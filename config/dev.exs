@@ -14,9 +14,9 @@ config :sartask, Sartask.Repo,
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
 config :sartask, SartaskWeb.Endpoint,
-  # Binding to loopback ipv4 address prevents access from other machines.
-  # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  url: [host: "sartask.test", scheme: "https", port: 443],
+  force_ssl: [rewrite_on: [:x_forwarded_proto]],
+  http: [port: 4025],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
