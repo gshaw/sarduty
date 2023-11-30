@@ -14,7 +14,7 @@ config :sartask, Sartask.Repo,
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
 config :sartask, SartaskWeb.Endpoint,
-  url: [host: "sartask.test", scheme: "https", port: 443],
+  url: [host: "sarduty.test", scheme: "https", port: 443],
   force_ssl: [rewrite_on: [:x_forwarded_proto]],
   http: [port: 4025],
   check_origin: false,
