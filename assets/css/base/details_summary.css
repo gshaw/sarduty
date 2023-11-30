@@ -1,0 +1,26 @@
+@layer base {
+  details > summary {
+    cursor: pointer;
+    list-style-type: none;
+  }
+
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  details .display-when-details-opened {
+    display: none;
+  }
+
+  details .display-when-details-closed {
+    display: block;
+  }
+
+  details[open] .display-when-details-opened {
+    display: block;
+  }
+
+  details[open] .display-when-details-closed {
+    display: none;
+  }
+}

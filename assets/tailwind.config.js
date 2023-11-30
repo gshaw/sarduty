@@ -12,9 +12,20 @@ module.exports = {
     "../lib/sartask_web/**/*.*ex"
   ],
   theme: {
+    screens: {
+      md: "640px",
+      lg: "960px",
+      print: { raw: "print" }
+    },
+    maxWidth: {
+      narrow: "420px",
+      sm: "640px",
+      md: "960px",
+      lg: "1200px"
+    },
     extend: {
       colors: {
-        brand: "#FD4F00",
+        brand: "#FD4F00", // phoenix-orange
       }
     },
   },
