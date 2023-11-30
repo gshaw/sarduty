@@ -9,18 +9,8 @@ defmodule SartaskWeb.UserLoginLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/users/log_in")
 
       assert html =~ "Log in"
-      assert html =~ "Register"
+      assert html =~ "Sign up"
       assert html =~ "Forgot your password?"
-    end
-
-    test "redirects if already logged in", %{conn: conn} do
-      result =
-        conn
-        |> log_in_user(user_fixture())
-        |> live(~p"/users/log_in")
-        |> follow_redirect(conn, "/")
-
-      assert {:ok, _conn} = result
     end
   end
 
@@ -75,13 +65,13 @@ defmodule SartaskWeb.UserLoginLiveTest do
     } do
       {:ok, lv, _html} = live(conn, ~p"/users/log_in")
 
-      {:ok, conn} =
+      {:ok, _lv, html} =
         lv
         |> element(~s|main a:fl-contains("Forgot your password?")|)
         |> render_click()
         |> follow_redirect(conn, ~p"/users/reset_password")
 
-      assert conn.resp_body =~ "Forgot your password?"
+      assert html =~ "Forgot your password?"
     end
   end
 end

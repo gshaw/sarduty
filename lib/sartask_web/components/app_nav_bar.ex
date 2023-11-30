@@ -4,6 +4,49 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
   import SartaskWeb.WebComponents.A
   import SartaskWeb.WebComponents.Avatar
 
+  attr :current_user, :map, default: nil
+
+  def app_nav_bar(assigns) do
+    ~H"""
+    <.navbar size={:wide} color={:white}>
+      <.navbar_mobile_menu>
+        <.a kind={:menu_item} navigate="/">Home</.a>
+        <.a kind={:menu_item} navigate="/styles">Style Guide</.a>
+        <.a kind={:menu_item} href="/dev/dashboard" external={true}>Dashboard</.a>
+        <.a kind={:menu_item} href="/dev/mailbox" external={true}>Mailbox</.a>
+        <%= if @current_user == nil do %>
+          <.navbar_menu_divider />
+          <.a kind={:menu_item} navigate="/users/log_in">Log in</.a>
+          <.a kind={:menu_item} navigate="/users/register">Sign up for FREE</.a>
+        <% end %>
+      </.navbar_mobile_menu>
+      <.navbar_links>
+        <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
+        <.navbar_desktop_links>
+          <.a kind={:navbar_item} navigate="/styles">Style Guide</.a>
+          <.a kind={:navbar_item} href="/dev/dashboard" external={true}>Dashboard</.a>
+          <.a kind={:navbar_item} href="/dev/mailbox" external={true}>Mailbox</.a>
+        </.navbar_desktop_links>
+      </.navbar_links>
+      <%= if @current_user do %>
+        <.navbar_user_menu current_user={@current_user} color={:white}>
+          <:menu_label>
+            <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
+          </:menu_label>
+          <.a kind={:menu_item} navigate="/users/settings">Settings</.a>
+          <.navbar_menu_divider />
+          <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
+        </.navbar_user_menu>
+      <% else %>
+        <.a navigate="/users/log_in" class="hidden md:inline-block mr-2">Log in</.a>
+        <.a navigate="/users/register">
+          Sign up<span class="hidden lg:inline">&nbsp;for FREE</span>
+        </.a>
+      <% end %>
+    </.navbar>
+    """
+  end
+
   slot :inner_block, required: true
 
   def navbar_mobile_menu(assigns) do
@@ -99,46 +142,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
     """
   end
 
-  attr :current_user, :map, default: nil
-
-  def app_nav_bar(assigns) do
-    ~H"""
-    <.navbar size={:wide} color={:white}>
-      <.navbar_mobile_menu>
-        <.a kind={:menu_item} href="/">Home</.a>
-        <.a kind={:menu_item} href="/">Style Guide</.a>
-        <.a kind={:menu_item} href="/">Dashboard</.a>
-        <%= if @current_user == nil do %>
-          <.navbar_menu_divider />
-          <.a kind={:menu_item} href="/users/log_in">Log in</.a>
-          <.a kind={:menu_item} href="/">Sign up for FREE</.a>
-        <% end %>
-      </.navbar_mobile_menu>
-      <.navbar_links>
-        <.a kind={:navbar_title} href="/">SAR Duty</.a>
-        <.navbar_desktop_menu>
-          <.a kind={:navbar_item} href="/">Style Guide</.a>
-          <.a kind={:navbar_item} href="/dev/dashboard">Dashboard</.a>
-          <.a kind={:navbar_item} href="/dev/mailbox">Mailbox</.a>
-        </.navbar_desktop_menu>
-      </.navbar_links>
-      <%= if @current_user do %>
-        <.navbar_user_menu current_user={@current_user} color={:white}>
-          <.a kind={:menu_item} href="/users/settings">Settings</.a>
-          <.navbar_menu_divider />
-          <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
-        </.navbar_user_menu>
-      <% else %>
-        <.a href="/users/log_in" class="hidden md:inline-block mr-2">Log in</.a>
-        <.a href="/users/register">
-          Sign up<span class="hidden lg:inline">&nbsp;for FREE</span>
-        </.a>
-      <% end %>
-    </.navbar>
-    """
-  end
-
-  def navbar_desktop_menu(assigns) do
+  def navbar_desktop_links(assigns) do
     ~H"""
     <span class="ml-4 border-l border-gray-200 hidden md:inline-block">
       <%= render_slot(@inner_block) %>
@@ -151,13 +155,13 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
     <details class="relative">
       <summary
         role="button"
-        aria-label="Open user menu"
+        aria-label="Open menu"
         class={[
           "rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2",
           determine_color_classes(@color)
         ]}
       >
-        <.avatar initials="GS" />
+        <%= render_slot(@menu_label) %>
       </summary>
       <div
         role="menu"

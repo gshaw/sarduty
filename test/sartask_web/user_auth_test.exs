@@ -185,47 +185,6 @@ defmodule SartaskWeb.UserAuthTest do
     end
   end
 
-  describe "on_mount: :redirect_if_user_is_authenticated" do
-    test "redirects if there is an authenticated  user ", %{conn: conn, user: user} do
-      user_token = Accounts.generate_user_session_token(user)
-      session = conn |> put_session(:user_token, user_token) |> get_session()
-
-      assert {:halt, _updated_socket} =
-               UserAuth.on_mount(
-                 :redirect_if_user_is_authenticated,
-                 %{},
-                 session,
-                 %LiveView.Socket{}
-               )
-    end
-
-    test "doesn't redirect if there is no authenticated user", %{conn: conn} do
-      session = conn |> get_session()
-
-      assert {:cont, _updated_socket} =
-               UserAuth.on_mount(
-                 :redirect_if_user_is_authenticated,
-                 %{},
-                 session,
-                 %LiveView.Socket{}
-               )
-    end
-  end
-
-  describe "redirect_if_user_is_authenticated/2" do
-    test "redirects if user is authenticated", %{conn: conn, user: user} do
-      conn = conn |> assign(:current_user, user) |> UserAuth.redirect_if_user_is_authenticated([])
-      assert conn.halted
-      assert redirected_to(conn) == ~p"/"
-    end
-
-    test "does not redirect if user is not authenticated", %{conn: conn} do
-      conn = UserAuth.redirect_if_user_is_authenticated(conn, [])
-      refute conn.halted
-      refute conn.status
-    end
-  end
-
   describe "require_authenticated_user/2" do
     test "redirects if user is not authenticated", %{conn: conn} do
       conn = conn |> fetch_flash() |> UserAuth.require_authenticated_user([])

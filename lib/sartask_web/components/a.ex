@@ -11,7 +11,7 @@ defmodule SartaskWeb.WebComponents.A do
   attr :class, :string, default: ""
 
   attr :rest, :global,
-    include: ~w(href method),
+    include: ~w(href method navigate),
     doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, required: true
@@ -23,6 +23,7 @@ defmodule SartaskWeb.WebComponents.A do
         determine_kind_classes(@kind, @is_current),
         @class
       ]}
+      {if @external, do: %{target: "_blank"}, else: %{}}
       {@rest}
     >
       <%= render_slot(@inner_block) %>

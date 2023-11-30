@@ -122,9 +122,6 @@ defmodule SartaskWeb.UserAuth do
       on user_token.
       Redirects to login page if there's no logged user.
 
-    * `:redirect_if_user_is_authenticated` - Authenticates the user from the session.
-      Redirects to signed_in_path if there's a logged user.
-
   ## Examples
 
   Use the `on_mount` lifecycle macro in LiveViews to mount or authenticate
@@ -162,35 +159,12 @@ defmodule SartaskWeb.UserAuth do
     end
   end
 
-  def on_mount(:redirect_if_user_is_authenticated, _params, session, socket) do
-    socket = mount_current_user(socket, session)
-
-    if socket.assigns.current_user do
-      {:halt, Phoenix.LiveView.redirect(socket, to: signed_in_path(socket))}
-    else
-      {:cont, socket}
-    end
-  end
-
   defp mount_current_user(socket, session) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
       if user_token = session["user_token"] do
         Accounts.get_user_by_session_token(user_token)
       end
     end)
-  end
-
-  @doc """
-  Used for routes that require the user to not be authenticated.
-  """
-  def redirect_if_user_is_authenticated(conn, _opts) do
-    if conn.assigns[:current_user] do
-      conn
-      |> redirect(to: signed_in_path(conn))
-      |> halt()
-    else
-      conn
-    end
   end
 
   @doc """
