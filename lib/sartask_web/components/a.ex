@@ -11,7 +11,7 @@ defmodule SartaskWeb.WebComponents.A do
   attr :class, :string, default: ""
 
   attr :rest, :global,
-    include: ~w(href method navigate),
+    include: ~w(href method navigate role),
     doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, required: true

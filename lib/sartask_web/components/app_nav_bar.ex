@@ -38,9 +38,18 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
           <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
         </.navbar_user_menu>
       <% else %>
-        <.a navigate="/users/log_in" class="hidden md:inline-block mr-2">Log in</.a>
-        <.a navigate="/users/register">
-          Sign up<span class="hidden lg:inline">&nbsp;for FREE</span>
+        <.a
+          role="button"
+          kind={:custom}
+          navigate="/users/log_in"
+          class="_hidden _md:inline-block mr-1 btn btn-sm btn-outline btn-secondary"
+        >
+          Log in
+        </.a>
+        <.a kind={:custom} role="button" navigate="/users/register" class="btn btn-sm btn-primary">
+          <span class="whitespace-nowrap">
+            Sign up<span class="hidden lg:inline"> for FREE</span>
+          </span>
         </.a>
       <% end %>
     </.navbar>

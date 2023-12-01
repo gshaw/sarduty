@@ -5,3 +5,8 @@
 @import "components/all";
 
 /* This file is for your main application CSS */
+.btn {
+  @apply font-medium; /* reduce from daisyui's bold */
+  @apply mb-1.5; /* give space when form action buttons wrap */
+  @apply animate-none; /* prevent buttons from poping on on page load */
+}

@@ -1,6 +1,10 @@
 defmodule SartaskWeb.HomePageLive do
   use SartaskWeb, :live_view
 
+  def mount(_params, _session, socket) do
+    {:ok, assign(socket, page_title: "Welcome")}
+  end
+
   def render(assigns) do
     ~H"""
     <section>
@@ -12,9 +16,5 @@ defmodule SartaskWeb.HomePageLive do
       </div>
     </section>
     """
-  end
-
-  def mount(_params, _session, socket) do
-    {:ok, socket}
   end
 end

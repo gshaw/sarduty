@@ -28,8 +28,73 @@ module.exports = {
         brand: "#FD4F00", // phoenix-orange
       }
     },
+
+  },
+  daisyui: {
+    themes: [
+      {
+        nhsuk: {
+          // nhsuk-text-color #212b32 (black)
+          // nhsuk-secondary-text-color #4c6272 (dark gray)
+          // nhsuk-link-color #005eb8 (blue)
+          // nhsuk-link-hover-color #7C2855 (dark-pink)
+          // nhsuk-link-visited-color #330072 (purple)
+          // nhsuk-link-active-color #002f5c (active link)
+          // nhsuk-focus-color #ffeb3b (yellow)
+          // nhsuk-focus-text-color #212b32 (text-color)
+          // nhsuk-border-color #d8dde0 (gray-4)
+          // nhsuk-form-border-color #4c6272 (secondary-text-color)
+          // nhsuk-error-color #d5281b (red)
+          // nhsuk-button-color #007f3b (green)
+          // nhsuk-secondary-button-color #4c6272 (gray-1)
+          "primary": "#005eb8", // blue-600
+          "primary-content": "#ffffff",
+          "secondary": "#4c6272",
+          "secondary-content": "#ffffff",
+          "accent": "#ffb81C", // warm-yello (brand)
+          "accent-content": "#212b32",
+          "neutral": "#374151", // gray-700
+          "neutral-content": "#ffffff",
+          "base-content": "#212b32",
+          "base-100": "#f3f4f6", // gray-100
+          "base-200": "#e5e7eb", // gray-200
+          "base-300": "#d1d5db", // gray-300
+          "info": "#e5e7eb", // gray-200
+          "info-content": "#212b32",
+          "success": "#007f3b", // green
+          "success-content": "#ffffff",
+          "warning": "#ffeb3b", // yellow
+          "warning-content": "#212b32",
+          "error": "#d5281b", // red
+          "error-content": "#ffffff",
+        },
+        tailwind: {
+          "primary": "#2563eb", // blue-600
+          "primary-content": "#ffffff",
+          "secondary": "#ffffff",
+          "secondary-content": "#212b32",
+          "accent": "#FD4F00", // phoenix-orange (brand)
+          "accent-content": "#ffffff",
+          "neutral": "#374151", // gray-700
+          "neutral-content": "#ffffff",
+          "base-content": "#212b32",
+          "base-100": "#f3f4f6", // gray-100
+          "base-200": "#e5e7eb", // gray-200
+          "base-300": "#d1d5db", // gray-300
+          "info": "#e5e7eb", // gray-200
+          "info-content": "#212b32",
+          "success": "#16a34a", // green-600
+          "success-content": "#ffffff",
+          "warning": "#facc15", // yellow-400
+          "warning-content": "#212b32",
+          "error": "#dc2626", // red-600
+          "error-content": "#ffffff",
+        }
+      }
+    ],
   },
   plugins: [
+    require("daisyui"),
     require("@tailwindcss/forms"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
