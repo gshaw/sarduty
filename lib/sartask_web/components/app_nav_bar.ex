@@ -42,7 +42,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
           role="button"
           kind={:custom}
           navigate="/users/log_in"
-          class="_hidden _md:inline-block mr-1 btn btn-sm btn-outline btn-secondary"
+          class="hidden md:flex mr-1 btn btn-sm btn-outline"
         >
           Log in
         </.a>

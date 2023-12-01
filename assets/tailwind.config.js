@@ -23,19 +23,13 @@ module.exports = {
       md: "960px",
       lg: "1200px"
     },
-    extend: {
-      colors: {
-        brand: "#FD4F00", // phoenix-orange
-      }
-    },
-
   },
   daisyui: {
     themes: [
       {
         nhsuk: {
           // nhsuk-text-color #212b32 (black)
-          // nhsuk-secondary-text-color #4c6272 (dark gray)
+          // nhsuk-secondary-text-color #4c6272 (dark gray nhsuk-grey-1)
           // nhsuk-link-color #005eb8 (blue)
           // nhsuk-link-hover-color #7C2855 (dark-pink)
           // nhsuk-link-visited-color #330072 (purple)
@@ -51,8 +45,11 @@ module.exports = {
           "primary-content": "#ffffff",
           "secondary": "#4c6272",
           "secondary-content": "#ffffff",
-          "accent": "#ffb81C", // warm-yello (brand)
+          "accent": "#ffb81C", // warm-yellow (brand)
           "accent-content": "#212b32",
+          // "accent": "#FD4F00", // phoenix orange (brand)
+          // "accent": "#005eb8", // nhsuk-blue (brand)
+          // "accent-content": "#fff",
           "neutral": "#374151", // gray-700
           "neutral-content": "#ffffff",
           "base-content": "#212b32",

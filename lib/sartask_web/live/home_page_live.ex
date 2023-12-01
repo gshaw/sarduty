@@ -9,7 +9,7 @@ defmodule SartaskWeb.HomePageLive do
     ~H"""
     <section>
       <h1 class="title">
-        Welcome to <span class="text-brand">SAR Duty</span>
+        Welcome to <span class="text-primary">SAR Duty</span>
       </h1>
       <div class="lead">
         Helpful tools for search and rescue managers.
