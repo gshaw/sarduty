@@ -1,19 +1,16 @@
 defmodule SartaskWeb.UserLoginLive do
-  use SartaskWeb, :live_view
+  use SartaskWeb, :live_view_narrow
+
+  import SartaskWeb.WebComponents.A
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
-      <.header class="text-center">
-        Sign in to account
-        <:subtitle>
-          Don't have an account?
-          <.link navigate={~p"/users/register"} class="font-semibold text-brand hover:underline">
-            Sign up
-          </.link>
-          for an account now.
-        </:subtitle>
-      </.header>
+    <div>
+      <h1 class="heading">Log in to your account</h1>
+      <p>
+        Don't have an account?
+        <.a navigate="/users/register">Sign up for free</.a>
+      </p>
 
       <.simple_form for={@form} id="login_form" action={~p"/users/log_in"} phx-update="ignore">
         <.input field={@form[:email]} type="email" label="Email" required />

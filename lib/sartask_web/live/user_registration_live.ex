@@ -1,22 +1,18 @@
 defmodule SartaskWeb.UserRegistrationLive do
-  use SartaskWeb, :live_view
+  use SartaskWeb, :live_view_narrow
 
+  import SartaskWeb.WebComponents.A
   alias Sartask.Accounts
   alias Sartask.Accounts.User
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
-      <.header class="text-center">
-        Register for an account
-        <:subtitle>
-          Already registered?
-          <.link navigate={~p"/users/log_in"} class="font-semibold text-brand hover:underline">
-            Sign in
-          </.link>
-          to your account now.
-        </:subtitle>
-      </.header>
+    <div>
+      <h1 class="heading">Sign up for free</h1>
+      <p>
+        Have an account?
+        <.a navigate="/users/log_in">Log in to your account</.a>
+      </p>
 
       <.simple_form
         for={@form}

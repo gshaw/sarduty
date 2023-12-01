@@ -13,3 +13,5 @@
 .form-actions .btn {
   @apply mb-2; /* required to gives some space if buttons wrap on narrow screen */
 }
+
+.link { @apply hover:no-underline font-medium }

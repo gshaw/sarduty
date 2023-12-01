@@ -1,26 +1,22 @@
 @layer components {
   .title {
-    @apply text-5xl md:text-7xl font-bold mb-2 text-black;
+    @apply text-5xl md:text-7xl font-bold mb-2;
   }
 
   .lead {
-    @apply text-xl md:text-2xl font-light mb-2 text-gray-700;
+    @apply text-xl md:text-2xl font-light mb-2 text-secondary;
   }
 
   .heading {
-    @apply text-3xl text-gray-900 mb-2;
+    @apply text-3xl mb-2;
   }
 
   .subheading {
-    @apply text-xl text-gray-900 mb-2;
+    @apply text-xl mb-2;
   }
 
   p,
   .paragraph {
     @apply mb-4;
-  }
-
-  .link {
-    @apply text-blue-600 hover:underline;
   }
 }

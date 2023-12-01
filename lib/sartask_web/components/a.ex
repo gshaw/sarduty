@@ -31,9 +31,9 @@ defmodule SartaskWeb.WebComponents.A do
     """
   end
 
-  defp determine_kind_classes(:default, _is_current), do: "text-blue-600 hover:underline"
+  defp determine_kind_classes(:default, _is_current), do: "link link-primary"
   defp determine_kind_classes(:custom, _is_current), do: nil
-  defp determine_kind_classes(:monochrome, _is_current), do: "text-gray-800 hover:underline"
+  defp determine_kind_classes(:monochrome, _is_current), do: "link"
 
   defp determine_kind_classes(:menu_item, is_current) do
     "

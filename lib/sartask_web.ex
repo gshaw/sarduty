@@ -59,8 +59,15 @@ defmodule SartaskWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView,
-        layout: {SartaskWeb.Layouts, :app}
+      use Phoenix.LiveView, layout: {SartaskWeb.Layouts, :app}
+
+      unquote(html_helpers())
+    end
+  end
+
+  def live_view_narrow do
+    quote do
+      use Phoenix.LiveView, layout: {SartaskWeb.Layouts, :narrow}
 
       unquote(html_helpers())
     end

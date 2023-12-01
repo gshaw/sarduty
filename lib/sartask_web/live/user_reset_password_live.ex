@@ -1,5 +1,5 @@
 defmodule SartaskWeb.UserResetPasswordLive do
-  use SartaskWeb, :live_view
+  use SartaskWeb, :live_view_narrow
 
   alias Sartask.Accounts
 

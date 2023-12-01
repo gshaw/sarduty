@@ -1,13 +1,21 @@
 defmodule SartaskWeb.WebComponents.Avatar do
+  alias SartaskWeb.CoreComponents
   use SartaskWeb, :function_component
+
+  import SartaskWeb.CoreComponents
 
   attr :initials, :string, required: true
 
   def avatar(assigns) do
     ~H"""
-    <span class="inline-flex items-center justify-center rounded-full bg-brand h-8 w-8">
-      <span class="leading-none font-medium text-white text-sm"><%= @initials %></span>
-    </span>
+    <div class="avatar placeholder">
+      <div class="bg-primary text-primary-content rounded-full w-8">
+        <span class="text-xs">
+          <.icon name="hero-user" class="h-5 w-5" />
+          <%!-- <%= @initials %> --%>
+        </span>
+      </div>
+    </div>
     """
   end
 end

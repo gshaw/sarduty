@@ -53,10 +53,10 @@ module.exports = {
           "neutral": "#374151", // gray-700
           "neutral-content": "#ffffff",
           "base-content": "#212b32",
-          "base-100": "#f3f4f6", // gray-100
-          "base-200": "#e5e7eb", // gray-200
-          "base-300": "#d1d5db", // gray-300
-          "info": "#e5e7eb", // gray-200
+          "base-100": "#f0f4f5", // nhsuk-grey-5
+          "base-200": "#d8dde0", // nhsuk-grey-4
+          "base-300": "#aeb7bd", // nhsuk-grey-3
+          "info": "#d8dde0", // gray-200
           "info-content": "#212b32",
           "success": "#007f3b", // green
           "success-content": "#ffffff",

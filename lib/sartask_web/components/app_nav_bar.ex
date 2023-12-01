@@ -56,6 +56,28 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
     """
   end
 
+  attr :current_user, :map, default: nil
+
+  def narrow_nav_bar(assigns) do
+    ~H"""
+    <.navbar size={:narrow} color={:gray}>
+      <.navbar_links>
+        <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
+      </.navbar_links>
+      <%= if @current_user do %>
+        <.navbar_user_menu current_user={@current_user} color={:white}>
+          <:menu_label>
+            <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
+          </:menu_label>
+          <.a kind={:menu_item} navigate="/users/settings">Settings</.a>
+          <.navbar_menu_divider />
+          <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
+        </.navbar_user_menu>
+      <% end %>
+    </.navbar>
+    """
+  end
+
   slot :inner_block, required: true
 
   def navbar_mobile_menu(assigns) do
@@ -125,10 +147,10 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
   defp determine_color_classes(color) do
     case color do
       :white ->
-        "bg-white text-gray-800 border-gray-200 focus:ring-gray-800 focus:ring-offset-white"
+        "bg-white text-base-content border-base-200 focus:ring-secondary focus:ring-offset-white"
 
       :gray ->
-        "bg-gray-200 text-gray-800 border-gray-200 focus:ring-gray-800 focus:ring-offset-gray-100"
+        "bg-gray-200 text-base-content border-base-300 focus:ring-gray-800 focus:ring-offset-gray-100"
     end
   end
 

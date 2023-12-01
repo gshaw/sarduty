@@ -10,11 +10,11 @@ defmodule SartaskWeb.StyleGuideLive do
 
   def render(assigns) do
     ~H"""
-    <section class="mb-8">
+    <header class="mb-8">
       <h1 class="title">
         Style Guide
       </h1>
-    </section>
+    </header>
 
     <.style_group title=".a">
       <div class="flex space-x-4">
@@ -24,6 +24,17 @@ defmodule SartaskWeb.StyleGuideLive do
           Custom
         </.a>
       </div>
+    </.style_group>
+
+    <.style_group title=".badge">
+      <div class="badge">default</div>
+      <div class="badge badge-primary">primary</div>
+      <div class="badge badge-secondary">secondary</div>
+      <div class="badge badge-neutral">neutral</div>
+      <div class="badge badge-accent">accent</div>
+      <div class="badge badge-success">success</div>
+      <div class="badge badge-warning">warning</div>
+      <div class="badge badge-error">error</div>
     </.style_group>
 
     <.style_group title=".btn and .form_actions">
@@ -67,22 +78,24 @@ defmodule SartaskWeb.StyleGuideLive do
         <a class="btn btn-sm btn-primary">Sign up for FREE</a>
       </div>
     </.style_group>
+    <.style_group title=".typography">
+      <h1 class="title">This is a .title</h1>
+      <p class="lead">This is .lead text inside a <code>p</code> tag.</p>
+      <p>This is another paragraph of text.</p>
+      <h2 class="heading">This is a .heading element</h2>
+      <p>This is a paragraph of text. Paragraphs have a bottom margin.</p>
 
-    <.style_group title=".badge">
-      <div class="badge">default</div>
-      <div class="badge badge-primary">primary</div>
-      <div class="badge badge-secondary">secondary</div>
-      <div class="badge badge-accent">accent</div>
-      <div class="badge badge-success">success</div>
-      <div class="badge badge-warning">warning</div>
-      <div class="badge badge-error">error</div>
+      <h3 class="subheading">This is a .subheading element</h3>
+      <div class="paragraph">
+        This is a paragraph of text inside a <code>div</code> block with styled with .paragraph.
+      </div>
     </.style_group>
     """
   end
 
   def style_group(assigns) do
     ~H"""
-    <section class="bg-gray-50 p-4 space-y-4 mb-8 rounded">
+    <section class="shadow p-4 space-y-4 mb-8 rounded">
       <h2 class="heading font-mono"><%= @title %></h2>
       <%= render_slot(@inner_block) %>
     </section>
