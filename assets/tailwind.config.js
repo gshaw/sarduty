@@ -25,6 +25,7 @@ module.exports = {
     },
   },
   daisyui: {
+    logs: false,
     themes: [
       {
         nhsuk: {
@@ -43,7 +44,7 @@ module.exports = {
           // nhsuk-secondary-button-color #4c6272 (gray-1)
           "primary": "#005eb8", // blue-600
           "primary-content": "#ffffff",
-          "secondary": "#4c6272",
+          "secondary": "#4c6272", // gray-1
           "secondary-content": "#ffffff",
           "accent": "#ffb81C", // warm-yellow (brand)
           "accent-content": "#212b32",
@@ -67,8 +68,8 @@ module.exports = {
 
           "--rounded-box": "1rem", // border radius rounded-box utility class, used in card and other large boxes
           "--rounded-btn": "0.25rem", // border radius rounded-btn utility class, used in buttons and similar element
-          "--rounded-badge": "1.9rem", // border radius rounded-badge utility class, used in badges and similar
-          "--animation-btn": "0.25s", // duration of animation when you click on button
+          "--rounded-badge": "1rem", // border radius rounded-badge utility class, used in badges and similar
+          "--animation-btn": "0.2s", // duration of animation when you click on button
           "--animation-input": "0.2s", // duration of animation for inputs like checkbox, toggle, radio, etc
           // "--btn-focus-scale": "0.95", // scale transform of button when you focus on it
           // "--border-btn": "1px", // border width of buttons
@@ -78,24 +79,33 @@ module.exports = {
         tailwind: {
           "primary": "#2563eb", // blue-600
           "primary-content": "#ffffff",
-          "secondary": "#ffffff",
-          "secondary-content": "#212b32",
-          "accent": "#FD4F00", // phoenix-orange (brand)
+          "secondary": "##4b5563", // gray-600
+          "secondary-content": "#ffffff",
+          "accent": "#ea580c", // orange-600
           "accent-content": "#ffffff",
           "neutral": "#374151", // gray-700
           "neutral-content": "#ffffff",
-          "base-content": "#212b32",
+          "base-content": "#1f2937", // gray-800
           "base-100": "#f3f4f6", // gray-100
           "base-200": "#e5e7eb", // gray-200
           "base-300": "#d1d5db", // gray-300
           "info": "#e5e7eb", // gray-200
-          "info-content": "#212b32",
+          "info-content": "#1f2937", // gray-800
           "success": "#16a34a", // green-600
           "success-content": "#ffffff",
           "warning": "#facc15", // yellow-400
-          "warning-content": "#212b32",
+          "warning-content": "#1f2937", // gray-800
           "error": "#dc2626", // red-600
           "error-content": "#ffffff",
+          "--rounded-box": "1rem", // border radius rounded-box utility class, used in card and other large boxes
+          "--rounded-btn": "0.25rem", // border radius rounded-btn utility class, used in buttons and similar element
+          "--rounded-badge": "1rem", // border radius rounded-badge utility class, used in badges and similar
+          "--animation-btn": "0.2s", // duration of animation when you click on button
+          "--animation-input": "0.2s", // duration of animation for inputs like checkbox, toggle, radio, etc
+          // "--btn-focus-scale": "0.95", // scale transform of button when you focus on it
+          // "--border-btn": "1px", // border width of buttons
+          // "--tab-border": "1px", // border width of tabs
+          // "--tab-radius": "0.5rem", // border radius of tabs
         }
       }
     ],

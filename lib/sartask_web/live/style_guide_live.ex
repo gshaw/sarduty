@@ -34,6 +34,7 @@ defmodule SartaskWeb.StyleGuideLive do
       <div class="badge badge-success">success</div>
       <div class="badge badge-warning">warning</div>
       <div class="badge badge-error">error</div>
+      <div class="badge badge-info">info</div>
     </.style_group>
 
     <.style_group title=".btn and .form_actions">

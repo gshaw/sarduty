@@ -442,7 +442,7 @@ defmodule SartaskWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <div class="mb-1 font-medium text-sm text-error phx-no-feedback:hidden">
+    <div class="my-1 font-normal text-sm text-error phx-no-feedback:hidden">
       <%= render_slot(@inner_block) %>
     </div>
     """

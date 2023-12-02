@@ -1,5 +1,4 @@
 defmodule SartaskWeb.WebComponents.Avatar do
-  alias SartaskWeb.CoreComponents
   use SartaskWeb, :function_component
 
   import SartaskWeb.CoreComponents
