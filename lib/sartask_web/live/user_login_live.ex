@@ -6,28 +6,26 @@ defmodule SartaskWeb.UserLoginLive do
   def render(assigns) do
     ~H"""
     <div>
-      <h1 class="heading">Log in to your account</h1>
+      <h1 class="heading">Log in</h1>
       <p>
         Don't have an account?
-        <.a navigate="/users/register">Sign up for free</.a>
+        <.a navigate="/users/register">Sign up</.a>
       </p>
 
-      <.simple_form for={@form} id="login_form" action={~p"/users/log_in"} phx-update="ignore">
-        <.input field={@form[:email]} type="email" label="Email" required />
-        <.input field={@form[:password]} type="password" label="Password" required />
+      <.form for={@form} id="login_form" action={~p"/users/log_in"} phx-update="ignore">
+        <.input field={@form[:email]} type="email" label="Email" required phx-debounce />
+        <.input field={@form[:password]} type="password" label="Password" required phx-debounce>
+          <.a navigate={~p"/users/reset_password"} class="link">Forgot your password?</.a>
+        </.input>
 
-        <:actions>
-          <.input field={@form[:remember_me]} type="checkbox" label="Keep me logged in" />
-          <.link navigate={~p"/users/reset_password"} class="text-sm font-semibold">
-            Forgot your password?
-          </.link>
-        </:actions>
-        <:actions>
-          <.button phx-disable-with="Signing in..." class="w-full">
-            Sign in <span aria-hidden="true">→</span>
-          </.button>
-        </:actions>
-      </.simple_form>
+        <.input type="checkbox" field={@form[:remember_me]} label="Remember Me">
+          Saves information on this browser so you don't have to log in again for 60 days.
+        </.input>
+
+        <.form_actions>
+          <.button class="btn-success">Log in</.button>
+        </.form_actions>
+      </.form>
     </div>
     """
   end

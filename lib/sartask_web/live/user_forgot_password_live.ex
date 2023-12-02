@@ -1,28 +1,26 @@
 defmodule SartaskWeb.UserForgotPasswordLive do
   use SartaskWeb, :live_view_narrow
+  import SartaskWeb.WebComponents.A
 
   alias Sartask.Accounts
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
-      <.header class="text-center">
-        Forgot your password?
-        <:subtitle>We'll send a password reset link to your inbox</:subtitle>
-      </.header>
-
-      <.simple_form for={@form} id="reset_password_form" phx-submit="send_email">
-        <.input field={@form[:email]} type="email" placeholder="Email" required />
-        <:actions>
-          <.button phx-disable-with="Sending..." class="w-full">
-            Send password reset instructions
-          </.button>
-        </:actions>
-      </.simple_form>
-      <p class="text-center text-sm mt-4">
-        <.link navigate={~p"/users/register"}>Register</.link>
-        | <.link navigate={~p"/users/log_in"}>Log in</.link>
+    <div>
+      <p>
+        <.a navigate={~p"/users/log_in"} class="no-underline">← Log in</.a>
       </p>
+      <h1 class="heading">Forgot your password?</h1>
+      <p>
+        Hey, it happens to everyone. Enter the email address you use to log in with and we'll send a link with instructions.
+      </p>
+
+      <.form for={@form} id="reset_password_form" phx-submit="send_email">
+        <.input field={@form[:email]} type="email" label="Email" required />
+        <.form_actions>
+          <.button class="btn-success">Send password reset link</.button>
+        </.form_actions>
+      </.form>
     </div>
     """
   end

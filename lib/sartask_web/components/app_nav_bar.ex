@@ -17,7 +17,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
         <%= if @current_user == nil do %>
           <.navbar_menu_divider />
           <.a kind={:menu_item} navigate="/users/log_in">Log in</.a>
-          <.a kind={:menu_item} navigate="/users/register">Sign up for FREE</.a>
+          <.a kind={:menu_item} navigate="/users/register">Sign up</.a>
         <% end %>
       </.navbar_mobile_menu>
       <.navbar_links>
@@ -48,7 +48,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
         </.a>
         <.a kind={:custom} role="button" navigate="/users/register" class="btn btn-sm btn-primary">
           <span class="whitespace-nowrap">
-            Sign up<span class="hidden lg:inline"> for FREE</span>
+            Sign up
           </span>
         </.a>
       <% end %>

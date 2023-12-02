@@ -2,7 +2,6 @@ defmodule SartaskWeb.StyleGuideLive do
   use SartaskWeb, :live_view
 
   import SartaskWeb.WebComponents.A
-  import SartaskWeb.WebComponents.FormActions
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Style Guide")}

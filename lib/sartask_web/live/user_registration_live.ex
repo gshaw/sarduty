@@ -8,13 +8,13 @@ defmodule SartaskWeb.UserRegistrationLive do
   def render(assigns) do
     ~H"""
     <div>
-      <h1 class="heading">Sign up for free</h1>
+      <h1 class="heading">Sign up</h1>
       <p>
         Have an account?
-        <.a navigate="/users/log_in">Log in to your account</.a>
+        <.a navigate="/users/log_in">Log in</.a>
       </p>
 
-      <.simple_form
+      <.form
         for={@form}
         id="registration_form"
         phx-submit="save"
@@ -23,17 +23,12 @@ defmodule SartaskWeb.UserRegistrationLive do
         action={~p"/users/log_in?_action=registered"}
         method="post"
       >
-        <.error :if={@check_errors}>
-          Oops, something went wrong! Please check the errors below.
-        </.error>
-
-        <.input field={@form[:email]} type="email" label="Email" required />
-        <.input field={@form[:password]} type="password" label="Password" required />
-
-        <:actions>
-          <.button phx-disable-with="Creating account..." class="w-full">Create an account</.button>
-        </:actions>
-      </.simple_form>
+        <.input field={@form[:email]} type="email" label="Email" phx-debounce />
+        <.input field={@form[:password]} type="password" label="Password" phx-debounce />
+        <.form_actions>
+          <.button class="btn-success">Sign up</.button>
+        </.form_actions>
+      </.form>
     </div>
     """
   end

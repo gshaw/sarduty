@@ -175,6 +175,25 @@ defmodule SartaskWeb.CoreComponents do
     """
   end
 
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+  slot :trailing
+
+  def form_actions(assigns) do
+    ~H"""
+    <div class={["form-actions flex flex-wrap", @class]}>
+      <div class="flex-grow">
+        <%= render_slot(@inner_block) %>
+      </div>
+      <%= if @trailing do %>
+        <div>
+          <%= render_slot(@trailing) %>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
   @doc """
   Renders a simple form.
 
@@ -201,9 +220,9 @@ defmodule SartaskWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 bg-white">
+      <div class="">
         <%= render_slot(@inner_block, f) %>
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
+        <div :for={action <- @actions} class="">
           <%= render_slot(action, f) %>
         </div>
       </div>
@@ -230,8 +249,7 @@ defmodule SartaskWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80",
+        "phx-submit-loading:opacity-75 btn",
         @class
       ]}
       {@rest}
@@ -307,8 +325,8 @@ defmodule SartaskWeb.CoreComponents do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600">
+    <div phx-feedback-for={@name} class="mb-4">
+      <div class="flex">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -316,12 +334,15 @@ defmodule SartaskWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+          class="cursor-pointer h-5 w-5 text-primary border border-base-300 shadow-sm rounded"
           {@rest}
         />
-        <%= @label %>
-      </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+        <div class="ml-2 leading-4">
+          <.label for={@id}><%= @label %></.label>
+          <.error :for={message <- @errors}><%= message %></.error>
+          <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
+        </div>
+      </div>
     </div>
     """
   end
@@ -368,7 +389,7 @@ defmodule SartaskWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div class="mb-4" phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
       <input
         type={@type}
@@ -376,14 +397,24 @@ defmodule SartaskWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "block w-full rounded border text-base-content shadow-sm",
+          "phx-no-feedback:text-base-content phx-no-feedback:border-base-300 phx-no-feedback:focus:ring-primary phx-no-feedback:focus:border-primary",
+          @errors != [] && "border-error focus:ring-error focus:border-error text-error"
         ]}
         {@rest}
       />
       <.error :for={msg <- @errors}><%= msg %></.error>
+      <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
+    </div>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def hint(assigns) do
+    ~H"""
+    <div class="block my-1 font-normal text-sm text-secondary">
+      <%= render_slot(@inner_block) %>
     </div>
     """
   end
@@ -396,7 +427,7 @@ defmodule SartaskWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="block mb-1 font-medium text-sm text-base-content">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -409,10 +440,9 @@ defmodule SartaskWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
+    <div class="mb-1 font-medium text-sm text-error phx-no-feedback:hidden">
       <%= render_slot(@inner_block) %>
-    </p>
+    </div>
     """
   end
 
