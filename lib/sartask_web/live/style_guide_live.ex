@@ -30,7 +30,6 @@ defmodule SartaskWeb.StyleGuideLive do
       <div class="badge badge-primary">primary</div>
       <div class="badge badge-secondary">secondary</div>
       <div class="badge badge-neutral">neutral</div>
-      <div class="badge badge-accent">accent</div>
       <div class="badge badge-success">success</div>
       <div class="badge badge-warning">warning</div>
       <div class="badge badge-error">error</div>
@@ -58,7 +57,6 @@ defmodule SartaskWeb.StyleGuideLive do
         <button class="btn btn-link">Link</button>
         <:trailing>
           <button class="btn btn-neutral">Neutral</button>
-          <button class="btn btn-accent">Accent</button>
         </:trailing>
       </.form_actions>
       <.form_actions>

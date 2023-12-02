@@ -37,8 +37,10 @@ defmodule SartaskWeb.Router do
 
     live_session :require_authenticated_user,
       on_mount: [{SartaskWeb.UserAuth, :ensure_authenticated}] do
-      live "/users/settings", UserSettingsLive, :edit
-      live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+      live "/settings", SettingsLive, :show
+      live "/settings/email", Settings.ChangeEmailLive, :edit
+      live "/settings/password", Settings.ChangePasswordLive, :edit
+      live "/settings/confirm_email/:token", SettingsLive, :confirm_email
     end
   end
 

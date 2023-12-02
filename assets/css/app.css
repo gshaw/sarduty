@@ -19,4 +19,4 @@
 .form-actions .btn { @apply mb-2; }
 
 /* improve look of links */
-.link { @apply no-underline hover:underline font-medium }
+.link { @apply no-underline hover:underline }

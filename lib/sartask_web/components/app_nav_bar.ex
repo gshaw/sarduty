@@ -33,7 +33,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
           <:menu_label>
             <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
           </:menu_label>
-          <.a kind={:menu_item} navigate="/users/settings">Settings</.a>
+          <.a kind={:menu_item} navigate="/settings">Settings</.a>
           <.navbar_menu_divider />
           <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
         </.navbar_user_menu>
@@ -69,7 +69,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
           <:menu_label>
             <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
           </:menu_label>
-          <.a kind={:menu_item} navigate="/users/settings">Settings</.a>
+          <.a kind={:menu_item} navigate="/settings">Settings</.a>
           <.navbar_menu_divider />
           <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
         </.navbar_user_menu>

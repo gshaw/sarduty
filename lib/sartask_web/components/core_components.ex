@@ -116,7 +116,7 @@ defmodule SartaskWeb.CoreComponents do
       role="alert"
       class={[
         "fixed top-16 right-2 mr-2 w-80 sm:w-96 z-50 rounded py-2 px-4",
-        @kind == :info && "bg-neutral text-neutral-content",
+        @kind == :info && "bg-secondary text-secondary-content",
         @kind == :error && "bg-error text-error-content"
       ]}
       {@rest}

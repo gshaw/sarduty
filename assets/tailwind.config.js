@@ -83,8 +83,8 @@ module.exports = {
           "secondary-content": "#ffffff",
           "accent": "#ea580c", // orange-600
           "accent-content": "#ffffff",
-          "neutral": "#374151", // gray-700
-          "neutral-content": "#ffffff",
+          "neutral": "#ffffff", // gray-700
+          "neutral-content": "#1f2937",
           "base-content": "#1f2937", // gray-800
           "base-100": "#f3f4f6", // gray-100
           "base-200": "#e5e7eb", // gray-200

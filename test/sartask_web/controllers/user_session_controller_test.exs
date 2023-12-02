@@ -22,7 +22,7 @@ defmodule SartaskWeb.UserSessionControllerTest do
       response = html_response(conn, 200)
       # TODO: change to initials when avatar is updated
       assert response =~ Integer.to_string(user.id)
-      assert response =~ ~p"/users/settings"
+      assert response =~ ~p"/settings"
       assert response =~ ~p"/users/log_out"
     end
 
@@ -81,7 +81,7 @@ defmodule SartaskWeb.UserSessionControllerTest do
           }
         })
 
-      assert redirected_to(conn) == ~p"/users/settings"
+      assert redirected_to(conn) == ~p"/settings"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Password updated successfully"
     end
 

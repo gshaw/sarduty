@@ -8,7 +8,7 @@ defmodule Sartask.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"Sartask", "contact@example.com"})
+      |> from({"SAR Duty", "contact@example.com"})
       |> subject(subject)
       |> text_body(body)
 
