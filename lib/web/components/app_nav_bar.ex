@@ -11,9 +11,11 @@ defmodule Web.WebComponents.AppNavBar do
     <.navbar size={:wide} color={:white}>
       <.navbar_mobile_menu>
         <.a kind={:menu_item} navigate="/">Home</.a>
-        <.a kind={:menu_item} navigate="/styles">Style Guide</.a>
-        <.a kind={:menu_item} href="/dev/dashboard" external={true}>Dashboard</.a>
-        <.a kind={:menu_item} href="/dev/mailbox" external={true}>Mailbox</.a>
+        <%= if Application.get_env(:sarduty, :dev_routes) do %>
+          <.a kind={:menu_item} navigate="/styles">Style Guide</.a>
+          <.a kind={:menu_item} href="/dev/dashboard" external={true}>Dashboard</.a>
+          <.a kind={:menu_item} href="/dev/mailbox" external={true}>Mailbox</.a>
+        <% end %>
         <%= if @current_user == nil do %>
           <.navbar_menu_divider />
           <.a kind={:menu_item} navigate="/login">Log in</.a>
@@ -22,7 +24,7 @@ defmodule Web.WebComponents.AppNavBar do
       </.navbar_mobile_menu>
       <.navbar_links>
         <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
-        <.navbar_desktop_links>
+        <.navbar_desktop_links :if={Application.get_env(:sarduty, :dev_routes)}>
           <.a kind={:navbar_item} navigate="/styles">Style Guide</.a>
           <.a kind={:navbar_item} href="/dev/dashboard" external={true}>Dashboard</.a>
           <.a kind={:navbar_item} href="/dev/mailbox" external={true}>Mailbox</.a>
