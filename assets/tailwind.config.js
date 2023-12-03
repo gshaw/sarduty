@@ -79,7 +79,7 @@ module.exports = {
         tailwind: {
           "primary": "#2563eb", // blue-600
           "primary-content": "#ffffff",
-          "secondary": "##4b5563", // gray-600
+          "secondary": "#4b5563", // gray-600
           "secondary-content": "#ffffff",
           "accent": "#ea580c", // orange-600
           "accent-content": "#ffffff",
