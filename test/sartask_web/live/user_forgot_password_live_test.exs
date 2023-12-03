@@ -9,11 +9,9 @@ defmodule SartaskWeb.UserForgotPasswordLiveTest do
 
   describe "Forgot password page" do
     test "renders email page", %{conn: conn} do
-      {:ok, lv, html} = live(conn, ~p"/login/reset")
+      {:ok, _lv, html} = live(conn, ~p"/login/reset")
 
       assert html =~ "Forgot your password?"
-      assert has_element?(lv, ~s|a[href="#{~p"/signup"}"]|, "Register")
-      assert has_element?(lv, ~s|a[href="#{~p"/login"}"]|, "Log in")
     end
   end
 

@@ -1,6 +1,5 @@
 defmodule SartaskWeb.UserForgotPasswordLive do
   use SartaskWeb, :live_view_narrow
-  import SartaskWeb.WebComponents.A
 
   alias Sartask.Accounts
 

@@ -4,11 +4,11 @@ defmodule SartaskWeb.UserRegistrationLiveTest do
   import Phoenix.LiveViewTest
   import Sartask.AccountsFixtures
 
-  describe "Registration page" do
-    test "renders registration page", %{conn: conn} do
+  describe "Sign up page" do
+    test "renders page", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/signup")
 
-      assert html =~ "Register"
+      assert html =~ "Sign up"
       assert html =~ "Log in"
     end
 
@@ -20,13 +20,13 @@ defmodule SartaskWeb.UserRegistrationLiveTest do
         |> element("#registration_form")
         |> render_change(user: %{"email" => "with spaces", "password" => "too short"})
 
-      assert result =~ "Register"
+      assert result =~ "Sign up"
       assert result =~ "must have the @ sign and no spaces"
       assert result =~ "should be at least 12 character"
     end
   end
 
-  describe "register user" do
+  describe "sign up user" do
     test "creates account and logs the user in", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/signup")
 
@@ -68,7 +68,7 @@ defmodule SartaskWeb.UserRegistrationLiveTest do
 
       {:ok, _login_live, login_html} =
         lv
-        |> element(~s|main a:fl-contains("Sign in")|)
+        |> element(~s|main a:fl-contains("Log in")|)
         |> render_click()
         |> follow_redirect(conn, ~p"/login")
 

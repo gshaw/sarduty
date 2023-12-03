@@ -49,7 +49,7 @@ defmodule SartaskWeb.Settings.ChangePasswordLive do
         />
 
         <.form_actions>
-          <.button class="btn-success">Change Password</.button>
+          <.button class="btn-success">Change password</.button>
         </.form_actions>
       </.form>
     </div>

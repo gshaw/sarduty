@@ -48,7 +48,7 @@ defmodule SartaskWeb.UserLoginLiveTest do
   end
 
   describe "login navigation" do
-    test "redirects to registration page when the Register button is clicked", %{conn: conn} do
+    test "redirects to sign up page when the sign up button is clicked", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/login")
 
       {:ok, _login_live, login_html} =
@@ -57,7 +57,7 @@ defmodule SartaskWeb.UserLoginLiveTest do
         |> render_click()
         |> follow_redirect(conn, ~p"/signup")
 
-      assert login_html =~ "Register"
+      assert login_html =~ "Sign up"
     end
 
     test "redirects to forgot password page when the Forgot Password button is clicked", %{

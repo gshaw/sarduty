@@ -20,7 +20,7 @@ defmodule SartaskWeb.Settings.ChangeEmailLive do
           type="password"
           label="Current password"
           value={@email_form_current_password}
-          _required
+          required
         >
           Required to protect your account before sensitive actions.<br />
           <.a navigate={~p"/login/reset?back=change_email"} class="link">
