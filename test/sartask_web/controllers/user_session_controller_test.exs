@@ -1,7 +1,7 @@
-defmodule SartaskWeb.UserSessionControllerTest do
-  use SartaskWeb.ConnCase
+defmodule Web.UserSessionControllerTest do
+  use Web.ConnCase
 
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
   setup do
     %{user: user_fixture()}
@@ -36,7 +36,7 @@ defmodule SartaskWeb.UserSessionControllerTest do
           }
         })
 
-      assert conn.resp_cookies["_sartask_web_user_remember_me"]
+      assert conn.resp_cookies["_sarduty_remember_me"]
       assert redirected_to(conn) == ~p"/"
     end
 

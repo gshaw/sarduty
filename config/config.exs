@@ -7,19 +7,19 @@
 # General application configuration
 import Config
 
-config :sartask,
-  ecto_repos: [Sartask.Repo],
+config :sarduty,
+  ecto_repos: [App.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
-config :sartask, SartaskWeb.Endpoint,
+config :sarduty, Web.Endpoint,
   url: [host: "localhost"],
   adapter: Phoenix.Endpoint.Cowboy2Adapter,
   render_errors: [
-    formats: [html: SartaskWeb.ErrorHTML, json: SartaskWeb.ErrorJSON],
+    formats: [html: Web.ErrorHTML, json: Web.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Sartask.PubSub,
+  pubsub_server: App.PubSub,
   live_view: [signing_salt: "VdFiDhpc"]
 
 # Configures the mailer
@@ -29,7 +29,7 @@ config :sartask, SartaskWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :sartask, Sartask.Mailer, adapter: Swoosh.Adapters.Local
+config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,

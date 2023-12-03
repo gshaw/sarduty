@@ -1,10 +1,10 @@
-defmodule Sartask.AccountsTest do
-  use Sartask.DataCase
+defmodule App.AccountsTest do
+  use App.DataCase
 
-  alias Sartask.Accounts
+  alias App.Accounts
 
-  import Sartask.AccountsFixtures
-  alias Sartask.Accounts.{User, UserToken}
+  import App.AccountsFixtures
+  alias App.Accounts.{User, UserToken}
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do

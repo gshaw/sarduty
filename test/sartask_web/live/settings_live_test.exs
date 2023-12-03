@@ -1,9 +1,9 @@
-defmodule SartaskWeb.SettingsLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.SettingsLiveTest do
+  use Web.ConnCase
 
-  alias Sartask.Accounts
+  alias App.Accounts
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
   describe "Settings page" do
     test "renders settings page", %{conn: conn} do

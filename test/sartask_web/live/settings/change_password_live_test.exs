@@ -1,9 +1,9 @@
-defmodule SartaskWeb.Settings.ChangePasswordLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.Settings.ChangePasswordLiveTest do
+  use Web.ConnCase
 
-  alias Sartask.Accounts
+  alias App.Accounts
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
   describe "Change password page" do
     test "renders page", %{conn: conn} do

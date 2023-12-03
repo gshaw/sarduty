@@ -1,8 +1,8 @@
-defmodule SartaskWeb.UserRegistrationLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.UserRegistrationLiveTest do
+  use Web.ConnCase
 
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
   describe "Sign up page" do
     test "renders page", %{conn: conn} do

@@ -8,8 +8,8 @@ const path = require("path")
 module.exports = {
   content: [
     "./js/**/*.js",
-    "../lib/sartask_web.ex",
-    "../lib/sartask_web/**/*.*ex"
+    "../lib/web.ex",
+    "../lib/web/**/*.*ex"
   ],
   theme: {
     screens: {

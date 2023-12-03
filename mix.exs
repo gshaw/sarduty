@@ -1,9 +1,9 @@
-defmodule Sartask.MixProject do
+defmodule App.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :sartask,
+      app: :sarduty,
       version: "0.1.0",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -18,7 +18,7 @@ defmodule Sartask.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Sartask.Application, []},
+      mod: {App.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end

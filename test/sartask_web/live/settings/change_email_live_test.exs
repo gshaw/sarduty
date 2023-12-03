@@ -1,9 +1,9 @@
-defmodule SartaskWeb.Settings.ChangeEmailLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.Settings.ChangeEmailLiveTest do
+  use Web.ConnCase
 
-  alias Sartask.Accounts
+  alias App.Accounts
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
   describe "Change email page" do
     test "renders page", %{conn: conn} do

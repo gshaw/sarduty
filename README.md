@@ -1,4 +1,4 @@
-# Sartask
+# App
 
 To start your Phoenix server:
 

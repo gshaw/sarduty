@@ -1,11 +1,11 @@
-defmodule SartaskWeb.UserConfirmationInstructionsLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.UserConfirmationInstructionsLiveTest do
+  use Web.ConnCase
 
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
-  alias Sartask.Accounts
-  alias Sartask.Repo
+  alias App.Accounts
+  alias App.Repo
 
   setup do
     %{user: user_fixture()}

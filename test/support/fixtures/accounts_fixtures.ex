@@ -1,7 +1,7 @@
-defmodule Sartask.AccountsFixtures do
+defmodule App.AccountsFixtures do
   @moduledoc """
   This module defines test helpers for creating
-  entities via the `Sartask.Accounts` context.
+  entities via the `App.Accounts` context.
   """
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
@@ -18,7 +18,7 @@ defmodule Sartask.AccountsFixtures do
     {:ok, user} =
       attrs
       |> valid_user_attributes()
-      |> Sartask.Accounts.register_user()
+      |> App.Accounts.register_user()
 
     user
   end

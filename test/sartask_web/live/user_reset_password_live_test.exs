@@ -1,10 +1,10 @@
-defmodule SartaskWeb.UserResetPasswordLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.UserResetPasswordLiveTest do
+  use Web.ConnCase
 
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
-  alias Sartask.Accounts
+  alias App.Accounts
 
   setup do
     user = user_fixture()

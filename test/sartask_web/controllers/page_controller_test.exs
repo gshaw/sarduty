@@ -1,5 +1,5 @@
-defmodule SartaskWeb.PageControllerTest do
-  use SartaskWeb.ConnCase
+defmodule Web.PageControllerTest do
+  use Web.ConnCase
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

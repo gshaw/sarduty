@@ -1,17 +1,17 @@
-defmodule SartaskWeb.UserAuthTest do
-  use SartaskWeb.ConnCase
+defmodule Web.UserAuthTest do
+  use Web.ConnCase
 
   alias Phoenix.LiveView
-  alias Sartask.Accounts
-  alias SartaskWeb.UserAuth
-  import Sartask.AccountsFixtures
+  alias App.Accounts
+  alias Web.UserAuth
+  import App.AccountsFixtures
 
-  @remember_me_cookie "_sartask_web_user_remember_me"
+  @remember_me_cookie "_sarduty_remember_me"
 
   setup %{conn: conn} do
     conn =
       conn
-      |> Map.replace!(:secret_key_base, SartaskWeb.Endpoint.config(:secret_key_base))
+      |> Map.replace!(:secret_key_base, Web.Endpoint.config(:secret_key_base))
       |> init_test_session(%{})
 
     %{user: user_fixture(), conn: conn}
@@ -66,7 +66,7 @@ defmodule SartaskWeb.UserAuthTest do
 
     test "broadcasts to the given live_socket_id", %{conn: conn} do
       live_socket_id = "users_sessions:abcdef-token"
-      SartaskWeb.Endpoint.subscribe(live_socket_id)
+      Web.Endpoint.subscribe(live_socket_id)
 
       conn
       |> put_session(:live_socket_id, live_socket_id)
@@ -164,7 +164,7 @@ defmodule SartaskWeb.UserAuthTest do
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
       socket = %LiveView.Socket{
-        endpoint: SartaskWeb.Endpoint,
+        endpoint: Web.Endpoint,
         assigns: %{__changed__: %{}, flash: %{}}
       }
 
@@ -176,7 +176,7 @@ defmodule SartaskWeb.UserAuthTest do
       session = conn |> get_session()
 
       socket = %LiveView.Socket{
-        endpoint: SartaskWeb.Endpoint,
+        endpoint: Web.Endpoint,
         assigns: %{__changed__: %{}, flash: %{}}
       }
 

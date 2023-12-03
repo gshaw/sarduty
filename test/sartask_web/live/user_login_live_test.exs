@@ -1,8 +1,8 @@
-defmodule SartaskWeb.UserLoginLiveTest do
-  use SartaskWeb.ConnCase
+defmodule Web.UserLoginLiveTest do
+  use Web.ConnCase
 
   import Phoenix.LiveViewTest
-  import Sartask.AccountsFixtures
+  import App.AccountsFixtures
 
   describe "Log in page" do
     test "renders log in page", %{conn: conn} do
