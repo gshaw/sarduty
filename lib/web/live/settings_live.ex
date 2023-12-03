@@ -50,7 +50,7 @@ defmodule Web.SettingsLive do
       kind={:custom}
       class={[
         "flex items-center",
-        "bg-neutral hover:bg-base-200 border hover:border-base-content",
+        "bg-base-0 hover:bg-base-2 border hover:border-base-content",
         "px-3 py-2 rounded-md",
         "focus:outline-none focus:ring-2 focus:ring-base-content"
       ]}
@@ -60,7 +60,7 @@ defmodule Web.SettingsLive do
       </span>
       <div>
         <div><%= @title %></div>
-        <div :if={@subtitle} class="truncate text-sm text-secondary">
+        <div :if={@subtitle} class="truncate text-sm text-secondary-0">
           <%= @subtitle %>
         </div>
       </div>

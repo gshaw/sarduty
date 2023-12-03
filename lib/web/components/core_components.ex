@@ -415,7 +415,7 @@ defmodule Web.CoreComponents do
 
   def hint(assigns) do
     ~H"""
-    <div class="block my-1 font-normal text-sm text-secondary">
+    <div class="block my-1 font-normal text-sm text-secondary-0">
       <%= render_slot(@inner_block) %>
     </div>
     """
