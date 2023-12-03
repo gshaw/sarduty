@@ -16,8 +16,8 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
         <.a kind={:menu_item} href="/dev/mailbox" external={true}>Mailbox</.a>
         <%= if @current_user == nil do %>
           <.navbar_menu_divider />
-          <.a kind={:menu_item} navigate="/users/log_in">Log in</.a>
-          <.a kind={:menu_item} navigate="/users/register">Sign up</.a>
+          <.a kind={:menu_item} navigate="/login">Log in</.a>
+          <.a kind={:menu_item} navigate="/signup">Sign up</.a>
         <% end %>
       </.navbar_mobile_menu>
       <.navbar_links>
@@ -35,18 +35,18 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
           </:menu_label>
           <.a kind={:menu_item} navigate="/settings">Settings</.a>
           <.navbar_menu_divider />
-          <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
+          <.a kind={:menu_item} method="delete" href="/logout">Log out</.a>
         </.navbar_user_menu>
       <% else %>
         <.a
           role="button"
           kind={:custom}
-          navigate="/users/log_in"
+          navigate="/login"
           class="hidden md:flex mr-1 btn btn-sm btn-outline"
         >
           Log in
         </.a>
-        <.a kind={:custom} role="button" navigate="/users/register" class="btn btn-sm btn-primary">
+        <.a kind={:custom} role="button" navigate="/signup" class="btn btn-sm btn-primary">
           <span class="whitespace-nowrap">
             Sign up
           </span>
@@ -71,7 +71,7 @@ defmodule SartaskWeb.WebComponents.AppNavBar do
           </:menu_label>
           <.a kind={:menu_item} navigate="/settings">Settings</.a>
           <.navbar_menu_divider />
-          <.a kind={:menu_item} method="delete" href="/users/log_out">Log out</.a>
+          <.a kind={:menu_item} method="delete" href="/logout">Log out</.a>
         </.navbar_user_menu>
       <% end %>
     </.navbar>

@@ -23,7 +23,7 @@ defmodule SartaskWeb.Settings.ChangeEmailLive do
           _required
         >
           Required to protect your account before sensitive actions.<br />
-          <.a navigate={~p"/users/reset_password?back=change_email"} class="link">
+          <.a navigate={~p"/login/reset?back=change_email"} class="link">
             Forgot your password?
           </.a>
         </.input>

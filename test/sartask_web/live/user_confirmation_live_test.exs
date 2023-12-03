@@ -13,7 +13,7 @@ defmodule SartaskWeb.UserConfirmationLiveTest do
 
   describe "Confirm user" do
     test "renders confirmation page", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/users/confirm/some-token")
+      {:ok, _lv, html} = live(conn, ~p"/signup/confirm/some-token")
       assert html =~ "Confirm Account"
     end
 
@@ -23,7 +23,7 @@ defmodule SartaskWeb.UserConfirmationLiveTest do
           Accounts.deliver_user_confirmation_instructions(user, url)
         end)
 
-      {:ok, lv, _html} = live(conn, ~p"/users/confirm/#{token}")
+      {:ok, lv, _html} = live(conn, ~p"/signup/confirm/#{token}")
 
       result =
         lv
@@ -41,7 +41,7 @@ defmodule SartaskWeb.UserConfirmationLiveTest do
       assert Repo.all(Accounts.UserToken) == []
 
       # when not logged in
-      {:ok, lv, _html} = live(conn, ~p"/users/confirm/#{token}")
+      {:ok, lv, _html} = live(conn, ~p"/signup/confirm/#{token}")
 
       result =
         lv
@@ -59,7 +59,7 @@ defmodule SartaskWeb.UserConfirmationLiveTest do
         build_conn()
         |> log_in_user(user)
 
-      {:ok, lv, _html} = live(conn, ~p"/users/confirm/#{token}")
+      {:ok, lv, _html} = live(conn, ~p"/signup/confirm/#{token}")
 
       result =
         lv
@@ -72,7 +72,7 @@ defmodule SartaskWeb.UserConfirmationLiveTest do
     end
 
     test "does not confirm email with invalid token", %{conn: conn, user: user} do
-      {:ok, lv, _html} = live(conn, ~p"/users/confirm/invalid-token")
+      {:ok, lv, _html} = live(conn, ~p"/signup/confirm/invalid-token")
 
       {:ok, conn} =
         lv

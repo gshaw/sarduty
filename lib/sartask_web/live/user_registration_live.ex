@@ -11,7 +11,7 @@ defmodule SartaskWeb.UserRegistrationLive do
       <h1 class="heading">Sign up</h1>
       <p>
         Have an account?
-        <.a navigate="/users/log_in">Log in</.a>
+        <.a navigate="/login">Log in</.a>
       </p>
 
       <.form
@@ -20,7 +20,7 @@ defmodule SartaskWeb.UserRegistrationLive do
         phx-submit="save"
         phx-change="validate"
         phx-trigger-action={@trigger_submit}
-        action={~p"/users/log_in?_action=registered"}
+        action={~p"/login?_action=registered"}
         method="post"
       >
         <.input field={@form[:email]} type="email" label="Email" phx-debounce />
@@ -50,7 +50,7 @@ defmodule SartaskWeb.UserRegistrationLive do
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(
             user,
-            &url(~p"/users/confirm/#{&1}")
+            &url(~p"/signup/confirm/#{&1}")
           )
 
         changeset = Accounts.change_user_registration(user)

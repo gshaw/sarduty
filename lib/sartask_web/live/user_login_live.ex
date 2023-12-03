@@ -9,13 +9,13 @@ defmodule SartaskWeb.UserLoginLive do
       <h1 class="heading">Log in</h1>
       <p>
         Don't have an account?
-        <.a navigate="/users/register">Sign up</.a>
+        <.a navigate="/signup">Sign up</.a>
       </p>
 
-      <.form for={@form} id="login_form" action={~p"/users/log_in"} phx-update="ignore">
+      <.form for={@form} id="login_form" action={~p"/login"} phx-update="ignore">
         <.input field={@form[:email]} type="email" label="Email" required phx-debounce />
         <.input field={@form[:password]} type="password" label="Password" required phx-debounce>
-          <.a navigate={~p"/users/reset_password"} class="link">Forgot your password?</.a>
+          <.a navigate={~p"/login/reset"} class="link">Forgot your password?</.a>
         </.input>
 
         <.input type="checkbox" field={@form[:remember_me]} label="Remember Me">

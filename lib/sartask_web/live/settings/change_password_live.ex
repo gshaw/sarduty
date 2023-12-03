@@ -15,7 +15,7 @@ defmodule SartaskWeb.Settings.ChangePasswordLive do
       <.form
         for={@password_form}
         id="password_form"
-        action={~p"/users/log_in?_action=password_updated"}
+        action={~p"/login?_action=password_updated"}
         method="post"
         phx-change="validate_password"
         phx-submit="update_password"
@@ -31,7 +31,7 @@ defmodule SartaskWeb.Settings.ChangePasswordLive do
           required
         >
           Required to protect your account before sensitive actions.<br />
-          <.a navigate={~p"/users/reset_password?back=change_password"} class="link">
+          <.a navigate={~p"/login/reset?back=change_password"} class="link">
             Forgot your password?
           </.a>
         </.input>

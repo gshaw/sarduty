@@ -20,16 +20,16 @@ defmodule SartaskWeb.Router do
       on_mount: [{SartaskWeb.UserAuth, :mount_current_user}] do
       live "/", HomePageLive, :show
       live "/styles", StyleGuideLive, :show
-      live "/users/confirm/:token", UserConfirmationLive, :edit
-      live "/users/confirm", UserConfirmationInstructionsLive, :new
-      live "/users/register", UserRegistrationLive, :new
-      live "/users/log_in", UserLoginLive, :new
-      live "/users/reset_password", UserForgotPasswordLive, :new
-      live "/users/reset_password/:token", UserResetPasswordLive, :edit
+      live "/signup", UserRegistrationLive, :new
+      live "/signup/confirm/:token", UserConfirmationLive, :edit
+      live "/signup/confirm", UserConfirmationInstructionsLive, :new
+      live "/login", UserLoginLive, :new
+      live "/login/reset", UserForgotPasswordLive, :new
+      live "/login/reset/:token", UserResetPasswordLive, :edit
     end
 
-    post "/users/log_in", UserSessionController, :create
-    delete "/users/log_out", UserSessionController, :delete
+    post "/login", UserSessionController, :create
+    delete "/logout", UserSessionController, :delete
   end
 
   scope "/", SartaskWeb do
