@@ -4,19 +4,5 @@
 @import "base/all";
 @import "components/all";
 
-/* improve look of default btn */
-.btn {
-  @apply font-medium; /* reduce from daisyui's bold */
-  @apply animate-none; /* prevent buttons from poping on on page load */
-}
-
-/* override default btn size to be h-10 (vs h-12) */
-.btn { @apply h-10 min-h-[2.5em]; }
-.btn-sm { @apply h-8 min-h-[2em]; }
-.btn-xs { @apply h-6 min-h-[1.5em]; }
-
 /* required to gives some space if buttons wrap on narrow screen */
 .form-actions .btn { @apply mb-2; }
-
-/* improve look of links */
-.link { @apply no-underline hover:underline }

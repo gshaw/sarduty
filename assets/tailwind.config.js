@@ -12,6 +12,42 @@ module.exports = {
     "../lib/web/**/*.*ex"
   ],
   theme: {
+    extend: {
+      colors: {
+        "base": {
+          0: "#ffffff", // white
+          1: "#f4f4f5", // zinc-100
+          2: "#e4e4e7", // zinc-200
+          3: "#d4d4d8", // zinc-300
+          "content": "#27272a" // zinc-800
+        },
+        "primary": {
+          0: "#2563eb", // blue-600
+          1: "#1d4ed8", // blue-700
+          "content": "#fff"
+        },
+        "secondary": {
+          0: "#52525b", // zinc-600
+          1: "#3f3f46", // zinc-700
+          "content": "#fff"
+        },
+        "success": {
+          0: "#059669", // green-600
+          1: "#15803d", // green-700
+          "content": "#fff"
+        },
+        "warning": {
+          0: "#fde047", // yellow-300
+          1: "#facc15", // yellow-400
+          "content": "#27272a" // zinc-800
+        },
+        "danger": {
+          0: "#dc2626", // red-600
+          1: "#b91c1c", // red-700
+          "content": "#fff"
+        },
+      }
+    },
     screens: {
       md: "640px",
       lg: "960px",
@@ -24,94 +60,8 @@ module.exports = {
       lg: "1200px"
     },
   },
-  daisyui: {
-    logs: false,
-    themes: [
-      {
-        nhsuk: {
-          // nhsuk-text-color #212b32 (black)
-          // nhsuk-secondary-text-color #4c6272 (dark gray nhsuk-grey-1)
-          // nhsuk-link-color #005eb8 (blue)
-          // nhsuk-link-hover-color #7C2855 (dark-pink)
-          // nhsuk-link-visited-color #330072 (purple)
-          // nhsuk-link-active-color #002f5c (active link)
-          // nhsuk-focus-color #ffeb3b (yellow)
-          // nhsuk-focus-text-color #212b32 (text-color)
-          // nhsuk-border-color #d8dde0 (gray-4)
-          // nhsuk-form-border-color #4c6272 (secondary-text-color)
-          // nhsuk-error-color #d5281b (red)
-          // nhsuk-button-color #007f3b (green)
-          // nhsuk-secondary-button-color #4c6272 (gray-1)
-          "primary": "#005eb8", // blue-600
-          "primary-content": "#ffffff",
-          "secondary": "#4c6272", // gray-1
-          "secondary-content": "#ffffff",
-          "accent": "#ffb81C", // warm-yellow (brand)
-          "accent-content": "#212b32",
-          // "accent": "#FD4F00", // phoenix orange (brand)
-          // "accent": "#005eb8", // nhsuk-blue (brand)
-          // "accent-content": "#fff",
-          "neutral": "#374151", // gray-700
-          "neutral-content": "#ffffff",
-          "base-content": "#212b32",
-          "base-100": "#f0f4f5", // nhsuk-grey-5
-          "base-200": "#d8dde0", // nhsuk-grey-4
-          "base-300": "#aeb7bd", // nhsuk-grey-3
-          "info": "#d8dde0", // gray-200
-          "info-content": "#212b32",
-          "success": "#007f3b", // green
-          "success-content": "#ffffff",
-          "warning": "#ffeb3b", // yellow
-          "warning-content": "#212b32",
-          "error": "#d5281b", // red
-          "error-content": "#ffffff",
 
-          "--rounded-box": "1rem", // border radius rounded-box utility class, used in card and other large boxes
-          "--rounded-btn": "0.25rem", // border radius rounded-btn utility class, used in buttons and similar element
-          "--rounded-badge": "1rem", // border radius rounded-badge utility class, used in badges and similar
-          "--animation-btn": "0.2s", // duration of animation when you click on button
-          "--animation-input": "0.2s", // duration of animation for inputs like checkbox, toggle, radio, etc
-          // "--btn-focus-scale": "0.95", // scale transform of button when you focus on it
-          // "--border-btn": "1px", // border width of buttons
-          // "--tab-border": "1px", // border width of tabs
-          // "--tab-radius": "0.5rem", // border radius of tabs
-        },
-        tailwind: {
-          "primary": "#2563eb", // blue-600
-          "primary-content": "#ffffff",
-          "secondary": "#4b5563", // gray-600
-          "secondary-content": "#ffffff",
-          "accent": "#ea580c", // orange-600
-          "accent-content": "#ffffff",
-          "neutral": "#ffffff", // gray-700
-          "neutral-content": "#1f2937",
-          "base-content": "#1f2937", // gray-800
-          "base-100": "#f3f4f6", // gray-100
-          "base-200": "#e5e7eb", // gray-200
-          "base-300": "#d1d5db", // gray-300
-          "info": "#e5e7eb", // gray-200
-          "info-content": "#1f2937", // gray-800
-          "success": "#16a34a", // green-600
-          "success-content": "#ffffff",
-          "warning": "#facc15", // yellow-400
-          "warning-content": "#1f2937", // gray-800
-          "error": "#dc2626", // red-600
-          "error-content": "#ffffff",
-          "--rounded-box": "1rem", // border radius rounded-box utility class, used in card and other large boxes
-          "--rounded-btn": "0.25rem", // border radius rounded-btn utility class, used in buttons and similar element
-          "--rounded-badge": "1rem", // border radius rounded-badge utility class, used in badges and similar
-          "--animation-btn": "0.2s", // duration of animation when you click on button
-          "--animation-input": "0.2s", // duration of animation for inputs like checkbox, toggle, radio, etc
-          // "--btn-focus-scale": "0.95", // scale transform of button when you focus on it
-          // "--border-btn": "1px", // border width of buttons
-          // "--tab-border": "1px", // border width of tabs
-          // "--tab-radius": "0.5rem", // border radius of tabs
-        }
-      }
-    ],
-  },
   plugins: [
-    require("daisyui"),
     require("@tailwindcss/forms"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:

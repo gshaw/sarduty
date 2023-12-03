@@ -18,22 +18,8 @@ defmodule Web.StyleGuideLive do
     <.style_group title=".a">
       <div class="flex space-x-4">
         <.a navigate="/styles">Default Link</.a>
-        <.a navigate="/styles" kind={:monochrome}>Monochrome</.a>
-        <.a kind={:custom} navigate="/styles" class="underline hover:no-underline">
-          Custom
-        </.a>
+        <.a kind={:custom} navigate="/styles">Unstyled</.a>
       </div>
-    </.style_group>
-
-    <.style_group title=".badge">
-      <div class="badge">default</div>
-      <div class="badge badge-primary">primary</div>
-      <div class="badge badge-secondary">secondary</div>
-      <div class="badge badge-neutral">neutral</div>
-      <div class="badge badge-success">success</div>
-      <div class="badge badge-warning">warning</div>
-      <div class="badge badge-error">error</div>
-      <div class="badge badge-info">info</div>
     </.style_group>
 
     <.style_group title=".btn and .form_actions">
@@ -43,33 +29,27 @@ defmodule Web.StyleGuideLive do
         <button class="btn">Cancel</button>
         <button class="btn btn-link">More Information</button>
         <:trailing>
-          <button class="btn btn-error">Delete</button>
+          <button class="btn btn-danger">Delete</button>
         </:trailing>
       </.form_actions>
       <p class="pt-8">
-        Examples of all button styles but the app mainly uses the default, success, link, and error.
+        Examples of all button styles but the app mainly uses the default, success, link, and danger.
       </p>
       <.form_actions>
         <button class="btn btn-primary">Primary</button>
         <button class="btn btn-secondary">Secondary</button>
         <button class="btn">Default</button>
-        <button class="btn btn-ghost">Ghost</button>
         <button class="btn btn-link">Link</button>
-        <:trailing>
-          <button class="btn btn-neutral">Neutral</button>
-        </:trailing>
       </.form_actions>
       <.form_actions>
         <button class="btn btn-success">Success</button>
         <button class="btn btn-warning">Warning</button>
-        <button class="btn btn-error">Error</button>
-        <button class="btn btn-info">Info</button>
+        <button class="btn btn-danger">Danger</button>
       </.form_actions>
       <.form_actions>
         <button class="btn btn-lg">Large</button>
         <button class="btn">Normal</button>
         <button class="btn btn-sm">Small</button>
-        <button class="btn btn-xs">Tiny</button>
       </.form_actions>
       <div>
         <a class="btn btn-sm btn-outline">Log in</a>

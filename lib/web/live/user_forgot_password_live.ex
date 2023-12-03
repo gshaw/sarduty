@@ -1,11 +1,15 @@
 defmodule Web.UserForgotPasswordLive do
   use Web, :live_view_narrow
+  import Web.WebComponents.A
 
   alias App.Accounts
 
   def render(assigns) do
     ~H"""
     <div>
+      <p :if={@current_user == nil}>
+        <.a navigate={~p"/login"} class="link">← Log in</.a>
+      </p>
       <h1 class="heading">Forgot your password?</h1>
       <p>
         Hey, it happens to everyone. Enter the email address you use to log in with and we'll send a link with instructions.

@@ -116,8 +116,8 @@ defmodule Web.CoreComponents do
       role="alert"
       class={[
         "fixed top-16 right-2 mr-2 w-80 sm:w-96 z-50 rounded py-2 px-4",
-        @kind == :info && "bg-secondary text-secondary-content",
-        @kind == :error && "bg-error text-error-content"
+        @kind == :info && "bg-success-0 text-success-content",
+        @kind == :error && "bg-danger-0 text-danger-content"
       ]}
       {@rest}
     >
@@ -336,7 +336,7 @@ defmodule Web.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="cursor-pointer h-5 w-5 text-primary border border-base-300 shadow-sm rounded"
+          class="cursor-pointer h-5 w-5 text-primary border border-base-3 shadow-sm rounded"
           {@rest}
         />
         <div class="ml-2 leading-4">
@@ -400,8 +400,8 @@ defmodule Web.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           "block w-full rounded border text-base-content shadow-sm",
-          "phx-no-feedback:text-base-content phx-no-feedback:border-base-300 phx-no-feedback:focus:ring-primary phx-no-feedback:focus:border-primary",
-          @errors != [] && "border-error focus:ring-error focus:border-error text-error"
+          "phx-no-feedback:text-base-content phx-no-feedback:border-base-3 phx-no-feedback:focus:ring-primary phx-no-feedback:focus:border-primary",
+          @errors != [] && "border-danger-0 focus:ring-danger-0 focus:border-danger-0 text-danger-0"
         ]}
         {@rest}
       />
@@ -442,7 +442,7 @@ defmodule Web.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <div class="my-1 font-normal text-sm text-error phx-no-feedback:hidden">
+    <div class="my-1 font-normal text-sm text-danger-0 phx-no-feedback:hidden">
       <%= render_slot(@inner_block) %>
     </div>
     """

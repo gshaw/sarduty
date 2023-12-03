@@ -1,0 +1,37 @@
+.btn { @apply
+  inline-flex items-center
+  text-sm font-medium
+  focus:outline-none focus:ring-2 focus:ring-offset-2
+}
+
+/* colors */
+.btn { @apply bg-base-2 text-base-content hover:bg-base-3 focus:bg-base-3 focus:ring-base-3 }
+.btn-primary { @apply bg-primary-0 text-primary-content hover:bg-primary-1 focus:bg-primary-1 focus:ring-primary-1 }
+.btn-secondary { @apply bg-secondary-0 text-secondary-content hover:bg-secondary-1 focus:bg-secondary-1 focus:ring-secondary-1 }
+.btn-success { @apply bg-success-0 text-success-content hover:bg-success-1 focus:bg-success-1 focus:ring-success-1 }
+.btn-warning { @apply bg-warning-0 text-warning-content hover:bg-warning-1 focus:bg-warning-1 focus:ring-warning-1 }
+.btn-danger { @apply bg-danger-0 text-danger-content hover:bg-danger-1 focus:bg-danger-1 focus:ring-danger-1 }
+
+
+/* size */
+.btn { @apply px-4 py-2 rounded-md }
+.btn-sm { @apply px-2.5 py-1.5 text-xs rounded }
+.btn-lg { @apply px-6 py-3 text-base rounded-md}
+
+/* push button animation and shadow */
+.btn { @apply border-solid border-b-2 border-base-content border-opacity-50 }
+.btn {
+  &:active:hover,
+  &:active:focus {
+    transform: translateY(2px);
+    @apply border-b-0;
+  }
+}
+
+/* special case link button */
+.btn-link {
+  @apply bg-transparent text-primary-0 border-0 hover:underline hover:bg-transparent focus:bg-transparent focus:ring-primary-1;
+  &:active:hover,&:active:focus {
+    transform: none;
+  }
+}

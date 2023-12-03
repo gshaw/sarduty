@@ -89,8 +89,8 @@ defmodule Web.WebComponents.AppNavBar do
         class="
           -ml-2 mr-2 border-r
           focus:outline-none focus:ring-inset focus:ring-2 focus:ring-offset-4
-          bg-white text-gray-800 border-gray-200
-          focus:ring-gray-800 focus:ring-offset-white
+          bg-base-0 text-base-content border-base-2
+          focus:ring-base-content focus:ring-offset-base-0
         "
       >
         <div
@@ -112,7 +112,7 @@ defmodule Web.WebComponents.AppNavBar do
         class="
           absolute -left-2 top-12 w-48 h-screen z-20 py-2
           border-t border-r
-          bg-white text-gray-800 border-gray-200
+          bg-base-0 text-base-content border-base-2
         "
       >
         <%= render_slot(@inner_block) %>
@@ -147,10 +147,10 @@ defmodule Web.WebComponents.AppNavBar do
   defp determine_color_classes(color) do
     case color do
       :white ->
-        "bg-white text-base-content border-base-200 focus:ring-secondary focus:ring-offset-white"
+        "bg-base-0 text-base-content border-base-2"
 
       :gray ->
-        "bg-gray-200 text-base-content border-base-300 focus:ring-gray-800 focus:ring-offset-gray-100"
+        "bg-base-2 text-base-content border-base-3"
     end
   end
 
@@ -175,7 +175,7 @@ defmodule Web.WebComponents.AppNavBar do
 
   def navbar_desktop_links(assigns) do
     ~H"""
-    <span class="ml-4 border-l border-gray-200 hidden md:inline-block">
+    <span class="ml-4 border-l border-base-200 hidden md:inline-block">
       <%= render_slot(@inner_block) %>
     </span>
     """
@@ -209,7 +209,7 @@ defmodule Web.WebComponents.AppNavBar do
 
   def navbar_menu_divider(assigns) do
     ~H"""
-    <hr class="my-2 mx-4 bg-white text-gray-800 border-gray-200" />
+    <hr class="my-2 mx-4 bg-base-0 text-base-content border-base-2" />
     """
   end
 end
