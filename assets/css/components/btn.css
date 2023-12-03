@@ -6,11 +6,11 @@
 
 /* colors */
 .btn { @apply bg-base-2 text-base-content hover:bg-base-3 focus:bg-base-3 focus:ring-base-3 }
-.btn-primary { @apply bg-primary-0 text-primary-content hover:bg-primary-1 focus:bg-primary-1 focus:ring-primary-1 }
-.btn-secondary { @apply bg-secondary-0 text-secondary-content hover:bg-secondary-1 focus:bg-secondary-1 focus:ring-secondary-1 }
-.btn-success { @apply bg-success-0 text-success-content hover:bg-success-1 focus:bg-success-1 focus:ring-success-1 }
-.btn-warning { @apply bg-warning-0 text-warning-content hover:bg-warning-1 focus:bg-warning-1 focus:ring-warning-1 }
-.btn-danger { @apply bg-danger-0 text-danger-content hover:bg-danger-1 focus:bg-danger-1 focus:ring-danger-1 }
+.btn-primary { @apply text-primary-content bg-primary-1 hover:bg-primary-2 focus:bg-primary-2 focus:ring-primary-2 }
+.btn-secondary { @apply text-secondary-content bg-secondary-1 hover:bg-secondary-2 focus:bg-secondary-2 focus:ring-secondary-2 }
+.btn-success { @apply text-success-content bg-success-1 hover:bg-success-2 focus:bg-success-2 focus:ring-success-2 }
+.btn-warning { @apply text-warning-content bg-warning-1 hover:bg-warning-2 focus:bg-warning-2 focus:ring-warning-2 }
+.btn-danger { @apply text-danger-content bg-danger-1 hover:bg-danger-2 focus:bg-danger-2 focus:ring-danger-2 }
 
 
 /* size */
@@ -30,7 +30,7 @@
 
 /* special case link button */
 .btn-link {
-  @apply bg-transparent text-primary-0 border-0 hover:underline hover:bg-transparent focus:bg-transparent focus:ring-primary-1;
+  @apply bg-transparent text-primary-1 border-0 hover:underline hover:bg-transparent focus:bg-transparent focus:ring-primary-2;
   &:active:hover,&:active:focus {
     transform: none;
   }

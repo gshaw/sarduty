@@ -14,37 +14,37 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "base": {
+        base: {
           0: "#ffffff", // white
           1: "#f4f4f5", // zinc-100
           2: "#e4e4e7", // zinc-200
           3: "#d4d4d8", // zinc-300
-          "content": "#27272a" // zinc-800
+          content: "#27272a" // zinc-800
         },
-        "primary": {
-          0: "#2563eb", // blue-600
-          1: "#1d4ed8", // blue-700
-          "content": "#fff"
+        primary: {
+          1: "#2563eb", // blue-600
+          2: "#1d4ed8", // blue-700
+          content: "#fff"
         },
-        "secondary": {
-          0: "#52525b", // zinc-600
-          1: "#3f3f46", // zinc-700
-          "content": "#fff"
+        secondary: {
+          1: "#52525b", // zinc-600
+          2: "#3f3f46", // zinc-700
+          content: "#fff"
         },
-        "success": {
-          0: "#059669", // green-600
-          1: "#15803d", // green-700
-          "content": "#fff"
+        success: {
+          1: "#059669", // green-600
+          2: "#15803d", // green-700
+          content: "#fff"
         },
-        "warning": {
-          0: "#fde047", // yellow-300
-          1: "#facc15", // yellow-400
-          "content": "#27272a" // zinc-800
+        warning: {
+          1: "#fde047", // yellow-300
+          2: "#facc15", // yellow-400
+          content: "#27272a" // zinc-800
         },
-        "danger": {
-          0: "#dc2626", // red-600
-          1: "#b91c1c", // red-700
-          "content": "#fff"
+        danger: {
+          1: "#dc2626", // red-600
+          2: "#b91c1c", // red-700
+          content: "#fff"
         },
       }
     },

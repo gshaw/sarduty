@@ -7,7 +7,7 @@ defmodule Web.WebComponents.Avatar do
 
   def avatar(assigns) do
     ~H"""
-    <span class="inline-flex items-center justify-center rounded-full bg-primary-0 h-8 w-8">
+    <span class="inline-flex items-center justify-center rounded-full bg-primary-1 h-8 w-8">
       <span class="leading-none font-medium text-primary-content text-sm">
         <.icon name="hero-user" class="h-5 w-5" />
         <%!-- <%= @initials %> --%>

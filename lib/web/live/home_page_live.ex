@@ -7,14 +7,14 @@ defmodule Web.HomePageLive do
 
   def render(assigns) do
     ~H"""
-    <section>
+    <hgroup>
       <h1 class="title">
-        Welcome to <span class="text-primary">SAR Duty</span>
+        Welcome to <span class="text-primary-1">SAR Duty</span>
       </h1>
-      <div class="lead">
+      <p class="lead">
         Helpful tools for search and rescue managers.
-      </div>
-    </section>
+      </p>
+    </hgroup>
     """
   end
 end

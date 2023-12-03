@@ -1,8 +1,8 @@
 @layer components {
   .title { @apply text-5xl md:text-7xl font-bold mb-2; }
-  .lead { @apply text-xl md:text-2xl font-light mb-2 text-secondary-0; }
+  .lead { @apply text-xl md:text-2xl font-light mb-2 text-secondary-1; }
   .heading { @apply text-3xl mb-2; }
   .subheading { @apply text-xl mb-2; }
   .paragraph, p { @apply mb-4; }
-  .link { @apply text-primary-0 no-underline hover:underline }
+  .link { @apply text-primary-1 no-underline hover:underline }
 }

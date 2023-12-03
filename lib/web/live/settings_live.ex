@@ -60,7 +60,7 @@ defmodule Web.SettingsLive do
       </span>
       <div>
         <div><%= @title %></div>
-        <div :if={@subtitle} class="truncate text-sm text-secondary-0">
+        <div :if={@subtitle} class="truncate text-sm text-secondary-1">
           <%= @subtitle %>
         </div>
       </div>

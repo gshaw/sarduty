@@ -116,8 +116,8 @@ defmodule Web.CoreComponents do
       role="alert"
       class={[
         "fixed top-16 right-2 mr-2 w-80 sm:w-96 z-50 rounded py-2 px-4",
-        @kind == :info && "bg-success-0 text-success-content",
-        @kind == :error && "bg-danger-0 text-danger-content"
+        @kind == :info && "bg-success-1 text-success-content",
+        @kind == :error && "bg-danger-1 text-danger-content"
       ]}
       {@rest}
     >
@@ -400,8 +400,8 @@ defmodule Web.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           "block w-full rounded border text-base-content shadow-sm",
-          "phx-no-feedback:text-base-content phx-no-feedback:border-base-3 phx-no-feedback:focus:ring-primary phx-no-feedback:focus:border-primary",
-          @errors != [] && "border-danger-0 focus:ring-danger-0 focus:border-danger-0 text-danger-0"
+          "phx-no-feedback:text-base-content phx-no-feedback:border-base-3 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1"
         ]}
         {@rest}
       />
@@ -415,7 +415,7 @@ defmodule Web.CoreComponents do
 
   def hint(assigns) do
     ~H"""
-    <div class="block my-1 font-normal text-sm text-secondary-0">
+    <div class="block my-1 font-normal text-sm text-secondary-1">
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -442,7 +442,7 @@ defmodule Web.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <div class="my-1 font-normal text-sm text-danger-0 phx-no-feedback:hidden">
+    <div class="my-1 font-normal text-sm text-danger-1 phx-no-feedback:hidden">
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -461,10 +461,10 @@ defmodule Web.CoreComponents do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8 text-zinc-800">
+        <h1 class="text-lg font-semibold leading-8 text-base-content">
           <%= render_slot(@inner_block) %>
         </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-zinc-600">
+        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-secondary-1">
           <%= render_slot(@subtitle) %>
         </p>
       </div>
