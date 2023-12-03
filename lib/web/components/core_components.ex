@@ -336,7 +336,7 @@ defmodule Web.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="cursor-pointer h-5 w-5 text-primary border border-base-3 shadow-sm rounded"
+          class="cursor-pointer h-5 w-5 text-primary border border-secondary-0 shadow-sm rounded"
           {@rest}
         />
         <div class="ml-2 leading-4">
@@ -399,8 +399,8 @@ defmodule Web.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "block w-full rounded border text-base-content shadow-sm",
-          "phx-no-feedback:text-base-content phx-no-feedback:border-base-3 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          "block w-full rounded border shadow-sm",
+          "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
           @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1"
         ]}
         {@rest}

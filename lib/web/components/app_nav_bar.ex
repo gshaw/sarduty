@@ -8,8 +8,8 @@ defmodule Web.WebComponents.AppNavBar do
 
   def app_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:wide} color={:white}>
-      <.navbar_mobile_menu>
+    <.navbar size={:wide} color={:base_1}>
+      <.navbar_mobile_menu color={:base_1}>
         <.a kind={:menu_item} navigate="/">Home</.a>
         <%= if Application.get_env(:sarduty, :dev_routes) do %>
           <.a kind={:menu_item} navigate="/styles">Style Guide</.a>
@@ -31,7 +31,7 @@ defmodule Web.WebComponents.AppNavBar do
         </.navbar_desktop_links>
       </.navbar_links>
       <%= if @current_user do %>
-        <.navbar_user_menu current_user={@current_user} color={:white}>
+        <.navbar_user_menu color={:base_2}>
           <:menu_label>
             <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
           </:menu_label>
@@ -62,12 +62,12 @@ defmodule Web.WebComponents.AppNavBar do
 
   def narrow_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:narrow} color={:gray}>
+    <.navbar size={:narrow} color={:base_2}>
       <.navbar_links>
         <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
       </.navbar_links>
       <%= if @current_user do %>
-        <.navbar_user_menu current_user={@current_user} color={:white}>
+        <.navbar_user_menu color={:base_2}>
           <:menu_label>
             <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
           </:menu_label>
@@ -80,6 +80,7 @@ defmodule Web.WebComponents.AppNavBar do
     """
   end
 
+  attr :color, :atom, required: true
   slot :inner_block, required: true
 
   def navbar_mobile_menu(assigns) do
@@ -88,12 +89,11 @@ defmodule Web.WebComponents.AppNavBar do
       <summary
         role="button"
         aria-label="Open main menu"
-        class="
-          -ml-2 mr-2 border-r
-          focus:outline-none focus:ring-inset focus:ring-2 focus:ring-offset-4
-          bg-base-0 text-base-content border-base-2
-          focus:ring-base-content focus:ring-offset-base-0
-        "
+        class={[
+          "-ml-2 mr-2 border-r",
+          "focus:outline-none focus:ring-inset focus:ring-2 focus:ring-offset-4",
+          determine_color_classes(@color)
+        ]}
       >
         <div
           x-description="Mobile menu opened and closed icons"
@@ -111,11 +111,11 @@ defmodule Web.WebComponents.AppNavBar do
       <div
         x-description="Mobile menu"
         role="menu"
-        class="
-          absolute -left-2 top-12 w-48 h-screen z-20 py-2
-          border-t border-r
-          bg-base-0 text-base-content border-base-2
-        "
+        class={[
+          "absolute -left-2 top-12 w-48 h-screen z-20 py-2",
+          "border-t border-r",
+          determine_color_classes(:base_2)
+        ]}
       >
         <%= render_slot(@inner_block) %>
       </div>
@@ -123,8 +123,8 @@ defmodule Web.WebComponents.AppNavBar do
     """
   end
 
-  attr :color, :atom, values: [:white, :gray]
-  attr :size, :atom, values: [:wide, :narrow]
+  attr :color, :atom, values: ~w(base_1 base_2)a
+  attr :size, :atom, values: ~w(wide narrow)a
   slot :inner_block, required: true
 
   def navbar(assigns) do
@@ -148,11 +148,11 @@ defmodule Web.WebComponents.AppNavBar do
 
   defp determine_color_classes(color) do
     case color do
-      :white ->
-        "bg-base-0 text-base-content border-base-2"
+      :base_1 ->
+        "bg-base-1 text-base-content border-base-2 focus:ring-base-content focus:ring-offset-base-1"
 
-      :gray ->
-        "bg-base-2 text-base-content border-base-3"
+      :base_2 ->
+        "bg-base-2 text-base-content border-base-3 focus:ring-base-content focus:ring-offset-base-2"
     end
   end
 
@@ -183,6 +183,10 @@ defmodule Web.WebComponents.AppNavBar do
     """
   end
 
+  attr :color, :atom, required: true
+  slot :menu_label, required: true
+  slot :inner_block, required: true
+
   def navbar_user_menu(assigns) do
     ~H"""
     <details class="relative">
@@ -211,7 +215,7 @@ defmodule Web.WebComponents.AppNavBar do
 
   def navbar_menu_divider(assigns) do
     ~H"""
-    <hr class="my-2 mx-4 bg-base-0 text-base-content border-base-2" />
+    <hr class="my-2 mx-4 text-base-content border-base-3" />
     """
   end
 end

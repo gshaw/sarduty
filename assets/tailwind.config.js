@@ -16,9 +16,9 @@ module.exports = {
       colors: {
         base: {
           0: "#ffffff", // white
-          1: "#f4f4f5", // zinc-100
-          2: "#e4e4e7", // zinc-200
-          3: "#d4d4d8", // zinc-300
+          1: "#fafafa", // zinc-50
+          2: "#f4f4f5", // zinc-100
+          3: "#e4e4e7", // zinc-200
           content: "#27272a" // zinc-800
         },
         primary: {
