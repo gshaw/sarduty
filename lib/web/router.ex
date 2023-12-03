@@ -37,6 +37,8 @@ defmodule Web.Router do
 
     live_session :require_authenticated_user,
       on_mount: [{Web.UserAuth, :ensure_authenticated}] do
+      live "/attendance", AttendanceLive, :show
+
       live "/settings", SettingsLive, :show
       live "/settings/email", Settings.ChangeEmailLive, :edit
       live "/settings/password", Settings.ChangePasswordLive, :edit
