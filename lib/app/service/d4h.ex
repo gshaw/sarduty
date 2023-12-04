@@ -28,6 +28,14 @@ defmodule Service.D4H do
     get!(d4h, path).body["data"]
   end
 
+  def delete!(d4h, path) do
+    Req.delete!("https://#{d4h.api_host}/v2/#{path}", auth: {:bearer, d4h.access_token})
+  end
+
+  def remove_attendance!(d4h, attendance_id) do
+    delete!(d4h, "team/attendance/#{attendance_id}")
+  end
+
   def fetch_activity!(d4h, activity_id) do
     d4h
     |> fetch!("team/activities/#{activity_id}")
@@ -50,3 +58,4 @@ defmodule Service.D4H do
     |> Enum.map(&D4H.Member.build(&1))
     |> Enum.sort(fn a, b -> a.name < b.name end)
   end
+end

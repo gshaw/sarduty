@@ -22,6 +22,26 @@ defmodule Web.StyleGuideLive do
       </div>
     </.style_group>
 
+    <.style_group title=".table">
+      <.table
+        id="attendance_records"
+        rows={[
+          %{name: "Alice in Wonderland", age: 19},
+          %{name: "Bob", age: 42},
+          %{name: "Carol", age: 33},
+          %{name: "Doug", age: 69}
+        ]}
+      >
+        <:col :let={_record} label="">
+          <div class="_mb-2">
+            <.input type="checkbox" name="fake" />
+          </div>
+        </:col>
+        <:col :let={user} label="Name"><%= user.name %></:col>
+        <:col :let={user} label="Age"><%= user.age %></:col>
+      </.table>
+    </.style_group>
+
     <.style_group title=".btn and .form_actions">
       <.form_actions>
         <button class="btn btn-success">Save</button>
@@ -36,6 +56,7 @@ defmodule Web.StyleGuideLive do
         Examples of all button styles but the app mainly uses the default, success, link, and danger.
       </p>
       <.form_actions>
+        <.button disabled class="btn btn-primary">Disabled</.button>
         <button class="btn btn-primary">Primary</button>
         <button class="btn btn-secondary">Secondary</button>
         <button class="btn">Default</button>

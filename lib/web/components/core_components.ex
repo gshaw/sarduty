@@ -327,7 +327,7 @@ defmodule Web.CoreComponents do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name} class="mb-4">
+    <div phx-feedback-for={@name}>
       <div class="flex">
         <input type="hidden" name={@name} value="false" />
         <input
@@ -486,6 +486,56 @@ defmodule Web.CoreComponents do
   attr :id, :string, required: true
   attr :rows, :list, required: true
   attr :row_id, :any, default: nil, doc: "the function for generating the row id"
+
+  attr :row_item, :any,
+    default: &Function.identity/1,
+    doc: "the function for mapping each row before calling the :col and :action slots"
+
+  slot :col, required: true do
+    attr :label, :string
+  end
+
+  def table(assigns) do
+    assigns =
+      with %{rows: %Phoenix.LiveView.LiveStream{}} <- assigns do
+        assign(assigns, row_id: assigns.row_id || fn {id, _item} -> id end)
+      end
+
+    ~H"""
+    <div class="">
+      <table class="">
+        <thead class="">
+          <tr>
+            <th :for={col <- @col} class="text-left py-1 pr-2 border-base-3 bg-base-2 border-b">
+              <%= col[:label] %>
+            </th>
+          </tr>
+        </thead>
+        <tbody id={@id} class="">
+          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="">
+            <td :for={{col, i} <- Enum.with_index(@col)} class="py-1 pr-2">
+              <%= render_slot(col, @row_item.(row)) %>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
+  @doc ~S"""
+  Renders a table with generic styling.
+
+  ## Examples
+
+      <.table id="users" rows={@users}>
+        <:col :let={user} label="id"><%= user.id %></:col>
+        <:col :let={user} label="username"><%= user.username %></:col>
+      </.table>
+  """
+  attr :id, :string, required: true
+  attr :rows, :list, required: true
+  attr :row_id, :any, default: nil, doc: "the function for generating the row id"
   attr :row_click, :any, default: nil, doc: "the function for handling phx-click on each row"
 
   attr :row_item, :any,
@@ -498,7 +548,7 @@ defmodule Web.CoreComponents do
 
   slot :action, doc: "the slot for showing user actions in the last table column"
 
-  def table(assigns) do
+  def phx_table(assigns) do
     assigns =
       with %{rows: %Phoenix.LiveView.LiveStream{}} <- assigns do
         assign(assigns, row_id: assigns.row_id || fn {id, _item} -> id end)

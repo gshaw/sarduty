@@ -85,7 +85,7 @@ defmodule Web.WebComponents.AppNavBar do
 
   def navbar_mobile_menu(assigns) do
     ~H"""
-    <details x-description="Mobile menu" class="md:hidden relative">
+    <details x-description="Mobile menu" role="menu" class="md:hidden relative">
       <summary
         role="button"
         aria-label="Open main menu"
@@ -189,7 +189,7 @@ defmodule Web.WebComponents.AppNavBar do
 
   def navbar_user_menu(assigns) do
     ~H"""
-    <details class="relative">
+    <details class="relative" role="menu">
       <summary
         role="button"
         aria-label="Open menu"

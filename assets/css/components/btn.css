@@ -28,6 +28,14 @@
   }
 }
 
+/* special case disabled button */
+.btn:disabled, .btn[disabled] {
+  @apply bg-base-3 text-secondary-1 border-none;
+  &:active:hover,&:active:focus {
+    transform: none;
+  }
+}
+
 /* special case link button */
 .btn-link {
   @apply bg-transparent text-primary-1 border-0 hover:underline hover:bg-transparent focus:bg-transparent focus:ring-primary-2;
