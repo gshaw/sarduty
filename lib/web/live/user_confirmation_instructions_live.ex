@@ -1,5 +1,5 @@
 defmodule Web.UserConfirmationInstructionsLive do
-  use Web, :live_view
+  use Web, :live_view_narrow
 
   alias App.Accounts
 

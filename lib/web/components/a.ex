@@ -18,7 +18,7 @@ defmodule Web.WebComponents.A do
   attr :class, :any, default: ""
 
   attr :rest, :global,
-    include: ~w(href method navigate role),
+    include: ~w(disabled href method navigate role),
     doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, required: true

@@ -1,8 +1,20 @@
 @layer components {
-  .title { @apply text-5xl md:text-7xl font-bold mb-2; }
-  .lead { @apply text-xl md:text-2xl font-light mb-2 text-secondary-1; }
-  .heading { @apply text-3xl mb-2; }
-  .subheading { @apply text-xl mb-2; }
-  .paragraph, p { @apply mb-4; }
+  .title-hero { @apply text-5xl md:text-7xl font-bold mb-p05 }
+  .title { @apply text-5xl font-bold mb-p05 }
+  .lead { @apply text-xl md:text-2xl font-light mb-p05 text-secondary-1 }
+  .heading { @apply text-3xl font-medium mb-p05 }
+  .subheading { @apply text-xl font-medium mb-p05 }
+  .paragraph, p { @apply mb-p }
   .link { @apply text-primary-1 no-underline hover:underline }
+  .hint { @apply text-secondary-1 text-sm font-normal }
+
+  .mb-p05 { @apply mb-2; } /* margin base paragraph x 0.5 */
+  .mb-p { @apply mb-4; } /* margin base paragraph x 1.0 */
+  .mb-p2 { @apply mb-8; } /* margin base paragraph x 2.0 */
+  .mt-p05 { @apply mt-2; } /* margin base paragraph x 0.5 */
+  .mt-p { @apply mt-4; } /* margin base paragraph x 1.0 */
+  .mt-p2 { @apply mt-8; } /* margin base paragraph x 2.0 */
+  .my-p05 { @apply my-2; } /* margin base paragraph x 0.5 */
+  .my-p { @apply my-4; } /* margin base paragraph x 1.0 */
+  .my-p2 { @apply my-8; } /* margin base paragraph x 2.0 */
 }

@@ -13,6 +13,23 @@ defmodule Web.Router do
     plug :fetch_current_user
   end
 
+  # Enable LiveDashboard and Swoosh mailbox preview in development
+  if Application.compile_env(:sarduty, :dev_routes) do
+    # If you want to use the LiveDashboard in production, you should put
+    # it behind authentication and allow only admins to access it.
+    # If your application does not have an admins-only section yet,
+    # you can use Plug.BasicAuth to set up some basic authentication
+    # as long as you are also using SSL (which you should anyway).
+    import Phoenix.LiveDashboard.Router
+
+    scope "/dev" do
+      pipe_through :browser
+
+      live_dashboard "/dashboard", metrics: Web.Telemetry
+      forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+  end
+
   scope "/", Web do
     pipe_through [:browser]
 
@@ -37,29 +54,17 @@ defmodule Web.Router do
 
     live_session :require_authenticated_user,
       on_mount: [{Web.UserAuth, :ensure_authenticated}] do
-      live "/attendance", AttendanceLive, :show
-
       live "/settings", SettingsLive, :show
       live "/settings/email", Settings.ChangeEmailLive, :edit
       live "/settings/password", Settings.ChangePasswordLive, :edit
       live "/settings/confirm_email/:token", SettingsLive, :confirm_email
-    end
-  end
 
-  # Enable LiveDashboard and Swoosh mailbox preview in development
-  if Application.compile_env(:sarduty, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
-
-    scope "/dev" do
-      pipe_through :browser
-
-      live_dashboard "/dashboard", metrics: Web.Telemetry
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
+      # Team subdomain routes must come last because of the wildcard nature
+      live "/southfrasersar", TeamDashboardLive
+      live "/southfrasersar/activities", ActivityCollectionLive
+      live "/southfrasersar/activities/:id", ActivityLive
+      live "/southfrasersar/activities/:id/attendance", ActivityAttendanceLive
+      live "/southfrasersar/activities/:id/mileage", ActivityMileageLive
     end
   end
 end

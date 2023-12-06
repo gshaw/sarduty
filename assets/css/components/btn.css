@@ -2,6 +2,7 @@
   inline-flex items-center
   text-sm font-medium
   focus:outline-none focus:ring-2 focus:ring-offset-2
+  no-underline hover:no-underline /* needed to style `a` */
 }
 
 /* colors */

@@ -1,0 +1,39 @@
+defmodule Web.ActivityMileageLive do
+  use Web, :live_view_app
+
+  import Web.WebComponents.A
+
+  alias App.Adapter.D4H
+
+  def mount(_params, _session, socket) do
+    {:ok, socket}
+  end
+
+  def handle_params(params, _uri, socket) do
+    activity_id = params["id"]
+    d4h = D4H.build_context(socket.assigns.current_user)
+    activity = D4H.fetch_activity(d4h, activity_id)
+
+    {:noreply, assign(socket, activity: activity)}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <div class="mb-p05 text-sm">
+      <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
+      /
+      <.a navigate={~p"/southfrasersar/activities/"}>Activities</.a>
+      /
+      <.a navigate={~p"/southfrasersar/activities/#{@activity.activity_id}"}>
+        #<%= @activity.activity_id %>
+      </.a>
+      /
+      Mileage Report
+    </div>
+    <h1 class="title"><%= @activity.title %></h1>
+    <div class="mt-p">
+      <.button class="btn-success">Generate Mileage Report</.button>
+    </div>
+    """
+  end
+end

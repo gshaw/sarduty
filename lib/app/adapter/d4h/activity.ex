@@ -1,7 +1,8 @@
-defmodule Service.D4H.Activity do
-  defstruct d4h_activity_id: nil,
-            d4h_team_id: nil,
+defmodule App.Adapter.D4H.Activity do
+  defstruct activity_id: nil,
+            team_id: nil,
             ref_id: nil,
+            is_published: false,
             title: nil,
             description: nil,
             lat: nil,
@@ -15,9 +16,10 @@ defmodule Service.D4H.Activity do
     {:ok, finished_at, 0} = DateTime.from_iso8601(record["enddate"])
 
     %__MODULE__{
-      d4h_activity_id: record["id"],
-      d4h_team_id: record["team_id"],
+      activity_id: record["id"],
+      team_id: record["team_id"],
       ref_id: record["ref_autoid"],
+      is_published: record["published"] != 0,
       title: record["ref_desc"],
       description: record["description"],
       lat: record["lat"],

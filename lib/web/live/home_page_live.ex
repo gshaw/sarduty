@@ -1,5 +1,5 @@
 defmodule Web.HomePageLive do
-  use Web, :live_view
+  use Web, :live_view_marketing
 
   import Web.WebComponents.A
 
@@ -10,7 +10,7 @@ defmodule Web.HomePageLive do
   def render(assigns) do
     ~H"""
     <hgroup class="mb-8">
-      <h1 class="title">
+      <h1 class="title-hero">
         Welcome to <span class="text-primary-1">SAR Duty</span>
       </h1>
       <p class="lead">
@@ -20,12 +20,9 @@ defmodule Web.HomePageLive do
     <%= if @current_user do %>
       <hgroup>
         <h2 class="heading mb-0">
-          🙋‍♀️
-          <.a navigate={~p"/attendance"}>Sync Attendance</.a>
+          →
+          <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
         </h2>
-        <p class="lead">
-          Synchronize activity attendance to D4H from SAR Assist.
-        </p>
       </hgroup>
     <% end %>
     """

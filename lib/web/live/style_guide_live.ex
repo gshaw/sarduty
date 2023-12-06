@@ -1,5 +1,5 @@
 defmodule Web.StyleGuideLive do
-  use Web, :live_view
+  use Web, :live_view_marketing
 
   import Web.WebComponents.A
 
@@ -20,6 +20,20 @@ defmodule Web.StyleGuideLive do
         <.a navigate="/styles">Default Link</.a>
         <.a kind={:custom} navigate="/styles">Unstyled</.a>
       </div>
+    </.style_group>
+    <.style_group title=".input">
+      <.input type="text" name="some_text_field" value="" label="A text field">
+        With a hint.
+      </.input>
+      <.input type="checkbox" name="some_text_field" value="" label="Remember me">
+        A hint under a checkbox can be very useful.
+      </.input>
+
+      <.input type="textarea" name="attendance_export" value="" label="Text area">
+        Copy the attendance record from an exported CSV file in Excel and paste into this text area. <pre>It can even have formatted text</pre>
+      </.input>
+      <div>And this is text right after a text area</div>
+      <.input type="text" name="some_text_field" value="" label="Another text field" />
     </.style_group>
 
     <.style_group title=".table">
@@ -78,6 +92,7 @@ defmodule Web.StyleGuideLive do
       </div>
     </.style_group>
     <.style_group title=".typography">
+      <h1 class="title-hero">This is a .title-hero</h1>
       <h1 class="title">This is a .title</h1>
       <p class="lead">This is .lead text inside a <code>p</code> tag.</p>
       <p>This is another paragraph of text.</p>

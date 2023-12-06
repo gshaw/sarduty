@@ -299,6 +299,7 @@ defmodule Web.CoreComponents do
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
+  attr :class, :any, default: nil
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
@@ -370,20 +371,21 @@ defmodule Web.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div class="mb-p" phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
       <textarea
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "min-h-[6rem] block w-full rounded border shadow-sm",
+          "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
+          @class
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
       <.error :for={msg <- @errors}><%= msg %></.error>
+      <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
     </div>
     """
   end
@@ -391,7 +393,7 @@ defmodule Web.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class="mb-4" phx-feedback-for={@name}>
+    <div class="mb-p" phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
       <input
         type={@type}
@@ -513,7 +515,7 @@ defmodule Web.CoreComponents do
         </thead>
         <tbody id={@id} class="">
           <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="">
-            <td :for={{col, i} <- Enum.with_index(@col)} class="py-1 pr-2">
+            <td :for={{col, _i} <- Enum.with_index(@col)} class="py-1 pr-2 align-text-top">
               <%= render_slot(col, @row_item.(row)) %>
             </td>
           </tr>
