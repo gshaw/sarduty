@@ -1,1 +1,1 @@
-call "%~dp0\sarduty" eval SARDuty.Release.migrate
+call "%~dp0\sarduty" eval App.Release.migrate

@@ -7,7 +7,7 @@ defmodule App.Application do
 
   @impl true
   def start(_type, _args) do
-    SARDuty.Release.migrate()
+    App.Release.migrate()
 
     children = [
       Web.Telemetry,
