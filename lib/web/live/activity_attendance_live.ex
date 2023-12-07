@@ -46,7 +46,7 @@ defmodule Web.ActivityAttendanceLive do
 
     <%= if @activity.is_published do %>
       <p>
-        Attendance cannot be modified because activty is published.
+        Attendance cannot be modified because activity is published.
       </p>
     <% else %>
       <%= if @recommendations == nil do %>
