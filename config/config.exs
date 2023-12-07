@@ -22,6 +22,18 @@ config :sarduty, Web.Endpoint,
   pubsub_server: App.PubSub,
   live_view: [signing_salt: "VdFiDhpc"]
 
+config :sarduty, App.Vault,
+  ciphers: [
+    default: {
+      Cloak.Ciphers.AES.GCM,
+      tag: "AES.GCM.V1",
+      iv_length: 12,
+      key: Base.decode64!("D7Lfe2YebDGeefH/D6C0oBasmaWM8iu8FkF0mMTwe9g=")
+      # 32 |> :crypto.strong_rand_bytes() |> Base.encode64()
+      # https://hexdocs.pm/cloak_ecto/install.html
+    }
+  ]
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails

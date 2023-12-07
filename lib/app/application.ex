@@ -12,6 +12,7 @@ defmodule App.Application do
     children = [
       Web.Telemetry,
       App.Repo,
+      App.Vault,
       {Ecto.Migrator,
        repos: Application.fetch_env!(:sarduty, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:sarduty, :dns_cluster_query) || :ignore},
