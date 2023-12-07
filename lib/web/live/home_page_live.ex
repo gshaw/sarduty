@@ -17,7 +17,7 @@ defmodule Web.HomePageLive do
         Helpful tools for search and rescue managers.
       </p>
     </hgroup>
-    <%= if @current_user do %>
+    <%= if @current_user && @current_user.d4h_access_key do %>
       <hgroup>
         <h2 class="heading mb-0">
           →

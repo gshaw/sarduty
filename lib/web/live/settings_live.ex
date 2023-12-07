@@ -32,7 +32,8 @@ defmodule Web.SettingsLive do
           title="Change email"
           subtitle={@current_user.email}
         />
-        <.navlist_item path={~p"/settings/password"} icon="hero-key" title="Change password" />
+        <.navlist_item path={~p"/settings/password"} icon="hero-lock-closed" title="Change password" />
+        <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="Change D4H access key" />
       </nav>
     </div>
     """

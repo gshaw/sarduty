@@ -403,7 +403,8 @@ defmodule Web.CoreComponents do
         class={[
           "block w-full rounded border shadow-sm",
           "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
-          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1"
+          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
+          @class
         ]}
         {@rest}
       />

@@ -1,17 +1,17 @@
 defmodule App.Adapter.D4H do
   alias App.Adapter.D4H
 
-  def build_context(access_token: access_token, api_host: api_host) do
+  def build_context(access_key: access_key, api_host: api_host) do
     Req.new(
       base_url: "https://#{api_host}/v2/",
       headers: %{"User-Agent" => "sarduty.com"},
-      auth: {:bearer, access_token}
+      auth: {:bearer, access_key}
     )
   end
 
-  def build_context(_current_user) do
+  def build_context(current_user) do
     build_context(
-      access_token: System.get_env("D4H_ACCESS_TOKEN"),
+      access_key: current_user.d4h_access_key,
       api_host: "api.ca.d4h.org"
     )
   end

@@ -58,6 +58,7 @@ defmodule Web.Router do
       live "/settings/email", Settings.ChangeEmailLive, :edit
       live "/settings/password", Settings.ChangePasswordLive, :edit
       live "/settings/confirm_email/:token", SettingsLive, :confirm_email
+      live "/settings/d4h", Settings.D4HLive, :edit
 
       # Team subdomain routes must come last because of the wildcard nature
       live "/southfrasersar", TeamDashboardLive

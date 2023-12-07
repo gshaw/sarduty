@@ -2,13 +2,32 @@ defmodule App.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias App.Field.EncryptedString
+  alias App.Accounts.User
+  alias App.Repo
+
   schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
+    field :d4h_access_key, EncryptedString
 
     timestamps(type: :utc_datetime)
+  end
+
+  def build_new_changeset(params \\ %{}), do: build_changeset(%User{}, params)
+
+  def build_changeset(data, params \\ %{}) do
+    data
+    |> cast(params, [
+      :d4h_access_key
+    ])
+  end
+
+  def update(%User{} = user, params) do
+    changeset = build_changeset(user, params)
+    Repo.update(changeset)
   end
 
   @doc """
