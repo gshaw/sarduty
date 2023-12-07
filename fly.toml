@@ -13,6 +13,7 @@ kill_signal = "SIGTERM"
   DATABASE_PATH = "/mnt/sarduty/sarduty.db"
   PHX_HOST = "sarduty.fly.dev"
   PORT = "8080"
+  MAILGUN_DOMAIN = "mg.sarduty.com"
 
 [http_service]
   internal_port = 8080
