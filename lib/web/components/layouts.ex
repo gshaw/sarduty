@@ -9,6 +9,7 @@ defmodule Web.Layouts do
     <html lang="en" class="[scrollbar-gutter:stable]" data-theme="tailwind">
       <head>
         <meta charset="utf-8" />
+        <meta name="description" content="Helpful tools for search and rescue managers." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <.live_title suffix=" · SAR Duty">
