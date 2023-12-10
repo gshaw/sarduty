@@ -352,7 +352,7 @@ defmodule Web.CoreComponents do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div class="mb-p" phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
       <select
         id={@id}

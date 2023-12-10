@@ -5,6 +5,7 @@ defmodule App.Repo.Migrations.CreateUsersAuthTables do
     create table(:users) do
       add :email, :string, null: false, collate: :nocase
       add :hashed_password, :string, null: false
+      # TODO: switch to utc_datetime
       add :confirmed_at, :naive_datetime
       timestamps(type: :utc_datetime)
     end

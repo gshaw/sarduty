@@ -1,25 +1,32 @@
 defmodule App.Adapter.D4H do
   alias App.Adapter.D4H
 
-  def build_context(access_key: access_key, api_host: api_host) do
+  def regions do
+    %{
+      "America" => "api.d4h.org",
+      "Canada" => "api.ca.d4h.org",
+      "Europe" => "api.eu.d4h.org",
+      "Pacific" => "api.ap.d4h.org",
+      "Staging" => "api.st.d4h.or"
+    }
+  end
+
+  def build_context(%{d4h_access_key: access_key, d4h_api_host: api_host}) do
     Req.new(
       base_url: "https://#{api_host}/v2/",
       headers: %{"User-Agent" => "sarduty.com"},
-      auth: {:bearer, access_key}
-    )
-  end
-
-  def build_context(current_user) do
-    build_context(
-      access_key: current_user.d4h_access_key,
-      api_host: "api.ca.d4h.org"
+      auth: {:bearer, access_key || ""}
     )
   end
 
   def fetch_team(context) do
-    context
-    |> Req.get!(url: "/team")
-    |> D4H.Team.build()
+    response = Req.get!(context, url: "/team")
+
+    if response.status == 200 do
+      {:ok, D4H.Team.build(response.body["data"])}
+    else
+      {:error, response}
+    end
   end
 
   def fetch_team_members(context) do

@@ -26,14 +26,13 @@ defmodule Web.SettingsLive do
     <div>
       <h1 class="heading mb-4">Settings</h1>
       <nav class="space-y-2" aria-label="Sidebar">
-        <.navlist_item
-          path={~p"/settings/email"}
-          icon="hero-at-symbol"
-          title="Change email"
-          subtitle={@current_user.email}
-        />
+        <.navlist_item path={~p"/settings/email"} icon="hero-at-symbol" title="Change email">
+          <%= @current_user.email %>
+        </.navlist_item>
         <.navlist_item path={~p"/settings/password"} icon="hero-lock-closed" title="Change password" />
-        <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="Change D4H access key" />
+        <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="D4H access key">
+          <%= @current_user.d4h_api_host %>
+        </.navlist_item>
       </nav>
     </div>
     """
@@ -42,7 +41,7 @@ defmodule Web.SettingsLive do
   attr :path, :string, required: true
   attr :icon, :string, required: true
   attr :title, :string, required: true
-  attr :subtitle, :string, default: nil
+  slot :inner_block
 
   def navlist_item(assigns) do
     ~H"""
@@ -61,8 +60,8 @@ defmodule Web.SettingsLive do
       </span>
       <div>
         <div><%= @title %></div>
-        <div :if={@subtitle} class="truncate text-sm text-secondary-1">
-          <%= @subtitle %>
+        <div :if={@inner_block} class="truncate text-sm text-secondary-1">
+          <%= render_slot(@inner_block) %>
         </div>
       </div>
     </.a>

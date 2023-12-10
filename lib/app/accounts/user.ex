@@ -3,6 +3,7 @@ defmodule App.Accounts.User do
   import Ecto.Changeset
 
   alias App.Field.EncryptedString
+  # alias App.Field.UTCDateTime
   alias App.Accounts.User
   alias App.Repo
 
@@ -11,7 +12,9 @@ defmodule App.Accounts.User do
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
-    field :d4h_access_key, EncryptedString
+    field :d4h_access_key, EncryptedString, redact: true
+    field :d4h_api_host, :string
+    field :d4h_changed_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
@@ -21,13 +24,24 @@ defmodule App.Accounts.User do
   def build_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
-      :d4h_access_key
+      :d4h_access_key,
+      :d4h_api_host,
+      :d4h_changed_at
     ])
   end
+
+  def get(id), do: Repo.get(User, id)
+  def get!(id), do: Repo.get!(User, id)
+  def get_by(params), do: Repo.get_by(User, params)
 
   def update(%User{} = user, params) do
     changeset = build_changeset(user, params)
     Repo.update(changeset)
+  end
+
+  def update!(%User{} = user, params) do
+    changeset = User.build_changeset(user, params)
+    Repo.update!(changeset)
   end
 
   @doc """
