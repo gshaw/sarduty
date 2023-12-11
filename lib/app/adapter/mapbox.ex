@@ -10,8 +10,10 @@ defmodule App.Adapter.Mapbox do
   end
 
   def build_context() do
-    build_context(%{mapbox_access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")})
+    build_context(%{mapbox_access_token: access_token()})
   end
+
+  defp access_token, do: Application.get_env(:sarduty, App.Adapter.Mapbox)[:access_token]
 
   def build_static_map_url(_context, nil), do: nil
 
