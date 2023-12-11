@@ -5,8 +5,7 @@ defmodule App.Adapter.D4H.Activity do
             is_published: false,
             title: nil,
             description: nil,
-            lat: nil,
-            lng: nil,
+            coordinate: nil,
             started_at: nil,
             finished_at: nil,
             kind: nil
@@ -22,11 +21,14 @@ defmodule App.Adapter.D4H.Activity do
       is_published: record["published"] != 0,
       title: record["ref_desc"],
       description: record["description"],
-      lat: record["lat"],
-      lng: record["lng"],
+      coordinate: build_coordinate(record["lat"], record["lng"]),
       started_at: started_at,
       finished_at: finished_at,
       kind: record["activity"]
     }
   end
+
+  def build_coordinate(nil, _lng), do: nil
+  def build_coordinate(_lat, nil), do: nil
+  def build_coordinate(lat, lng), do: {Float.round(lat, 5), Float.round(lng, 5)}
 end

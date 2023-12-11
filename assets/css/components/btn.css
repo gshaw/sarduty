@@ -24,8 +24,8 @@
 .btn {
   &:active:hover,
   &:active:focus {
-    transform: translateY(2px);
-    @apply border-b-0;
+    transform: scale(0.97);
+    @apply border-b-transparent;
   }
 }
 

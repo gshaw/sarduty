@@ -7,6 +7,9 @@
 # General application configuration
 import Config
 
+# Import optinal compile time local development ENV variables.
+if File.exists?("config/env.exs"), do: import_config("env.exs")
+
 config :sarduty,
   ecto_repos: [App.Repo],
   generators: [timestamp_type: :utc_datetime]

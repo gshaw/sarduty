@@ -37,3 +37,6 @@ npm-debug.log
 
 # Database files
 /db
+
+# Ignore developer environment config file that may contain secrets
+config/env.exs

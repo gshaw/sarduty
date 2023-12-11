@@ -45,14 +45,12 @@ defmodule Web.ActivityLive do
           Attendance
         </.a>
       </h3>
-      <!--
       <h3 class="subheading">
         →
         <.a navigate={~p"/southfrasersar/activities/#{@activity.activity_id}/mileage"}>
           Mileage Report
         </.a>
       </h3>
-      -->
     </div>
     """
   end

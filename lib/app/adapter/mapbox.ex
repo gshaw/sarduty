@@ -1,19 +1,30 @@
 defmodule App.Adapter.Mapbox do
   # alias App.Adapter.Mapbox
 
-  def build_context(%{mapbox_access_key: access_key}) do
+  def build_context(%{mapbox_access_token: access_token}) do
     Req.new(
       base_url: "https://api.mapbox.com/",
       headers: %{"User-Agent" => "sarduty.com"},
-      params: [access_token: access_key]
+      params: [access_token: access_token]
     )
   end
 
   def build_context() do
-    build_context(%{
-      mapbox_access_key:
-        "pk.eyJ1IjoiZ3NoYXciLCJhIjoiY2xwcDcwZXRiMHduNzJxbzlrZnM2b2d0NiJ9.LDPtgWSj-dAs8zkw3w99Pw"
-    })
+    build_context(%{mapbox_access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")})
+  end
+
+  def build_static_map_url(_context, nil), do: nil
+
+  def build_static_map_url(context, {lat, lng}) do
+    base_url = context.options.base_url
+    token = context.options.params[:access_token]
+    coordinate = "#{lng},#{lat}"
+    zoom = "10"
+    size = "480x320"
+    pin_color = "ff2600"
+
+    # https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff2600(-122.7267,49.1916)/-122.7267,49.1916,10,0/480x320@2x?access_token=pk.eyJ1
+    "#{base_url}styles/v1/mapbox/streets-v12/static/pin-s+#{pin_color}(#{coordinate})/#{coordinate},#{zoom},0/#{size}@2x?access_token=#{token}"
   end
 
   def fetch_coordinate(context, address), do: fetch_coordinate(context, address, nil)
@@ -23,11 +34,17 @@ defmodule App.Adapter.Mapbox do
   end
 
   def fetch_coordinate(context, address, proximity) do
+    address =
+      address
+      |> String.replace("#", "%23")
+      |> String.replace("\n", " ")
+      |> String.replace("\r", " ")
+
     url = "geocoding/v5/mapbox.places/#{URI.encode(address)}.json"
 
     params = [
-      proximity: proximity,
-      types: "address"
+      proximity: proximity
+      # types: "address"
     ]
 
     response = Req.get!(context, url: url, params: params)
@@ -37,7 +54,7 @@ defmodule App.Adapter.Mapbox do
         %{"features" => [%{"center" => [lng, lat]} | _]} = response.body
         {:ok, {lat, lng}}
       rescue
-        _ in MatchError -> {:error, "Unable to geocode `#{address}`"}
+        _ in MatchError -> {:error, response}
       end
     else
       {:error, response}
