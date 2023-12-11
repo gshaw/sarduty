@@ -701,12 +701,25 @@ defmodule Web.CoreComponents do
     """
   end
 
-  attr :class, :string, default: "w-5 h-5"
+  attr :class, :string, default: nil
+  attr :size, :string, default: "6"
+  slot :inner_block
 
   def spinner(assigns) do
     ~H"""
+    <div class={["flex items-center", @class]}>
+      <.spinner_icon class={"w-#{@size} h-#{@size}"} />
+      <span :if={@inner_block}><%= render_slot(@inner_block) %></span>
+    </div>
+    """
+  end
+
+  attr :class, :string, default: "w-6 h-6"
+
+  def spinner_icon(assigns) do
+    ~H"""
     <svg
-      class={["inline animate-spin -ml-1 mr-2", @class]}
+      class={["animate-spin mx-2", @class]}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
