@@ -328,7 +328,7 @@ defmodule Web.CoreComponents do
       end)
 
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div class="mb-p" phx-feedback-for={@name}>
       <div class="flex">
         <input type="hidden" name={@name} value="false" />
         <input
@@ -432,7 +432,7 @@ defmodule Web.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block mb-1 font-medium text-sm text-base-content">
+    <label for={@for} class="block mb-1 label">
       <%= render_slot(@inner_block) %>
     </label>
     """
