@@ -60,7 +60,7 @@ defmodule Web.ActivityMileageLive do
           Yard Location: <%= App.Model.Coordinate.to_string(@team.coordinate, 5) %>
         </div>
       </p>
-      <p>
+      <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
         <.button phx-click="generate-report" class="btn-success">Generate Mileage Report</.button>
       </p>
     <% else %>
