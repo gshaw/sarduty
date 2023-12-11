@@ -2,6 +2,7 @@ defmodule App.Adapter.D4H.Team do
   defstruct team_id: nil,
             organisation_id: nil,
             title: nil,
+            subdomain: nil,
             coordinate: nil
 
   alias App.Model.Coordinate
@@ -11,6 +12,7 @@ defmodule App.Adapter.D4H.Team do
       team_id: record["team_id"],
       organisation_id: record["organisation_id"],
       title: record["title"],
+      subdomain: record["subdomain"],
       coordinate: Coordinate.build(record)
     }
   end

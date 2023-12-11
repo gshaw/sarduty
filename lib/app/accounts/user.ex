@@ -14,6 +14,8 @@ defmodule App.Accounts.User do
     field :confirmed_at, :naive_datetime
     field :d4h_access_key, EncryptedString, redact: true
     field :d4h_api_host, :string
+    field :d4h_team_title, :string
+    field :d4h_team_subdomain, :string
     field :d4h_changed_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
@@ -26,6 +28,8 @@ defmodule App.Accounts.User do
     |> cast(params, [
       :d4h_access_key,
       :d4h_api_host,
+      :d4h_team_title,
+      :d4h_team_subdomain,
       :d4h_changed_at
     ])
   end

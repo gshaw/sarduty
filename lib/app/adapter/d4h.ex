@@ -11,6 +11,12 @@ defmodule App.Adapter.D4H do
     }
   end
 
+  def determine_region(api_host) do
+    regions()
+    |> Enum.find(fn {_key, val} -> val == api_host end)
+    |> elem(0)
+  end
+
   def build_context(%{d4h_access_key: access_key, d4h_api_host: api_host}) do
     Req.new(
       base_url: "https://#{api_host}/v2/",

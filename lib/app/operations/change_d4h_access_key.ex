@@ -16,6 +16,8 @@ defmodule App.Operation.ChangeD4HAccessKey do
         User.update(user, %{
           d4h_access_key: view_model.access_key,
           d4h_api_host: view_model.api_host,
+          d4h_team_title: view_model.team_title,
+          d4h_team_subdomain: view_model.team_subdomain,
           d4h_changed_at: DateTime.utc_now()
         })
 

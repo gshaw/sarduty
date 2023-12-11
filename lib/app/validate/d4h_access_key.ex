@@ -19,8 +19,13 @@ defmodule App.Validate.D4HAccessKey do
 
     try do
       case D4H.fetch_team(d4h) do
-        {:error, _} -> add_error(changeset, access_key_field, "is unknown or not authorized")
-        {:ok, _} -> changeset
+        {:error, _} ->
+          add_error(changeset, access_key_field, "is unknown or not authorized")
+
+        {:ok, team} ->
+          changeset
+          |> put_change(:team_title, team.title)
+          |> put_change(:team_subdomain, team.subdomain)
       end
     rescue
       e in Mint.TransportError ->

@@ -31,7 +31,7 @@ defmodule Web.SettingsLive do
         </.navlist_item>
         <.navlist_item path={~p"/settings/password"} icon="hero-lock-closed" title="Change password" />
         <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="D4H access key">
-          <%= @current_user.d4h_api_host %>
+          <%= @current_user.d4h_team_title %>
         </.navlist_item>
       </nav>
     </div>
