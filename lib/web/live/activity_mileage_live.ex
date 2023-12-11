@@ -90,9 +90,7 @@ defmodule Web.ActivityMileageLive do
           <:col :let={record} label="Hours"><%= record.yard_hours %></:col>
           <:col :let={record} label="Home Address"><%= record.address %></:col>
           <:col :let={record} label="Coordinate">
-            <span class="hint text-xs font-mono">
-              <%= Coordinate.to_string(record.coordinate, 3) %>
-            </span>
+            <%= Coordinate.to_string(record.coordinate, 3) %>
           </:col>
         </.table>
         <p class="mt-p">

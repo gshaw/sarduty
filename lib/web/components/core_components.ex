@@ -510,18 +510,25 @@ defmodule Web.CoreComponents do
     <div class="">
       <table class="">
         <thead class="">
-          <tr :if={@header_row}>
+          <tr :if={@header_row} class="py-1 px-2 bg-base-3">
             <%= render_slot(@header_row) %>
           </tr>
           <tr>
-            <th :for={col <- @col} class="text-left py-1 pr-2 border-base-3 bg-base-2 border-b">
+            <th
+              :for={col <- @col}
+              class="text-left py-1 px-2 bg-base-3 border-b-2 border-base-content border-opacity-50"
+            >
               <%= col[:label] %>
             </th>
           </tr>
         </thead>
         <tbody id={@id} class="">
-          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="">
-            <td :for={{col, _i} <- Enum.with_index(@col)} class="py-1 pr-2 align-text-top">
+          <tr
+            :for={{row, index} <- Enum.with_index(@rows)}
+            id={@row_id && @row_id.(row)}
+            class={if rem(index, 2) == 1, do: "bg-base-3"}
+          >
+            <td :for={{col, _i} <- Enum.with_index(@col)} class="py-1 px-2 align-text-baseline">
               <%= render_slot(col, @row_item.(row)) %>
             </td>
           </tr>
