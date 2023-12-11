@@ -56,10 +56,10 @@ defmodule App.Adapter.Mapbox do
         %{"features" => [%{"center" => [lng, lat]} | _]} = response.body
         {:ok, {lat, lng}}
       rescue
-        _ in MatchError -> {:error, response}
+        _ in MatchError -> {:error, "unknown", response}
       end
     else
-      {:error, response}
+      {:error, "status:#{response.status}", response}
     end
   end
 

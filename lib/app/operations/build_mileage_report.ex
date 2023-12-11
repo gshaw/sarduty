@@ -20,25 +20,25 @@ defmodule App.Operation.BuildMilesageReport do
       |> Task.async_stream(fn attending ->
         address = attending.member.address
 
-        {coordinate, activity_distance, activity_duration} =
+        {coordinate, activity_distance, activity_duration, yard_distance, yard_duration} =
           case Mapbox.fetch_coordinate(mapbox, address, activity_coordinate) do
             {:ok, coordinate} ->
-              {distance, duration} =
+              {activity_distance, activity_duration} =
                 case Mapbox.fetch_driving_info(mapbox, activity_coordinate, coordinate) do
                   {:ok, distance, duration} -> {distance, duration}
                   {:error, _} -> {"unknown", "unknown"}
                 end
 
-              {coordinate, distance, duration}
+              {yard_distance, yard_duration} =
+                case Mapbox.fetch_driving_info(mapbox, yard_coordinate, coordinate) do
+                  {:ok, distance, duration} -> {distance, duration}
+                  {:error, _} -> {"unknown", "unknown"}
+                end
 
-            {:error, response} ->
-              {"status:#{response.status}", nil, nil}
-          end
+              {coordinate, activity_distance, activity_duration, yard_distance, yard_duration}
 
-        {yard_distance, yard_duration} =
-          case Mapbox.fetch_driving_info(mapbox, yard_coordinate, coordinate) do
-            {:ok, distance, duration} -> {distance, duration}
-            {:error, _} -> {"unknown", "unknown"}
+            {:error, reason, _response} ->
+              {reason, nil, nil, nil, nil}
           end
 
         %{
@@ -68,9 +68,13 @@ defmodule App.Operation.BuildMilesageReport do
     }
   end
 
+  defp build_round_trip_distance(nil), do: nil
+
   defp build_round_trip_distance(distance) do
     round(distance / 1000 * 2)
   end
+
+  defp build_round_trip_duration(nil), do: nil
 
   defp build_round_trip_duration(duration) do
     Float.round(duration / 3600 * 2, 1)

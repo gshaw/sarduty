@@ -40,10 +40,10 @@ defmodule Web.StyleGuideLive do
       <.table
         id="attendance_records"
         rows={[
-          %{name: "Alice in Wonderland", age: 19},
+          %{name: "Alice in Wonderland", age: 9},
           %{name: "Bob", age: 42},
           %{name: "Carol", age: 33},
-          %{name: "Doug", age: 69}
+          %{name: "Doug", age: 104}
         ]}
       >
         <:col :let={_record} label="">
@@ -52,7 +52,7 @@ defmodule Web.StyleGuideLive do
           </div>
         </:col>
         <:col :let={user} label="Name"><%= user.name %></:col>
-        <:col :let={user} label="Age"><%= user.age %></:col>
+        <:col :let={user} label="Age" class="text-right"><%= user.age %></:col>
       </.table>
     </.style_group>
 
