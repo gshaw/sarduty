@@ -69,7 +69,9 @@ defmodule Web.ActivityMileageLive do
 
     <%= if @mileage_report do %>
       <.async_result :let={report} assign={@mileage_report}>
-        <:loading>Loading mileage report...</:loading>
+        <:loading>
+          <.spinner /> Loading mileage report...
+        </:loading>
         <:failed :let={_reason}>There was an error loading the mileage report</:failed>
 
         <p>
