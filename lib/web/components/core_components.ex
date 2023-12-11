@@ -498,6 +498,8 @@ defmodule Web.CoreComponents do
     attr :label, :string
   end
 
+  slot :header_row, defualt: nil
+
   def table(assigns) do
     assigns =
       with %{rows: %Phoenix.LiveView.LiveStream{}} <- assigns do
@@ -508,6 +510,9 @@ defmodule Web.CoreComponents do
     <div class="">
       <table class="">
         <thead class="">
+          <tr :if={@header_row}>
+            <%= render_slot(@header_row) %>
+          </tr>
           <tr>
             <th :for={col <- @col} class="text-left py-1 pr-2 border-base-3 bg-base-2 border-b">
               <%= col[:label] %>

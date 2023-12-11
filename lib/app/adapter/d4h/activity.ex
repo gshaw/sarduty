@@ -10,6 +10,8 @@ defmodule App.Adapter.D4H.Activity do
             finished_at: nil,
             kind: nil
 
+  alias App.Model.Coordinate
+
   def build(record) do
     {:ok, started_at, 0} = DateTime.from_iso8601(record["date"])
     {:ok, finished_at, 0} = DateTime.from_iso8601(record["enddate"])
@@ -21,14 +23,10 @@ defmodule App.Adapter.D4H.Activity do
       is_published: record["published"] != 0,
       title: record["ref_desc"],
       description: record["description"],
-      coordinate: build_coordinate(record["lat"], record["lng"]),
+      coordinate: Coordinate.build(record),
       started_at: started_at,
       finished_at: finished_at,
       kind: record["activity"]
     }
   end
-
-  def build_coordinate(nil, _lng), do: nil
-  def build_coordinate(_lat, nil), do: nil
-  def build_coordinate(lat, lng), do: {Float.round(lat, 5), Float.round(lng, 5)}
 end

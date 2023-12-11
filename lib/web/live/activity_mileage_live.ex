@@ -16,6 +16,7 @@ defmodule Web.ActivityMileageLive do
   def handle_params(params, _uri, socket) do
     activity_id = params["id"]
     d4h = D4H.build_context(socket.assigns.current_user)
+    {:ok, team} = D4H.fetch_team(d4h)
     activity = D4H.fetch_activity(d4h, activity_id)
 
     mapbox = Mapbox.build_context()
@@ -25,6 +26,7 @@ defmodule Web.ActivityMileageLive do
       assign(
         socket,
         mileage_report: nil,
+        team: team,
         activity: activity,
         map_image_url: map_image_url
       )
@@ -51,10 +53,12 @@ defmodule Web.ActivityMileageLive do
         <img src={@map_image_url} width="480" height="320" alt="Map of activity" />
       </p>
       <p>
-        Location:
-        <span>
-          <%= elem(@activity.coordinate, 0) %>, <%= elem(@activity.coordinate, 1) %>
-        </span>
+        <div>
+          Activity Location: <%= App.Model.Coordinate.to_string(@activity.coordinate, 5) %>
+        </div>
+        <div>
+          Yard Location: <%= App.Model.Coordinate.to_string(@team.coordinate, 5) %>
+        </div>
       </p>
       <p>
         <.button phx-click="generate-report" class="btn-success">Generate Mileage Report</.button>
@@ -68,11 +72,23 @@ defmodule Web.ActivityMileageLive do
         <:loading>Loading mileage report...</:loading>
         <:failed :let={_reason}>There was an error loading the mileage report</:failed>
 
-        <.table id="mileage_report" rows={report}>
+        <p>
+          Yard to Activity Round Trip: <%= report.yard_to_activity_km %> km <%= report.yard_to_activity_hours %> hours
+        </p>
+
+        <.table id="mileage_report" rows={report.attendees}>
+          <:header_row>
+            <th></th>
+            <th colspan="2" class="pr-2 text-sm font-normal">To Activity Roundtrip</th>
+            <th colspan="2" class="pr-2 text-sm font-normal">To Yard Roundtrip</th>
+            <th colspan="2" class="pr-2 text-sm font-normal"></th>
+          </:header_row>
           <:col :let={record} label="Name"><%= record.name %></:col>
-          <:col :let={record} label="KMs"><%= record.round_trip_in_km %></:col>
-          <:col :let={record} label="Hours"><%= record.round_trip_in_hours %></:col>
-          <:col :let={record} label="Address"><%= record.address %></:col>
+          <:col :let={record} label="KMs"><%= record.activity_km %></:col>
+          <:col :let={record} label="Hours"><%= record.activity_hours %></:col>
+          <:col :let={record} label="KMs"><%= record.yard_km %></:col>
+          <:col :let={record} label="Hours"><%= record.yard_hours %></:col>
+          <:col :let={record} label="Home Address"><%= record.address %></:col>
           <:col :let={record} label="Coordinate">
             <span class="hint text-xs font-mono">
               <%= Coordinate.to_string(record.coordinate, 3) %>
@@ -80,7 +96,7 @@ defmodule Web.ActivityMileageLive do
           </:col>
         </.table>
         <p class="mt-p">
-          KMs and Hours are round trip driving distance and durationfrom address coordinate to activity coordinate.
+          KMs and Hours are round trip driving distance and duration from home address coordinate to activity or yard coordinate.
         </p>
         <p>
           Address coordinate is geocoded using <a
