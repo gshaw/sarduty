@@ -69,10 +69,10 @@ defmodule App.Operation.BuildMilesageReport do
   end
 
   defp build_round_trip_distance(distance) do
-    round(Float.round(distance / 1000) * 2)
+    round(distance / 1000 * 2)
   end
 
   defp build_round_trip_duration(duration) do
-    Float.round(duration / 3600, 2) * 2
+    Float.round(duration / 3600 * 2, 1)
   end
 end

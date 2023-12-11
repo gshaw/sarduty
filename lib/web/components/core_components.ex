@@ -496,6 +496,7 @@ defmodule Web.CoreComponents do
 
   slot :col, required: true do
     attr :label, :string
+    attr :class, :string
   end
 
   slot :header_row, defualt: nil
@@ -516,19 +517,25 @@ defmodule Web.CoreComponents do
           <tr>
             <th
               :for={col <- @col}
-              class="text-left py-1 px-2 bg-base-3 border-b-2 border-base-content border-opacity-50"
+              class={[
+                "text-left py-1 px-2 bg-base-3 border-b-2 border-base-content border-opacity-50",
+                Map.get(col, :class)
+              ]}
             >
               <%= col[:label] %>
             </th>
           </tr>
         </thead>
-        <tbody id={@id} class="">
+        <tbody id={@id}>
           <tr
             :for={{row, index} <- Enum.with_index(@rows)}
             id={@row_id && @row_id.(row)}
             class={if rem(index, 2) == 1, do: "bg-base-3"}
           >
-            <td :for={{col, _i} <- Enum.with_index(@col)} class="py-1 px-2 align-text-baseline">
+            <td
+              :for={{col, _i} <- Enum.with_index(@col)}
+              class={["py-1 px-2 align-text-baseline", Map.get(col, :class)]}
+            >
               <%= render_slot(col, @row_item.(row)) %>
             </td>
           </tr>

@@ -79,15 +79,15 @@ defmodule Web.ActivityMileageLive do
         <.table id="mileage_report" rows={report.attendees}>
           <:header_row>
             <th></th>
-            <th colspan="2" class="pr-2 text-sm font-normal">To Activity Roundtrip</th>
-            <th colspan="2" class="pr-2 text-sm font-normal">To Yard Roundtrip</th>
-            <th colspan="2" class="pr-2 text-sm font-normal"></th>
+            <th colspan="2" class="text-sm font-normal">To Activity</th>
+            <th colspan="2" class="text-sm font-normal">To Yard</th>
+            <th colspan="2" class="text-sm font-normal"></th>
           </:header_row>
           <:col :let={record} label="Name"><%= record.name %></:col>
-          <:col :let={record} label="KMs"><%= record.activity_km %></:col>
-          <:col :let={record} label="Hours"><%= record.activity_hours %></:col>
-          <:col :let={record} label="KMs"><%= record.yard_km %></:col>
-          <:col :let={record} label="Hours"><%= record.yard_hours %></:col>
+          <:col :let={record} class="text-right" label="KMs"><%= record.activity_km %></:col>
+          <:col :let={record} class="text-right" label="Hours"><%= record.activity_hours %></:col>
+          <:col :let={record} class="text-right" label="KMs"><%= record.yard_km %></:col>
+          <:col :let={record} class="text-right" label="Hours"><%= record.yard_hours %></:col>
           <:col :let={record} label="Home Address"><%= record.address %></:col>
           <:col :let={record} label="Coordinate">
             <%= Coordinate.to_string(record.coordinate, 3) %>
