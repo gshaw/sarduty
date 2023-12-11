@@ -99,16 +99,17 @@ defmodule Web.ActivityMileageLive do
           KMs and Hours are round trip driving distance and duration from home address coordinate to activity or yard coordinate.
         </p>
         <p>
-          Address coordinate is geocoded using <a
-            class="link"
-            target="_blank"
+          Address coordinate is geocoded using <.a
+            external={true}
             href="https://docs.mapbox.com/playground/geocoding/"
-          >Mapbox Geocoder</a>.
-          Distances and durations calculated with <a
-            class="link"
-            target="_blank"
+            phx-no-format
+          >Mapbox Geocoder</.a>.
+
+          Distances and durations calculated with <.a
+            external={true}
             href="https://docs.mapbox.com/playground/directions/"
-          >Mapbox Directions</a>.
+            phx-no-format
+          >Mapbox Directions</.a>.
         </p>
       </.async_result>
     <% end %>

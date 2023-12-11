@@ -29,9 +29,10 @@ defmodule Web.WebComponents.A do
       class={determine_kind_classes(@kind, @is_current) ++ [@class]}
       {if @external, do: %{target: "_blank"}, else: %{}}
       {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </.link>
+      phx-no-format
+    ><%= render_slot(@inner_block) %><%= if @external do %><.icon
+      name="hero-arrow-top-right-on-square-mini" class="ml-1 mb-1 w-5 h-5"
+    /><% end %></.link>
     """
   end
 
