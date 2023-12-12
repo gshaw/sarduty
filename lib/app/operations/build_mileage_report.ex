@@ -3,8 +3,6 @@ defmodule App.Operation.BuildMilesageReport do
   alias App.Adapter.Mapbox
 
   def call(d4h, activity_id) do
-    :timer.sleep(500)
-
     {:ok, team} = D4H.fetch_team(d4h)
     activity = D4H.fetch_activity(d4h, activity_id)
     team_members = D4H.fetch_team_members(d4h)
