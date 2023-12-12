@@ -17,11 +17,11 @@ defmodule Web.HomePageLive do
         Helpful tools for search and rescue managers.
       </p>
     </hgroup>
-    <%= if @current_user && @current_user.d4h_access_key do %>
+    <%= if @current_team do %>
       <hgroup>
         <h2 class="heading mb-0">
           →
-          <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
+          <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
         </h2>
       </hgroup>
     <% end %>

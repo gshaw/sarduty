@@ -9,10 +9,10 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title-hero mb-p">South Fraser SAR</h1>
+    <h1 class="title-hero mb-p"><%= @current_team.title %></h1>
     <h2 class="heading">
       →
-      <.a navigate={~p"/southfrasersar/activities"}>Activities</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
     </h2>
     """
   end

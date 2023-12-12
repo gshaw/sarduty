@@ -159,12 +159,45 @@ defmodule Web.UserAuth do
     end
   end
 
+  def on_mount(:ensure_valid_team_subdomain, params, _session, socket) do
+    team_subdomain = socket.assigns.current_team.subdomain
+
+    if params["subdomain"] == team_subdomain do
+      {:cont, socket}
+    else
+      raise Web.Status.NotFound
+    end
+  end
+
   defp mount_current_user(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_user, fn ->
-      if user_token = session["user_token"] do
-        Accounts.get_user_by_session_token(user_token)
-      end
-    end)
+    socket =
+      Phoenix.Component.assign_new(socket, :current_user, fn ->
+        if user_token = session["user_token"] do
+          Accounts.get_user_by_session_token(user_token)
+        end
+      end)
+
+    assign_current_team(socket, socket.assigns.current_user)
+  end
+
+  defp assign_current_team(socket, nil) do
+    Phoenix.Component.assign(socket, current_team: nil)
+  end
+
+  defp assign_current_team(socket, %{d4h_team_title: nil, d4h_team_subdomain: nil}) do
+    Phoenix.Component.assign(socket, current_team: nil)
+  end
+
+  defp assign_current_team(socket, %{d4h_team_title: title, d4h_team_subdomain: subdomain}) do
+    title = String.replace(title, "Search and Rescue", "SAR")
+
+    Phoenix.Component.assign(
+      socket,
+      current_team: %{
+        title: title,
+        subdomain: subdomain
+      }
+    )
   end
 
   @doc """

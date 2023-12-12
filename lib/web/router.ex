@@ -59,13 +59,18 @@ defmodule Web.Router do
       live "/settings/password", Settings.ChangePasswordLive, :edit
       live "/settings/confirm_email/:token", SettingsLive, :confirm_email
       live "/settings/d4h", Settings.D4HLive, :edit
+    end
 
-      # Team subdomain routes must come last because of the wildcard nature
-      live "/southfrasersar", TeamDashboardLive
-      live "/southfrasersar/activities", ActivityCollectionLive
-      live "/southfrasersar/activities/:id", ActivityLive
-      live "/southfrasersar/activities/:id/attendance", ActivityAttendanceLive
-      live "/southfrasersar/activities/:id/mileage", ActivityMileageLive
+    live_session :require_current_team,
+      on_mount: [
+        {Web.UserAuth, :ensure_authenticated},
+        {Web.UserAuth, :ensure_valid_team_subdomain}
+      ] do
+      live "/:subdomain", TeamDashboardLive
+      live "/:subdomain/activities", ActivityCollectionLive
+      live "/:subdomain/activities/:id", ActivityLive
+      live "/:subdomain/activities/:id/attendance", ActivityAttendanceLive
+      live "/:subdomain/activities/:id/mileage", ActivityMileageLive
     end
   end
 end

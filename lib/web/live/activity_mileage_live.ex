@@ -37,11 +37,11 @@ defmodule Web.ActivityMileageLive do
   def render(assigns) do
     ~H"""
     <div class="mb-p05 text-sm">
-      <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
       /
-      <.a navigate={~p"/southfrasersar/activities/"}>Activities</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
       /
-      <.a navigate={~p"/southfrasersar/activities/#{@activity.activity_id}"}>
+      <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}"}>
         #<%= @activity.activity_id %>
       </.a>
       /

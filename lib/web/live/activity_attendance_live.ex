@@ -32,14 +32,13 @@ defmodule Web.ActivityAttendanceLive do
   def render(assigns) do
     ~H"""
     <div class="mb-p05 text-sm">
-      <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
       /
-      <.a navigate={~p"/southfrasersar/activities/"}>Activities</.a>
-      /
-      <.a navigate={~p"/southfrasersar/activities/#{@activity.activity_id}"}>
-        #<%= @activity.activity_id %>
-      </.a>
-      /
+      <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
+      / <.a
+        navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}"}
+        phx-no-format
+      >#<%= @activity.activity_id %></.a> /
       Attendance
     </div>
     <h1 class="title"><%= @activity.title %></h1>

@@ -20,9 +20,9 @@ defmodule Web.ActivityLive do
   def render(assigns) do
     ~H"""
     <div class="mb-p05 text-sm">
-      <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
       /
-      <.a navigate={~p"/southfrasersar/activities/"}>Activities</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
       /
       #<%= @activity.activity_id %>
     </div>
@@ -34,20 +34,20 @@ defmodule Web.ActivityLive do
         →
         <.a
           target="_blank"
-          href={"https://southfrasersar.team-manager.ca.d4h.com/team/exercises/view/#{@activity.activity_id}"}
+          href={"https://#{@current_team.subdomain}.team-manager.ca.d4h.com/team/exercises/view/#{@activity.activity_id}"}
         >
           Open in D4H
         </.a>
       </h3>
       <h3 class="subheading">
         →
-        <.a navigate={~p"/southfrasersar/activities/#{@activity.activity_id}/attendance"}>
+        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}/attendance"}>
           Attendance
         </.a>
       </h3>
       <h3 class="subheading">
         →
-        <.a navigate={~p"/southfrasersar/activities/#{@activity.activity_id}/mileage"}>
+        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}/mileage"}>
           Mileage Report
         </.a>
       </h3>

@@ -37,27 +37,31 @@ defmodule Web.ActivityCollectionLive do
   def render(assigns) do
     ~H"""
     <div class="mb-p05 text-sm">
-      <.a navigate={~p"/southfrasersar"}>South Fraser SAR</.a>
+      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
       /
       Activities
     </div>
     <h1 class="title mb-p">Activities</h1>
     <div class="mb-p">
       <.a
-        navigate={~p"/southfrasersar/activities?filter=past"}
+        navigate={~p"/#{@current_team.subdomain}/activities?filter=past"}
         disabled={@filter == :past}
         class="btn"
       >
         Past
       </.a>
       <.a
-        navigate={~p"/southfrasersar/activities?filter=future"}
+        navigate={~p"/#{@current_team.subdomain}/activities?filter=future"}
         disabled={@filter == :future}
         class="btn"
       >
         Future
       </.a>
-      <.a navigate={~p"/southfrasersar/activities?filter=all"} disabled={@filter == :all} class="btn">
+      <.a
+        navigate={~p"/#{@current_team.subdomain}/activities?filter=all"}
+        disabled={@filter == :all}
+        class="btn"
+      >
         All
       </.a>
     </div>
@@ -69,7 +73,7 @@ defmodule Web.ActivityCollectionLive do
         </span>
       </:col>
       <:col :let={record} label="Activity">
-        <.a navigate={~p"/southfrasersar/activities/#{record.activity_id}"}>
+        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.activity_id}"}>
           <%= record.title %>
         </.a>
         <div class="hint">
