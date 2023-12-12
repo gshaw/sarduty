@@ -89,9 +89,9 @@ defmodule Web.Layouts do
   def app_nav_bar(assigns) do
     ~H"""
     <.navbar size={:wide} color={:base_1}>
-      <.navbar_mobile_menu color={:base_1}>
+      <%!-- <.navbar_mobile_menu color={:base_1}>
         <.a kind={:menu_item} navigate="/">SAR Duty</.a>
-      </.navbar_mobile_menu>
+      </.navbar_mobile_menu> --%>
       <.navbar_links>
         <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
       </.navbar_links>
@@ -120,26 +120,16 @@ defmodule Web.Layouts do
   def marketing_nav_bar(assigns) do
     ~H"""
     <.navbar size={:wide} color={:base_1}>
-      <.navbar_mobile_menu color={:base_1}>
+      <%!-- <.navbar_mobile_menu color={:base_1}>
         <.a kind={:menu_item} navigate="/">SAR Duty</.a>
-        <%= if Application.get_env(:sarduty, :dev_routes) do %>
-          <.a kind={:menu_item} navigate="/styles">Style Guide</.a>
-          <.a kind={:menu_item} href="/dev/dashboard" external={true}>Dashboard</.a>
-          <.a kind={:menu_item} href="/dev/mailbox" external={true}>Mailbox</.a>
-        <% end %>
         <%= if @current_user == nil do %>
           <.navbar_menu_divider />
           <.a kind={:menu_item} navigate="/login">Log in</.a>
           <.a kind={:menu_item} navigate="/signup">Sign up</.a>
         <% end %>
-      </.navbar_mobile_menu>
+      </.navbar_mobile_menu> --%>
       <.navbar_links>
         <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
-        <.navbar_desktop_links :if={Application.get_env(:sarduty, :dev_routes)}>
-          <.a kind={:navbar_item} navigate="/styles">Style Guide</.a>
-          <.a kind={:navbar_item} href="/dev/dashboard" external={true}>Dashboard</.a>
-          <.a kind={:navbar_item} href="/dev/mailbox" external={true}>Mailbox</.a>
-        </.navbar_desktop_links>
       </.navbar_links>
       <%= if @current_user do %>
         <.current_user_menu current_user={@current_user} />

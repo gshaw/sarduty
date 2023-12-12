@@ -25,6 +25,16 @@ defmodule Web.HomePageLive do
         </h2>
       </hgroup>
     <% end %>
+    <hr class="my-p" />
+    <p class="mt-p">
+      <%= if Application.get_env(:sarduty, :dev_routes) do %>
+        <.a navigate="/styles">Style Guide</.a>
+        ·
+        <.a href="/dev/dashboard" external={true}>Dashboard</.a>
+        ·
+        <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+      <% end %>
+    </p>
     """
   end
 end
