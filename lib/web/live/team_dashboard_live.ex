@@ -18,7 +18,7 @@ defmodule Web.TeamDashboardLive do
         → <.a
           external={true}
           external_icon_class="w-8 h-8 ml-2 mb-2"
-          href={D4H.build_team_manager_url(@current_team)}
+          href={D4H.build_url(@current_team, "/dashboard")}
           phx-no-format
         >Open D4H Dashboard</.a>
       </h2>

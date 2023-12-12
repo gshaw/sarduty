@@ -34,9 +34,7 @@ defmodule Web.ActivityLive do
         → <.a
           external={true}
           external_icon_class="w-6 h-6"
-          href={
-            D4H.build_team_manager_url(@current_team, "/team/exercises/view/#{@activity.activity_id}")
-          }
+          href={D4H.build_activity_url(@current_team, @activity)}
           phx-no-format
         >Open D4H Activity</.a>
       </h3>

@@ -11,13 +11,24 @@ defmodule App.Adapter.D4H do
     }
   end
 
-  def build_team_manager_url(team, path \\ "/dashboard") do
+  def build_url(team, path \\ "/dashboard") do
     team_manager_host =
       team.api_host
       |> String.replace("api.", "#{team.subdomain}.team-manager.")
       |> String.replace(".org", ".com")
 
     "https://#{team_manager_host}#{path}"
+  end
+
+  def build_activity_url(team, activity) do
+    activity_path =
+      case activity.kind do
+        "incident" -> "incidents"
+        "event" -> "events"
+        "exercise" -> "exercises"
+      end
+
+    build_url(team, "/team/#{activity_path}/view/#{activity.activity_id}")
   end
 
   def determine_region(api_host) do
