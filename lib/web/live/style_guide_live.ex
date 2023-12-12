@@ -22,35 +22,31 @@ defmodule Web.StyleGuideLive do
       </div>
     </.style_group>
     <.style_group title=".input">
-      <.input type="text" name="some_text_field" value="" label="A text field">
+      <.input type="text" id="tf" name="some_text_field" value="" label="A text field">
         With a hint.
       </.input>
-      <.input type="checkbox" name="some_text_field" value="" label="Remember me">
+      <.input type="checkbox" id="cb" name="some_checkbox_field" value="" label="Remember me">
         A hint under a checkbox can be very useful.
       </.input>
 
-      <.input type="textarea" name="attendance_export" value="" label="Text area">
+      <.input type="textarea" id="ta" name="attendance_export" value="" label="Text area">
         Copy the attendance record from an exported CSV file in Excel and paste into this text area. <pre>It can even have formatted text</pre>
       </.input>
       <div>And this is text right after a text area</div>
-      <.input type="text" name="some_text_field" value="" label="Another text field" />
+      <.input type="text" id="atf" name="some_text_field" value="" label="Another text field" />
     </.style_group>
 
-    <.style_group title=".table">
+    <.style_group title=".table" class="w-1/3">
       <.table
         id="attendance_records"
         rows={[
-          %{name: "Alice in Wonderland", age: 9},
+          %{name: "Alice in Wonderland looking through the looking glass", age: 9},
           %{name: "Bob", age: 42},
           %{name: "Carol", age: 33},
           %{name: "Doug", age: 104}
         ]}
       >
-        <:col :let={_record} label="">
-          <div class="_mb-2">
-            <.input type="checkbox" name="fake" />
-          </div>
-        </:col>
+        <:col :let={_record} label=""><.input type="checkbox" name="fake" /></:col>
         <:col :let={user} label="Name"><%= user.name %></:col>
         <:col :let={user} label="Age" class="text-right"><%= user.age %></:col>
       </.table>
@@ -107,9 +103,13 @@ defmodule Web.StyleGuideLive do
     """
   end
 
+  attr :class, :string, default: nil
+  attr :title, :string, required: true
+  slot :inner_block, required: true
+
   def style_group(assigns) do
     ~H"""
-    <section class="shadow p-4 space-y-4 mb-8 rounded">
+    <section class={["shadow p-4 space-y-4 mb-8 rounded", @class]}>
       <h2 class="heading font-mono"><%= @title %></h2>
       <%= render_slot(@inner_block) %>
     </section>

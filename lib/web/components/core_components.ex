@@ -327,24 +327,23 @@ defmodule Web.CoreComponents do
         Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
       end)
 
+    # mt-0.5 is so checkbox can embed in a table nicely
     ~H"""
-    <div class="mb-p" phx-feedback-for={@name}>
-      <div class="flex">
-        <input type="hidden" name={@name} value="false" />
-        <input
-          type="checkbox"
-          id={@id}
-          name={@name}
-          value="true"
-          checked={@checked}
-          class="cursor-pointer h-5 w-5 text-primary border border-secondary-0 shadow-sm rounded"
-          {@rest}
-        />
-        <div class="ml-2 leading-4">
-          <.label for={@id}><%= @label %></.label>
-          <.error :for={message <- @errors}><%= message %></.error>
-          <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
-        </div>
+    <div class="mt-0.5 flex" phx-feedback-for={@name}>
+      <input type="hidden" name={@name} value="false" />
+      <input
+        type="checkbox"
+        id={@id}
+        name={@name}
+        value="true"
+        checked={@checked}
+        class={["cursor-pointer h-5 w-5 text-primary shadow-sm rounded", @class]}
+        {@rest}
+      />
+      <div :if={@label} class="ml-2">
+        <.label for={@id}><%= @label %></.label>
+        <.error :for={message <- @errors}><%= message %></.error>
+        <.hint :if={@inner_block != []}><%= render_slot(@inner_block) %></.hint>
       </div>
     </div>
     """
@@ -518,7 +517,7 @@ defmodule Web.CoreComponents do
             <th
               :for={col <- @col}
               class={[
-                "text-left py-1 px-2 bg-base-3 border-b-2 border-base-content border-opacity-50",
+                "text-left py-1 px-2 align-text-top bg-base-3 border-b-2 border-base-content border-opacity-50",
                 Map.get(col, :class)
               ]}
             >
@@ -526,15 +525,11 @@ defmodule Web.CoreComponents do
             </th>
           </tr>
         </thead>
-        <tbody id={@id}>
-          <tr
-            :for={{row, index} <- Enum.with_index(@rows)}
-            id={@row_id && @row_id.(row)}
-            class={if rem(index, 2) == 1, do: "bg-base-3"}
-          >
+        <tbody id={@id} class="[&>*:nth-child(even)]:bg-base-3">
+          <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
             <td
               :for={{col, _i} <- Enum.with_index(@col)}
-              class={["py-1 px-2 align-text-baseline", Map.get(col, :class)]}
+              class={["py-1 px-2 align-top", Map.get(col, :class)]}
             >
               <%= render_slot(col, @row_item.(row)) %>
             </td>
