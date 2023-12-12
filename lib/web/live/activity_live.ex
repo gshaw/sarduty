@@ -31,13 +31,14 @@ defmodule Web.ActivityLive do
     <p><%= @activity.description %></p>
     <div class="mb-p">
       <h3 class="subheading">
-        →
-        <.a
-          target="_blank"
-          href={"https://#{@current_team.subdomain}.team-manager.ca.d4h.com/team/exercises/view/#{@activity.activity_id}"}
-        >
-          Open in D4H
-        </.a>
+        → <.a
+          external={true}
+          external_icon_class="w-6 h-6"
+          href={
+            D4H.build_team_manager_url(@current_team, "/team/exercises/view/#{@activity.activity_id}")
+          }
+          phx-no-format
+        >Open D4H Activity</.a>
       </h3>
       <h3 class="subheading">
         →

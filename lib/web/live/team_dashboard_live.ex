@@ -3,6 +3,8 @@ defmodule Web.TeamDashboardLive do
 
   import Web.WebComponents.A
 
+  alias App.Adapter.D4H
+
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
@@ -10,10 +12,22 @@ defmodule Web.TeamDashboardLive do
   def render(assigns) do
     ~H"""
     <h1 class="title-hero mb-p"><%= @current_team.title %></h1>
-    <h2 class="heading">
-      →
-      <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
-    </h2>
+
+    <div class="mb-p">
+      <h2 class="heading">
+        → <.a
+          external={true}
+          external_icon_class="w-8 h-8 ml-2 mb-2"
+          href={D4H.build_team_manager_url(@current_team)}
+          phx-no-format
+        >Open D4H Dashboard</.a>
+      </h2>
+
+      <h2 class="heading">
+        →
+        <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
+      </h2>
+    </div>
     """
   end
 end

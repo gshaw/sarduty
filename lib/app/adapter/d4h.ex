@@ -7,8 +7,17 @@ defmodule App.Adapter.D4H do
       "Canada" => "api.ca.d4h.org",
       "Europe" => "api.eu.d4h.org",
       "Pacific" => "api.ap.d4h.org",
-      "Staging" => "api.st.d4h.or"
+      "Staging" => "api.st.d4h.org"
     }
+  end
+
+  def build_team_manager_url(team, path \\ "/dashboard") do
+    team_manager_host =
+      team.api_host
+      |> String.replace("api.", "#{team.subdomain}.team-manager.")
+      |> String.replace(".org", ".com")
+
+    "https://#{team_manager_host}#{path}"
   end
 
   def determine_region(api_host) do

@@ -184,18 +184,17 @@ defmodule Web.UserAuth do
     Phoenix.Component.assign(socket, current_team: nil)
   end
 
-  defp assign_current_team(socket, %{d4h_team_title: nil, d4h_team_subdomain: nil}) do
+  defp assign_current_team(socket, %App.Accounts.User{d4h_api_host: nil}) do
     Phoenix.Component.assign(socket, current_team: nil)
   end
 
-  defp assign_current_team(socket, %{d4h_team_title: title, d4h_team_subdomain: subdomain}) do
-    title = String.replace(title, "Search and Rescue", "SAR")
-
+  defp assign_current_team(socket, %App.Accounts.User{} = user) do
     Phoenix.Component.assign(
       socket,
       current_team: %{
-        title: title,
-        subdomain: subdomain
+        title: String.replace(user.d4h_team_title, "Search and Rescue", "SAR"),
+        api_host: user.d4h_api_host,
+        subdomain: user.d4h_team_subdomain
       }
     )
   end

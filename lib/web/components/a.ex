@@ -14,6 +14,7 @@ defmodule Web.WebComponents.A do
     doc: "used for styling and flash lookup"
 
   attr :external, :boolean, default: false
+  attr :external_icon_class, :string, default: nil
   attr :is_current, :boolean, default: false
   attr :class, :any, default: ""
 
@@ -31,7 +32,8 @@ defmodule Web.WebComponents.A do
       {@rest}
       phx-no-format
     ><%= render_slot(@inner_block) %><%= if @external do %><.icon
-      name="hero-arrow-top-right-on-square-mini" class="ml-1 mb-1 w-5 h-5"
+      name="hero-arrow-top-right-on-square-mini"
+      class={["ml-1 mb-1 w-5 h-5", @external_icon_class]}
     /><% end %></.link>
     """
   end
