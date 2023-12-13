@@ -32,7 +32,7 @@ module.exports = {
           content: "#fff"
         },
         success: {
-          1: "#059669", // green-600
+          1: "#16a34a", // green-600
           2: "#15803d", // green-700
           content: "#fff"
         },
