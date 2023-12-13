@@ -33,7 +33,7 @@ defmodule Web.WebComponents.A do
       phx-no-format
     ><%= render_slot(@inner_block) %><%= if @external do %><.icon
       name="hero-arrow-top-right-on-square-mini"
-      class={["ml-1 mb-1 w-5 h-5", @external_icon_class]}
+      class={"ml-1 mb-1 w-5 h-5 #{@external_icon_class}"}
     /><% end %></.link>
     """
   end
