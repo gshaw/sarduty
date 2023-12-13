@@ -10,8 +10,8 @@ defmodule Web.Settings.D4HLive do
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> assign(confirmation_message: nil)
       |> assign(page_title: "D4H Access Key")
+      |> assign(confirmation_message: nil)
       |> assign_form(ChangeD4HAccessKey.build_new_changeset())
 
     {:ok, socket}

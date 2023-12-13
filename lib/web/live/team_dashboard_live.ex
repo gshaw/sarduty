@@ -6,7 +6,7 @@ defmodule Web.TeamDashboardLive do
   alias App.Adapter.D4H
 
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, page_title: socket.assigns.current_team.title)}
   end
 
   def render(assigns) do

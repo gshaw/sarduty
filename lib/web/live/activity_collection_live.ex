@@ -17,6 +17,7 @@ defmodule Web.ActivityCollectionLive do
     socket =
       assign(
         socket,
+        page_title: "Activities",
         activities: activities,
         filter: filter
       )
@@ -38,10 +39,8 @@ defmodule Web.ActivityCollectionLive do
     ~H"""
     <div class="mb-p05 text-sm">
       <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
-      /
-      Activities
     </div>
-    <h1 class="title mb-p">Activities</h1>
+    <h1 class="title mb-p"><%= @page_title %></h1>
     <div class="mb-p">
       <.a
         navigate={~p"/#{@current_team.subdomain}/activities?filter=past"}

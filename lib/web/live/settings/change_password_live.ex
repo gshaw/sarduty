@@ -76,6 +76,7 @@ defmodule Web.Settings.ChangePasswordLive do
 
     socket =
       socket
+      |> assign(:page_title, "Change Password")
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)

@@ -14,7 +14,13 @@ defmodule Web.ActivityLive do
     d4h = D4H.build_context(socket.assigns.current_user)
     activity = D4H.fetch_activity(d4h, activity_id)
 
-    {:noreply, assign(socket, activity: activity)}
+    socket =
+      assign(socket,
+        page_title: activity.title,
+        activity: activity
+      )
+
+    {:noreply, socket}
   end
 
   def render(assigns) do

@@ -19,6 +19,7 @@ defmodule Web.ActivityAttendanceLive do
 
     socket =
       assign(socket,
+        page_title: "Attendance",
         activity: activity,
         team_members: team_members,
         attendance_records: attendance_records,

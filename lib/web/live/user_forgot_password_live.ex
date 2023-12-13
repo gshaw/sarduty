@@ -26,7 +26,13 @@ defmodule Web.UserForgotPasswordLive do
   end
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, form: to_form(%{}, as: "user"))}
+    socket =
+      assign(socket,
+        page_title: "Forgot password",
+        form: to_form(%{}, as: "user")
+      )
+
+    {:ok, socket}
   end
 
   def handle_event("send_email", %{"user" => %{"email" => email}}, socket) do

@@ -38,6 +38,7 @@ defmodule Web.UserRegistrationLive do
 
     socket =
       socket
+      |> assign(page_title: "Sign up")
       |> assign(trigger_submit: false, check_errors: false)
       |> assign_form(changeset)
 
