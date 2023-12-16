@@ -1,19 +1,21 @@
 defmodule App.Adapter.D4H.Team do
-  defstruct team_id: nil,
+  defstruct id: nil,
             organisation_id: nil,
-            title: nil,
+            name: nil,
             subdomain: nil,
-            coordinate: nil
+            coordinate: nil,
+            timezone: nil
 
   alias App.Model.Coordinate
 
   def build(record) do
     %__MODULE__{
-      team_id: record["team_id"],
+      id: record["id"],
       organisation_id: record["organisation_id"],
-      title: record["title"],
+      name: record["title"],
       subdomain: record["subdomain"],
-      coordinate: Coordinate.build(record)
+      coordinate: Coordinate.build(record),
+      timezone: record["timezone"]["location"]
     }
   end
 end

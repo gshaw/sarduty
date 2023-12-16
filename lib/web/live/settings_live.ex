@@ -31,7 +31,17 @@ defmodule Web.SettingsLive do
         </.navlist_item>
         <.navlist_item path={~p"/settings/password"} icon="hero-lock-closed" title="Change password" />
         <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="D4H access key">
-          <%= @current_user.d4h_team_title %>
+          <div :if={@current_user.team} class="font-mono">
+            <%= @current_user.team.subdomain %>
+          </div>
+        </.navlist_item>
+        <.navlist_item
+          :if={@current_team}
+          path={~p"/settings/team"}
+          icon="hero-users"
+          title="Team settings"
+        >
+          <%= if @current_user.team, do: @current_user.team.name %>
         </.navlist_item>
       </nav>
     </div>

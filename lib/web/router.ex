@@ -58,7 +58,8 @@ defmodule Web.Router do
       live "/settings/email", Settings.ChangeEmailLive, :edit
       live "/settings/password", Settings.ChangePasswordLive, :edit
       live "/settings/confirm_email/:token", SettingsLive, :confirm_email
-      live "/settings/d4h", Settings.D4HLive, :edit
+      live "/settings/d4h", Settings.D4HLive
+      live "/settings/team", Settings.TeamLive
     end
 
     live_session :require_current_team,

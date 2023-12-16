@@ -4,15 +4,16 @@ defmodule Web.Settings.D4HLive do
   import Web.WebComponents.A
 
   alias App.Adapter.D4H
-  alias App.Operation.ChangeD4HAccessKey
+  alias App.Operation.AddD4HAccessKey
   alias App.Operation.RemoveD4HAccessKey
 
   def mount(_params, _session, socket) do
     socket =
       socket
       |> assign(page_title: "D4H Access Key")
+      |> assign(team: socket.assigns.current_user.team)
       |> assign(confirmation_message: nil)
-      |> assign_form(ChangeD4HAccessKey.build_new_changeset())
+      |> assign_form(AddD4HAccessKey.build_new_changeset())
 
     {:ok, socket}
   end
@@ -25,16 +26,16 @@ defmodule Web.Settings.D4HLive do
       </p>
       <h1 class="heading">D4H access key</h1>
 
-      <%= if @current_user.d4h_access_key do %>
+      <%= if @team do %>
         <dl>
           <dt>Team</dt>
-          <dd><%= @current_user.d4h_team_title %></dd>
-          <dt>Region</dt>
-          <dd><%= D4H.determine_region(@current_user.d4h_api_host) %></dd>
+          <dd><%= @team.name %></dd>
           <dt>Subdomain</dt>
-          <dd class="font-mono"><%= @current_user.d4h_team_subdomain %></dd>
+          <dd class="font-mono"><%= @team.subdomain %></dd>
+          <dt>Region</dt>
+          <dd><%= D4H.determine_region(@team.d4h_api_host) %></dd>
           <dt>API Host</dt>
-          <dd class="font-mono"><%= @current_user.d4h_api_host %></dd>
+          <dd class="font-mono"><%= @team.d4h_api_host %></dd>
         </dl>
 
         <p>
@@ -79,12 +80,12 @@ defmodule Web.Settings.D4HLive do
   end
 
   def handle_event("validate", %{"form" => form_params}, socket) do
-    changeset = ChangeD4HAccessKey.validate(form_params)
+    changeset = AddD4HAccessKey.validate(form_params)
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
   def handle_event("save", %{"form" => form_params}, socket) do
-    case ChangeD4HAccessKey.call(form_params, socket.assigns.current_user) do
+    case AddD4HAccessKey.call(form_params, socket.assigns.current_user) do
       {:ok, _user} ->
         {:noreply, push_navigate(socket, to: ~p"/settings/d4h")}
 
@@ -103,12 +104,12 @@ defmodule Web.Settings.D4HLive do
     d4h = D4H.build_context(user)
 
     case D4H.fetch_team(d4h) do
-      {:ok, team} -> matching_team?(team, user)
+      {:ok, d4h_team} -> matching_team?(d4h_team, user)
       {:error, _response} -> false
     end
   end
 
-  defp matching_team?(team, user) do
-    team.title == user.d4h_team_title && team.subdomain == user.d4h_team_subdomain
+  defp matching_team?(d4h_team, user) do
+    d4h_team.name == user.team.name && d4h_team.subdomain == user.team.subdomain
   end
 end

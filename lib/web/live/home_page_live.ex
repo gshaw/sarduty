@@ -21,7 +21,7 @@ defmodule Web.HomePageLive do
       <hgroup>
         <h2 class="heading mb-0">
           →
-          <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
+          <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
         </h2>
       </hgroup>
     <% end %>

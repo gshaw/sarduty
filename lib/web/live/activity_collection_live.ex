@@ -38,7 +38,7 @@ defmodule Web.ActivityCollectionLive do
   def render(assigns) do
     ~H"""
     <div class="mb-p05 text-sm">
-      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.title %></.a>
+      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
     </div>
     <h1 class="title mb-p"><%= @page_title %></h1>
     <div class="mb-p">

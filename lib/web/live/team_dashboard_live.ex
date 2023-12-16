@@ -6,12 +6,12 @@ defmodule Web.TeamDashboardLive do
   alias App.Adapter.D4H
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: socket.assigns.current_team.title)}
+    {:ok, assign(socket, page_title: socket.assigns.current_team.name)}
   end
 
   def render(assigns) do
     ~H"""
-    <h1 class="title-hero mb-p"><%= @current_team.title %></h1>
+    <h1 class="title-hero mb-p"><%= @current_team.name %></h1>
 
     <div class="mb-p">
       <h2 class="heading">

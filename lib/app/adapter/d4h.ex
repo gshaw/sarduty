@@ -1,5 +1,8 @@
 defmodule App.Adapter.D4H do
+  alias App.Accounts.User
   alias App.Adapter.D4H
+
+  def default_region(), do: "api.ca.d4h.org"
 
   def regions do
     %{
@@ -13,7 +16,7 @@ defmodule App.Adapter.D4H do
 
   def build_url(team, path \\ "/dashboard") do
     team_manager_host =
-      team.api_host
+      team.d4h_api_host
       |> String.replace("api.", "#{team.subdomain}.team-manager.")
       |> String.replace(".org", ".com")
 
@@ -37,7 +40,11 @@ defmodule App.Adapter.D4H do
     |> elem(0)
   end
 
-  def build_context(%{d4h_access_key: access_key, d4h_api_host: api_host}) do
+  def build_context(%User{} = user) do
+    build_context(access_key: user.d4h_access_key, api_host: user.team.d4h_api_host)
+  end
+
+  def build_context(access_key: access_key, api_host: api_host) do
     Req.new(
       base_url: "https://#{api_host}/v2/",
       headers: %{"User-Agent" => "sarduty.com"},

@@ -2,21 +2,18 @@ defmodule App.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias App.Field.EncryptedString
-  # alias App.Field.UTCDateTime
   alias App.Accounts.User
+  alias App.Field.EncryptedString
+  alias App.Model.Team
   alias App.Repo
 
   schema "users" do
+    belongs_to :team, Team
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :d4h_access_key, EncryptedString, redact: true
-    field :d4h_api_host, :string
-    field :d4h_team_title, :string
-    field :d4h_team_subdomain, :string
-    field :d4h_changed_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
@@ -26,15 +23,13 @@ defmodule App.Accounts.User do
   def build_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
-      :d4h_access_key,
-      :d4h_api_host,
-      :d4h_team_title,
-      :d4h_team_subdomain,
-      :d4h_changed_at
+      :team_id,
+      :d4h_access_key
     ])
+    |> foreign_key_constraint(:team_id)
   end
 
-  def get(id), do: Repo.get(User, id)
+  def get(id), do: Repo.get(User, id, preload: [:team])
   def get!(id), do: Repo.get!(User, id)
   def get_by(params), do: Repo.get_by(User, params)
 
