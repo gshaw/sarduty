@@ -507,36 +507,25 @@ defmodule Web.CoreComponents do
       end
 
     ~H"""
-    <div class="">
-      <table class="">
-        <thead class="">
-          <tr :if={@header_row} class="py-1 px-2 bg-base-3">
-            <%= render_slot(@header_row) %>
-          </tr>
-          <tr>
-            <th
-              :for={col <- @col}
-              class={[
-                "text-left py-1 px-2 align-text-top bg-base-3 border-b-2 border-base-content border-opacity-50",
-                Map.get(col, :class)
-              ]}
-            >
-              <%= col[:label] %>
-            </th>
-          </tr>
-        </thead>
-        <tbody id={@id} class="[&>*:nth-child(even)]:bg-base-3">
-          <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-            <td
-              :for={{col, _i} <- Enum.with_index(@col)}
-              class={["py-1 px-2 align-top", Map.get(col, :class)]}
-            >
-              <%= render_slot(col, @row_item.(row)) %>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <table class="table">
+      <thead>
+        <tr :if={@header_row} class="table-header-row">
+          <%= render_slot(@header_row) %>
+        </tr>
+        <tr>
+          <th :for={col <- @col} class={Map.get(col, :class)}>
+            <%= col[:label] %>
+          </th>
+        </tr>
+      </thead>
+      <tbody id={@id}>
+        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
+          <td :for={col <- @col} class={Map.get(col, :class)}>
+            <%= render_slot(col, @row_item.(row)) %>
+          </td>
+        </tr>
+      </tbody>
+    </table>
     """
   end
 

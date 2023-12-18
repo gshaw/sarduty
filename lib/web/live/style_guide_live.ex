@@ -68,9 +68,17 @@ defmodule Web.StyleGuideLive do
           %{name: "Doug", age: 104}
         ]}
       >
+        <:header_row>
+          <th></th>
+          <th colspan="2" class="text-center">
+            A header can span multiple columns
+          </th>
+        </:header_row>
         <:col :let={_record} label=""><.input type="checkbox" name="fake" /></:col>
         <:col :let={user} label="Name"><%= user.name %></:col>
-        <:col :let={user} label="Age" class="text-right"><%= user.age %></:col>
+        <:col :let={user} label="Age in years" class="text-right">
+          <%= user.age %>
+        </:col>
       </.table>
     </.style_group>
 

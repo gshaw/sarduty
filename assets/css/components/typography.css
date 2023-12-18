@@ -23,4 +23,11 @@
   p, dl { @apply mb-p }
   dt { @apply label }
   dd { @apply mb-p05 }
+
+  table.table { @apply text-left }
+  table.table thead tr { @apply py-1 px-2 bg-base-3 }
+  table.table thead tr th { @apply py-1 px-2 align-text-top bg-base-3 border-b-2 border-base-content border-opacity-50 }
+  table.table thead tr.table-header-row th { @apply border-none text-sm font-normal }
+  table.table tbody { @apply [&>*:nth-child(even)]:bg-base-3 }
+  table.table tbody tr td { @apply py-1 px-2 align-text-top }
 }
