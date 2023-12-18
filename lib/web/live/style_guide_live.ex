@@ -15,6 +15,28 @@ defmodule Web.StyleGuideLive do
       </h1>
     </header>
 
+    <.style_group title=".colors">
+      <div class="grid grid-cols-5">
+        <.color_swatch bg="bg-base-0" fg="text-base-content" />
+        <.color_swatch bg="bg-base-1" fg="text-base-content" />
+        <.color_swatch bg="bg-base-2" fg="text-base-content" />
+        <.color_swatch bg="bg-base-3" fg="text-base-content" />
+        <.color_swatch bg="bg-base-content" fg="text-base-1" />
+
+        <.color_swatch bg="bg-primary-1" fg="text-primary-content" />
+        <.color_swatch bg="bg-secondary-1" fg="text-secondary-content" />
+        <.color_swatch bg="bg-success-1" fg="text-success-content" />
+        <.color_swatch bg="bg-warning-1" fg="text-warning-content" />
+        <.color_swatch bg="bg-danger-1" fg="text-danger-content" />
+
+        <.color_swatch bg="bg-primary-2" fg="text-primary-content" />
+        <.color_swatch bg="bg-secondary-2" fg="text-secondary-content" />
+        <.color_swatch bg="bg-success-2" fg="text-success-content" />
+        <.color_swatch bg="bg-warning-2" fg="text-warning-content" />
+        <.color_swatch bg="bg-danger-2" fg="text-danger-content" />
+      </div>
+    </.style_group>
+
     <.style_group title=".a">
       <div class="flex space-x-4">
         <.a navigate="/styles">Default Link</.a>
@@ -113,6 +135,21 @@ defmodule Web.StyleGuideLive do
       <h2 class="heading font-mono"><%= @title %></h2>
       <%= render_slot(@inner_block) %>
     </section>
+    """
+  end
+
+  attr :fg, :string, required: true
+  attr :bg, :string, required: true
+
+  def color_swatch(assigns) do
+    ~H"""
+    <div class={[
+      "px-8 py-6 m-2 text-center inline-block align-middle rounded text-xs",
+      @bg,
+      @fg
+    ]}>
+      <%= @bg %>
+    </div>
     """
   end
 end
