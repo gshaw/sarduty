@@ -4,6 +4,7 @@ defmodule App.Model.Team do
   alias App.Field.TrimmedString
   alias App.Model.Team
   alias App.Repo
+  alias App.Validate
 
   schema "teams" do
     field :name, TrimmedString
@@ -40,8 +41,8 @@ defmodule App.Model.Team do
       :lng,
       :timezone
     ])
-    |> validate_length(:name, max: App.Validate.max_name_length())
-    |> validate_length(:mailing_address, max: App.Validate.max_address_length())
+    |> Validate.name(:name)
+    |> Validate.address(:mailing_address)
   end
 
   def get_all() do

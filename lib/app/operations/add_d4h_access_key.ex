@@ -30,7 +30,7 @@ defmodule App.Operation.AddD4HAccessKey do
                 subdomain: view_model.d4h_team.subdomain,
                 d4h_team_id: d4h_team_id,
                 d4h_api_host: view_model.api_host,
-                name: String.slice(view_model.d4h_team.name, 0, App.Validate.max_name_length()),
+                name: String.slice(view_model.d4h_team.name, 0, App.Validate.Name.max_length()),
                 mailing_address: "",
                 lat: lat,
                 lng: lng,
