@@ -1,7 +1,5 @@
 defmodule Web.Layouts do
   use Web, :html
-  import Web.WebComponents.A
-  import Web.WebComponents.Avatar
 
   def root(assigns) do
     ~H"""

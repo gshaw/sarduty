@@ -2,7 +2,6 @@ defmodule Web.ActivityCollectionLive do
   use Web, :live_view_app
 
   alias App.Adapter.D4H
-  import Web.WebComponents.A
 
   def mount(_params, _session, socket) do
     {:ok, socket}

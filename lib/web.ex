@@ -61,6 +61,8 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :marketing}
 
+      import Web.WebComponents.A
+
       unquote(html_helpers())
     end
   end
@@ -69,6 +71,9 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :app}
 
+      import Web.WebComponents.A
+      import Web.WebComponents.AttendanceTable
+
       unquote(html_helpers())
     end
   end
@@ -76,6 +81,8 @@ defmodule Web do
   def live_view_narrow do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :narrow}
+
+      import Web.WebComponents.A
 
       unquote(html_helpers())
     end
@@ -98,6 +105,7 @@ defmodule Web do
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
       import Web.WebComponents.A
+      import Web.WebComponents.Avatar
       import Web.WebComponents.NavBar
 
       # Include general helpers for rendering HTML
@@ -113,7 +121,7 @@ defmodule Web do
       import Web.CoreComponents
       import Web.Gettext
 
-      # Shortcut for generating JS commands
+      alias Phoenix.LiveView.AsyncResult
       alias Phoenix.LiveView.JS
 
       # Routes generation with the ~p sigil

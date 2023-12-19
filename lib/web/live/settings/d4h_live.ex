@@ -1,8 +1,6 @@
 defmodule Web.Settings.D4HLive do
   use Web, :live_view_narrow
 
-  import Web.WebComponents.A
-
   alias App.Adapter.D4H
   alias App.Operation.AddD4HAccessKey
   alias App.Operation.RemoveD4HAccessKey

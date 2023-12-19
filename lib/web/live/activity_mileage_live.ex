@@ -1,8 +1,6 @@
 defmodule Web.ActivityMileageLive do
   use Web, :live_view_app
 
-  import Web.WebComponents.A
-
   alias App.Adapter.D4H
   alias App.Adapter.Mapbox
   alias App.Model.Coordinate

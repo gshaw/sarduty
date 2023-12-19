@@ -1,8 +1,6 @@
 defmodule Web.TeamDashboardLive do
   use Web, :live_view_app
 
-  import Web.WebComponents.A
-
   alias App.Adapter.D4H
   alias App.Operation.RefreshD4HData
   alias App.ViewData.TeamDashboardViewData

@@ -1,8 +1,6 @@
 defmodule Web.UserLoginLive do
   use Web, :live_view_narrow
 
-  import Web.WebComponents.A
-
   def render(assigns) do
     ~H"""
     <div>

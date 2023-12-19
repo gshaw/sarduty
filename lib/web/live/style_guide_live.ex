@@ -1,8 +1,6 @@
 defmodule Web.StyleGuideLive do
   use Web, :live_view_marketing
 
-  import Web.WebComponents.A
-
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Style Guide")}
   end

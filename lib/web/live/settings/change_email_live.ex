@@ -1,7 +1,6 @@
 defmodule Web.Settings.ChangeEmailLive do
   use Web, :live_view_narrow
 
-  import Web.WebComponents.A
   alias App.Accounts
 
   def render(assigns) do

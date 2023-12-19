@@ -1,7 +1,6 @@
 defmodule Web.SettingsLive do
   use Web, :live_view_narrow
 
-  import Web.WebComponents.A
   alias App.Accounts
 
   def mount(%{"token" => token}, _session, socket) do

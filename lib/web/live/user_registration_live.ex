@@ -1,7 +1,6 @@
 defmodule Web.UserRegistrationLive do
   use Web, :live_view_narrow
 
-  import Web.WebComponents.A
   alias App.Accounts
   alias App.Accounts.User
 

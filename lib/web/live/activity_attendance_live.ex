@@ -1,9 +1,6 @@
 defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app
 
-  import Web.WebComponents.A
-  import Web.WebComponents.AttendanceTable
-
   alias App.Adapter.D4H
 
   def mount(_params, _session, socket) do
