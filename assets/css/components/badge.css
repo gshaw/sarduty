@@ -1,0 +1,9 @@
+.badge { @apply text-xs font-medium px-1 py-0.5 rounded inline-block }
+
+/* colors */
+.badge { @apply bg-base-2 text-base-content }
+.badge-primary { @apply text-primary-content bg-primary-1 }
+.badge-secondary { @apply text-secondary-content bg-secondary-1 }
+.badge-success { @apply text-success-content bg-success-1 }
+.badge-warning { @apply text-warning-content bg-warning-1 }
+.badge-danger { @apply text-danger-content bg-danger-1 }

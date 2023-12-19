@@ -115,6 +115,16 @@ defmodule Web.StyleGuideLive do
         <a class="btn btn-sm btn-primary">Sign up for FREE</a>
       </div>
     </.style_group>
+    <.style_group title=".badge">
+      <div class="flex space-x-2">
+        <span class="badge">Default</span>
+        <span class="badge badge-primary">Primary</span>
+        <span class="badge badge-secondary">Secondary</span>
+        <span class="badge badge-success">Success</span>
+        <span class="badge badge-warning">Warning</span>
+        <span class="badge badge-danger">Danger</span>
+      </div>
+    </.style_group>
     <.style_group title=".typography">
       <h1 class="title-hero">This is a .title-hero</h1>
       <h1 class="title">This is a .title</h1>
