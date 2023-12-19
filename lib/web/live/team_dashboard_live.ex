@@ -36,7 +36,12 @@ defmodule Web.TeamDashboardLive do
       </h2>
 
       <p class="mt-p2">
-        <.button type="button" class="btn-lg btn-success" phx-click="refresh">
+        <.button
+          type="button"
+          class="btn-warning"
+          phx-click="refresh"
+          disabled={@view_data.loading != nil}
+        >
           Refresh D4H Data
         </.button>
       </p>
