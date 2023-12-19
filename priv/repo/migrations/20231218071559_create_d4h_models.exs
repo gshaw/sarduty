@@ -4,7 +4,7 @@ defmodule App.Repo.Migrations.CreateD4HModels do
   def change do
     create table(:activities) do
       add :team_id, references(:teams), null: false
-      add :d4h_id, :integer, null: false
+      add :d4h_activity_id, :integer, null: false
       add :ref_id, :string
       add :is_published, :boolean, null: false
       add :title, :string, null: false
@@ -20,9 +20,11 @@ defmodule App.Repo.Migrations.CreateD4HModels do
       timestamps(type: :utc_datetime_usec)
     end
 
+    create unique_index(:activities, [:team_id, :d4h_activity_id])
+
     create table(:members) do
       add :team_id, references(:teams), null: false
-      add :d4h_id, :integer, null: false
+      add :d4h_member_id, :integer, null: false
       add :ref_id, :string
       add :name, :string, null: false
       add :email, :string
@@ -36,10 +38,12 @@ defmodule App.Repo.Migrations.CreateD4HModels do
       timestamps(type: :utc_datetime_usec)
     end
 
+    create unique_index(:members, [:team_id, :d4h_member_id])
+
     create table(:attendances) do
       add :member_id, references(:members), null: false
       add :activity_id, references(:activities), null: false
-      add :d4h_id, :integer, null: false
+      add :d4h_attendance_id, :integer, null: false
       add :duration_in_minutes, :integer, null: false
       add :started_at, :utc_datetime_usec
       add :finished_at, :utc_datetime_usec
@@ -47,5 +51,8 @@ defmodule App.Repo.Migrations.CreateD4HModels do
 
       timestamps(type: :utc_datetime_usec)
     end
+
+    create unique_index(:attendances, [:member_id, :d4h_attendance_id])
+    create unique_index(:attendances, [:activity_id, :d4h_attendance_id])
   end
 end

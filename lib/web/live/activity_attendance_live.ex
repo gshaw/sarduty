@@ -34,9 +34,9 @@ defmodule Web.ActivityAttendanceLive do
       /
       <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
       / <.a
-        navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}"}
+        navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.d4h_activity_id}"}
         phx-no-format
-      >#<%= @activity.activity_id %></.a> /
+      >#<%= @activity.d4h_activity_id %></.a> /
       Attendance
     </div>
     <h1 class="title"><%= @activity.title %></h1>
@@ -125,10 +125,10 @@ defmodule Web.ActivityAttendanceLive do
   def operation_description(:unknown), do: "Unknown"
 
   def handle_event("import-attendance", %{"import_content" => import_content}, socket) do
-    activity_id = socket.assigns.activity.activity_id
+    d4h_activity_id = socket.assigns.activity.d4h_activity_id
     d4h = D4H.build_context(socket.assigns.current_user)
     team_members = D4H.fetch_team_members(d4h)
-    attendance_records = D4H.fetch_activity_attendance(d4h, activity_id, team_members)
+    attendance_records = D4H.fetch_activity_attendance(d4h, d4h_activity_id, team_members)
     recommendations = fetch_recommendations(import_content, attendance_records)
 
     socket =
@@ -185,7 +185,7 @@ defmodule Web.ActivityAttendanceLive do
     new_attendance_records =
       D4H.fetch_activity_attendance(
         d4h,
-        socket.assigns.activity.activity_id,
+        socket.assigns.activity.d4h_activity_id,
         socket.assigns.team_members
       )
 
@@ -260,7 +260,7 @@ defmodule Web.ActivityAttendanceLive do
             _ -> :noop
           end
 
-        {operation, attendance.attendance_id, attendance.member}
+        {operation, attendance.d4h_attendance_id, attendance.member}
       end)
       |> Enum.reject(fn {op, _, _} -> op == :noop end)
       |> Enum.sort(fn {op1, _, m1}, {op2, _, m2} ->

@@ -9,7 +9,7 @@ defmodule App.Model.Member do
 
   schema "members" do
     belongs_to :team, Team
-    field :d4h_id, :integer
+    field :d4h_member_id, :integer
     field :ref_id, :string
     field :name, EncryptedString
     field :email, EncryptedString
@@ -29,7 +29,7 @@ defmodule App.Model.Member do
     |> cast(params, [
       :id,
       :team_id,
-      :d4h_id,
+      :d4h_member_id,
       :ref_id,
       :name,
       :email,
@@ -40,9 +40,10 @@ defmodule App.Model.Member do
       :joined_at,
       :left_at
     ])
+    |> unique_constraint([:team_id, :d4h_member_id])
     |> validate_required([
       :team_id,
-      :d4h_id,
+      :d4h_member_id,
       :name,
       :joined_at
     ])

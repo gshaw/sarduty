@@ -28,7 +28,7 @@ defmodule Web.ActivityLive do
       /
       <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
       /
-      #<%= @activity.activity_id %>
+      #<%= @activity.d4h_activity_id %>
     </div>
 
     <h1 class="title"><%= @activity.title %></h1>
@@ -44,13 +44,15 @@ defmodule Web.ActivityLive do
       </h3>
       <h3 class="subheading">
         →
-        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}/attendance"}>
+        <.a navigate={
+          ~p"/#{@current_team.subdomain}/activities/#{@activity.d4h_activity_id}/attendance"
+        }>
           Attendance
         </.a>
       </h3>
       <h3 class="subheading">
         →
-        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}/mileage"}>
+        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.d4h_activity_id}/mileage"}>
           Mileage Report
         </.a>
       </h3>

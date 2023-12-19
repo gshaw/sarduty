@@ -9,7 +9,7 @@ defmodule App.Model.Activity do
 
   schema "activities" do
     belongs_to :team, Team
-    field :d4h_id, :integer
+    field :d4h_activity_id, :integer
     field :ref_id, :string
     field :is_published, :boolean
     field :title, TrimmedString
@@ -30,7 +30,7 @@ defmodule App.Model.Activity do
     data
     |> cast(params, [
       :team_id,
-      :d4h_id,
+      :d4h_activity_id,
       :ref_id,
       :is_published,
       :title,
@@ -45,7 +45,7 @@ defmodule App.Model.Activity do
     ])
     |> validate_required([
       :team_id,
-      :d4h_id,
+      :d4h_activity_id,
       :is_published,
       :title,
       :activity_kind,

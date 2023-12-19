@@ -31,7 +31,7 @@ defmodule App.Adapter.D4H do
         "exercise" -> "exercises"
       end
 
-    build_url(team, "/team/#{activity_path}/view/#{activity.activity_id}")
+    build_url(team, "/team/#{activity_path}/view/#{activity.d4h_activity_id}")
   end
 
   def determine_region(api_host) do

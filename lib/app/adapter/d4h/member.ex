@@ -1,6 +1,6 @@
 defmodule App.Adapter.D4H.Member do
-  defstruct member_id: nil,
-            team_id: nil,
+  defstruct d4h_member_id: nil,
+            d4h_team_id: nil,
             ref_id: nil,
             name: nil,
             position: nil,
@@ -12,8 +12,8 @@ defmodule App.Adapter.D4H.Member do
 
   def build(record) do
     %__MODULE__{
-      member_id: record["id"],
-      team_id: record["team_id"],
+      d4h_member_id: record["id"],
+      d4h_team_id: record["team_id"],
       name: record["name"],
       position: record["position"],
       ref_id: record["ref"],

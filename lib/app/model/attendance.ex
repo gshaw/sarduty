@@ -9,7 +9,7 @@ defmodule App.Model.Attendance do
   schema "attendances" do
     belongs_to :member, Member
     belongs_to :activity, Activity
-    field :d4h_id, :integer
+    field :d4h_attendance_id, :integer
     field :duration_in_minutes, :integer
     field :started_at, :utc_datetime
     field :finished_at, :utc_datetime
@@ -24,7 +24,7 @@ defmodule App.Model.Attendance do
     |> cast(params, [
       :member_id,
       :activity_id,
-      :d4h_id,
+      :d4h_attendance_id,
       :duration_in_minutes,
       :started_at,
       :finished_at,
@@ -33,7 +33,7 @@ defmodule App.Model.Attendance do
     |> validate_required([
       :member_id,
       :activity_id,
-      :d4h_id,
+      :d4h_attendance_id,
       :duration_in_minutes,
       :status
     ])

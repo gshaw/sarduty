@@ -39,8 +39,8 @@ defmodule Web.ActivityMileageLive do
       /
       <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
       /
-      <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.activity_id}"}>
-        #<%= @activity.activity_id %>
+      <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.d4h_activity_id}"}>
+        #<%= @activity.d4h_activity_id %>
       </.a>
       /
       Mileage Report
@@ -120,8 +120,8 @@ defmodule Web.ActivityMileageLive do
       |> assign(mileage_report: nil)
       |> assign_async(:mileage_report, fn ->
         d4h = D4H.build_context(socket.assigns.current_user)
-        activity_id = socket.assigns.activity.activity_id
-        report = BuildMilesageReport.call(d4h, activity_id)
+        d4h_activity_id = socket.assigns.activity.d4h_activity_id
+        report = BuildMilesageReport.call(d4h, d4h_activity_id)
         {:ok, %{mileage_report: report}}
       end)
 

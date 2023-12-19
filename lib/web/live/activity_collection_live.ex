@@ -71,7 +71,7 @@ defmodule Web.ActivityCollectionLive do
         </span>
       </:col>
       <:col :let={record} label="Activity">
-        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.activity_id}"}>
+        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.d4h_activity_id}"}>
           <%= record.title %>
         </.a>
         <div class="hint">

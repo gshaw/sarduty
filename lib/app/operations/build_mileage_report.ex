@@ -40,7 +40,7 @@ defmodule App.Operation.BuildMilesageReport do
           end
 
         %{
-          member_id: attending.member.member_id,
+          member_id: attending.member.d4h_member_id,
           name: attending.member.name,
           address: address,
           coordinate: coordinate,
