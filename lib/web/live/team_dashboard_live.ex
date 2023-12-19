@@ -13,11 +13,7 @@ defmodule Web.TeamDashboardLive do
     socket =
       socket
       |> assign(page_title: current_team.name)
-      |> assign(view_data: nil)
-      |> assign_async(:view_data, fn ->
-        view_data = TeamDashboardViewData.build(socket.assigns.current_team)
-        {:ok, %{view_data: view_data}}
-      end)
+      |> assign(view_data: AsyncResult.ok(TeamDashboardViewData.build(current_team)))
 
     {:ok, socket}
   end
@@ -47,35 +43,33 @@ defmodule Web.TeamDashboardLive do
         </.button>
       </p>
 
-      <%= if @view_data do %>
-        <.async_result :let={view_data} assign={@view_data}>
-          <:loading>
-            <.spinner>Refreshing D4H data...</.spinner>
-          </:loading>
-          <:failed :let={_reason}>There was an error refershing D4H data</:failed>
+      <.async_result :let={view_data} assign={@view_data}>
+        <:loading>
+          <.spinner>Refreshing D4H data...</.spinner>
+        </:loading>
+        <:failed :let={_reason}>There was an error refershing D4H data</:failed>
 
-          <table class="table">
-            <thead>
-              <th>Type</th>
-              <th class="text-right">Count</th>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Members</td>
-                <td class="text-right"><%= view_data.member_count %></td>
-              </tr>
-              <tr>
-                <td>Activities</td>
-                <td class="text-right"><%= view_data.activity_count %></td>
-              </tr>
-              <tr>
-                <td>Attendances</td>
-                <td class="text-right"><%= view_data.attendance_count %></td>
-              </tr>
-            </tbody>
-          </table>
-        </.async_result>
-      <% end %>
+        <table class="table">
+          <thead>
+            <th>Type</th>
+            <th class="text-right">Count</th>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Members</td>
+              <td class="text-right"><%= view_data.member_count %></td>
+            </tr>
+            <tr>
+              <td>Activities</td>
+              <td class="text-right"><%= view_data.activity_count %></td>
+            </tr>
+            <tr>
+              <td>Attendances</td>
+              <td class="text-right"><%= view_data.attendance_count %></td>
+            </tr>
+          </tbody>
+        </table>
+      </.async_result>
     </div>
     """
   end
