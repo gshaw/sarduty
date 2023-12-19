@@ -25,7 +25,7 @@ defmodule App.Adapter.D4H do
 
   def build_activity_url(team, activity) do
     activity_path =
-      case activity.kind do
+      case activity.activity_kind do
         "incident" -> "incidents"
         "event" -> "events"
         "exercise" -> "exercises"
@@ -63,11 +63,18 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_team_members(context) do
-    response = Req.get!(context, url: "/team/members")
+    response = Req.get!(context, url: "/team/members", params: [limit: 750])
 
     response.body["data"]
     |> Enum.map(&D4H.Member.build(&1))
     |> Enum.sort(&(&1.name < &2.name))
+  end
+
+  def fetch_attendances(context, params: params) do
+    response = Req.get!(context, url: "/team/attendance", params: params)
+
+    response.body["data"]
+    |> Enum.map(&D4H.AttendanceInfo.build(&1))
   end
 
   def fetch_activites(context),
