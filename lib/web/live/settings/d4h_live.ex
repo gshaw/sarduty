@@ -110,6 +110,6 @@ defmodule Web.Settings.D4HLive do
   end
 
   defp matching_team?(d4h_team, user) do
-    d4h_team.name == user.team.name && d4h_team.subdomain == user.team.subdomain
+    d4h_team.subdomain == user.team.subdomain
   end
 end
