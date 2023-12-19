@@ -26,6 +26,7 @@ defmodule App.Operation.RefreshD4HData.Activities do
       team_id: team_id,
       d4h_activity_id: d4h_activity.d4h_activity_id,
       ref_id: d4h_activity.ref_id,
+      tracking_number: d4h_activity.tracking_number,
       is_published: d4h_activity.is_published,
       title: d4h_activity.title,
       description: d4h_activity.description,

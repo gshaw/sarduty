@@ -6,6 +6,7 @@ defmodule App.Repo.Migrations.CreateD4HModels do
       add :team_id, references(:teams), null: false
       add :d4h_activity_id, :integer, null: false
       add :ref_id, :string
+      add :tracking_number, :string
       add :is_published, :boolean, null: false
       add :title, :string, null: false
       add :description, :string

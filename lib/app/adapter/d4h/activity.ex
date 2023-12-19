@@ -4,6 +4,7 @@ defmodule App.Adapter.D4H.Activity do
   defstruct d4h_activity_id: nil,
             d4h_team_id: nil,
             ref_id: nil,
+            tracking_number: nil,
             is_published: false,
             title: nil,
             description: nil,
@@ -22,6 +23,7 @@ defmodule App.Adapter.D4H.Activity do
       d4h_activity_id: record["id"],
       d4h_team_id: record["team_id"],
       ref_id: record["ref_autoid"],
+      tracking_number: record["tracking_number"],
       is_published: record["published"] != 0,
       title: String.slice(record["ref_desc"], 0, 50),
       description: record["description"],
@@ -30,7 +32,7 @@ defmodule App.Adapter.D4H.Activity do
       started_at: started_at,
       finished_at: finished_at,
       activity_kind: record["activity"],
-      tags: record["tags"]
+      tags: Enum.dedup(record["tags"])
     }
   end
 

@@ -11,6 +11,7 @@ defmodule App.Model.Activity do
     belongs_to :team, Team
     field :d4h_activity_id, :integer
     field :ref_id, :string
+    field :tracking_number, :string
     field :is_published, :boolean
     field :title, TrimmedString
     field :description, TrimmedString
@@ -32,6 +33,7 @@ defmodule App.Model.Activity do
       :team_id,
       :d4h_activity_id,
       :ref_id,
+      :tracking_number,
       :is_published,
       :title,
       :description,
