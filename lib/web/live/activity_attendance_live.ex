@@ -2,17 +2,19 @@ defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app
 
   alias App.Adapter.D4H
+  alias App.Model.Activity
 
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
 
   def handle_params(params, _uri, socket) do
-    activity_id = params["id"]
+    activity = Activity.get(params["id"])
     d4h = D4H.build_context(socket.assigns.current_user)
-    activity = D4H.fetch_activity(d4h, activity_id)
     team_members = D4H.fetch_team_members(d4h)
-    attendance_records = D4H.fetch_activity_attendance(d4h, activity_id, team_members)
+
+    attendance_records =
+      D4H.fetch_activity_attendance(d4h, activity.d4h_activity_id, team_members)
 
     socket =
       assign(socket,
@@ -33,10 +35,7 @@ defmodule Web.ActivityAttendanceLive do
       <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
       /
       <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
-      / <.a
-        navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.d4h_activity_id}"}
-        phx-no-format
-      >#<%= @activity.d4h_activity_id %></.a> /
+      / <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"} phx-no-format>#<%= @activity.ref_id %></.a> /
       Attendance
     </div>
     <h1 class="title"><%= @activity.title %></h1>

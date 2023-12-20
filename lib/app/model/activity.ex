@@ -1,6 +1,8 @@
 defmodule App.Model.Activity do
   use App, :model
 
+  import Ecto.Query
+
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.Team
@@ -65,8 +67,33 @@ defmodule App.Model.Activity do
     |> Repo.all()
   end
 
-  # def get(id), do: Repo.get(Activity, id)
+  def get(id), do: Repo.get(Activity, id)
   # def get!(id), do: Repo.get!(Activity, id)
+
+  def get_by(team_id: team_id, date_filter: date_filter) do
+    case date_filter do
+      :past ->
+        Activity
+        |> where([r], r.team_id == ^team_id)
+        |> where([r], r.finished_at <= ^DateTime.utc_now())
+        |> order_by([r], desc: r.started_at)
+        |> Repo.all()
+
+      :future ->
+        Activity
+        |> where([r], r.team_id == ^team_id)
+        |> where([r], r.finished_at >= ^DateTime.utc_now())
+        |> order_by([r], asc: r.started_at)
+        |> Repo.all()
+
+      :all ->
+        Activity
+        |> where([r], r.team_id == ^team_id)
+        |> order_by([r], desc: r.started_at)
+        |> Repo.all()
+    end
+  end
+
   def get_by(params), do: Repo.get_by(Activity, params)
 
   def insert!(params) do

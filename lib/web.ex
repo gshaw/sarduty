@@ -73,6 +73,7 @@ defmodule Web do
 
       import Web.WebComponents.A
       import Web.WebComponents.AttendanceTable
+      import Web.WebComponents.D4HComponents
 
       unquote(html_helpers())
     end

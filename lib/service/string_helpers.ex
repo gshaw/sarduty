@@ -11,6 +11,9 @@ defmodule Service.StringHelpers do
     omission = opts[:omission] || "…"
 
     cond do
+      is_nil(text) ->
+        nil
+
       not String.valid?(text) ->
         text
 

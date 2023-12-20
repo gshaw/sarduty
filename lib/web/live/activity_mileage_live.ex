@@ -2,7 +2,7 @@ defmodule Web.ActivityMileageLive do
   use Web, :live_view_app
 
   alias App.Adapter.D4H
-  alias App.Adapter.Mapbox
+  alias App.Model.Activity
   alias App.Model.Coordinate
 
   alias App.Operation.BuildMilesageReport
@@ -12,21 +12,17 @@ defmodule Web.ActivityMileageLive do
   end
 
   def handle_params(params, _uri, socket) do
-    activity_id = params["id"]
+    activity = Activity.get(params["id"])
+    IO.inspect(activity, label: "Web.ActivityMileageLive")
     d4h = D4H.build_context(socket.assigns.current_user)
     {:ok, team} = D4H.fetch_team(d4h)
-    activity = D4H.fetch_activity(d4h, activity_id)
-
-    mapbox = Mapbox.build_context()
-    map_image_url = Mapbox.build_static_map_url(mapbox, activity.coordinate)
 
     socket =
       assign(
         socket,
         mileage_report: nil,
         team: team,
-        activity: activity,
-        map_image_url: map_image_url
+        activity: activity
       )
 
     {:noreply, socket}
@@ -39,17 +35,14 @@ defmodule Web.ActivityMileageLive do
       /
       <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
       /
-      <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.d4h_activity_id}"}>
-        #<%= @activity.d4h_activity_id %>
+      <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}>
+        #<%= @activity.ref_id %>
       </.a>
       /
       Mileage Report
     </div>
     <h1 class="title mb-p"><%= @activity.title %></h1>
     <%= if @activity.coordinate do %>
-      <p :if={false && @map_image_url}>
-        <img src={@map_image_url} width="480" height="320" alt="Map of activity" />
-      </p>
       <p>
         <div>
           Activity Location: <%= App.Model.Coordinate.to_string(@activity.coordinate, 5) %>

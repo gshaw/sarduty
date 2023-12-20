@@ -1,5 +1,6 @@
 defmodule App.Adapter.Mapbox do
   # alias App.Adapter.Mapbox
+  alias App.Model.Coordinate
 
   def build_context(%{mapbox_access_token: access_token}) do
     Req.new(
@@ -17,16 +18,17 @@ defmodule App.Adapter.Mapbox do
 
   def build_static_map_url(_context, nil), do: nil
 
-  def build_static_map_url(context, {lat, lng}) do
+  def build_static_map_url(context, coordinate) do
     base_url = context.options.base_url
     token = context.options.params[:access_token]
-    coordinate = "#{lng},#{lat}"
+
+    mapbox_coordinate = Coordinate.build(coordinate) |> Coordinate.build_mapbox()
     zoom = "10"
-    size = "480x320"
+    size = "640x480"
     pin_color = "ff2600"
 
     # https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff2600(-122.7267,49.1916)/-122.7267,49.1916,10,0/480x320@2x?access_token=pk.eyJ1
-    "#{base_url}styles/v1/mapbox/streets-v12/static/pin-s+#{pin_color}(#{coordinate})/#{coordinate},#{zoom},0/#{size}@2x?access_token=#{token}"
+    "#{base_url}styles/v1/mapbox/streets-v12/static/pin-s+#{pin_color}(#{mapbox_coordinate})/#{mapbox_coordinate},#{zoom},0/#{size}@2x?access_token=#{token}"
   end
 
   def fetch_coordinate(context, address), do: fetch_coordinate(context, address, nil)
