@@ -4,6 +4,7 @@ defmodule Web.WebComponents.A do
   attr :kind, :atom,
     values: [
       :default,
+      :btn,
       :custom,
       :monochrome,
       :menu_item,
@@ -39,6 +40,7 @@ defmodule Web.WebComponents.A do
   end
 
   defp determine_kind_classes(:default, _is_current), do: ["link link-primary"]
+  defp determine_kind_classes(:btn, _is_current), do: ["btn"]
   defp determine_kind_classes(:custom, _is_current), do: []
   defp determine_kind_classes(:monochrome, _is_current), do: ["link"]
 

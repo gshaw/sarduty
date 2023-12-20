@@ -30,7 +30,7 @@
 }
 
 /* special case disabled button */
-.btn:disabled, .btn[disabled] {
+.btn:disabled, .btn[disabled], .btn-disabled {
   @apply bg-base-3 text-secondary-1 border-none;
   &:active:hover,&:active:focus {
     transform: none;

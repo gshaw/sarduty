@@ -1,0 +1,9 @@
+.pagination { @apply mb-p }
+.pagination-list { @apply inline }
+.pagination-list li { @apply inline }
+.pagination-previous { @apply btn btn-sm }
+.pagination-previous.disabled { @apply btn-disabled }
+.pagination-next { @apply btn btn-sm }
+.pagination-next.disabled { @apply btn-disabled }
+.pagination-link { @apply btn btn-sm }
+.pagination-link.is-current { @apply btn-primary }

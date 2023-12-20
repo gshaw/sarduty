@@ -21,6 +21,7 @@ module.exports = {
           3: "#e4e4e7", // zinc-200
           content: "#27272a" // zinc-800
         },
+        disabled: "#a1a1aa", // zinc-400
         primary: {
           1: "#2563eb", // blue-600
           2: "#1d4ed8", // blue-700
