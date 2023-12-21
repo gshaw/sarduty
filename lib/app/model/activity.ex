@@ -70,28 +70,28 @@ defmodule App.Model.Activity do
   def get(id), do: Repo.get(Activity, id)
   # def get!(id), do: Repo.get!(Activity, id)
 
-  def get_by(team_id: team_id, date_filter: date_filter) do
-    case date_filter do
-      :past ->
-        Activity
-        |> where([r], r.team_id == ^team_id)
-        |> where([r], r.finished_at <= ^DateTime.utc_now())
-        |> order_by([r], desc: r.started_at)
-        |> Repo.all()
+  def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 
-      :future ->
-        Activity
-        |> where([r], r.team_id == ^team_id)
-        |> where([r], r.finished_at >= ^DateTime.utc_now())
-        |> order_by([r], asc: r.started_at)
-        |> Repo.all()
+  # def scope(q, search_filter: nil), do: q
+  # def scope(q, search_filter: ""), do: q
+  # def scope(q, search_filter: search_filter) do
+  #   where(q, [r], like(r.title, ^"%#{search_filter}%"))
+  # end
 
-      :all ->
-        Activity
-        |> where([r], r.team_id == ^team_id)
-        |> order_by([r], desc: r.started_at)
-        |> Repo.all()
-    end
+  def scope(q, date_filter: :past) do
+    q
+    |> where([r], r.finished_at <= ^DateTime.utc_now())
+    |> order_by([r], desc: r.started_at)
+  end
+
+  def scope(q, date_filter: :future) do
+    q
+    |> where([r], r.finished_at >= ^DateTime.utc_now())
+    |> order_by([r], asc: r.started_at)
+  end
+
+  def scope(q, date_filter: :all) do
+    order_by(q, [r], desc: r.started_at)
   end
 
   def get_by(params), do: Repo.get_by(Activity, params)

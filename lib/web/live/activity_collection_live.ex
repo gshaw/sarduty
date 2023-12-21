@@ -2,6 +2,7 @@ defmodule Web.ActivityCollectionLive do
   use Web, :live_view_app
 
   alias App.Model.Activity
+  alias App.Repo
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -10,14 +11,17 @@ defmodule Web.ActivityCollectionLive do
   def handle_params(params, _uri, socket) do
     date_filter = valid_date_filter(params)
 
-    activities =
-      Activity.get_by(team_id: socket.assigns.current_team.id, date_filter: date_filter)
+    page =
+      Activity
+      |> Activity.scope(team_id: socket.assigns.current_team.id)
+      |> Activity.scope(date_filter: date_filter)
+      |> Repo.paginate(params)
 
     socket =
       assign(
         socket,
         page_title: "Activities",
-        activities: activities,
+        page: page,
         date_filter: date_filter
       )
 
@@ -41,27 +45,27 @@ defmodule Web.ActivityCollectionLive do
       <.a
         navigate={~p"/#{@current_team.subdomain}/activities?date=past"}
         disabled={@date_filter == :past}
-        class="btn"
+        kind={:btn}
       >
         Past
       </.a>
       <.a
         navigate={~p"/#{@current_team.subdomain}/activities?date=future"}
         disabled={@date_filter == :future}
-        class="btn"
+        kind={:btn}
       >
         Future
       </.a>
       <.a
         navigate={~p"/#{@current_team.subdomain}/activities?date=all"}
         disabled={@date_filter == :all}
-        class="btn"
+        kind={:btn}
       >
         All
       </.a>
     </div>
 
-    <.table id="activity_collection" rows={@activities}>
+    <.table id="activity_collection" rows={@page.entries}>
       <:col :let={record} label="Activity">
         <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.id}"}>
           <.activity_title activity={record} /> #<%= record.ref_id %>
@@ -82,6 +86,7 @@ defmodule Web.ActivityCollectionLive do
         </span>
       </:col>
     </.table>
+    <.pagination class="my-p" page={@page} path={~p"/#{@current_team.subdomain}/activities"} />
     """
   end
 end

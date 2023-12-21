@@ -51,6 +51,7 @@ defmodule App.MixProject do
       {:phoenix, "~> 1.7.10"},
       {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.4.0"},
+      {:scrivener_ecto, "~> 2.7"},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
