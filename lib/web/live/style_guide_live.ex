@@ -49,6 +49,18 @@ defmodule Web.StyleGuideLive do
         A hint under a checkbox can be very useful.
       </.input>
 
+      <.input
+        type="select"
+        id="sel"
+        name="some_sel"
+        value="all"
+        options={["all", "some", "none"]}
+        label="A select field with width auto sized"
+        class="w-auto"
+      >
+        This is the hint for a select field.
+      </.input>
+
       <.input type="textarea" id="ta" name="attendance_export" value="" label="Text area">
         Copy the attendance record from an exported CSV file in Excel and paste into this text area. <pre>It can even have formatted text</pre>
       </.input>

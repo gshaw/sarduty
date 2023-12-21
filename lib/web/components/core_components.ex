@@ -356,7 +356,12 @@ defmodule Web.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+        class={[
+          "block w-full rounded border shadow-sm",
+          "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
+          @class
+        ]}
         multiple={@multiple}
         {@rest}
       >
@@ -364,6 +369,7 @@ defmodule Web.CoreComponents do
         <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
       </select>
       <.error :for={msg <- @errors}><%= msg %></.error>
+      <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
     </div>
     """
   end
