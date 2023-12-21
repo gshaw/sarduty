@@ -9,7 +9,11 @@ defmodule Web.WebComponents.Pagination do
 
   def pagination(assigns) do
     ~H"""
-    <div :if={@page.total_pages > 1} class={["flex items-center justify-between", @class]}>
+    <nav
+      :if={@page.total_pages > 1}
+      class={["flex items-center justify-between", @class]}
+      aria-label="pagination"
+    >
       <%= if @page.page_number > 1 do %>
         <.a navigate={"#{@path}?page=#{@page.page_number - 1}"}>← Previous Page</.a>
       <% else %>
@@ -23,7 +27,7 @@ defmodule Web.WebComponents.Pagination do
       <% else %>
         <span class="text-disabled">Next Page →</span>
       <% end %>
-    </div>
+    </nav>
     """
   end
 end
