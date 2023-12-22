@@ -352,7 +352,7 @@ defmodule Web.CoreComponents do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div class="mb-p" phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label != nil} for={@id}><%= @label %></.label>
       <select
         id={@id}
         name={@name}
@@ -369,7 +369,7 @@ defmodule Web.CoreComponents do
         <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
       </select>
       <.error :for={msg <- @errors}><%= msg %></.error>
-      <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
+      <.hint :if={@inner_block != []}><%= render_slot(@inner_block) %></.hint>
     </div>
     """
   end
@@ -377,7 +377,7 @@ defmodule Web.CoreComponents do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div class="mb-p" phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label != nil} for={@id}><%= @label %></.label>
       <textarea
         id={@id}
         name={@name}
@@ -399,7 +399,7 @@ defmodule Web.CoreComponents do
   def input(assigns) do
     ~H"""
     <div class="mb-p" phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label :if={@label != nil} for={@id}><%= @label %></.label>
       <input
         type={@type}
         name={@name}
@@ -414,7 +414,7 @@ defmodule Web.CoreComponents do
         {@rest}
       />
       <.error :for={msg <- @errors}><%= msg %></.error>
-      <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
+      <.hint :if={@inner_block != []}><%= render_slot(@inner_block) %></.hint>
     </div>
     """
   end
