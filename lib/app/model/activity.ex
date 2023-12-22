@@ -67,30 +67,50 @@ defmodule App.Model.Activity do
     |> Repo.all()
   end
 
+  # q = query
+  # r = record
+
   def get(id), do: Repo.get(Activity, id)
   # def get!(id), do: Repo.get!(Activity, id)
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 
-  # def scope(q, search_filter: nil), do: q
-  # def scope(q, search_filter: ""), do: q
-  # def scope(q, search_filter: search_filter) do
-  #   where(q, [r], like(r.title, ^"%#{search_filter}%"))
-  # end
+  def scope(q, q: nil), do: q
+  def scope(q, q: ""), do: q
 
-  def scope(q, date_filter: :past) do
+  def scope(q, q: search_filter) do
+    # https://dev.to/ivor/beware-ectos-orwhere-pitfall-50bb
+    subquery =
+      Activity
+      |> where([r], like(r.title, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.ref_id, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.tracking_number, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.tags, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.description, ^"%#{search_filter}%"))
+      |> select([:id])
+
+    where(q, [r], r.id in subquery(subquery))
+  end
+
+  def scope(q, date: "past") do
     q
     |> where([r], r.finished_at <= ^DateTime.utc_now())
     |> order_by([r], desc: r.started_at)
   end
 
-  def scope(q, date_filter: :future) do
+  def scope(q, date: "future") do
     q
     |> where([r], r.finished_at >= ^DateTime.utc_now())
     |> order_by([r], asc: r.started_at)
   end
 
-  def scope(q, date_filter: :all) do
+  def scope(q, activity: "all"), do: q
+
+  def scope(q, activity: activity) do
+    where(q, [r], r.activity_kind == ^activity)
+  end
+
+  def scope(q, date: "all") do
     order_by(q, [r], desc: r.started_at)
   end
 
