@@ -42,17 +42,16 @@ defmodule Web.StyleGuideLive do
       </div>
     </.style_group>
     <.style_group title=".input">
-      <.input type="text" id="tf" name="some_text_field" value="" label="A text field">
+      <.input type="text" name="some_text_field" value="" label="A text field">
         With a hint.
       </.input>
-      <.input type="checkbox" id="cb" name="some_checkbox_field" value="" label="Remember me">
+      <.input type="checkbox" name="some_checkbox_field" value="" label="Remember me">
         A hint under a checkbox can be very useful.
       </.input>
 
       <.input
         type="select"
-        id="sel"
-        name="some_sel"
+        name="sel"
         value="all"
         options={["all", "some", "none"]}
         label="A select field with width auto sized"
@@ -61,11 +60,19 @@ defmodule Web.StyleGuideLive do
         This is the hint for a select field.
       </.input>
 
-      <.input type="textarea" id="ta" name="attendance_export" value="" label="Text area">
+      <.input type="textarea" name="attendance_export" value="" label="Text area">
         Copy the attendance record from an exported CSV file in Excel and paste into this text area. <pre>It can even have formatted text</pre>
       </.input>
       <div>And this is text right after a text area</div>
-      <.input type="text" id="atf" name="some_text_field" value="" label="Another text field" />
+      <.input
+        type="text"
+        name="some_text_field"
+        value=""
+        label="A field with an error"
+        class="md:w-1/2"
+        errors={["is invalid"]}
+        phx-connected={JS.remove_class("phx-no-feedback", to: ".phx-no-feedback")}
+      />
     </.style_group>
 
     <.style_group title=".table" class="w-1/3">
