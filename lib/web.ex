@@ -57,7 +57,7 @@ defmodule Web do
     end
   end
 
-  def live_view_marketing do
+  def live_view_marketing_layout do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :marketing}
 
@@ -67,7 +67,7 @@ defmodule Web do
     end
   end
 
-  def live_view_app do
+  def live_view_app_layout do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :app}
 
@@ -80,7 +80,7 @@ defmodule Web do
     end
   end
 
-  def live_view_narrow do
+  def live_view_narrow_layout do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :narrow}
 

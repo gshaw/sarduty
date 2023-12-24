@@ -1,24 +1,24 @@
 defmodule Web.ActivityCollectionLive do
-  use Web, :live_view_app
+  use Web, :live_view_app_layout
 
   alias App.Model.Activity
   alias App.Repo
   alias App.ViewModel.ActivityFilterViewModel
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Activities")}
+    {:ok, assign(socket, :page_title, "Activities")}
   end
 
   def handle_params(params, _uri, socket) do
-    current_team = socket.assigns.current_team
-
     case ActivityFilterViewModel.validate(params) do
       {:ok, filter_options, changeset} ->
+        current_team = socket.assigns.current_team
+
         socket =
           socket
-          |> assign(paginated: build_paginated_content(current_team, filter_options))
-          |> assign(paginated_path_fn: build_paginated_path_fn(current_team, filter_options))
-          |> assign(form: to_form(changeset, as: "form"))
+          |> assign(:paginated, build_paginated_content(current_team, filter_options))
+          |> assign(:paginated_path_fn, build_paginated_path_fn(current_team, filter_options))
+          |> assign(:form, to_form(changeset, as: "form"))
 
         {:noreply, socket}
 

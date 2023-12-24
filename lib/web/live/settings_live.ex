@@ -1,5 +1,5 @@
 defmodule Web.SettingsLive do
-  use Web, :live_view_narrow
+  use Web, :live_view_narrow_layout
 
   alias App.Accounts
 

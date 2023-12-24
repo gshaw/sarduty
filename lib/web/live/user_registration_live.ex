@@ -1,5 +1,5 @@
 defmodule Web.UserRegistrationLive do
-  use Web, :live_view_narrow
+  use Web, :live_view_narrow_layout
 
   alias App.Accounts
   alias App.Accounts.User

@@ -1,6 +1,6 @@
 defmodule Web.Settings.TeamLive do
   alias App.Adapter
-  use Web, :live_view_narrow
+  use Web, :live_view_narrow_layout
 
   alias Adapter.D4H
   alias App.Model.Team

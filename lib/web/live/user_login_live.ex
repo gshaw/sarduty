@@ -1,5 +1,5 @@
 defmodule Web.UserLoginLive do
-  use Web, :live_view_narrow
+  use Web, :live_view_narrow_layout
 
   def render(assigns) do
     ~H"""

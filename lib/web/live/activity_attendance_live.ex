@@ -1,5 +1,5 @@
 defmodule Web.ActivityAttendanceLive do
-  use Web, :live_view_app
+  use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
   alias App.Model.Activity

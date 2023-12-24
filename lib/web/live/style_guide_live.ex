@@ -1,5 +1,5 @@
 defmodule Web.StyleGuideLive do
-  use Web, :live_view_marketing
+  use Web, :live_view_marketing_layout
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Style Guide")}
