@@ -13,6 +13,17 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: {
+        // p = 1 paragraph spacing unit
+        p05: "0.5rem",
+        p: "1rem",
+        p2: "2rem",
+        // h = 1 horizontal spacing unit
+        h05: "0.25rem",
+        h: "0.5rem",
+        h2: "1rem",
+        h4: "2rem",
+      },
       colors: {
         base: {
           0: "#ffffff", // white

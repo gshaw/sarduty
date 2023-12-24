@@ -34,7 +34,7 @@ defmodule Web.ActivityCollectionLive do
     </div>
     <h1 class="title mb-p"><%= @page_title %></h1>
     <.form for={@form} phx-change="change">
-      <div class="flex gap-4 items-center ">
+      <div class="flex gap-h items-center ">
         <.input field={@form[:q]} label="Search" />
         <.input
           label="Kind"
@@ -62,8 +62,6 @@ defmodule Web.ActivityCollectionLive do
       </div>
     </.form>
 
-    <.pagination class="my-p" paginated={@paginated} path_fn={@paginated_path_fn} />
-
     <.table id="activity_collection" rows={@paginated.entries}>
       <:col :let={record} label="Activity">
         <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.id}"}>
@@ -85,6 +83,8 @@ defmodule Web.ActivityCollectionLive do
         </span>
       </:col>
     </.table>
+
+    <.pagination class="my-p" paginated={@paginated} path_fn={@paginated_path_fn} />
     """
   end
 

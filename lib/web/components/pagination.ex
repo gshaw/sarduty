@@ -11,7 +11,7 @@ defmodule Web.WebComponents.Pagination do
     ~H"""
     <nav
       :if={@paginated.total_pages > 1}
-      class={["flex items-center justify-between", @class]}
+      class={["flex items-center justify-between gap-h", @class]}
       aria-label="pagination"
     >
       <%= if @paginated.page_number > 1 do %>
@@ -19,7 +19,7 @@ defmodule Web.WebComponents.Pagination do
       <% else %>
         <span class="text-disabled">← Previous Page</span>
       <% end %>
-      <span class="px-2">
+      <span>
         Page <%= @paginated.page_number %> of <%= @paginated.total_pages %>
       </span>
       <%= if @paginated.page_number < @paginated.total_pages do %>

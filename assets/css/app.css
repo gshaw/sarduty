@@ -1,8 +1,6 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
 @import "base/all";
 @import "components/all";
-
-/* required to gives some space if buttons wrap on narrow screen */
-.form-actions .btn { @apply mb-2; }

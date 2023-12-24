@@ -8,17 +8,9 @@
 .link { @apply text-primary-1 no-underline hover:underline }
 .hint { @apply text-secondary-1 text-sm font-normal }
 
-  /* mb-p = "margin base paragraph" */
-.mb-p05 { @apply mb-2; }
-.mb-p { @apply mb-4; }
-.mb-p2 { @apply mb-8; }
-.mt-p05 { @apply mt-2; }
-.mt-p { @apply mt-4; }
-.mt-p2 { @apply mt-8; }
-.my-p05 { @apply my-2; }
-.my-p { @apply my-4; }
-.my-p2 { @apply my-8; }
-
 p, dl { @apply mb-p }
 dt { @apply label }
 dd { @apply mb-p05 }
+
+/* required to gives some space if buttons wrap on narrow screen */
+.form-actions .btn { @apply mb-2; }

@@ -30,7 +30,7 @@ defmodule Web.Settings.TeamLive do
 
       <.form for={@form} phx-submit="save" phx-change="validate">
         <.input field={@form[:name]} label="Name" />
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-h">
           <.input field={@form[:lat]} readonly label="Lat" class="bg-base-3" />
           <.input field={@form[:lng]} readonly label="Lng" class="bg-base-3" />
         </div>
