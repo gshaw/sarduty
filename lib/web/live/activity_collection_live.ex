@@ -10,34 +10,21 @@ defmodule Web.ActivityCollectionLive do
   end
 
   def handle_params(params, _uri, socket) do
-    # TODO: Combine .validate and build_new_changeset into one function
-    case ActivityFilterViewModel.validate(params) do
-      {:ok, options} ->
-        page_path_fn = fn n -> build_filter_path(socket, options |> Map.put(:page, n)) end
-        page = fetch_page(socket.assigns.current_team.id, options)
-        changeset = ActivityFilterViewModel.build_new_changeset(params)
-        form = to_form(changeset, as: "form")
+    current_team = socket.assigns.current_team
 
+    case ActivityFilterViewModel.validate(params) do
+      {:ok, filter_options, changeset} ->
         socket =
           socket
-          |> assign(page_path_fn: page_path_fn)
-          |> assign(page: page)
-          |> assign(form: form)
+          |> assign(paginated: build_paginated_content(current_team, filter_options))
+          |> assign(paginated_path_fn: build_paginated_path_fn(current_team, filter_options))
+          |> assign(form: to_form(changeset, as: "form"))
 
         {:noreply, socket}
 
       {:error, _} ->
         raise Web.Status.NotFound
     end
-  end
-
-  def fetch_page(team_id, data) do
-    Activity
-    |> Activity.scope(team_id: team_id)
-    |> Activity.scope(activity: data.activity)
-    |> Activity.scope(date: data.date)
-    |> Activity.scope(q: data.q)
-    |> Repo.paginate(%{page: data.page, page_size: data.limit})
   end
 
   def render(assigns) do
@@ -70,14 +57,14 @@ defmodule Web.ActivityCollectionLive do
         <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Reset</.a>
         <span class="grow"></span>
         <span class="">
-          <%= @page.total_entries %> records
+          <%= @paginated.total_entries %> records
         </span>
       </div>
     </.form>
 
-    <.pagination class="my-p" page={@page} page_path_fn={@page_path_fn} />
+    <.pagination class="my-p" paginated={@paginated} path_fn={@paginated_path_fn} />
 
-    <.table id="activity_collection" rows={@page.entries}>
+    <.table id="activity_collection" rows={@paginated.entries}>
       <:col :let={record} label="Activity">
         <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.id}"}>
           <.activity_title activity={record} /> #<%= record.ref_id %>
@@ -103,28 +90,32 @@ defmodule Web.ActivityCollectionLive do
 
   def handle_event("change", %{"form" => form_params}, socket) do
     case ActivityFilterViewModel.validate(form_params) do
-      {:ok, options} ->
-        {:noreply, push_patch(socket, to: build_filter_path(socket, options), replace: true)}
+      {:ok, filter_options, _changeset} ->
+        path = build_filter_path(socket.assigns.current_team, filter_options)
+        {:noreply, push_patch(socket, to: path, replace: true)}
 
       {:error, _} ->
         raise Web.Status.NotFound
     end
   end
 
-  def build_filter_path(socket, options) do
-    query_params = build_query_params(options)
-    ~p"/#{socket.assigns.current_team.subdomain}/activities?#{query_params}"
+  def build_paginated_content(team, filter_options) do
+    Activity
+    |> Activity.scope(team_id: team.id)
+    |> Activity.scope(activity: filter_options.activity)
+    |> Activity.scope(date: filter_options.date)
+    |> Activity.scope(q: filter_options.q)
+    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
-  def build_query_params(options) do
-    %{
-      q: options.q,
-      activity: options.activity,
-      date: options.date,
-      page: options.page,
-      limit: options.limit
-    }
-    |> Map.reject(fn {k, v} -> k == :page && v == 1 end)
-    |> Map.reject(fn {_, v} -> v == nil end)
+  def build_paginated_path_fn(team, filter_options) do
+    fn page_number ->
+      build_filter_path(team, Map.put(filter_options, :page, page_number))
+    end
+  end
+
+  def build_filter_path(team, filter_options) do
+    query_params = Service.PathHelpers.build_filter_query_params(filter_options)
+    ~p"/#{team.subdomain}/activities?#{query_params}"
   end
 end

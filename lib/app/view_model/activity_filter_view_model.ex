@@ -2,6 +2,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   use App, :view_model
 
   alias App.Field
+  alias App.Model.Activity
+  alias App.Repo
   # alias App.Validate
   # alias App.ViewModel.ActivityFilterViewModel, as: VM
 
@@ -18,20 +20,14 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def date_kinds, do: ["all", "past", "future"]
   def limits, do: [nil, 10, 25, 50, 100, 250, 500, 1000]
 
-  def validate(params) do
-    params
-    |> build_new_changeset()
-    |> apply_action(:replace)
-  end
-
-  def build_new do
+  defp build_new do
     %__MODULE__{
       date: "past",
       activity: "all"
     }
   end
 
-  def build_new_changeset(params \\ %{}), do: build_changeset(build_new(), params)
+  defp build_new_changeset(params), do: build_changeset(build_new(), params)
 
   defp build_changeset(data, params) do
     data
@@ -41,5 +37,14 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> validate_inclusion(:date, date_kinds())
     |> validate_number(:page, greater_than_or_equal_to: 1)
     |> validate_number(:page, greater_than_or_equal_to: 1, less_than_or_equal_to: 1000)
+  end
+
+  def validate(params) do
+    changeset = build_new_changeset(params)
+
+    case apply_action(changeset, :replace) do
+      {:ok, filter_options} -> {:ok, filter_options, changeset}
+      {:error, _} = result -> result
+    end
   end
 end
