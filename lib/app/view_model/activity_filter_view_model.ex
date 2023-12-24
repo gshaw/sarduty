@@ -2,10 +2,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   use App, :view_model
 
   alias App.Field
-  alias App.Model.Activity
-  alias App.Repo
-  # alias App.Validate
-  # alias App.ViewModel.ActivityFilterViewModel, as: VM
 
   @primary_key false
   embedded_schema do
