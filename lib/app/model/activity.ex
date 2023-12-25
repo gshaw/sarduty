@@ -99,10 +99,10 @@ defmodule App.Model.Activity do
   def scope(q, activity: "all"), do: q
   def scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
 
-  def scope(q, order: "date:desc"), do: order_by(q, [r], desc: r.started_at)
-  def scope(q, order: "date:asc"), do: order_by(q, [r], asc: r.started_at)
-  def scope(q, order: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
-  def scope(q, order: "id:asc"), do: order_by(q, [r], asc: r.ref_id)
+  def scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.started_at)
+  def scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.started_at)
+  def scope(q, sort: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
+  def scope(q, sort: "id:asc"), do: order_by(q, [r], asc: r.ref_id)
 
   def get_by(params), do: Repo.get_by(Activity, params)
 

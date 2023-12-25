@@ -38,9 +38,9 @@ defmodule Web.MemberCollectionLive do
         <.input field={@form[:q]} label="Search" />
         <.input
           label="Sort"
-          field={@form[:order]}
+          field={@form[:sort]}
           type="select"
-          options={MemberFilterViewModel.order_kinds()}
+          options={MemberFilterViewModel.sort_kinds()}
         />
         <.input
           label="Limit"
@@ -88,7 +88,7 @@ defmodule Web.MemberCollectionLive do
     Member
     |> Member.scope(team_id: team.id)
     |> Member.scope(q: filter_options.q)
-    |> Member.scope(order: filter_options.order)
+    |> Member.scope(sort: filter_options.sort)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 

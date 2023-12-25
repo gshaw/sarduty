@@ -68,10 +68,10 @@ defmodule App.Model.Member do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  def scope(q, order: "name"), do: order_by(q, [r], asc: r.name)
-  def scope(q, order: "role"), do: order_by(q, [r], asc: r.position)
-  def scope(q, order: "date:desc"), do: order_by(q, [r], desc: r.joined_at)
-  def scope(q, order: "date:asc"), do: order_by(q, [r], asc: r.joined_at)
+  def scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
+  def scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
+  def scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.joined_at)
+  def scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.joined_at)
 
   def get_all(team_id) do
     Member

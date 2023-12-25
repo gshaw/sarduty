@@ -50,9 +50,9 @@ defmodule Web.ActivityCollectionLive do
         />
         <.input
           label="Sort"
-          field={@form[:order]}
+          field={@form[:sort]}
           type="select"
-          options={ActivityFilterViewModel.order_kinds()}
+          options={ActivityFilterViewModel.sort_kinds()}
         />
         <.input
           label="Limit"
@@ -108,7 +108,7 @@ defmodule Web.ActivityCollectionLive do
     |> Activity.scope(q: filter_options.q)
     |> Activity.scope(activity: filter_options.activity)
     |> Activity.scope(date: filter_options.date)
-    |> Activity.scope(order: filter_options.order)
+    |> Activity.scope(sort: filter_options.sort)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
