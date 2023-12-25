@@ -20,7 +20,7 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <h1 class="title-hero mb-p"><%= @current_team.name %></h1>
 
-    <div class="mb-p">
+    <div class="mb-p2">
       <h2 class="heading">
         → <.a
           external={true}
@@ -34,46 +34,46 @@ defmodule Web.TeamDashboardLive do
         →
         <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
       </h2>
-
-      <p class="mt-p2">
-        <.button
-          type="button"
-          class="btn-warning"
-          phx-click="refresh"
-          disabled={@view_data.loading != nil}
-        >
-          Refresh D4H Data
-        </.button>
-      </p>
-
-      <.async_result :let={view_data} assign={@view_data}>
-        <:loading>
-          <.spinner>Refreshing D4H data...</.spinner>
-        </:loading>
-        <:failed :let={_reason}>There was an error refershing D4H data</:failed>
-
-        <table class="table">
-          <thead>
-            <th>Type</th>
-            <th class="text-right">Count</th>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Members</td>
-              <td class="text-right"><%= view_data.member_count %></td>
-            </tr>
-            <tr>
-              <td>Activities</td>
-              <td class="text-right"><%= view_data.activity_count %></td>
-            </tr>
-            <tr>
-              <td>Attendances</td>
-              <td class="text-right"><%= view_data.attendance_count %></td>
-            </tr>
-          </tbody>
-        </table>
-      </.async_result>
     </div>
+
+    <p class="">
+      <.button
+        type="button"
+        class="btn-warning"
+        phx-click="refresh"
+        disabled={@view_data.loading != nil}
+      >
+        Refresh D4H Data
+      </.button>
+    </p>
+
+    <.async_result :let={view_data} assign={@view_data}>
+      <:loading>
+        <.spinner>Refreshing D4H data...</.spinner>
+      </:loading>
+      <:failed :let={_reason}>There was an error refershing D4H data</:failed>
+
+      <table class="table">
+        <thead>
+          <th>Type</th>
+          <th class="text-right">Count</th>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Members</td>
+            <td class="text-right"><%= view_data.member_count %></td>
+          </tr>
+          <tr>
+            <td>Activities</td>
+            <td class="text-right"><%= view_data.activity_count %></td>
+          </tr>
+          <tr>
+            <td>Attendances</td>
+            <td class="text-right"><%= view_data.attendance_count %></td>
+          </tr>
+        </tbody>
+      </table>
+    </.async_result>
     """
   end
 
