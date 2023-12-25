@@ -75,5 +75,7 @@ defmodule Web.Router do
       live "/:subdomain/members", MemberCollectionLive
       live "/:subdomain/members/:id", MemberLive
     end
+
+    get "/:subdomain/members/:id/image", MemberController, :image
   end
 end

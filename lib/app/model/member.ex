@@ -81,8 +81,8 @@ defmodule App.Model.Member do
   end
 
   def get(id), do: Repo.get(Member, id)
-  # def get!(id), do: Repo.get!(Member, id)
-  # def get_by(params), do: Repo.get_by(Member, params)
+  def get!(id), do: Repo.get!(Member, id)
+  def get_by(params), do: Repo.get_by(Member, params)
 
   def insert!(params) do
     changeset = Member.build_new_changeset(params)
