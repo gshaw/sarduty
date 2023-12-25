@@ -54,6 +54,9 @@ defmodule Web.MemberCollectionLive do
     </.form>
 
     <.table id="member_collection" rows={@paginated.entries} class="w-full">
+      <:col :let={record} label="#" class="w-px text-right">
+        <%= record.ref_id %>
+      </:col>
       <:col :let={record} label="Member">
         <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.id}"}>
           <%= record.name %>

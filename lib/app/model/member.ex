@@ -63,6 +63,7 @@ defmodule App.Model.Member do
       Member
       |> where([r], like(r.name, ^"%#{search_filter}%"))
       |> or_where([r], like(r.position, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.ref_id, ^"%#{search_filter}%"))
       |> select([:id])
 
     where(q, [r], r.id in subquery(subquery))
@@ -70,6 +71,8 @@ defmodule App.Model.Member do
 
   def scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   def scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
+  def scope(q, sort: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
+  def scope(q, sort: "id:asc"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
   def scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.joined_at)
   def scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.joined_at)
 

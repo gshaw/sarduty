@@ -25,6 +25,7 @@ defmodule Web.MemberLive do
       <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
       /
       <.a navigate={~p"/#{@current_team.subdomain}/members/"}>Members</.a>
+      / #<%= @member.ref_id %>
     </div>
 
     <div class="md:flex gap-p w-full">
@@ -42,10 +43,6 @@ defmodule Web.MemberLive do
           <tr>
             <th>Role</th>
             <td><%= @member.position %></td>
-          </tr>
-          <tr>
-            <th>ID</th>
-            <td><%= @member.ref_id %></td>
           </tr>
           <tr>
             <th>Email</th>

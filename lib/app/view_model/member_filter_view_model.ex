@@ -17,14 +17,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
     do: %{
       "Name" => "name",
       "Role" => "role",
+      "ID ↓" => "id:desc",
+      "ID ↑" => "id:asc",
       "Joined ↓" => "date:desc",
       "Joined ↑" => "date:asc"
     }
 
   defp build_new do
     %__MODULE__{
-      # date: "past",
-      # activity: "all",
       limit: 100,
       sort: "name"
     }
