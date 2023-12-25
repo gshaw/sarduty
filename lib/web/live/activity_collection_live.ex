@@ -55,14 +55,11 @@ defmodule Web.ActivityCollectionLive do
           options={ActivityFilterViewModel.limits()}
         />
         <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Reset</.a>
-        <span class="grow"></span>
-        <span class="">
-          <%= @paginated.total_entries %> records
-        </span>
+        <span class="text-right grow"><%= @paginated.total_entries %> records</span>
       </div>
     </.form>
 
-    <.table id="activity_collection" rows={@paginated.entries}>
+    <.table id="activity_collection" rows={@paginated.entries} class="w-full">
       <:col :let={record} label="Activity">
         <.a navigate={~p"/#{@current_team.subdomain}/activities/#{record.id}"}>
           <.activity_title activity={record} /> #<%= record.ref_id %>
@@ -73,11 +70,11 @@ defmodule Web.ActivityCollectionLive do
         </div>
         <.activity_tags activity={record} />
       </:col>
-      <:col :let={record} label="Kind">
-        <.activity_kind_badge activity={record} />
+      <:col :let={record} label="Kind" class="w-1/12">
+        <div><.activity_kind_badge activity={record} /></div>
         <.activity_tracking_number_badge activity={record} />
       </:col>
-      <:col :let={record} label="Date">
+      <:col :let={record} label="Date" class="w-1/12">
         <span class="whitespace-nowrap">
           <%= Calendar.strftime(record.started_at, "%x") %>
         </span>

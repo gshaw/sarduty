@@ -499,6 +499,8 @@ defmodule Web.CoreComponents do
     default: &Function.identity/1,
     doc: "the function for mapping each row before calling the :col and :action slots"
 
+  attr :class, :string, default: nil
+
   slot :col, required: true do
     attr :label, :string
     attr :class, :string
@@ -513,7 +515,7 @@ defmodule Web.CoreComponents do
       end
 
     ~H"""
-    <table class="table">
+    <table class={["table", @class]}>
       <thead>
         <tr :if={@header_row} class="table-header-row">
           <%= render_slot(@header_row) %>
