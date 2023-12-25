@@ -49,6 +49,12 @@ defmodule Web.ActivityCollectionLive do
           options={ActivityFilterViewModel.date_kinds()}
         />
         <.input
+          label="Sort"
+          field={@form[:order]}
+          type="select"
+          options={ActivityFilterViewModel.order_kinds()}
+        />
+        <.input
           label="Limit"
           field={@form[:limit]}
           type="select"
@@ -99,9 +105,10 @@ defmodule Web.ActivityCollectionLive do
   def build_paginated_content(team, filter_options) do
     Activity
     |> Activity.scope(team_id: team.id)
+    |> Activity.scope(q: filter_options.q)
     |> Activity.scope(activity: filter_options.activity)
     |> Activity.scope(date: filter_options.date)
-    |> Activity.scope(q: filter_options.q)
+    |> Activity.scope(order: filter_options.order)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 

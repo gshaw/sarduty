@@ -10,16 +10,27 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :date, :string
     field :page, :integer
     field :limit, :integer
+    field :order, :string
   end
 
   def activity_kinds, do: ["all", "exercise", "event", "incident"]
   def date_kinds, do: ["all", "past", "future"]
-  def limits, do: [nil, 10, 25, 50, 100, 250, 500, 1000]
+  def limits, do: [10, 25, 50, 100, 250, 500, 1000]
+
+  def order_kinds,
+    do: %{
+      "Date ↓" => "date:desc",
+      "Date ↑" => "date:asc",
+      "ID ↓" => "id:desc",
+      "ID ↑" => "id:asc"
+    }
 
   defp build_new do
     %__MODULE__{
       date: "past",
-      activity: "all"
+      activity: "all",
+      limit: 50,
+      order: "date:desc"
     }
   end
 
@@ -27,10 +38,11 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :date, :activity, :page, :limit])
+    |> cast(params, [:q, :date, :activity, :page, :limit, :order])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, activity_kinds())
     |> validate_inclusion(:date, date_kinds())
+    |> validate_inclusion(:order, Map.values(order_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
     |> validate_number(:page, greater_than_or_equal_to: 1, less_than_or_equal_to: 1000)
   end
