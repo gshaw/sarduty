@@ -556,7 +556,7 @@ defmodule Web.CoreComponents do
         <%= case Enum.find(@sorts, fn {_k, v} -> v == @sort end) do %>
           <% nil -> %>
             <% {_suffix, sort} = List.first(@sorts) %>
-            <.a kind={:custom} navigate={@path_fn.(page: 1, sort: sort)}>
+            <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
               <%= @label %>
             </.a>
           <% {suffix, current_sort} -> %>
@@ -564,7 +564,7 @@ defmodule Web.CoreComponents do
               <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
             <% else %>
               <% sort = find_next_sort(@sorts, current_sort) %>
-              <.a kind={:custom} navigate={@path_fn.(page: 1, sort: sort)}>
+              <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
                 <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
               </.a>
             <% end %>
