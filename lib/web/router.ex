@@ -35,8 +35,8 @@ defmodule Web.Router do
 
     live_session :current_user,
       on_mount: [{Web.UserAuth, :mount_current_user}] do
-      live "/", HomePageLive, :show
-      live "/styles", StyleGuideLive, :show
+      live "/", HomePageLive
+      live "/styles", StyleGuideLive
       live "/signup", UserRegistrationLive, :new
       live "/signup/confirm/:token", UserConfirmationLive, :edit
       live "/signup/confirm", UserConfirmationInstructionsLive, :new
@@ -54,10 +54,10 @@ defmodule Web.Router do
 
     live_session :require_authenticated_user,
       on_mount: [{Web.UserAuth, :ensure_authenticated}] do
-      live "/settings", SettingsLive, :show
-      live "/settings/email", Settings.ChangeEmailLive, :edit
-      live "/settings/password", Settings.ChangePasswordLive, :edit
-      live "/settings/confirm_email/:token", SettingsLive, :confirm_email
+      live "/settings", SettingsLive
+      live "/settings/email", Settings.ChangeEmailLive
+      live "/settings/password", Settings.ChangePasswordLive
+      live "/settings/confirm_email/:token", SettingsLive
       live "/settings/d4h", Settings.D4HLive
       live "/settings/team", Settings.TeamLive
     end
