@@ -15,7 +15,7 @@ defmodule Web.WebComponents.Pagination do
       aria-label="pagination"
     >
       <%= if @paginated.page_number > 1 do %>
-        <.a navigate={@path_fn.(@paginated.page_number - 1)}>← Previous Page</.a>
+        <.a navigate={@path_fn.(page: @paginated.page_number - 1)}>← Previous Page</.a>
       <% else %>
         <span class="text-disabled">← Previous Page</span>
       <% end %>
@@ -23,7 +23,7 @@ defmodule Web.WebComponents.Pagination do
         Page <%= @paginated.page_number %> of <%= @paginated.total_pages %>
       </span>
       <%= if @paginated.page_number < @paginated.total_pages do %>
-        <.a navigate={@path_fn.(@paginated.page_number + 1)}>Next Page →</.a>
+        <.a navigate={@path_fn.(page: @paginated.page_number + 1)}>Next Page →</.a>
       <% else %>
         <span class="text-disabled">Next Page →</span>
       <% end %>

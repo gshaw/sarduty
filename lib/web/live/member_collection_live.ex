@@ -16,8 +16,9 @@ defmodule Web.MemberCollectionLive do
 
         socket =
           socket
+          |> assign(:sort, filter_options.sort)
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
-          |> assign(:paginated_path_fn, build_paginated_path_fn(current_team, filter_options))
+          |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
 
         {:noreply, socket}
@@ -53,26 +54,42 @@ defmodule Web.MemberCollectionLive do
       </div>
     </.form>
 
-    <.table id="member_collection" rows={@paginated.entries} class="w-full">
-      <:col :let={record} label="#" class="w-px text-right">
+    <.table
+      id="member_collection"
+      rows={@paginated.entries}
+      sort={@sort}
+      path_fn={@path_fn}
+      class="w-full"
+    >
+      <:col
+        :let={record}
+        label="ID"
+        class="w-px text-right"
+        sorts={[{"↓", "id:desc"}, {"↑", "id:asc"}]}
+      >
         <%= record.ref_id %>
       </:col>
-      <:col :let={record} label="Member">
+      <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
         <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.id}"}>
           <%= record.name %>
         </.a>
       </:col>
-      <:col :let={record} label="Role" class="w-1/3">
+      <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
         <%= record.position %>
       </:col>
-      <:col :let={record} label="Joined" class="w-1/12">
+      <:col
+        :let={record}
+        label="Joined"
+        class="w-1/12"
+        sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}
+      >
         <span class="whitespace-nowrap">
           <%= Calendar.strftime(record.joined_at, "%x") %>
         </span>
       </:col>
     </.table>
 
-    <.pagination class="my-p" paginated={@paginated} path_fn={@paginated_path_fn} />
+    <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
     """
   end
 
@@ -95,9 +112,9 @@ defmodule Web.MemberCollectionLive do
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
-  def build_paginated_path_fn(team, filter_options) do
-    fn page_number ->
-      build_filter_path(team, Map.put(filter_options, :page, page_number))
+  def build_path_fn(team, filter_options) do
+    fn changed_options ->
+      build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
     end
   end
 

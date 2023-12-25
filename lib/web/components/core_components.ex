@@ -17,6 +17,7 @@ defmodule Web.CoreComponents do
   use Phoenix.Component
 
   import Web.Gettext
+  import Web.WebComponents.A
 
   alias Phoenix.LiveView.JS
 
@@ -501,10 +502,13 @@ defmodule Web.CoreComponents do
     doc: "the function for mapping each row before calling the :col and :action slots"
 
   attr :class, :string, default: nil
+  attr :sort, :string, default: nil
+  attr :path_fn, :any, default: nil
 
   slot :col, required: true do
     attr :label, :string
     attr :class, :string
+    attr :sorts, :list
   end
 
   slot :header_row, defualt: nil
@@ -522,9 +526,14 @@ defmodule Web.CoreComponents do
           <%= render_slot(@header_row) %>
         </tr>
         <tr>
-          <th :for={col <- @col} class={Map.get(col, :class)}>
-            <%= col[:label] %>
-          </th>
+          <.table_header
+            :for={col <- @col}
+            label={col[:label]}
+            class={Map.get(col, :class)}
+            sorts={col[:sorts]}
+            sort={@sort}
+            path_fn={@path_fn}
+          />
         </tr>
       </thead>
       <tbody id={@id}>
@@ -536,6 +545,39 @@ defmodule Web.CoreComponents do
       </tbody>
     </table>
     """
+  end
+
+  def table_header(assigns) do
+    ~H"""
+    <th class={@class}>
+      <%= if @sorts == nil do %>
+        <%= @label %>
+      <% else %>
+        <%= case Enum.find(@sorts, fn {_k, v} -> v == @sort end) do %>
+          <% nil -> %>
+            <% {_suffix, sort} = List.first(@sorts) %>
+            <.a kind={:custom} navigate={@path_fn.(page: 1, sort: sort)}>
+              <%= @label %>
+            </.a>
+          <% {suffix, current_sort} -> %>
+            <%= if Enum.count(@sorts) == 1 do %>
+              <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+            <% else %>
+              <% sort = find_next_sort(@sorts, current_sort) %>
+              <.a kind={:custom} navigate={@path_fn.(page: 1, sort: sort)}>
+                <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+              </.a>
+            <% end %>
+        <% end %>
+      <% end %>
+    </th>
+    """
+  end
+
+  def find_next_sort([{_label, sort}] = _sorts, _current_sort), do: sort
+
+  def find_next_sort([{_label1, sort1}, {_label2, sort2}] = _sorts, current_sort) do
+    if current_sort == sort1, do: sort2, else: sort1
   end
 
   @doc """
