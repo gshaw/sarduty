@@ -18,9 +18,9 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title-hero mb-p"><%= @current_team.name %></h1>
+    <h1 class="title-hero"><%= @current_team.name %></h1>
 
-    <div class="mb-p2">
+    <nav class="my-p2">
       <h2 class="heading">
         → <.a
           external={true}
@@ -29,12 +29,15 @@ defmodule Web.TeamDashboardLive do
           phx-no-format
         >Open D4H Dashboard</.a>
       </h2>
-
       <h2 class="heading">
         →
         <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
       </h2>
-    </div>
+      <h2 class="heading">
+        →
+        <.a navigate={~p"/#{@current_team.subdomain}/members"}>Members</.a>
+      </h2>
+    </nav>
 
     <p class="">
       <.button
