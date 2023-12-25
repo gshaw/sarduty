@@ -40,7 +40,6 @@ defmodule Web.Settings.ChangeEmailLive do
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
     email_changeset = Accounts.change_user_email(user)
-    password_changeset = Accounts.change_user_password(user)
 
     socket =
       socket
@@ -49,7 +48,6 @@ defmodule Web.Settings.ChangeEmailLive do
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
-      |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
 
     {:ok, socket}

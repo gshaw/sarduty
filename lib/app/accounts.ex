@@ -1,12 +1,16 @@
+# credo:disable-for-this-file
+
 defmodule App.Accounts do
   @moduledoc """
   The Accounts context.
   """
 
   import Ecto.Query, warn: false
-  alias App.Repo
 
-  alias App.Accounts.{User, UserToken, UserNotifier}
+  alias App.Accounts.User
+  alias App.Accounts.UserNotifier
+  alias App.Accounts.UserToken
+  alias App.Repo
 
   ## Database getters
 

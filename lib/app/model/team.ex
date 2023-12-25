@@ -45,7 +45,7 @@ defmodule App.Model.Team do
     |> Validate.address(:mailing_address)
   end
 
-  def get_all() do
+  def get_all do
     Team
     |> order_by([t], desc: t.id)
     |> Repo.all()

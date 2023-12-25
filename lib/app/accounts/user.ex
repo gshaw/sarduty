@@ -128,6 +128,7 @@ defmodule App.Accounts.User do
     user
     |> cast(attrs, [:email])
     |> validate_email(opts)
+    # credo:disable-for-next-line Credo.Check.Readability.BlockPipe
     |> case do
       %{changes: %{email: _}} = changeset -> changeset
       %{} = changeset -> add_error(changeset, :email, "did not change")

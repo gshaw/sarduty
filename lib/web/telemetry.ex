@@ -6,6 +6,7 @@ defmodule Web.Telemetry do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
+  # credo:disable-for-next-line Credo.Check.Readability.ImplTrue
   @impl true
   def init(_arg) do
     children = [

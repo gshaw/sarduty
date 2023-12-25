@@ -16,11 +16,13 @@ defmodule App.ViewData.TeamDashboardViewData do
   end
 
   def count_members(team) do
-    Repo.one(from m in Member, where: m.team_id == ^team.id, select: count(1))
+    query = from m in Member, where: m.team_id == ^team.id, select: count(1)
+    Repo.one(query)
   end
 
   def count_activities(team) do
-    Repo.one(from a in Activity, where: a.team_id == ^team.id, select: count(1))
+    query = from a in Activity, where: a.team_id == ^team.id, select: count(1)
+    Repo.one(query)
   end
 
   def count_attendances(team) do

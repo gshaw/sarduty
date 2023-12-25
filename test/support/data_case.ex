@@ -16,14 +16,16 @@ defmodule App.DataCase do
 
   use ExUnit.CaseTemplate
 
+  alias Ecto.Adapters.SQL
+
   using do
     quote do
-      alias App.Repo
-
+      import App.DataCase
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
-      import App.DataCase
+
+      alias App.Repo
     end
   end
 
@@ -36,8 +38,8 @@ defmodule App.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(App.Repo, shared: not tags[:async])
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    pid = SQL.Sandbox.start_owner!(App.Repo, shared: not tags[:async])
+    on_exit(fn -> SQL.Sandbox.stop_owner(pid) end)
   end
 
   @doc """

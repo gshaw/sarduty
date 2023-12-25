@@ -2,7 +2,7 @@ defmodule App.Adapter.D4H do
   alias App.Accounts.User
   alias App.Adapter.D4H
 
-  def default_region(), do: "api.ca.d4h.org"
+  def default_region, do: "api.ca.d4h.org"
 
   def regions do
     %{

@@ -1,9 +1,10 @@
 defmodule Web.Settings.ChangePasswordLiveTest do
   use Web.ConnCase
 
-  alias App.Accounts
-  import Phoenix.LiveViewTest
   import App.AccountsFixtures
+  import Phoenix.LiveViewTest
+
+  alias App.Accounts
 
   describe "Change password page" do
     test "renders page", %{conn: conn} do

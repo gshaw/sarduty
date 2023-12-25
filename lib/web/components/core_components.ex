@@ -16,8 +16,9 @@ defmodule Web.CoreComponents do
   """
   use Phoenix.Component
 
-  alias Phoenix.LiveView.JS
   import Web.Gettext
+
+  alias Phoenix.LiveView.JS
 
   @doc """
   Renders a modal.

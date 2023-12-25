@@ -10,7 +10,7 @@ defmodule App.Adapter.Mapbox do
     )
   end
 
-  def build_context() do
+  def build_context do
     build_context(%{mapbox_access_token: access_token()})
   end
 
@@ -22,7 +22,8 @@ defmodule App.Adapter.Mapbox do
     base_url = context.options.base_url
     token = context.options.params[:access_token]
 
-    mapbox_coordinate = Coordinate.build(coordinate) |> Coordinate.build_mapbox()
+    coordinate = Coordinate.build(coordinate)
+    mapbox_coordinate = Coordinate.build_mapbox(coordinate)
     zoom = "10"
     size = "640x480"
     pin_color = "ff2600"

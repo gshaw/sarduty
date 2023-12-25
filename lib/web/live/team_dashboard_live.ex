@@ -7,11 +7,12 @@ defmodule Web.TeamDashboardLive do
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
+    view_data = TeamDashboardViewData.build(current_team)
 
     socket =
       socket
       |> assign(page_title: current_team.name)
-      |> assign(view_data: AsyncResult.ok(TeamDashboardViewData.build(current_team)))
+      |> assign(view_data: AsyncResult.ok(view_data))
 
     {:ok, socket}
   end

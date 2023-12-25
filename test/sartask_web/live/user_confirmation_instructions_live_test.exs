@@ -33,7 +33,8 @@ defmodule Web.UserConfirmationInstructionsLiveTest do
     end
 
     test "does not send confirmation token if user is confirmed", %{conn: conn, user: user} do
-      Repo.update!(Accounts.User.confirm_changeset(user))
+      changeset = Accounts.User.confirm_changeset(user)
+      Repo.update!(changeset)
 
       {:ok, lv, _html} = live(conn, ~p"/signup/confirm")
 

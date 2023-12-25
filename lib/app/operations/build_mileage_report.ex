@@ -2,6 +2,7 @@ defmodule App.Operation.BuildMilesageReport do
   alias App.Adapter.D4H
   alias App.Adapter.Mapbox
 
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   def call(d4h, activity_id) do
     {:ok, team} = D4H.fetch_team(d4h)
     activity = D4H.fetch_activity(d4h, activity_id)
@@ -19,25 +20,7 @@ defmodule App.Operation.BuildMilesageReport do
         address = attending.member.address
 
         {coordinate, activity_distance, activity_duration, yard_distance, yard_duration} =
-          case Mapbox.fetch_coordinate(mapbox, address, activity_coordinate) do
-            {:ok, coordinate} ->
-              {activity_distance, activity_duration} =
-                case Mapbox.fetch_driving_info(mapbox, activity_coordinate, coordinate) do
-                  {:ok, distance, duration} -> {distance, duration}
-                  {:error, _} -> {"unknown", "unknown"}
-                end
-
-              {yard_distance, yard_duration} =
-                case Mapbox.fetch_driving_info(mapbox, yard_coordinate, coordinate) do
-                  {:ok, distance, duration} -> {distance, duration}
-                  {:error, _} -> {"unknown", "unknown"}
-                end
-
-              {coordinate, activity_distance, activity_duration, yard_distance, yard_duration}
-
-            {:error, reason, _response} ->
-              {reason, nil, nil, nil, nil}
-          end
+          build_driving_info(mapbox, address, activity_coordinate, yard_coordinate)
 
         %{
           member_id: attending.member.d4h_member_id,
@@ -76,5 +59,28 @@ defmodule App.Operation.BuildMilesageReport do
 
   defp build_round_trip_duration(duration) do
     Float.round(duration / 3600 * 2, 1)
+  end
+
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
+  defp build_driving_info(mapbox, address, activity_coordinate, yard_coordinate) do
+    case Mapbox.fetch_coordinate(mapbox, address, activity_coordinate) do
+      {:ok, coordinate} ->
+        {activity_distance, activity_duration} =
+          case Mapbox.fetch_driving_info(mapbox, activity_coordinate, coordinate) do
+            {:ok, distance, duration} -> {distance, duration}
+            {:error, _} -> {"unknown", "unknown"}
+          end
+
+        {yard_distance, yard_duration} =
+          case Mapbox.fetch_driving_info(mapbox, yard_coordinate, coordinate) do
+            {:ok, distance, duration} -> {distance, duration}
+            {:error, _} -> {"unknown", "unknown"}
+          end
+
+        {coordinate, activity_distance, activity_duration, yard_distance, yard_duration}
+
+      {:error, reason, _response} ->
+        {reason, nil, nil, nil, nil}
+    end
   end
 end

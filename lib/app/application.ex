@@ -5,6 +5,7 @@ defmodule App.Application do
 
   use Application
 
+  # credo:disable-for-next-line Credo.Check.Readability.ImplTrue
   @impl true
   def start(_type, _args) do
     App.Release.migrate()
@@ -33,13 +34,14 @@ defmodule App.Application do
 
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.
+  # credo:disable-for-next-line Credo.Check.Readability.ImplTrue
   @impl true
   def config_change(changed, _new, removed) do
     Web.Endpoint.config_change(changed, removed)
     :ok
   end
 
-  defp skip_migrations?() do
+  defp skip_migrations? do
     # By default, sqlite migrations are run when using a release
     System.get_env("RELEASE_NAME") != nil
   end

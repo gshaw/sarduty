@@ -1,5 +1,5 @@
 defmodule App.Operation.BuildPDF do
-  def call() do
+  def call do
     call(%{
       team_logo: "assets/img/logo-sfsar.png",
       team_name: "South Fraser SAR",

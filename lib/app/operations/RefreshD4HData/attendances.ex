@@ -19,11 +19,17 @@ defmodule App.Operation.RefreshD4HData.Attendances do
   end
 
   defp build_d4h_activity_index(team_id) do
-    Activity.get_all(team_id) |> Enum.map(fn r -> {r.d4h_activity_id, r.id} end) |> Map.new()
+    team_id
+    |> Activity.get_all()
+    |> Enum.map(fn r -> {r.d4h_activity_id, r.id} end)
+    |> Map.new()
   end
 
   defp build_d4h_member_index(team_id) do
-    Member.get_all(team_id) |> Enum.map(fn r -> {r.d4h_member_id, r.id} end) |> Map.new()
+    team_id
+    |> Member.get_all()
+    |> Enum.map(fn r -> {r.d4h_member_id, r.id} end)
+    |> Map.new()
   end
 
   defp upsert_attendances(_context, _offset, []), do: :ok

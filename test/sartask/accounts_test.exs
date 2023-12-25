@@ -1,10 +1,11 @@
 defmodule App.AccountsTest do
   use App.DataCase
 
-  alias App.Accounts
-
   import App.AccountsFixtures
-  alias App.Accounts.{User, UserToken}
+
+  alias App.Accounts
+  alias App.Accounts.User
+  alias App.Accounts.UserToken
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
@@ -86,7 +87,8 @@ defmodule App.AccountsTest do
 
     test "registers users with a hashed password" do
       email = unique_user_email()
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
+      attributes = valid_user_attributes(email: email)
+      {:ok, user} = Accounts.register_user(attributes)
       assert user.email == email
       assert is_binary(user.hashed_password)
       assert is_nil(user.confirmed_at)

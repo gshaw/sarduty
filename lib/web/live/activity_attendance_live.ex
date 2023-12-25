@@ -151,6 +151,7 @@ defmodule Web.ActivityAttendanceLive do
     {:noreply, socket}
   end
 
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   def handle_event("perform-recommendations", params, socket) do
     attendance_ids =
       Enum.reduce(params, [], fn {k, v}, a ->
@@ -159,8 +160,7 @@ defmodule Web.ActivityAttendanceLive do
 
     recommendations =
       socket.assigns.recommendations
-      |> Enum.reject(fn {_, id, _} -> id == nil end)
-      |> Enum.filter(fn {_, id, _} -> Enum.member?(attendance_ids, id) end)
+      |> Enum.filter(fn {_, id, _} -> id != nil && Enum.member?(attendance_ids, id) end)
 
     d4h = D4H.build_context(socket.assigns.current_user)
 
@@ -219,9 +219,13 @@ defmodule Web.ActivityAttendanceLive do
   def phone_equal?(a, b), do: downcase_equal?(normalize_phone(a), normalize_phone(b))
 
   def downcase_equal?(a, b) do
-    a = String.trim(a || "") |> String.downcase()
-    b = String.trim(b || "") |> String.downcase()
+    a = trim_and_downcase(a || "")
+    b = trim_and_downcase(b || "")
     if a == "" || b == "", do: false, else: a == b
+  end
+
+  def trim_and_downcase(value) do
+    value |> String.trim() |> String.downcase()
   end
 
   def member_equal?(a, b) do
@@ -230,6 +234,7 @@ defmodule Web.ActivityAttendanceLive do
       phone_equal?(a.phone, b.phone)
   end
 
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   def fetch_recommendations(import_content, attendance_records) do
     attended_members = parse_import_content(import_content)
 
@@ -241,14 +246,16 @@ defmodule Web.ActivityAttendanceLive do
 
     # find any attended_member that isn't in attendance records
     not_invited_recommendations =
-      Enum.reject(attended_members, fn attended_member ->
+      attended_members
+      |> Enum.reject(fn attended_member ->
         # all invited (and thus known) attended members
         Enum.any?(attendance_records, fn r -> member_equal?(r.member, attended_member) end)
       end)
       |> Enum.map(&{:not_invited, nil, &1})
 
     attendance_recommendations =
-      Enum.map(attendance_records, fn attendance ->
+      attendance_records
+      |> Enum.map(fn attendance ->
         is_attending = attendance.status == "attending"
         did_attend = Enum.any?(attended_members, &member_equal?(&1, attendance.member))
 

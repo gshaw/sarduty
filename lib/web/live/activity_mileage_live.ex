@@ -13,7 +13,6 @@ defmodule Web.ActivityMileageLive do
 
   def handle_params(params, _uri, socket) do
     activity = Activity.get(params["id"])
-    IO.inspect(activity, label: "Web.ActivityMileageLive")
     d4h = D4H.build_context(socket.assigns.current_user)
     {:ok, team} = D4H.fetch_team(d4h)
 

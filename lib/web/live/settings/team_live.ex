@@ -1,8 +1,7 @@
 defmodule Web.Settings.TeamLive do
-  alias App.Adapter
   use Web, :live_view_narrow_layout
 
-  alias Adapter.D4H
+  alias App.Adapter.D4H
   alias App.Model.Team
 
   def mount(_params, _session, socket) do
@@ -72,7 +71,8 @@ defmodule Web.Settings.TeamLive do
   end
 
   def handle_event("refresh", _params, socket) do
-    {:ok, d4h_team} = D4H.fetch_team(D4H.build_context(socket.assigns.current_user))
+    d4h = D4H.build_context(socket.assigns.current_user)
+    {:ok, d4h_team} = D4H.fetch_team(d4h)
     {lat, lng} = d4h_team.coordinate
 
     params = %{

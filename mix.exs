@@ -34,6 +34,7 @@ defmodule App.MixProject do
     [
       {:bcrypt_elixir, "~> 3.0"},
       {:cloak, "~> 1.1"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dns_cluster, "~> 0.1.1"},
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, "~> 0.14"},
@@ -67,6 +68,12 @@ defmodule App.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
+      check: [
+        "format --check-formatted",
+        "compile --force --warnings-as-errors",
+        "credo --all-priorities"
+        # "cmd mix test --color"
+      ],
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],

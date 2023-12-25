@@ -1,10 +1,13 @@
+# credo:disable-for-this-file Credo.Check.Readability.OnePipePerLine
+
 defmodule Web.UserAuthTest do
   use Web.ConnCase
 
-  alias Phoenix.LiveView
-  alias App.Accounts
-  alias Web.UserAuth
   import App.AccountsFixtures
+
+  alias App.Accounts
+  alias Phoenix.LiveView
+  alias Web.UserAuth
 
   @remember_me_cookie "_sarduty_remember_me"
 
