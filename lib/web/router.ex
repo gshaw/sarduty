@@ -73,6 +73,7 @@ defmodule Web.Router do
       live "/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/:subdomain/activities/:id/mileage", ActivityMileageLive
       live "/:subdomain/members", MemberCollectionLive
+      live "/:subdomain/members/:id", MemberLive
     end
   end
 end

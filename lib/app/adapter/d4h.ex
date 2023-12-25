@@ -34,6 +34,10 @@ defmodule App.Adapter.D4H do
     build_url(team, "/team/#{activity_path}/view/#{activity.d4h_activity_id}")
   end
 
+  def build_member_url(team, member) do
+    build_url(team, "/team/members/view/#{member.d4h_member_id}")
+  end
+
   def determine_region(api_host) do
     regions()
     |> Enum.find(fn {_key, val} -> val == api_host end)
