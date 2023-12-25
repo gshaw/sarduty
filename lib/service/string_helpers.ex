@@ -3,6 +3,8 @@ defmodule Service.StringHelpers do
     Useful functions for working with strings.
   """
 
+  def no_break_space, do: " "
+
   @doc """
   Truncate the string to a given length.
   """

@@ -9,7 +9,8 @@ defmodule Web.HomePageLive do
     ~H"""
     <hgroup class="mb-8">
       <h1 class="title-hero">
-        Welcome to <span class="text-danger-1">SAR Duty</span>
+        Welcome to
+        <span class="text-danger-1">SAR<%= Service.StringHelpers.no_break_space() %>Duty</span>
       </h1>
       <p class="lead">
         Helpful tools for search and rescue managers.
