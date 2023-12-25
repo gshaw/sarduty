@@ -11,6 +11,7 @@ defmodule Web.ActivityCollectionLive do
 
   def handle_params(params, _uri, socket) do
     case ActivityFilterViewModel.validate(params) do
+      # credo:disable-for-next-line Credo.Check.Design.DuplicatedCode
       {:ok, filter_options, changeset} ->
         current_team = socket.assigns.current_team
 
