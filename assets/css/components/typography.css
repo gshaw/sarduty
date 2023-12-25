@@ -5,7 +5,7 @@
 .subheading { @apply text-xl font-medium mb-p05 }
 .paragraph { @apply mb-p }
 .label { @apply font-semibold text-sm text-base-content }
-.link { @apply text-primary-1 no-underline hover:underline }
+.link { @apply no-underline hover:underline }
 .hint { @apply text-secondary-1 text-sm font-normal }
 
 p, dl { @apply mb-p }
