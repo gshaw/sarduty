@@ -1,7 +1,7 @@
 defmodule Web.WebComponents.AttendanceTable do
   use Web, :function_component
 
-  import Web.CoreComponents
+  import Web.Components.Table
 
   attr :attendance_records, :list, required: true
   attr :status, :string, default: "all"

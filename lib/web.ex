@@ -61,6 +61,7 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :marketing}
 
+      import Web.Components.Table
       import Web.WebComponents.A
 
       unquote(html_helpers())
@@ -71,6 +72,7 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :app}
 
+      import Web.Components.Table
       import Web.WebComponents.A
       import Web.WebComponents.AttendanceTable
       import Web.WebComponents.D4HComponents
