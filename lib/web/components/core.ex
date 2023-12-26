@@ -1,4 +1,4 @@
-defmodule Web.CoreComponents do
+defmodule Web.Components.Core do
   @moduledoc """
   Provides core UI components.
 

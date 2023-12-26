@@ -61,8 +61,8 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :marketing}
 
+      import Web.Components.A
       import Web.Components.Table
-      import Web.WebComponents.A
 
       unquote(html_helpers())
     end
@@ -72,11 +72,11 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :app}
 
+      import Web.Components.A
+      import Web.Components.AttendanceTable
+      import Web.Components.D4H
+      import Web.Components.Pagination
       import Web.Components.Table
-      import Web.WebComponents.A
-      import Web.WebComponents.AttendanceTable
-      import Web.WebComponents.D4HComponents
-      import Web.WebComponents.Pagination
 
       unquote(html_helpers())
     end
@@ -86,7 +86,7 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :narrow}
 
-      import Web.WebComponents.A
+      import Web.Components.A
 
       unquote(html_helpers())
     end
@@ -108,9 +108,9 @@ defmodule Web do
       import Phoenix.Controller,
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
-      import Web.WebComponents.A
-      import Web.WebComponents.Avatar
-      import Web.WebComponents.NavBar
+      import Web.Components.A
+      import Web.Components.Avatar
+      import Web.Components.NavBar
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())
@@ -122,7 +122,7 @@ defmodule Web do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
-      import Web.CoreComponents
+      import Web.Components.Core
       import Web.Gettext
 
       alias Phoenix.LiveView.AsyncResult

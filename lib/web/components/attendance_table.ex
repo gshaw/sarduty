@@ -1,4 +1,4 @@
-defmodule Web.WebComponents.AttendanceTable do
+defmodule Web.Components.AttendanceTable do
   use Web, :function_component
 
   import Web.Components.Table

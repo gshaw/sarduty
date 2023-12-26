@@ -1,4 +1,4 @@
-defmodule Web.WebComponents.NavBar do
+defmodule Web.Components.NavBar do
   use Web, :function_component
 
   attr :color, :atom, required: true

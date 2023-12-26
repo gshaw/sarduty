@@ -1,7 +1,7 @@
 defmodule Web.Components.Table do
   use Phoenix.Component
 
-  import Web.WebComponents.A
+  import Web.Components.A
 
   @doc ~S"""
   Renders a table with generic styling.

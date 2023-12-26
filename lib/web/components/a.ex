@@ -1,4 +1,4 @@
-defmodule Web.WebComponents.A do
+defmodule Web.Components.A do
   use Web, :function_component
 
   attr :kind, :atom,

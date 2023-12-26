@@ -1,7 +1,7 @@
-defmodule Web.WebComponents.Pagination do
+defmodule Web.Components.Pagination do
   use Web, :function_component
 
-  import Web.WebComponents.A
+  import Web.Components.A
 
   attr :paginated, :map, required: true
   attr :path_fn, :any, required: true

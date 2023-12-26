@@ -1,4 +1,4 @@
-defmodule Web.WebComponents.D4HComponents do
+defmodule Web.Components.D4H do
   use Web, :function_component
 
   attr :activity, :map, required: true

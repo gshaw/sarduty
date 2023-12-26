@@ -1,7 +1,7 @@
-defmodule Web.WebComponents.Avatar do
+defmodule Web.Components.Avatar do
   use Web, :function_component
 
-  import Web.CoreComponents
+  import Web.Components.Core
 
   attr :initials, :string, required: true
 
