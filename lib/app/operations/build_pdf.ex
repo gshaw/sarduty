@@ -31,6 +31,7 @@ defmodule App.Operation.BuildPDF do
     |> Pdf.write_to(file_path)
     |> Pdf.cleanup()
 
+    # credo:disable-for-next-line Credo.Check.Warning.LeakyEnvironment
     System.cmd("open", ["-g", file_path])
   end
 

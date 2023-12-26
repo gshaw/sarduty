@@ -142,7 +142,10 @@
           {Credo.Check.Warning.UnusedRegexOperation, []},
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
-          {Credo.Check.Warning.WrongTestFileExtension, []}
+          {Credo.Check.Warning.WrongTestFileExtension, []},
+          {Credo.Check.Warning.LeakyEnvironment, []},
+          {Credo.Check.Warning.MapGetUnsafePass, []},
+          {Credo.Check.Warning.UnsafeToAtom, []}
         ],
         disabled: [
           # Controversial and experimental checks (opt-in, just move the check to `:enabled`
@@ -152,10 +155,7 @@
           {Credo.Check.Readability.Specs, false},
           {Credo.Check.Refactor.ModuleDependencies, false},
           {Credo.Check.Refactor.VariableRebinding, false},
-          {Credo.Check.Warning.LazyLogging, []},
-          {Credo.Check.Warning.LeakyEnvironment, []},
-          {Credo.Check.Warning.MapGetUnsafePass, []},
-          {Credo.Check.Warning.UnsafeToAtom, []}
+          {Credo.Check.Warning.LazyLogging, []}
 
           # Custom checks can be created using `mix credo.gen.check`.
         ]
