@@ -6,12 +6,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
   @primary_key false
   embedded_schema do
     field :q, Field.TrimmedString
+    field :year, :integer
     field :page, :integer
     field :limit, :integer
     field :sort, :string
   end
 
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
+
+  def years, do: [2018, 2019, 2020, 2021, 2022, 2023, 2024]
 
   def sort_kinds,
     do: %{
@@ -25,6 +28,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_new do
     %__MODULE__{
+      year: 2023,
       limit: 100,
       sort: "name"
     }
@@ -34,9 +38,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :page, :limit, :sort])
+    |> cast(params, [:q, :year, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
+    |> validate_number(:year, greater_than_or_equal_to: 2018, less_than_or_equal_to: 2024)
     |> validate_number(:page, greater_than_or_equal_to: 1)
     |> validate_number(:page, greater_than_or_equal_to: 1, less_than_or_equal_to: 1000)
   end

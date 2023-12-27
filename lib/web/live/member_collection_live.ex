@@ -18,7 +18,9 @@ defmodule Web.MemberCollectionLive do
         socket =
           socket
           |> assign(:sort, filter_options.sort)
+          |> assign(:year, filter_options.year)
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
+          |> assign(:summary, Member.get_activity_summary(filter_options.year))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
 
@@ -37,6 +39,12 @@ defmodule Web.MemberCollectionLive do
     <h1 class="title mb-p"><%= @page_title %></h1>
     <.form for={@form} phx-change="change">
       <div class="flex gap-h items-center ">
+        <.input
+          label="Year"
+          field={@form[:year]}
+          type="select"
+          options={MemberFilterViewModel.years()}
+        />
         <.input field={@form[:q]} label="Search" />
         <.input
           label="Sort"
@@ -77,6 +85,18 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
         <%= record.position %>
+      </:col>
+      <:col :let={record} label="Activities" class="w-p text-right">
+        <% summary = @summary[record.id] %>
+        <span :if={summary}>
+          <%= summary.count %>
+        </span>
+      </:col>
+      <:col :let={record} label="Hours" class="w-p text-right">
+        <% summary = @summary[record.id] %>
+        <span :if={summary}>
+          <%= summary.hours %>
+        </span>
       </:col>
       <:col
         :let={record}

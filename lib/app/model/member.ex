@@ -2,6 +2,7 @@ defmodule App.Model.Member do
   use App, :model
 
   alias App.Field.EncryptedString
+  alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
@@ -9,6 +10,8 @@ defmodule App.Model.Member do
 
   schema "members" do
     belongs_to :team, Team
+    has_many :attendances, Attendance, where: [status: "attending"]
+    has_many :activities, through: [:attendances, :activity]
     field :d4h_member_id, :integer
     field :ref_id, :string
     field :name, :string
@@ -95,6 +98,43 @@ defmodule App.Model.Member do
   def update!(%Member{} = record, params) do
     changeset = Member.build_changeset(record, params)
     Repo.update!(changeset)
+  end
+
+  def get_activity_summary(year) do
+    ["Primary Hours", "Secondary Hours"]
+    |> Enum.reduce(%{}, fn tag, acc ->
+      summary = get_activity_summary(year, tag)
+
+      Enum.reduce(summary, acc, fn info, acc ->
+        Map.update(
+          acc,
+          info.member_id,
+          %{count: info.count, hours: info.hours},
+          # credo:disable-for-next-line Credo.Check.Refactor.Nesting
+          fn %{count: c, hours: h} -> %{count: c + info.count, hours: h + info.hours} end
+        )
+      end)
+    end)
+  end
+
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
+  def get_activity_summary(year, tag) do
+    query =
+      from(m in Member,
+        join: a in assoc(m, :attendances),
+        join: ac in assoc(a, :activity),
+        where: fragment("strftime('%Y', ?) = ?", ac.started_at, ^Integer.to_string(year)),
+        where: ^tag in ac.tags,
+        group_by: m.id,
+        select: %{
+          # member: m,
+          member_id: m.id,
+          hours: sum(a.duration_in_minutes) / 60,
+          count: count(ac.id)
+        }
+      )
+
+    Repo.all(query)
   end
 
   # def delete(%Member{} = record), do: Repo.delete(record)
