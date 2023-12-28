@@ -28,6 +28,7 @@ defmodule Web.Components.Table do
   slot :col, required: true do
     attr :label, :string
     attr :class, :string
+    attr :align, :string, values: ["left", "right"]
     attr :sorts, :list
   end
 
@@ -49,7 +50,8 @@ defmodule Web.Components.Table do
           <.table_header
             :for={col <- @col}
             label={col[:label]}
-            class={Map.get(col, :class)}
+            class={col[:class]}
+            align={col[:align]}
             sorts={col[:sorts]}
             sort={@sort}
             path_fn={@path_fn}
@@ -58,7 +60,13 @@ defmodule Web.Components.Table do
       </thead>
       <tbody id={@id}>
         <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-          <td :for={col <- @col} class={Map.get(col, :class)}>
+          <td
+            :for={col <- @col}
+            class={[
+              Map.get(col, :class),
+              if(Map.get(col, :align) == "right", do: "text-right", else: nil)
+            ]}
+          >
             <%= render_slot(col, @row_item.(row)) %>
           </td>
         </tr>
@@ -69,7 +77,7 @@ defmodule Web.Components.Table do
 
   def table_header(assigns) do
     ~H"""
-    <th class={@class}>
+    <th class={[@class, if(@align == "right", do: "text-right", else: nil)]}>
       <%= if @sorts == nil do %>
         <%= @label %>
       <% else %>
@@ -81,11 +89,19 @@ defmodule Web.Components.Table do
             </.a>
           <% {suffix, current_sort} -> %>
             <%= if Enum.count(@sorts) == 1 do %>
-              <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+              <%= if @align == "right" do %>
+                <%= suffix %><%= Service.StringHelpers.no_break_space() %><%= @label %>
+              <% else %>
+                <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+              <% end %>
             <% else %>
               <% sort = find_next_sort(@sorts, current_sort) %>
               <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
-                <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+                <%= if @align == "right" do %>
+                  <%= suffix %><%= Service.StringHelpers.no_break_space() %><%= @label %>
+                <% else %>
+                  <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+                <% end %>
               </.a>
             <% end %>
         <% end %>
