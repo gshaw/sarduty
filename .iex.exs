@@ -21,6 +21,8 @@ defmodule H do
     |> Changeset.change(changes)
     |> Repo.update()
   end
+
+  def count(query), do: query |> select(count()) |> Repo.one()
 end
 
 import H, only: [reload: 0]
