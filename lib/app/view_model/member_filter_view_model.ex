@@ -43,12 +43,12 @@ defmodule App.ViewModel.MemberFilterViewModel do
     end
   end
 
-  def build_paginated_content(team, filter_options) do
+  def build_paginated_content(team, filter_options, tags) do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
     |> scope(sort: filter_options.sort)
-    |> build_activity_summary(filter_options.year)
+    |> include_activity_summary(filter_options.year, tags)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
@@ -103,7 +103,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "hours:desc"), do: order_by(q, [r], desc: fragment("hours"))
   defp scope(q, sort: "hours:asc"), do: order_by(q, [r], asc: fragment("hours"))
 
-  defp build_activity_summary(query, year, tags \\ ["Primary Hours", "Secondary Hours"]) do
+  defp include_activity_summary(query, year, tags) do
     from(
       m in query,
       left_join: summary in subquery(tagged_activities_summary(year, tags)),
@@ -116,18 +116,26 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
-  defp tagged_activities_summary(year, tags) do
-    tagged_activitity_ids_q =
-      Activity
-      |> Activity.scope(tags: tags)
-      |> select([:id])
+  def tagged_activity_ids(tags) do
+    subquery = select(Activity, [:id])
+    Enum.reduce(tags, subquery, fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end)
+  end
 
+  def tagged_activity_ids3(tags) do
+    Enum.reduce(
+      tags,
+      select(Activity, [:id]),
+      fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end
+    )
+  end
+
+  defp tagged_activities_summary(year, tags) do
     from(
       ac in Activity,
       left_join: at in assoc(ac, :attendances),
       left_join: m in assoc(at, :member),
       where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
-      where: ac.id in subquery(tagged_activitity_ids_q),
+      where: ac.id in subquery(tagged_activity_ids(tags)),
       group_by: m.id,
       select: %{
         member_id: m.id,
@@ -136,46 +144,4 @@ defmodule App.ViewModel.MemberFilterViewModel do
       }
     )
   end
-
-  # def build_activity_summary2(query, year) do
-  #   from(
-  #     m in query,
-  #     left_join: pri in subquery(activity_summary(year, "Primary Hours")),
-  #     as: :primary,
-  #     on: m.id == pri.member_id,
-  #     left_join: sec in subquery(activity_summary(year, "Secondary Hours")),
-  #     as: :secondary,
-  #     on: m.id == sec.member_id,
-  #     select: %{
-  #       member: m,
-  #       primary_hours: fragment("? as primary_hours", coalesce(pri.hours, 0)),
-  #       primary_count: fragment("? as primary_count", coalesce(pri.count, 0)),
-  #       secondary_hours: fragment("? as secondary_hours", coalesce(sec.hours, 0)),
-  #       secondary_count: fragment("? as secondary_count", coalesce(sec.count, 0)),
-  #       hours: fragment("? as hours", coalesce(pri.hours, 0) + coalesce(sec.hours, 0))
-  #     }
-  #   )
-  # end
-
-  # def activity_summary(year, tag) do
-  #   # year = Date.utc_today.year
-  #   # tag = "Primary Hours"
-  #   # tag = "Secondary Hours"
-
-  #   # query =
-  #   from(
-  #     ac in Activity,
-  #     left_join: at in assoc(ac, :attendances),
-  #     left_join: m in assoc(at, :member),
-  #     where: at.status == "attending",
-  #     where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
-  #     where: ^tag in ac.tags,
-  #     group_by: m.id,
-  #     select: %{
-  #       member_id: m.id,
-  #       count: count(ac.id),
-  #       hours: sum(at.duration_in_minutes) / 60
-  #     }
-  #   )
-  # end
 end

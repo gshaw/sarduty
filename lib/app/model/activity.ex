@@ -104,13 +104,6 @@ defmodule App.Model.Activity do
 
   def scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
 
-  def scope(q, tags: tags) do
-    subquery = Enum.reduce(tags, Activity, fn tag, sq -> or_where(sq, [r], ^tag in r.tags) end)
-    subquery = select(subquery, [:id])
-
-    where(q, [r], r.id in subquery(subquery))
-  end
-
   def scope(q, year: year),
     do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
 

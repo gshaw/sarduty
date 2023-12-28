@@ -9,7 +9,6 @@ defmodule Web.MemberCollectionLive do
 
   def handle_params(params, _uri, socket) do
     case MemberFilterViewModel.validate(params) do
-      # credo:disable-for-next-line Credo.Check.Design.DuplicatedCode
       {:ok, filter_options, changeset} ->
         current_team = socket.assigns.current_team
 
@@ -132,7 +131,13 @@ defmodule Web.MemberCollectionLive do
   end
 
   def build_paginated_content(team, filter_options) do
-    MemberFilterViewModel.build_paginated_content(team, filter_options)
+    MemberFilterViewModel.build_paginated_content(
+      team,
+      filter_options,
+      # []
+      # ["AdventureSmart"]
+      ["Primary Hours", "Secondary Hours"]
+    )
   end
 
   def build_path_fn(team, filter_options) do
