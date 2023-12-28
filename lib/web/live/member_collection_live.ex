@@ -34,7 +34,7 @@ defmodule Web.MemberCollectionLive do
       <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
     </div>
     <h1 class="title mb-p"><%= @page_title %></h1>
-    <.form for={@form} phx-change="change">
+    <.form for={@form} phx-change="change" phx-submit="change">
       <div class="flex gap-h items-center ">
         <.input
           label="Year"
