@@ -18,8 +18,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
-
-  def years, do: [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+  def years, do: Range.to_list(2018..(Date.utc_today().year + 1))
 
   def sort_kinds,
     do: %{
@@ -55,7 +54,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_new do
     %__MODULE__{
-      year: 2023,
+      year: Date.utc_today().year,
       limit: 100,
       sort: "name"
     }
@@ -68,9 +67,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> cast(params, [:q, :year, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
-    |> validate_number(:year, greater_than_or_equal_to: 2018, less_than_or_equal_to: 2024)
-    |> validate_number(:page, greater_than_or_equal_to: 1)
-    |> validate_number(:page, greater_than_or_equal_to: 1, less_than_or_equal_to: 1000)
+    |> validate_number(:year,
+      greater_than_or_equal_to: Enum.min(years()),
+      less_than_or_equal_to: Enum.max(years())
+    )
+    |> validate_number(:page,
+      greater_than_or_equal_to: 1,
+      less_than_or_equal_to: Enum.max(limits())
+    )
   end
 
   defp scope(q, q: nil), do: q
@@ -133,7 +137,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
-  # def build_activity_summary2(query, year \\ 2023) do
+  # def build_activity_summary2(query, year) do
   #   from(
   #     m in query,
   #     left_join: pri in subquery(activity_summary(year, "Primary Hours")),
@@ -154,7 +158,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   # end
 
   # def activity_summary(year, tag) do
-  #   # year = 2023
+  #   # year = Date.utc_today.year
   #   # tag = "Primary Hours"
   #   # tag = "Secondary Hours"
 
