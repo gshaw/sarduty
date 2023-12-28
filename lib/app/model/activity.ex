@@ -85,7 +85,7 @@ defmodule App.Model.Activity do
     # https://dev.to/ivor/beware-ectos-orwhere-pitfall-50bb
     subquery =
       Activity
-      |> where([r], like(r.title, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.title, ^"%#{search_filter}%"))
       |> or_where([r], like(r.ref_id, ^"%#{search_filter}%"))
       |> or_where([r], like(r.tracking_number, ^"%#{search_filter}%"))
       |> or_where([r], like(r.tags, ^"%#{search_filter}%"))
@@ -103,6 +103,16 @@ defmodule App.Model.Activity do
   def scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
 
   def scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
+
+  def scope(q, tags: tags) do
+    subquery = Enum.reduce(tags, Activity, fn tag, sq -> or_where(sq, [r], ^tag in r.tags) end)
+    subquery = select(subquery, [:id])
+
+    where(q, [r], r.id in subquery(subquery))
+  end
+
+  def scope(q, year: year),
+    do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
 
   def scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.started_at)
   def scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.started_at)

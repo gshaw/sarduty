@@ -1,8 +1,6 @@
 defmodule Web.MemberCollectionLive do
   use Web, :live_view_app_layout
 
-  alias App.Model.Member
-  alias App.Repo
   alias App.ViewModel.MemberFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -20,7 +18,6 @@ defmodule Web.MemberCollectionLive do
           |> assign(:sort, filter_options.sort)
           |> assign(:year, filter_options.year)
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
-          |> assign(:summary, Member.get_activity_summary(filter_options.year))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
 
@@ -73,30 +70,39 @@ defmodule Web.MemberCollectionLive do
       <:col
         :let={record}
         label="ID"
-        class="w-px text-right"
+        class="w-px"
+        align="right"
         sorts={[{"↓", "id:desc"}, {"↑", "id:asc"}]}
       >
-        <%= record.ref_id %>
+        <%= record.member.ref_id %>
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
-        <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.id}"}>
-          <%= record.name %>
+        <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.member.id}"}>
+          <%= record.member.name %>
         </.a>
       </:col>
       <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
-        <%= record.position %>
+        <%= record.member.position %>
       </:col>
-      <:col :let={record} label="Activities" class="w-p text-right">
-        <% summary = @summary[record.id] %>
-        <span :if={summary}>
-          <%= summary.count %>
-        </span>
+
+      <:col
+        :let={record}
+        label="Activities"
+        class="w-px"
+        align="right"
+        sorts={[{"↓", "count:desc"}, {"↑", "count:asc"}]}
+      >
+        <%= record.count %>
       </:col>
-      <:col :let={record} label="Hours" class="w-p text-right">
-        <% summary = @summary[record.id] %>
-        <span :if={summary}>
-          <%= summary.hours %>
-        </span>
+
+      <:col
+        :let={record}
+        label="Hours"
+        class="w-px"
+        align="right"
+        sorts={[{"↓", "hours:desc"}, {"↑", "hours:asc"}]}
+      >
+        <%= record.hours %>
       </:col>
       <:col
         :let={record}
@@ -105,7 +111,7 @@ defmodule Web.MemberCollectionLive do
         sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}
       >
         <span class="whitespace-nowrap">
-          <%= Calendar.strftime(record.joined_at, "%x") %>
+          <%= Calendar.strftime(record.member.joined_at, "%x") %>
         </span>
       </:col>
     </.table>
@@ -126,11 +132,7 @@ defmodule Web.MemberCollectionLive do
   end
 
   def build_paginated_content(team, filter_options) do
-    Member
-    |> Member.scope(team_id: team.id)
-    |> Member.scope(q: filter_options.q)
-    |> Member.scope(sort: filter_options.sort)
-    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
+    MemberFilterViewModel.build_paginated_content(team, filter_options)
   end
 
   def build_path_fn(team, filter_options) do

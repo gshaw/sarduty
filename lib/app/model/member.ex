@@ -57,28 +57,6 @@ defmodule App.Model.Member do
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 
-  def scope(q, q: nil), do: q
-  def scope(q, q: ""), do: q
-
-  def scope(q, q: search_filter) do
-    # https://dev.to/ivor/beware-ectos-orwhere-pitfall-50bb
-    subquery =
-      Member
-      |> where([r], like(r.name, ^"%#{search_filter}%"))
-      |> or_where([r], like(r.position, ^"%#{search_filter}%"))
-      |> or_where([r], like(r.ref_id, ^"%#{search_filter}%"))
-      |> select([:id])
-
-    where(q, [r], r.id in subquery(subquery))
-  end
-
-  def scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
-  def scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
-  def scope(q, sort: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
-  def scope(q, sort: "id:asc"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
-  def scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.joined_at)
-  def scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.joined_at)
-
   def get_all(team_id) do
     Member
     |> where([r], r.team_id == ^team_id)
@@ -98,43 +76,6 @@ defmodule App.Model.Member do
   def update!(%Member{} = record, params) do
     changeset = Member.build_changeset(record, params)
     Repo.update!(changeset)
-  end
-
-  def get_activity_summary(year) do
-    ["Primary Hours", "Secondary Hours"]
-    |> Enum.reduce(%{}, fn tag, acc ->
-      summary = get_activity_summary(year, tag)
-
-      Enum.reduce(summary, acc, fn info, acc ->
-        Map.update(
-          acc,
-          info.member_id,
-          %{count: info.count, hours: info.hours},
-          # credo:disable-for-next-line Credo.Check.Refactor.Nesting
-          fn %{count: c, hours: h} -> %{count: c + info.count, hours: h + info.hours} end
-        )
-      end)
-    end)
-  end
-
-  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
-  def get_activity_summary(year, tag) do
-    query =
-      from(m in Member,
-        join: a in assoc(m, :attendances),
-        join: ac in assoc(a, :activity),
-        where: fragment("strftime('%Y', ?) = ?", ac.started_at, ^Integer.to_string(year)),
-        where: ^tag in ac.tags,
-        group_by: m.id,
-        select: %{
-          # member: m,
-          member_id: m.id,
-          hours: sum(a.duration_in_minutes) / 60,
-          count: count(ac.id)
-        }
-      )
-
-    Repo.all(query)
   end
 
   # def delete(%Member{} = record), do: Repo.delete(record)
