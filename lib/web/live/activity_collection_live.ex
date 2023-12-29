@@ -1,8 +1,6 @@
 defmodule Web.ActivityCollectionLive do
   use Web, :live_view_app_layout
 
-  alias App.Model.Activity
-  alias App.Repo
   alias App.ViewModel.ActivityFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -11,7 +9,6 @@ defmodule Web.ActivityCollectionLive do
 
   def handle_params(params, _uri, socket) do
     case ActivityFilterViewModel.validate(params) do
-      # credo:disable-for-next-line Credo.Check.Design.DuplicatedCode
       {:ok, filter_options, changeset} ->
         current_team = socket.assigns.current_team
 
@@ -109,13 +106,7 @@ defmodule Web.ActivityCollectionLive do
   end
 
   def build_paginated_content(team, filter_options) do
-    Activity
-    |> Activity.scope(team_id: team.id)
-    |> Activity.scope(q: filter_options.q)
-    |> Activity.scope(activity: filter_options.activity)
-    |> Activity.scope(date: filter_options.date)
-    |> Activity.scope(sort: filter_options.sort)
-    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
+    ActivityFilterViewModel.build_paginated_content(team, filter_options)
   end
 
   def build_path_fn(team, filter_options) do

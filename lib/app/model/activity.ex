@@ -70,47 +70,10 @@ defmodule App.Model.Activity do
     |> Repo.all()
   end
 
-  # q = query
-  # r = record
-
   def get(id), do: Repo.get(Activity, id)
   # def get!(id), do: Repo.get!(Activity, id)
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
-
-  def scope(q, q: nil), do: q
-  def scope(q, q: ""), do: q
-
-  def scope(q, q: search_filter) do
-    # https://dev.to/ivor/beware-ectos-orwhere-pitfall-50bb
-    subquery =
-      Activity
-      |> or_where([r], like(r.title, ^"%#{search_filter}%"))
-      |> or_where([r], like(r.ref_id, ^"%#{search_filter}%"))
-      |> or_where([r], like(r.tracking_number, ^"%#{search_filter}%"))
-      |> or_where([r], like(r.tags, ^"%#{search_filter}%"))
-      |> or_where([r], like(r.description, ^"%#{search_filter}%"))
-      |> select([:id])
-
-    where(q, [r], r.id in subquery(subquery))
-  end
-
-  def scope(q, date: "all"), do: q
-  def scope(q, date: "past"), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
-  def scope(q, date: "future"), do: where(q, [r], r.started_at >= ^DateTime.utc_now())
-
-  def scope(q, activity: "all"), do: q
-  def scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
-
-  def scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
-
-  def scope(q, year: year),
-    do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
-
-  def scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.started_at)
-  def scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.started_at)
-  def scope(q, sort: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
-  def scope(q, sort: "id:asc"), do: order_by(q, [r], asc: r.ref_id)
 
   def get_by(params), do: Repo.get_by(Activity, params)
 
