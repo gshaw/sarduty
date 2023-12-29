@@ -74,6 +74,7 @@ defmodule Web do
 
       import Web.Components.A
       import Web.Components.AttendanceTable
+      import Web.Components.Breadcrumbs
       import Web.Components.D4H
       import Web.Components.Pagination
       import Web.Components.Table

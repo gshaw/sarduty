@@ -21,12 +21,10 @@ defmodule Web.MemberLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mb-p05 text-sm">
-      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
-      /
-      <.a navigate={~p"/#{@current_team.subdomain}/members/"}>Members</.a>
-      / #<%= @member.ref_id %>
-    </div>
+    <.breadcrumbs team={@current_team}>
+      <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
+      <:item label={"##{@member.ref_id}"} />
+    </.breadcrumbs>
 
     <div class="md:flex gap-p w-full">
       <div class="flex-1">

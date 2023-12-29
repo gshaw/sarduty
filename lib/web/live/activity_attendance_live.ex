@@ -31,13 +31,14 @@ defmodule Web.ActivityAttendanceLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mb-p05 text-sm">
-      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
-      /
-      <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
-      / <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"} phx-no-format>#<%= @activity.ref_id %></.a> /
-      Attendance
-    </div>
+    <.breadcrumbs team={@current_team}>
+      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
+      <:item
+        label={"##{@activity.ref_id}"}
+        path={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}
+      />
+      <:item label="Attendance" />
+    </.breadcrumbs>
     <h1 class="title"><%= @activity.title %></h1>
 
     <%= if @activity.is_published do %>

@@ -29,17 +29,15 @@ defmodule Web.ActivityMileageLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mb-p05 text-sm">
-      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
-      /
-      <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
-      /
-      <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}>
-        #<%= @activity.ref_id %>
-      </.a>
-      /
-      Mileage Report
-    </div>
+    <.breadcrumbs team={@current_team}>
+      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
+      <:item
+        label={"##{@activity.ref_id}"}
+        path={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}
+      />
+      <:item label="Mileage Report" />
+    </.breadcrumbs>
+
     <h1 class="title mb-p"><%= @activity.title %></h1>
     <%= if @activity.coordinate do %>
       <p>

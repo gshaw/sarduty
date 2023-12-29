@@ -31,9 +31,7 @@ defmodule Web.ActivityCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mb-p05 text-sm">
-      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
-    </div>
+    <.breadcrumbs team={@current_team} />
     <h1 class="title mb-p"><%= @page_title %></h1>
     <.form for={@form} phx-change="change">
       <div class="flex gap-h items-center ">

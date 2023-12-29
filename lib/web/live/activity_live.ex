@@ -27,13 +27,10 @@ defmodule Web.ActivityLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mb-p05 text-sm">
-      <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
-      /
-      <.a navigate={~p"/#{@current_team.subdomain}/activities/"}>Activities</.a>
-      /
-      #<%= @activity.ref_id %>
-    </div>
+    <.breadcrumbs team={@current_team}>
+      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities/"} />
+      <:item label={"##{@activity.ref_id}"} />
+    </.breadcrumbs>
 
     <h1 class="title"><%= @activity.title %></h1>
     <p>
