@@ -1,10 +1,10 @@
 table.table { @apply text-left }
 table.table thead tr { @apply py-1 px-2 bg-base-3 }
-table.table thead th { @apply py-1 px-2 align-top bg-base-3 border-b-2 border-base-content border-opacity-50 }
-table.table tbody th { @apply py-1 px-2 align-top }
-table.table tbody td { @apply py-1 px-2 align-top }
+table.table thead th { @apply py-1 px-2 align-top bg-base-3 border-b-2 border-base-content border-opacity-50 label }
+table.table tbody th { @apply py-1 px-2 align-text-top label }
+table.table tbody td { @apply py-1 px-2 align-text-top }
 
 table.table thead tr.table-header-row th { @apply border-none text-sm font-normal }
 
 table.table-striped tbody { @apply [&>*:nth-child(even)]:bg-base-3 }
-table.table-form tbody th { @apply text-right }
+table.table-form tbody th { @apply text-right label }
