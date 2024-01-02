@@ -1,4 +1,4 @@
-defmodule App.Repo.Migrations.AddD4HAccessKey do
+defmodule App.Repo.Migrations.AddD4HAPIHost do
   use Ecto.Migration
 
   def change do
