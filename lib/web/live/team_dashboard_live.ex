@@ -56,21 +56,17 @@ defmodule Web.TeamDashboardLive do
       <:failed :let={_reason}>There was an error refershing D4H data</:failed>
 
       <table class="table">
-        <thead>
-          <th>Type</th>
-          <th class="text-right">Count</th>
-        </thead>
         <tbody>
           <tr>
-            <td>Members</td>
+            <th>Members</th>
             <td class="text-right"><%= view_data.member_count %></td>
           </tr>
           <tr>
-            <td>Activities</td>
+            <th>Activities</th>
             <td class="text-right"><%= view_data.activity_count %></td>
           </tr>
           <tr>
-            <td>Attendances</td>
+            <th>Attendances</th>
             <td class="text-right"><%= view_data.attendance_count %></td>
           </tr>
         </tbody>
