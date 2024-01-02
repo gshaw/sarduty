@@ -32,6 +32,15 @@ defmodule Web.Components.D4H do
 
   attr :activity, :map, required: true
 
+  def activity_badges(assigns) do
+    ~H"""
+    <.activity_kind_badge activity={@activity} />
+    <.activity_tracking_number_badge activity={@activity} />
+    """
+  end
+
+  attr :activity, :map, required: true
+
   def activity_tracking_number_badge(assigns) do
     ~H"""
     <span

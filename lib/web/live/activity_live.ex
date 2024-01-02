@@ -33,12 +33,11 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title"><%= @activity.title %></h1>
-    <p>
-      <.activity_kind_badge activity={@activity} />
-      <.activity_tracking_number_badge activity={@activity} />
-    </p>
+    <p><.activity_badges activity={@activity} /></p>
+    <p><%= Service.Format.short_date(@activity.started_at) %></p>
+    <p><%= @activity.address %> · <%= @activity.coordinate %></p>
 
-    <div><%= @activity.description %></div>
+    <pre><%= @activity.description %></pre>
     <.activity_tags activity={@activity} class="mb-p" />
 
     <div class="mb-p">
@@ -53,7 +52,7 @@ defmodule Web.ActivityLive do
       <h3 class="subheading">
         →
         <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/attendance"}>
-          Attendance
+          Import Attendance
         </.a>
       </h3>
       <h3 class="subheading">

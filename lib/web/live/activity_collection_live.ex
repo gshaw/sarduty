@@ -80,8 +80,7 @@ defmodule Web.ActivityCollectionLive do
         <.activity_tags activity={record} />
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
-        <div><.activity_kind_badge activity={record} /></div>
-        <.activity_tracking_number_badge activity={record} />
+        <.activity_badges activity={record} />
       </:col>
       <:col :let={record} label="Date" class="w-1/12" sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}>
         <span class="whitespace-nowrap">
