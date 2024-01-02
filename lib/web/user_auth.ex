@@ -160,9 +160,9 @@ defmodule Web.UserAuth do
   end
 
   def on_mount(:ensure_valid_team_subdomain, params, _session, socket) do
-    team_subdomain = socket.assigns.current_team.subdomain
+    current_team = socket.assigns.current_team
 
-    if params["subdomain"] == team_subdomain do
+    if current_team && current_team.subdomain == params["subdomain"] do
       {:cont, socket}
     else
       raise Web.Status.NotFound
