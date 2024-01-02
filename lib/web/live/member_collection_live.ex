@@ -62,7 +62,7 @@ defmodule Web.MemberCollectionLive do
       rows={@paginated.entries}
       sort={@sort}
       path_fn={@path_fn}
-      class="w-full"
+      class="w-full table-striped"
     >
       <:col
         :let={record}

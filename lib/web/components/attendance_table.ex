@@ -8,7 +8,11 @@ defmodule Web.Components.AttendanceTable do
 
   def attendance_table(assigns) do
     ~H"""
-    <.table id="attendance_collection" rows={filter_attendance(@attendance_records, @status)}>
+    <.table
+      id="attendance_collection"
+      rows={filter_attendance(@attendance_records, @status)}
+      class="table-striped"
+    >
       <:col :let={record} :if={@status == "all"} label="">
         <span class=""><%= attendance_status_emoji(record.status) %></span>
       </:col>

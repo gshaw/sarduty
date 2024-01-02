@@ -66,7 +66,7 @@ defmodule Web.ActivityMileageLive do
           Yard to Activity Round Trip: <%= report.yard_to_activity_km %> km <%= report.yard_to_activity_hours %> hours
         </p>
 
-        <.table id="mileage_report" rows={report.attendees}>
+        <.table id="mileage_report" rows={report.attendees} class="table-striped">
           <:header_row>
             <th></th>
             <th colspan="2" class="text-sm font-normal">To Activity</th>

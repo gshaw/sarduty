@@ -74,7 +74,7 @@ defmodule Web.ActivityAttendanceLive do
       <% else %>
         <h2 class="heading">Recommended changes</h2>
         <form phx-submit="perform-recommendations" _phx-change="validate-recommendations">
-          <.table id="recommendations" rows={@recommendations}>
+          <.table id="recommendations" rows={@recommendations} class="table-striped">
             <:col :let={{_op, attendance_id, _member}} label="">
               <.input :if={attendance_id} type="checkbox" name={attendance_id} checked />
             </:col>

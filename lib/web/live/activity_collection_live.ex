@@ -65,7 +65,7 @@ defmodule Web.ActivityCollectionLive do
     <.table
       id="activity_collection"
       rows={@paginated.entries}
-      class="w-full"
+      class="w-full table-striped"
       sort={@sort}
       path_fn={@path_fn}
     >
