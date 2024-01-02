@@ -85,7 +85,7 @@ defmodule Web.ActivityCollectionLive do
       </:col>
       <:col :let={record} label="Date" class="w-1/12" sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}>
         <span class="whitespace-nowrap">
-          <%= Calendar.strftime(record.started_at, "%x") %>
+          <%= Service.Format.short_date(record.started_at) %>
         </span>
       </:col>
     </.table>

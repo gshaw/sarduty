@@ -108,7 +108,7 @@ defmodule Web.MemberCollectionLive do
         sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}
       >
         <span class="whitespace-nowrap">
-          <%= Calendar.strftime(record.member.joined_at, "%x") %>
+          <%= Service.Format.short_date(record.member.joined_at) %>
         </span>
       </:col>
     </.table>
