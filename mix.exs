@@ -36,6 +36,7 @@ defmodule App.MixProject do
       {:cloak, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dns_cluster, "~> 0.1.1"},
+      {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, "~> 0.14"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
