@@ -73,6 +73,7 @@ defmodule Web do
       use Phoenix.LiveView, layout: {Web.Layouts, :app}
 
       import Web.Components.A
+      import Web.Components.ActivityFilterTable
       import Web.Components.AttendanceTable
       import Web.Components.Breadcrumbs
       import Web.Components.D4H

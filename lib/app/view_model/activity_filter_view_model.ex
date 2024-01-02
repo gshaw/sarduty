@@ -11,22 +11,28 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   embedded_schema do
     field :q, Field.TrimmedString
     field :activity, :string
-    field :date, :string
+    field :when, :string
     field :page, :integer
     field :limit, :integer
     field :sort, :string
   end
 
   def activity_kinds, do: ["all", "exercise", "event", "incident"]
-  def date_kinds, do: ["all", "past", "future"]
+  def when_kinds, do: ["all", "past", "future" | build_year_options()]
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
+
+  defp build_year_options do
+    2018..(Date.utc_today().year + 1)
+    |> Range.to_list()
+    |> Enum.map(&Integer.to_string(&1))
+  end
 
   def sort_kinds,
     do: %{
-      "Date ↓" => "date:desc",
-      "Date ↑" => "date:asc",
-      "ID ↓" => "id:desc",
-      "ID ↑" => "id:asc"
+      "Date ↓" => "date-",
+      "Date ↑" => "date",
+      "ID ↓" => "id-",
+      "ID ↑" => "id"
     }
 
   def validate(params) do
@@ -38,22 +44,23 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     end
   end
 
-  def build_paginated_content(team, filter_options) do
+  def build_paginated_content(team, member, filter_options) do
     Activity
     |> Activity.scope(team_id: team.id)
+    |> scope(member: member)
     |> scope(q: filter_options.q)
     |> scope(activity: filter_options.activity)
-    |> scope(date: filter_options.date)
+    |> scope(when: filter_options.when)
     |> scope(sort: filter_options.sort)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
   defp build_new do
     %__MODULE__{
-      date: "past",
+      when: "all",
       activity: "all",
       limit: 50,
-      sort: "date:desc"
+      sort: "date-"
     }
   end
 
@@ -61,13 +68,23 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :date, :activity, :page, :limit, :sort])
+    |> cast(params, [:q, :activity, :when, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, activity_kinds())
-    |> validate_inclusion(:date, date_kinds())
+    |> validate_inclusion(:when, when_kinds())
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
-    |> validate_number(:page, greater_than_or_equal_to: 1)
-    |> validate_number(:page, greater_than_or_equal_to: 1, less_than_or_equal_to: 1000)
+    |> validate_number(:page,
+      greater_than_or_equal_to: 1,
+      less_than_or_equal_to: Enum.max(limits())
+    )
+  end
+
+  defp scope(q, member: nil), do: q
+
+  defp scope(q, member: member) do
+    q
+    |> join(:left, [r], at in assoc(r, :attendances))
+    |> where([r, at], at.member_id == ^member.id)
   end
 
   defp scope(q, q: nil), do: q
@@ -87,9 +104,12 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, date: "all"), do: q
-  defp scope(q, date: "past"), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
-  defp scope(q, date: "future"), do: where(q, [r], r.started_at >= ^DateTime.utc_now())
+  defp scope(q, when: "all"), do: q
+  defp scope(q, when: "past"), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
+  defp scope(q, when: "future"), do: where(q, [r], r.started_at >= ^DateTime.utc_now())
+
+  defp scope(q, when: year) when is_binary(year),
+    do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^year))
 
   defp scope(q, activity: "all"), do: q
   defp scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
@@ -99,8 +119,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, year: year),
     do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
 
-  defp scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.started_at)
-  defp scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.started_at)
-  defp scope(q, sort: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
-  defp scope(q, sort: "id:asc"), do: order_by(q, [r], asc: r.ref_id)
+  defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
+  defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)
+  defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.ref_id)
+  defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.ref_id)
 end

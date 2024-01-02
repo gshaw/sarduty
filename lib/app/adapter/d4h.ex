@@ -14,6 +14,7 @@ defmodule App.Adapter.D4H do
     }
   end
 
+  # TODO: rename build_ with team_, e.g., team_url(@current_team, "/dashboard")
   def build_url(team, path \\ "/dashboard") do
     team_manager_host =
       team.d4h_api_host
@@ -23,6 +24,7 @@ defmodule App.Adapter.D4H do
     "https://#{team_manager_host}#{path}"
   end
 
+  # TODO: rename, activity_url(@activity)
   def build_activity_url(team, activity) do
     activity_path =
       case activity.activity_kind do
@@ -34,8 +36,9 @@ defmodule App.Adapter.D4H do
     build_url(team, "/team/#{activity_path}/view/#{activity.d4h_activity_id}")
   end
 
-  def build_member_url(team, member) do
-    build_url(team, "/team/members/view/#{member.d4h_member_id}")
+  # TODO: rename, member_url(@member)
+  def build_member_url(member) do
+    build_url(member.team, "/team/members/view/#{member.d4h_member_id}")
   end
 
   def determine_region(api_host) do

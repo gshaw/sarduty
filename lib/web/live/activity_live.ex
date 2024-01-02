@@ -38,7 +38,7 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title"><%= @activity.title %></h1>
-    <table class="table">
+    <table class="table table-form">
       <tbody>
         <tr>
           <th>Kind</th>
@@ -107,6 +107,7 @@ defmodule Web.ActivityLive do
           <%= record.position %>
         </:col>
       </.table>
+      <p class="my-1"><%= Enum.count(@members) %> members</p>
     </div>
 
     <div :if={false && @map_image_url} class="my-p">

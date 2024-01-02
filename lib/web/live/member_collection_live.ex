@@ -89,7 +89,11 @@ defmodule Web.MemberCollectionLive do
         align="right"
         sorts={[{"↓", "count:desc"}, {"↑", "count:asc"}]}
       >
-        <%= record.count %>
+        <.a navigate={
+          ~p"/#{@current_team.subdomain}/members/#{record.member.id}/activities?when=#{@year}"
+        }>
+          <%= record.count %>
+        </.a>
       </:col>
 
       <:col
@@ -132,9 +136,9 @@ defmodule Web.MemberCollectionLive do
     MemberFilterViewModel.build_paginated_content(
       team,
       filter_options,
-      # []
+      []
       # ["AdventureSmart"]
-      ["Primary Hours", "Secondary Hours"]
+      # ["Primary Hours", "Secondary Hours"]
     )
   end
 
