@@ -4,7 +4,7 @@
 #
 
 app = "sarduty"
-primary_region = "sea"
+primary_region = "yyz"
 kill_signal = "SIGTERM"
 
 [build]
