@@ -21,24 +21,22 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <h1 class="title-hero"><%= @current_team.name %></h1>
 
-    <nav class="my-p2">
-      <h2 class="heading">
-        → <.a
+    <ul class="my-p2 action-list">
+      <li class="heading">
+        <.a
           external={true}
           external_icon_class="w-8 h-8 ml-2 mb-2"
           href={D4H.build_url(@current_team, "/dashboard")}
           phx-no-format
         >Open D4H Dashboard</.a>
-      </h2>
-      <h2 class="heading">
-        →
+      </li>
+      <li class="heading">
         <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
-      </h2>
-      <h2 class="heading">
-        →
+      </li>
+      <li class="heading">
         <.a navigate={~p"/#{@current_team.subdomain}/members"}>Members</.a>
-      </h2>
-    </nav>
+      </li>
+    </ul>
 
     <p class="">
       <.button

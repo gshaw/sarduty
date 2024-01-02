@@ -56,6 +56,12 @@ module.exports = {
         },
       },
     },
+    listStyleType: {
+      none: "none",
+      arrow: "'→ '",
+      decimal: "decimal",
+      disc: "disc",
+    },
     screens: {
       md: "640px",
       lg: "960px",
@@ -71,6 +77,7 @@ module.exports = {
 
   plugins: [
     require("@tailwindcss/forms"),
+    require("@tailwindcss/typography"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //

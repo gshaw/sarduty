@@ -29,14 +29,6 @@ defmodule Web.MemberLive do
     <div class="md:flex gap-p w-full">
       <div class="flex-1">
         <h1 class="title"><%= @member.name %></h1>
-        <h3 class="subheading">
-          → <.a
-            external={true}
-            external_icon_class="w-6 h-6"
-            href={D4H.build_member_url(@current_team, @member)}
-            phx-no-format
-          >Open D4H Member</.a>
-        </h3>
         <table class="table mb-p">
           <tr>
             <th>Role</th>
@@ -53,6 +45,21 @@ defmodule Web.MemberLive do
           <tr>
             <th>Address</th>
             <td><%= @member.address %></td>
+          </tr>
+          <tr>
+            <th>Actions</th>
+            <td>
+              <ol class="action-list">
+                <li>
+                  <.a
+                    external={true}
+                    external_icon_class="w-6 h-6"
+                    href={D4H.build_member_url(@current_team, @member)}
+                    phx-no-format
+                  >Open D4H Member</.a>
+                </li>
+              </ol>
+            </td>
           </tr>
         </table>
       </div>

@@ -38,39 +38,63 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title"><%= @activity.title %></h1>
-    <p><.activity_badges activity={@activity} /></p>
-    <p><%= Service.Format.short_date(@activity.started_at) %></p>
-    <p><%= @activity.address %> · <%= @activity.coordinate %></p>
-
-    <pre><%= @activity.description %></pre>
-    <.activity_tags activity={@activity} class="mb-p" />
-
-    <div class="mb-p">
-      <h3 class="subheading">
-        → <.a
-          external={true}
-          external_icon_class="w-6 h-6"
-          href={D4H.build_activity_url(@current_team, @activity)}
-          phx-no-format
-        >Open D4H Activity</.a>
-      </h3>
-      <h3 class="subheading">
-        →
-        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/attendance"}>
-          Import Attendance
-        </.a>
-      </h3>
-      <h3 class="subheading">
-        →
-        <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/mileage"}>
-          Mileage Report
-        </.a>
-      </h3>
-    </div>
+    <table class="table">
+      <tbody>
+        <tr>
+          <th>Kind</th>
+          <td><.activity_badges activity={@activity} /></td>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <td><%= Service.Format.short_date(@activity.started_at) %></td>
+        </tr>
+        <tr :if={@activity.address}>
+          <th>Address</th>
+          <td><%= @activity.address %></td>
+        </tr>
+        <tr :if={@activity.coordinate}>
+          <th>Coordinate</th>
+          <td><%= @activity.coordinate %></td>
+        </tr>
+        <tr>
+          <th>Actions</th>
+          <td>
+            <ul class="action-list">
+              <li>
+                <.a
+                  external={true}
+                  external_icon_class="w-6 h-6"
+                  href={D4H.build_activity_url(@current_team, @activity)}
+                  phx-no-format
+                >Open D4H Activity</.a>
+              </li>
+              <li>
+                <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/attendance"}>
+                  Import Attendance
+                </.a>
+              </li>
+              <li>
+                <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/mileage"}>
+                  Mileage Report
+                </.a>
+              </li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <th>Description</th>
+          <td><.markdown content={@activity.description} /></td>
+        </tr>
+        <tr>
+          <th>Tags</th>
+          <td><.activity_tags activity={@activity} /></td>
+        </tr>
+      </tbody>
+    </table>
 
     <div class="my-p">
-      <h2 class="heading">Attendance</h2>
-      <.table id="member_collection" rows={@members}>
+      <h3 class="table-heading">Attendance</h3>
+      <.table id="member_collection" rows={@members} class="table-striped">
         <:col :let={record} label="ID" class="w-px" align="right">
           <%= record.ref_id %>
         </:col>
@@ -85,9 +109,10 @@ defmodule Web.ActivityLive do
       </.table>
     </div>
 
-    <p :if={false && @map_image_url}>
+    <div :if={false && @map_image_url} class="my-p">
+      <h3 class="table-heading">Map</h3>
       <img src={@map_image_url} width="640" height="480" alt="Map of activity" />
-    </p>
+    </div>
     """
   end
 
