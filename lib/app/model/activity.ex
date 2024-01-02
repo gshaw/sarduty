@@ -13,7 +13,7 @@ defmodule App.Model.Activity do
   schema "activities" do
     belongs_to :team, Team
     has_many :attendances, Attendance, where: [status: "attending"]
-    has_many :members, through: [:attendances, :members]
+    has_many :members, through: [:attendances, :member]
     field :d4h_activity_id, :integer
     field :ref_id, :string
     field :tracking_number, :string

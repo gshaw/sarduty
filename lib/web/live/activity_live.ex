@@ -1,9 +1,12 @@
 defmodule Web.ActivityLive do
   use Web, :live_view_app_layout
 
+  import Ecto.Query
+
   alias App.Adapter.D4H
   alias App.Adapter.Mapbox
   alias App.Model.Activity
+  alias App.Repo
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -11,6 +14,7 @@ defmodule Web.ActivityLive do
 
   def handle_params(params, _uri, socket) do
     activity = Activity.get(params["id"])
+    members = fetch_members(activity)
 
     mapbox = Mapbox.build_context()
     map_image_url = Mapbox.build_static_map_url(mapbox, activity.coordinate)
@@ -19,6 +23,7 @@ defmodule Web.ActivityLive do
       assign(socket,
         page_title: activity.title,
         activity: activity,
+        members: members,
         map_image_url: map_image_url
       )
 
@@ -62,9 +67,34 @@ defmodule Web.ActivityLive do
         </.a>
       </h3>
     </div>
+
+    <div class="my-p">
+      <h2 class="heading">Attendance</h2>
+      <.table id="member_collection" rows={@members}>
+        <:col :let={record} label="ID" class="w-px" align="right">
+          <%= record.ref_id %>
+        </:col>
+        <:col :let={record} label="Name">
+          <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.id}"}>
+            <%= record.name %>
+          </.a>
+        </:col>
+        <:col :let={record} label="Role" class="">
+          <%= record.position %>
+        </:col>
+      </.table>
+    </div>
+
     <p :if={false && @map_image_url}>
       <img src={@map_image_url} width="640" height="480" alt="Map of activity" />
     </p>
     """
+  end
+
+  def fetch_members(activity) do
+    activity
+    |> Ecto.assoc(:members)
+    |> order_by(:name)
+    |> Repo.all()
   end
 end
