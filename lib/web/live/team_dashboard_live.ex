@@ -27,6 +27,18 @@ defmodule Web.TeamDashboardLive do
       </li>
       <li class="heading">
         <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
+        <ul class="subheading action-list ml-p2">
+          <li>
+            <.a navigate={~p"/#{@current_team.subdomain}/activities?&when=future&sort=date"}>
+              Future
+            </.a>
+          </li>
+          <li>
+            <.a navigate={~p"/#{@current_team.subdomain}/activities?when=past&sort=date-"}>
+              Past
+            </.a>
+          </li>
+        </ul>
       </li>
       <li class="heading">
         <.a navigate={~p"/#{@current_team.subdomain}/members"}>Members</.a>
