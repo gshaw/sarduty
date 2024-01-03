@@ -38,7 +38,8 @@ defmodule Web.StyleGuideLive do
     <.style_group title=".a">
       <div class="flex space-x-4">
         <.a navigate="/styles">Default Link</.a>
-        <.a kind={:custom} navigate="/styles">Unstyled</.a>
+        <.a external={true} navigate="/styles">External Link</.a>
+        <.a kind={:custom} navigate="/styles">Unstyled Link</.a>
       </div>
     </.style_group>
     <.style_group title=".input">

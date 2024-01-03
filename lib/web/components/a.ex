@@ -15,7 +15,6 @@ defmodule Web.Components.A do
     doc: "used for styling and flash lookup"
 
   attr :external, :boolean, default: false
-  attr :external_icon_class, :string, default: nil
   attr :is_current, :boolean, default: false
   attr :class, :any, default: ""
 
@@ -26,25 +25,36 @@ defmodule Web.Components.A do
   slot :inner_block, required: true
 
   def a(assigns) do
+    assigns =
+      assigns
+      |> assign(:link_class, determine_link_class(assigns))
+      |> assign(:target, determine_target(assigns))
+
     ~H"""
-    <.link
-      class={determine_kind_classes(@kind, @is_current) ++ [@class]}
-      {if @external, do: %{target: "_blank"}, else: %{}}
-      {@rest}
-      phx-no-format
-    ><%= render_slot(@inner_block) %><%= if @external do %><.icon
-      name="hero-arrow-top-right-on-square-mini"
-      class={"ml-1 mb-1 w-5 h-5 #{@external_icon_class}"}
-    /><% end %></.link>
+    <.link class={@link_class} {@target} {@rest}><%= render_slot(@inner_block) %></.link>
     """
   end
 
-  defp determine_kind_classes(:default, _is_current), do: ["link text-primary-1"]
-  defp determine_kind_classes(:btn, _is_current), do: ["btn"]
-  defp determine_kind_classes(:custom, _is_current), do: []
-  defp determine_kind_classes(:monochrome, _is_current), do: ["link"]
+  def determine_target(%{external: true}), do: %{target: "_blank"}
+  def determine_target(_assigns), do: %{}
 
-  defp determine_kind_classes(:menu_item, is_current) do
+  defp determine_link_class(assigns) do
+    [
+      determine_kind_classes(assigns),
+      determine_external_class(assigns),
+      assigns.class
+    ]
+  end
+
+  defp determine_external_class(%{external: true}), do: "after:content-['_↗']"
+  defp determine_external_class(_assigns), do: nil
+
+  defp determine_kind_classes(%{kind: :default}), do: ["link text-primary-1"]
+  defp determine_kind_classes(%{kind: :btn}), do: ["btn"]
+  defp determine_kind_classes(%{kind: :custom}), do: []
+  defp determine_kind_classes(%{kind: :monochrome}), do: ["link"]
+
+  defp determine_kind_classes(%{kind: :menu_item, is_current: is_current}) do
     [
       "block text-sm font-medium",
       "hover:text-gray-800 hover:bg-gray-200",
@@ -55,7 +65,7 @@ defmodule Web.Components.A do
     ]
   end
 
-  defp determine_kind_classes(:navbar_item, is_current) do
+  defp determine_kind_classes(%{kind: :navbar_item, is_current: is_current}) do
     [
       "border-gray-200",
       "mx-4",
@@ -65,7 +75,7 @@ defmodule Web.Components.A do
     ]
   end
 
-  defp determine_kind_classes(:navbar_title, is_current) do
+  defp determine_kind_classes(%{kind: :navbar_title, is_current: is_current}) do
     [
       "font-medium",
       "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800",

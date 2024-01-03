@@ -61,12 +61,9 @@ defmodule Web.ActivityLive do
           <td>
             <ul class="action-list">
               <li>
-                <.a
-                  external={true}
-                  external_icon_class="w-6 h-6"
-                  href={D4H.build_activity_url(@current_team, @activity)}
-                  phx-no-format
-                >Open D4H Activity</.a>
+                <.a external={true} href={D4H.build_activity_url(@current_team, @activity)}>
+                  Open D4H Activity
+                </.a>
               </li>
               <li>
                 <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/attendance"}>
