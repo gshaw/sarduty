@@ -46,6 +46,9 @@ config :sarduty, App.Vault,
 # at the `config/runtime.exs`.
 config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
 
+# Configure Timezone database: https://github.com/lau/tzdata
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",

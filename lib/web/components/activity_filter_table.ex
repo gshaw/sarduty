@@ -70,7 +70,7 @@ defmodule Web.Components.ActivityFilterTable do
       </:col>
       <:col :let={record} label="Date" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
         <span class="whitespace-nowrap">
-          <%= Service.Format.short_date(record.started_at) %>
+          <%= Service.Format.short_datetime(record.started_at, @team.timezone) %>
         </span>
       </:col>
     </.table>

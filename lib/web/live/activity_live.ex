@@ -46,7 +46,7 @@ defmodule Web.ActivityLive do
         </tr>
         <tr>
           <th>Date</th>
-          <td><%= Service.Format.short_date(@activity.started_at) %></td>
+          <td><%= Service.Format.short_datetime(@activity.started_at, @current_team.timezone) %></td>
         </tr>
         <tr :if={@activity.address}>
           <th>Address</th>

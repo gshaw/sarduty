@@ -112,7 +112,7 @@ defmodule Web.MemberCollectionLive do
         sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}
       >
         <span class="whitespace-nowrap">
-          <%= Service.Format.short_date(record.member.joined_at) %>
+          <%= Service.Format.short_date(record.member.joined_at, @current_team.timezone) %>
         </span>
       </:col>
     </.table>
