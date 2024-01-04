@@ -26,7 +26,7 @@ defmodule Web.TeamDashboardLive do
         <.a external={true} href={D4H.build_url(@current_team, "/dashboard")}>Open D4H Dashboard</.a>
       </li>
       <li class="heading">
-        <.a navigate={~p"/#{@current_team.subdomain}/activities"}>Activities</.a>
+        Activities
         <ul class="subheading action-list ml-p2">
           <li>
             <.a navigate={~p"/#{@current_team.subdomain}/activities?&when=future&sort=date"}>
@@ -36,6 +36,11 @@ defmodule Web.TeamDashboardLive do
           <li>
             <.a navigate={~p"/#{@current_team.subdomain}/activities?when=past&sort=date-"}>
               Past
+            </.a>
+          </li>
+          <li>
+            <.a navigate={~p"/#{@current_team.subdomain}/activities"}>
+              All
             </.a>
           </li>
         </ul>
