@@ -3,6 +3,8 @@ defmodule Web.Components.Table do
 
   import Web.Components.A
 
+  alias Service.StringHelpers
+
   @doc ~S"""
   Renders a table with generic styling.
 
@@ -90,17 +92,17 @@ defmodule Web.Components.Table do
           <% {suffix, current_sort} -> %>
             <%= if Enum.count(@sorts) == 1 do %>
               <%= if @align == "right" do %>
-                <%= suffix %><%= Service.StringHelpers.no_break_space() %><%= @label %>
+                <%= suffix %><%= StringHelpers.no_break_space() %><%= @label %>
               <% else %>
-                <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+                <%= @label %><%= StringHelpers.no_break_space() %><%= suffix %>
               <% end %>
             <% else %>
               <% sort = find_next_sort(@sorts, current_sort) %>
               <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
                 <%= if @align == "right" do %>
-                  <%= suffix %><%= Service.StringHelpers.no_break_space() %><%= @label %>
+                  <%= suffix %><%= StringHelpers.no_break_space() %><%= @label %>
                 <% else %>
-                  <%= @label %><%= Service.StringHelpers.no_break_space() %><%= suffix %>
+                  <%= @label %><%= StringHelpers.no_break_space() %><%= suffix %>
                 <% end %>
               </.a>
             <% end %>

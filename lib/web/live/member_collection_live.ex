@@ -31,30 +31,23 @@ defmodule Web.MemberCollectionLive do
     ~H"""
     <.breadcrumbs team={@current_team} />
     <h1 class="title mb-p"><%= @page_title %></h1>
-    <.form for={@form} phx-change="change" phx-submit="change">
-      <div class="flex gap-h items-center ">
-        <.input
-          label="Year"
-          field={@form[:year]}
-          type="select"
-          options={MemberFilterViewModel.years()}
-        />
-        <.input field={@form[:q]} label="Search" />
-        <.input
-          label="Sort"
-          field={@form[:sort]}
-          type="select"
-          options={MemberFilterViewModel.sort_kinds()}
-        />
-        <.input
-          label="Limit"
-          field={@form[:limit]}
-          type="select"
-          options={MemberFilterViewModel.limits()}
-        />
-        <.a navigate={~p"/#{@current_team.subdomain}/members"}>Reset</.a>
-        <span class="text-right grow"><%= @paginated.total_entries %> records</span>
-      </div>
+    <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
+      <.input label="Year" field={@form[:year]} type="select" options={MemberFilterViewModel.years()} />
+      <.input field={@form[:q]} label="Search" />
+      <.input
+        label="Sort"
+        field={@form[:sort]}
+        type="select"
+        options={MemberFilterViewModel.sort_kinds()}
+      />
+      <.input
+        label="Limit"
+        field={@form[:limit]}
+        type="select"
+        options={MemberFilterViewModel.limits()}
+      />
+      <.a class="filter-form-reset" navigate={~p"/#{@current_team.subdomain}/members"}>Reset</.a>
+      <span class="filter-form-count"><%= @paginated.total_entries %> records</span>
     </.form>
 
     <.table
@@ -92,6 +85,7 @@ defmodule Web.MemberCollectionLive do
         <.a navigate={
           ~p"/#{@current_team.subdomain}/members/#{record.member.id}/activities?when=#{@year}"
         }>
+          <span class="label md:hidden">Activities</span>
           <%= record.count %>
         </.a>
       </:col>
@@ -103,6 +97,7 @@ defmodule Web.MemberCollectionLive do
         align="right"
         sorts={[{"↓", "hours:desc"}, {"↑", "hours:asc"}]}
       >
+        <span class="label md:hidden">Hours</span>
         <%= record.hours %>
       </:col>
       <:col
@@ -111,6 +106,7 @@ defmodule Web.MemberCollectionLive do
         class="w-1/12"
         sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}
       >
+        <span class="label md:hidden">Joined</span>
         <span class="whitespace-nowrap">
           <%= Service.Format.short_date(record.member.joined_at, @current_team.timezone) %>
         </span>
