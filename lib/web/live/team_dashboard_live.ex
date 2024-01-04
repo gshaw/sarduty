@@ -76,6 +76,12 @@ defmodule Web.TeamDashboardLive do
             <th>Attendances</th>
             <td><%= view_data.attendance_count %></td>
           </tr>
+          <tr>
+            <th>Refreshed</th>
+            <td>
+              <%= Service.Format.short_datetime(view_data.refreshed_at, @current_team.timezone) %>
+            </td>
+          </tr>
         </tbody>
       </table>
     </.async_result>
@@ -87,8 +93,8 @@ defmodule Web.TeamDashboardLive do
       socket
       |> assign(view_data: nil)
       |> assign_async(:view_data, fn ->
-        RefreshD4HData.call(socket.assigns.current_user)
-        view_data = TeamDashboardViewData.build(socket.assigns.current_team)
+        team = RefreshD4HData.call(socket.assigns.current_user)
+        view_data = TeamDashboardViewData.build(team)
         {:ok, %{view_data: view_data}}
       end)
 

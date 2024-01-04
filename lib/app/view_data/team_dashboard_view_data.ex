@@ -11,7 +11,8 @@ defmodule App.ViewData.TeamDashboardViewData do
     %{
       member_count: count_members(team),
       activity_count: count_activities(team),
-      attendance_count: count_attendances(team)
+      attendance_count: count_attendances(team),
+      refreshed_at: team.d4h_refreshed_at
     }
   end
 

@@ -15,6 +15,7 @@ defmodule App.Model.Team do
     field :lat, :float
     field :lng, :float
     field :timezone, :string
+    field :d4h_refreshed_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -27,6 +28,7 @@ defmodule App.Model.Team do
       :subdomain,
       :d4h_team_id,
       :d4h_api_host,
+      :d4h_refreshed_at,
       :mailing_address,
       :lat,
       :lng,
