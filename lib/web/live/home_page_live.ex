@@ -7,7 +7,7 @@ defmodule Web.HomePageLive do
 
   def render(assigns) do
     ~H"""
-    <hgroup class="mb-8">
+    <div class="mb-8">
       <h1 class="title-hero">
         Welcome to
         <span class="text-danger-1">SAR<%= Service.StringHelpers.no_break_space() %>Duty</span>
@@ -15,14 +15,13 @@ defmodule Web.HomePageLive do
       <p class="lead">
         Helpful tools for search and rescue managers.
       </p>
-    </hgroup>
+    </div>
     <%= if @current_team do %>
-      <hgroup>
-        <h2 class="heading mb-0">
-          →
+      <ul class="heading action-list">
+        <li>
           <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
-        </h2>
-      </hgroup>
+        </li>
+      </ul>
     <% end %>
     <hr class="my-p" />
     <p class="mt-p">

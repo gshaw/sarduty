@@ -1,6 +1,6 @@
 .title-hero { @apply text-5xl md:text-7xl font-bold mb-p05 }
 .title { @apply text-5xl font-bold mb-p05 }
-.lead { @apply text-xl md:text-2xl font-light mb-p05 text-secondary-1 }
+.lead { @apply text-xl md:text-3xl font-light mb-p05 text-secondary-1 }
 .heading { @apply text-3xl font-medium mb-p05 }
 .subheading { @apply text-xl font-medium mb-p05 }
 .table-heading { @apply label py-1 }

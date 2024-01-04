@@ -86,7 +86,7 @@ defmodule Web.Layouts do
 
   def app_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:wide} color={:base_1}>
+    <.navbar size={:wide} color={:base_2}>
       <%!-- <.navbar_mobile_menu color={:base_1}>
         <.a kind={:menu_item} navigate="/">SAR Duty</.a>
       </.navbar_mobile_menu> --%>
@@ -117,7 +117,7 @@ defmodule Web.Layouts do
 
   def marketing_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:wide} color={:base_1}>
+    <.navbar size={:wide} color={:base_2}>
       <%!-- <.navbar_mobile_menu color={:base_1}>
         <.a kind={:menu_item} navigate="/">SAR Duty</.a>
         <%= if @current_user == nil do %>
