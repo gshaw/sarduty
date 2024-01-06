@@ -1,7 +1,8 @@
 .btn { @apply
   inline-flex items-center
   text-sm font-medium
-  focus:outline-none focus:ring-2 focus:ring-offset-2
+  outline-none
+  /* focus:ring-2 focus:ring-offset-2 */
   no-underline hover:no-underline /* needed to style `a` */
 }
 
@@ -14,20 +15,21 @@
 .btn-danger { @apply text-danger-content bg-danger-1 hover:bg-danger-2 focus:bg-danger-2 focus:ring-danger-2 }
 
 
-/* size */
-.btn { @apply px-4 py-2 rounded-md }
-.btn-sm { @apply px-2.5 py-1.5 text-xs rounded }
-.btn-lg { @apply px-6 py-3 text-base rounded-md}
+/* size (h- styles needed to prevent page movement when reloading page) */
+.btn { @apply px-4 py-2 rounded-md h-10 }
+.btn-sm { @apply px-2.5 py-1.5 text-xs rounded h-6 }
+.btn-lg { @apply px-6 py-3 text-base rounded-md h-14 }
 
 /* push button animation and shadow */
 .btn { @apply border-solid border-b-2 border-base-content border-opacity-50 }
 .btn {
   &:active:hover,
-  &:active:focus {
-    transform: scale(0.97);
-    @apply border-b-transparent;
+  &:active:active {
+    @apply border-b-transparent translate-y-0.5 ;
   }
 }
+
+.btn { &:not(:active) { @apply duration-200 } }
 
 /* special case disabled button */
 .btn:disabled, .btn[disabled], .btn-disabled {

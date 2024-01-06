@@ -2,7 +2,18 @@ defmodule Web.StyleGuideLive do
   use Web, :live_view_marketing_layout
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Style Guide")}
+    socket =
+      socket
+      |> assign(:page_title, "Style Guide")
+      |> assign(:random_numbers, build_random_numbers())
+
+    {:ok, socket}
+  end
+
+  defp build_random_numbers(), do: Enum.map(0..10, fn _ -> Enum.random(100..999) end)
+
+  def handle_event("update-random-numbers", _unsigned_params, socket) do
+    {:noreply, assign(socket, :random_numbers, build_random_numbers())}
   end
 
   def render(assigns) do
@@ -110,7 +121,17 @@ defmodule Web.StyleGuideLive do
           <button class="btn btn-danger">Delete</button>
         </:trailing>
       </.form_actions>
-      <p class="pt-8">
+
+      <div class="py-p">
+        <p class="font-mono"><%= inspect(@random_numbers) %></p>
+        <p>
+          <button phx-click="update-random-numbers" class="btn btn-warning">
+            Refresh Random Numbers
+          </button>
+        </p>
+      </div>
+
+      <p>
         Examples of all button styles but the app mainly uses the default, success, link, and danger.
       </p>
       <.form_actions>
