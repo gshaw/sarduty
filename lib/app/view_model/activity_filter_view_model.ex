@@ -22,7 +22,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   defp build_year_options do
-    2018..(Date.utc_today().year + 1)
+    (Date.utc_today().year + 1)..2018
     |> Range.to_list()
     |> Enum.map(&Integer.to_string(&1))
   end

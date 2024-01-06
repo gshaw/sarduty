@@ -34,7 +34,7 @@ defmodule Web.Components.Table do
     attr :sorts, :list
   end
 
-  slot :header_row, defualt: nil
+  slot :header_row
 
   def table(assigns) do
     assigns =
@@ -45,7 +45,7 @@ defmodule Web.Components.Table do
     ~H"""
     <table class={["table", @class]}>
       <thead>
-        <tr :if={@header_row} class="table-header-row">
+        <tr :if={@header_row != []} class="table-header-row">
           <%= render_slot(@header_row) %>
         </tr>
         <tr>
@@ -66,7 +66,7 @@ defmodule Web.Components.Table do
             :for={col <- @col}
             class={[
               Map.get(col, :class),
-              if(Map.get(col, :align) == "right", do: "text-right", else: nil)
+              if(Map.get(col, :align) == "right", do: "md:text-right", else: nil)
             ]}
           >
             <%= render_slot(col, @row_item.(row)) %>
@@ -79,7 +79,7 @@ defmodule Web.Components.Table do
 
   def table_header(assigns) do
     ~H"""
-    <th class={[@class, if(@align == "right", do: "text-right", else: nil)]}>
+    <th class={[@class, if(@align == "right", do: "md:text-right", else: nil)]}>
       <%= if @sorts == nil do %>
         <%= @label %>
       <% else %>

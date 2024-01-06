@@ -42,8 +42,15 @@ defmodule Web.Components.ActivityFilterTable do
         type="select"
         options={ActivityFilterViewModel.limits()}
       />
-      <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
-      <span class="filter-form-count"><%= @paginated.total_entries %> records</span>
+      <span>
+        <.a class="filter-form-reset" navigate={@path_fn.(:future)}>Future</.a>
+        ·
+        <.a class="filter-form-reset" navigate={@path_fn.(:past)}>Past</.a>
+        ·
+        <.a class="filter-form-reset" navigate={@path_fn.(:all)}>All</.a>
+      </span>
+
+      <span class="filter-form-count"><%= @paginated.total_entries %> activities</span>
     </.form>
 
     <.table

@@ -4,7 +4,6 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
-  # alias App.Model.Team
   alias App.Repo
 
   def build(team) do

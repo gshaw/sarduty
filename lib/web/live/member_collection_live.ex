@@ -47,7 +47,7 @@ defmodule Web.MemberCollectionLive do
         options={MemberFilterViewModel.limits()}
       />
       <.a class="filter-form-reset" navigate={~p"/#{@current_team.subdomain}/members"}>Reset</.a>
-      <span class="filter-form-count"><%= @paginated.total_entries %> records</span>
+      <span class="filter-form-count"><%= @paginated.total_entries %> members</span>
     </.form>
 
     <.table

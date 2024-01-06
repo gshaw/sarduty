@@ -52,6 +52,7 @@ defmodule Web.ActivityCollectionLive do
     <% end %>
 
     <h1 class="title mb-p"><%= @page_title %></h1>
+
     <.activity_filter_table
       form={@form}
       paginated={@paginated}
@@ -93,8 +94,17 @@ defmodule Web.ActivityCollectionLive do
   def build_path_fn(team, member, filter_options) do
     fn changed_options ->
       case changed_options do
-        :reset -> build_filter_path(team, member, %ActivityFilterViewModel{})
-        _ -> build_filter_path(team, member, Map.merge(filter_options, Map.new(changed_options)))
+        :future ->
+          build_filter_path(team, member, %ActivityFilterViewModel{when: "future", sort: "date"})
+
+        :past ->
+          build_filter_path(team, member, %ActivityFilterViewModel{when: "past", sort: "date-"})
+
+        :all ->
+          build_filter_path(team, member, %ActivityFilterViewModel{})
+
+        _ ->
+          build_filter_path(team, member, Map.merge(filter_options, Map.new(changed_options)))
       end
     end
   end

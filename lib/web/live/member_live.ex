@@ -27,54 +27,49 @@ defmodule Web.MemberLive do
       <:item label={"##{@member.ref_id}"} />
     </.breadcrumbs>
 
-    <div class="md:flex gap-p w-full">
-      <div class="flex-1">
-        <h1 class="title"><%= @member.name %></h1>
-        <.member_details_table member={@member} />
-      </div>
-      <div>
-        <img
-          class="bg-base-0 aspect-square object-cover size-48 rounded"
-          src={~p"/#{@current_team.subdomain}/members/#{@member.id}/image"}
-        />
-      </div>
+    <h1 class="title"><%= @member.name %></h1>
+    <div class="content-wrapper">
+      <aside class="content-1/3">
+        <.sidebar_content member={@member} />
+      </aside>
+      <main class="content-2/3">
+        <.main_content member={@member} />
+      </main>
     </div>
     """
   end
 
-  defp member_details_table(assigns) do
+  defp sidebar_content(assigns) do
     ~H"""
-    <table class="table table-form">
-      <tr>
-        <th>Role</th>
-        <td><%= @member.position %></td>
-      </tr>
-      <tr>
-        <th>Email</th>
-        <td><%= @member.email %></td>
-      </tr>
-      <tr>
-        <th>Phone</th>
-        <td><%= @member.phone %></td>
-      </tr>
-      <tr>
-        <th>Address</th>
-        <td><%= @member.address %></td>
-      </tr>
-      <tr>
-        <th>Actions</th>
-        <td>
-          <ol class="action-list">
-            <li>
-              <.a external={true} href={D4H.build_member_url(@member)}>Open D4H Member</.a>
-            </li>
-            <li>
-              <.a href={member_activities_path(@member)}>Member Activities</.a>
-            </li>
-          </ol>
-        </td>
-      </tr>
-    </table>
+    <dl>
+      <p><.member_image member={@member} /></p>
+      <dt>Actions</dt>
+      <dd>
+        <ul class="action-list">
+          <li>
+            <.a external={true} href={D4H.build_member_url(@member)}>Open D4H Member</.a>
+          </li>
+          <li>
+            <.a href={member_activities_path(@member)}>Member Activities</.a>
+          </li>
+        </ul>
+      </dd>
+    </dl>
+    """
+  end
+
+  defp main_content(assigns) do
+    ~H"""
+    <dl>
+      <dt>Role</dt>
+      <dd><%= @member.position %></dd>
+      <dt>Email</dt>
+      <dd><%= @member.email %></dd>
+      <dl>Phone</dl>
+      <dd><%= @member.phone %></dd>
+      <dt>Address</dt>
+      <dd><%= @member.address %></dd>
+    </dl>
     """
   end
 

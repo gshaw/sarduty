@@ -1,0 +1,5 @@
+@layer components {
+  .content-wrapper { @apply md:flex md:flex-row-reverse gap-p }
+  .content-1\/3 { @apply md:w-1/3 }
+  .content-2\/3 { @apply md:w-2/3 }
+}

@@ -51,4 +51,15 @@ defmodule Web.Components.D4H do
     ><%= @activity.tracking_number %></span>
     """
   end
+
+  attr :member, :map, required: true
+
+  def member_image(assigns) do
+    ~H"""
+    <img
+      class="bg-base-0 aspect-square object-cover size-48 rounded"
+      src={~p"/#{@member.team.subdomain}/members/#{@member.id}/image"}
+    />
+    """
+  end
 end

@@ -13,7 +13,7 @@ defmodule Web.ActivityLive do
   end
 
   def handle_params(params, _uri, socket) do
-    activity = Activity.get(params["id"])
+    activity = fetch_activity(params["id"])
     members = fetch_members(activity)
 
     mapbox = Mapbox.build_context()
@@ -38,80 +38,102 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title"><%= @activity.title %></h1>
-    <table class="table table-form">
-      <tbody>
-        <tr>
-          <th>Kind</th>
-          <td><.activity_badges activity={@activity} /></td>
-        </tr>
-        <tr>
-          <th>Date</th>
-          <td><%= Service.Format.short_datetime(@activity.started_at, @current_team.timezone) %></td>
-        </tr>
-        <tr :if={@activity.address}>
-          <th>Address</th>
-          <td><%= @activity.address %></td>
-        </tr>
-        <tr :if={@activity.coordinate}>
-          <th>Coordinate</th>
-          <td><%= @activity.coordinate %></td>
-        </tr>
-        <tr>
-          <th>Actions</th>
-          <td>
-            <ul class="action-list">
-              <li>
-                <.a external={true} href={D4H.build_activity_url(@current_team, @activity)}>
-                  Open D4H Activity
-                </.a>
-              </li>
-              <li>
-                <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/attendance"}>
-                  Import Attendance
-                </.a>
-              </li>
-              <li>
-                <.a navigate={~p"/#{@current_team.subdomain}/activities/#{@activity.id}/mileage"}>
-                  Mileage Report
-                </.a>
-              </li>
-            </ul>
-          </td>
-        </tr>
-        <tr>
-          <th>Description</th>
-          <td><.markdown content={@activity.description} /></td>
-        </tr>
-        <tr>
-          <th>Tags</th>
-          <td><.activity_tags activity={@activity} /></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="my-p">
-      <h3 class="table-heading">Attendance</h3>
-      <.table id="member_collection" rows={@members} class="table-striped">
-        <:col :let={record} label="ID" class="w-px" align="right">
-          <%= record.ref_id %>
-        </:col>
-        <:col :let={record} label="Name">
-          <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.id}"}>
-            <%= record.name %>
-          </.a>
-        </:col>
-        <:col :let={record} label="Role" class="">
-          <%= record.position %>
-        </:col>
-      </.table>
-      <p class="my-1"><%= Enum.count(@members) %> members</p>
-    </div>
-
-    <div :if={false && @map_image_url} class="my-p">
-      <h3 class="table-heading">Map</h3>
-      <img src={@map_image_url} width="640" height="480" alt="Map of activity" />
+    <div class="content-wrapper">
+      <aside class="content-1/3">
+        <.sidebar_content activity={@activity} />
+      </aside>
+      <main class="content-2/3">
+        <.main_content activity={@activity} map_image_url={@map_image_url} members={@members} />
+      </main>
     </div>
     """
+  end
+
+  def sidebar_content(assigns) do
+    ~H"""
+    <dl>
+      <dt>Kind</dt>
+      <dd><.activity_badges activity={@activity} /></dd>
+
+      <dt>Date</dt>
+      <dd>
+        <%= Service.Format.short_datetime(@activity.started_at, @activity.team.timezone) %>
+      </dd>
+
+      <dt>Actions</dt>
+      <dd>
+        <ul class="action-list">
+          <li>
+            <.a external={true} href={D4H.build_activity_url(@activity.team, @activity)}>
+              Open D4H Activity
+            </.a>
+          </li>
+          <li>
+            <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/attendance"}>
+              Import Attendance
+            </.a>
+          </li>
+          <li>
+            <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/mileage"}>
+              Mileage Report
+            </.a>
+          </li>
+        </ul>
+      </dd>
+    </dl>
+    """
+  end
+
+  def main_content(assigns) do
+    ~H"""
+    <dl>
+      <p :if={@map_image_url}>
+        <img src={@map_image_url} width="640" height="480" alt="Map of activity" />
+      </p>
+      <div :if={@activity.address || @activity.coordinate}>
+        <dt>Address</dt>
+        <dd><%= @activity.address %></dd>
+        <dt>Coordinate</dt>
+        <dd>
+          <%= @activity.coordinate %>
+        </dd>
+      </div>
+
+      <dt>Description</dt>
+      <dd class="no-section-divider"><.markdown content={@activity.description} /></dd>
+
+      <dt>Tags</dt>
+      <dd><.activity_tags activity={@activity} /></dd>
+
+      <dt>
+        Attendance
+        <span class="hint">
+          · <%= Enum.count(@members) %> members
+        </span>
+      </dt>
+      <dd>
+        <.table id="member_collection" rows={@members} class="mt-p05 table-striped w-fit">
+          <:col :let={record} label="ID" class="w-px" align="right">
+            <%= record.ref_id %>
+          </:col>
+          <:col :let={record} label="Name">
+            <.a navigate={~p"/#{@activity.team.subdomain}/members/#{record.id}"}>
+              <%= record.name %>
+            </.a>
+          </:col>
+          <:col :let={record} label="Role">
+            <%= record.position %>
+          </:col>
+        </.table>
+      </dd>
+    </dl>
+    """
+  end
+
+  def fetch_activity(activity_id) do
+    activity_id
+    |> Activity.get()
+    |> Repo.preload(:team)
   end
 
   def fetch_members(activity) do

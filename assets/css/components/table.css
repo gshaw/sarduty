@@ -1,12 +1,19 @@
-table.table { @apply text-left }
-table.table thead tr { @apply bg-base-3 border-b-2 border-base-content border-opacity-50 }
-table.table thead th { @apply py-1 px-2 align-top label }
-table.table tbody th { @apply py-1 px-2 align-text-top label }
-table.table tbody td { @apply py-1 px-2 align-text-top }
+table.table { @apply text-left w-full }
+table.table thead th { @apply bg-base-3 md:border-b-2 border-base-content border-opacity-50 }
+table.table thead th,
+table.table tbody th { @apply py-1 pr-2 align-text-top label w-full md:w-auto }
+table.table tbody td { @apply py-1 pr-2 align-text-top }
 
+/* style header row cells that span multiple columns */
 table.table thead tr.table-header-row th { @apply border-none text-sm font-normal }
 
-table.table-striped tbody { @apply [&>*:nth-child(even)]:bg-base-3 }
-table.table-form tbody th { @apply md:text-right label }
+/* alternating row colors requires left padding */
+table.table-striped tbody { @apply [&>*:nth-child(even)]:bg-base-3/70 }
+table.table-striped th,
+table.table-striped td { @apply pl-2 }
 
+/* vertically stack mobile table cells */
 table.table tr { @apply flex flex-col md:table-row }
+
+table.table-form tbody th { @apply py-0 }
+table.table-form tbody td { @apply py-0 pb-p05 mb-p05 border-b }

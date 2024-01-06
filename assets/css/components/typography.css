@@ -1,20 +1,28 @@
-.title-hero { @apply text-5xl md:text-7xl font-bold mb-p05 }
-.title { @apply text-5xl font-bold mb-p05 }
-.lead { @apply text-xl md:text-3xl font-light mb-p05 text-secondary-1 }
-.heading { @apply text-3xl font-medium mb-p05 }
-.subheading { @apply text-xl font-medium mb-p05 }
-.table-heading { @apply label py-1 }
-.paragraph { @apply mb-p }
-.label { @apply font-semibold text-sm text-base-content }
-.link { @apply no-underline hover:underline }
-.hint { @apply text-secondary-1 text-sm font-normal }
+@layer components {
+  .title-hero { @apply text-5xl md:text-7xl font-bold mb-p05 }
+  .title { @apply text-5xl font-bold mb-p05 }
+  .lead { @apply text-xl md:text-3xl font-light mb-p05 text-secondary-1 }
+  .heading { @apply text-3xl font-medium mb-p05 }
+  .subheading { @apply text-xl font-medium mb-p05 }
+  .table-heading { @apply label py-1 }
+  .paragraph { @apply mb-p }
+  .label { @apply font-semibold text-sm text-base-content }
+  .link { @apply no-underline hover:underline }
+  .hint { @apply text-secondary-1 text-sm font-normal }
+  .list { @apply list-disc list-inside }
+  .action-list { @apply list-arrow list-inside }
 
-.list { @apply list-disc list-inside }
-.action-list { @apply list-arrow list-inside }
+  p { @apply mb-p }
 
-p, dl { @apply mb-p }
-dt { @apply label }
-dd { @apply mb-p05 }
+  /* definition lists are used for label/value pairs */
+  dl { @apply mb-p }
+  dt { @apply label }
+  dd { @apply mb-p05 dl-section }
+  dl > dd { @apply last:border-b-0 }
+  /* used to group related definition list items */
+  .dl-section { @apply mb-p05 pb-p05 border-b }
+  .dl-section dd { @apply !mb-0 !pb-0 !border-b-0 }
 
-/* required to gives some space if buttons wrap on narrow screen */
-.form-actions .btn { @apply mb-2; }
+  /* required to gives some space if buttons wrap on narrow screen */
+  .form-actions .btn { @apply mb-2; }
+}

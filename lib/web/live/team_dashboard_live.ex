@@ -19,38 +19,54 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title-hero"><%= @current_team.name %></h1>
+    <h1 class="title-hero mb-p"><%= @current_team.name %></h1>
+    <div class="content-wrapper">
+      <aside class="content-1/3">
+        <.sidebar_content team={@current_team} view_data={@view_data} />
+      </aside>
+      <main class="content-2/3">
+        <.main_content team={@current_team} />
+      </main>
+    </div>
+    """
+  end
 
-    <ul class="my-p2 action-list">
+  def main_content(assigns) do
+    ~H"""
+    <ul class="action-list">
       <li class="heading">
-        <.a external={true} href={D4H.build_url(@current_team, "/dashboard")}>Open D4H Dashboard</.a>
+        <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H Dashboard</.a>
       </li>
       <li class="heading">
         Activities
         <ul class="subheading action-list ml-p2">
           <li>
-            <.a navigate={~p"/#{@current_team.subdomain}/activities?&when=future&sort=date"}>
+            <.a navigate={~p"/#{@team.subdomain}/activities?&when=future&sort=date"}>
               Future
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@current_team.subdomain}/activities?when=past&sort=date-"}>
+            <.a navigate={~p"/#{@team.subdomain}/activities?when=past&sort=date-"}>
               Past
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@current_team.subdomain}/activities"}>
+            <.a navigate={~p"/#{@team.subdomain}/activities"}>
               All
             </.a>
           </li>
         </ul>
       </li>
       <li class="heading">
-        <.a navigate={~p"/#{@current_team.subdomain}/members"}>Members</.a>
+        <.a navigate={~p"/#{@team.subdomain}/members"}>Members</.a>
       </li>
     </ul>
+    """
+  end
 
-    <p class="">
+  def sidebar_content(assigns) do
+    ~H"""
+    <p>
       <.button
         type="button"
         class="btn-warning"
@@ -60,35 +76,30 @@ defmodule Web.TeamDashboardLive do
         Refresh D4H Data
       </.button>
     </p>
-
     <.async_result :let={view_data} assign={@view_data}>
       <:loading>
-        <.spinner>Refreshing D4H data...</.spinner>
+        <.spinner>
+          Refreshing D4H data...
+          <div class="hint">This can take a few minutes</div>
+        </.spinner>
       </:loading>
       <:failed :let={_reason}>There was an error refershing D4H data</:failed>
 
-      <table class="table table-form">
-        <tbody>
-          <tr>
-            <th>Members</th>
-            <td><%= view_data.member_count %></td>
-          </tr>
-          <tr>
-            <th>Activities</th>
-            <td><%= view_data.activity_count %></td>
-          </tr>
-          <tr>
-            <th>Attendances</th>
-            <td><%= view_data.attendance_count %></td>
-          </tr>
-          <tr>
-            <th>Refreshed</th>
-            <td>
-              <%= Service.Format.short_datetime(view_data.refreshed_at, @current_team.timezone) %>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <dl>
+        <dt>Members</dt>
+        <dd><%= view_data.member_count %></dd>
+
+        <dt>Activities</dt>
+        <dd><%= view_data.activity_count %></dd>
+
+        <dt>Attendances</dt>
+        <dd><%= view_data.attendance_count %></dd>
+
+        <dt>Refreshed</dt>
+        <dd>
+          <%= Service.Format.short_datetime(view_data.refreshed_at, @team.timezone) %>
+        </dd>
+      </dl>
     </.async_result>
     """
   end
