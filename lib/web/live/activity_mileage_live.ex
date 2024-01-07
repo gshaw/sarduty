@@ -69,9 +69,9 @@ defmodule Web.ActivityMileageLive do
         <.table id="mileage_report" rows={report.attendees} class="table-striped">
           <:header_row>
             <th></th>
-            <th colspan="2" class="text-sm font-normal">To Activity</th>
-            <th colspan="2" class="text-sm font-normal">To Yard</th>
-            <th colspan="2" class="text-sm font-normal"></th>
+            <th colspan="2">To Activity</th>
+            <th colspan="2">To Yard</th>
+            <th colspan="2"></th>
           </:header_row>
           <:col :let={record} label="Name"><%= record.name %></:col>
           <:col :let={record} class="text-right" label="KMs"><%= record.activity_km %></:col>

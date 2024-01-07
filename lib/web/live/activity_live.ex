@@ -33,7 +33,7 @@ defmodule Web.ActivityLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities/"} />
+      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
       <:item label={"##{@activity.ref_id}"} />
     </.breadcrumbs>
 
