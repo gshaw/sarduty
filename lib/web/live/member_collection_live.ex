@@ -46,7 +46,7 @@ defmodule Web.MemberCollectionLive do
         type="select"
         options={MemberFilterViewModel.limits()}
       />
-      <.a class="filter-form-reset" navigate={~p"/#{@current_team.subdomain}/members"}>Reset</.a>
+      <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
       <span class="filter-form-count"><%= @paginated.total_entries %> members</span>
     </.form>
 
@@ -57,13 +57,7 @@ defmodule Web.MemberCollectionLive do
       path_fn={@path_fn}
       class="w-full table-striped"
     >
-      <:col
-        :let={record}
-        label="ID"
-        class="w-px"
-        align="right"
-        sorts={[{"↓", "id:desc"}, {"↑", "id:asc"}]}
-      >
+      <:col :let={record} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>
         <%= record.member.ref_id %>
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
@@ -80,7 +74,7 @@ defmodule Web.MemberCollectionLive do
         label="Activities"
         class="w-px"
         align="right"
-        sorts={[{"↓", "count:desc"}, {"↑", "count:asc"}]}
+        sorts={[{"↓", "count-"}, {"↑", "count"}]}
       >
         <.a navigate={
           ~p"/#{@current_team.subdomain}/members/#{record.member.id}/activities?when=#{@year}"
@@ -95,17 +89,12 @@ defmodule Web.MemberCollectionLive do
         label="Hours"
         class="w-px"
         align="right"
-        sorts={[{"↓", "hours:desc"}, {"↑", "hours:asc"}]}
+        sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
         <span class="label md:hidden">Hours</span>
         <%= record.hours %>
       </:col>
-      <:col
-        :let={record}
-        label="Joined"
-        class="w-1/12"
-        sorts={[{"↓", "date:desc"}, {"↑", "date:asc"}]}
-      >
+      <:col :let={record} label="Joined" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
         <span class="label md:hidden">Joined</span>
         <span class="whitespace-nowrap">
           <%= Service.Format.short_date(record.member.joined_at, @current_team.timezone) %>
@@ -129,18 +118,18 @@ defmodule Web.MemberCollectionLive do
   end
 
   def build_paginated_content(team, filter_options) do
-    MemberFilterViewModel.build_paginated_content(
-      team,
-      filter_options,
-      []
-      # ["AdventureSmart"]
-      # ["Primary Hours", "Secondary Hours"]
-    )
+    MemberFilterViewModel.build_paginated_content(team, filter_options, [])
   end
 
   def build_path_fn(team, filter_options) do
     fn changed_options ->
-      build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
+      case changed_options do
+        :reset ->
+          build_filter_path(team, %MemberFilterViewModel{})
+
+        _ ->
+          build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
+      end
     end
   end
 

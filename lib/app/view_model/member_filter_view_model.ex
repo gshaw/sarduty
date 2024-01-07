@@ -24,14 +24,13 @@ defmodule App.ViewModel.MemberFilterViewModel do
     do: %{
       "Name" => "name",
       "Role" => "role",
-      "ID ↓" => "id:desc",
-      "ID ↑" => "id:asc",
-      "Joined ↓" => "date:desc",
-      "Joined ↑" => "date:asc",
-      "Activities ↓" => "count:desc",
-      "Activities ↑" => "count:asc",
-      "Hours ↓" => "hours:desc",
-      "Hours ↑" => "hours:asc"
+      "ID" => "id",
+      "Joined ↑" => "date",
+      "Joined ↓" => "date-",
+      "Activities ↑" => "count",
+      "Activities ↓" => "count-",
+      "Hours ↑" => "hours",
+      "Hours ↓" => "hours-"
     }
 
   def validate(params) do
@@ -84,7 +83,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     # https://dev.to/ivor/beware-ectos-orwhere-pitfall-50bb
     subquery =
       Member
-      |> where([r], like(r.name, ^"%#{search_filter}%"))
+      |> or_where([r], like(r.name, ^"%#{search_filter}%"))
       |> or_where([r], like(r.position, ^"%#{search_filter}%"))
       |> or_where([r], like(r.ref_id, ^"%#{search_filter}%"))
       |> select([:id])
@@ -94,14 +93,13 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
-  defp scope(q, sort: "id:desc"), do: order_by(q, [r], desc: r.ref_id)
-  defp scope(q, sort: "id:asc"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
-  defp scope(q, sort: "date:desc"), do: order_by(q, [r], desc: r.joined_at)
-  defp scope(q, sort: "date:asc"), do: order_by(q, [r], asc: r.joined_at)
-  defp scope(q, sort: "count:desc"), do: order_by(q, [r], desc: fragment("count"))
-  defp scope(q, sort: "count:asc"), do: order_by(q, [r], asc: fragment("count"))
-  defp scope(q, sort: "hours:desc"), do: order_by(q, [r], desc: fragment("hours"))
-  defp scope(q, sort: "hours:asc"), do: order_by(q, [r], asc: fragment("hours"))
+  defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
+  defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.joined_at)
+  defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.joined_at)
+  defp scope(q, sort: "count-"), do: order_by(q, [r], desc: fragment("count"))
+  defp scope(q, sort: "count"), do: order_by(q, [r], asc: fragment("count"))
+  defp scope(q, sort: "hours-"), do: order_by(q, [r], desc: fragment("hours"))
+  defp scope(q, sort: "hours"), do: order_by(q, [r], asc: fragment("hours"))
 
   defp include_activity_summary(query, year, tags) do
     from(
@@ -121,14 +119,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
     Enum.reduce(tags, subquery, fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end)
   end
 
-  def tagged_activity_ids3(tags) do
-    Enum.reduce(
-      tags,
-      select(Activity, [:id]),
-      fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end
-    )
-  end
-
   defp tagged_activities_summary(year, tags) do
     from(
       ac in Activity,
@@ -140,7 +130,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
       select: %{
         member_id: m.id,
         count: count(ac.id),
-        hours: sum(at.duration_in_minutes) / 60
+        # Add 0.5 to simulate CEIL so 1.01 hours gives 2 hours credit
+        hours: fragment("cast(round(? + 0.5) as int)", sum(at.duration_in_minutes) / 60.0)
       }
     )
   end
