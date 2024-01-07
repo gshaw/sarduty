@@ -104,34 +104,12 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp include_activity_summary(query, year, tags) do
     from(
       m in query,
-      left_join: summary in subquery(tagged_activities_summary(year, tags)),
+      left_join: summary in subquery(Activity.tagged_activities_summary(year, tags)),
       on: m.id == summary.member_id,
       select: %{
         member: m,
         hours: fragment("? as hours", coalesce(summary.hours, 0)),
         count: fragment("? as count", coalesce(summary.count, 0))
-      }
-    )
-  end
-
-  def tagged_activity_ids(tags) do
-    subquery = select(Activity, [:id])
-    Enum.reduce(tags, subquery, fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end)
-  end
-
-  defp tagged_activities_summary(year, tags) do
-    from(
-      ac in Activity,
-      left_join: at in assoc(ac, :attendances),
-      left_join: m in assoc(at, :member),
-      where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
-      where: ac.id in subquery(tagged_activity_ids(tags)),
-      group_by: m.id,
-      select: %{
-        member_id: m.id,
-        count: count(ac.id),
-        # Add 0.5 to simulate CEIL so 1.01 hours gives 2 hours credit
-        hours: fragment("cast(round(? + 0.5) as int)", sum(at.duration_in_minutes) / 60.0)
       }
     )
   end

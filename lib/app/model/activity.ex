@@ -88,4 +88,25 @@ defmodule App.Model.Activity do
   end
 
   # def delete(%Activity{} = record), do: Repo.delete(record)
+
+  def tagged_activities_summary(year, tags) do
+    from(
+      ac in Activity,
+      left_join: at in assoc(ac, :attendances),
+      left_join: m in assoc(at, :member),
+      where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
+      where: ac.id in subquery(tagged_activity_ids(tags)),
+      group_by: m.id,
+      select: %{
+        member_id: m.id,
+        count: count(ac.id),
+        hours: fragment("cast(round(? + 0.5) as int)", sum(at.duration_in_minutes) / 60.0)
+      }
+    )
+  end
+
+  defp tagged_activity_ids(tags) do
+    subquery = select(Activity, [:id])
+    Enum.reduce(tags, subquery, fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end)
+  end
 end

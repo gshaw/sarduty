@@ -10,7 +10,7 @@ defmodule Web.StyleGuideLive do
     {:ok, socket, temporary_assigns: [random_numbers: []]}
   end
 
-  defp build_random_numbers(), do: Enum.map(0..10, fn _ -> Enum.random(100..999) end)
+  defp build_random_numbers, do: Enum.map(0..10, fn _ -> Enum.random(100..999) end)
 
   def handle_event("update-random-numbers", _unsigned_params, socket) do
     {:noreply, assign(socket, :random_numbers, build_random_numbers())}
