@@ -33,7 +33,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <:item label={@page_title} />
     </.breadcrumbs>
 
-    <span class="badge badge-warning">Under Contruction</span>
+    <span class="badge badge-warning">Under Construction</span>
     <h1 class="title mb-p"><%= @page_title %></h1>
     <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
       <.input

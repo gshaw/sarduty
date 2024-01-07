@@ -58,7 +58,7 @@ defmodule Web.TeamDashboardLive do
           </li>
           <li>
             <.a navigate={~p"/#{@team.subdomain}/tax-credit-letters"}>Tax Credit Letters</.a>
-            <span class="badge badge-warning">Under Contruction</span>
+            <span class="badge badge-warning">Under Construction</span>
           </li>
         </ul>
       </li>

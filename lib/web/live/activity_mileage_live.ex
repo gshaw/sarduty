@@ -52,7 +52,7 @@ defmodule Web.ActivityMileageLive do
         <.button phx-click="generate-report" class="btn-success">Generate Mileage Report</.button>
       </p>
     <% else %>
-      <p>Mileage report not available because activity does not have a location coodinate.</p>
+      <p>Mileage report not available because activity does not have a location coordinate.</p>
     <% end %>
 
     <%= if @mileage_report do %>
