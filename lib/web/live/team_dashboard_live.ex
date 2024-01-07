@@ -39,7 +39,7 @@ defmodule Web.TeamDashboardLive do
       </li>
       <li class="heading">
         Activities
-        <ul class="subheading action-list ml-p2">
+        <ul class="subheading action-list ml-hindent">
           <li>
             <.a navigate={~p"/#{@team.subdomain}/activities?&when=future&sort=date"}>
               Future

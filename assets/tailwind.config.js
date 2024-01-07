@@ -14,11 +14,9 @@ module.exports = {
         p05: "0.5rem",
         p: "1rem",
         p2: "2rem",
-        // h = 1 horizontal spacing unit
-        h05: "0.25rem",
-        h: "0.5rem",
-        h2: "1rem",
-        h4: "2rem",
+        // h = horizontal spacing unit
+        hspacer: "0.5rem",
+        hindent: "2rem",
       },
       colors: {
         base: {

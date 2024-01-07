@@ -1,3 +1,3 @@
-.filter-form { @apply flex flex-col md:flex-row md:gap-h md:items-center }
+.filter-form { @apply flex flex-col md:flex-row md:gap-hspacer md:items-center }
 .filter-form .filter-form-reset { @apply mb-p md:mb-0 }
 .filter-form .filter-form-count { @apply mb-p md:mb-0 md:text-right md:grow }
