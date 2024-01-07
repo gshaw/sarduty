@@ -1,0 +1,1 @@
+        statics: Web.static_paths()

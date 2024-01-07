@@ -7,7 +7,7 @@
 # General application configuration
 import Config
 
-# Import optinal compile time local development ENV variables.
+# Import optional compile time local development ENV variables.
 if File.exists?("config/env.exs"), do: import_config("env.exs")
 
 config :sarduty,

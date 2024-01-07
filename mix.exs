@@ -73,9 +73,12 @@ defmodule App.MixProject do
       check: [
         "format --check-formatted",
         "compile --force --warnings-as-errors",
-        "credo --all-priorities"
         # "cmd mix test --color"
+        "credo --all-priorities",
+        "spell"
       ],
+      spell:
+        "cmd codespell --enable-colors --exclude-file .codespellignorelines --skip deps,priv,erl_crash.dump",
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
