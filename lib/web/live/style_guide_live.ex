@@ -7,7 +7,7 @@ defmodule Web.StyleGuideLive do
       |> assign(:page_title, "Style Guide")
       |> assign(:random_numbers, build_random_numbers())
 
-    {:ok, socket}
+    {:ok, socket, temporary_assigns: [random_numbers: []]}
   end
 
   defp build_random_numbers(), do: Enum.map(0..10, fn _ -> Enum.random(100..999) end)

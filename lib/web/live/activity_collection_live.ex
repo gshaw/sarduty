@@ -13,7 +13,7 @@ defmodule Web.ActivityCollectionLive do
       |> assign(:member, member)
       |> assign(:page_title, build_page_title(member))
 
-    {:ok, socket}
+    {:ok, socket, temporary_assigns: [paginated: nil]}
   end
 
   def handle_params(params, _uri, socket) do
