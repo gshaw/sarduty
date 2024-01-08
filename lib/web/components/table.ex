@@ -85,30 +85,42 @@ defmodule Web.Components.Table do
       <% else %>
         <%= case Enum.find(@sorts, fn {_k, v} -> v == @sort end) do %>
           <% nil -> %>
-            <% {_suffix, sort} = List.first(@sorts) %>
+            <% {suffix, sort} = List.first(@sorts) %>
             <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
-              <%= @label %>
+              <.sort_header_content
+                label={@label}
+                suffix={if Enum.count(@sorts) == 1, do: suffix, else: "⇅"}
+                suffix_class="text-disabled"
+                align={@align}
+              />
             </.a>
           <% {suffix, current_sort} -> %>
             <%= if Enum.count(@sorts) == 1 do %>
-              <%= if @align == "right" do %>
-                <%= suffix %><%= StringHelpers.no_break_space() %><%= @label %>
-              <% else %>
-                <%= @label %><%= StringHelpers.no_break_space() %><%= suffix %>
-              <% end %>
+              <.sort_header_content label={@label} suffix={suffix} align={@align} />
             <% else %>
               <% sort = find_next_sort(@sorts, current_sort) %>
               <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
-                <%= if @align == "right" do %>
-                  <%= suffix %><%= StringHelpers.no_break_space() %><%= @label %>
-                <% else %>
-                  <%= @label %><%= StringHelpers.no_break_space() %><%= suffix %>
-                <% end %>
+                <.sort_header_content label={@label} suffix={suffix} align={@align} />
               </.a>
             <% end %>
         <% end %>
       <% end %>
     </th>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :suffix, :string, required: true
+  attr :suffix_class, :string, default: nil
+  attr :align, :string, values: ["left", "right"]
+
+  defp sort_header_content(assigns) do
+    ~H"""
+    <%= if @align == "right" do %>
+      <span class={@suffix_class}><%= @suffix %></span><%= StringHelpers.no_break_space() %><%= @label %>
+    <% else %>
+      <%= @label %><%= StringHelpers.no_break_space() %><span class={@suffix_class}><%= @suffix %></span>
+    <% end %>
     """
   end
 
