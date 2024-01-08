@@ -86,10 +86,10 @@ defmodule Web.UserAuthTest do
     end
   end
 
-  describe "fetch_current_user/2" do
+  describe "assign_current_user/2" do
     test "authenticates user from session", %{conn: conn, user: user} do
       user_token = Accounts.generate_user_session_token(user)
-      conn = conn |> put_session(:user_token, user_token) |> UserAuth.fetch_current_user([])
+      conn = conn |> put_session(:user_token, user_token) |> UserAuth.assign_current_user([])
       assert conn.assigns.current_user.id == user.id
     end
 
@@ -103,7 +103,7 @@ defmodule Web.UserAuthTest do
       conn =
         conn
         |> put_req_cookie(@remember_me_cookie, signed_token)
-        |> UserAuth.fetch_current_user([])
+        |> UserAuth.assign_current_user([])
 
       assert conn.assigns.current_user.id == user.id
       assert get_session(conn, :user_token) == user_token
@@ -114,7 +114,7 @@ defmodule Web.UserAuthTest do
 
     test "does not authenticate if data is missing", %{conn: conn, user: user} do
       _ = Accounts.generate_user_session_token(user)
-      conn = UserAuth.fetch_current_user(conn, [])
+      conn = UserAuth.assign_current_user(conn, [])
       refute get_session(conn, :user_token)
       refute conn.assigns.current_user
     end

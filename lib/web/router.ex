@@ -10,7 +10,7 @@ defmodule Web.Router do
     plug :put_root_layout, html: {Web.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :fetch_current_user
+    plug :assign_current_user
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
@@ -31,9 +31,9 @@ defmodule Web.Router do
   end
 
   scope "/", Web do
-    pipe_through [:browser]
+    pipe_through :browser
 
-    live_session :current_user,
+    live_session :current_user_session,
       on_mount: [{Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/styles", StyleGuideLive
@@ -50,9 +50,9 @@ defmodule Web.Router do
   end
 
   scope "/", Web do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through :browser
 
-    live_session :require_authenticated_user,
+    live_session :require_authenticated_user_session,
       on_mount: [{Web.UserAuth, :ensure_authenticated}] do
       live "/settings", SettingsLive
       live "/settings/email", Settings.ChangeEmailLive
@@ -62,10 +62,10 @@ defmodule Web.Router do
       live "/settings/team", Settings.TeamLive
     end
 
-    live_session :require_current_team,
+    live_session :require_current_team_session,
       on_mount: [
         {Web.UserAuth, :ensure_authenticated},
-        {Web.UserAuth, :ensure_valid_team_subdomain}
+        {Web.UserAuth, :ensure_authorized_team_subdomain}
       ] do
       live "/:subdomain", TeamDashboardLive
       live "/:subdomain/activities", ActivityCollectionLive
@@ -79,7 +79,11 @@ defmodule Web.Router do
       live "/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
     end
 
-    get "/:subdomain/members/:id/image", MemberController, :image
-    get "/:subdomain/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
+    scope "/" do
+      pipe_through [:require_authenticated_user, :require_authorized_team_subdomain]
+
+      get "/:subdomain/members/:id/image", MemberController, :image
+      get "/:subdomain/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
+    end
   end
 end

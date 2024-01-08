@@ -88,10 +88,13 @@ defmodule Web.UserAuth do
   Authenticates the user by looking into the session
   and remember me token.
   """
-  def fetch_current_user(conn, _opts) do
+  def assign_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
-    assign(conn, :current_user, user)
+
+    conn
+    |> assign(:current_user, user)
+    |> assign(:current_team, user.team)
   end
 
   defp ensure_user_token(conn) do
@@ -159,33 +162,35 @@ defmodule Web.UserAuth do
     end
   end
 
-  def on_mount(:ensure_valid_team_subdomain, params, _session, socket) do
-    current_team = socket.assigns.current_team
+  # ensure current_user.team.subdomain matches url and assign it to current_team
+  def on_mount(:ensure_authorized_team_subdomain, params, _session, socket) do
+    current_team = socket.assigns.current_user.team
 
     if current_team && current_team.subdomain == params["subdomain"] do
-      {:cont, socket}
+      {:cont, Phoenix.Component.assign(socket, :current_team, current_team)}
     else
       raise Web.Status.NotFound
     end
   end
 
   defp mount_current_user(socket, session) do
-    socket =
-      Phoenix.Component.assign_new(socket, :current_user, fn ->
-        if user_token = session["user_token"] do
-          Accounts.get_user_by_session_token(user_token)
-        end
-      end)
-
-    assign_current_team(socket, socket.assigns.current_user)
+    socket
+    |> Phoenix.Component.assign_new(:current_user, fn ->
+      if user_token = session["user_token"] do
+        Accounts.get_user_by_session_token(user_token)
+      end
+    end)
+    |> mount_current_team()
   end
 
-  defp assign_current_team(socket, nil) do
-    Phoenix.Component.assign(socket, current_team: nil)
-  end
+  defp mount_current_team(socket) do
+    current_user = socket.assigns.current_user
 
-  defp assign_current_team(socket, %App.Accounts.User{} = user) do
-    Phoenix.Component.assign(socket, current_team: user.team)
+    if current_user do
+      Phoenix.Component.assign(socket, current_team: current_user.team)
+    else
+      Phoenix.Component.assign(socket, current_team: nil)
+    end
   end
 
   @doc """
@@ -203,6 +208,16 @@ defmodule Web.UserAuth do
       |> maybe_store_return_to()
       |> redirect(to: ~p"/login")
       |> halt()
+    end
+  end
+
+  def require_authorized_team_subdomain(conn, _opts) do
+    current_team = conn.assigns.current_user.team
+
+    if current_team && current_team.subdomain == conn.path_params["subdomain"] do
+      assign(conn, :current_team, current_team)
+    else
+      raise Web.Status.NotFound
     end
   end
 
