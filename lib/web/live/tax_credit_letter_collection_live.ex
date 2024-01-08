@@ -129,7 +129,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     socket =
       socket
       |> assign_records()
-      |> put_flash(:info, "Tax credit letter created for #{letter.member.name}")
+      |> put_flash(:info, "#{letter.member.name}ʼs tax credit letter created")
 
     {:noreply, socket}
   end

@@ -117,7 +117,7 @@ defmodule Web.Components.Core do
       role="alert"
       class={[
         "fixed top-16 right-2 mr-2 w-80 sm:w-96 z-50 rounded py-2 px-4",
-        @kind == :info && "bg-success-1 text-success-content",
+        @kind == :info && "bg-base-content text-base-1",
         @kind == :error && "bg-danger-1 text-danger-content"
       ]}
       {@rest}
