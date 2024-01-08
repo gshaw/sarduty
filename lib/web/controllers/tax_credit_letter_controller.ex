@@ -12,7 +12,7 @@ defmodule Web.TaxCreditLetterController do
         title: "SAR Volunteer Tax Credit #{tax_credit_letter.year}",
         author: "South Fraser SAR",
         creator: "SARDuty.com",
-        logo_path: "assets/img/logo-sfsar.png",
+        logo_path: Application.app_dir(:sarduty, "/priv/static/images/logo-sfsar.png"),
         content: tax_credit_letter.letter_content
       })
 

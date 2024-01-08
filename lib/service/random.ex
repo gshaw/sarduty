@@ -15,7 +15,7 @@ defmodule Service.Random do
   def temp_path, do: temp_path(extension: "")
 
   def temp_path(extension: extension) do
-    "#{System.tmp_dir!()}#{hex()}#{extension}"
+    Path.join(System.tmp_dir!(), "#{hex()}#{extension}")
   end
 
   @letters ~w(A B C E G H J K L M N P R S T V W X Y Z)

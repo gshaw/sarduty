@@ -13,7 +13,10 @@ defmodule Web.MemberController do
         send_download(conn, {:binary, image}, filename: filename)
 
       {:error, _response} ->
-        send_download(conn, {:file, "assets/img/member.png"})
+        send_download(
+          conn,
+          {:file, Application.app_dir(:sarduty, "/priv/static/images/member.png")}
+        )
     end
   end
 end
