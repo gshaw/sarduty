@@ -3,6 +3,7 @@ defmodule Service.Format do
     Useful functions for formatting data into strings.
   """
 
+  def legal_date(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
   def short_date(datetime, timezone), do: datetime(datetime, timezone, "%x")
   def short_datetime(datetime, timezone), do: datetime(datetime, timezone, "%c")
 

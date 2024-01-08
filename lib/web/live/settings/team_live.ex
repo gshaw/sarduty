@@ -40,6 +40,10 @@ defmodule Web.Settings.TeamLive do
           type="textarea"
           class="h-[10rem]"
         />
+        <.input field={@form[:authorized_by_name]} label="Authorized by name">
+          Used for tax credit letters, e.g., Jay Doe, President<br />
+          If blank, the team name will be used.
+        </.input>
         <.form_actions>
           <.button class="btn-success">Save</.button>
           <:trailing>

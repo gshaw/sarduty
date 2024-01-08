@@ -1,24 +1,23 @@
 defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
+  alias App.Operation.CreateTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Tax Credit Letters")}
+    {:ok, socket}
   end
 
   def handle_params(params, _uri, socket) do
     case TaxCreditLetterFilterViewModel.validate(params) do
       {:ok, filter_options, changeset} ->
-        current_team = socket.assigns.current_team
-
         socket =
           socket
-          |> assign(:sort, filter_options.sort)
-          |> assign(:year, filter_options.year)
-          |> assign(:records, fetch_records(current_team, filter_options))
-          |> assign(:path_fn, build_path_fn(current_team, filter_options))
+          |> assign(:page_title, "#{filter_options.year} Tax Credit Letters")
+          |> assign(:filter_options, filter_options)
           |> assign(:form, to_form(changeset, as: "form"))
+          |> assign(:path_fn, build_path_fn(socket.assigns.current_team, filter_options))
+          |> assign_records()
 
         {:noreply, socket}
 
@@ -33,7 +32,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <:item label={@page_title} />
     </.breadcrumbs>
 
-    <span class="badge badge-warning">Under Construction</span>
     <h1 class="title mb-p"><%= @page_title %></h1>
     <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
       <.input
@@ -62,17 +60,15 @@ defmodule Web.TaxCreditLetterCollectionLive do
     <.table
       id="member_collection"
       rows={@records}
-      sort={@sort}
+      sort={@filter_options.sort}
       path_fn={@path_fn}
       class="w-full table-striped"
     >
       <:header_row>
         <th colspan="3"></th>
         <th colspan="3" class="text-center">SARVAC Hours</th>
+        <th></th>
       </:header_row>
-      <:col :let={record} label="" class="w-px">
-        <.input field={@form[:ids]} type="checkbox" value={record.member.id} />
-      </:col>
       <:col :let={record} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>
         <%= record.member.ref_id %>
       </:col>
@@ -80,6 +76,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.member.id}"}>
           <%= record.member.name %>
         </.a>
+      </:col>
+      <:col :let={record} label="Email">
+        <%= record.member.email %>
       </:col>
 
       <:col :let={record} label="Primary" class="w-px" align="right" sorts={[{"↓", "primary"}]}>
@@ -94,8 +93,45 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <span class="label md:hidden">Hours</span>
         <%= record.total_hours %>
       </:col>
+      <:col :let={record} label="Letter">
+        <.record_actions record={record} current_team={@current_team} />
+      </:col>
     </.table>
     """
+  end
+
+  defp record_actions(assigns) do
+    ~H"""
+    <%= if @record.tax_credit_letter_id do %>
+      <.a navigate={
+        ~p"/#{@current_team.subdomain}/tax-credit-letters/#{@record.tax_credit_letter_id}"
+      }>
+        <span class="font-mono text-sm"><%= @record.tax_credit_letter_ref_id %></span>
+      </.a>
+    <% else %>
+      <%= if @record.total_hours >= 200 && @record.primary_hours >= 101 do %>
+        <button phx-click="create" value={@record.member.id} class="btn btn-success btn-sm">
+          Create letter
+        </button>
+      <% end %>
+    <% end %>
+    """
+  end
+
+  def handle_event("create", %{"value" => member_id}, socket) do
+    letter =
+      CreateTaxCreditLetter.call(
+        team: socket.assigns.current_team,
+        member_id: member_id,
+        year: socket.assigns.filter_options.year
+      )
+
+    socket =
+      socket
+      |> assign_records()
+      |> put_flash(:info, "Tax credit letter created for #{letter.member.name}")
+
+    {:noreply, socket}
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do
@@ -109,11 +145,22 @@ defmodule Web.TaxCreditLetterCollectionLive do
     end
   end
 
-  def fetch_records(team, filter_options) do
-    TaxCreditLetterFilterViewModel.fetch_all(team, filter_options)
+  defp assign_records(socket) do
+    records =
+      TaxCreditLetterFilterViewModel.fetch_all(
+        socket.assigns.current_team,
+        socket.assigns.filter_options
+      )
+
+    # records =
+    #   Enum.map(records, fn record ->
+    #     Map.put(record, :tax_credit_letter, TaxCreditLetter.get(record.tax_credit_letter_id))
+    #   end)
+
+    assign(socket, :records, records)
   end
 
-  def build_path_fn(team, filter_options) do
+  defp build_path_fn(team, filter_options) do
     fn changed_options ->
       case changed_options do
         :reset ->
@@ -125,7 +172,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     end
   end
 
-  def build_filter_path(team, filter_options) do
+  defp build_filter_path(team, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
     ~p"/#{team.subdomain}/tax-credit-letters?#{query_params}"
   end

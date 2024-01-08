@@ -4,7 +4,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   import Ecto.Query
 
   alias App.Field
-  alias App.Model.Activity
   alias App.Model.Member
   alias App.Repo
 
@@ -22,8 +21,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   def sort_kinds,
     do: %{
-      "Name" => "name",
       "ID" => "id",
+      "Name" => "name",
       "Primary" => "primary",
       "Secondary" => "secondary",
       "Total" => "total"
@@ -41,7 +40,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   def fetch_all(team, filter_options) do
     Member
     |> Member.scope(team_id: team.id)
-    |> include_primary_and_secondary_hours(filter_options.year)
+    |> Member.include_primary_and_secondary_hours(filter_options.year)
     |> scope(q: filter_options.q)
     |> scope(sort: filter_options.sort)
     |> scope(cutoff: filter_options.cutoff)
@@ -91,31 +90,9 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
+  defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "primary"), do: order_by(q, [r], desc: fragment("primary_hours"))
   defp scope(q, sort: "secondary"), do: order_by(q, [r], desc: fragment("secondary_hours"))
   defp scope(q, sort: "total"), do: order_by(q, [r], desc: fragment("total_hours"))
-
-  defp include_primary_and_secondary_hours(query, year) do
-    from(
-      m in query,
-      left_join: primary in subquery(Activity.tagged_activities_summary(year, ["Primary Hours"])),
-      on: m.id == primary.member_id,
-      left_join:
-        secondary in subquery(Activity.tagged_activities_summary(year, ["Secondary Hours"])),
-      on: m.id == secondary.member_id,
-      select: %{
-        member: m,
-        primary_hours: fragment("? as primary_hours", coalesce(primary.hours, 0)),
-        secondary_hours: fragment("? as secondary_hours", coalesce(secondary.hours, 0)),
-        total_hours:
-          fragment(
-            "(? + ?) as total_hours",
-            coalesce(primary.hours, 0),
-            coalesce(secondary.hours, 0)
-          )
-      }
-    )
-  end
 end

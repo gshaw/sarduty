@@ -15,9 +15,15 @@ defmodule Web.Components.Markdown do
   end
 
   defp build_raw_html(markdown_content) do
+    earmark_options = [
+      code_class_prefix: "lang- language-",
+      gfm: true,
+      breaks: true
+    ]
+
     markdown_content
     |> String.trim()
-    |> Earmark.as_html!(code_class_prefix: "lang- language-")
+    |> Earmark.as_html!(earmark_options)
     |> Phoenix.HTML.raw()
   end
 end

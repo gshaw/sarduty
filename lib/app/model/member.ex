@@ -2,8 +2,10 @@ defmodule App.Model.Member do
   use App, :model
 
   alias App.Field.EncryptedString
+  alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
   alias App.Validate
@@ -12,6 +14,7 @@ defmodule App.Model.Member do
     belongs_to :team, Team
     has_many :attendances, Attendance, where: [status: "attending"]
     has_many :activities, through: [:attendances, :activity]
+    has_many :tax_credit_letters, TaxCreditLetter
     field :d4h_member_id, :integer
     field :ref_id, :string
     field :name, :string
@@ -79,4 +82,47 @@ defmodule App.Model.Member do
   end
 
   # def delete(%Member{} = record), do: Repo.delete(record)
+
+  def include_primary_and_secondary_hours(query, year) do
+    query
+    |> join_activity_hours(year, "Primary Hours")
+    |> join_activity_hours(year, "Secondary Hours")
+    |> join_tax_credit_letter_id(year)
+    |> select_primary_secondary_hours_summary()
+  end
+
+  defp join_activity_hours(query, year, tag) do
+    from(
+      m in query,
+      left_join: a in subquery(Activity.tagged_activities_summary(year, [tag])),
+      on: m.id == a.member_id
+    )
+  end
+
+  defp join_tax_credit_letter_id(query, year) do
+    from(
+      m in query,
+      left_join: tcl in assoc(m, :tax_credit_letters),
+      on: tcl.year == ^year
+    )
+  end
+
+  defp select_primary_secondary_hours_summary(query) do
+    from(
+      [m, primary, secondary, tcl] in query,
+      select: %{
+        member: m,
+        tax_credit_letter_id: tcl.id,
+        tax_credit_letter_ref_id: tcl.ref_id,
+        primary_hours: fragment("? as primary_hours", coalesce(primary.hours, 0)),
+        secondary_hours: fragment("? as secondary_hours", coalesce(secondary.hours, 0)),
+        total_hours:
+          fragment(
+            "(? + ?) as total_hours",
+            coalesce(primary.hours, 0),
+            coalesce(secondary.hours, 0)
+          )
+      }
+    )
+  end
 end

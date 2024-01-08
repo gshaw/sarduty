@@ -12,6 +12,7 @@ defmodule App.Model.Team do
     field :d4h_team_id, :integer
     field :d4h_api_host, :string
     field :mailing_address, TrimmedString
+    field :authorized_by_name, TrimmedString
     field :lat, :float
     field :lng, :float
     field :timezone, :string
@@ -30,6 +31,7 @@ defmodule App.Model.Team do
       :d4h_api_host,
       :d4h_refreshed_at,
       :mailing_address,
+      :authorized_by_name,
       :lat,
       :lng,
       :timezone
@@ -45,6 +47,7 @@ defmodule App.Model.Team do
     ])
     |> Validate.name(:name)
     |> Validate.address(:mailing_address)
+    |> Validate.name(:authorized_by_name)
   end
 
   def get_all do
