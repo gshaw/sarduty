@@ -29,8 +29,10 @@ defmodule Web.HomePageLive do
         <.a navigate="/styles">Style Guide</.a>
         ·
         <.a href="/dev/dashboard" external={true}>Dashboard</.a>
-        ·
-        <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+        <%= if Application.get_env(:swoosh, :local) do %>
+          ·
+          <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+        <% end %>
       <% end %>
     </p>
     """

@@ -7,9 +7,6 @@
 # General application configuration
 import Config
 
-# Import optional compile time local development ENV variables.
-if File.exists?("config/env.exs"), do: import_config("env.exs")
-
 config :sarduty,
   ecto_repos: [App.Repo],
   generators: [timestamp_type: :utc_datetime]
@@ -40,11 +37,15 @@ config :sarduty, App.Vault,
 # Configure mailer, note runtime mailer config is still required
 case System.fetch_env("SMTP2GO_API_KEY") do
   {:ok, api_key} ->
+    config :swoosh, local: false
+    config :swoosh, api_client: Swoosh.ApiClient.Req
+
     config :sarduty, App.Mailer,
       adapter: Swoosh.Adapters.SMTP2GO,
       api_key: api_key
 
   :error ->
+    config :swoosh, local: true
     config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
 end
 
