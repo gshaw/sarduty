@@ -23,7 +23,7 @@ config :sarduty, Web.Endpoint,
 # In test we don't send emails.
 config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Test
 
-# Disable swoosh api client as it is only required for production adapters.
+# Disable swoosh api client in test
 config :swoosh, :api_client, false
 
 # Print only warnings and errors during test

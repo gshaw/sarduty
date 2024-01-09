@@ -49,8 +49,11 @@ if config_env() == :prod do
 
   config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
 
+  # config :sarduty, App.Mailer,
+  #   adapter: Swoosh.Adapters.Mailgun,
+  #   api_key: System.fetch_env!("MAILGUN_API_KEY"),
+  #   domain: System.fetch_env!("MAILGUN_DOMAIN")
   config :sarduty, App.Mailer,
-    adapter: Swoosh.Adapters.Mailgun,
-    api_key: System.fetch_env!("MAILGUN_API_KEY"),
-    domain: System.fetch_env!("MAILGUN_DOMAIN")
+    adapter: Swoosh.Adapters.SMTP2GO,
+    api_key: System.fetch_env!("SMTP2GO_API_KEY")
 end
