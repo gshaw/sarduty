@@ -30,8 +30,8 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     subject = attachment.title
 
     body = """
-    Attached is the income tax document you need to claim the
-    SAR Volunteers Tax Credit (SRVTC).
+    Attached is the income tax document you need to claim the SAR Volunteers Tax Credit (SRVTC).
+
     """
 
     deliver_with_attachment(email, subject, body, attachment)

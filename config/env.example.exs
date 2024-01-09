@@ -1,4 +1,6 @@
 vars = %{
+  # "MAILGUN_API_KEY" => "secret",
+  "MAILGUN_DOMAIN" => "mg.sarduty.com",
   "MAPBOX_ACCESS_TOKEN" => "pk___"
 }
 

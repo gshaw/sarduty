@@ -37,14 +37,17 @@ config :sarduty, App.Vault,
     }
   ]
 
-# Configures the mailer
-#
-# By default it uses the "Local" adapter which stores the emails
-# locally. You can see the emails in your browser, at "/dev/mailbox".
-#
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
-config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
+# Configure mailer, note runtime mailer config is still required
+case System.fetch_env("MAILGUN_API_KEY") do
+  {:ok, api_key} ->
+    config :sarduty, App.Mailer,
+      adapter: Swoosh.Adapters.Mailgun,
+      api_key: api_key,
+      domain: System.fetch_env!("MAILGUN_DOMAIN")
+
+  :error ->
+    config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
+end
 
 # Configure Timezone database: https://github.com/lau/tzdata
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
