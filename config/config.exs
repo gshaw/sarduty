@@ -38,42 +38,6 @@ config :sarduty, App.Vault,
   ]
 
 # Configure mailer, note runtime mailer config is still required
-# config :swoosh, :api_client, Swoosh.ApiClient.Req
-
-# case System.fetch_env("MAILGUN_API_KEY") do
-#   {:ok, api_key} ->
-#     config :sarduty, App.Mailer,
-#       adapter: Swoosh.Adapters.Mailgun,
-#       api_key: api_key,
-#       domain: System.fetch_env!("MAILGUN_DOMAIN")
-
-#   :error ->
-#     config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
-# end
-
-# case System.fetch_env("AMAZON_SES_ACCESS_KEY") do
-#   {:ok, access_key} ->
-#     config :sarduty, App.Mailer,
-#       adapter: Swoosh.Adapters.AmazonSES,
-#       region: System.fetch_env!("AMAZON_SES_REGION"),
-#       access_key: access_key,
-#       secret: System.fetch_env!("AMAZON_SES_SECRET")
-
-#   :error ->
-#     config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
-# end
-
-# case System.fetch_env("MAILJET_API_KEY") do
-#   {:ok, api_key} ->
-#     config :sarduty, App.Mailer,
-#       adapter: Swoosh.Adapters.Mailjet,
-#       api_key: api_key,
-#       secret: System.fetch_env!("MAILJET_SECRET")
-
-#   :error ->
-#     config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
-# end
-
 case System.fetch_env("SMTP2GO_API_KEY") do
   {:ok, api_key} ->
     config :sarduty, App.Mailer,
