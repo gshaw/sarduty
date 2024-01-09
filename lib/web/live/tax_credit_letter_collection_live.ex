@@ -127,12 +127,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
         year: socket.assigns.filter_options.year
       )
 
-    TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter)
+    Task.start(fn -> TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter) end)
 
     socket =
       socket
       |> assign_records()
-      |> put_flash(:info, "#{tax_credit_letter.member.name}ʼs tax credit letter created")
+      |> put_flash(:info, "Email sent to #{tax_credit_letter.member.email}")
 
     {:noreply, socket}
   end

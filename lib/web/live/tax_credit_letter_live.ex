@@ -65,11 +65,12 @@ defmodule Web.TaxCreditLetterLive do
 
   def handle_event("email", _unsigned_params, socket) do
     tax_credit_letter = socket.assigns.letter
-    TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter)
+
+    Task.start(fn -> TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter) end)
 
     socket =
       socket
-      |> put_flash(:info, "Tax credit letter emailed to #{tax_credit_letter.member.email}")
+      |> put_flash(:info, "Email sent to #{tax_credit_letter.member.email}")
 
     {:noreply, socket}
   end
