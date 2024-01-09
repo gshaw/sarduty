@@ -28,15 +28,11 @@ defmodule Web.Components.A do
     assigns =
       assigns
       |> assign(:link_class, determine_link_class(assigns))
-      |> assign(:target, determine_target(assigns))
 
     ~H"""
-    <.link class={@link_class} {@target} {@rest}><%= render_slot(@inner_block) %></.link>
+    <.link class={@link_class} {@rest}><%= render_slot(@inner_block) %></.link>
     """
   end
-
-  def determine_target(%{external: true}), do: %{target: "_blank"}
-  def determine_target(_assigns), do: %{}
 
   defp determine_link_class(assigns) do
     [
