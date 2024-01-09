@@ -92,9 +92,13 @@ defmodule Web.UserAuth do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
 
-    conn
-    |> assign(:current_user, user)
-    |> assign(:current_team, user.team)
+    conn = assign(conn, :current_user, user)
+
+    if user do
+      assign(conn, :current_team, user.team)
+    else
+      conn
+    end
   end
 
   defp ensure_user_token(conn) do
