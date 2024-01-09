@@ -27,6 +27,9 @@ module.exports = {
           content: "#27272a", // zinc-800
         },
         disabled: "#a1a1aa", // zinc-400
+        incident: "#005DFF", // D4H blue
+        exercise: "#FF9900", // D4H orange
+        event: "#9F79EE", // D4H purple
         primary: {
           1: "#2563eb", // blue-600
           2: "#1d4ed8", // blue-700

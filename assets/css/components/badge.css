@@ -7,3 +7,7 @@
 .badge-success { @apply text-success-content bg-success-1 }
 .badge-warning { @apply text-warning-content bg-warning-1 }
 .badge-danger { @apply text-danger-content bg-danger-1 }
+
+.badge-incident { @apply text-primary-content bg-incident }
+.badge-exercise { @apply text-primary-content bg-exercise }
+.badge-event { @apply text-primary-content bg-event }
