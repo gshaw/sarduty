@@ -28,4 +28,8 @@ defmodule Service.StringHelpers do
         "#{String.slice(text, 0, length_with_omission)}#{omission}"
     end
   end
+
+  def to_filename(text) do
+    String.replace(text, ~r/\s+/, "_")
+  end
 end

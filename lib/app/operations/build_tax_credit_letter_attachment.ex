@@ -17,7 +17,7 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
     %{
       content: content,
       title: title,
-      filename: "#{title}.pdf",
+      filename: Service.StringHelpers.to_filename("#{title}.pdf"),
       content_type: "application/pdf"
     }
   end

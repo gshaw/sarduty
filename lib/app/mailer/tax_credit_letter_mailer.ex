@@ -28,7 +28,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
   def deliver_tax_credit_letter(letter) do
     email = letter.member.email
     attachment = BuildTaxCreditLetterAttachment.call(letter)
-    subject = "🇨🇦 #{attachment.title}"
+    subject = attachment.title
 
     body = """
     Attached is the tax document you need to claim the SAR Volunteers Tax Credit
