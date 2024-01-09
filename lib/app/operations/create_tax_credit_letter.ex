@@ -20,7 +20,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
     }
     |> TaxCreditLetter.build_new_changeset()
     |> Repo.insert!()
-    |> Repo.preload(:member)
+    |> Repo.preload(member: :team)
   end
 
   defp build_letter_content(team, member, ref_id, year) do

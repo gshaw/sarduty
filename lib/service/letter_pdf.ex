@@ -4,6 +4,13 @@ defmodule Service.PDFLetter do
   @one_inch 72
 
   def build(options) do
+    temp_path = write_to_temp_path(options)
+    pdf_contents = File.read!(temp_path)
+    File.rm(temp_path)
+    pdf_contents
+  end
+
+  def write_to_temp_path(options) do
     temp_path = Random.temp_path()
 
     {:ok, pdf} = Pdf.new(size: :letter)
@@ -21,9 +28,7 @@ defmodule Service.PDFLetter do
     |> Pdf.write_to(temp_path)
     |> Pdf.cleanup()
 
-    pdf_contents = File.read!(temp_path)
-    File.rm(temp_path)
-    pdf_contents
+    temp_path
   end
 
   defp add_logo(pdf, %{logo_path: nil}), do: pdf

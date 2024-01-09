@@ -1,8 +1,7 @@
 defmodule Web.TaxCreditLetterLive do
   use Web, :live_view_app_layout
 
-  import Ecto.Query
-
+  alias App.Mailer.TaxCreditLetterMailer
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
@@ -11,7 +10,7 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   def handle_params(params, _uri, socket) do
-    letter = find_tax_credit_letter(params["id"], socket.assigns.current_team)
+    letter = TaxCreditLetter.find(socket.assigns.current_team, params["id"])
 
     socket =
       socket
@@ -39,8 +38,7 @@ defmodule Web.TaxCreditLetterLive do
       >
         Download PDF
       </a>
-      <%!-- <button disabled class="btn btn-warning">Email PDF to member</button> --%>
-      <span class="badge badge-warning">Email PDF to member under construction</span>
+      <button phx-click="email" class="btn btn-warning">Email PDF to member</button>
       <:trailing>
         <button phx-click="destroy" class="btn btn-danger">Delete</button>
       </:trailing>
@@ -65,6 +63,17 @@ defmodule Web.TaxCreditLetterLive do
     """
   end
 
+  def handle_event("email", _unsigned_params, socket) do
+    tax_credit_letter = socket.assigns.letter
+    TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter)
+
+    socket =
+      socket
+      |> put_flash(:info, "Tax credit letter emailed to #{tax_credit_letter.member.email}")
+
+    {:noreply, socket}
+  end
+
   def handle_event("destroy", _unsigned_params, socket) do
     tax_credit_letter = socket.assigns.letter
     Repo.delete!(tax_credit_letter)
@@ -78,17 +87,5 @@ defmodule Web.TaxCreditLetterLive do
       )
 
     {:noreply, socket}
-  end
-
-  defp find_tax_credit_letter(tax_credit_letter_id, current_team) do
-    query =
-      from(tcl in TaxCreditLetter,
-        left_join: m in assoc(tcl, :member),
-        where: tcl.id == ^tax_credit_letter_id,
-        where: m.team_id == ^current_team.id,
-        preload: [:member]
-      )
-
-    Repo.one(query)
   end
 end

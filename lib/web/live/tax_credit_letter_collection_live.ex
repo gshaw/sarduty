@@ -1,6 +1,7 @@
 defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
+  alias App.Mailer.TaxCreditLetterMailer
   alias App.Operation.CreateTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
@@ -119,17 +120,19 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   def handle_event("create", %{"value" => member_id}, socket) do
-    letter =
+    tax_credit_letter =
       CreateTaxCreditLetter.call(
         team: socket.assigns.current_team,
         member_id: member_id,
         year: socket.assigns.filter_options.year
       )
 
+    TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter)
+
     socket =
       socket
       |> assign_records()
-      |> put_flash(:info, "#{letter.member.name}ʼs tax credit letter created")
+      |> put_flash(:info, "#{tax_credit_letter.member.name}ʼs tax credit letter created")
 
     {:noreply, socket}
   end
@@ -147,15 +150,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   defp assign_records(socket) do
     records =
-      TaxCreditLetterFilterViewModel.fetch_all(
+      TaxCreditLetterFilterViewModel.find_all(
         socket.assigns.current_team,
         socket.assigns.filter_options
       )
-
-    # records =
-    #   Enum.map(records, fn record ->
-    #     Map.put(record, :tax_credit_letter, TaxCreditLetter.get(record.tax_credit_letter_id))
-    #   end)
 
     assign(socket, :records, records)
   end

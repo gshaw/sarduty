@@ -1,6 +1,8 @@
 defmodule App.Model.TaxCreditLetter do
   use App, :model
 
+  import Ecto.Query
+
   alias App.Field.EncryptedString
   alias App.Model.Member
   alias App.Model.TaxCreditLetter
@@ -33,15 +35,27 @@ defmodule App.Model.TaxCreditLetter do
     |> validate_number(:year, greater_than_or_equal_to: 2014, less_than: 2100)
   end
 
-  def get_all do
-    TaxCreditLetter
-    |> order_by([t], desc: t.id)
-    |> Repo.all()
+  def find(team, id) do
+    query =
+      from(tcl in TaxCreditLetter,
+        left_join: m in assoc(tcl, :member),
+        where: tcl.id == ^id,
+        where: m.team_id == ^team.id,
+        preload: [member: :team]
+      )
+
+    Repo.one(query)
   end
 
-  def get(nil), do: nil
-  def get(id), do: Repo.get(TaxCreditLetter, id)
-  def get!(id), do: Repo.get!(TaxCreditLetter, id)
+  # def get_all do
+  #   TaxCreditLetter
+  #   |> order_by([t], desc: t.id)
+  #   |> Repo.all()
+  # end
+
+  # def get(nil), do: nil
+  # def get(id), do: Repo.get(TaxCreditLetter, id)
+  # def get!(id), do: Repo.get!(TaxCreditLetter, id)
   # def get_by(params), do: Repo.get_by(TaxCreditLetter, params)
 
   # def update(%TaxCreditLetter{} = tax_credit_letter, params) do

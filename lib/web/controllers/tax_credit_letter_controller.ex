@@ -2,22 +2,14 @@ defmodule Web.TaxCreditLetterController do
   use Web, :controller
 
   alias App.Model.TaxCreditLetter
-  alias Service.PDFLetter
+  alias App.Operation.BuildTaxCreditLetterAttachment
 
   def show(conn, %{"id" => tax_credit_letter_id}) do
-    tax_credit_letter = TaxCreditLetter.get!(tax_credit_letter_id)
-
-    pdf_contents =
-      PDFLetter.build(%{
-        title: "SAR Volunteer Tax Credit #{tax_credit_letter.year}",
-        author: "South Fraser SAR",
-        creator: "SARDuty.com",
-        logo_path: Application.app_dir(:sarduty, "/priv/static/images/logo-sfsar.png"),
-        content: tax_credit_letter.letter_content
-      })
+    tax_credit_letter = TaxCreditLetter.find(conn.assigns.current_team, tax_credit_letter_id)
+    attachment = BuildTaxCreditLetterAttachment.call(tax_credit_letter)
 
     conn
-    |> put_resp_content_type("application/pdf")
-    |> send_resp(200, pdf_contents)
+    |> put_resp_content_type(attachment.content_type)
+    |> send_resp(200, attachment.content)
   end
 end

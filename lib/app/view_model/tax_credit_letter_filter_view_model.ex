@@ -37,7 +37,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     end
   end
 
-  def fetch_all(team, filter_options) do
+  def find_all(team, filter_options) do
     Member
     |> Member.scope(team_id: team.id)
     |> Member.include_primary_and_secondary_hours(filter_options.year)
