@@ -1,0 +1,5 @@
+# https://mise.jdx.dev/configuration.html
+
+[tools]
+elixir = "1.16.0-otp-26"
+erlang = "26.2.1"

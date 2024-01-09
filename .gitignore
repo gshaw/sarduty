@@ -39,4 +39,4 @@ npm-debug.log
 /db
 
 # Ignore developer environment config file that may contain secrets
-config/env.exs
+.mise.local.toml
