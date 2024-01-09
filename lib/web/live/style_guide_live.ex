@@ -114,8 +114,10 @@ defmodule Web.StyleGuideLive do
     <.style_group title=".btn and .form_actions">
       <.form_actions>
         <button class="btn btn-success">Save</button>
-        <button class="btn btn-success">Save and Close</button>
         <button class="btn">Cancel</button>
+        <button class="btn btn-success" disabled>
+          <.spinner>Processing...</.spinner>
+        </button>
         <button class="btn btn-link">More Information</button>
         <:trailing>
           <button class="btn btn-danger">Delete</button>

@@ -185,11 +185,11 @@ defmodule Web.Components.Core do
   def form_actions(assigns) do
     ~H"""
     <div class={["form-actions flex flex-wrap", @class]}>
-      <div class="flex-grow">
+      <div class="flex gap-hspacer flex-grow">
         <%= render_slot(@inner_block) %>
       </div>
       <%= if @trailing do %>
-        <div>
+        <div class="flex gap-hspacer">
           <%= render_slot(@trailing) %>
         </div>
       <% end %>
@@ -515,12 +515,12 @@ defmodule Web.Components.Core do
 
   def spinner(assigns) do
     ~H"""
-    <div class={["flex items-center", @class]}>
-      <span class="mx-2">
+    <span class={["inline-flex items-center", @class]}>
+      <span class="mr-2">
         <.spinner_icon class={"size-#{@size}"} />
       </span>
       <span :if={@inner_block}><%= render_slot(@inner_block) %></span>
-    </div>
+    </span>
     """
   end
 
@@ -528,10 +528,10 @@ defmodule Web.Components.Core do
 
   def spinner_icon(assigns) do
     ~H"""
-    <div class={["grid animate-spin", @class]}>
+    <span class={["grid animate-spin", @class]}>
       <span class="col-start-1 row-start-1 rounded-full border-4 border-base-content border-opacity-25" />
       <span class="col-start-1 row-start-1 rounded-full border-4 border-transparent border-b-base-content" />
-    </div>
+    </span>
     """
   end
 
