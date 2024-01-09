@@ -15,8 +15,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
         Swoosh.Attachment.new(
           {:data, attachment.content},
           filename: attachment.filename,
-          content_type: attachment.content_type,
-          type: :inline
+          content_type: attachment.content_type
         )
       )
 
@@ -31,8 +30,8 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     subject = attachment.title
 
     body = """
-    Attached is the tax document you need to claim the SAR Volunteers Tax Credit
-    (SRVTC) tax credit.
+    Attached is the income tax document you need to claim the
+    SAR Volunteers Tax Credit (SRVTC).
     """
 
     deliver_with_attachment(email, subject, body, attachment)
