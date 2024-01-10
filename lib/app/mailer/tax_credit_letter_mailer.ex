@@ -19,8 +19,12 @@ defmodule App.Mailer.TaxCreditLetterMailer do
         )
       )
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+    case Mailer.deliver(email) do
+      {:ok, metadata} ->
+        IO.inspect(metadata, label: "delivered email metadata")
+
+      {:error, reason} ->
+        IO.inspect(reason, label: "email error reason")
     end
   end
 

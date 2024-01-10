@@ -35,14 +35,16 @@ config :sarduty, App.Vault,
   ]
 
 # Configure mailer, note runtime mailer config is still required
-case System.fetch_env("SMTP2GO_API_KEY") do
-  {:ok, api_key} ->
+case System.fetch_env("AMAZON_SES_ACCESS_KEY") do
+  {:ok, access_key} ->
     config :swoosh, local: false
     config :swoosh, api_client: Swoosh.ApiClient.Req
 
     config :sarduty, App.Mailer,
-      adapter: Swoosh.Adapters.SMTP2GO,
-      api_key: api_key
+      adapter: Swoosh.Adapters.AmazonSES,
+      access_key: access_key,
+      region: System.fetch_env!("AMAZON_SES_REGION"),
+      secret: System.fetch_env!("AMAZON_SES_SECRET")
 
   :error ->
     config :swoosh, local: true

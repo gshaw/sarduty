@@ -43,6 +43,7 @@ defmodule App.MixProject do
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.20"},
+      {:gen_smtp, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},
