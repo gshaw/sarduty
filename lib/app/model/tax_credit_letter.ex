@@ -35,7 +35,7 @@ defmodule App.Model.TaxCreditLetter do
     |> validate_number(:year, greater_than_or_equal_to: 2014, less_than: 2100)
   end
 
-  def find(team, id) do
+  def find!(team, id) do
     query =
       from(tcl in TaxCreditLetter,
         left_join: m in assoc(tcl, :member),
@@ -44,7 +44,7 @@ defmodule App.Model.TaxCreditLetter do
         preload: [member: :team]
       )
 
-    Repo.one(query)
+    Repo.one!(query)
   end
 
   # def get_all do

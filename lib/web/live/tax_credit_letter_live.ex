@@ -10,7 +10,7 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   def handle_params(params, _uri, socket) do
-    letter = TaxCreditLetter.find(socket.assigns.current_team, params["id"])
+    letter = TaxCreditLetter.find!(socket.assigns.current_team, params["id"])
 
     socket =
       socket

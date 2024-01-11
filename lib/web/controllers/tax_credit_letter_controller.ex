@@ -5,7 +5,7 @@ defmodule Web.TaxCreditLetterController do
   alias App.Operation.BuildTaxCreditLetterAttachment
 
   def show(conn, %{"id" => tax_credit_letter_id}) do
-    tax_credit_letter = TaxCreditLetter.find(conn.assigns.current_team, tax_credit_letter_id)
+    tax_credit_letter = TaxCreditLetter.find!(conn.assigns.current_team, tax_credit_letter_id)
     attachment = BuildTaxCreditLetterAttachment.call(tax_credit_letter)
 
     conn
