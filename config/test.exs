@@ -28,5 +28,3 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
-
-config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")

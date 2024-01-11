@@ -4,6 +4,8 @@ defmodule App.Mailer.TaxCreditLetterMailer do
   alias App.Mailer
   alias App.Operation.BuildTaxCreditLetterAttachment
 
+  require Logger
+
   defp deliver_with_attachment(recipient, subject, body, attachment) do
     email =
       new()
@@ -21,10 +23,10 @@ defmodule App.Mailer.TaxCreditLetterMailer do
 
     case Mailer.deliver(email) do
       {:ok, metadata} ->
-        IO.inspect(metadata, label: "delivered email metadata")
+        Logger.notice("delivered email metadata: #{inspect(metadata)}")
 
       {:error, reason} ->
-        IO.inspect(reason, label: "email error reason")
+        Logger.error("email error: #{inspect(reason)}")
     end
   end
 

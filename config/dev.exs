@@ -75,4 +75,13 @@ config :phoenix, :plug_init_mode, :runtime
 # Include HEEx debug annotations as HTML comments in rendered markup
 config :phoenix_live_view, :debug_heex_annotations, true
 
-config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
+if System.get_env("AMAZON_SES_ACCESS_KEY") do
+  config :swoosh, local: false
+  config :swoosh, api_client: Swoosh.ApiClient.Req
+
+  config :sarduty, App.Mailer,
+    adapter: Swoosh.Adapters.AmazonSES,
+    access_key: System.fetch_env!("AMAZON_SES_ACCESS_KEY"),
+    region: System.fetch_env!("AMAZON_SES_REGION"),
+    secret: System.fetch_env!("AMAZON_SES_SECRET")
+end

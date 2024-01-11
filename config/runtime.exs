@@ -20,6 +20,8 @@ if System.get_env("PHX_SERVER") do
   config :sarduty, Web.Endpoint, server: true
 end
 
+config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
+
 if config_env() == :prod do
   config :sarduty, Web.Endpoint,
     secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),

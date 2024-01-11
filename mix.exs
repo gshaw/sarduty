@@ -74,9 +74,9 @@ defmodule App.MixProject do
       check: [
         "format --check-formatted",
         "compile --force --warnings-as-errors",
-        # "cmd mix test --color"
         "credo --all-priorities",
-        "spell"
+        "spell",
+        "cmd mix test --color"
       ],
       spell:
         "cmd codespell --enable-colors --exclude-file .codespellignorelines --skip deps,priv,erl_crash.dump",

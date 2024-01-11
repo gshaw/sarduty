@@ -34,22 +34,9 @@ config :sarduty, App.Vault,
     }
   ]
 
-# Configure mailer, note runtime mailer config is still required
-case System.fetch_env("AMAZON_SES_ACCESS_KEY") do
-  {:ok, access_key} ->
-    config :swoosh, local: false
-    config :swoosh, api_client: Swoosh.ApiClient.Req
-
-    config :sarduty, App.Mailer,
-      adapter: Swoosh.Adapters.AmazonSES,
-      access_key: access_key,
-      region: System.fetch_env!("AMAZON_SES_REGION"),
-      secret: System.fetch_env!("AMAZON_SES_SECRET")
-
-  :error ->
-    config :swoosh, local: true
-    config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
-end
+# Configure mailer for dev and test
+config :swoosh, local: true
+config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure Timezone database: https://github.com/lau/tzdata
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
