@@ -64,7 +64,7 @@ defmodule Web.ActivityLive do
       <dd>
         <ul class="action-list">
           <li>
-            <.a external={true} href={D4H.build_activity_url(@activity.team, @activity)}>
+            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
               Open D4H Activity
             </.a>
           </li>
