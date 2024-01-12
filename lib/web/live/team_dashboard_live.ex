@@ -19,7 +19,10 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title-hero mb-p"><%= @current_team.name %></h1>
+    <h1 class="title-hero mb-p flex items-center justify-between">
+      <%= @current_team.name %>
+      <img src={~p"/#{@current_team.subdomain}/image"} class="h-32" alt="Team logo" />
+    </h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content team={@current_team} view_data={@view_data} />

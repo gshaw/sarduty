@@ -1,4 +1,5 @@
 defmodule App.Operation.BuildTaxCreditLetterAttachment do
+  alias App.Model.Team
   alias Service.PDFLetter
 
   def call(tax_credit_letter) do
@@ -10,7 +11,7 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
         title: title,
         author: team.name,
         creator: "SARDuty.com",
-        logo_path: Application.app_dir(:sarduty, "/priv/static/images/logo-sfsar.png"),
+        logo_path: Team.logo_path(team.subdomain),
         content: tax_credit_letter.letter_content
       })
 

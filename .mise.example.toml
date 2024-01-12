@@ -5,3 +5,4 @@
 [env]
 MAPBOX_ACCESS_TOKEN = "pk.e---"
 SMTP2GO_API_KEY = "api-9---"
+TEAM_LOGO_PATH = "/Users/gerry/Developer/sarduty.mount/team-logos"

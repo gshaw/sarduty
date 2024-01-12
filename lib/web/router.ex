@@ -82,6 +82,7 @@ defmodule Web.Router do
     scope "/" do
       pipe_through [:require_authenticated_user, :require_authorized_team_subdomain]
 
+      get "/:subdomain/image", TeamController, :image
       get "/:subdomain/members/:id/image", MemberController, :image
       get "/:subdomain/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
     end

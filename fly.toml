@@ -14,6 +14,7 @@ AMAZON_SES_REGION = "ca-central-1"
 DATABASE_PATH = "/mnt/sarduty/sarduty.db"
 PHX_HOST = "sarduty.fly.dev"
 PORT = "8080"
+TEAM_LOGO_PATH = "/mnt/sarduty/team-logos"
 
 [http_service]
 internal_port = 8080

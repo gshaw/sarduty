@@ -71,4 +71,9 @@ defmodule App.Model.Team do
   end
 
   # def delete(%Team{} = record), do: Repo.delete(record)
+
+  def logo_path(team_subdomain) do
+    logo_path = System.fetch_env!("TEAM_LOGO_PATH")
+    Path.join(logo_path, "#{team_subdomain}.png")
+  end
 end
