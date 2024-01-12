@@ -18,10 +18,6 @@ defmodule App.Application do
        repos: Application.fetch_env!(:sarduty, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:sarduty, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: App.PubSub},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: App.Finch},
-      # Start a worker by calling: App.Worker.start_link(arg)
-      # {App.Worker, arg},
       # Start to serve requests, typically the last entry
       Web.Endpoint
     ]
