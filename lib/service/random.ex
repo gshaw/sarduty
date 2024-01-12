@@ -12,12 +12,6 @@ defmodule Service.Random do
     Base.encode16(random_bytes, case: :lower)
   end
 
-  def temp_path, do: temp_path(extension: "")
-
-  def temp_path(extension: extension) do
-    Path.join(System.tmp_dir!(), "#{hex()}#{extension}")
-  end
-
   @letters ~w(A B C E G H J K L M N P R S T V W X Y Z)
   @digits ~w(1 2 3 4 5 6 7 8 9)
   @letter_and_digits ~w(A B C E G H J K L M N P R S T V W X Y Z 1 2 3 4 5 6 7 8 9)

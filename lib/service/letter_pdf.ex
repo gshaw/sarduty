@@ -1,5 +1,5 @@
 defmodule Service.PDFLetter do
-  alias Service.Random
+  alias Service.Temp
 
   @one_inch 72
 
@@ -11,7 +11,7 @@ defmodule Service.PDFLetter do
   end
 
   def write_to_temp_path(options) do
-    temp_path = Random.temp_path()
+    temp_path = Temp.path()
 
     {:ok, pdf} = Pdf.new(size: :letter)
 
