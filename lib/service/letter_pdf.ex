@@ -41,8 +41,7 @@ defmodule Service.PDFLetter do
     |> Pdf.add_image(
       {width - @one_inch - image_size, height - @one_inch - image_size},
       options.logo_path,
-      width: image_size,
-      height: image_size
+      width: image_size
     )
   end
 
