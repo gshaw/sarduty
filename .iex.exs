@@ -1,11 +1,11 @@
 import Ecto.Query
 # import Ecto.Query, only: [from: 2]
 
+alias App.Accounts.User
 alias App.Model.Activity
 alias App.Model.Attendance
 alias App.Model.Member
 alias App.Model.Team
-alias App.Model.User
 alias App.Repo
 
 alias Ecto.Changeset
