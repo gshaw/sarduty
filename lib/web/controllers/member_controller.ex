@@ -15,7 +15,8 @@ defmodule Web.MemberController do
       {:error, _response} ->
         send_download(
           conn,
-          {:file, Application.app_dir(:sarduty, "/priv/static/images/member.png")}
+          {:file, Application.app_dir(:sarduty, "/priv/static/images/member.png")},
+          disposition: :inline
         )
     end
   end
