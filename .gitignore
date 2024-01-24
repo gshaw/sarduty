@@ -35,7 +35,7 @@ sarduty-*.tar
 npm-debug.log
 /assets/node_modules/
 
-# Database files
+# Ignore development database files
 /db
 
 # Ignore developer environment config file that may contain secrets
