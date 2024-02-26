@@ -8,7 +8,7 @@ defmodule App.Model.Coordinate do
 
   def build(nil, _lng), do: nil
   def build(_lat, nil), do: nil
-  def build(lat, lng), do: {Float.round(lat, 5), Float.round(lng, 5)}
+  def build(lat, lng), do: {Float.round(lat * 1.0, 5), Float.round(lng * 1.0, 5)}
 
   def build_mapbox({lat, lng}), do: "#{lng},#{lat}"
 
