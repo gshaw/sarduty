@@ -65,10 +65,12 @@ defmodule Web.MemberLive do
       <dd><%= @member.position %></dd>
       <dt>Email</dt>
       <dd><%= @member.email %></dd>
-      <dl>Phone</dl>
+      <dt>Phone</dt>
       <dd><%= @member.phone %></dd>
       <dt>Address</dt>
       <dd><%= @member.address %></dd>
+      <dt>Joined</dt>
+      <dd><%= Service.Format.long_date(@member.joined_at, @member.team.timezone) %></dd>
     </dl>
     """
   end

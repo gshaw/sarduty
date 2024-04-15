@@ -57,7 +57,7 @@ defmodule Web.ActivityLive do
 
       <dt>Date</dt>
       <dd>
-        <%= Service.Format.short_datetime(@activity.started_at, @activity.team.timezone) %>
+        <%= Service.Format.medium_datetime(@activity.started_at, @activity.team.timezone) %>
       </dd>
       <dt>Duration</dt>
       <dd>
