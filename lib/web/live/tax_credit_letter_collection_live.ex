@@ -83,15 +83,15 @@ defmodule Web.TaxCreditLetterCollectionLive do
       </:col>
 
       <:col :let={record} label="Primary" class="w-px" align="right" sorts={[{"↓", "primary"}]}>
-        <span class="label md:hidden">Hours</span>
+        <span class="label md:hidden">Primary</span>
         <%= record.primary_hours %>
       </:col>
       <:col :let={record} label="Secondary" class="w-px" align="right" sorts={[{"↓", "secondary"}]}>
-        <span class="label md:hidden">Hours</span>
+        <span class="label md:hidden">Secondary</span>
         <%= record.secondary_hours %>
       </:col>
       <:col :let={record} label="Total" class="w-px" align="right" sorts={[{"↓", "total"}]}>
-        <span class="label md:hidden">Hours</span>
+        <span class="label md:hidden">Total</span>
         <%= record.total_hours %>
       </:col>
       <:col :let={record} label="Letter">
