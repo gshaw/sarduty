@@ -19,4 +19,8 @@ defmodule Service.Format do
     |> DateTime.shift_zone!(timezone)
     |> Calendar.strftime(format, user_options)
   end
+
+  def long_duration(started_at, finished_at) do
+    "#{Service.Convert.duration_to_hours(started_at, finished_at)} hours"
+  end
 end

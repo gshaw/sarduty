@@ -79,6 +79,16 @@ defmodule Web.Components.ActivityFilterTable do
           <%= Service.Format.short_datetime(record.started_at, @team.timezone) %>
         </span>
       </:col>
+      <:col
+        :let={record}
+        label="Hours"
+        class="w-1/12"
+        align="right"
+        sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
+      >
+        <span class="label md:hidden">Hours</span>
+        <%= Service.Convert.duration_to_hours(record.started_at, record.finished_at) %>
+      </:col>
     </.table>
 
     <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />

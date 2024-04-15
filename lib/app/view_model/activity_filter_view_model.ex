@@ -31,6 +31,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     do: %{
       "Date ↓" => "date-",
       "Date ↑" => "date",
+      "Hours ↓" => "hours-",
+      "Hours ↑" => "hours",
       "ID ↓" => "id-",
       "ID ↑" => "id"
     }
@@ -121,6 +123,15 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)
+
+  defp scope(q, sort: "hours-"),
+    do:
+      order_by(q, [r], desc: fragment("JULIANDAY(?) - JULIANDAY(?)", r.started_at, r.finished_at))
+
+  defp scope(q, sort: "hours"),
+    do:
+      order_by(q, [r], asc: fragment("JULIANDAY(?) - JULIANDAY(?)", r.started_at, r.finished_at))
+
   defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.ref_id)
   defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.ref_id)
 end

@@ -59,6 +59,10 @@ defmodule Web.ActivityLive do
       <dd>
         <%= Service.Format.short_datetime(@activity.started_at, @activity.team.timezone) %>
       </dd>
+      <dt>Duration</dt>
+      <dd>
+        <%= Service.Format.long_duration(@activity.started_at, @activity.finished_at) %>
+      </dd>
 
       <dt>Actions</dt>
       <dd>
