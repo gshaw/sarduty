@@ -110,11 +110,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <span class="font-mono text-sm"><%= @record.tax_credit_letter_ref_id %></span>
       </.a>
     <% else %>
-      <%= if @record.total_hours >= 200 && @record.primary_hours >= 101 do %>
-        <button phx-click="create" value={@record.member.id} class="btn btn-success btn-sm">
-          Create letter
-        </button>
-      <% end %>
+      <button phx-click="create" value={@record.member.id} class="btn btn-success btn-sm">
+        Create letter
+      </button>
     <% end %>
     """
   end
