@@ -17,7 +17,7 @@ defmodule App.Adapter.D4H.Member do
       name: record["name"],
       position: record["position"],
       ref_id: record["ref"],
-      email: record["email"] |> String.downcase(),
+      email: (record["email"] || "") |> String.downcase(),
       phone: record["mobilephone"],
       address: record["address"],
       joined_at: parse_optional_datetime(record["joined_at"]),
