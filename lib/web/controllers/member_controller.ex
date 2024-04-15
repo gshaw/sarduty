@@ -10,7 +10,7 @@ defmodule Web.MemberController do
 
     case D4H.fetch_member_image(d4h, member.d4h_member_id) do
       {:ok, image, filename} ->
-        send_download(conn, {:binary, image}, filename: filename)
+        send_download(conn, {:binary, image}, filename: filename, disposition: :inline)
 
       {:error, _response} ->
         send_download(
