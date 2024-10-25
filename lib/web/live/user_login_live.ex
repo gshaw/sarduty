@@ -16,9 +16,11 @@ defmodule Web.UserLoginLive do
           <.a navigate={~p"/login/reset"} class="link">Forgot your password?</.a>
         </.input>
 
-        <.input type="checkbox" field={@form[:remember_me]} label="Remember Me">
-          Saves information on this browser so you don't have to log in again for 60 days.
-        </.input>
+        <p>
+          <.input type="checkbox" field={@form[:remember_me]} label="Remember Me">
+            Saves information on this browser so you don't have to log in again for 60 days.
+          </.input>
+        </p>
 
         <.form_actions>
           <.button class="btn-success">Log in</.button>
