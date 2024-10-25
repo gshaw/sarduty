@@ -140,11 +140,13 @@ defmodule Web.Layouts do
         >
           Log in
         </.a>
+        <%!--
         <.a kind={:custom} role="button" navigate="/signup" class="btn btn-sm btn-primary">
           <span class="whitespace-nowrap">
             Sign up
           </span>
         </.a>
+        --%>
       <% end %>
     </.navbar>
     """

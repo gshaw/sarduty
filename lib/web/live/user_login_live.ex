@@ -5,11 +5,12 @@ defmodule Web.UserLoginLive do
     ~H"""
     <div>
       <h1 class="heading">Log in</h1>
+      <%!--
       <p>
         Don't have an account?
         <.a navigate="/signup">Sign up</.a>
       </p>
-
+      --%>
       <.form for={@form} id="login_form" action={~p"/login"} phx-update="ignore">
         <.input field={@form[:email]} type="email" label="Email" required phx-debounce />
         <.input field={@form[:password]} type="password" label="Password" required phx-debounce>

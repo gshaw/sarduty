@@ -9,7 +9,7 @@ defmodule Web.UserLoginLiveTest do
       {:ok, _lv, html} = live(conn, ~p"/login")
 
       assert html =~ "Log in"
-      assert html =~ "Sign up"
+      # assert html =~ "Sign up"
       assert html =~ "Forgot your password?"
     end
   end
@@ -48,17 +48,17 @@ defmodule Web.UserLoginLiveTest do
   end
 
   describe "login navigation" do
-    test "redirects to sign up page when the sign up button is clicked", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/login")
+    # test "redirects to sign up page when the sign up button is clicked", %{conn: conn} do
+    #   {:ok, lv, _html} = live(conn, ~p"/login")
 
-      {:ok, _login_live, login_html} =
-        lv
-        |> element(~s|main a:fl-contains("Sign up")|)
-        |> render_click()
-        |> follow_redirect(conn, ~p"/signup")
+    #   {:ok, _login_live, login_html} =
+    #     lv
+    #     |> element(~s|main a:fl-contains("Sign up")|)
+    #     |> render_click()
+    #     |> follow_redirect(conn, ~p"/signup")
 
-      assert login_html =~ "Sign up"
-    end
+    #   assert login_html =~ "Sign up"
+    # end
 
     test "redirects to forgot password page when the Forgot Password button is clicked", %{
       conn: conn
