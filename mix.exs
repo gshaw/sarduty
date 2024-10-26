@@ -79,8 +79,7 @@ defmodule App.MixProject do
         "spell",
         "cmd mix test --color"
       ],
-      spell:
-        "cmd codespell --enable-colors --exclude-file .codespellignorelines --skip deps,priv,erl_crash.dump",
+      spell: "cmd cspell .",
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
