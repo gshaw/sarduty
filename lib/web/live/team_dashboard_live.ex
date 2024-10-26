@@ -111,11 +111,13 @@ defmodule Web.TeamDashboardLive do
   end
 
   def handle_event("refresh", _params, socket) do
+    current_user = socket.assigns.current_user
+
     socket =
       socket
       |> assign(view_data: nil)
       |> assign_async(:view_data, fn ->
-        team = RefreshD4HData.call(socket.assigns.current_user)
+        team = RefreshD4HData.call(current_user)
         view_data = TeamDashboardViewData.build(team)
         {:ok, %{view_data: view_data}}
       end)

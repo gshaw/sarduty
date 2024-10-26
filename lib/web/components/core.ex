@@ -16,7 +16,7 @@ defmodule Web.Components.Core do
   """
   use Phoenix.Component
 
-  import Web.Gettext
+  use Gettext, backend: Web.Gettext
 
   alias Phoenix.LiveView.JS
 

@@ -43,7 +43,7 @@ defmodule Web do
         layouts: [html: Web.Layouts]
 
       import Plug.Conn
-      import Web.Gettext
+      use Gettext, backend: Web.Gettext
 
       unquote(verified_routes())
     end

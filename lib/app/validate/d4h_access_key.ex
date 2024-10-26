@@ -27,7 +27,7 @@ defmodule App.Validate.D4HAccessKey do
       end
     rescue
       e in Mint.TransportError ->
-        add_error(changeset, api_host_field, e.message)
+        add_error(changeset, api_host_field, e.reason)
     end
   end
 end
