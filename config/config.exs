@@ -14,7 +14,7 @@ config :sarduty,
 # Configures the endpoint
 config :sarduty, Web.Endpoint,
   url: [host: "localhost"],
-  adapter: Phoenix.Endpoint.Cowboy2Adapter,
+  adapter: Bandit.PhoenixAdapter,
   render_errors: [
     formats: [html: Web.ErrorHTML, json: Web.ErrorJSON],
     layout: false

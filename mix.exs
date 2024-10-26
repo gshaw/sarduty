@@ -32,13 +32,14 @@ defmodule App.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:bandit, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:cloak, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dns_cluster, "~> 0.1.1"},
       {:earmark, "~> 1.4"},
-      {:ecto_sql, "~> 3.10"},
-      {:ecto_sqlite3, "~> 0.14"},
+      {:ecto_sql, "~> 3.12"},
+      {:ecto_sqlite3, "~> 0.17"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0", only: :test},
@@ -52,12 +53,12 @@ defmodule App.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.20.2"},
       {:phoenix, "~> 1.7.10"},
-      {:plug_cowboy, "~> 2.5"},
-      {:req, "~> 0.4.0"},
-      {:scrivener_ecto, "~> 2.7"},
-      {:swoosh, "~> 1.3"},
+      # {:plug_cowboy, "~> 2.5"},
+      {:req, "~> 0.5"},
+      {:scrivener_ecto, "~> 3.1"},
+      {:swoosh, "~> 1.17"},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tzdata, "~> 1.1"}
     ]
