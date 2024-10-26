@@ -5,20 +5,20 @@ defmodule App.Operation.RefreshD4HData.Activities do
 
   def call(d4h, team_id) do
     limit = 750
-    d4h_activities = D4H.fetch_activites(d4h, params: [limit: limit])
-    upsert_activites(d4h, team_id, 0, limit, d4h_activities)
+    d4h_activities = D4H.fetch_activities(d4h, params: [limit: limit])
+    upsert_activities(d4h, team_id, 0, limit, d4h_activities)
     :ok
   end
 
-  defp upsert_activites(_d4h, _team_id, _offset, _limit, []), do: :ok
+  defp upsert_activities(_d4h, _team_id, _offset, _limit, []), do: :ok
 
-  defp upsert_activites(d4h, team_id, offset, limit, d4h_activities) do
+  defp upsert_activities(d4h, team_id, offset, limit, d4h_activities) do
     Enum.each(d4h_activities, fn d4h_activity ->
       upsert_activity(team_id, d4h_activity)
     end)
 
-    d4h_activities = D4H.fetch_activites(d4h, params: [offset: offset, limit: limit])
-    upsert_activites(d4h, team_id, offset + limit, limit, d4h_activities)
+    d4h_activities = D4H.fetch_activities(d4h, params: [offset: offset, limit: limit])
+    upsert_activities(d4h, team_id, offset + limit, limit, d4h_activities)
   end
 
   defp upsert_activity(team_id, d4h_activity) do

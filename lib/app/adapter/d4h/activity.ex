@@ -22,6 +22,7 @@ defmodule App.Adapter.D4H.Activity do
     %__MODULE__{
       d4h_activity_id: record["id"],
       d4h_team_id: record["team_id"],
+      # cspell:ignore ref_autoid
       ref_id: record["ref_autoid"],
       tracking_number: record["tracking_number"],
       is_published: record["published"] != 0,

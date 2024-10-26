@@ -7,6 +7,7 @@ defmodule Web.Endpoint do
   @session_options [
     store: :cookie,
     key: "_sarduty_session",
+    # cspell:ignore o5BANF2H
     signing_salt: "o5BANF2H",
     same_site: "Lax"
   ]

@@ -1,3 +1,5 @@
+# cspell:ignore AddD4HAPIHost
+
 defmodule App.Repo.Migrations.AddD4HAPIHost do
   use Ecto.Migration
 

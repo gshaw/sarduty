@@ -39,7 +39,7 @@ defmodule App.Operation.RefreshD4HData.Members do
     # Repo.insert!(
     #   Member.build_new_changeset(Map.new(params)),
     #   on_conflict: [set: params],
-    #   confict_target: [:team_id, :d4h_id]
+    #   conflict_target: [:team_id, :d4h_id]
     # )
   end
 end

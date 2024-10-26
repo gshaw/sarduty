@@ -50,7 +50,7 @@ defmodule Web.ActivityAttendanceLive do
         <h2 class="heading mt-p">Import Attendance</h2>
         <p>
           Synchronize D4H attendance from SAR Assist.
-          Attedance report is exported by SAR Assist after using QR code check in process.
+          Attendance report is exported by SAR Assist after using QR code check in process.
           View an <a
             target="_blank"
             class="link"

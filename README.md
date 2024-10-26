@@ -5,6 +5,7 @@ Helpful tools for search and rescue managers
 ## Setup
 
 ```sh
+brew install mise cspell flyctl
 cp .mise.example.toml .mise.local.toml
 # Add MAPBOX_ACCESS_TOKEN
 mise trust
@@ -19,6 +20,7 @@ echo 4025 > ~/.puma-dev/sarduty
 * `mix phx.server` to start dev server
 * `iex -S mix phx.server` to start dev server inside IEx
 * `fly deploy` to deploy current version
+* `cspell .` to spell check
 
 ## Troubleshooting
 

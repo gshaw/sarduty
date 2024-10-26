@@ -20,6 +20,7 @@ config :sarduty, Web.Endpoint,
     layout: false
   ],
   pubsub_server: App.PubSub,
+  # cspell:ignore VdFiDhpc
   live_view: [signing_salt: "VdFiDhpc"]
 
 config :sarduty, App.Vault,

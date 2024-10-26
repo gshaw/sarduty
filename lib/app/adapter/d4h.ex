@@ -104,10 +104,10 @@ defmodule App.Adapter.D4H do
     |> Enum.map(&D4H.AttendanceInfo.build(&1))
   end
 
-  def fetch_activites(context),
-    do: fetch_activites(context, params: [limit: 50, sort: "date:desc", before: "now"])
+  def fetch_activities(context),
+    do: fetch_activities(context, params: [limit: 50, sort: "date:desc", before: "now"])
 
-  def fetch_activites(context, params: params) do
+  def fetch_activities(context, params: params) do
     response = Req.get!(context, url: "/team/activities", params: params)
 
     response.body["data"]

@@ -1,0 +1,39 @@
+---
+$schema: "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json"
+version: "0.2"
+language: en
+allowCompoundWords: true
+ignorePaths:
+  - "_build/*"
+  - ".git/*"
+  - "assets/vendor/*"
+  - "cspell.config.yml"
+  - "deps/*"
+  - "erl_crash.dump"
+  - "priv/static/assets/*"
+words:
+  - aria-describedby
+  - aria-labelledby
+  - dedup
+  - Ecto
+  - esbuild
+  - floki
+  - flyctl
+  - hexpm
+  - hspacer
+  - libncurses
+  - libstdc
+  - msgid
+  - nocase
+  - noreply
+  - rsquo
+  - sarduty
+  - SARVAC
+  - signup
+  - SRVTC
+  - strftime
+  - tbody
+  - thead
+  - totp
+  - Tzdata
+  - X
