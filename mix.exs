@@ -79,7 +79,7 @@ defmodule App.MixProject do
         "spell",
         "cmd mix test --color"
       ],
-      spell: "cmd cspell .",
+      spell: "cmd cspell lint --no-progress .",
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
