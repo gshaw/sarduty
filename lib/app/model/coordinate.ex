@@ -3,12 +3,19 @@ defmodule App.Model.Coordinate do
 
   def build(value) do
     [lat, lng] = String.split(value, ",")
-    build(String.to_float(lat), String.to_float(lng))
+    build(lat, lng)
   end
 
   def build(nil, _lng), do: nil
   def build(_lat, nil), do: nil
-  def build(lat, lng), do: {Float.round(lat * 1.0, 5), Float.round(lng * 1.0, 5)}
+
+  def build(lat, lng) when is_binary(lat) and is_binary(lng) do
+    build(String.to_float(lat), String.to_float(lng))
+  end
+
+  def build(lat, lng) when is_float(lat) and is_float(lng) do
+    {Float.round(lat, 5), Float.round(lng, 5)}
+  end
 
   def build_mapbox({lat, lng}), do: "#{lng},#{lat}"
 
