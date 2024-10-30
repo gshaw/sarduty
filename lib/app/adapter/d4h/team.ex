@@ -1,5 +1,5 @@
 defmodule App.Adapter.D4H.Team do
-  alias App.Model.Coordinate
+  alias App.Adapter.D4H.Parse
 
   defstruct d4h_team_id: nil,
             name: nil,
@@ -12,8 +12,8 @@ defmodule App.Adapter.D4H.Team do
       d4h_team_id: record["id"],
       name: record["title"],
       subdomain: record["subdomain"],
-      coordinate: Coordinate.build(record),
-      timezone: record["timezone"]["location"]
+      coordinate: Parse.coordinate(record["location"]),
+      timezone: record["timezone"]
     }
   end
 end

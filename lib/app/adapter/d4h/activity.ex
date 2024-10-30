@@ -1,5 +1,5 @@
 defmodule App.Adapter.D4H.Activity do
-  alias App.Model.Coordinate
+  alias App.Adapter.D4H.Parse
 
   defstruct d4h_activity_id: nil,
             d4h_team_id: nil,
@@ -16,33 +16,30 @@ defmodule App.Adapter.D4H.Activity do
             tags: []
 
   def build(record) do
-    {:ok, started_at, 0} = DateTime.from_iso8601(record["date"])
-    {:ok, finished_at, 0} = DateTime.from_iso8601(record["enddate"])
-
     %__MODULE__{
       d4h_activity_id: record["id"],
-      d4h_team_id: record["team_id"],
-      # cspell:ignore ref_autoid
-      ref_id: record["ref_autoid"],
-      tracking_number: record["tracking_number"],
-      is_published: record["published"] != 0,
-      title: String.slice(record["ref_desc"], 0, 50),
+      d4h_team_id: Parse.team_id(record["owner"]),
+      ref_id: record["reference"],
+      tracking_number: record["trackingNumber"],
+      is_published: record["published"],
+      title: String.slice(record["referenceDescription"], 0, 50),
+      # Note: description in v3 is HTML
       description: record["description"],
-      address: build_address(record),
-      coordinate: Coordinate.build(record),
-      started_at: started_at,
-      finished_at: finished_at,
-      activity_kind: record["activity"],
+      address: build_address(record["address"]),
+      coordinate: Parse.coordinate(record["location"]),
+      started_at: Parse.datetime(record["startsAt"]),
+      finished_at: Parse.datetime(record["endsAt"]),
+      activity_kind: Parse.activity_kind(record["resourceType"]),
       tags: Enum.dedup(record["tags"])
     }
   end
 
   defp build_address(record) do
     [
-      record["streetaddress"],
-      record["townaddress"],
-      record["regionaddress"],
-      record["countryaddress"]
+      record["street"],
+      record["town"],
+      record["region"],
+      record["country"]
     ]
     |> Enum.reject(&String.match?(&1, ~r/^\s*$/))
     |> Enum.join(", ")

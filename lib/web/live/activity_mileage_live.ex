@@ -107,13 +107,14 @@ defmodule Web.ActivityMileageLive do
   def handle_event("generate-report", _params, socket) do
     current_user = socket.assigns.current_user
     d4h_activity_id = socket.assigns.activity.d4h_activity_id
+    activity_kind = socket.assigns.activity.activity_kind
 
     socket =
       socket
       |> assign(mileage_report: nil)
       |> assign_async(:mileage_report, fn ->
         d4h = D4H.build_context(current_user)
-        report = BuildMilesageReport.call(d4h, d4h_activity_id)
+        report = BuildMilesageReport.call(d4h, d4h_activity_id, activity_kind)
         {:ok, %{mileage_report: report}}
       end)
 

@@ -1,4 +1,6 @@
 defmodule App.Adapter.D4H.Member do
+  alias App.Adapter.D4H.Parse
+
   defstruct d4h_member_id: nil,
             d4h_team_id: nil,
             ref_id: nil,
@@ -13,22 +15,15 @@ defmodule App.Adapter.D4H.Member do
   def build(record) do
     %__MODULE__{
       d4h_member_id: record["id"],
-      d4h_team_id: record["team_id"],
+      d4h_team_id: Parse.team_id(record["owner"]),
       name: record["name"],
       position: record["position"],
       ref_id: record["ref"],
-      email: (record["email"] || "") |> String.downcase(),
-      phone: record["mobilephone"],
-      address: record["address"],
-      joined_at: parse_optional_datetime(record["joined_at"]),
-      left_at: parse_optional_datetime(record["left_at"])
+      email: String.downcase(record["email"]["value"] || ""),
+      phone: record["mobile"]["phone"],
+      address: record["deprecatedAddress"],
+      joined_at: Parse.optional_datetime(record["startsAt"]),
+      left_at: Parse.optional_datetime(record["endsAt"])
     }
-  end
-
-  defp parse_optional_datetime(nil), do: nil
-
-  defp parse_optional_datetime(value) do
-    {:ok, result, 0} = DateTime.from_iso8601(value)
-    DateTime.truncate(result, :second)
   end
 end

@@ -1,6 +1,4 @@
 defmodule App.Model.Coordinate do
-  def build(%{"lat" => lat, "lng" => lng}), do: build(lat, lng)
-
   def build(value) do
     [lat, lng] = String.split(value, ",")
     build(lat, lng)

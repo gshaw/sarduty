@@ -3,9 +3,9 @@ defmodule App.Operation.BuildMilesageReport do
   alias App.Adapter.Mapbox
 
   # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
-  def call(d4h, activity_id) do
+  def call(d4h, activity_id, activity_kind) do
     {:ok, team} = D4H.fetch_team(d4h)
-    activity = D4H.fetch_activity(d4h, activity_id)
+    activity = D4H.fetch_activity(d4h, activity_id, activity_kind)
     team_members = D4H.fetch_team_members(d4h)
     attendance_records = D4H.fetch_activity_attendance(d4h, activity_id, team_members)
 

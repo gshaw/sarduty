@@ -46,15 +46,20 @@ defmodule App.Adapter.D4H do
   end
 
   def build_context(%User{} = user) do
-    build_context(access_key: user.d4h_access_key, api_host: user.team.d4h_api_host)
+    build_context(
+      access_key: user.d4h_access_key,
+      api_host: user.team.d4h_api_host,
+      d4h_team_id: user.team.d4h_team_id
+    )
   end
 
-  def build_context(access_key: access_key, api_host: api_host) do
+  def build_context(access_key: access_key, api_host: api_host, d4h_team_id: d4h_team_id) do
     Req.new(
-      base_url: "https://#{api_host}/v2/",
+      base_url: "https://#{api_host}/v3/team/#{d4h_team_id}",
       headers: %{"User-Agent" => "sarduty.com"},
       auth: {:bearer, access_key || ""}
     )
+    |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
   end
 
   def fetch_member_image(context, member_id) do
@@ -80,27 +85,28 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_team(context) do
-    response = Req.get!(context, url: "/team")
+    d4h_team_id = Req.Request.get_private(context, :d4h_team_id)
+    response = Req.get!(context, url: "/teams/#{d4h_team_id}")
 
     if response.status == 200 do
-      {:ok, D4H.Team.build(response.body["data"])}
+      {:ok, D4H.Team.build(response.body)}
     else
       {:error, response}
     end
   end
 
   def fetch_team_members(context) do
-    response = Req.get!(context, url: "/team/members", params: [limit: 750])
+    response = Req.get!(context, url: "/members", params: [size: -1])
 
-    response.body["data"]
+    response.body["results"]
     |> Enum.map(&D4H.Member.build(&1))
     |> Enum.sort(&(&1.name < &2.name))
   end
 
   def fetch_attendances(context, params: params) do
-    response = Req.get!(context, url: "/team/attendance", params: params)
+    response = Req.get!(context, url: "/attendance", params: params)
 
-    response.body["data"]
+    response.body["results"]
     |> Enum.map(&D4H.AttendanceInfo.build(&1))
   end
 
@@ -114,17 +120,31 @@ defmodule App.Adapter.D4H do
     |> Enum.map(&D4H.Activity.build(&1))
   end
 
-  def fetch_activity(context, activity_id) do
-    response = Req.get!(context, url: "/team/activities/#{activity_id}")
+  def fetch_activity(context, activity_id, "event") do
+    response = Req.get!(context, url: "/events/#{activity_id}")
 
-    response.body["data"]
+    response.body
+    |> D4H.Activity.build()
+  end
+
+  def fetch_activity(context, activity_id, "incident") do
+    response = Req.get!(context, url: "/incidents/#{activity_id}")
+
+    response.body
+    |> D4H.Activity.build()
+  end
+
+  def fetch_activity(context, activity_id, "exercise") do
+    response = Req.get!(context, url: "/exercises/#{activity_id}")
+
+    response.body
     |> D4H.Activity.build()
   end
 
   def fetch_activity_attendance(context, activity_id, team_members) do
-    response = Req.get!(context, url: "/team/attendance", params: [activity_id: activity_id])
+    response = Req.get!(context, url: "/attendance", params: [activity_id: activity_id])
 
-    response.body["data"]
+    response.body["results"]
     |> Enum.map(&D4H.Attendance.build(&1, team_members))
     |> Enum.sort(&(&1.member.name < &2.member.name))
   end
