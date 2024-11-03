@@ -3,3 +3,24 @@
 [tools]
 elixir = "1.17.3-otp-27"
 erlang = "27.1.2"
+
+[tasks.check]
+depends = ["format", "compile", "spell", "lint", "test"]
+
+[tasks.format]
+run = "mix format --check-formatted"
+
+[tasks.compile]
+run = "mix compile --force --warnings-as-errors"
+
+[tasks.lint]
+run = "mix credo --all-priorities"
+
+[tasks.spell]
+run = "cspell lint --no-progress ."
+
+[tasks.test]
+run = "mix test --color"
+
+[tasks.server]
+run = "mix phx.server"
