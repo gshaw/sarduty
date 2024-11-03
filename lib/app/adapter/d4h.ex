@@ -73,15 +73,38 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  def fetch_team_image(context) do
+  def fetch_team_image_document(context) do
     response =
-      Req.get!(context, url: "/team/image", params: [size: "preview"])
+      Req.get!(context,
+        url: "/documents",
+        params: [
+          profile: true,
+          target_resource_type: "Team"
+        ]
+      )
 
     if response.status == 200 do
-      {:ok, response.body, "team.png"}
+      result = response.body["results"] |> List.first()
+      {:ok, D4H.Document.build(result)}
     else
       {:error, response}
     end
+  end
+
+  def download_document(context, document_id, file_name) do
+    response =
+      Req.get!(context, url: "/documents/#{document_id}/download")
+
+    if response.status == 200 do
+      {:ok, response.body, file_name}
+    else
+      {:error, response}
+    end
+  end
+
+  def fetch_team_image(context) do
+    {:ok, image_document} = D4H.fetch_team_image_document(context)
+    download_document(context, image_document.d4h_document_id, "team.png")
   end
 
   def fetch_team(context) do
