@@ -42,7 +42,7 @@ defmodule App.MixProject do
       {:ecto_sqlite3, "~> 0.17"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:finch, "~> 0.13"},
-      {:floki, ">= 0.30.0", only: :test},
+      {:floki, ">= 0.30.0"},
       {:gettext, "~> 0.20"},
       {:gen_smtp, "~> 1.0"},
       {:jason, "~> 1.2"},

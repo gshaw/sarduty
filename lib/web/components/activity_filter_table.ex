@@ -65,7 +65,7 @@ defmodule Web.Components.ActivityFilterTable do
           <.activity_title activity={record} />
         </.a>
         <div class="hint">
-          <%= Service.StringHelpers.truncate(record.description, max_length: 120) %>
+          <%= activity_summary(record) %>
         </div>
         <.activity_tags activity={record} />
       </:col>
@@ -93,5 +93,17 @@ defmodule Web.Components.ActivityFilterTable do
 
     <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
     """
+  end
+
+  def activity_summary(activity) do
+    case activity.description do
+      nil ->
+        ""
+
+      description ->
+        description
+        |> Service.StringHelpers.strip_html()
+        |> Service.StringHelpers.truncate(max_length: 120)
+    end
   end
 end

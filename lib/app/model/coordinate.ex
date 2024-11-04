@@ -15,6 +15,11 @@ defmodule App.Model.Coordinate do
     {Float.round(lat, 5), Float.round(lng, 5)}
   end
 
+  def build(lat, lng) when is_integer(lat) and is_integer(lng) do
+    # https://programming-idioms.org/idiom/79/convert-integer-to-floating-point-number/901/elixir
+    {lat / 1, lng / 1}
+  end
+
   def build_mapbox({lat, lng}), do: "#{lng},#{lat}"
 
   def to_string({lat, lng}, precision) do

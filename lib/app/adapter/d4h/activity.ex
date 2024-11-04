@@ -30,7 +30,7 @@ defmodule App.Adapter.D4H.Activity do
       started_at: Parse.datetime(record["startsAt"]),
       finished_at: Parse.datetime(record["endsAt"]),
       activity_kind: Parse.activity_kind(record["resourceType"]),
-      tags: Enum.dedup(record["tags"])
+      tags: Parse.tag_ids(record["tags"])
     }
   end
 

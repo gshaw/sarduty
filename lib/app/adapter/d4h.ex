@@ -133,14 +133,16 @@ defmodule App.Adapter.D4H do
     |> Enum.map(&D4H.AttendanceInfo.build(&1))
   end
 
-  def fetch_activities(context),
-    do: fetch_activities(context, params: [limit: 50, sort: "date:desc", before: "now"])
+  def fetch_activities(context) do
+    exercises = fetch_activities(context, "exercises")
+    events = fetch_activities(context, "events")
+    incidents = fetch_activities(context, "incidents")
+    exercises ++ incidents ++ events
+  end
 
-  def fetch_activities(context, params: params) do
-    response = Req.get!(context, url: "/team/activities", params: params)
-
-    response.body["data"]
-    |> Enum.map(&D4H.Activity.build(&1))
+  def fetch_activities(context, kind) do
+    response = Req.get!(context, url: "/#{kind}", params: [size: -1])
+    response.body["results"] |> Enum.map(&D4H.Activity.build(&1))
   end
 
   def fetch_activity(context, activity_id, "event") do

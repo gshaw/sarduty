@@ -3,7 +3,16 @@ defmodule Service.StringHelpers do
     Useful functions for working with strings.
   """
 
+  alias Floki
+
   def no_break_space, do: " "
+
+  def strip_html(html) do
+    html
+    |> Floki.parse_fragment!()
+    |> Floki.text()
+    |> String.trim()
+  end
 
   @doc """
   Truncate the string to a given length.
