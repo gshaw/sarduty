@@ -126,8 +126,8 @@ defmodule App.Adapter.D4H do
     |> Enum.sort(&(&1.name < &2.name))
   end
 
-  def fetch_attendances(context, params: params) do
-    response = Req.get!(context, url: "/attendance", params: params)
+  def fetch_attendances(context) do
+    response = Req.get!(context, url: "/attendance", params: [size: -1])
 
     response.body["results"]
     |> Enum.map(&D4H.AttendanceInfo.build(&1))

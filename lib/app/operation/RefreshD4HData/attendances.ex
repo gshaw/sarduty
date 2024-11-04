@@ -9,12 +9,11 @@ defmodule App.Operation.RefreshD4HData.Attendances do
       d4h: d4h,
       team_id: team_id,
       d4h_member_index: build_d4h_member_index(team_id),
-      d4h_activity_index: build_d4h_activity_index(team_id),
-      limit: 750
+      d4h_activity_index: build_d4h_activity_index(team_id)
     }
 
-    d4h_attendances = D4H.fetch_attendances(d4h, params: [limit: context.limit])
-    upsert_attendances(context, 0, d4h_attendances)
+    d4h_attendances = D4H.fetch_attendances(d4h)
+    upsert_attendances(context, d4h_attendances)
     :ok
   end
 
@@ -32,17 +31,10 @@ defmodule App.Operation.RefreshD4HData.Attendances do
     |> Map.new()
   end
 
-  defp upsert_attendances(_context, _offset, []), do: :ok
-
-  defp upsert_attendances(context, offset, d4h_attendances) do
+  defp upsert_attendances(context, d4h_attendances) do
     Enum.each(d4h_attendances, fn d4h_attendance ->
       upsert_attendance(context, d4h_attendance)
     end)
-
-    d4h_attendances =
-      D4H.fetch_attendances(context.d4h, params: [offset: offset, limit: context.limit])
-
-    upsert_attendances(context, offset + context.limit, d4h_attendances)
   end
 
   defp upsert_attendance(context, d4h_attendance) do

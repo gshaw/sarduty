@@ -9,8 +9,7 @@ defmodule App.Operation.RefreshD4HData do
     save_team_logo(d4h, current_user.team)
     RefreshD4HData.Members.call(d4h, current_user.team_id)
     RefreshD4HData.Activities.call(d4h, current_user.team_id)
-    # RefreshD4HData.Attendances.call(d4h, current_user.team_id)
-
+    RefreshD4HData.Attendances.call(d4h, current_user.team_id)
     update_team_refreshed_at(current_user.team)
   end
 
