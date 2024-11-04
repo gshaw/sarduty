@@ -21,12 +21,18 @@ defmodule App.Adapter.D4H.Parse do
   def role_id(%{"resourceType" => "Role", "id" => id}), do: id
   def role_id(%{}), do: nil
 
-  def tag_id(%{"resourceType" => "Tag", "id" => id}), do: Integer.to_string(id)
+  def tag_id(%{"resourceType" => "Tag", "id" => id}), do: id
   def tag_id(%{}), do: nil
 
-  def tag_ids(tags) do
-    tags |> Enum.map(&tag_id(&1)) |> Enum.uniq()
+  def tag_ids(tags, tag_index) do
+    tags
+    |> Enum.map(&tag_id(&1))
+    |> Enum.uniq()
+    |> Enum.map(&look_up_tag_title(tag_index, &1))
   end
+
+  defp look_up_tag_title(nil, tag_id), do: Integer.to_string(tag_id)
+  defp look_up_tag_title(tag_index, tag_id), do: tag_index[tag_id]
 
   def team_id(%{"resourceType" => "Team", "id" => id}), do: id
   def team_id(%{}), do: nil

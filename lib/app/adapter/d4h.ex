@@ -134,15 +134,23 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_activities(context) do
-    exercises = fetch_activities(context, "exercises")
-    events = fetch_activities(context, "events")
-    incidents = fetch_activities(context, "incidents")
+    tag_index = build_d4h_tag_index(context)
+    exercises = fetch_activities(context, tag_index, "exercises")
+    events = fetch_activities(context, tag_index, "events")
+    incidents = fetch_activities(context, tag_index, "incidents")
     exercises ++ incidents ++ events
   end
 
-  def fetch_activities(context, kind) do
+  defp build_d4h_tag_index(context) do
+    context
+    |> D4H.fetch_tags()
+    |> Enum.map(fn r -> {r.d4h_tag_id, r.title} end)
+    |> Map.new()
+  end
+
+  def fetch_activities(context, tag_index, kind) do
     response = Req.get!(context, url: "/#{kind}", params: [size: -1])
-    response.body["results"] |> Enum.map(&D4H.Activity.build(&1))
+    response.body["results"] |> Enum.map(&D4H.Activity.build(&1, tag_index))
   end
 
   def fetch_activity(context, activity_id, "event") do
@@ -172,6 +180,11 @@ defmodule App.Adapter.D4H do
     response.body["results"]
     |> Enum.map(&D4H.Attendance.build(&1, team_members))
     |> Enum.sort(&(&1.member.name < &2.member.name))
+  end
+
+  def fetch_tags(context) do
+    response = Req.get!(context, url: "/tags", params: [size: -1])
+    response.body["results"] |> Enum.map(&D4H.Tag.build(&1))
   end
 
   defp update_attendance(context, attendance_id, status) do

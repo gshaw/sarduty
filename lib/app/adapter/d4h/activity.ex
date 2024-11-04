@@ -16,6 +16,10 @@ defmodule App.Adapter.D4H.Activity do
             tags: []
 
   def build(record) do
+    build(record, nil)
+  end
+
+  def build(record, tag_index) do
     %__MODULE__{
       d4h_activity_id: record["id"],
       d4h_team_id: Parse.team_id(record["owner"]),
@@ -30,7 +34,7 @@ defmodule App.Adapter.D4H.Activity do
       started_at: Parse.datetime(record["startsAt"]),
       finished_at: Parse.datetime(record["endsAt"]),
       activity_kind: Parse.activity_kind(record["resourceType"]),
-      tags: Parse.tag_ids(record["tags"])
+      tags: Parse.tag_ids(record["tags"], tag_index)
     }
   end
 
