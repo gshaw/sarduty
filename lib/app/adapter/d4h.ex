@@ -45,7 +45,7 @@ defmodule App.Adapter.D4H do
     |> elem(0)
   end
 
-  def build_context(%User{} = user) do
+  def build_context_from_user(%User{} = user) do
     build_context(
       access_key: user.d4h_access_key,
       api_host: user.team.d4h_api_host,

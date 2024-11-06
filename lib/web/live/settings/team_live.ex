@@ -75,7 +75,7 @@ defmodule Web.Settings.TeamLive do
   end
 
   def handle_event("refresh", _params, socket) do
-    d4h = D4H.build_context(socket.assigns.current_user)
+    d4h = D4H.build_context_from_user(socket.assigns.current_user)
     {:ok, d4h_team} = D4H.fetch_team(d4h)
     {lat, lng} = d4h_team.coordinate
 

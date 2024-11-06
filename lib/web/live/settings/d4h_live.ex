@@ -99,7 +99,7 @@ defmodule Web.Settings.D4HLive do
   end
 
   defp user_has_valid_key?(user) do
-    d4h = D4H.build_context(user)
+    d4h = D4H.build_context_from_user(user)
 
     case D4H.fetch_team(d4h) do
       {:ok, d4h_team} -> matching_team?(d4h_team, user)

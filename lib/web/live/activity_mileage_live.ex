@@ -13,7 +13,7 @@ defmodule Web.ActivityMileageLive do
 
   def handle_params(params, _uri, socket) do
     activity = Activity.get(params["id"])
-    d4h = D4H.build_context(socket.assigns.current_user)
+    d4h = D4H.build_context_from_user(socket.assigns.current_user)
     {:ok, team} = D4H.fetch_team(d4h)
 
     socket =
@@ -113,7 +113,7 @@ defmodule Web.ActivityMileageLive do
       socket
       |> assign(mileage_report: nil)
       |> assign_async(:mileage_report, fn ->
-        d4h = D4H.build_context(current_user)
+        d4h = D4H.build_context_from_user(current_user)
         report = BuildMilesageReport.call(d4h, d4h_activity_id, activity_kind)
         {:ok, %{mileage_report: report}}
       end)
