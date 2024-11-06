@@ -32,7 +32,7 @@ defmodule App.Operation.AddD4HAccessKey do
   end
 
   defp find_or_insert_team(view_model) do
-    d4h_team_id = view_model.d4h_team.d4h_team_id
+    d4h_team_id = view_model.d4h_team_id
     team = Team.get_by(%{d4h_team_id: d4h_team_id})
 
     if team do

@@ -62,6 +62,24 @@ defmodule App.Adapter.D4H do
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
   end
 
+  def determine_team_id(access_key: access_key, api_host: api_host) do
+    context =
+      Req.new(
+        base_url: "https://#{api_host}/v3",
+        headers: %{"User-Agent" => "sarduty.com"},
+        auth: {:bearer, access_key || ""}
+      )
+
+    response = Req.get!(context, url: "/whoami")
+
+    if response.status == 200 do
+      whoami = D4H.WhoAmI.build(response.body)
+      {:ok, whoami.d4h_team_id}
+    else
+      {:error, "Unable to determine team ID"}
+    end
+  end
+
   def fetch_member_image(context, member_id) do
     response =
       Req.get!(context, url: "/team/members/#{member_id}/image", params: [size: "preview"])

@@ -8,7 +8,8 @@ defmodule App.ViewModel.D4HAccessKeyViewModel do
   embedded_schema do
     field :access_key, TrimmedString
     field :api_host, TrimmedString
-    field :d4h_team, :map, virtual: true
+    # populated by Validate.d4h_access_key
+    field :d4h_team_id, :integer, virtual: true
   end
 
   def validate(params) do
@@ -23,6 +24,6 @@ defmodule App.ViewModel.D4HAccessKeyViewModel do
     data
     |> cast(params, [:access_key, :api_host])
     |> validate_required([:access_key, :api_host])
-    |> Validate.d4h_access_key(:access_key, :api_host, :d4h_team)
+    |> Validate.d4h_access_key(:access_key, :api_host, :d4h_team_id)
   end
 end
