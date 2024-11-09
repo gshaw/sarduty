@@ -1,20 +1,20 @@
-defmodule App.Operation.RefreshD4HData.Members do
+defmodule App.Operation.RefreshD4HData.UpsertMembers do
   alias App.Adapter.D4H
   alias App.Model.Member
 
-  def call(d4h, team_id) do
+  def call(d4h, team) do
     d4h_members = D4H.fetch_team_members(d4h)
 
     Enum.each(d4h_members, fn d4h_member ->
-      upsert_member(team_id, d4h_member)
+      upsert_member(team, d4h_member)
     end)
 
     :ok
   end
 
-  defp upsert_member(team_id, d4h_member) do
+  defp upsert_member(team, d4h_member) do
     params = %{
-      team_id: team_id,
+      team_id: team.id,
       d4h_member_id: d4h_member.d4h_member_id,
       ref_id: d4h_member.ref_id,
       name: d4h_member.name,
@@ -26,7 +26,7 @@ defmodule App.Operation.RefreshD4HData.Members do
       left_at: d4h_member.left_at
     }
 
-    member = Member.get_by(team_id: team_id, d4h_member_id: d4h_member.d4h_member_id)
+    member = Member.get_by(team_id: team.id, d4h_member_id: d4h_member.d4h_member_id)
 
     if member do
       Member.update!(member, params)

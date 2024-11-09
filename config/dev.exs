@@ -5,6 +5,7 @@ config :sarduty, App.Repo,
   database: Path.expand("../db/sarduty_dev.db", Path.dirname(__ENV__.file)),
   pool_size: 5,
   stacktrace: true,
+  log: false,
   show_sensitive_data_on_connection_error: true
 
 # For development, we disable any cache and enable

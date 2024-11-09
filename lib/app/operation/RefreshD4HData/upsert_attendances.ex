@@ -1,20 +1,23 @@
-defmodule App.Operation.RefreshD4HData.Attendances do
+defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
 
-  def call(d4h, team_id) do
+  def call(d4h, team) when is_map(d4h) when is_map(team) do
     context = %{
       d4h: d4h,
-      team_id: team_id,
-      d4h_member_index: build_d4h_member_index(team_id),
-      d4h_activity_index: build_d4h_activity_index(team_id)
+      team_id: team.id,
+      d4h_member_index: build_d4h_member_index(team.id),
+      d4h_activity_index: build_d4h_activity_index(team.id)
     }
 
-    d4h_attendances = D4H.fetch_attendances(d4h)
-    upsert_attendances(context, d4h_attendances)
-    :ok
+    fetch_and_upsert(context, 0)
+  end
+
+  defp fetch_and_upsert(context, page) do
+    d4h_attendances = D4H.fetch_attendances(context.d4h, page)
+    upsert_attendances(context, page, d4h_attendances)
   end
 
   defp build_d4h_activity_index(team_id) do
@@ -31,10 +34,12 @@ defmodule App.Operation.RefreshD4HData.Attendances do
     |> Map.new()
   end
 
-  defp upsert_attendances(context, d4h_attendances) do
-    Enum.each(d4h_attendances, fn d4h_attendance ->
-      upsert_attendance(context, d4h_attendance)
-    end)
+  defp upsert_attendances(_context, _page, []), do: :ok
+
+  defp upsert_attendances(context, page, d4h_attendances) do
+    # IO.inspect({:attendances, :page, page, :count, Enum.count(d4h_attendances)})
+    Enum.each(d4h_attendances, &upsert_attendance(context, &1))
+    fetch_and_upsert(context, page + 1)
   end
 
   defp upsert_attendance(context, d4h_attendance) do

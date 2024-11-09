@@ -5,12 +5,24 @@ defmodule App.Operation.RefreshD4HData do
   alias App.Repo
 
   def call(current_user) do
+    team = current_user.team
     d4h = D4H.build_context_from_user(current_user)
-    save_team_logo(d4h, current_user.team)
-    RefreshD4HData.Members.call(d4h, current_user.team_id)
-    RefreshD4HData.Activities.call(d4h, current_user.team_id)
-    RefreshD4HData.Attendances.call(d4h, current_user.team_id)
-    update_team_refreshed_at(current_user.team)
+    save_team_logo(d4h, team)
+    RefreshD4HData.UpsertMembers.call(d4h, team)
+
+    d4h_tag_index = build_d4h_tag_index(d4h)
+    RefreshD4HData.UpsertActivities.call(d4h, team, d4h_tag_index, "exercises")
+    RefreshD4HData.UpsertActivities.call(d4h, team, d4h_tag_index, "events")
+    RefreshD4HData.UpsertActivities.call(d4h, team, d4h_tag_index, "incidents")
+    RefreshD4HData.UpsertAttendances.call(d4h, team)
+    update_team_refreshed_at(team)
+  end
+
+  defp build_d4h_tag_index(d4h) do
+    d4h
+    |> D4H.fetch_tags()
+    |> Enum.map(fn r -> {r.d4h_tag_id, r.title} end)
+    |> Map.new()
   end
 
   defp update_team_refreshed_at(team) do

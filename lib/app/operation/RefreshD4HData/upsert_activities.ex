@@ -1,18 +1,34 @@
-defmodule App.Operation.RefreshD4HData.Activities do
+defmodule App.Operation.RefreshD4HData.UpsertActivities do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Coordinate
 
-  def call(d4h, team_id) do
-    d4h_activities = D4H.fetch_activities(d4h)
-    upsert_activities(team_id, d4h_activities)
-    :ok
+  def call(d4h, team, d4h_tag_index, kind)
+      when is_map(d4h)
+      when is_map(team)
+      when is_map(d4h_tag_index)
+      when is_binary(kind) do
+    context = %{
+      d4h: d4h,
+      team_id: team.id,
+      d4h_tag_index: d4h_tag_index,
+      kind: kind
+    }
+
+    fetch_and_upsert(context, 0)
   end
 
-  defp upsert_activities(team_id, d4h_activities) do
-    Enum.each(d4h_activities, fn d4h_activity ->
-      upsert_activity(team_id, d4h_activity)
-    end)
+  defp fetch_and_upsert(context, page) do
+    d4h_activities = D4H.fetch_activities(context.d4h, context.d4h_tag_index, context.kind, page)
+    upsert_activities(context, page, d4h_activities)
+  end
+
+  defp upsert_activities(_context, _page, []), do: :ok
+
+  defp upsert_activities(context, page, d4h_activities) do
+    # IO.inspect({:activities, context.kind, :page, page, :count, Enum.count(d4h_activities)})
+    Enum.each(d4h_activities, &upsert_activity(context.team_id, &1))
+    fetch_and_upsert(context, page + 1)
   end
 
   defp upsert_activity(team_id, d4h_activity) do
