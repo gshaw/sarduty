@@ -192,14 +192,25 @@ defmodule App.Adapter.D4H do
     response.body["results"] |> Enum.map(&D4H.Tag.build(&1))
   end
 
-  defp update_attendance(context, attendance_id, status) do
-    context
+  defp update_attendance(v2_context, attendance_id, status) do
+    v2_context
     |> Req.put!(url: "/team/attendance/#{attendance_id}", form: [status: status])
   end
 
-  def add_attendance(context, attendance_id),
-    do: update_attendance(context, attendance_id, "attending")
+  def build_v2_context_from_user(%User{} = user) do
+    access_key = user.d4h_access_key
+    api_host = user.team.d4h_api_host
 
-  def remove_attendance(context, attendance_id),
-    do: update_attendance(context, attendance_id, "absent")
+    Req.new(
+      base_url: "https://#{api_host}/v2",
+      headers: %{"User-Agent" => "sarduty.com"},
+      auth: {:bearer, access_key || ""}
+    )
+  end
+
+  def add_attendance(v2_context, attendance_id),
+    do: update_attendance(v2_context, attendance_id, "attending")
+
+  def remove_attendance(v2_context, attendance_id),
+    do: update_attendance(v2_context, attendance_id, "absent")
 end
