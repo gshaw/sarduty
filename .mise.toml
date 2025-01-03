@@ -25,5 +25,5 @@ run = "mix test --color"
 [tasks.server]
 run = "mix phx.server"
 
-[tasks.vac]
+[tasks.vacuum]
 run = "sqlite3 db/sarduty_dev.db \"VACUUM;\""
