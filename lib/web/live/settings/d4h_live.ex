@@ -23,7 +23,15 @@ defmodule Web.Settings.D4HLive do
         <.a navigate={~p"/settings"}>← Settings</.a>
       </p>
       <h1 class="heading">D4H access key</h1>
-
+      <p>
+        <.a
+          target="_blank"
+          external={true}
+          navigate="https://help.d4h.com/article/377-obtaining-an-api-access-key"
+        >
+          How to obtain a D4H access key.
+        </.a>
+      </p>
       <%= if @team do %>
         <dl>
           <dt>Team</dt>
@@ -43,9 +51,6 @@ defmodule Web.Settings.D4HLive do
         <p :if={@confirmation_message}><%= @confirmation_message %></p>
       <% else %>
         <.form for={@form} phx-submit="save">
-          <.input field={@form[:access_key]} label="New D4H Access Key" class="font-mono text-sm">
-            Encrypted at rest using AES 256 encryption.
-          </.input>
           <.input
             field={@form[:api_host]}
             label="D4H Region"
@@ -53,6 +58,15 @@ defmodule Web.Settings.D4HLive do
             options={D4H.regions()}
             prompt="Select a region"
           />
+          <.input
+            type="textarea"
+            rows="18"
+            field={@form[:access_key]}
+            label="D4H Personal Access Token (PAT)"
+            class="font-mono text-sm"
+          >
+            Encrypted at rest using AES 256 encryption.
+          </.input>
           <.form_actions>
             <.button class="btn-success">Save access key</.button>
           </.form_actions>

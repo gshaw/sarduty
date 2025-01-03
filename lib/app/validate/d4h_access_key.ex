@@ -5,7 +5,7 @@ defmodule App.Validate.D4HAccessKey do
 
   def call(changeset, access_key_field, api_host_field, d4h_team_id_field) do
     changeset
-    |> validate_length(access_key_field, min: 5, max: 100)
+    |> validate_length(access_key_field, min: 5, max: 2000)
     |> validate_inclusion(api_host_field, Map.values(D4H.regions()))
     |> validate_d4h_api_auth(access_key_field, api_host_field, d4h_team_id_field)
   end
