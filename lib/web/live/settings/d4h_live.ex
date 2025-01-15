@@ -35,20 +35,20 @@ defmodule Web.Settings.D4HLive do
       <%= if @team do %>
         <dl>
           <dt>Team</dt>
-          <dd><%= @team.name %></dd>
+          <dd>{@team.name}</dd>
           <dt>Subdomain</dt>
-          <dd class="font-mono"><%= @team.subdomain %></dd>
+          <dd class="font-mono">{@team.subdomain}</dd>
           <dt>Region</dt>
-          <dd><%= D4H.determine_region(@team.d4h_api_host) %></dd>
+          <dd>{D4H.determine_region(@team.d4h_api_host)}</dd>
           <dt>API Host</dt>
-          <dd class="font-mono"><%= @team.d4h_api_host %></dd>
+          <dd class="font-mono">{@team.d4h_api_host}</dd>
         </dl>
 
         <p>
           <.button phx-click="verify_access_key" class="btn-success">Verify Key</.button>
           <.button phx-click="delete_access_key" class="btn-danger">Delete Key</.button>
         </p>
-        <p :if={@confirmation_message}><%= @confirmation_message %></p>
+        <p :if={@confirmation_message}>{@confirmation_message}</p>
       <% else %>
         <.form for={@form} phx-submit="save">
           <.input

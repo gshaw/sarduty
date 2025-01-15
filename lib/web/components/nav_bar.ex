@@ -38,7 +38,7 @@ defmodule Web.Components.NavBar do
           determine_color_classes(:base_2)
         ]}
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </details>
     """
@@ -61,7 +61,7 @@ defmodule Web.Components.NavBar do
         "px-2 m-auto h-12 flex items-center",
         determine_container_classes(@size)
       ]}>
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </nav>
     """
@@ -90,7 +90,7 @@ defmodule Web.Components.NavBar do
     ~H"""
     <div class="flex-grow">
       <div class="flex align-items">
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </div>
     """
@@ -99,7 +99,7 @@ defmodule Web.Components.NavBar do
   def navbar_desktop_links(assigns) do
     ~H"""
     <span class="ml-4 border-l border-base-200 hidden md:inline-block">
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </span>
     """
   end
@@ -119,7 +119,7 @@ defmodule Web.Components.NavBar do
           determine_color_classes(@color)
         ]}
       >
-        <%= render_slot(@menu_label) %>
+        {render_slot(@menu_label)}
       </summary>
       <div
         role="menu"
@@ -128,7 +128,7 @@ defmodule Web.Components.NavBar do
           determine_color_classes(@color)
         ]}
       >
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
     </details>
     """

@@ -38,14 +38,14 @@ defmodule Web.ActivityMileageLive do
       <:item label="Mileage Report" />
     </.breadcrumbs>
 
-    <h1 class="title mb-p"><%= @activity.title %></h1>
+    <h1 class="title mb-p">{@activity.title}</h1>
     <%= if @activity.coordinate do %>
       <p>
         <div>
-          Activity Location: <%= App.Model.Coordinate.to_string(@activity.coordinate, 5) %>
+          Activity Location: {App.Model.Coordinate.to_string(@activity.coordinate, 5)}
         </div>
         <div>
-          Yard Location: <%= App.Model.Coordinate.to_string(@team.coordinate, 5) %>
+          Yard Location: {App.Model.Coordinate.to_string(@team.coordinate, 5)}
         </div>
       </p>
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
@@ -63,7 +63,7 @@ defmodule Web.ActivityMileageLive do
         <:failed :let={_reason}>There was an error loading the mileage report</:failed>
 
         <p>
-          Yard to Activity Round Trip: <%= report.yard_to_activity_km %> km <%= report.yard_to_activity_hours %> hours
+          Yard to Activity Round Trip: {report.yard_to_activity_km} km {report.yard_to_activity_hours} hours
         </p>
 
         <.table id="mileage_report" rows={report.attendees} class="table-striped">
@@ -73,14 +73,14 @@ defmodule Web.ActivityMileageLive do
             <th colspan="2">To Yard</th>
             <th colspan="2"></th>
           </:header_row>
-          <:col :let={record} label="Name"><%= record.name %></:col>
-          <:col :let={record} class="text-right" label="KMs"><%= record.activity_km %></:col>
-          <:col :let={record} class="text-right" label="Hours"><%= record.activity_hours %></:col>
-          <:col :let={record} class="text-right" label="KMs"><%= record.yard_km %></:col>
-          <:col :let={record} class="text-right" label="Hours"><%= record.yard_hours %></:col>
-          <:col :let={record} label="Home Address"><%= record.address %></:col>
+          <:col :let={record} label="Name">{record.name}</:col>
+          <:col :let={record} class="text-right" label="KMs">{record.activity_km}</:col>
+          <:col :let={record} class="text-right" label="Hours">{record.activity_hours}</:col>
+          <:col :let={record} class="text-right" label="KMs">{record.yard_km}</:col>
+          <:col :let={record} class="text-right" label="Hours">{record.yard_hours}</:col>
+          <:col :let={record} label="Home Address">{record.address}</:col>
           <:col :let={record} label="Coordinate">
-            <%= Coordinate.to_string(record.coordinate, 3) %>
+            {Coordinate.to_string(record.coordinate, 3)}
           </:col>
         </.table>
         <p class="mt-p">

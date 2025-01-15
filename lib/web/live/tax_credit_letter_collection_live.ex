@@ -33,7 +33,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <:item label={@page_title} />
     </.breadcrumbs>
 
-    <h1 class="title mb-p"><%= @page_title %></h1>
+    <h1 class="title mb-p">{@page_title}</h1>
     <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
       <.input
         label="Year"
@@ -55,7 +55,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         options={TaxCreditLetterFilterViewModel.cutoffs()}
       />
       <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
-      <span class="filter-form-count"><%= Enum.count(@records) %> members</span>
+      <span class="filter-form-count">{Enum.count(@records)} members</span>
     </.form>
 
     <.table
@@ -71,28 +71,28 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <th></th>
       </:header_row>
       <:col :let={record} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>
-        <%= record.member.ref_id %>
+        {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
         <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.member.id}"}>
-          <%= record.member.name %>
+          {record.member.name}
         </.a>
       </:col>
       <:col :let={record} label="Email">
-        <%= record.member.email %>
+        {record.member.email}
       </:col>
 
       <:col :let={record} label="Primary" class="w-px" align="right" sorts={[{"↓", "primary"}]}>
         <span class="label md:hidden">Primary</span>
-        <%= record.primary_hours %>
+        {record.primary_hours}
       </:col>
       <:col :let={record} label="Secondary" class="w-px" align="right" sorts={[{"↓", "secondary"}]}>
         <span class="label md:hidden">Secondary</span>
-        <%= record.secondary_hours %>
+        {record.secondary_hours}
       </:col>
       <:col :let={record} label="Total" class="w-px" align="right" sorts={[{"↓", "total"}]}>
         <span class="label md:hidden">Total</span>
-        <%= record.total_hours %>
+        {record.total_hours}
       </:col>
       <:col :let={record} label="Letter">
         <.record_actions record={record} current_team={@current_team} />
@@ -107,7 +107,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <.a navigate={
         ~p"/#{@current_team.subdomain}/tax-credit-letters/#{@record.tax_credit_letter_id}"
       }>
-        <span class="font-mono text-sm"><%= @record.tax_credit_letter_ref_id %></span>
+        <span class="font-mono text-sm">{@record.tax_credit_letter_ref_id}</span>
       </.a>
     <% else %>
       <button phx-click="create" value={@record.member.id} class="btn btn-success btn-sm">

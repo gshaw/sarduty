@@ -20,7 +20,7 @@ defmodule Web.Components.Pagination do
         <span class="text-disabled">← Previous Page</span>
       <% end %>
       <span>
-        Page <%= @paginated.page_number %> of <%= @paginated.total_pages %>
+        Page {@paginated.page_number} of {@paginated.total_pages}
       </span>
       <%= if @paginated.page_number < @paginated.total_pages do %>
         <.a navigate={@path_fn.(page: @paginated.page_number + 1)}>Next Page →</.a>

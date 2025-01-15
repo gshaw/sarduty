@@ -116,10 +116,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, activity: "all"), do: q
   defp scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
 
-  defp scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
+  # defp scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
 
-  defp scope(q, year: year),
-    do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
+  # defp scope(q, year: year),
+  #   do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
 
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)

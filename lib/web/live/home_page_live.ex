@@ -9,8 +9,7 @@ defmodule Web.HomePageLive do
     ~H"""
     <div class="mb-8">
       <h1 class="title-hero">
-        Welcome to
-        <span class="text-danger-1">SAR<%= Service.StringHelpers.no_break_space() %>Duty</span>
+        Welcome to <span class="text-danger-1">SAR{Service.StringHelpers.no_break_space()}Duty</span>
       </h1>
       <p class="lead">
         Helpful tools for search and rescue managers.
@@ -19,7 +18,7 @@ defmodule Web.HomePageLive do
     <%= if @current_team do %>
       <ul class="heading action-list">
         <li>
-          <.a navigate={~p"/#{@current_team.subdomain}"}><%= @current_team.name %></.a>
+          <.a navigate={~p"/#{@current_team.subdomain}"}>{@current_team.name}</.a>
         </li>
       </ul>
     <% end %>

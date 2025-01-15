@@ -80,7 +80,7 @@ defmodule Web.Components.Core do
                 </button>
               </div>
               <div id={"#{@id}-content"}>
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
           </div>
@@ -123,9 +123,9 @@ defmodule Web.Components.Core do
       {@rest}
     >
       <div :if={@title} class="text-lg font-medium">
-        <%= @title %>
+        {@title}
       </div>
-      <div class="font-normal mr-6"><%= msg %></div>
+      <div class="font-normal mr-6">{msg}</div>
       <button
         type="button"
         class="group absolute top-0 right-0 px-4 py-2"
@@ -186,11 +186,11 @@ defmodule Web.Components.Core do
     ~H"""
     <div class={["form-actions flex flex-wrap", @class]}>
       <div class="flex gap-hspacer flex-grow">
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </div>
       <%= if @trailing do %>
         <div class="flex gap-hspacer">
-          <%= render_slot(@trailing) %>
+          {render_slot(@trailing)}
         </div>
       <% end %>
     </div>
@@ -224,9 +224,9 @@ defmodule Web.Components.Core do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
       <div class="">
-        <%= render_slot(@inner_block, f) %>
+        {render_slot(@inner_block, f)}
         <div :for={action <- @actions} class="">
-          <%= render_slot(action, f) %>
+          {render_slot(action, f)}
         </div>
       </div>
     </.form>
@@ -257,7 +257,7 @@ defmodule Web.Components.Core do
       ]}
       {@rest}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </button>
     """
   end
@@ -342,9 +342,9 @@ defmodule Web.Components.Core do
         {@rest}
       />
       <div :if={@label} class="ml-2">
-        <.label for={@id}><%= @label %></.label>
-        <.error :for={message <- @errors}><%= message %></.error>
-        <.hint :if={@inner_block != []}><%= render_slot(@inner_block) %></.hint>
+        <.label for={@id}>{@label}</.label>
+        <.error :for={message <- @errors}>{message}</.error>
+        <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       </div>
     </div>
     """
@@ -353,7 +353,7 @@ defmodule Web.Components.Core do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div class="mb-p" phx-feedback-for={@name}>
-      <.label :if={@label != nil} for={@id}><%= @label %></.label>
+      <.label :if={@label != nil} for={@id}>{@label}</.label>
       <select
         id={@id}
         name={@name}
@@ -366,11 +366,11 @@ defmodule Web.Components.Core do
         multiple={@multiple}
         {@rest}
       >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+        <option :if={@prompt} value="">{@prompt}</option>
+        {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-      <.hint :if={@inner_block != []}><%= render_slot(@inner_block) %></.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
@@ -378,7 +378,7 @@ defmodule Web.Components.Core do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div class="mb-p" phx-feedback-for={@name}>
-      <.label :if={@label != nil} for={@id}><%= @label %></.label>
+      <.label :if={@label != nil} for={@id}>{@label}</.label>
       <textarea
         id={@id}
         name={@name}
@@ -390,8 +390,8 @@ defmodule Web.Components.Core do
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-      <.hint :if={@inner_block}><%= render_slot(@inner_block) %></.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <.hint :if={@inner_block}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
@@ -400,7 +400,7 @@ defmodule Web.Components.Core do
   def input(assigns) do
     ~H"""
     <div class="mb-p" phx-feedback-for={@name}>
-      <.label :if={@label != nil} for={@id}><%= @label %></.label>
+      <.label :if={@label != nil} for={@id}>{@label}</.label>
       <input
         type={@type}
         name={@name}
@@ -414,8 +414,8 @@ defmodule Web.Components.Core do
         ]}
         {@rest}
       />
-      <.error :for={msg <- @errors}><%= msg %></.error>
-      <.hint :if={@inner_block != []}><%= render_slot(@inner_block) %></.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
@@ -425,7 +425,7 @@ defmodule Web.Components.Core do
   def hint(assigns) do
     ~H"""
     <div class="block my-1 font-normal text-sm text-secondary-1">
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -439,7 +439,7 @@ defmodule Web.Components.Core do
   def label(assigns) do
     ~H"""
     <label for={@for} class="block mb-1 label">
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </label>
     """
   end
@@ -452,7 +452,7 @@ defmodule Web.Components.Core do
   def error(assigns) do
     ~H"""
     <div class="my-1 font-normal text-sm text-danger-1 phx-no-feedback:hidden">
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -471,13 +471,13 @@ defmodule Web.Components.Core do
     <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
       <div>
         <h1 class="text-lg font-semibold leading-8 text-base-content">
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </h1>
         <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-secondary-1">
-          <%= render_slot(@subtitle) %>
+          {render_slot(@subtitle)}
         </p>
       </div>
-      <div class="flex-none"><%= render_slot(@actions) %></div>
+      <div class="flex-none">{render_slot(@actions)}</div>
     </header>
     """
   end
@@ -519,7 +519,7 @@ defmodule Web.Components.Core do
       <span class="mr-2">
         <.spinner_icon class={"size-#{@size}"} />
       </span>
-      <span :if={@inner_block}><%= render_slot(@inner_block) %></span>
+      <span :if={@inner_block}>{render_slot(@inner_block)}</span>
     </span>
     """
   end

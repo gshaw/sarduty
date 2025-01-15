@@ -11,14 +11,14 @@ defmodule Web.Layouts do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <.live_title suffix=" · SAR Duty">
-          <%= assigns[:page_title] || "Untitled Page" %>
+          {assigns[:page_title] || "Untitled Page"}
         </.live_title>
         <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
         <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
         </script>
       </head>
       <body class="bg-base-1 text-base-content">
-        <%= @inner_content %>
+        {@inner_content}
       </body>
     </html>
     """
@@ -30,7 +30,7 @@ defmodule Web.Layouts do
     <main role="main" class="lg:container mx-auto pt-16 px-2 mb-p2">
       <div class="mx-auto max-w-2xl">
         <.flash_group flash={@flash} />
-        <%= @inner_content %>
+        {@inner_content}
       </div>
     </main>
     """
@@ -42,7 +42,7 @@ defmodule Web.Layouts do
     <main role="main" class="lg:container mx-auto pt-16 px-2 mb-p2">
       <div class="mx-auto max-w-2xl">
         <.flash_group flash={@flash} />
-        <%= @inner_content %>
+        {@inner_content}
       </div>
     </main>
     """
@@ -54,7 +54,7 @@ defmodule Web.Layouts do
     <main role="main" class="max-w-narrow m-auto px-2 pt-16 mb-p2">
       <div class="mx-auto max-w-2xl">
         <.flash_group flash={@flash} />
-        <%= @inner_content %>
+        {@inner_content}
       </div>
     </main>
     """

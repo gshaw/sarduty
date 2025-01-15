@@ -39,7 +39,7 @@ defmodule Web.ActivityAttendanceLive do
       />
       <:item label="Attendance" />
     </.breadcrumbs>
-    <h1 class="title"><%= @activity.title %></h1>
+    <h1 class="title">{@activity.title}</h1>
 
     <%= if @activity.is_published do %>
       <p>
@@ -91,9 +91,9 @@ defmodule Web.ActivityAttendanceLive do
                 <% end %>
               <% end %>
             </:col>
-            <:col :let={{_, _, member}} label="Name"><%= member.name %></:col>
-            <:col :let={{_, _, member}} label="Email"><%= member.email %></:col>
-            <:col :let={{_, _, member}} label="Phone"><%= member.phone %></:col>
+            <:col :let={{_, _, member}} label="Name">{member.name}</:col>
+            <:col :let={{_, _, member}} label="Email">{member.email}</:col>
+            <:col :let={{_, _, member}} label="Phone">{member.phone}</:col>
           </.table>
           <.form_actions class="mt-4">
             <.button disabled={disable_perform_recommendations?(@recommendations)} class="btn-success">

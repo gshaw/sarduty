@@ -51,7 +51,7 @@ defmodule Web.ActivityCollectionLive do
       <.breadcrumbs team={@current_team} />
     <% end %>
 
-    <h1 class="title mb-p"><%= @page_title %></h1>
+    <h1 class="title mb-p">{@page_title}</h1>
 
     <.activity_filter_table
       form={@form}

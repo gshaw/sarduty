@@ -9,7 +9,7 @@ defmodule Web.Components.Markdown do
 
     ~H"""
     <div class="prose">
-      <%= @markdown_html %>
+      {@markdown_html}
     </div>
     """
   end

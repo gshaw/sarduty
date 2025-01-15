@@ -14,16 +14,16 @@ defmodule Web.Components.AttendanceTable do
       class="table-striped"
     >
       <:col :let={record} :if={@status == "all"} label="">
-        <span class=""><%= attendance_status_emoji(record.status) %></span>
+        <span class="">{attendance_status_emoji(record.status)}</span>
       </:col>
       <:col :let={record} label="Member">
-        <%= record.member.name %>
+        {record.member.name}
       </:col>
       <:col :let={record} label="Email">
-        <%= record.member.email %>
+        {record.member.email}
       </:col>
     </.table>
-    <p class="my-1"><%= filter_attendance(@attendance_records, @status) |> Enum.count() %> members</p>
+    <p class="my-1">{filter_attendance(@attendance_records, @status) |> Enum.count()} members</p>
     """
   end
 

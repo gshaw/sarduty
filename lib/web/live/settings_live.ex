@@ -26,12 +26,12 @@ defmodule Web.SettingsLive do
       <h1 class="heading mb-4">Settings</h1>
       <nav class="space-y-2" aria-label="Sidebar">
         <.navlist_item path={~p"/settings/email"} icon="hero-at-symbol" title="Change email">
-          <%= @current_user.email %>
+          {@current_user.email}
         </.navlist_item>
         <.navlist_item path={~p"/settings/password"} icon="hero-lock-closed" title="Change password" />
         <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="D4H access key">
           <div :if={@current_user.team} class="font-mono">
-            <%= @current_user.team.subdomain %>
+            {@current_user.team.subdomain}
           </div>
         </.navlist_item>
         <.navlist_item
@@ -40,7 +40,7 @@ defmodule Web.SettingsLive do
           icon="hero-users"
           title="Team settings"
         >
-          <%= if @current_user.team, do: @current_user.team.name %>
+          {if @current_user.team, do: @current_user.team.name}
         </.navlist_item>
       </nav>
     </div>
@@ -68,9 +68,9 @@ defmodule Web.SettingsLive do
         <.icon name={@icon} class="h-6 w-6" />
       </span>
       <div>
-        <div><%= @title %></div>
+        <div>{@title}</div>
         <div :if={@inner_block} class="truncate text-sm text-secondary-1">
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </div>
       </div>
     </.a>

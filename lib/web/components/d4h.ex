@@ -5,7 +5,7 @@ defmodule Web.Components.D4H do
 
   def activity_title(assigns) do
     ~H"""
-    <span>#<%= @activity.ref_id %> <%= @activity.title %></span>
+    <span>#{@activity.ref_id} {@activity.title}</span>
     """
   end
 
@@ -16,7 +16,7 @@ defmodule Web.Components.D4H do
     ~H"""
     <div {@rest}>
       <%= for tag <- @activity.tags do %>
-        <span class="badge"><%= tag %></span>
+        <span class="badge">{tag}</span>
       <% end %>
     </div>
     """
@@ -27,10 +27,10 @@ defmodule Web.Components.D4H do
   def activity_badges(assigns) do
     ~H"""
     <span title="Activity kind" class={"badge badge-#{@activity.activity_kind}"}>
-      <%= @activity.activity_kind %>
+      {@activity.activity_kind}
     </span>
     <span :if={@activity.tracking_number} title="Tracking number" class="badge">
-      <%= @activity.tracking_number %>
+      {@activity.tracking_number}
     </span>
     <span :if={@activity.is_published} class="badge">published</span>
     """

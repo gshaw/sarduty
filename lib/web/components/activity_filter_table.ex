@@ -50,7 +50,7 @@ defmodule Web.Components.ActivityFilterTable do
         <.a class="filter-form-reset" navigate={@path_fn.(:all)}>All</.a>
       </span>
 
-      <span class="filter-form-count"><%= @paginated.total_entries %> activities</span>
+      <span class="filter-form-count">{@paginated.total_entries} activities</span>
     </.form>
 
     <.table
@@ -65,7 +65,7 @@ defmodule Web.Components.ActivityFilterTable do
           <.activity_title activity={record} />
         </.a>
         <div class="hint">
-          <%= activity_summary(record) %>
+          {activity_summary(record)}
         </div>
         <.activity_tags activity={record} />
       </:col>
@@ -76,7 +76,7 @@ defmodule Web.Components.ActivityFilterTable do
       <:col :let={record} label="Date" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
         <span class="label md:hidden">Date</span>
         <span class="whitespace-nowrap">
-          <%= Service.Format.short_datetime(record.started_at, @team.timezone) %>
+          {Service.Format.short_datetime(record.started_at, @team.timezone)}
         </span>
       </:col>
       <:col
@@ -87,7 +87,7 @@ defmodule Web.Components.ActivityFilterTable do
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
         <span class="label md:hidden">Hours</span>
-        <%= Service.Convert.duration_to_hours(record.started_at, record.finished_at) %>
+        {Service.Convert.duration_to_hours(record.started_at, record.finished_at)}
       </:col>
     </.table>
 

@@ -104,9 +104,9 @@ defmodule Web.StyleGuideLive do
           </th>
         </:header_row>
         <:col :let={_record} label=""><.input type="checkbox" name="fake" /></:col>
-        <:col :let={user} label="Name"><%= user.name %></:col>
+        <:col :let={user} label="Name">{user.name}</:col>
         <:col :let={user} label="Age in years" class="text-right">
-          <%= user.age %>
+          {user.age}
         </:col>
       </.table>
     </.style_group>
@@ -125,7 +125,7 @@ defmodule Web.StyleGuideLive do
       </.form_actions>
 
       <div class="py-p">
-        <p class="font-mono"><%= inspect(@random_numbers) %></p>
+        <p class="font-mono">{inspect(@random_numbers)}</p>
         <p>
           <button phx-click="update-random-numbers" class="btn btn-warning">
             Refresh Random Numbers
@@ -191,8 +191,8 @@ defmodule Web.StyleGuideLive do
   def style_group(assigns) do
     ~H"""
     <section class={["shadow p-4 space-y-4 mb-8 rounded", @class]}>
-      <h2 class="heading font-mono"><%= @title %></h2>
-      <%= render_slot(@inner_block) %>
+      <h2 class="heading font-mono">{@title}</h2>
+      {render_slot(@inner_block)}
     </section>
     """
   end
@@ -207,7 +207,7 @@ defmodule Web.StyleGuideLive do
       @bg,
       @fg
     ]}>
-      <%= @bg %>
+      {@bg}
     </div>
     """
   end

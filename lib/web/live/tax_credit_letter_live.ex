@@ -30,7 +30,7 @@ defmodule Web.TaxCreditLetterLive do
       <:item label={@letter.ref_id} />
     </.breadcrumbs>
 
-    <h1 class="title"><%= @page_title %></h1>
+    <h1 class="title">{@page_title}</h1>
     <.form_actions>
       <a
         href={~p"/#{@current_team.subdomain}/tax-credit-letters/#{@letter.id}/pdf"}
@@ -50,10 +50,10 @@ defmodule Web.TaxCreditLetterLive do
         <dl>
           <dt>Member</dt>
           <dd>
-            <%= @letter.member.name %><br /><%= @letter.member.email %>
+            {@letter.member.name}<br />{@letter.member.email}
           </dd>
           <dt>Created</dt>
-          <dd><%= Service.Format.short_datetime(@letter.inserted_at, @current_team.timezone) %></dd>
+          <dd>{Service.Format.short_datetime(@letter.inserted_at, @current_team.timezone)}</dd>
         </dl>
       </aside>
       <main class="content-2/3">

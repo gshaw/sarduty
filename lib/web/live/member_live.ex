@@ -27,7 +27,7 @@ defmodule Web.MemberLive do
       <:item label={"##{@member.ref_id}"} />
     </.breadcrumbs>
 
-    <h1 class="title"><%= @member.name %></h1>
+    <h1 class="title">{@member.name}</h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content member={@member} />
@@ -62,15 +62,15 @@ defmodule Web.MemberLive do
     ~H"""
     <dl>
       <dt>Role</dt>
-      <dd><%= @member.position %></dd>
+      <dd>{@member.position}</dd>
       <dt>Email</dt>
-      <dd><%= @member.email %></dd>
+      <dd>{@member.email}</dd>
       <dt>Phone</dt>
-      <dd><%= @member.phone %></dd>
+      <dd>{@member.phone}</dd>
       <dt>Address</dt>
-      <dd><%= @member.address %></dd>
+      <dd>{@member.address}</dd>
       <dt>Joined</dt>
-      <dd><%= Service.Format.long_date(@member.joined_at, @member.team.timezone) %></dd>
+      <dd>{Service.Format.long_date(@member.joined_at, @member.team.timezone)}</dd>
     </dl>
     """
   end

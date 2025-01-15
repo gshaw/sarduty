@@ -30,7 +30,7 @@ defmodule Web.Components.A do
       |> assign(:link_class, determine_link_class(assigns))
 
     ~H"""
-    <.link class={@link_class} {@rest}><%= render_slot(@inner_block) %></.link>
+    <.link class={@link_class} {@rest}>{render_slot(@inner_block)}</.link>
     """
   end
 

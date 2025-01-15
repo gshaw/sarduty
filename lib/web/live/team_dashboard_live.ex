@@ -20,7 +20,7 @@ defmodule Web.TeamDashboardLive do
   def render(assigns) do
     ~H"""
     <h1 class="title-hero mb-p flex items-center justify-between">
-      <%= @current_team.name %>
+      {@current_team.name}
       <img src={~p"/#{@current_team.subdomain}/image"} class="h-32" alt="Team logo" />
     </h1>
     <div class="content-wrapper">
@@ -97,14 +97,14 @@ defmodule Web.TeamDashboardLive do
 
         <dt>Last Refreshed</dt>
         <dd>
-          <%= Service.Format.short_datetime(view_data.refreshed_at, @team.timezone) %>
+          {Service.Format.short_datetime(view_data.refreshed_at, @team.timezone)}
         </dd>
         <dt>Members</dt>
-        <dd><%= view_data.member_count %></dd>
+        <dd>{view_data.member_count}</dd>
         <dt>Activities</dt>
-        <dd><%= view_data.activity_count %></dd>
+        <dd>{view_data.activity_count}</dd>
         <dt>Attendances</dt>
-        <dd><%= view_data.attendance_count %></dd>
+        <dd>{view_data.attendance_count}</dd>
       </.async_result>
     </dl>
     """

@@ -46,7 +46,7 @@ defmodule Web.Components.Table do
     <table class={["table", @class]}>
       <thead>
         <tr :if={@header_row != []} class="table-header-row">
-          <%= render_slot(@header_row) %>
+          {render_slot(@header_row)}
         </tr>
         <tr>
           <.table_header
@@ -69,7 +69,7 @@ defmodule Web.Components.Table do
               if(Map.get(col, :align) == "right", do: "md:text-right", else: nil)
             ]}
           >
-            <%= render_slot(col, @row_item.(row)) %>
+            {render_slot(col, @row_item.(row))}
           </td>
         </tr>
       </tbody>
@@ -81,7 +81,7 @@ defmodule Web.Components.Table do
     ~H"""
     <th class={[@class, if(@align == "right", do: "md:text-right", else: nil)]}>
       <%= if @sorts == nil do %>
-        <%= @label %>
+        {@label}
       <% else %>
         <%= case Enum.find(@sorts, fn {_k, v} -> v == @sort end) do %>
           <% nil -> %>
@@ -117,9 +117,9 @@ defmodule Web.Components.Table do
   defp sort_header_content(assigns) do
     ~H"""
     <%= if @align == "right" do %>
-      <span class={@suffix_class}><%= @suffix %></span><%= StringHelpers.no_break_space() %><%= @label %>
+      <span class={@suffix_class}>{@suffix}</span>{StringHelpers.no_break_space()}{@label}
     <% else %>
-      <%= @label %><%= StringHelpers.no_break_space() %><span class={@suffix_class}><%= @suffix %></span>
+      {@label}{StringHelpers.no_break_space()}<span class={@suffix_class}><%= @suffix %></span>
     <% end %>
     """
   end

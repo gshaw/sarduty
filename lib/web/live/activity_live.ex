@@ -37,7 +37,7 @@ defmodule Web.ActivityLive do
       <:item label={"##{@activity.ref_id}"} />
     </.breadcrumbs>
 
-    <h1 class="title"><%= @activity.title %></h1>
+    <h1 class="title">{@activity.title}</h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content activity={@activity} />
@@ -57,11 +57,11 @@ defmodule Web.ActivityLive do
 
       <dt>Date</dt>
       <dd>
-        <%= Service.Format.medium_datetime(@activity.started_at, @activity.team.timezone) %>
+        {Service.Format.medium_datetime(@activity.started_at, @activity.team.timezone)}
       </dd>
       <dt>Duration</dt>
       <dd>
-        <%= Service.Format.long_duration(@activity.started_at, @activity.finished_at) %>
+        {Service.Format.long_duration(@activity.started_at, @activity.finished_at)}
       </dd>
 
       <dt>Actions</dt>
@@ -96,10 +96,10 @@ defmodule Web.ActivityLive do
       </p>
       <div :if={@activity.address || @activity.coordinate}>
         <dt>Address</dt>
-        <dd><%= @activity.address %></dd>
+        <dd>{@activity.address}</dd>
         <dt>Coordinate</dt>
         <dd>
-          <%= @activity.coordinate %>
+          {@activity.coordinate}
         </dd>
       </div>
 
@@ -112,21 +112,21 @@ defmodule Web.ActivityLive do
       <dt>
         Attendance
         <span class="hint">
-          · <%= Enum.count(@members) %> members
+          · {Enum.count(@members)} members
         </span>
       </dt>
       <dd>
         <.table id="member_collection" rows={@members} class="mt-p05 table-striped w-fit">
           <:col :let={record} label="ID" class="w-px" align="right">
-            <%= record.ref_id %>
+            {record.ref_id}
           </:col>
           <:col :let={record} label="Name">
             <.a navigate={~p"/#{@activity.team.subdomain}/members/#{record.id}"}>
-              <%= record.name %>
+              {record.name}
             </.a>
           </:col>
           <:col :let={record} label="Role">
-            <%= record.position %>
+            {record.position}
           </:col>
         </.table>
       </dd>

@@ -45,7 +45,7 @@ defmodule Web.ErrorHTML do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <.live_title suffix=" · SAR Duty">
-          <%= assigns[:page_title] || "Untitled Page" %>
+          {assigns[:page_title] || "Untitled Page"}
         </.live_title>
         <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
         <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
@@ -61,11 +61,11 @@ defmodule Web.ErrorHTML do
         <main role="main" class="max-w-narrow m-auto px-2 pt-16 mb-p2">
           <div class="mx-auto max-w-2xl">
             <h1 class="my-p2">
-              <div class="title-hero mb-0"><%= @code %></div>
+              <div class="title-hero mb-0">{@code}</div>
               <div class="title text-danger-1">That&rsquo;s an error</div>
             </h1>
-            <p class="heading"><%= @description %></p>
-            <p class="mb-p2"><%= @help_text %></p>
+            <p class="heading">{@description}</p>
+            <p class="mb-p2">{@help_text}</p>
             <p>
               <a href="/" class="link">
                 Home Page
