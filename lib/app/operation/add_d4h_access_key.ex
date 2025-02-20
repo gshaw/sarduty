@@ -38,17 +38,29 @@ defmodule App.Operation.AddD4HAccessKey do
     if team do
       team
     else
-      {lat, lng} = view_model.d4h_team.coordinate
+      # Fetch team details from D4H
+      d4h =
+        D4H.build_context(
+          access_key: view_model.access_key,
+          api_host: view_model.api_host,
+          d4h_team_id: d4h_team_id
+        )
+
+      {:ok, d4h_team} = D4H.fetch_team(d4h)
+
+      # TODO: add better error handling
+
+      {lat, lng} = d4h_team.coordinate
 
       Team.insert!(%{
-        subdomain: view_model.d4h_team.subdomain,
+        subdomain: d4h_team.subdomain,
         d4h_team_id: d4h_team_id,
         d4h_api_host: view_model.api_host,
-        name: String.slice(view_model.d4h_team.name, 0, Validate.Name.max_length()),
+        name: String.slice(d4h_team.name, 0, Validate.Name.max_length()),
         mailing_address: "",
         lat: lat,
         lng: lng,
-        timezone: view_model.d4h_team.timezone
+        timezone: d4h_team.timezone
       })
     end
   end
