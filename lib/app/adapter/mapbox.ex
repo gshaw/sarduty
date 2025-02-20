@@ -23,13 +23,18 @@ defmodule App.Adapter.Mapbox do
     token = context.options.params[:access_token]
 
     coordinate = Coordinate.build(coordinate)
-    mapbox_coordinate = Coordinate.build_mapbox(coordinate)
-    zoom = "10"
-    size = "640x480"
-    pin_color = "ff2600"
 
-    # https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff2600(-122.7267,49.1916)/-122.7267,49.1916,10,0/480x320@2x?access_token=pk.eyJ1
-    "#{base_url}styles/v1/mapbox/streets-v12/static/pin-s+#{pin_color}(#{mapbox_coordinate})/#{mapbox_coordinate},#{zoom},0/#{size}@2x?access_token=#{token}"
+    if coordinate == {0.0, 0.0} do
+      nil
+    else
+      mapbox_coordinate = Coordinate.build_mapbox(coordinate)
+      zoom = "10"
+      size = "640x480"
+      pin_color = "ff2600"
+
+      # https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff2600(-122.7267,49.1916)/-122.7267,49.1916,10,0/480x320@2x?access_token=pk.eyJ1
+      "#{base_url}styles/v1/mapbox/streets-v12/static/pin-s+#{pin_color}(#{mapbox_coordinate})/#{mapbox_coordinate},#{zoom},0/#{size}@2x?access_token=#{token}"
+    end
   end
 
   def fetch_coordinate(context, address), do: fetch_coordinate(context, address, nil)
