@@ -164,15 +164,14 @@ defmodule Web.ActivityAttendanceLive do
       |> Enum.filter(fn {_, id, _} -> id != nil && Enum.member?(attendance_ids, id) end)
 
     d4h = D4H.build_context_from_user(socket.assigns.current_user)
-    v2_context = D4H.build_v2_context_from_user(socket.assigns.current_user)
 
     for {op, attendance_id, _member} <- recommendations do
       case op do
         :add ->
-          D4H.add_attendance(v2_context, attendance_id)
+          D4H.add_attendance(d4h, attendance_id)
 
         :remove ->
-          D4H.remove_attendance(v2_context, attendance_id)
+          D4H.remove_attendance(d4h, attendance_id)
 
         _ ->
           nil
