@@ -45,7 +45,7 @@ defmodule App.Adapter.Mapbox do
 
   def fetch_coordinate(context, address, proximity) do
     address =
-      address
+      (address || "")
       |> String.replace("#", "%23")
       |> String.replace("\n", " ")
       |> String.replace("\r", " ")
@@ -67,7 +67,7 @@ defmodule App.Adapter.Mapbox do
         _ in MatchError -> {:error, "unknown", response}
       end
     else
-      {:error, "status:#{response.status}", response}
+      {:error, "Unknown (#{response.status})", response}
     end
   end
 
