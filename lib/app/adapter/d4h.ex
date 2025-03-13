@@ -82,7 +82,7 @@ defmodule App.Adapter.D4H do
 
   def fetch_member_image(context, member_id) do
     response =
-      Req.get!(context, url: "/team/members/#{member_id}/image", params: [size: "preview"])
+      Req.get!(context, url: "/members/#{member_id}/image", params: [size: "PREVIEW"])
 
     if response.status == 200 do
       {:ok, response.body, "member-#{member_id}.png"}
