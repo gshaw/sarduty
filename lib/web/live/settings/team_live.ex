@@ -40,9 +40,14 @@ defmodule Web.Settings.TeamLive do
           type="textarea"
           class="h-[10rem]"
         />
-        <.input field={@form[:authorized_by_name]} label="Authorized by name">
-          Used for tax credit letters, e.g., Jay Doe, President<br />
-          If blank, the team name will be used.
+        <.input
+          field={@form[:authorized_by_name]}
+          label="Tax letters authorized by"
+          type="textarea"
+          class="h-[10rem]"
+        >
+          Should include full name, title, team address, and phone number of the team president or other
+          individual with a similar role from the organization. Used by CRA during tax audits.
         </.input>
         <.form_actions>
           <.button class="btn-success">Save</.button>

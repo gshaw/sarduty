@@ -49,6 +49,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
 
 
+
     #{team.authorized_by_name || team.name}
 
     Reference: #{ref_id}

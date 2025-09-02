@@ -47,7 +47,7 @@ defmodule App.Model.Team do
     ])
     |> Validate.name(:name)
     |> Validate.address(:mailing_address)
-    |> Validate.name(:authorized_by_name)
+    |> validate_length(:authorized_by_name, max: 250)
   end
 
   def get_all do
