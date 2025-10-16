@@ -37,7 +37,7 @@ defmodule App.Adapter.D4H.Parse do
   def team_id(%{"resourceType" => "Team", "id" => id}), do: id
   def team_id(%{}), do: nil
 
-  def coordinate(%{"coordinates" => [lat, lng]}) do
+  def coordinate(%{"coordinates" => [lng, lat]}) do
     Coordinate.build(lat, lng)
   end
 
