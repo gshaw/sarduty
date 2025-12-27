@@ -4,12 +4,13 @@ defmodule App.MixProject do
   def project do
     [
       app: :sarduty,
-      version: "0.1.0",
-      elixir: "~> 1.14",
+      version: "0.2.0",
+      elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -36,28 +37,28 @@ defmodule App.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:cloak, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dns_cluster, "~> 0.1.1"},
+      {:dns_cluster, "~> 0.2"},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.12"},
       {:ecto_sqlite3, "~> 0.17"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0"},
-      {:gettext, "~> 0.20"},
+      {:gettext, "~> 1.0"},
       {:gen_smtp, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
-      {:phoenix_live_dashboard, "~> 0.8.2"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.0.2"},
-      {:phoenix, "~> 1.7.10"},
+      {:phoenix_live_dashboard, "~> 0.8"},
+      {:phoenix_live_reload, "~> 1.6", only: :dev},
+      {:phoenix_live_view, "~> 1.1"},
+      {:phoenix, "~> 1.8"},
       # {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.5"},
       {:scrivener_ecto, "~> 3.1"},
       {:swoosh, "~> 1.17"},
-      {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.4.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tzdata, "~> 1.1"}

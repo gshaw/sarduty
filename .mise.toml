@@ -1,9 +1,9 @@
 # https://mise.jdx.dev/configuration.html
 
 [tools]
-elixir = "1.18.1-otp-27"
-erlang = "27.2"
-"npm:cspell" = "8.17.2"
+elixir = "1.19.4-otp-28"
+erlang = "28.3"
+"npm:cspell" = "9.4.0"
 
 [tasks.check]
 depends = ["format", "compile", "spell", "lint", "test"]
