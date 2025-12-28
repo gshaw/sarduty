@@ -80,6 +80,7 @@ defmodule Web do
       import Web.Components.Markdown
       import Web.Components.Pagination
       import Web.Components.Table
+      import Web.Components.UI
 
       unquote(html_helpers())
     end
@@ -126,6 +127,7 @@ defmodule Web do
       import Phoenix.HTML
       # Core UI components and translation
       import Web.Components.Core
+      import Web.Components.UI
       import Web.Gettext
 
       alias Phoenix.LiveView.AsyncResult

@@ -34,7 +34,7 @@ defmodule Web.ActivityLive do
     ~H"""
     <.breadcrumbs team={@current_team}>
       <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
-      <:item label={"##{@activity.ref_id}"} />
+      <:item label={"#{@activity.ref_id}"} />
     </.breadcrumbs>
 
     <h1 class="title">{@activity.title}</h1>

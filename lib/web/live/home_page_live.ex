@@ -9,7 +9,7 @@ defmodule Web.HomePageLive do
     ~H"""
     <div class="mb-8">
       <h1 class="title-hero">
-        Welcome to <span class="text-danger-1">SAR{Service.StringHelpers.no_break_space()}Duty</span>
+        Welcome to <span class="text-danger-2">SAR{Service.StringHelpers.no_break_space()}Duty</span>
       </h1>
       <p class="lead">
         Helpful tools for search and rescue managers.
@@ -22,7 +22,7 @@ defmodule Web.HomePageLive do
         </li>
       </ul>
     <% end %>
-    <hr class="my-p" />
+    <hr class="my-p border-hr" />
     <p class="mt-p">
       <%= if Application.get_env(:sarduty, :dev_routes) do %>
         <.a navigate="/styles">Style Guide</.a>

@@ -26,14 +26,18 @@ if config_env() == :prod do
   config :sarduty, Web.Endpoint,
     secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),
     http: [
+      # Enable IPv6 and bind on all interfaces.
+      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
+      # See the documentation on https://hexdocs.pm/bandit/Bandit.html#t:options/0
+      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
+      ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.fetch_env!("PORT"))
     ],
     url: [
       host: System.fetch_env!("PHX_HOST"),
       port: 443,
       scheme: "https"
-    ],
-    force_ssl: [hsts: true]
+    ]
 
   config :sarduty, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
@@ -48,8 +52,6 @@ if config_env() == :prod do
         tag: "AES.GCM.V1", iv_length: 12, key: Base.decode64!(System.fetch_env!("CLOAK_KEY"))
       }
     ]
-
-  config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
 
   config :sarduty, App.Mailer,
     adapter: Swoosh.Adapters.AmazonSES,

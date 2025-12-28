@@ -10,7 +10,7 @@ defmodule Web.Components.Avatar do
     <span class="inline-flex items-center justify-center rounded-full bg-primary-1 h-8 w-8">
       <span class="leading-none font-medium text-primary-content text-sm">
         <.icon name="hero-user" class="h-5 w-5" />
-        <%!-- <%= @initials %> --%>
+        <% # = @initials %>
       </span>
     </span>
     """

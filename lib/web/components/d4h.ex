@@ -5,7 +5,7 @@ defmodule Web.Components.D4H do
 
   def activity_title(assigns) do
     ~H"""
-    <span>#{@activity.ref_id} {@activity.title}</span>
+    <span>{@activity.ref_id}: {@activity.title}</span>
     """
   end
 

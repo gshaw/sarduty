@@ -47,8 +47,8 @@ defmodule Web.ErrorHTML do
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled Page"}
         </.live_title>
-        <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-        <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+        <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+        <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
         </script>
       </head>
       <body class="bg-base-1 text-base-content">
@@ -58,20 +58,18 @@ defmodule Web.ErrorHTML do
           </.navbar_links>
         </.navbar>
 
-        <main role="main" class="max-w-narrow m-auto px-2 pt-16 mb-p2">
-          <div class="mx-auto max-w-2xl">
-            <h1 class="my-p2">
-              <div class="title-hero mb-0">{@code}</div>
-              <div class="title text-danger-1">That&rsquo;s an error</div>
-            </h1>
-            <p class="heading">{@description}</p>
-            <p class="mb-p2">{@help_text}</p>
-            <p>
-              <a href="/" class="link">
-                Home Page
-              </a>
-            </p>
-          </div>
+        <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
+          <h1 class="my-p2">
+            <div class="title-hero mb-0">{@code}</div>
+            <div class="title text-danger-1">That&rsquo;s an error</div>
+          </h1>
+          <p class="heading">{@description}</p>
+          <p class="mb-p2">{@help_text}</p>
+          <p>
+            <a href="/" class="link">
+              Home Page
+            </a>
+          </p>
         </main>
       </body>
     </html>

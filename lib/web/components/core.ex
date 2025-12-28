@@ -18,77 +18,9 @@ defmodule Web.Components.Core do
 
   use Gettext, backend: Web.Gettext
 
+  import Web.Components.UI
+
   alias Phoenix.LiveView.JS
-
-  @doc """
-  Renders a modal.
-
-  ## Examples
-
-      <.modal id="confirm-modal">
-        This is a modal.
-      </.modal>
-
-  JS commands may be passed to the `:on_cancel` to configure
-  the closing/cancel event, for example:
-
-      <.modal id="confirm" on_cancel={JS.navigate(~p"/posts")}>
-        This is another modal.
-      </.modal>
-
-  """
-  attr :id, :string, required: true
-  attr :show, :boolean, default: false
-  attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
-
-  def modal(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      phx-mounted={@show && show_modal(@id)}
-      phx-remove={hide_modal(@id)}
-      data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden"
-    >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
-      <div
-        class="fixed inset-0 overflow-y-auto"
-        aria-labelledby={"#{@id}-title"}
-        aria-describedby={"#{@id}-description"}
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
-      >
-        <div class="flex min-h-full items-center justify-center">
-          <div class="w-full max-w-3xl p-4 sm:p-6 lg:py-8">
-            <.focus_wrap
-              id={"#{@id}-container"}
-              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
-              phx-key="escape"
-              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
-            >
-              <div class="absolute top-6 right-5">
-                <button
-                  phx-click={JS.exec("data-cancel", to: "##{@id}")}
-                  type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
-                  aria-label={gettext("close")}
-                >
-                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
-                </button>
-              </div>
-              <div id={"#{@id}-content"}>
-                {render_slot(@inner_block)}
-              </div>
-            </.focus_wrap>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
 
   @doc """
   Renders flash notices.
@@ -134,102 +66,6 @@ defmodule Web.Components.Core do
         <.icon name="hero-x-mark" class="h-5 w-5" />
       </button>
     </div>
-    """
-  end
-
-  @doc """
-  Shows the flash group with standard titles and content.
-
-  ## Examples
-
-      <.flash_group flash={@flash} />
-  """
-  attr :flash, :map, required: true, doc: "the map of flash messages"
-  attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
-
-  def flash_group(assigns) do
-    ~H"""
-    <div id={@id}>
-      <.flash kind={:info} flash={@flash} />
-      <.flash kind={:error} title="Error" flash={@flash} />
-      <.flash
-        id="client-error"
-        kind={:error}
-        title="Server disconnected"
-        phx-disconnected={show(".phx-client-error #client-error")}
-        phx-connected={hide("#client-error")}
-        hidden
-      >
-        Attempting to reconnect <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
-      </.flash>
-
-      <.flash
-        id="server-error"
-        kind={:error}
-        title="Something went wrong!"
-        phx-disconnected={show(".phx-server-error #server-error")}
-        phx-connected={hide("#server-error")}
-        hidden
-      >
-        Hang in there while we get back on track
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
-      </.flash>
-    </div>
-    """
-  end
-
-  attr :class, :string, default: nil
-  slot :inner_block, required: true
-  slot :trailing
-
-  def form_actions(assigns) do
-    ~H"""
-    <div class={["form-actions flex flex-wrap", @class]}>
-      <div class="flex gap-hspacer flex-grow">
-        {render_slot(@inner_block)}
-      </div>
-      <%= if @trailing do %>
-        <div class="flex gap-hspacer">
-          {render_slot(@trailing)}
-        </div>
-      <% end %>
-    </div>
-    """
-  end
-
-  @doc """
-  Renders a simple form.
-
-  ## Examples
-
-      <.simple_form for={@form} phx-change="validate" phx-submit="save">
-        <.input field={@form[:email]} label="Email"/>
-        <.input field={@form[:username]} label="Username" />
-        <:actions>
-          <.button>Save</.button>
-        </:actions>
-      </.simple_form>
-  """
-  attr :for, :any, required: true, doc: "the datastructure for the form"
-  attr :as, :any, default: nil, doc: "the server side parameter to collect all input under"
-
-  attr :rest, :global,
-    include: ~w(autocomplete name rel action enctype method novalidate target multipart),
-    doc: "the arbitrary HTML attributes to apply to the form tag"
-
-  slot :inner_block, required: true
-  slot :actions, doc: "the slot for form actions, such as a submit button"
-
-  def simple_form(assigns) do
-    ~H"""
-    <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="">
-        {render_slot(@inner_block, f)}
-        <div :for={action <- @actions} class="">
-          {render_slot(action, f)}
-        </div>
-      </div>
-    </.form>
     """
   end
 
@@ -383,7 +219,7 @@ defmodule Web.Components.Core do
         id={@id}
         name={@name}
         class={[
-          "min-h-[6rem] block w-full rounded border shadow-sm",
+          "min-h-24 block w-full rounded border shadow-sm",
           "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
           @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
           @class
@@ -416,43 +252,6 @@ defmodule Web.Components.Core do
       />
       <.error :for={msg <- @errors}>{msg}</.error>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
-    </div>
-    """
-  end
-
-  slot :inner_block, required: true
-
-  def hint(assigns) do
-    ~H"""
-    <div class="block my-1 font-normal text-sm text-secondary-1">
-      {render_slot(@inner_block)}
-    </div>
-    """
-  end
-
-  @doc """
-  Renders a label.
-  """
-  attr :for, :string, default: nil
-  slot :inner_block, required: true
-
-  def label(assigns) do
-    ~H"""
-    <label for={@for} class="block mb-1 label">
-      {render_slot(@inner_block)}
-    </label>
-    """
-  end
-
-  @doc """
-  Generates a generic error message.
-  """
-  slot :inner_block, required: true
-
-  def error(assigns) do
-    ~H"""
-    <div class="my-1 font-normal text-sm text-danger-1 phx-no-feedback:hidden">
-      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -492,46 +291,20 @@ defmodule Web.Components.Core do
   You can customize the size and colors of the icons by setting
   width, height, and background color classes.
 
-  Icons are extracted from your `assets/vendor/heroicons` directory and bundled
-  within your compiled app.css by the plugin in your `assets/tailwind.config.js`.
+  Icons are extracted from the `deps/heroicons` directory and bundled within
+  your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
 
   ## Examples
 
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+      <.icon name="hero-x-mark" />
+      <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
   """
   attr :name, :string, required: true
-  attr :class, :string, default: nil
+  attr :class, :any, default: "size-4"
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
     <span class={[@name, @class]} />
-    """
-  end
-
-  attr :class, :string, default: nil
-  attr :size, :string, default: "6"
-  slot :inner_block
-
-  def spinner(assigns) do
-    ~H"""
-    <span class={["inline-flex items-center", @class]}>
-      <span class="mr-2">
-        <.spinner_icon class={"size-#{@size}"} />
-      </span>
-      <span :if={@inner_block}>{render_slot(@inner_block)}</span>
-    </span>
-    """
-  end
-
-  attr :class, :string, default: "size-6"
-
-  def spinner_icon(assigns) do
-    ~H"""
-    <span class={["grid animate-spin", @class]}>
-      <span class="col-start-1 row-start-1 rounded-full border-4 border-base-content border-opacity-25" />
-      <span class="col-start-1 row-start-1 rounded-full border-4 border-transparent border-b-base-content" />
-    </span>
     """
   end
 

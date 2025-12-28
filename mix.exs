@@ -10,6 +10,7 @@ defmodule App.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader]
     ]
   end
@@ -40,13 +41,14 @@ defmodule App.MixProject do
       {:dns_cluster, "~> 0.2"},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.12"},
-      {:ecto_sqlite3, "~> 0.17"},
-      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
+      {:ecto_sqlite3, "~> 0.22"},
+      {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0"},
       {:gettext, "~> 1.0"},
       {:gen_smtp, "~> 1.0"},
       {:jason, "~> 1.2"},
+      {:lazy_html, ">= 0.0.0", only: :test},
       {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
@@ -54,11 +56,17 @@ defmodule App.MixProject do
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:phoenix, "~> 1.8"},
-      # {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.5"},
       {:scrivener_ecto, "~> 3.1"},
       {:swoosh, "~> 1.17"},
-      {:tailwind, "~> 0.4.1", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.2.0",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tzdata, "~> 1.1"}
@@ -76,6 +84,7 @@ defmodule App.MixProject do
       check: [
         "format --check-formatted",
         "compile --force --warnings-as-errors",
+        "deps.unlock --unused",
         "credo --all-priorities",
         "spell",
         "cmd mix test --color"
@@ -86,7 +95,7 @@ defmodule App.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["tailwind default", "esbuild default"],
+      "assets.build": ["compile", "tailwind default", "esbuild default"],
       "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
     ]
   end

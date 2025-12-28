@@ -1,7 +1,9 @@
+.table-heading { @apply font-semibold text-sm text-base-content py-1 } /* label */
+
 table.table { @apply text-left w-full }
-table.table thead th { @apply bg-base-3 md:border-b-2 border-base-content border-opacity-50 }
+table.table thead th { @apply bg-base-3 md:border-b-2 border-base-content/50 }
 table.table thead th,
-table.table tbody th { @apply py-1 pr-2 align-text-top label w-full md:w-auto }
+table.table tbody th { @apply py-1 pr-2 align-text-top font-semibold text-sm text-base-content w-full md:w-auto }
 table.table tbody td { @apply py-1 pr-2 align-text-top }
 
 /* style header row cells that span multiple columns */

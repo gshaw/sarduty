@@ -13,8 +13,8 @@ defmodule Web.Layouts do
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled Page"}
         </.live_title>
-        <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-        <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+        <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+        <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
         </script>
       </head>
       <body class="bg-base-1 text-base-content">
@@ -27,11 +27,9 @@ defmodule Web.Layouts do
   def marketing(assigns) do
     ~H"""
     <.marketing_nav_bar current_user={@current_user} />
-    <main role="main" class="lg:container mx-auto pt-16 px-2 mb-p2">
-      <div class="mx-auto max-w-2xl">
-        <.flash_group flash={@flash} />
-        {@inner_content}
-      </div>
+    <main role="main" class="container mx-auto pt-16 px-2 mb-p2">
+      <.flash_group flash={@flash} />
+      {@inner_content}
     </main>
     """
   end
@@ -39,11 +37,9 @@ defmodule Web.Layouts do
   def app(assigns) do
     ~H"""
     <.app_nav_bar current_user={@current_user} />
-    <main role="main" class="lg:container mx-auto pt-16 px-2 mb-p2">
-      <div class="mx-auto max-w-2xl">
-        <.flash_group flash={@flash} />
-        {@inner_content}
-      </div>
+    <main role="main" class="container mx-auto pt-16 px-2 mb-p2">
+      <.flash_group flash={@flash} />
+      {@inner_content}
     </main>
     """
   end
@@ -51,11 +47,9 @@ defmodule Web.Layouts do
   def narrow(assigns) do
     ~H"""
     <.narrow_nav_bar current_user={@current_user} />
-    <main role="main" class="max-w-narrow m-auto px-2 pt-16 mb-p2">
-      <div class="mx-auto max-w-2xl">
-        <.flash_group flash={@flash} />
-        {@inner_content}
-      </div>
+    <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
+      <.flash_group flash={@flash} />
+      {@inner_content}
     </main>
     """
   end
@@ -149,6 +143,47 @@ defmodule Web.Layouts do
         --%>
       <% end %>
     </.navbar>
+    """
+  end
+
+  @doc """
+  Shows the flash group with standard titles and content.
+
+  ## Examples
+
+      <.flash_group flash={@flash} />
+  """
+  attr :flash, :map, required: true, doc: "the map of flash messages"
+  attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
+
+  def flash_group(assigns) do
+    ~H"""
+    <div id={@id}>
+      <.flash kind={:info} flash={@flash} />
+      <.flash kind={:error} title="Error" flash={@flash} />
+      <.flash
+        id="client-error"
+        kind={:error}
+        title="Server disconnected"
+        phx-disconnected={show(".phx-client-error #client-error")}
+        phx-connected={hide("#client-error")}
+        hidden
+      >
+        Attempting to reconnect <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+      </.flash>
+
+      <.flash
+        id="server-error"
+        kind={:error}
+        title="Something went wrong!"
+        phx-disconnected={show(".phx-server-error #server-error")}
+        phx-connected={hide("#server-error")}
+        hidden
+      >
+        Hang in there while we get back on track
+        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+      </.flash>
+    </div>
     """
   end
 end

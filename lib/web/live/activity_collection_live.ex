@@ -42,7 +42,7 @@ defmodule Web.ActivityCollectionLive do
       <.breadcrumbs team={@current_team}>
         <:item label="Members" path={~p"/#{@member.team.subdomain}/members/"} />
         <:item
-          label={"##{@member.ref_id} #{@member.name}"}
+          label={"#{@member.ref_id} #{@member.name}"}
           path={~p"/#{@member.team.subdomain}/members/#{@member.id}"}
         />
         <:item label="Activities" />

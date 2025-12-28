@@ -7,6 +7,22 @@ import Config
 # before starting your production server.
 config :sarduty, Web.Endpoint, cache_static_manifest: "priv/static/cache_manifest.json"
 
+# Force using SSL in production. This also sets the "strict-security-transport" header,
+# known as HSTS. If you have a health check endpoint, you may want to exclude it below.
+# Note `:force_ssl` is required to be set at compile-time.
+config :sarduty, Web.Endpoint,
+  force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true],
+  exclude: [
+    # paths: ["/health"],
+    hosts: ["localhost", "127.0.0.1"]
+  ]
+
+# Configure Swoosh API Client
+config :swoosh, api_client: Swoosh.ApiClient.Req
+
+# Disable Swoosh Local Memory Storage
+config :swoosh, local: false
+
 # Do not print debug messages in production
 config :logger, level: :info
 

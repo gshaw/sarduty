@@ -43,7 +43,7 @@ defmodule Web.TaxCreditLetterLive do
         <button phx-click="destroy" class="btn btn-danger">Delete</button>
       </:trailing>
     </.form_actions>
-    <hr class="my-p" />
+    <hr class="my-p border-hr" />
 
     <div class="content-wrapper">
       <aside class="content-1/3">

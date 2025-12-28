@@ -14,16 +14,22 @@ ignorePaths:
 words:
   - aria-describedby
   - aria-labelledby
+  - behaviour
   - dedup
   - Ecto
   - esbuild
-  - floki
   - flyctl
+  - heex
   - hexpm
+  - httpc
+  - httpoison
   - hspacer
   - libncurses
   - libstdc
   - msgid
+  - myclass
+  - myhook
+  - mylist
   - nocase
   - noreply
   - rsquo

@@ -23,7 +23,14 @@ defmodule Web.StyleGuideLive do
         Style Guide
       </h1>
     </header>
-
+    <.style_group title=".icon">
+      <div>
+        <.icon name="hero-user" />
+        <.icon name="hero-user" />
+        <.icon name="hero-computer-desktop" class="size-8" />
+        <.icon name="hero-arrow-path" class="motion-safe:animate-spin" />
+      </div>
+    </.style_group>
     <.style_group title=".colors">
       <div class="grid grid-cols-5">
         <.color_swatch bg="bg-base-0" fg="text-base-content" />
@@ -43,6 +50,15 @@ defmodule Web.StyleGuideLive do
         <.color_swatch bg="bg-success-2" fg="text-success-content" />
         <.color_swatch bg="bg-warning-2" fg="text-warning-content" />
         <.color_swatch bg="bg-danger-2" fg="text-danger-content" />
+      </div>
+      <div class="grid grid-cols-5">
+        <.color_swatch bg="bg-hr" fg="text-base-content" />
+        <.color_swatch bg="bg-disabled" fg="text-base-content" />
+      </div>
+      <div class="grid grid-cols-5">
+        <.color_swatch bg="bg-incident" fg="text-base-1" />
+        <.color_swatch bg="bg-exercise" fg="text-base-1" />
+        <.color_swatch bg="bg-event" fg="text-base-1" />
       </div>
     </.style_group>
 
@@ -203,7 +219,7 @@ defmodule Web.StyleGuideLive do
   def color_swatch(assigns) do
     ~H"""
     <div class={[
-      "px-8 py-6 m-2 text-center inline-block align-middle rounded text-xs",
+      "px-8 py-5 m-1 text-center inline-block align-middle rounded text-xs",
       @bg,
       @fg
     ]}>

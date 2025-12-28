@@ -21,7 +21,7 @@
 .btn-lg { @apply px-6 py-3 text-base rounded-md h-14 }
 
 /* push button animation and shadow */
-.btn { @apply border-solid border-b-2 border-base-content border-opacity-50 }
+.btn { @apply border-solid border-b-2 border-base-content/50 }
 .btn {
   &:active:hover,
   &:active:active {

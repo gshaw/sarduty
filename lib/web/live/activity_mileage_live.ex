@@ -32,7 +32,7 @@ defmodule Web.ActivityMileageLive do
     <.breadcrumbs team={@current_team}>
       <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
       <:item
-        label={"##{@activity.ref_id}"}
+        label={"#{@activity.ref_id}"}
         path={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}
       />
       <:item label="Mileage Report" />

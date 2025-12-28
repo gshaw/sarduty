@@ -79,8 +79,8 @@ defmodule Web.Components.NavBar do
 
   defp determine_container_classes(size) do
     case size do
-      :wide -> "lg:container"
-      :narrow -> "max-w-narrow"
+      :wide -> "container"
+      :narrow -> "max-w-md"
     end
   end
 
@@ -124,7 +124,7 @@ defmodule Web.Components.NavBar do
       <div
         role="menu"
         class={[
-          "absolute -right-2 top-0 mt-10 w-40 py-2 border z-20",
+          "absolute -right-2 top-0 mt-10 w-40 py-2 border border-hr z-20",
           determine_color_classes(@color)
         ]}
       >

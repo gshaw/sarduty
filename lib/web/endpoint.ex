@@ -7,12 +7,14 @@ defmodule Web.Endpoint do
   @session_options [
     store: :cookie,
     key: "_sarduty_session",
-    # cspell:ignore o5BANF2H
+    # cspell:disable-next-line
     signing_salt: "o5BANF2H",
     same_site: "Lax"
   ]
 
-  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options]],
+    longpoll: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -21,8 +23,9 @@ defmodule Web.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :sarduty,
-    gzip: false,
-    only: Web.static_paths()
+    gzip: not code_reloading?,
+    only: Web.static_paths(),
+    raise_on_missing_only: code_reloading?
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
