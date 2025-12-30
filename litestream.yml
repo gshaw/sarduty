@@ -1,0 +1,9 @@
+dbs:
+  - path: /mnt/sarduty/sarduty.db
+    replicas:
+      - type: s3
+        bucket: damp-wood-9786
+        path: database
+        endpoint: fly.storage.tigris.dev
+        region: auto
+        force-path-style: true

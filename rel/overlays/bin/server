@@ -1,5 +1,14 @@
 #!/bin/sh
 set -eu
 
+# Restore database from Litestream if it doesn't exist
+if [ ! -f /mnt/sarduty/sarduty.db ]; then
+  litestream restore -if-replica-exists -config /app/litestream.yml /mnt/sarduty/sarduty.db
+fi
+
+# Start Litestream in the background
+litestream replicate -config /app/litestream.yml &
+
+# Start Phoenix
 cd -P -- "$(dirname -- "$0")"
 PHX_SERVER=true exec ./sarduty start

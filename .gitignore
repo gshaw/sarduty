@@ -40,3 +40,5 @@ npm-debug.log
 
 # Ignore developer environment config file that may contain secrets
 .mise.local.toml
+
+/backups/*

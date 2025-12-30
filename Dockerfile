@@ -73,8 +73,13 @@ RUN mix release
 FROM ${RUNNER_IMAGE} AS final
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates \
+  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates wget \
   && rm -rf /var/lib/apt/lists/*
+
+# Install Litestream
+RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz \
+  && tar -xzf litestream-v0.3.13-linux-amd64.tar.gz -C /usr/local/bin \
+  && rm litestream-v0.3.13-linux-amd64.tar.gz
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
@@ -92,6 +97,9 @@ ENV MIX_ENV="prod"
 
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/sarduty ./
+
+# Copy Litestream configuration
+COPY --chown=nobody:root litestream.yml /app/litestream.yml
 
 USER nobody
 
