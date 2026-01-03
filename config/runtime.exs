@@ -54,8 +54,6 @@ if config_env() == :prod do
     ]
 
   config :sarduty, App.Mailer,
-    adapter: Swoosh.Adapters.AmazonSES,
-    access_key: System.fetch_env!("AMAZON_SES_ACCESS_KEY"),
-    region: System.fetch_env!("AMAZON_SES_REGION"),
-    secret: System.fetch_env!("AMAZON_SES_SECRET")
+    adapter: Swoosh.Adapters.ZeptoMail,
+    api_key: System.fetch_env!("ZEPTO_MAIL_KEY")
 end

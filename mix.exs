@@ -58,7 +58,7 @@ defmodule App.MixProject do
       {:phoenix, "~> 1.8"},
       {:req, "~> 0.5"},
       {:scrivener_ecto, "~> 3.1"},
-      {:swoosh, "~> 1.17"},
+      {:swoosh, "~> 1.20"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:heroicons,
        github: "tailwindlabs/heroicons",
