@@ -46,7 +46,6 @@ defmodule App.MixProject do
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0"},
       {:gettext, "~> 1.0"},
-      {:gen_smtp, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:lazy_html, ">= 0.0.0", only: :test},
       {:pdf, "~> 0.6"},
