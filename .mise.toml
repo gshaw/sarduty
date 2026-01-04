@@ -6,7 +6,7 @@ erlang = "28.3"
 "npm:cspell" = "9.4.0"
 
 [tasks.check]
-run = "mix check"
+run = "mix precommit"
 
 [tasks.format]
 run = "mix format --check-formatted"

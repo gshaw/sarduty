@@ -80,7 +80,7 @@ defmodule App.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      check: [
+      precommit: [
         "format --check-formatted",
         "compile --force --warnings-as-errors",
         "deps.unlock --unused",

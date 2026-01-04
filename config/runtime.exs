@@ -26,12 +26,8 @@ if config_env() == :prod do
   config :sarduty, Web.Endpoint,
     secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),
     http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-      # See the documentation on https://hexdocs.pm/bandit/Bandit.html#t:options/0
-      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: String.to_integer(System.fetch_env!("PORT"))
+      ip: {0, 0, 0, 0},
+      port: String.to_integer(System.get_env("PORT", "8080"))
     ],
     url: [
       host: System.fetch_env!("PHX_HOST"),
