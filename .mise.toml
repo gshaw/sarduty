@@ -3,7 +3,8 @@
 [tools]
 elixir = "1.19.4-otp-28"
 erlang = "28.3"
-"npm:cspell" = "9.4.0"
+node = "25.4.0"
+"npm:cspell" = "9.6.0"
 
 [tasks.check]
 run = "mix precommit"
