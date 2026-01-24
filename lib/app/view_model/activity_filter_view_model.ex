@@ -22,9 +22,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   defp build_year_options do
-    (Date.utc_today().year + 1)..2018
-    |> Range.to_list()
-    |> Enum.map(&Integer.to_string(&1))
+    max_year = Date.utc_today().year + 1
+    Enum.map(max_year..2018//-1, &Integer.to_string(&1))
   end
 
   def sort_kinds,
