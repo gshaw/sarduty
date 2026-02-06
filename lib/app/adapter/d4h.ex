@@ -187,6 +187,21 @@ defmodule App.Adapter.D4H do
     |> Enum.sort(&(&1.member.name < &2.member.name))
   end
 
+  def fetch_qualifications(context) do
+    response = Req.get!(context, url: "/member-qualifications", params: [size: -1])
+
+    response.body["results"]
+    |> Enum.map(&D4H.Qualification.build(&1))
+  end
+
+  def fetch_qualification_awards(context, page) do
+    response =
+      Req.get!(context, url: "/member-qualification-awards", params: [page: page, size: 1000])
+
+    response.body["results"]
+    |> Enum.map(&D4H.QualificationAward.build(&1))
+  end
+
   def fetch_tags(context) do
     response = Req.get!(context, url: "/tags", params: [size: -1])
     response.body["results"] |> Enum.map(&D4H.Tag.build(&1))

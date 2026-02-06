@@ -4,6 +4,8 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.MemberQualificationAward
+  alias App.Model.Qualification
   alias App.Repo
 
   def build(team) do
@@ -11,6 +13,8 @@ defmodule App.ViewData.TeamDashboardViewData do
       member_count: count_members(team),
       activity_count: count_activities(team),
       attendance_count: count_attendances(team),
+      qualification_count: count_qualifications(team),
+      qualification_award_count: count_qualification_awards(team),
       refreshed_at: team.d4h_refreshed_at
     }
   end
@@ -27,6 +31,19 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   def count_attendances(team) do
     Attendance
+    |> join(:left, [a], m in assoc(a, :member))
+    |> where([_, m], m.team_id == ^team.id)
+    |> select(count(1))
+    |> Repo.one()
+  end
+
+  def count_qualifications(team) do
+    query = from q in Qualification, where: q.team_id == ^team.id, select: count(1)
+    Repo.one(query)
+  end
+
+  def count_qualification_awards(team) do
+    MemberQualificationAward
     |> join(:left, [a], m in assoc(a, :member))
     |> where([_, m], m.team_id == ^team.id)
     |> select(count(1))

@@ -72,6 +72,27 @@ defmodule Web.MemberLive do
       <dt>Joined</dt>
       <dd>{Service.Format.long_date(@member.joined_at, @member.team.timezone)}</dd>
     </dl>
+
+    <h2 class="title">Qualifications</h2>
+    <table :if={@member.member_qualification_awards != []}>
+      <thead>
+        <tr>
+          <th>Qualification</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={award <- @member.member_qualification_awards}>
+          <td>{award.qualification.title}</td>
+          <td>{Service.Format.short_date(award.starts_at, @member.team.timezone)}</td>
+          <td>{Service.Format.short_date(award.ends_at, @member.team.timezone)}</td>
+          <td>{award_status(award)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p :if={@member.member_qualification_awards == []}>No qualifications found.</p>
     """
   end
 
@@ -81,6 +102,14 @@ defmodule Web.MemberLive do
   defp find_member(member_id) do
     Member
     |> Repo.get(member_id)
-    |> Repo.preload(:team)
+    |> Repo.preload([:team, member_qualification_awards: :qualification])
+  end
+
+  defp award_status(award) do
+    now = DateTime.utc_now()
+    started = is_nil(award.starts_at) or DateTime.compare(award.starts_at, now) != :gt
+    not_ended = is_nil(award.ends_at) or DateTime.compare(award.ends_at, now) == :gt
+
+    if started and not_ended, do: "Active", else: "Expired"
   end
 end
