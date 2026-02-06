@@ -4,6 +4,8 @@ defmodule App.DataFixtures do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.MemberQualificationAward
+  alias App.Model.Qualification
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
@@ -111,6 +113,44 @@ defmodule App.DataFixtures do
       )
 
     Attendance.insert!(params)
+  end
+
+  def qualification_fixture(%Team{} = team, attrs \\ %{}) do
+    unique = System.unique_integer([:positive])
+
+    params =
+      Map.merge(
+        %{
+          team_id: team.id,
+          d4h_qualification_id: unique,
+          title: "Qualification #{unique}"
+        },
+        attrs
+      )
+
+    Qualification.insert!(params)
+  end
+
+  def qualification_award_fixture(
+        %Qualification{} = qualification,
+        %Member{} = member,
+        attrs \\ %{}
+      ) do
+    unique = System.unique_integer([:positive])
+
+    params =
+      Map.merge(
+        %{
+          qualification_id: qualification.id,
+          member_id: member.id,
+          d4h_award_id: unique,
+          starts_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          ends_at: nil
+        },
+        attrs
+      )
+
+    MemberQualificationAward.insert!(params)
   end
 
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do

@@ -15,6 +15,8 @@ defmodule App.Operation.RefreshD4HData do
     RefreshD4HData.UpsertActivities.call(d4h, team, d4h_tag_index, "events")
     RefreshD4HData.UpsertActivities.call(d4h, team, d4h_tag_index, "incidents")
     RefreshD4HData.UpsertAttendances.call(d4h, team)
+    RefreshD4HData.UpsertQualifications.call(d4h, team)
+    RefreshD4HData.UpsertQualificationAwards.call(d4h, team)
     update_team_refreshed_at(team)
   end
 

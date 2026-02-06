@@ -5,6 +5,7 @@ defmodule App.Model.Member do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.MemberQualificationAward
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
@@ -14,6 +15,8 @@ defmodule App.Model.Member do
     belongs_to :team, Team
     has_many :attendances, Attendance, where: [status: "attending"]
     has_many :activities, through: [:attendances, :activity]
+    has_many :member_qualification_awards, MemberQualificationAward
+    has_many :qualifications, through: [:member_qualification_awards, :qualification]
     has_many :tax_credit_letters, TaxCreditLetter
     field :d4h_member_id, :integer
     field :ref_id, :string

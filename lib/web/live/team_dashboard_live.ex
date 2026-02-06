@@ -102,6 +102,10 @@ defmodule Web.TeamDashboardLive do
         <dd>{view_data.activity_count}</dd>
         <dt>Attendances</dt>
         <dd>{view_data.attendance_count}</dd>
+        <dt>Qualifications</dt>
+        <dd>{view_data.qualification_count}</dd>
+        <dt>Qualification Awards</dt>
+        <dd>{view_data.qualification_award_count}</dd>
       </.async_result>
     </dl>
     """
