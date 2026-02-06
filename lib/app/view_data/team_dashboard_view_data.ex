@@ -15,7 +15,8 @@ defmodule App.ViewData.TeamDashboardViewData do
       attendance_count: count_attendances(team),
       qualification_count: count_qualifications(team),
       qualification_award_count: count_qualification_awards(team),
-      refreshed_at: team.d4h_refreshed_at
+      refreshed_at: team.d4h_refreshed_at,
+      refresh_result: team.d4h_refresh_result
     }
   end
 

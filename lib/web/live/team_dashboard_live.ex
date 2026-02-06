@@ -73,14 +73,23 @@ defmodule Web.TeamDashboardLive do
         <div class="mb-p">
           <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H Dashboard</.a>
         </div>
-        <.button type="button" class="btn-warning" phx-click="refresh">
-          Refresh D4H Data
-        </.button>
+        <%= if @view_data.refresh_result != "refreshing" do %>
+          <.button type="button" class="btn-warning" phx-click="refresh">
+            Refresh D4H Data
+          </.button>
+        <% end %>
       </dd>
 
       <dt>Last Refreshed</dt>
       <dd>
         {Service.Format.short_datetime(@view_data.refreshed_at, @team.timezone)}
+        <%= if @view_data.refresh_result == "refreshing" do %>
+          <span class="ml-2 text-sm text-amber-600 animate-pulse">Refreshing…</span>
+        <% else %>
+          <%= if @view_data.refresh_result && @view_data.refresh_result != "ok" do %>
+            <span class="ml-2 text-sm text-red-600" title={@view_data.refresh_result}>Error</span>
+          <% end %>
+        <% end %>
       </dd>
       <dt>Members</dt>
       <dd>{@view_data.member_count}</dd>

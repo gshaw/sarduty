@@ -7,6 +7,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"team_id" => team_id}}) do
     team = Team.get!(team_id)
+    Team.update(team, %{d4h_refresh_result: "refreshing"})
 
     try do
       RefreshD4HData.call(team)
