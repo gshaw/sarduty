@@ -1,6 +1,8 @@
 defmodule Web.MemberLive do
   use Web, :live_view_app_layout
 
+  import Ecto.Query
+
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Repo
@@ -73,25 +75,31 @@ defmodule Web.MemberLive do
       <dd>{Service.Format.long_date(@member.joined_at, @member.team.timezone)}</dd>
     </dl>
 
-    <h2 class="title">Qualifications</h2>
-    <table :if={@member.member_qualification_awards != []}>
-      <thead>
-        <tr>
-          <th>Qualification</th>
-          <th>Start Date</th>
-          <th>End Date</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={award <- @member.member_qualification_awards}>
-          <td>{award.qualification.title}</td>
-          <td>{Service.Format.short_date(award.starts_at, @member.team.timezone)}</td>
-          <td>{Service.Format.short_date(award.ends_at, @member.team.timezone)}</td>
-          <td>{award_status(award)}</td>
-        </tr>
-      </tbody>
-    </table>
+    <.qualifications_content member={@member} />
+    """
+  end
+
+  defp qualifications_content(assigns) do
+    ~H"""
+    <.table
+      :if={@member.member_qualification_awards != []}
+      id="member_qualifications"
+      rows={@member.member_qualification_awards}
+      class="w-full table-striped"
+    >
+      <:col :let={award} label="Qualification">
+        {award.qualification.title}
+      </:col>
+      <:col :let={award} label="Start" class="w-px whitespace-nowrap" align="right">
+        {Service.Format.short_date(award.starts_at, @member.team.timezone)}
+      </:col>
+      <:col :let={award} label="End" class="w-px whitespace-nowrap" align="right">
+        {Service.Format.short_date(award.ends_at, @member.team.timezone)}
+      </:col>
+      <:col :let={award} label="Status" class="w-px whitespace-nowrap" align="right">
+        {award_status(award)}
+      </:col>
+    </.table>
     <p :if={@member.member_qualification_awards == []}>No qualifications found.</p>
     """
   end
@@ -100,9 +108,21 @@ defmodule Web.MemberLive do
     do: ~p"/#{member.team.subdomain}/members/#{member.id}/activities"
 
   defp find_member(member_id) do
+    qualification_awards_query =
+      from(mqa in App.Model.MemberQualificationAward,
+        join: q in assoc(mqa, :qualification),
+        order_by: [
+          asc: q.title,
+          asc: fragment("? IS NOT NULL", mqa.ends_at),
+          desc: mqa.ends_at,
+          desc: mqa.starts_at
+        ],
+        preload: [qualification: q]
+      )
+
     Member
     |> Repo.get(member_id)
-    |> Repo.preload([:team, member_qualification_awards: :qualification])
+    |> Repo.preload([:team, member_qualification_awards: qualification_awards_query])
   end
 
   defp award_status(award) do
