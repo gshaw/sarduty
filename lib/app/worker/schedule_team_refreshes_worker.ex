@@ -7,7 +7,7 @@ defmodule App.Worker.ScheduleTeamRefreshesWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
     Team.get_all()
-    |> Enum.filter(& &1.d4h_access_key)
+    |> Enum.filter(& &1.d4h_team_id)
     |> Enum.each(fn team ->
       %{team_id: team.id}
       |> RefreshTeamDataWorker.new()

@@ -12,7 +12,15 @@ defmodule App.Operation.RefreshD4HData do
   end
 
   def call(%Team{} = team) do
-    d4h = D4H.build_context_from_team(team)
+    access_key = RefreshD4HData.ResolveAccessKey.call(team)
+
+    d4h =
+      D4H.build_context(
+        access_key: access_key,
+        api_host: team.d4h_api_host,
+        d4h_team_id: team.d4h_team_id
+      )
+
     refresh(d4h, team)
   end
 
