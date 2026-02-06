@@ -71,6 +71,7 @@ config :logger, :console,
 # Configure Oban
 config :sarduty, Oban,
   engine: Oban.Engines.Lite,
+  repo: App.Repo,
   queues: [default: 5],
   plugins: [
     {Oban.Plugins.Cron,
