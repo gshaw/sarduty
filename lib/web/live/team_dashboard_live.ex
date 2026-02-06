@@ -2,8 +2,8 @@ defmodule Web.TeamDashboardLive do
   use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
-  alias App.Operation.RefreshD4HData
   alias App.ViewData.TeamDashboardViewData
+  alias App.Worker.RefreshTeamDataWorker
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -12,7 +12,7 @@ defmodule Web.TeamDashboardLive do
     socket =
       socket
       |> assign(page_title: current_team.name)
-      |> assign(view_data: AsyncResult.ok(view_data))
+      |> assign(view_data: view_data)
 
     {:ok, socket}
   end
@@ -73,56 +73,34 @@ defmodule Web.TeamDashboardLive do
         <div class="mb-p">
           <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H Dashboard</.a>
         </div>
-        <.button
-          type="button"
-          class="btn-warning"
-          phx-click="refresh"
-          disabled={@view_data.loading != nil}
-        >
+        <.button type="button" class="btn-warning" phx-click="refresh">
           Refresh D4H Data
         </.button>
       </dd>
 
-      <.async_result :let={view_data} assign={@view_data}>
-        <:loading>
-          <.spinner>
-            Refreshing D4H data...
-            <div class="hint">This can take a few minutes</div>
-          </.spinner>
-        </:loading>
-        <:failed :let={_reason}>There was an error refershing D4H data</:failed>
-
-        <dt>Last Refreshed</dt>
-        <dd>
-          {Service.Format.short_datetime(view_data.refreshed_at, @team.timezone)}
-        </dd>
-        <dt>Members</dt>
-        <dd>{view_data.member_count}</dd>
-        <dt>Activities</dt>
-        <dd>{view_data.activity_count}</dd>
-        <dt>Attendances</dt>
-        <dd>{view_data.attendance_count}</dd>
-        <dt>Qualifications</dt>
-        <dd>{view_data.qualification_count}</dd>
-        <dt>Qualification Awards</dt>
-        <dd>{view_data.qualification_award_count}</dd>
-      </.async_result>
+      <dt>Last Refreshed</dt>
+      <dd>
+        {Service.Format.short_datetime(@view_data.refreshed_at, @team.timezone)}
+      </dd>
+      <dt>Members</dt>
+      <dd>{@view_data.member_count}</dd>
+      <dt>Activities</dt>
+      <dd>{@view_data.activity_count}</dd>
+      <dt>Attendances</dt>
+      <dd>{@view_data.attendance_count}</dd>
+      <dt>Qualifications</dt>
+      <dd>{@view_data.qualification_count}</dd>
+      <dt>Qualification Awards</dt>
+      <dd>{@view_data.qualification_award_count}</dd>
     </dl>
     """
   end
 
   def handle_event("refresh", _params, socket) do
-    current_user = socket.assigns.current_user
+    %{team_id: socket.assigns.current_team.id}
+    |> RefreshTeamDataWorker.new()
+    |> Oban.insert()
 
-    socket =
-      socket
-      |> assign(view_data: nil)
-      |> assign_async(:view_data, fn ->
-        team = RefreshD4HData.call(current_user)
-        view_data = TeamDashboardViewData.build(team)
-        {:ok, %{view_data: view_data}}
-      end)
-
-    {:noreply, socket}
+    {:noreply, put_flash(socket, :info, "D4H data refresh has been scheduled.")}
   end
 end

@@ -68,6 +68,17 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+# Configure Oban
+config :sarduty, Oban,
+  engine: Oban.Engines.Lite,
+  queues: [default: 5],
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}
+     ]}
+  ]
+
 # Configure Phoenix to filter sensitive parameters
 config :phoenix, :filter_parameters, ["access_key"]
 

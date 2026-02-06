@@ -1,12 +1,22 @@
 defmodule App.Operation.RefreshD4HData do
+  alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
   alias App.Repo
 
-  def call(current_user) do
+  def call(%User{} = current_user) do
     team = current_user.team
     d4h = D4H.build_context_from_user(current_user)
+    refresh(d4h, team)
+  end
+
+  def call(%Team{} = team) do
+    d4h = D4H.build_context_from_team(team)
+    refresh(d4h, team)
+  end
+
+  defp refresh(d4h, team) do
     save_team_logo(d4h, team)
     RefreshD4HData.UpsertMembers.call(d4h, team)
 

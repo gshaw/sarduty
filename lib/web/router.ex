@@ -62,6 +62,14 @@ defmodule Web.Router do
       live "/settings/team", Settings.TeamLive
     end
 
+    live_session :require_admin_session,
+      on_mount: [
+        {Web.UserAuth, :ensure_authenticated},
+        {Web.UserAuth, :ensure_admin}
+      ] do
+      live "/admin", AdminDashboardLive
+    end
+
     live_session :require_current_team_session,
       on_mount: [
         {Web.UserAuth, :ensure_authenticated},

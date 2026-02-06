@@ -23,6 +23,9 @@ config :sarduty, Web.Endpoint,
 # In test we don't send emails.
 config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Test
 
+# Configure Oban for inline testing
+config :sarduty, Oban, testing: :inline
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
