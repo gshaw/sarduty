@@ -110,6 +110,11 @@ defmodule Web.TeamDashboardLive do
     |> RefreshTeamDataWorker.new()
     |> Oban.insert()
 
-    {:noreply, put_flash(socket, :info, "D4H data refresh has been scheduled.")}
+    view_data = Map.put(socket.assigns.view_data, :refresh_result, "refreshing")
+
+    {:noreply,
+     socket
+     |> assign(view_data: view_data)
+     |> put_flash(:info, "D4H data refresh has been scheduled.")}
   end
 end
