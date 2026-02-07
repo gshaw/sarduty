@@ -35,7 +35,7 @@ defmodule App.Operation.RefreshD4HData do
     RefreshD4HData.UpsertAttendances.call(d4h, team)
     RefreshD4HData.UpsertQualifications.call(d4h, team)
     RefreshD4HData.UpsertQualificationAwards.call(d4h, team)
-    update_team_refreshed_at(team)
+    {:ok, update_team_refreshed_at(team)}
   end
 
   defp build_d4h_tag_index(d4h) do
