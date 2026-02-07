@@ -31,7 +31,7 @@ defmodule Web.AdminDashboardLive do
       <:col :let={team} label="Last Refreshed">
         {format_refreshed_at(team)}
       </:col>
-      <:col :let={team} label="Refresh Result">
+      <:col :let={team} label="Status">
         <span class={refresh_result_class(team.d4h_refresh_result)}>
           {team.d4h_refresh_result}
         </span>
