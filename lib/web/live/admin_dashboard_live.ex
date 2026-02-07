@@ -3,6 +3,7 @@ defmodule Web.AdminDashboardLive do
 
   alias App.Model.Team
   alias App.Worker.RefreshTeamDataWorker
+  alias App.Worker.ScheduleTeamRefreshesWorker
 
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
@@ -29,6 +30,11 @@ defmodule Web.AdminDashboardLive do
   def render(assigns) do
     ~H"""
     <h1 class="title mb-p">Admin</h1>
+    <div class="mb-p">
+      <.button type="button" class="btn-warning" phx-click="refresh-all">
+        Refresh All Teams
+      </.button>
+    </div>
     <.table id="teams" rows={@teams}>
       <:col :let={team} label="ID">
         {team.id}
@@ -57,6 +63,14 @@ defmodule Web.AdminDashboardLive do
       </:col>
     </.table>
     """
+  end
+
+  def handle_event("refresh-all", _params, socket) do
+    %{}
+    |> ScheduleTeamRefreshesWorker.new()
+    |> Oban.insert()
+
+    {:noreply, put_flash(socket, :info, "All team refreshes have been scheduled.")}
   end
 
   def handle_event("refresh", %{"team-id" => team_id}, socket) do
