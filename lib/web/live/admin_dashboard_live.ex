@@ -64,7 +64,7 @@ defmodule Web.AdminDashboardLive do
     |> RefreshTeamDataWorker.new()
     |> Oban.insert()
 
-    {:noreply, put_flash(socket, :info, "D4H data refresh has been scheduled.")}
+    {:noreply, socket}
   end
 
   defp format_refreshed_at(team) do

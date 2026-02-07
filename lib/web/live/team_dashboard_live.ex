@@ -128,10 +128,7 @@ defmodule Web.TeamDashboardLive do
 
     view_data = Map.put(socket.assigns.view_data, :refresh_result, "Refreshing")
 
-    {:noreply,
-     socket
-     |> assign(view_data: view_data)
-     |> put_flash(:info, "D4H data refresh has been scheduled.")}
+    {:noreply, assign(socket, view_data: view_data)}
   end
 
   defp refreshing?(view_data) do
