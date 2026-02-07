@@ -1,5 +1,5 @@
 defmodule App.Worker.RefreshTeamDataWorker do
-  use Oban.Worker, queue: :default, max_attempts: 1
+  use Oban.Worker, queue: :refresh, max_attempts: 1
 
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
