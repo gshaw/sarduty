@@ -10,6 +10,8 @@ defmodule App.Application do
   def start(_type, _args) do
     App.Release.migrate()
 
+    :ok = Oban.Telemetry.attach_default_logger()
+
     children = [
       Web.Telemetry,
       App.Repo,
