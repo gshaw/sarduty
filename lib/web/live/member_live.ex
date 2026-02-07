@@ -88,7 +88,9 @@ defmodule Web.MemberLive do
       class="w-full table-striped"
     >
       <:col :let={award} label="Qualification">
-        {award.qualification.title}
+        <.a navigate={~p"/#{@member.team.subdomain}/qualifications/#{award.qualification.id}"}>
+          {award.qualification.title}
+        </.a>
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap" align="right">
         {Service.Format.short_date(award.starts_at, @member.team.timezone)}

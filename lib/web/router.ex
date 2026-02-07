@@ -83,6 +83,8 @@ defmodule Web.Router do
       live "/:subdomain/members", MemberCollectionLive
       live "/:subdomain/members/:id", MemberLive
       live "/:subdomain/members/:member_id/activities", ActivityCollectionLive
+      live "/:subdomain/qualifications", QualificationCollectionLive
+      live "/:subdomain/qualifications/:id", QualificationLive
       live "/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       live "/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
     end
