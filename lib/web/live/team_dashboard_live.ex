@@ -59,6 +59,9 @@ defmodule Web.TeamDashboardLive do
         <.a navigate={~p"/#{@team.subdomain}/members"}>Members</.a>
         <ul class="subheading action-list ml-hindent">
           <li>
+            <.a navigate={~p"/#{@team.subdomain}/qualifications"}>Qualifications</.a>
+          </li>
+          <li>
             <.a navigate={~p"/#{@team.subdomain}/tax-credit-letters"}>Tax Credit Letters</.a>
           </li>
         </ul>
