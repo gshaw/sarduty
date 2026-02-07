@@ -14,6 +14,7 @@ defmodule App.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :d4h_access_key, EncryptedString, redact: true
+    field :is_admin, :boolean, default: false
 
     timestamps(type: :utc_datetime)
   end

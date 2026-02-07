@@ -1,6 +1,7 @@
 defmodule App.Model.Team do
   use App, :model
 
+  alias App.Field.EncryptedString
   alias App.Field.TrimmedString
   alias App.Model.Team
   alias App.Repo
@@ -16,6 +17,8 @@ defmodule App.Model.Team do
     field :lat, :float
     field :lng, :float
     field :timezone, :string
+    field :d4h_access_key, EncryptedString, redact: true
+    field :d4h_refresh_result, :string
     field :d4h_refreshed_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
@@ -29,6 +32,8 @@ defmodule App.Model.Team do
       :subdomain,
       :d4h_team_id,
       :d4h_api_host,
+      :d4h_access_key,
+      :d4h_refresh_result,
       :d4h_refreshed_at,
       :mailing_address,
       :authorized_by_name,

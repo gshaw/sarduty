@@ -21,6 +21,7 @@ if System.get_env("PHX_SERVER") do
 end
 
 config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
+config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
 
 if config_env() == :prod do
   config :sarduty, Web.Endpoint,

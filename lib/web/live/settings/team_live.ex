@@ -49,6 +49,13 @@ defmodule Web.Settings.TeamLive do
           Should include full name, title, team address, and phone number of the team president or other
           individual with a similar role from the organization. Used by CRA during tax audits.
         </.input>
+        <.input
+          field={@form[:d4h_access_key]}
+          label="D4H access key (team)"
+          type="password"
+        >
+          Team-level D4H Personal Access Token used for scheduled background data refresh.
+        </.input>
         <.form_actions>
           <.button class="btn-success">Save</.button>
           <:trailing>

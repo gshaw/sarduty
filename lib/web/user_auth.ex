@@ -166,6 +166,19 @@ defmodule Web.UserAuth do
     end
   end
 
+  def on_mount(:ensure_admin, _params, _session, socket) do
+    if socket.assigns.current_user.is_admin do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(:error, "You must be an admin to access this page.")
+        |> Phoenix.LiveView.redirect(to: ~p"/")
+
+      {:halt, socket}
+    end
+  end
+
   # ensure current_user.team.subdomain matches url and assign it to current_team
   def on_mount(:ensure_authorized_team_subdomain, params, _session, socket) do
     current_team = socket.assigns.current_user.team

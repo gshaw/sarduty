@@ -10,10 +10,13 @@ defmodule App.Application do
   def start(_type, _args) do
     App.Release.migrate()
 
+    :ok = Oban.Telemetry.attach_default_logger()
+
     children = [
       Web.Telemetry,
       App.Repo,
       App.Vault,
+      {Oban, Application.fetch_env!(:sarduty, Oban)},
       {Ecto.Migrator,
        repos: Application.fetch_env!(:sarduty, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:sarduty, :dns_cluster_query) || :ignore},

@@ -47,6 +47,7 @@ defmodule App.MixProject do
       {:floki, ">= 0.30.0"},
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
+      {:oban, "~> 2.19"},
       {:lazy_html, ">= 0.0.0", only: :test},
       {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},

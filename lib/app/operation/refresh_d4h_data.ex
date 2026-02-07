@@ -1,12 +1,30 @@
 defmodule App.Operation.RefreshD4HData do
+  alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
   alias App.Repo
 
-  def call(current_user) do
+  def call(%User{} = current_user) do
     team = current_user.team
     d4h = D4H.build_context_from_user(current_user)
+    refresh(d4h, team)
+  end
+
+  def call(%Team{} = team) do
+    access_key = RefreshD4HData.ResolveAccessKey.call(team)
+
+    d4h =
+      D4H.build_context(
+        access_key: access_key,
+        api_host: team.d4h_api_host,
+        d4h_team_id: team.d4h_team_id
+      )
+
+    refresh(d4h, team)
+  end
+
+  defp refresh(d4h, team) do
     save_team_logo(d4h, team)
     RefreshD4HData.UpsertMembers.call(d4h, team)
 
@@ -17,7 +35,7 @@ defmodule App.Operation.RefreshD4HData do
     RefreshD4HData.UpsertAttendances.call(d4h, team)
     RefreshD4HData.UpsertQualifications.call(d4h, team)
     RefreshD4HData.UpsertQualificationAwards.call(d4h, team)
-    update_team_refreshed_at(team)
+    {:ok, update_team_refreshed_at(team)}
   end
 
   defp build_d4h_tag_index(d4h) do
