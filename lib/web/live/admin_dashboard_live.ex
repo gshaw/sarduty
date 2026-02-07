@@ -5,6 +5,8 @@ defmodule Web.AdminDashboardLive do
   alias App.Worker.RefreshTeamDataWorker
 
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
+
     teams = Team.get_all()
 
     socket =
@@ -13,6 +15,15 @@ defmodule Web.AdminDashboardLive do
       |> assign(teams: teams)
 
     {:ok, socket}
+  end
+
+  def handle_info({:team_refreshed, updated_team}, socket) do
+    teams =
+      Enum.map(socket.assigns.teams, fn team ->
+        if team.id == updated_team.id, do: updated_team, else: team
+      end)
+
+    {:noreply, assign(socket, teams: teams)}
   end
 
   def render(assigns) do

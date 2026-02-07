@@ -6,6 +6,8 @@ defmodule Web.TeamDashboardLive do
   alias App.Worker.RefreshTeamDataWorker
 
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
+
     current_team = socket.assigns.current_team
     view_data = TeamDashboardViewData.build(current_team)
 
@@ -73,7 +75,9 @@ defmodule Web.TeamDashboardLive do
         <div class="mb-p">
           <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H Dashboard</.a>
         </div>
-        <%= if @view_data.refresh_result != "refreshing" do %>
+        <%= if refreshing?(@view_data) do %>
+          <.spinner>Refreshing…</.spinner>
+        <% else %>
           <.button type="button" class="btn-warning" phx-click="refresh">
             Refresh D4H Data
           </.button>
@@ -83,12 +87,8 @@ defmodule Web.TeamDashboardLive do
       <dt>Last Refreshed</dt>
       <dd>
         {Service.Format.short_datetime(@view_data.refreshed_at, @team.timezone)}
-        <%= if @view_data.refresh_result == "refreshing" do %>
-          <span class="ml-2 text-sm text-amber-600 animate-pulse">Refreshing…</span>
-        <% else %>
-          <%= if @view_data.refresh_result && @view_data.refresh_result != "OK" do %>
-            <span class="ml-2 text-sm text-red-600" title={@view_data.refresh_result}>Error</span>
-          <% end %>
+        <%= if @view_data.refresh_result && !refreshing?(@view_data) && @view_data.refresh_result != "OK" do %>
+          <span class="ml-2 text-sm text-red-600" title={@view_data.refresh_result}>Error</span>
         <% end %>
       </dd>
       <dt>Members</dt>
@@ -105,16 +105,36 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
+  def handle_info({:team_refreshed, updated_team}, socket) do
+    if updated_team.id == socket.assigns.current_team.id do
+      view_data =
+        socket.assigns.view_data
+        |> Map.put(:refreshed_at, updated_team.d4h_refreshed_at)
+        |> Map.put(:refresh_result, updated_team.d4h_refresh_result)
+
+      {:noreply,
+       socket
+       |> assign(current_team: updated_team)
+       |> assign(view_data: view_data)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("refresh", _params, socket) do
     %{team_id: socket.assigns.current_team.id}
     |> RefreshTeamDataWorker.new()
     |> Oban.insert()
 
-    view_data = Map.put(socket.assigns.view_data, :refresh_result, "refreshing")
+    view_data = Map.put(socket.assigns.view_data, :refresh_result, "Refreshing")
 
     {:noreply,
      socket
      |> assign(view_data: view_data)
      |> put_flash(:info, "D4H data refresh has been scheduled.")}
+  end
+
+  defp refreshing?(view_data) do
+    (view_data.refresh_result || "") == "Refreshing"
   end
 end

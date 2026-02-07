@@ -8,18 +8,25 @@ defmodule App.Worker.RefreshTeamDataWorker do
   def perform(%Oban.Job{args: %{"team_id" => team_id}}) do
     team = Team.get!(team_id)
     {:ok, team} = Team.update(team, %{d4h_refresh_result: "Refreshing"})
+    broadcast_team_refresh(team)
 
     try do
-      # RefreshD4HData.call(team)
-      Team.update(team, %{d4h_refresh_result: "OK"})
+      {:ok, team} = RefreshD4HData.call(team)
+      {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
+      broadcast_team_refresh(team)
       ping_healthchecks()
       :ok
     rescue
       e ->
         message = format_error(e)
-        Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
+        {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
+        broadcast_team_refresh(team)
         {:error, message}
     end
+  end
+
+  defp broadcast_team_refresh(team) do
+    Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
   end
 
   defp ping_healthchecks do
