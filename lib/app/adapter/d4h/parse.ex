@@ -41,6 +41,8 @@ defmodule App.Adapter.D4H.Parse do
     Coordinate.build(lat, lng)
   end
 
+  def coordinate(_location), do: nil
+
   def datetime(value) do
     {:ok, result, 0} = DateTime.from_iso8601(value)
     DateTime.truncate(result, :second)
