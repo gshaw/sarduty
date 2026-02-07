@@ -17,37 +17,34 @@ defmodule Web.AdminDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title-hero mb-p">Admin</h1>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Subdomain</th>
-          <th>Last Refreshed</th>
-          <th>Refresh Result</th>
-          <th>Has PAT?</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={team <- @teams}>
-          <td>{team.name}</td>
-          <td>{team.subdomain}</td>
-          <td>{format_refreshed_at(team)}</td>
-          <td>
-            <span class={refresh_result_class(team.d4h_refresh_result)}>
-              {team.d4h_refresh_result}
-            </span>
-          </td>
-          <td>{if team.d4h_access_key, do: "Yes", else: "No"}</td>
-          <td>
-            <.button type="button" phx-click="refresh" phx-value-team-id={team.id}>
-              Refresh
-            </.button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <h1 class="title mb-p">Admin</h1>
+    <.table id="teams" rows={@teams}>
+      <:col :let={team} label="ID">
+        {team.id}
+      </:col>
+      <:col :let={team} label="Name">
+        {team.name}
+        <.hint>
+          {team.subdomain}
+        </.hint>
+      </:col>
+      <:col :let={team} label="Last Refreshed">
+        {format_refreshed_at(team)}
+      </:col>
+      <:col :let={team} label="Refresh Result">
+        <span class={refresh_result_class(team.d4h_refresh_result)}>
+          {team.d4h_refresh_result}
+        </span>
+      </:col>
+      <:col :let={team} label="PAT?">
+        {if team.d4h_access_key, do: "Yes", else: "No"}
+      </:col>
+      <:col :let={team} label="">
+        <.button type="button" phx-click="refresh" phx-value-team-id={team.id}>
+          Refresh
+        </.button>
+      </:col>
+    </.table>
     """
   end
 
