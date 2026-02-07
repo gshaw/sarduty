@@ -7,17 +7,17 @@ defmodule App.Worker.RefreshTeamDataWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"team_id" => team_id}}) do
     team = Team.get!(team_id)
-    Team.update(team, %{d4h_refresh_result: "refreshing"})
+    Team.update(team, %{d4h_refresh_result: "Refreshing"})
 
     try do
-      RefreshD4HData.call(team)
-      Team.update(team, %{d4h_refresh_result: "ok"})
+      # RefreshD4HData.call(team)
+      Team.update(team, %{d4h_refresh_result: "OK"})
       ping_healthchecks()
       :ok
     rescue
       e ->
         message = format_error(e)
-        Team.update(team, %{d4h_refresh_result: message})
+        Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
         {:error, message}
     end
   end

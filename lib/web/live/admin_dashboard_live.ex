@@ -62,7 +62,7 @@ defmodule Web.AdminDashboardLive do
     end
   end
 
-  defp refresh_result_class("ok"), do: "text-success-1"
+  defp refresh_result_class("OK"), do: "text-success-1"
   defp refresh_result_class(nil), do: ""
   defp refresh_result_class(_error), do: "text-danger-1"
 end

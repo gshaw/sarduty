@@ -86,7 +86,7 @@ defmodule Web.TeamDashboardLive do
         <%= if @view_data.refresh_result == "refreshing" do %>
           <span class="ml-2 text-sm text-amber-600 animate-pulse">Refreshing…</span>
         <% else %>
-          <%= if @view_data.refresh_result && @view_data.refresh_result != "ok" do %>
+          <%= if @view_data.refresh_result && @view_data.refresh_result != "OK" do %>
             <span class="ml-2 text-sm text-red-600" title={@view_data.refresh_result}>Error</span>
           <% end %>
         <% end %>
