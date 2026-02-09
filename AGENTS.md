@@ -43,6 +43,25 @@ custom classes must fully style the input
 - Ensure **clean typography, spacing, and layout balance** for a refined, premium look
 - Focus on **delightful details** like hover effects, loading states, and smooth page transitions
 
+## Agent Skills
+
+This repository contains task-specific skills in `.github/copilot/skills/` that provide detailed checklists and patterns for common operations. **Always check for relevant skills before starting work.**
+
+### Available Skills
+
+- **Data Model + Migration** (`.github/copilot/skills/data-model-migration/`) - Add or modify database models and migrations
+- **LiveView Feature** (`.github/copilot/skills/liveview-feature/`) - Add new LiveView pages and features
+- **UI Components** (`.github/copilot/skills/ui-components/`) - Create reusable UI components
+- **View Model Filtering** (`.github/copilot/skills/view-model-filtering/`) - Add filtering to list views
+- **External Adapter + Req** (`.github/copilot/skills/external-adapter-req/`) - Create external API adapters using the Req library
+- **Production Database Changes** (`.github/copilot/skills/production-db-changes/`) - Query or modify production database on Fly.io
+
+### Using Skills
+
+1. **Discover**: List all available skills with `ls -la .github/copilot/skills/`
+2. **Read**: Read the SKILL.md file for your task type
+3. **Follow**: Use the checklist and patterns provided in the skill
+4. **Extend**: Create new skills when you encounter repeatable complex tasks
 
 <!-- usage-rules-start -->
 
