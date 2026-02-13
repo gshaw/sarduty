@@ -26,7 +26,7 @@ defmodule App.Adapter.D4H.Activity do
       ref_id: record["reference"],
       tracking_number: record["trackingNumber"],
       is_published: record["published"],
-      title: String.slice(record["referenceDescription"], 0, 50),
+      title: build_title(record["referenceDescription"], record["id"]),
       # Note: description in v3 is HTML
       description: record["description"],
       address: build_address(record["address"]),
@@ -38,6 +38,10 @@ defmodule App.Adapter.D4H.Activity do
     }
   end
 
+  defp build_title(nil, activity_id), do: "Untitled Activity #{activity_id}"
+  defp build_title("", activity_id), do: "Untitled Activity #{activity_id}"
+  defp build_title(description, _), do: String.slice(description, 0, 50)
+
   defp build_address(record) do
     [
       record["street"],
@@ -45,7 +49,7 @@ defmodule App.Adapter.D4H.Activity do
       record["region"],
       record["country"]
     ]
-    |> Enum.reject(&String.match?(&1, ~r/^\s*$/))
+    |> Enum.reject(fn str -> is_nil(str) or String.match?(str, ~r/^\s*$/) end)
     |> Enum.join(", ")
   end
 end
