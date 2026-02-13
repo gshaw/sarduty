@@ -18,8 +18,20 @@ defmodule App.ViewData.TeamDashboardViewData do
       qualification_count: count_qualifications(team),
       qualification_award_count: count_qualification_awards(team),
       refreshed_at: team.d4h_refreshed_at,
-      refresh_result: if(refreshing?, do: "Refreshing", else: team.d4h_refresh_result)
+      refresh_result: refresh_result_value(team, refreshing?)
     }
+  end
+
+  defp refresh_result_value(team, true) do
+    if is_binary(team.d4h_refresh_result) and team.d4h_refresh_result != "OK" do
+      team.d4h_refresh_result
+    else
+      "Refreshing"
+    end
+  end
+
+  defp refresh_result_value(team, false) do
+    team.d4h_refresh_result
   end
 
   defp refresh_job_active?(team) do

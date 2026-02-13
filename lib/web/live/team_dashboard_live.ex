@@ -79,9 +79,18 @@ defmodule Web.TeamDashboardLive do
           <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H Dashboard</.a>
         </div>
         <%= if refreshing?(@view_data) do %>
-          <.spinner>Refreshing…</.spinner>
+          <div class="flex items-center gap-2 text-blue-600">
+            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent">
+            </span>
+            <span>{@view_data.refresh_result}</span>
+          </div>
         <% else %>
-          <.button type="button" class="btn-warning" phx-click="refresh">
+          <.button
+            type="button"
+            class="btn-warning"
+            phx-click="refresh"
+            disabled={refreshing?(@view_data)}
+          >
             Refresh D4H Data
           </.button>
         <% end %>
@@ -134,7 +143,21 @@ defmodule Web.TeamDashboardLive do
     {:noreply, assign(socket, view_data: view_data)}
   end
 
+  @refresh_stages [
+    "Starting",
+    "Team logo",
+    "Members",
+    "Tags",
+    "Exercises",
+    "Events",
+    "Incidents",
+    "Attendances",
+    "Qualifications",
+    "Qualification Awards"
+  ]
+
   defp refreshing?(view_data) do
-    (view_data.refresh_result || "") == "Refreshing"
+    result = view_data.refresh_result || ""
+    result == "Refreshing" or Enum.any?(@refresh_stages, &String.contains?(result, &1))
   end
 end

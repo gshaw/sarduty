@@ -2,8 +2,9 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Coordinate
+  alias App.Operation.RefreshD4HData.Progress
 
-  def call(d4h, team, d4h_tag_index, kind)
+  def call(d4h, team, d4h_tag_index, kind, progress)
       when is_map(d4h)
       when is_map(team)
       when is_map(d4h_tag_index)
@@ -12,7 +13,9 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
       d4h: d4h,
       team_id: team.id,
       d4h_tag_index: d4h_tag_index,
-      kind: kind
+      kind: kind,
+      progress: progress,
+      total_count: 0
     }
 
     fetch_and_upsert(context, 0)
@@ -23,11 +26,17 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
     upsert_activities(context, page, d4h_activities)
   end
 
-  defp upsert_activities(_context, _page, []), do: :ok
+  defp upsert_activities(context, _page, []) do
+    {context.total_count, context.progress}
+  end
 
   defp upsert_activities(context, page, d4h_activities) do
-    # IO.inspect({:activities, context.kind, :page, page, :count, Enum.count(d4h_activities)})
+    count = Enum.count(d4h_activities)
+
     Enum.each(d4h_activities, &upsert_activity(context.team_id, &1))
+
+    progress = Progress.add_page(context.progress, count)
+    context = %{context | progress: progress, total_count: context.total_count + count}
     fetch_and_upsert(context, page + 1)
   end
 

@@ -1,15 +1,25 @@
 defmodule App.Operation.RefreshD4HData.UpsertQualifications do
   alias App.Adapter.D4H
   alias App.Model.Qualification
+  alias App.Operation.RefreshD4HData.Progress
 
-  def call(d4h, team) do
+  @chunk_size 100
+
+  def call(d4h, team, progress) do
     d4h_qualifications = D4H.fetch_qualifications(d4h)
+    total_count = Enum.count(d4h_qualifications)
 
-    Enum.each(d4h_qualifications, fn d4h_qualification ->
-      upsert_qualification(team, d4h_qualification)
-    end)
+    progress = Progress.update_stage(progress, "Qualifications", total_count)
 
-    :ok
+    chunks = Enum.chunk_every(d4h_qualifications, @chunk_size)
+
+    progress =
+      Enum.reduce(chunks, progress, fn chunk, progress_acc ->
+        Enum.each(chunk, &upsert_qualification(team, &1))
+        Progress.add_page(progress_acc, Enum.count(chunk))
+      end)
+
+    {total_count, progress}
   end
 
   defp upsert_qualification(team, d4h_qualification) do

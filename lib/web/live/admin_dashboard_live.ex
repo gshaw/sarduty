@@ -49,15 +49,28 @@ defmodule Web.AdminDashboardLive do
         {format_refreshed_at(team)}
       </:col>
       <:col :let={team} label="Status">
-        <span class={refresh_result_class(team.d4h_refresh_result)}>
-          {team.d4h_refresh_result}
-        </span>
+        <div class={refresh_result_class(team.d4h_refresh_result)}>
+          <%= if refreshing?(team.d4h_refresh_result) do %>
+            <div class="flex items-center gap-2">
+              <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent">
+              </span>
+              <span>{team.d4h_refresh_result}</span>
+            </div>
+          <% else %>
+            <span>{team.d4h_refresh_result || "-"}</span>
+          <% end %>
+        </div>
       </:col>
       <:col :let={team} label="PAT?">
         {if team.d4h_access_key, do: "Yes", else: "No"}
       </:col>
       <:col :let={team} label="">
-        <.button type="button" phx-click="refresh" phx-value-team-id={team.id}>
+        <.button
+          type="button"
+          phx-click="refresh"
+          phx-value-team-id={team.id}
+          disabled={refreshing?(team.d4h_refresh_result)}
+        >
           Refresh
         </.button>
       </:col>
@@ -89,5 +102,32 @@ defmodule Web.AdminDashboardLive do
 
   defp refresh_result_class("OK"), do: "text-success-1"
   defp refresh_result_class(nil), do: ""
-  defp refresh_result_class(_error), do: "text-danger-1"
+
+  defp refresh_result_class(result) when is_binary(result) do
+    if refreshing?(result) do
+      "text-blue-600"
+    else
+      "text-danger-1"
+    end
+  end
+
+  @refresh_stages [
+    "Starting",
+    "Team logo",
+    "Members",
+    "Tags",
+    "Exercises",
+    "Events",
+    "Incidents",
+    "Attendances",
+    "Qualifications",
+    "Qualification Awards"
+  ]
+
+  defp refreshing?(nil), do: false
+  defp refreshing?("Refreshing"), do: true
+
+  defp refreshing?(result) when is_binary(result) do
+    String.contains?(result, "[") or Enum.any?(@refresh_stages, &String.contains?(result, &1))
+  end
 end

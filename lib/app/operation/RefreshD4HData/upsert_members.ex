@@ -1,15 +1,25 @@
 defmodule App.Operation.RefreshD4HData.UpsertMembers do
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Operation.RefreshD4HData.Progress
 
-  def call(d4h, team) do
+  @chunk_size 100
+
+  def call(d4h, team, progress) do
     d4h_members = D4H.fetch_team_members(d4h)
+    total_count = Enum.count(d4h_members)
 
-    Enum.each(d4h_members, fn d4h_member ->
-      upsert_member(team, d4h_member)
-    end)
+    progress = Progress.update_stage(progress, "Members", total_count)
 
-    :ok
+    chunks = Enum.chunk_every(d4h_members, @chunk_size)
+
+    progress =
+      Enum.reduce(chunks, progress, fn chunk, progress_acc ->
+        Enum.each(chunk, &upsert_member(team, &1))
+        Progress.add_page(progress_acc, Enum.count(chunk))
+      end)
+
+    {total_count, progress}
   end
 
   defp upsert_member(team, d4h_member) do
