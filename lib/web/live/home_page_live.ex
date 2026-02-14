@@ -24,8 +24,14 @@ defmodule Web.HomePageLive do
     <% end %>
     <hr class="my-p border-hr" />
     <p class="mt-p">
+      <.a navigate="/styles">Style Guide</.a>
+      <%= if @current_user && @current_user.is_admin do %>
+        ·
+        <.a navigate="https://github.com/gshaw/sarduty">GitHub</.a>
+        ·
+        <.a navigate="/admin">Admin</.a>
+      <% end %>
       <%= if Application.get_env(:sarduty, :dev_routes) do %>
-        <.a navigate="/styles">Style Guide</.a>
         ·
         <.a href="/dev/dashboard" external={true}>Dashboard</.a>
         <%= if Application.get_env(:swoosh, :local) do %>
