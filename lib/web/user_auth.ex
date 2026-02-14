@@ -5,6 +5,7 @@ defmodule Web.UserAuth do
   import Phoenix.Controller
 
   alias App.Accounts
+  alias App.Model.Team
 
   # Make the remember me cookie valid for 60 days.
   # If you want bump or reduce this value, also change
@@ -180,13 +181,26 @@ defmodule Web.UserAuth do
   end
 
   # ensure current_user.team.subdomain matches url and assign it to current_team
+  # admins can access any team
   def on_mount(:ensure_authorized_team_subdomain, params, _session, socket) do
-    current_team = socket.assigns.current_user.team
+    current_user = socket.assigns.current_user
 
-    if current_team && current_team.subdomain == params["subdomain"] do
-      {:cont, Phoenix.Component.assign(socket, :current_team, current_team)}
-    else
-      raise Web.Status.NotFound
+    cond do
+      current_user.is_admin ->
+        # Admins can access any team - fetch the requested team by subdomain
+        team = Team.get_by(subdomain: params["subdomain"])
+
+        if team do
+          {:cont, Phoenix.Component.assign(socket, :current_team, team)}
+        else
+          raise Web.Status.NotFound
+        end
+
+      current_user.team && current_user.team.subdomain == params["subdomain"] ->
+        {:cont, Phoenix.Component.assign(socket, :current_team, current_user.team)}
+
+      true ->
+        raise Web.Status.NotFound
     end
   end
 
@@ -228,13 +242,27 @@ defmodule Web.UserAuth do
     end
   end
 
+  # Admins can access any team, others are restricted to their own team
   def require_authorized_team_subdomain(conn, _opts) do
-    current_team = conn.assigns.current_user.team
+    current_user = conn.assigns.current_user
+    subdomain = conn.path_params["subdomain"]
 
-    if current_team && current_team.subdomain == conn.path_params["subdomain"] do
-      assign(conn, :current_team, current_team)
-    else
-      raise Web.Status.NotFound
+    cond do
+      current_user.is_admin ->
+        # Admins can access any team - fetch the requested team by subdomain
+        team = Team.get_by(subdomain: subdomain)
+
+        if team do
+          assign(conn, :current_team, team)
+        else
+          raise Web.Status.NotFound
+        end
+
+      current_user.team && current_user.team.subdomain == subdomain ->
+        assign(conn, :current_team, current_user.team)
+
+      true ->
+        raise Web.Status.NotFound
     end
   end
 

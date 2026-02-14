@@ -40,7 +40,7 @@ defmodule Web.AdminDashboardLive do
         {team.id}
       </:col>
       <:col :let={team} label="Name">
-        {team.name}
+        <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
         <.hint>
           {team.subdomain}
         </.hint>
