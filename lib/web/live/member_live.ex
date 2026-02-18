@@ -103,9 +103,6 @@ defmodule Web.MemberLive do
           <li>
             <.a external={true} href={D4H.member_url(@member)}>Open D4H Member</.a>
           </li>
-          <li>
-            <.a href={member_activities_path(@member)}>Member Activities</.a>
-          </li>
         </ul>
       </dd>
     </dl>
@@ -155,9 +152,6 @@ defmodule Web.MemberLive do
     <p :if={@member.member_qualification_awards == []}>No qualifications found.</p>
     """
   end
-
-  defp member_activities_path(member),
-    do: ~p"/#{member.team.subdomain}/members/#{member.id}/activities"
 
   defp find_member(member_id) do
     qualification_awards_query =

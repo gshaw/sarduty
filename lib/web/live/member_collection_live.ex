@@ -76,12 +76,8 @@ defmodule Web.MemberCollectionLive do
         align="right"
         sorts={[{"↓", "count-"}, {"↑", "count"}]}
       >
-        <.a navigate={
-          ~p"/#{@current_team.subdomain}/members/#{record.member.id}/activities?when=#{@year}"
-        }>
-          <span class="label md:hidden">Activities</span>
-          {record.count}
-        </.a>
+        <span class="label md:hidden">Activities</span>
+        {record.count}
       </:col>
 
       <:col
