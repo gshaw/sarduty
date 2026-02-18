@@ -74,7 +74,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
-        <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.member.id}"}>
+        <.a navigate={
+          ~p"/#{@current_team.subdomain}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
+        }>
           {record.member.name}
         </.a>
       </:col>
