@@ -128,14 +128,14 @@ defmodule Web.ActivityLive do
           <:col :let={record} label="Role">
             {record.member.position}
           </:col>
-          <:col :let={record} label="Started" class="whitespace-nowrap" align="right">
+          <:col :let={record} label="Started" class="whitespace-nowrap">
             {Service.Format.attendance_datetime(
               record.started_at,
               @activity.started_at,
               @activity.team.timezone
             )}
           </:col>
-          <:col :let={record} label="Finished" class="whitespace-nowrap" align="right">
+          <:col :let={record} label="Finished" class="whitespace-nowrap">
             {Service.Format.attendance_datetime(
               record.finished_at,
               @activity.started_at,

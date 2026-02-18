@@ -115,10 +115,10 @@ defmodule Web.QualificationLive do
           {award.member.name}
         </.a>
       </:col>
-      <:col :let={award} label="Start" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="Start" class="w-px whitespace-nowrap">
         {Service.Format.short_date(award.starts_at, @team.timezone)}
       </:col>
-      <:col :let={award} label="End" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="End" class="w-px whitespace-nowrap">
         {Service.Format.short_date(award.ends_at, @team.timezone)}
       </:col>
     </.table>
@@ -136,10 +136,10 @@ defmodule Web.QualificationLive do
           {award.member.name}
         </.a>
       </:col>
-      <:col :let={award} label="Start" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="Start" class="w-px whitespace-nowrap">
         {Service.Format.short_date(award.starts_at, @team.timezone)}
       </:col>
-      <:col :let={award} label="End" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="End" class="w-px whitespace-nowrap">
         {Service.Format.short_date(award.ends_at, @team.timezone)}
       </:col>
     </.table>

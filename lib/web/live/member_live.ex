@@ -142,13 +142,13 @@ defmodule Web.MemberLive do
           {award.qualification.title}
         </.a>
       </:col>
-      <:col :let={award} label="Start" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="Start" class="w-px whitespace-nowrap">
         {Service.Format.short_date(award.starts_at, @member.team.timezone)}
       </:col>
-      <:col :let={award} label="End" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="End" class="w-px whitespace-nowrap">
         {Service.Format.short_date(award.ends_at, @member.team.timezone)}
       </:col>
-      <:col :let={award} label="Status" class="w-px whitespace-nowrap" align="right">
+      <:col :let={award} label="Status" class="w-px whitespace-nowrap">
         {award_status(award)}
       </:col>
     </.table>

@@ -47,7 +47,7 @@ defmodule Web.Components.AttendanceFilterTable do
           <.activity_title activity={record.activity} />
         </.a>
       </:col>
-      <:col :let={record} label="Started" align="right" class="w-1/12 whitespace-nowrap">
+      <:col :let={record} label="Started" class="w-1/12 whitespace-nowrap">
         <span class="label md:hidden">Started</span>
         <span class="whitespace-nowrap">
           {Service.Format.short_datetime(
@@ -56,7 +56,7 @@ defmodule Web.Components.AttendanceFilterTable do
           )}
         </span>
       </:col>
-      <:col :let={record} label="Finished" align="right" class="w-1/12 whitespace-nowrap">
+      <:col :let={record} label="Finished" class="w-1/12 whitespace-nowrap">
         <span class="label md:hidden">Finished</span>
         <span class="whitespace-nowrap">
           {Service.Format.attendance_datetime(
