@@ -182,6 +182,8 @@ defmodule Web.StyleGuideLive do
         <span class="badge badge-success">Success</span>
         <span class="badge badge-warning">Warning</span>
         <span class="badge badge-danger">Danger</span>
+        <span class="badge"><strong>Primary Hours</strong></span>
+        <span class="badge"><strong>Secondary Hours</strong></span>
       </div>
     </.style_group>
     <.style_group title=".typography">

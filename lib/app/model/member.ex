@@ -2,6 +2,7 @@ defmodule App.Model.Member do
   use App, :model
 
   alias App.Field.EncryptedString
+  alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
@@ -87,8 +88,8 @@ defmodule App.Model.Member do
 
   def include_primary_and_secondary_hours(query, year) do
     query
-    |> join_activity_hours(year, "Primary Hours")
-    |> join_activity_hours(year, "Secondary Hours")
+    |> join_activity_hours(year, Activity.primary_hours_tag())
+    |> join_activity_hours(year, Activity.secondary_hours_tag())
     |> join_tax_credit_letter_id(year)
     |> select_primary_secondary_hours_summary()
   end

@@ -10,6 +10,9 @@ defmodule App.Model.Activity do
   alias App.Repo
   alias App.Validate
 
+  def primary_hours_tag, do: "Primary Hours"
+  def secondary_hours_tag, do: "Secondary Hours"
+
   schema "activities" do
     belongs_to :team, Team
     has_many :attendances, Attendance, where: [status: "attending"]
