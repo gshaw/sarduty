@@ -2,7 +2,6 @@ defmodule App.Model.Member do
   use App, :model
 
   alias App.Field.EncryptedString
-  alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
@@ -97,7 +96,7 @@ defmodule App.Model.Member do
   defp join_activity_hours(query, year, tag) do
     from(
       m in query,
-      left_join: a in subquery(Activity.tagged_activities_summary(year, [tag])),
+      left_join: a in subquery(Attendance.tagged_hours_summary(year, [tag])),
       on: m.id == a.member_id
     )
   end

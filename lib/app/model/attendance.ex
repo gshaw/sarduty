@@ -1,6 +1,8 @@
 defmodule App.Model.Attendance do
   use App, :model
 
+  import Ecto.Query
+
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
@@ -54,4 +56,24 @@ defmodule App.Model.Attendance do
   end
 
   # def delete(%Attendance{} = record), do: Repo.delete(record)
+
+  def tagged_hours_summary(year, tags) do
+    from(
+      at in Attendance,
+      join: ac in assoc(at, :activity),
+      where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
+      where: ac.id in subquery(tagged_activity_ids(tags)),
+      group_by: at.member_id,
+      select: %{
+        member_id: at.member_id,
+        count: count(at.id),
+        hours: fragment("cast(round(? + 0.5) as int)", sum(at.duration_in_minutes) / 60.0)
+      }
+    )
+  end
+
+  defp tagged_activity_ids(tags) do
+    subquery = select(Activity, [:id])
+    Enum.reduce(tags, subquery, fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end)
+  end
 end
