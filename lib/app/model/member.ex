@@ -88,8 +88,8 @@ defmodule App.Model.Member do
 
   def include_primary_and_secondary_hours(query, year) do
     query
-    |> join_activity_hours(year, "Primary Hours")
-    |> join_activity_hours(year, "Secondary Hours")
+    |> join_activity_hours(year, Activity.primary_hours_tag())
+    |> join_activity_hours(year, Activity.secondary_hours_tag())
     |> join_tax_credit_letter_id(year)
     |> select_primary_secondary_hours_summary()
   end
@@ -97,7 +97,7 @@ defmodule App.Model.Member do
   defp join_activity_hours(query, year, tag) do
     from(
       m in query,
-      left_join: a in subquery(Activity.tagged_activities_summary(year, [tag])),
+      left_join: a in subquery(Attendance.tagged_hours_summary(year, [tag])),
       on: m.id == a.member_id
     )
   end

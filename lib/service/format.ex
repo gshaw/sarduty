@@ -21,7 +21,25 @@ defmodule Service.Format do
     |> Calendar.strftime(format, user_options)
   end
 
-  def long_duration(started_at, finished_at) do
+  def duration_in_hours(started_at, finished_at) do
     "#{Service.Convert.duration_to_hours(started_at, finished_at)} hours"
+  end
+
+  def duration_in_years(started_at, finished_at) do
+    "#{Service.Convert.duration_to_years(started_at, finished_at)} years"
+  end
+
+  def attendance_datetime(nil, _activity_started_at, _timezone), do: nil
+
+  def attendance_datetime(datetime, activity_started_at, timezone) do
+    shifted = DateTime.shift_zone!(datetime, timezone)
+    activity_date = activity_started_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+    attendance_date = DateTime.to_date(shifted)
+
+    if Date.compare(attendance_date, activity_date) == :eq do
+      Calendar.strftime(shifted, "%H:%M")
+    else
+      Calendar.strftime(shifted, "%b %-d %H:%M")
+    end
   end
 end

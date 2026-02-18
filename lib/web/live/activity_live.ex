@@ -14,7 +14,7 @@ defmodule Web.ActivityLive do
 
   def handle_params(params, _uri, socket) do
     activity = fetch_activity(params["id"])
-    members = fetch_members(activity)
+    attendances = fetch_attendances(activity)
 
     mapbox = Mapbox.build_context()
     map_image_url = Mapbox.build_static_map_url(mapbox, activity.coordinate)
@@ -23,7 +23,7 @@ defmodule Web.ActivityLive do
       assign(socket,
         page_title: activity.title,
         activity: activity,
-        members: members,
+        attendances: attendances,
         map_image_url: map_image_url
       )
 
@@ -43,7 +43,7 @@ defmodule Web.ActivityLive do
         <.sidebar_content activity={@activity} />
       </aside>
       <main class="content-2/3">
-        <.main_content activity={@activity} map_image_url={@map_image_url} members={@members} />
+        <.main_content activity={@activity} map_image_url={@map_image_url} attendances={@attendances} />
       </main>
     </div>
     """
@@ -61,7 +61,7 @@ defmodule Web.ActivityLive do
       </dd>
       <dt>Duration</dt>
       <dd>
-        {Service.Format.long_duration(@activity.started_at, @activity.finished_at)}
+        {Service.Format.duration_in_hours(@activity.started_at, @activity.finished_at)}
       </dd>
 
       <dt>Actions</dt>
@@ -112,21 +112,38 @@ defmodule Web.ActivityLive do
       <dt>
         Attendance
         <span class="hint">
-          · {Enum.count(@members)} members
+          · {Enum.count(@attendances)} members
         </span>
       </dt>
       <dd>
-        <.table id="member_collection" rows={@members} class="mt-p05 table-striped w-fit">
-          <:col :let={record} label="ID" class="w-px" align="right">
-            {record.ref_id}
+        <.table id="attendance_collection" rows={@attendances} class="mt-p05 table-striped w-fit">
+          <:col :let={record} label="ID" class="w-px">
+            {record.member.ref_id}
           </:col>
           <:col :let={record} label="Name">
-            <.a navigate={~p"/#{@activity.team.subdomain}/members/#{record.id}"}>
-              {record.name}
+            <.a navigate={~p"/#{@activity.team.subdomain}/members/#{record.member.id}"}>
+              {record.member.name}
             </.a>
           </:col>
           <:col :let={record} label="Role">
-            {record.position}
+            {record.member.position}
+          </:col>
+          <:col :let={record} label="Started" class="whitespace-nowrap" align="right">
+            {Service.Format.attendance_datetime(
+              record.started_at,
+              @activity.started_at,
+              @activity.team.timezone
+            )}
+          </:col>
+          <:col :let={record} label="Finished" class="whitespace-nowrap" align="right">
+            {Service.Format.attendance_datetime(
+              record.finished_at,
+              @activity.started_at,
+              @activity.team.timezone
+            )}
+          </:col>
+          <:col :let={record} label="Hours" class="whitespace-nowrap" align="right">
+            {Service.Convert.duration_to_hours(record.started_at, record.finished_at)}
           </:col>
         </.table>
       </dd>
@@ -140,10 +157,12 @@ defmodule Web.ActivityLive do
     |> Repo.preload(:team)
   end
 
-  def fetch_members(activity) do
+  def fetch_attendances(activity) do
     activity
-    |> Ecto.assoc(:members)
-    |> order_by(:name)
+    |> Ecto.assoc(:attendances)
+    |> where([a], a.status == "attending")
+    |> order_by([a], asc: a.started_at)
+    |> preload(:member)
     |> Repo.all()
   end
 end
