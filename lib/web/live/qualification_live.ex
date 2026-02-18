@@ -111,7 +111,7 @@ defmodule Web.QualificationLive do
       class="w-full table-striped mb-p2"
     >
       <:col :let={award} label="Member">
-        <.a navigate={~p"/#{@team.subdomain}/members/#{award.member.id}"}>
+        <.a navigate={~p"/#{@team.subdomain}/members/#{award.member.id}/qualifications"}>
           {award.member.name}
         </.a>
       </:col>
@@ -132,7 +132,7 @@ defmodule Web.QualificationLive do
       class="w-full table-striped"
     >
       <:col :let={award} label="Member">
-        <.a navigate={~p"/#{@team.subdomain}/members/#{award.member.id}"}>
+        <.a navigate={~p"/#{@team.subdomain}/members/#{award.member.id}/qualifications"}>
           {award.member.name}
         </.a>
       </:col>
