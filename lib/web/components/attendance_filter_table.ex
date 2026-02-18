@@ -42,7 +42,7 @@ defmodule Web.Components.AttendanceFilterTable do
       rows={@records}
       class="w-full table-striped"
     >
-      <:col :let={record} label="Attendance">
+      <:col :let={record} label="Activity">
         <.a navigate={~p"/#{@member.team.subdomain}/activities/#{record.activity.id}"}>
           <.activity_title activity={record.activity} />
         </.a>
