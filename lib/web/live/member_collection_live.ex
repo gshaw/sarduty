@@ -57,7 +57,7 @@ defmodule Web.MemberCollectionLive do
       path_fn={@path_fn}
       class="w-full table-striped"
     >
-      <:col :let={record} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>
+      <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>

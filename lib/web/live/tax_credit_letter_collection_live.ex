@@ -70,7 +70,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <th colspan="3" class="text-center">SARVAC Hours</th>
         <th></th>
       </:header_row>
-      <:col :let={record} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>
+      <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>

@@ -117,8 +117,8 @@ defmodule Web.ActivityLive do
       </dt>
       <dd>
         <.table id="member_collection" rows={@members} class="mt-p05 table-striped w-fit">
-          <:col :let={record} label="ID" class="w-px" align="right">
             {record.ref_id}
+          <:col :let={record} label="ID" class="w-px">
           </:col>
           <:col :let={record} label="Name">
             <.a navigate={~p"/#{@activity.team.subdomain}/members/#{record.id}"}>
