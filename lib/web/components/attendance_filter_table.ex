@@ -5,7 +5,6 @@ defmodule Web.Components.AttendanceFilterTable do
   import Web.Components.D4H
   import Web.Components.Table
 
-  alias App.Model.Activity
   alias App.ViewModel.AttendanceFilterViewModel
 
   attr :form, :map, required: true
@@ -73,18 +72,5 @@ defmodule Web.Components.AttendanceFilterTable do
       </:col>
     </.table>
     """
-  end
-
-  defp filter_and_sort_tags(tags) do
-    primary_tag = Activity.primary_hours_tag()
-    secondary_tag = Activity.secondary_hours_tag()
-
-    tags
-    |> Enum.filter(fn tag -> tag in [primary_tag, secondary_tag] end)
-    |> Enum.sort_by(fn
-      tag when tag == primary_tag -> 0
-      tag when tag == secondary_tag -> 1
-      _ -> 2
-    end)
   end
 end

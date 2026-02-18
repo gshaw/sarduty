@@ -57,12 +57,17 @@ defmodule App.Model.Attendance do
 
   # def delete(%Attendance{} = record), do: Repo.delete(record)
 
-  def scope(q, member_id: member_id), do: where(q, [r], r.member_id == ^member_id)
+  def scope(q, member_id: member_id) do
+    q
+    |> where([r], r.member_id == ^member_id)
+    |> where([r], r.status == "attending")
+  end
 
   def tagged_hours_summary(year, tags) do
     from(
       at in Attendance,
       join: ac in assoc(at, :activity),
+      where: at.status == "attending",
       where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
       where: ac.id in subquery(tagged_activity_ids(tags)),
       group_by: at.member_id,
