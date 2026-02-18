@@ -61,7 +61,7 @@ defmodule Web.ActivityLive do
       </dd>
       <dt>Duration</dt>
       <dd>
-        {Service.Format.long_duration(@activity.started_at, @activity.finished_at)}
+        {Service.Format.duration_in_hours(@activity.started_at, @activity.finished_at)}
       </dd>
 
       <dt>Actions</dt>
