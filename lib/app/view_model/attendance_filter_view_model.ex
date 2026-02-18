@@ -13,15 +13,25 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     field :tag, :string
   end
 
-  def when_kinds, do: build_year_options()
+  def when_kinds(member), do: build_member_year_options(member)
   def tag_kinds, do: ["all", "both", "primary", "secondary", "other"]
 
   defp activity_primary_hours_tag, do: Activity.primary_hours_tag()
   defp activity_secondary_hours_tag, do: Activity.secondary_hours_tag()
 
-  defp build_year_options do
-    max_year = Date.utc_today().year + 1
-    Enum.map(max_year..2018//-1, &Integer.to_string(&1))
+  defp build_member_year_options(member) do
+    current = current_year()
+
+    attendance_years =
+      Attendance
+      |> where([a], a.member_id == ^member.id)
+      |> where([a], a.status == "attending")
+      |> select([a], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
+      |> Repo.all()
+
+    [current | attendance_years]
+    |> Enum.uniq()
+    |> Enum.sort(:desc)
   end
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
@@ -69,7 +79,6 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   defp build_changeset(data, params) do
     data
     |> cast(params, [:when, :tag])
-    |> validate_inclusion(:when, when_kinds())
     |> validate_inclusion(:tag, tag_kinds())
   end
 

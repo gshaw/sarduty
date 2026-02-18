@@ -23,7 +23,7 @@ defmodule Web.Components.AttendanceFilterTable do
         label="When"
         field={@form[:when]}
         type="select"
-        options={AttendanceFilterViewModel.when_kinds()}
+        options={AttendanceFilterViewModel.when_kinds(@member)}
       />
       <.input
         label="Kind"
