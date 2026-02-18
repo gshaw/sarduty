@@ -121,7 +121,9 @@ defmodule Web.ActivityLive do
             {record.member.ref_id}
           </:col>
           <:col :let={record} label="Name">
-            <.a navigate={~p"/#{@activity.team.subdomain}/members/#{record.member.id}"}>
+            <.a navigate={
+              ~p"/#{@activity.team.subdomain}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+            }>
               {record.member.name}
             </.a>
           </:col>
