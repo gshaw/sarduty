@@ -45,6 +45,21 @@ defmodule Web.MemberLive do
     ~H"""
     <dl>
       <p><.member_image member={@member} /></p>
+      <dt>ID</dt>
+      <dd>{@member.ref_id}</dd>
+      <dt>Role</dt>
+      <dd>{@member.position}</dd>
+      <dt>Email</dt>
+      <dd>{@member.email}</dd>
+      <dt>Phone</dt>
+      <dd>{@member.phone}</dd>
+      <dt>Address</dt>
+      <dd>{@member.address}</dd>
+      <dt>Joined</dt>
+      <dd>
+        {Service.Format.long_date(@member.joined_at, @member.team.timezone)}
+      </dd>
+
       <dt>Actions</dt>
       <dd>
         <ul class="action-list">
@@ -62,18 +77,7 @@ defmodule Web.MemberLive do
 
   defp main_content(assigns) do
     ~H"""
-    <dl>
-      <dt>Role</dt>
-      <dd>{@member.position}</dd>
-      <dt>Email</dt>
-      <dd>{@member.email}</dd>
-      <dt>Phone</dt>
-      <dd>{@member.phone}</dd>
-      <dt>Address</dt>
-      <dd>{@member.address}</dd>
-      <dt>Joined</dt>
-      <dd>{Service.Format.long_date(@member.joined_at, @member.team.timezone)}</dd>
-    </dl>
+    <dl></dl>
 
     <.qualifications_content member={@member} />
     """
