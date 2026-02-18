@@ -57,7 +57,10 @@ defmodule Web.MemberLive do
       <dd>{@member.address}</dd>
       <dt>Joined</dt>
       <dd>
-        {Service.Format.long_date(@member.joined_at, @member.team.timezone)}
+        {Service.Format.long_date(@member.joined_at, @member.team.timezone)} ({Service.Format.duration_in_years(
+          @member.joined_at,
+          DateTime.utc_now()
+        )} ago)
       </dd>
 
       <dt>Actions</dt>

@@ -7,4 +7,9 @@ defmodule Service.Convert do
     minutes = DateTime.diff(finished_at, started_at, :minute)
     Float.round(minutes / 60.0, 1)
   end
+
+  def duration_to_years(started_at, finished_at) do
+    minutes = DateTime.diff(finished_at, started_at, :minute)
+    Float.round(minutes / 525_600.0, 1)
+  end
 end
