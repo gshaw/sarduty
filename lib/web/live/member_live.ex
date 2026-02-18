@@ -97,6 +97,19 @@ defmodule Web.MemberLive do
         )} ago)
       </dd>
 
+      <dt :if={@member.tax_credit_letters != []}>Tax Credit Letters</dt>
+      <dd :if={@member.tax_credit_letters != []}>
+        <ul class="action-list">
+          <%= for letter <- Enum.sort_by(@member.tax_credit_letters, & &1.year, :desc) do %>
+            <li>
+              <.a navigate={~p"/#{@member.team.subdomain}/tax-credit-letters/#{letter.id}"}>
+                {letter.year}
+              </.a>
+            </li>
+          <% end %>
+        </ul>
+      </dd>
+
       <dt>Actions</dt>
       <dd>
         <ul class="action-list">
@@ -168,7 +181,11 @@ defmodule Web.MemberLive do
 
     Member
     |> Repo.get(member_id)
-    |> Repo.preload([:team, member_qualification_awards: qualification_awards_query])
+    |> Repo.preload([
+      :team,
+      :tax_credit_letters,
+      member_qualification_awards: qualification_awards_query
+    ])
   end
 
   defp award_status(award) do

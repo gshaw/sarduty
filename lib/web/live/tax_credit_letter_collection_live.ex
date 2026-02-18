@@ -96,7 +96,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <span class="label md:hidden">Total</span>
         {record.total_hours}
       </:col>
-      <:col :let={record} label="Letter">
+      <:col :let={record} label="Letter" class="text-nowrap">
         <.record_actions record={record} current_team={@current_team} />
       </:col>
     </.table>

@@ -14,7 +14,7 @@ defmodule Web.Components.Markdown do
     """
   end
 
-  defp build_raw_html(markdown_content) do
+  defp build_raw_html(markdown_content) when is_binary(markdown_content) do
     earmark_options = [
       code_class_prefix: "lang- language-",
       gfm: true,
@@ -26,4 +26,6 @@ defmodule Web.Components.Markdown do
     |> Earmark.as_html!(earmark_options)
     |> Phoenix.HTML.raw()
   end
+
+  defp build_raw_html(_), do: Phoenix.HTML.raw("<p>Content unavailable</p>")
 end
