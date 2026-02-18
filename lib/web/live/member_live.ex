@@ -2,10 +2,12 @@ defmodule Web.MemberLive do
   use Web, :live_view_app_layout
 
   import Ecto.Query
+  import Web.Components.AttendanceFilterTable
 
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Repo
+  alias App.ViewModel.AttendanceFilterViewModel
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -14,10 +16,38 @@ defmodule Web.MemberLive do
   def handle_params(params, _uri, socket) do
     member = find_member(params["id"])
 
+    {:ok, filter_options, filter_changeset} =
+      AttendanceFilterViewModel.validate(params)
+
+    records =
+      AttendanceFilterViewModel.build_filtered_content(member, filter_options)
+
     socket =
       socket
       |> assign(:page_title, member.name)
       |> assign(:member, member)
+      |> assign(:filter_form, to_form(filter_changeset, as: :filter))
+      |> assign(:records, records)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("change", params, socket) do
+    params = clean_params(params)
+
+    {:ok, filter_options, _} = AttendanceFilterViewModel.validate(params)
+
+    records =
+      AttendanceFilterViewModel.build_filtered_content(socket.assigns.member, filter_options)
+
+    member = socket.assigns.member
+    query_params = Service.PathHelpers.build_filter_query_params(filter_options)
+    path = ~p"/#{member.team.subdomain}/members/#{member.id}?#{query_params}"
+
+    socket =
+      socket
+      |> push_patch(to: path, replace: true)
+      |> assign(:records, records)
 
     {:noreply, socket}
   end
@@ -35,7 +65,11 @@ defmodule Web.MemberLive do
         <.sidebar_content member={@member} />
       </aside>
       <main class="content-2/3">
-        <.main_content member={@member} />
+        <.main_content
+          member={@member}
+          filter_form={@filter_form}
+          records={@records}
+        />
       </main>
     </div>
     """
@@ -80,9 +114,18 @@ defmodule Web.MemberLive do
 
   defp main_content(assigns) do
     ~H"""
-    <dl></dl>
-
-    <.qualifications_content member={@member} />
+    <div>
+      <.attendance_filter_table
+        form={@filter_form}
+        records={@records}
+        member={@member}
+      />
+    </div>
+    <br />
+    <br />
+    <div>
+      <.qualifications_content member={@member} />
+    </div>
     """
   end
 
@@ -140,5 +183,12 @@ defmodule Web.MemberLive do
     not_ended = is_nil(award.ends_at) or DateTime.compare(award.ends_at, now) == :gt
 
     if started and not_ended, do: "Active", else: "Expired"
+  end
+
+  defp clean_params(params) do
+    case params do
+      %{"filter" => filter} -> filter
+      %{} -> %{}
+    end
   end
 end

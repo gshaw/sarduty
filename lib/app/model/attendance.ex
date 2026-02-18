@@ -57,6 +57,8 @@ defmodule App.Model.Attendance do
 
   # def delete(%Attendance{} = record), do: Repo.delete(record)
 
+  def scope(q, member_id: member_id), do: where(q, [r], r.member_id == ^member_id)
+
   def tagged_hours_summary(year, tags) do
     from(
       at in Attendance,
