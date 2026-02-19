@@ -4,17 +4,20 @@ defmodule Service.Convert do
   """
 
   def duration_to_minutes(started_at, finished_at) do
-    seconds = DateTime.diff(finished_at, started_at, :second)
-    round(seconds / 60.0)
+    DateTime.diff(finished_at, started_at, :minute)
   end
 
   def duration_to_hours(started_at, finished_at) do
-    seconds = DateTime.diff(finished_at, started_at, :second)
-    Float.round(seconds / 3600.0, 1)
+    minutes = duration_to_minutes(started_at, finished_at)
+    Float.round(minutes / 60.0, 1)
   end
 
-  def duration_to_years(started_at, finished_at) do
-    minutes = DateTime.diff(finished_at, started_at, :minute)
-    Float.round(minutes / 525_600.0, 1)
+  def duration_to_months(started_at, finished_at) do
+    days =
+      finished_at
+      |> DateTime.to_date()
+      |> Date.diff(DateTime.to_date(started_at))
+
+    round(days / 30.44)
   end
 end

@@ -21,12 +21,21 @@ defmodule Service.Format do
     |> Calendar.strftime(format, user_options)
   end
 
-  def duration_in_hours(started_at, finished_at) do
-    "#{Service.Convert.duration_to_hours(started_at, finished_at)} hours"
+  def months_or_years_ago(date) do
+    months_or_years_distance(date, DateTime.utc_now())
   end
 
-  def duration_in_years(started_at, finished_at) do
-    "#{Service.Convert.duration_to_years(started_at, finished_at)} years"
+  def months_or_years_distance(started_at, finished_at) do
+    months = Service.Convert.duration_to_months(started_at, finished_at)
+    years = round(months / 12)
+
+    cond do
+      months < 1 -> "less than a month"
+      months == 1 -> "1 month"
+      months <= 18 -> "#{months} months"
+      # years == 1 -> "1 year" (not needed since 18 months is the cutoff)
+      true -> "#{years} years"
+    end
   end
 
   def same_day_datetime(nil, _activity_started_at, _timezone), do: nil
@@ -48,10 +57,10 @@ defmodule Service.Format do
     mins = rem(minutes, 60)
 
     cond do
-      hours > 0 and mins == 0 -> "#{hours} hour#{if(hours > 1, do: "s", else: "")}"
-      hours > 0 and mins > 0 -> "#{hours}h #{mins}m"
-      mins > 0 -> "#{mins} min"
-      true -> "0 min"
+      hours == 0 -> "#{mins} min"
+      hours == 1 and mins == 0 -> "1 hour"
+      mins == 0 -> "#{hours} hours"
+      true -> "#{hours}h #{mins}m"
     end
   end
 
