@@ -33,7 +33,7 @@ defmodule Web.Components.AttendanceFilterTable do
       />
 
       <span class="filter-form-count">
-        {length(@records)} records · {@total_hours} hours
+        {length(@records)} activities · {@total_hours} hours
       </span>
     </.form>
 
