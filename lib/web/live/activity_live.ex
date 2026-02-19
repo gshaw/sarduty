@@ -40,7 +40,7 @@ defmodule Web.ActivityLive do
     <h1 class="title">{@activity.title}</h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content activity={@activity} />
+        <.sidebar_content activity={@activity} attendances={@attendances} />
       </aside>
       <main class="content-2/3">
         <.main_content activity={@activity} map_image_url={@map_image_url} attendances={@attendances} />
@@ -55,11 +55,14 @@ defmodule Web.ActivityLive do
       <dt>Kind</dt>
       <dd><.activity_badges activity={@activity} /></dd>
 
-      <dt>Started</dt>
+      <dt>Attendance</dt>
+      <dd>{Enum.count(@attendances)} members</dd>
+
+      <dt>Start</dt>
       <dd>
         {Service.Format.medium_datetime(@activity.started_at, @activity.team.timezone)}
       </dd>
-      <dt>Finished</dt>
+      <dt>Finish</dt>
       <dd>
         {Service.Format.medium_datetime(@activity.finished_at, @activity.team.timezone)}
       </dd>
@@ -69,6 +72,15 @@ defmodule Web.ActivityLive do
           DateTime.diff(@activity.finished_at, @activity.started_at, :second) / 60
         )}
       </dd>
+
+      <div :if={@activity.address || @activity.coordinate}>
+        <dt>Address</dt>
+        <dd>{@activity.address}</dd>
+        <dt>Coordinate</dt>
+        <dd>
+          {@activity.coordinate}
+        </dd>
+      </div>
 
       <dt>Actions</dt>
       <dd>
@@ -96,66 +108,50 @@ defmodule Web.ActivityLive do
 
   def main_content(assigns) do
     ~H"""
-    <dl>
-      <p :if={@map_image_url}>
+    <div>
+      <div class="mb-p"><.activity_tags activity={@activity} /></div>
+
+      <div :if={@map_image_url} class="mb-p">
         <img src={@map_image_url} width="640" height="480" alt="Map of activity" />
-      </p>
-      <div :if={@activity.address || @activity.coordinate}>
-        <dt>Address</dt>
-        <dd>{@activity.address}</dd>
-        <dt>Coordinate</dt>
-        <dd>
-          {@activity.coordinate}
-        </dd>
       </div>
 
-      <dt>Description</dt>
-      <dd class="no-section-divider"><.markdown content={@activity.description} /></dd>
+      <div class="mb-p">
+        <.markdown content={@activity.description} />
+      </div>
 
-      <dt>Tags</dt>
-      <dd><.activity_tags activity={@activity} /></dd>
-
-      <dt>
-        Attendance
-        <span class="hint">
-          · {Enum.count(@attendances)} members
-        </span>
-      </dt>
-      <dd>
-        <.table id="attendance_collection" rows={@attendances} class="mt-p05 table-striped w-fit">
-          <:col :let={record} label="ID" class="w-px">
-            {record.member.ref_id}
-          </:col>
-          <:col :let={record} label="Name">
-            <.a navigate={
-              ~p"/#{@activity.team.subdomain}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-            }>
-              {record.member.name}
-            </.a>
-          </:col>
-          <:col :let={record} label="Role">
-            {record.member.position}
-          </:col>
-          <:col :let={record} label="Started" class="whitespace-nowrap">
-            {Service.Format.same_day_datetime(
-              record.started_at,
-              @activity.started_at,
-              @activity.team.timezone
-            )}
-          </:col>
-          <:col :let={record} label="Finished" class="whitespace-nowrap">
-            {Service.Format.same_day_datetime(
-              record.finished_at,
-              @activity.started_at,
-              @activity.team.timezone
-            )}
-          </:col>
-          <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
-            {Service.Format.minutes_to_hm(record.duration_in_minutes)}
-          </:col>
-        </.table>
-      </dd>
-    </dl>
+      <.table id="attendance_collection" rows={@attendances} class="mt-p05 table-striped w-fit">
+        <:col :let={record} label="ID" class="w-px">
+          {record.member.ref_id}
+        </:col>
+        <:col :let={record} label="Name">
+          <.a navigate={
+            ~p"/#{@activity.team.subdomain}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+          }>
+            {record.member.name}
+          </.a>
+        </:col>
+        <:col :let={record} label="Role">
+          {record.member.position}
+        </:col>
+        <:col :let={record} label="Start" class="whitespace-nowrap">
+          {Service.Format.same_day_datetime(
+            record.started_at,
+            @activity.started_at,
+            @activity.team.timezone
+          )}
+        </:col>
+        <:col :let={record} label="Finish" class="whitespace-nowrap">
+          {Service.Format.same_day_datetime(
+            record.finished_at,
+            @activity.started_at,
+            @activity.team.timezone
+          )}
+        </:col>
+        <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
+          {Service.Format.minutes_to_hm(record.duration_in_minutes)}
+        </:col>
+      </.table>
+    </div>
     """
   end
 
