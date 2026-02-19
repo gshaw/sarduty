@@ -69,7 +69,7 @@ defmodule Web.ActivityLive do
         <dt>Attendance</dt>
         <dd>
           {@attendance_count} members
-          · {format_total_duration(@attendances)} effort
+          · {format_total_effort(@attendances)} effort
         </dd>
       </div>
 
@@ -190,17 +190,20 @@ defmodule Web.ActivityLive do
   end
 
   defp format_activity_duration(activity) do
-    Service.Format.duration_as_hours_minutes_verbose(
-      Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at)
-    )
+    activity.started_at
+    |> Service.Convert.duration_to_minutes(activity.finished_at)
+    |> Service.Format.duration_as_hours_minutes_verbose()
   end
 
-  defp format_total_duration(attendances) do
+  defp format_total_effort(attendances) do
     total_minutes =
       attendances
       |> Enum.map(& &1.duration_in_minutes)
       |> Enum.sum()
 
-    Service.Format.duration_as_hours_minutes_verbose(total_minutes)
+    rounded_minutes =
+      if total_minutes > 300, do: round(total_minutes / 60) * 60, else: total_minutes
+
+    Service.Format.duration_as_hours_minutes_verbose(rounded_minutes)
   end
 end
