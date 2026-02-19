@@ -19,8 +19,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   def filters,
     do: [
-      {"none", "none"},
-      {"any", "any"},
+      {"None", "none"},
+      {"Any", "any"},
       {"50+", "50"},
       {"100+", "100"},
       {"150+", "150"},

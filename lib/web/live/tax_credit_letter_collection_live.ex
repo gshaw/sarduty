@@ -54,9 +54,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
         type="select"
         options={TaxCreditLetterFilterViewModel.filters()}
       />
-      <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
-      <span class="filter-form-count">{Enum.count(@records)} members</span>
     </.form>
+
+    <div class="filter-form-results">
+      {Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")} ·
+      <.a navigate={@path_fn.(:reset)}>Reset</.a>
+    </div>
 
     <.table
       id="member_collection"
