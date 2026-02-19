@@ -10,6 +10,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   @primary_key false
   embedded_schema do
     field :q, Field.TrimmedString
+    field :status, :string
     field :page, :integer
     field :limit, :integer
     field :sort, :string
@@ -17,13 +18,17 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
+  def status_kinds, do: [{"All", "all"}, {"Active", "active"}, {"Departed", "departed"}]
+
   def sort_kinds,
     do: %{
       "Name" => "name",
       "Role" => "role",
       "ID" => "id",
       "Joined ↑" => "date",
-      "Joined ↓" => "date-"
+      "Joined ↓" => "date-",
+      "Departed ↑" => "departed",
+      "Departed ↓" => "departed-"
     }
 
   def validate(params) do
@@ -39,12 +44,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
+    |> scope(status: filter_options.status)
     |> scope(sort: filter_options.sort)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
   defp build_new do
     %__MODULE__{
+      status: "active",
       limit: 500,
       sort: "name"
     }
@@ -54,8 +61,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :page, :limit, :sort])
+    |> cast(params, [:q, :status, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
+    |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,
@@ -78,9 +86,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
+  defp scope(q, status: "all"), do: q
+  defp scope(q, status: "active"), do: where(q, [r], is_nil(r.left_at))
+  defp scope(q, status: "departed"), do: where(q, [r], not is_nil(r.left_at))
+
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
   defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.joined_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.joined_at)
+  defp scope(q, sort: "departed-"), do: order_by(q, [r], desc_nulls_last: r.left_at)
+  defp scope(q, sort: "departed"), do: order_by(q, [r], asc_nulls_last: r.left_at)
 end

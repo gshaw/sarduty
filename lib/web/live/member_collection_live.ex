@@ -16,6 +16,7 @@ defmodule Web.MemberCollectionLive do
         socket =
           socket
           |> assign(:sort, filter_options.sort)
+          |> assign(:status, filter_options.status)
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
@@ -33,6 +34,12 @@ defmodule Web.MemberCollectionLive do
     <h1 class="title mb-p">{@page_title}</h1>
     <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
       <.input field={@form[:q]} label="Search" />
+      <.input
+        label="Status"
+        field={@form[:status]}
+        type="select"
+        options={MemberFilterViewModel.status_kinds()}
+      />
       <.input
         label="Sort"
         field={@form[:sort]}
@@ -72,6 +79,19 @@ defmodule Web.MemberCollectionLive do
         <span class="whitespace-nowrap">
           {Service.Format.short_date(record.joined_at, @current_team.timezone)}
         </span>
+      </:col>
+      <:col
+        :let={record}
+        :if={@status != "active"}
+        label="Departed"
+        class="w-1/12"
+        sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
+      >
+        <span class="label md:hidden">Departed</span>
+        <span :if={record.left_at} class="whitespace-nowrap">
+          {Service.Format.short_date(record.left_at, @current_team.timezone)}
+        </span>
+        <span :if={!record.left_at} class="text-gray-400">-</span>
       </:col>
     </.table>
 
