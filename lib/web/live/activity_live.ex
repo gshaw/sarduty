@@ -24,6 +24,7 @@ defmodule Web.ActivityLive do
         page_title: activity.title,
         activity: activity,
         attendances: attendances,
+        attendance_count: length(attendances),
         map_image_url: map_image_url
       )
 
@@ -40,10 +41,19 @@ defmodule Web.ActivityLive do
     <h1 class="title">{@activity.title}</h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content activity={@activity} attendances={@attendances} />
+        <.sidebar_content
+          activity={@activity}
+          attendances={@attendances}
+          attendance_count={@attendance_count}
+        />
       </aside>
       <main class="content-2/3">
-        <.main_content activity={@activity} map_image_url={@map_image_url} attendances={@attendances} />
+        <.main_content
+          activity={@activity}
+          map_image_url={@map_image_url}
+          attendances={@attendances}
+          attendance_count={@attendance_count}
+        />
       </main>
     </div>
     """
@@ -55,11 +65,13 @@ defmodule Web.ActivityLive do
       <dt>Kind</dt>
       <dd><.activity_badges activity={@activity} /></dd>
 
-      <dt>Attendance</dt>
-      <dd>
-        {Enum.count(@attendances)} members
-        · {calculate_total_duration(@attendances)}
-      </dd>
+      <div :if={@attendance_count > 0}>
+        <dt>Attendance</dt>
+        <dd>
+          {@attendance_count} members
+          · {calculate_total_duration(@attendances)}
+        </dd>
+      </div>
 
       <dt>Start</dt>
       <dd>
@@ -124,36 +136,44 @@ defmodule Web.ActivityLive do
         <.markdown content={@activity.description} />
       </div>
 
-      <.table id="attendance_collection" rows={@attendances} class="mt-p05 table-striped w-fit">
-        <:col :let={record} label="ID" class="w-px">
-          {record.member.ref_id}
-        </:col>
-        <:col :let={record} label="Name">
-          <.a navigate={
-            ~p"/#{@activity.team.subdomain}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-          }>
-            {record.member.name}
-          </.a>
-        </:col>
-        <:col :let={record} label="Start" class="whitespace-nowrap">
-          {Service.Format.same_day_datetime(
-            record.started_at,
-            @activity.started_at,
-            @activity.team.timezone
-          )}
-        </:col>
-        <:col :let={record} label="Finish" class="whitespace-nowrap">
-          {Service.Format.same_day_datetime(
-            record.finished_at,
-            @activity.started_at,
-            @activity.team.timezone
-          )}
-        </:col>
-        <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
-          {Service.Format.minutes_to_hm(record.duration_in_minutes)}
-        </:col>
-      </.table>
+      <div :if={@attendance_count > 0}>
+        <.activity_attendance_table activity={@activity} attendances={@attendances} />
+      </div>
     </div>
+    """
+  end
+
+  def activity_attendance_table(assigns) do
+    ~H"""
+    <.table id="attendance_collection" rows={@attendances} class="mt-p05 table-striped w-fit">
+      <:col :let={record} label="ID" class="w-px">
+        {record.member.ref_id}
+      </:col>
+      <:col :let={record} label="Name">
+        <.a navigate={
+          ~p"/#{@activity.team.subdomain}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+        }>
+          {record.member.name}
+        </.a>
+      </:col>
+      <:col :let={record} label="Start" class="whitespace-nowrap">
+        {Service.Format.same_day_datetime(
+          record.started_at,
+          @activity.started_at,
+          @activity.team.timezone
+        )}
+      </:col>
+      <:col :let={record} label="Finish" class="whitespace-nowrap">
+        {Service.Format.same_day_datetime(
+          record.finished_at,
+          @activity.started_at,
+          @activity.team.timezone
+        )}
+      </:col>
+      <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
+        {Service.Format.minutes_to_hm(record.duration_in_minutes)}
+      </:col>
+    </.table>
     """
   end
 
