@@ -12,6 +12,7 @@ defmodule App.Model.Activity do
 
   def primary_hours_tag, do: "Primary Hours"
   def secondary_hours_tag, do: "Secondary Hours"
+  def null_island, do: "0.00000,0.00000"
 
   schema "activities" do
     belongs_to :team, Team

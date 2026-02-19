@@ -76,9 +76,11 @@ defmodule Web.ActivityLive do
         )}
       </dd>
 
-      <div :if={@activity.address || @activity.coordinate}>
+      <div :if={@activity.address}>
         <dt>Address</dt>
         <dd>{@activity.address}</dd>
+      </div>
+      <div :if={@activity.coordinate && @activity.coordinate != Activity.null_island()}>
         <dt>Coordinate</dt>
         <dd>
           {@activity.coordinate}
