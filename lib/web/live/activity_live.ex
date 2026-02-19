@@ -133,9 +133,6 @@ defmodule Web.ActivityLive do
             {record.member.name}
           </.a>
         </:col>
-        <:col :let={record} label="Role">
-          {record.member.position}
-        </:col>
         <:col :let={record} label="Start" class="whitespace-nowrap">
           {Service.Format.same_day_datetime(
             record.started_at,
