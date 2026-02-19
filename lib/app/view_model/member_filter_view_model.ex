@@ -4,21 +4,18 @@ defmodule App.ViewModel.MemberFilterViewModel do
   import Ecto.Query
 
   alias App.Field
-  alias App.Model.Activity
   alias App.Model.Member
   alias App.Repo
 
   @primary_key false
   embedded_schema do
     field :q, Field.TrimmedString
-    field :year, :integer
     field :page, :integer
     field :limit, :integer
     field :sort, :string
   end
 
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
-  def years, do: Range.to_list(2018..(Date.utc_today().year + 1))
 
   def sort_kinds,
     do: %{
@@ -26,11 +23,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "Role" => "role",
       "ID" => "id",
       "Joined ↑" => "date",
-      "Joined ↓" => "date-",
-      "Activities ↑" => "count",
-      "Activities ↓" => "count-",
-      "Hours ↑" => "hours",
-      "Hours ↓" => "hours-"
+      "Joined ↓" => "date-"
     }
 
   def validate(params) do
@@ -42,19 +35,17 @@ defmodule App.ViewModel.MemberFilterViewModel do
     end
   end
 
-  def build_paginated_content(team, filter_options, tags) do
+  def build_paginated_content(team, filter_options) do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
     |> scope(sort: filter_options.sort)
-    |> include_activity_summary(filter_options.year, tags)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
   defp build_new do
     %__MODULE__{
-      year: Date.utc_today().year,
-      limit: 100,
+      limit: 500,
       sort: "name"
     }
   end
@@ -63,13 +54,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :year, :page, :limit, :sort])
+    |> cast(params, [:q, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
-    |> validate_number(:year,
-      greater_than_or_equal_to: Enum.min(years()),
-      less_than_or_equal_to: Enum.max(years())
-    )
     |> validate_number(:page,
       greater_than_or_equal_to: 1,
       less_than_or_equal_to: Enum.max(limits())
@@ -96,21 +83,4 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.joined_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.joined_at)
-  defp scope(q, sort: "count-"), do: order_by(q, [r], desc: fragment("count"))
-  defp scope(q, sort: "count"), do: order_by(q, [r], asc: fragment("count"))
-  defp scope(q, sort: "hours-"), do: order_by(q, [r], desc: fragment("hours"))
-  defp scope(q, sort: "hours"), do: order_by(q, [r], asc: fragment("hours"))
-
-  defp include_activity_summary(query, year, tags) do
-    from(
-      m in query,
-      left_join: summary in subquery(Activity.tagged_activities_summary(year, tags)),
-      on: m.id == summary.member_id,
-      select: %{
-        member: m,
-        hours: fragment("? as hours", coalesce(summary.hours, 0)),
-        count: fragment("? as count", coalesce(summary.count, 0))
-      }
-    )
-  end
 end
