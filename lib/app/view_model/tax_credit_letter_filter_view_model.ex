@@ -70,7 +70,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   def find_all(team, filter_options) do
     Member
     |> Member.scope(team_id: team.id)
-    |> Member.include_primary_and_secondary_hours(filter_options.year)
+    |> Member.include_primary_and_secondary_minutes(filter_options.year)
     |> scope(q: filter_options.q)
     |> scope(sort: filter_options.sort)
     |> scope(filter: filter_options.filter)
@@ -101,12 +101,12 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     )
   end
 
-  defp scope(q, filter: "none"), do: where(q, [r], fragment("total_hours") == 0)
-  defp scope(q, filter: "any"), do: where(q, [r], fragment("total_hours") > 0)
+  defp scope(q, filter: "none"), do: where(q, [r], fragment("total_minutes") == 0)
+  defp scope(q, filter: "any"), do: where(q, [r], fragment("total_minutes") > 0)
 
   defp scope(q, filter: filter) when is_binary(filter) do
     case Integer.parse(filter) do
-      {hours, ""} -> where(q, [r], fragment("total_hours") >= ^hours)
+      {hours, ""} -> where(q, [r], fragment("total_minutes") >= ^(hours * 60))
       _ -> q
     end
   end
@@ -127,7 +127,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
-  defp scope(q, sort: "primary"), do: order_by(q, [r], desc: fragment("primary_hours"))
-  defp scope(q, sort: "secondary"), do: order_by(q, [r], desc: fragment("secondary_hours"))
-  defp scope(q, sort: "total"), do: order_by(q, [r], desc: fragment("total_hours"))
+  defp scope(q, sort: "primary"), do: order_by(q, [r], desc: fragment("primary_minutes"))
+  defp scope(q, sort: "secondary"), do: order_by(q, [r], desc: fragment("secondary_minutes"))
+  defp scope(q, sort: "total"), do: order_by(q, [r], desc: fragment("total_minutes"))
 end

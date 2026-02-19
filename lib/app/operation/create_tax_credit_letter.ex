@@ -24,7 +24,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
   end
 
   defp build_letter_content(team, member, ref_id, year) do
-    summary = build_hours_summary(member, year)
+    summary = build_minutes_summary(member, year)
     certified_at = DateTime.utc_now()
     formatted_certified_on = Format.long_date(certified_at, team.timezone)
 
@@ -39,9 +39,9 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
     This letter serves to confirm that the above noted individual has completed eligible volunteer search and rescue hours for #{team.name}, an ‘Eligible Search and Rescue Organization recognized by the RCMP’ in the #{year} calendar year.
 
-    Primary Hours: #{summary.primary_hours}
-    Secondary Hours: #{summary.secondary_hours}
-    Total Hours: #{summary.total_hours}
+    Primary Hours: #{Format.duration_as_hours_minutes_long(summary.primary_minutes)}
+    Secondary Hours: #{Format.duration_as_hours_minutes_long(summary.secondary_minutes)}
+    Total Hours: #{Format.duration_as_hours_minutes_long(summary.total_minutes)}
 
     Please contact the writer if you have any questions.
 
@@ -56,10 +56,10 @@ defmodule App.Operation.CreateTaxCreditLetter do
     """
   end
 
-  defp build_hours_summary(member, year) do
+  defp build_minutes_summary(member, year) do
     Member
     |> where(id: ^member.id)
-    |> Member.include_primary_and_secondary_hours(year)
+    |> Member.include_primary_and_secondary_minutes(year)
     |> Repo.one()
   end
 end

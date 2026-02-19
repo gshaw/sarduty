@@ -84,18 +84,18 @@ defmodule App.Model.Member do
     Repo.update!(changeset)
   end
 
-  def include_primary_and_secondary_hours(query, year) do
+  def include_primary_and_secondary_minutes(query, year) do
     query
-    |> join_activity_hours(year, Activity.primary_hours_tag())
-    |> join_activity_hours(year, Activity.secondary_hours_tag())
+    |> join_activity_minutes(year, Activity.primary_hours_tag())
+    |> join_activity_minutes(year, Activity.secondary_hours_tag())
     |> join_tax_credit_letter_id(year)
-    |> select_primary_secondary_hours_summary()
+    |> select_primary_secondary_minutes_summary()
   end
 
-  defp join_activity_hours(query, year, tag) do
+  defp join_activity_minutes(query, year, tag) do
     from(
       m in query,
-      left_join: a in subquery(Attendance.tagged_hours_summary(year, [tag])),
+      left_join: a in subquery(Attendance.tagged_minutes_summary(year, [tag])),
       on: m.id == a.member_id
     )
   end
@@ -108,20 +108,20 @@ defmodule App.Model.Member do
     )
   end
 
-  defp select_primary_secondary_hours_summary(query) do
+  defp select_primary_secondary_minutes_summary(query) do
     from(
       [m, primary, secondary, tcl] in query,
       select: %{
         member: m,
         tax_credit_letter_id: tcl.id,
         tax_credit_letter_ref_id: tcl.ref_id,
-        primary_hours: fragment("? as primary_hours", coalesce(primary.hours, 0)),
-        secondary_hours: fragment("? as secondary_hours", coalesce(secondary.hours, 0)),
-        total_hours:
+        primary_minutes: fragment("? as primary_minutes", coalesce(primary.minutes, 0)),
+        secondary_minutes: fragment("? as secondary_minutes", coalesce(secondary.minutes, 0)),
+        total_minutes:
           fragment(
-            "(? + ?) as total_hours",
-            coalesce(primary.hours, 0),
-            coalesce(secondary.hours, 0)
+            "(? + ?) as total_minutes",
+            coalesce(primary.minutes, 0),
+            coalesce(secondary.minutes, 0)
           )
       }
     )

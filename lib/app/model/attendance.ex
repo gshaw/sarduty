@@ -63,7 +63,7 @@ defmodule App.Model.Attendance do
     |> where([r], r.status == "attending")
   end
 
-  def tagged_hours_summary(year, tags) do
+  def tagged_minutes_summary(year, tags) do
     from(
       at in Attendance,
       join: ac in assoc(at, :activity),
@@ -74,11 +74,7 @@ defmodule App.Model.Attendance do
       select: %{
         member_id: at.member_id,
         count: count(at.id),
-        hours:
-          fragment(
-            "CAST(CEIL(SUM(?) / 60.0 - 0.000001) AS INTEGER)",
-            at.duration_in_minutes
-          )
+        minutes: sum(at.duration_in_minutes)
       }
     )
   end

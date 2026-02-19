@@ -86,15 +86,21 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
       <:col :let={record} label="Primary" class="w-px" align="right" sorts={[{"↓", "primary"}]}>
         <span class="label md:hidden">Primary</span>
-        {record.primary_hours}
+        <span class="text-nowrap">
+          {Service.Format.duration_as_hours_minutes_verbose(record.primary_minutes)}
+        </span>
       </:col>
       <:col :let={record} label="Secondary" class="w-px" align="right" sorts={[{"↓", "secondary"}]}>
         <span class="label md:hidden">Secondary</span>
-        {record.secondary_hours}
+        <span class="text-nowrap">
+          {Service.Format.duration_as_hours_minutes_verbose(record.secondary_minutes)}
+        </span>
       </:col>
       <:col :let={record} label="Total" class="w-px" align="right" sorts={[{"↓", "total"}]}>
         <span class="label md:hidden">Total</span>
-        {record.total_hours}
+        <span class="text-nowrap">
+          {Service.Format.duration_as_hours_minutes_verbose(record.total_minutes)}
+        </span>
       </:col>
       <:col :let={record} label="Letter" class="text-nowrap">
         <.record_actions record={record} current_team={@current_team} />
