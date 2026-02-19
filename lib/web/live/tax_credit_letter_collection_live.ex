@@ -39,7 +39,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         label="Year"
         field={@form[:year]}
         type="select"
-        options={TaxCreditLetterFilterViewModel.years()}
+        options={TaxCreditLetterFilterViewModel.years(@current_team)}
       />
       <.input field={@form[:q]} label="Search" />
       <.input

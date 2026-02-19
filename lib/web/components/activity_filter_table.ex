@@ -28,7 +28,7 @@ defmodule Web.Components.ActivityFilterTable do
         label="When"
         field={@form[:when]}
         type="select"
-        options={ActivityFilterViewModel.when_kinds()}
+        options={ActivityFilterViewModel.when_kinds(@team)}
       />
       <.input
         label="Sort"

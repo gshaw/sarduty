@@ -18,12 +18,15 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   end
 
   def activity_kinds, do: ["all", "exercise", "event", "incident"]
-  def when_kinds, do: ["all", "past", "future" | build_year_options()]
+  def when_kinds(team), do: ["all", "past", "future" | build_team_year_options(team)]
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
-  defp build_year_options do
-    max_year = Date.utc_today().year + 1
-    Enum.map(max_year..2018//-1, &Integer.to_string(&1))
+  defp build_team_year_options(team) do
+    Activity
+    |> where([a], a.team_id == ^team.id)
+    |> select([a], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
+    |> Repo.all()
+    |> Enum.sort(:desc)
   end
 
   def sort_kinds,
@@ -72,7 +75,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> cast(params, [:q, :activity, :when, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, activity_kinds())
-    |> validate_inclusion(:when, when_kinds())
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,

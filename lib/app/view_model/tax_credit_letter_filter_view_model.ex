@@ -4,6 +4,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   import Ecto.Query
 
   alias App.Field
+  alias App.Model.Attendance
   alias App.Model.Member
   alias App.Repo
 
@@ -17,7 +18,27 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   end
 
   def cutoffs, do: [0, 50, 100, 150, 200]
-  def years, do: Range.to_list(2018..Date.utc_today().year)
+  def years(team), do: build_team_year_options(team)
+
+  def current_year, do: Date.utc_today().year |> Integer.to_string()
+
+  defp build_team_year_options(team) do
+    current = current_year()
+
+    attendance_years =
+      Attendance
+      |> join(:inner, [a], m in assoc(a, :member))
+      |> where([a, m], m.team_id == ^team.id)
+      |> where([a, m], a.status == "attending")
+      # Search and Rescue Volunteer Tax Credit (SRVTC) started in 2014
+      |> where([a, m], fragment("strftime('%Y', ?) >= '2014'", a.started_at))
+      |> select([a, m], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
+      |> Repo.all()
+
+    [current | attendance_years]
+    |> Enum.uniq()
+    |> Enum.sort(:desc)
+  end
 
   def sort_kinds,
     do: %{
@@ -65,8 +86,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:year,
-      greater_than_or_equal_to: Enum.min(years()),
-      less_than_or_equal_to: Enum.max(years())
+      greater_than_or_equal_to: 2014,
+      less_than_or_equal_to: Date.utc_today().year + 1
     )
     |> validate_number(:cutoff,
       greater_than_or_equal_to: Enum.min(cutoffs()),
