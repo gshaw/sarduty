@@ -165,7 +165,8 @@ defmodule Web.ActivityLive do
     activity
     |> Ecto.assoc(:attendances)
     |> where([a], a.status == "attending")
-    |> order_by([a], asc: a.started_at)
+    |> join(:inner, [a], m in assoc(a, :member))
+    |> order_by([a, m], asc: m.name)
     |> preload(:member)
     |> Repo.all()
   end
