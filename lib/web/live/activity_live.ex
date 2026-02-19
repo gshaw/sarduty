@@ -55,13 +55,19 @@ defmodule Web.ActivityLive do
       <dt>Kind</dt>
       <dd><.activity_badges activity={@activity} /></dd>
 
-      <dt>Date</dt>
+      <dt>Started</dt>
       <dd>
         {Service.Format.medium_datetime(@activity.started_at, @activity.team.timezone)}
       </dd>
+      <dt>Finished</dt>
+      <dd>
+        {Service.Format.medium_datetime(@activity.finished_at, @activity.team.timezone)}
+      </dd>
       <dt>Duration</dt>
       <dd>
-        {Service.Format.duration_in_hours(@activity.started_at, @activity.finished_at)}
+        {Service.Format.minutes_to_hm(
+          DateTime.diff(@activity.finished_at, @activity.started_at, :second) / 60
+        )}
       </dd>
 
       <dt>Actions</dt>
@@ -131,21 +137,21 @@ defmodule Web.ActivityLive do
             {record.member.position}
           </:col>
           <:col :let={record} label="Started" class="whitespace-nowrap">
-            {Service.Format.attendance_datetime(
+            {Service.Format.same_day_datetime(
               record.started_at,
               @activity.started_at,
               @activity.team.timezone
             )}
           </:col>
           <:col :let={record} label="Finished" class="whitespace-nowrap">
-            {Service.Format.attendance_datetime(
+            {Service.Format.same_day_datetime(
               record.finished_at,
               @activity.started_at,
               @activity.team.timezone
             )}
           </:col>
-          <:col :let={record} label="Hours" class="whitespace-nowrap" align="right">
-            {Service.Convert.duration_to_hours(record.started_at, record.finished_at)}
+          <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
+            {Service.Format.minutes_to_hm(record.duration_in_minutes)}
           </:col>
         </.table>
       </dd>

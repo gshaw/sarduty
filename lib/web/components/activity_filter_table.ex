@@ -81,13 +81,15 @@ defmodule Web.Components.ActivityFilterTable do
       </:col>
       <:col
         :let={record}
-        label="Hours"
+        label="Duration"
         class="w-1/12"
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span class="label md:hidden">Hours</span>
-        {Service.Convert.duration_to_hours(record.started_at, record.finished_at)}
+        <span class="label md:hidden">Duration</span>
+        {Service.Format.minutes_to_hm(
+          DateTime.diff(record.finished_at, record.started_at, :second) / 60
+        )}
       </:col>
     </.table>
 

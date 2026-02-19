@@ -33,8 +33,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     do: %{
       "Date ↓" => "date-",
       "Date ↑" => "date",
-      "Hours ↓" => "hours-",
-      "Hours ↑" => "hours",
+      "Duration ↓" => "hours-",
+      "Duration ↑" => "hours",
       "ID ↓" => "id-",
       "ID ↑" => "id"
     }

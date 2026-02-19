@@ -74,7 +74,11 @@ defmodule App.Model.Attendance do
       select: %{
         member_id: at.member_id,
         count: count(at.id),
-        hours: fragment("cast(round(? + 0.5) as int)", sum(at.duration_in_minutes) / 60.0)
+        hours:
+          fragment(
+            "CAST(CEIL(SUM(?) / 60.0 - 0.000001) AS INTEGER)",
+            at.duration_in_minutes
+          )
       }
     )
   end

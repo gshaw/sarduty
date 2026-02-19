@@ -12,9 +12,12 @@ defmodule Web.Components.AttendanceFilterTable do
   attr :member, :map, required: true
 
   def attendance_filter_table(assigns) do
+    total_minutes = AttendanceFilterViewModel.calculate_total_duration(assigns.records)
+
     assigns =
       Phoenix.Component.assign(assigns,
-        total_hours: AttendanceFilterViewModel.calculate_total_hours(assigns.records)
+        total_minutes: total_minutes,
+        total_formatted: Service.Format.minutes_to_hm(total_minutes)
       )
 
     ~H"""
@@ -33,7 +36,7 @@ defmodule Web.Components.AttendanceFilterTable do
       />
 
       <span class="filter-form-count">
-        {length(@records)} activities · {@total_hours} hours
+        {length(@records)} activities · {@total_formatted}
       </span>
     </.form>
 
@@ -59,16 +62,16 @@ defmodule Web.Components.AttendanceFilterTable do
       <:col :let={record} label="Finished" class="w-1/12 whitespace-nowrap">
         <span class="label md:hidden">Finished</span>
         <span class="whitespace-nowrap">
-          {Service.Format.attendance_datetime(
+          {Service.Format.same_day_datetime(
             record.finished_at,
             record.started_at,
             @member.team.timezone
           )}
         </span>
       </:col>
-      <:col :let={record} label="Hours" class="w-1/12" align="right">
-        <span class="label md:hidden">Hours</span>
-        {Service.Convert.duration_to_hours(record.started_at, record.finished_at)}
+      <:col :let={record} label="Duration" class="w-1/12" align="right">
+        <span class="label md:hidden">Duration</span>
+        {Service.Format.minutes_to_hm(record.duration_in_minutes)}
       </:col>
     </.table>
     """

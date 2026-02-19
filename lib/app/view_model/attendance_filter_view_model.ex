@@ -55,16 +55,10 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     |> Repo.all()
   end
 
-  def calculate_total_hours(records) do
-    total =
-      records
-      |> Enum.map(fn record ->
-        Service.Convert.duration_to_hours(record.started_at, record.finished_at)
-      end)
-      |> Enum.sum()
-
-    (total / 1.0)
-    |> Float.round(1)
+  def calculate_total_duration(records) do
+    records
+    |> Enum.map(fn record -> record.duration_in_minutes end)
+    |> Enum.sum()
   end
 
   defp build_new do
