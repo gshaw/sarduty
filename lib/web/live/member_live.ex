@@ -24,7 +24,7 @@ defmodule Web.MemberLive do
 
     socket =
       socket
-      |> assign(:page_title, member.name)
+      |> assign(:page_title, "#{member.name} - Attendance")
       |> assign(:member, member)
       |> assign(:filter_form, to_form(filter_changeset, as: :filter))
       |> assign(:records, records)
@@ -57,6 +57,7 @@ defmodule Web.MemberLive do
     <.breadcrumbs team={@current_team}>
       <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
       <:item label={@member.ref_id} />
+      <:item label="Attendance" />
     </.breadcrumbs>
 
     <h1 class="title">{@member.name}</h1>
