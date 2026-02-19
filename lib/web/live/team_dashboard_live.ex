@@ -98,7 +98,7 @@ defmodule Web.TeamDashboardLive do
 
       <dt>Last Refreshed</dt>
       <dd>
-        {Service.Format.short_datetime(@view_data.refreshed_at, @team.timezone)}
+        {Service.Format.datetime_short(@view_data.refreshed_at, @team.timezone)}
         <%= if @view_data.refresh_result && !refreshing?(@view_data) && @view_data.refresh_result != "OK" do %>
           <span class="ml-2 text-sm text-red-600" title={@view_data.refresh_result}>Error</span>
         <% end %>

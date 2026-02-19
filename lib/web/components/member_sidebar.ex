@@ -24,7 +24,7 @@ defmodule Web.Components.MemberSidebar do
       <dd>{@member.address}</dd>
       <dt>Joined</dt>
       <dd>
-        {Service.Format.short_date(@member.joined_at, @member.team.timezone)} · {Service.Format.months_or_years_ago(
+        {Service.Format.date_short(@member.joined_at, @member.team.timezone)} · {Service.Format.months_or_years_ago(
           @member.joined_at
         )} ago
       </dd>

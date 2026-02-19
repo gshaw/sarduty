@@ -116,10 +116,10 @@ defmodule Web.QualificationLive do
         </.a>
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap">
-        {Service.Format.short_date(award.starts_at, @team.timezone)}
+        {Service.Format.date_short(award.starts_at, @team.timezone)}
       </:col>
       <:col :let={award} label="End" class="w-px whitespace-nowrap">
-        {Service.Format.short_date(award.ends_at, @team.timezone)}
+        {Service.Format.date_short(award.ends_at, @team.timezone)}
       </:col>
     </.table>
     <p :if={@active_awards == []} class="text-secondary-1 mb-p2">No active awards.</p>
@@ -137,10 +137,10 @@ defmodule Web.QualificationLive do
         </.a>
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap">
-        {Service.Format.short_date(award.starts_at, @team.timezone)}
+        {Service.Format.date_short(award.starts_at, @team.timezone)}
       </:col>
       <:col :let={award} label="End" class="w-px whitespace-nowrap">
-        {Service.Format.short_date(award.ends_at, @team.timezone)}
+        {Service.Format.date_short(award.ends_at, @team.timezone)}
       </:col>
     </.table>
     <p :if={@expired_awards == []} class="text-secondary-1">No expired awards.</p>

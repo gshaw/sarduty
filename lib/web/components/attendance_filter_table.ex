@@ -17,7 +17,7 @@ defmodule Web.Components.AttendanceFilterTable do
     assigns =
       Phoenix.Component.assign(assigns,
         total_minutes: total_minutes,
-        total_formatted: Service.Format.duration_as_hours_minutes_verbose(total_minutes)
+        total_formatted: Service.Format.duration_as_hours_minutes_medium(total_minutes)
       )
 
     ~H"""
@@ -53,7 +53,7 @@ defmodule Web.Components.AttendanceFilterTable do
       <:col :let={record} label="Start" class="w-1/12 whitespace-nowrap">
         <span class="label md:hidden">Start</span>
         <span class="whitespace-nowrap">
-          {Service.Format.short_datetime(
+          {Service.Format.datetime_short(
             record.started_at,
             @member.team.timezone
           )}
@@ -71,7 +71,7 @@ defmodule Web.Components.AttendanceFilterTable do
       </:col>
       <:col :let={record} label="Duration" class="w-1/12" align="right">
         <span class="label md:hidden">Duration</span>
-        {Service.Format.duration_as_hours_minutes_concise(record.duration_in_minutes)}
+        {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
       </:col>
     </.table>
     """

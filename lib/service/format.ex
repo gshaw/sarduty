@@ -3,10 +3,10 @@ defmodule Service.Format do
     Useful functions for formatting data into strings.
   """
 
-  def long_date(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
-  def short_date(datetime, timezone), do: datetime(datetime, timezone, "%x")
-  def short_datetime(datetime, timezone), do: datetime(datetime, timezone, "%c")
-  def medium_datetime(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
+  def date_long(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
+  def date_short(datetime, timezone), do: datetime(datetime, timezone, "%x")
+  def datetime_short(datetime, timezone), do: datetime(datetime, timezone, "%c")
+  def datetime_medium(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
 
   defp datetime(nil, _timezone, _format), do: nil
 
@@ -83,7 +83,7 @@ defmodule Service.Format do
     duration_as_hours_minutes_long(round(minutes))
   end
 
-  def duration_as_hours_minutes_verbose(minutes) when is_integer(minutes) do
+  def duration_as_hours_minutes_medium(minutes) when is_integer(minutes) do
     hours = div(minutes, 60)
     mins = rem(minutes, 60)
 
@@ -95,17 +95,17 @@ defmodule Service.Format do
     end
   end
 
-  def duration_as_hours_minutes_verbose(minutes) when is_float(minutes) do
-    duration_as_hours_minutes_verbose(round(minutes))
+  def duration_as_hours_minutes_medium(minutes) when is_float(minutes) do
+    duration_as_hours_minutes_medium(round(minutes))
   end
 
-  def duration_as_hours_minutes_concise(minutes) when is_integer(minutes) do
+  def duration_as_hours_minutes_short(minutes) when is_integer(minutes) do
     hours = div(minutes, 60)
     mins = rem(minutes, 60)
     "#{hours}:#{String.pad_leading("#{mins}", 2, "0")}"
   end
 
-  def duration_as_hours_minutes_concise(minutes) when is_float(minutes) do
-    duration_as_hours_minutes_concise(round(minutes))
+  def duration_as_hours_minutes_short(minutes) when is_float(minutes) do
+    duration_as_hours_minutes_short(round(minutes))
   end
 end

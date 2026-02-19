@@ -26,7 +26,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
   defp build_letter_content(team, member, ref_id, year) do
     summary = build_minutes_summary(member, year)
     certified_at = DateTime.utc_now()
-    formatted_certified_on = Format.long_date(certified_at, team.timezone)
+    formatted_certified_on = Format.date_long(certified_at, team.timezone)
 
     """
     #{team.mailing_address}

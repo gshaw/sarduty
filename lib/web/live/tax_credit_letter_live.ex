@@ -58,7 +58,7 @@ defmodule Web.TaxCreditLetterLive do
             <br />{@letter.member.email}
           </dd>
           <dt>Created</dt>
-          <dd>{Service.Format.short_datetime(@letter.inserted_at, @current_team.timezone)}</dd>
+          <dd>{Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}</dd>
         </dl>
       </aside>
       <main class="content-2/3">

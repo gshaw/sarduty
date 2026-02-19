@@ -75,11 +75,11 @@ defmodule Web.ActivityLive do
 
       <dt>Start</dt>
       <dd>
-        {Service.Format.medium_datetime(@activity.started_at, @activity.team.timezone)}
+        {Service.Format.datetime_medium(@activity.started_at, @activity.team.timezone)}
       </dd>
       <dt>Finish</dt>
       <dd>
-        {Service.Format.medium_datetime(@activity.finished_at, @activity.team.timezone)}
+        {Service.Format.datetime_medium(@activity.finished_at, @activity.team.timezone)}
       </dd>
       <dt>Duration</dt>
       <dd>{format_activity_duration(@activity)}</dd>
@@ -167,7 +167,7 @@ defmodule Web.ActivityLive do
         )}
       </:col>
       <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
-        {Service.Format.duration_as_hours_minutes_concise(record.duration_in_minutes)}
+        {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
       </:col>
     </.table>
     """
@@ -192,7 +192,7 @@ defmodule Web.ActivityLive do
   defp format_activity_duration(activity) do
     activity.started_at
     |> Service.Convert.duration_to_minutes(activity.finished_at)
-    |> Service.Format.duration_as_hours_minutes_verbose()
+    |> Service.Format.duration_as_hours_minutes_medium()
   end
 
   defp format_total_effort(attendances) do
@@ -204,6 +204,6 @@ defmodule Web.ActivityLive do
     rounded_minutes =
       if total_minutes > 300, do: round(total_minutes / 60) * 60, else: total_minutes
 
-    Service.Format.duration_as_hours_minutes_verbose(rounded_minutes)
+    Service.Format.duration_as_hours_minutes_medium(rounded_minutes)
   end
 end

@@ -76,7 +76,7 @@ defmodule Web.Components.ActivityFilterTable do
       <:col :let={record} label="Date" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
         <span class="label md:hidden">Date</span>
         <span class="whitespace-nowrap">
-          {Service.Format.short_datetime(record.started_at, @team.timezone)}
+          {Service.Format.datetime_short(record.started_at, @team.timezone)}
         </span>
       </:col>
       <:col
@@ -87,7 +87,7 @@ defmodule Web.Components.ActivityFilterTable do
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
         <span class="label md:hidden">Duration</span>
-        {Service.Format.duration_as_hours_minutes_concise(
+        {Service.Format.duration_as_hours_minutes_short(
           Service.Convert.duration_to_minutes(record.started_at, record.finished_at)
         )}
       </:col>

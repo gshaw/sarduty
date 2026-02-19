@@ -96,7 +96,7 @@ defmodule Web.AdminDashboardLive do
 
   defp format_refreshed_at(team) do
     if team.d4h_refreshed_at do
-      Service.Format.short_datetime(team.d4h_refreshed_at, team.timezone)
+      Service.Format.datetime_short(team.d4h_refreshed_at, team.timezone)
     end
   end
 

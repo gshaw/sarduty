@@ -59,10 +59,10 @@ defmodule Web.MemberQualificationsLive do
         </.a>
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap">
-        {Service.Format.short_date(award.starts_at, @member.team.timezone)}
+        {Service.Format.date_short(award.starts_at, @member.team.timezone)}
       </:col>
       <:col :let={award} label="End" class="w-px whitespace-nowrap">
-        {Service.Format.short_date(award.ends_at, @member.team.timezone)}
+        {Service.Format.date_short(award.ends_at, @member.team.timezone)}
       </:col>
       <:col :let={award} label="Status" class="w-px whitespace-nowrap">
         {award_status(award)}

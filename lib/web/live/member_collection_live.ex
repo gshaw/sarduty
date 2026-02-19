@@ -77,7 +77,7 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} label="Joined" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
         <span class="label md:hidden">Joined</span>
         <span class="whitespace-nowrap">
-          {Service.Format.short_date(record.joined_at, @current_team.timezone)}
+          {Service.Format.date_short(record.joined_at, @current_team.timezone)}
         </span>
       </:col>
       <:col
@@ -89,7 +89,7 @@ defmodule Web.MemberCollectionLive do
       >
         <span class="label md:hidden">Departed</span>
         <span :if={record.left_at} class="whitespace-nowrap">
-          {Service.Format.short_date(record.left_at, @current_team.timezone)}
+          {Service.Format.date_short(record.left_at, @current_team.timezone)}
         </span>
         <span :if={!record.left_at} class="text-gray-400">-</span>
       </:col>
