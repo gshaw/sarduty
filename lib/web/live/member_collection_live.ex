@@ -1,6 +1,8 @@
 defmodule Web.MemberCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.Pagination
+
   alias App.ViewModel.MemberFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -34,6 +36,12 @@ defmodule Web.MemberCollectionLive do
     <h1 class="title mb-p">{@page_title}</h1>
     <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
       <.input field={@form[:q]} label="Search" />
+      <.input
+        label="Year"
+        field={@form[:when]}
+        type="select"
+        options={MemberFilterViewModel.when_kinds(@current_team)}
+      />
       <.input
         label="Status"
         field={@form[:status]}
@@ -71,20 +79,36 @@ defmodule Web.MemberCollectionLive do
       class="w-full table-striped"
     >
       <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
-        {record.ref_id}
+        {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
-        <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.id}"}>
-          {record.name}
+        <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.member.id}"}>
+          {record.member.name}
         </.a>
       </:col>
       <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
-        {record.position}
+        {record.member.position}
+      </:col>
+      <:col :let={record} label="Activities" class="w-px" align="right">
+        <span class="label md:hidden">Activities</span>
+        {record.activity_count}
+      </:col>
+      <:col
+        :let={record}
+        label="Duration"
+        class="w-px"
+        align="right"
+        sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
+      >
+        <span class="label md:hidden">Duration</span>
+        <span class="text-nowrap">
+          {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
+        </span>
       </:col>
       <:col :let={record} label="Joined" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
         <span class="label md:hidden">Joined</span>
         <span class="whitespace-nowrap">
-          {Service.Format.date_short(record.joined_at, @current_team.timezone)}
+          {Service.Format.date_short(record.member.joined_at, @current_team.timezone)}
         </span>
       </:col>
       <:col
@@ -95,10 +119,10 @@ defmodule Web.MemberCollectionLive do
         sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
       >
         <span class="label md:hidden">Departed</span>
-        <span :if={record.left_at} class="whitespace-nowrap">
-          {Service.Format.date_short(record.left_at, @current_team.timezone)}
+        <span :if={record.member.left_at} class="whitespace-nowrap">
+          {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
         </span>
-        <span :if={!record.left_at} class="text-gray-400">-</span>
+        <span :if={!record.member.left_at} class="text-gray-400">-</span>
       </:col>
     </.table>
 
