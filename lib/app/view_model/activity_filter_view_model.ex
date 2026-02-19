@@ -20,7 +20,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def activity_kinds,
     do: [{"All", "all"}, {"Exercise", "exercise"}, {"Event", "event"}, {"Incident", "incident"}]
 
-  def when_kinds(team), do: ["all", "past", "future" | build_team_year_options(team)]
+  def when_kinds(team),
+    do: [{"All", "all"}, {"Past", "past"}, {"Future", "future"} | build_team_year_options(team)]
+
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   defp build_team_year_options(team) do
@@ -29,6 +31,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> select([a], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
     |> Repo.all()
     |> Enum.sort(:desc)
+    |> Enum.map(fn year -> {year, year} end)
   end
 
   def sort_kinds,
