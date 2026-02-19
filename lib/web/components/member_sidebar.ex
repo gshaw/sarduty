@@ -24,10 +24,9 @@ defmodule Web.Components.MemberSidebar do
       <dd>{@member.address}</dd>
       <dt>Joined</dt>
       <dd>
-        {Service.Format.long_date(@member.joined_at, @member.team.timezone)} ({Service.Format.duration_in_years(
-          @member.joined_at,
-          DateTime.utc_now()
-        )} ago)
+        {Service.Format.short_date(@member.joined_at, @member.team.timezone)} · {Service.Format.months_or_years_ago(
+          @member.joined_at
+        )} ago
       </dd>
 
       <dt :if={@member.tax_credit_letters != []}>Tax Credit Letters</dt>
