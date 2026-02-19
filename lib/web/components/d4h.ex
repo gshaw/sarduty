@@ -58,6 +58,7 @@ defmodule Web.Components.D4H do
     <span :if={@activity.tracking_number} title="Tracking number" class="badge">
       {@activity.tracking_number}
     </span>
+    <span :if={!@activity.is_published} class="badge">Draft</span>
     <span :if={@activity.is_published} class="badge">Published</span>
     """
   end
