@@ -25,23 +25,6 @@ defmodule Service.Format do
     "#{Service.Convert.duration_to_hours(started_at, finished_at)} hours"
   end
 
-  def minutes_to_hm(minutes) when is_integer(minutes) do
-    hours = div(minutes, 60)
-    mins = rem(minutes, 60)
-
-    cond do
-      hours > 0 and mins > 0 -> "#{hours}h#{mins}m"
-      hours > 0 -> "#{hours}h"
-      mins > 0 -> "#{mins}m"
-      true -> "0m"
-    end
-  end
-
-  def minutes_to_hm(minutes) when is_float(minutes) do
-    total_minutes = round(minutes)
-    minutes_to_hm(total_minutes)
-  end
-
   def duration_in_years(started_at, finished_at) do
     "#{Service.Convert.duration_to_years(started_at, finished_at)} years"
   end
@@ -58,5 +41,31 @@ defmodule Service.Format do
     else
       Calendar.strftime(shifted, "%b %-d %H:%M")
     end
+  end
+
+  def duration_as_hours_minutes_verbose(minutes) when is_integer(minutes) do
+    hours = div(minutes, 60)
+    mins = rem(minutes, 60)
+
+    cond do
+      hours > 0 and mins == 0 -> "#{hours} hour#{if(hours > 1, do: "s", else: "")}"
+      hours > 0 and mins > 0 -> "#{hours}h #{mins}m"
+      mins > 0 -> "#{mins} min"
+      true -> "0 min"
+    end
+  end
+
+  def duration_as_hours_minutes_verbose(minutes) when is_float(minutes) do
+    duration_as_hours_minutes_verbose(round(minutes))
+  end
+
+  def duration_as_hours_minutes_concise(minutes) when is_integer(minutes) do
+    hours = div(minutes, 60)
+    mins = rem(minutes, 60)
+    "#{hours}:#{String.pad_leading("#{mins}", 2, "0")}"
+  end
+
+  def duration_as_hours_minutes_concise(minutes) when is_float(minutes) do
+    duration_as_hours_minutes_concise(round(minutes))
   end
 end

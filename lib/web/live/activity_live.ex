@@ -69,7 +69,7 @@ defmodule Web.ActivityLive do
         <dt>Attendance</dt>
         <dd>
           {@attendance_count} members
-          · {calculate_total_duration(@attendances)}
+          · {format_total_duration(@attendances)} effort
         </dd>
       </div>
 
@@ -82,11 +82,7 @@ defmodule Web.ActivityLive do
         {Service.Format.medium_datetime(@activity.finished_at, @activity.team.timezone)}
       </dd>
       <dt>Duration</dt>
-      <dd>
-        {Service.Format.minutes_to_hm(
-          DateTime.diff(@activity.finished_at, @activity.started_at, :second) / 60
-        )}
-      </dd>
+      <dd>{format_activity_duration(@activity)}</dd>
 
       <div :if={@activity.address}>
         <dt>Address</dt>
@@ -171,7 +167,7 @@ defmodule Web.ActivityLive do
         )}
       </:col>
       <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
-        {Service.Format.minutes_to_hm(record.duration_in_minutes)}
+        {Service.Format.duration_as_hours_minutes_concise(record.duration_in_minutes)}
       </:col>
     </.table>
     """
@@ -193,12 +189,18 @@ defmodule Web.ActivityLive do
     |> Repo.all()
   end
 
-  defp calculate_total_duration(attendances) do
+  defp format_activity_duration(activity) do
+    Service.Format.duration_as_hours_minutes_verbose(
+      Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at)
+    )
+  end
+
+  defp format_total_duration(attendances) do
     total_minutes =
       attendances
       |> Enum.map(& &1.duration_in_minutes)
       |> Enum.sum()
 
-    Service.Format.minutes_to_hm(total_minutes)
+    Service.Format.duration_as_hours_minutes_verbose(total_minutes)
   end
 end

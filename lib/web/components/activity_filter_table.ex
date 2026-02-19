@@ -87,8 +87,8 @@ defmodule Web.Components.ActivityFilterTable do
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
         <span class="label md:hidden">Duration</span>
-        {Service.Format.minutes_to_hm(
-          DateTime.diff(record.finished_at, record.started_at, :second) / 60
+        {Service.Format.duration_as_hours_minutes_concise(
+          Service.Convert.duration_to_minutes(record.started_at, record.finished_at)
         )}
       </:col>
     </.table>
