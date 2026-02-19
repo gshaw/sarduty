@@ -56,7 +56,10 @@ defmodule Web.ActivityLive do
       <dd><.activity_badges activity={@activity} /></dd>
 
       <dt>Attendance</dt>
-      <dd>{Enum.count(@attendances)} members</dd>
+      <dd>
+        {Enum.count(@attendances)} members
+        · {calculate_total_duration(@attendances)}
+      </dd>
 
       <dt>Start</dt>
       <dd>
@@ -168,5 +171,14 @@ defmodule Web.ActivityLive do
     |> order_by([a], asc: a.started_at)
     |> preload(:member)
     |> Repo.all()
+  end
+
+  defp calculate_total_duration(attendances) do
+    total_minutes =
+      attendances
+      |> Enum.map(& &1.duration_in_minutes)
+      |> Enum.sum()
+
+    Service.Format.minutes_to_hm(total_minutes)
   end
 end
