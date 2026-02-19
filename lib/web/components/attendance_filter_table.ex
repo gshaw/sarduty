@@ -55,6 +55,7 @@ defmodule Web.Components.AttendanceFilterTable do
     </div>
 
     <.table
+      :if={Enum.any?(@paginated.entries)}
       id="attendance_collection"
       rows={@paginated.entries}
       class="w-full table-striped"
