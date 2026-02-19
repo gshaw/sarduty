@@ -28,7 +28,6 @@ defmodule Web.MemberQualificationsLive do
     ~H"""
     <.breadcrumbs team={@current_team}>
       <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
-      <:item label={@member.ref_id} path={~p"/#{@current_team.subdomain}/members/#{@member.id}"} />
       <:item label="Qualifications" />
     </.breadcrumbs>
 

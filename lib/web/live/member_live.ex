@@ -53,7 +53,6 @@ defmodule Web.MemberLive do
     ~H"""
     <.breadcrumbs team={@current_team}>
       <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
-      <:item label={@member.ref_id} />
       <:item label="Attendance" />
     </.breadcrumbs>
 
