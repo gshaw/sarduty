@@ -29,19 +29,6 @@ defmodule Web.Components.MemberSidebar do
         )} ago
       </dd>
 
-      <dt :if={@member.tax_credit_letters != []}>Tax Credit Letters</dt>
-      <dd :if={@member.tax_credit_letters != []}>
-        <ul class="action-list">
-          <%= for letter <- Enum.sort_by(@member.tax_credit_letters, & &1.year, :desc) do %>
-            <li>
-              <.a navigate={~p"/#{@member.team.subdomain}/tax-credit-letters/#{letter.id}"}>
-                {letter.year}
-              </.a>
-            </li>
-          <% end %>
-        </ul>
-      </dd>
-
       <dt>Actions</dt>
       <dd>
         <ul class="action-list">

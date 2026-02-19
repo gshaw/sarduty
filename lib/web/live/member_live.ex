@@ -79,7 +79,7 @@ defmodule Web.MemberLive do
   defp find_member(member_id) do
     Member
     |> Repo.get(member_id)
-    |> Repo.preload([:team, :tax_credit_letters])
+    |> Repo.preload([:team])
   end
 
   defp clean_params(params) do

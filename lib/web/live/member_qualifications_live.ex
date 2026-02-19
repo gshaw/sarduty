@@ -89,7 +89,6 @@ defmodule Web.MemberQualificationsLive do
     |> Repo.get(member_id)
     |> Repo.preload([
       :team,
-      :tax_credit_letters,
       member_qualification_awards: qualification_awards_query
     ])
   end
