@@ -11,6 +11,9 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   embedded_schema do
     field :when, :string
     field :tag, :string
+    field :page, :integer
+    field :limit, :integer
+    field :sort, :string
   end
 
   def when_kinds(member), do: build_member_year_options(member)
@@ -23,6 +26,18 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
       {"Secondary", "secondary"},
       {"Other", "other"}
     ]
+
+  def sort_kinds,
+    do: %{
+      "Date ↓" => "date-",
+      "Date ↑" => "date",
+      "Duration ↓" => "hours-",
+      "Duration ↑" => "hours",
+      "ID ↓" => "id-",
+      "ID ↑" => "id"
+    }
+
+  def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   defp activity_primary_hours_tag, do: Activity.primary_hours_tag()
   defp activity_secondary_hours_tag, do: Activity.secondary_hours_tag()
@@ -56,26 +71,31 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     end
   end
 
-  def build_filtered_content(member, filter_options) do
+  def build_paginated_content(member, filter_options) do
     Attendance
     |> Attendance.scope(member_id: member.id)
     |> scope(when: filter_options.when)
     |> scope(tag: filter_options.tag)
-    |> order_by([r], desc: r.started_at)
+    |> scope(sort: filter_options.sort)
     |> preload(:activity)
-    |> Repo.all()
+    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
 
-  def calculate_total_duration(records) do
-    records
-    |> Enum.map(fn record -> record.duration_in_minutes end)
-    |> Enum.sum()
+  def total_duration(member, filter_options) do
+    Attendance
+    |> Attendance.scope(member_id: member.id)
+    |> scope(when: filter_options.when)
+    |> scope(tag: filter_options.tag)
+    |> select([r], coalesce(sum(r.duration_in_minutes), 0))
+    |> Repo.one()
   end
 
   defp build_new do
     %__MODULE__{
       when: current_year(),
-      tag: "all"
+      tag: "all",
+      sort: "date-",
+      limit: 50
     }
   end
 
@@ -83,8 +103,13 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:when, :tag])
+    |> cast(params, [:when, :tag, :page, :limit, :sort])
     |> validate_inclusion(:tag, Enum.map(tag_kinds(), fn {_, v} -> v end))
+    |> validate_inclusion(:sort, Map.values(sort_kinds()))
+    |> validate_number(:limit,
+      greater_than_or_equal_to: 1,
+      less_than_or_equal_to: Enum.max(limits())
+    )
   end
 
   defp scope(q, when: "all"), do: q
@@ -121,4 +146,11 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     |> where([at, ac], ^activity_primary_hours_tag() not in ac.tags)
     |> where([at, ac], ^activity_secondary_hours_tag() not in ac.tags)
   end
+
+  defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
+  defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)
+  defp scope(q, sort: "hours-"), do: order_by(q, [r], desc: r.duration_in_minutes)
+  defp scope(q, sort: "hours"), do: order_by(q, [r], asc: r.duration_in_minutes)
+  defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.activity_id)
+  defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.activity_id)
 end
