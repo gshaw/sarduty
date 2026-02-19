@@ -52,9 +52,12 @@ defmodule Web.MemberCollectionLive do
         type="select"
         options={MemberFilterViewModel.limits()}
       />
-      <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
-      <span class="filter-form-count">{@paginated.total_entries} members</span>
     </.form>
+
+    <div class="filter-form-results">
+      {Service.Format.count(@paginated.total_entries, one: "%d member", many: "%d members")} ·
+      <.a navigate={@path_fn.(:reset)}>Reset</.a>
+    </div>
 
     <.table
       id="member_collection"
