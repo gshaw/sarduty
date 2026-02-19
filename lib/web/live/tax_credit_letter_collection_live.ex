@@ -56,9 +56,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
       />
     </.form>
 
-    <div class="filter-form-results">
-      {Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")} ·
-      <.a navigate={@path_fn.(:reset)}>Reset</.a>
+    <div class="table-summary">
+      <span class="table-summary-links">
+        <.a navigate={@path_fn.(:reset)}>Reset</.a>
+      </span>
+      <span class="table-summary-count">
+        {Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
+      </span>
     </div>
 
     <.table

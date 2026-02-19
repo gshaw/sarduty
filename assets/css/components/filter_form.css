@@ -1,2 +1,5 @@
 .filter-form { @apply flex flex-col md:flex-row md:gap-hspacer md:items-center }
-.filter-form-results { @apply mb-p text-sm }
+
+.table-summary { @apply flex flex-col md:flex-row md:items-center text-sm mb-p }
+.table-summary .table-summary-links { @apply mb-p md:mb-0 }
+.table-summary .table-summary-count { @apply mb-p md:mb-0 md:text-right md:grow }
