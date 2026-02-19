@@ -37,9 +37,12 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
       |> select([a], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
       |> Repo.all()
 
-    [current | attendance_years]
-    |> Enum.uniq()
-    |> Enum.sort(:desc)
+    years =
+      [current | attendance_years]
+      |> Enum.uniq()
+      |> Enum.sort(:desc)
+
+    [{"All", "all"} | years]
   end
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
@@ -83,6 +86,8 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     |> cast(params, [:when, :tag])
     |> validate_inclusion(:tag, Enum.map(tag_kinds(), fn {_, v} -> v end))
   end
+
+  defp scope(q, when: "all"), do: q
 
   defp scope(q, when: year) when is_binary(year),
     do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^year))
