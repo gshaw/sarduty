@@ -17,7 +17,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :sort, :string
   end
 
-  def activity_kinds, do: ["all", "exercise", "event", "incident"]
+  def activity_kinds,
+    do: [{"All", "all"}, {"Exercise", "exercise"}, {"Event", "event"}, {"Incident", "incident"}]
+
   def when_kinds(team), do: ["all", "past", "future" | build_team_year_options(team)]
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
@@ -74,7 +76,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     data
     |> cast(params, [:q, :activity, :when, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
-    |> validate_inclusion(:activity, activity_kinds())
+    |> validate_inclusion(:activity, Enum.map(activity_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,

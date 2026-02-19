@@ -52,8 +52,8 @@ defmodule Web.Components.D4H do
 
   def activity_badges(assigns) do
     ~H"""
-    <span title="Activity kind" class={"badge badge-#{@activity.activity_kind}"}>
-      {@activity.activity_kind}
+    <span title="Activity kind" class={["badge", "badge-#{@activity.activity_kind}"]}>
+      {String.capitalize(@activity.activity_kind)}
     </span>
     <span :if={@activity.tracking_number} title="Tracking number" class="badge">
       {@activity.tracking_number}
