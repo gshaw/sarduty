@@ -84,8 +84,6 @@ defmodule App.Model.Member do
     Repo.update!(changeset)
   end
 
-  # def delete(%Member{} = record), do: Repo.delete(record)
-
   def include_primary_and_secondary_hours(query, year) do
     query
     |> join_activity_hours(year, Activity.primary_hours_tag())
