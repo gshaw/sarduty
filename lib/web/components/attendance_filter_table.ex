@@ -47,11 +47,12 @@ defmodule Web.Components.AttendanceFilterTable do
         type="select"
         options={AttendanceFilterViewModel.limits()}
       />
-
-      <span class="filter-form-count">
-        {@paginated.total_entries} activities · {@total_formatted}
-      </span>
     </.form>
+
+    <div class="mb-p text-sm">
+      {@paginated.total_entries} activities · {@total_formatted} total ·
+      <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
+    </div>
 
     <.table
       id="attendance_collection"

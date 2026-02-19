@@ -78,8 +78,12 @@ defmodule Web.MemberLive do
   end
 
   defp build_path_fn(member, filter_options) do
-    fn changed_options ->
-      build_filter_path(member, Map.merge(filter_options, Map.new(changed_options)))
+    fn
+      :reset ->
+        build_filter_path(member, %AttendanceFilterViewModel{})
+
+      changed_options ->
+        build_filter_path(member, Map.merge(filter_options, Map.new(changed_options)))
     end
   end
 
