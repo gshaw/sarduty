@@ -17,9 +17,13 @@ defmodule Web.Components.MemberSidebar do
       <dt>Role</dt>
       <dd>{@member.position}</dd>
       <dt>Email</dt>
-      <dd>{@member.email}</dd>
+      <dd>
+        <.a href={"mailto:#{@member.email}"}>{@member.email}</.a>
+      </dd>
       <dt>Phone</dt>
-      <dd>{@member.phone}</dd>
+      <dd>
+        <.a href={"tel:#{@member.phone}"}>{@member.phone}</.a>
+      </dd>
       <dt>Address</dt>
       <dd>{@member.address}</dd>
       <dt>Joined</dt>
