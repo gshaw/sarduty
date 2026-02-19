@@ -166,7 +166,7 @@ defmodule Web.ActivityLive do
       <:col :let={record} label="Finish" class="whitespace-nowrap">
         {Service.Format.same_day_datetime(
           record.finished_at,
-          @activity.started_at,
+          @activity.finished_at,
           @activity.team.timezone
         )}
       </:col>
