@@ -23,13 +23,13 @@ defmodule Web.Components.AttendanceFilterTable do
     ~H"""
     <.form for={@form} phx-change="change" class="filter-form">
       <.input
-        label="When"
+        label="Year"
         field={@form[:when]}
         type="select"
         options={AttendanceFilterViewModel.when_kinds(@member)}
       />
       <.input
-        label="Kind"
+        label="Tagged"
         field={@form[:tag]}
         type="select"
         options={AttendanceFilterViewModel.tag_kinds()}

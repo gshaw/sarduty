@@ -14,7 +14,15 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   end
 
   def when_kinds(member), do: build_member_year_options(member)
-  def tag_kinds, do: ["all", "both", "primary", "secondary", "other"]
+
+  def tag_kinds,
+    do: [
+      {"All", "all"},
+      {"Both", "both"},
+      {"Primary", "primary"},
+      {"Secondary", "secondary"},
+      {"Other", "other"}
+    ]
 
   defp activity_primary_hours_tag, do: Activity.primary_hours_tag()
   defp activity_secondary_hours_tag, do: Activity.secondary_hours_tag()
@@ -73,7 +81,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   defp build_changeset(data, params) do
     data
     |> cast(params, [:when, :tag])
-    |> validate_inclusion(:tag, tag_kinds())
+    |> validate_inclusion(:tag, Enum.map(tag_kinds(), fn {_, v} -> v end))
   end
 
   defp scope(q, when: year) when is_binary(year),
