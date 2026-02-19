@@ -49,10 +49,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
         options={TaxCreditLetterFilterViewModel.sort_kinds()}
       />
       <.input
-        label="Cutoff"
-        field={@form[:cutoff]}
+        label="Hours"
+        field={@form[:filter]}
         type="select"
-        options={TaxCreditLetterFilterViewModel.cutoffs()}
+        options={TaxCreditLetterFilterViewModel.filters()}
       />
       <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
       <span class="filter-form-count">{Enum.count(@records)} members</span>

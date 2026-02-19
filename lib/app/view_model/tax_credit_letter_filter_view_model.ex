@@ -13,11 +13,20 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     field :q, Field.TrimmedString
     field :year, :integer
     field :page, :integer
-    field :cutoff, :integer
+    field :filter, :string
     field :sort, :string
   end
 
-  def cutoffs, do: [0, 50, 100, 150, 200]
+  def filters,
+    do: [
+      {"none", "none"},
+      {"any", "any"},
+      {"50+", "50"},
+      {"100+", "100"},
+      {"150+", "150"},
+      {"200+", "200"}
+    ]
+
   def years(team), do: build_team_year_options(team)
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
@@ -64,7 +73,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     |> Member.include_primary_and_secondary_hours(filter_options.year)
     |> scope(q: filter_options.q)
     |> scope(sort: filter_options.sort)
-    |> scope(cutoff: filter_options.cutoff)
+    |> scope(filter: filter_options.filter)
     |> Repo.all()
 
     # |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
@@ -73,7 +82,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   defp build_new do
     %__MODULE__{
       year: Date.utc_today().year - 1,
-      cutoff: 200,
+      filter: "any",
       sort: "total"
     }
   end
@@ -82,20 +91,25 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :year, :page, :cutoff, :sort])
+    |> cast(params, [:q, :year, :page, :filter, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
+    |> validate_inclusion(:filter, filters() |> Enum.map(fn {_label, value} -> value end))
     |> validate_number(:year,
       greater_than_or_equal_to: 2014,
       less_than_or_equal_to: Date.utc_today().year + 1
     )
-    |> validate_number(:cutoff,
-      greater_than_or_equal_to: Enum.min(cutoffs()),
-      less_than_or_equal_to: Enum.max(cutoffs())
-    )
   end
 
-  defp scope(q, cutoff: cutoff), do: where(q, [r], fragment("total_hours") >= ^cutoff)
+  defp scope(q, filter: "none"), do: where(q, [r], fragment("total_hours") == 0)
+  defp scope(q, filter: "any"), do: where(q, [r], fragment("total_hours") > 0)
+
+  defp scope(q, filter: filter) when is_binary(filter) do
+    case Integer.parse(filter) do
+      {hours, ""} -> where(q, [r], fragment("total_hours") >= ^hours)
+      _ -> q
+    end
+  end
 
   defp scope(q, q: nil), do: q
   defp scope(q, q: ""), do: q
