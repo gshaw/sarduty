@@ -50,7 +50,7 @@ defmodule Web.Components.AttendanceFilterTable do
     </.form>
 
     <div class="mb-p text-sm">
-      {@paginated.total_entries} activities · {@total_formatted} total ·
+      {Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")} · {@total_formatted} total ·
       <.a class="filter-form-reset" navigate={@path_fn.(:reset)}>Reset</.a>
     </div>
 

@@ -3,6 +3,11 @@ defmodule Service.Format do
     Useful functions for formatting data into strings.
   """
 
+  def count(n, one: one, many: many) do
+    template = if n == 1, do: one, else: many
+    String.replace(template, "%d", Integer.to_string(n))
+  end
+
   def date_long(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
   def date_short(datetime, timezone), do: datetime(datetime, timezone, "%x")
   def datetime_short(datetime, timezone), do: datetime(datetime, timezone, "%c")
