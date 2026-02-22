@@ -99,13 +99,29 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
     end
   end
 
-  defp delete_stale_attendances(team_id, d4h_attendance_ids) do
+  defp delete_stale_attendances(team_id, synced_d4h_ids) do
     import Ecto.Query
 
-    Attendance
-    |> join(:inner, [a], m in Member, on: a.member_id == m.id)
-    |> where([a, m], m.team_id == ^team_id)
-    |> where([a], a.d4h_attendance_id not in ^MapSet.to_list(d4h_attendance_ids))
-    |> App.Repo.delete_all()
+    # Get all d4h_attendance_ids for this team
+    all_local_d4h_ids =
+      Attendance
+      |> join(:inner, [a], m in Member, on: a.member_id == m.id)
+      |> where([a, m], m.team_id == ^team_id)
+      |> select([a], a.d4h_attendance_id)
+      |> App.Repo.all()
+      |> MapSet.new()
+
+    # Find stale d4h_attendance_ids (in local DB but not in D4H API response)
+    stale_d4h_ids = MapSet.difference(all_local_d4h_ids, synced_d4h_ids)
+
+    {count, _} =
+      Attendance
+      |> where([a], a.d4h_attendance_id in ^MapSet.to_list(stale_d4h_ids))
+      |> App.Repo.delete_all()
+
+    require Logger
+    Logger.info("Deleted #{count} stale attendance records for team #{team_id}")
+
+    :ok
   end
 end
