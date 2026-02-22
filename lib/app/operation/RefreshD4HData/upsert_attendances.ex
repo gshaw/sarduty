@@ -12,10 +12,13 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
       d4h_member_index: build_d4h_member_index(team.id),
       d4h_activity_index: build_d4h_activity_index(team.id),
       progress: progress,
-      total_count: 0
+      total_count: 0,
+      d4h_attendance_ids: MapSet.new()
     }
 
-    fetch_and_upsert(context, 0)
+    {count, progress, d4h_attendance_ids} = fetch_and_upsert(context, 0)
+    delete_stale_attendances(team.id, d4h_attendance_ids)
+    {count, progress}
   end
 
   defp fetch_and_upsert(context, page) do
@@ -38,16 +41,27 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   end
 
   defp upsert_attendances(context, _page, []) do
-    {context.total_count, context.progress}
+    {context.total_count, context.progress, context.d4h_attendance_ids}
   end
 
   defp upsert_attendances(context, page, d4h_attendances) do
     count = Enum.count(d4h_attendances)
 
-    Enum.each(d4h_attendances, &upsert_attendance(context, &1))
+    d4h_attendance_ids =
+      Enum.reduce(d4h_attendances, context.d4h_attendance_ids, fn d4h_attendance, ids ->
+        upsert_attendance(context, d4h_attendance)
+        MapSet.put(ids, d4h_attendance.d4h_attendance_id)
+      end)
 
     progress = Progress.add_page(context.progress, count)
-    context = %{context | progress: progress, total_count: context.total_count + count}
+
+    context = %{
+      context
+      | progress: progress,
+        total_count: context.total_count + count,
+        d4h_attendance_ids: d4h_attendance_ids
+    }
+
     fetch_and_upsert(context, page + 1)
   end
 
@@ -83,5 +97,15 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
     else
       Attendance.insert!(params)
     end
+  end
+
+  defp delete_stale_attendances(team_id, d4h_attendance_ids) do
+    import Ecto.Query
+
+    Attendance
+    |> join(:inner, [a], m in Member, on: a.member_id == m.id)
+    |> where([a, m], m.team_id == ^team_id)
+    |> where([a], a.d4h_attendance_id not in ^MapSet.to_list(d4h_attendance_ids))
+    |> App.Repo.delete_all()
   end
 end
