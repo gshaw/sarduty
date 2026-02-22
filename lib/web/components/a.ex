@@ -19,7 +19,7 @@ defmodule Web.Components.A do
   attr :class, :any, default: ""
 
   attr :rest, :global,
-    include: ~w(disabled href method navigate role),
+    include: ~w(disabled href method navigate role target),
     doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, required: true
@@ -28,11 +28,15 @@ defmodule Web.Components.A do
     assigns =
       assigns
       |> assign(:link_class, determine_link_class(assigns))
+      |> assign(:link_target, determine_target(assigns))
 
     ~H"""
-    <.link class={@link_class} {@rest}>{render_slot(@inner_block)}</.link>
+    <.link class={@link_class} target={@link_target} {@rest}>{render_slot(@inner_block)}</.link>
     """
   end
+
+  defp determine_target(%{external: true}), do: "_blank"
+  defp determine_target(_assigns), do: nil
 
   defp determine_link_class(assigns) do
     [
