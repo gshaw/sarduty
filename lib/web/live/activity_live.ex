@@ -152,21 +152,19 @@ defmodule Web.ActivityLive do
           {record.member.name}
         </.a>
       </:col>
-      <:col :let={record} label="Start" class="whitespace-nowrap">
-        {Service.Format.same_day_datetime(
+      <:col :let={record} label="Start" align="right" class="whitespace-nowrap tabular-nums">
+        {Service.Format.datetime_short(
           record.started_at,
-          @activity.started_at,
           @activity.team.timezone
         )}
       </:col>
-      <:col :let={record} label="Finish" class="whitespace-nowrap">
-        {Service.Format.same_day_datetime(
+      <:col :let={record} label="Finish" align="right" class="whitespace-nowrap tabular-nums">
+        {Service.Format.time_short(
           record.finished_at,
-          @activity.finished_at,
           @activity.team.timezone
         )}
       </:col>
-      <:col :let={record} label="Duration" class="whitespace-nowrap" align="right">
+      <:col :let={record} label="Duration" align="right" class="whitespace-nowrap tabular-nums">
         {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
       </:col>
     </.table>

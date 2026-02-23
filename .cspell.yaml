@@ -39,6 +39,7 @@ words:
   - signup
   - SRVTC
   - strftime
+  - tabular-nums
   - tbody
   - thead
   - totp

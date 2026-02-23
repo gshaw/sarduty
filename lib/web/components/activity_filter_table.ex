@@ -74,23 +74,24 @@ defmodule Web.Components.ActivityFilterTable do
         <.activity_tags activity={record} />
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
-        <span class="label md:hidden">Kind</span>
         <.activity_badges activity={record} />
       </:col>
-      <:col :let={record} label="Date" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
-        <span class="label md:hidden">Date</span>
-        <span class="whitespace-nowrap">
-          {Service.Format.datetime_short(record.started_at, @team.timezone)}
-        </span>
+      <:col
+        :let={record}
+        label="Date"
+        align="right"
+        class="w-1/12 whitespace-nowrap tabular-nums"
+        sorts={[{"↓", "date-"}, {"↑", "date"}]}
+      >
+        {Service.Format.datetime_short(record.started_at, @team.timezone)}
       </:col>
       <:col
         :let={record}
         label="Duration"
-        class="w-1/12"
+        class="w-1/12 whitespace-nowrap tabular-nums"
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span class="label md:hidden">Duration</span>
         {Service.Format.duration_as_hours_minutes_short(
           Service.Convert.duration_to_minutes(record.started_at, record.finished_at)
         )}

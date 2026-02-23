@@ -91,25 +91,34 @@ defmodule Web.TaxCreditLetterCollectionLive do
         {record.member.email}
       </:col>
 
-      <:col :let={record} label="Primary" class="w-px" align="right" sorts={[{"↓", "primary"}]}>
-        <span class="label md:hidden">Primary</span>
-        <span class="text-nowrap">
-          {Service.Format.duration_as_hours_minutes_medium(record.primary_minutes)}
-        </span>
+      <:col
+        :let={record}
+        label="Primary"
+        align="right"
+        class="w-px whitespace-nowrap tabular-nums"
+        sorts={[{"↓", "primary"}]}
+      >
+        {Service.Format.duration_as_hours_minutes_medium(record.primary_minutes)}
       </:col>
-      <:col :let={record} label="Secondary" class="w-px" align="right" sorts={[{"↓", "secondary"}]}>
-        <span class="label md:hidden">Secondary</span>
-        <span class="text-nowrap">
-          {Service.Format.duration_as_hours_minutes_medium(record.secondary_minutes)}
-        </span>
+      <:col
+        :let={record}
+        label="Secondary"
+        align="right"
+        class="w-px whitespace-nowrap tabular-nums"
+        sorts={[{"↓", "secondary"}]}
+      >
+        {Service.Format.duration_as_hours_minutes_medium(record.secondary_minutes)}
       </:col>
-      <:col :let={record} label="Total" class="w-px" align="right" sorts={[{"↓", "total"}]}>
-        <span class="label md:hidden">Total</span>
-        <span class="text-nowrap">
-          {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
-        </span>
+      <:col
+        :let={record}
+        label="Total"
+        align="right"
+        class="w-px whitespace-nowrap tabular-nums"
+        sorts={[{"↓", "total"}]}
+      >
+        {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
       </:col>
-      <:col :let={record} label="Letter" class="text-nowrap">
+      <:col :let={record} label="Letter" class="whitespace-nowrap">
         <.record_actions record={record} current_team={@current_team} />
       </:col>
     </.table>

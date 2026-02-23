@@ -89,39 +89,36 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
         {record.member.position}
       </:col>
-      <:col :let={record} label="Activities" class="w-px" align="right">
-        <span class="label md:hidden">Activities</span>
+      <:col :let={record} label="Activities" align="right" class="w-px whitespace-nowrap tabular-nums">
         {record.activity_count}
       </:col>
       <:col
         :let={record}
         label="Duration"
-        class="w-px"
         align="right"
+        class="w-px whitespace-nowrap tabular-nums"
         sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
       >
-        <span class="label md:hidden">Duration</span>
-        <span class="text-nowrap">
-          {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
-        </span>
+        {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
       </:col>
-      <:col :let={record} label="Joined" class="w-1/12" sorts={[{"↓", "date-"}, {"↑", "date"}]}>
-        <span class="label md:hidden">Joined</span>
-        <span class="whitespace-nowrap">
-          {Service.Format.date_short(record.member.joined_at, @current_team.timezone)}
-        </span>
+      <:col
+        :let={record}
+        label="Joined"
+        align="right"
+        class="w-1/12 whitespace-nowrap tabular-nums"
+        sorts={[{"↓", "date-"}, {"↑", "date"}]}
+      >
+        {Service.Format.date_short(record.member.joined_at, @current_team.timezone)}
       </:col>
       <:col
         :let={record}
         :if={@status != "active"}
         label="Departed"
-        class="w-1/12"
+        align="right"
+        class="w-1/12 whitespace-nowrap tabular-nums"
         sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
       >
-        <span class="label md:hidden">Departed</span>
-        <span :if={record.member.left_at} class="whitespace-nowrap">
-          {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
-        </span>
+        {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
         <span :if={!record.member.left_at} class="text-gray-400">-</span>
       </:col>
     </.table>

@@ -13,6 +13,8 @@ defmodule Service.Format do
   def datetime_short(datetime, timezone), do: datetime(datetime, timezone, "%c")
   def datetime_medium(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
 
+  def time_short(datetime, timezone), do: datetime(datetime, timezone, "%H:%M")
+
   defp datetime(nil, _timezone, _format), do: nil
 
   defp datetime(datetime, timezone, format) do

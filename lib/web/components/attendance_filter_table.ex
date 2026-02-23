@@ -74,35 +74,28 @@ defmodule Web.Components.AttendanceFilterTable do
       <:col
         :let={record}
         label="Start"
-        class="w-1/12 whitespace-nowrap"
+        align="right"
+        class="w-1/12 whitespace-nowrap  tabular-nums"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
-        <span class="label md:hidden">Start</span>
-        <span class="whitespace-nowrap">
-          {Service.Format.datetime_short(
-            record.started_at,
-            @member.team.timezone
-          )}
-        </span>
+        {Service.Format.datetime_short(
+          record.started_at,
+          @member.team.timezone
+        )}
       </:col>
-      <:col :let={record} label="Finish" class="w-1/12 whitespace-nowrap">
-        <span class="label md:hidden">Finish</span>
-        <span class="whitespace-nowrap">
-          {Service.Format.same_day_datetime(
-            record.finished_at,
-            record.started_at,
-            @member.team.timezone
-          )}
-        </span>
+      <:col :let={record} label="Finish" align="right" class="w-1/12 whitespace-nowrap tabular-nums">
+        {Service.Format.time_short(
+          record.finished_at,
+          @member.team.timezone
+        )}
       </:col>
       <:col
         :let={record}
         label="Duration"
-        class="w-1/12"
         align="right"
+        class="w-1/12 whitespace-nowrap tabular-nums"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span class="label md:hidden">Duration</span>
         {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
       </:col>
     </.table>
