@@ -4,6 +4,8 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Repo
@@ -17,6 +19,8 @@ defmodule App.ViewData.TeamDashboardViewData do
       attendance_count: count_attendances(team),
       qualification_count: count_qualifications(team),
       qualification_award_count: count_qualification_awards(team),
+      group_count: count_groups(team),
+      group_member_count: count_group_members(team),
       refreshed_at: team.d4h_refreshed_at,
       refresh_result: refresh_result_value(team, refreshing?)
     }
@@ -71,6 +75,19 @@ defmodule App.ViewData.TeamDashboardViewData do
     MemberQualificationAward
     |> join(:left, [a], m in assoc(a, :member))
     |> where([_, m], m.team_id == ^team.id)
+    |> select(count(1))
+    |> Repo.one()
+  end
+
+  def count_groups(team) do
+    query = from g in Group, where: g.team_id == ^team.id, select: count(1)
+    Repo.one(query)
+  end
+
+  def count_group_members(team) do
+    GroupMember
+    |> join(:left, [gm], g in assoc(gm, :group))
+    |> where([_, g], g.team_id == ^team.id)
     |> select(count(1))
     |> Repo.one()
   end

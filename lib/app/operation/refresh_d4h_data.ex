@@ -33,6 +33,7 @@ defmodule App.Operation.RefreshD4HData do
     {tag_index, progress} = refresh_members_and_tags(d4h, team, progress)
     progress = refresh_all_activities(d4h, team, tag_index, progress)
     progress = refresh_qualifications(d4h, team, progress)
+    progress = refresh_groups(d4h, team, progress)
 
     RefreshD4HData.Progress.complete(progress)
     {:ok, update_team_refreshed_at(team)}
@@ -82,6 +83,16 @@ defmodule App.Operation.RefreshD4HData do
 
     progress = RefreshD4HData.Progress.update_stage(progress, "Qualification Awards")
     {_count, progress} = RefreshD4HData.UpsertQualificationAwards.call(d4h, team, progress)
+    RefreshD4HData.Progress.finish_stage(progress)
+  end
+
+  defp refresh_groups(d4h, team, progress) do
+    progress = RefreshD4HData.Progress.update_stage(progress, "Groups")
+    {_count, progress} = RefreshD4HData.UpsertGroups.call(d4h, team, progress)
+    progress = RefreshD4HData.Progress.finish_stage(progress)
+
+    progress = RefreshD4HData.Progress.update_stage(progress, "Group Memberships")
+    {_count, progress} = RefreshD4HData.UpsertGroupMemberships.call(d4h, team, progress)
     RefreshD4HData.Progress.finish_stage(progress)
   end
 

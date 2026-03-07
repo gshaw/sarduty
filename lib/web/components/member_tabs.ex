@@ -4,7 +4,7 @@ defmodule Web.Components.MemberTabs do
   import Web.Components.A
 
   attr :member, :map, required: true
-  attr :active_tab, :atom, required: true, values: [:attendance, :qualifications]
+  attr :active_tab, :atom, required: true, values: [:attendance, :qualifications, :groups]
 
   def member_tabs(assigns) do
     ~H"""
@@ -29,6 +29,16 @@ defmodule Web.Components.MemberTabs do
           ]}
         >
           Qualifications
+        </.a>
+        <.a
+          navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}/groups"}
+          class={[
+            "py-3 px-4 font-medium text-sm border-b-2 transition-colors duration-200",
+            (@active_tab == :groups && "border-blue-500 text-blue-600 bg-blue-50") ||
+              "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+          ]}
+        >
+          Groups
         </.a>
       </nav>
     </div>

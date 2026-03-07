@@ -59,6 +59,9 @@ defmodule Web.TeamDashboardLive do
         <.a navigate={~p"/#{@team.subdomain}/members"}>Members</.a>
         <ul class="subheading action-list ml-hindent">
           <li>
+            <.a navigate={~p"/#{@team.subdomain}/groups"}>Groups</.a>
+          </li>
+          <li>
             <.a navigate={~p"/#{@team.subdomain}/qualifications"}>Qualifications</.a>
           </li>
           <li>
@@ -113,6 +116,10 @@ defmodule Web.TeamDashboardLive do
       <dd>{@view_data.qualification_count}</dd>
       <dt>Qualification Awards</dt>
       <dd>{@view_data.qualification_award_count}</dd>
+      <dt>Groups</dt>
+      <dd>{@view_data.group_count}</dd>
+      <dt>Group Members</dt>
+      <dd>{@view_data.group_member_count}</dd>
     </dl>
     """
   end
@@ -153,7 +160,9 @@ defmodule Web.TeamDashboardLive do
     "Incidents",
     "Attendances",
     "Qualifications",
-    "Qualification Awards"
+    "Qualification Awards",
+    "Groups",
+    "Group Memberships"
   ]
 
   defp refreshing?(view_data) do
