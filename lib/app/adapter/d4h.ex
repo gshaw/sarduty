@@ -211,6 +211,21 @@ defmodule App.Adapter.D4H do
     |> Enum.map(&D4H.QualificationAward.build(&1))
   end
 
+  def fetch_groups(context) do
+    response = Req.get!(context, url: "/member-groups", params: [size: -1])
+
+    response.body["results"]
+    |> Enum.map(&D4H.Group.build(&1))
+  end
+
+  def fetch_group_memberships(context, page) do
+    response =
+      Req.get!(context, url: "/member-group-memberships", params: [page: page, size: 1000])
+
+    response.body["results"]
+    |> Enum.map(&D4H.GroupMembership.build(&1))
+  end
+
   def fetch_tags(context) do
     response = Req.get!(context, url: "/tags", params: [size: -1])
     response.body["results"] |> Enum.map(&D4H.Tag.build(&1))
