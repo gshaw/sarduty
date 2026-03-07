@@ -116,17 +116,18 @@ defmodule Web.GroupLive do
   defp clause_editor(assigns) do
     ~H"""
     <h2 class="subtitle mb-p05">Qualification Rules</h2>
-    <p :if={@clauses == []} class="text-secondary-1 mb-p">
-      No rules defined. Add a clause to define which qualifications members must hold.
+    <p class="text-secondary-1 mb-p">
+      Define which qualifications members must hold to belong to this group.
+      Automatic syncing based on these rules is coming in a future update.
     </p>
 
-    <div :for={clause <- @clauses} class="mb-p border rounded p-p">
+    <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
       <div class="flex justify-between items-center mb-p05">
         <h3 class="font-semibold">Clause — member must hold ANY of:</h3>
         <button
           phx-click="delete-clause"
           phx-value-clause-id={clause.id}
-          class="btn btn-sm btn-danger"
+          class="btn btn-sm btn-danger ml-p"
           data-confirm="Delete this clause and all its qualifications?"
         >
           Delete clause
@@ -136,7 +137,7 @@ defmodule Web.GroupLive do
       <div class="flex flex-wrap gap-2 mb-p05">
         <span
           :for={cq <- clause.group_rule_clause_qualifications}
-          class="inline-flex items-center gap-1 rounded bg-base-200 px-2 py-1 text-sm"
+          class="inline-flex items-center gap-2 rounded bg-base-200 px-2 py-1 text-sm"
         >
           {qualification_title(@qualifications, cq.d4h_qualification_id)}
           <button
@@ -158,7 +159,10 @@ defmodule Web.GroupLive do
 
       <form phx-submit="add-qualification" class="flex gap-2 items-end">
         <input type="hidden" name="clause-id" value={clause.id} />
-        <select name="qualification-id" class="block rounded border shadow-sm text-sm">
+        <select
+          name="qualification-id"
+          class="block rounded border shadow-sm text-sm max-w-xs truncate"
+        >
           <option value="">Add qualification...</option>
           {Phoenix.HTML.Form.options_for_select(
             available_qualifications(@qualifications, clause.group_rule_clause_qualifications),
