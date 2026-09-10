@@ -3,6 +3,7 @@ defmodule Web.Settings.TeamLive do
 
   alias App.Adapter.D4H
   alias App.Model.Team
+  alias App.Operation.UpdateTeamSettings
 
   def mount(_params, _session, socket) do
     team = socket.assigns.current_user.team
@@ -13,7 +14,7 @@ defmodule Web.Settings.TeamLive do
       else
         socket
         |> assign(page_title: "Team Settings")
-        |> assign_form(Team.build_changeset(team))
+        |> assign_form(Team.build_settings_changeset(team))
       end
 
     {:ok, socket}
@@ -50,11 +51,13 @@ defmodule Web.Settings.TeamLive do
           individual with a similar role from the organization. Used by CRA during tax audits.
         </.input>
         <.input
-          field={@form[:d4h_access_key]}
+          field={@form[:new_d4h_access_key]}
           label="D4H access key (team)"
           type="password"
+          autocomplete="off"
         >
           Team-level D4H Personal Access Token used for scheduled background data refresh.
+          <span id="team-key-status">{key_status(@current_team)}</span>
         </.input>
         <.form_actions>
           <.button variant={:success}>Save</.button>
@@ -71,15 +74,34 @@ defmodule Web.Settings.TeamLive do
     assign(socket, :form, to_form(source, as: "form"))
   end
 
+  defp key_status(%Team{d4h_access_key: nil}) do
+    "No team key saved, so the refresh uses a team member's personal key."
+  end
+
+  defp key_status(%Team{d4h_access_key_saved_at: nil}) do
+    "A key is saved. Leave blank to keep it."
+  end
+
+  defp key_status(%Team{} = team) do
+    saved_on = Service.Format.date_long(team.d4h_access_key_saved_at, team.timezone)
+    "Key saved #{saved_on}. Leave blank to keep it."
+  end
+
   def handle_event("validate", %{"form" => form_params}, socket) do
-    changeset = Team.build_changeset(socket.assigns.current_team, form_params)
+    changeset = Team.build_settings_changeset(socket.assigns.current_team, form_params)
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
   def handle_event("save", %{"form" => form_params}, socket) do
-    case Team.update(socket.assigns.current_team, form_params) do
-      {:ok, _team} ->
-        {:noreply, put_flash(socket, :info, "Changes saved")}
+    case UpdateTeamSettings.call(socket.assigns.current_team, form_params) do
+      {:ok, team} ->
+        socket =
+          socket
+          |> assign(current_team: team)
+          |> assign_form(Team.build_settings_changeset(team))
+          |> put_flash(:info, "Changes saved")
+
+        {:noreply, socket}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
@@ -102,7 +124,8 @@ defmodule Web.Settings.TeamLive do
       {:ok, team} ->
         socket =
           socket
-          |> assign_form(Team.build_changeset(team))
+          |> assign(current_team: team)
+          |> assign_form(Team.build_settings_changeset(team))
           |> put_flash(:info, "Refreshed from D4H")
 
         {:noreply, socket}

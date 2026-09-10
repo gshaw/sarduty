@@ -72,6 +72,13 @@ defmodule App.Adapter.D4H do
   end
 
   def determine_team_id(access_key: access_key, api_host: api_host) do
+    case fetch_whoami(access_key: access_key, api_host: api_host) do
+      {:ok, whoami} -> {:ok, whoami.d4h_team_id}
+      error -> error
+    end
+  end
+
+  def fetch_whoami(access_key: access_key, api_host: api_host) do
     context =
       Req.new(
         base_url: "https://#{api_host}/v3",
@@ -81,11 +88,11 @@ defmodule App.Adapter.D4H do
 
     response = Req.get!(context, url: "/whoami")
 
-    if response.status == 200 do
-      whoami = D4H.WhoAmI.build(response.body)
-      {:ok, whoami.d4h_team_id}
+    with 200 <- response.status,
+         %D4H.WhoAmI{} = whoami <- D4H.WhoAmI.build(response.body) do
+      {:ok, whoami}
     else
-      {:error, "Unable to determine team ID"}
+      _ -> {:error, "Unable to determine team ID"}
     end
   end
 

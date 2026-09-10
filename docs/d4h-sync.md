@@ -23,6 +23,10 @@ team's own key (`teams.d4h_access_key`, set in team settings). Without one, it b
 first team member's personal key. Both are `EncryptedString` columns. Most teams still
 rely on the fallback; #41 tracks moving them to their own key so it can be deleted.
 
+Team settings never sends the saved key back to the page. A new key goes through
+[UpdateTeamSettings](../lib/app/operation/update_team_settings.ex), which asks D4H `whoami`
+and saves it only if the key's member is on this team. A blank field keeps the saved key.
+
 ## The stages
 
 [RefreshD4HData](../lib/app/operation/refresh_d4h_data.ex) runs these in order, in one

@@ -19,6 +19,10 @@ defmodule App.Model.Team do
     field :lng, :float
     field :timezone, :string
     field :d4h_access_key, EncryptedString, redact: true
+    field :d4h_access_key_saved_at, :utc_datetime_usec
+    # The settings form takes a replacement key here, so the saved key never
+    # goes back to the page.
+    field :new_d4h_access_key, TrimmedString, virtual: true, redact: true
     field :d4h_refresh_result, :string
     field :d4h_refreshed_at, :utc_datetime_usec
     has_many :users, User
@@ -26,6 +30,18 @@ defmodule App.Model.Team do
   end
 
   def build_new_changeset(params \\ %{}), do: build_changeset(%Team{}, params)
+
+  # Only what a team manager may edit. d4h_team_id and the saved key are not
+  # castable here; UpdateTeamSettings sets the key after checking it with D4H.
+  def build_settings_changeset(data, params \\ %{}) do
+    data
+    |> cast(params, [:name, :mailing_address, :authorized_by_name, :new_d4h_access_key])
+    |> validate_required([:name])
+    |> Validate.name(:name)
+    |> Validate.address(:mailing_address)
+    |> validate_length(:authorized_by_name, max: 250)
+    |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
+  end
 
   def build_changeset(data, params \\ %{}) do
     data
@@ -35,6 +51,7 @@ defmodule App.Model.Team do
       :d4h_team_id,
       :d4h_api_host,
       :d4h_access_key,
+      :d4h_access_key_saved_at,
       :d4h_refresh_result,
       :d4h_refreshed_at,
       :mailing_address,
