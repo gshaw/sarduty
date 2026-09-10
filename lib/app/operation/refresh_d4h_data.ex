@@ -12,9 +12,24 @@ defmodule App.Operation.RefreshD4HData do
     refresh(d4h, team, progress)
   end
 
+  # A missing or rejected key needs a person to fix it, so it comes back as
+  # `{:error, reason}` rather than an exception to retry and report.
   def call(%Team{} = team) do
-    access_key = RefreshD4HData.ResolveAccessKey.call(team)
+    case RefreshD4HData.ResolveAccessKey.call(team) do
+      nil -> {:error, :no_key}
+      {key_owner, access_key} -> refresh_with_key(team, key_owner, access_key)
+    end
+  end
 
+  def error_message(:no_key), do: "No D4H key. Save a team key in Team Settings."
+
+  def error_message({:key_rejected, :team, status}),
+    do: "D4H rejected the team key (#{status}). Save a new one in Team Settings."
+
+  def error_message({:key_rejected, %User{email: email}, status}),
+    do: "D4H rejected #{email}'s personal key (#{status}). Save a team key in Team Settings."
+
+  defp refresh_with_key(team, key_owner, access_key) do
     d4h =
       D4H.build_context(
         access_key: access_key,
@@ -24,6 +39,13 @@ defmodule App.Operation.RefreshD4HData do
 
     progress = RefreshD4HData.Progress.new(team.id)
     refresh(d4h, team, progress)
+  rescue
+    error in D4H.Error ->
+      if error.status in [401, 403] do
+        {:error, {:key_rejected, key_owner, error.status}}
+      else
+        reraise error, __STACKTRACE__
+      end
   end
 
   @activity_types ["exercises", "events", "incidents"]
@@ -115,6 +137,9 @@ defmodule App.Operation.RefreshD4HData do
         logo_dir_path = Path.dirname(logo_path)
         File.mkdir_p!(logo_dir_path)
         File.write!(logo_path, data)
+
+      {:error, response} ->
+        raise D4H.Error, response
     end
   end
 end

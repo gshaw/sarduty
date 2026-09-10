@@ -19,11 +19,13 @@ defmodule Web.AdminDashboardLiveTest do
     assert html =~ "Admin"
   end
 
-  test "lists each team's users and links an email to all of them", %{conn: conn} do
+  test "lists each team's users and marks the key the refresh borrows", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
 
-    %{user: with_key, team: team} = user_with_team_fixture()
+    %{user: borrowed, team: team} = user_with_team_fixture()
+    second_key = App.AccountsFixtures.user_fixture()
+    {:ok, second_key} = User.update(second_key, %{team_id: team.id, d4h_access_key: "key-2"})
     without_key = App.AccountsFixtures.user_fixture()
     {:ok, without_key} = User.update(without_key, %{team_id: team.id})
 
@@ -33,12 +35,30 @@ defmodule Web.AdminDashboardLiveTest do
       |> live(~p"/admin")
 
     row = "#team-#{team.id}"
-    [first, second] = Enum.sort([with_key.email, without_key.email])
 
-    assert render(element(lv, row)) =~ with_key.email
-    assert render(element(lv, row)) =~ without_key.email
-    assert has_element?(lv, "#{row} .badge", "D4H key")
-    assert has_element?(lv, ~s(#{row} a[href="mailto:#{first},#{second}"]), "Email")
+    assert has_element?(lv, "#{row} li", without_key.email)
+    assert has_element?(lv, "#{row} li", borrowed.email)
+    assert render(element(lv, "#{row} li", borrowed.email)) =~ "Refresh key"
+    assert render(element(lv, "#{row} li", second_key.email)) =~ "D4H key"
+    refute has_element?(lv, "#{row} a[href^='mailto:']")
+    assert has_element?(lv, "#key-notes", "Refresh key")
+  end
+
+  test "shows why a team's refresh failed", %{conn: conn} do
+    %{user: admin, team: team} = user_with_team_fixture()
+    admin = make_admin(admin)
+
+    {:ok, _team} =
+      Team.update(team, %{
+        d4h_refresh_result: "Error: No D4H key. Save a team key in Team Settings."
+      })
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(admin)
+      |> live(~p"/admin")
+
+    assert has_element?(lv, "#team-#{team.id} .text-danger-1", "No D4H key.")
   end
 
   test "flags a team with no users", %{conn: conn} do
@@ -52,7 +72,6 @@ defmodule Web.AdminDashboardLiveTest do
       |> live(~p"/admin")
 
     assert has_element?(lv, "#team-#{team.id}", "No users")
-    refute has_element?(lv, "#team-#{team.id} a[href^='mailto:']")
   end
 
   test "keeps a team's contacts after a refresh broadcast", %{conn: conn} do

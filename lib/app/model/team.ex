@@ -105,6 +105,15 @@ defmodule App.Model.Team do
 
   # def delete(%Team{} = record), do: Repo.delete(record)
 
+  @doc """
+  How a `d4h_refresh_result` reads: `:never` refreshed, `:ok`, `:failed` (anything the
+  worker writes as "Error: …"), or `:refreshing` (a stage's progress).
+  """
+  def refresh_state(nil), do: :never
+  def refresh_state("OK"), do: :ok
+  def refresh_state("Error:" <> _message), do: :failed
+  def refresh_state(result) when is_binary(result), do: :refreshing
+
   def logo_path(team_subdomain) do
     logo_path = System.fetch_env!("TEAM_LOGO_PATH")
     Path.join(logo_path, "#{team_subdomain}.png")

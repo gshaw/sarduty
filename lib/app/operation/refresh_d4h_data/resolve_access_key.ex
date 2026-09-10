@@ -1,5 +1,4 @@
-# TODO: Remove this module once all teams have their own d4h_access_key.
-# This is a temporary fallback that finds a user's PAT when the team doesn't have one.
+# TODO: Remove the member fallback once all teams have their own d4h_access_key (#41).
 defmodule App.Operation.RefreshD4HData.ResolveAccessKey do
   import Ecto.Query
 
@@ -8,22 +7,32 @@ defmodule App.Operation.RefreshD4HData.ResolveAccessKey do
   alias App.Repo
 
   @doc """
-  Returns a D4H access key for the given team.
-  Prefers the team's own key, falling back to any user on the team that has one.
+  Returns `{owner, access_key}` for the key the refresh uses, where `owner` is `:team` or
+  the `%User{}` whose personal key is borrowed, or `nil` when there is no key.
   """
   def call(%Team{} = team) do
-    case team.d4h_access_key do
-      key when is_binary(key) and key != "" -> key
-      _ -> find_user_access_key(team)
+    users = User |> where([u], u.team_id == ^team.id) |> Repo.all()
+
+    case key_owner(team, users) do
+      nil -> nil
+      :team -> {:team, team.d4h_access_key}
+      %User{} = user -> {user, user.d4h_access_key}
     end
   end
 
-  defp find_user_access_key(team) do
-    User
-    |> where([u], u.team_id == ^team.id)
-    |> where([u], not is_nil(u.d4h_access_key) and u.d4h_access_key != "")
-    |> limit(1)
-    |> select([u], u.d4h_access_key)
-    |> Repo.one()
+  @doc """
+  The team's own key when it has one, otherwise the personal key of the earliest member
+  (lowest user id) who has one, otherwise `nil`.
+  """
+  def key_owner(%Team{} = team, users) do
+    if key?(team.d4h_access_key) do
+      :team
+    else
+      users
+      |> Enum.filter(&key?(&1.d4h_access_key))
+      |> Enum.min_by(& &1.id, fn -> nil end)
+    end
   end
+
+  def key?(key), do: is_binary(key) and key != ""
 end

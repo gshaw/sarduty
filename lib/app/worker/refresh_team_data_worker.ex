@@ -1,7 +1,6 @@
 defmodule App.Worker.RefreshTeamDataWorker do
   use Oban.Worker, queue: :refresh, max_attempts: 3
 
-  alias App.Adapter.D4H
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
 
@@ -16,15 +15,24 @@ defmodule App.Worker.RefreshTeamDataWorker do
     broadcast_team_refresh(team)
 
     try do
-      {:ok, team} = RefreshD4HData.call(team)
-      {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
-      broadcast_team_refresh(team)
-      ping_healthchecks()
-      :ok
+      case RefreshD4HData.call(team) do
+        {:ok, team} ->
+          {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
+          broadcast_team_refresh(team)
+          ping_healthchecks()
+          :ok
+
+        # Only a person can fix a missing or rejected key, so a cancelled job is
+        # neither retried nor sent to Honeybadger.
+        {:error, reason} ->
+          message = RefreshD4HData.error_message(reason)
+          {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
+          broadcast_team_refresh(team)
+          {:cancel, message}
+      end
     rescue
       e ->
-        message = format_error(e)
-        {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
+        {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{Exception.message(e)}"})
         broadcast_team_refresh(team)
         # Reraise so the job fails with the real exception and stacktrace, which
         # App.Worker.ErrorReporter sends to Honeybadger.
@@ -43,10 +51,4 @@ defmodule App.Worker.RefreshTeamDataWorker do
       url -> Req.get(url)
     end
   end
-
-  defp format_error(%MatchError{term: {:error, %Req.Response{} = response}}) do
-    response |> D4H.Error.exception() |> Exception.message()
-  end
-
-  defp format_error(e), do: Exception.message(e)
 end

@@ -14,15 +14,20 @@ covers how the copy is refreshed and where it drifts from D4H.
 - The `refresh` queue has a limit of 1, so one team refreshes at a time. A failed job
   retries after 15 minutes, then 30 (`max_attempts: 3`), before waiting for the next day.
 - A successful run pings `HEALTHCHECKS_URL`. A failed one writes `Error: …` to
-  `teams.d4h_refresh_result`, which the dashboard shows. When the last attempt fails, the
+  `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
   error goes to Honeybadger.
+- A missing key, or one D4H rejects with 401 or 403, is not an app error. The job writes
+  `Error: No D4H key…` or `Error: D4H rejected …'s personal key (401)…` and cancels, so it
+  is neither retried nor sent to Honeybadger. It tries again the next night.
 
 ## Which key
 
 [ResolveAccessKey](../lib/app/operation/refresh_d4h_data/resolve_access_key.ex) uses the
 team's own key (`teams.d4h_access_key`, set in team settings). Without one, it borrows the
-first team member's personal key. Both are `EncryptedString` columns. Most teams still
-rely on the fallback; #41 tracks moving them to their own key so it can be deleted.
+personal key of the earliest member (lowest user id) who has one. Both are
+`EncryptedString` columns. `/admin` marks the borrowed key with a "Refresh key" badge.
+Most teams still rely on the fallback; #41 tracks moving them to their own key so it can
+be deleted.
 
 Team settings never sends the saved key back to the page. A new key goes through
 [UpdateTeamSettings](../lib/app/operation/update_team_settings.ex), which asks D4H `whoami`
@@ -50,8 +55,8 @@ Each stage does `get_by` then `update!` or `insert!` on the D4H id, rather than 
 
 Progress goes through [Progress](../lib/app/operation/refresh_d4h_data/progress.ex): each
 update writes `teams.d4h_refresh_result` and broadcasts on the `"team_refresh"` PubSub
-topic. `TeamDashboardLive` matches stage names against its own `@refresh_stages` list, so
-renaming a stage means changing both.
+topic. `Team.refresh_state/1` reads the column for both dashboards: `OK`, anything
+starting `Error:` is a failure, and any other text is a stage in progress.
 
 ## Where the copy drifts
 

@@ -3,8 +3,10 @@ defmodule App.Adapter.D4H.Error do
 
   @impl Exception
   def exception(%Req.Response{} = response) do
-    body =
+    # D4H error bodies carry a short "title", e.g. "Legacy Tokens Not Supported".
+    reason =
       case response.body do
+        %{"title" => title} when is_binary(title) -> title
         body when is_binary(body) -> body
         body when is_map(body) -> Jason.encode!(body)
         other -> inspect(other)
@@ -12,7 +14,7 @@ defmodule App.Adapter.D4H.Error do
 
     %__MODULE__{
       status: response.status,
-      message: "D4H API error (#{response.status}): #{String.slice(body, 0, 500)}"
+      message: "D4H API error (#{response.status}): #{String.slice(reason, 0, 500)}"
     }
   end
 

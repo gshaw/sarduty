@@ -140,8 +140,9 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_team_image(context) do
-    {:ok, image_document} = D4H.fetch_team_image_document(context)
-    download_document(context, image_document.d4h_document_id, "team.png")
+    with {:ok, image_document} <- D4H.fetch_team_image_document(context) do
+      download_document(context, image_document.d4h_document_id, "team.png")
+    end
   end
 
   def fetch_team(context) do
