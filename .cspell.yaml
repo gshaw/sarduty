@@ -4,6 +4,7 @@ version: "0.2"
 language: en
 allowCompoundWords: true
 ignorePaths:
+  - ".claude"
   - "_build/*"
   - ".git/*"
   - "assets/vendor/*"

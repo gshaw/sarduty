@@ -1,0 +1,5 @@
+# Agent worktrees are checkouts of other branches; formatting them from this
+# checkout would silently rewrite files those branches own.
+.claude/
+_build/
+deps/

@@ -81,15 +81,8 @@ defmodule App.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      precommit: [
-        "format --check-formatted",
-        "compile --force --warnings-as-errors",
-        "deps.unlock --unused",
-        "credo --all-priorities",
-        "spell",
-        "cmd mix test --color"
-      ],
-      spell: "cmd cspell lint --no-progress .",
+      # The checks live in .mise.toml; this keeps the Phoenix-standard name working.
+      precommit: "cmd mise run ci",
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],

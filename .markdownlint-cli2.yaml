@@ -1,0 +1,10 @@
+gitignore: true
+ignores:
+  - ".claude/**"
+  - "CLAUDE.md" # Claude Code import shim (@AGENTS.md), not prose
+  - ".github/PULL_REQUEST_TEMPLATE.md" # GitHub scaffolding; section-led, no H1
+  - ".github/ISSUE_TEMPLATE/**" # Same: front matter plus sections, and GitHub owns the title
+
+config:
+  default: true
+  MD013: false # line length
