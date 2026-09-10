@@ -126,21 +126,8 @@ defmodule Web.Layouts do
       <%= if @current_user do %>
         <.current_user_menu current_user={@current_user} />
       <% else %>
-        <.a
-          role="button"
-          kind={:custom}
-          navigate="/login"
-          class="mr-1 btn btn-sm"
-        >
-          Log in
-        </.a>
-        <%!--
-        <.a kind={:custom} role="button" navigate="/signup" class="btn btn-sm btn-primary">
-          <span class="whitespace-nowrap">
-            Sign up
-          </span>
-        </.a>
-        --%>
+        <.button navigate="/login" size={:sm} class="mr-1">Log in</.button>
+        <%!-- <.button navigate="/signup" size={:sm} variant={:primary}>Sign up</.button> --%>
       <% end %>
     </.navbar>
     """

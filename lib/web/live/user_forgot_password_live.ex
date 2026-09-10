@@ -17,7 +17,7 @@ defmodule Web.UserForgotPasswordLive do
       <.form for={@form} id="reset_password_form" phx-submit="send_email">
         <.input field={@form[:email]} type="email" label="Email" required />
         <.form_actions>
-          <.button class="btn-success">Send password reset link</.button>
+          <.button variant={:success}>Send password reset link</.button>
         </.form_actions>
       </.form>
     </div>

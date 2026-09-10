@@ -128,14 +128,16 @@ defmodule Web.GroupLive do
     <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
       <div class="flex justify-between items-center mb-p05">
         <h3 class="font-semibold">Clause — member must hold ANY of:</h3>
-        <button
+        <.button
+          variant={:danger}
+          size={:sm}
+          class="ml-p"
           phx-click="delete-clause"
           phx-value-clause-id={clause.id}
-          class="btn btn-sm btn-danger ml-p"
           data-confirm="Delete this clause and all its qualifications?"
         >
           Delete clause
-        </button>
+        </.button>
       </div>
 
       <div class="flex flex-wrap gap-2 mb-p05">
@@ -173,13 +175,13 @@ defmodule Web.GroupLive do
             nil
           )}
         </select>
-        <button type="submit" class="btn btn-sm">Add</button>
+        <.button size={:sm}>Add</.button>
       </form>
     </div>
 
-    <button phx-click="add-clause" class="btn btn-sm">
+    <.button size={:sm} phx-click="add-clause">
       + Add clause
-    </button>
+    </.button>
     """
   end
 

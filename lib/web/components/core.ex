@@ -70,32 +70,53 @@ defmodule Web.Components.Core do
   end
 
   @doc """
-  Renders a button.
+  Renders a button, or a link styled as one when given `navigate` or `href`.
 
   ## Examples
 
-      <.button>Send!</.button>
-      <.button phx-click="go" class="ml-2">Send!</.button>
+      <.button variant={:success}>Save</.button>
+      <.button variant={:danger} size={:sm} phx-click="delete">Delete</.button>
+      <.button navigate={~p"/login"} size={:sm}>Log in</.button>
   """
   attr :type, :string, default: nil
+
+  attr :variant, :atom,
+    default: :default,
+    values: [:default, :primary, :secondary, :success, :warning, :danger, :link]
+
+  attr :size, :atom, default: :md, values: [:sm, :md, :lg]
+  attr :navigate, :string, default: nil
+  attr :href, :string, default: nil
   attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :rest, :global, include: ~w(disabled form name value method)
 
   slot :inner_block, required: true
 
   def button(assigns) do
-    ~H"""
-    <button
-      type={@type}
-      class={[
-        "phx-submit-loading:opacity-75 btn",
-        @class
-      ]}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </button>
-    """
+    assigns = assign(assigns, :button_class, button_class(assigns))
+
+    if assigns.navigate || assigns.href do
+      ~H"""
+      <.link navigate={@navigate} href={@href} class={@button_class} {@rest}>
+        {render_slot(@inner_block)}
+      </.link>
+      """
+    else
+      ~H"""
+      <button type={@type} class={["phx-submit-loading:opacity-75", @button_class]} {@rest}>
+        {render_slot(@inner_block)}
+      </button>
+      """
+    end
+  end
+
+  defp button_class(%{variant: variant, size: size, class: class}) do
+    [
+      "btn",
+      variant != :default && "btn-#{variant}",
+      size != :md && "btn-#{size}",
+      class
+    ]
   end
 
   @doc """

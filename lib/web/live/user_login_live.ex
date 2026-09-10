@@ -24,7 +24,7 @@ defmodule Web.UserLoginLive do
         </p>
 
         <.form_actions>
-          <.button class="btn-success">Log in</.button>
+          <.button variant={:success}>Log in</.button>
         </.form_actions>
       </.form>
     </div>

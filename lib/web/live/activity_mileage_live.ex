@@ -49,7 +49,7 @@ defmodule Web.ActivityMileageLive do
         </div>
       </p>
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
-        <.button phx-click="generate-report" class="btn-success">Generate Mileage Report</.button>
+        <.button phx-click="generate-report" variant={:success}>Generate Mileage Report</.button>
       </p>
     <% else %>
       <p>Mileage report not available because activity does not have a location coordinate.</p>

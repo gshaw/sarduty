@@ -31,7 +31,7 @@ defmodule Web.AdminDashboardLive do
     ~H"""
     <h1 class="title mb-p">Admin</h1>
     <div class="mb-p">
-      <.button type="button" class="btn-warning" phx-click="refresh-all">
+      <.button type="button" variant={:warning} phx-click="refresh-all">
         Refresh All Teams
       </.button>
     </div>

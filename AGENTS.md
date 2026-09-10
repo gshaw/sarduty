@@ -153,6 +153,9 @@ fi
   access keys and letter text. Keep it that way for any new personal data.
 - **Times are stored in UTC** and shown in the team's zone with `Service.Format`
   (`Service.Format.date_long(datetime, team.timezone)`).
+- Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
+  link styled as a button. Badges are `<.badge kind={:incident}>`. Both check their values
+  at compile time, so never write `class="btn btn-success"` or `class="badge"` by hand.
 - Phoenix hazards that are easy to trip on:
   - HEEx interpolates with `{…}` in attributes and bodies, and `<%= … %>` only for block
     constructs (`if`, `case`, `for`). Class lists use `[…]`. There is no `else if`; use
