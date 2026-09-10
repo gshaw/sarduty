@@ -1,5 +1,6 @@
 defmodule Web.Router do
   use Web, :router
+  use Honeybadger.Plug
 
   import Web.UserAuth
 

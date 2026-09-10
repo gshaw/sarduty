@@ -43,6 +43,23 @@ Team logos on the same volume are not replicated. See [deployment.md](deployment
 - `HEALTHCHECKS_URL` — optional. Pinged after each successful team refresh, so a missed
   ping means the daily sync stopped.
 
+## Honeybadger
+
+Error reports and Insights (request, query, LiveView, and job timings), configured in
+[config/config.exs](../config/config.exs). Errors come from the router
+(`use Honeybadger.Plug`), crashed processes through the logger, and failed Oban jobs
+through [App.Worker.ErrorReporter](../lib/app/worker/error_reporter.ex). Dev and test
+send nothing.
+
+- `HONEYBADGER_API_KEY` — a Fly secret, read by the `honeybadger` library itself.
+  Without it in production the app still boots, logs
+  `Mandatory config key :api_key not set`, and reports nothing.
+
+Passwords, access keys, tokens, and the cookie header are filtered before sending, at
+every level of the params ([Web.HoneybadgerFilter](../lib/web/honeybadger_filter.ex)).
+Request paths are not, so reset and confirm links reach Honeybadger the same way they
+reach the logs.
+
 ## MCP endpoint
 
 Off. The test version served `GET|POST /:subdomain/mcp` to every team behind one
