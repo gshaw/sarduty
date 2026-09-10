@@ -120,7 +120,7 @@ defmodule Web.Components.UI do
 
   def error(assigns) do
     ~H"""
-    <div class="my-1 font-normal text-sm text-danger-1 phx-no-feedback:hidden">
+    <div class="my-1 font-normal text-sm text-danger-1">
       {render_slot(@inner_block)}
     </div>
     """

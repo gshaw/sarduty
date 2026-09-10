@@ -99,7 +99,6 @@ defmodule Web.StyleGuideLive do
         label="A field with an error"
         class="md:w-1/2"
         errors={["is invalid"]}
-        phx-connected={JS.remove_class("phx-no-feedback", to: ".phx-no-feedback")}
       />
     </.style_group>
 
