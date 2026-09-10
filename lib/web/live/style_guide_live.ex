@@ -170,7 +170,7 @@ defmodule Web.StyleGuideLive do
         <button class="btn btn-sm">Small</button>
       </.form_actions>
       <div>
-        <a class="btn btn-sm btn-outline">Log in</a>
+        <a class="btn btn-sm">Log in</a>
         <a class="btn btn-sm btn-primary">Sign up for FREE</a>
       </div>
     </.style_group>

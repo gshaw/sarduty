@@ -130,7 +130,7 @@ defmodule Web.Layouts do
           role="button"
           kind={:custom}
           navigate="/login"
-          class="hidden md:flex mr-1 btn btn-sm btn-outline"
+          class="mr-1 btn btn-sm"
         >
           Log in
         </.a>

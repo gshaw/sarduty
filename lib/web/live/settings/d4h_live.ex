@@ -24,11 +24,7 @@ defmodule Web.Settings.D4HLive do
       </p>
       <h1 class="heading">D4H access key</h1>
       <p>
-        <.a
-          target="_blank"
-          external={true}
-          navigate="https://help.d4h.com/article/377-obtaining-an-api-access-key"
-        >
+        <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
           How to obtain a D4H access key.
         </.a>
       </p>

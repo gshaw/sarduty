@@ -119,7 +119,7 @@ defmodule Web.GroupLive do
 
   defp clause_editor(assigns) do
     ~H"""
-    <h2 class="subtitle mb-p05">Qualification Rules</h2>
+    <h2 class="subheading mb-p05">Qualification Rules</h2>
     <p class="text-secondary-1 mb-p">
       Define which qualifications members must hold to belong to this group.
       Automatic syncing based on these rules is coming in a future update.
@@ -141,7 +141,7 @@ defmodule Web.GroupLive do
       <div class="flex flex-wrap gap-2 mb-p05">
         <span
           :for={cq <- clause.group_rule_clause_qualifications}
-          class="inline-flex items-center gap-2 rounded bg-base-200 px-2 py-1 text-sm"
+          class="inline-flex items-center gap-2 rounded bg-base-2 px-2 py-1 text-sm"
         >
           {qualification_title(@qualifications, cq.d4h_qualification_id)}
           <button
@@ -186,7 +186,7 @@ defmodule Web.GroupLive do
   defp rule_preview(assigns) do
     ~H"""
     <div :if={@clauses != []} class="mt-p">
-      <h2 class="subtitle mb-p05">Rule Preview</h2>
+      <h2 class="subheading mb-p05">Rule Preview</h2>
       <p class="text-secondary-1 text-sm mb-p05">
         Shows what would change if these rules were applied to the group.
       </p>
@@ -223,7 +223,7 @@ defmodule Web.GroupLive do
 
   defp main_content(assigns) do
     ~H"""
-    <h2 class="subtitle mb-p05 mt-p">Members ({length(@members)})</h2>
+    <h2 class="subheading mb-p05 mt-p">Members ({length(@members)})</h2>
     <.table
       :if={@members != []}
       id="group_members"

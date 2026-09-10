@@ -48,7 +48,7 @@ defmodule Web.Components.Core do
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class={[
-        "fixed top-16 right-2 mr-2 w-80 sm:w-96 z-50 rounded py-2 px-4",
+        "fixed top-16 right-2 mr-2 w-80 md:w-96 z-50 rounded py-2 px-4",
         @kind == :info && "bg-base-content text-base-1",
         @kind == :error && "bg-danger-1 text-danger-content"
       ]}
@@ -174,7 +174,7 @@ defmodule Web.Components.Core do
         name={@name}
         value="true"
         checked={@checked}
-        class={["cursor-pointer h-5 w-5 text-primary shadow-sm rounded", @class]}
+        class={["cursor-pointer h-5 w-5 text-primary-1 shadow-sm rounded", @class]}
         {@rest}
       />
       <div :if={@label} class="ml-2">
@@ -227,7 +227,7 @@ defmodule Web.Components.Core do
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <.hint :if={@inner_block}>{render_slot(@inner_block)}</.hint>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
@@ -315,8 +315,8 @@ defmodule Web.Components.Core do
       to: selector,
       transition:
         {"transition-all transform ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
-         "opacity-100 translate-y-0 sm:scale-100"}
+         "opacity-0 translate-y-4 md:translate-y-0 md:scale-95",
+         "opacity-100 translate-y-0 md:scale-100"}
     )
   end
 
@@ -326,8 +326,8 @@ defmodule Web.Components.Core do
       time: 200,
       transition:
         {"transition-all transform ease-in duration-200",
-         "opacity-100 translate-y-0 sm:scale-100",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+         "opacity-100 translate-y-0 md:scale-100",
+         "opacity-0 translate-y-4 md:translate-y-0 md:scale-95"}
     )
   end
 

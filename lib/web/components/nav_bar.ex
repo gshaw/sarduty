@@ -98,7 +98,7 @@ defmodule Web.Components.NavBar do
 
   def navbar_desktop_links(assigns) do
     ~H"""
-    <span class="ml-4 border-l border-base-200 hidden md:inline-block">
+    <span class="ml-4 border-l border-base-3 hidden md:inline-block">
       {render_slot(@inner_block)}
     </span>
     """

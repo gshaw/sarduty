@@ -69,7 +69,7 @@ defmodule Web.SettingsLive do
       </span>
       <div>
         <div>{@title}</div>
-        <div :if={@inner_block} class="truncate text-sm text-secondary-1">
+        <div :if={@inner_block != []} class="truncate text-sm text-secondary-1">
           {render_slot(@inner_block)}
         </div>
       </div>
