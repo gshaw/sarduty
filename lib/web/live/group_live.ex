@@ -13,7 +13,7 @@ defmodule Web.GroupLive do
   alias App.Repo
 
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, :editing, false)}
   end
 
   def handle_params(params, _uri, socket) do
@@ -22,7 +22,7 @@ defmodule Web.GroupLive do
     members = list_members_for_group(group)
     clauses = GroupRuleClause.get_all_for_group(current_team.id, group.d4h_group_id)
     qualifications = Qualification.get_all(current_team.id)
-    preview = build_preview(clauses, members, current_team.id)
+    preview = build_preview(clauses, members, current_team)
 
     socket =
       socket
@@ -34,6 +34,14 @@ defmodule Web.GroupLive do
       |> assign(:preview, preview)
 
     {:noreply, socket}
+  end
+
+  def handle_event("edit-rules", _params, socket) do
+    {:noreply, assign(socket, :editing, true)}
+  end
+
+  def handle_event("done-editing", _params, socket) do
+    {:noreply, assign(socket, :editing, false)}
   end
 
   def handle_event("add-clause", _params, socket) do
@@ -94,7 +102,14 @@ defmodule Web.GroupLive do
         <.sidebar_content group={@group} members={@members} team={@current_team} />
       </aside>
       <main class="content-2/3">
+        <h2 class="subheading mb-p05">Qualification Rules</h2>
+        <.rule_summary
+          :if={!@editing}
+          clauses={@clauses}
+          qualifications={@qualifications}
+        />
         <.clause_editor
+          :if={@editing}
           clauses={@clauses}
           qualifications={@qualifications}
           team={@current_team}
@@ -125,12 +140,21 @@ defmodule Web.GroupLive do
     """
   end
 
+  defp rule_summary(assigns) do
+    ~H"""
+    <div class="flex items-center justify-between gap-p border rounded px-p py-p05">
+      <p id="rule-sentence">{rule_sentence(@clauses, @qualifications)}</p>
+      <.button id="edit-rules" size={:sm} class="shrink-0" phx-click="edit-rules">
+        {if @clauses == [], do: "Add rules", else: "Edit rules"}
+      </.button>
+    </div>
+    """
+  end
+
   defp clause_editor(assigns) do
     ~H"""
-    <h2 class="subheading mb-p05">Qualification Rules</h2>
     <p class="text-secondary-1 mb-p">
       Define which qualifications members must hold to belong to this group.
-      Automatic syncing based on these rules is coming in a future update.
     </p>
 
     <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
@@ -194,9 +218,12 @@ defmodule Web.GroupLive do
       </form>
     </div>
 
-    <.button size={:sm} phx-click="add-clause">
-      + Add clause
-    </.button>
+    <div class="flex gap-2">
+      <.button size={:sm} phx-click="add-clause">+ Add clause</.button>
+      <.button id="done-editing" variant={:primary} size={:sm} phx-click="done-editing">
+        Done
+      </.button>
+    </div>
     """
   end
 
@@ -209,35 +236,34 @@ defmodule Web.GroupLive do
         id="rule-broken"
         class="rounded bg-warning-1 text-warning-content px-p py-p05 text-sm"
       >
-        These rules name a qualification that is no longer in D4H, shown in red above.
-        Remove it or replace it to see the preview.
+        These rules name a qualification that is no longer in D4H. Edit the rules to
+        remove or replace it, then the preview comes back.
       </p>
       <p :if={@preview.missing_qualification_ids == []} class="text-secondary-1 text-sm mb-p05">
-        Shows what would change if these rules were applied to the group.
+        What would change if these rules were applied to the D4H group.
       </p>
 
-      <div :if={@preview.to_add != [] || @preview.to_remove != []} class="grid grid-cols-2 gap-p">
-        <div :if={@preview.to_add != []}>
-          <h3 class="font-semibold text-success-1 mb-p05">
-            Would be added ({length(@preview.to_add)})
-          </h3>
-          <ul class="text-sm">
-            <li :for={member <- @preview.to_add}>
-              <.a navigate={~p"/#{@team.subdomain}/members/#{member.id}"}>{member.name}</.a>
-            </li>
-          </ul>
-        </div>
-        <div :if={@preview.to_remove != []}>
-          <h3 class="font-semibold text-danger-1 mb-p05">
-            Would be removed ({length(@preview.to_remove)})
-          </h3>
-          <ul class="text-sm">
-            <li :for={member <- @preview.to_remove}>
-              <.a navigate={~p"/#{@team.subdomain}/members/#{member.id}"}>{member.name}</.a>
-            </li>
-          </ul>
-        </div>
-      </div>
+      <.change_list
+        id="would-remove"
+        title="Would be removed"
+        title_class="text-danger-1"
+        rows={@preview.to_remove}
+        team={@team}
+      />
+      <.change_list
+        id="would-add"
+        title="Would be added"
+        title_class="text-success-1"
+        rows={@preview.to_add}
+        team={@team}
+      />
+      <.change_list
+        id="expiring"
+        title={"Expiring within #{BuildGroupRulePreview.expiring_days()} days"}
+        title_class="text-base-content"
+        rows={@preview.expiring}
+        team={@team}
+      />
 
       <p
         :if={
@@ -248,6 +274,33 @@ defmodule Web.GroupLive do
       >
         No changes — current group membership matches the rules.
       </p>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :title_class, :string, required: true
+  attr :rows, :list, required: true
+  attr :team, :map, required: true
+
+  defp change_list(assigns) do
+    ~H"""
+    <div :if={@rows != []} class="mb-p">
+      <h3 class={["font-semibold mb-p05", @title_class]}>{@title} ({length(@rows)})</h3>
+      <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="w-full table-striped">
+        <:col :let={row} label="Member" class="md:w-1/3">
+          <.a navigate={~p"/#{@team.subdomain}/members/#{row.member.id}/qualifications"}>
+            {row.member.name}
+          </.a>
+        </:col>
+        <:col :let={row} label="Why">
+          {row.reason}
+          <.badge :if={row[:days]} kind={:warning} class="ml-2 whitespace-nowrap">
+            {row.days} days
+          </.badge>
+        </:col>
+      </.table>
     </div>
     """
   end
@@ -276,7 +329,7 @@ defmodule Web.GroupLive do
     team = socket.assigns.current_team
     members = socket.assigns.members
     clauses = GroupRuleClause.get_all_for_group(team.id, group.d4h_group_id)
-    preview = build_preview(clauses, members, team.id)
+    preview = build_preview(clauses, members, team)
 
     socket
     |> assign(:clauses, clauses)
@@ -296,6 +349,39 @@ defmodule Web.GroupLive do
     |> order_by([gm, m], asc: m.name)
     |> preload([gm, m], member: m)
     |> Repo.all()
+  end
+
+  # "Members must hold A and one of B or C." Titles come from D4H, so each is
+  # escaped before it goes inside <strong>.
+  defp rule_sentence([], _qualifications), do: "No rules yet."
+
+  defp rule_sentence(clauses, qualifications) do
+    clause_phrases =
+      Enum.map(clauses, fn clause ->
+        titles =
+          Enum.map(clause.group_rule_clause_qualifications, fn cq ->
+            title = qualification_title(qualifications, cq.d4h_qualification_id)
+
+            [
+              "<strong>",
+              title |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(),
+              "</strong>"
+            ]
+          end)
+
+        case titles do
+          [] -> "(an empty clause)"
+          [title] -> title
+          titles -> ["one of ", join_or(titles)]
+        end
+      end)
+
+    Phoenix.HTML.raw(["Members must hold ", Enum.intersperse(clause_phrases, " and "), "."])
+  end
+
+  defp join_or(titles) do
+    {init, [last]} = Enum.split(titles, -1)
+    [Enum.intersperse(init, ", "), " or ", last]
   end
 
   defp qualification_title(qualifications, d4h_qualification_id) do
@@ -321,7 +407,7 @@ defmodule Web.GroupLive do
     |> Enum.map(&{&1.title, &1.id})
   end
 
-  defp build_preview(clauses, members, team_id) do
-    BuildGroupRulePreview.call(clauses, Enum.map(members, & &1.member.id), team_id)
+  defp build_preview(clauses, members, team) do
+    BuildGroupRulePreview.call(clauses, Enum.map(members, & &1.member), team)
   end
 end
