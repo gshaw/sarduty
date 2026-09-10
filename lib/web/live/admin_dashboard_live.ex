@@ -64,8 +64,7 @@ defmodule Web.AdminDashboardLive do
         <div class={refresh_result_class(team.d4h_refresh_result)}>
           <%= if refreshing?(team.d4h_refresh_result) do %>
             <div class="flex items-center gap-2">
-              <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent">
-              </span>
+              <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
               <span>{team.d4h_refresh_result}</span>
             </div>
           <% else %>

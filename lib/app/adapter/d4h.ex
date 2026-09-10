@@ -66,7 +66,10 @@ defmodule App.Adapter.D4H do
     Req.new(
       base_url: "https://#{api_host}/v3/team/#{d4h_team_id}",
       headers: %{"User-Agent" => "sarduty.com"},
-      auth: {:bearer, access_key || ""}
+      auth: {:bearer, access_key || ""},
+      # Req 0.6+ no longer asks for gzip by default. api_host is always one of
+      # D4H.regions(), so decompressing is safe, and 1000-record pages are large.
+      compressed: true
     )
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
   end

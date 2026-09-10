@@ -83,8 +83,7 @@ defmodule Web.TeamDashboardLive do
         </div>
         <%= if refreshing?(@view_data) do %>
           <div class="flex items-center gap-2 text-primary-1">
-            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent">
-            </span>
+            <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
             <span>{@view_data.refresh_result}</span>
           </div>
         <% else %>

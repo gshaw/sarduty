@@ -31,7 +31,6 @@ defmodule App.Accounts.User do
     |> foreign_key_constraint(:team_id)
   end
 
-  def get(id), do: Repo.get(User, id, preload: [:team])
   def get!(id), do: Repo.get!(User, id)
   def get_by(params), do: Repo.get_by(User, params)
 

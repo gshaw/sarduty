@@ -34,7 +34,13 @@ defmodule Web.MemberCollectionLive do
     ~H"""
     <.breadcrumbs team={@current_team} />
     <h1 class="title mb-p">{@page_title}</h1>
-    <.form for={@form} phx-change="change" phx-submit="change" class="filter-form">
+    <.form
+      for={@form}
+      id="member_filter_form"
+      phx-change="change"
+      phx-submit="change"
+      class="filter-form"
+    >
       <.input field={@form[:q]} label="Search" />
       <.input
         label="Year"
