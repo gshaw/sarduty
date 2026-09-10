@@ -8,8 +8,17 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
   @swiftwater 2
   @first_aid 3
 
-  defp award(member_id, qualification_id, ends_at \\ nil) do
-    %{member_id: member_id, d4h_qualification_id: qualification_id, ends_at: ends_at}
+  defp award(member_id, qualification_id, attrs \\ []) do
+    Map.merge(
+      %{
+        member_id: member_id,
+        member_left_at: nil,
+        d4h_qualification_id: qualification_id,
+        starts_at: ~U[2025-01-01 00:00:00Z],
+        ends_at: nil
+      },
+      Map.new(attrs)
+    )
   end
 
   defp plan(clauses, awards, current_member_ids) do
@@ -34,11 +43,35 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
 
   test "an expired award does not count" do
     awards = [
-      award(10, @rope, ~U[2026-09-01 00:00:00Z]),
-      award(11, @rope, ~U[2027-01-01 00:00:00Z])
+      award(10, @rope, ends_at: ~U[2026-09-01 00:00:00Z]),
+      award(11, @rope, ends_at: ~U[2027-01-01 00:00:00Z])
     ]
 
     result = plan([[@rope]], awards, [10, 11])
+
+    assert result.add == MapSet.new()
+    assert result.remove == MapSet.new([10])
+  end
+
+  test "an award that has not started yet does not count" do
+    result = plan([[@rope]], [award(10, @rope, starts_at: ~U[2026-10-01 00:00:00Z])], [10])
+
+    assert result.remove == MapSet.new([10])
+  end
+
+  test "an expired award still counts when another award for it is active" do
+    awards = [award(10, @rope, ends_at: ~U[2026-09-01 00:00:00Z]), award(10, @rope)]
+
+    result = plan([[@rope]], awards, [10])
+
+    assert result.remove == MapSet.new()
+  end
+
+  test "a member who has left is removed and never added" do
+    left = [member_left_at: ~U[2026-08-01 00:00:00Z]]
+    awards = [award(10, @rope, left), award(11, @rope, left)]
+
+    result = plan([[@rope]], awards, [10])
 
     assert result.add == MapSet.new()
     assert result.remove == MapSet.new([10])
@@ -62,5 +95,11 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
 
     assert result.add == MapSet.new()
     assert result.remove == MapSet.new()
+  end
+
+  test "a qualification with no local row is reported once" do
+    missing = BuildGroupRulePreview.missing_qualification_ids([[@rope, 99], [99]], [@rope])
+
+    assert missing == [99]
   end
 end

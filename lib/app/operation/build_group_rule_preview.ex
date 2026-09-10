@@ -3,20 +3,48 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
+  alias App.Model.Qualification
   alias App.Repo
 
   # Group rules are CNF: a member qualifies when every clause lists at least one
-  # qualification they hold and that has not expired.
+  # qualification they hold with an active award.
   def call(clauses, current_member_ids, team_id, now \\ DateTime.utc_now()) do
     clause_qualification_ids =
       Enum.map(clauses, fn clause ->
         Enum.map(clause.group_rule_clause_qualifications, & &1.d4h_qualification_id)
       end)
 
-    awards = list_awards(team_id, List.flatten(clause_qualification_ids))
-    %{add: add, remove: remove} = plan(clause_qualification_ids, awards, current_member_ids, now)
+    known_qualification_ids =
+      team_id
+      |> Qualification.get_all()
+      |> Enum.map(& &1.d4h_qualification_id)
 
-    %{to_add: load_members(add), to_remove: load_members(remove)}
+    case missing_qualification_ids(clause_qualification_ids, known_qualification_ids) do
+      [] ->
+        awards = list_awards(team_id, List.flatten(clause_qualification_ids))
+        plan = plan(clause_qualification_ids, awards, current_member_ids, now)
+
+        %{
+          missing_qualification_ids: [],
+          to_add: load_members(plan.add),
+          to_remove: load_members(plan.remove)
+        }
+
+      missing ->
+        %{missing_qualification_ids: missing, to_add: [], to_remove: []}
+    end
+  end
+
+  # A qualification deleted in D4H, or deleted and recreated with a new id, has no
+  # local row. A clause naming only that would match nobody and remove everyone, so
+  # the caller must plan nothing until the rule is fixed.
+  def missing_qualification_ids(clause_qualification_ids, known_qualification_ids) do
+    known = MapSet.new(known_qualification_ids)
+
+    clause_qualification_ids
+    |> List.flatten()
+    |> Enum.reject(&MapSet.member?(known, &1))
+    |> Enum.uniq()
   end
 
   # A clause with no qualifications would disqualify everyone, so an incomplete
@@ -37,7 +65,10 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   defp qualifying_member_ids(clause_qualification_ids, awards, now) do
     awards
-    |> Enum.filter(&(is_nil(&1.ends_at) || DateTime.after?(&1.ends_at, now)))
+    |> Enum.filter(fn award ->
+      MemberQualificationAward.active?(award, now) and
+        Member.current?(%{left_at: award.member_left_at}, now)
+    end)
     |> Enum.group_by(& &1.member_id, & &1.d4h_qualification_id)
     |> Enum.filter(fn {_member_id, held} ->
       Enum.all?(clause_qualification_ids, fn clause -> Enum.any?(clause, &(&1 in held)) end)
@@ -55,7 +86,9 @@ defmodule App.Operation.BuildGroupRulePreview do
     |> where([a, m, q], q.d4h_qualification_id in ^d4h_qualification_ids)
     |> select([a, m, q], %{
       member_id: a.member_id,
+      member_left_at: m.left_at,
       d4h_qualification_id: q.d4h_qualification_id,
+      starts_at: a.starts_at,
       ends_at: a.ends_at
     })
     |> Repo.all()

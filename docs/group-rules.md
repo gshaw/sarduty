@@ -22,22 +22,17 @@ being recreated by the sync.
 - `call/4` loads the team's awards for the qualifications the rules mention, runs
   `plan/4`, and loads the members to add and remove.
 - `plan/4` is pure. A member qualifies when every clause lists at least one qualification
-  they hold whose award has no `ends_at`, or one after `now`.
+  they hold with an active award, and they haven't left the team (`Member.current?/2`).
+- An award is active from `starts_at` until `ends_at`, either of which may be missing.
+  `MemberQualificationAward.active?/2` is the one definition; the qualification and member
+  pages use it too.
 - **No clauses, or any empty clause, plans no changes.** An empty clause would otherwise
   disqualify everyone and empty the group. Keep this guard when rules start writing to D4H.
-
-## Known gaps
-
-These matter once the rules change D4H instead of only previewing:
-
-- An award's `starts_at` is ignored, so an award dated in the future counts.
-- Members who have left (`members.left_at`) can still qualify.
-- A clause that names a qualification no local row has matches nobody, so every current
-  member is planned for removal. The empty-clause guard doesn't catch this.
-- Qualifications deleted in D4H are never deleted locally ([d4h-sync.md](d4h-sync.md)),
-  so a rule can keep naming one.
-- The clause events in [GroupLive](../lib/web/live/group_live.ex) change rows by the id
-  the client sends, without checking that the clause belongs to the current team.
+- **A rule naming a qualification with no local row plans no changes.** That happens when
+  the qualification is deleted in D4H, or deleted and recreated with a new id. The clause
+  would match nobody and remove everyone. `call/4` checks
+  `missing_qualification_ids/2` first, and the group page shows a warning until someone
+  fixes the rule.
 
 ## Applying the rules (#20)
 

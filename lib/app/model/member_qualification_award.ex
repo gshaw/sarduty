@@ -33,6 +33,16 @@ defmodule App.Model.MemberQualificationAward do
     ])
   end
 
+  # The one definition of a current award, used by group rules and every page that
+  # shows awards. Takes any map with starts_at and ends_at; either may be nil.
+  def active?(%{starts_at: starts_at, ends_at: ends_at}, now) do
+    (is_nil(starts_at) or not DateTime.after?(starts_at, now)) and
+      (is_nil(ends_at) or DateTime.after?(ends_at, now))
+  end
+
+  def expired?(%{ends_at: ends_at}, now),
+    do: not is_nil(ends_at) and not DateTime.after?(ends_at, now)
+
   def get_by(params), do: Repo.get_by(MemberQualificationAward, params)
 
   def insert!(params) do

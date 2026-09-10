@@ -51,33 +51,30 @@ defmodule Web.QualificationCollectionLive do
   defp list_qualifications_with_counts(team) do
     now = DateTime.utc_now()
 
-    Qualification
-    |> where([q], q.team_id == ^team.id)
-    |> join(:left, [q], mqa in MemberQualificationAward, on: mqa.qualification_id == q.id)
-    |> group_by([q], [q.id, q.title])
-    |> order_by([q], asc: q.title)
-    |> select([q, mqa], %{
-      id: q.id,
-      title: q.title,
-      total_count: count(mqa.id),
-      active_count:
-        fragment(
-          "SUM(CASE WHEN (? IS NULL OR ? <= ?) AND (? IS NULL OR ? > ?) THEN 1 ELSE 0 END)",
-          mqa.starts_at,
-          mqa.starts_at,
-          ^now,
-          mqa.ends_at,
-          mqa.ends_at,
-          ^now
-        ),
-      expired_count:
-        fragment(
-          "SUM(CASE WHEN ? IS NOT NULL AND ? <= ? THEN 1 ELSE 0 END)",
-          mqa.ends_at,
-          mqa.ends_at,
-          ^now
-        )
-    })
-    |> Repo.all()
+    awards_by_qualification =
+      MemberQualificationAward
+      |> join(:inner, [a], q in assoc(a, :qualification))
+      |> where([a, q], q.team_id == ^team.id)
+      |> select([a], %{
+        qualification_id: a.qualification_id,
+        starts_at: a.starts_at,
+        ends_at: a.ends_at
+      })
+      |> Repo.all()
+      |> Enum.group_by(& &1.qualification_id)
+
+    team.id
+    |> Qualification.get_all()
+    |> Enum.map(fn q ->
+      awards = Map.get(awards_by_qualification, q.id, [])
+
+      %{
+        id: q.id,
+        title: q.title,
+        total_count: length(awards),
+        active_count: Enum.count(awards, &MemberQualificationAward.active?(&1, now)),
+        expired_count: Enum.count(awards, &MemberQualificationAward.expired?(&1, now))
+      }
+    end)
   end
 end

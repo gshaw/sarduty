@@ -93,10 +93,6 @@ defmodule Web.MemberQualificationsLive do
   end
 
   defp award_status(award) do
-    now = DateTime.utc_now()
-    started = is_nil(award.starts_at) or DateTime.compare(award.starts_at, now) != :gt
-    not_ended = is_nil(award.ends_at) or DateTime.compare(award.ends_at, now) == :gt
-
-    if started and not_ended, do: "Active", else: "Expired"
+    if MemberQualificationAward.active?(award, DateTime.utc_now()), do: "Active", else: "Expired"
   end
 end

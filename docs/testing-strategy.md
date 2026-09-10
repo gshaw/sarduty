@@ -36,6 +36,8 @@ data?
 - Group rules: `test/app/operation/build_group_rule_preview_test.exs`.
 - Short D4H fetches, which the refresh must never treat as complete:
   `test/app/adapter/d4h/page_test.exs`.
+- The refresh deleting rows D4H no longer has, and only the current team's:
+  `test/app/operation/refresh_d4h_data/upsert_*_test.exs`.
 - Which D4H key a refresh uses, and so which key a failure blames:
   `test/app/operation/refresh_d4h_data/resolve_access_key_test.exs`.
 - Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
