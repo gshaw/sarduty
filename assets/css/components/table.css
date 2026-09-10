@@ -14,8 +14,12 @@ table.table-striped tbody { @apply [&>*:nth-child(even)]:bg-base-3/70 }
 table.table-striped th,
 table.table-striped td { @apply pl-2 }
 
-/* vertically stack mobile table cells */
+/* vertically stack mobile table cells, each labeled by its column header */
+table.table thead { @apply hidden md:table-header-group }
 table.table tr { @apply flex flex-col md:table-row }
+table.table td[data-label]:not([data-label=""]) {
+  @apply before:block before:text-xs before:font-semibold before:text-secondary-1 before:content-[attr(data-label)] md:before:hidden;
+}
 
 table.table-form tbody th { @apply py-0 }
 table.table-form tbody td { @apply py-0 pb-p05 mb-p05 border-b }

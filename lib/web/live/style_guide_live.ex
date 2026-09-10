@@ -102,7 +102,7 @@ defmodule Web.StyleGuideLive do
       />
     </.style_group>
 
-    <.style_group title=".table" class="w-1/3">
+    <.style_group title=".table" class="md:w-1/3">
       <.table
         id="attendance_records"
         rows={[
