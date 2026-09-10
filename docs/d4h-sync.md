@@ -20,8 +20,8 @@ covers how the copy is refreshed and where it drifts from D4H.
 
 [ResolveAccessKey](../lib/app/operation/refresh_d4h_data/resolve_access_key.ex) uses the
 team's own key (`teams.d4h_access_key`, set in team settings). Without one, it borrows the
-first team member's personal key. Both are `EncryptedString` columns. The fallback is
-marked for removal once every team has a key.
+first team member's personal key. Both are `EncryptedString` columns. Most teams still
+rely on the fallback; #41 tracks moving them to their own key so it can be deleted.
 
 ## The stages
 

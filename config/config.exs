@@ -80,8 +80,9 @@ config :sarduty, Oban,
      ]}
   ]
 
-# Configure Phoenix to filter sensitive parameters
-config :phoenix, :filter_parameters, ["access_key"]
+# Setting this replaces Phoenix's default of ["password"], so list it too. Each entry
+# matches any param name that contains it: "token" covers the confirm and reset links.
+config :phoenix, :filter_parameters, ["password", "access_key", "token"]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
