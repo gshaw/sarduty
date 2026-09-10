@@ -23,8 +23,8 @@ defmodule App.Repo.Migrations.CreateGroupRuleClauses do
     create index(:group_rule_clause_qualifications, [:group_rule_clause_id])
 
     create unique_index(:group_rule_clause_qualifications, [
-      :group_rule_clause_id,
-      :d4h_qualification_id
-    ])
+             :group_rule_clause_id,
+             :d4h_qualification_id
+           ])
   end
 end

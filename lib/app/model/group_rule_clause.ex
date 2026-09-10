@@ -8,7 +8,10 @@ defmodule App.Model.GroupRuleClause do
 
   schema "group_rule_clauses" do
     belongs_to :team, Team
-    has_many :group_rule_clause_qualifications, GroupRuleClauseQualification, on_delete: :delete_all
+
+    has_many :group_rule_clause_qualifications, GroupRuleClauseQualification,
+      on_delete: :delete_all
+
     field :d4h_group_id, :integer
     timestamps(type: :utc_datetime_usec)
   end
@@ -41,6 +44,8 @@ defmodule App.Model.GroupRuleClause do
   end
 
   def delete!(id) do
-    Repo.get!(GroupRuleClause, id) |> Repo.delete!()
+    GroupRuleClause
+    |> Repo.get!(id)
+    |> Repo.delete!()
   end
 end
