@@ -73,8 +73,7 @@ defmodule App.Model.Member do
     |> Repo.all()
   end
 
-  def get(id), do: Repo.get(Member, id)
-  def get!(id), do: Repo.get!(Member, id)
+  def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
   def get_by(params), do: Repo.get_by(Member, params)
 
   def insert!(params) do

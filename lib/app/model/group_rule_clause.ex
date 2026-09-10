@@ -1,6 +1,7 @@
 defmodule App.Model.GroupRuleClause do
   use App, :model
 
+  alias App.Model.Group
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
   alias App.Model.Team
@@ -43,9 +44,13 @@ defmodule App.Model.GroupRuleClause do
     Repo.insert!(changeset)
   end
 
-  def delete!(id) do
-    GroupRuleClause
-    |> Repo.get!(id)
-    |> Repo.delete!()
+  def find!(%Group{} = group, id) do
+    Repo.get_by!(GroupRuleClause,
+      id: id,
+      team_id: group.team_id,
+      d4h_group_id: group.d4h_group_id
+    )
   end
+
+  def delete!(%GroupRuleClause{} = clause), do: Repo.delete!(clause)
 end

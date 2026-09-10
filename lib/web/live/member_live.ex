@@ -14,7 +14,7 @@ defmodule Web.MemberLive do
   end
 
   def handle_params(params, _uri, socket) do
-    member = find_member(params["id"])
+    member = find_member(socket.assigns.current_team, params["id"])
 
     {:ok, filter_options, filter_changeset} =
       AttendanceFilterViewModel.validate(params)
@@ -91,9 +91,9 @@ defmodule Web.MemberLive do
     ~p"/#{member.team.subdomain}/members/#{member.id}?#{query_params}"
   end
 
-  defp find_member(member_id) do
-    Member
-    |> Repo.get(member_id)
+  defp find_member(team, member_id) do
+    team
+    |> Member.find!(member_id)
     |> Repo.preload([:team])
   end
 

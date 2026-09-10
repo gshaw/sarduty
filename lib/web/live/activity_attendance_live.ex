@@ -9,7 +9,7 @@ defmodule Web.ActivityAttendanceLive do
   end
 
   def handle_params(params, _uri, socket) do
-    activity = Activity.get(params["id"])
+    activity = Activity.find!(socket.assigns.current_team, params["id"])
     d4h = D4H.build_context_from_user(socket.assigns.current_user)
     team_members = D4H.fetch_team_members(d4h)
 
