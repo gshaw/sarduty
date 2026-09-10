@@ -6,6 +6,7 @@ defmodule Web.GroupLive do
   alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
+  alias App.Model.GroupMembershipChange
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
   alias App.Model.Qualification
@@ -32,6 +33,7 @@ defmodule Web.GroupLive do
       |> assign(:clauses, clauses)
       |> assign(:qualifications, qualifications)
       |> assign(:preview, preview)
+      |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
 
     {:noreply, socket}
   end
@@ -114,7 +116,13 @@ defmodule Web.GroupLive do
           qualifications={@qualifications}
           team={@current_team}
         />
-        <.rule_preview preview={@preview} team={@current_team} clauses={@clauses} />
+        <.rule_preview
+          preview={@preview}
+          team={@current_team}
+          group={@group}
+          clauses={@clauses}
+        />
+        <.recent_changes changes={@recent_changes} team={@current_team} />
         <.main_content members={@members} team={@current_team} />
       </main>
     </div>
@@ -274,6 +282,37 @@ defmodule Web.GroupLive do
       >
         No changes — current group membership matches the rules.
       </p>
+
+      <.button
+        :if={@preview.to_add != [] || @preview.to_remove != []}
+        id="review-changes"
+        variant={:primary}
+        navigate={~p"/#{@team.subdomain}/groups/#{@group.id}/review"}
+      >
+        Review changes
+      </.button>
+    </div>
+    """
+  end
+
+  defp recent_changes(assigns) do
+    ~H"""
+    <div :if={@changes != []} class="mt-p">
+      <h2 class="subheading mb-p05">Recent Changes</h2>
+      <.table id="recent-changes" rows={@changes} class="w-full table-striped">
+        <:col :let={change} label="When" class="w-px whitespace-nowrap">
+          {Service.Format.datetime_short(change.inserted_at, @team.timezone)}
+        </:col>
+        <:col :let={change} label="Change">
+          <span class={change.error && "text-danger-1"}>{change_verb(change)}</span>
+          <.a navigate={~p"/#{@team.subdomain}/members/#{change.member.id}/qualifications"}>
+            {change.member.name}
+          </.a>
+          · {change.reason}
+          <span :if={change.user}>· by {change.user.email}</span>
+          <div :if={change.error} class="text-sm text-danger-1">{change.error}</div>
+        </:col>
+      </.table>
     </div>
     """
   end
@@ -323,6 +362,11 @@ defmodule Web.GroupLive do
     <p :if={@members == []} class="text-secondary-1">No members found.</p>
     """
   end
+
+  defp change_verb(%{action: :add, error: nil}), do: "Added"
+  defp change_verb(%{action: :remove, error: nil}), do: "Removed"
+  defp change_verb(%{action: :add}), do: "Couldn't add"
+  defp change_verb(%{action: :remove}), do: "Couldn't remove"
 
   defp reload(socket) do
     group = socket.assigns.group
