@@ -1,4 +1,6 @@
 defmodule Web.MCPController do
+  # No route points here: the test endpoint is off until teams can opt in with
+  # their own tokens (#28). Kept as the starting point for that work.
   use Web, :controller
 
   import Ecto.Query
@@ -14,7 +16,7 @@ defmodule Web.MCPController do
 
   def handle(conn, %{"subdomain" => subdomain}) do
     with :ok <- authenticate(conn),
-         team when not is_nil(team) <- Team.get_by(subdomain: subdomain) do
+         %Team{} = team <- Team.get_by(subdomain: subdomain) do
       dispatch_request(conn, team)
     else
       :error ->
@@ -151,7 +153,7 @@ defmodule Web.MCPController do
   end
 
   defp call_tool(team, "list_activities", args) do
-    limit = Map.get(args, "limit", 100) |> min(1000)
+    limit = args |> Map.get("limit", 100) |> min(1000)
     offset = Map.get(args, "offset", 0)
     kind = Map.get(args, "kind")
     year = Map.get(args, "year")
@@ -211,7 +213,7 @@ defmodule Web.MCPController do
   end
 
   defp call_tool(team, "list_attendances_for_member", %{"member_id" => member_id} = args) do
-    limit = Map.get(args, "limit", 100) |> min(1000)
+    limit = args |> Map.get("limit", 100) |> min(1000)
     offset = Map.get(args, "offset", 0)
 
     case Repo.get_by(Member, id: member_id, team_id: team.id) do
@@ -267,11 +269,10 @@ defmodule Web.MCPController do
     member_id = Map.get(args, "member_id")
 
     letters =
-      from(tcl in TaxCreditLetter,
-        join: m in assoc(tcl, :member),
-        where: m.team_id == ^team.id,
-        preload: [member: m]
-      )
+      TaxCreditLetter
+      |> join(:inner, [tcl], m in assoc(tcl, :member))
+      |> where([tcl, m], m.team_id == ^team.id)
+      |> preload([tcl, m], member: m)
       |> then(fn q -> if year, do: where(q, [tcl], tcl.year == ^year), else: q end)
       |> then(fn q ->
         if member_id, do: where(q, [tcl], tcl.member_id == ^member_id), else: q
@@ -434,8 +435,7 @@ defmodule Web.MCPController do
             },
             "kind" => %{
               "type" => "string",
-              "description" =>
-                "Filter by activity_kind (e.g. 'operation', 'training', 'meeting')"
+              "description" => "Filter by activity_kind (e.g. 'operation', 'training', 'meeting')"
             },
             "year" => %{
               "type" => "integer",

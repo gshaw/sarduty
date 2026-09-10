@@ -11,7 +11,8 @@ defmodule App.Model.GroupRuleClauseQualification do
     timestamps(type: :utc_datetime_usec)
   end
 
-  def build_new_changeset(params \\ %{}), do: build_changeset(%GroupRuleClauseQualification{}, params)
+  def build_new_changeset(params \\ %{}),
+    do: build_changeset(%GroupRuleClauseQualification{}, params)
 
   def build_changeset(data, params \\ %{}) do
     data
@@ -32,6 +33,8 @@ defmodule App.Model.GroupRuleClauseQualification do
   end
 
   def delete!(id) do
-    Repo.get!(GroupRuleClauseQualification, id) |> Repo.delete!()
+    GroupRuleClauseQualification
+    |> Repo.get!(id)
+    |> Repo.delete!()
   end
 end

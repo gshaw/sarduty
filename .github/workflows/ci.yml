@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Checks and tests
+    runs-on: ubuntu-24.04
+
+    env:
+      # runtime.exs reads it in every environment; no test calls Mapbox.
+      MAPBOX_ACCESS_TOKEN: dummy
+      # Fail fast instead of spending ten minutes compiling Erlang from source
+      # if mise ever can't find a precompiled build for this runner.
+      MISE_ERLANG_COMPILE: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install mise
+        uses: jdx/mise-action@v4
+
+      - name: Cache deps and _build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('.mise.toml', 'mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-
+
+      - name: Fetch deps
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+
+      # -c (--continue-on-error) runs every check even after one fails, so a
+      # single red build shows all the problems at once. Run locally with
+      # `mise run -c ci-static-analysis`.
+      #
+      # MISE_TASK_OUTPUT=interleave drops mise's per-task line prefix, which
+      # would otherwise stop GitHub from reading annotation lines.
+      - name: Run static analysis
+        env:
+          MISE_TASK_OUTPUT: interleave
+        run: mise run -c ci-static-analysis
+
+      - name: Run tests
+        run: mise run test

@@ -4,6 +4,7 @@ version: "0.2"
 language: en
 allowCompoundWords: true
 ignorePaths:
+  - ".claude"
   - "_build/*"
   - ".git/*"
   - "assets/vendor/*"
@@ -19,6 +20,7 @@ words:
   - Ecto
   - esbuild
   - flyctl
+  - gshaw # the GitHub account that owns the repo; LICENSE is plain text with nowhere for an inline ignore
   - heex
   - hexpm
   - httpc

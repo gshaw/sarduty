@@ -5,24 +5,70 @@ elixir = "1.19.4-otp-28"
 erlang = "28.3"
 node = "25.4.0"
 "npm:cspell" = "9.6.0"
+"npm:prettier" = "3.8.3"
+"npm:markdownlint-cli2" = "0.22.1"
 
+# Everything except the test suite. The Mix steps run in order inside
+# `check-elixir` because they share _build; the Node checkers only read and
+# write source files, so they run alongside it.
 [tasks.check]
-run = "mix precommit"
+description = "Format, compile, lint, and spell check"
+depends = ["check-elixir", "format-md", "spell", "markdownlint"]
+
+[tasks.check-elixir]
+run = [
+  "mix format",
+  "mix compile --force --warnings-as-errors",
+  "mix deps.unlock --unused",
+  "mix credo --strict",
+]
 
 [tasks.format]
-run = "mix format --check-formatted"
+run = "mix format"
+
+[tasks.format-md]
+description = "Format all Markdown files with Prettier"
+run = "prettier --write --log-level silent '**/*.md'"
 
 [tasks.compile]
 run = "mix compile --force --warnings-as-errors"
 
 [tasks.lint]
-run = "mix credo --all-priorities"
+run = "mix credo --strict"
 
 [tasks.spell]
 run = "cspell lint --no-progress ."
 
+[tasks.markdownlint]
+description = "Lint all Markdown files"
+run = """
+if out=$(markdownlint-cli2 '**/*.md' 2>&1); then echo "$out" | grep '^Linting' || true; else echo "$out"; exit 1; fi
+"""
+
 [tasks.test]
 run = "mix test --color"
+
+[tasks.ci]
+description = "Run all checks, then the test suite"
+run = [{ task = "check" }, { task = "test" }]
+
+# CI variants only check and never change the tree, so a CI run fails loudly
+# instead of reformatting. `mise run -c ci-static-analysis` locally runs every
+# check even after one fails.
+[tasks.ci-static-analysis]
+depends = ["ci-elixir", "ci-format-md", "spell", "markdownlint"]
+
+[tasks.ci-elixir]
+run = [
+  "mix format --check-formatted",
+  "mix compile --force --warnings-as-errors",
+  "mix deps.unlock --check-unused",
+  "mix credo --strict",
+]
+
+[tasks.ci-format-md]
+description = "Check Markdown formatting (Prettier) without modifying files"
+run = "prettier --check '**/*.md'"
 
 [tasks.server]
 run = "mix phx.server"

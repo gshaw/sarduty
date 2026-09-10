@@ -3,9 +3,9 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.Member
   alias App.Model.Group
   alias App.Model.GroupMember
+  alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Repo

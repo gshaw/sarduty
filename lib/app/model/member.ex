@@ -4,8 +4,8 @@ defmodule App.Model.Member do
   alias App.Field.EncryptedString
   alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.Member
   alias App.Model.GroupMember
+  alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.TaxCreditLetter
   alias App.Model.Team

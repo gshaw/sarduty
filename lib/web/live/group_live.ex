@@ -8,8 +8,8 @@ defmodule Web.GroupLive do
   alias App.Model.GroupMember
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
-  alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Operation.BuildGroupRulePreview
   alias App.Repo
 
   def mount(_params, _session, socket) do
@@ -22,7 +22,7 @@ defmodule Web.GroupLive do
     members = list_members_for_group(group)
     clauses = GroupRuleClause.get_all_for_group(current_team.id, group.d4h_group_id)
     qualifications = Qualification.get_all(current_team.id)
-    preview = compute_preview(clauses, qualifications, members, current_team.id)
+    preview = build_preview(clauses, members, current_team.id)
 
     socket =
       socket
@@ -51,7 +51,11 @@ defmodule Web.GroupLive do
     {:noreply, reload(socket)}
   end
 
-  def handle_event("add-qualification", %{"clause-id" => clause_id, "qualification-id" => qual_id}, socket) do
+  def handle_event(
+        "add-qualification",
+        %{"clause-id" => clause_id, "qualification-id" => qual_id},
+        socket
+      ) do
     if qual_id != "" do
       GroupRuleClauseQualification.insert!(%{
         group_rule_clause_id: clause_id,
@@ -189,7 +193,9 @@ defmodule Web.GroupLive do
 
       <div :if={@preview.to_add != [] || @preview.to_remove != []} class="grid grid-cols-2 gap-p">
         <div :if={@preview.to_add != []}>
-          <h3 class="font-semibold text-success-1 mb-p05">Would be added ({length(@preview.to_add)})</h3>
+          <h3 class="font-semibold text-success-1 mb-p05">
+            Would be added ({length(@preview.to_add)})
+          </h3>
           <ul class="text-sm">
             <li :for={member <- @preview.to_add}>
               <.a navigate={~p"/#{@team.subdomain}/members/#{member.id}"}>{member.name}</.a>
@@ -197,7 +203,9 @@ defmodule Web.GroupLive do
           </ul>
         </div>
         <div :if={@preview.to_remove != []}>
-          <h3 class="font-semibold text-danger-1 mb-p05">Would be removed ({length(@preview.to_remove)})</h3>
+          <h3 class="font-semibold text-danger-1 mb-p05">
+            Would be removed ({length(@preview.to_remove)})
+          </h3>
           <ul class="text-sm">
             <li :for={member <- @preview.to_remove}>
               <.a navigate={~p"/#{@team.subdomain}/members/#{member.id}"}>{member.name}</.a>
@@ -237,8 +245,7 @@ defmodule Web.GroupLive do
     team = socket.assigns.current_team
     members = socket.assigns.members
     clauses = GroupRuleClause.get_all_for_group(team.id, group.d4h_group_id)
-    qualifications = socket.assigns.qualifications
-    preview = compute_preview(clauses, qualifications, members, team.id)
+    preview = build_preview(clauses, members, team.id)
 
     socket
     |> assign(:clauses, clauses)
@@ -272,79 +279,15 @@ defmodule Web.GroupLive do
     qual && qual.d4h_qualification_id
   end
 
-  defp available_qualifications(qualifications, existing_clause_quals) do
-    existing_d4h_ids = MapSet.new(existing_clause_quals, & &1.d4h_qualification_id)
+  defp available_qualifications(qualifications, clause_qualifications) do
+    existing_d4h_ids = MapSet.new(clause_qualifications, & &1.d4h_qualification_id)
 
     qualifications
     |> Enum.reject(&MapSet.member?(existing_d4h_ids, &1.d4h_qualification_id))
     |> Enum.map(&{&1.title, &1.id})
   end
 
-  defp compute_preview(clauses, qualifications, current_group_members, team_id) do
-    if clauses == [] || Enum.any?(clauses, &(&1.group_rule_clause_qualifications == [])) do
-      %{to_add: [], to_remove: []}
-    else
-      qualifying_member_ids = compute_qualifying_members(clauses, qualifications, team_id)
-      current_member_ids = MapSet.new(current_group_members, & &1.member.id)
-
-      to_add =
-        qualifying_member_ids
-        |> MapSet.difference(current_member_ids)
-        |> load_members()
-
-      to_remove =
-        current_member_ids
-        |> MapSet.difference(qualifying_member_ids)
-        |> load_members()
-
-      %{to_add: to_add, to_remove: to_remove}
-    end
-  end
-
-  defp compute_qualifying_members(clauses, qualifications, team_id) do
-    # For each clause, find the set of members who hold any qualification in that clause
-    # Then intersect all clause sets (CNF: all clauses must pass)
-    clause_member_sets =
-      Enum.map(clauses, fn clause ->
-        d4h_qual_ids =
-          Enum.map(clause.group_rule_clause_qualifications, & &1.d4h_qualification_id)
-
-        qual_ids =
-          qualifications
-          |> Enum.filter(&(&1.d4h_qualification_id in d4h_qual_ids))
-          |> Enum.map(& &1.id)
-
-        if qual_ids == [] do
-          MapSet.new()
-        else
-          MemberQualificationAward
-          |> where([a], a.qualification_id in ^qual_ids)
-          |> where([a], is_nil(a.ends_at) or a.ends_at > ^DateTime.utc_now())
-          |> join(:inner, [a], m in assoc(a, :member))
-          |> where([a, m], m.team_id == ^team_id)
-          |> select([a], a.member_id)
-          |> distinct(true)
-          |> Repo.all()
-          |> MapSet.new()
-        end
-      end)
-
-    case clause_member_sets do
-      [] -> MapSet.new()
-      [first | rest] -> Enum.reduce(rest, first, &MapSet.intersection(&2, &1))
-    end
-  end
-
-  defp load_members(member_ids) do
-    ids = MapSet.to_list(member_ids)
-
-    if ids == [] do
-      []
-    else
-      App.Model.Member
-      |> where([m], m.id in ^ids)
-      |> order_by([m], asc: m.name)
-      |> Repo.all()
-    end
+  defp build_preview(clauses, members, team_id) do
+    BuildGroupRulePreview.call(clauses, Enum.map(members, & &1.member.id), team_id)
   end
 end

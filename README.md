@@ -1,6 +1,6 @@
 # SAR Duty
 
-Helpful tools for search and rescue managers
+Helpful tools for search and rescue managers, on top of D4H.
 
 ## Setup
 
@@ -8,22 +8,26 @@ Helpful tools for search and rescue managers
 brew install mise flyctl puma-dev
 puma-dev -install
 cp .mise.example.toml .mise.local.toml
-# Add MAPBOX_ACCESS_TOKEN
+# Add MAPBOX_ACCESS_TOKEN; the rest are optional in dev
 mise trust
 mise install
+mix setup
 echo 4025 > ~/.puma-dev/sarduty
 ```
 
+Then `mise run server` and open <https://sarduty.test>.
+
 ## Tasks
 
-* `mix setup` to install and setup dependencies
-* `mix test` to run tests
-* `mix phx.server` to start dev server
-* `iex -S mix phx.server` to start dev server inside IEx
-* `mise spell .` to run cSpell spell checker
-* `mise check .` to run all checks (use before git push or deploy)
-* `fly deploy` to deploy current version
+- `mise run server` starts the dev server; `iex -S mix phx.server` starts it inside IEx.
+- `mise run check` formats, compiles, lints, and spell-checks.
+- `mise run test` runs the tests; `mise run ci` runs checks and tests. Run it before
+  pushing.
+- `fly deploy` deploys `main` — see [docs/deployment.md](docs/deployment.md).
+
+How the app is built: [docs/README.md](docs/README.md). Working in this repo as an agent:
+[AGENTS.md](AGENTS.md).
 
 ## Troubleshooting
 
-Restarting my Mac fixed an issue with puma-dev not server the app correctly.
+Restarting the Mac fixed puma-dev not serving the app.
