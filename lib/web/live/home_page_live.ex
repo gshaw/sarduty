@@ -27,7 +27,7 @@ defmodule Web.HomePageLive do
       <.a navigate="/styles">Style Guide</.a>
       <%= if @current_user && @current_user.is_admin do %>
         ·
-        <.a navigate="https://github.com/gshaw/sarduty">GitHub</.a>
+        <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
         ·
         <.a navigate="/admin">Admin</.a>
       <% end %>

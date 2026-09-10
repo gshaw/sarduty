@@ -28,11 +28,9 @@ defmodule Web.Components.UI do
       <div class="flex gap-hspacer grow">
         {render_slot(@inner_block)}
       </div>
-      <%= if @trailing do %>
-        <div class="flex gap-hspacer">
-          {render_slot(@trailing)}
-        </div>
-      <% end %>
+      <div :if={@trailing != []} class="flex gap-hspacer">
+        {render_slot(@trailing)}
+      </div>
     </div>
     """
   end
@@ -74,7 +72,7 @@ defmodule Web.Components.UI do
   end
 
   attr :class, :string, default: nil
-  attr :size, :string, default: "6"
+  attr :size, :string, default: "size-6"
   slot :inner_block
 
   def spinner(assigns) do
@@ -83,10 +81,10 @@ defmodule Web.Components.UI do
       <span class="mr-2">
         <Web.Components.Core.icon
           name="hero-arrow-path"
-          class={"motion-safe:animate-spin size=#{@size}"}
+          class={["motion-safe:animate-spin", @size]}
         />
       </span>
-      <span :if={@inner_block}>{render_slot(@inner_block)}</span>
+      <span :if={@inner_block != []}>{render_slot(@inner_block)}</span>
     </span>
     """
   end

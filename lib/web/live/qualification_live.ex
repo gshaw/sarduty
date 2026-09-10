@@ -103,7 +103,7 @@ defmodule Web.QualificationLive do
 
   defp main_content(assigns) do
     ~H"""
-    <h2 class="subtitle mb-p05">Active ({length(@active_awards)})</h2>
+    <h2 class="subheading mb-p05">Active ({length(@active_awards)})</h2>
     <.table
       :if={@active_awards != []}
       id="active_awards"
@@ -124,7 +124,7 @@ defmodule Web.QualificationLive do
     </.table>
     <p :if={@active_awards == []} class="text-secondary-1 mb-p2">No active awards.</p>
 
-    <h2 class="subtitle mb-p05">Expired ({length(@expired_awards)})</h2>
+    <h2 class="subheading mb-p05">Expired ({length(@expired_awards)})</h2>
     <.table
       :if={@expired_awards != []}
       id="expired_awards"
