@@ -105,7 +105,7 @@ defmodule Web.AdminDashboardLive do
 
   defp refresh_result_class(result) when is_binary(result) do
     if refreshing?(result) do
-      "text-blue-600"
+      "text-primary-1"
     else
       "text-danger-1"
     end

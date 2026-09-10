@@ -57,30 +57,28 @@ defmodule Web.Components.A do
   defp determine_kind_classes(%{kind: :menu_item, is_current: is_current}) do
     [
       "block text-sm font-medium",
-      "hover:text-gray-800 hover:bg-gray-200",
+      "hover:text-base-content hover:bg-base-3",
       "px-4 py-2",
-      "focus:outline-none focus:ring-inset focus:ring-2 focus:ring-gray-800",
-      is_current && "text-black font-bold",
-      !is_current && "text-gray-600"
+      "focus:outline-none focus:ring-inset focus:ring-2 focus:ring-base-content",
+      is_current && "text-base-content font-bold",
+      !is_current && "text-secondary-1"
     ]
   end
 
   defp determine_kind_classes(%{kind: :navbar_item, is_current: is_current}) do
     [
-      "border-gray-200",
+      "border-hr",
       "mx-4",
-      "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800",
-      is_current && "text-black",
-      !is_current && "text-gray-500 hover:text-gray-800"
+      "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-base-content",
+      is_current && "text-base-content",
+      !is_current && "text-secondary-1 hover:text-base-content"
     ]
   end
 
-  defp determine_kind_classes(%{kind: :navbar_title, is_current: is_current}) do
+  defp determine_kind_classes(%{kind: :navbar_title}) do
     [
-      "font-medium",
-      "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800",
-      is_current && "text-black",
-      !is_current && "text-gray-800 hover:text-black"
+      "font-medium text-base-content",
+      "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-base-content"
     ]
   end
 end

@@ -185,6 +185,11 @@ defmodule Web.StyleGuideLive do
         <span class="badge"><strong>Primary Hours</strong></span>
         <span class="badge"><strong>Secondary Hours</strong></span>
       </div>
+      <div class="flex space-x-2">
+        <span class="badge badge-incident">Incident</span>
+        <span class="badge badge-exercise">Exercise</span>
+        <span class="badge badge-event">Event</span>
+      </div>
     </.style_group>
     <.style_group title=".typography">
       <h1 class="title-hero">This is a .title-hero</h1>

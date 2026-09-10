@@ -1,13 +1,12 @@
 .btn { @apply
   inline-flex items-center
   text-sm font-medium
-  outline-none
-  /* focus:ring-2 focus:ring-offset-2 */
+  outline-none focus-visible:ring-2 focus-visible:ring-offset-2 /* keyboard focus only */
   no-underline hover:no-underline /* needed to style `a` */
 }
 
 /* colors */
-.btn { @apply bg-base-2 text-base-content hover:bg-base-3 focus:bg-base-3 focus:ring-base-3 }
+.btn { @apply bg-base-2 text-base-content hover:bg-base-3 focus:bg-base-3 focus:ring-secondary-1 }
 .btn-primary { @apply text-primary-content bg-primary-1 hover:bg-primary-2 focus:bg-primary-2 focus:ring-primary-2 }
 .btn-secondary { @apply text-secondary-content bg-secondary-1 hover:bg-secondary-2 focus:bg-secondary-2 focus:ring-secondary-2 }
 .btn-success { @apply text-success-content bg-success-1 hover:bg-success-2 focus:bg-success-2 focus:ring-success-2 }
