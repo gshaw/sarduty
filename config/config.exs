@@ -73,12 +73,7 @@ config :sarduty, Oban,
   engine: Oban.Engines.Lite,
   repo: App.Repo,
   queues: [default: 5, refresh: 1],
-  plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}
-     ]}
-  ]
+  cron: [crontab: [{"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}]]
 
 # Setting this replaces Phoenix's default of ["password"], so list it too. Each entry
 # matches any param name that contains it: "token" covers the confirm and reset links.

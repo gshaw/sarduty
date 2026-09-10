@@ -22,7 +22,7 @@ defmodule Web.Components.AttendanceFilterTable do
       )
 
     ~H"""
-    <.form for={@form} phx-change="change" class="filter-form">
+    <.form for={@form} id="attendance_filter_form" phx-change="change" class="filter-form">
       <.input
         label="Year"
         field={@form[:when]}
