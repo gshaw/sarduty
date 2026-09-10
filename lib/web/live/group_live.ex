@@ -45,8 +45,12 @@ defmodule Web.GroupLive do
     {:noreply, reload(socket)}
   end
 
+  # The ids in these events come from the browser, so each one is looked up
+  # through the current group before anything changes.
   def handle_event("delete-clause", %{"clause-id" => clause_id}, socket) do
-    GroupRuleClause.delete!(clause_id)
+    socket.assigns.group
+    |> GroupRuleClause.find!(clause_id)
+    |> GroupRuleClause.delete!()
 
     {:noreply, reload(socket)}
   end
@@ -56,9 +60,11 @@ defmodule Web.GroupLive do
         %{"clause-id" => clause_id, "qualification-id" => qual_id},
         socket
       ) do
+    clause = GroupRuleClause.find!(socket.assigns.group, clause_id)
+
     if qual_id != "" do
       GroupRuleClauseQualification.insert!(%{
-        group_rule_clause_id: clause_id,
+        group_rule_clause_id: clause.id,
         d4h_qualification_id: find_qualification_d4h_id(socket.assigns.qualifications, qual_id)
       })
     end
@@ -67,7 +73,9 @@ defmodule Web.GroupLive do
   end
 
   def handle_event("remove-qualification", %{"qualification-id" => qual_id}, socket) do
-    GroupRuleClauseQualification.delete!(qual_id)
+    socket.assigns.group
+    |> GroupRuleClauseQualification.find!(qual_id)
+    |> GroupRuleClauseQualification.delete!()
 
     {:noreply, reload(socket)}
   end

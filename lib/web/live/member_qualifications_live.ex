@@ -14,7 +14,7 @@ defmodule Web.MemberQualificationsLive do
   end
 
   def handle_params(params, _uri, socket) do
-    member = find_member(params["id"])
+    member = find_member(socket.assigns.current_team, params["id"])
 
     socket =
       socket
@@ -71,7 +71,7 @@ defmodule Web.MemberQualificationsLive do
     """
   end
 
-  defp find_member(member_id) do
+  defp find_member(team, member_id) do
     qualification_awards_query =
       from(mqa in MemberQualificationAward,
         join: q in assoc(mqa, :qualification),
@@ -84,8 +84,8 @@ defmodule Web.MemberQualificationsLive do
         preload: [qualification: q]
       )
 
-    Member
-    |> Repo.get(member_id)
+    team
+    |> Member.find!(member_id)
     |> Repo.preload([
       :team,
       member_qualification_awards: qualification_awards_query

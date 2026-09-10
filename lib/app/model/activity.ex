@@ -74,8 +74,7 @@ defmodule App.Model.Activity do
     |> Repo.all()
   end
 
-  def get(id), do: Repo.get(Activity, id)
-  # def get!(id), do: Repo.get!(Activity, id)
+  def find!(team, id), do: Repo.get_by!(Activity, id: id, team_id: team.id)
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 

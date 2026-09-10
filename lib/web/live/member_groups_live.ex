@@ -14,7 +14,7 @@ defmodule Web.MemberGroupsLive do
   end
 
   def handle_params(params, _uri, socket) do
-    member = find_member(params["id"])
+    member = find_member(socket.assigns.current_team, params["id"])
 
     socket =
       socket
@@ -62,7 +62,7 @@ defmodule Web.MemberGroupsLive do
     """
   end
 
-  defp find_member(member_id) do
+  defp find_member(team, member_id) do
     group_members_query =
       from(gm in GroupMember,
         join: g in assoc(gm, :group),
@@ -70,8 +70,8 @@ defmodule Web.MemberGroupsLive do
         preload: [group: g]
       )
 
-    Member
-    |> Repo.get(member_id)
+    team
+    |> Member.find!(member_id)
     |> Repo.preload([
       :team,
       group_members: group_members_query

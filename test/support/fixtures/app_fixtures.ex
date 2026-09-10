@@ -3,6 +3,9 @@ defmodule App.DataFixtures do
   alias App.AccountsFixtures
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Group
+  alias App.Model.GroupRuleClause
+  alias App.Model.GroupRuleClauseQualification
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
@@ -151,6 +154,36 @@ defmodule App.DataFixtures do
       )
 
     MemberQualificationAward.insert!(params)
+  end
+
+  def group_fixture(%Team{} = team, attrs \\ %{}) do
+    unique = System.unique_integer([:positive])
+
+    params =
+      Map.merge(
+        %{
+          team_id: team.id,
+          d4h_group_id: unique,
+          title: "Group #{unique}"
+        },
+        attrs
+      )
+
+    Group.insert!(params)
+  end
+
+  def group_rule_clause_fixture(%Group{} = group) do
+    GroupRuleClause.insert!(%{team_id: group.team_id, d4h_group_id: group.d4h_group_id})
+  end
+
+  def group_rule_clause_qualification_fixture(
+        %GroupRuleClause{} = clause,
+        %Qualification{} = qualification
+      ) do
+    GroupRuleClauseQualification.insert!(%{
+      group_rule_clause_id: clause.id,
+      d4h_qualification_id: qualification.d4h_qualification_id
+    })
   end
 
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do

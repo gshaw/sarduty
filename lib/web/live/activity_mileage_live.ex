@@ -12,7 +12,7 @@ defmodule Web.ActivityMileageLive do
   end
 
   def handle_params(params, _uri, socket) do
-    activity = Activity.get(params["id"])
+    activity = Activity.find!(socket.assigns.current_team, params["id"])
     d4h = D4H.build_context_from_user(socket.assigns.current_user)
     {:ok, team} = D4H.fetch_team(d4h)
 

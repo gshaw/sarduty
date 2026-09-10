@@ -34,19 +34,23 @@ data?
 - Accounts and auth: `test/app/accounts_test.exs`, `test/web/user_auth_test.exs`, and the
   `user_*` LiveView tests — the generated suite, kept.
 - Group rules: `test/app/operation/build_group_rule_preview_test.exs`.
+- Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
+  `/:subdomain/…/:id` route and expects a 404. It fails when a new route of that shape is
+  not in its list. `test/web/live/group_live_test.exs` does the same for the rule editor's
+  events.
 - Most LiveViews have one smoke test that the page renders or redirects.
 
 The two worker tests are `assert true` placeholders.
 
 ## High-value targets
 
-| Target                                                | Why                                                 | Shape                                |
-| ----------------------------------------------------- | --------------------------------------------------- | ------------------------------------ |
-| Letter hours (`Attendance.tagged_minutes_summary/2`)  | The number CRA sees. Status, tag, and year filters. | `DataCase` with fixtures             |
-| Team scoping in LiveViews, controllers, and MCP tools | One team reading or changing another's data         | `ConnCase`, two teams                |
-| D4H struct `build/1` and `App.Adapter.D4H.Parse`      | A D4H format change corrupts the copy quietly       | Pure, against recorded D4H JSON      |
-| Stale attendance deletion (`UpsertAttendances`)       | Deletes rows; a wrong set deletes real attendance   | Extract the id arithmetic, test pure |
-| Mileage round trips (`BuildMilesageReport`)           | Reimbursement numbers                               | Extract the arithmetic, test pure    |
+| Target                                               | Why                                                 | Shape                                |
+| ---------------------------------------------------- | --------------------------------------------------- | ------------------------------------ |
+| Letter hours (`Attendance.tagged_minutes_summary/2`) | The number CRA sees. Status, tag, and year filters. | `DataCase` with fixtures             |
+| Team scoping in MCP tools                            | One team reading or changing another's data         | `ConnCase`, two teams                |
+| D4H struct `build/1` and `App.Adapter.D4H.Parse`     | A D4H format change corrupts the copy quietly       | Pure, against recorded D4H JSON      |
+| Stale attendance deletion (`UpsertAttendances`)      | Deletes rows; a wrong set deletes real attendance   | Extract the id arithmetic, test pure |
+| Mileage round trips (`BuildMilesageReport`)          | Reimbursement numbers                               | Extract the arithmetic, test pure    |
 
 ## Known gaps
 

@@ -13,7 +13,7 @@ defmodule Web.ActivityLive do
   end
 
   def handle_params(params, _uri, socket) do
-    activity = fetch_activity(params["id"])
+    activity = fetch_activity(socket.assigns.current_team, params["id"])
     attendances = fetch_attendances(activity)
 
     mapbox = Mapbox.build_context()
@@ -171,9 +171,9 @@ defmodule Web.ActivityLive do
     """
   end
 
-  def fetch_activity(activity_id) do
-    activity_id
-    |> Activity.get()
+  def fetch_activity(team, activity_id) do
+    team
+    |> Activity.find!(activity_id)
     |> Repo.preload(:team)
   end
 
