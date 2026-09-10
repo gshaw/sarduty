@@ -140,8 +140,9 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_team_image(context) do
-    {:ok, image_document} = D4H.fetch_team_image_document(context)
-    download_document(context, image_document.d4h_document_id, "team.png")
+    with {:ok, image_document} <- D4H.fetch_team_image_document(context) do
+      download_document(context, image_document.d4h_document_id, "team.png")
+    end
   end
 
   def fetch_team(context) do
@@ -156,25 +157,17 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_team_members(context) do
-    response = Req.get!(context, url: "/members", params: [size: -1])
-
-    response.body["results"]
-    |> Enum.map(&D4H.Member.build(&1))
+    context
+    |> fetch_all("/members", &D4H.Member.build/1)
     |> Enum.sort(&(&1.name < &2.name))
   end
 
-  def fetch_attendances(context, page) do
-    response = Req.get!(context, url: "/attendance", params: [page: page, size: 1000])
-
-    response.body["results"]
-    |> Enum.map(&D4H.AttendanceInfo.build(&1))
+  def reduce_attendances(context, acc, fun) do
+    reduce_pages(context, "/attendance", &D4H.AttendanceInfo.build/1, acc, fun)
   end
 
-  def fetch_activities(context, tag_index, kind, page) do
-    response = Req.get!(context, url: "/#{kind}", params: [page: page, size: 1000])
-
-    response.body["results"]
-    |> Enum.map(&D4H.Activity.build(&1, tag_index))
+  def reduce_activities(context, tag_index, kind, acc, fun) do
+    reduce_pages(context, "/#{kind}", &D4H.Activity.build(&1, tag_index), acc, fun)
   end
 
   def fetch_activity(context, activity_id, "event") do
@@ -207,38 +200,75 @@ defmodule App.Adapter.D4H do
   end
 
   def fetch_qualifications(context) do
-    response = Req.get!(context, url: "/member-qualifications", params: [size: -1])
-
-    response.body["results"]
-    |> Enum.map(&D4H.Qualification.build(&1))
+    fetch_all(context, "/member-qualifications", &D4H.Qualification.build/1)
   end
 
-  def fetch_qualification_awards(context, page) do
-    response =
-      Req.get!(context, url: "/member-qualification-awards", params: [page: page, size: 1000])
-
-    response.body["results"]
-    |> Enum.map(&D4H.QualificationAward.build(&1))
+  def reduce_qualification_awards(context, acc, fun) do
+    reduce_pages(
+      context,
+      "/member-qualification-awards",
+      &D4H.QualificationAward.build/1,
+      acc,
+      fun
+    )
   end
 
   def fetch_groups(context) do
-    response = Req.get!(context, url: "/member-groups", params: [size: -1])
-
-    response.body["results"]
-    |> Enum.map(&D4H.Group.build(&1))
+    fetch_all(context, "/member-groups", &D4H.Group.build/1)
   end
 
-  def fetch_group_memberships(context, page) do
-    response =
-      Req.get!(context, url: "/member-group-memberships", params: [page: page, size: 1000])
-
-    response.body["results"]
-    |> Enum.map(&D4H.GroupMembership.build(&1))
+  def reduce_group_memberships(context, acc, fun) do
+    reduce_pages(context, "/member-group-memberships", &D4H.GroupMembership.build/1, acc, fun)
   end
 
   def fetch_tags(context) do
-    response = Req.get!(context, url: "/tags", params: [size: -1])
-    response.body["results"] |> Enum.map(&D4H.Tag.build(&1))
+    fetch_all(context, "/tags", &D4H.Tag.build/1)
+  end
+
+  defp fetch_all(context, url, build) do
+    context
+    |> reduce_pages(url, build, [], &[&1 | &2])
+    |> Enum.reverse()
+    |> Enum.concat()
+  end
+
+  # Calls `fun` with each page of built rows, then raises unless the rows add up to
+  # D4H's totalSize. The refresh deletes whatever D4H didn't return, so a short fetch
+  # must never look like a finished one.
+  defp reduce_pages(context, url, build, acc, fun) do
+    request = %{context: context, url: url, build: build}
+    reduce_from_page(request, 0, 0, acc, fun)
+  end
+
+  defp reduce_from_page(request, page_number, fetched_count, acc, fun) do
+    page = fetch_page!(request, page_number)
+    fetched_count = fetched_count + length(page.results)
+    rows = Enum.map(page.results, request.build)
+    acc = fun.(rows, acc)
+
+    case D4H.Page.next(page, fetched_count) do
+      :done ->
+        acc
+
+      :next ->
+        reduce_from_page(request, page_number + 1, fetched_count, acc, fun)
+
+      :short ->
+        raise D4H.Error,
+              "D4H returned #{fetched_count} of #{page.total_size} records from #{request.url}."
+    end
+  end
+
+  defp fetch_page!(request, page_number) do
+    params = [page: page_number, size: 1000]
+    response = Req.get!(request.context, url: request.url, params: params)
+
+    with 200 <- response.status,
+         {:ok, page} <- D4H.Page.build(response.body) do
+      page
+    else
+      _ -> raise D4H.Error, response
+    end
   end
 
   defp update_attendance(context, attendance_id, status) do

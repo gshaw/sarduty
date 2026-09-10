@@ -1,29 +1,27 @@
 defmodule App.Operation.RefreshD4HData.UpsertAttendances do
+  import Ecto.Query
+
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Operation.RefreshD4HData.Progress
+  alias App.Repo
+
+  require Logger
 
   def call(d4h, team, progress) when is_map(d4h) when is_map(team) do
     context = %{
-      d4h: d4h,
-      team_id: team.id,
       d4h_member_index: build_d4h_member_index(team.id),
-      d4h_activity_index: build_d4h_activity_index(team.id),
-      progress: progress,
-      total_count: 0,
-      d4h_attendance_ids: MapSet.new()
+      d4h_activity_index: build_d4h_activity_index(team.id)
     }
 
-    {count, progress, d4h_attendance_ids} = fetch_and_upsert(context, 0)
+    # Raises before the delete when D4H returns fewer rows than its own total.
+    {count, progress, d4h_attendance_ids} =
+      D4H.reduce_attendances(d4h, {0, progress, MapSet.new()}, &upsert_page(context, &1, &2))
+
     delete_stale_attendances(team.id, d4h_attendance_ids)
     {count, progress}
-  end
-
-  defp fetch_and_upsert(context, page) do
-    d4h_attendances = D4H.fetch_attendances(context.d4h, page)
-    upsert_attendances(context, page, d4h_attendances)
   end
 
   defp build_d4h_activity_index(team_id) do
@@ -40,29 +38,16 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
     |> Map.new()
   end
 
-  defp upsert_attendances(context, _page, []) do
-    {context.total_count, context.progress, context.d4h_attendance_ids}
-  end
-
-  defp upsert_attendances(context, page, d4h_attendances) do
+  defp upsert_page(context, d4h_attendances, {total_count, progress, d4h_attendance_ids}) do
     count = Enum.count(d4h_attendances)
 
     d4h_attendance_ids =
-      Enum.reduce(d4h_attendances, context.d4h_attendance_ids, fn d4h_attendance, ids ->
+      Enum.reduce(d4h_attendances, d4h_attendance_ids, fn d4h_attendance, ids ->
         upsert_attendance(context, d4h_attendance)
         MapSet.put(ids, d4h_attendance.d4h_attendance_id)
       end)
 
-    progress = Progress.add_page(context.progress, count)
-
-    context = %{
-      context
-      | progress: progress,
-        total_count: context.total_count + count,
-        d4h_attendance_ids: d4h_attendance_ids
-    }
-
-    fetch_and_upsert(context, page + 1)
+    {total_count + count, Progress.add_page(progress, count), d4h_attendance_ids}
   end
 
   defp upsert_attendance(context, d4h_attendance) do
@@ -100,28 +85,26 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   end
 
   defp delete_stale_attendances(team_id, synced_d4h_ids) do
-    import Ecto.Query
-
-    # Get all d4h_attendance_ids for this team
-    all_local_d4h_ids =
-      Attendance
-      |> join(:inner, [a], m in Member, on: a.member_id == m.id)
-      |> where([a, m], m.team_id == ^team_id)
+    local_d4h_ids =
+      team_id
+      |> team_attendances()
       |> select([a], a.d4h_attendance_id)
-      |> App.Repo.all()
+      |> Repo.all()
       |> MapSet.new()
 
-    # Find stale d4h_attendance_ids (in local DB but not in D4H API response)
-    stale_d4h_ids = MapSet.difference(all_local_d4h_ids, synced_d4h_ids)
+    stale_d4h_ids = MapSet.difference(local_d4h_ids, synced_d4h_ids)
 
     {count, _} =
-      Attendance
+      team_id
+      |> team_attendances()
       |> where([a], a.d4h_attendance_id in ^MapSet.to_list(stale_d4h_ids))
-      |> App.Repo.delete_all()
+      |> Repo.delete_all()
 
-    require Logger
     Logger.info("Deleted #{count} stale attendance records for team #{team_id}")
+  end
 
-    :ok
+  defp team_attendances(team_id) do
+    team_member_ids = from(m in Member, where: m.team_id == ^team_id, select: m.id)
+    where(Attendance, [a], a.member_id in subquery(team_member_ids))
   end
 end

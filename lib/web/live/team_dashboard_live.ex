@@ -2,6 +2,7 @@ defmodule Web.TeamDashboardLive do
   use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
+  alias App.Model.Team
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
 
@@ -101,9 +102,9 @@ defmodule Web.TeamDashboardLive do
       <dt>Last Refreshed</dt>
       <dd>
         {Service.Format.datetime_short(@view_data.refreshed_at, @team.timezone)}
-        <%= if @view_data.refresh_result && !refreshing?(@view_data) && @view_data.refresh_result != "OK" do %>
-          <span class="ml-2 text-sm text-danger-1" title={@view_data.refresh_result}>Error</span>
-        <% end %>
+        <div :if={failed?(@view_data)} id="refresh-error" class="text-sm text-danger-1">
+          {String.replace_prefix(@view_data.refresh_result, "Error: ", "")}
+        </div>
       </dd>
       <dt>Members</dt>
       <dd>{@view_data.member_count}</dd>
@@ -149,23 +150,6 @@ defmodule Web.TeamDashboardLive do
     {:noreply, assign(socket, view_data: view_data)}
   end
 
-  @refresh_stages [
-    "Starting",
-    "Team logo",
-    "Members",
-    "Tags",
-    "Exercises",
-    "Events",
-    "Incidents",
-    "Attendances",
-    "Qualifications",
-    "Qualification Awards",
-    "Groups",
-    "Group Memberships"
-  ]
-
-  defp refreshing?(view_data) do
-    result = view_data.refresh_result || ""
-    result == "Refreshing" or Enum.any?(@refresh_stages, &String.contains?(result, &1))
-  end
+  defp refreshing?(view_data), do: Team.refresh_state(view_data.refresh_result) == :refreshing
+  defp failed?(view_data), do: Team.refresh_state(view_data.refresh_result) == :failed
 end

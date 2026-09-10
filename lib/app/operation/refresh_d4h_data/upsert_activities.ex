@@ -9,35 +9,13 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
       when is_map(team)
       when is_map(d4h_tag_index)
       when is_binary(kind) do
-    context = %{
-      d4h: d4h,
-      team_id: team.id,
-      d4h_tag_index: d4h_tag_index,
-      kind: kind,
-      progress: progress,
-      total_count: 0
-    }
-
-    fetch_and_upsert(context, 0)
+    D4H.reduce_activities(d4h, d4h_tag_index, kind, {0, progress}, &upsert_page(team.id, &1, &2))
   end
 
-  defp fetch_and_upsert(context, page) do
-    d4h_activities = D4H.fetch_activities(context.d4h, context.d4h_tag_index, context.kind, page)
-    upsert_activities(context, page, d4h_activities)
-  end
-
-  defp upsert_activities(context, _page, []) do
-    {context.total_count, context.progress}
-  end
-
-  defp upsert_activities(context, page, d4h_activities) do
+  defp upsert_page(team_id, d4h_activities, {total_count, progress}) do
     count = Enum.count(d4h_activities)
-
-    Enum.each(d4h_activities, &upsert_activity(context.team_id, &1))
-
-    progress = Progress.add_page(context.progress, count)
-    context = %{context | progress: progress, total_count: context.total_count + count}
-    fetch_and_upsert(context, page + 1)
+    Enum.each(d4h_activities, &upsert_activity(team_id, &1))
+    {total_count + count, Progress.add_page(progress, count)}
   end
 
   defp upsert_activity(team_id, d4h_activity) do
