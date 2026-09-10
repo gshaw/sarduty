@@ -120,7 +120,7 @@ defmodule Web.Components.Table do
     <%= if @align == "right" do %>
       <span class={@suffix_class}>{@suffix}</span>{StringHelpers.no_break_space()}{@label}
     <% else %>
-      {@label}{StringHelpers.no_break_space()}<span class={@suffix_class}><%= @suffix %></span>
+      {@label}{StringHelpers.no_break_space()}<span class={@suffix_class}>{@suffix}</span>
     <% end %>
     """
   end

@@ -16,7 +16,7 @@ defmodule Web.Components.ActivityFilterTable do
 
   def activity_filter_table(assigns) do
     ~H"""
-    <.form for={@form} phx-change="change" class="filter-form">
+    <.form for={@form} id="activity_filter_form" phx-change="change" class="filter-form">
       <.input field={@form[:q]} label="Search" />
       <.input
         label="Kind"

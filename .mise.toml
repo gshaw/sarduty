@@ -1,12 +1,12 @@
 # https://mise.jdx.dev/configuration.html
 
 [tools]
-elixir = "1.19.4-otp-28"
-erlang = "28.3"
-node = "25.4.0"
-"npm:cspell" = "9.6.0"
-"npm:prettier" = "3.8.3"
-"npm:markdownlint-cli2" = "0.22.1"
+elixir = "1.20.4-otp-29"
+erlang = "29.0.6"
+node = "26.8.2"
+"npm:cspell" = "10.3.0"
+"npm:prettier" = "3.9.6"
+"npm:markdownlint-cli2" = "0.23.2"
 
 # Everything except the test suite. The Mix steps run in order inside
 # `check-elixir` because they share _build; the Node checkers only read and
