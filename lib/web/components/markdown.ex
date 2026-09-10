@@ -14,16 +14,17 @@ defmodule Web.Components.Markdown do
     """
   end
 
+  # D4H activity descriptions arrive as HTML that any D4H user can edit, so
+  # raw HTML is kept but sanitized: no scripts, event handlers, or
+  # `javascript:` links.
   defp build_raw_html(markdown_content) when is_binary(markdown_content) do
-    earmark_options = [
-      code_class_prefix: "lang- language-",
-      gfm: true,
-      breaks: true
-    ]
-
     markdown_content
     |> String.trim()
-    |> Earmark.as_html!(earmark_options)
+    |> MDEx.to_html!(
+      extension: [autolink: true, strikethrough: true, table: true, tasklist: true],
+      render: [hardbreaks: true, unsafe: true],
+      sanitize: MDEx.Document.default_sanitize_options()
+    )
     |> Phoenix.HTML.raw()
   end
 

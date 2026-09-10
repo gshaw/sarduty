@@ -28,7 +28,7 @@ defmodule Web.Settings.TeamLive do
       </p>
       <h1 class="heading">Team settings</h1>
 
-      <.form for={@form} phx-submit="save" phx-change="validate">
+      <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:name]} label="Name" />
         <div class="grid grid-cols-2 gap-hspacer">
           <.input field={@form[:lat]} readonly label="Lat" class="bg-base-3" />

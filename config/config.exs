@@ -44,7 +44,7 @@ config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.25.4",
+  version: "0.28.2",
   default: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
@@ -54,7 +54,7 @@ config :esbuild,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "4.1.12",
+  version: "4.3.3",
   default: [
     args: ~w(
       --input=assets/css/app.css
@@ -73,12 +73,7 @@ config :sarduty, Oban,
   engine: Oban.Engines.Lite,
   repo: App.Repo,
   queues: [default: 5, refresh: 1],
-  plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}
-     ]}
-  ]
+  cron: [crontab: [{"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}]]
 
 # Setting this replaces Phoenix's default of ["password"], so list it too. Each entry
 # matches any param name that contains it: "token" covers the confirm and reset links.

@@ -90,8 +90,8 @@ fi
   `mise run test` runs the suite; `mise run ci` runs both. `mix precommit` is an alias for
   `mise run ci`.
 - **Read the counts, not just the exit code.** Credo prints `N source files`,
-  markdownlint prints `Linting: N file(s)`, and ExUnit prints `N tests`. A green run over
-  a handful of files checked nothing; if a count looks small, the checker is
+  markdownlint prints `Linting: N files`, and ExUnit prints `Result: N passed`. A green
+  run over a handful of files checked nothing; if a count looks small, the checker is
   misconfigured rather than satisfied.
 - CI runs `mise run -c ci-static-analysis` and `mise run test` on every PR
   ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Don't merge on red.
