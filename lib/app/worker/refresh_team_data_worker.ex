@@ -1,8 +1,13 @@
 defmodule App.Worker.RefreshTeamDataWorker do
-  use Oban.Worker, queue: :refresh, max_attempts: 1
+  use Oban.Worker, queue: :refresh, max_attempts: 3
 
+  alias App.Adapter.D4H
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
+
+  # Retry a failed refresh after 15, then 30 minutes, rather than waiting a day.
+  @impl Oban.Worker
+  def backoff(%Oban.Job{attempt: attempt}), do: attempt * 15 * 60
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"team_id" => team_id}}) do
@@ -40,14 +45,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
   end
 
   defp format_error(%MatchError{term: {:error, %Req.Response{} = response}}) do
-    body =
-      case response.body do
-        body when is_binary(body) -> body
-        body when is_map(body) -> Jason.encode!(body)
-        other -> inspect(other)
-      end
-
-    "D4H API error (#{response.status}): #{String.slice(body, 0, 500)}"
+    response |> D4H.Error.exception() |> Exception.message()
   end
 
   defp format_error(e), do: Exception.message(e)

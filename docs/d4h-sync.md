@@ -11,10 +11,11 @@ covers how the copy is refreshed and where it drifts from D4H.
   [RefreshTeamDataWorker](../lib/app/worker/refresh_team_data_worker.ex) per team that has
   a `d4h_team_id`.
 - The team dashboard's refresh button and the admin dashboard enqueue the same jobs.
-- The `refresh` queue has a limit of 1, so one team refreshes at a time. Jobs have
-  `max_attempts: 1` — a failure waits for the next day.
+- The `refresh` queue has a limit of 1, so one team refreshes at a time. A failed job
+  retries after 15 minutes, then 30 (`max_attempts: 3`), before waiting for the next day.
 - A successful run pings `HEALTHCHECKS_URL`. A failed one writes `Error: …` to
-  `teams.d4h_refresh_result`, which the dashboard shows.
+  `teams.d4h_refresh_result`, which the dashboard shows. When the last attempt fails, the
+  error goes to Honeybadger.
 
 ## Which key
 
@@ -58,6 +59,12 @@ renaming a stage means changing both.
   at the end of that stage. Members, activities, qualifications, awards, groups, and group
   memberships that are deleted in D4H **stay** in SAR Duty. This is why #18 sees deleted
   qualifications.
+- **A short fetch fails the refresh.** Every D4H list response has a `totalSize`. The
+  adapter pages until the rows add up to it, and raises `D4H.Error` if a page comes back
+  empty first, so the delete never runs on a partial list. Nothing local points at
+  attendance, so a row deleted by mistake loses nothing and the next refresh restores it.
+  One gap remains: D4H pages by offset, so a row deleted in D4H mid-refresh shifts the
+  next one out of view, and that row is gone until the next refresh.
 - The team's name and time zone are copied when the team is created and when an admin
   clicks refresh in team settings, not on the daily sync.
 - Activity tags are stored as titles. Letter hours depend on the exact titles
@@ -74,8 +81,9 @@ key, not the team's.
 
 - The base URL is `https://<team.d4h_api_host>/v3/team/<d4h_team_id>`. The host is the
   team's D4H region; `D4H.regions/0` lists them.
-- Paged endpoints use `page` from 0 with `size: 1000`, and callers loop until an empty
-  page. Members, qualifications, groups, and tags use `size: -1` for everything at once.
-- Responses are read as `body["results"]` without checking the status. A bad key usually
-  surfaces as a `MatchError` that the worker turns into `D4H API error (status): …`.
+- Every list endpoint goes through `reduce_pages` in the adapter, `page` from 0 with
+  `size: 1000`. It stops when the rows reach D4H's `totalSize`, and raises `D4H.Error` on
+  a non-200 response or a short fetch.
+- Other calls read the body without checking the status. A bad key there surfaces as a
+  `MatchError` that the worker turns into `D4H API error (status): …`. #33 covers them.
 - `Parse.datetime/1` expects D4H timestamps in UTC and raises on any other offset.

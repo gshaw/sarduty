@@ -7,20 +7,11 @@ defmodule App.Operation.RefreshD4HData.UpsertQualificationAwards do
 
   def call(d4h, team, progress) when is_map(d4h) when is_map(team) do
     context = %{
-      d4h: d4h,
-      team_id: team.id,
       d4h_member_index: build_d4h_member_index(team.id),
-      d4h_qualification_index: build_d4h_qualification_index(team.id),
-      progress: progress,
-      total_count: 0
+      d4h_qualification_index: build_d4h_qualification_index(team.id)
     }
 
-    fetch_and_upsert(context, 0)
-  end
-
-  defp fetch_and_upsert(context, page) do
-    d4h_awards = D4H.fetch_qualification_awards(context.d4h, page)
-    upsert_awards(context, page, d4h_awards)
+    D4H.reduce_qualification_awards(d4h, {0, progress}, &upsert_page(context, &1, &2))
   end
 
   defp build_d4h_member_index(team_id) do
@@ -37,18 +28,10 @@ defmodule App.Operation.RefreshD4HData.UpsertQualificationAwards do
     |> Map.new()
   end
 
-  defp upsert_awards(context, _page, []) do
-    {context.total_count, context.progress}
-  end
-
-  defp upsert_awards(context, page, d4h_awards) do
+  defp upsert_page(context, d4h_awards, {total_count, progress}) do
     count = Enum.count(d4h_awards)
-
     Enum.each(d4h_awards, &upsert_award(context, &1))
-
-    progress = Progress.add_page(context.progress, count)
-    context = %{context | progress: progress, total_count: context.total_count + count}
-    fetch_and_upsert(context, page + 1)
+    {total_count + count, Progress.add_page(progress, count)}
   end
 
   defp upsert_award(context, d4h_award) do

@@ -47,9 +47,9 @@ Team logos on the same volume are not replicated. See [deployment.md](deployment
 
 Error reports and Insights (request, query, LiveView, and job timings), configured in
 [config/config.exs](../config/config.exs). Errors come from the router
-(`use Honeybadger.Plug`), crashed processes through the logger, and failed Oban jobs
-through [App.Worker.ErrorReporter](../lib/app/worker/error_reporter.ex). Dev and test
-send nothing.
+(`use Honeybadger.Plug`), crashed processes through the logger, and Oban jobs that fail
+their last attempt through [App.Worker.ErrorReporter](../lib/app/worker/error_reporter.ex).
+Dev and test send nothing.
 
 - `HONEYBADGER_API_KEY` — a Fly secret, read by the `honeybadger` library itself.
   Without it in production the app still boots, logs
