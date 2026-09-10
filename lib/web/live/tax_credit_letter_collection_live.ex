@@ -134,9 +134,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <span class="font-mono text-sm">{@record.tax_credit_letter_ref_id}</span>
       </.a>
     <% else %>
-      <button phx-click="create" value={@record.member.id} class="btn btn-success btn-sm">
+      <.button variant={:success} size={:sm} phx-click="create" value={@record.member.id}>
         Create letter
-      </button>
+      </.button>
     <% end %>
     """
   end

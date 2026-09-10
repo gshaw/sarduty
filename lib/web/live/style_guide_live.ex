@@ -126,68 +126,69 @@ defmodule Web.StyleGuideLive do
       </.table>
     </.style_group>
 
-    <.style_group title=".btn and .form_actions">
+    <.style_group title=".button and .form_actions">
       <.form_actions>
-        <button class="btn btn-success">Save</button>
-        <button class="btn">Cancel</button>
-        <button class="btn btn-success" disabled>
+        <.button variant={:success}>Save</.button>
+        <.button>Cancel</.button>
+        <.button variant={:success} disabled>
           <.spinner>Processing...</.spinner>
-        </button>
-        <button class="btn btn-link">More Information</button>
+        </.button>
+        <.button variant={:link}>More Information</.button>
         <:trailing>
-          <button class="btn btn-danger">Delete</button>
+          <.button variant={:danger}>Delete</.button>
         </:trailing>
       </.form_actions>
 
       <div class="py-p">
         <p class="font-mono">{inspect(@random_numbers)}</p>
         <p>
-          <button phx-click="update-random-numbers" class="btn btn-warning">
+          <.button variant={:warning} phx-click="update-random-numbers">
             Refresh Random Numbers
-          </button>
+          </.button>
         </p>
       </div>
 
       <p>
-        Examples of all button styles but the app mainly uses the default, success, link, and danger.
+        Every variant, though the app mainly uses default, success, link, and danger.
       </p>
       <.form_actions>
-        <.button disabled class="btn btn-primary">Disabled</.button>
-        <button class="btn btn-primary">Primary</button>
-        <button class="btn btn-secondary">Secondary</button>
-        <button class="btn">Default</button>
-        <button class="btn btn-link">Link</button>
+        <.button variant={:primary} disabled>Disabled</.button>
+        <.button variant={:primary}>Primary</.button>
+        <.button variant={:secondary}>Secondary</.button>
+        <.button>Default</.button>
+        <.button variant={:link}>Link</.button>
       </.form_actions>
       <.form_actions>
-        <button class="btn btn-success">Success</button>
-        <button class="btn btn-warning">Warning</button>
-        <button class="btn btn-danger">Danger</button>
+        <.button variant={:success}>Success</.button>
+        <.button variant={:warning}>Warning</.button>
+        <.button variant={:danger}>Danger</.button>
       </.form_actions>
       <.form_actions>
-        <button class="btn btn-lg">Large</button>
-        <button class="btn">Normal</button>
-        <button class="btn btn-sm">Small</button>
+        <.button size={:lg}>Large</.button>
+        <.button>Normal</.button>
+        <.button size={:sm}>Small</.button>
       </.form_actions>
+      <p>A link styled as a button takes <code>navigate</code> or <code>href</code>.</p>
       <div>
-        <a class="btn btn-sm">Log in</a>
-        <a class="btn btn-sm btn-primary">Sign up for FREE</a>
+        <.button navigate="/styles" size={:sm}>Log in</.button>
+        <.button navigate="/styles" size={:sm} variant={:primary}>Sign up for FREE</.button>
       </div>
     </.style_group>
     <.style_group title=".badge">
       <div class="flex space-x-2">
-        <span class="badge">Default</span>
-        <span class="badge badge-primary">Primary</span>
-        <span class="badge badge-secondary">Secondary</span>
-        <span class="badge badge-success">Success</span>
-        <span class="badge badge-warning">Warning</span>
-        <span class="badge badge-danger">Danger</span>
-        <span class="badge"><strong>Primary Hours</strong></span>
-        <span class="badge"><strong>Secondary Hours</strong></span>
+        <.badge>Default</.badge>
+        <.badge kind={:primary}>Primary</.badge>
+        <.badge kind={:secondary}>Secondary</.badge>
+        <.badge kind={:success}>Success</.badge>
+        <.badge kind={:warning}>Warning</.badge>
+        <.badge kind={:danger}>Danger</.badge>
+        <.badge><strong>Primary Hours</strong></.badge>
+        <.badge><strong>Secondary Hours</strong></.badge>
       </div>
       <div class="flex space-x-2">
-        <span class="badge badge-incident">Incident</span>
-        <span class="badge badge-exercise">Exercise</span>
-        <span class="badge badge-event">Event</span>
+        <.badge kind={:incident}>Incident</.badge>
+        <.badge kind={:exercise}>Exercise</.badge>
+        <.badge kind={:event}>Event</.badge>
       </div>
     </.style_group>
     <.style_group title=".typography">

@@ -69,7 +69,7 @@ defmodule Web.ActivityAttendanceLive do
             Members will be matched by their name, email, or phone in D4H.
             You will have a chance to review changes before they are performed.
           </.input>
-          <.button class="btn-success">Import Attendance Report</.button>
+          <.button variant={:success}>Import Attendance Report</.button>
         </form>
       <% else %>
         <h2 class="heading">Recommended changes</h2>
@@ -96,12 +96,10 @@ defmodule Web.ActivityAttendanceLive do
             <:col :let={{_, _, member}} label="Phone">{member.phone}</:col>
           </.table>
           <.form_actions class="mt-4">
-            <.button disabled={disable_perform_recommendations?(@recommendations)} class="btn-success">
+            <.button disabled={disable_perform_recommendations?(@recommendations)} variant={:success}>
               Perform Checked Recommendations
             </.button>
-            <.a class="btn" phx-click="reset">
-              Reset
-            </.a>
+            <.button type="button" phx-click="reset">Reset</.button>
           </.form_actions>
         </form>
       <% end %>

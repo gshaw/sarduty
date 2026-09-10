@@ -32,15 +32,15 @@ defmodule Web.TaxCreditLetterLive do
 
     <h1 class="title">{@page_title}</h1>
     <.form_actions>
-      <a
+      <.button
         href={~p"/#{@current_team.subdomain}/tax-credit-letters/#{@letter.id}/pdf"}
-        class="btn btn-success"
+        variant={:success}
       >
         Download PDF
-      </a>
-      <button phx-click="email" class="btn btn-warning">Email PDF to member</button>
+      </.button>
+      <.button variant={:warning} phx-click="email">Email PDF to member</.button>
       <:trailing>
-        <button phx-click="destroy" class="btn btn-danger">Delete</button>
+        <.button variant={:danger} phx-click="destroy">Delete</.button>
       </:trailing>
     </.form_actions>
     <hr class="my-p border-hr" />

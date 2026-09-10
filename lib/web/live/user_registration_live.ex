@@ -25,7 +25,7 @@ defmodule Web.UserRegistrationLive do
         <.input field={@form[:email]} type="email" label="Email" phx-debounce />
         <.input field={@form[:password]} type="password" label="Password" phx-debounce />
         <.form_actions>
-          <.button class="btn-success">Sign up</.button>
+          <.button variant={:success}>Sign up</.button>
         </.form_actions>
       </.form>
     </div>

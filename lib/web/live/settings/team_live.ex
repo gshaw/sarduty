@@ -57,7 +57,7 @@ defmodule Web.Settings.TeamLive do
           Team-level D4H Personal Access Token used for scheduled background data refresh.
         </.input>
         <.form_actions>
-          <.button class="btn-success">Save</.button>
+          <.button variant={:success}>Save</.button>
           <:trailing>
             <.button type="button" phx-click="refresh">Refresh from D4H</.button>
           </:trailing>

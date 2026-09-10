@@ -20,15 +20,13 @@ defmodule Web.Components.D4H do
     |> then(fn assigns ->
       ~H"""
       <div {@rest}>
-        <%= for tag <- @sorted_tags do %>
-          <span class="badge">
-            <%= if tag in [Activity.primary_hours_tag(), Activity.secondary_hours_tag()] do %>
-              <strong>{tag}</strong>
-            <% else %>
-              {tag}
-            <% end %>
-          </span>
-        <% end %>
+        <.badge :for={tag <- @sorted_tags}>
+          <%= if tag in [Activity.primary_hours_tag(), Activity.secondary_hours_tag()] do %>
+            <strong>{tag}</strong>
+          <% else %>
+            {tag}
+          <% end %>
+        </.badge>
       </div>
       """
     end)
@@ -52,16 +50,22 @@ defmodule Web.Components.D4H do
 
   def activity_badges(assigns) do
     ~H"""
-    <span title="Activity kind" class={["badge", "badge-#{@activity.activity_kind}"]}>
+    <.badge kind={activity_kind_badge(@activity.activity_kind)} title="Activity kind">
       {String.capitalize(@activity.activity_kind)}
-    </span>
-    <span :if={@activity.tracking_number} title="Tracking number" class="badge">
+    </.badge>
+    <.badge :if={@activity.tracking_number} title="Tracking number">
       {@activity.tracking_number}
-    </span>
-    <span :if={!@activity.is_published} class="badge">Draft</span>
-    <span :if={@activity.is_published} class="badge">Published</span>
+    </.badge>
+    <.badge :if={!@activity.is_published}>Draft</.badge>
+    <.badge :if={@activity.is_published}>Published</.badge>
     """
   end
+
+  # activity_kind is a D4H value; anything unexpected gets the plain badge
+  defp activity_kind_badge("incident"), do: :incident
+  defp activity_kind_badge("exercise"), do: :exercise
+  defp activity_kind_badge("event"), do: :event
+  defp activity_kind_badge(_kind), do: :default
 
   attr :member, :map, required: true
 

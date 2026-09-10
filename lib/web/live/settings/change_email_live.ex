@@ -30,7 +30,7 @@ defmodule Web.Settings.ChangeEmailLive do
         <p>A link will be delivered to your new email.</p>
         <p>You must click the link to change your email.</p>
         <.form_actions>
-          <.button class="btn-success">Send confirm link</.button>
+          <.button variant={:success}>Send confirm link</.button>
         </.form_actions>
       </.form>
     </div>

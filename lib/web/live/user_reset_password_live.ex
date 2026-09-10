@@ -17,7 +17,7 @@ defmodule Web.UserResetPasswordLive do
           required
         />
         <.form_actions>
-          <.button class="btn-success">Change password</.button>
+          <.button variant={:success}>Change password</.button>
         </.form_actions>
       </.form>
     </div>

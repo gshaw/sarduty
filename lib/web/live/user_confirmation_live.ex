@@ -11,7 +11,7 @@ defmodule Web.UserConfirmationLive do
       <.form for={@form} id="confirmation_form" phx-submit="confirm_account">
         <.input field={@form[:token]} type="hidden" />
         <.form_actions>
-          <.button class="btn-success">Confirm my account</.button>
+          <.button variant={:success}>Confirm my account</.button>
         </.form_actions>
       </.form>
     </div>

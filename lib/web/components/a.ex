@@ -4,7 +4,6 @@ defmodule Web.Components.A do
   attr :kind, :atom,
     values: [
       :default,
-      :btn,
       :custom,
       :monochrome,
       :menu_item,
@@ -50,7 +49,6 @@ defmodule Web.Components.A do
   defp determine_external_class(_assigns), do: nil
 
   defp determine_kind_classes(%{kind: :default}), do: ["link text-primary-1"]
-  defp determine_kind_classes(%{kind: :btn}), do: ["btn"]
   defp determine_kind_classes(%{kind: :custom}), do: []
   defp determine_kind_classes(%{kind: :monochrome}), do: ["link"]
 

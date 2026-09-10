@@ -90,7 +90,7 @@ defmodule Web.TeamDashboardLive do
         <% else %>
           <.button
             type="button"
-            class="btn-warning"
+            variant={:warning}
             phx-click="refresh"
             disabled={refreshing?(@view_data)}
           >

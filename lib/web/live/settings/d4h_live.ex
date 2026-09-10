@@ -41,8 +41,8 @@ defmodule Web.Settings.D4HLive do
         </dl>
 
         <p>
-          <.button phx-click="verify_access_key" class="btn-success">Verify Key</.button>
-          <.button phx-click="delete_access_key" class="btn-danger">Delete Key</.button>
+          <.button phx-click="verify_access_key" variant={:success}>Verify Key</.button>
+          <.button phx-click="delete_access_key" variant={:danger}>Delete Key</.button>
         </p>
         <p :if={@confirmation_message}>{@confirmation_message}</p>
       <% else %>
@@ -64,7 +64,7 @@ defmodule Web.Settings.D4HLive do
             Encrypted at rest using AES 256 encryption.
           </.input>
           <.form_actions>
-            <.button class="btn-success">Save access key</.button>
+            <.button variant={:success}>Save access key</.button>
           </.form_actions>
         </.form>
       <% end %>

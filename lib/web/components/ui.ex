@@ -71,6 +71,39 @@ defmodule Web.Components.UI do
     """
   end
 
+  @doc """
+  Renders a badge.
+
+  ## Examples
+
+      <.badge>Draft</.badge>
+      <.badge kind={:incident} title="Activity kind">Incident</.badge>
+  """
+  attr :kind, :atom,
+    default: :default,
+    values: [
+      :default,
+      :primary,
+      :secondary,
+      :success,
+      :warning,
+      :danger,
+      :incident,
+      :exercise,
+      :event
+    ]
+
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def badge(assigns) do
+    ~H"""
+    <span class={["badge", @kind != :default && "badge-#{@kind}"]} {@rest}>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
   attr :class, :string, default: nil
   attr :size, :string, default: "size-6"
   slot :inner_block
