@@ -5,12 +5,15 @@ defmodule App.Application do
 
   use Application
 
+  alias App.Worker.ErrorReporter
+
   # credo:disable-for-next-line Credo.Check.Readability.ImplTrue
   @impl true
   def start(_type, _args) do
     App.Release.migrate()
 
     :ok = Oban.Telemetry.attach_default_logger()
+    :ok = ErrorReporter.attach()
 
     children = [
       Web.Telemetry,

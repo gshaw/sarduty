@@ -46,6 +46,7 @@ defmodule App.MixProject do
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0"},
       {:gettext, "~> 1.0"},
+      {:honeybadger, "~> 0.24"},
       {:jason, "~> 1.2"},
       {:oban, "~> 2.19"},
       {:lazy_html, ">= 0.0.0", only: :test},

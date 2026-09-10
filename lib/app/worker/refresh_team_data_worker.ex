@@ -21,7 +21,9 @@ defmodule App.Worker.RefreshTeamDataWorker do
         message = format_error(e)
         {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
         broadcast_team_refresh(team)
-        {:error, message}
+        # Reraise so the job fails with the real exception and stacktrace, which
+        # App.Worker.ErrorReporter sends to Honeybadger.
+        reraise e, __STACKTRACE__
     end
   end
 
