@@ -42,7 +42,7 @@ run = "cspell lint --no-progress ."
 [tasks.markdownlint]
 description = "Lint all Markdown files"
 run = """
-out=$(markdownlint-cli2 '**/*.md' 2>&1) && echo "Markdown lint passed" || { echo "$out"; exit 1; }
+if out=$(markdownlint-cli2 '**/*.md' 2>&1); then echo "$out" | grep '^Linting' || true; else echo "$out"; exit 1; fi
 """
 
 [tasks.test]

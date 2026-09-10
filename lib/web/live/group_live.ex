@@ -279,8 +279,8 @@ defmodule Web.GroupLive do
     qual && qual.d4h_qualification_id
   end
 
-  defp available_qualifications(qualifications, existing_clause_quals) do
-    existing_d4h_ids = MapSet.new(existing_clause_quals, & &1.d4h_qualification_id)
+  defp available_qualifications(qualifications, clause_qualifications) do
+    existing_d4h_ids = MapSet.new(clause_qualifications, & &1.d4h_qualification_id)
 
     qualifications
     |> Enum.reject(&MapSet.member?(existing_d4h_ids, &1.d4h_qualification_id))
