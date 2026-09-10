@@ -24,6 +24,21 @@ defmodule Web.UserRegistrationLiveTest do
       assert result =~ "must have the @ sign and no spaces"
       assert result =~ "should be at least 12 character"
     end
+
+    test "hides errors for fields the user has not used yet", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/signup")
+
+      # LiveView marks untouched inputs with _unused_ params on phx-change
+      result =
+        lv
+        |> element("#registration_form")
+        |> render_change(
+          user: %{"email" => "with spaces", "password" => "", "_unused_password" => ""}
+        )
+
+      assert result =~ "must have the @ sign and no spaces"
+      refute result =~ "can&#39;t be blank"
+    end
   end
 
   describe "sign up user" do

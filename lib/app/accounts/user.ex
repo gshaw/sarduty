@@ -11,6 +11,7 @@ defmodule App.Accounts.User do
     belongs_to :team, Team
     field :email, :string
     field :password, :string, virtual: true, redact: true
+    field :current_password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
     field :d4h_access_key, EncryptedString, redact: true
@@ -183,6 +184,9 @@ defmodule App.Accounts.User do
   Validates the current password otherwise adds an error to the changeset.
   """
   def validate_current_password(changeset, password) do
+    # Cast it so the form knows the field was used and shows its error.
+    changeset = cast(changeset, %{current_password: password}, [:current_password])
+
     if valid_password?(changeset.data, password) do
       changeset
     else

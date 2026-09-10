@@ -150,9 +150,12 @@ defmodule Web.Components.Core do
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    # Only show errors for fields the user has typed in or submitted.
+    errors = if used_input?(field), do: field.errors, else: []
+
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
@@ -166,7 +169,7 @@ defmodule Web.Components.Core do
 
     # mt-0.5 is so checkbox can embed in a table nicely
     ~H"""
-    <div class="mt-0.5 flex" phx-feedback-for={@name}>
+    <div class="mt-0.5 flex">
       <input type="hidden" name={@name} value="false" />
       <input
         type="checkbox"
@@ -188,14 +191,14 @@ defmodule Web.Components.Core do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div class="mb-p" phx-feedback-for={@name}>
+    <div class="mb-p">
       <.label :if={@label != nil} for={@id}>{@label}</.label>
       <select
         id={@id}
         name={@name}
         class={[
           "block w-full rounded border shadow-sm",
-          "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          @errors == [] && "text-base-content focus:ring-primary-1 focus:border-primary-1",
           @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
           @class
         ]}
@@ -213,14 +216,14 @@ defmodule Web.Components.Core do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div class="mb-p" phx-feedback-for={@name}>
+    <div class="mb-p">
       <.label :if={@label != nil} for={@id}>{@label}</.label>
       <textarea
         id={@id}
         name={@name}
         class={[
           "min-h-24 block w-full rounded border shadow-sm",
-          "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          @errors == [] && "text-base-content focus:ring-primary-1 focus:border-primary-1",
           @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
           @class
         ]}
@@ -235,7 +238,7 @@ defmodule Web.Components.Core do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class="mb-p" phx-feedback-for={@name}>
+    <div class="mb-p">
       <.label :if={@label != nil} for={@id}>{@label}</.label>
       <input
         type={@type}
@@ -244,7 +247,7 @@ defmodule Web.Components.Core do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           "block w-full rounded border shadow-sm",
-          "phx-no-feedback:text-base-content phx-no-feedback:border-secondary-0 phx-no-feedback:focus:ring-primary-1 phx-no-feedback:focus:border-primary-1",
+          @errors == [] && "text-base-content focus:ring-primary-1 focus:border-primary-1",
           @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
           @class
         ]}
