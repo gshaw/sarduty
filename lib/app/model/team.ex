@@ -1,6 +1,7 @@
 defmodule App.Model.Team do
   use App, :model
 
+  alias App.Accounts.User
   alias App.Field.EncryptedString
   alias App.Field.TrimmedString
   alias App.Model.Team
@@ -20,6 +21,7 @@ defmodule App.Model.Team do
     field :d4h_access_key, EncryptedString, redact: true
     field :d4h_refresh_result, :string
     field :d4h_refreshed_at, :utc_datetime_usec
+    has_many :users, User
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -58,6 +60,15 @@ defmodule App.Model.Team do
   def get_all do
     Team
     |> order_by([t], desc: t.id)
+    |> Repo.all()
+  end
+
+  def get_all_with_users do
+    users = from u in User, order_by: u.email
+
+    Team
+    |> order_by([t], desc: t.id)
+    |> preload(users: ^users)
     |> Repo.all()
   end
 

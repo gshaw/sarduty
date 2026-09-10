@@ -8,7 +8,7 @@ defmodule Web.AdminDashboardLive do
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    teams = Team.get_all()
+    teams = Team.get_all_with_users()
 
     socket =
       socket
@@ -19,9 +19,10 @@ defmodule Web.AdminDashboardLive do
   end
 
   def handle_info({:team_refreshed, updated_team}, socket) do
+    # The broadcast team has no users loaded, so keep the ones from mount.
     teams =
       Enum.map(socket.assigns.teams, fn team ->
-        if team.id == updated_team.id, do: updated_team, else: team
+        if team.id == updated_team.id, do: %{updated_team | users: team.users}, else: team
       end)
 
     {:noreply, assign(socket, teams: teams)}
@@ -35,7 +36,7 @@ defmodule Web.AdminDashboardLive do
         Refresh All Teams
       </.button>
     </div>
-    <.table id="teams" rows={@teams}>
+    <.table id="teams" rows={@teams} row_id={&"team-#{&1.id}"}>
       <:col :let={team} label="ID">
         {team.id}
       </:col>
@@ -45,7 +46,18 @@ defmodule Web.AdminDashboardLive do
           {team.subdomain}
         </.hint>
       </:col>
-      <:col :let={team} label="Last Refreshed">
+      <:col :let={team} label="Contacts">
+        <%= if team.users == [] do %>
+          <span class="text-danger-1">No users</span>
+        <% else %>
+          <div :for={user <- team.users}>
+            {user.email}
+            <.badge :if={personal_key?(user)} title="Has a personal D4H key">D4H key</.badge>
+          </div>
+          <.a href={mailto(team.users)}>Email</.a>
+        <% end %>
+      </:col>
+      <:col :let={team} label="Last OK refresh">
         {format_refreshed_at(team)}
       </:col>
       <:col :let={team} label="Status">
@@ -93,6 +105,10 @@ defmodule Web.AdminDashboardLive do
 
     {:noreply, socket}
   end
+
+  defp personal_key?(user), do: is_binary(user.d4h_access_key) and user.d4h_access_key != ""
+
+  defp mailto(users), do: "mailto:" <> Enum.map_join(users, ",", & &1.email)
 
   defp format_refreshed_at(team) do
     if team.d4h_refreshed_at do
