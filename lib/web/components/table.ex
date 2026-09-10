@@ -64,6 +64,7 @@ defmodule Web.Components.Table do
         <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
           <td
             :for={col <- @col}
+            data-label={col[:label]}
             class={[
               Map.get(col, :class),
               if(Map.get(col, :align) == "right", do: "md:text-right", else: nil)
