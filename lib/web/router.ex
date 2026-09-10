@@ -13,10 +13,6 @@ defmodule Web.Router do
     plug :assign_current_user
   end
 
-  pipeline :mcp do
-    plug :accepts, ["json"]
-  end
-
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:sarduty, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
@@ -105,10 +101,6 @@ defmodule Web.Router do
     end
   end
 
-  scope "/", Web do
-    pipe_through :mcp
-
-    get "/:subdomain/mcp", MCPController, :handle
-    post "/:subdomain/mcp", MCPController, :handle
-  end
+  # No route to the MCP endpoint (Web.MCPController) until teams can opt in
+  # with their own tokens: #28.
 end

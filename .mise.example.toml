@@ -8,8 +8,6 @@
 MAPBOX_ACCESS_TOKEN = "pk.e---"
 # Where the D4H refresh saves team logos.
 TEAM_LOGO_PATH = "/Users/gerry/Developer/sarduty.mount/team-logos"
-# Optional: the MCP endpoint answers 401 without it.
-# MCP_ACCESS_KEY = ""
 # Optional: send real mail from dev instead of /dev/mailbox.
 # ZEPTO_MAIL_KEY = ""
 # Optional: pinged after each successful team refresh.

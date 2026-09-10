@@ -1,4 +1,6 @@
 defmodule Web.MCPController do
+  # No route points here: the test endpoint is off until teams can opt in with
+  # their own tokens (#28). Kept as the starting point for that work.
   use Web, :controller
 
   import Ecto.Query

@@ -4,8 +4,8 @@
 
 - SAR Duty is a **Phoenix 1.8 LiveView** app for search and rescue team managers. D4H is
   each team's system of record; SAR Duty copies it into a local **SQLite** database and
-  builds what D4H doesn't: tax credit letters, mileage reports, attendance cleanup, group
-  qualification rules, and a read-only MCP endpoint.
+  builds what D4H doesn't: tax credit letters, mileage reports, attendance cleanup, and
+  group qualification rules.
 - It is multi-team. Team pages live under `/:subdomain/…`, and every query that reads team
   data filters by `team_id`.
 - Production is one Fly machine with SQLite on a volume, replicated by Litestream. See
@@ -53,7 +53,8 @@
 - **ZeptoMail** through Swoosh: mail in production. Dev uses the local mailbox at
   `/dev/mailbox`.
 - **Litestream to Tigris**: continuous SQLite backup.
-- **MCP**: `GET|POST /:subdomain/mcp`, read-only JSON-RPC behind a shared key.
+- **MCP**: off. `Web.MCPController` has no route until teams can opt in with their own
+  tokens (#28). Don't route it again without that.
 
 Every boundary, its credentials, and what breaks without it:
 [docs/external-services.md](docs/external-services.md).

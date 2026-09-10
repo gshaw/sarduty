@@ -45,12 +45,11 @@ Team logos on the same volume are not replicated. See [deployment.md](deployment
 
 ## MCP endpoint
 
-[lib/web/controllers/mcp_controller.ex](../lib/web/controllers/mcp_controller.ex) serves
-`GET|POST /:subdomain/mcp`: plain JSON-RPC 2.0 (no streaming) with read-only tools over
-the team's members, activities, attendance, qualifications, and letters.
-
-- `MCP_ACCESS_KEY` — one key for every team, passed as `?access=…` and read per request.
-  Unset means every request gets 401.
+Off. The test version served `GET|POST /:subdomain/mcp` to every team behind one
+`MCP_ACCESS_KEY` sent as `?access=…`, and returned member home addresses. Its controller,
+[lib/web/controllers/mcp_controller.ex](../lib/web/controllers/mcp_controller.ex), has
+no route until #28 brings it back as an opt-in team feature: per-team tokens in an
+`Authorization` header, and member names, email, and phone but never addresses.
 
 ## Other secrets
 

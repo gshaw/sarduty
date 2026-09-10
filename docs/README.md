@@ -17,9 +17,8 @@ SAR Duty is a Phoenix LiveView app for search and rescue team managers. D4H is e
 team's system of record. A daily Oban job copies each team's members, activities,
 attendance, qualifications, and groups from the D4H API into a local SQLite database, and
 the pages read from that copy. On top of it the app builds what D4H doesn't: tax credit
-letters as PDFs, mileage reports, attendance cleanup, group qualification rules, and a
-read-only MCP endpoint. It runs as one Fly machine with Litestream replicating the
-database.
+letters as PDFs, mileage reports, attendance cleanup, and group qualification rules. It
+runs as one Fly machine with Litestream replicating the database.
 
 ## The layers and the calling rules
 
