@@ -4,6 +4,13 @@ defmodule Web.Router do
 
   import Web.UserAuth
 
+  # Honeybadger's default skips only 404s. Other 4xx are the client's doing: a JSON
+  # Accept header on a page (406), a stale CSRF token (403), a malformed body (400).
+  @impl Plug.ErrorHandler
+  def handle_errors(conn, %{reason: reason} = error) do
+    if Plug.Exception.status(reason) < 500, do: :ok, else: super(conn, error)
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
