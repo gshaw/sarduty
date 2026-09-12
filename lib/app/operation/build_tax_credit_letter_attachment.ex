@@ -11,7 +11,7 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
         title: title,
         author: team.name,
         creator: "SARDuty.com",
-        logo_path: Team.logo_path(team.subdomain),
+        logo_path: Team.logo_file(team.subdomain),
         content: tax_credit_letter.letter_content
       })
 

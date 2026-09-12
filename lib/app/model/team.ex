@@ -118,4 +118,13 @@ defmodule App.Model.Team do
     logo_path = System.fetch_env!("TEAM_LOGO_PATH")
     Path.join(logo_path, "#{team_subdomain}.png")
   end
+
+  @doc """
+  The saved logo's path, or nil when there is none: the team has not refreshed yet, or
+  has no profile image in D4H.
+  """
+  def logo_file(team_subdomain) do
+    path = logo_path(team_subdomain)
+    if File.regular?(path), do: path
+  end
 end

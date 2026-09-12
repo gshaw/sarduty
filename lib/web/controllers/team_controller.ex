@@ -4,12 +4,9 @@ defmodule Web.TeamController do
   alias App.Model.Team
 
   def image(conn, params) do
-    path = Team.logo_path(params["subdomain"])
-
-    send_download(
-      conn,
-      {:file, path},
-      disposition: :inline
-    )
+    case Team.logo_file(params["subdomain"]) do
+      nil -> send_resp(conn, :not_found, "")
+      path -> send_download(conn, {:file, path}, disposition: :inline)
+    end
   end
 end

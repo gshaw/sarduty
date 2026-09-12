@@ -17,6 +17,19 @@ defmodule Web.TeamDashboardLiveTest do
     assert html =~ team.name
   end
 
+  test "shows the team logo only once one is saved", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}")
+    refute has_element?(lv, "#team-logo")
+
+    team_logo_fixture(team)
+
+    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}")
+    assert has_element?(lv, "#team-logo")
+  end
+
   test "a failed refresh says why", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

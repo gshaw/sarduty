@@ -128,8 +128,10 @@ defmodule App.Adapter.D4H do
       )
 
     if response.status == 200 do
-      result = response.body["results"] |> List.first()
-      {:ok, D4H.Document.build(result)}
+      case List.first(response.body["results"]) do
+        nil -> {:ok, nil}
+        result -> {:ok, D4H.Document.build(result)}
+      end
     else
       {:error, response}
     end
@@ -146,9 +148,12 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  # `:none` when the team has no profile image in D4H.
   def fetch_team_image(context) do
-    with {:ok, image_document} <- D4H.fetch_team_image_document(context) do
-      download_document(context, image_document.d4h_document_id, "team.png")
+    case D4H.fetch_team_image_document(context) do
+      {:ok, nil} -> :none
+      {:ok, document} -> download_document(context, document.d4h_document_id, "team.png")
+      error -> error
     end
   end
 

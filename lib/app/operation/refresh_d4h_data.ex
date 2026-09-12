@@ -131,12 +131,16 @@ defmodule App.Operation.RefreshD4HData do
   end
 
   defp save_team_logo(d4h, team) do
+    logo_path = Team.logo_path(team.subdomain)
+
     case D4H.fetch_team_image(d4h) do
       {:ok, data, _filename} ->
-        logo_path = Team.logo_path(team.subdomain)
-        logo_dir_path = Path.dirname(logo_path)
-        File.mkdir_p!(logo_dir_path)
+        logo_path |> Path.dirname() |> File.mkdir_p!()
         File.write!(logo_path, data)
+
+      # The team removed its image in D4H, so drop the one saved before.
+      :none ->
+        File.rm(logo_path)
 
       {:error, response} ->
         raise D4H.Error, response
