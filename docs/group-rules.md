@@ -20,9 +20,16 @@ being recreated by the sync.
 [BuildGroupRulePreview](../lib/app/operation/build_group_rule_preview.ex):
 
 - `call/4` loads the team's awards for the qualifications the rules mention, runs
-  `plan/4`, and loads the members to add and remove.
+  `plan/4`, and returns the members to add, to remove, and expiring, each with a reason
+  as text.
 - `plan/4` is pure. A member qualifies when every clause lists at least one qualification
   they hold with an active award, and they haven't left the team (`Member.current?/2`).
+- Each removal carries a reason per unmet clause: left the team, no award on record, the
+  latest award expired, or the next award hasn't started. `describe/3` turns one into a
+  sentence in the team's time zone.
+- **Expiring** lists members who qualify now but won't within 60 days (D4H's default
+  reminder). A clause stays met until the latest end among its awards that haven't ended,
+  so a renewal already on record, even one that starts later, keeps a member off the list.
 - An award is active from `starts_at` until `ends_at`, either of which may be missing.
   `MemberQualificationAward.active?/2` is the one definition; the qualification and member
   pages use it too.
@@ -35,6 +42,9 @@ being recreated by the sync.
   fixes the rule.
 
 ## Applying the rules (#20)
+
+The group page shows the rules as one sentence, with an **Edit rules** button that opens
+the clause editor.
 
 The plan in the issue is a manual mode first — pick groups, confirm the changes, and show
 which clause removes each member — then an automatic batch mode. Both need a D4H write for

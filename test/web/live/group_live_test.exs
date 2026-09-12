@@ -27,6 +27,8 @@ defmodule Web.GroupLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/groups/#{group.id}")
 
     %{
+      team: team,
+      group: group,
       conn: conn,
       path: ~p"/#{team.subdomain}/groups/#{group.id}",
       lv: lv,
@@ -75,6 +77,20 @@ defmodule Web.GroupLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ctx.path)
 
     assert has_element?(lv, "#rule-broken")
+  end
+
+  test "the rule reads as a sentence, and each removal says why", ctx do
+    group_rule_clause_qualification_fixture(ctx.clause, ctx.qualification)
+    ended = member_fixture(ctx.team, %{name: "Alex Morgan"})
+    qualification_award_fixture(ctx.qualification, ended, %{ends_at: ~U[2026-03-31 19:00:00Z]})
+    group_member_fixture(ctx.group, ended)
+    group_member_fixture(ctx.group, member_fixture(ctx.team, %{name: "Jordan Lee"}))
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+    assert has_element?(lv, "#rule-sentence", "Members must hold #{ctx.qualification.title}.")
+    assert has_element?(lv, "#would-remove-#{ended.id}", "expired Mar 31, 2026")
+    assert has_element?(lv, "#would-remove", "No #{ctx.qualification.title} on record")
   end
 
   # A miss raises and takes the LiveView down, as a 404 would on a page load.
