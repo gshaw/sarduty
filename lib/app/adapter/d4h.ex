@@ -63,16 +63,21 @@ defmodule App.Adapter.D4H do
   end
 
   def build_context(access_key: access_key, api_host: api_host, d4h_team_id: d4h_team_id) do
-    Req.new(
+    [
       base_url: "https://#{api_host}/v3/team/#{d4h_team_id}",
       headers: %{"User-Agent" => "sarduty.com"},
       auth: {:bearer, access_key || ""},
       # Req 0.6+ no longer asks for gzip by default. api_host is always one of
       # D4H.regions(), so decompressing is safe, and 1000-record pages are large.
       compressed: true
-    )
+    ]
+    |> Keyword.merge(test_options())
+    |> Req.new()
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
   end
+
+  # config/test.exs routes every request to `Req.Test`, so no test reaches D4H.
+  defp test_options, do: Application.get_env(:sarduty, App.Adapter.D4H, [])
 
   def determine_team_id(access_key: access_key, api_host: api_host) do
     case fetch_whoami(access_key: access_key, api_host: api_host) do
@@ -83,11 +88,13 @@ defmodule App.Adapter.D4H do
 
   def fetch_whoami(access_key: access_key, api_host: api_host) do
     context =
-      Req.new(
+      [
         base_url: "https://#{api_host}/v3",
         headers: %{"User-Agent" => "sarduty.com"},
         auth: {:bearer, access_key || ""}
-      )
+      ]
+      |> Keyword.merge(test_options())
+      |> Req.new()
 
     response = Req.get!(context, url: "/whoami")
 
@@ -270,6 +277,45 @@ defmodule App.Adapter.D4H do
       _ -> raise D4H.Error, response
     end
   end
+
+  # The two group writes return D4H.Error instead of raising, so one failed change
+  # doesn't stop the rest. Neither is retried: a person is watching and can apply
+  # again, and a retried POST could add someone twice.
+  def add_group_member(context, d4h_group_id, d4h_member_id) do
+    request = [
+      method: :post,
+      url: "/member-group-memberships",
+      json: %{groupId: d4h_group_id, memberId: d4h_member_id},
+      retry: false
+    ]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status} = response} when status in 200..299 ->
+        {:ok, D4H.GroupMembership.build(response.body)}
+
+      result ->
+        {:error, write_error(result)}
+    end
+  end
+
+  # A membership D4H has already deleted counts as removed.
+  def remove_group_membership(context, d4h_group_membership_id) do
+    request = [
+      method: :delete,
+      url: "/member-group-memberships/#{d4h_group_membership_id}",
+      retry: false
+    ]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status}} when status in 200..299 or status == 404 -> :ok
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  defp write_error({:ok, response}), do: D4H.Error.exception(response)
+
+  defp write_error({:error, exception}),
+    do: exception |> Exception.message() |> D4H.Error.exception()
 
   defp update_attendance(context, attendance_id, status) do
     Req.patch!(context, url: "/attendance/#{attendance_id}", json: %{status: status})

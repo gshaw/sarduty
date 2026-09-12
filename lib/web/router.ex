@@ -87,6 +87,7 @@ defmodule Web.Router do
       live "/:subdomain/members/:id/qualifications", MemberQualificationsLive
       live "/:subdomain/groups", GroupCollectionLive
       live "/:subdomain/groups/:id", GroupLive
+      live "/:subdomain/groups/:id/review", GroupReviewLive
       live "/:subdomain/qualifications", QualificationCollectionLive
       live "/:subdomain/qualifications/:id", QualificationLive
       live "/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive

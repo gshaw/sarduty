@@ -82,10 +82,13 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 ## Pages that skip the copy
 
-Some pages call D4H live instead of reading the database: activity attendance (which is
-also the one page that writes, via `PATCH /attendance/:id`), the mileage report, team
-settings refresh, the access key check, and member photos. They use the signed-in user's
-key, not the team's.
+Some pages call D4H live instead of reading the database: activity attendance (which
+writes, via `PATCH /attendance/:id`), the mileage report, team settings refresh, the
+access key check, and member photos. They use the signed-in user's key, not the team's.
+
+Group rule changes are the other write. The review page sends them with the **team's**
+key only, never a borrowed personal one, and updates `group_members` right away rather
+than waiting for the next refresh. See [group-rules.md](group-rules.md).
 
 ## Adapter notes
 

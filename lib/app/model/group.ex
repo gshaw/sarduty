@@ -40,6 +40,7 @@ defmodule App.Model.Group do
     |> Repo.all()
   end
 
+  def find!(team, id), do: Repo.get_by!(Group, id: id, team_id: team.id)
   def get_by(params), do: Repo.get_by(Group, params)
 
   def insert!(params) do

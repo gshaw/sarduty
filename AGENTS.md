@@ -45,8 +45,9 @@
 ## External integrations (know where to look)
 
 - **D4H v3 API**: [lib/app/adapter/d4h.ex](lib/app/adapter/d4h.ex). Each team has its own
-  API host (region) and bearer token. Almost everything reads; the one write is the
-  attendance `PATCH` fired from `Web.ActivityAttendanceLive`. How the local copy is kept
+  API host (region) and bearer token. Almost everything reads. The writes are the
+  attendance `PATCH` fired from `Web.ActivityAttendanceLive`, and group membership adds
+  and removes from `ApplyGroupRuleChanges`. How the local copy is kept
   fresh is in [docs/d4h-sync.md](docs/d4h-sync.md).
 - **Mapbox**: geocoding and driving distances for the mileage report, and the static map
   on the activity page.
@@ -127,8 +128,10 @@ fi
   function, with `use ExUnit.Case, async: true`. Reference:
   [BuildGroupRulePreview.plan/4](lib/app/operation/build_group_rule_preview.ex) and
   [its test](test/app/operation/build_group_rule_preview_test.exs).
-- **Never call D4H or Mapbox from a test.** There is no HTTP stubbing yet, and Oban runs
-  with `testing: :inline`, so a test that enqueues a refresh would hit the real D4H API.
+- **Never call D4H or Mapbox from a test.** In tests every D4H request goes to
+  `Req.Test` (`config/test.exs`), so stub it with `Req.Test.stub(App.Adapter.D4H, …)`; a call
+  with no stub fails. Mapbox has no stub yet. Oban runs with `testing: :inline`, so a
+  test that enqueues a refresh runs it.
 - LiveView tests use `Phoenix.LiveViewTest` and target element IDs (`has_element?/2`),
   not raw HTML.
 - Test files mirror `lib/`: `lib/app/operation/x.ex` → `test/app/operation/x_test.exs`.

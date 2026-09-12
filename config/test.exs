@@ -31,3 +31,7 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Every D4H request goes to Req.Test. A test that doesn't stub D4H fails instead of
+# calling the real API.
+config :sarduty, App.Adapter.D4H, plug: {Req.Test, App.Adapter.D4H}

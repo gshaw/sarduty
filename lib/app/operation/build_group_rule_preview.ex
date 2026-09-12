@@ -1,6 +1,9 @@
 defmodule App.Operation.BuildGroupRulePreview do
   import Ecto.Query
 
+  alias App.Model.Group
+  alias App.Model.GroupMember
+  alias App.Model.GroupRuleClause
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
@@ -33,6 +36,18 @@ defmodule App.Operation.BuildGroupRulePreview do
       missing ->
         %{missing_qualification_ids: missing, to_add: [], to_remove: [], expiring: []}
     end
+  end
+
+  def for_group(%Team{} = team, %Group{} = group, now \\ DateTime.utc_now()) do
+    clauses = GroupRuleClause.get_all_for_group(team.id, group.d4h_group_id)
+
+    current_members =
+      Member
+      |> join(:inner, [m], gm in GroupMember, on: gm.member_id == m.id)
+      |> where([m, gm], gm.group_id == ^group.id and m.team_id == ^team.id)
+      |> Repo.all()
+
+    call(clauses, current_members, team, now)
   end
 
   def clause_qualification_ids(clauses) do

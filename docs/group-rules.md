@@ -46,6 +46,21 @@ being recreated by the sync.
 The group page shows the rules as one sentence, with an **Edit rules** button that opens
 the clause editor.
 
-The plan in the issue is a manual mode first — pick groups, confirm the changes, and show
-which clause removes each member — then an automatic batch mode. Both need a D4H write for
-group membership, which the adapter doesn't have yet. `plan/4` is the part they share.
+**Review changes** on the group page opens
+[GroupReviewLive](../lib/web/live/group_review_live.ex): every add and remove with its
+reason, all ticked, and how old the data is, with a button to refresh from D4H.
+
+[ApplyGroupRuleChanges](../lib/app/operation/apply_group_rule_changes.ex) does the work:
+
+- It rebuilds the plan, so it only acts on members the plan lists, whatever ids the
+  browser sends.
+- It needs the team's own D4H key, and refuses while a rule is broken.
+- Each change is `POST /member-group-memberships` or
+  `DELETE /member-group-memberships/:id`, then the same change to `group_members`. A 404
+  on delete counts as done. Neither is retried.
+- Every change is logged to `group_membership_changes` with its reason, who clicked, and
+  D4H's error if it failed. A failed change doesn't stop the rest. The group page shows
+  the last ten.
+
+The groups list shows which groups have rules, and how many changes are pending or that
+a rule is broken. Automatic mode, stage 4 of #20, should go through the same operation.

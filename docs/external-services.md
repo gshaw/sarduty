@@ -8,8 +8,8 @@ variables are read in [config/runtime.exs](../config/runtime.exs) unless noted.
 The system of record. Each team has an API host (its region) and a bearer token, both in
 the database; there is no D4H environment variable. Access keys come from D4H personal
 access tokens ([how to get one](https://help.d4h.com/article/377-obtaining-an-api-access-key)).
-Reads are everywhere; the only write is the attendance `PATCH`. See
-[d4h-sync.md](d4h-sync.md).
+Reads are everywhere. The writes are the attendance `PATCH` and group membership adds and
+removes from the group review page. See [d4h-sync.md](d4h-sync.md).
 
 ## Mapbox
 
