@@ -4,6 +4,7 @@ defmodule App.DataFixtures do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
   alias App.Model.Member
@@ -170,6 +171,14 @@ defmodule App.DataFixtures do
       )
 
     Group.insert!(params)
+  end
+
+  def group_member_fixture(%Group{} = group, %Member{} = member) do
+    GroupMember.insert!(%{
+      group_id: group.id,
+      member_id: member.id,
+      d4h_group_membership_id: System.unique_integer([:positive])
+    })
   end
 
   def group_rule_clause_fixture(%Group{} = group) do

@@ -151,7 +151,14 @@ defmodule Web.GroupLive do
       <div class="flex flex-wrap gap-2 mb-p05">
         <span
           :for={cq <- clause.group_rule_clause_qualifications}
-          class="inline-flex items-center gap-2 rounded bg-base-2 px-2 py-1 text-sm"
+          id={"clause-qualification-#{cq.id}"}
+          class={[
+            "inline-flex items-center gap-2 rounded px-2 py-1 text-sm",
+            if(qualification_known?(@qualifications, cq.d4h_qualification_id),
+              do: "bg-base-2",
+              else: "border border-danger-1 text-danger-1"
+            )
+          ]}
         >
           {qualification_title(@qualifications, cq.d4h_qualification_id)}
           <button
@@ -197,7 +204,15 @@ defmodule Web.GroupLive do
     ~H"""
     <div :if={@clauses != []} class="mt-p">
       <h2 class="subheading mb-p05">Rule Preview</h2>
-      <p class="text-secondary-1 text-sm mb-p05">
+      <p
+        :if={@preview.missing_qualification_ids != []}
+        id="rule-broken"
+        class="rounded bg-warning-1 text-warning-content px-p py-p05 text-sm"
+      >
+        These rules name a qualification that is no longer in D4H, shown in red above.
+        Remove it or replace it to see the preview.
+      </p>
+      <p :if={@preview.missing_qualification_ids == []} class="text-secondary-1 text-sm mb-p05">
         Shows what would change if these rules were applied to the group.
       </p>
 
@@ -224,7 +239,13 @@ defmodule Web.GroupLive do
         </div>
       </div>
 
-      <p :if={@preview.to_add == [] && @preview.to_remove == []} class="text-secondary-1 text-sm">
+      <p
+        :if={
+          @preview.missing_qualification_ids == [] && @preview.to_add == [] &&
+            @preview.to_remove == []
+        }
+        class="text-secondary-1 text-sm"
+      >
         No changes — current group membership matches the rules.
       </p>
     </div>
@@ -279,10 +300,13 @@ defmodule Web.GroupLive do
 
   defp qualification_title(qualifications, d4h_qualification_id) do
     case Enum.find(qualifications, &(&1.d4h_qualification_id == d4h_qualification_id)) do
-      nil -> "Unknown (#{d4h_qualification_id})"
+      nil -> "Deleted in D4H (#{d4h_qualification_id})"
       q -> q.title
     end
   end
+
+  defp qualification_known?(qualifications, d4h_qualification_id),
+    do: Enum.any?(qualifications, &(&1.d4h_qualification_id == d4h_qualification_id))
 
   defp find_qualification_d4h_id(qualifications, id) do
     qual = Enum.find(qualifications, &(to_string(&1.id) == to_string(id)))

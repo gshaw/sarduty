@@ -60,14 +60,19 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 ## Where the copy drifts
 
-- **Only attendance is ever deleted.** Attendance rows D4H no longer returns are removed
-  at the end of that stage. Members, activities, qualifications, awards, groups, and group
-  memberships that are deleted in D4H **stay** in SAR Duty. This is why #18 sees deleted
-  qualifications.
+- **Attendance, qualifications, awards, groups, and group memberships are deleted** when
+  D4H stops returning them, at the end of each one's stage. A deleted qualification takes
+  its awards with it, and a deleted group its memberships.
+  [StaleRows](../lib/app/operation/refresh_d4h_data/stale_rows.ex) finds the rows, always
+  within one team.
+- **Members and activities are never deleted.** A member deleted in D4H keeps their
+  contact details here. Attendance and tax credit letters point at them.
+- Group rule clauses are never deleted by the sync. A clause for a deleted group is left
+  unused; a clause naming a deleted qualification shows a warning on the group page.
 - **A short fetch fails the refresh.** Every D4H list response has a `totalSize`. The
   adapter pages until the rows add up to it, and raises `D4H.Error` if a page comes back
-  empty first, so the delete never runs on a partial list. Nothing local points at
-  attendance, so a row deleted by mistake loses nothing and the next refresh restores it.
+  empty first, so the delete never runs on a partial list. Nothing local points at the
+  deleted rows, so a row deleted by mistake loses nothing and the next refresh restores it.
   One gap remains: D4H pages by offset, so a row deleted in D4H mid-refresh shifts the
   next one out of view, and that row is gone until the next refresh.
 - The team's name and time zone are copied when the team is created and when an admin

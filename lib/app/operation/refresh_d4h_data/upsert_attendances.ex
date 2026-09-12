@@ -6,6 +6,7 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Operation.RefreshD4HData.Progress
+  alias App.Operation.RefreshD4HData.StaleRows
   alias App.Repo
 
   require Logger
@@ -85,26 +86,14 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   end
 
   defp delete_stale_attendances(team_id, synced_d4h_ids) do
-    local_d4h_ids =
-      team_id
-      |> team_attendances()
-      |> select([a], a.d4h_attendance_id)
-      |> Repo.all()
-      |> MapSet.new()
-
-    stale_d4h_ids = MapSet.difference(local_d4h_ids, synced_d4h_ids)
-
-    {count, _} =
-      team_id
-      |> team_attendances()
-      |> where([a], a.d4h_attendance_id in ^MapSet.to_list(stale_d4h_ids))
-      |> Repo.delete_all()
-
-    Logger.info("Deleted #{count} stale attendance records for team #{team_id}")
-  end
-
-  defp team_attendances(team_id) do
     team_member_ids = from(m in Member, where: m.team_id == ^team_id, select: m.id)
-    where(Attendance, [a], a.member_id in subquery(team_member_ids))
+
+    stale_ids =
+      Attendance
+      |> where([a], a.member_id in subquery(team_member_ids))
+      |> StaleRows.ids(:d4h_attendance_id, synced_d4h_ids)
+
+    {count, _} = Attendance |> where([a], a.id in ^stale_ids) |> Repo.delete_all()
+    Logger.info("Deleted #{count} stale attendance records for team #{team_id}")
   end
 end

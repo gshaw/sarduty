@@ -23,12 +23,12 @@ defmodule Web.GroupLiveTest do
     other_clause_qualification =
       group_rule_clause_qualification_fixture(other_clause, qualification_fixture(other_team))
 
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/groups/#{group.id}")
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/groups/#{group.id}")
 
     %{
+      conn: conn,
+      path: ~p"/#{team.subdomain}/groups/#{group.id}",
       lv: lv,
       qualification: qualification,
       clause: clause,
@@ -64,6 +64,17 @@ defmodule Web.GroupLiveTest do
     other_id = ctx.other_clause_qualification.id
     crash(ctx.lv, "remove-qualification", %{"qualification-id" => other_id})
     assert Repo.get(GroupRuleClauseQualification, other_id)
+  end
+
+  test "a rule naming a qualification deleted in D4H shows a warning instead of changes", ctx do
+    GroupRuleClauseQualification.insert!(%{
+      group_rule_clause_id: ctx.clause.id,
+      d4h_qualification_id: System.unique_integer([:positive])
+    })
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+    assert has_element?(lv, "#rule-broken")
   end
 
   # A miss raises and takes the LiveView down, as a 404 would on a page load.

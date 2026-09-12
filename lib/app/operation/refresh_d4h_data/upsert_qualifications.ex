@@ -1,7 +1,14 @@
 defmodule App.Operation.RefreshD4HData.UpsertQualifications do
+  import Ecto.Query
+
   alias App.Adapter.D4H
+  alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Operation.RefreshD4HData.Progress
+  alias App.Operation.RefreshD4HData.StaleRows
+  alias App.Repo
+
+  require Logger
 
   @chunk_size 100
 
@@ -19,7 +26,20 @@ defmodule App.Operation.RefreshD4HData.UpsertQualifications do
         Progress.add_page(progress_acc, Enum.count(chunk))
       end)
 
+    delete_stale(team.id, MapSet.new(d4h_qualifications, & &1.d4h_qualification_id))
     {total_count, progress}
+  end
+
+  # A qualification deleted in D4H takes its awards with it.
+  def delete_stale(team_id, synced_d4h_ids) do
+    stale_ids =
+      Qualification
+      |> where([q], q.team_id == ^team_id)
+      |> StaleRows.ids(:d4h_qualification_id, synced_d4h_ids)
+
+    MemberQualificationAward |> where([a], a.qualification_id in ^stale_ids) |> Repo.delete_all()
+    {count, _} = Qualification |> where([q], q.id in ^stale_ids) |> Repo.delete_all()
+    Logger.info("Deleted #{count} stale qualifications for team #{team_id}")
   end
 
   defp upsert_qualification(team, d4h_qualification) do

@@ -73,6 +73,9 @@ defmodule App.Model.Member do
     |> Repo.all()
   end
 
+  # D4H sets endsAt when a member retires. Takes any map with left_at.
+  def current?(%{left_at: left_at}, now), do: is_nil(left_at) or DateTime.after?(left_at, now)
+
   def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
   def get_by(params), do: Repo.get_by(Member, params)
 

@@ -23,11 +23,7 @@ defmodule Web.QualificationLive do
     # Awards are already ordered by member name asc, starts_at desc.
     {active_awards, expired_awards} =
       awards
-      |> Enum.split_with(fn award ->
-        started = is_nil(award.starts_at) or DateTime.compare(award.starts_at, now) != :gt
-        not_ended = is_nil(award.ends_at) or DateTime.compare(award.ends_at, now) == :gt
-        started and not_ended
-      end)
+      |> Enum.split_with(&MemberQualificationAward.active?(&1, now))
 
     # Keep only the most recent award per member in each section
     active_awards = dedup_by_member(active_awards)
