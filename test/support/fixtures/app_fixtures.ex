@@ -35,6 +35,15 @@ defmodule App.DataFixtures do
     Team.insert!(params)
   end
 
+  # Call from a test: the file is removed when the test exits.
+  def team_logo_fixture(team) do
+    path = Team.logo_path(team.subdomain)
+    path |> Path.dirname() |> File.mkdir_p!()
+    File.write!(path, "png bytes")
+    ExUnit.Callbacks.on_exit(fn -> File.rm(path) end)
+    path
+  end
+
   def user_with_team_fixture(attrs \\ %{}) do
     user = AccountsFixtures.user_fixture()
     team = team_fixture(Map.get(attrs, :team, %{}))

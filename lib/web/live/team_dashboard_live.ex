@@ -16,6 +16,7 @@ defmodule Web.TeamDashboardLive do
       socket
       |> assign(page_title: current_team.name)
       |> assign(view_data: view_data)
+      |> assign(has_logo: Team.logo_file(current_team.subdomain) != nil)
 
     {:ok, socket}
   end
@@ -24,7 +25,13 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <h1 class="title-hero mb-p flex items-center justify-between">
       {@current_team.name}
-      <img src={~p"/#{@current_team.subdomain}/image"} class="h-32" alt="Team logo" />
+      <img
+        :if={@has_logo}
+        id="team-logo"
+        src={~p"/#{@current_team.subdomain}/image"}
+        class="h-32"
+        alt="Team logo"
+      />
     </h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -134,7 +141,8 @@ defmodule Web.TeamDashboardLive do
       {:noreply,
        socket
        |> assign(current_team: updated_team)
-       |> assign(view_data: view_data)}
+       |> assign(view_data: view_data)
+       |> assign(has_logo: Team.logo_file(updated_team.subdomain) != nil)}
     else
       {:noreply, socket}
     end
