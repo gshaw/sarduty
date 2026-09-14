@@ -17,8 +17,9 @@ config :sarduty, Web.Endpoint,
     hosts: ["localhost", "127.0.0.1"]
   ]
 
-# Configure Swoosh API Client
-config :swoosh, api_client: Swoosh.ApiClient.Req
+# Swoosh's API client is only for its built-in adapters. App.Adapter.CloudflareEmail
+# calls Req itself.
+config :swoosh, api_client: false
 
 # Disable Swoosh Local Memory Storage
 config :swoosh, local: false

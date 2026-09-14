@@ -51,8 +51,9 @@
   fresh is in [docs/d4h-sync.md](docs/d4h-sync.md).
 - **Mapbox**: geocoding and driving distances for the mileage report, and the static map
   on the activity page.
-- **ZeptoMail** through Swoosh: mail in production. Dev uses the local mailbox at
-  `/dev/mailbox`.
+- **Cloudflare Email Sending** through Swoosh, with our own adapter in
+  [lib/app/adapter/cloudflare_email.ex](lib/app/adapter/cloudflare_email.ex): mail in
+  production. Dev uses the local mailbox at `/dev/mailbox`.
 - **Litestream to Tigris**: continuous SQLite backup.
 - **MCP**: off. `Web.MCPController` has no route until teams can opt in with their own
   tokens (#28). Don't route it again without that.

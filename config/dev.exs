@@ -86,11 +86,11 @@ config :phoenix_live_view,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
 
-if System.get_env("ZEPTO_MAIL_KEY") do
+if System.get_env("CLOUDFLARE_EMAIL_TOKEN") do
   config :swoosh, local: false
-  config :swoosh, api_client: Swoosh.ApiClient.Req
 
   config :sarduty, App.Mailer,
-    adapter: Swoosh.Adapters.ZeptoMail,
-    api_key: System.fetch_env!("ZEPTO_MAIL_KEY")
+    adapter: App.Adapter.CloudflareEmail,
+    account_id: System.fetch_env!("CLOUDFLARE_ACCOUNT_ID"),
+    api_token: System.fetch_env!("CLOUDFLARE_EMAIL_TOKEN")
 end
