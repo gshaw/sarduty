@@ -15,6 +15,7 @@ defmodule Web.AdminDashboardLive do
       socket
       |> assign(page_title: "Admin")
       |> assign(teams: teams)
+      |> assign(now: DateTime.utc_now())
 
     {:ok, socket}
   end
@@ -52,8 +53,18 @@ defmodule Web.AdminDashboardLive do
             {user.email}
             <.badge :if={key_badge(team, user) == :refresh} kind={:primary}>Refresh key</.badge>
             <.badge :if={key_badge(team, user) == :personal}>D4H key</.badge>
+            <span
+              :if={user.last_seen_at}
+              class="text-sm text-secondary-1 whitespace-nowrap"
+              title={Service.Format.datetime_short(user.last_seen_at, team.timezone)}
+            >
+              · {Service.Format.days_ago(user.last_seen_at, @now, team.timezone)}
+            </span>
           </li>
         </ul>
+      </:col>
+      <:col :let={team} label="Last seen" class="whitespace-nowrap">
+        <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @now)}</span>
       </:col>
       <:col :let={team} label="Team key" class="whitespace-nowrap">
         {if ResolveAccessKey.key?(team.d4h_access_key), do: "Yes", else: "No"}
@@ -78,6 +89,12 @@ defmodule Web.AdminDashboardLive do
     </.table>
 
     <dl id="key-notes" class="mt-p">
+      <dt>Last seen</dt>
+      <dd>
+        The last time someone on the team opened a team page. Admin visits don't count.
+        Dates before mid-September 2026 are last logins, so the real last visit can be up
+        to 60 days later.
+      </dd>
       <dt>Team key</dt>
       <dd>
         The team's own D4H key, saved in Team Settings. The refresh uses it when there is one.
@@ -146,6 +163,15 @@ defmodule Web.AdminDashboardLive do
       ResolveAccessKey.key?(user.d4h_access_key) -> :personal
       true -> nil
     end
+  end
+
+  # The most recent visit by anyone on the team.
+  defp team_last_seen(team, now) do
+    team.users
+    |> Enum.map(& &1.last_seen_at)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(DateTime, fn -> nil end)
+    |> Service.Format.days_ago(now, team.timezone)
   end
 
   defp format_refreshed_at(team) do

@@ -16,6 +16,8 @@ defmodule App.Accounts.User do
     field :confirmed_at, :naive_datetime
     field :d4h_access_key, EncryptedString, redact: true
     field :is_admin, :boolean, default: false
+    # When the user last opened a team page, to the hour. See App.Operation.RecordUserSeen.
+    field :last_seen_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end

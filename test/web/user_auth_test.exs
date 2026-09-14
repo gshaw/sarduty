@@ -188,6 +188,43 @@ defmodule Web.UserAuthTest do
     end
   end
 
+  describe "last seen" do
+    setup do
+      %{user: user, team: team} = App.DataFixtures.user_with_team_fixture()
+      %{user: App.Repo.preload(user, :team), team: team}
+    end
+
+    test "opening a team LiveView records the visit", %{user: user, team: team} do
+      socket = %LiveView.Socket{assigns: %{__changed__: %{}, current_user: user}}
+      params = %{"subdomain" => team.subdomain}
+
+      {:cont, _socket} =
+        UserAuth.on_mount(:ensure_authorized_team_subdomain, params, %{}, socket)
+
+      assert Accounts.get_user!(user.id).last_seen_at
+    end
+
+    test "opening a team controller page records the visit", %{conn: conn, user: user, team: team} do
+      conn
+      |> assign(:current_user, user)
+      |> Map.put(:path_params, %{"subdomain" => team.subdomain})
+      |> UserAuth.require_authorized_team_subdomain([])
+
+      assert Accounts.get_user!(user.id).last_seen_at
+    end
+
+    test "an admin's visit is not recorded", %{conn: conn, team: team} do
+      admin = user_fixture() |> Ecto.Changeset.change(is_admin: true) |> App.Repo.update!()
+
+      conn
+      |> assign(:current_user, admin)
+      |> Map.put(:path_params, %{"subdomain" => team.subdomain})
+      |> UserAuth.require_authorized_team_subdomain([])
+
+      refute Accounts.get_user!(admin.id).last_seen_at
+    end
+  end
+
   describe "require_authenticated_user/2" do
     test "redirects if user is not authenticated", %{conn: conn} do
       conn = conn |> fetch_flash() |> UserAuth.require_authenticated_user([])

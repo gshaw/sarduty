@@ -6,6 +6,7 @@ defmodule Web.UserAuth do
 
   alias App.Accounts
   alias App.Model.Team
+  alias App.Operation.RecordUserSeen
 
   # Make the remember me cookie valid for 60 days.
   # If you want bump or reduce this value, also change
@@ -197,6 +198,7 @@ defmodule Web.UserAuth do
         end
 
       current_user.team && current_user.team.subdomain == params["subdomain"] ->
+        RecordUserSeen.call(current_user)
         {:cont, Phoenix.Component.assign(socket, :current_team, current_user.team)}
 
       true ->
@@ -259,6 +261,7 @@ defmodule Web.UserAuth do
         end
 
       current_user.team && current_user.team.subdomain == subdomain ->
+        RecordUserSeen.call(current_user)
         assign(conn, :current_team, current_user.team)
 
       true ->
