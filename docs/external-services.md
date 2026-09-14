@@ -23,11 +23,21 @@ page. The token is a query parameter.
 
 ## Mail
 
-Swoosh. Production uses ZeptoMail; dev uses the local mailbox at `/dev/mailbox` unless
-`ZEPTO_MAIL_KEY` is set in dev too; tests use `Swoosh.Adapters.Test`. Mail comes from
+Swoosh. Production sends through Cloudflare Email Sending's REST API with
+[App.Adapter.CloudflareEmail](../lib/app/adapter/cloudflare_email.ex), since Swoosh has
+no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox` unless both
+variables below are set in dev too; tests use `Swoosh.Adapters.Test`. Mail comes from
 `noreply@sarduty.com`: account emails, and tax credit letters with the PDF attached.
 
-- `ZEPTO_MAIL_KEY` — required in production.
+- `CLOUDFLARE_ACCOUNT_ID` — required in production.
+- `CLOUDFLARE_EMAIL_TOKEN` — required in production. An account API token with only the
+  **Email Sending: Edit** permission.
+
+sarduty.com is onboarded under **Email Service > Email Sending** in the Cloudflare
+dashboard, which added and locked the DNS records that authenticate its mail. Sending
+needs the Workers Paid plan: 3,000 emails a month are included. The dashboard's
+**Activity log** shows each message and whether it was delivered or bounced. A message
+over 5 MiB, attachments included, is refused.
 
 Creating a tax credit letter emails it from a `Task.start`, so the "Email sent" flash
 appears before delivery is known.

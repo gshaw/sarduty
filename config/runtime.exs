@@ -51,6 +51,7 @@ if config_env() == :prod do
     ]
 
   config :sarduty, App.Mailer,
-    adapter: Swoosh.Adapters.ZeptoMail,
-    api_key: System.fetch_env!("ZEPTO_MAIL_KEY")
+    adapter: App.Adapter.CloudflareEmail,
+    account_id: System.fetch_env!("CLOUDFLARE_ACCOUNT_ID"),
+    api_token: System.fetch_env!("CLOUDFLARE_EMAIL_TOKEN")
 end
