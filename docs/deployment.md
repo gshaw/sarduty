@@ -17,6 +17,16 @@ From `main`, after CI is green. The [Dockerfile](../Dockerfile) builds a release
 starting, so test migrations against a copy of production data when they touch existing
 rows.
 
+For a PR with a migration:
+
+- Prefer additive changes: a new table, or a nullable column. The previous release ignores
+  what it doesn't know, so going back to it needs no down migration.
+- Run it up, down, and up again on a copy of the data (`sqlite3 <db> ".backup <copy>"`),
+  and load the changed schema through Ecto after each up.
+- To go back, deploy the previous release first. Roll the migration back afterwards, and
+  only if you have to, with `App.Release.rollback(App.Repo, <previous version>)` through
+  `bin/sarduty eval`. The other order leaves the new code reading a column that is gone.
+
 ## Database and backups
 
 - **Litestream** replicates the database continuously to Tigris

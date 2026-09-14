@@ -44,6 +44,29 @@ defmodule Web.AdminDashboardLiveTest do
     assert has_element?(lv, "#key-notes", "Refresh key")
   end
 
+  test "shows when each team and contact was last seen", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    admin = make_admin(admin)
+
+    %{user: recent, team: team} = user_with_team_fixture()
+    earlier = App.AccountsFixtures.user_fixture()
+    {:ok, earlier} = User.update(earlier, %{team_id: team.id})
+    unused = team_fixture()
+
+    now = DateTime.utc_now(:second)
+    seen(recent, now)
+    seen(earlier, DateTime.add(now, -130, :day))
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(admin)
+      |> live(~p"/admin")
+
+    assert has_element?(lv, "#team-#{team.id}-last-seen", "Today")
+    assert render(element(lv, "#team-#{team.id} li", earlier.email)) =~ "4 months ago"
+    refute has_element?(lv, "#team-#{unused.id}-last-seen", ~r/\S/)
+  end
+
   test "shows why a team's refresh failed", %{conn: conn} do
     %{user: admin, team: team} = user_with_team_fixture()
     admin = make_admin(admin)
@@ -104,6 +127,12 @@ defmodule Web.AdminDashboardLiveTest do
     conn = get(conn, ~p"/admin")
 
     assert redirected_to(conn) == ~p"/login"
+  end
+
+  defp seen(user, at) do
+    user
+    |> Ecto.Changeset.change(%{last_seen_at: at})
+    |> App.Repo.update!()
   end
 
   defp make_admin(user) do

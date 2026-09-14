@@ -28,6 +28,27 @@ defmodule Service.Format do
     |> Calendar.strftime(format, user_options)
   end
 
+  @doc """
+  How long before `now` a datetime was, counted in calendar days in `timezone`: "Today",
+  "Yesterday", "12 days ago", then "4 months ago".
+  """
+  def days_ago(nil, _now, _timezone), do: nil
+
+  def days_ago(datetime, now, timezone) do
+    seen_on = local_date(datetime, timezone)
+    days = now |> local_date(timezone) |> Date.diff(seen_on)
+
+    cond do
+      days <= 0 -> "Today"
+      days == 1 -> "Yesterday"
+      days < 45 -> "#{days} days ago"
+      true -> "#{months_or_years_distance(datetime, now)} ago"
+    end
+  end
+
+  defp local_date(datetime, timezone),
+    do: datetime |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+
   def months_or_years_ago(date) do
     months_or_years_distance(date, DateTime.utc_now())
   end
