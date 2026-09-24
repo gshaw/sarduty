@@ -47,6 +47,19 @@ defmodule Web.GroupLiveTest do
     assert Repo.get(GroupRuleClause, ctx.other_clause.id)
   end
 
+  test "rename-clause names this group's clause but not another team's", ctx do
+    params = %{"name" => "  First Aid  "}
+
+    render_change(ctx.lv, "rename-clause", Map.put(params, "clause-id", ctx.clause.id))
+    assert Repo.get(GroupRuleClause, ctx.clause.id).name == "First Aid"
+
+    render_change(ctx.lv, "rename-clause", %{"clause-id" => ctx.clause.id, "name" => ""})
+    assert Repo.get(GroupRuleClause, ctx.clause.id).name == nil
+
+    crash(ctx.lv, "rename-clause", Map.put(params, "clause-id", ctx.other_clause.id))
+    assert Repo.get(GroupRuleClause, ctx.other_clause.id).name == nil
+  end
+
   test "add-qualification adds to this group's clause but not another team's", ctx do
     params = %{"qualification-id" => ctx.qualification.id}
 
@@ -91,6 +104,18 @@ defmodule Web.GroupLiveTest do
     assert has_element?(lv, "#rule-sentence", "Members must hold #{ctx.qualification.title}.")
     assert has_element?(lv, "#would-remove-#{ended.id}", "expired Mar 31, 2026")
     assert has_element?(lv, "#would-remove", "No #{ctx.qualification.title} on record")
+  end
+
+  test "a named clause reads by its name in the rule and the removals", ctx do
+    group_rule_clause_qualification_fixture(ctx.clause, ctx.qualification)
+    GroupRuleClause.rename(ctx.clause, "First Aid")
+    member = member_fixture(ctx.team, %{name: "Jordan Lee"})
+    group_member_fixture(ctx.group, member)
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+    assert has_element?(lv, "#rule-sentence", "Members must hold First Aid.")
+    assert has_element?(lv, "#would-remove-#{member.id}", "No First Aid on record")
   end
 
   # A miss raises and takes the LiveView down, as a 404 would on a page load.

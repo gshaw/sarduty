@@ -30,7 +30,8 @@ defmodule App.Operation.BuildGroupRulePreview do
       [] ->
         awards = list_awards(team.id, List.flatten(clause_qualification_ids))
         plan = plan(clause_qualification_ids, awards, current_members, now)
-        describe = &describe(&1, titles, team.timezone)
+        names = clause_names(clauses)
+        describe = &describe(&1, titles, team.timezone, names)
         build_preview(plan, describe, now)
 
       missing ->
@@ -50,11 +51,16 @@ defmodule App.Operation.BuildGroupRulePreview do
     call(clauses, current_members, team, now)
   end
 
-  def clause_qualification_ids(clauses) do
-    Enum.map(clauses, fn clause ->
-      Enum.map(clause.group_rule_clause_qualifications, & &1.d4h_qualification_id)
-    end)
+  def clause_qualification_ids(clauses), do: Enum.map(clauses, &qualification_ids/1)
+
+  # Keyed by the clause's qualification ids, which is what a `{:missing, ids}` reason
+  # carries.
+  def clause_names(clauses) do
+    for clause <- clauses, clause.name, into: %{}, do: {qualification_ids(clause), clause.name}
   end
+
+  defp qualification_ids(clause),
+    do: Enum.map(clause.group_rule_clause_qualifications, & &1.d4h_qualification_id)
 
   # A qualification deleted in D4H, or deleted and recreated with a new id, has no
   # local row. A clause naming only that would match nobody and remove everyone, so
@@ -180,22 +186,31 @@ defmodule App.Operation.BuildGroupRulePreview do
     |> Enum.min_by(& &1.ends_at, DateTime, fn -> nil end)
   end
 
-  @doc "A reason from `plan/4` as a sentence for the page and the change log."
-  def describe({:left, left_at}, _titles, timezone),
+  @doc """
+  A reason from `plan/4` as a sentence for the page and the change log. A missing
+  clause with a name in `clause_names` reads by that name.
+  """
+  def describe(reason, titles, timezone, clause_names \\ %{})
+
+  def describe({:left, left_at}, _titles, timezone, _clause_names),
     do: "Left the team #{Service.Format.date_short(left_at, timezone)}"
 
-  def describe({:missing, clause}, titles, _timezone),
-    do: "No #{Enum.map_join(clause, " or ", &title(titles, &1))} on record"
+  def describe({:missing, clause}, titles, _timezone, clause_names) do
+    case Map.fetch(clause_names, clause) do
+      {:ok, name} -> "No #{name} on record"
+      :error -> "No #{Enum.map_join(clause, " or ", &title(titles, &1))} on record"
+    end
+  end
 
-  def describe({:expired, qualification_id, ends_at}, titles, timezone),
+  def describe({:expired, qualification_id, ends_at}, titles, timezone, _clause_names),
     do:
       "#{title(titles, qualification_id)} expired #{Service.Format.date_short(ends_at, timezone)}"
 
-  def describe({:not_started, qualification_id, starts_at}, titles, timezone),
+  def describe({:not_started, qualification_id, starts_at}, titles, timezone, _clause_names),
     do:
       "#{title(titles, qualification_id)} starts #{Service.Format.date_short(starts_at, timezone)}"
 
-  def describe({:expires, qualification_id, ends_at}, titles, timezone),
+  def describe({:expires, qualification_id, ends_at}, titles, timezone, _clause_names),
     do:
       "#{title(titles, qualification_id)} expires #{Service.Format.date_short(ends_at, timezone)}"
 

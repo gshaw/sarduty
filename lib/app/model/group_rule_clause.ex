@@ -1,6 +1,7 @@
 defmodule App.Model.GroupRuleClause do
   use App, :model
 
+  alias App.Field.TrimmedString
   alias App.Model.Group
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
@@ -14,6 +15,7 @@ defmodule App.Model.GroupRuleClause do
       on_delete: :delete_all
 
     field :d4h_group_id, :integer
+    field :name, TrimmedString
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -23,8 +25,10 @@ defmodule App.Model.GroupRuleClause do
     data
     |> cast(params, [
       :team_id,
-      :d4h_group_id
+      :d4h_group_id,
+      :name
     ])
+    |> validate_length(:name, max: 60)
     |> validate_required([
       :team_id,
       :d4h_group_id
@@ -50,6 +54,12 @@ defmodule App.Model.GroupRuleClause do
       team_id: group.team_id,
       d4h_group_id: group.d4h_group_id
     )
+  end
+
+  def rename(%GroupRuleClause{} = clause, name) do
+    clause
+    |> build_changeset(%{name: name})
+    |> Repo.update()
   end
 
   def delete!(%GroupRuleClause{} = clause), do: Repo.delete!(clause)
