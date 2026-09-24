@@ -8,7 +8,8 @@ drive a preview on the group page; applying them to D4H is #20.
 Rules are in conjunctive normal form: `(A OR B) AND (C OR D)`.
 
 - A [GroupRuleClause](../lib/app/model/group_rule_clause.ex) is one OR group, attached to
-  a group by `d4h_group_id`.
+  a group by `d4h_group_id`. It may have a name, like "First Aid". The rule sentence and
+  the "No … on record" reason use the name instead of listing every qualification.
 - A [GroupRuleClauseQualification](../lib/app/model/group_rule_clause_qualification.ex)
   is one qualification in a clause, by `d4h_qualification_id`.
 

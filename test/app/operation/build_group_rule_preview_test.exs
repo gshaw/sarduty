@@ -174,4 +174,22 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
     assert describe.({:expired, @rope, ~U[2026-04-01 03:00:00Z]}) == "Rope expired Mar 31, 2026"
     assert describe.({:left, ~U[2026-02-12 20:00:00Z]}) == "Left the team Feb 12, 2026"
   end
+
+  test "a missing clause with a name reads by its name" do
+    clauses = [clause("Water", [@rope, @swiftwater]), clause(nil, [@first_aid])]
+    names = BuildGroupRulePreview.clause_names(clauses)
+    titles = %{@rope => "Rope", @swiftwater => "Swiftwater", @first_aid => "First Aid"}
+    describe = &BuildGroupRulePreview.describe(&1, titles, "America/Vancouver", names)
+
+    assert describe.({:missing, [@rope, @swiftwater]}) == "No Water on record"
+    assert describe.({:missing, [@first_aid]}) == "No First Aid on record"
+    assert describe.({:expired, @rope, ~U[2026-04-01 03:00:00Z]}) == "Rope expired Mar 31, 2026"
+  end
+
+  defp clause(name, qualification_ids) do
+    %{
+      name: name,
+      group_rule_clause_qualifications: Enum.map(qualification_ids, &%{d4h_qualification_id: &1})
+    }
+  end
 end

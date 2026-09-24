@@ -65,6 +65,14 @@ defmodule Web.GroupLive do
     {:noreply, reload(socket)}
   end
 
+  def handle_event("rename-clause", %{"clause-id" => clause_id, "name" => name}, socket) do
+    socket.assigns.group
+    |> GroupRuleClause.find!(clause_id)
+    |> GroupRuleClause.rename(name)
+
+    {:noreply, reload(socket)}
+  end
+
   def handle_event(
         "add-qualification",
         %{"clause-id" => clause_id, "qualification-id" => qual_id},
@@ -167,7 +175,26 @@ defmodule Web.GroupLive do
 
     <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
       <div class="flex justify-between items-center mb-p05">
-        <h3 class="font-semibold">Clause — member must hold ANY of:</h3>
+        <form
+          id={"clause-name-form-#{clause.id}"}
+          phx-change="rename-clause"
+          phx-submit="rename-clause"
+          class="flex items-center gap-2"
+        >
+          <input type="hidden" name="clause-id" value={clause.id} />
+          <input
+            type="text"
+            name="name"
+            id={"clause-name-#{clause.id}"}
+            value={clause.name}
+            placeholder="Name, e.g. First Aid"
+            aria-label="Clause name"
+            maxlength="60"
+            phx-debounce="blur"
+            class="rounded border shadow-sm text-sm font-semibold"
+          />
+          <h3 class="font-semibold">— member must hold ANY of:</h3>
+        </form>
         <.button
           variant={:danger}
           size={:sm}
@@ -395,8 +422,9 @@ defmodule Web.GroupLive do
     |> Repo.all()
   end
 
-  # "Members must hold A and one of B or C." Titles come from D4H, so each is
-  # escaped before it goes inside <strong>.
+  # "Members must hold A and one of B or C", or "First Aid" for a named clause. Titles
+  # come from D4H and names from users, so each is escaped before it goes inside
+  # <strong>.
   defp rule_sentence([], _qualifications), do: "No rules yet."
 
   defp rule_sentence(clauses, qualifications) do
@@ -404,24 +432,26 @@ defmodule Web.GroupLive do
       Enum.map(clauses, fn clause ->
         titles =
           Enum.map(clause.group_rule_clause_qualifications, fn cq ->
-            title = qualification_title(qualifications, cq.d4h_qualification_id)
-
-            [
-              "<strong>",
-              title |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(),
-              "</strong>"
-            ]
+            strong(qualification_title(qualifications, cq.d4h_qualification_id))
           end)
 
-        case titles do
-          [] -> "(an empty clause)"
-          [title] -> title
-          titles -> ["one of ", join_or(titles)]
+        case {clause.name, titles} do
+          {_name, []} -> "(an empty clause)"
+          {nil, [title]} -> title
+          {nil, titles} -> ["one of ", join_or(titles)]
+          {name, _titles} -> strong(name)
         end
       end)
 
     Phoenix.HTML.raw(["Members must hold ", Enum.intersperse(clause_phrases, " and "), "."])
   end
+
+  defp strong(text),
+    do: [
+      "<strong>",
+      text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(),
+      "</strong>"
+    ]
 
   defp join_or(titles) do
     {init, [last]} = Enum.split(titles, -1)
