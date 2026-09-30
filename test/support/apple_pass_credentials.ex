@@ -19,4 +19,13 @@ defmodule App.ApplePassCredentials do
     File.rm_rf!(dir)
     credentials
   end
+
+  @doc "Turns on Apple Wallet passes with a throwaway certificate until the test exits."
+  def configure do
+    config =
+      Map.merge(generate(), %{pass_type_id: "pass.com.sarduty.member-card", team_id: "TEAM123"})
+
+    Application.put_env(:sarduty, :apple_pass, Map.to_list(config))
+    ExUnit.Callbacks.on_exit(fn -> Application.put_env(:sarduty, :apple_pass, []) end)
+  end
 end

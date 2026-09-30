@@ -7,6 +7,7 @@ defmodule Web.MemberCardLive do
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Operation.BuildApplePass
+  alias App.Operation.EmailMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Operation.RevokeMemberCard
   alias App.Repo
@@ -32,6 +33,19 @@ defmodule Web.MemberCardLive do
     %{current_team: team, member: member} = socket.assigns
     {:ok, card} = IssueMemberCard.call(team, member, DateTime.utc_now())
     {:noreply, socket |> assign(:card, card) |> put_flash(:info, "Issued a new card.")}
+  end
+
+  def handle_event("email", _params, socket) do
+    %{current_team: team, member: member} = socket.assigns
+
+    socket =
+      case EmailMemberCard.call(team, member, DateTime.utc_now()) do
+        :ok -> put_flash(socket, :info, "Emailed the pass to #{member.email}.")
+        {:error, :no_email} -> put_flash(socket, :error, "#{member.name} has no email in D4H.")
+        {:error, _reason} -> put_flash(socket, :error, "The email didn't send. Try again.")
+      end
+
+    {:noreply, socket}
   end
 
   def handle_event("revoke", _params, socket) do
@@ -85,7 +99,17 @@ defmodule Web.MemberCardLive do
           ~p"/verify?#{[code: MemberCard.format_code(@card.code)]}"
         }>sarduty.com/verify</.a>.
       </p>
-      <p :if={BuildApplePass.configured?()} class="mt-p">
+      <p :if={BuildApplePass.configured?()} class="mt-p flex gap-2">
+        <.button
+          :if={@member.email}
+          id="email-pass"
+          variant={:primary}
+          phx-click="email"
+          phx-disable-with="Sending…"
+          data-confirm={"Email the Apple Wallet pass to #{@member.email}?"}
+        >
+          Email pass to member
+        </.button>
         <.button id="apple-pass" href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/pass"}>
           Download Apple Wallet pass
         </.button>
