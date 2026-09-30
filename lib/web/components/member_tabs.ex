@@ -4,7 +4,7 @@ defmodule Web.Components.MemberTabs do
   import Web.Components.A
 
   attr :member, :map, required: true
-  attr :active_tab, :atom, required: true, values: [:attendance, :qualifications, :groups]
+  attr :active_tab, :atom, required: true, values: [:attendance, :qualifications, :groups, :card]
 
   def member_tabs(assigns) do
     ~H"""
@@ -27,6 +27,12 @@ defmodule Web.Components.MemberTabs do
           current={@active_tab == :groups}
         >
           Groups
+        </.tab>
+        <.tab
+          navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}/card"}
+          current={@active_tab == :card}
+        >
+          ID Card
         </.tab>
       </nav>
     </div>
