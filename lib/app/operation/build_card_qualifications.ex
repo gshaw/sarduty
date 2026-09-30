@@ -64,7 +64,14 @@ defmodule App.Operation.BuildCardQualifications do
     %{name: name, status: :current, ends_at: ends_at}
   end
 
-  @doc "One line per qualification for a pass or a page: \"First Aid — expires Nov 2026\"."
+  @doc "The status alone, for a pass field labelled with the name: \"Expires Nov 2026\"."
+  def status_text(%{status: :not_current}, _timezone), do: "Not current"
+  def status_text(%{ends_at: nil}, _timezone), do: "No expiry"
+
+  def status_text(%{ends_at: ends_at}, timezone),
+    do: "Expires #{Service.Format.month_year(ends_at, timezone)}"
+
+  @doc "One line per qualification for a page: \"First Aid — expires Nov 2026\"."
   def describe(%{status: :not_current, name: name}, _timezone), do: "#{name} — not current"
   def describe(%{ends_at: nil, name: name}, _timezone), do: "#{name} — no expiry"
 

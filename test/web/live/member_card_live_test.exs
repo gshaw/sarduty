@@ -6,12 +6,24 @@ defmodule Web.MemberCardLiveTest do
   import Swoosh.TestAssertions
 
   alias App.Model.MemberCard
+  alias App.Operation.IssueMemberCard
   alias App.Repo
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
     %{conn: log_in_user(conn, user), team: team, member: member}
+  end
+
+  test "a member's first card gets their Wallet serial, and cards made before keep theirs",
+       %{team: team, member: member} do
+    {:ok, first} = IssueMemberCard.call(team, member, DateTime.utc_now())
+    assert first.serial_number == "member-#{member.id}"
+
+    other = member_fixture(team)
+    member_card_fixture(other, %{serial_number: "member-card-5"})
+    {:ok, replacement} = IssueMemberCard.call(team, other, DateTime.utc_now())
+    assert replacement.serial_number == "member-card-5"
   end
 
   test "issues a card", %{conn: conn, team: team, member: member} do

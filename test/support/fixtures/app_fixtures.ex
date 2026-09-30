@@ -212,7 +212,12 @@ defmodule App.DataFixtures do
   end
 
   def member_card_fixture(%Member{} = member, attrs \\ %{}) do
-    %MemberCard{team_id: member.team_id, member_id: member.id, code: MemberCard.generate_code()}
+    %MemberCard{
+      team_id: member.team_id,
+      member_id: member.id,
+      code: MemberCard.generate_code(),
+      serial_number: "member-#{member.id}"
+    }
     |> Map.merge(attrs)
     |> Repo.insert!()
   end

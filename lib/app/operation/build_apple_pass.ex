@@ -93,25 +93,22 @@ defmodule App.Operation.BuildApplePass do
           }
         ],
         backFields:
-          Enum.reject(
-            [
-              %{
-                key: "verify",
-                label: "How to check this card",
-                value:
-                  "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
-                    "Don't trust a link or a page you reached from the card."
-              },
-              qualifications_field(qualifications, team.timezone),
-              %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
-              %{
-                key: "issuer",
-                label: "Issued by",
-                value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
-              }
-            ],
-            &is_nil/1
-          )
+          List.flatten([
+            %{
+              key: "verify",
+              label: "How to check this card",
+              value:
+                "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
+                  "Don't trust a link or a page you reached from the card."
+            },
+            qualification_fields(qualifications, team.timezone),
+            %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
+            %{
+              key: "issuer",
+              label: "Issued by",
+              value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
+            }
+          ])
       }
     }
     |> drop_web_service(card.authentication_token)
@@ -131,14 +128,17 @@ defmodule App.Operation.BuildApplePass do
     |> Base.encode16(case: :lower)
   end
 
-  defp qualifications_field([], _timezone), do: nil
-
-  defp qualifications_field(qualifications, timezone) do
-    %{
-      key: "qualifications",
-      label: "Qualifications",
-      value: Enum.map_join(qualifications, "\n", &BuildCardQualifications.describe(&1, timezone))
-    }
+  # One field per qualification, labelled with its name. A single field with a line per
+  # qualification renders as a cramped table on the back.
+  defp qualification_fields(qualifications, timezone) do
+    for q <- qualifications do
+      %{
+        key: "qualification-#{q.name}",
+        label: q.name,
+        value: BuildCardQualifications.status_text(q, timezone),
+        changeMessage: "#{q.name}: %@"
+      }
+    end
   end
 
   defp status_text(card, now) do

@@ -6,12 +6,14 @@ defmodule App.Operation.IssueMemberCard do
   alias App.Repo
 
   @doc """
-  Gives the member a new card with a new code. Any card they had stops working, and
-  phones holding its pass are told to fetch the voided one.
+  Gives the member a new card with a new code and token, under their existing Wallet
+  serial number. Any card they had stops working, and phones holding its pass are told
+  to fetch the voided one. Adding the new pass replaces the old one in Wallet.
   """
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
     {:ok, {card, revoked}} =
       Repo.transaction(fn ->
+        serial_number = MemberCard.next_serial_number(team, member)
         revoked = MemberCard.revoke_all!(team, member, now)
 
         card =
@@ -20,6 +22,7 @@ defmodule App.Operation.IssueMemberCard do
             member_id: member.id,
             code: MemberCard.generate_code(),
             authentication_token: MemberCard.generate_authentication_token(),
+            serial_number: serial_number,
             pass_updated_at: now
           })
 
