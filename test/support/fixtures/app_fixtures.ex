@@ -8,6 +8,7 @@ defmodule App.DataFixtures do
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
   alias App.Model.Member
+  alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.TaxCreditLetter
@@ -202,6 +203,12 @@ defmodule App.DataFixtures do
       group_rule_clause_id: clause.id,
       d4h_qualification_id: qualification.d4h_qualification_id
     })
+  end
+
+  def member_card_fixture(%Member{} = member, attrs \\ %{}) do
+    %MemberCard{team_id: member.team_id, member_id: member.id, code: MemberCard.generate_code()}
+    |> Map.merge(attrs)
+    |> Repo.insert!()
   end
 
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do

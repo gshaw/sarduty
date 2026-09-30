@@ -81,6 +81,7 @@ The rules that are easy to break:
 
 - [d4h-sync.md](d4h-sync.md) — how D4H data reaches the database, and what is never deleted.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
+- [member-cards.md](member-cards.md) — member ID cards and the public `/verify` page.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
 - [deployment.md](deployment.md) — Fly, Litestream, migrations, backups, and changing production data.
 - [testing-strategy.md](testing-strategy.md) — what the test suite covers and why.

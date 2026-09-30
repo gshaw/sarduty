@@ -51,7 +51,10 @@ defmodule Web.Router do
       live "/login", UserLoginLive, :new
       live "/login/reset", UserForgotPasswordLive, :new
       live "/login/reset/:token", UserResetPasswordLive, :edit
+      live "/verify", VerifyLive
     end
+
+    get "/verify/:code/photo", MemberCardController, :photo
 
     post "/login", UserSessionController, :create
     delete "/logout", UserSessionController, :delete
@@ -92,6 +95,7 @@ defmodule Web.Router do
       live "/:subdomain/members/:id", MemberLive
       live "/:subdomain/members/:id/groups", MemberGroupsLive
       live "/:subdomain/members/:id/qualifications", MemberQualificationsLive
+      live "/:subdomain/members/:id/card", MemberCardLive
       live "/:subdomain/groups", GroupCollectionLive
       live "/:subdomain/groups/:id", GroupLive
       live "/:subdomain/groups/:id/review", GroupReviewLive
