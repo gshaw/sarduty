@@ -91,9 +91,20 @@ defmodule App.Operation.BuildApplePassTest do
     refute card() |> BuildApplePass.pass_json([], @config, @now) |> Map.has_key?(:webServiceURL)
   end
 
-  test "a cancelled card says so" do
+  test "a cancelled card says so and shows no QR code" do
     json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json([], @config, @now)
     assert [%{value: "Cancelled"} | _] = json.generic.secondaryFields
+    assert [%{label: "CARD CANCELLED", value: "Alex Example"}] = json.generic.primaryFields
+    refute Map.has_key?(json, :barcodes)
+  end
+
+  test "a member who left gets no QR code either" do
+    card = card()
+    card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
+    json = BuildApplePass.pass_json(card, [], @config, @now)
+
+    assert [%{label: "NOT AN ACTIVE MEMBER"}] = json.generic.primaryFields
+    refute Map.has_key?(json, :barcodes)
   end
 
   test "the fingerprint ignores the last-refreshed date but not the rest" do

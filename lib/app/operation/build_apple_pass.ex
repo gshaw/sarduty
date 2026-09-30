@@ -65,19 +65,12 @@ defmodule App.Operation.BuildApplePass do
       labelColor: @label_color,
       sharingProhibited: true,
       voided: MemberCard.status(card, now) == :revoked,
-      barcodes: [
-        %{
-          format: "PKBarcodeFormatQR",
-          message: card.code,
-          messageEncoding: "iso-8859-1",
-          altText: code
-        }
-      ],
+      barcodes: barcodes(card, code, now),
       generic: %{
         # No header fields: they share the top row with the team name, which Wallet
         # then cuts short.
         primaryFields: [
-          %{key: "name", label: "MEMBER", value: member.name}
+          %{key: "name", label: name_label(card, now), value: member.name}
         ],
         secondaryFields: [
           %{
@@ -117,6 +110,7 @@ defmodule App.Operation.BuildApplePass do
       }
     }
     |> drop_web_service(card.authentication_token)
+    |> Map.reject(fn {key, value} -> key == :barcodes and value == [] end)
   end
 
   @doc """
@@ -143,6 +137,31 @@ defmodule App.Operation.BuildApplePass do
         value: BuildCardQualifications.status_text(q, timezone),
         changeMessage: "#{q.name}: %@"
       }
+    end
+  end
+
+  # Only an active card shows its QR code. Wallet dims a voided pass's code, which still
+  # looks usable, so a card that can't pass a check shows none, and says why up top.
+  defp barcodes(card, code, now) do
+    if MemberCard.status(card, now) == :active do
+      [
+        %{
+          format: "PKBarcodeFormatQR",
+          message: card.code,
+          messageEncoding: "iso-8859-1",
+          altText: code
+        }
+      ]
+    else
+      []
+    end
+  end
+
+  defp name_label(card, now) do
+    case MemberCard.status(card, now) do
+      :active -> "MEMBER"
+      :inactive -> "NOT AN ACTIVE MEMBER"
+      :revoked -> "CARD CANCELLED"
     end
   end
 
