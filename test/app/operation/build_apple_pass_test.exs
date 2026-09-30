@@ -17,7 +17,7 @@ defmodule App.Operation.BuildApplePassTest do
     }
 
     member = %Member{name: "Alex Example", joined_at: ~U[2019-03-12 08:00:00Z], team: team}
-    struct(%MemberCard{id: 7, code: "K7Q4M2XA", member: member}, attrs)
+    struct(%MemberCard{id: 7, code: "K7Q4M2XA", serial_number: "member-3", member: member}, attrs)
   end
 
   test "shows the member, their status, and how long they've been a member" do
@@ -25,7 +25,7 @@ defmodule App.Operation.BuildApplePassTest do
 
     assert json.passTypeIdentifier == "pass.com.sarduty.member-card"
     assert json.teamIdentifier == "TEAM123"
-    assert json.serialNumber == "member-card-7"
+    assert json.serialNumber == "member-3"
     assert json.voided == false
     refute Map.has_key?(json.generic, :headerFields)
     assert [%{value: "Alex Example"}] = json.generic.primaryFields
@@ -69,11 +69,14 @@ defmodule App.Operation.BuildApplePassTest do
     ]
 
     back = BuildApplePass.pass_json(card(), qualifications, @config, @now).generic.backFields
-    field = Enum.find(back, &(&1.key == "qualifications"))
-    assert field.value == "First Aid — expires Nov 2026\nRope — not current"
+
+    assert [
+             %{label: "First Aid", value: "Expires Nov 2026", changeMessage: "First Aid: %@"},
+             %{label: "Rope", value: "Not current"}
+           ] = Enum.filter(back, &String.starts_with?(&1.key, "qualification-"))
 
     back = BuildApplePass.pass_json(card(), [], @config, @now).generic.backFields
-    refute Enum.any?(back, &(&1.key == "qualifications"))
+    refute Enum.any?(back, &String.starts_with?(&1.key, "qualification-"))
   end
 
   test "an updatable card points Wallet at the web service" do

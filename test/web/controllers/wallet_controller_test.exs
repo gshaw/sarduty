@@ -5,6 +5,7 @@ defmodule Web.WalletControllerTest do
 
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
+  alias App.Operation.IssueMemberCard
   alias App.Repo
 
   @pass_type "pass.com.sarduty.member-card"
@@ -138,5 +139,50 @@ defmodule Web.WalletControllerTest do
       |> post("/wallet/v1/log", %{logs: ["something went wrong"]})
 
     assert response(conn, 200)
+  end
+
+  describe "after a replacement" do
+    setup %{card: old} do
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+      Req.Test.stub(App.Adapter.APNs, &Plug.Conn.send_resp(&1, 200, ""))
+      old = Repo.preload(old, member: :team)
+
+      {:ok, new} =
+        IssueMemberCard.call(old.member.team, old.member, DateTime.utc_now())
+
+      %{new: new}
+    end
+
+    test "the new card keeps the Wallet serial with a new token", %{card: old, new: new} do
+      assert new.serial_number == old.serial_number
+      refute new.authentication_token == old.authentication_token
+    end
+
+    test "each token gets its own card's pass under the shared serial",
+         %{conn: conn, serial: serial, new: new} do
+      old_pass =
+        conn |> authed() |> get("/wallet/v1/passes/#{@pass_type}/#{serial}") |> pass_json()
+
+      assert old_pass["voided"] == true
+
+      new_pass =
+        build_conn()
+        |> authed(new.authentication_token)
+        |> get("/wallet/v1/passes/#{@pass_type}/#{serial}")
+        |> pass_json()
+
+      assert new_pass["voided"] == false
+      assert new_pass["serialNumber"] == serial
+      assert new_pass["barcodes"] |> hd() |> Map.get("message") == new.code
+    end
+  end
+
+  defp pass_json(conn) do
+    {:ok, entries} = conn |> response(200) |> :zip.extract([:memory])
+
+    entries
+    |> Map.new(fn {n, d} -> {to_string(n), d} end)
+    |> Map.fetch!("pass.json")
+    |> Jason.decode!()
   end
 end

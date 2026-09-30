@@ -22,6 +22,8 @@ defmodule App.Model.MemberCard do
     field :authentication_token, EncryptedString, redact: true
     field :pass_fingerprint, :string
     field :pass_updated_at, :utc_datetime_usec
+    # Shared by a member's cards, so a replacement updates the same Wallet pass.
+    field :serial_number, :string
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -102,17 +104,36 @@ defmodule App.Model.MemberCard do
     cards
   end
 
-  @doc "The card behind an Apple Wallet serial number, `member-card-<id>`."
-  def find_by_serial_number("member-card-" <> id) do
-    case Integer.parse(id) do
-      {id, ""} -> MemberCard |> Repo.get(id) |> Repo.preload(member: :team)
-      _ -> nil
-    end
+  @doc """
+  The card behind a Wallet request: the member's cards share a serial number, and the
+  token says which one the phone holds. A phone with a replaced card's pass only ever
+  gets that card, voided.
+  """
+  def find_by_serial_number_and_token(serial_number, token) when is_binary(token) do
+    MemberCard
+    |> where([c], c.serial_number == ^serial_number)
+    |> preload(member: :team)
+    |> Repo.all()
+    |> Enum.find(
+      &(is_binary(&1.authentication_token) and
+          Plug.Crypto.secure_compare(&1.authentication_token, token))
+    )
   end
 
-  def find_by_serial_number(_serial_number), do: nil
+  def find_by_serial_number_and_token(_serial_number, _token), do: nil
 
-  def serial_number(%MemberCard{id: id}), do: "member-card-#{id}"
+  def serial_number(%MemberCard{serial_number: serial_number}), do: serial_number
+
+  @doc "A new card takes the serial of the member's last card, so Wallet updates that pass."
+  def next_serial_number(%Team{} = team, %Member{} = member) do
+    MemberCard
+    |> where([c], c.team_id == ^team.id and c.member_id == ^member.id)
+    |> order_by([c], desc: c.id)
+    |> limit(1)
+    |> select([c], c.serial_number)
+    |> Repo.one()
+    |> Kernel.||("member-#{member.id}")
+  end
 
   def ensure_authentication_token!(%MemberCard{authentication_token: nil} = card) do
     card

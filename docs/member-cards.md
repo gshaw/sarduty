@@ -36,6 +36,10 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - **On cancel or replace** it pushes right away, and Wallet fetches a voided pass that
   says "Cancelled".
 - A phone that APNs says dropped the pass, or whose token is bad, is deleted.
+- **A member keeps one Wallet serial number** across replacements, so a replacement pass
+  lands on the existing pass instead of beside it. Each card has its own token, and a
+  phone's token picks which card it gets, so a lost phone still holding the old token
+  only ever gets the old card, voided. Cards made before this keep `member-card-<id>`.
 - A pass made before updates existed has no token, so it never updates. Its card gets a
   token the next time its pass is built.
 - APNs only works in production, so dev can build passes but never deliver a push.

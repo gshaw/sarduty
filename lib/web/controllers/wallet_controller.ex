@@ -53,7 +53,7 @@ defmodule Web.WalletController do
         last = cards |> Enum.map(& &1.pass_updated_at) |> Enum.max(DateTime)
 
         json(conn, %{
-          serialNumbers: Enum.map(cards, &MemberCard.serial_number/1),
+          serialNumbers: cards |> Enum.map(&MemberCard.serial_number/1) |> Enum.uniq(),
           lastUpdated: last |> DateTime.to_unix(:microsecond) |> Integer.to_string()
         })
     end
@@ -80,10 +80,8 @@ defmodule Web.WalletController do
 
   defp authorize(conn, pass_type, serial) do
     with true <- pass_type == pass_type_id(),
-         %MemberCard{authentication_token: token} = card when is_binary(token) <-
-           MemberCard.find_by_serial_number(serial),
-         ["ApplePass " <> given] <- get_req_header(conn, "authorization"),
-         true <- Plug.Crypto.secure_compare(given, token) do
+         ["ApplePass " <> token] <- get_req_header(conn, "authorization"),
+         %MemberCard{} = card <- MemberCard.find_by_serial_number_and_token(serial, token) do
       {:ok, card}
     else
       _ -> :unauthorized
