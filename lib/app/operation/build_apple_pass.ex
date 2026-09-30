@@ -72,41 +72,8 @@ defmodule App.Operation.BuildApplePass do
         primaryFields: [
           %{key: "name", label: name_label(card, now), value: member.name}
         ],
-        secondaryFields: [
-          %{
-            key: "status",
-            label: "STATUS",
-            value: status_text(card, now),
-            changeMessage: "Your card is now %@."
-          },
-          %{
-            key: "member-since",
-            label: "MEMBER SINCE",
-            value: Service.Format.month_year(member.joined_at, team.timezone)
-          },
-          %{
-            key: "member-for",
-            label: "MEMBER FOR",
-            value: Service.Format.months_or_years_distance(member.joined_at, now)
-          }
-        ],
-        backFields:
-          List.flatten([
-            %{
-              key: "verify",
-              label: "How to check this card",
-              value:
-                "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
-                  "Don't trust a link or a page you reached from the card."
-            },
-            qualification_fields(qualifications, team.timezone),
-            %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
-            %{
-              key: "issuer",
-              label: "Issued by",
-              value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
-            }
-          ])
+        secondaryFields: secondary_fields(card, now),
+        backFields: back_fields(team, code, qualifications)
       }
     }
     |> drop_web_service(card.authentication_token)
@@ -155,6 +122,46 @@ defmodule App.Operation.BuildApplePass do
     else
       []
     end
+  end
+
+  defp secondary_fields(%MemberCard{member: member} = card, now) do
+    [
+      %{
+        key: "status",
+        label: "STATUS",
+        value: status_text(card, now),
+        changeMessage: "Your card is now %@."
+      },
+      %{
+        key: "member-since",
+        label: "MEMBER SINCE",
+        value: Service.Format.month_year(member.joined_at, member.team.timezone)
+      },
+      %{
+        key: "member-for",
+        label: "MEMBER FOR",
+        value: Service.Format.months_or_years_distance(member.joined_at, now)
+      }
+    ]
+  end
+
+  defp back_fields(team, code, qualifications) do
+    List.flatten([
+      %{
+        key: "verify",
+        label: "How to check this card",
+        value:
+          "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
+            "Don't trust a link or a page you reached from the card."
+      },
+      qualification_fields(qualifications, team.timezone),
+      %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
+      %{
+        key: "issuer",
+        label: "Issued by",
+        value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
+      }
+    ])
   end
 
   defp name_label(card, now) do
