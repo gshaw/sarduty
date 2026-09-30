@@ -21,12 +21,16 @@ defmodule App.Operation.BuildApplePass do
   def call(%MemberCard{} = card, now) do
     if configured?() do
       config = :sarduty |> Application.get_env(:apple_pass) |> Map.new()
+      card = MemberCard.ensure_authentication_token!(card)
       member = card.member
       qualifications = BuildCardQualifications.call(member.team, member, now)
       logo = (Team.logo_file(member.team.subdomain) || default_logo_path()) |> File.read!()
 
+      json = pass_json(card, qualifications, config, now)
+      MemberCard.record_pass!(card, fingerprint(json), now)
+
       files = %{
-        "pass.json" => card |> pass_json(qualifications, config, now) |> Jason.encode!(),
+        "pass.json" => Jason.encode!(json),
         "icon.png" => logo,
         "logo.png" => logo,
         "thumbnail.png" => photo(member)
@@ -48,9 +52,11 @@ defmodule App.Operation.BuildApplePass do
 
     %{
       formatVersion: 1,
+      webServiceURL: "#{Web.Endpoint.url()}/wallet",
+      authenticationToken: card.authentication_token,
       passTypeIdentifier: config.pass_type_id,
       teamIdentifier: config.team_id,
-      serialNumber: "member-card-#{card.id}",
+      serialNumber: MemberCard.serial_number(card),
       organizationName: team.name,
       description: "#{team.name} member ID card",
       logoText: team.name,
@@ -108,6 +114,21 @@ defmodule App.Operation.BuildApplePass do
           )
       }
     }
+    |> drop_web_service(card.authentication_token)
+  end
+
+  @doc """
+  A hash of what a member sees on the pass, less the last-refreshed date, which changes
+  every day. Updates are pushed only when it changes.
+  """
+  def fingerprint(json) do
+    back = Enum.reject(json.generic.backFields, &(&1.key == "checked"))
+
+    json
+    |> put_in([:generic, :backFields], back)
+    |> Jason.encode!()
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
   end
 
   defp qualifications_field([], _timezone), do: nil
@@ -121,8 +142,16 @@ defmodule App.Operation.BuildApplePass do
   end
 
   defp status_text(card, now) do
-    if MemberCard.status(card, now) == :active, do: "Active", else: "Not active"
+    case MemberCard.status(card, now) do
+      :active -> "Active"
+      :inactive -> "Not active"
+      :revoked -> "Cancelled"
+    end
   end
+
+  # A card made before pass updates has no token until its pass is next built.
+  defp drop_web_service(json, nil), do: Map.drop(json, [:webServiceURL, :authenticationToken])
+  defp drop_web_service(json, _token), do: json
 
   defp last_checked(%{d4h_refreshed_at: nil}), do: "Never"
   defp last_checked(team), do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)

@@ -21,6 +21,16 @@ defmodule Web.Router do
     plug :assign_current_user
   end
 
+  # Apple Wallet calls these with JSON bodies and its own auth header: no session, no
+  # CSRF token, and an Accept header of its own choosing.
+  scope "/wallet/v1", Web do
+    post "/devices/:device/registrations/:pass_type/:serial", WalletController, :register
+    delete "/devices/:device/registrations/:pass_type/:serial", WalletController, :unregister
+    get "/devices/:device/registrations/:pass_type", WalletController, :serial_numbers
+    get "/passes/:pass_type/:serial", WalletController, :pass
+    post "/log", WalletController, :log
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:sarduty, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put

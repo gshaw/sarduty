@@ -55,6 +55,10 @@ variables are optional: without them the ID Card tab offers no pass.
 - `APPLE_PASS_CERTIFICATE` — the pass certificate, PEM text.
 - `APPLE_PASS_PRIVATE_KEY` — its private key, PEM text.
 
+The same certificate signs in to Apple Push Notification service
+([App.Adapter.APNs](../lib/app/adapter/apns.ex)), which tells phones a pass changed.
+Passes also call back to `/wallet/v1/…`, so those routes must stay public.
+
 The certificate expires on 2027-10-30. Make a new one with
 `asc certificates create --certificate-type PASS_TYPE_ID`, then update the secrets.
 Passes already on phones keep working.

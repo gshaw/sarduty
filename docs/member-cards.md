@@ -23,10 +23,22 @@ code or typing the code printed under it. Issue #63 has the design and the plan.
 
 The ID Card tab emails the current card's pass to the member's D4H address as an
 attachment, or downloads it, when Apple Wallet is set up (see
-[external-services.md](external-services.md)). The pass is a snapshot: it doesn't update
-after it's added, and cancelling a card doesn't void a pass already on a phone. `/verify`
-still says the card was cancelled. Updates need Apple's pass web service, which is next
-on #63.
+[external-services.md](external-services.md)).
+
+Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
+`authentication_token`. Wallet registers the phone with
+[WalletController](../lib/web/controllers/wallet_controller.ex), and
+[PushPassUpdates](../lib/app/operation/push_pass_updates.ex) pushes through APNs:
+
+- **After every team refresh** it rebuilds each registered card's pass and pushes only
+  when its fingerprint changed. The fingerprint leaves out the "last checked" date, or
+  every pass would buzz every day.
+- **On cancel or replace** it pushes right away, and Wallet fetches a voided pass that
+  says "Cancelled".
+- A phone that APNs says dropped the pass, or whose token is bad, is deleted.
+- A pass made before updates existed has no token, so it never updates. Its card gets a
+  token the next time its pass is built.
+- APNs only works in production, so dev can build passes but never deliver a push.
 
 Wallet shows images only as PNG. The photo comes from D4H and the logo from the team's
 saved logo, both as D4H sent them.
