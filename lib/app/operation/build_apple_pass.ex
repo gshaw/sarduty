@@ -68,13 +68,13 @@ defmodule App.Operation.BuildApplePass do
         }
       ],
       generic: %{
-        headerFields: [
-          %{key: "status", label: "STATUS", value: status_text(card, now)}
-        ],
+        # No header fields: they share the top row with the team name, which Wallet
+        # then cuts short.
         primaryFields: [
           %{key: "name", label: "MEMBER", value: member.name}
         ],
         secondaryFields: [
+          %{key: "status", label: "STATUS", value: status_text(card, now)},
           %{
             key: "member-since",
             label: "MEMBER SINCE",

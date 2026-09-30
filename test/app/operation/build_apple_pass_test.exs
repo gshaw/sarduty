@@ -27,10 +27,11 @@ defmodule App.Operation.BuildApplePassTest do
     assert json.teamIdentifier == "TEAM123"
     assert json.serialNumber == "member-card-7"
     assert json.voided == false
-    assert [%{value: "Active"}] = json.generic.headerFields
+    refute Map.has_key?(json.generic, :headerFields)
     assert [%{value: "Alex Example"}] = json.generic.primaryFields
 
-    assert [%{value: "Mar 2019"}, %{value: "8 years"}] = json.generic.secondaryFields
+    assert [%{value: "Active"}, %{value: "Mar 2019"}, %{value: "8 years"}] =
+             json.generic.secondaryFields
   end
 
   test "the QR code holds only the code, never a link" do
@@ -57,8 +58,8 @@ defmodule App.Operation.BuildApplePassTest do
     card = card()
     card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
 
-    assert [%{value: "Not active"}] =
-             BuildApplePass.pass_json(card, [], @config, @now).generic.headerFields
+    assert [%{value: "Not active"} | _] =
+             BuildApplePass.pass_json(card, [], @config, @now).generic.secondaryFields
   end
 
   test "lists the team's picked qualifications on the back, and leaves them off when none" do
