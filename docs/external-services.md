@@ -42,6 +42,23 @@ over 5 MiB, attachments included, is refused.
 Creating a tax credit letter emails it from a `Task.start`, so the "Email sent" flash
 appears before delivery is known.
 
+## Apple Wallet
+
+Signs member ID card passes ([BuildApplePass](../lib/app/operation/build_apple_pass.ex),
+[Service.ApplePass](../lib/service/apple_pass.ex)) with a Pass Type ID certificate from
+Gerry's Apple developer account. Signing runs the `openssl` CLI, which the Fly image
+installs. Apple's WWDR G4 intermediate is public and lives in `priv/apple/`. All four
+variables are optional: without them the ID Card tab offers no pass.
+
+- `APPLE_PASS_TYPE_ID` — `pass.com.sarduty.member-card`.
+- `APPLE_TEAM_ID` — the developer account's team ID.
+- `APPLE_PASS_CERTIFICATE` — the pass certificate, PEM text.
+- `APPLE_PASS_PRIVATE_KEY` — its private key, PEM text.
+
+The certificate expires on 2027-10-30. Make a new one with
+`asc certificates create --certificate-type PASS_TYPE_ID`, then update the secrets.
+Passes already on phones keep working.
+
 ## Litestream and Tigris
 
 Litestream replicates `/mnt/sarduty/sarduty.db` to the Tigris bucket in

@@ -19,6 +19,17 @@ code or typing the code printed under it. Issue #63 has the design and the plan.
 - **Status comes from the local copy of D4H**, so it can be a day old. The result says
   when the team last refreshed.
 
+## Apple Wallet
+
+The ID Card tab downloads a signed `.pkpass` for the current card when Apple Wallet is set
+up (see [external-services.md](external-services.md)). A manager opens it on an iPhone or
+sends it to the member. The pass is a snapshot: it doesn't update after it's added, and
+cancelling a card doesn't void a pass already on a phone. `/verify` still says the card
+was cancelled. Updates need Apple's pass web service, which is next on #63.
+
+Wallet shows images only as PNG. The photo comes from D4H and the logo from the team's
+saved logo, both as D4H sent them.
+
 ## Active
 
 A card is active while the member hasn't left the team in D4H (`Member.current?/2`).

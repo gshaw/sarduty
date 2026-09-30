@@ -10,6 +10,7 @@ defmodule Service.Format do
 
   def date_long(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
   def date_short(datetime, timezone), do: datetime(datetime, timezone, "%x")
+  def month_year(datetime, timezone), do: datetime(datetime, timezone, "%b %Y")
   def datetime_short(datetime, timezone), do: datetime(datetime, timezone, "%c")
   def datetime_medium(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
 

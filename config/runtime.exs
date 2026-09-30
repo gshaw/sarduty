@@ -23,6 +23,14 @@ end
 config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
 config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
 
+# Apple Wallet passes for member ID cards. Optional: without them the ID Card tab
+# offers no pass. The certificate and key are PEM text.
+config :sarduty, :apple_pass,
+  pass_type_id: System.get_env("APPLE_PASS_TYPE_ID"),
+  team_id: System.get_env("APPLE_TEAM_ID"),
+  certificate: System.get_env("APPLE_PASS_CERTIFICATE"),
+  private_key: System.get_env("APPLE_PASS_PRIVATE_KEY")
+
 if config_env() == :prod do
   config :sarduty, Web.Endpoint,
     secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),
