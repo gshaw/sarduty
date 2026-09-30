@@ -71,6 +71,7 @@ defmodule Web.Router do
       live "/settings/confirm_email/:token", SettingsLive
       live "/settings/d4h", Settings.D4HLive
       live "/settings/team", Settings.TeamLive
+      live "/settings/cards", Settings.CardsLive
     end
 
     live_session :require_admin_session,

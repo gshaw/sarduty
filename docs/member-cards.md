@@ -31,7 +31,14 @@ on #63.
 Wallet shows images only as PNG. The photo comes from D4H and the logo from the team's
 saved logo, both as D4H sent them.
 
-## Active
+## Active and qualifications
 
 A card is active while the member hasn't left the team in D4H (`Member.current?/2`).
-Which qualifications a team also requires is still open on #63.
+Qualifications don't change that. They're listed, not required.
+
+A team picks what to list at **Settings > ID cards**: any named clause from its groups'
+rules. Clauses that share a name count as one. For each, the back of the pass, `/verify`,
+and the ID Card tab say when the member's latest current award ends, or that none is
+current ([BuildCardQualifications](../lib/app/operation/build_card_qualifications.ex)).
+The pass shows them as of when it was made, and `/verify` shows them as of the last
+refresh.

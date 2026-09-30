@@ -62,4 +62,20 @@ defmodule Web.VerifyLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: "https://example.com"]}")
     assert has_element?(lv, "#result-not-found")
   end
+
+  test "lists the qualifications the team shows on cards", %{
+    conn: conn,
+    team: team,
+    member: member
+  } do
+    qualification = qualification_fixture(team)
+    clause = group_rule_clause_fixture(group_fixture(team), %{name: "First Aid", on_card: true})
+    group_rule_clause_qualification_fixture(clause, qualification)
+    qualification_award_fixture(qualification, member)
+    card = member_card_fixture(member)
+
+    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: card.code]}")
+
+    assert has_element?(lv, "#result-qualifications", "First Aid — no expiry")
+  end
 end

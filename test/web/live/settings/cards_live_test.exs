@@ -1,0 +1,49 @@
+defmodule Web.Settings.CardsLiveTest do
+  use Web.ConnCase
+
+  import App.DataFixtures
+  import Phoenix.LiveViewTest
+
+  alias App.Repo
+
+  setup %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    %{conn: log_in_user(conn, user), team: team}
+  end
+
+  test "says so when the team has no named clauses", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    assert has_element?(lv, "#no-names")
+  end
+
+  test "ticks a name on for every clause with it, and off again", %{conn: conn, team: team} do
+    group = group_fixture(team)
+    other_group = group_fixture(team)
+    first_aid = group_rule_clause_fixture(group, %{name: "First Aid"})
+    first_aid_too = group_rule_clause_fixture(other_group, %{name: "First Aid"})
+    rope = group_rule_clause_fixture(group, %{name: "Rope"})
+    group_rule_clause_fixture(group)
+
+    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    lv |> form("#cards-form") |> render_submit(%{"names" => ["", "First Aid"]})
+
+    assert Repo.reload!(first_aid).on_card
+    assert Repo.reload!(first_aid_too).on_card
+    refute Repo.reload!(rope).on_card
+
+    lv |> form("#cards-form") |> render_submit(%{"names" => [""]})
+    refute Repo.reload!(first_aid).on_card
+  end
+
+  test "never changes another team's clauses", %{conn: conn, team: team} do
+    group_rule_clause_fixture(group_fixture(team), %{name: "First Aid"})
+
+    theirs =
+      group_rule_clause_fixture(group_fixture(team_fixture()), %{name: "First Aid", on_card: true})
+
+    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    lv |> form("#cards-form") |> render_submit(%{"names" => [""]})
+
+    assert Repo.reload!(theirs).on_card
+  end
+end
