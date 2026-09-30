@@ -7,6 +7,7 @@ defmodule Web.MemberCardLive do
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Operation.BuildApplePass
+  alias App.Operation.BuildCardQualifications
   alias App.Operation.EmailMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Operation.RevokeMemberCard
@@ -25,6 +26,7 @@ defmodule Web.MemberCardLive do
       |> assign(:page_title, "#{member.name} - ID Card")
       |> assign(:member, member)
       |> assign(:card, MemberCard.find_current(team, member))
+      |> assign(:qualifications, BuildCardQualifications.call(team, member, DateTime.utc_now()))
 
     {:noreply, socket}
   end
@@ -68,7 +70,7 @@ defmodule Web.MemberCardLive do
       </aside>
       <main class="content-2/3">
         <.member_tabs member={@member} active_tab={:card} />
-        <.card_content card={@card} member={@member} />
+        <.card_content card={@card} member={@member} qualifications={@qualifications} />
       </main>
     </div>
     """
@@ -93,6 +95,15 @@ defmodule Web.MemberCardLive do
         <dd id="card-code" class="font-mono text-lg">{MemberCard.format_code(@card.code)}</dd>
         <dt>Issued</dt>
         <dd>{Service.Format.date_long(@card.inserted_at, @member.team.timezone)}</dd>
+        <dt>On the back</dt>
+        <dd id="card-qualifications">
+          <div :for={q <- @qualifications}>
+            {BuildCardQualifications.describe(q, @member.team.timezone)}
+          </div>
+          <.a :if={@qualifications == []} navigate={~p"/settings/cards"}>
+            Pick qualifications to show
+          </.a>
+        </dd>
       </dl>
       <p class="mt-p">
         Anyone can check this card at <.a navigate={

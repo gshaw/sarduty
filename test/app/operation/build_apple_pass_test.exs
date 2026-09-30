@@ -21,7 +21,7 @@ defmodule App.Operation.BuildApplePassTest do
   end
 
   test "shows the member, their status, and how long they've been a member" do
-    json = BuildApplePass.pass_json(card(), @config, @now)
+    json = BuildApplePass.pass_json(card(), [], @config, @now)
 
     assert json.passTypeIdentifier == "pass.com.sarduty.member-card"
     assert json.teamIdentifier == "TEAM123"
@@ -34,7 +34,7 @@ defmodule App.Operation.BuildApplePassTest do
   end
 
   test "the QR code holds only the code, never a link" do
-    [barcode] = BuildApplePass.pass_json(card(), @config, @now).barcodes
+    [barcode] = BuildApplePass.pass_json(card(), [], @config, @now).barcodes
 
     assert barcode.format == "PKBarcodeFormatQR"
     assert barcode.message == "K7Q4M2XA"
@@ -42,14 +42,14 @@ defmodule App.Operation.BuildApplePassTest do
   end
 
   test "keeps to Apple's limit of four secondary and auxiliary fields with a square code" do
-    generic = BuildApplePass.pass_json(card(), @config, @now).generic
+    generic = BuildApplePass.pass_json(card(), [], @config, @now).generic
 
     refute Map.has_key?(generic, :auxiliaryFields)
     assert length(generic.secondaryFields) <= 4
   end
 
   test "a cancelled card is voided" do
-    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json(@config, @now)
+    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json([], @config, @now)
     assert json.voided == true
   end
 
@@ -58,6 +58,20 @@ defmodule App.Operation.BuildApplePassTest do
     card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
 
     assert [%{value: "Not active"}] =
-             BuildApplePass.pass_json(card, @config, @now).generic.headerFields
+             BuildApplePass.pass_json(card, [], @config, @now).generic.headerFields
+  end
+
+  test "lists the team's picked qualifications on the back, and leaves them off when none" do
+    qualifications = [
+      %{name: "First Aid", status: :current, ends_at: ~U[2026-11-15 08:00:00Z]},
+      %{name: "Rope", status: :not_current, ends_at: nil}
+    ]
+
+    back = BuildApplePass.pass_json(card(), qualifications, @config, @now).generic.backFields
+    field = Enum.find(back, &(&1.key == "qualifications"))
+    assert field.value == "First Aid — expires Nov 2026\nRope — not current"
+
+    back = BuildApplePass.pass_json(card(), [], @config, @now).generic.backFields
+    refute Enum.any?(back, &(&1.key == "qualifications"))
   end
 end

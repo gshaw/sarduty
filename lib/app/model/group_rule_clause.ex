@@ -16,6 +16,8 @@ defmodule App.Model.GroupRuleClause do
 
     field :d4h_group_id, :integer
     field :name, TrimmedString
+    # Named clauses a team picked to list on the back of member ID cards.
+    field :on_card, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -63,4 +65,24 @@ defmodule App.Model.GroupRuleClause do
   end
 
   def delete!(%GroupRuleClause{} = clause), do: Repo.delete!(clause)
+
+  @doc "The team's named clauses with their qualifications, in name order."
+  def get_all_named(team_id) do
+    GroupRuleClause
+    |> where([c], c.team_id == ^team_id and not is_nil(c.name) and c.name != "")
+    |> preload(group_rule_clause_qualifications: [])
+    |> order_by([c], asc: c.name, asc: c.id)
+    |> Repo.all()
+  end
+
+  @doc "Shows every clause with one of `names` on ID cards, and hides the rest."
+  def set_on_card!(team_id, names) do
+    GroupRuleClause
+    |> where([c], c.team_id == ^team_id)
+    |> Repo.update_all(set: [on_card: false])
+
+    GroupRuleClause
+    |> where([c], c.team_id == ^team_id and c.name in ^names)
+    |> Repo.update_all(set: [on_card: true])
+  end
 end

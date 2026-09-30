@@ -2,6 +2,7 @@ defmodule Web.VerifyLive do
   use Web, :live_view_narrow_layout
 
   alias App.Model.MemberCard
+  alias App.Operation.BuildCardQualifications
 
   # Public: whoever is checking a card opens this page on their own phone, so a forged
   # card can't send them to a look-alike site.
@@ -37,11 +38,18 @@ defmodule Web.VerifyLive do
   defp check(input) do
     with code when is_binary(code) <- MemberCard.normalize_code(input),
          %MemberCard{} = card <- MemberCard.find_by_code(code) do
-      %{status: MemberCard.status(card, DateTime.utc_now()), card: card}
+      now = DateTime.utc_now()
+      status = MemberCard.status(card, now)
+      %{status: status, card: card, qualifications: qualifications(status, card, now)}
     else
       _ -> %{status: :not_found}
     end
   end
+
+  defp qualifications(:revoked, _card, _now), do: []
+
+  defp qualifications(_status, %MemberCard{member: member}, now),
+    do: BuildCardQualifications.call(member.team, member, now)
 
   def render(assigns) do
     ~H"""
@@ -122,6 +130,12 @@ defmodule Web.VerifyLive do
           </dd>
         </dl>
       </div>
+      <p :if={@result.qualifications != []} class="font-bold mt-p">Qualifications</p>
+      <ul :if={@result.qualifications != []} id="result-qualifications">
+        <li :for={q <- @result.qualifications} class={q.status == :not_current && "text-danger-1"}>
+          {BuildCardQualifications.describe(q, @team.timezone)}
+        </li>
+      </ul>
       <.hint>
         Make sure the photo matches the person. Status is from the team's D4H records, last
         checked {last_checked(@team)}.

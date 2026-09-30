@@ -42,6 +42,14 @@ defmodule Web.SettingsLive do
         >
           {if @current_user.team, do: @current_user.team.name}
         </.navlist_item>
+        <.navlist_item
+          :if={@current_team}
+          path={~p"/settings/cards"}
+          icon="hero-identification"
+          title="ID cards"
+        >
+          Qualifications on the back
+        </.navlist_item>
       </nav>
     </div>
     """

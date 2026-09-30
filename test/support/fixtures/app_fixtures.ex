@@ -191,8 +191,14 @@ defmodule App.DataFixtures do
     })
   end
 
-  def group_rule_clause_fixture(%Group{} = group) do
-    GroupRuleClause.insert!(%{team_id: group.team_id, d4h_group_id: group.d4h_group_id})
+  def group_rule_clause_fixture(%Group{} = group, attrs \\ %{}) do
+    {on_card, attrs} = Map.pop(attrs, :on_card, false)
+
+    %{team_id: group.team_id, d4h_group_id: group.d4h_group_id}
+    |> Map.merge(attrs)
+    |> GroupRuleClause.insert!()
+    |> Ecto.Changeset.change(on_card: on_card)
+    |> Repo.update!()
   end
 
   def group_rule_clause_qualification_fixture(

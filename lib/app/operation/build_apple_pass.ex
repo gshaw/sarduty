@@ -2,6 +2,7 @@ defmodule App.Operation.BuildApplePass do
   alias App.Adapter.D4H
   alias App.Model.MemberCard
   alias App.Model.Team
+  alias App.Operation.BuildCardQualifications
 
   # SAR Duty's navy and yellow, the same on every team's card.
   @background_color "rgb(28, 45, 66)"
@@ -21,10 +22,11 @@ defmodule App.Operation.BuildApplePass do
     if configured?() do
       config = :sarduty |> Application.get_env(:apple_pass) |> Map.new()
       member = card.member
+      qualifications = BuildCardQualifications.call(member.team, member, now)
       logo = (Team.logo_file(member.team.subdomain) || default_logo_path()) |> File.read!()
 
       files = %{
-        "pass.json" => card |> pass_json(config, now) |> Jason.encode!(),
+        "pass.json" => card |> pass_json(qualifications, config, now) |> Jason.encode!(),
         "icon.png" => logo,
         "logo.png" => logo,
         "thumbnail.png" => photo(member)
@@ -36,8 +38,11 @@ defmodule App.Operation.BuildApplePass do
     end
   end
 
-  @doc "The pass's `pass.json` as a map."
-  def pass_json(%MemberCard{member: member} = card, config, now) do
+  @doc """
+  The pass's `pass.json` as a map. `qualifications` comes from
+  `BuildCardQualifications.summarize/3`.
+  """
+  def pass_json(%MemberCard{member: member} = card, qualifications, config, now) do
     team = member.team
     code = MemberCard.format_code(card.code)
 
@@ -81,22 +86,37 @@ defmodule App.Operation.BuildApplePass do
             value: Service.Format.months_or_years_distance(member.joined_at, now)
           }
         ],
-        backFields: [
-          %{
-            key: "verify",
-            label: "How to check this card",
-            value:
-              "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
-                "Don't trust a link or a page you reached from the card."
-          },
-          %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
-          %{
-            key: "issuer",
-            label: "Issued by",
-            value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
-          }
-        ]
+        backFields:
+          Enum.reject(
+            [
+              %{
+                key: "verify",
+                label: "How to check this card",
+                value:
+                  "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
+                    "Don't trust a link or a page you reached from the card."
+              },
+              qualifications_field(qualifications, team.timezone),
+              %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
+              %{
+                key: "issuer",
+                label: "Issued by",
+                value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
+              }
+            ],
+            &is_nil/1
+          )
       }
+    }
+  end
+
+  defp qualifications_field([], _timezone), do: nil
+
+  defp qualifications_field(qualifications, timezone) do
+    %{
+      key: "qualifications",
+      label: "Qualifications",
+      value: Enum.map_join(qualifications, "\n", &BuildCardQualifications.describe(&1, timezone))
     }
   end
 
