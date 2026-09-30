@@ -152,11 +152,16 @@ defmodule App.Model.MemberCard do
     card |> change(changes) |> Repo.update!()
   end
 
-  @doc "The team's cards that at least one phone is registered for."
+  @doc "The team's live cards whose Wallet serial at least one phone is registered for."
   def get_all_registered(%Team{} = team) do
+    registered_serials =
+      PassRegistration
+      |> join(:inner, [r], c in MemberCard, on: c.id == r.member_card_id)
+      |> select([r, c], c.serial_number)
+
     MemberCard
-    |> where([c], c.team_id == ^team.id)
-    |> where([c], c.id in subquery(select(PassRegistration, [r], r.member_card_id)))
+    |> where([c], c.team_id == ^team.id and is_nil(c.revoked_at))
+    |> where([c], c.serial_number in subquery(registered_serials))
     |> preload(member: :team)
     |> Repo.all()
   end

@@ -6,6 +6,7 @@ defmodule App.Operation.PushPassUpdatesTest do
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
   alias App.Operation.BuildApplePass
+  alias App.Operation.IssueMemberCard
   alias App.Operation.PushPassUpdates
   alias App.Operation.RevokeMemberCard
 
@@ -57,7 +58,7 @@ defmodule App.Operation.PushPassUpdatesTest do
 
     PushPassUpdates.call(team, @now)
 
-    assert PassRegistration.get_all_for_card(card) == []
+    assert PassRegistration.get_all_for_serial(card) == []
   end
 
   test "drops a phone whose push token Apple calls bad", %{team: team, card: card} do
@@ -68,7 +69,7 @@ defmodule App.Operation.PushPassUpdatesTest do
 
     PushPassUpdates.call(team, @now)
 
-    assert PassRegistration.get_all_for_card(card) == []
+    assert PassRegistration.get_all_for_serial(card) == []
   end
 
   test "keeps a phone after any other error", %{team: team, card: card} do
@@ -79,7 +80,7 @@ defmodule App.Operation.PushPassUpdatesTest do
 
     PushPassUpdates.call(team, @now)
 
-    assert [_] = PassRegistration.get_all_for_card(card)
+    assert [_] = PassRegistration.get_all_for_serial(card)
   end
 
   test "cancelling a card pushes its voided pass", %{team: team, member: member, card: card} do
@@ -107,5 +108,36 @@ defmodule App.Operation.PushPassUpdatesTest do
     assert_received {:pushed, "/3/device/push-token-1", _}
     refute_received {:pushed, _, _}
     assert MemberCard.find_current(team, member)
+  end
+
+  describe "after the phone's card was replaced" do
+    # The phone registered for the first card. Adding the replacement pass lands on the
+    # same Wallet pass, so Wallet never registers again.
+    setup %{team: team, member: member} do
+      expect_pushes(self())
+      {:ok, replacement} = IssueMemberCard.call(team, member, @now)
+      assert_received {:pushed, _, _}
+      %{replacement: replacement}
+    end
+
+    test "cancelling the replacement still reaches the phone", %{team: team, member: member} do
+      RevokeMemberCard.call(team, member, @now)
+      assert_received {:pushed, "/3/device/push-token-1", _}
+    end
+
+    test "a refresh that changes the replacement reaches the phone", %{
+      team: team,
+      replacement: replacement
+    } do
+      PushPassUpdates.call(team, @now)
+      assert_received {:pushed, "/3/device/push-token-1", _}
+      assert Repo.reload!(replacement).pass_fingerprint
+    end
+
+    test "the phone lists the serial once, and unregisters for every card", %{card: card} do
+      assert [_, _] = PassRegistration.cards_for_device("device-1", nil)
+      PassRegistration.unregister!(card, "device-1")
+      assert PassRegistration.get_all_for_serial(card) == []
+    end
   end
 end

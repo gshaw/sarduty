@@ -80,7 +80,12 @@ defmodule App.Operation.BuildApplePass do
           %{key: "name", label: "MEMBER", value: member.name}
         ],
         secondaryFields: [
-          %{key: "status", label: "STATUS", value: status_text(card, now)},
+          %{
+            key: "status",
+            label: "STATUS",
+            value: status_text(card, now),
+            changeMessage: "Your card is now %@."
+          },
           %{
             key: "member-since",
             label: "MEMBER SINCE",

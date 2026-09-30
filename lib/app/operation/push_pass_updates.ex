@@ -44,7 +44,7 @@ defmodule App.Operation.PushPassUpdates do
   end
 
   defp push(card) do
-    for registration <- PassRegistration.get_all_for_card(card) do
+    for registration <- PassRegistration.get_all_for_serial(card) do
       case APNs.push_pass_update(registration.push_token, config()) do
         :ok -> :ok
         {:error, :unregistered} -> PassRegistration.delete!(registration)

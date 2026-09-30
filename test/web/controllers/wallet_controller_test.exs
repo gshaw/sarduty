@@ -42,7 +42,7 @@ defmodule Web.WalletControllerTest do
   } do
     assert conn |> authed() |> register(serial) |> response(201)
     assert build_conn() |> authed() |> register(serial) |> response(200)
-    assert [%{push_token: "push-token-1"}] = PassRegistration.get_all_for_card(card)
+    assert [%{push_token: "push-token-1"}] = PassRegistration.get_all_for_serial(card)
   end
 
   test "refuses a wrong token, a missing one, or another pass type", %{conn: conn, serial: serial} do
@@ -64,7 +64,7 @@ defmodule Web.WalletControllerTest do
       |> delete("/wallet/v1/devices/device-1/registrations/#{@pass_type}/#{serial}")
 
     assert response(conn, 200)
-    assert PassRegistration.get_all_for_card(card) == []
+    assert PassRegistration.get_all_for_serial(card) == []
   end
 
   test "lists the phone's passes changed since its last tag", %{
@@ -151,6 +151,16 @@ defmodule Web.WalletControllerTest do
         IssueMemberCard.call(old.member.team, old.member, DateTime.utc_now())
 
       %{new: new}
+    end
+
+    test "re-registering with the new card's token updates the same registration",
+         %{conn: conn, card: old, new: new, serial: serial} do
+      build_conn() |> authed() |> register(serial)
+
+      conn = conn |> authed(new.authentication_token) |> register(serial)
+
+      assert response(conn, 200)
+      assert [_] = PassRegistration.get_all_for_serial(old)
     end
 
     test "the new card keeps the Wallet serial with a new token", %{card: old, new: new} do

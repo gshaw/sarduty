@@ -14,10 +14,17 @@ defmodule App.Model.PassRegistration do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @doc "`:created`, or `:existing` when the phone already had it (its token is updated)."
+  # A member's cards share one Wallet serial, and a phone registers once per serial: when
+  # a replacement pass lands on the same pass, Wallet doesn't register again. So a
+  # registration counts for every card with its card's serial.
+
+  @doc "`:created`, or `:existing` when the phone already had the pass (its token is updated)."
   def register!(%MemberCard{} = card, device, push_token) do
-    case Repo.get_by(PassRegistration, member_card_id: card.id, device_library_identifier: device) do
-      nil ->
+    case card
+         |> for_serial()
+         |> where([r], r.device_library_identifier == ^device)
+         |> Repo.all() do
+      [] ->
         Repo.insert!(%PassRegistration{
           member_card_id: card.id,
           device_library_identifier: device,
@@ -26,29 +33,45 @@ defmodule App.Model.PassRegistration do
 
         :created
 
-      registration ->
-        registration |> change(push_token: push_token) |> Repo.update!()
+      registrations ->
+        Enum.each(registrations, &(&1 |> change(push_token: push_token) |> Repo.update!()))
         :existing
     end
   end
 
-  def unregister!(%MemberCard{} = card, device) do
+  # SQLite can't DELETE with a JOIN, so the serial's cards go in as a subquery.
+  def unregister!(%MemberCard{serial_number: serial_number}, device) do
+    card_ids = MemberCard |> where([c], c.serial_number == ^serial_number) |> select([c], c.id)
+
     PassRegistration
-    |> where([r], r.member_card_id == ^card.id and r.device_library_identifier == ^device)
+    |> where(
+      [r],
+      r.member_card_id in subquery(card_ids) and r.device_library_identifier == ^device
+    )
     |> Repo.delete_all()
   end
 
-  def get_all_for_card(%MemberCard{} = card) do
-    PassRegistration |> where([r], r.member_card_id == ^card.id) |> Repo.all()
-  end
+  @doc "Every phone holding a pass with this card's serial, whichever card it was added as."
+  def get_all_for_serial(%MemberCard{} = card), do: card |> for_serial() |> Repo.all()
 
-  @doc "The cards registered on a phone, for its pass type, changed after `since` if given."
+  @doc "The cards whose serial is registered on a phone, changed after `since` if given."
   def cards_for_device(device, since) do
+    serials =
+      PassRegistration
+      |> join(:inner, [r], c in MemberCard, on: c.id == r.member_card_id)
+      |> where([r], r.device_library_identifier == ^device)
+      |> select([r, c], c.serial_number)
+
     MemberCard
-    |> join(:inner, [c], r in PassRegistration, on: r.member_card_id == c.id)
-    |> where([c, r], r.device_library_identifier == ^device)
+    |> where([c], c.serial_number in subquery(serials))
     |> maybe_since(since)
     |> Repo.all()
+  end
+
+  defp for_serial(%MemberCard{serial_number: serial_number}) do
+    PassRegistration
+    |> join(:inner, [r], c in MemberCard, on: c.id == r.member_card_id)
+    |> where([r, c], c.serial_number == ^serial_number)
   end
 
   defp maybe_since(query, nil), do: query
