@@ -3,6 +3,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
 
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
+  alias App.Worker.PushPassUpdatesWorker
 
   # Retry a failed refresh after 15, then 30 minutes, rather than waiting a day.
   @impl Oban.Worker
@@ -20,6 +21,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
           {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
           broadcast_team_refresh(team)
           ping_healthchecks()
+          %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
           :ok
 
         # Only a person can fix a missing or rejected key, so a cancelled job is

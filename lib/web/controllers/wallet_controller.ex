@@ -1,0 +1,109 @@
+defmodule Web.WalletController do
+  @moduledoc """
+  Apple's pass web service, which Wallet calls under the pass's `webServiceURL`:
+  register and unregister a phone, list changed passes, and fetch a pass. Calls about
+  one pass prove themselves with `Authorization: ApplePass <authenticationToken>`.
+  """
+  use Web, :controller
+
+  alias App.Model.MemberCard
+  alias App.Model.PassRegistration
+  alias App.Operation.BuildApplePass
+
+  require Logger
+
+  def register(conn, %{"device" => device, "pass_type" => pass_type, "serial" => serial} = params) do
+    with {:ok, card} <- authorize(conn, pass_type, serial),
+         token when is_binary(token) and token != "" <- params["pushToken"] do
+      case PassRegistration.register!(card, device, token) do
+        :created -> send_resp(conn, 201, "")
+        :existing -> send_resp(conn, 200, "")
+      end
+    else
+      :unauthorized -> send_resp(conn, 401, "")
+      _ -> send_resp(conn, 400, "")
+    end
+  end
+
+  def unregister(conn, %{"device" => device, "pass_type" => pass_type, "serial" => serial}) do
+    case authorize(conn, pass_type, serial) do
+      {:ok, card} ->
+        PassRegistration.unregister!(card, device)
+        send_resp(conn, 200, "")
+
+      :unauthorized ->
+        send_resp(conn, 401, "")
+    end
+  end
+
+  # The device library id is the secret here: only the phone knows it.
+  def serial_numbers(conn, %{"device" => device, "pass_type" => pass_type} = params) do
+    since = parse_tag(params["passesUpdatedSince"])
+
+    cards =
+      if pass_type == pass_type_id(),
+        do: PassRegistration.cards_for_device(device, since),
+        else: []
+
+    case cards do
+      [] ->
+        send_resp(conn, 204, "")
+
+      cards ->
+        last = cards |> Enum.map(& &1.pass_updated_at) |> Enum.max(DateTime)
+
+        json(conn, %{
+          serialNumbers: Enum.map(cards, &MemberCard.serial_number/1),
+          lastUpdated: last |> DateTime.to_unix(:microsecond) |> Integer.to_string()
+        })
+    end
+  end
+
+  def pass(conn, %{"pass_type" => pass_type, "serial" => serial}) do
+    with {:ok, card} <- authorize(conn, pass_type, serial),
+         {:ok, pkpass} <- BuildApplePass.call(card, DateTime.utc_now()) do
+      conn
+      |> put_resp_content_type("application/vnd.apple.pkpass", nil)
+      |> put_resp_header("last-modified", last_modified(card))
+      |> send_resp(200, pkpass)
+    else
+      :unauthorized -> send_resp(conn, 401, "")
+      _ -> send_resp(conn, 404, "")
+    end
+  end
+
+  # Wallet posts its own error messages here. They help when a pass won't update.
+  def log(conn, params) do
+    for message <- List.wrap(params["logs"]), do: Logger.warning("Wallet: #{message}")
+    send_resp(conn, 200, "")
+  end
+
+  defp authorize(conn, pass_type, serial) do
+    with true <- pass_type == pass_type_id(),
+         %MemberCard{authentication_token: token} = card when is_binary(token) <-
+           MemberCard.find_by_serial_number(serial),
+         ["ApplePass " <> given] <- get_req_header(conn, "authorization"),
+         true <- Plug.Crypto.secure_compare(given, token) do
+      {:ok, card}
+    else
+      _ -> :unauthorized
+    end
+  end
+
+  defp pass_type_id, do: Application.get_env(:sarduty, :apple_pass, [])[:pass_type_id]
+
+  defp parse_tag(nil), do: nil
+
+  defp parse_tag(tag) do
+    case Integer.parse(tag) do
+      {microseconds, ""} -> DateTime.from_unix!(microseconds, :microsecond)
+      _ -> nil
+    end
+  end
+
+  defp last_modified(card) do
+    card.pass_updated_at
+    |> Kernel.||(card.inserted_at)
+    |> Calendar.strftime("%a, %d %b %Y %H:%M:%S GMT")
+  end
+end

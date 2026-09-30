@@ -1,8 +1,10 @@
 defmodule App.Model.MemberCard do
   use App, :model
 
+  alias App.Field.EncryptedString
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.PassRegistration
   alias App.Model.Team
   alias App.Repo
 
@@ -14,6 +16,12 @@ defmodule App.Model.MemberCard do
     belongs_to :member, Member
     field :code, :string
     field :revoked_at, :utc_datetime_usec
+    has_many :pass_registrations, PassRegistration
+    # Apple Wallet pass updates: Wallet sends the token back to prove it holds the pass,
+    # the fingerprint is the pass as last sent, and pass_updated_at is when it changed.
+    field :authentication_token, EncryptedString, redact: true
+    field :pass_fingerprint, :string
+    field :pass_updated_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -80,9 +88,55 @@ defmodule App.Model.MemberCard do
 
   def insert!(%MemberCard{} = card), do: Repo.insert!(card)
 
+  @doc "A secret for the pass web service, 32 random bytes as hex."
+  def generate_authentication_token, do: Service.Random.hex(32)
+
+  @doc "Revokes the member's live cards and returns them."
   def revoke_all!(%Team{} = team, %Member{} = member, now) do
+    {_count, cards} =
+      MemberCard
+      |> where([c], c.team_id == ^team.id and c.member_id == ^member.id and is_nil(c.revoked_at))
+      |> select([c], c)
+      |> Repo.update_all(set: [revoked_at: now, updated_at: now, pass_updated_at: now])
+
+    cards
+  end
+
+  @doc "The card behind an Apple Wallet serial number, `member-card-<id>`."
+  def find_by_serial_number("member-card-" <> id) do
+    case Integer.parse(id) do
+      {id, ""} -> MemberCard |> Repo.get(id) |> Repo.preload(member: :team)
+      _ -> nil
+    end
+  end
+
+  def find_by_serial_number(_serial_number), do: nil
+
+  def serial_number(%MemberCard{id: id}), do: "member-card-#{id}"
+
+  def ensure_authentication_token!(%MemberCard{authentication_token: nil} = card) do
+    card
+    |> change(authentication_token: generate_authentication_token())
+    |> Repo.update!()
+  end
+
+  def ensure_authentication_token!(card), do: card
+
+  def record_pass!(%MemberCard{} = card, fingerprint, now) do
+    changes =
+      if card.pass_fingerprint == fingerprint,
+        do: [pass_fingerprint: fingerprint],
+        else: [pass_fingerprint: fingerprint, pass_updated_at: now]
+
+    card |> change(changes) |> Repo.update!()
+  end
+
+  @doc "The team's cards that at least one phone is registered for."
+  def get_all_registered(%Team{} = team) do
     MemberCard
-    |> where([c], c.team_id == ^team.id and c.member_id == ^member.id and is_nil(c.revoked_at))
-    |> Repo.update_all(set: [revoked_at: now, updated_at: now])
+    |> where([c], c.team_id == ^team.id)
+    |> where([c], c.id in subquery(select(PassRegistration, [r], r.member_card_id)))
+    |> preload(member: :team)
+    |> Repo.all()
   end
 end

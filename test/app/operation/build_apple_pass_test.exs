@@ -75,4 +75,33 @@ defmodule App.Operation.BuildApplePassTest do
     back = BuildApplePass.pass_json(card(), [], @config, @now).generic.backFields
     refute Enum.any?(back, &(&1.key == "qualifications"))
   end
+
+  test "an updatable card points Wallet at the web service" do
+    json =
+      [authentication_token: "token-0123456789abcdef"]
+      |> card()
+      |> BuildApplePass.pass_json([], @config, @now)
+
+    assert json.webServiceURL =~ "/wallet"
+    assert json.authenticationToken == "token-0123456789abcdef"
+
+    refute card() |> BuildApplePass.pass_json([], @config, @now) |> Map.has_key?(:webServiceURL)
+  end
+
+  test "a cancelled card says so" do
+    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json([], @config, @now)
+    assert [%{value: "Cancelled"} | _] = json.generic.secondaryFields
+  end
+
+  test "the fingerprint ignores the last-refreshed date but not the rest" do
+    base = card()
+    later = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 13:00:00Z])
+    left = put_in(base.member.left_at, ~U[2026-01-01 00:00:00Z])
+
+    fingerprint =
+      &(&1 |> BuildApplePass.pass_json([], @config, @now) |> BuildApplePass.fingerprint())
+
+    assert fingerprint.(base) == fingerprint.(later)
+    refute fingerprint.(base) == fingerprint.(left)
+  end
 end
