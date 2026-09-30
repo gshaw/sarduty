@@ -110,6 +110,7 @@ defmodule Web.Router do
 
       get "/:subdomain/image", TeamController, :image
       get "/:subdomain/members/:id/image", MemberController, :image
+      get "/:subdomain/members/:id/card/pass", MemberCardController, :pass
       get "/:subdomain/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
     end
   end

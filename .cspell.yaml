@@ -28,6 +28,9 @@ words:
   - hspacer
   - libncurses
   - libstdc
+  - pkpass # Apple Wallet's pass file extension
+  - smime # the openssl subcommand that signs Apple Wallet passes
+  - wwdr # Apple Worldwide Developer Relations, the intermediate certificate for passes
   - msgid
   - myclass
   - myhook

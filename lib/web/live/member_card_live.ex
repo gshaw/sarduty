@@ -6,6 +6,7 @@ defmodule Web.MemberCardLive do
 
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Operation.BuildApplePass
   alias App.Operation.IssueMemberCard
   alias App.Operation.RevokeMemberCard
   alias App.Repo
@@ -83,6 +84,11 @@ defmodule Web.MemberCardLive do
         Anyone can check this card at <.a navigate={
           ~p"/verify?#{[code: MemberCard.format_code(@card.code)]}"
         }>sarduty.com/verify</.a>.
+      </p>
+      <p :if={BuildApplePass.configured?()} class="mt-p">
+        <.button id="apple-pass" href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/pass"}>
+          Download Apple Wallet pass
+        </.button>
       </p>
       <p class="mt-p flex gap-2">
         <.button

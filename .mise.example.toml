@@ -13,3 +13,8 @@ TEAM_LOGO_PATH = "/Users/gerry/Developer/sarduty.mount/team-logos"
 # CLOUDFLARE_EMAIL_TOKEN = ""
 # Optional: pinged after each successful team refresh.
 # HEALTHCHECKS_URL = ""
+# Optional: sign Apple Wallet passes for member ID cards. PEM text. Set all four.
+# APPLE_PASS_TYPE_ID = "pass.com.sarduty.member-card"
+# APPLE_TEAM_ID = ""
+# APPLE_PASS_CERTIFICATE = """-----BEGIN CERTIFICATE-----..."""
+# APPLE_PASS_PRIVATE_KEY = """-----BEGIN PRIVATE KEY-----..."""

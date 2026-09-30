@@ -37,4 +37,53 @@ defmodule Web.MemberCardControllerTest do
 
     assert response(conn, 404)
   end
+
+  describe "pass" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      member = member_fixture(team)
+
+      config =
+        Map.merge(App.ApplePassCredentials.generate(), %{
+          pass_type_id: "pass.com.sarduty.member-card",
+          team_id: "TEAM123"
+        })
+
+      Application.put_env(:sarduty, :apple_pass, Map.to_list(config))
+      on_exit(fn -> Application.put_env(:sarduty, :apple_pass, []) end)
+
+      %{conn: log_in_user(conn, user), team: team, member: member}
+    end
+
+    test "sends a signed pass for the member's card", %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, "photo-bytes"))
+
+      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/pass")
+
+      assert [content_type] = get_resp_header(conn, "content-type")
+      assert content_type =~ "application/vnd.apple.pkpass"
+      {:ok, entries} = conn |> response(200) |> :zip.extract([:memory])
+      files = Map.new(entries, fn {name, data} -> {to_string(name), data} end)
+      assert files["thumbnail.png"] == "photo-bytes"
+
+      assert Jason.decode!(files["pass.json"])["generic"]["primaryFields"]
+             |> hd()
+             |> Map.get("value") ==
+               member.name
+    end
+
+    test "404s when the member has no card", %{conn: conn, team: team, member: member} do
+      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/pass")
+      assert response(conn, 404)
+    end
+
+    test "404s when passes aren't set up", %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+      Application.put_env(:sarduty, :apple_pass, [])
+
+      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/pass")
+      assert response(conn, 404)
+    end
+  end
 end
