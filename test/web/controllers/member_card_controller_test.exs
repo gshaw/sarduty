@@ -43,14 +43,7 @@ defmodule Web.MemberCardControllerTest do
       %{user: user, team: team} = user_with_team_fixture()
       member = member_fixture(team)
 
-      config =
-        Map.merge(App.ApplePassCredentials.generate(), %{
-          pass_type_id: "pass.com.sarduty.member-card",
-          team_id: "TEAM123"
-        })
-
-      Application.put_env(:sarduty, :apple_pass, Map.to_list(config))
-      on_exit(fn -> Application.put_env(:sarduty, :apple_pass, []) end)
+      App.ApplePassCredentials.configure()
 
       %{conn: log_in_user(conn, user), team: team, member: member}
     end

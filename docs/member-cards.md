@@ -21,11 +21,12 @@ code or typing the code printed under it. Issue #63 has the design and the plan.
 
 ## Apple Wallet
 
-The ID Card tab downloads a signed `.pkpass` for the current card when Apple Wallet is set
-up (see [external-services.md](external-services.md)). A manager opens it on an iPhone or
-sends it to the member. The pass is a snapshot: it doesn't update after it's added, and
-cancelling a card doesn't void a pass already on a phone. `/verify` still says the card
-was cancelled. Updates need Apple's pass web service, which is next on #63.
+The ID Card tab emails the current card's pass to the member's D4H address as an
+attachment, or downloads it, when Apple Wallet is set up (see
+[external-services.md](external-services.md)). The pass is a snapshot: it doesn't update
+after it's added, and cancelling a card doesn't void a pass already on a phone. `/verify`
+still says the card was cancelled. Updates need Apple's pass web service, which is next
+on #63.
 
 Wallet shows images only as PNG. The photo comes from D4H and the logo from the team's
 saved logo, both as D4H sent them.
