@@ -31,6 +31,15 @@ defmodule Service.ImageTest do
     assert size(Service.Image.pad_square(wide, 180, margin: 0.1)) == {180, 180}
   end
 
+  test "pads with transparency, even around a JPEG" do
+    jpeg = 100 |> Image.new!(50, color: :white) |> Image.write!(:memory, suffix: ".jpg")
+    {:ok, png} = Service.Image.pad_square(jpeg, 100)
+    padded = Image.from_binary!(png)
+
+    assert Image.has_alpha?(padded)
+    assert [_r, _g, _b, 0] = Image.get_pixel!(padded, 0, 0)
+  end
+
   test "turns a JPEG into a PNG" do
     jpeg = 100 |> Image.new!(50) |> Image.write!(:memory, suffix: ".jpg")
     assert size(Service.Image.png(jpeg, 480)) == {100, 50}

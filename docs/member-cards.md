@@ -78,8 +78,9 @@ Google loads images from URLs and refuses a pass whose images it can't load. It 
 reach a dev server, so dev passes have none. In production:
 
 - **The team logo** sits in the round spot beside the team name, from
-  `/teams/:subdomain/logo`: padded square on white, with a margin so the circle
-  clips nothing. It's public, like the logo on the team's D4H pages.
+  `/teams/:subdomain/logo`: padded to a transparent square, with a margin so the
+  circle clips nothing. Google fills the transparency with white (tested 2026-10-01), so
+  pages and Google share one image. It's public, like the logo on the team's D4H pages.
 - **The photo** sits in the banner under the QR code (`heroImage`), from
   `/verify/:code/banner`: the square photo centered on the pass's navy. Google has no
   picture spot beside the name, so this is the only place on the front for both.

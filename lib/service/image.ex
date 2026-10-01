@@ -23,19 +23,19 @@ defmodule Service.Image do
   end
 
   @doc """
-  Fits a logo inside a square of `side`, padded with `background`, so nothing is cut
-  off. `margin` is the share of the side left clear on each edge, so a round frame
-  doesn't clip the corners.
+  Fits a logo inside a transparent square of `side`, so nothing is cut off and it sits
+  on any background. Google fills the transparency with white in its circle. `margin` is
+  the share of the side left clear on each edge, so a round frame doesn't clip the
+  corners.
   """
   def pad_square(bytes, side, opts \\ []) do
-    background = Keyword.get(opts, :background, :white)
     margin = Keyword.get(opts, :margin, 0.0)
     inner = round(side * (1 - 2 * margin))
 
     with {:ok, image} <- Image.from_binary(bytes),
          {:ok, fitted} <- Image.thumbnail(image, inner),
-         {:ok, flat} <- flatten(fitted, background),
-         {:ok, padded} <- Image.embed(flat, side, side, background: background) do
+         {:ok, alpha} <- with_alpha(fitted),
+         {:ok, padded} <- Image.embed(alpha, side, side, background: :transparent) do
       to_png(padded)
     end
   end
@@ -57,6 +57,10 @@ defmodule Service.Image do
     if Image.has_alpha?(image),
       do: Image.flatten(image, background: background),
       else: {:ok, image}
+  end
+
+  defp with_alpha(image) do
+    if Image.has_alpha?(image), do: {:ok, image}, else: Image.add_alpha(image, :opaque)
   end
 
   defp to_png(image), do: Image.write(image, :memory, suffix: ".png")
