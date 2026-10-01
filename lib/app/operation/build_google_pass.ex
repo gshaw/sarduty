@@ -144,7 +144,7 @@ defmodule App.Operation.BuildGooglePass do
   defp put_barcode(object, card, :active) do
     Map.put(object, :barcode, %{
       type: "QR_CODE",
-      value: MemberCard.qr_url(card.code, Web.Endpoint.url()),
+      value: MemberCard.qr_url(card.code, Web.VerifyHost.url()),
       alternateText: MemberCard.format_code(card.code)
     })
   end

@@ -6,20 +6,21 @@ defmodule Web.VerifyLiveTest do
 
   alias App.Model.MemberCard
 
-  setup do
+  # The verify site is matched by host, like verify.sarduty.com in production.
+  setup %{conn: conn} do
     team = team_fixture()
-    %{team: team, member: member_fixture(team)}
+    %{conn: %{conn | host: Web.VerifyHost.host()}, team: team, member: member_fixture(team)}
   end
 
   test "anyone can open the page without logging in", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/verify")
+    {:ok, lv, _html} = live(conn, ~p"/")
     assert has_element?(lv, "#check-form")
     assert has_element?(lv, "#scanner")
   end
 
   test "a typed code for a current member shows them as active", %{conn: conn, member: member} do
     card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/verify")
+    {:ok, lv, _html} = live(conn, ~p"/")
 
     typed = card.code |> MemberCard.format_code() |> String.downcase()
     lv |> form("#check-form", check: %{code: typed}) |> render_submit()
@@ -30,7 +31,7 @@ defmodule Web.VerifyLiveTest do
 
   test "a scanned code is checked the same way", %{conn: conn, member: member} do
     card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/verify")
+    {:ok, lv, _html} = live(conn, ~p"/")
 
     lv |> element("#scanner") |> render_hook("scanned", %{code: card.code})
 
@@ -40,8 +41,7 @@ defmodule Web.VerifyLiveTest do
   test "a card's QR link opens straight to the check", %{conn: conn, member: member} do
     card = member_card_fixture(member)
 
-    path = card.code |> MemberCard.qr_url(Web.Endpoint.url()) |> URI.parse() |> Map.get(:path)
-    assert path =~ "/VERIFY/"
+    path = card.code |> MemberCard.qr_url(Web.VerifyHost.url()) |> URI.parse() |> Map.get(:path)
     {:ok, lv, _html} = live(conn, path)
 
     assert has_element?(lv, "#result-active")
@@ -51,18 +51,18 @@ defmodule Web.VerifyLiveTest do
 
   test "scanning a card's QR link on this page checks its code", %{conn: conn, member: member} do
     card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/verify")
+    {:ok, lv, _html} = live(conn, ~p"/")
 
-    link = MemberCard.qr_url(card.code, Web.Endpoint.url())
+    link = MemberCard.qr_url(card.code, Web.VerifyHost.url())
     lv |> element("#scanner") |> render_hook("scanned", %{code: link})
 
-    assert_patch(lv, ~p"/verify/#{MemberCard.format_code(card.code)}")
+    assert_patch(lv, ~p"/#{MemberCard.format_code(card.code)}")
     assert has_element?(lv, "#result-active")
   end
 
   test "scanning a link to another site flags the card", %{conn: conn, member: member} do
     card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/verify")
+    {:ok, lv, _html} = live(conn, ~p"/")
 
     link = "https://sarduty-verify.com/verify/#{MemberCard.format_code(card.code)}"
     lv |> element("#scanner") |> render_hook("scanned", %{code: link})
@@ -75,25 +75,25 @@ defmodule Web.VerifyLiveTest do
     member = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
     card = member_card_fixture(member)
 
-    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: card.code]}")
+    {:ok, lv, _html} = live(conn, ~p"/?#{[code: card.code]}")
 
-    assert has_element?(lv, "#result-inactive")
+    assert has_element?(lv, "#result-inactive", "Left the team Dec 2025")
   end
 
   test "a cancelled card shows no member details", %{conn: conn, member: member} do
     card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
 
-    {:ok, lv, html} = live(conn, ~p"/verify?#{[code: card.code]}")
+    {:ok, lv, html} = live(conn, ~p"/?#{[code: card.code]}")
 
     assert has_element?(lv, "#result-revoked")
     refute html =~ member.name
   end
 
   test "an unknown or malformed code is not found", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: "AAAA-AAAA"]}")
+    {:ok, lv, _html} = live(conn, ~p"/?#{[code: "AAAA-AAAA"]}")
     assert has_element?(lv, "#result-not-found")
 
-    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: "not a code"]}")
+    {:ok, lv, _html} = live(conn, ~p"/?#{[code: "not a code"]}")
     assert has_element?(lv, "#result-not-found")
   end
 
@@ -108,8 +108,45 @@ defmodule Web.VerifyLiveTest do
     qualification_award_fixture(qualification, member)
     card = member_card_fixture(member)
 
-    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: card.code]}")
+    {:ok, lv, _html} = live(conn, ~p"/?#{[code: card.code]}")
 
-    assert has_element?(lv, "#result-qualifications", "First Aid — no expiry")
+    assert has_element?(lv, "#result-qualifications", "First Aid")
+    assert has_element?(lv, "#result-qualifications", "No expiry")
+  end
+
+  test "a card scanned from before the verify site still checks", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+
+    old_link =
+      "HTTPS://#{String.upcase(Web.Endpoint.host())}/VERIFY/#{MemberCard.format_code(card.code)}"
+
+    lv |> element("#scanner") |> render_hook("scanned", %{code: old_link})
+
+    assert has_element?(lv, "#result-active")
+  end
+
+  test "the rest of the app isn't on the verify site", %{conn: conn} do
+    assert conn |> get("/settings/team") |> redirected_to() ==
+             Web.Endpoint.url() <> "/settings/team"
+
+    # One segment reads as a code.
+    {:ok, lv, _html} = live(conn, "/login")
+    assert has_element?(lv, "#result-not-found")
+    refute has_element?(lv, "#login_form")
+  end
+
+  describe "on the app's host" do
+    setup %{conn: conn}, do: %{conn: %{conn | host: Web.Endpoint.host()}}
+
+    test "/verify links from before the verify site go there", %{conn: conn} do
+      assert conn |> get("/VERIFY/K7Q4-M2XA") |> redirected_to() ==
+               Web.VerifyHost.url() <> "/K7Q4-M2XA"
+
+      assert build_conn() |> get("/verify?code=K7Q4M2XA") |> redirected_to() ==
+               Web.VerifyHost.url() <> "/?code=K7Q4M2XA"
+
+      assert build_conn() |> get("/verify") |> redirected_to() == Web.VerifyHost.url() <> "/"
+    end
   end
 end

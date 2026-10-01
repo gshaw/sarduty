@@ -124,7 +124,7 @@ defmodule App.Operation.BuildApplePass do
       [
         %{
           format: "PKBarcodeFormatQR",
-          message: MemberCard.qr_url(card.code, Web.Endpoint.url()),
+          message: MemberCard.qr_url(card.code, Web.VerifyHost.url()),
           messageEncoding: "iso-8859-1",
           # Just the code: Wallet widens its white box to fit this text, and shows only
           # the first line of it. How to check the card is on the back.

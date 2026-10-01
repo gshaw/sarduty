@@ -44,6 +44,23 @@ defmodule Web.Layouts do
     """
   end
 
+  # The verify site: SAR Duty's navy bar with the host beside it, since the host is what
+  # a checker is told to look for. No app navigation, no login.
+  def verify(assigns) do
+    ~H"""
+    <header class="bg-[#1c2d42] text-white">
+      <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+        <a href="/" class="text-lg font-bold">SAR <span class="text-[#ffc400]">Duty</span></a>
+        <span id="verify-host" class="text-sm text-slate-300">{Web.VerifyHost.host()}</span>
+      </div>
+    </header>
+    <main role="main" class="max-w-md mx-auto mb-p2">
+      <.flash_group flash={@flash} />
+      {@inner_content}
+    </main>
+    """
+  end
+
   def narrow(assigns) do
     ~H"""
     <.narrow_nav_bar current_user={@current_user} />

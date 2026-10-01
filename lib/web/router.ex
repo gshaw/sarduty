@@ -21,6 +21,30 @@ defmodule Web.Router do
     plug :assign_current_user
   end
 
+  # The verify site (verify.sarduty.com): a card's QR code opens /<code> here. No login,
+  # and the app's session cookie never reaches it, since that cookie is host-only. First,
+  # so `/` on this host is the check rather than the home page.
+  pipeline :verify do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {Web.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+  end
+
+  scope "/", Web, host: "verify." do
+    pipe_through :verify
+
+    live_session :verify do
+      live "/", VerifyLive
+      live "/:code", VerifyLive
+    end
+
+    get "/:code/photo", MemberCardController, :photo
+    get "/*path", VerifyController, :to_app
+  end
+
   # Apple Wallet calls these with JSON bodies and its own auth header: no session, no
   # CSRF token, and an Accept header of its own choosing.
   scope "/wallet/v1", Web do
@@ -61,11 +85,12 @@ defmodule Web.Router do
       live "/login", UserLoginLive, :new
       live "/login/reset", UserForgotPasswordLive, :new
       live "/login/reset/:token", UserResetPasswordLive, :edit
-      live "/verify", VerifyLive
-      live "/verify/:code", VerifyLive
-      # A card's QR link is in capitals (MemberCard.qr_url/2), and paths are case-sensitive.
-      live "/VERIFY/:code", VerifyLive
     end
+
+    # The check moved to the verify site. Cards linked here before it, in capitals.
+    get "/verify", VerifyController, :to_verify
+    get "/verify/:code", VerifyController, :to_verify
+    get "/VERIFY/:code", VerifyController, :to_verify
 
     get "/verify/:code/photo", MemberCardController, :photo
     get "/verify/:code/banner", MemberCardController, :banner

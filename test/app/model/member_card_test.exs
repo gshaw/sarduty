@@ -72,43 +72,43 @@ defmodule App.Model.MemberCardTest do
     end
   end
 
-  test "qr_url is the card's /verify page in capitals" do
-    assert MemberCard.qr_url("K7Q4M2XA", "https://sarduty.com") ==
-             "HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA"
+  test "qr_url is the card's page on the verify site, in capitals" do
+    assert MemberCard.qr_url("K7Q4M2XA", "https://verify.sarduty.com") ==
+             "HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA"
   end
 
   describe "code_from_scan" do
-    test "reads a bare code, as on older cards" do
-      assert MemberCard.code_from_scan("K7Q4M2XA", "sarduty.com") == "K7Q4M2XA"
+    @hosts ["verify.sarduty.com", "sarduty.com"]
+
+    test "reads a bare code, as on the first cards" do
+      assert MemberCard.code_from_scan("K7Q4M2XA", @hosts) == "K7Q4M2XA"
     end
 
-    test "reads the code from a link to this site, in any case" do
+    test "reads the code from a card's link, in any case, on either host" do
       for link <- [
+            "HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA",
+            "https://verify.sarduty.com/k7q4m2xa",
             "HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA",
-            "https://sarduty.com/verify/k7q4m2xa",
             "https://sarduty.com/verify/K7Q4-M2XA/"
           ] do
-        assert MemberCard.code_from_scan(link, "sarduty.com") == "K7Q4M2XA"
+        assert MemberCard.code_from_scan(link, @hosts) == "K7Q4M2XA"
       end
     end
 
     test "flags a link to another site, the way a forged card would" do
-      assert MemberCard.code_from_scan(
-               "https://sarduty-verify.com/verify/K7Q4-M2XA",
-               "sarduty.com"
-             ) ==
+      assert MemberCard.code_from_scan("https://sarduty-verify.com/K7Q4-M2XA", @hosts) ==
                {:other_site, "sarduty-verify.com"}
 
       assert MemberCard.code_from_scan(
-               "https://sarduty.com.evil.example/verify/K7Q4-M2XA",
-               "sarduty.com"
+               "https://verify.sarduty.com.evil.example/K7Q4-M2XA",
+               @hosts
              ) ==
-               {:other_site, "sarduty.com.evil.example"}
+               {:other_site, "verify.sarduty.com.evil.example"}
     end
 
     test "is nil for a link to another page here, or text that isn't a code" do
-      assert MemberCard.code_from_scan("https://sarduty.com/login", "sarduty.com") == nil
-      assert MemberCard.code_from_scan("hello", "sarduty.com") == nil
+      assert MemberCard.code_from_scan("https://sarduty.com/login", @hosts) == nil
+      assert MemberCard.code_from_scan("hello", @hosts) == nil
     end
   end
 end
