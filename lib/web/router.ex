@@ -65,6 +65,8 @@ defmodule Web.Router do
     end
 
     get "/verify/:code/photo", MemberCardController, :photo
+    get "/verify/:code/banner", MemberCardController, :banner
+    get "/teams/:subdomain/logo", TeamController, :logo
 
     post "/login", UserSessionController, :create
     delete "/logout", UserSessionController, :delete
@@ -119,7 +121,6 @@ defmodule Web.Router do
     scope "/" do
       pipe_through [:require_authenticated_user, :require_authorized_team_subdomain]
 
-      get "/:subdomain/image", TeamController, :image
       get "/:subdomain/members/:id/image", MemberController, :image
       get "/:subdomain/members/:id/card/pass", MemberCardController, :pass
       get "/:subdomain/members/:id/card/google-pass", MemberCardController, :google_pass

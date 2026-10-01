@@ -3,22 +3,27 @@ defmodule Web.TeamControllerTest do
 
   import App.DataFixtures
 
-  setup %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    %{conn: log_in_user(conn, user), team: team}
+  setup do
+    %{team: team_fixture()}
   end
 
-  test "404s when the team has no saved logo", %{conn: conn, team: team} do
-    conn = get(conn, ~p"/#{team.subdomain}/image")
+  describe "logo" do
+    test "sends the logo padded square, without a login", %{team: team} do
+      team_logo_fixture(team, png_fixture(800, 504))
 
-    assert conn.status == 404
-  end
+      conn = get(build_conn(), ~p"/teams/#{team.subdomain}/logo")
 
-  test "sends the saved logo", %{conn: conn, team: team} do
-    team_logo_fixture(team)
+      image = conn |> response(200) |> Image.from_binary!()
+      assert {Image.width(image), Image.height(image)} == {660, 660}
+    end
 
-    conn = get(conn, ~p"/#{team.subdomain}/image")
+    test "sends SAR Duty's logo when the team has none", %{team: team} do
+      conn = get(build_conn(), ~p"/teams/#{team.subdomain}/logo")
+      assert response(conn, 200)
+    end
 
-    assert response(conn, 200) == "png bytes"
+    test "404s for a team that doesn't exist" do
+      assert build_conn() |> get(~p"/teams/no-such-team/logo") |> response(404)
+    end
   end
 end

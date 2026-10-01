@@ -72,7 +72,7 @@ defmodule Web.Components.D4H do
   def member_image(assigns) do
     ~H"""
     <img
-      class="bg-base-0 aspect-square object-cover size-48 rounded"
+      class="bg-base-0 size-48 rounded"
       src={~p"/#{@member.team.subdomain}/members/#{@member.id}/image"}
     />
     """

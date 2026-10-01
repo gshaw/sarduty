@@ -47,8 +47,13 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   token the next time its pass is built.
 - APNs only works in production, so dev can build passes but never deliver a push.
 
-Wallet shows images only as PNG. The photo comes from D4H and the logo from the team's
-saved logo, both as D4H sent them.
+Wallet has no CSS and shows images only as PNG, so
+[LoadImage](../lib/app/operation/load_image.ex) shapes them with
+[Service.Image](../lib/service/image.ex): the D4H photo cropped to a centered square, and
+the team's saved logo converted to PNG, since D4H may send a JPEG. A missing or broken
+image falls back to the placeholder photo or SAR Duty's logo. The member page, the team
+dashboard, and tax credit letters use the same images, so what a manager sees is what
+goes on the pass.
 
 ## Google Wallet
 
@@ -69,10 +74,16 @@ pass again, and every saved copy changes:
 - **A replacement is a new pass.** Each card has its own Wallet object, because Google
   has no per-phone token to say which card a phone holds. The member adds the new one.
 
-Google loads the photo from `/verify/:code/photo`, the public one `/verify` shows, and
-refuses a pass whose photo it can't load. It can't reach a dev server, so dev passes have
-no photo. Team logos aren't public, so the Google pass shows the team's name, not its
-logo.
+Google loads images from URLs and refuses a pass whose images it can't load. It can't
+reach a dev server, so dev passes have none. In production:
+
+- **The team logo** sits in the round spot beside the team name, from
+  `/teams/:subdomain/logo`: padded to a transparent square, with a margin so the
+  circle clips nothing. Google fills the transparency with white (tested 2026-10-01), so
+  pages and Google share one image. It's public, like the logo on the team's D4H pages.
+- **The photo** sits in the banner under the QR code (`heroImage`), from
+  `/verify/:code/banner`: the square photo centered on the pass's navy. Google has no
+  picture spot beside the name, so this is the only place on the front for both.
 
 ## Active and qualifications
 

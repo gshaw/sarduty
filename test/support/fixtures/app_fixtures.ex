@@ -36,11 +36,16 @@ defmodule App.DataFixtures do
     Team.insert!(params)
   end
 
+  @doc "PNG bytes of a plain image, as D4H sends a photo or logo."
+  def png_fixture(width, height) do
+    width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: ".png")
+  end
+
   # Call from a test: the file is removed when the test exits.
-  def team_logo_fixture(team) do
+  def team_logo_fixture(team, bytes \\ "png bytes") do
     path = Team.logo_path(team.subdomain)
     path |> Path.dirname() |> File.mkdir_p!()
-    File.write!(path, "png bytes")
+    File.write!(path, bytes)
     ExUnit.Callbacks.on_exit(fn -> File.rm(path) end)
     path
   end

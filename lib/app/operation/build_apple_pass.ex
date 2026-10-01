@@ -1,8 +1,7 @@
 defmodule App.Operation.BuildApplePass do
-  alias App.Adapter.D4H
   alias App.Model.MemberCard
-  alias App.Model.Team
   alias App.Operation.BuildCardQualifications
+  alias App.Operation.LoadImage
   alias App.Operation.PushPassUpdates
 
   # SAR Duty's navy and yellow, the same on every team's card.
@@ -12,7 +11,8 @@ defmodule App.Operation.BuildApplePass do
 
   # Part of every fingerprint. Bump it to push every pass once, as when something outside
   # pass.json changes. 2: passes built for email or download had swallowed changes.
-  @fingerprint_version 2
+  # 3: square photos and PNG logos (#78).
+  @fingerprint_version 3
 
   def configured? do
     config = Application.get_env(:sarduty, :apple_pass, [])
@@ -30,7 +30,6 @@ defmodule App.Operation.BuildApplePass do
       card = MemberCard.ensure_authentication_token!(card)
       member = card.member
       qualifications = BuildCardQualifications.call(member.team, member, now)
-      logo = (Team.logo_file(member.team.subdomain) || default_logo_path()) |> File.read!()
 
       json = pass_json(card, qualifications, config, now)
       fingerprint = fingerprint(json)
@@ -39,9 +38,9 @@ defmodule App.Operation.BuildApplePass do
 
       files = %{
         "pass.json" => Jason.encode!(json),
-        "icon.png" => logo,
-        "logo.png" => logo,
-        "thumbnail.png" => photo(member)
+        "icon.png" => LoadImage.logo(member.team.subdomain, :icon),
+        "logo.png" => LoadImage.logo(member.team.subdomain, :logo),
+        "thumbnail.png" => LoadImage.photo(member, :square)
       }
 
       {:ok, Service.ApplePass.package(files, config)}
@@ -195,16 +194,4 @@ defmodule App.Operation.BuildApplePass do
 
   defp last_checked(%{d4h_refreshed_at: nil}), do: "Never"
   defp last_checked(team), do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
-
-  defp photo(member) do
-    d4h = D4H.build_context_from_team(member.team)
-
-    case D4H.fetch_member_image(d4h, member.d4h_member_id) do
-      {:ok, image, _filename} -> image
-      {:error, _response} -> File.read!(default_photo_path())
-    end
-  end
-
-  defp default_logo_path, do: Application.app_dir(:sarduty, "priv/apple/sarduty_logo.png")
-  defp default_photo_path, do: Application.app_dir(:sarduty, "priv/static/images/member.png")
 end

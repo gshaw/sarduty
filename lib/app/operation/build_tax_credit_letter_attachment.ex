@@ -1,5 +1,6 @@
 defmodule App.Operation.BuildTaxCreditLetterAttachment do
   alias App.Model.Team
+  alias App.Operation.LoadImage
   alias Service.PDFLetter
 
   def call(tax_credit_letter) do
@@ -11,7 +12,7 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
         title: title,
         author: team.name,
         creator: "SARDuty.com",
-        logo_path: Team.logo_file(team.subdomain),
+        logo: logo(team),
         content: tax_credit_letter.letter_content
       })
 
@@ -21,5 +22,10 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
       filename: Service.StringHelpers.to_filename("#{title}.pdf"),
       content_type: "application/pdf"
     }
+  end
+
+  # A team without a logo gets none on its letters, not SAR Duty's.
+  defp logo(team) do
+    if Team.logo_file(team.subdomain), do: LoadImage.logo(team.subdomain, :square)
   end
 end

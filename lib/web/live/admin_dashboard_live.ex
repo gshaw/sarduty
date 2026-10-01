@@ -44,9 +44,23 @@ defmodule Web.AdminDashboardLive do
       </div>
     </div>
     <.table id="teams" rows={@teams} row_id={&"team-#{&1.id}"} class="table-striped">
-      <:col :let={team} label="Team" class="md:w-44">
-        <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
-        <.hint><span class="whitespace-nowrap">{team.subdomain} · ID {team.id}</span></.hint>
+      <:col :let={team} label="Team" class="md:w-56">
+        <div class="flex items-start gap-2">
+          <img
+            id={"team-#{team.id}-logo"}
+            src={~p"/teams/#{team.subdomain}/logo"}
+            width="32"
+            height="32"
+            class="size-8 shrink-0 rounded"
+            alt=""
+          />
+          <div>
+            <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
+            <.hint>
+              <span class="whitespace-nowrap">{team.subdomain} · ID {team.id}</span>
+            </.hint>
+          </div>
+        </div>
       </:col>
       <:col :let={team} label="Last seen" class="whitespace-nowrap">
         <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @now)}</span>
