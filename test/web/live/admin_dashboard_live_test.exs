@@ -19,6 +19,15 @@ defmodule Web.AdminDashboardLiveTest do
     assert html =~ "Admin"
   end
 
+  test "shows each team's logo from the shared logo route", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    user = make_admin(user)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/admin")
+
+    assert has_element?(lv, ~s(#team-#{team.id}-logo[src="/teams/#{team.subdomain}/logo"]))
+  end
+
   test "lists each team's users and marks the key the refresh borrows", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
