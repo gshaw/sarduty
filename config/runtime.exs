@@ -32,12 +32,12 @@ config :sarduty, :apple_pass,
   private_key: System.get_env("APPLE_PASS_PRIVATE_KEY")
 
 # Google Wallet passes for member ID cards. Optional, like Apple's. The service account
-# is the key file's JSON. Google refuses a pass whose photo it can't load, and it can't
-# reach a dev server, so only production passes have one.
+# is the key file's JSON. Google refuses a pass whose images it can't load, and it can't
+# reach a dev server, so only production passes have a logo and photo.
 config :sarduty, :google_wallet,
   issuer_id: System.get_env("GOOGLE_WALLET_ISSUER_ID"),
   service_account: System.get_env("GOOGLE_WALLET_SERVICE_ACCOUNT"),
-  photos: config_env() == :prod
+  images: config_env() == :prod
 
 if config_env() == :prod do
   config :sarduty, Web.Endpoint,

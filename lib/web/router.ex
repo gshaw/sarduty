@@ -65,6 +65,8 @@ defmodule Web.Router do
     end
 
     get "/verify/:code/photo", MemberCardController, :photo
+    get "/verify/:code/banner", MemberCardController, :banner
+    get "/teams/:subdomain/pass-logo", TeamController, :pass_logo
 
     post "/login", UserSessionController, :create
     delete "/logout", UserSessionController, :delete

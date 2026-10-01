@@ -61,7 +61,7 @@ defmodule Web.MemberCardLiveTest do
   describe "with Apple Wallet set up" do
     setup do
       App.ApplePassCredentials.configure()
-      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, "photo-bytes"))
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
       :ok
     end
 

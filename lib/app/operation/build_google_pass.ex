@@ -13,7 +13,7 @@ defmodule App.Operation.BuildGooglePass do
 
   @doc """
   The issuer ID, the service account's credentials, the host the ids are made under,
-  and whether passes carry the photo. Dev and production share one issuer, so the host
+  and whether passes carry the logo and photo. Dev and production share one issuer, so the host
   keeps their ids apart.
   """
   def config do
@@ -23,7 +23,7 @@ defmodule App.Operation.BuildGooglePass do
       issuer_id: config.issuer_id,
       credentials: GoogleWallet.credentials(config.service_account),
       host: Web.Endpoint.host(),
-      photos: Map.get(config, :photos, false)
+      images: Map.get(config, :images, false)
     }
   end
 
@@ -97,7 +97,7 @@ defmodule App.Operation.BuildGooglePass do
       textModulesData: texts(card, qualifications, status, now)
     }
     |> put_barcode(card, status)
-    |> put_photo(card, status, config)
+    |> put_images(card, status, config)
   end
 
   defp texts(%MemberCard{member: member} = card, qualifications, status, now) do
@@ -146,15 +146,28 @@ defmodule App.Operation.BuildGooglePass do
 
   defp put_barcode(object, _card, _status), do: object
 
-  # Google loads the photo from a URL, so it uses the public one /verify shows, which
-  # answers only while the card isn't cancelled. The round logo spot is the only image on
-  # the front that fits a face.
-  defp put_photo(object, _card, :revoked, _config), do: object
-  defp put_photo(object, _card, _status, %{photos: false}), do: object
+  # Google loads images from URLs it can reach, so dev passes have none. The team logo
+  # sits in the round spot beside the team name, and the photo in the banner under the
+  # QR code, from the public URL /verify uses. A cancelled card's photo URL 404s.
+  defp put_images(object, _card, _status, %{images: false}), do: object
 
-  defp put_photo(object, card, _status, _config) do
-    Map.put(object, :logo, %{
-      sourceUri: %{uri: "#{Web.Endpoint.url()}/verify/#{card.code}/photo"},
+  defp put_images(object, card, status, _config) do
+    team = card.member.team
+    url = Web.Endpoint.url()
+
+    object
+    |> Map.put(:logo, %{
+      sourceUri: %{uri: "#{url}/teams/#{team.subdomain}/pass-logo"},
+      contentDescription: localized("#{team.name} logo")
+    })
+    |> put_banner(card, status, url)
+  end
+
+  defp put_banner(object, _card, :revoked, _url), do: object
+
+  defp put_banner(object, card, _status, url) do
+    Map.put(object, :heroImage, %{
+      sourceUri: %{uri: "#{url}/verify/#{card.code}/banner"},
       contentDescription: localized("Photo of #{card.member.name}")
     })
   end

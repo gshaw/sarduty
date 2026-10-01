@@ -7,11 +7,12 @@ defmodule App.Operation.BuildGooglePassTest do
   alias App.Operation.BuildGooglePass
 
   @now ~U[2026-09-30 12:00:00Z]
-  @config %{issuer_id: "3388", host: "sarduty.com", photos: true}
+  @config %{issuer_id: "3388", host: "sarduty.com", images: true}
 
   defp card(attrs \\ %{}) do
     team = %Team{
       name: "Example SAR",
+      subdomain: "example",
       timezone: "America/Vancouver",
       d4h_refreshed_at: ~U[2026-09-30 13:05:00Z]
     }
@@ -58,11 +59,14 @@ defmodule App.Operation.BuildGooglePassTest do
            }
   end
 
-  test "the photo is the public one /verify shows, and dev passes leave it off" do
-    assert object(card()).logo.sourceUri.uri =~ "/verify/K7Q4M2XA/photo"
+  test "the team logo is by the name, the photo is under the code, and dev has neither" do
+    object = object(card())
+    assert object.logo.sourceUri.uri =~ "/teams/example/pass-logo"
+    assert object.heroImage.sourceUri.uri =~ "/verify/K7Q4M2XA/banner"
 
-    dev = BuildGooglePass.pass_object(card(), [], %{@config | photos: false}, @now)
+    dev = BuildGooglePass.pass_object(card(), [], %{@config | images: false}, @now)
     refute Map.has_key?(dev, :logo)
+    refute Map.has_key?(dev, :heroImage)
   end
 
   test "a cancelled card expires and shows no QR code or photo" do
@@ -72,7 +76,7 @@ defmodule App.Operation.BuildGooglePassTest do
     assert object.subheader.defaultValue.value == "Card cancelled"
     assert text(object, "status").body == "Cancelled"
     refute Map.has_key?(object, :barcode)
-    refute Map.has_key?(object, :logo)
+    refute Map.has_key?(object, :heroImage)
   end
 
   test "a member who left stays a live pass but shows as not active, with no QR code" do
