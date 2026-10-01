@@ -37,6 +37,40 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-active")
   end
 
+  test "a card's QR link opens straight to the check", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+
+    path = card.code |> MemberCard.qr_url(Web.Endpoint.url()) |> URI.parse() |> Map.get(:path)
+    assert path =~ "/VERIFY/"
+    {:ok, lv, _html} = live(conn, path)
+
+    assert has_element?(lv, "#result-active")
+    assert has_element?(lv, "#result-photo")
+    assert has_element?(lv, "#result-check", "address bar")
+  end
+
+  test "scanning a card's QR link on this page checks its code", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/verify")
+
+    link = MemberCard.qr_url(card.code, Web.Endpoint.url())
+    lv |> element("#scanner") |> render_hook("scanned", %{code: link})
+
+    assert_patch(lv, ~p"/verify/#{MemberCard.format_code(card.code)}")
+    assert has_element?(lv, "#result-active")
+  end
+
+  test "scanning a link to another site flags the card", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/verify")
+
+    link = "https://sarduty-verify.com/verify/#{MemberCard.format_code(card.code)}"
+    lv |> element("#scanner") |> render_hook("scanned", %{code: link})
+
+    assert has_element?(lv, "#result-other-site", "sarduty-verify.com")
+    refute has_element?(lv, "#result-active")
+  end
+
   test "a member who left shows as not active", %{conn: conn, team: team} do
     member = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
     card = member_card_fixture(member)
@@ -59,7 +93,7 @@ defmodule Web.VerifyLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: "AAAA-AAAA"]}")
     assert has_element?(lv, "#result-not-found")
 
-    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: "https://example.com"]}")
+    {:ok, lv, _html} = live(conn, ~p"/verify?#{[code: "not a code"]}")
     assert has_element?(lv, "#result-not-found")
   end
 

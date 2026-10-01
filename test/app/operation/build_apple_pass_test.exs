@@ -58,11 +58,11 @@ defmodule App.Operation.BuildApplePassTest do
     refute Enum.any?(json.generic.secondaryFields, &(&1.key == "valid-until"))
   end
 
-  test "the QR code holds only the code, never a link" do
+  test "the QR code opens the card's /verify page, with only the code printed under it" do
     [barcode] = BuildApplePass.pass_json(card(), [], @config, @now).barcodes
 
     assert barcode.format == "PKBarcodeFormatQR"
-    assert barcode.message == "K7Q4M2XA"
+    assert barcode.message =~ ~r{^HTTPS?://[A-Z0-9.:]+/VERIFY/K7Q4-M2XA$}
     assert barcode.altText == "K7Q4-M2XA"
   end
 

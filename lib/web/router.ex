@@ -62,6 +62,9 @@ defmodule Web.Router do
       live "/login/reset", UserForgotPasswordLive, :new
       live "/login/reset/:token", UserResetPasswordLive, :edit
       live "/verify", VerifyLive
+      live "/verify/:code", VerifyLive
+      # A card's QR link is in capitals (MemberCard.qr_url/2), and paths are case-sensitive.
+      live "/VERIFY/:code", VerifyLive
     end
 
     get "/verify/:code/photo", MemberCardController, :photo

@@ -197,7 +197,9 @@ defmodule Web.WalletControllerTest do
 
       assert new_pass["voided"] == false
       assert new_pass["serialNumber"] == serial
-      assert new_pass["barcodes"] |> hd() |> Map.get("message") == new.code
+
+      assert new_pass["barcodes"] |> hd() |> Map.get("message") =~
+               MemberCard.format_code(new.code)
     end
   end
 

@@ -109,7 +109,11 @@ defmodule App.Operation.BuildGooglePass do
       text("status", "Status", status_text(status)),
       text("member_since", "Member since", member_since(member)),
       valid_until_text(team, status),
-      text("verify", "How to check this card", verify_text(card)),
+      text(
+        "verify",
+        "How to check this card",
+        MemberCard.how_to_check(MemberCard.format_code(card.code))
+      ),
       qualification_texts(qualifications, team.timezone),
       text("checked", "Last checked with D4H", last_checked(team)),
       text("issuer", "Issued by", issuer)
@@ -135,12 +139,13 @@ defmodule App.Operation.BuildGooglePass do
     |> Base.encode16(case: :lower)
   end
 
-  # Only an active card shows its QR code, as on the Apple pass. The code, never a link.
+  # Only an active card shows its QR code, as on the Apple pass. It opens the card's
+  # /verify page; only the code is printed under it.
   defp put_barcode(object, card, :active) do
     Map.put(object, :barcode, %{
       type: "QR_CODE",
-      value: card.code,
-      alternateText: "sarduty.com/verify · #{MemberCard.format_code(card.code)}"
+      value: MemberCard.qr_url(card.code, Web.Endpoint.url()),
+      alternateText: MemberCard.format_code(card.code)
     })
   end
 
@@ -203,12 +208,6 @@ defmodule App.Operation.BuildGooglePass do
     for {q, index} <- Enum.with_index(qualifications) do
       text("qualification_#{index}", q.name, BuildCardQualifications.status_text(q, timezone))
     end
-  end
-
-  defp verify_text(card) do
-    "Open sarduty.com/verify on your own phone and scan the code, or type " <>
-      "#{MemberCard.format_code(card.code)}. Don't trust a link or a page you reached " <>
-      "from the card."
   end
 
   defp text(id, header, body), do: %{id: id, header: header, body: body}
