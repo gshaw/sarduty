@@ -5,7 +5,9 @@ holding the SQLite database and team logos. Deploys are manual.
 
 It answers on two hosts, each with a Fly certificate (`fly certs list`): `sarduty.com`,
 and `verify.sarduty.com` for checking ID cards. The verify host is a Cloudflare CNAME to
-`sarduty.fly.dev`, DNS only, not proxied.
+`sarduty.com`, DNS only: proxying would stop Fly issuing its certificate. Cloudflare warns
+that this exposes the origin IP; it's Fly's shared edge, already public through
+sarduty.com.
 
 ## Deploying
 
