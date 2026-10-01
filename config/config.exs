@@ -35,6 +35,10 @@ config :sarduty, App.Vault,
     }
   ]
 
+# Swoosh's API client is only for its built-in adapters. App.Adapter.CloudflareEmail
+# calls Req itself. Its default client needs hackney, which we don't have.
+config :swoosh, api_client: false
+
 # Configure mailer for dev and test
 config :swoosh, local: true
 config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
