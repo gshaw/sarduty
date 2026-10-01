@@ -2,6 +2,7 @@ defmodule Web.Settings.CardsLive do
   use Web, :live_view_narrow_layout
 
   alias App.Model.GroupRuleClause
+  alias App.Worker.PushPassUpdatesWorker
 
   def mount(_params, _session, socket) do
     team = socket.assigns.current_user.team
@@ -21,11 +22,13 @@ defmodule Web.Settings.CardsLive do
     known = Map.keys(socket.assigns.names)
     picked = params |> Map.get("names", []) |> Enum.filter(&(&1 in known))
     GroupRuleClause.set_on_card!(team.id, picked)
+    # Passes already on phones change too; the job pushes only those that look different.
+    %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
 
     socket =
       socket
       |> assign_names(team)
-      |> put_flash(:info, "Saved. New and emailed passes use these.")
+      |> put_flash(:info, "Saved. Passes on members' phones update in a minute or so.")
 
     {:noreply, socket}
   end

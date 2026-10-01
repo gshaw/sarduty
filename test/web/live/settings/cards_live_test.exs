@@ -4,6 +4,7 @@ defmodule Web.Settings.CardsLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.PassRegistration
   alias App.Repo
 
   setup %{conn: conn} do
@@ -45,5 +46,25 @@ defmodule Web.Settings.CardsLiveTest do
     lv |> form("#cards-form") |> render_submit(%{"names" => [""]})
 
     assert Repo.reload!(theirs).on_card
+  end
+
+  test "saving pushes the change to passes on phones", %{conn: conn, team: team} do
+    App.ApplePassCredentials.configure()
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.APNs, fn conn ->
+      send(test_pid, {:pushed, conn.request_path})
+      Plug.Conn.send_resp(conn, 200, "")
+    end)
+
+    member = member_fixture(team)
+    card = member_card_fixture(member, %{authentication_token: "token-0123456789abcdef"})
+    PassRegistration.register!(card, "device-1", "push-token-1")
+    group_rule_clause_fixture(group_fixture(team), %{name: "First Aid"})
+
+    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    lv |> form("#cards-form") |> render_submit(%{"names" => ["", "First Aid"]})
+
+    assert_received {:pushed, "/3/device/push-token-1"}
   end
 end
