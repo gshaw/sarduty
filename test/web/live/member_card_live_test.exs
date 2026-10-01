@@ -35,6 +35,9 @@ defmodule Web.MemberCardLiveTest do
 
     card = MemberCard.find_current(team, member)
     assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
+
+    url = "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
+    assert has_element?(lv, ~s(#card-verify-link[href="#{url}"]))
   end
 
   test "replacing a card cancels the old one", %{conn: conn, team: team, member: member} do

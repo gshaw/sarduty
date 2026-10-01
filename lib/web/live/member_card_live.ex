@@ -160,9 +160,9 @@ defmodule Web.MemberCardLive do
         </dd>
       </dl>
       <p class="mt-p">
-        Anyone can check this card at <.a navigate={
-          ~p"/verify?#{[code: MemberCard.format_code(@card.code)]}"
-        }>sarduty.com/verify</.a>.
+        Anyone can check this card at <.a id="card-verify-link" href={verify_url(@card)}>
+          {Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}
+        </.a>.
       </p>
       <p :if={BuildApplePass.configured?() or BuildGooglePass.configured?()} class="mt-p flex gap-2">
         <.button
@@ -221,4 +221,7 @@ defmodule Web.MemberCardLive do
       fetched_at -> "#{on} · last fetched #{Service.Format.month_day_time(fetched_at, timezone)}"
     end
   end
+
+  # The card's page on the verify site, the same one its QR code opens.
+  defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
 end
