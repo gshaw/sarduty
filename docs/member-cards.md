@@ -1,9 +1,10 @@
 # Member ID cards
 
 A team manager issues a member an ID card from the member's **ID Card** tab. Anyone can
-check a card by scanning its QR code with a phone's camera, which opens
-`/verify/K7Q4-M2XA` ([VerifyLive](../lib/web/live/verify_live.ex)), or by typing the code
-printed under it at `/verify`. Issue #63 has the design and the plan.
+check a card by scanning its QR code with a phone's camera, which opens its page on the
+verify site, `verify.sarduty.com/K7Q4-M2XA`
+([VerifyLive](../lib/web/live/verify_live.ex)), or by typing the code printed under it
+at `verify.sarduty.com`. Issue #63 has the design and the plan.
 
 ## What must stay true
 
@@ -12,12 +13,18 @@ printed under it at `/verify`. Issue #63 has the design and the plan.
   showing the member's face, so the result shows the photo large and tells the checker
   to look at the address bar.
 - **The QR opens the card's page, and only the code is printed under it.** It holds
-  `HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA`
+  `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`
   ([MemberCard.qr_url/2](../lib/app/model/member_card.ex)), in capitals because a QR code
   packs capitals, digits, and `:/.-` into fewer squares. That fits the size-2 QR code.
-- **Scanning from `/verify` is the careful check.** The page's scanner never follows a
-  link. It takes the code out of a link to this site, accepts a bare code from cards made
-  before, and flags a link to anywhere else as forged.
+- **The verify site serves only the check.** The router matches it by its `verify.`
+  host ([Web.VerifyHost](../lib/web/verify_host.ex)). There's no login there, and the
+  app's session cookie never reaches it, since that cookie is host-only. Other paths go to
+  the app; a one-segment path reads as a code. The app's old `/verify` links redirect
+  there, and the websocket's `check_origin` lists both hosts.
+- **Scanning from the verify site is the careful check.** The page's scanner never
+  follows a link. It takes the code out of a card's link (or an older `sarduty.com/verify`
+  one), accepts a bare code from the first cards, and flags a link to anywhere else as
+  forged.
 - **Codes are random.** They come from `:crypto`, 8 characters from a 30-character
   alphabet ([MemberCard](../lib/app/model/member_card.ex)). Never derive one from the D4H
   member number or the local id: a guessable code would let anyone walk the roster.

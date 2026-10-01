@@ -61,11 +61,11 @@ defmodule App.Operation.BuildGooglePassTest do
     end
   end
 
-  test "the QR code opens the card's /verify page, with only the code printed under it" do
+  test "the QR code opens the card's page on the verify site, with only the code printed under it" do
     barcode = object(card()).barcode
 
     assert barcode.type == "QR_CODE"
-    assert barcode.value =~ ~r{^HTTPS?://[A-Z0-9.:]+/VERIFY/K7Q4-M2XA$}
+    assert barcode.value =~ ~r{^HTTPS?://VERIFY\.[A-Z0-9.:]+/K7Q4-M2XA$}
     assert barcode.alternateText == "K7Q4-M2XA"
   end
 

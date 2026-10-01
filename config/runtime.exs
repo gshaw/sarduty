@@ -50,6 +50,12 @@ if config_env() == :prod do
       host: System.fetch_env!("PHX_HOST"),
       port: 443,
       scheme: "https"
+    ],
+    # The verify site's LiveView connects from its own host (Web.VerifyHost). Not :conn:
+    # behind Fly's proxy the app sees http on 8080, which no browser origin matches.
+    check_origin: [
+      "//#{System.fetch_env!("PHX_HOST")}",
+      "//verify.#{System.fetch_env!("PHX_HOST")}"
     ]
 
   config :sarduty, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")

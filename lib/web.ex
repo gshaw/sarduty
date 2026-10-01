@@ -96,6 +96,14 @@ defmodule Web do
     end
   end
 
+  def live_view_verify_layout do
+    quote do
+      use Phoenix.LiveView, layout: {Web.Layouts, :verify}
+
+      unquote(html_helpers())
+    end
+  end
+
   def live_component do
     quote do
       use Phoenix.LiveComponent

@@ -3,6 +3,10 @@
 One Fly app, `sarduty`, in `yyz`: one always-on machine with a volume at `/mnt/sarduty`
 holding the SQLite database and team logos. Deploys are manual.
 
+It answers on two hosts, each with a Fly certificate (`fly certs list`): `sarduty.com`,
+and `verify.sarduty.com` for checking ID cards. The verify host is a Cloudflare CNAME to
+`sarduty.fly.dev`, DNS only, not proxied.
+
 ## Deploying
 
 ```sh

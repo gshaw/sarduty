@@ -74,32 +74,35 @@ defmodule App.Model.MemberCard do
   def normalize_code(_input), do: nil
 
   @doc """
-  What the card's QR code holds: its /verify page, so a phone's camera opens the check.
-  In capitals, because a QR code packs capitals, digits, and `:/.-` into fewer squares,
-  and neither the host nor the code cares about case.
-  `HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA`.
+  What the card's QR code holds: its page on the verify site, so a phone's camera opens
+  the check. In capitals, because a QR code packs capitals, digits, and `:/.-` into fewer
+  squares, and neither the host nor the code cares about case.
+  `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`.
   """
-  def qr_url(code, base_url), do: String.upcase("#{base_url}/verify/#{format_code(code)}")
+  def qr_url(code, verify_url), do: String.upcase("#{verify_url}/#{format_code(code)}")
 
   @doc "How to check a card, for the back of the pass. `code` is as printed."
   def how_to_check(code) do
     "Scan the QR code with your phone's camera. Check that the page it opens is " <>
-      "sarduty.com, and that the photo matches the person. Or open sarduty.com/verify " <>
-      "and type #{code}."
+      "verify.sarduty.com, and that the photo matches the person. Or open " <>
+      "verify.sarduty.com and type #{code}."
   end
 
   @doc """
-  The code in what a scanner read: a bare code, as on cards made before `qr_url/2`, or a
-  link to `host`'s /verify page. `{:other_site, host}` for a link anywhere else, which
-  is what a forged card would carry. Nil when it's neither.
+  The code in what a scanner read: a bare code, as on the first cards, or a link to a
+  card's page on one of `hosts`: `/K7Q4-M2XA` on the verify site, or `/verify/K7Q4-M2XA`
+  on the app's host, as cards linked before the verify site. `{:other_site, host}` for a
+  link anywhere else, which is what a forged card would carry. Nil when it's neither.
   """
-  def code_from_scan(text, host) when is_binary(text) do
+  def code_from_scan(text, hosts) when is_binary(text) do
     case text |> String.trim() |> URI.parse() do
       %URI{scheme: scheme, host: link_host, path: path}
       when scheme in ["http", "https", "HTTP", "HTTPS"] and is_binary(link_host) ->
-        if String.downcase(link_host) == String.downcase(host),
+        link_host = String.downcase(link_host)
+
+        if link_host in Enum.map(hosts, &String.downcase/1),
           do: code_from_path(path),
-          else: {:other_site, String.downcase(link_host)}
+          else: {:other_site, link_host}
 
       _ ->
         normalize_code(text)
@@ -107,7 +110,7 @@ defmodule App.Model.MemberCard do
   end
 
   defp code_from_path(path) do
-    case Regex.run(~r{^/verify/([^/]+)/?$}i, path || "") do
+    case Regex.run(~r{^(?:/verify)?/([^/]+)/?$}i, path || "") do
       [_, code] -> normalize_code(code)
       nil -> nil
     end
