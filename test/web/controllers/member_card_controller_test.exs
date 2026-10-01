@@ -62,6 +62,23 @@ defmodule Web.MemberCardControllerTest do
     assert response(conn, 404)
   end
 
+  describe "the verify limit" do
+    setup %{conn: conn} do
+      ip = "10.1.#{System.unique_integer([:positive])}"
+      %{conn: put_req_header(conn, "fly-client-ip", ip)}
+    end
+
+    test "photo 404s count, and a limited IP is refused", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(64, 64)))
+
+      for _ <- 1..20, do: assert(conn |> get(~p"/verify/ZZZZZZZZ/photo") |> response(404))
+
+      assert conn |> get(~p"/verify/#{card.code}/photo") |> response(429)
+      assert build_conn() |> get(~p"/verify/#{card.code}/photo") |> response(200)
+    end
+  end
+
   describe "pass" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()

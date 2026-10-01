@@ -7,10 +7,21 @@ defmodule Web.MemberCardController do
   alias App.Operation.BuildGooglePass
   alias App.Operation.LoadImage
   alias App.Repo
+  alias Web.VerifyLimit
 
   # The photo on /verify, also the Apple thumbnail. Public, so it answers only for a card
-  # that isn't cancelled.
-  def photo(conn, %{"code" => input}), do: send_photo(conn, input, :square)
+  # that isn't cancelled, and its 404s count toward the verify site's limit.
+  def photo(conn, %{"code" => input}) do
+    ip = VerifyLimit.client_ip(conn)
+
+    if VerifyLimit.limited?(ip) do
+      send_resp(conn, :too_many_requests, "")
+    else
+      conn = send_photo(conn, input, :square)
+      if conn.status == 404, do: VerifyLimit.miss(ip)
+      conn
+    end
+  end
 
   # The photo centered in the Google pass's hero banner.
   def banner(conn, %{"code" => input}), do: send_photo(conn, input, :banner)

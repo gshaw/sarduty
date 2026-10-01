@@ -6,11 +6,19 @@ defmodule Web.VerifyLiveTest do
 
   alias App.Model.MemberCard
 
-  # The verify site is matched by host, like verify.sarduty.com in production.
+  # The verify site is matched by host, like verify.sarduty.com in production. Each test
+  # gets its own client IP, since the limit's counters outlive a test.
   setup %{conn: conn} do
     team = team_fixture()
-    %{conn: %{conn | host: Web.VerifyHost.host()}, team: team, member: member_fixture(team)}
+    conn = conn |> Map.put(:host, Web.VerifyHost.host()) |> with_ip(unique_ip())
+    %{conn: conn, team: team, member: member_fixture(team)}
   end
+
+  defp unique_ip, do: "10.0.#{System.unique_integer([:positive])}"
+  defp with_ip(conn, ip), do: put_req_header(conn, "fly-client-ip", ip)
+
+  # A check by ?code=, which works from a result too, where the form isn't shown.
+  defp check(lv, code), do: render_patch(lv, ~p"/?#{[code: code]}")
 
   test "anyone can open the page without logging in", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
@@ -134,6 +142,53 @@ defmodule Web.VerifyLiveTest do
     {:ok, lv, _html} = live(conn, "/login")
     assert has_element?(lv, "#result-not-found")
     refute has_element?(lv, "#login_form")
+  end
+
+  describe "the limit on misses" do
+    test "the 21st miss shows the limit and doesn't look the code up", %{
+      conn: conn,
+      member: member
+    } do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/")
+
+      for _ <- 1..20, do: check(lv, "ZZZZ-ZZZZ")
+      assert has_element?(lv, "#result-not-found")
+
+      check(lv, card.code)
+      assert has_element?(lv, "#result-limited", "Wait a few minutes")
+      refute has_element?(lv, "#result-active")
+    end
+
+    test "a limited IP doesn't stop others", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/")
+      for _ <- 1..21, do: check(lv, "ZZZZ-ZZZZ")
+      assert has_element?(lv, "#result-limited")
+
+      other = build_conn() |> Map.put(:host, conn.host) |> with_ip(unique_ip())
+      {:ok, lv, _html} = live(other, ~p"/")
+
+      check(lv, card.code)
+      assert has_element?(lv, "#result-active")
+    end
+
+    test "real codes never count", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/")
+
+      for _ <- 1..25, do: check(lv, card.code)
+      check(lv, "ZZZZ-ZZZZ")
+
+      assert has_element?(lv, "#result-not-found")
+    end
+
+    test "a bad link opened directly counts", %{conn: conn} do
+      for _ <- 1..10, do: {:ok, _lv, _html} = live(conn, ~p"/ZZZZ-ZZZZ")
+
+      {:ok, lv, _html} = live(conn, ~p"/ZZZZ-ZZZZ")
+      assert has_element?(lv, "#result-limited")
+    end
   end
 
   describe "on the app's host" do

@@ -36,7 +36,7 @@ defmodule Web.Router do
   scope "/", Web, host: "verify." do
     pipe_through :verify
 
-    live_session :verify do
+    live_session :verify, session: {Web.VerifyLimit, :session, []} do
       live "/", VerifyLive
       live "/:code", VerifyLive
     end
