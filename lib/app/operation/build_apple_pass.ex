@@ -3,11 +3,16 @@ defmodule App.Operation.BuildApplePass do
   alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Operation.BuildCardQualifications
+  alias App.Operation.PushPassUpdates
 
   # SAR Duty's navy and yellow, the same on every team's card.
   @background_color "rgb(28, 45, 66)"
   @foreground_color "rgb(255, 255, 255)"
   @label_color "rgb(255, 196, 0)"
+
+  # Part of every fingerprint. Bump it to push every pass once, as when something outside
+  # pass.json changes. 2: passes built for email or download had swallowed changes.
+  @fingerprint_version 2
 
   def configured? do
     config = Application.get_env(:sarduty, :apple_pass, [])
@@ -16,7 +21,8 @@ defmodule App.Operation.BuildApplePass do
 
   @doc """
   The signed `.pkpass` for a card, with the member's D4H photo and the team's logo.
-  Expects the card with `member: :team` preloaded.
+  Expects the card with `member: :team` preloaded. If the pass changed, the phones that
+  hold it are told, since a refresh won't see the change once it's recorded here.
   """
   def call(%MemberCard{} = card, now) do
     if configured?() do
@@ -27,7 +33,9 @@ defmodule App.Operation.BuildApplePass do
       logo = (Team.logo_file(member.team.subdomain) || default_logo_path()) |> File.read!()
 
       json = pass_json(card, qualifications, config, now)
-      MemberCard.record_pass!(card, fingerprint(json), now)
+      fingerprint = fingerprint(json)
+      MemberCard.record_pass!(card, fingerprint, now)
+      if fingerprint != card.pass_fingerprint, do: PushPassUpdates.push_cards([card])
 
       files = %{
         "pass.json" => Jason.encode!(json),
@@ -89,6 +97,7 @@ defmodule App.Operation.BuildApplePass do
 
     json
     |> put_in([:generic, :backFields], back)
+    |> Map.put(:fingerprint_version, @fingerprint_version)
     |> Jason.encode!()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
