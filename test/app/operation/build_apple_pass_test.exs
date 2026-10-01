@@ -63,7 +63,7 @@ defmodule App.Operation.BuildApplePassTest do
 
     assert barcode.format == "PKBarcodeFormatQR"
     assert barcode.message == "K7Q4M2XA"
-    assert barcode.altText == "sarduty.com/verify\nK7Q4-M2XA"
+    assert barcode.altText == "K7Q4-M2XA"
   end
 
   test "keeps to Apple's limit of four secondary and auxiliary fields with a square code" do

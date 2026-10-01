@@ -126,8 +126,9 @@ defmodule App.Operation.BuildApplePass do
           format: "PKBarcodeFormatQR",
           message: card.code,
           messageEncoding: "iso-8859-1",
-          # Two lines keep Wallet's white box around the QR narrow.
-          altText: "sarduty.com/verify\n#{code}"
+          # Just the code: Wallet widens its white box to fit this text, and shows only
+          # the first line of it. How to check the card is on the back.
+          altText: code
         }
       ]
     else
