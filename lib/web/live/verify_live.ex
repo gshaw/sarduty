@@ -100,7 +100,7 @@ defmodule Web.VerifyLive do
             id="check_code"
             name={@form[:code].name}
             value={@form[:code].value}
-            placeholder="K7Q4-M2XA"
+            placeholder="XXXX-XXXX"
             autocomplete="off"
             autocapitalize="characters"
             spellcheck="false"
@@ -149,7 +149,7 @@ defmodule Web.VerifyLive do
       <.band kind={:bad} title="No card has this code">Check the code and try again</.band>
       <.panel>
         A card that doesn't check out here isn't valid. Codes are 8 letters and numbers,
-        like K7Q4-M2XA.
+        printed under the QR code.
       </.panel>
     </div>
     """
