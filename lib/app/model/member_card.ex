@@ -24,6 +24,8 @@ defmodule App.Model.MemberCard do
     field :pass_updated_at, :utc_datetime_usec
     # Shared by a member's cards, so a replacement updates the same Wallet pass.
     field :serial_number, :string
+    # Google Wallet: the pass as last sent to Google, or nil when it has none.
+    field :google_pass_fingerprint, :string
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -150,6 +152,19 @@ defmodule App.Model.MemberCard do
         else: [pass_fingerprint: fingerprint, pass_updated_at: now]
 
     card |> change(changes) |> Repo.update!()
+  end
+
+  def record_google_pass!(%MemberCard{} = card, fingerprint) do
+    card |> change(google_pass_fingerprint: fingerprint) |> Repo.update!()
+  end
+
+  @doc "The team's live cards that have a Google Wallet pass."
+  def get_all_on_google(%Team{} = team) do
+    MemberCard
+    |> where([c], c.team_id == ^team.id and is_nil(c.revoked_at))
+    |> where([c], not is_nil(c.google_pass_fingerprint))
+    |> preload(member: :team)
+    |> Repo.all()
   end
 
   @doc "The team's live cards whose Wallet serial at least one phone is registered for."

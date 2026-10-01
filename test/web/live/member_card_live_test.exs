@@ -94,4 +94,33 @@ defmodule Web.MemberCardLiveTest do
       assert has_element?(lv, "#apple-pass")
     end
   end
+
+  describe "with Google Wallet set up" do
+    setup do
+      App.GoogleWalletCredentials.configure()
+      App.GoogleWalletCredentials.stub(self())
+      :ok
+    end
+
+    test "offers the Google pass and no Apple one", %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+
+      assert has_element?(lv, "#google-pass")
+      refute has_element?(lv, "#apple-pass")
+    end
+
+    test "emails the Google Wallet link", %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+
+      lv |> element("#email-pass") |> render_click()
+
+      assert_email_sent(fn email ->
+        assert email.text_body =~ "https://pay.google.com/gp/v/save/"
+        refute email.text_body =~ "iPhone"
+        assert email.attachments == []
+      end)
+    end
+  end
 end

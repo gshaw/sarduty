@@ -5,6 +5,7 @@ defmodule Web.MemberCardController do
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Operation.BuildApplePass
+  alias App.Operation.BuildGooglePass
   alias App.Repo
 
   # The photo on /verify. Public, so it answers only for a card that isn't cancelled.
@@ -45,6 +46,21 @@ defmodule Web.MemberCardController do
         filename: "#{team.subdomain}-member-card.pkpass",
         content_type: "application/vnd.apple.pkpass"
       )
+    else
+      _ -> send_resp(conn, :not_found, "")
+    end
+  end
+
+  # Sends the current card's pass to Google, then opens Google's "Add to Google Wallet"
+  # page for it.
+  def google_pass(conn, %{"id" => id}) do
+    team = conn.assigns.current_team
+    member = Member.find!(team, id)
+
+    with %MemberCard{} = card <- MemberCard.find_current(team, member),
+         card = Repo.preload(card, member: :team),
+         {:ok, url} <- BuildGooglePass.call(card, DateTime.utc_now()) do
+      redirect(conn, external: url)
     else
       _ -> send_resp(conn, :not_found, "")
     end

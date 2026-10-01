@@ -63,6 +63,25 @@ The certificate expires on 2027-10-30. Make a new one with
 `asc certificates create --certificate-type PASS_TYPE_ID`, then update the secrets.
 Passes already on phones keep working.
 
+## Google Wallet
+
+Sends member ID card passes to Google
+([BuildGooglePass](../lib/app/operation/build_google_pass.ex),
+[App.Adapter.GoogleWallet](../lib/app/adapter/google_wallet.ex)) as the
+`sarduty-wallet@sar-duty.iam.gserviceaccount.com` service account, in Google Cloud
+project `sar-duty`. The issuer account is in the
+[Pay & Wallet Console](https://pay.google.com/business/console/) as "SAR Duty", where the
+service account is a Developer. Setup is in #74. Both variables are optional: without
+them the ID Card tab offers no Google pass.
+
+- `GOOGLE_WALLET_ISSUER_ID` — `3388000000023212691`.
+- `GOOGLE_WALLET_SERVICE_ACCOUNT` — the service account's JSON key file, on one line.
+  Gerry's copy is in `~/.sarduty-wallet/`.
+
+Until Google grants publishing access, passes say "[TEST ONLY]" and only the console's
+users can save them. Dev and production share the issuer; ids carry the host, so they
+don't collide.
+
 ## Litestream and Tigris
 
 Litestream replicates `/mnt/sarduty/sarduty.db` to the Tigris bucket in

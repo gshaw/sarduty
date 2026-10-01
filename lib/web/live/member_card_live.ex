@@ -8,6 +8,7 @@ defmodule Web.MemberCardLive do
   alias App.Model.MemberCard
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
+  alias App.Operation.BuildGooglePass
   alias App.Operation.EmailMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Operation.RevokeMemberCard
@@ -110,19 +111,30 @@ defmodule Web.MemberCardLive do
           ~p"/verify?#{[code: MemberCard.format_code(@card.code)]}"
         }>sarduty.com/verify</.a>.
       </p>
-      <p :if={BuildApplePass.configured?()} class="mt-p flex gap-2">
+      <p :if={BuildApplePass.configured?() or BuildGooglePass.configured?()} class="mt-p flex gap-2">
         <.button
           :if={@member.email}
           id="email-pass"
           variant={:primary}
           phx-click="email"
           phx-disable-with="Sending…"
-          data-confirm={"Email the Apple Wallet pass to #{@member.email}?"}
+          data-confirm={"Email the wallet pass to #{@member.email}?"}
         >
           Email pass to member
         </.button>
-        <.button id="apple-pass" href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/pass"}>
+        <.button
+          :if={BuildApplePass.configured?()}
+          id="apple-pass"
+          href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/pass"}
+        >
           Download Apple Wallet pass
+        </.button>
+        <.button
+          :if={BuildGooglePass.configured?()}
+          id="google-pass"
+          href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/google-pass"}
+        >
+          Add to Google Wallet
         </.button>
       </p>
       <p class="mt-p flex gap-2">

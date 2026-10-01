@@ -14,6 +14,7 @@ defmodule Web.TeamScopingTest do
     "/:subdomain/members/:id/qualifications",
     "/:subdomain/members/:id/card",
     "/:subdomain/members/:id/card/pass",
+    "/:subdomain/members/:id/card/google-pass",
     "/:subdomain/members/:id/image",
     "/:subdomain/groups/:id",
     "/:subdomain/groups/:id/review",
@@ -77,6 +78,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/:subdomain/members/:id/card/pass", s, o),
     do: ~p"/#{s}/members/#{o.member.id}/card/pass"
+
+  defp path_for("/:subdomain/members/:id/card/google-pass", s, o),
+    do: ~p"/#{s}/members/#{o.member.id}/card/google-pass"
 
   defp path_for("/:subdomain/members/:id/image", s, o),
     do: ~p"/#{s}/members/#{o.member.id}/image"

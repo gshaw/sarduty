@@ -47,6 +47,30 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 Wallet shows images only as PNG. The photo comes from D4H and the logo from the team's
 saved logo, both as D4H sent them.
 
+## Google Wallet
+
+The ID Card tab's **Add to Google Wallet** sends the current card's pass to Google and
+opens Google's save page. The email to the member has the same link, beside the Apple
+pass. The link is a JWT that names the pass and nothing else; Google holds the pass
+itself.
+
+Google keeps the pass, so there's no phone to push to.
+[UpdateGooglePasses](../lib/app/operation/update_google_passes.ex) sends Google a card's
+pass again, and every saved copy changes:
+
+- **After every team refresh**, for cards whose pass changed. The fingerprint leaves out
+  the "last checked" date, as for Apple. A card with no `google_pass_fingerprint` has no
+  pass at Google and is skipped.
+- **On cancel or replace** the old pass is sent as `EXPIRED`, with no QR code or photo,
+  and Wallet moves it to "Expired passes".
+- **A replacement is a new pass.** Each card has its own Wallet object, because Google
+  has no per-phone token to say which card a phone holds. The member adds the new one.
+
+Google loads the photo from `/verify/:code/photo`, the public one `/verify` shows, and
+refuses a pass whose photo it can't load. It can't reach a dev server, so dev passes have
+no photo. Team logos aren't public, so the Google pass shows the team's name, not its
+logo.
+
 ## Active and qualifications
 
 A card is active while the member hasn't left the team in D4H (`Member.current?/2`).

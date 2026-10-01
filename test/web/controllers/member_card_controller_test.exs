@@ -79,4 +79,39 @@ defmodule Web.MemberCardControllerTest do
       assert response(conn, 404)
     end
   end
+
+  describe "google_pass" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      member = member_fixture(team)
+
+      App.GoogleWalletCredentials.configure()
+      App.GoogleWalletCredentials.stub(self())
+
+      %{conn: log_in_user(conn, user), team: team, member: member}
+    end
+
+    test "sends the pass to Google and opens its save page",
+         %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+
+      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/google-pass")
+
+      assert redirected_to(conn) =~ "https://pay.google.com/gp/v/save/"
+      assert_received {:google, "PUT", "/walletobjects/v1/genericObject/" <> _, _object}
+    end
+
+    test "404s when the member has no card", %{conn: conn, team: team, member: member} do
+      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/google-pass")
+      assert response(conn, 404)
+    end
+
+    test "404s when Google Wallet isn't set up", %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+      Application.put_env(:sarduty, :google_wallet, [])
+
+      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/google-pass")
+      assert response(conn, 404)
+    end
+  end
 end
