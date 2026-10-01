@@ -6,16 +6,18 @@ defmodule App.Mailer.MemberCardMailer do
 
   @doc """
   Emails the member their card: the Apple Wallet pass attached, and the Google Wallet
-  link in the text, each when given. Expects the card with `member: :team`.
+  link as a button, each when given. Expects the card with `member: :team`.
   """
   def deliver(%MemberCard{member: member} = card, pkpass, google_url) do
     team = member.team
+    paragraphs = paragraphs(card, pkpass, google_url)
 
     new()
     |> to({member.name, member.email})
     |> from({"SAR Duty", "noreply@sarduty.com"})
     |> subject("Your #{team.name} ID card")
-    |> text_body(body(card, pkpass, google_url))
+    |> text_body(Enum.map_join(paragraphs, "\n\n", &text/1) <> "\n")
+    |> html_body(Enum.map_join(paragraphs, "\n", &html/1) <> "\n")
     |> attach_pass(pkpass, team)
     |> Mailer.deliver()
   end
@@ -32,27 +34,39 @@ defmodule App.Mailer.MemberCardMailer do
     )
   end
 
-  defp body(%MemberCard{member: member} = card, pkpass, google_url) do
+  # The body once, as plain strings plus the Google link, so the text and HTML parts
+  # can't drift apart.
+  defp paragraphs(%MemberCard{member: member} = card, pkpass, google_url) do
+    Enum.reject(
+      [
+        "Hi #{member.name},",
+        "Here is your #{member.team.name} member ID card.",
+        pkpass && "On an iPhone, open the attachment and tap Add to put it in Apple Wallet.",
+        google_url && {:google, google_url},
+        "To check your card, someone scans its QR code with their phone's camera, which opens verify.sarduty.com, or types your code there: #{MemberCard.format_code(card.code)}",
+        "If you leave the team, or the team replaces or cancels the card, it stops checking out.",
+        "#{member.team.name}, through SAR Duty"
+      ],
+      &is_nil/1
+    )
+  end
+
+  defp text({:google, url}),
+    do: "On an Android phone, open this link to add it to Google Wallet:\n#{url}"
+
+  defp text(paragraph), do: paragraph
+
+  # Google's own badge, rendered at 2x from its brand assets, since Gmail won't show SVG.
+  defp html({:google, url}) do
+    src = Web.Endpoint.url() <> "/images/add-to-google-wallet.png"
+
     """
-    Hi #{member.name},
-
-    Here is your #{member.team.name} member ID card.
-    #{apple_text(pkpass)}#{google_text(google_url)}
-    To check your card, someone scans its QR code with their phone's camera, which opens verify.sarduty.com, or types your code there: #{MemberCard.format_code(card.code)}
-
-    If you leave the team, or the team replaces or cancels the card, it stops checking out.
-
-    #{member.team.name}, through SAR Duty
+    <p>On an Android phone, tap the button to add it to Google Wallet:</p>
+    <p><a href="#{escape(url)}"><img src="#{src}" alt="Add to Google Wallet" width="283" height="50"></a></p>\
     """
   end
 
-  defp apple_text(nil), do: ""
+  defp html(paragraph), do: "<p>#{escape(paragraph)}</p>"
 
-  defp apple_text(_pkpass),
-    do: "\nOn an iPhone, open the attachment and tap Add to put it in Apple Wallet.\n"
-
-  defp google_text(nil), do: ""
-
-  defp google_text(url),
-    do: "\nOn an Android phone, open this link to add it to Google Wallet:\n#{url}\n"
+  defp escape(string), do: string |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end
