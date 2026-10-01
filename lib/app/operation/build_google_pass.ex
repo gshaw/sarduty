@@ -49,8 +49,8 @@ defmodule App.Operation.BuildGooglePass do
   end
 
   @doc """
-  The class every card shares. Its template puts status, member since, and member for in
-  a row on the front; the rest of the text shows under Details.
+  The class every card shares. Its template puts status, member since, and valid until
+  in a row on the front; the rest of the text shows under Details.
   """
   def pass_class(config) do
     %{
@@ -64,7 +64,7 @@ defmodule App.Operation.BuildGooglePass do
               threeItems: %{
                 startItem: template_item("status"),
                 middleItem: template_item("member_since"),
-                endItem: template_item("member_for")
+                endItem: template_item("valid_until")
               }
             }
           ]
@@ -94,21 +94,21 @@ defmodule App.Operation.BuildGooglePass do
       cardTitle: localized(team.name),
       subheader: localized(name_label(status)),
       header: localized(member.name),
-      textModulesData: texts(card, qualifications, status, now)
+      textModulesData: texts(card, qualifications, status)
     }
+    |> put_valid_time(team)
     |> put_barcode(card, status)
     |> put_images(card, status, config)
   end
 
-  defp texts(%MemberCard{member: member} = card, qualifications, status, now) do
+  defp texts(%MemberCard{member: member} = card, qualifications, status) do
     team = member.team
-    member_for = Service.Format.months_or_years_distance(member.joined_at, now)
     issuer = "#{team.name} through SAR Duty. Status comes from the team's D4H records."
 
     List.flatten([
       text("status", "Status", status_text(status)),
       text("member_since", "Member since", member_since(member)),
-      text("member_for", "Member for", member_for),
+      valid_until_text(team, status),
       text("verify", "How to check this card", verify_text(card)),
       qualification_texts(qualifications, team.timezone),
       text("checked", "Last checked with D4H", last_checked(team)),
@@ -140,11 +140,36 @@ defmodule App.Operation.BuildGooglePass do
     Map.put(object, :barcode, %{
       type: "QR_CODE",
       value: card.code,
-      alternateText: MemberCard.format_code(card.code)
+      alternateText: "sarduty.com/verify · #{MemberCard.format_code(card.code)}"
     })
   end
 
   defp put_barcode(object, _card, _status), do: object
+
+  # Wallet moves the pass to "Expired passes" once this passes, which happens only if
+  # refreshes stop.
+  defp put_valid_time(object, team) do
+    case MemberCard.valid_until(team) do
+      nil ->
+        object
+
+      valid_until ->
+        Map.put(object, :validTimeInterval, %{end: %{date: DateTime.to_iso8601(valid_until)}})
+    end
+  end
+
+  # Only an active card says how long it's good for.
+  defp valid_until_text(team, :active) do
+    case MemberCard.valid_until(team) do
+      nil ->
+        []
+
+      valid_until ->
+        text("valid_until", "Valid until", Service.Format.month_year(valid_until, team.timezone))
+    end
+  end
+
+  defp valid_until_text(_team, _status), do: []
 
   # Google loads images from URLs it can reach, so dev passes have none. The team logo
   # sits in the round spot beside the team name, and the photo in the banner under the

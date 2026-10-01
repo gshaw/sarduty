@@ -42,6 +42,9 @@ defmodule App.Operation.UpdateGooglePasses do
 
     if changed != [] do
       {:ok, token} = GoogleWallet.access_token(config.credentials, now)
+      # The class is otherwise sent only when a pass is added, so a change to its front
+      # row would never reach the passes already out there.
+      :ok = GoogleWallet.upsert(token, "genericClass", BuildGooglePass.pass_class(config))
 
       for {card, object} <- changed,
           GoogleWallet.upsert(token, "genericObject", object) == :ok,

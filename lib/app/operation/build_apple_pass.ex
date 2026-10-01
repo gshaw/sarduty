@@ -83,6 +83,7 @@ defmodule App.Operation.BuildApplePass do
         backFields: back_fields(team, code, qualifications)
       }
     }
+    |> put_expiration(team)
     |> drop_web_service(card.authentication_token)
     |> Map.reject(fn {key, value} -> key == :barcodes and value == [] end)
   end
@@ -124,7 +125,7 @@ defmodule App.Operation.BuildApplePass do
           format: "PKBarcodeFormatQR",
           message: card.code,
           messageEncoding: "iso-8859-1",
-          altText: code
+          altText: "sarduty.com/verify · #{code}"
         }
       ]
     else
@@ -145,12 +146,31 @@ defmodule App.Operation.BuildApplePass do
         label: "MEMBER SINCE",
         value: Service.Format.month_year(member.joined_at, member.team.timezone)
       },
-      %{
-        key: "member-for",
-        label: "MEMBER FOR",
-        value: Service.Format.months_or_years_distance(member.joined_at, now)
-      }
+      valid_until_field(card, now)
     ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  # Only an active card says how long it's good for. No changeMessage: it moves once a
+  # month, and that update is silent.
+  defp valid_until_field(%MemberCard{member: member} = card, now) do
+    valid_until = MemberCard.valid_until(member.team)
+
+    if valid_until && MemberCard.status(card, now) == :active do
+      %{
+        key: "valid-until",
+        label: "VALID UNTIL",
+        value: Service.Format.month_year(valid_until, member.team.timezone)
+      }
+    end
+  end
+
+  # Wallet marks the pass expired once this passes, which happens only if refreshes stop.
+  defp put_expiration(json, team) do
+    case MemberCard.valid_until(team) do
+      nil -> json
+      valid_until -> Map.put(json, :expirationDate, DateTime.to_iso8601(valid_until))
+    end
   end
 
   defp back_fields(team, code, qualifications) do

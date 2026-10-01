@@ -26,7 +26,7 @@ defmodule App.Operation.BuildGooglePassTest do
 
   defp text(object, id), do: Enum.find(object.textModulesData, &(&1.id == id))
 
-  test "shows the team, the member, their status, and how long they've been a member" do
+  test "shows the team, the member, their status, and how long the card is good for" do
     object = object(card())
 
     assert object.id == "3388.sarduty.com-card-7"
@@ -37,7 +37,17 @@ defmodule App.Operation.BuildGooglePassTest do
     assert object.subheader.defaultValue.value == "Member"
     assert text(object, "status").body == "Active"
     assert text(object, "member_since").body == "Mar 2019"
-    assert text(object, "member_for").body == "8 years"
+    assert text(object, "valid_until").body == "Dec 2026"
+    refute text(object, "member_for")
+    assert object.validTimeInterval == %{end: %{date: "2027-01-01T06:59:59Z"}}
+  end
+
+  test "an inactive card doesn't say how long it's good for, but still expires" do
+    card = card()
+    object = object(put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z]))
+
+    refute text(object, "valid_until")
+    assert object.validTimeInterval
   end
 
   test "the class puts every field its front row names on the object" do
@@ -55,7 +65,7 @@ defmodule App.Operation.BuildGooglePassTest do
     assert object(card()).barcode == %{
              type: "QR_CODE",
              value: "K7Q4M2XA",
-             alternateText: "K7Q4-M2XA"
+             alternateText: "sarduty.com/verify · K7Q4-M2XA"
            }
   end
 
@@ -100,13 +110,15 @@ defmodule App.Operation.BuildGooglePassTest do
     assert %{header: "Rope", body: "Not current"} = text(object, "qualification_1")
   end
 
-  test "the fingerprint ignores the last-refreshed date but not the rest" do
+  test "the fingerprint ignores the last-refreshed date until valid until moves" do
     base = card()
-    later = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 13:00:00Z])
+    later = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 05:00:00Z])
+    next_month = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 13:00:00Z])
     left = put_in(base.member.left_at, ~U[2026-01-01 00:00:00Z])
     fingerprint = &(&1 |> object() |> BuildGooglePass.fingerprint())
 
     assert fingerprint.(base) == fingerprint.(later)
+    refute fingerprint.(base) == fingerprint.(next_month)
     refute fingerprint.(base) == fingerprint.(left)
   end
 end
