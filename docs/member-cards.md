@@ -47,6 +47,14 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   token the next time its pass is built.
 - APNs only works in production, so dev can build passes but never deliver a push.
 
+The ID Card tab shows how many phones hold the pass and when one last fetched it
+(`pass_fetched_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without
+a reload. **Send test update**
+([SendTestPassUpdate](../lib/app/operation/send_test_pass_update.ex)) sets `pass_test_at`
+and pushes. The pass gains a "Test update" back field whose `changeMessage` puts a notice
+on the lock screen. The fingerprint leaves that field out, so a test never makes a
+refresh push, and the card's code, token and serial don't change.
+
 Wallet has no CSS and shows images only as PNG, so
 [LoadImage](../lib/app/operation/load_image.ex) shapes them with
 [Service.Image](../lib/service/image.ex): the D4H photo cropped to a centered square, and

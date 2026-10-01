@@ -60,8 +60,12 @@ defmodule Web.WalletController do
   end
 
   def pass(conn, %{"pass_type" => pass_type, "serial" => serial}) do
+    now = DateTime.utc_now()
+
     with {:ok, card} <- authorize(conn, pass_type, serial),
-         {:ok, pkpass} <- BuildApplePass.call(card, DateTime.utc_now()) do
+         {:ok, pkpass} <- BuildApplePass.call(card, now) do
+      MemberCard.record_pass_fetched!(card, now)
+
       conn
       |> put_resp_content_type("application/vnd.apple.pkpass", nil)
       |> put_resp_header("last-modified", last_modified(card))

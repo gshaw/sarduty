@@ -80,7 +80,7 @@ defmodule App.Operation.BuildApplePass do
           %{key: "name", label: name_label(card, now), value: member.name}
         ],
         secondaryFields: secondary_fields(card, now),
-        backFields: back_fields(team, code, qualifications)
+        backFields: back_fields(card, code, qualifications)
       }
     }
     |> put_expiration(team)
@@ -90,10 +90,11 @@ defmodule App.Operation.BuildApplePass do
 
   @doc """
   A hash of what a member sees on the pass, less the last-refreshed date, which changes
-  every day. Updates are pushed only when it changes.
+  every day, and the test update time, which a manager pushes by hand. Updates are
+  pushed only when it changes.
   """
   def fingerprint(json) do
-    back = Enum.reject(json.generic.backFields, &(&1.key == "checked"))
+    back = Enum.reject(json.generic.backFields, &(&1.key in ["checked", "test"]))
 
     json
     |> put_in([:generic, :backFields], back)
@@ -173,7 +174,7 @@ defmodule App.Operation.BuildApplePass do
     end
   end
 
-  defp back_fields(team, code, qualifications) do
+  defp back_fields(%MemberCard{member: %{team: team}} = card, code, qualifications) do
     List.flatten([
       %{
         key: "verify",
@@ -184,12 +185,26 @@ defmodule App.Operation.BuildApplePass do
       },
       qualification_fields(qualifications, team.timezone),
       %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
+      test_field(card, team),
       %{
         key: "issuer",
         label: "Issued by",
         value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
       }
     ])
+  end
+
+  # Sent from the ID Card tab. The changeMessage puts a notice on the lock screen, which
+  # is how a manager sees the update arrive.
+  defp test_field(%MemberCard{pass_test_at: nil}, _team), do: []
+
+  defp test_field(card, team) do
+    %{
+      key: "test",
+      label: "Test update",
+      value: Service.Format.month_day_time_seconds(card.pass_test_at, team.timezone),
+      changeMessage: "SAR Duty test update %@"
+    }
   end
 
   defp name_label(card, now) do

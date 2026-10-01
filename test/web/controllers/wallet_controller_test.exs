@@ -128,6 +128,20 @@ defmodule Web.WalletControllerTest do
     assert json["authenticationToken"] == "token-0123456789abcdef"
   end
 
+  test "records when a phone fetched the pass and tells the ID Card tab", %{
+    conn: conn,
+    card: card,
+    serial: serial
+  } do
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+    Phoenix.PubSub.subscribe(App.PubSub, MemberCard.pass_topic(card.member_id))
+
+    conn |> authed() |> get("/wallet/v1/passes/#{@pass_type}/#{serial}") |> response(200)
+
+    assert Repo.reload!(card).pass_fetched_at
+    assert_received :pass_fetched
+  end
+
   test "won't send a pass without the token", %{conn: conn, serial: serial} do
     assert conn |> get("/wallet/v1/passes/#{@pass_type}/#{serial}") |> response(401)
   end
