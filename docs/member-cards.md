@@ -48,10 +48,12 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - APNs only works in production, so dev can build passes but never deliver a push.
 
 Wallet has no CSS and shows images only as PNG, so
-[LoadPassImage](../lib/app/operation/load_pass_image.ex) shapes them with
+[LoadImage](../lib/app/operation/load_image.ex) shapes them with
 [Service.Image](../lib/service/image.ex): the D4H photo cropped to a centered square, and
 the team's saved logo converted to PNG, since D4H may send a JPEG. A missing or broken
-image falls back to the placeholder photo or SAR Duty's logo.
+image falls back to the placeholder photo or SAR Duty's logo. The member page, the team
+dashboard, and tax credit letters use the same images, so what a manager sees is what
+goes on the pass.
 
 ## Google Wallet
 
@@ -76,7 +78,7 @@ Google loads images from URLs and refuses a pass whose images it can't load. It 
 reach a dev server, so dev passes have none. In production:
 
 - **The team logo** sits in the round spot beside the team name, from
-  `/teams/:subdomain/pass-logo`: padded square on white, with a margin so the circle
+  `/teams/:subdomain/logo`: padded square on white, with a margin so the circle
   clips nothing. It's public, like the logo on the team's D4H pages.
 - **The photo** sits in the banner under the QR code (`heroImage`), from
   `/verify/:code/banner`: the square photo centered on the pass's navy. Google has no

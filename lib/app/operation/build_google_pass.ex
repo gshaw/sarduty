@@ -157,7 +157,7 @@ defmodule App.Operation.BuildGooglePass do
 
     object
     |> Map.put(:logo, %{
-      sourceUri: %{uri: "#{url}/teams/#{team.subdomain}/pass-logo"},
+      sourceUri: %{uri: "#{url}/teams/#{team.subdomain}/logo"},
       contentDescription: localized("#{team.name} logo")
     })
     |> put_banner(card, status, url)

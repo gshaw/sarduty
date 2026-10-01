@@ -1,6 +1,6 @@
-defmodule App.Operation.LoadPassImage do
+defmodule App.Operation.LoadImage do
   @moduledoc """
-  A member's photo or a team's logo as a PNG shaped for a pass or /verify. Falls back to
+  A member's photo or a team's logo as a PNG, shaped for a pass, a page, or a letter. Falls back to
   the placeholder photo or SAR Duty's logo when D4H has none or the image won't decode,
   so a bad image never fails a pass.
   """
@@ -19,11 +19,12 @@ defmodule App.Operation.LoadPassImage do
   @banner_height 336
 
   @doc """
-  `:square` for /verify and the Apple thumbnail, `:banner` for the Google hero image.
+  `:square` for /verify, the member page, and the Apple thumbnail; `:banner` for the
+  Google hero image. Fetches with the team's D4H key unless given another context.
   Expects the member with `:team` preloaded.
   """
-  def photo(%Member{} = member, shape) do
-    d4h = D4H.build_context_from_team(member.team)
+  def photo(%Member{} = member, shape, d4h \\ nil) do
+    d4h = d4h || D4H.build_context_from_team(member.team)
 
     bytes =
       case D4H.fetch_member_image(d4h, member.d4h_member_id) do
@@ -35,8 +36,9 @@ defmodule App.Operation.LoadPassImage do
   end
 
   @doc """
-  `:round` for Google's circle, padded so the circle clips nothing; `:icon` for the
-  Apple icon; `:logo` for the Apple logo, which Wallet fits in a wide strip.
+  `:round` for Google's circle and the dashboard, padded so the circle clips nothing;
+  `:square` for the tax credit letter; `:icon` for the Apple icon; `:logo` for the Apple
+  logo, which Wallet fits in a wide strip.
   """
   def logo(subdomain, shape) do
     bytes = if path = Team.logo_file(subdomain), do: File.read!(path)
@@ -67,6 +69,7 @@ defmodule App.Operation.LoadPassImage do
     do: Service.Image.banner(bytes, @banner_width, @banner_height, @navy)
 
   defp shape_logo(bytes, :round), do: Service.Image.pad_square(bytes, 660, margin: 0.12)
+  defp shape_logo(bytes, :square), do: Service.Image.pad_square(bytes, 660)
   defp shape_logo(bytes, :icon), do: Service.Image.pad_square(bytes, 180)
   defp shape_logo(bytes, :logo), do: Service.Image.png(bytes, 480)
 

@@ -1,7 +1,7 @@
 defmodule App.Operation.BuildApplePass do
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
-  alias App.Operation.LoadPassImage
+  alias App.Operation.LoadImage
   alias App.Operation.PushPassUpdates
 
   # SAR Duty's navy and yellow, the same on every team's card.
@@ -38,9 +38,9 @@ defmodule App.Operation.BuildApplePass do
 
       files = %{
         "pass.json" => Jason.encode!(json),
-        "icon.png" => LoadPassImage.logo(member.team.subdomain, :icon),
-        "logo.png" => LoadPassImage.logo(member.team.subdomain, :logo),
-        "thumbnail.png" => LoadPassImage.photo(member, :square)
+        "icon.png" => LoadImage.logo(member.team.subdomain, :icon),
+        "logo.png" => LoadImage.logo(member.team.subdomain, :logo),
+        "thumbnail.png" => LoadImage.photo(member, :square)
       }
 
       {:ok, Service.ApplePass.package(files, config)}

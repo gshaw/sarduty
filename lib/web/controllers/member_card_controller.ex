@@ -5,7 +5,7 @@ defmodule Web.MemberCardController do
   alias App.Model.MemberCard
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
-  alias App.Operation.LoadPassImage
+  alias App.Operation.LoadImage
   alias App.Repo
 
   # The photo on /verify, also the Apple thumbnail. Public, so it answers only for a card
@@ -21,7 +21,7 @@ defmodule Web.MemberCardController do
       conn
       |> put_resp_header("cache-control", "private, max-age=300")
       |> put_resp_content_type("image/png", nil)
-      |> send_resp(200, LoadPassImage.photo(card.member, shape))
+      |> send_resp(200, LoadImage.photo(card.member, shape))
     else
       _ -> send_resp(conn, :not_found, "")
     end

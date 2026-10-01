@@ -31,7 +31,8 @@ defmodule Service.PDFLetter do
     temp_path
   end
 
-  defp add_logo(pdf, %{logo_path: nil}), do: pdf
+  # The logo is PNG bytes, padded square so one inch wide is one inch tall.
+  defp add_logo(pdf, %{logo: nil}), do: pdf
 
   defp add_logo(pdf, options) do
     image_size = @one_inch
@@ -40,7 +41,7 @@ defmodule Service.PDFLetter do
     pdf
     |> Pdf.add_image(
       {width - @one_inch - image_size, height - @one_inch - image_size},
-      options.logo_path,
+      {:binary, options.logo},
       width: image_size
     )
   end

@@ -61,7 +61,7 @@ defmodule App.Operation.BuildGooglePassTest do
 
   test "the team logo is by the name, the photo is under the code, and dev has neither" do
     object = object(card())
-    assert object.logo.sourceUri.uri =~ "/teams/example/pass-logo"
+    assert object.logo.sourceUri.uri =~ "/teams/example/logo"
     assert object.heroImage.sourceUri.uri =~ "/verify/K7Q4M2XA/banner"
 
     dev = BuildGooglePass.pass_object(card(), [], %{@config | images: false}, @now)
