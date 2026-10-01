@@ -41,9 +41,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
       |> join(:inner, [a], m in assoc(a, :member))
       |> where([a, m], m.team_id == ^team.id)
       |> where([a], a.status == "attending")
-      |> select([a], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
-      |> Repo.all()
-      |> Enum.sort(:desc)
+      |> Attendance.years(team.timezone)
+      |> Enum.map(&Integer.to_string/1)
 
     [{"All", "all"} | Enum.map(years, fn y -> {y, y} end)]
   end
@@ -63,9 +62,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
-    |> scope(when: filter_options.when)
+    |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
-    |> join_attendance_summary(filter_options.when)
+    |> join_attendance_summary(team, filter_options.when)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
@@ -87,6 +86,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> cast(params, [:q, :when, :status, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
+    |> validate_format(:when, ~r/\A(all|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,
@@ -94,40 +94,34 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
-  defp join_attendance_summary(query, year) do
+  defp join_attendance_summary(query, team, year) do
     from(
       m in query,
-      left_join: a in subquery(build_attendance_summary(year)),
+      left_join: a in subquery(build_attendance_summary(team, year)),
       on: m.id == a.member_id
     )
   end
 
-  defp build_attendance_summary(year) when year in [nil, "all"] do
-    from(
-      at in Attendance,
-      where: at.status == "attending",
-      group_by: at.member_id,
-      select: %{
-        member_id: at.member_id,
-        activity_count: count(at.id),
-        total_minutes: sum(at.duration_in_minutes)
-      }
-    )
+  defp build_attendance_summary(team, year) do
+    query =
+      from(
+        at in Attendance,
+        join: m in assoc(at, :member),
+        where: m.team_id == ^team.id,
+        where: at.status == "attending",
+        group_by: at.member_id,
+        select: %{
+          member_id: at.member_id,
+          activity_count: count(at.id),
+          total_minutes: sum(at.duration_in_minutes)
+        }
+      )
+
+    started_in(query, year, team.timezone)
   end
 
-  defp build_attendance_summary(year) do
-    from(
-      at in Attendance,
-      where: at.status == "attending",
-      where: fragment("strftime('%Y', ?) = ?", at.started_at, ^year),
-      group_by: at.member_id,
-      select: %{
-        member_id: at.member_id,
-        activity_count: count(at.id),
-        total_minutes: sum(at.duration_in_minutes)
-      }
-    )
-  end
+  defp started_in(query, year, _timezone) when year in [nil, "all"], do: query
+  defp started_in(query, year, timezone), do: Attendance.started_in(query, year, timezone)
 
   defp select_member_with_attendance(query) do
     from(
@@ -155,13 +149,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, when: "all"), do: q
-  defp scope(q, when: nil), do: q
+  defp scope(q, when: "all", timezone: _), do: q
+  defp scope(q, when: nil, timezone: _), do: q
 
-  defp scope(q, when: year) when is_binary(year) do
+  # Members on the team at any point in the year.
+  defp scope(q, when: year, timezone: timezone) when is_binary(year) do
+    {start, finish} = Service.YearRange.bounds(year, timezone)
+
     q
-    |> where([m], fragment("strftime('%Y', ?) <= ?", m.joined_at, ^year))
-    |> where([m], is_nil(m.left_at) or fragment("strftime('%Y', ?) >= ?", m.left_at, ^year))
+    |> where([m], m.joined_at < type(^finish, :naive_datetime))
+    |> where([m], is_nil(m.left_at) or m.left_at >= type(^start, :naive_datetime))
   end
 
   defp scope(q, status: "all"), do: q

@@ -39,10 +39,10 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
       |> join(:inner, [a], m in assoc(a, :member))
       |> where([a, m], m.team_id == ^team.id)
       |> where([a, m], a.status == "attending")
+      |> Attendance.years(team.timezone)
       # Search and Rescue Volunteer Tax Credit (SRVTC) started in 2014
-      |> where([a, m], fragment("strftime('%Y', ?) >= '2014'", a.started_at))
-      |> select([a, m], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
-      |> Repo.all()
+      |> Enum.filter(&(&1 >= 2014))
+      |> Enum.map(&Integer.to_string/1)
 
     [current | attendance_years]
     |> Enum.uniq()
@@ -70,7 +70,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   def find_all(team, filter_options) do
     Member
     |> Member.scope(team_id: team.id)
-    |> Member.include_primary_and_secondary_minutes(filter_options.year)
+    |> Member.include_primary_and_secondary_minutes(team, filter_options.year)
     |> scope(q: filter_options.q)
     |> scope(sort: filter_options.sort)
     |> scope(filter: filter_options.filter)

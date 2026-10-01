@@ -78,6 +78,25 @@ defmodule App.Model.Activity do
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 
+  @doc "Rows that started in `year` in `timezone`."
+  def started_in(query, year, timezone) do
+    {start, finish} = Service.YearRange.bounds(year, timezone)
+
+    query
+    |> where([r], r.started_at >= type(^start, :naive_datetime))
+    |> where([r], r.started_at < type(^finish, :naive_datetime))
+  end
+
+  @doc "The years `query`'s rows span, newest first, in `timezone`."
+  def years(query, timezone) do
+    {first, last} =
+      query
+      |> select([r], {min(r.started_at), max(r.started_at)})
+      |> Repo.one()
+
+    Service.YearRange.years(first, last, timezone)
+  end
+
   def get_by(params), do: Repo.get_by(Activity, params)
 
   def insert!(params) do
