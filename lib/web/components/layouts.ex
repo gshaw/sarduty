@@ -14,7 +14,7 @@ defmodule Web.Layouts do
           {assigns[:page_title] || "Untitled Page"}
         </.live_title>
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
-        <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+        <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
         </script>
       </head>
       <body class="bg-base-1 text-base-content">
