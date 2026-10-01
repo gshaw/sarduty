@@ -9,6 +9,7 @@ defmodule App.Operation.PushPassUpdatesTest do
   alias App.Operation.IssueMemberCard
   alias App.Operation.PushPassUpdates
   alias App.Operation.RevokeMemberCard
+  alias App.Operation.SendTestPassUpdate
 
   @now ~U[2026-09-30 12:00:00.000000Z]
 
@@ -79,6 +80,21 @@ defmodule App.Operation.PushPassUpdatesTest do
 
     card |> Repo.reload!() |> Repo.preload(member: :team) |> BuildApplePass.call(@now)
     team |> Repo.reload!() |> PushPassUpdates.call(@now)
+    refute_received {:pushed, _, _}
+  end
+
+  test "a test update pushes now, and the next refresh doesn't push it again",
+       %{team: team, card: card} do
+    expect_pushes(self())
+    PushPassUpdates.call(team, @now)
+    assert_received {:pushed, _, _}
+
+    later = ~U[2026-09-30 13:00:00.000000Z]
+    assert {:ok, 1} = card |> Repo.reload!() |> SendTestPassUpdate.call(later)
+    assert_received {:pushed, "/3/device/push-token-1", _}
+    assert %{pass_test_at: ^later, pass_updated_at: ^later} = Repo.reload!(card)
+
+    team |> Repo.reload!() |> PushPassUpdates.call(later)
     refute_received {:pushed, _, _}
   end
 

@@ -6,15 +6,22 @@ defmodule Web.MemberCardLive do
 
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.PassRegistration
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
   alias App.Operation.EmailMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Operation.RevokeMemberCard
+  alias App.Operation.SendTestPassUpdate
   alias App.Repo
 
-  def mount(_params, _session, socket) do
+  # A phone fetching the pass ticks "last fetched" over. The topic is by the URL's member
+  # id, but the message carries nothing; the card is looked up through the team.
+  def mount(params, _session, socket) do
+    if connected?(socket),
+      do: Phoenix.PubSub.subscribe(App.PubSub, MemberCard.pass_topic(params["id"]))
+
     {:ok, socket}
   end
 
@@ -26,7 +33,7 @@ defmodule Web.MemberCardLive do
       socket
       |> assign(:page_title, "#{member.name} - ID Card")
       |> assign(:member, member)
-      |> assign(:card, MemberCard.find_current(team, member))
+      |> assign_card(MemberCard.find_current(team, member))
       |> assign(:qualifications, BuildCardQualifications.call(team, member, DateTime.utc_now()))
 
     {:noreply, socket}
@@ -35,7 +42,7 @@ defmodule Web.MemberCardLive do
   def handle_event("issue", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
     {:ok, card} = IssueMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, socket |> assign(:card, card) |> put_flash(:info, "Issued a new card.")}
+    {:noreply, socket |> assign_card(card) |> put_flash(:info, "Issued a new card.")}
   end
 
   def handle_event("email", _params, socket) do
@@ -54,7 +61,35 @@ defmodule Web.MemberCardLive do
   def handle_event("revoke", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
     :ok = RevokeMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, socket |> assign(:card, nil) |> put_flash(:info, "Cancelled the card.")}
+    {:noreply, socket |> assign_card(nil) |> put_flash(:info, "Cancelled the card.")}
+  end
+
+  def handle_event("test-update", _params, socket) do
+    %{current_team: team, member: member} = socket.assigns
+
+    case MemberCard.find_current(team, member) do
+      nil ->
+        {:noreply, assign_card(socket, nil)}
+
+      card ->
+        {:ok, phones} = SendTestPassUpdate.call(card, DateTime.utc_now())
+        count = Service.Format.count(phones, one: "1 phone", many: "%d phones")
+        message = "Sent a test update to #{count}. Each should show a notice within a minute."
+        {:noreply, socket |> assign_card(Repo.reload!(card)) |> put_flash(:info, message)}
+    end
+  end
+
+  def handle_info(:pass_fetched, socket) do
+    %{current_team: team, member: member} = socket.assigns
+    {:noreply, assign_card(socket, MemberCard.find_current(team, member))}
+  end
+
+  # Swoosh's test adapter sends each email to the process that sent it.
+  def handle_info(_message, socket), do: {:noreply, socket}
+
+  defp assign_card(socket, card) do
+    phones = if card, do: length(PassRegistration.get_all_for_serial(card)), else: 0
+    socket |> assign(:card, card) |> assign(:phones, phones)
   end
 
   def render(assigns) do
@@ -71,7 +106,12 @@ defmodule Web.MemberCardLive do
       </aside>
       <main class="content-2/3">
         <.member_tabs member={@member} active_tab={:card} />
-        <.card_content card={@card} member={@member} qualifications={@qualifications} />
+        <.card_content
+          card={@card}
+          member={@member}
+          qualifications={@qualifications}
+          phones={@phones}
+        />
       </main>
     </div>
     """
@@ -104,6 +144,19 @@ defmodule Web.MemberCardLive do
           <.a :if={@qualifications == []} navigate={~p"/settings/cards"}>
             Pick qualifications to show
           </.a>
+        </dd>
+        <dt :if={BuildApplePass.configured?()}>Apple Wallet</dt>
+        <dd :if={BuildApplePass.configured?()}>
+          <span id="card-phones">{phone_status(@phones, @card, @member.team.timezone)}</span>
+          <.button
+            :if={@phones > 0}
+            id="test-update"
+            size={:sm}
+            phx-click="test-update"
+            phx-disable-with="Sending…"
+          >
+            Send test update
+          </.button>
         </dd>
       </dl>
       <p class="mt-p">
@@ -156,5 +209,16 @@ defmodule Web.MemberCardLive do
       </p>
     </div>
     """
+  end
+
+  defp phone_status(0, _card, _timezone), do: "Not on a phone yet"
+
+  defp phone_status(phones, card, timezone) do
+    on = "On #{Service.Format.count(phones, one: "1 phone", many: "%d phones")}"
+
+    case card.pass_fetched_at do
+      nil -> on
+      fetched_at -> "#{on} · last fetched #{Service.Format.month_day_time(fetched_at, timezone)}"
+    end
   end
 end

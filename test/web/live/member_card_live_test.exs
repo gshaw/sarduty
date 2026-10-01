@@ -6,6 +6,7 @@ defmodule Web.MemberCardLiveTest do
   import Swoosh.TestAssertions
 
   alias App.Model.MemberCard
+  alias App.Model.PassRegistration
   alias App.Operation.IssueMemberCard
   alias App.Repo
 
@@ -92,6 +93,55 @@ defmodule Web.MemberCardLiveTest do
 
       refute has_element?(lv, "#email-pass")
       assert has_element?(lv, "#apple-pass")
+    end
+  end
+
+  describe "a card's phones" do
+    setup %{member: member} do
+      App.ApplePassCredentials.configure()
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+      %{card: member_card_fixture(member, %{authentication_token: "token-0123456789abcdef"})}
+    end
+
+    test "a card on no phone says so and offers no test", %{
+      conn: conn,
+      team: team,
+      member: member
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+
+      assert has_element?(lv, "#card-phones", "Not on a phone yet")
+      refute has_element?(lv, "#test-update")
+    end
+
+    test "shows the phones and the last fetch, and ticks over when a phone fetches",
+         %{conn: conn, team: team, member: member, card: card} do
+      PassRegistration.register!(card, "device-1", "push-token-1")
+      PassRegistration.register!(card, "device-2", "push-token-2")
+      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      assert has_element?(lv, "#card-phones", "On 2 phones")
+      refute render(lv) =~ "last fetched"
+
+      MemberCard.record_pass_fetched!(card, ~U[2026-09-30 22:42:00.000000Z])
+
+      assert has_element?(lv, "#card-phones", "On 2 phones · last fetched Sep 30, 3:42 PM")
+    end
+
+    test "sends a test update to the phone", %{conn: conn, team: team, member: member, card: card} do
+      PassRegistration.register!(card, "device-1", "push-token-1")
+      test_pid = self()
+
+      Req.Test.stub(App.Adapter.APNs, fn conn ->
+        send(test_pid, {:pushed, conn.request_path})
+        Plug.Conn.send_resp(conn, 200, "")
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      lv |> element("#test-update") |> render_click()
+
+      assert_received {:pushed, "/3/device/push-token-1"}
+      assert Repo.reload!(card).pass_test_at
+      assert render(lv) =~ "Sent a test update to 1 phone."
     end
   end
 
