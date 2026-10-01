@@ -24,7 +24,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
   end
 
   defp build_letter_content(team, member, ref_id, year) do
-    summary = build_minutes_summary(member, year)
+    summary = build_minutes_summary(team, member, year)
     certified_at = DateTime.utc_now()
     formatted_certified_on = Format.date_long(certified_at, team.timezone)
 
@@ -56,10 +56,10 @@ defmodule App.Operation.CreateTaxCreditLetter do
     """
   end
 
-  defp build_minutes_summary(member, year) do
+  defp build_minutes_summary(team, member, year) do
     Member
     |> where(id: ^member.id)
-    |> Member.include_primary_and_secondary_minutes(year)
+    |> Member.include_primary_and_secondary_minutes(team, year)
     |> Repo.one()
   end
 end

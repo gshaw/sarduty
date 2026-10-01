@@ -28,10 +28,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp build_team_year_options(team) do
     Activity
     |> where([a], a.team_id == ^team.id)
-    |> select([a], fragment("DISTINCT strftime('%Y', ?)", a.started_at))
-    |> Repo.all()
-    |> Enum.sort(:desc)
-    |> Enum.map(fn year -> {year, year} end)
+    |> Activity.years(team.timezone)
+    |> Enum.map(fn year -> {Integer.to_string(year), Integer.to_string(year)} end)
   end
 
   def sort_kinds,
@@ -59,7 +57,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(member: member)
     |> scope(q: filter_options.q)
     |> scope(activity: filter_options.activity)
-    |> scope(when: filter_options.when)
+    |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(sort: filter_options.sort)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
@@ -80,6 +78,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> cast(params, [:q, :activity, :when, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, Enum.map(activity_kinds(), fn {_, v} -> v end))
+    |> validate_format(:when, ~r/\A(all|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,
@@ -112,20 +111,19 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, when: "all"), do: q
-  defp scope(q, when: "past"), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
-  defp scope(q, when: "future"), do: where(q, [r], r.started_at >= ^DateTime.utc_now())
+  defp scope(q, when: "all", timezone: _), do: q
+  defp scope(q, when: "past", timezone: _), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
 
-  defp scope(q, when: year) when is_binary(year),
-    do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^year))
+  defp scope(q, when: "future", timezone: _),
+    do: where(q, [r], r.started_at >= ^DateTime.utc_now())
+
+  defp scope(q, when: year, timezone: timezone) when is_binary(year),
+    do: Activity.started_in(q, year, timezone)
 
   defp scope(q, activity: "all"), do: q
   defp scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
 
   # defp scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
-
-  # defp scope(q, year: year),
-  #   do: where(q, [r], fragment("strftime('%Y', ?) = ?", r.started_at, ^Integer.to_string(year)))
 
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)

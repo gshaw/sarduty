@@ -166,11 +166,7 @@ defmodule Web.MCPController do
       end)
       |> then(fn q ->
         if year do
-          where(
-            q,
-            [a],
-            fragment("strftime('%Y', ?) = ?", a.started_at, ^to_string(year))
-          )
+          Activity.started_in(q, to_string(year), team.timezone)
         else
           q
         end

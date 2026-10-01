@@ -89,18 +89,18 @@ defmodule App.Model.Member do
     Repo.update!(changeset)
   end
 
-  def include_primary_and_secondary_minutes(query, year) do
+  def include_primary_and_secondary_minutes(query, team, year) do
     query
-    |> join_activity_minutes(year, Activity.primary_hours_tag())
-    |> join_activity_minutes(year, Activity.secondary_hours_tag())
+    |> join_activity_minutes(team, year, Activity.primary_hours_tag())
+    |> join_activity_minutes(team, year, Activity.secondary_hours_tag())
     |> join_tax_credit_letter_id(year)
     |> select_primary_secondary_minutes_summary()
   end
 
-  defp join_activity_minutes(query, year, tag) do
+  defp join_activity_minutes(query, team, year, tag) do
     from(
       m in query,
-      left_join: a in subquery(Attendance.tagged_minutes_summary(year, [tag])),
+      left_join: a in subquery(Attendance.tagged_minutes_summary(team, year, [tag])),
       on: m.id == a.member_id
     )
   end

@@ -63,24 +63,46 @@ defmodule App.Model.Attendance do
     |> where([r], r.status == "attending")
   end
 
-  def tagged_minutes_summary(year, tags) do
-    from(
-      at in Attendance,
-      join: ac in assoc(at, :activity),
-      where: at.status == "attending",
-      where: fragment("strftime('%Y', ?) = ?", at.started_at, ^Integer.to_string(year)),
-      where: ac.id in subquery(tagged_activity_ids(tags)),
-      group_by: at.member_id,
-      select: %{
-        member_id: at.member_id,
-        count: count(at.id),
-        minutes: sum(at.duration_in_minutes)
-      }
-    )
+  @doc "Rows that started in `year` in `timezone`."
+  def started_in(query, year, timezone) do
+    {start, finish} = Service.YearRange.bounds(year, timezone)
+
+    query
+    |> where([r], r.started_at >= type(^start, :naive_datetime))
+    |> where([r], r.started_at < type(^finish, :naive_datetime))
   end
 
-  defp tagged_activity_ids(tags) do
-    subquery = select(Activity, [:id])
-    Enum.reduce(tags, subquery, fn tag, sq -> or_where(sq, [ac], ^tag in ac.tags) end)
+  @doc "The years `query`'s rows span, newest first, in `timezone`."
+  def years(query, timezone) do
+    {first, last} =
+      query
+      |> select([r], {min(r.started_at), max(r.started_at)})
+      |> Repo.one()
+
+    Service.YearRange.years(first, last, timezone)
+  end
+
+  def tagged_minutes_summary(team, year, tags) do
+    query =
+      from(
+        at in Attendance,
+        join: m in assoc(at, :member),
+        join: ac in assoc(at, :activity),
+        where: m.team_id == ^team.id,
+        where: at.status == "attending",
+        where: ^tagged_activity_filter(tags),
+        group_by: at.member_id,
+        select: %{
+          member_id: at.member_id,
+          count: count(at.id),
+          minutes: sum(at.duration_in_minutes)
+        }
+      )
+
+    started_in(query, year, team.timezone)
+  end
+
+  defp tagged_activity_filter(tags) do
+    Enum.reduce(tags, false, fn tag, acc -> dynamic([at, m, ac], ^acc or ^tag in ac.tags) end)
   end
 end
