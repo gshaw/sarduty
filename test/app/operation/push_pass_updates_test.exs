@@ -41,16 +41,25 @@ defmodule App.Operation.PushPassUpdatesTest do
 
   test "doesn't push when only the last-refreshed date moved", %{team: team, card: card} do
     expect_pushes(self())
-    PushPassUpdates.call(team, @now)
+    team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
     assert_received {:pushed, _, _}
 
-    team
-    |> Ecto.Changeset.change(d4h_refreshed_at: ~U[2026-10-01 13:00:00.000000Z])
-    |> Repo.update!()
-
-    team |> Repo.reload!() |> PushPassUpdates.call(@now)
+    team |> refreshed_at(~U[2026-10-02 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
     refute_received {:pushed, _, _}
     assert Repo.reload!(card).pass_updated_at == @now
+  end
+
+  test "pushes once a month as valid until rolls forward", %{team: team} do
+    expect_pushes(self())
+    team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    assert_received {:pushed, _, _}
+
+    team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    assert_received {:pushed, _, _}
+  end
+
+  defp refreshed_at(team, refreshed_at) do
+    team |> Ecto.Changeset.change(d4h_refreshed_at: refreshed_at) |> Repo.update!()
   end
 
   test "a changed pass built for an email or download is pushed, not swallowed", %{

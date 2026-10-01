@@ -77,6 +77,23 @@ defmodule App.Model.MemberCard do
 
   def status(%MemberCard{}, _now), do: :revoked
 
+  @doc """
+  When a pass stops being good: the last moment of the month three months after the
+  team last checked D4H, in the team's zone. Each refresh moves it, so a pass expires on
+  its own once updates stop. Nil when the team has never refreshed.
+  """
+  def valid_until(%Team{d4h_refreshed_at: nil}), do: nil
+
+  def valid_until(%Team{d4h_refreshed_at: refreshed_at, timezone: timezone}) do
+    refreshed_at
+    |> DateTime.shift_zone!(timezone)
+    |> DateTime.to_date()
+    |> Date.shift(month: 3)
+    |> Date.end_of_month()
+    |> DateTime.new!(~T[23:59:59], timezone)
+    |> DateTime.shift_zone!("Etc/UTC")
+  end
+
   def find_by_code(code) do
     MemberCard
     |> where([c], c.code == ^code)

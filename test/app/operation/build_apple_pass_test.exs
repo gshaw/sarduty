@@ -20,7 +20,7 @@ defmodule App.Operation.BuildApplePassTest do
     struct(%MemberCard{id: 7, code: "K7Q4M2XA", serial_number: "member-3", member: member}, attrs)
   end
 
-  test "shows the member, their status, and how long they've been a member" do
+  test "shows the member, their status, and how long the card is good for" do
     json = BuildApplePass.pass_json(card(), [], @config, @now)
 
     assert json.passTypeIdentifier == "pass.com.sarduty.member-card"
@@ -30,8 +30,32 @@ defmodule App.Operation.BuildApplePassTest do
     refute Map.has_key?(json.generic, :headerFields)
     assert [%{value: "Alex Example"}] = json.generic.primaryFields
 
-    assert [%{value: "Active"}, %{value: "Mar 2019"}, %{value: "8 years"}] =
-             json.generic.secondaryFields
+    assert [
+             %{label: "STATUS", value: "Active"},
+             %{label: "MEMBER SINCE", value: "Mar 2019"},
+             %{label: "VALID UNTIL", value: "Dec 2026"} = valid_until
+           ] = json.generic.secondaryFields
+
+    refute Map.has_key?(valid_until, :changeMessage)
+    assert json.expirationDate == "2027-01-01T06:59:59Z"
+  end
+
+  test "an inactive card doesn't say how long it's good for, but still expires" do
+    card = card()
+    card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
+    json = BuildApplePass.pass_json(card, [], @config, @now)
+
+    refute Enum.any?(json.generic.secondaryFields, &(&1.key == "valid-until"))
+    assert json.expirationDate == "2027-01-01T06:59:59Z"
+  end
+
+  test "a team that has never refreshed sets no expiry" do
+    card = card()
+    card = put_in(card.member.team.d4h_refreshed_at, nil)
+    json = BuildApplePass.pass_json(card, [], @config, @now)
+
+    refute Map.has_key?(json, :expirationDate)
+    refute Enum.any?(json.generic.secondaryFields, &(&1.key == "valid-until"))
   end
 
   test "the QR code holds only the code, never a link" do
@@ -39,7 +63,7 @@ defmodule App.Operation.BuildApplePassTest do
 
     assert barcode.format == "PKBarcodeFormatQR"
     assert barcode.message == "K7Q4M2XA"
-    assert barcode.altText == "K7Q4-M2XA"
+    assert barcode.altText == "sarduty.com/verify · K7Q4-M2XA"
   end
 
   test "keeps to Apple's limit of four secondary and auxiliary fields with a square code" do
@@ -107,15 +131,17 @@ defmodule App.Operation.BuildApplePassTest do
     refute Map.has_key?(json, :barcodes)
   end
 
-  test "the fingerprint ignores the last-refreshed date but not the rest" do
+  test "the fingerprint ignores the last-refreshed date until valid until moves" do
     base = card()
-    later = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 13:00:00Z])
+    later = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 05:00:00Z])
+    next_month = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 13:00:00Z])
     left = put_in(base.member.left_at, ~U[2026-01-01 00:00:00Z])
 
     fingerprint =
       &(&1 |> BuildApplePass.pass_json([], @config, @now) |> BuildApplePass.fingerprint())
 
     assert fingerprint.(base) == fingerprint.(later)
+    refute fingerprint.(base) == fingerprint.(next_month)
     refute fingerprint.(base) == fingerprint.(left)
   end
 end

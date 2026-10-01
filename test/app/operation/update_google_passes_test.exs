@@ -40,6 +40,7 @@ defmodule App.Operation.UpdateGooglePassesTest do
     card = card_on_google(member)
 
     UpdateGooglePasses.call(team, @now)
+    assert_received {:google, "PUT", "/walletobjects/v1/genericClass/" <> _, _class}
     assert_received {:google, "PUT", "/walletobjects/v1/genericObject/" <> _, _object}
     refute Repo.reload!(card).google_pass_fingerprint == "old"
 

@@ -3,6 +3,7 @@ defmodule App.Model.MemberCardTest do
 
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.Team
 
   @now ~U[2026-09-30 12:00:00Z]
 
@@ -39,5 +40,35 @@ defmodule App.Model.MemberCardTest do
     assert MemberCard.status(%MemberCard{member: current}, @now) == :active
     assert MemberCard.status(%MemberCard{member: left}, @now) == :inactive
     assert MemberCard.status(%MemberCard{member: current, revoked_at: @now}, @now) == :revoked
+  end
+
+  describe "valid_until" do
+    defp valid_until(refreshed_at),
+      do:
+        MemberCard.valid_until(%Team{
+          d4h_refreshed_at: refreshed_at,
+          timezone: "America/Toronto"
+        })
+
+    test "is the end of the month three months after the last check, in the team's zone" do
+      # Checked in daylight time; Dec 31 ends in standard time.
+      assert valid_until(~U[2026-09-30 19:00:00Z]) == ~U[2027-01-01 04:59:59Z]
+      # Already Oct 1 in UTC, still Sep 30 in Toronto.
+      assert valid_until(~U[2026-10-01 03:00:00Z]) == ~U[2027-01-01 04:59:59Z]
+    end
+
+    test "crosses the year from October" do
+      assert valid_until(~U[2026-10-01 19:00:00Z]) == ~U[2027-02-01 04:59:59Z]
+    end
+
+    test "lands on the last day of a short month" do
+      assert valid_until(~U[2026-11-30 19:00:00Z]) == ~U[2027-03-01 04:59:59Z]
+      # Checked in standard time; Mar 31 ends in daylight time.
+      assert valid_until(~U[2027-12-31 19:00:00Z]) == ~U[2028-04-01 03:59:59Z]
+    end
+
+    test "is nil before the team's first refresh" do
+      assert valid_until(nil) == nil
+    end
   end
 end

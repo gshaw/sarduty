@@ -85,6 +85,26 @@ reach a dev server, so dev passes have none. In production:
   `/verify/:code/banner`: the square photo centered on the pass's navy. Google has no
   picture spot beside the name, so this is the only place on the front for both.
 
+## Valid until
+
+The front of both passes reads **Status · Member since · Valid until**. Valid until is
+the end of the month three months after the team last checked D4H, shown as "Dec 2026"
+in the team's zone ([MemberCard.valid_until/1](../lib/app/model/member_card.ex)). Apple
+gets it as `expirationDate`, Google as `validTimeInterval.end`, and each marks the pass
+expired once it passes.
+
+- **It rolls with the refresh.** The date is part of the fingerprint, so each card gets
+  one silent update a month from the push after a refresh. No `changeMessage`, no
+  Google `notifyPreference`.
+- **It comes from `d4h_refreshed_at`, not now.** Saving Settings > ID cards pushes too,
+  and that shouldn't extend a card without a D4H check.
+- **When refreshes stop, the pass expires** within three months: a broken D4H key, a
+  team that leaves, a member who turns off updates.
+- Only an active card shows the date. An inactive card still gets the expiry, so a
+  member who comes back still gets updates.
+- Google sends the class only when a pass is added, so `UpdateGooglePasses` sends it
+  again before any update. That's how a front-row change reaches passes already out.
+
 ## Active and qualifications
 
 A card is active while the member hasn't left the team in D4H (`Member.current?/2`).
