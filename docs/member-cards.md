@@ -33,6 +33,9 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - **After every team refresh** it rebuilds each registered card's pass and pushes only
   when its fingerprint changed. The fingerprint leaves out the "last checked" date, or
   every pass would buzz every day.
+- **When a pass is built** for an email, a download, or a phone, and its fingerprint
+  changed, it pushes too. Building records the fingerprint, so the next refresh would
+  otherwise see nothing new and the phones would keep the old pass.
 - **On cancel or replace** it pushes right away, and Wallet fetches a voided pass that
   says "Cancelled".
 - A phone that APNs says dropped the pass, or whose token is bad, is deleted.

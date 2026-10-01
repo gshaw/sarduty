@@ -53,6 +53,26 @@ defmodule App.Operation.PushPassUpdatesTest do
     assert Repo.reload!(card).pass_updated_at == @now
   end
 
+  test "a changed pass built for an email or download is pushed, not swallowed", %{
+    team: team,
+    card: card
+  } do
+    expect_pushes(self())
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+    PushPassUpdates.call(team, @now)
+    assert_received {:pushed, _, _}
+
+    team |> Ecto.Changeset.change(name: "Renamed SAR") |> Repo.update!()
+    card = MemberCard |> Repo.get!(card.id) |> Repo.preload(member: :team)
+
+    {:ok, _pkpass} = BuildApplePass.call(card, @now)
+    assert_received {:pushed, "/3/device/push-token-1", _}
+
+    card |> Repo.reload!() |> Repo.preload(member: :team) |> BuildApplePass.call(@now)
+    team |> Repo.reload!() |> PushPassUpdates.call(@now)
+    refute_received {:pushed, _, _}
+  end
+
   test "drops a phone Apple says no longer has the pass", %{team: team, card: card} do
     Req.Test.stub(App.Adapter.APNs, &Plug.Conn.send_resp(&1, 410, ~s({"reason":"Unregistered"})))
 
