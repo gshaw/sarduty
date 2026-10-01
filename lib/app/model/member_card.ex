@@ -73,6 +73,46 @@ defmodule App.Model.MemberCard do
 
   def normalize_code(_input), do: nil
 
+  @doc """
+  What the card's QR code holds: its /verify page, so a phone's camera opens the check.
+  In capitals, because a QR code packs capitals, digits, and `:/.-` into fewer squares,
+  and neither the host nor the code cares about case.
+  `HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA`.
+  """
+  def qr_url(code, base_url), do: String.upcase("#{base_url}/verify/#{format_code(code)}")
+
+  @doc "How to check a card, for the back of the pass. `code` is as printed."
+  def how_to_check(code) do
+    "Scan the QR code with your phone's camera. Check that the page it opens is " <>
+      "sarduty.com, and that the photo matches the person. Or open sarduty.com/verify " <>
+      "and type #{code}."
+  end
+
+  @doc """
+  The code in what a scanner read: a bare code, as on cards made before `qr_url/2`, or a
+  link to `host`'s /verify page. `{:other_site, host}` for a link anywhere else, which
+  is what a forged card would carry. Nil when it's neither.
+  """
+  def code_from_scan(text, host) when is_binary(text) do
+    case text |> String.trim() |> URI.parse() do
+      %URI{scheme: scheme, host: link_host, path: path}
+      when scheme in ["http", "https", "HTTP", "HTTPS"] and is_binary(link_host) ->
+        if String.downcase(link_host) == String.downcase(host),
+          do: code_from_path(path),
+          else: {:other_site, String.downcase(link_host)}
+
+      _ ->
+        normalize_code(text)
+    end
+  end
+
+  defp code_from_path(path) do
+    case Regex.run(~r{^/verify/([^/]+)/?$}i, path || "") do
+      [_, code] -> normalize_code(code)
+      nil -> nil
+    end
+  end
+
   @doc "`:active`, `:inactive` when the member has left the team, or `:revoked`."
   def status(%MemberCard{revoked_at: nil, member: member}, now) do
     if Member.current?(member, now), do: :active, else: :inactive

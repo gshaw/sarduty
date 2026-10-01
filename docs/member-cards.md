@@ -1,14 +1,23 @@
 # Member ID cards
 
 A team manager issues a member an ID card from the member's **ID Card** tab. Anyone can
-check a card at `/verify` ([VerifyLive](../lib/web/live/verify_live.ex)) by scanning its QR
-code or typing the code printed under it. Issue #63 has the design and the plan.
+check a card by scanning its QR code with a phone's camera, which opens
+`/verify/K7Q4-M2XA` ([VerifyLive](../lib/web/live/verify_live.ex)), or by typing the code
+printed under it at `/verify`. Issue #63 has the design and the plan.
 
 ## What must stay true
 
-- **The checker starts at sarduty.com.** A forged card can carry a QR code that opens a
-  look-alike site, so the QR holds only the code, never a URL, and `/verify` reads it with
-  the camera instead of following it. Don't add a link to a card that opens the result.
+- **The real check is the server's answer and the photo.** A pass is easy to fake with
+  any pass-maker app. What can't be faked is sarduty.com saying the code is active and
+  showing the member's face, so the result shows the photo large and tells the checker
+  to look at the address bar.
+- **The QR opens the card's page, and only the code is printed under it.** It holds
+  `HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA`
+  ([MemberCard.qr_url/2](../lib/app/model/member_card.ex)), in capitals because a QR code
+  packs capitals, digits, and `:/.-` into fewer squares. That fits the size-2 QR code.
+- **Scanning from `/verify` is the careful check.** The page's scanner never follows a
+  link. It takes the code out of a link to this site, accepts a bare code from cards made
+  before, and flags a link to anywhere else as forged.
 - **Codes are random.** They come from `:crypto`, 8 characters from a 30-character
   alphabet ([MemberCard](../lib/app/model/member_card.ex)). Never derive one from the D4H
   member number or the local id: a guessable code would let anyone walk the roster.
@@ -92,6 +101,20 @@ reach a dev server, so dev passes have none. In production:
 - **The photo** sits in the banner under the QR code (`heroImage`), from
   `/verify/:code/banner`: the square photo centered on the pass's navy. Google has no
   picture spot beside the name, so this is the only place on the front for both.
+
+## Why the QR holds a link
+
+Until 2026-10-01 the QR held only the code, so a forged card's QR couldn't open a
+look-alike site: the checker had to open sarduty.com/verify first and scan from there.
+We dropped that. Cards are for shops giving pro deals and for mutual aid teams. A clerk
+whose camera shows a bare code gives up and looks at the pass instead, which is easier
+to fake than a web page. A link gets them to the real check.
+
+What's left: someone who scans a forged card with the plain camera and doesn't look at
+the domain can be fooled by a look-alike site. The camera shows the domain before it
+opens, the result page says to check the address bar, and partners who check often
+should keep sarduty.com/verify on their home screen, where a forged link is flagged. For
+mutual aid, a call to the member's team is the check; the card speeds it up.
 
 ## Valid until
 

@@ -124,9 +124,11 @@ defmodule App.Operation.BuildApplePass do
       [
         %{
           format: "PKBarcodeFormatQR",
-          message: card.code,
+          message: MemberCard.qr_url(card.code, Web.Endpoint.url()),
           messageEncoding: "iso-8859-1",
-          altText: "sarduty.com/verify · #{code}"
+          # Just the code: Wallet widens its white box to fit this text, and shows only
+          # the first line of it. How to check the card is on the back.
+          altText: code
         }
       ]
     else
@@ -179,9 +181,7 @@ defmodule App.Operation.BuildApplePass do
       %{
         key: "verify",
         label: "How to check this card",
-        value:
-          "Open sarduty.com/verify on your own phone and scan the code, or type #{code}. " <>
-            "Don't trust a link or a page you reached from the card."
+        value: MemberCard.how_to_check(code)
       },
       qualification_fields(qualifications, team.timezone),
       %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},

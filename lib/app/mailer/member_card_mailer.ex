@@ -38,7 +38,7 @@ defmodule App.Mailer.MemberCardMailer do
 
     Here is your #{member.team.name} member ID card.
     #{apple_text(pkpass)}#{google_text(google_url)}
-    To check your card, someone opens sarduty.com/verify on their own phone and scans the QR code, or types your code: #{MemberCard.format_code(card.code)}
+    To check your card, someone scans its QR code with their phone's camera, which opens sarduty.com, or types your code at sarduty.com/verify: #{MemberCard.format_code(card.code)}
 
     If you leave the team, or the team replaces or cancels the card, it stops checking out.
 

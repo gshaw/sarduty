@@ -61,12 +61,12 @@ defmodule App.Operation.BuildGooglePassTest do
     end
   end
 
-  test "the QR code holds only the code, never a link" do
-    assert object(card()).barcode == %{
-             type: "QR_CODE",
-             value: "K7Q4M2XA",
-             alternateText: "sarduty.com/verify · K7Q4-M2XA"
-           }
+  test "the QR code opens the card's /verify page, with only the code printed under it" do
+    barcode = object(card()).barcode
+
+    assert barcode.type == "QR_CODE"
+    assert barcode.value =~ ~r{^HTTPS?://[A-Z0-9.:]+/VERIFY/K7Q4-M2XA$}
+    assert barcode.alternateText == "K7Q4-M2XA"
   end
 
   test "the team logo is by the name, the photo is under the code, and dev has neither" do

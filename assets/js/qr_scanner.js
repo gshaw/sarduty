@@ -2,7 +2,7 @@
 import jsQR from "../vendor/jsqr"
 
 // Reads a member card's QR code with the phone's camera on /verify and sends the text
-// to the LiveView. The page reads the code; it never follows a link from the card.
+// to the LiveView, which takes the code out of it. It never follows a link from a card.
 export const QRScanner = {
   mounted() {
     this.video = this.el.querySelector("video")
