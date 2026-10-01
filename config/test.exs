@@ -38,3 +38,6 @@ config :sarduty, App.Adapter.D4H, plug: {Req.Test, App.Adapter.D4H}
 
 # Wallet pass pushes go to Req.Test too, so no test reaches Apple.
 config :sarduty, App.Adapter.APNs, plug: {Req.Test, App.Adapter.APNs}
+
+# And so do Google Wallet's.
+config :sarduty, App.Adapter.GoogleWallet, plug: {Req.Test, App.Adapter.GoogleWallet}

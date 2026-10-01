@@ -3,12 +3,14 @@ defmodule App.Operation.IssueMemberCard do
   alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Operation.PushPassUpdates
+  alias App.Operation.UpdateGooglePasses
   alias App.Repo
 
   @doc """
   Gives the member a new card with a new code and token, under their existing Wallet
   serial number. Any card they had stops working, and phones holding its pass are told
-  to fetch the voided one. Adding the new pass replaces the old one in Wallet.
+  to fetch the voided one. Adding the new pass replaces the old one in Apple Wallet; in
+  Google Wallet the old one expires.
   """
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
     {:ok, {card, revoked}} =
@@ -30,6 +32,7 @@ defmodule App.Operation.IssueMemberCard do
       end)
 
     PushPassUpdates.push_cards(revoked)
+    UpdateGooglePasses.update_cards(revoked, now)
     {:ok, card}
   end
 end
