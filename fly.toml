@@ -10,7 +10,6 @@ kill_signal = "SIGTERM"
 [build]
 
 [env]
-AMAZON_SES_REGION = "ca-central-1"
 DATABASE_PATH = "/mnt/sarduty/sarduty.db"
 PHX_HOST = "sarduty.com"
 PORT = "8080"

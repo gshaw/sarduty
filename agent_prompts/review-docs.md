@@ -21,7 +21,6 @@ flag (don't silently rewrite) anything that looks substantially wrong.
 - `docs/history.md` — maintained by `refresh-history.md`.
 - `docs/testing-strategy.md` — owned by `review-tests.md`.
 - `agent_prompts/*` — these prompts.
-- `CLAUDE.md` — just an `@AGENTS.md` import; nothing to review.
 
 ## What to check, per doc
 
