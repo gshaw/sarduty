@@ -8,4 +8,10 @@ defmodule Web.HomePageLiveTest do
 
     assert html =~ "Welcome to"
   end
+
+  test "the footer links to the verify site", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/")
+
+    assert has_element?(lv, ~s(#footer-verify[href="#{Web.VerifyHost.url()}"]))
+  end
 end

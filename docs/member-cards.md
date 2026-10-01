@@ -28,6 +28,13 @@ at `verify.sarduty.com`. Issue #63 has the design and the plan.
 - **Codes are random.** They come from `:crypto`, 8 characters from a 30-character
   alphabet ([MemberCard](../lib/app/model/member_card.ex)). Never derive one from the D4H
   member number or the local id: a guessable code would let anyone walk the roster.
+- **Misses are capped per IP.** 20 codes that match no card in 10 minutes, on the page
+  or the photo route, and that IP gets "Too many tries" with no lookup
+  ([Web.VerifyLimit](../lib/web/verify_limit.ex)). Real codes never count, so checking a
+  crowd of cards at a callout can't trip it. The counts live in memory (Hammer's ETS
+  backend), which is enough on one machine and resets on deploy. The IP is Fly's
+  `Fly-Client-IP`, read on the HTTP request and carried into the LiveView's session,
+  since a websocket can't see that header.
 - **A cancelled card shows nothing about the member.** `/verify` says it was cancelled,
   and its photo route 404s.
 - **One live card per member.** Issuing a card revokes the one before it, and a code is

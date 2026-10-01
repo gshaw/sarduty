@@ -3,12 +3,22 @@ defmodule Web.VerifyLive do
 
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
+  alias Web.VerifyLimit
 
   # Public, on the verify site (Web.VerifyHost). A card's QR code opens /<code> here.
   # Scanning from this page is the careful check: it takes the code out of a card's link
   # and flags a link to any other site, which is what a forged card would carry.
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Check an ID card", scan_failed: false)}
+  #
+  # Misses count toward a per-IP limit (Web.VerifyLimit). It's checked here rather than in
+  # a plug, which would miss checks sent over the open connection. A bad link opened
+  # directly counts twice, once for the HTTP render and once on connect.
+  def mount(_params, session, socket) do
+    {:ok,
+     assign(socket,
+       page_title: "Check an ID card",
+       scan_failed: false,
+       client_ip: session["client_ip"]
+     )}
   end
 
   def handle_params(params, _uri, socket) do
@@ -17,7 +27,7 @@ defmodule Web.VerifyLive do
     socket =
       socket
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
-      |> assign(:result, check(input))
+      |> assign(:result, check(input, socket.assigns.client_ip))
 
     {:noreply, socket}
   end
@@ -40,9 +50,19 @@ defmodule Web.VerifyLive do
     end
   end
 
-  defp check(""), do: nil
+  defp check("", _ip), do: nil
 
-  defp check(input) do
+  defp check(input, ip) do
+    if VerifyLimit.limited?(ip) do
+      %{status: :limited}
+    else
+      result = look_up(input)
+      if result.status == :not_found, do: VerifyLimit.miss(ip)
+      result
+    end
+  end
+
+  defp look_up(input) do
     with code when is_binary(code) <-
            MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()),
          %MemberCard{} = card <- MemberCard.find_by_code(code) do
@@ -139,6 +159,15 @@ defmodule Web.VerifyLive do
       >
         Check another card
       </.button>
+    </div>
+    """
+  end
+
+  defp result(%{result: %{status: :limited}} = assigns) do
+    ~H"""
+    <div id="result-limited">
+      <.band kind={:bad} title="Too many tries">Wait a few minutes and try again</.band>
+      <.panel>Too many codes from this connection didn't match a card.</.panel>
     </div>
     """
   end

@@ -31,6 +31,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
+    <.site_footer />
     """
   end
 
@@ -41,6 +42,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
+    <.site_footer />
     """
   end
 
@@ -68,6 +70,16 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
+    <.site_footer />
+    """
+  end
+
+  # The main site's footer. The verify site is a separate host, so this is a full URL.
+  defp site_footer(assigns) do
+    ~H"""
+    <footer id="site-footer" class="container mx-auto px-2 py-p border-t border-hr text-sm">
+      <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
+    </footer>
     """
   end
 

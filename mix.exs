@@ -44,6 +44,7 @@ defmodule App.MixProject do
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:floki, ">= 0.30.0"},
       {:gettext, "~> 1.0"},
+      {:hammer, "~> 7.5"},
       {:honeybadger, "~> 0.24"},
       {:image, "~> 0.72"},
       {:jason, "~> 1.2"},
