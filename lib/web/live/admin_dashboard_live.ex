@@ -49,7 +49,9 @@ defmodule Web.AdminDashboardLive do
           <img
             id={"team-#{team.id}-logo"}
             src={~p"/teams/#{team.subdomain}/logo"}
-            class="size-10 shrink-0 rounded"
+            width="32"
+            height="32"
+            class="size-8 shrink-0 rounded"
             alt=""
           />
           <div>
