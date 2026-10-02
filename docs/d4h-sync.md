@@ -67,6 +67,10 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   within one team.
 - **Members and activities are never deleted.** A member deleted in D4H keeps their
   contact details here. Attendance and tax credit letters point at them.
+- **A member D4H stops listing is marked departed.** D4H's `GET /members` leaves deleted
+  members out, so the members stage sets `left_at` to the refresh time on any active
+  member it didn't see (#72). It skips this when D4H returns no members at all. If D4H
+  lists the member again, the next refresh copies D4H's `endsAt` back.
 - Group rule clauses are never deleted by the sync. A clause for a deleted group is left
   unused; a clause naming a deleted qualification shows a warning on the group page.
 - **A short fetch fails the refresh.** Every D4H list response has a `totalSize`. The

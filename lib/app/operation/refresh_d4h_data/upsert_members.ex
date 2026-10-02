@@ -1,7 +1,13 @@
 defmodule App.Operation.RefreshD4HData.UpsertMembers do
+  import Ecto.Query
+
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Operation.RefreshD4HData.Progress
+  alias App.Operation.RefreshD4HData.StaleRows
+  alias App.Repo
+
+  require Logger
 
   @chunk_size 100
 
@@ -19,7 +25,29 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
         Progress.add_page(progress_acc, Enum.count(chunk))
       end)
 
+    if d4h_members != [] do
+      synced_d4h_ids = MapSet.new(d4h_members, & &1.d4h_member_id)
+      mark_departed(team.id, synced_d4h_ids, DateTime.utc_now(:second))
+    end
+
     {total_count, progress}
+  end
+
+  # D4H leaves deleted members out of `GET /members`. Attendance and letters point at
+  # them, so they stay, marked as left. If D4H lists one again, the upsert takes its
+  # `endsAt` back. An empty list is never a real team, so `call` skips this for one.
+  def mark_departed(team_id, synced_d4h_ids, now) do
+    stale_ids =
+      Member
+      |> where([m], m.team_id == ^team_id and is_nil(m.left_at))
+      |> StaleRows.ids(:d4h_member_id, synced_d4h_ids)
+
+    {count, _} =
+      Member
+      |> where([m], m.id in ^stale_ids)
+      |> Repo.update_all(set: [left_at: now, updated_at: DateTime.utc_now()])
+
+    Logger.info("Marked #{count} members D4H no longer lists as departed for team #{team_id}")
   end
 
   defp upsert_member(team, d4h_member) do
