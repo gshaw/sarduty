@@ -25,7 +25,10 @@ defmodule Web.AdminDashboardLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/admin")
 
-    assert has_element?(lv, ~s(#team-#{team.id}-logo[src="/teams/#{team.subdomain}/logo"]))
+    assert has_element?(
+             lv,
+             ~s(#team-#{team.id}-logo[src="/teams/#{team.subdomain}/logo?shape=square"])
+           )
   end
 
   test "lists each team's users and marks the key the refresh borrows", %{conn: conn} do

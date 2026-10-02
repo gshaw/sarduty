@@ -10,6 +10,7 @@ defmodule Web.Layouts do
         <meta name="description" content="Helpful tools for search and rescue managers." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
+        <meta name="theme-color" content={theme_color(@conn)} />
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled Page"}
         </.live_title>
@@ -22,6 +23,12 @@ defmodule Web.Layouts do
       </body>
     </html>
     """
+  end
+
+  # Safari tints the status bar with theme-color, so it matches the bar at the top:
+  # zinc-100 (bg-base-2) for the app's navbar, slate-800 for the verify site's.
+  defp theme_color(%Plug.Conn{host: host}) do
+    if host == Web.VerifyHost.host(), do: "#1e293b", else: "#f4f4f5"
   end
 
   def marketing(assigns) do
@@ -46,27 +53,23 @@ defmodule Web.Layouts do
     """
   end
 
-  # The verify site: SAR Duty's navy bar with the host beside it, since the host is what
-  # a checker is told to look for. No app navigation, no login. The footer credits SAR
-  # Duty, which stays when the bar carries an organization's own brand.
+  # The verify site: a navy bar with the host beside it, so it doesn't look like the app,
+  # and the host is what a checker is told to look for. No app navigation, no login. The
+  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand.
   def verify(assigns) do
     ~H"""
-    <header class="bg-[#1c2d42] text-white">
-      <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-        <a href="/" class="text-lg font-bold">SAR <span class="text-[#ffc400]">Duty</span></a>
+    <header class="sticky top-0 z-30 bg-slate-800 text-white">
+      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between">
+        <a href="/" class="font-semibold">SAR <span class="text-amber-400">Duty</span></a>
         <span id="verify-host" class="text-sm text-slate-300">{Web.VerifyHost.host()}</span>
       </div>
     </header>
-    <main role="main" class="max-w-md mx-auto mb-p2">
+    <main role="main" class="max-w-md mx-auto px-4 pt-6 pb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <footer
-      id="verify-footer"
-      class="max-w-md mx-auto px-4 mb-p2 text-center text-sm text-base-content/60"
-    >
-      Powered by
-      <.a href={Web.Endpoint.url()}>{Web.Endpoint.host()}</.a>
+    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-zinc-400">
+      Powered by <a href={Web.Endpoint.url()} class="hover:underline">{Web.Endpoint.host()}</a>
     </footer>
     """
   end

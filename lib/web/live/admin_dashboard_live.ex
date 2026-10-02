@@ -48,7 +48,7 @@ defmodule Web.AdminDashboardLive do
         <div class="flex items-start gap-2">
           <img
             id={"team-#{team.id}-logo"}
-            src={~p"/teams/#{team.subdomain}/logo"}
+            src={~p"/teams/#{team.subdomain}/logo?shape=square"}
             width="32"
             height="32"
             class="size-8 shrink-0 rounded"

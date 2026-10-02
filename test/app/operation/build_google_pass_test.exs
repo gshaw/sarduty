@@ -106,8 +106,8 @@ defmodule App.Operation.BuildGooglePassTest do
 
     object = object(card(), qualifications)
 
-    assert %{header: "First Aid", body: "Expires Nov 2026"} = text(object, "qualification_0")
-    assert %{header: "Rope", body: "No expiry"} = text(object, "qualification_1")
+    assert %{header: "First Aid", body: "Nov 2026"} = text(object, "qualification_0")
+    assert %{header: "Rope", body: ""} = text(object, "qualification_1")
   end
 
   test "the fingerprint ignores the last-refreshed date until valid until moves" do

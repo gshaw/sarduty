@@ -82,64 +82,57 @@ defmodule Web.VerifyLive do
 
   def render(%{result: nil} = assigns) do
     ~H"""
-    <div id="start" class="px-4 pt-6">
-      <h1 class="text-3xl font-bold leading-tight">Check a search and rescue ID card</h1>
-      <p class="mt-2 text-lg text-base-content/70">
+    <div id="start">
+      <h1 class="text-2xl font-semibold text-zinc-900">
+        Check a search and rescue ID card
+      </h1>
+      <p class="mt-2 mb-0 text-zinc-600">
         Scan the QR code on the member's card. You'll see whether they're an active member
         of their team, with their photo.
       </p>
 
-      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="group mt-6">
-        <video class="hidden group-data-scanning:block w-full rounded-xl" playsinline muted></video>
+      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="group mt-6 mb-6">
+        <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
         <div class="group-data-scanning:hidden">
           <.button
             type="button"
             variant={:primary}
             size={:lg}
-            class="w-full justify-center text-center"
+            class="w-full justify-center"
             data-scan-start
           >
             Scan a card
           </.button>
         </div>
         <div class="hidden group-data-scanning:block mt-2">
-          <.button type="button" class="w-full justify-center text-center" data-scan-stop>Stop</.button>
+          <.button type="button" class="w-full justify-center" data-scan-stop>Stop</.button>
         </div>
       </div>
-      <p :if={@scan_failed} id="scan-failed" class="mt-2 text-danger-1">
+      <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera didn't start. Allow camera access, or type the code.
       </p>
 
-      <.form for={@form} id="check-form" phx-submit="check" class="mt-6">
-        <label for="check_code" class="block text-center text-base-content/70">
-          or type the code printed under the QR
-        </label>
-        <div class="mt-2 flex gap-2">
-          <input
-            type="text"
-            id="check_code"
-            name={@form[:code].name}
-            value={@form[:code].value}
-            placeholder="XXXX-XXXX"
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            class="min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-3 py-3 font-mono text-xl tracking-wider"
-          />
-          <.button size={:lg}>Check</.button>
-        </div>
+      <.form for={@form} id="check-form" phx-submit="check">
+        <.input
+          field={@form[:code]}
+          label="Or type the code printed under the QR"
+          placeholder="XXXX-XXXX"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          class="font-mono"
+        />
+        <.button size={:lg} class="w-full justify-center">Check</.button>
       </.form>
 
-      <section class="mt-8 border-t border-zinc-300 pt-5 text-base-content/80">
-        <h2 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
-          How it works
-        </h2>
-        <p class="mt-2">
+      <section class="mt-8 pt-6 border-t border-zinc-200 text-sm text-zinc-600">
+        <h2 class="mb-2 font-semibold text-zinc-900">How it works</h2>
+        <p class="mb-2">
           Each team keeps member records. SAR Duty checks the card against them, so a
           cancelled card, or a member who has left, shows here.
         </p>
-        <p class="mt-2">
-          A real card's QR code always opens <b>{Web.VerifyHost.host()}</b>. Keep this page
+        <p class="mb-0">
+          A real card's QR code always opens <b class="text-zinc-900">{Web.VerifyHost.host()}</b>. Keep this page
           on your home screen if you check cards often.
         </p>
       </section>
@@ -150,13 +143,8 @@ defmodule Web.VerifyLive do
   def render(assigns) do
     ~H"""
     <.result result={@result} />
-    <div class="px-4 mt-5">
-      <.button
-        id="check-another"
-        navigate={~p"/"}
-        size={:lg}
-        class="w-full justify-center text-center"
-      >
+    <div class="mt-6">
+      <.button id="check-another" navigate={~p"/"} size={:lg} class="w-full justify-center">
         Check another card
       </.button>
     </div>
@@ -190,7 +178,7 @@ defmodule Web.VerifyLive do
       <.band kind={:bad} title="Not a SAR Duty card">Treat this card as forged</.band>
       <.panel>
         <p>
-          Its QR code links to <span class="rounded bg-red-50 px-1.5 font-mono text-red-800">{@result.host}</span>.
+          Its QR code links to <span class="font-mono text-danger-1">{@result.host}</span>.
         </p>
         <p class="mt-2">
           A real card's code only ever opens <b>{Web.VerifyHost.host()}</b>. Don't trust any
@@ -228,65 +216,72 @@ defmodule Web.VerifyLive do
         {left_text(@member)}
       </.band>
 
-      <div class="mx-4 mt-4 rounded-2xl bg-white p-4 shadow-sm">
+      <.panel>
         <div class="flex items-center gap-4">
           <img
             id="result-photo"
             src={~p"/#{@result.card.code}/photo"}
             alt={"Photo of #{@member.name}"}
-            class="size-32 shrink-0 rounded-xl border border-zinc-300 object-cover"
+            class="size-28 shrink-0 rounded-lg border border-zinc-200 object-cover"
           />
-          <p id="result-name" class="text-2xl font-bold leading-tight">{@member.name}</p>
+          <h2 id="result-name" class="text-2xl font-semibold text-zinc-900">
+            {@member.name}
+          </h2>
         </div>
 
-        <div class="mt-4 flex items-center gap-3 border-t border-zinc-200 pt-4">
+        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-zinc-200">
           <img
-            src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo"}
+            src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo?shape=square"}
             alt=""
-            class="size-11 shrink-0"
+            class="size-14 shrink-0"
           />
-          <p id="result-team" class="font-semibold">{@team.name}</p>
+          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-zinc-900">
+            {@team.name}
+          </p>
         </div>
 
-        <div class="mt-4 grid grid-cols-2 gap-3">
+        <%!-- The same three columns as the front of the Apple pass. --%>
+        <div id="result-facts" class="grid grid-cols-3 gap-2 mt-4">
           <%= if @status == :active do %>
+            <.fact label="Status">Active</.fact>
             <.fact label="Member since">
               {Service.Format.month_year(@member.joined_at, @team.timezone)}
             </.fact>
-            <.fact :if={@valid_until} label="Card valid until">
+            <.fact :if={@valid_until} label="Valid until" class="text-right">
               {Service.Format.month_year(@valid_until, @team.timezone)}
             </.fact>
           <% else %>
-            <.fact label="Member">{member_years(@member, @team.timezone)}</.fact>
+            <.fact label="Status">Not active</.fact>
+            <.fact label="Member" class="col-span-2">{member_years(@member, @team.timezone)}</.fact>
           <% end %>
         </div>
 
         <ul
           :if={@result.qualifications != []}
           id="result-qualifications"
-          class="mt-4 border-t border-zinc-200 pt-3"
+          class="mt-4 pt-3 border-t border-zinc-200 text-sm"
         >
-          <li :for={q <- @result.qualifications} class="flex justify-between py-1">
-            <span>{q.name}</span>
-            <span class="font-semibold text-success-1">
+          <li :for={q <- @result.qualifications} class="flex justify-between gap-4 py-1">
+            <span class="text-zinc-900">{q.name}</span>
+            <span class="shrink-0 text-zinc-600">
               {BuildCardQualifications.status_text(q, @team.timezone)}
             </span>
           </li>
         </ul>
-      </div>
+      </.panel>
 
-      <div
+      <p
         :if={@status == :active}
         id="result-check"
-        class="mx-4 mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-3"
+        class="mt-4 mb-0 p-4 rounded-lg border border-amber-200 bg-amber-50 text-sm text-amber-900"
       >
         <b>Match the photo to the person.</b>
         And check that the address bar says {Web.VerifyHost.host()}.
-      </div>
-      <p :if={@status == :inactive} class="mx-4 mt-4">
+      </p>
+      <p :if={@status == :inactive} class="mt-4 mb-0 text-zinc-900">
         This card doesn't qualify for member benefits.
       </p>
-      <p class="mx-4 mt-3 text-sm text-base-content/60">
+      <p class="mt-3 mb-0 text-sm text-zinc-500">
         From the team's records, last checked {last_checked(@team)}.
       </p>
     </div>
@@ -300,17 +295,15 @@ defmodule Web.VerifyLive do
   defp band(assigns) do
     ~H"""
     <div class={[
-      "flex items-center gap-3 px-4 py-4 text-white",
-      @kind == :ok && "bg-green-700",
-      @kind == :warn && "bg-amber-700",
-      @kind == :bad && "bg-red-700"
+      "flex items-center gap-3 p-4 rounded-lg",
+      @kind == :ok && "bg-success-1 text-success-content",
+      @kind == :warn && "bg-warning-1 text-warning-content",
+      @kind == :bad && "bg-danger-1 text-danger-content"
     ]}>
-      <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-2xl font-bold">
-        {band_icon(@kind)}
-      </span>
+      <.icon name={band_icon(@kind)} class="size-8 shrink-0" />
       <div>
-        <div class="text-2xl font-extrabold leading-tight">{@title}</div>
-        <div class="text-sm opacity-90">{render_slot(@inner_block)}</div>
+        <div class="text-xl font-semibold">{@title}</div>
+        <div class="text-sm">{render_slot(@inner_block)}</div>
       </div>
     </div>
     """
@@ -320,27 +313,28 @@ defmodule Web.VerifyLive do
 
   defp panel(assigns) do
     ~H"""
-    <div class="mx-4 mt-4 rounded-2xl bg-white p-4 text-lg shadow-sm">
+    <div class="mt-4 p-4 rounded-lg border border-zinc-200 bg-white">
       {render_slot(@inner_block)}
     </div>
     """
   end
 
   attr :label, :string, required: true
+  attr :class, :string, default: nil
   slot :inner_block, required: true
 
   defp fact(assigns) do
     ~H"""
-    <div>
-      <div class="text-xs uppercase tracking-wide text-base-content/60">{@label}</div>
-      <div class="text-lg font-semibold">{render_slot(@inner_block)}</div>
+    <div class={@class}>
+      <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{@label}</div>
+      <div class="text-lg font-semibold text-zinc-900">{render_slot(@inner_block)}</div>
     </div>
     """
   end
 
-  defp band_icon(:ok), do: "✓"
-  defp band_icon(:warn), do: "!"
-  defp band_icon(:bad), do: "✕"
+  defp band_icon(:ok), do: "hero-check-circle"
+  defp band_icon(:warn), do: "hero-exclamation-triangle"
+  defp band_icon(:bad), do: "hero-x-circle"
 
   defp left_text(%{left_at: nil}), do: "Not a current member"
 
