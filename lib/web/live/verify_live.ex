@@ -231,9 +231,9 @@ defmodule Web.VerifyLive do
 
         <div class="flex items-center gap-3 mt-4 pt-4 border-t border-zinc-200">
           <img
-            src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo"}
+            src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo?shape=square"}
             alt=""
-            class="size-10 shrink-0"
+            class="size-14 shrink-0"
           />
           <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-zinc-900">
             {@team.name}
