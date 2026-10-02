@@ -216,26 +216,26 @@ defmodule Web.VerifyLive do
         {left_text(@member)}
       </.band>
 
-      <.panel>
+      <.panel kind={:pass}>
         <div class="flex items-center gap-4">
           <img
             id="result-photo"
             src={~p"/#{@result.card.code}/photo"}
             alt={"Photo of #{@member.name}"}
-            class="size-28 shrink-0 rounded-lg border border-zinc-200 object-cover"
+            class="size-28 shrink-0 rounded-lg border border-slate-600 object-cover"
           />
-          <h2 id="result-name" class="text-2xl font-semibold text-zinc-900">
+          <h2 id="result-name" class="text-2xl font-semibold">
             {@member.name}
           </h2>
         </div>
 
-        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-zinc-200">
+        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-slate-600">
           <img
             src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo"}
             alt=""
             class="size-10 shrink-0"
           />
-          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-zinc-900">
+          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug">
             {@team.name}
           </p>
         </div>
@@ -259,11 +259,11 @@ defmodule Web.VerifyLive do
         <ul
           :if={@result.qualifications != []}
           id="result-qualifications"
-          class="mt-4 pt-3 border-t border-zinc-200 text-sm"
+          class="mt-4 pt-3 border-t border-slate-600 text-sm"
         >
           <li :for={q <- @result.qualifications} class="flex justify-between gap-4 py-1">
-            <span class="text-zinc-900">{q.name}</span>
-            <span class="shrink-0 text-zinc-600">
+            <span>{q.name}</span>
+            <span class="shrink-0 text-slate-300">
               {BuildCardQualifications.status_text(q, @team.timezone)}
             </span>
           </li>
@@ -309,11 +309,17 @@ defmodule Web.VerifyLive do
     """
   end
 
+  # :pass is the member's card, in the Wallet pass's navy, white, and amber.
+  attr :kind, :atom, default: :plain, values: [:plain, :pass]
   slot :inner_block, required: true
 
   defp panel(assigns) do
     ~H"""
-    <div class="mt-4 p-4 rounded-lg border border-zinc-200 bg-white">
+    <div class={[
+      "mt-4 p-4 rounded-lg",
+      @kind == :plain && "border border-zinc-200 bg-white",
+      @kind == :pass && "bg-slate-800 text-white"
+    ]}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -326,8 +332,8 @@ defmodule Web.VerifyLive do
   defp fact(assigns) do
     ~H"""
     <div class={@class}>
-      <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{@label}</div>
-      <div class="text-lg font-semibold text-zinc-900">{render_slot(@inner_block)}</div>
+      <div class="text-xs font-medium uppercase tracking-wide text-amber-400">{@label}</div>
+      <div class="text-lg font-semibold">{render_slot(@inner_block)}</div>
     </div>
     """
   end
