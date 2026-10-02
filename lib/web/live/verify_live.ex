@@ -83,13 +83,15 @@ defmodule Web.VerifyLive do
   def render(%{result: nil} = assigns) do
     ~H"""
     <div id="start">
-      <h1 class="title">Check a search and rescue ID card</h1>
-      <p class="lead">
+      <h1 class="text-2xl font-semibold text-zinc-900">
+        Check a search and rescue ID card
+      </h1>
+      <p class="mt-2 mb-0 text-zinc-600">
         Scan the QR code on the member's card. You'll see whether they're an active member
         of their team, with their photo.
       </p>
 
-      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="group mb-p">
+      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="group mt-6 mb-6">
         <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
         <div class="group-data-scanning:hidden">
           <.button
@@ -102,7 +104,7 @@ defmodule Web.VerifyLive do
             Scan a card
           </.button>
         </div>
-        <div class="hidden group-data-scanning:block mt-p05">
+        <div class="hidden group-data-scanning:block mt-2">
           <.button type="button" class="w-full justify-center" data-scan-stop>Stop</.button>
         </div>
       </div>
@@ -123,14 +125,14 @@ defmodule Web.VerifyLive do
         <.button size={:lg} class="w-full justify-center">Check</.button>
       </.form>
 
-      <section class="mt-p2 pt-p border-t border-hr">
-        <h2 class="subheading">How it works</h2>
-        <p>
+      <section class="mt-8 pt-6 border-t border-zinc-200 text-sm text-zinc-600">
+        <h2 class="mb-2 font-semibold text-zinc-900">How it works</h2>
+        <p class="mb-2">
           Each team keeps member records. SAR Duty checks the card against them, so a
           cancelled card, or a member who has left, shows here.
         </p>
-        <p>
-          A real card's QR code always opens <b>{Web.VerifyHost.host()}</b>. Keep this page
+        <p class="mb-0">
+          A real card's QR code always opens <b class="text-zinc-900">{Web.VerifyHost.host()}</b>. Keep this page
           on your home screen if you check cards often.
         </p>
       </section>
@@ -141,7 +143,7 @@ defmodule Web.VerifyLive do
   def render(assigns) do
     ~H"""
     <.result result={@result} />
-    <div class="mt-p">
+    <div class="mt-6">
       <.button id="check-another" navigate={~p"/"} size={:lg} class="w-full justify-center">
         Check another card
       </.button>
@@ -215,27 +217,31 @@ defmodule Web.VerifyLive do
       </.band>
 
       <.panel>
-        <div class="flex items-center gap-p">
+        <div class="flex items-center gap-4">
           <img
             id="result-photo"
             src={~p"/#{@result.card.code}/photo"}
             alt={"Photo of #{@member.name}"}
-            class="size-32 shrink-0 rounded border border-hr object-cover"
+            class="size-28 shrink-0 rounded-lg border border-zinc-200 object-cover"
           />
-          <h2 id="result-name" class="heading">{@member.name}</h2>
+          <h2 id="result-name" class="text-2xl font-semibold text-zinc-900">
+            {@member.name}
+          </h2>
         </div>
 
-        <div class="flex items-center gap-p mt-p pt-p border-t border-hr">
+        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-zinc-200">
           <img
             src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo"}
             alt=""
-            class="size-12 shrink-0"
+            class="size-10 shrink-0"
           />
-          <p id="result-team" class="subheading mb-0">{@team.name}</p>
+          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-zinc-900">
+            {@team.name}
+          </p>
         </div>
 
         <%!-- The same three columns as the front of the Apple pass. --%>
-        <div id="result-facts" class="grid grid-cols-3 gap-2 mt-p">
+        <div id="result-facts" class="grid grid-cols-3 gap-2 mt-4">
           <%= if @status == :active do %>
             <.fact label="Status">Active</.fact>
             <.fact label="Member since">
@@ -253,23 +259,29 @@ defmodule Web.VerifyLive do
         <ul
           :if={@result.qualifications != []}
           id="result-qualifications"
-          class="mt-p pt-p05 border-t border-hr"
+          class="mt-4 pt-3 border-t border-zinc-200 text-sm"
         >
-          <li :for={q <- @result.qualifications} class="flex justify-between py-1">
-            <span>{q.name}</span>
-            <span>{BuildCardQualifications.status_text(q, @team.timezone)}</span>
+          <li :for={q <- @result.qualifications} class="flex justify-between gap-4 py-1">
+            <span class="text-zinc-900">{q.name}</span>
+            <span class="shrink-0 text-zinc-600">
+              {BuildCardQualifications.status_text(q, @team.timezone)}
+            </span>
           </li>
         </ul>
       </.panel>
 
-      <p :if={@status == :active} id="result-check" class="mt-p p-p rounded bg-warning-1">
+      <p
+        :if={@status == :active}
+        id="result-check"
+        class="mt-4 mb-0 p-4 rounded-lg border border-amber-200 bg-amber-50 text-sm text-amber-900"
+      >
         <b>Match the photo to the person.</b>
         And check that the address bar says {Web.VerifyHost.host()}.
       </p>
-      <p :if={@status == :inactive} class="mt-p">
+      <p :if={@status == :inactive} class="mt-4 mb-0 text-zinc-900">
         This card doesn't qualify for member benefits.
       </p>
-      <p class="hint">
+      <p class="mt-3 mb-0 text-sm text-zinc-500">
         From the team's records, last checked {last_checked(@team)}.
       </p>
     </div>
@@ -283,15 +295,15 @@ defmodule Web.VerifyLive do
   defp band(assigns) do
     ~H"""
     <div class={[
-      "flex items-center gap-p p-p rounded",
+      "flex items-center gap-3 p-4 rounded-lg",
       @kind == :ok && "bg-success-1 text-success-content",
       @kind == :warn && "bg-warning-1 text-warning-content",
       @kind == :bad && "bg-danger-1 text-danger-content"
     ]}>
-      <.icon name={band_icon(@kind)} class="size-10 shrink-0" />
+      <.icon name={band_icon(@kind)} class="size-8 shrink-0" />
       <div>
-        <div class="heading mb-0">{@title}</div>
-        <div>{render_slot(@inner_block)}</div>
+        <div class="text-xl font-semibold">{@title}</div>
+        <div class="text-sm">{render_slot(@inner_block)}</div>
       </div>
     </div>
     """
@@ -301,7 +313,7 @@ defmodule Web.VerifyLive do
 
   defp panel(assigns) do
     ~H"""
-    <div class="mt-p p-p rounded shadow bg-base-0">
+    <div class="mt-4 p-4 rounded-lg border border-zinc-200 bg-white">
       {render_slot(@inner_block)}
     </div>
     """
@@ -314,8 +326,8 @@ defmodule Web.VerifyLive do
   defp fact(assigns) do
     ~H"""
     <div class={@class}>
-      <div class="label">{@label}</div>
-      <div class="subheading mb-0">{render_slot(@inner_block)}</div>
+      <div class="text-xs font-medium uppercase tracking-wide text-zinc-500">{@label}</div>
+      <div class="text-lg font-semibold text-zinc-900">{render_slot(@inner_block)}</div>
     </div>
     """
   end

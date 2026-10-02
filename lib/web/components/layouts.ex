@@ -46,24 +46,23 @@ defmodule Web.Layouts do
     """
   end
 
-  # The verify site: the main site's bar with the host beside it, since the host is what
-  # a checker is told to look for. No app navigation, no login. The footer credits SAR
-  # Duty, which stays when the bar carries an organization's own brand.
+  # The verify site: a navy bar with the host beside it, so it doesn't look like the app,
+  # and the host is what a checker is told to look for. No app navigation, no login. The
+  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand.
   def verify(assigns) do
     ~H"""
-    <.navbar size={:narrow} color={:base_2}>
-      <.navbar_links>
-        <.a kind={:navbar_title} href="/">SAR Duty</.a>
-      </.navbar_links>
-      <span id="verify-host" class="hint">{Web.VerifyHost.host()}</span>
-    </.navbar>
-    <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
+    <header class="bg-slate-800 text-white">
+      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between">
+        <a href="/" class="font-semibold">SAR <span class="text-amber-400">Duty</span></a>
+        <span id="verify-host" class="text-sm text-slate-300">{Web.VerifyHost.host()}</span>
+      </div>
+    </header>
+    <main role="main" class="max-w-md mx-auto px-4 pt-6 pb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <footer id="verify-footer" class="max-w-md m-auto px-2 mb-p2 text-center hint">
-      Powered by
-      <.a href={Web.Endpoint.url()}>{Web.Endpoint.host()}</.a>
+    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-zinc-400">
+      Powered by <a href={Web.Endpoint.url()} class="hover:underline">{Web.Endpoint.host()}</a>
     </footer>
     """
   end
