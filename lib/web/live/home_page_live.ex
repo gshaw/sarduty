@@ -22,24 +22,6 @@ defmodule Web.HomePageLive do
         </li>
       </ul>
     <% end %>
-    <hr class="my-p border-hr" />
-    <p class="mt-p">
-      <.a navigate="/styles">Style Guide</.a>
-      <%= if @current_user && @current_user.is_admin do %>
-        ·
-        <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-        ·
-        <.a navigate="/admin">Admin</.a>
-      <% end %>
-      <%= if Application.get_env(:sarduty, :dev_routes) do %>
-        ·
-        <.a href="/dev/dashboard" external={true}>Dashboard</.a>
-        <%= if Application.get_env(:swoosh, :local) do %>
-          ·
-          <.a href="/dev/mailbox" external={true}>Mailbox</.a>
-        <% end %>
-      <% end %>
-    </p>
     """
   end
 end

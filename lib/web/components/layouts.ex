@@ -31,7 +31,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <.site_footer />
+    <.site_footer current_user={@current_user} />
     """
   end
 
@@ -42,7 +42,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <.site_footer />
+    <.site_footer current_user={@current_user} />
     """
   end
 
@@ -70,15 +70,42 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <.site_footer />
+    <.site_footer current_user={@current_user} />
     """
   end
 
-  # The main site's footer. The verify site is a separate host, so this is a full URL.
+  attr :current_user, :map, default: nil
+
+  # The main site's footer. The verify site is a separate host, so its link is a full URL.
   defp site_footer(assigns) do
+    assigns =
+      assign(assigns,
+        admin?: assigns.current_user && assigns.current_user.is_admin,
+        dev_routes?: Application.get_env(:sarduty, :dev_routes),
+        mailbox?: Application.get_env(:swoosh, :local)
+      )
+
     ~H"""
-    <footer id="site-footer" class="container mx-auto px-2 py-p border-t border-hr text-sm">
-      <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
+    <footer id="site-footer" class="container mx-auto px-2 mb-p2">
+      <p class="pt-p border-t border-hr">
+        <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
+        <%= if @admin? do %>
+          ·
+          <.a id="footer-styles" navigate="/styles">Style Guide</.a>
+          ·
+          <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
+          ·
+          <.a navigate="/admin">Admin</.a>
+        <% end %>
+        <%= if @dev_routes? do %>
+          ·
+          <.a href="/dev/dashboard" external={true}>Dashboard</.a>
+          <%= if @mailbox? do %>
+            ·
+            <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+          <% end %>
+        <% end %>
+      </p>
     </footer>
     """
   end
