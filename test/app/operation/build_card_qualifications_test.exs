@@ -24,55 +24,45 @@ defmodule App.Operation.BuildCardQualificationsTest do
       award(2, ~U[2025-06-01 00:00:00Z], ~U[2027-05-01 00:00:00Z])
     ]
 
-    assert [%{name: "First Aid", status: :current, ends_at: ~U[2027-05-01 00:00:00Z]}] =
+    assert [%{name: "First Aid", ends_at: ~U[2027-05-01 00:00:00Z]}] =
              BuildCardQualifications.summarize([clause("First Aid", [1, 2])], awards, @now)
   end
 
   test "an award with no end means no expiry" do
     awards = [award(1, nil, ~U[2027-01-01 00:00:00Z]), award(2, nil, nil)]
 
-    assert [%{status: :current, ends_at: nil}] =
+    assert [%{name: "Tracking", ends_at: nil}] =
              BuildCardQualifications.summarize([clause("Tracking", [1, 2])], awards, @now)
   end
 
-  test "expired, future, and missing awards are not current" do
+  test "expired, future, and missing awards leave the clause off" do
     awards = [
       award(1, nil, ~U[2026-01-01 00:00:00Z]),
       award(2, ~U[2027-01-01 00:00:00Z], nil)
     ]
 
-    assert [%{status: :not_current}] =
-             BuildCardQualifications.summarize([clause("Rope", [1, 2, 3])], awards, @now)
+    assert [] = BuildCardQualifications.summarize([clause("Rope", [1, 2, 3])], awards, @now)
   end
 
   test "clauses with the same name count once, met by any of their qualifications" do
     clauses = [clause("First Aid", [1]), clause("First Aid", [2]), clause("Avalanche", [3])]
     awards = [award(2, nil, nil)]
 
-    assert [
-             %{name: "Avalanche", status: :not_current},
-             %{name: "First Aid", status: :current}
-           ] = BuildCardQualifications.summarize(clauses, awards, @now)
+    assert [%{name: "First Aid"}] = BuildCardQualifications.summarize(clauses, awards, @now)
   end
 
   test "describe gives one line per qualification in the team's time zone" do
     tz = "America/Vancouver"
 
     assert BuildCardQualifications.describe(
-             %{name: "First Aid", status: :current, ends_at: ~U[2026-11-15 07:00:00Z]},
+             %{name: "First Aid", ends_at: ~U[2026-11-15 07:00:00Z]},
              tz
            ) == "First Aid — expires Nov 2026"
 
     assert BuildCardQualifications.describe(
-             %{name: "Tracking", status: :current, ends_at: nil},
+             %{name: "Tracking", ends_at: nil},
              tz
            ) ==
              "Tracking — no expiry"
-
-    assert BuildCardQualifications.describe(
-             %{name: "Rope", status: :not_current, ends_at: nil},
-             tz
-           ) ==
-             "Rope — not current"
   end
 end

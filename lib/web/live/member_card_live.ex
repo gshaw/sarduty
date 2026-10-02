@@ -141,9 +141,10 @@ defmodule Web.MemberCardLive do
           <div :for={q <- @qualifications}>
             {BuildCardQualifications.describe(q, @member.team.timezone)}
           </div>
-          <.a :if={@qualifications == []} navigate={~p"/settings/cards"}>
-            Pick qualifications to show
-          </.a>
+          <div :if={@qualifications == []}>
+            None held.
+            <.a navigate={~p"/settings/cards"}>Pick qualifications to show</.a>
+          </div>
         </dd>
         <dt :if={BuildApplePass.configured?()}>Apple Wallet</dt>
         <dd :if={BuildApplePass.configured?()}>
