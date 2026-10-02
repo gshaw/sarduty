@@ -47,7 +47,8 @@ defmodule Web.Layouts do
   end
 
   # The verify site: SAR Duty's navy bar with the host beside it, since the host is what
-  # a checker is told to look for. No app navigation, no login.
+  # a checker is told to look for. No app navigation, no login. The footer credits SAR
+  # Duty, which stays when the bar carries an organization's own brand.
   def verify(assigns) do
     ~H"""
     <header class="bg-[#1c2d42] text-white">
@@ -60,6 +61,13 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
+    <footer
+      id="verify-footer"
+      class="max-w-md mx-auto px-4 mb-p2 text-center text-sm text-base-content/60"
+    >
+      Powered by
+      <.a href={Web.Endpoint.url()}>{Web.Endpoint.host()}</.a>
+    </footer>
     """
   end
 
