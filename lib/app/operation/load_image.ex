@@ -36,8 +36,8 @@ defmodule App.Operation.LoadImage do
   end
 
   @doc """
-  `:round` for Google's circle and the dashboard, padded so the circle clips nothing;
-  `:square` for the tax credit letter; `:icon` for the Apple icon; `:logo` for the Apple
+  `:round` for Google's circle, padded so the circle clips nothing; `:square` for the
+  tax credit letter, the dashboards, and the verify page; `:icon` for the Apple icon; `:logo` for the Apple
   logo, which Wallet fits in a wide strip.
   """
   def logo(subdomain, shape) do

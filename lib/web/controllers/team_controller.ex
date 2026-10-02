@@ -4,8 +4,8 @@ defmodule Web.TeamController do
   alias App.Model.Team
   alias App.Operation.LoadImage
 
-  # The team logo padded square, for the dashboard and the round spot on Google passes.
-  # ?shape=square leaves off the margin the circle needs, for the verify page. Public,
+  # The team logo padded square, for the round spot on Google passes. ?shape=square
+  # leaves off the margin the circle needs, for the dashboards and verify page. Public,
   # because Google loads it from this URL. A team without a logo gets SAR Duty's.
   def logo(conn, %{"subdomain" => subdomain} = params) do
     shape = if params["shape"] == "square", do: :square, else: :round
