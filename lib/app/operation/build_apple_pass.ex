@@ -184,12 +184,12 @@ defmodule App.Operation.BuildApplePass do
         value: MemberCard.how_to_check(code)
       },
       qualification_fields(qualifications, team.timezone),
-      %{key: "checked", label: "Last checked with D4H", value: last_checked(team)},
+      %{key: "checked", label: "Last updated", value: last_checked(team)},
       test_field(card, team),
       %{
         key: "issuer",
         label: "Issued by",
-        value: "#{team.name} through SAR Duty. Status comes from the team's D4H records."
+        value: "#{team.name} through SAR Duty. Status comes from the team's records."
       }
     ])
   end

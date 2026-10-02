@@ -64,11 +64,12 @@ defmodule App.Operation.BuildCardQualifications do
     [%{name: name, ends_at: ends_at}]
   end
 
-  @doc "The status alone, for a pass field labelled with the name: \"Expires Nov 2026\"."
-  def status_text(%{ends_at: nil}, _timezone), do: "No expiry"
-
-  def status_text(%{ends_at: ends_at}, timezone),
-    do: "Expires #{Service.Format.month_year(ends_at, timezone)}"
+  @doc """
+  The value beside the name in a pass field: when it ends, "Nov 2026", or blank when it
+  doesn't. The name alone says the member holds it.
+  """
+  def status_text(%{ends_at: nil}, _timezone), do: ""
+  def status_text(%{ends_at: ends_at}, timezone), do: Service.Format.month_year(ends_at, timezone)
 
   @doc "One line per qualification for a page: \"First Aid — expires Nov 2026\"."
   def describe(%{ends_at: nil, name: name}, _timezone), do: "#{name} — no expiry"

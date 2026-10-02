@@ -248,16 +248,19 @@ defmodule Web.VerifyLive do
           <p id="result-team" class="font-semibold">{@team.name}</p>
         </div>
 
-        <div class="mt-4 grid grid-cols-2 gap-3">
+        <%!-- The same three columns as the front of the Apple pass. --%>
+        <div id="result-facts" class="mt-4 grid grid-cols-3 gap-3">
           <%= if @status == :active do %>
+            <.fact label="Status">Active</.fact>
             <.fact label="Member since">
               {Service.Format.month_year(@member.joined_at, @team.timezone)}
             </.fact>
-            <.fact :if={@valid_until} label="Card valid until">
+            <.fact :if={@valid_until} label="Valid until">
               {Service.Format.month_year(@valid_until, @team.timezone)}
             </.fact>
           <% else %>
-            <.fact label="Member">{member_years(@member, @team.timezone)}</.fact>
+            <.fact label="Status">Not active</.fact>
+            <.fact label="Member" class="col-span-2">{member_years(@member, @team.timezone)}</.fact>
           <% end %>
         </div>
 
@@ -327,11 +330,12 @@ defmodule Web.VerifyLive do
   end
 
   attr :label, :string, required: true
+  attr :class, :string, default: nil
   slot :inner_block, required: true
 
   defp fact(assigns) do
     ~H"""
-    <div>
+    <div class={@class}>
       <div class="text-xs uppercase tracking-wide text-base-content/60">{@label}</div>
       <div class="text-lg font-semibold">{render_slot(@inner_block)}</div>
     </div>

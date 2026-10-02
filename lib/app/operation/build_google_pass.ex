@@ -103,7 +103,7 @@ defmodule App.Operation.BuildGooglePass do
 
   defp texts(%MemberCard{member: member} = card, qualifications, status) do
     team = member.team
-    issuer = "#{team.name} through SAR Duty. Status comes from the team's D4H records."
+    issuer = "#{team.name} through SAR Duty. Status comes from the team's records."
 
     List.flatten([
       text("status", "Status", status_text(status)),
@@ -115,7 +115,7 @@ defmodule App.Operation.BuildGooglePass do
         MemberCard.how_to_check(MemberCard.format_code(card.code))
       ),
       qualification_texts(qualifications, team.timezone),
-      text("checked", "Last checked with D4H", last_checked(team)),
+      text("checked", "Last updated", last_checked(team)),
       text("issuer", "Issued by", issuer)
     ])
   end

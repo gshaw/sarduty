@@ -36,6 +36,7 @@ defmodule Web.VerifyLiveTest do
 
     assert has_element?(lv, "#result-active")
     assert has_element?(lv, "#result-name", member.name)
+    assert has_element?(lv, "#result-facts", "Active")
   end
 
   test "a scanned code is checked the same way", %{conn: conn, member: member} do
@@ -87,6 +88,7 @@ defmodule Web.VerifyLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/?#{[code: card.code]}")
 
     assert has_element?(lv, "#result-inactive", "Left the team Dec 2025")
+    assert has_element?(lv, "#result-facts", "Not active")
   end
 
   test "a cancelled card shows no member details", %{conn: conn, member: member} do
@@ -120,7 +122,6 @@ defmodule Web.VerifyLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/?#{[code: card.code]}")
 
     assert has_element?(lv, "#result-qualifications", "First Aid")
-    assert has_element?(lv, "#result-qualifications", "No expiry")
   end
 
   test "a card scanned from before the verify site still checks", %{conn: conn, member: member} do

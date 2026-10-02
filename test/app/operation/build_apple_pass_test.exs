@@ -95,8 +95,8 @@ defmodule App.Operation.BuildApplePassTest do
     back = BuildApplePass.pass_json(card(), qualifications, @config, @now).generic.backFields
 
     assert [
-             %{label: "First Aid", value: "Expires Nov 2026", changeMessage: "First Aid: %@"},
-             %{label: "Rope", value: "No expiry"}
+             %{label: "First Aid", value: "Nov 2026", changeMessage: "First Aid: %@"},
+             %{label: "Rope", value: ""}
            ] = Enum.filter(back, &String.starts_with?(&1.key, "qualification-"))
 
     back = BuildApplePass.pass_json(card(), [], @config, @now).generic.backFields
