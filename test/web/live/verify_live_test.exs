@@ -24,6 +24,7 @@ defmodule Web.VerifyLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/")
     assert has_element?(lv, "#check-form")
     assert has_element?(lv, "#scanner")
+    assert has_element?(lv, "#verify-footer a", Web.Endpoint.host())
   end
 
   test "a typed code for a current member shows them as active", %{conn: conn, member: member} do

@@ -135,7 +135,7 @@ defmodule Web.VerifyLive do
           How it works
         </h2>
         <p class="mt-2">
-          Each team keeps its records in D4H. SAR Duty checks the card against them, so a
+          Each team keeps member records. SAR Duty checks the card against them, so a
           cancelled card, or a member who has left, shows here.
         </p>
         <p class="mt-2">
@@ -287,7 +287,7 @@ defmodule Web.VerifyLive do
         This card doesn't qualify for member benefits.
       </p>
       <p class="mx-4 mt-3 text-sm text-base-content/60">
-        From the team's D4H records, last checked {last_checked(@team)}.
+        From the team's records, last checked {last_checked(@team)}.
       </p>
     </div>
     """
