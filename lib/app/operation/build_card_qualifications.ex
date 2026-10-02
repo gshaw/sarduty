@@ -8,8 +8,8 @@ defmodule App.Operation.BuildCardQualifications do
   alias App.Repo
 
   @doc """
-  The qualifications the team shows on ID cards, for one member: each named clause the
-  team picked, and whether the member meets it now.
+  The qualifications the team shows on ID cards that one member holds now: each named
+  clause the team picked that the member meets.
   """
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
     clauses = team.id |> GroupRuleClause.get_all_named() |> Enum.filter(& &1.on_card)
@@ -30,16 +30,16 @@ defmodule App.Operation.BuildCardQualifications do
 
   @doc """
   Pure. Clauses that share a name count as one, meeting it with a qualification from any
-  of them. Returns `%{name, status, ends_at}` in name order, where status is `:current`
-  or `:not_current`, and `ends_at` is when the latest current award ends, or nil when it
-  doesn't.
+  of them. Returns `%{name, ends_at}` in name order for each one the member meets, where
+  `ends_at` is when the latest current award ends, or nil when it doesn't. A clause the
+  member doesn't meet is left off, so a card lists only what its holder has.
   """
   def summarize(clauses, awards, now) do
     active = Enum.filter(awards, &MemberQualificationAward.active?(&1, now))
 
     clauses
     |> Enum.group_by(& &1.name)
-    |> Enum.map(fn {name, same_name} ->
+    |> Enum.flat_map(fn {name, same_name} ->
       ids = qualification_ids(same_name)
       active |> Enum.filter(&MapSet.member?(ids, &1.d4h_qualification_id)) |> summary(name)
     end)
@@ -53,7 +53,7 @@ defmodule App.Operation.BuildCardQualifications do
         do: q.d4h_qualification_id
   end
 
-  defp summary([], name), do: %{name: name, status: :not_current, ends_at: nil}
+  defp summary([], _name), do: []
 
   defp summary(active, name) do
     ends_at =
@@ -61,18 +61,16 @@ defmodule App.Operation.BuildCardQualifications do
         do: nil,
         else: active |> Enum.map(& &1.ends_at) |> Enum.max(DateTime)
 
-    %{name: name, status: :current, ends_at: ends_at}
+    [%{name: name, ends_at: ends_at}]
   end
 
   @doc "The status alone, for a pass field labelled with the name: \"Expires Nov 2026\"."
-  def status_text(%{status: :not_current}, _timezone), do: "Not current"
   def status_text(%{ends_at: nil}, _timezone), do: "No expiry"
 
   def status_text(%{ends_at: ends_at}, timezone),
     do: "Expires #{Service.Format.month_year(ends_at, timezone)}"
 
   @doc "One line per qualification for a page: \"First Aid — expires Nov 2026\"."
-  def describe(%{status: :not_current, name: name}, _timezone), do: "#{name} — not current"
   def describe(%{ends_at: nil, name: name}, _timezone), do: "#{name} — no expiry"
 
   def describe(%{ends_at: ends_at, name: name}, timezone),

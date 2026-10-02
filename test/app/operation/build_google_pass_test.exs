@@ -100,14 +100,14 @@ defmodule App.Operation.BuildGooglePassTest do
 
   test "lists the team's picked qualifications" do
     qualifications = [
-      %{name: "First Aid", status: :current, ends_at: ~U[2026-11-15 08:00:00Z]},
-      %{name: "Rope", status: :not_current, ends_at: nil}
+      %{name: "First Aid", ends_at: ~U[2026-11-15 08:00:00Z]},
+      %{name: "Rope", ends_at: nil}
     ]
 
     object = object(card(), qualifications)
 
     assert %{header: "First Aid", body: "Expires Nov 2026"} = text(object, "qualification_0")
-    assert %{header: "Rope", body: "Not current"} = text(object, "qualification_1")
+    assert %{header: "Rope", body: "No expiry"} = text(object, "qualification_1")
   end
 
   test "the fingerprint ignores the last-refreshed date until valid until moves" do

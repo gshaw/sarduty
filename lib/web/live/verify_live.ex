@@ -268,10 +268,7 @@ defmodule Web.VerifyLive do
         >
           <li :for={q <- @result.qualifications} class="flex justify-between py-1">
             <span>{q.name}</span>
-            <span class={[
-              "font-semibold",
-              if(q.status == :not_current, do: "text-danger-1", else: "text-success-1")
-            ]}>
+            <span class="font-semibold text-success-1">
               {BuildCardQualifications.status_text(q, @team.timezone)}
             </span>
           </li>
