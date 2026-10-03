@@ -35,11 +35,11 @@ For a PR with a migration:
 
 ## Database and backups
 
-- **Litestream** replicates the database continuously to Tigris
+- **Litestream** replicates the database continuously to Cloudflare R2
   ([litestream.yml](../litestream.yml)). `bin/server` restores from the replica when the
   database file is missing, then runs `litestream replicate` in the background.
 - **Volume snapshots** by hand: [backups/backup.sh](../backups/backup.sh) tars the whole
-  volume over `fly ssh`, logos included, into `backups/` (gitignored).
+  volume over `fly ssh`, logos included, into `backups/` (gitignored), encrypted with age.
 
 ## Changing production data
 
