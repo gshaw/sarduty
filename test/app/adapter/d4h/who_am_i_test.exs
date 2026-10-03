@@ -34,6 +34,7 @@ defmodule App.Adapter.D4H.WhoAmITest do
       })
 
     assert WhoAmI.member_name(whoami, 20) == "SAR Duty"
+    assert WhoAmI.member_id(whoami, 20) == 3
     assert WhoAmI.member_name(whoami, 99) == nil
   end
 

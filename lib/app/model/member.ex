@@ -29,6 +29,9 @@ defmodule App.Model.Member do
     field :position, :string
     field :joined_at, :utc_datetime
     field :left_at, :utc_datetime
+    # D4H's access level: 0 OWNER, 1 EDITOR, 2 MEMBER, 3 MEMBER_PLUS, 4 NO_ACCESS.
+    field :d4h_permission, :integer
+    field :d4h_status, :string
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -47,7 +50,9 @@ defmodule App.Model.Member do
       :address,
       :position,
       :joined_at,
-      :left_at
+      :left_at,
+      :d4h_permission,
+      :d4h_status
     ])
     |> unique_constraint([:team_id, :d4h_member_id])
     |> validate_required([
@@ -72,6 +77,36 @@ defmodule App.Model.Member do
 
   # D4H sets endsAt when a member retires. Takes any map with left_at.
   def current?(%{left_at: left_at}, now), do: is_nil(left_at) or DateTime.after?(left_at, now)
+
+  @manager_permissions [0, 1]
+
+  @doc """
+  Whether D4H makes this member one of the team's managers (#57): an OWNER or EDITOR who
+  isn't retired and hasn't left. Operational status doesn't matter.
+  """
+  def manager?(%Member{} = member, now) do
+    member.d4h_permission in @manager_permissions and member.d4h_status != "RETIRED" and
+      current?(member, now)
+  end
+
+  def permission_label(0), do: "Owner"
+  def permission_label(1), do: "Editor"
+  def permission_label(2), do: "Member"
+  def permission_label(3), do: "Member plus"
+  def permission_label(4), do: "No access"
+  def permission_label(_), do: "Unknown"
+
+  @doc """
+  The team's managers, by name, leaving out the team key's own account: a "SAR Duty"
+  member would otherwise pass as one.
+  """
+  def get_managers(%Team{} = team, now) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.d4h_permission in @manager_permissions)
+    |> order_by([m], asc: m.name)
+    |> Repo.all()
+    |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != team.d4h_access_key_member_id))
+  end
 
   def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
   def get_by(params), do: Repo.get_by(Member, params)

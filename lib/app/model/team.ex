@@ -21,6 +21,7 @@ defmodule App.Model.Team do
     field :d4h_access_key, EncryptedString, redact: true
     field :d4h_access_key_saved_at, :utc_datetime_usec
     field :d4h_access_key_owner, :string
+    field :d4h_access_key_member_id, :integer
     # The settings form takes a replacement key here, so the saved key never
     # goes back to the page.
     field :new_d4h_access_key, TrimmedString, virtual: true, redact: true
@@ -54,6 +55,7 @@ defmodule App.Model.Team do
       :d4h_access_key,
       :d4h_access_key_saved_at,
       :d4h_access_key_owner,
+      :d4h_access_key_member_id,
       :d4h_refresh_result,
       :d4h_refreshed_at,
       :mailing_address,

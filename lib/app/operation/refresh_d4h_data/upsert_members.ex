@@ -61,7 +61,9 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
       address: d4h_member.address,
       position: d4h_member.position,
       joined_at: d4h_member.joined_at,
-      left_at: d4h_member.left_at
+      left_at: d4h_member.left_at,
+      d4h_permission: d4h_member.permission,
+      d4h_status: d4h_member.status
     }
 
     member = Member.get_by(team_id: team.id, d4h_member_id: d4h_member.d4h_member_id)

@@ -34,6 +34,7 @@ defmodule App.Operation.UpdateTeamSettings do
       |> put_change(:d4h_access_key, get_change(changeset, :new_d4h_access_key))
       |> put_change(:d4h_access_key_saved_at, now)
       |> put_change(:d4h_access_key_owner, WhoAmI.member_name(whoami, team.d4h_team_id))
+      |> put_change(:d4h_access_key_member_id, WhoAmI.member_id(whoami, team.d4h_team_id))
     else
       add_error(changeset, :new_d4h_access_key, "belongs to a different D4H team")
     end

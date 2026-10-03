@@ -32,8 +32,12 @@ defmodule App.Operation.RefreshD4HData do
   defp record_key_owner(team) do
     case D4H.fetch_whoami(access_key: team.d4h_access_key, api_host: team.d4h_api_host) do
       {:ok, whoami} ->
-        owner = D4H.WhoAmI.member_name(whoami, team.d4h_team_id)
-        team |> Team.build_changeset(%{d4h_access_key_owner: owner}) |> Repo.update!()
+        params = %{
+          d4h_access_key_owner: D4H.WhoAmI.member_name(whoami, team.d4h_team_id),
+          d4h_access_key_member_id: D4H.WhoAmI.member_id(whoami, team.d4h_team_id)
+        }
+
+        team |> Team.build_changeset(params) |> Repo.update!()
 
       {:error, _reason} ->
         team
