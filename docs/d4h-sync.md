@@ -17,17 +17,21 @@ covers how the copy is refreshed and where it drifts from D4H.
   `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
   error goes to Honeybadger.
 - A missing key, or one D4H rejects with 401 or 403, is not an app error. The job writes
-  `Error: No D4H key…` or `Error: D4H rejected …'s personal key (401)…` and cancels, so it
-  is neither retried nor sent to Honeybadger. It tries again the next night.
+  `Error: No D4H key…` or `Error: D4H rejected the team key (401)…` and cancels, so it is
+  neither retried nor sent to Honeybadger. It tries again the next night.
 
 ## Which key
 
-[ResolveAccessKey](../lib/app/operation/refresh_d4h_data/resolve_access_key.ex) uses the
-team's own key (`teams.d4h_access_key`, set in team settings). Without one, it borrows the
-personal key of the earliest member (lowest user id) who has one. Both are
-`EncryptedString` columns. `/admin` marks the borrowed key with a "Refresh key" badge.
-Most teams still rely on the fallback; #41 tracks moving them to their own key so it can
-be deleted.
+Every D4H request uses the team's key (`teams.d4h_access_key`, an `EncryptedString` set
+in team settings). There is no fallback to a user's personal key; personal keys only
+prove who joined a team until #57 phase 3 removes them.
+
+Each team should create the key from a D4H member named "SAR Duty" rather than a
+person, so D4H history shows SAR Duty for changes made here and the key outlives the
+people on the team. `teams.d4h_access_key_owner` holds the key's D4H member name, from
+`whoami` when the key is saved and at the start of every refresh. Team settings and
+`/admin` flag a key whose owner isn't a SAR Duty account. D4H doesn't say when a token
+expires.
 
 Team settings never sends the saved key back to the page. A new key goes through
 [UpdateTeamSettings](../lib/app/operation/update_team_settings.ex), which asks D4H `whoami`
@@ -87,11 +91,12 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 ## Pages that skip the copy
 
 Some pages call D4H live instead of reading the database: activity attendance (which
-writes, via `PATCH /attendance/:id`), the mileage report, team settings refresh, the
-access key check, and member photos. They use the signed-in user's key, not the team's.
+writes, via `PATCH /attendance/:id`), the mileage report, team settings refresh, and
+member photos. They use the team's key too. The one exception is the check on the
+personal D4H key page in Settings, which tests the user's own key.
 
-Group rule changes are the other write. The review page sends them with the **team's**
-key only, never a borrowed personal one, and updates `group_members` right away rather
+Group rule changes are the other write. The review page sends them with the team's key
+and updates `group_members` right away rather
 than waiting for the next refresh. See [group-rules.md](group-rules.md).
 
 ## Adapter notes

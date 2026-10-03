@@ -10,7 +10,7 @@ defmodule Web.ActivityAttendanceLive do
 
   def handle_params(params, _uri, socket) do
     activity = Activity.find!(socket.assigns.current_team, params["id"])
-    d4h = D4H.build_context_from_user(socket.assigns.current_user)
+    d4h = D4H.build_context_from_team(socket.assigns.current_team)
     team_members = D4H.fetch_team_members(d4h)
 
     attendance_records =
@@ -124,7 +124,7 @@ defmodule Web.ActivityAttendanceLive do
 
   def handle_event("import-attendance", %{"import_content" => import_content}, socket) do
     d4h_activity_id = socket.assigns.activity.d4h_activity_id
-    d4h = D4H.build_context_from_user(socket.assigns.current_user)
+    d4h = D4H.build_context_from_team(socket.assigns.current_team)
     team_members = D4H.fetch_team_members(d4h)
     attendance_records = D4H.fetch_activity_attendance(d4h, d4h_activity_id, team_members)
     recommendations = fetch_recommendations(import_content, attendance_records)
@@ -161,7 +161,7 @@ defmodule Web.ActivityAttendanceLive do
       socket.assigns.recommendations
       |> Enum.filter(fn {_, id, _} -> id != nil && Enum.member?(attendance_ids, id) end)
 
-    d4h = D4H.build_context_from_user(socket.assigns.current_user)
+    d4h = D4H.build_context_from_team(socket.assigns.current_team)
 
     for {op, attendance_id, _member} <- recommendations do
       case op do

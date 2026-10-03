@@ -2,7 +2,6 @@ defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
   alias App.Model.Team
-  alias App.Operation.RefreshD4HData.ResolveAccessKey
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.ScheduleTeamRefreshesWorker
 
@@ -70,8 +69,6 @@ defmodule Web.AdminDashboardLive do
         <ul :if={team.users != []}>
           <li :for={user <- team.users} class="flex items-baseline gap-2 md:whitespace-nowrap">
             <span>{user.email}</span>
-            <.badge :if={key_badge(team, user) == :refresh} kind={:primary}>Refresh key</.badge>
-            <.badge :if={key_badge(team, user) == :personal}>D4H key</.badge>
             <span
               :if={user.last_seen_at}
               class="ml-auto pl-p text-sm text-secondary-1"
@@ -85,9 +82,7 @@ defmodule Web.AdminDashboardLive do
       <:col :let={team} label="D4H refresh">
         <.refresh_status result={team.d4h_refresh_result} />
         <.hint>
-          <div>
-            {if ResolveAccessKey.key?(team.d4h_access_key), do: "Team key", else: "No team key"}
-          </div>
+          <div id={"team-#{team.id}-key"}>{key_summary(team)}</div>
           <div :if={team.d4h_refreshed_at} class="whitespace-nowrap">
             Last OK {format_refreshed_at(team)}
           </div>
@@ -113,20 +108,9 @@ defmodule Web.AdminDashboardLive do
       </dd>
       <dt>Team key</dt>
       <dd>
-        The team's own D4H key, saved in Team Settings. The refresh uses it when there is one.
-      </dd>
-      <dt>
-        <.badge kind={:primary}>Refresh key</.badge>
-      </dt>
-      <dd>
-        The team has no key of its own, so the refresh borrows this person's personal D4H key.
-      </dd>
-      <dt>
-        <.badge>D4H key</.badge>
-      </dt>
-      <dd>
-        This person saved a personal D4H key in Settings. Pages that call D4H live, like
-        activity attendance and the mileage report, use it while they are signed in.
+        The team's D4H key, saved in Team Settings, and the D4H member it belongs to. SAR Duty
+        uses it for every D4H request. "Person's key" means the member isn't a SAR Duty
+        account, so the key stops working if that person leaves.
       </dd>
     </dl>
     """
@@ -171,14 +155,13 @@ defmodule Web.AdminDashboardLive do
     "#{ok_count} of #{length(teams)} teams refreshed OK."
   end
 
-  # :refresh for the member whose personal key the refresh borrows, :personal for any
-  # other member with a key.
-  defp key_badge(team, user) do
-    cond do
-      ResolveAccessKey.key_owner(team, team.users) == user -> :refresh
-      ResolveAccessKey.key?(user.d4h_access_key) -> :personal
-      true -> nil
-    end
+  defp key_summary(%Team{d4h_access_key: key}) when key in [nil, ""], do: "No team key"
+  defp key_summary(%Team{d4h_access_key_owner: nil}), do: "Team key"
+
+  defp key_summary(%Team{} = team) do
+    if Team.key_owner_is_sar_duty?(team),
+      do: "Team key: #{team.d4h_access_key_owner}",
+      else: "Person's key: #{team.d4h_access_key_owner}"
   end
 
   # The most recent visit by anyone on the team.

@@ -1,51 +1,43 @@
 defmodule App.Operation.RefreshD4HData do
-  alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
   alias App.Repo
 
-  def call(%User{} = current_user) do
-    team = current_user.team
-    d4h = D4H.build_context_from_user(current_user)
-    progress = RefreshD4HData.Progress.new(team.id)
-    refresh(d4h, team, progress)
-  end
-
   # A missing or rejected key needs a person to fix it, so it comes back as
   # `{:error, reason}` rather than an exception to retry and report.
+  def call(%Team{d4h_access_key: key}) when key in [nil, ""], do: {:error, :no_key}
+
   def call(%Team{} = team) do
-    case RefreshD4HData.ResolveAccessKey.call(team) do
-      nil -> {:error, :no_key}
-      {key_owner, access_key} -> refresh_with_key(team, key_owner, access_key)
-    end
-  end
-
-  def error_message(:no_key), do: "No D4H key. Save a team key in Team Settings."
-
-  def error_message({:key_rejected, :team, status}),
-    do: "D4H rejected the team key (#{status}). Save a new one in Team Settings."
-
-  def error_message({:key_rejected, %User{email: email}, status}),
-    do: "D4H rejected #{email}'s personal key (#{status}). Save a team key in Team Settings."
-
-  defp refresh_with_key(team, key_owner, access_key) do
-    d4h =
-      D4H.build_context(
-        access_key: access_key,
-        api_host: team.d4h_api_host,
-        d4h_team_id: team.d4h_team_id
-      )
-
+    team = record_key_owner(team)
+    d4h = D4H.build_context_from_team(team)
     progress = RefreshD4HData.Progress.new(team.id)
     refresh(d4h, team, progress)
   rescue
     error in D4H.Error ->
       if error.status in [401, 403] do
-        {:error, {:key_rejected, key_owner, error.status}}
+        {:error, {:key_rejected, error.status}}
       else
         reraise error, __STACKTRACE__
       end
+  end
+
+  def error_message(:no_key), do: "No D4H key. Save a team key in Team Settings."
+
+  def error_message({:key_rejected, status}),
+    do: "D4H rejected the team key (#{status}). Save a new one in Team Settings."
+
+  # Keys saved before the owner was recorded get it here. A rejected key is left for the
+  # refresh's own requests to report.
+  defp record_key_owner(team) do
+    case D4H.fetch_whoami(access_key: team.d4h_access_key, api_host: team.d4h_api_host) do
+      {:ok, whoami} ->
+        owner = D4H.WhoAmI.member_name(whoami, team.d4h_team_id)
+        team |> Team.build_changeset(%{d4h_access_key_owner: owner}) |> Repo.update!()
+
+      {:error, _reason} ->
+        team
+    end
   end
 
   @activity_types ["exercises", "events", "incidents"]
