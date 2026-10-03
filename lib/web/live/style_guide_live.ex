@@ -1,6 +1,8 @@
 defmodule Web.StyleGuideLive do
   use Web, :live_view_marketing_layout
 
+  import Web.Components.StyleGuide
+
   def mount(_params, _session, socket) do
     socket =
       socket
@@ -18,11 +20,7 @@ defmodule Web.StyleGuideLive do
 
   def render(assigns) do
     ~H"""
-    <header class="mb-8">
-      <h1 class="title">
-        Style Guide
-      </h1>
-    </header>
+    <.style_guide_header current={:index} />
     <.style_group title=".icon">
       <div>
         <.icon name="hero-user" />
@@ -204,34 +202,6 @@ defmodule Web.StyleGuideLive do
         This is a paragraph of text inside a <code>div</code> block with styled with .paragraph.
       </div>
     </.style_group>
-    """
-  end
-
-  attr :class, :string, default: nil
-  attr :title, :string, required: true
-  slot :inner_block, required: true
-
-  def style_group(assigns) do
-    ~H"""
-    <section class={["shadow p-4 space-y-4 mb-8 rounded", @class]}>
-      <h2 class="heading font-mono">{@title}</h2>
-      {render_slot(@inner_block)}
-    </section>
-    """
-  end
-
-  attr :fg, :string, required: true
-  attr :bg, :string, required: true
-
-  def color_swatch(assigns) do
-    ~H"""
-    <div class={[
-      "px-8 py-5 m-1 text-center inline-block align-middle rounded text-xs",
-      @bg,
-      @fg
-    ]}>
-      {@bg}
-    </div>
     """
   end
 end
