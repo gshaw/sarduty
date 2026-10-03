@@ -1,77 +1,31 @@
 defmodule Web.UserLoginLiveTest do
   use Web.ConnCase
 
+  import App.DataFixtures
   import Phoenix.LiveViewTest
-  import App.AccountsFixtures
 
-  describe "Log in page" do
-    test "renders log in page", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/login")
+  alias App.Accounts.UserToken
+  alias App.Repo
 
-      assert html =~ "Log in"
-      # assert html =~ "Sign up"
-      assert html =~ "Forgot your password?"
-    end
+  test "asks for an email only", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/login")
+
+    assert has_element?(lv, "#login_form input[type=email]")
+    refute has_element?(lv, "#login_form input[type=password]")
   end
 
-  describe "user login" do
-    test "redirects if user login with valid credentials", %{conn: conn} do
-      password = "123456789abcd"
-      user = user_fixture(%{password: password})
+  test "a login link opens a page with a button that logs in", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    {token, user_token} = UserToken.build_login_token(user)
+    Repo.insert!(user_token)
 
-      {:ok, lv, _html} = live(conn, ~p"/login")
+    {:ok, lv, _html} = live(conn, ~p"/login/#{token}")
 
-      form =
-        form(lv, "#login_form", user: %{email: user.email, password: password, remember_me: true})
-
-      conn = submit_form(form, conn)
-
-      assert redirected_to(conn) == ~p"/"
-    end
-
-    test "redirects to login page with a flash error if there are no valid credentials", %{
-      conn: conn
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/login")
-
-      form =
-        form(lv, "#login_form",
-          user: %{email: "test@email.com", password: "123456", remember_me: true}
-        )
-
-      conn = submit_form(form, conn)
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid email or password"
-
-      assert redirected_to(conn) == "/login"
-    end
+    assert has_element?(lv, "#login_link_form", user.email)
+    assert has_element?(lv, ~s(#login_link_form input[name=token][value="#{token}"]))
   end
 
-  describe "login navigation" do
-    # test "redirects to sign up page when the sign up button is clicked", %{conn: conn} do
-    #   {:ok, lv, _html} = live(conn, ~p"/login")
-
-    #   {:ok, _login_live, login_html} =
-    #     lv
-    #     |> element(~s|main a:fl-contains("Sign up")|)
-    #     |> render_click()
-    #     |> follow_redirect(conn, ~p"/signup")
-
-    #   assert login_html =~ "Sign up"
-    # end
-
-    test "redirects to forgot password page when the Forgot Password button is clicked", %{
-      conn: conn
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/login")
-
-      {:ok, _lv, html} =
-        lv
-        |> element("main a", "Forgot your password?")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/login/reset")
-
-      assert html =~ "Forgot your password?"
-    end
+  test "a used or expired link goes back to the login page", %{conn: conn} do
+    assert {:error, {:live_redirect, %{to: "/login"}}} = live(conn, ~p"/login/expired-token")
   end
 end

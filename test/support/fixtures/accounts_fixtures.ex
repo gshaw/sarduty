@@ -1,26 +1,21 @@
 defmodule App.AccountsFixtures do
   @moduledoc """
-  This module defines test helpers for creating
-  entities via the `App.Accounts` context.
+  Test helpers for users. A user reaches a team only through a manager member with the
+  same email; App.DataFixtures.user_with_team_fixture/1 makes both.
   """
 
-  def unique_user_email, do: "user#{System.unique_integer()}@example.com"
-  def valid_user_password, do: "hello world!"
+  alias App.Accounts.User
+  alias App.Repo
 
-  def valid_user_attributes(attrs \\ %{}) do
-    Enum.into(attrs, %{
-      email: unique_user_email(),
-      password: valid_user_password()
-    })
-  end
+  def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"
 
   def user_fixture(attrs \\ %{}) do
-    {:ok, user} =
-      attrs
-      |> valid_user_attributes()
-      |> App.Accounts.register_user()
+    attrs = Map.new(attrs)
 
-    user
+    %{email: attrs[:email] || unique_user_email()}
+    |> User.new_changeset()
+    |> Ecto.Changeset.change(Map.drop(attrs, [:email]))
+    |> Repo.insert!()
   end
 
   def extract_user_token(fun) do

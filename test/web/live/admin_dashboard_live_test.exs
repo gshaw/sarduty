@@ -4,8 +4,8 @@ defmodule Web.AdminDashboardLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Accounts.User
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
 
   test "renders admin dashboard for admin users", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
@@ -37,7 +37,7 @@ defmodule Web.AdminDashboardLiveTest do
 
     %{user: first, team: team} = user_with_team_fixture()
     second = App.AccountsFixtures.user_fixture()
-    {:ok, second} = User.update(second, %{team_id: team.id})
+    manager_fixture(team, %{email: second.email, d4h_permission: 1})
 
     {:ok, lv, _html} =
       conn
@@ -66,20 +66,13 @@ defmodule Web.AdminDashboardLiveTest do
     assert has_element?(lv, "#team-#{no_key.id}-key", "No team key")
   end
 
-  test "lists each team's managers, and the logins that match none", %{conn: conn} do
+  test "lists each team's managers", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
 
-    %{user: kept, team: team} = user_with_team_fixture()
-    lost = App.AccountsFixtures.user_fixture()
-    {:ok, lost} = User.update(lost, %{team_id: team.id})
-
-    {:ok, team} =
-      Team.update(team, %{d4h_access_key_member_id: 900, d4h_access_key_owner: "SAR Duty"})
-
-    manager = fn attrs ->
-      member_fixture(team, Map.merge(%{d4h_permission: 0, d4h_status: "OPERATIONAL"}, attrs))
-    end
+    team = team_fixture(%{d4h_access_key_member_id: 900, d4h_access_key_owner: "SAR Duty"})
+    kept = App.AccountsFixtures.user_fixture()
+    manager = &manager_fixture(team, &1)
 
     owner = manager.(%{name: "Ada Owner", email: kept.email})
     editor = manager.(%{name: "Eli Editor", email: "eli@other.org", d4h_permission: 1})
@@ -95,8 +88,19 @@ defmodule Web.AdminDashboardLiveTest do
     refute has_element?(lv, "#managers-#{team.id}", "SAR Duty")
     refute has_element?(lv, "#managers-#{team.id}", "Mo Member")
     refute has_element?(lv, "#managers-#{team.id}", "Rae Retired")
-    assert has_element?(lv, "#loses-#{lost.id}", lost.email)
-    refute has_element?(lv, "#loses-#{kept.id}")
+  end
+
+  test "lists emails an admin let in, and counts their logins", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    admin = make_admin(admin)
+    team = team_fixture()
+    grant = TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
+    App.AccountsFixtures.user_fixture(%{email: "office@example.com"})
+
+    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
+
+    assert has_element?(lv, "#grant-#{grant.id}", "role address")
+    assert has_element?(lv, "#team-#{team.id} li", "office@example.com")
   end
 
   test "keeps a person whose own key is the team key among the managers", %{conn: conn} do
@@ -123,7 +127,7 @@ defmodule Web.AdminDashboardLiveTest do
 
     %{user: recent, team: team} = user_with_team_fixture()
     earlier = App.AccountsFixtures.user_fixture()
-    {:ok, earlier} = User.update(earlier, %{team_id: team.id})
+    manager_fixture(team, %{email: earlier.email})
     unused = team_fixture()
 
     now = DateTime.utc_now(:second)

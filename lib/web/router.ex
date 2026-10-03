@@ -79,12 +79,8 @@ defmodule Web.Router do
       on_mount: [{Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/styles", StyleGuideLive
-      live "/signup", UserRegistrationLive, :new
-      live "/signup/confirm/:token", UserConfirmationLive, :edit
-      live "/signup/confirm", UserConfirmationInstructionsLive, :new
       live "/login", UserLoginLive, :new
-      live "/login/reset", UserForgotPasswordLive, :new
-      live "/login/reset/:token", UserResetPasswordLive, :edit
+      live "/login/:token", UserLoginLinkLive, :new
     end
 
     # The check moved to the verify site. Cards linked here before it, in capitals.
@@ -96,6 +92,7 @@ defmodule Web.Router do
     get "/verify/:code/banner", MemberCardController, :banner
     get "/teams/:subdomain/logo", TeamController, :logo
 
+    post "/login/link", UserSessionController, :request_link
     post "/login", UserSessionController, :create
     delete "/logout", UserSessionController, :delete
   end
@@ -106,10 +103,6 @@ defmodule Web.Router do
     live_session :require_authenticated_user_session,
       on_mount: [{Web.UserAuth, :ensure_authenticated}] do
       live "/settings", SettingsLive
-      live "/settings/email", Settings.ChangeEmailLive
-      live "/settings/password", Settings.ChangePasswordLive
-      live "/settings/confirm_email/:token", SettingsLive
-      live "/settings/d4h", Settings.D4HLive
       live "/settings/team", Settings.TeamLive
       live "/settings/cards", Settings.CardsLive
     end
