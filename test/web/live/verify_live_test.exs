@@ -236,7 +236,7 @@ defmodule Web.VerifyLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/o/#{organization.slug}")
 
-      assert has_element?(lv, "#start-organization", organization.name)
+      assert has_element?(lv, "#verify-footer-organization", organization.name)
       assert has_element?(lv, "#verify-organization img")
       assert has_element?(lv, "#check-form")
     end

@@ -8,7 +8,8 @@ themselves. Issue #87 has the design.
 ## What an organization changes today
 
 - **Its scan page**, `verify.sarduty.com/o/<slug>`, shows the organization's logo and
-  short name in the bar. The host on the right and the "Powered by" footer stay, since the
+  short name in the bar and its name in the footer. The check itself is unchanged, since
+  it works for any card. The host on the right and the "Powered by" footer stay, since the
   host is what checkers are told to look for.
 - **A card's result keeps the team's brand.** It adds one line under the team, "Member
   team of BC Search and Rescue Association", linked to the organization's website. Its
