@@ -3,6 +3,7 @@ defmodule App.Operation.BuildApplePassTest do
 
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Operation.BuildApplePass
 
@@ -13,7 +14,8 @@ defmodule App.Operation.BuildApplePassTest do
     team = %Team{
       name: "Example SAR",
       timezone: "America/Vancouver",
-      d4h_refreshed_at: ~U[2026-09-30 13:05:00Z]
+      d4h_refreshed_at: ~U[2026-09-30 13:05:00Z],
+      organization: nil
     }
 
     member = %Member{name: "Alex Example", joined_at: ~U[2019-03-12 08:00:00Z], team: team}
@@ -161,5 +163,16 @@ defmodule App.Operation.BuildApplePassTest do
     assert tested_json.serialNumber == json.serialNumber
     assert tested_json.barcodes == json.barcodes
     assert BuildApplePass.fingerprint(tested_json) == BuildApplePass.fingerprint(json)
+  end
+
+  test "a team in an organization names it as issuer, and SAR Duty nowhere" do
+    card = card(authentication_token: "token-0123456789abcdef", pass_test_at: @now)
+    organization = %Organization{name: "BC Search and Rescue Association"}
+    card = put_in(card.member.team.organization, organization)
+    json = BuildApplePass.pass_json(card, [], @config, @now)
+
+    issuer = Enum.find(json.generic.backFields, &(&1.key == "issuer"))
+    assert issuer.value =~ "Example SAR, a member team of BC Search and Rescue Association."
+    refute Jason.encode!(json) =~ "SAR Duty"
   end
 end

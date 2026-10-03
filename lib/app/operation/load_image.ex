@@ -7,6 +7,7 @@ defmodule App.Operation.LoadImage do
 
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Model.Organization
   alias App.Model.Team
 
   require Logger
@@ -40,10 +41,14 @@ defmodule App.Operation.LoadImage do
   tax credit letter, the dashboards, and the verify page; `:icon` for the Apple icon; `:logo` for the Apple
   logo, which Wallet fits in a wide strip.
   """
-  def logo(subdomain, shape) do
-    bytes = if path = Team.logo_file(subdomain), do: File.read!(path)
+  def logo(%Team{} = team, shape) do
+    bytes = if path = Team.logo_file(team.subdomain), do: File.read!(path)
     shape_or_default(bytes, &shape_logo(&1, shape), default_logo())
   end
+
+  @doc "The organization's logo, shaped like a team's. Expects one that has a logo."
+  def organization_logo(%Organization{logo: logo}, shape) when is_binary(logo),
+    do: shape!(logo, &shape_logo(&1, shape))
 
   defp shape_or_default(nil, fun, default), do: shape!(default, fun)
 

@@ -10,6 +10,7 @@ defmodule App.DataFixtures do
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
+  alias App.Model.Organization
   alias App.Model.Qualification
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -36,6 +37,24 @@ defmodule App.DataFixtures do
     Team.insert!(params)
   end
 
+  @doc "An organization with a logo, and these teams as members."
+  def organization_fixture(teams \\ [], attrs \\ %{}) do
+    unique = System.unique_integer([:positive])
+
+    organization =
+      %Organization{
+        name: "Example Association #{unique}",
+        short_name: "EXA",
+        slug: "exa-#{unique}",
+        logo: png_fixture(200, 200)
+      }
+      |> Map.merge(attrs)
+      |> Repo.insert!()
+
+    Organization.set_teams!(organization, Enum.map(teams, & &1.id))
+    organization
+  end
+
   @doc "PNG bytes of a plain image, as D4H sends a photo or logo."
   def png_fixture(width, height) do
     width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: ".png")
@@ -48,6 +67,12 @@ defmodule App.DataFixtures do
     File.write!(path, bytes)
     ExUnit.Callbacks.on_exit(fn -> File.rm(path) end)
     path
+  end
+
+  def make_admin(user) do
+    user
+    |> Ecto.Changeset.change(%{is_admin: true})
+    |> Repo.update!()
   end
 
   def user_with_team_fixture(attrs \\ %{}) do

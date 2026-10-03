@@ -24,7 +24,7 @@ defmodule App.Operation.UpdateGooglePasses do
     if BuildGooglePass.configured?() do
       cards
       |> Enum.reject(&is_nil(&1.google_pass_fingerprint))
-      |> Repo.preload(member: :team)
+      |> Repo.preload(member: [team: :organization])
       |> send_changed(now)
     end
 

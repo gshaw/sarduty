@@ -55,12 +55,31 @@ defmodule Web.Layouts do
 
   # The verify site: a navy bar with the host beside it, so it doesn't look like the app,
   # and the host is what a checker is told to look for. No app navigation, no login. The
-  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand.
+  # footer credits SAR Duty quietly. An organization's scan page puts its brand in the bar
+  # and its name in the footer, and leaves the check itself alone: it works for any card.
   def verify(assigns) do
+    assigns = assign(assigns, :organization, assigns[:organization])
+
     ~H"""
     <header class="sticky top-0 z-30 bg-slate-800 text-white">
-      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between">
-        <a href="/" class="font-semibold">SAR <span class="text-amber-400">Duty</span></a>
+      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between gap-4">
+        <a :if={@organization == nil} href="/" class="font-semibold">
+          SAR <span class="text-amber-400">Duty</span>
+        </a>
+        <a
+          :if={@organization}
+          id="verify-organization"
+          href={~p"/o/#{@organization.slug}"}
+          class="flex items-center gap-2 font-semibold"
+        >
+          <img
+            :if={@organization.logo}
+            src={Web.OrganizationController.logo_url(@organization)}
+            alt=""
+            class="size-8 shrink-0"
+          />
+          {@organization.short_name}
+        </a>
         <span id="verify-host" class="text-sm text-slate-300">{Web.VerifyHost.host()}</span>
       </div>
     </header>
@@ -69,6 +88,13 @@ defmodule Web.Layouts do
       {@inner_content}
     </main>
     <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-zinc-400">
+      <span :if={@organization} id="verify-footer-organization">
+        <a :if={@organization.website} href={@organization.website} class="hover:underline">
+          {@organization.name}
+        </a>
+        <span :if={!@organization.website}>{@organization.name}</span>
+        ·
+      </span>
       Powered by <a href={Web.Endpoint.url()} class="hover:underline">{Web.Endpoint.host()}</a>
     </footer>
     """

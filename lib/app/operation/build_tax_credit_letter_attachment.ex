@@ -26,6 +26,6 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
 
   # A team without a logo gets none on its letters, not SAR Duty's.
   defp logo(team) do
-    if Team.logo_file(team.subdomain), do: LoadImage.logo(team.subdomain, :square)
+    if Team.logo_file(team.subdomain), do: LoadImage.logo(team, :square)
   end
 end

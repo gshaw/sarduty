@@ -24,10 +24,12 @@ defmodule Web.AdminDashboardLive do
   end
 
   def handle_info({:team_refreshed, updated_team}, socket) do
-    # The broadcast team has no users loaded, so keep the ones from mount.
+    # The broadcast team has no users or organization loaded, so keep the ones from mount.
     teams =
       Enum.map(socket.assigns.teams, fn team ->
-        if team.id == updated_team.id, do: %{updated_team | users: team.users}, else: team
+        if team.id == updated_team.id,
+          do: %{updated_team | users: team.users, organization: team.organization},
+          else: team
       end)
 
     {:noreply, assign(socket, teams: teams)}
@@ -41,6 +43,7 @@ defmodule Web.AdminDashboardLive do
         <span id="refresh-summary" class="text-sm text-secondary-1">
           {refresh_summary(@teams)}
         </span>
+        <.button navigate={~p"/admin/organizations"} size={:sm}>Organizations</.button>
         <.button type="button" variant={:warning} size={:sm} phx-click="refresh-all">
           Refresh All Teams
         </.button>
@@ -61,6 +64,9 @@ defmodule Web.AdminDashboardLive do
             <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
             <.hint>
               <span class="whitespace-nowrap">{team.subdomain} · ID {team.id}</span>
+              <span :if={team.organization} id={"team-#{team.id}-organization"} class="block">
+                {team.organization.short_name}
+              </span>
             </.hint>
           </div>
         </div>

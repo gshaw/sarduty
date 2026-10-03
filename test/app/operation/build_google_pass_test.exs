@@ -3,6 +3,7 @@ defmodule App.Operation.BuildGooglePassTest do
 
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Operation.BuildGooglePass
 
@@ -14,7 +15,8 @@ defmodule App.Operation.BuildGooglePassTest do
       name: "Example SAR",
       subdomain: "example",
       timezone: "America/Vancouver",
-      d4h_refreshed_at: ~U[2026-09-30 13:05:00Z]
+      d4h_refreshed_at: ~U[2026-09-30 13:05:00Z],
+      organization: nil
     }
 
     member = %Member{name: "Alex Example", joined_at: ~U[2019-03-12 08:00:00Z], team: team}
@@ -120,5 +122,16 @@ defmodule App.Operation.BuildGooglePassTest do
     assert fingerprint.(base) == fingerprint.(later)
     refute fingerprint.(base) == fingerprint.(next_month)
     refute fingerprint.(base) == fingerprint.(left)
+  end
+
+  test "a team in an organization names it as issuer, and SAR Duty nowhere" do
+    card = card()
+    organization = %Organization{name: "BC Search and Rescue Association"}
+    object = object(put_in(card.member.team.organization, organization))
+
+    assert text(object, "issuer").body =~
+             "Example SAR, a member team of BC Search and Rescue Association."
+
+    refute Jason.encode!(object) =~ "SAR Duty"
   end
 end

@@ -206,4 +206,43 @@ defmodule Web.VerifyLiveTest do
       assert build_conn() |> get("/verify") |> redirected_to() == Web.VerifyHost.url() <> "/"
     end
   end
+
+  describe "organizations" do
+    test "a card from a member team keeps the team's brand, and names the organization",
+         %{conn: conn} do
+      team = team_fixture()
+      organization = organization_fixture([team])
+      card = member_card_fixture(member_fixture(team))
+
+      {:ok, lv, _html} = live(conn, ~p"/#{MemberCard.format_code(card.code)}")
+
+      assert has_element?(lv, "#result-organization", organization.name)
+      refute has_element?(lv, "#result-organization a")
+      refute has_element?(lv, "#verify-organization")
+      assert has_element?(lv, "#check-another[href='/o/#{organization.slug}']")
+    end
+
+    test "a card from a team with no organization shows SAR Duty", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+
+      {:ok, lv, _html} = live(conn, ~p"/#{MemberCard.format_code(card.code)}")
+
+      refute has_element?(lv, "#result-organization")
+      refute has_element?(lv, "#verify-organization")
+    end
+
+    test "the organization's start page carries its brand", %{conn: conn} do
+      organization = organization_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/o/#{organization.slug}")
+
+      assert has_element?(lv, "#verify-footer-organization", organization.name)
+      assert has_element?(lv, "#verify-organization img")
+      assert has_element?(lv, "#check-form")
+    end
+
+    test "an unknown organization goes to the plain start page", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/"}}} = live(conn, ~p"/o/nobody")
+    end
+  end
 end
