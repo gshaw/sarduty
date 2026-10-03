@@ -5,6 +5,7 @@ defmodule Web.AdminDashboardLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
 
   test "renders admin dashboard for admin users", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
@@ -87,6 +88,19 @@ defmodule Web.AdminDashboardLiveTest do
     refute has_element?(lv, "#managers-#{team.id}", "SAR Duty")
     refute has_element?(lv, "#managers-#{team.id}", "Mo Member")
     refute has_element?(lv, "#managers-#{team.id}", "Rae Retired")
+  end
+
+  test "lists emails an admin let in, and counts their logins", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    admin = make_admin(admin)
+    team = team_fixture()
+    grant = TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
+    App.AccountsFixtures.user_fixture(%{email: "office@example.com"})
+
+    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
+
+    assert has_element?(lv, "#grant-#{grant.id}", "role address")
+    assert has_element?(lv, "#team-#{team.id} li", "office@example.com")
   end
 
   test "keeps a person whose own key is the team key among the managers", %{conn: conn} do

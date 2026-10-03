@@ -5,6 +5,7 @@ defmodule App.Model.Team do
   alias App.Field.TrimmedString
   alias App.Model.Member
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
   alias App.Repo
   alias App.Validate
 
@@ -87,9 +88,16 @@ defmodule App.Model.Team do
   The teams this email manages: it matches a member who is a D4H Owner or Editor, isn't
   retired, and hasn't left (App.Model.Member.manager?/2). The team key's own member never
   counts when it's a "SAR Duty" account; a person whose own key is the team key still
-  manages the team. By name.
+  manages the team. Teams an admin let the email into (App.Model.TeamLoginGrant) count
+  too. By name.
   """
   def get_managed_by(email, now) when is_binary(email) do
+    (teams_managed_in_d4h(email, now) ++ teams_granted(email))
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  defp teams_managed_in_d4h(email, now) do
     Team
     |> join(:inner, [t], m in subquery(managers_with_email(email, now)), on: m.team_id == t.id)
     |> where(
@@ -98,7 +106,16 @@ defmodule App.Model.Team do
         not like(fragment("lower(replace(?, ' ', ''))", t.d4h_access_key_owner), "%sarduty%")
     )
     |> distinct(true)
-    |> order_by([t], asc: t.name)
+    |> Repo.all()
+  end
+
+  # Teams an admin let this email into with App.Model.TeamLoginGrant.
+  defp teams_granted(email) do
+    email = email |> String.trim() |> String.downcase()
+
+    Team
+    |> join(:inner, [t], g in TeamLoginGrant, on: g.team_id == t.id)
+    |> where([t, g], g.email == ^email)
     |> Repo.all()
   end
 
