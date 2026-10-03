@@ -82,11 +82,15 @@ Until Google grants publishing access, passes say "[TEST ONLY]" and only the con
 users can save them. Dev and production share the issuer; ids carry the host, so they
 don't collide.
 
-## Litestream and Tigris
+## Litestream and Cloudflare R2
 
-Litestream replicates `/mnt/sarduty/sarduty.db` to the Tigris bucket in
-[litestream.yml](../litestream.yml). Its credentials are Fly secrets, not in the repo.
+Litestream replicates `/mnt/sarduty/sarduty.db` to the `sarduty-db` R2 bucket in
+[litestream.yml](../litestream.yml), using the account in `CLOUDFLARE_ACCOUNT_ID`.
 Team logos on the same volume are not replicated. See [deployment.md](deployment.md).
+
+- `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` — Fly secrets, from an R2 API token
+  with **Object Read & Write** on `sarduty-db` only. Without them Litestream logs
+  errors and the app runs without a backup.
 
 ## Healthchecks
 
