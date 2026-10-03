@@ -1,7 +1,6 @@
 defmodule App.Model.Member do
   use App, :model
 
-  alias App.Field.EncryptedString
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.GroupMember
@@ -24,10 +23,9 @@ defmodule App.Model.Member do
     field :d4h_member_id, :integer
     field :ref_id, :string
     field :name, :string
-    field :email, EncryptedString
-    field :phone, EncryptedString
-    field :address, EncryptedString
-    field :coordinate, EncryptedString
+    field :email, :string, redact: true
+    field :phone, :string, redact: true
+    field :address, :string, redact: true
     field :position, :string
     field :joined_at, :utc_datetime
     field :left_at, :utc_datetime
@@ -47,7 +45,6 @@ defmodule App.Model.Member do
       :email,
       :phone,
       :address,
-      :coordinate,
       :position,
       :joined_at,
       :left_at
