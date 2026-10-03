@@ -97,15 +97,18 @@ defmodule App.Model.Member do
   def permission_label(_), do: "Unknown"
 
   @doc """
-  The team's managers, by name, leaving out the team key's own account: a "SAR Duty"
-  member would otherwise pass as one.
+  The team's managers, by name. A team key from a "SAR Duty" account is left out: it
+  isn't a person. A team key from a person's account leaves them in, since they manage
+  the team too.
   """
   def get_managers(%Team{} = team, now) do
+    key_account = if Team.key_owner_is_sar_duty?(team), do: team.d4h_access_key_member_id
+
     Member
     |> where([m], m.team_id == ^team.id and m.d4h_permission in @manager_permissions)
     |> order_by([m], asc: m.name)
     |> Repo.all()
-    |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != team.d4h_access_key_member_id))
+    |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != key_account))
   end
 
   def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
