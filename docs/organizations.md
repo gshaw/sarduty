@@ -11,9 +11,9 @@ themselves. Issue #87 has the design.
   short name in the bar and its name in the footer. The check itself is unchanged, since
   it works for any card. The host on the right and the "Powered by" footer stay, since the
   host is what checkers are told to look for.
-- **A card's result keeps the team's brand.** It adds one line under the team, "Member
-  team of BC Search and Rescue Association", linked to the organization's website. Its
-  "Check another card" button goes back to the organization's scan page.
+- **A card's result keeps the team's brand.** The organization's name goes under the team
+  name, as plain text. Its "Check another card" button goes back to the organization's
+  scan page.
 - **The back of the pass** says who issued it: "North Shore Rescue, a member team of BC
   Search and Rescue Association", with no SAR Duty. The front doesn't change.
 
