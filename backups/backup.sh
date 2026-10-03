@@ -11,4 +11,4 @@ set -euo pipefail
 curl -s -o /dev/null https://sarduty.com/
 
 filename="backups/data_backup_$(date +%F).tar.gz.age"
-fly ssh console -C 'tar cz /mnt/sarduty' -t "$FLY_SSH_TOKEN" | age -r "$BACKUP_AGE_RECIPIENT" > "$filename"
+fly ssh console -a sarduty -C 'tar cz /mnt/sarduty' | age -r "$BACKUP_AGE_RECIPIENT" > "$filename"
