@@ -38,9 +38,11 @@
   `TrimmedString`) and [lib/app/validate/](lib/app/validate).
 - **Service**: [lib/service/](lib/service) are stateless helpers — `Service.Format`,
   `Service.Convert`, `Service.PDFLetter`. No database, no HTTP.
-- **Accounts**: [lib/app/accounts/](lib/app/accounts) is `phx.gen.auth`-style users (1.7
-  naming: `current_user` and `current_team`, not `current_scope`), plus each user's team,
-  admin flag, and D4H access key.
+- **Accounts**: [lib/app/accounts/](lib/app/accounts) is users who log in with an emailed
+  link (no passwords), with `phx.gen.auth`-style sessions (`current_user` and
+  `current_team`, not `current_scope`) and an admin flag. Access comes from D4H: a user
+  reaches a team when their email matches a member D4H makes an Owner or Editor
+  (`Team.get_managed_by/2`). Admins reach every team.
 
 ## External integrations (know where to look)
 
@@ -68,8 +70,8 @@ Every boundary, its credentials, and what breaks without it:
 - `config/runtime.exs` reads `MAPBOX_ACCESS_TOKEN` in **every** environment, so
   `mix test`, `mix phx.server`, and `mix ecto.migrate` fail without it. Any value works
   when you are not testing the mileage report: `MAPBOX_ACCESS_TOKEN=dummy mix test`.
-- D4H tokens are not environment variables. A user or team admin pastes a D4H personal
-  access token into Settings, and it is stored encrypted (Cloak) in the database.
+- D4H tokens are not environment variables. Each team has one key, a D4H personal access
+  token pasted into team settings, stored encrypted (Cloak) in the database.
 - The dev server is `https://sarduty.test` through puma-dev, proxying to port 4025.
 
 ## Shell environment

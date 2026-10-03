@@ -1,5 +1,4 @@
 defmodule App.DataFixtures do
-  alias App.Accounts.User
   alias App.AccountsFixtures
   alias App.Model.Activity
   alias App.Model.Attendance
@@ -50,17 +49,17 @@ defmodule App.DataFixtures do
     path
   end
 
+  @doc "A team, and a user who reaches it as a D4H Owner with the same email."
   def user_with_team_fixture(attrs \\ %{}) do
     user = AccountsFixtures.user_fixture()
     team = team_fixture(Map.get(attrs, :team, %{}))
-
-    {:ok, user} =
-      User.update(user, %{
-        team_id: team.id,
-        d4h_access_key: Map.get(attrs, :d4h_access_key, "d4h-access-key")
-      })
-
+    manager_fixture(team, %{email: user.email})
     %{user: user, team: team}
+  end
+
+  @doc "A member D4H makes an Owner, so a user with their email manages the team."
+  def manager_fixture(%Team{} = team, attrs \\ %{}) do
+    member_fixture(team, Map.merge(%{d4h_permission: 0, d4h_status: "OPERATIONAL"}, attrs))
   end
 
   def activity_fixture(%Team{} = team, attrs \\ %{}) do

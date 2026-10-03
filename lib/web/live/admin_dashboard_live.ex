@@ -1,6 +1,7 @@
 defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
+  alias App.Accounts.User
   alias App.Model.Member
   alias App.Model.Team
   alias App.Worker.RefreshTeamDataWorker
@@ -9,25 +10,27 @@ defmodule Web.AdminDashboardLive do
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    teams = Team.get_all_with_users()
+    teams = Team.get_all()
     now = DateTime.utc_now()
+    managers = Map.new(teams, &{&1.id, Member.get_managers(&1, now)})
+    users = App.Repo.all(User)
 
     socket =
       socket
       |> assign(page_title: "Admin")
       |> assign(teams: teams)
       |> assign(now: now)
-      |> assign(managers: Map.new(teams, &{&1.id, Member.get_managers(&1, now)}))
-      |> assign(login_emails: login_emails(teams))
+      |> assign(managers: managers)
+      |> assign(login_emails: MapSet.new(users, &String.downcase(&1.email)))
+      |> assign(logins: Map.new(teams, &{&1.id, logins(users, managers[&1.id])}))
 
     {:ok, socket}
   end
 
   def handle_info({:team_refreshed, updated_team}, socket) do
-    # The broadcast team has no users loaded, so keep the ones from mount.
     teams =
       Enum.map(socket.assigns.teams, fn team ->
-        if team.id == updated_team.id, do: %{updated_team | users: team.users}, else: team
+        if team.id == updated_team.id, do: updated_team, else: team
       end)
 
     {:noreply, assign(socket, teams: teams)}
@@ -66,12 +69,15 @@ defmodule Web.AdminDashboardLive do
         </div>
       </:col>
       <:col :let={team} label="Last seen" class="whitespace-nowrap">
-        <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @now)}</span>
+        <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
       </:col>
       <:col :let={team} label="Contacts">
-        <span :if={team.users == []} class="text-danger-1">No users</span>
-        <ul :if={team.users != []}>
-          <li :for={user <- team.users} class="flex items-baseline gap-2 md:whitespace-nowrap">
+        <span :if={@logins[team.id] == []} class="text-danger-1">No users</span>
+        <ul :if={@logins[team.id] != []}>
+          <li
+            :for={user <- @logins[team.id]}
+            class="flex items-baseline gap-2 md:whitespace-nowrap"
+          >
             <span>{user.email}</span>
             <span
               :if={user.last_seen_at}
@@ -137,13 +143,6 @@ defmodule Web.AdminDashboardLive do
             <.badge :if={member.d4h_status != "OPERATIONAL"}>Not operational</.badge>
           </li>
         </ul>
-        <p
-          :for={user <- losing_users(team, @managers[team.id])}
-          id={"loses-#{user.id}"}
-          class="text-sm text-danger-1"
-        >
-          {user.email} has a login but matches no manager, so would lose access.
-        </p>
       </div>
     </section>
 
@@ -203,17 +202,17 @@ defmodule Web.AdminDashboardLive do
     "#{ok_count} of #{length(teams)} teams refreshed OK."
   end
 
-  defp login_emails(teams) do
-    for team <- teams, user <- team.users, into: MapSet.new(), do: String.downcase(user.email)
+  # The team's managers who have logged in, by email.
+  defp logins(users, managers) do
+    emails = MapSet.new(managers, &String.downcase(&1.email || ""))
+
+    users
+    |> Enum.filter(&MapSet.member?(emails, String.downcase(&1.email)))
+    |> Enum.sort_by(& &1.email)
   end
 
   defp has_login?(member, login_emails),
     do: member.email != nil and MapSet.member?(login_emails, String.downcase(member.email))
-
-  defp losing_users(team, managers) do
-    emails = MapSet.new(managers, &String.downcase(&1.email || ""))
-    Enum.reject(team.users, &MapSet.member?(emails, String.downcase(&1.email)))
-  end
 
   # The team's most common manager email domain is its usual one.
   defp odd_domain?(member, managers) do
@@ -247,8 +246,8 @@ defmodule Web.AdminDashboardLive do
   end
 
   # The most recent visit by anyone on the team.
-  defp team_last_seen(team, now) do
-    team.users
+  defp team_last_seen(team, logins, now) do
+    logins
     |> Enum.map(& &1.last_seen_at)
     |> Enum.reject(&is_nil/1)
     |> Enum.max(DateTime, fn -> nil end)

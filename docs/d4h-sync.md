@@ -23,8 +23,7 @@ covers how the copy is refreshed and where it drifts from D4H.
 ## Which key
 
 Every D4H request uses the team's key (`teams.d4h_access_key`, an `EncryptedString` set
-in team settings). There is no fallback to a user's personal key; personal keys only
-prove who joined a team until #57 phase 3 removes them.
+in team settings). Users have no D4H keys.
 
 Each team should create the key from a D4H member named "SAR Duty" rather than a
 person, so D4H history shows SAR Duty for changes made here and the key outlives the
@@ -92,8 +91,11 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 Some pages call D4H live instead of reading the database: activity attendance (which
 writes, via `PATCH /attendance/:id`), the mileage report, team settings refresh, and
-member photos. They use the team's key too. The one exception is the check on the
-personal D4H key page in Settings, which tests the user's own key.
+member photos. They use the team's key too.
+
+The sync also stores each member's D4H access level (`d4h_permission`) and status. That
+decides who can log in: see `App.Model.Member.manager?/2`. Losing Owner or Editor in D4H
+loses access at the next refresh.
 
 Group rule changes are the other write. The review page sends them with the team's key
 and updates `group_members` right away rather

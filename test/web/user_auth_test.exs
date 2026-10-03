@@ -39,8 +39,8 @@ defmodule Web.UserAuthTest do
       assert redirected_to(conn) == "/hello"
     end
 
-    test "writes a cookie if remember_me is configured", %{conn: conn, user: user} do
-      conn = conn |> fetch_cookies() |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+    test "always writes a 60-day remember-me cookie", %{conn: conn, user: user} do
+      conn = conn |> fetch_cookies() |> UserAuth.log_in_user(user)
       assert get_session(conn, :user_token) == conn.cookies[@remember_me_cookie]
 
       assert %{value: signed_token, max_age: max_age} = conn.resp_cookies[@remember_me_cookie]
@@ -95,7 +95,7 @@ defmodule Web.UserAuthTest do
 
     test "authenticates user from cookies", %{conn: conn, user: user} do
       logged_in_conn =
-        conn |> fetch_cookies() |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+        conn |> fetch_cookies() |> UserAuth.log_in_user(user)
 
       user_token = logged_in_conn.cookies[@remember_me_cookie]
       %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
@@ -190,8 +190,7 @@ defmodule Web.UserAuthTest do
 
   describe "last seen" do
     setup do
-      %{user: user, team: team} = App.DataFixtures.user_with_team_fixture()
-      %{user: App.Repo.preload(user, :team), team: team}
+      App.DataFixtures.user_with_team_fixture()
     end
 
     test "opening a team LiveView records the visit", %{user: user, team: team} do
@@ -214,7 +213,7 @@ defmodule Web.UserAuthTest do
     end
 
     test "an admin's visit is not recorded", %{conn: conn, team: team} do
-      admin = user_fixture() |> Ecto.Changeset.change(is_admin: true) |> App.Repo.update!()
+      admin = user_fixture(%{is_admin: true})
 
       conn
       |> assign(:current_user, admin)
@@ -222,6 +221,45 @@ defmodule Web.UserAuthTest do
       |> UserAuth.require_authorized_team_subdomain([])
 
       refute Accounts.get_user!(admin.id).last_seen_at
+    end
+  end
+
+  describe "team access" do
+    setup do
+      App.DataFixtures.user_with_team_fixture()
+    end
+
+    defp open(conn, user, team) do
+      conn
+      |> assign(:current_user, user)
+      |> Map.put(:path_params, %{"subdomain" => team.subdomain})
+      |> UserAuth.require_authorized_team_subdomain([])
+    end
+
+    test "a manager opens their team", %{conn: conn, user: user, team: team} do
+      assert open(conn, user, team).assigns.current_team.id == team.id
+    end
+
+    test "a manager can't open another team", %{conn: conn, user: user} do
+      other = App.DataFixtures.team_fixture()
+      assert_raise Web.Status.NotFound, fn -> open(conn, user, other) end
+    end
+
+    test "losing Owner or Editor in D4H loses the team", %{conn: conn, user: user, team: team} do
+      App.Repo.update_all(App.Model.Member, set: [d4h_permission: 2])
+      assert_raise Web.Status.NotFound, fn -> open(conn, user, team) end
+    end
+
+    test "an admin opens any team", %{conn: conn} do
+      admin = user_fixture(%{is_admin: true})
+      other = App.DataFixtures.team_fixture()
+      assert open(conn, admin, other).assigns.current_team.id == other.id
+    end
+
+    test "pages outside a team use the first team the user manages", %{conn: conn, user: user} do
+      token = Accounts.generate_user_session_token(user)
+      conn = conn |> put_session(:user_token, token) |> UserAuth.assign_current_user([])
+      assert conn.assigns.current_team
     end
   end
 

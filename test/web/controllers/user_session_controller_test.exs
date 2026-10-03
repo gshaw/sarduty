@@ -2,113 +2,78 @@ defmodule Web.UserSessionControllerTest do
   use Web.ConnCase
 
   import App.AccountsFixtures
+  import App.DataFixtures
 
-  setup do
-    %{user: user_fixture()}
+  alias App.Accounts.UserToken
+
+  defp request_link(conn, email),
+    do: post(conn, ~p"/login/link", %{"user" => %{"email" => email}})
+
+  describe "POST /login/link" do
+    test "emails a manager a link, and says the same as for anyone", %{conn: conn} do
+      manager_fixture(team_fixture(), %{email: "pat@example.com"})
+
+      conn = request_link(conn, "pat@example.com")
+
+      assert redirected_to(conn) == ~p"/login"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If pat@example.com can use SAR Duty"
+      assert_received {:email, %{subject: "Log in to SAR Duty", text_body: body}}
+      assert body =~ "/login/"
+    end
+
+    test "sends nothing to an email that may not log in, with the same reply", %{conn: conn} do
+      conn = request_link(conn, "stranger@example.com")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If stranger@example.com can use"
+      refute_received {:email, _}
+    end
+
+    test "stops sending after 5 requests for one email", %{conn: conn} do
+      manager_fixture(team_fixture(), %{email: "busy@example.com"})
+
+      for _ <- 1..6, do: request_link(conn, "busy@example.com")
+
+      assert length(sent_emails()) == 5
+    end
   end
 
   describe "POST /login" do
-    test "logs the user in", %{conn: conn, user: user} do
-      conn =
-        post(conn, ~p"/login", %{
-          "user" => %{"email" => user.email, "password" => valid_user_password()}
-        })
+    test "logs in with a valid token, once", %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      {token, user_token} = UserToken.build_login_token(user)
+      App.Repo.insert!(user_token)
 
+      conn = post(conn, ~p"/login", %{"token" => token})
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/"
-
-      # Now do a logged in request and assert on the menu
-      conn = get(conn, ~p"/")
-      response = html_response(conn, 200)
-      # TODO: change to initials when avatar is updated
-      assert response =~ Integer.to_string(user.id)
-      assert response =~ ~p"/settings"
-      assert response =~ ~p"/logout"
-    end
-
-    test "logs the user in with remember me", %{conn: conn, user: user} do
-      conn =
-        post(conn, ~p"/login", %{
-          "user" => %{
-            "email" => user.email,
-            "password" => valid_user_password(),
-            "remember_me" => "true"
-          }
-        })
-
       assert conn.resp_cookies["_sarduty_remember_me"]
-      assert redirected_to(conn) == ~p"/"
+
+      conn = post(build_conn(), ~p"/login", %{"token" => token})
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "used or expired"
     end
 
-    test "logs the user in with return to", %{conn: conn, user: user} do
-      conn =
-        conn
-        |> init_test_session(user_return_to: "/foo/bar")
-        |> post(~p"/login", %{
-          "user" => %{
-            "email" => user.email,
-            "password" => valid_user_password()
-          }
-        })
+    test "refuses a bad token", %{conn: conn} do
+      conn = post(conn, ~p"/login", %{"token" => "nope"})
 
-      assert redirected_to(conn) == "/foo/bar"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Welcome back!"
-    end
-
-    test "login following registration", %{conn: conn, user: user} do
-      conn =
-        conn
-        |> post(~p"/login", %{
-          "_action" => "registered",
-          "user" => %{
-            "email" => user.email,
-            "password" => valid_user_password()
-          }
-        })
-
-      assert redirected_to(conn) == ~p"/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Account created successfully"
-    end
-
-    test "login following password update", %{conn: conn, user: user} do
-      conn =
-        conn
-        |> post(~p"/login", %{
-          "_action" => "password_updated",
-          "user" => %{
-            "email" => user.email,
-            "password" => valid_user_password()
-          }
-        })
-
-      assert redirected_to(conn) == ~p"/settings"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Password updated successfully"
-    end
-
-    test "redirects to login page with invalid credentials", %{conn: conn} do
-      conn =
-        post(conn, ~p"/login", %{
-          "user" => %{"email" => "invalid@email.com", "password" => "invalid_password"}
-        })
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid email or password"
+      refute get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/login"
     end
   end
 
   describe "DELETE /logout" do
-    test "logs the user out", %{conn: conn, user: user} do
-      conn = conn |> log_in_user(user) |> delete(~p"/logout")
-      assert redirected_to(conn) == ~p"/"
-      refute get_session(conn, :user_token)
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "You are now logged out"
-    end
+    test "logs the user out", %{conn: conn} do
+      conn = conn |> log_in_user(user_fixture()) |> delete(~p"/logout")
 
-    test "succeeds even if the user is not logged in", %{conn: conn} do
-      conn = delete(conn, ~p"/logout")
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "You are now logged out"
+    end
+  end
+
+  defp sent_emails(acc \\ []) do
+    receive do
+      {:email, email} -> sent_emails([email | acc])
+    after
+      0 -> acc
     end
   end
 end

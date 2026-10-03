@@ -5,26 +5,14 @@ defmodule Web.UserLoginLive do
     ~H"""
     <div>
       <h1 class="heading">Log in</h1>
-      <%!--
       <p>
-        Don't have an account?
-        <.a navigate="/signup">Sign up</.a>
+        Enter the email D4H has for you. If you're an Owner or Editor on your team in D4H,
+        we'll email you a link to log in. There's no password.
       </p>
-      --%>
-      <.form for={@form} id="login_form" action={~p"/login"} phx-update="ignore">
-        <.input field={@form[:email]} type="email" label="Email" required phx-debounce />
-        <.input field={@form[:password]} type="password" label="Password" required phx-debounce>
-          <.a navigate={~p"/login/reset"} class="link">Forgot your password?</.a>
-        </.input>
-
-        <p>
-          <.input type="checkbox" field={@form[:remember_me]} label="Remember Me">
-            Saves information on this browser so you don't have to log in again for 60 days.
-          </.input>
-        </p>
-
+      <.form for={@form} id="login_form" action={~p"/login/link"} phx-update="ignore">
+        <.input field={@form[:email]} type="email" label="Email" required autocomplete="email" />
         <.form_actions>
-          <.button variant={:success}>Log in</.button>
+          <.button variant={:success}>Email me a login link</.button>
         </.form_actions>
       </.form>
     </div>
@@ -32,15 +20,7 @@ defmodule Web.UserLoginLive do
   end
 
   def mount(_params, _session, socket) do
-    email = Phoenix.Flash.get(socket.assigns.flash, :email)
-    form = to_form(%{"email" => email}, as: "user")
-
-    socket =
-      assign(socket,
-        page_title: "Log in",
-        form: form
-      )
-
-    {:ok, socket, temporary_assigns: [form: form]}
+    form = to_form(%{"email" => nil}, as: "user")
+    {:ok, assign(socket, page_title: "Log in", form: form), temporary_assigns: [form: form]}
   end
 end
