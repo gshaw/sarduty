@@ -4,6 +4,7 @@ defmodule App.Model.MemberCard do
   alias App.Field.EncryptedString
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.Organization
   alias App.Model.PassRegistration
   alias App.Model.Team
   alias App.Repo
@@ -89,6 +90,16 @@ defmodule App.Model.MemberCard do
   end
 
   @doc """
+  Who issued the card, for the back of the pass. A team in an organization names it
+  instead of SAR Duty. Expects the team with `:organization` preloaded.
+  """
+  def issued_by(%Team{organization: %Organization{name: organization}} = team),
+    do: "#{team.name}, a member team of #{organization}. Status comes from the team's records."
+
+  def issued_by(%Team{organization: nil} = team),
+    do: "#{team.name} through SAR Duty. Status comes from the team's records."
+
+  @doc """
   The code in what a scanner read: a bare code, as on the first cards, or a link to a
   card's page on one of `hosts`: `/K7Q4-M2XA` on the verify site, or `/verify/K7Q4-M2XA`
   on the app's host, as cards linked before the verify site. `{:other_site, host}` for a
@@ -143,7 +154,7 @@ defmodule App.Model.MemberCard do
   def find_by_code(code) do
     MemberCard
     |> where([c], c.code == ^code)
-    |> preload(member: :team)
+    |> preload(member: [team: :organization])
     |> Repo.one()
   end
 
@@ -177,7 +188,7 @@ defmodule App.Model.MemberCard do
   def find_by_serial_number_and_token(serial_number, token) when is_binary(token) do
     MemberCard
     |> where([c], c.serial_number == ^serial_number)
-    |> preload(member: :team)
+    |> preload(member: [team: :organization])
     |> Repo.all()
     |> Enum.find(
       &(is_binary(&1.authentication_token) and
@@ -244,7 +255,7 @@ defmodule App.Model.MemberCard do
     MemberCard
     |> where([c], c.team_id == ^team.id and is_nil(c.revoked_at))
     |> where([c], not is_nil(c.google_pass_fingerprint))
-    |> preload(member: :team)
+    |> preload(member: [team: :organization])
     |> Repo.all()
   end
 
@@ -258,7 +269,7 @@ defmodule App.Model.MemberCard do
     MemberCard
     |> where([c], c.team_id == ^team.id and is_nil(c.revoked_at))
     |> where([c], c.serial_number in subquery(registered_serials))
-    |> preload(member: :team)
+    |> preload(member: [team: :organization])
     |> Repo.all()
   end
 end

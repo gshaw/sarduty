@@ -20,7 +20,7 @@ defmodule App.Operation.EmailMemberCard do
   end
 
   defp send_pass(card, now) do
-    card = Repo.preload(card, member: :team)
+    card = Repo.preload(card, member: [team: :organization])
 
     with {:ok, pkpass} <-
            optional(BuildApplePass.configured?(), &BuildApplePass.call/2, card, now),

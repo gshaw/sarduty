@@ -1,12 +1,13 @@
 defmodule App.Operation.LoadImage do
   @moduledoc """
   A member's photo or a team's logo as a PNG, shaped for a pass, a page, or a letter. Falls back to
-  the placeholder photo or SAR Duty's logo when D4H has none or the image won't decode,
-  so a bad image never fails a pass.
+  the placeholder photo, or the organization's logo and then SAR Duty's, when D4H has none
+  or the image won't decode, so a bad image never fails a pass.
   """
 
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Model.Organization
   alias App.Model.Team
 
   require Logger
@@ -40,10 +41,20 @@ defmodule App.Operation.LoadImage do
   tax credit letter, the dashboards, and the verify page; `:icon` for the Apple icon; `:logo` for the Apple
   logo, which Wallet fits in a wide strip.
   """
-  def logo(subdomain, shape) do
-    bytes = if path = Team.logo_file(subdomain), do: File.read!(path)
-    shape_or_default(bytes, &shape_logo(&1, shape), default_logo())
+  def logo(%Team{} = team, shape) do
+    bytes = if path = Team.logo_file(team.subdomain), do: File.read!(path)
+    shape_or_default(bytes, &shape_logo(&1, shape), fallback_logo(team))
   end
+
+  @doc "The organization's logo, shaped like a team's. Expects one that has a logo."
+  def organization_logo(%Organization{logo: logo}, shape) when is_binary(logo),
+    do: shape!(logo, &shape_logo(&1, shape))
+
+  # A team in an organization shows no SAR Duty, so its logo stands in.
+  defp fallback_logo(%Team{organization: %Organization{logo: logo}}) when is_binary(logo),
+    do: logo
+
+  defp fallback_logo(_team), do: default_logo()
 
   defp shape_or_default(nil, fun, default), do: shape!(default, fun)
 
