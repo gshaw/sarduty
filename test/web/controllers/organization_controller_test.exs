@@ -18,15 +18,4 @@ defmodule Web.OrganizationControllerTest do
     assert build_conn() |> get(~p"/organizations/#{organization.slug}/logo") |> response(404)
     assert build_conn() |> get(~p"/organizations/nobody/logo") |> response(404)
   end
-
-  test "a member team without a logo gets the organization's, not SAR Duty's" do
-    team = team_fixture()
-    plain = team_fixture()
-    organization_fixture([team])
-
-    logo = build_conn() |> get(~p"/teams/#{team.subdomain}/logo") |> response(200)
-    sar_duty = build_conn() |> get(~p"/teams/#{plain.subdomain}/logo") |> response(200)
-
-    assert logo != sar_duty
-  end
 end

@@ -14,8 +14,8 @@ defmodule Web.VerifyLive do
   # a plug, which would miss checks sent over the open connection. A bad link opened
   # directly counts twice, once for the HTTP render and once on connect.
   #
-  # An organization's start page, /o/<slug>, carries its brand until it has its own verify
-  # host. A card from one of its teams carries it too, whichever page it was checked from.
+  # An organization's scan page, /o/<slug>, carries its brand until it has its own verify
+  # host. A card's result keeps the team's brand, and names the organization in a line.
   def mount(_params, session, socket) do
     {:ok,
      assign(socket,
@@ -48,7 +48,7 @@ defmodule Web.VerifyLive do
     socket =
       socket
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
-      |> assign(result: result, organization: organization)
+      |> assign(result: result, organization: nil)
       |> assign(:start_path, if(organization, do: ~p"/o/#{organization.slug}", else: ~p"/"))
 
     {:noreply, socket}
@@ -268,7 +268,7 @@ defmodule Web.VerifyLive do
               {@team.name}
             </p>
             <p :if={@team.organization} id="result-organization" class="mb-0 text-sm text-zinc-600">
-              Member team of {@team.organization.name}
+              Member team of <.organization_name organization={@team.organization} />
             </p>
           </div>
         </div>
@@ -318,6 +318,16 @@ defmodule Web.VerifyLive do
         From the team's records, last checked {last_checked(@team)}.
       </p>
     </div>
+    """
+  end
+
+  attr :organization, :map, required: true
+
+  defp organization_name(%{organization: %{website: nil}} = assigns), do: ~H"{@organization.name}"
+
+  defp organization_name(assigns) do
+    ~H"""
+    <a href={@organization.website} class="underline hover:text-zinc-900">{@organization.name}</a>
     """
   end
 

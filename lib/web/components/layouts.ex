@@ -55,8 +55,8 @@ defmodule Web.Layouts do
 
   # The verify site: a navy bar with the host beside it, so it doesn't look like the app,
   # and the host is what a checker is told to look for. No app navigation, no login. The
-  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand:
-  # on its start page, or for a card from one of its teams.
+  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand
+  # on its scan page.
   def verify(assigns) do
     assigns = assign(assigns, :organization, assigns[:organization])
 
@@ -76,7 +76,7 @@ defmodule Web.Layouts do
             :if={@organization.logo}
             src={Web.OrganizationController.logo_url(@organization)}
             alt=""
-            class="size-8 shrink-0 rounded bg-white"
+            class="size-8 shrink-0"
           />
           {@organization.short_name}
         </a>
