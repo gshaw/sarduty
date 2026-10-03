@@ -10,7 +10,9 @@ defmodule App.Adapter.D4H.Member do
             phone: nil,
             address: nil,
             joined_at: nil,
-            left_at: nil
+            left_at: nil,
+            permission: nil,
+            status: nil
 
   def build(record) do
     %__MODULE__{
@@ -23,7 +25,9 @@ defmodule App.Adapter.D4H.Member do
       phone: record["mobile"]["phone"],
       address: record["deprecatedAddress"],
       joined_at: Parse.optional_datetime(record["startsAt"]),
-      left_at: Parse.optional_datetime(record["endsAt"])
+      left_at: Parse.optional_datetime(record["endsAt"]),
+      permission: record["permission"],
+      status: record["status"]
     }
   end
 end

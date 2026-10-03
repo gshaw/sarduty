@@ -66,6 +66,37 @@ defmodule Web.AdminDashboardLiveTest do
     assert has_element?(lv, "#team-#{no_key.id}-key", "No team key")
   end
 
+  test "lists each team's managers, and the logins that match none", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    admin = make_admin(admin)
+
+    %{user: kept, team: team} = user_with_team_fixture()
+    lost = App.AccountsFixtures.user_fixture()
+    {:ok, lost} = User.update(lost, %{team_id: team.id})
+    {:ok, team} = Team.update(team, %{d4h_access_key_member_id: 900})
+
+    manager = fn attrs ->
+      member_fixture(team, Map.merge(%{d4h_permission: 0, d4h_status: "OPERATIONAL"}, attrs))
+    end
+
+    owner = manager.(%{name: "Ada Owner", email: kept.email})
+    editor = manager.(%{name: "Eli Editor", email: "eli@other.org", d4h_permission: 1})
+    _sar_duty = manager.(%{name: "SAR Duty", d4h_member_id: 900})
+    _member = manager.(%{name: "Mo Member", d4h_permission: 2})
+    _retired = manager.(%{name: "Rae Retired", d4h_status: "RETIRED"})
+
+    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
+
+    assert has_element?(lv, "#managers-#{team.id} h3", "2 managers")
+    assert has_element?(lv, "#manager-#{owner.id}", "Has login")
+    assert has_element?(lv, "#manager-#{editor.id}", "Editor")
+    refute has_element?(lv, "#managers-#{team.id}", "SAR Duty")
+    refute has_element?(lv, "#managers-#{team.id}", "Mo Member")
+    refute has_element?(lv, "#managers-#{team.id}", "Rae Retired")
+    assert has_element?(lv, "#loses-#{lost.id}", lost.email)
+    refute has_element?(lv, "#loses-#{kept.id}")
+  end
+
   test "shows when each team and contact was last seen", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)

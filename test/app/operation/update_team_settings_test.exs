@@ -17,13 +17,19 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   end
 
   test "saves a key whose member is on this team, and when" do
-    whoami = %WhoAmI{d4h_team_ids: [3, 7], member_names: %{3 => "Sam", 7 => "SAR Duty"}}
+    whoami = %WhoAmI{
+      d4h_team_ids: [3, 7],
+      member_names: %{3 => "Sam", 7 => "SAR Duty"},
+      member_ids: %{3 => 30, 7 => 70}
+    }
+
     changeset = check({:ok, whoami})
 
     assert changeset.valid?
     assert get_change(changeset, :d4h_access_key) == "new-key"
     assert get_change(changeset, :d4h_access_key_saved_at) == @now
     assert get_change(changeset, :d4h_access_key_owner) == "SAR Duty"
+    assert get_change(changeset, :d4h_access_key_member_id) == 70
   end
 
   test "rejects a key for a different D4H team" do
