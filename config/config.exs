@@ -83,15 +83,17 @@ config :sarduty, Oban,
 # matches any param name that contains it: "token" covers the confirm and reset links.
 config :phoenix, :filter_parameters, ["password", "access_key", "token"]
 
-# Honeybadger reports errors, and Insights sends request, query, and job timings. It
+# Honeybadger reports errors, and Insights sends request and job timings. It
 # sends nothing in dev or test, or without HONEYBADGER_API_KEY. Its filter_keys match
 # whole key names, not substrings like the list above, so each variant is listed;
 # http_cookie drops the session cookie from the request headers. filter_args keeps
-# function arguments, which can be members, out of backtraces.
+# function arguments, which can be members, out of backtraces. Query events are off: the
+# nightly refresh writes row by row, and they filled the plan's daily Insights cap.
 config :honeybadger,
   app: :sarduty,
   environment_name: config_env(),
   insights_enabled: true,
+  insights_config: %{ecto: %{disabled: true}},
   use_logger: true,
   ecto_repos: [App.Repo],
   filter: Web.HoneybadgerFilter,
