@@ -1,17 +1,11 @@
-# Litestream expands ${VAR} from the environment; all are Fly secrets. Age encryption
-# only works on Litestream 0.3.x, so don't upgrade to 0.5 without replacing it (#111).
+# Litestream expands ${VAR} from the environment; all three are Fly secrets.
 dbs:
   - path: /mnt/sarduty/sarduty.db
-    replicas:
-      - type: s3
-        bucket: sarduty-db
-        path: database
-        endpoint: https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com
-        region: auto
-        access-key-id: ${R2_ACCESS_KEY_ID}
-        secret-access-key: ${R2_SECRET_ACCESS_KEY}
-        age:
-          identities:
-            - ${LITESTREAM_AGE_IDENTITY}
-          recipients:
-            - ${LITESTREAM_AGE_RECIPIENT}
+    replica:
+      type: s3
+      bucket: sarduty-db
+      path: database
+      endpoint: https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com
+      region: auto
+      access-key-id: ${R2_ACCESS_KEY_ID}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY}

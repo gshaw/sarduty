@@ -11,8 +11,8 @@ TEAM_LOGO_PATH = "/Users/gerry/Developer/sarduty.mount/team-logos"
 # Optional: send real mail from dev instead of /dev/mailbox. Set both.
 # CLOUDFLARE_ACCOUNT_ID = ""
 # CLOUDFLARE_EMAIL_TOKEN = ""
-# For backups/backup.sh: the public half of the Litestream age key (age1...).
-# LITESTREAM_AGE_RECIPIENT = ""
+# For backups/backup.sh: the public half of the backup age key (age1...).
+# BACKUP_AGE_RECIPIENT = ""
 # Optional: pinged after each successful team refresh.
 # HEALTHCHECKS_URL = ""
 # Optional: sign Apple Wallet passes for member ID cards. PEM text. Set all four.

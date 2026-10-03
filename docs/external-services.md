@@ -91,11 +91,14 @@ Team logos on the same volume are not replicated. See [deployment.md](deployment
 - `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` — Fly secrets, from an R2 API token
   with **Object Read & Write** on `sarduty-db` only. Without them Litestream logs
   errors and the app runs without a backup.
-- `LITESTREAM_AGE_RECIPIENT` and `LITESTREAM_AGE_IDENTITY` — Fly secrets, the public and
-  private halves of an [age](https://age-encryption.org) key. Litestream encrypts
-  everything it uploads, so the bucket holds no readable data. Restoring needs the
-  identity: keep a copy in the password manager, because without it the replica is
-  unreadable. Age only works on Litestream 0.3.x.
+
+Litestream 0.5 has no client-side encryption, so the replica holds readable data. R2
+encrypts it at rest; reading it takes the bucket token or the Cloudflare account.
+
+- `BACKUP_AGE_RECIPIENT` — in `.mise.local.toml`, the public half of an
+  [age](https://age-encryption.org) key. [backups/backup.sh](../backups/backup.sh)
+  encrypts each local snapshot to it. The private half is in the password manager, and
+  nothing decrypts a snapshot without it.
 
 ## Healthchecks
 

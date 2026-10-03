@@ -77,9 +77,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Litestream
-RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz \
-  && tar -xzf litestream-v0.3.13-linux-amd64.tar.gz -C /usr/local/bin \
-  && rm litestream-v0.3.13-linux-amd64.tar.gz
+RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.5.17/litestream-0.5.17-linux-x86_64.tar.gz \
+  && tar -xzf litestream-0.5.17-linux-x86_64.tar.gz -C /usr/local/bin litestream \
+  && rm litestream-0.5.17-linux-x86_64.tar.gz
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
