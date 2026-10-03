@@ -1,21 +1,6 @@
 defmodule Web.SettingsLive do
   use Web, :live_view_narrow_layout
 
-  alias App.Accounts
-
-  def mount(%{"token" => token}, _session, socket) do
-    socket =
-      case Accounts.update_user_email(socket.assigns.current_user, token) do
-        :ok ->
-          put_flash(socket, :info, "Email changed successfully.")
-
-        :error ->
-          put_flash(socket, :error, "Email change link is invalid or it has expired.")
-      end
-
-    {:ok, push_navigate(socket, to: ~p"/settings")}
-  end
-
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Settings")}
   end
@@ -24,23 +9,17 @@ defmodule Web.SettingsLive do
     ~H"""
     <div>
       <h1 class="heading mb-4">Settings</h1>
+      <p id="settings-email">
+        Logged in as {@current_user.email}. Your email and your teams come from D4H.
+      </p>
       <nav class="space-y-2" aria-label="Sidebar">
-        <.navlist_item path={~p"/settings/email"} icon="hero-at-symbol" title="Change email">
-          {@current_user.email}
-        </.navlist_item>
-        <.navlist_item path={~p"/settings/password"} icon="hero-lock-closed" title="Change password" />
-        <.navlist_item path={~p"/settings/d4h"} icon="hero-key" title="D4H access key">
-          <div :if={@current_user.team} class="font-mono">
-            {@current_user.team.subdomain}
-          </div>
-        </.navlist_item>
         <.navlist_item
           :if={@current_team}
           path={~p"/settings/team"}
           icon="hero-users"
           title="Team settings"
         >
-          {if @current_user.team, do: @current_user.team.name}
+          {@current_team.name}
         </.navlist_item>
         <.navlist_item
           :if={@current_team}

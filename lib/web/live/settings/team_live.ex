@@ -6,7 +6,7 @@ defmodule Web.Settings.TeamLive do
   alias App.Operation.UpdateTeamSettings
 
   def mount(_params, _session, socket) do
-    team = socket.assigns.current_user.team
+    team = socket.assigns.current_team
 
     socket =
       if team == nil do

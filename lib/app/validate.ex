@@ -13,8 +13,4 @@ defmodule App.Validate do
   #   as: :call
 
   # defdelegate user_name(changeset, field), to: Validate.UserName, as: :call
-
-  defdelegate d4h_access_key(changeset, access_key_field, api_host_field, d4h_team_field),
-    to: Validate.D4HAccessKey,
-    as: :call
 end
