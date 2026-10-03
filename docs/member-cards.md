@@ -4,7 +4,8 @@ A team manager issues a member an ID card from the member's **ID Card** tab. Any
 check a card by scanning its QR code with a phone's camera, which opens its page on the
 verify site, `verify.sarduty.com/K7Q4-M2XA`
 ([VerifyLive](../lib/web/live/verify_live.ex)), or by typing the code printed under it
-at `verify.sarduty.com`. Issue #63 has the design and the plan.
+at `verify.sarduty.com`. Issue #63 has the design and the plan. A team in a parent
+organization gets its branding: see [organizations.md](organizations.md).
 
 ## What must stay true
 

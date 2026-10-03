@@ -211,10 +211,4 @@ defmodule Web.AdminDashboardLiveTest do
     |> Ecto.Changeset.change(%{last_seen_at: at})
     |> App.Repo.update!()
   end
-
-  defp make_admin(user) do
-    user
-    |> Ecto.Changeset.change(%{is_admin: true})
-    |> App.Repo.update!()
-  end
 end

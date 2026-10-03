@@ -38,6 +38,8 @@ defmodule Web.Router do
 
     live_session :verify, session: {Web.VerifyLimit, :session, []} do
       live "/", VerifyLive
+      # An organization's own start page, until it has its own verify host.
+      live "/o/:slug", VerifyLive
       live "/:code", VerifyLive
     end
 
@@ -90,6 +92,7 @@ defmodule Web.Router do
     get "/verify/:code/photo", MemberCardController, :photo
     get "/verify/:code/banner", MemberCardController, :banner
     get "/teams/:subdomain/logo", TeamController, :logo
+    get "/organizations/:slug/logo", OrganizationController, :logo
 
     post "/login/link", UserSessionController, :request_link
     post "/login", UserSessionController, :create
@@ -126,6 +129,9 @@ defmodule Web.Router do
         {Web.UserAuth, :ensure_admin}
       ] do
       live "/admin", AdminDashboardLive
+      live "/admin/organizations", Admin.OrganizationCollectionLive
+      live "/admin/organizations/new", Admin.OrganizationLive, :new
+      live "/admin/organizations/:id", Admin.OrganizationLive, :edit
     end
 
     live_session :require_current_team_session,

@@ -2,6 +2,7 @@ defmodule App.Operation.BuildGooglePass do
   alias App.Adapter.GoogleWallet
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
+  alias App.Repo
 
   # SAR Duty's navy, the same on every team's card, as on the Apple pass.
   @background_color "#1c2d42"
@@ -29,10 +30,11 @@ defmodule App.Operation.BuildGooglePass do
 
   @doc """
   Sends the card's pass to Google and returns the "Add to Google Wallet" link. Expects
-  the card with `member: :team` preloaded.
+  the card with `member: [team: :organization]` preloaded.
   """
   def call(%MemberCard{} = card, now) do
     if configured?() do
+      card = Repo.preload(card, member: [team: :organization])
       config = config()
       qualifications = BuildCardQualifications.call(card.member.team, card.member, now)
       object = pass_object(card, qualifications, config, now)
@@ -103,7 +105,6 @@ defmodule App.Operation.BuildGooglePass do
 
   defp texts(%MemberCard{member: member} = card, qualifications, status) do
     team = member.team
-    issuer = "#{team.name} through SAR Duty. Status comes from the team's records."
 
     List.flatten([
       text("status", "Status", status_text(status)),
@@ -116,7 +117,7 @@ defmodule App.Operation.BuildGooglePass do
       ),
       qualification_texts(qualifications, team.timezone),
       text("checked", "Last updated", last_checked(team)),
-      text("issuer", "Issued by", issuer)
+      text("issuer", "Issued by", MemberCard.issued_by(team))
     ])
   end
 

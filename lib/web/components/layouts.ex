@@ -55,12 +55,31 @@ defmodule Web.Layouts do
 
   # The verify site: a navy bar with the host beside it, so it doesn't look like the app,
   # and the host is what a checker is told to look for. No app navigation, no login. The
-  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand.
+  # footer credits SAR Duty quietly, and stays when the bar carries an organization's brand:
+  # on its start page, or for a card from one of its teams.
   def verify(assigns) do
+    assigns = assign(assigns, :organization, assigns[:organization])
+
     ~H"""
     <header class="sticky top-0 z-30 bg-slate-800 text-white">
-      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between">
-        <a href="/" class="font-semibold">SAR <span class="text-amber-400">Duty</span></a>
+      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between gap-4">
+        <a :if={@organization == nil} href="/" class="font-semibold">
+          SAR <span class="text-amber-400">Duty</span>
+        </a>
+        <a
+          :if={@organization}
+          id="verify-organization"
+          href={~p"/o/#{@organization.slug}"}
+          class="flex items-center gap-2 font-semibold"
+        >
+          <img
+            :if={@organization.logo}
+            src={Web.OrganizationController.logo_url(@organization)}
+            alt=""
+            class="size-8 shrink-0 rounded bg-white"
+          />
+          {@organization.short_name}
+        </a>
         <span id="verify-host" class="text-sm text-slate-300">{Web.VerifyHost.host()}</span>
       </div>
     </header>
