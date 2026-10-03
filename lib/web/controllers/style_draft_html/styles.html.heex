@@ -188,6 +188,7 @@
   table.striped tbody tr:nth-child(even) td { background: var(--row-alt); }
   tbody tr:hover td { background: var(--row-hover); }
   td.num, th.num { text-align: right; white-space: nowrap; }
+  td.mono { white-space: nowrap; }
   td.shrink, th.shrink { width: 1px; white-space: nowrap; }
   td input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); display: block; }
   table.compact { font-size: 13px; line-height: 16px; }
@@ -226,5 +227,12 @@
 
   @media (max-width: 800px) {
     .modes, .grid-2 { grid-template-columns: 1fr; }
+    .container { padding: 0 16px; }
+    .site-bar .container { flex-wrap: wrap; height: auto; gap: 8px 16px; padding-block: 10px; }
+    .site-bar nav { order: 3; flex-basis: 100%; }
+    .theme-switch { margin-left: auto; }
+    .clause-head { flex-wrap: wrap; }
+    .clause-head input { max-width: none; flex: 1 1 100%; }
+    .clause-head .grow { flex: 1; }
   }
 </style>
