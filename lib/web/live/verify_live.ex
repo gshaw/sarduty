@@ -111,9 +111,6 @@ defmodule Web.VerifyLive do
       <h1 class="text-2xl font-semibold text-zinc-900">
         Check a search and rescue ID card
       </h1>
-      <p :if={@organization} id="start-organization" class="mt-1 mb-0 text-zinc-900">
-        For member teams of {@organization.name}.
-      </p>
       <p class="mt-2 mb-0 text-zinc-600">
         Scan the QR code on the member's card. You'll see whether they're an active member
         of their team, with their photo.
