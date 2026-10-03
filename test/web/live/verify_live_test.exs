@@ -208,15 +208,17 @@ defmodule Web.VerifyLiveTest do
   end
 
   describe "organizations" do
-    test "a card from a member team carries the organization's brand", %{conn: conn} do
+    test "a card from a member team keeps the team's brand, and links the organization",
+         %{conn: conn} do
       team = team_fixture()
-      organization = organization_fixture([team])
+      organization = organization_fixture([team], %{website: "https://bcsara.com"})
       card = member_card_fixture(member_fixture(team))
 
       {:ok, lv, _html} = live(conn, ~p"/#{MemberCard.format_code(card.code)}")
 
       assert has_element?(lv, "#result-organization", "Member team of #{organization.name}")
-      assert has_element?(lv, "#verify-organization", organization.short_name)
+      assert has_element?(lv, "#result-organization a[href='https://bcsara.com']")
+      refute has_element?(lv, "#verify-organization")
       assert has_element?(lv, "#check-another[href='/o/#{organization.slug}']")
     end
 

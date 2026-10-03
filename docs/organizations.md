@@ -7,14 +7,14 @@ themselves. Issue #87 has the design.
 
 ## What an organization changes today
 
-- **The verify site's bar** shows the organization's logo and short name, on its start
-  page `verify.sarduty.com/o/<slug>` and for a card from one of its teams. The host on the
-  right and the "Powered by" footer stay, since the host is what checkers are told to look
-  for.
-- **The result** says "Member team of BC Search and Rescue Association" under the team.
+- **Its scan page**, `verify.sarduty.com/o/<slug>`, shows the organization's logo and
+  short name in the bar. The host on the right and the "Powered by" footer stay, since the
+  host is what checkers are told to look for.
+- **A card's result keeps the team's brand.** It adds one line under the team, "Member
+  team of BC Search and Rescue Association", linked to the organization's website. Its
+  "Check another card" button goes back to the organization's scan page.
 - **The back of the pass** says who issued it: "North Shore Rescue, a member team of BC
   Search and Rescue Association", with no SAR Duty. The front doesn't change.
-- **A team without a D4H logo** gets the organization's logo, not SAR Duty's.
 
 Saving an organization queues a pass update for every team it had or now has, so phones
 pick up the new back of the pass in a minute or so.

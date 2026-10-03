@@ -3,12 +3,10 @@ defmodule Web.TeamController do
 
   alias App.Model.Team
   alias App.Operation.LoadImage
-  alias App.Repo
 
   # The team logo padded square, for the round spot on Google passes. ?shape=square
   # leaves off the margin the circle needs, for the dashboards and verify page. Public,
-  # because Google loads it from this URL. A team without a logo gets its organization's,
-  # or SAR Duty's.
+  # because Google loads it from this URL. A team without a logo gets SAR Duty's.
   def logo(conn, %{"subdomain" => subdomain} = params) do
     shape = if params["shape"] == "square", do: :square, else: :round
 
@@ -17,7 +15,7 @@ defmodule Web.TeamController do
         conn
         |> put_resp_header("cache-control", "public, max-age=3600")
         |> put_resp_content_type("image/png", nil)
-        |> send_resp(200, team |> Repo.preload(:organization) |> LoadImage.logo(shape))
+        |> send_resp(200, LoadImage.logo(team, shape))
 
       nil ->
         send_resp(conn, :not_found, "")

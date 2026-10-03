@@ -58,7 +58,7 @@ defmodule Web.Admin.OrganizationLive do
           <.live_file_input upload={@uploads.logo} />
         </div>
         <.hint>
-          PNG or JPEG, square or wide. Stands in for a member team's logo when D4H has none.
+          PNG or JPEG, square or wide. Shown on its scan page, never on a team's card.
         </.hint>
         <p :for={error <- upload_errors(@uploads.logo)} class="text-danger-1">
           {upload_error(error)}
