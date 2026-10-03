@@ -1,5 +1,4 @@
 defmodule App.Adapter.D4H do
-  alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Team
 
@@ -44,14 +43,6 @@ defmodule App.Adapter.D4H do
     regions()
     |> Enum.find(fn {_key, val} -> val == api_host end)
     |> elem(0)
-  end
-
-  def build_context_from_user(%User{} = user) do
-    build_context(
-      access_key: user.d4h_access_key,
-      api_host: user.team.d4h_api_host,
-      d4h_team_id: user.team.d4h_team_id
-    )
   end
 
   def build_context_from_team(%Team{} = team) do

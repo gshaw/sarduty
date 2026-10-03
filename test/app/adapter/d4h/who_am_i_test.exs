@@ -21,6 +21,22 @@ defmodule App.Adapter.D4H.WhoAmITest do
     assert whoami.d4h_team_ids == [10, 20]
   end
 
+  test "names the key's member on a given team" do
+    whoami =
+      WhoAmI.build(%{
+        "members" => [
+          member(1, %{"resourceType" => "Team", "id" => 10, "title" => "North"}),
+          %{
+            member(3, %{"resourceType" => "Team", "id" => 20, "title" => "South"})
+            | "name" => "SAR Duty"
+          }
+        ]
+      })
+
+    assert WhoAmI.member_name(whoami, 20) == "SAR Duty"
+    assert WhoAmI.member_name(whoami, 99) == nil
+  end
+
   test "is nil without members" do
     assert WhoAmI.build(%{"members" => []}) == nil
   end

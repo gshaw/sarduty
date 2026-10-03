@@ -31,15 +31,13 @@ defmodule Web.AdminDashboardLiveTest do
            )
   end
 
-  test "lists each team's users and marks the key the refresh borrows", %{conn: conn} do
+  test "lists each team's users", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
 
-    %{user: borrowed, team: team} = user_with_team_fixture()
-    second_key = App.AccountsFixtures.user_fixture()
-    {:ok, second_key} = User.update(second_key, %{team_id: team.id, d4h_access_key: "key-2"})
-    without_key = App.AccountsFixtures.user_fixture()
-    {:ok, without_key} = User.update(without_key, %{team_id: team.id})
+    %{user: first, team: team} = user_with_team_fixture()
+    second = App.AccountsFixtures.user_fixture()
+    {:ok, second} = User.update(second, %{team_id: team.id})
 
     {:ok, lv, _html} =
       conn
@@ -48,12 +46,24 @@ defmodule Web.AdminDashboardLiveTest do
 
     row = "#team-#{team.id}"
 
-    assert has_element?(lv, "#{row} li", without_key.email)
-    assert has_element?(lv, "#{row} li", borrowed.email)
-    assert render(element(lv, "#{row} li", borrowed.email)) =~ "Refresh key"
-    assert render(element(lv, "#{row} li", second_key.email)) =~ "D4H key"
+    assert has_element?(lv, "#{row} li", first.email)
+    assert has_element?(lv, "#{row} li", second.email)
     refute has_element?(lv, "#{row} a[href^='mailto:']")
-    assert has_element?(lv, "#key-notes", "Refresh key")
+  end
+
+  test "says whose D4H account each team key is", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    admin = make_admin(admin)
+
+    sar_duty = team_fixture(%{d4h_access_key: "k1", d4h_access_key_owner: "SAR Duty"})
+    person = team_fixture(%{d4h_access_key: "k2", d4h_access_key_owner: "Sam Rivers"})
+    no_key = team_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
+
+    assert has_element?(lv, "#team-#{sar_duty.id}-key", "Team key: SAR Duty")
+    assert has_element?(lv, "#team-#{person.id}-key", "Person's key: Sam Rivers")
+    assert has_element?(lv, "#team-#{no_key.id}-key", "No team key")
   end
 
   test "shows when each team and contact was last seen", %{conn: conn} do

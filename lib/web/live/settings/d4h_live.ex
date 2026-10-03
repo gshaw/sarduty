@@ -108,8 +108,15 @@ defmodule Web.Settings.D4HLive do
     {:noreply, push_navigate(socket, to: ~p"/settings/d4h")}
   end
 
+  # The personal key only proves who joined the team (#57 phase 3 removes it), so this
+  # is the one place it still reaches D4H.
   defp user_has_valid_key?(user) do
-    d4h = D4H.build_context_from_user(user)
+    d4h =
+      D4H.build_context(
+        access_key: user.d4h_access_key,
+        api_host: user.team.d4h_api_host,
+        d4h_team_id: user.team.d4h_team_id
+      )
 
     case D4H.fetch_team(d4h) do
       {:ok, d4h_team} -> matching_team?(d4h_team, user)

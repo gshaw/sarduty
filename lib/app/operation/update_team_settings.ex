@@ -2,6 +2,7 @@ defmodule App.Operation.UpdateTeamSettings do
   import Ecto.Changeset
 
   alias App.Adapter.D4H
+  alias App.Adapter.D4H.WhoAmI
   alias App.Model.Team
   alias App.Repo
 
@@ -32,6 +33,7 @@ defmodule App.Operation.UpdateTeamSettings do
       changeset
       |> put_change(:d4h_access_key, get_change(changeset, :new_d4h_access_key))
       |> put_change(:d4h_access_key_saved_at, now)
+      |> put_change(:d4h_access_key_owner, WhoAmI.member_name(whoami, team.d4h_team_id))
     else
       add_error(changeset, :new_d4h_access_key, "belongs to a different D4H team")
     end

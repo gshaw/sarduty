@@ -68,4 +68,28 @@ defmodule Web.Settings.TeamLiveTest do
     assert team.name == "Renamed SAR"
     assert team.d4h_access_key == @secret
   end
+
+  test "names the key's D4H member and asks for a SAR Duty account", %{conn: conn} do
+    %{user: user} =
+      user_with_team_fixture(%{
+        team: %{d4h_access_key: @secret, d4h_access_key_owner: "Sam Rivers"}
+      })
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/settings/team")
+
+    assert has_element?(lv, "#team-key-owner", "Sam Rivers")
+    assert has_element?(lv, "#team-key-advice", "SAR Duty")
+  end
+
+  test "drops the advice once the key is a SAR Duty account's", %{conn: conn} do
+    %{user: user} =
+      user_with_team_fixture(%{
+        team: %{d4h_access_key: @secret, d4h_access_key_owner: "SAR Duty"}
+      })
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/settings/team")
+
+    assert has_element?(lv, "#team-key-owner", "SAR Duty")
+    refute has_element?(lv, "#team-key-advice")
+  end
 end
