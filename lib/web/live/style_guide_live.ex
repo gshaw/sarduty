@@ -21,7 +21,7 @@ defmodule Web.StyleGuideLive do
   def render(assigns) do
     ~H"""
     <.style_guide_header current={:index} />
-    <.style_group title=".icon">
+    <.style_group title="Icons">
       <div>
         <.icon name="hero-user" />
         <.icon name="hero-user" />
@@ -29,7 +29,7 @@ defmodule Web.StyleGuideLive do
         <.icon name="hero-arrow-path" class="motion-safe:animate-spin" />
       </div>
     </.style_group>
-    <.style_group title=".colors">
+    <.style_group title="Colors">
       <div class="grid grid-cols-5">
         <.color_swatch bg="bg-base-0" fg="text-base-content" />
         <.color_swatch bg="bg-base-1" fg="text-base-content" />
@@ -60,14 +60,14 @@ defmodule Web.StyleGuideLive do
       </div>
     </.style_group>
 
-    <.style_group title=".a">
+    <.style_group title="Links">
       <div class="flex space-x-4">
         <.a navigate="/styles">Default Link</.a>
         <.a external={true} navigate="/styles">External Link</.a>
         <.a kind={:custom} navigate="/styles">Unstyled Link</.a>
       </div>
     </.style_group>
-    <.style_group title=".input">
+    <.style_group title="Inputs">
       <.input type="text" name="some_text_field" value="" label="A text field">
         With a hint.
       </.input>
@@ -100,7 +100,7 @@ defmodule Web.StyleGuideLive do
       />
     </.style_group>
 
-    <.style_group title=".table" class="md:w-1/3">
+    <.style_group title="Table" class="md:w-1/3">
       <.table
         id="attendance_records"
         rows={[
@@ -124,7 +124,7 @@ defmodule Web.StyleGuideLive do
       </.table>
     </.style_group>
 
-    <.style_group title=".button and .form_actions">
+    <.style_group title="Buttons">
       <.form_actions>
         <.button variant={:success}>Save</.button>
         <.button>Cancel</.button>
@@ -172,7 +172,7 @@ defmodule Web.StyleGuideLive do
         <.button navigate="/styles" size={:sm} variant={:primary}>Sign up for FREE</.button>
       </div>
     </.style_group>
-    <.style_group title=".badge">
+    <.style_group title="Badges">
       <div class="flex space-x-2">
         <.badge>Default</.badge>
         <.badge kind={:primary}>Primary</.badge>
@@ -189,7 +189,7 @@ defmodule Web.StyleGuideLive do
         <.badge kind={:event}>Event</.badge>
       </div>
     </.style_group>
-    <.style_group title=".typography">
+    <.style_group title="Typography">
       <h1 class="title-hero">This is a .title-hero</h1>
       <h1 class="title">This is a .title</h1>
       <p class="lead">This is .lead text inside a <code>p</code> tag.</p>

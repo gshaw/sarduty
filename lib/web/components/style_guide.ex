@@ -50,7 +50,7 @@ defmodule Web.Components.StyleGuide do
   def style_group(assigns) do
     ~H"""
     <section id={@id} class={["shadow p-4 space-y-4 mb-8 rounded", @class]}>
-      <h2 class="heading font-mono">{@title}</h2>
+      <h2 class="heading">{@title}</h2>
       {render_slot(@inner_block)}
     </section>
     """
