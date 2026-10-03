@@ -62,7 +62,7 @@ The rules that are easy to break:
   is the fullest example.
 - **New table or column** → `mix ecto.gen.migration name`, then a schema in
   `lib/app/model/` with `use App, :model`. Use `App.Field.TrimmedString` for user-entered
-  text, `App.Field.EncryptedString` for personal data, and the `App.Validate` helpers in
+  text, `App.Field.EncryptedString` for credentials, and the `App.Validate` helpers in
   the changeset. Add a fixture to `test/support/fixtures/app_fixtures.ex` when a test
   needs the row.
 - **New D4H data** → a struct in `lib/app/adapter/d4h/` with `build/1`, a fetch function

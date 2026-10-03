@@ -136,10 +136,10 @@ no route until #28 brings it back as an opt-in team feature: per-team tokens in 
 | Variable          | Purpose                                                          |
 | ----------------- | ---------------------------------------------------------------- |
 | `SECRET_KEY_BASE` | Phoenix endpoint secret. Production only.                        |
-| `CLOAK_KEY`       | Base64 AES-GCM key for every `EncryptedString`. Production only. |
+| `CLOAK_KEY`       | Base64 AES-GCM key for credentials. Production only.             |
 | `TEAM_LOGO_PATH`  | Directory for team logos. Read when a logo is used, not at boot. |
 | `DATABASE_PATH`   | SQLite file. Set in `fly.toml`.                                  |
 | `PHX_HOST`        | Public host. Set in `fly.toml`.                                  |
 
-Losing `CLOAK_KEY` makes every access key, member contact detail, and letter unreadable.
+Losing `CLOAK_KEY` makes every D4H access key and Apple pass token unreadable.
 Dev and test use a key committed in `config/config.exs`.

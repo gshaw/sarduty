@@ -3,7 +3,6 @@ defmodule App.Model.TaxCreditLetter do
 
   import Ecto.Query
 
-  alias App.Field.EncryptedString
   alias App.Model.Member
   alias App.Model.TaxCreditLetter
   alias App.Repo
@@ -12,7 +11,7 @@ defmodule App.Model.TaxCreditLetter do
     belongs_to :member, Member
     field :ref_id, :string
     field :year, :integer
-    field :letter_content, EncryptedString, redact: true
+    field :letter_content, :string, redact: true
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 

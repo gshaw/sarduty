@@ -153,8 +153,10 @@ fi
 - **Scope every team query, including joins and deletes.** Filter the member's or
   qualification's `team_id`, not just the row you started from, and look a record up
   through the current team before changing it — never by a bare id from the client.
-- **Member contact details are encrypted** with `App.Field.EncryptedString`; so are D4H
-  access keys and letter text. Keep it that way for any new personal data.
+- **Cloak is for credentials**: D4H access keys and pass tokens use
+  `App.Field.EncryptedString`. Personal data such as member contact details and letter
+  text is plain, protected by encrypting every database copy with age (#111). Give
+  personal fields `redact: true`.
 - **Times are stored in UTC** and shown in the team's zone with `Service.Format`
   (`Service.Format.date_long(datetime, team.timezone)`).
 - Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
