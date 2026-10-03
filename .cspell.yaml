@@ -13,6 +13,8 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - onsubmit # an HTML attribute
+  - Squamish # the town of the made-up team in style guide sample data
   - aria-describedby
   - aria-labelledby
   - bcsara # BC Search and Rescue Association, the first parent organization

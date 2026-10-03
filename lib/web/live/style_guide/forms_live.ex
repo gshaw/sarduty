@@ -3,7 +3,7 @@ defmodule Web.StyleGuide.FormsLive do
 
   import Web.Components.StyleGuide
 
-  # cspell:ignore Dhillon Squamish GSAR
+  alias Web.StyleGuide.SampleData
 
   def mount(_params, _session, socket) do
     team = %{
@@ -33,7 +33,7 @@ defmodule Web.StyleGuide.FormsLive do
         Define which qualifications members must hold to belong to this group.
       </p>
 
-      <div :for={clause <- clauses()} class="mb-p border rounded px-p py-p05">
+      <div :for={clause <- SampleData.clauses()} class="mb-p border rounded px-p py-p05">
         <div class="flex justify-between items-center mb-p05">
           <form class="flex items-center gap-2">
             <input
@@ -98,19 +98,19 @@ defmodule Web.StyleGuide.FormsLive do
           id="would-remove"
           title="Would be removed"
           title_class="text-danger-1"
-          rows={preview().to_remove}
+          rows={SampleData.preview().to_remove}
         />
         <.change_list
           id="would-add"
           title="Would be added"
           title_class="text-success-1"
-          rows={preview().to_add}
+          rows={SampleData.preview().to_add}
         />
         <.change_list
           id="expiring"
           title="Expiring within 30 days"
           title_class="text-base-content"
-          rows={preview().expiring}
+          rows={SampleData.preview().expiring}
         />
         <.button variant={:primary} navigate={~p"/styles/forms"}>Review changes</.button>
       </div>
@@ -204,23 +204,5 @@ defmodule Web.StyleGuide.FormsLive do
       </.table>
     </div>
     """
-  end
-
-  defp clauses do
-    [
-      %{name: "First Aid", qualifications: ["OFA Level 1", "Wilderness First Aid", "EMR"]},
-      %{name: "Ground Search", qualifications: ["GSAR Member", "Missing: Team Leader 2019"]},
-      %{name: "", qualifications: []}
-    ]
-  end
-
-  defp preview do
-    %{
-      to_remove: [%{name: "Devon Okafor", reason: "No First Aid qualification"}],
-      to_add: [%{name: "Avery Chen", reason: "Holds OFA Level 1 and GSAR Member"}],
-      expiring: [
-        %{name: "Casey Dhillon", reason: "Wilderness First Aid expires Nov 12", days: 12}
-      ]
-    }
   end
 end

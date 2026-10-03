@@ -86,6 +86,10 @@ defmodule Web.Router do
       live "/signup", TeamSignupLive
     end
 
+    get "/styles/draft", StyleDraftController, :index
+    get "/styles/draft/tables", StyleDraftController, :tables
+    get "/styles/draft/forms", StyleDraftController, :forms
+
     # The check moved to the verify site. Cards linked here before it, in capitals.
     get "/verify", VerifyController, :to_verify
     get "/verify/:code", VerifyController, :to_verify

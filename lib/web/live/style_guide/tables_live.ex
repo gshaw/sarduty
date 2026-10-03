@@ -3,7 +3,7 @@ defmodule Web.StyleGuide.TablesLive do
 
   import Web.Components.StyleGuide
 
-  # cspell:ignore Dhillon Tremblay
+  alias Web.StyleGuide.SampleData
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :page_title, "Style Guide: Tables")}
@@ -50,12 +50,12 @@ defmodule Web.StyleGuide.TablesLive do
         <span class="table-summary-links">
           <.a navigate={@path_fn.(:reset)}>Reset</.a>
         </span>
-        <span class="table-summary-count">{length(letters())} members</span>
+        <span class="table-summary-count">{length(SampleData.letters())} members</span>
       </div>
 
       <.table
         id="letters"
-        rows={letters()}
+        rows={SampleData.letters()}
         sort={@sort}
         path_fn={@path_fn}
         class="w-full table-striped"
@@ -109,7 +109,7 @@ defmodule Web.StyleGuide.TablesLive do
     <.style_group id="recommendations" title="Attendance recommendations">
       <p>A checkbox per row, a status column, and actions under the table.</p>
       <form>
-        <.table id="recommendation_rows" rows={recommendations()} class="table-striped">
+        <.table id="recommendation_rows" rows={SampleData.recommendations()} class="table-striped">
           <:col :let={r} label="">
             <.input :if={r.op != :not_invited} type="checkbox" name={"r#{r.phone}"} checked />
           </:col>
@@ -134,64 +134,5 @@ defmodule Web.StyleGuide.TablesLive do
       </form>
     </.style_group>
     """
-  end
-
-  defp letters do
-    [
-      %{
-        id: 101,
-        name: "Avery Chen",
-        email: "avery@example.com",
-        primary: "212h 30m",
-        secondary: "18h 00m",
-        total: "230h 30m",
-        letter: "TCL-2025-014"
-      },
-      %{
-        id: 117,
-        name: "Blake Morrison",
-        email: "blake@example.com",
-        primary: "198h 15m",
-        secondary: "4h 45m",
-        total: "203h 00m",
-        letter: nil
-      },
-      %{
-        id: 123,
-        name: "Casey Dhillon",
-        email: "casey@example.com",
-        primary: "156h 00m",
-        secondary: "62h 30m",
-        total: "218h 30m",
-        letter: "TCL-2025-015"
-      },
-      %{
-        id: 131,
-        name: "Devon Okafor",
-        email: "devon@example.com",
-        primary: "88h 45m",
-        secondary: "12h 15m",
-        total: "101h 00m",
-        letter: nil
-      },
-      %{
-        id: 152,
-        name: "Finley Tremblay",
-        email: "finley@example.com",
-        primary: "41h 00m",
-        secondary: "9h 30m",
-        total: "50h 30m",
-        letter: nil
-      }
-    ]
-  end
-
-  defp recommendations do
-    [
-      %{op: :add, name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"},
-      %{op: :add, name: "Casey Dhillon", email: "casey@example.com", phone: "604-555-0123"},
-      %{op: :remove, name: "Devon Okafor", email: "devon@example.com", phone: "604-555-0131"},
-      %{op: :not_invited, name: "Jordan Park", email: "jordan@example.com", phone: "604-555-0177"}
-    ]
   end
 end

@@ -1,0 +1,127 @@
+<.shell title="Tables" current={:tables}>
+  <h1>Tables</h1>
+  <p class="lead">
+    32px rows by default, 24px when compact. Numbers right-aligned, headers stick on scroll.
+  </p>
+
+  <h2>Tax credit letters</h2>
+  <form class="filter-bar" onsubmit="return false">
+    <div class="field">
+      <label for="year">Year</label>
+      <select id="year" name="year"><option>2025</option><option>2024</option></select>
+    </div>
+    <div class="field">
+      <label for="q">Search</label>
+      <input id="q" type="search" name="q" />
+    </div>
+    <div class="field">
+      <label for="hours">Hours</label>
+      <select id="hours" name="hours">
+        <option>200 hours or more</option>
+        <option>Everyone</option>
+      </select>
+    </div>
+  </form>
+  <div class="table-summary">
+    <a href="#">Reset filters</a>
+    <span>{length(letters())} members</span>
+  </div>
+  <div class="table-wrap">
+    <table class="striped">
+      <thead>
+        <tr class="group">
+          <th colspan="3"></th>
+          <th colspan="3" class="span">SARVAC hours</th>
+          <th></th>
+        </tr>
+        <tr>
+          <th class="shrink"><a href="#">ID<span class="sort">↑</span></a></th>
+          <th><a href="#">Name<span class="sort">↑</span></a></th>
+          <th>Email</th>
+          <th class="num"><a href="#">Primary<span class="sort">↓</span></a></th>
+          <th class="num"><a href="#">Secondary<span class="sort">↓</span></a></th>
+          <th class="num sorted"><a href="#">Total<span class="sort">↓</span></a></th>
+          <th class="shrink">Letter</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={r <- letters()}>
+          <td>{r.id}</td>
+          <td><a href="#">{r.name}</a></td>
+          <td>{r.email}</td>
+          <td class="num">{r.primary}</td>
+          <td class="num">{r.secondary}</td>
+          <td class="num"><strong>{r.total}</strong></td>
+          <td class="shrink">
+            <a :if={r.letter} href="#" class="mono">{r.letter}</a>
+            <button :if={!r.letter} class="btn sm success">Create letter</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Attendance recommendations</h2>
+  <p>Check the changes to make, then perform them.</p>
+  <form onsubmit="return false">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="shrink"><input type="checkbox" checked aria-label="All" /></th>
+            <th class="shrink">Change</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={r <- recommendations()}>
+            <td>
+              <input :if={r.op != :not_invited} type="checkbox" checked aria-label={r.name} />
+            </td>
+            <td>
+              <span :if={r.op == :add} class="op-add">Add</span>
+              <span :if={r.op == :remove} class="op-remove">Remove</span>
+              <span :if={r.op == :not_invited} class="tag danger">Not invited</span>
+            </td>
+            <td>{r.name}</td>
+            <td>{r.email}</td>
+            <td>{r.phone}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn success">Perform 3 changes</button>
+      <button type="button" class="btn secondary">Reset</button>
+    </div>
+  </form>
+
+  <h2>Activities, compact</h2>
+  <p>The compact size, for long lists people scan rather than read.</p>
+  <div class="table-wrap">
+    <table class="compact striped">
+      <thead>
+        <tr>
+          <th class="shrink sorted"><a href="#">Date<span class="sort">↓</span></a></th>
+          <th class="shrink">Kind</th>
+          <th>Title</th>
+          <th class="num">Attended</th>
+          <th class="num">Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{date, kind, title, count, hours} <- activities()}>
+          <td class="mono">{date}</td>
+          <td>
+            <span class={["tag", kind]}>{kind |> Atom.to_string() |> String.capitalize()}</span>
+          </td>
+          <td><a href="#">{title}</a></td>
+          <td class="num">{count}</td>
+          <td class="num">{hours}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</.shell>

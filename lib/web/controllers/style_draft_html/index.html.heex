@@ -1,0 +1,119 @@
+<.shell title="Overview" current={:index}>
+  <h1>Style guide (draft)</h1>
+  <p class="lead">
+    GOV.UK's patterns and plain look, Carbon's dense tables, in light and dark. Standalone: none
+    of this reaches the app. <a href="/styles">The current style guide</a>.
+  </p>
+
+  <h2>Palette</h2>
+  <p>
+    Every color is a token with a light and a dark value. Components use tokens only, so dark
+    mode is a swap, not a second set of styles. The switch in the top bar picks the mode for
+    the page; both are shown here side by side.
+  </p>
+  <div class="modes">
+    <div
+      :for={{mode, label} <- [{"theme-light", "Light"}, {"theme-dark", "Dark"}]}
+      class={["mode", mode]}
+    >
+      <h3>{label}</h3>
+      <div :for={{group, tokens} <- palette()}>
+        <h4>{group}</h4>
+        <div class="swatches">
+          <div :for={{name, light, dark, use} <- tokens} class="swatch" title={use}>
+            <div class="chipcolor" style={"background: var(--#{name})"}></div>
+            <strong>{name}</strong>
+            <span>{if mode == "theme-light", do: light, else: dark}</span>
+          </div>
+        </div>
+      </div>
+      <div class="sample-card">
+        <p>
+          Body text with <a href="#">a link</a> and <span class="muted">muted text</span>.
+        </p>
+        <div class="actions">
+          <button class="btn">Primary</button>
+          <button class="btn secondary">Secondary</button>
+          <span class="tag success">Active</span>
+          <span class="tag incident">Incident</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Typography</h2>
+  <p>
+    IBM Plex Sans, with tabular figures everywhere so numbers line up. 16px body, 14px in
+    tables.
+  </p>
+  <h1>Heading 1, 32px</h1>
+  <h2 style="margin-top: 0">Heading 2, 24px</h2>
+  <h3 style="margin-top: 0">Heading 3, 19px</h3>
+  <p class="lead">Lead text introduces a page in one or two sentences.</p>
+  <p>
+    Body text. Search and rescue team managers read this between calls, so it stays short and
+    plain. Hours like <strong>212h 30m</strong> and <strong>18h 05m</strong> line up because
+    figures are tabular.
+  </p>
+  <p class="muted small">Small muted text, for captions and table notes.</p>
+
+  <h2>Buttons</h2>
+  <p>Flat, with a hard bottom edge. One primary action per page.</p>
+  <div class="actions">
+    <button class="btn">Save and continue</button>
+    <button class="btn secondary">Cancel</button>
+    <button class="btn success">Create letter</button>
+    <button class="btn danger">Delete clause</button>
+    <button class="btn ghost">More information</button>
+    <button class="btn" disabled>Disabled</button>
+  </div>
+  <div class="actions">
+    <button class="btn sm">Small</button>
+    <button class="btn sm secondary">Small secondary</button>
+    <button class="btn sm success">Create letter</button>
+    <button class="btn sm danger">Remove</button>
+  </div>
+
+  <h2>Tags</h2>
+  <div class="actions">
+    <span class="tag">Default</span>
+    <span class="tag primary">Primary</span>
+    <span class="tag success">Qualified</span>
+    <span class="tag warning">Expires in 12 days</span>
+    <span class="tag danger">Not invited</span>
+    <span class="tag info">Synced</span>
+  </div>
+  <div class="actions">
+    <span class="tag incident">Incident</span>
+    <span class="tag exercise">Exercise</span>
+    <span class="tag event">Event</span>
+  </div>
+
+  <h2>Messages</h2>
+  <div class="banner success" role="status">
+    <div class="banner-title">Success</div>
+    <div class="banner-body">
+      <p><strong>4 attendance changes were saved to D4H.</strong></p>
+    </div>
+  </div>
+  <div class="banner" role="region" aria-label="Important">
+    <div class="banner-title">Important</div>
+    <div class="banner-body">
+      <p>D4H refreshes every night at 2am. Changes made in D4H today show up tomorrow.</p>
+    </div>
+  </div>
+  <div class="warning-text">
+    <span class="icon" aria-hidden="true">!</span>
+    <span>Attendance can't be changed once the activity is published in D4H.</span>
+  </div>
+  <div class="inset">
+    Members are matched by name, email, or phone. You review every change before it's made.
+  </div>
+
+  <h2>Focus</h2>
+  <p>
+    Press Tab on this page. Everything you can reach gets the GOV.UK yellow focus, the same in
+    both modes: <a href="#">a link</a>, <button class="btn sm">a button</button>, and inputs on
+    the forms page.
+  </p>
+</.shell>
