@@ -1,9 +1,8 @@
 defmodule App.Repo.Migrations.DecryptMemberContactDetails do
   use Ecto.Migration
 
-  # Cloak is for credentials only (#113): every database copy is encrypted whole
-  # with age (#111). The columns are already TEXT, so values are rewritten in
-  # place. Migrations run at boot before the supervision tree, so start the Vault
+  # Cloak is for credentials only (#113). The columns are already TEXT, so values
+  # are rewritten in place. Migrations run at boot before the supervision tree, so start the Vault
   # here. members.coordinate is dropped: nothing has written it since 2023.
   @columns ~w(email phone address)
 
