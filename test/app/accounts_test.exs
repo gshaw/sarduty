@@ -8,6 +8,7 @@ defmodule App.AccountsTest do
   alias App.Accounts.User
   alias App.Accounts.UserToken
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
 
   @now ~U[2026-10-04 12:00:00Z]
 
@@ -45,6 +46,18 @@ defmodule App.AccountsTest do
       manager_fixture(team, %{email: "kim@example.com", d4h_member_id: 901})
 
       assert Accounts.may_log_in?("kim@example.com", @now)
+    end
+
+    test "an email an admin let into a team may, and reaches only that team" do
+      team = team_fixture()
+      TeamLoginGrant.grant!(team.subdomain, " Shared@Example.com ", "role address")
+
+      assert Accounts.may_log_in?("shared@example.com", @now)
+      assert [%{id: id}] = Team.get_managed_by("SHARED@example.com", @now)
+      assert id == team.id
+
+      TeamLoginGrant.revoke!(team.subdomain, "shared@example.com")
+      refute Accounts.may_log_in?("shared@example.com", @now)
     end
 
     test "an admin may without managing a team" do

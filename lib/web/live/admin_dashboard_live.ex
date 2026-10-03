@@ -4,6 +4,7 @@ defmodule Web.AdminDashboardLive do
   alias App.Accounts.User
   alias App.Model.Member
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.ScheduleTeamRefreshesWorker
 
@@ -12,19 +13,28 @@ defmodule Web.AdminDashboardLive do
 
     teams = Team.get_all()
     now = DateTime.utc_now()
-    managers = Map.new(teams, &{&1.id, Member.get_managers(&1, now)})
-    users = App.Repo.all(User)
 
     socket =
       socket
-      |> assign(page_title: "Admin")
-      |> assign(teams: teams)
-      |> assign(now: now)
-      |> assign(managers: managers)
-      |> assign(login_emails: MapSet.new(users, &String.downcase(&1.email)))
-      |> assign(logins: Map.new(teams, &{&1.id, logins(users, managers[&1.id])}))
+      |> assign(page_title: "Admin", teams: teams, now: now)
+      |> assign_access(teams, now)
 
     {:ok, socket}
+  end
+
+  # Who reaches each team: its D4H managers, emails an admin let in, and which have logins.
+  defp assign_access(socket, teams, now) do
+    managers = Map.new(teams, &{&1.id, Member.get_managers(&1, now)})
+    users = App.Repo.all(User)
+    grants = Enum.group_by(TeamLoginGrant.get_all(), & &1.team_id)
+    logins = Map.new(teams, &{&1.id, logins(users, managers[&1.id], grants[&1.id] || [])})
+
+    assign(socket,
+      managers: managers,
+      grants: grants,
+      logins: logins,
+      login_emails: MapSet.new(users, &String.downcase(&1.email))
+    )
   end
 
   def handle_info({:team_refreshed, updated_team}, socket) do
@@ -117,8 +127,8 @@ defmodule Web.AdminDashboardLive do
       <p class="max-w-3xl text-sm text-secondary-1">
         Everyone D4H makes an Owner or Editor who isn't retired and hasn't left, from the last
         refresh, leaving out the team key's own account. Under #57 these people get access,
-        and only these. Flagged: an email outside the team's usual domain, and anyone not
-        operational.
+        and only these, plus any email an admin let in. Flagged: an email outside the team's
+        usual domain, and anyone not operational.
       </p>
       <div :for={team <- @teams} id={"managers-#{team.id}"} class="mb-p2">
         <h3 class="font-bold">
@@ -141,6 +151,17 @@ defmodule Web.AdminDashboardLive do
               Other domain
             </.badge>
             <.badge :if={member.d4h_status != "OPERATIONAL"}>Not operational</.badge>
+          </li>
+        </ul>
+        <ul :if={@grants[team.id]} class="text-sm">
+          <li
+            :for={grant <- @grants[team.id]}
+            id={"grant-#{grant.id}"}
+            class="flex flex-wrap items-baseline gap-2"
+          >
+            <span>{grant.email}</span>
+            <.badge kind={:warning}>Let in by admin</.badge>
+            <span :if={grant.reason} class="text-secondary-1">{grant.reason}</span>
           </li>
         </ul>
       </div>
@@ -202,9 +223,13 @@ defmodule Web.AdminDashboardLive do
     "#{ok_count} of #{length(teams)} teams refreshed OK."
   end
 
-  # The team's managers who have logged in, by email.
-  defp logins(users, managers) do
-    emails = MapSet.new(managers, &String.downcase(&1.email || ""))
+  # Users who can reach the team, by email: its managers who have logged in, and emails
+  # an admin let in.
+  defp logins(users, managers, grants) do
+    emails =
+      managers
+      |> MapSet.new(&String.downcase(&1.email || ""))
+      |> MapSet.union(MapSet.new(grants, & &1.email))
 
     users
     |> Enum.filter(&MapSet.member?(emails, String.downcase(&1.email)))
