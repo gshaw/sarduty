@@ -15,7 +15,7 @@ defmodule Web.VerifyLive do
   # directly counts twice, once for the HTTP render and once on connect.
   #
   # An organization's scan page, /o/<slug>, carries its brand until it has its own verify
-  # host. A card's result keeps the team's brand, and names the organization in a line.
+  # host. A card's result keeps the team's brand, with the organization's name under it.
   def mount(_params, session, socket) do
     {:ok,
      assign(socket,
@@ -265,7 +265,7 @@ defmodule Web.VerifyLive do
               {@team.name}
             </p>
             <p :if={@team.organization} id="result-organization" class="mb-0 text-sm text-zinc-600">
-              Member team of <.organization_name organization={@team.organization} />
+              {@team.organization.name}
             </p>
           </div>
         </div>
@@ -315,16 +315,6 @@ defmodule Web.VerifyLive do
         From the team's records, last checked {last_checked(@team)}.
       </p>
     </div>
-    """
-  end
-
-  attr :organization, :map, required: true
-
-  defp organization_name(%{organization: %{website: nil}} = assigns), do: ~H"{@organization.name}"
-
-  defp organization_name(assigns) do
-    ~H"""
-    <a href={@organization.website} class="underline hover:text-zinc-900">{@organization.name}</a>
     """
   end
 
