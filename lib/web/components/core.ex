@@ -186,7 +186,7 @@ defmodule Web.Components.Core do
 
     # mt-0.5 is so checkbox can embed in a table nicely
     ~H"""
-    <div class="flex gap-3 items-start mb-p">
+    <div class={["flex gap-3 items-start", @label && "mb-p"]}>
       <input type="hidden" name={@name} value="false" />
       <input
         type="checkbox"

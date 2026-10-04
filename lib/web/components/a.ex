@@ -22,13 +22,11 @@ defmodule Web.Components.A do
       |> assign(:link_target, determine_target(assigns))
 
     ~H"""
-    <.link class={@link_class} target={@link_target} {@rest}>
-      {render_slot(@inner_block)}<.icon
-        :if={@external}
-        name="hero-arrow-top-right-on-square-micro"
-        class="size-4 ml-0.5 align-[-3px]"
-      />
-    </.link>
+    <.link class={@link_class} target={@link_target} {@rest}>{render_slot(@inner_block)}<.icon
+      :if={@external}
+      name="hero-arrow-top-right-on-square-micro"
+      class="size-4 ml-0.5 align-[-3px]"
+    /></.link>
     """
   end
 
