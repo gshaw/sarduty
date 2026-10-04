@@ -99,7 +99,7 @@ defmodule Web.TeamSignupLiveTest do
     stub_d4h(2)
 
     lv = sign_up(conn)
-    assert has_element?(lv, "#signup_form", "must belong to an Owner or Editor")
+    assert has_element?(lv, "#signup_form", "Use the email of an Owner or Editor")
 
     refute Team.get_by(d4h_team_id: @d4h_team_id)
   end

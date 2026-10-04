@@ -15,7 +15,9 @@ defmodule App.ViewModel.TeamSignupViewModel do
     %__MODULE__{}
     |> cast(params, [:email, :api_host, :access_key])
     |> validate_required([:email, :api_host, :access_key])
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+      message: "Enter an email with an @ sign and no spaces."
+    )
     |> validate_length(:email, max: 160)
     |> validate_inclusion(:api_host, Map.values(D4H.regions()))
     |> validate_length(:access_key, min: 5, max: 2000)

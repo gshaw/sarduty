@@ -172,7 +172,7 @@ defmodule Web.UserAuth do
     else
       socket =
         socket
-        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+        |> Phoenix.LiveView.put_flash(:error, "Log in to see this page.")
         |> Phoenix.LiveView.redirect(to: ~p"/login")
 
       {:halt, socket}
@@ -185,7 +185,7 @@ defmodule Web.UserAuth do
     else
       socket =
         socket
-        |> Phoenix.LiveView.put_flash(:error, "You must be an admin to access this page.")
+        |> Phoenix.LiveView.put_flash(:error, "Only SAR Duty admins can see this page.")
         |> Phoenix.LiveView.redirect(to: ~p"/")
 
       {:halt, socket}
@@ -245,7 +245,7 @@ defmodule Web.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
+      |> put_flash(:error, "Log in to see this page.")
       |> maybe_store_return_to()
       |> redirect(to: ~p"/login")
       |> halt()

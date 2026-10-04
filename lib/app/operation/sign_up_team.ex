@@ -65,10 +65,11 @@ defmodule App.Operation.SignUpTeam do
           "#{d4h_team.name} is already on SAR Duty. Its Owners and Editors can log in."}}
 
       signer == nil ->
-        {:error, {:email, "isn't the email of any member of #{d4h_team.name} in D4H"}}
+        {:error,
+         {:email, "Enter the email D4H has for you. No member of #{d4h_team.name} uses this one."}}
 
       not manager?(signer, now) ->
-        {:error, {:email, "must belong to an Owner or Editor of #{d4h_team.name} in D4H"}}
+        {:error, {:email, "Use the email of an Owner or Editor of #{d4h_team.name} in D4H."}}
 
       true ->
         {:ok, signer}
@@ -82,17 +83,21 @@ defmodule App.Operation.SignUpTeam do
 
   defp fetch_whoami(view_model) do
     case D4H.fetch_whoami(access_key: view_model.access_key, api_host: view_model.api_host) do
-      {:ok, whoami} -> {:ok, whoami}
-      {:error, _reason} -> {:error, {:access_key, "is unknown or not authorized in that region"}}
+      {:ok, whoami} ->
+        {:ok, whoami}
+
+      {:error, _reason} ->
+        {:error, {:access_key, "Enter a D4H access key that works in this region."}}
     end
   rescue
-    Req.TransportError -> {:error, {:access_key, "could not be checked. D4H did not respond"}}
+    Req.TransportError ->
+      {:error, {:access_key, "D4H did not respond. Try again in a few minutes."}}
   end
 
   defp fetch_team(d4h) do
     case D4H.fetch_team(d4h) do
       {:ok, d4h_team} -> {:ok, d4h_team}
-      {:error, _response} -> {:error, {:access_key, "can't read its team in D4H"}}
+      {:error, _response} -> {:error, {:access_key, "Use a key that can read the team in D4H."}}
     end
   end
 

@@ -112,7 +112,7 @@ defmodule Web.GroupLive do
         <.sidebar_content group={@group} members={@members} team={@current_team} />
       </aside>
       <main class="content-2/3">
-        <h2 class="subheading mb-p05">Qualification Rules</h2>
+        <h2 class="subheading mb-p05">Group rules</h2>
         <.rule_summary
           :if={!@editing}
           clauses={@clauses}
@@ -145,7 +145,7 @@ defmodule Web.GroupLive do
         <ul class="action-list">
           <li>
             <.a external={true} href={D4H.build_url(@team, "/team/members")}>
-              Open D4H Members
+              Open D4H members
             </.a>
           </li>
         </ul>
@@ -170,7 +170,7 @@ defmodule Web.GroupLive do
   defp clause_editor(assigns) do
     ~H"""
     <p class="text-secondary-1 mb-p">
-      Define which qualifications members must hold to belong to this group.
+      Set the qualifications members must hold to be in this group.
     </p>
 
     <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
@@ -187,13 +187,13 @@ defmodule Web.GroupLive do
             name="name"
             id={"clause-name-#{clause.id}"}
             value={clause.name}
-            placeholder="Name, e.g. First Aid"
+            placeholder="Name, for example First Aid"
             aria-label="Clause name"
             maxlength="60"
             phx-debounce="blur"
             class="rounded border shadow-sm text-sm font-semibold"
           />
-          <h3 class="font-semibold">— member must hold ANY of:</h3>
+          <h3 class="font-semibold">— member must hold any of:</h3>
         </form>
         <.button
           variant={:danger}
@@ -201,7 +201,7 @@ defmodule Web.GroupLive do
           class="ml-p"
           phx-click="delete-clause"
           phx-value-clause-id={clause.id}
-          data-confirm="Delete this clause and all its qualifications?"
+          data-confirm={delete_clause_confirmation(clause)}
         >
           Delete clause
         </.button>
@@ -224,7 +224,7 @@ defmodule Web.GroupLive do
             phx-click="remove-qualification"
             phx-value-qualification-id={cq.id}
             class="text-danger-1 hover:text-danger-2 font-bold"
-            title="Remove"
+            title="Remove qualification"
           >
             &times;
           </button>
@@ -233,7 +233,7 @@ defmodule Web.GroupLive do
           :if={clause.group_rule_clause_qualifications == []}
           class="text-secondary-1 text-sm italic"
         >
-          No qualifications added yet
+          No qualifications yet
         </span>
       </div>
 
@@ -249,7 +249,7 @@ defmodule Web.GroupLive do
             nil
           )}
         </select>
-        <.button size={:sm}>Add</.button>
+        <.button size={:sm}>Add qualification</.button>
       </form>
     </div>
 
@@ -265,17 +265,17 @@ defmodule Web.GroupLive do
   defp rule_preview(assigns) do
     ~H"""
     <div :if={@clauses != []} class="mt-p">
-      <h2 class="subheading mb-p05">Rule Preview</h2>
+      <h2 class="subheading mb-p05">Rule preview</h2>
       <p
         :if={@preview.missing_qualification_ids != []}
         id="rule-broken"
         class="callout text-sm"
       >
-        These rules name a qualification that is no longer in D4H. Edit the rules to
-        remove or replace it, then the preview comes back.
+        These rules name a qualification that is no longer in D4H. Remove or replace it to
+        see the preview.
       </p>
       <p :if={@preview.missing_qualification_ids == []} class="text-secondary-1 text-sm mb-p05">
-        What would change if these rules were applied to the D4H group.
+        What these rules would change in the D4H group.
       </p>
 
       <.change_list
@@ -307,7 +307,7 @@ defmodule Web.GroupLive do
         }
         class="text-secondary-1 text-sm"
       >
-        No changes — current group membership matches the rules.
+        No changes. The group matches its rules.
       </p>
 
       <.button
@@ -325,7 +325,7 @@ defmodule Web.GroupLive do
   defp recent_changes(assigns) do
     ~H"""
     <div :if={@changes != []} class="mt-p">
-      <h2 class="subheading mb-p05">Recent Changes</h2>
+      <h2 class="subheading mb-p05">Recent changes</h2>
       <.table id="recent-changes" rows={@changes} class="w-full table-striped">
         <:col :let={change} label="When" class="w-px whitespace-nowrap">
           {Service.Format.datetime_short(change.inserted_at, @team.timezone)}
@@ -363,7 +363,7 @@ defmodule Web.GroupLive do
         <:col :let={row} label="Why">
           {row.reason}
           <.badge :if={row[:days]} kind={:warning} class="ml-2 whitespace-nowrap">
-            {row.days} days
+            {Service.Format.count(row.days, one: "%d day", many: "%d days")}
           </.badge>
         </:col>
       </.table>
@@ -386,14 +386,24 @@ defmodule Web.GroupLive do
         </.a>
       </:col>
     </.table>
-    <p :if={@members == []} class="text-secondary-1">No members found.</p>
+    <p :if={@members == []} class="text-secondary-1">No members in this group.</p>
     """
   end
 
   defp change_verb(%{action: :add, error: nil}), do: "Added"
   defp change_verb(%{action: :remove, error: nil}), do: "Removed"
-  defp change_verb(%{action: :add}), do: "Couldn't add"
-  defp change_verb(%{action: :remove}), do: "Couldn't remove"
+  defp change_verb(%{action: :add}), do: "Could not add"
+  defp change_verb(%{action: :remove}), do: "Could not remove"
+
+  defp delete_clause_confirmation(clause) do
+    name = if clause.name, do: "the #{clause.name} clause", else: "this clause"
+    count = length(clause.group_rule_clause_qualifications)
+
+    qualifications =
+      Service.Format.count(count, one: "its %d qualification", many: "its %d qualifications")
+
+    "Delete #{name} and #{qualifications}?"
+  end
 
   defp reload(socket) do
     group = socket.assigns.group

@@ -19,7 +19,7 @@ defmodule Web.VerifyLive do
   def mount(_params, session, socket) do
     {:ok,
      assign(socket,
-       page_title: "Check an ID card",
+       page_title: "Verify an ID card",
        scan_failed: false,
        client_ip: session["client_ip"]
      )}
@@ -109,10 +109,10 @@ defmodule Web.VerifyLive do
     ~H"""
     <div id="start">
       <h1 class="text-2xl font-semibold text-base-content">
-        Check a search and rescue ID card
+        Verify a search and rescue ID card
       </h1>
       <p class="mt-2 mb-0 text-secondary-1">
-        Scan the QR code on the member's card. You'll see whether they're an active member
+        Scan the QR code on the member's ID card. You'll see whether they're an active member
         of their team, with their photo.
       </p>
 
@@ -130,35 +130,35 @@ defmodule Web.VerifyLive do
           </.button>
         </div>
         <div class="hidden group-data-scanning:block mt-2">
-          <.button type="button" class="w-full justify-center" data-scan-stop>Stop</.button>
+          <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
         </div>
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
-        The camera didn't start. Allow camera access, or type the code.
+        The camera did not start. Allow camera access, or type the code.
       </p>
 
       <.form for={@form} id="check-form" phx-submit="check">
         <.input
           field={@form[:code]}
-          label="Or type the code printed under the QR"
+          label="Or type the code printed under the QR code"
           placeholder="XXXX-XXXX"
           autocomplete="off"
           autocapitalize="characters"
           spellcheck="false"
           class="font-mono"
         />
-        <.button size={:lg} class="w-full justify-center">Check</.button>
+        <.button size={:lg} class="w-full justify-center">Verify card</.button>
       </.form>
 
       <section class="mt-8 pt-6 border-t border-hr text-sm text-secondary-1">
         <h2 class="mb-2 font-semibold text-base-content">How it works</h2>
         <p class="mb-2">
-          Each team keeps member records. SAR Duty checks the card against them, so a
+          Each team keeps member records. SAR Duty verifies the card against them, so a
           cancelled card, or a member who has left, shows here.
         </p>
         <p class="mb-0">
           A real card's QR code always opens <b class="text-base-content">{Web.VerifyHost.host()}</b>. Keep this page
-          on your home screen if you check cards often.
+          on your home screen if you verify ID cards often.
         </p>
       </section>
     </div>
@@ -170,7 +170,7 @@ defmodule Web.VerifyLive do
     <.result result={@result} />
     <div class="mt-6">
       <.button id="check-another" navigate={@start_path} size={:lg} class="w-full justify-center">
-        Check another card
+        Verify another card
       </.button>
     </div>
     """
@@ -180,7 +180,7 @@ defmodule Web.VerifyLive do
     ~H"""
     <div id="result-limited">
       <.band kind={:bad} title="Too many tries">Wait a few minutes and try again</.band>
-      <.panel>Too many codes from this connection didn't match a card.</.panel>
+      <.panel>Too many codes from this connection did not match a card.</.panel>
     </div>
     """
   end
@@ -190,7 +190,7 @@ defmodule Web.VerifyLive do
     <div id="result-not-found">
       <.band kind={:bad} title="No card has this code">Check the code and try again</.band>
       <.panel>
-        A card that doesn't check out here isn't valid. Codes are 8 letters and numbers,
+        A card that SAR Duty cannot verify here is not valid. Codes are 8 letters and numbers,
         printed under the QR code.
       </.panel>
     </div>
@@ -206,7 +206,7 @@ defmodule Web.VerifyLive do
           Its QR code links to <span class="font-mono text-danger-1">{@result.host}</span>.
         </p>
         <p class="mt-2">
-          A real card's code only ever opens <b>{Web.VerifyHost.host()}</b>. Don't trust any
+          A real card's code only ever opens <b>{Web.VerifyHost.host()}</b>. Do not trust any
           page the card opened.
         </p>
       </.panel>
@@ -217,7 +217,7 @@ defmodule Web.VerifyLive do
   defp result(%{result: %{status: :revoked}} = assigns) do
     ~H"""
     <div id="result-revoked">
-      <.band kind={:bad} title="This card was cancelled">It isn't valid</.band>
+      <.band kind={:bad} title="This card was cancelled">It is not valid</.band>
       <.panel>The team replaced or withdrew this card.</.panel>
     </div>
     """
@@ -236,7 +236,7 @@ defmodule Web.VerifyLive do
 
     ~H"""
     <div id={"result-#{@status}"}>
-      <.band :if={@status == :active} kind={:ok} title="Active member">Checked just now</.band>
+      <.band :if={@status == :active} kind={:ok} title="Active member">Verified just now</.band>
       <.band :if={@status == :inactive} kind={:warn} title="Not an active member">
         {left_text(@member)}
       </.band>
@@ -309,10 +309,10 @@ defmodule Web.VerifyLive do
         And check that the address bar says {Web.VerifyHost.host()}.
       </p>
       <p :if={@status == :inactive} class="mt-4 mb-0 text-base-content">
-        This card doesn't qualify for member benefits.
+        This card does not qualify for member benefits.
       </p>
       <p class="mt-3 mb-0 text-sm text-secondary-1">
-        From the team's records, last checked {last_checked(@team)}.
+        From the team's D4H records, last refreshed {last_checked(@team)}.
       </p>
     </div>
     """

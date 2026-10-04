@@ -70,7 +70,7 @@ defmodule Web.MemberCollectionLive do
 
     <div class="table-summary">
       <span class="table-summary-links">
-        <.a navigate={@path_fn.(:reset)}>Reset</.a>
+        <.a navigate={@path_fn.(:reset)}>Reset filters</.a>
       </span>
       <span class="table-summary-count">
         {Service.Format.count(@paginated.total_entries, one: "%d member", many: "%d members")}

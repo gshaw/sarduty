@@ -13,7 +13,7 @@ defmodule Web.Settings.TeamLive do
         push_navigate(socket, to: ~p"/settings")
       else
         socket
-        |> assign(page_title: "Team Settings")
+        |> assign(page_title: "Team settings")
         |> assign_form(Team.build_settings_changeset(team))
       end
 
@@ -31,10 +31,10 @@ defmodule Web.Settings.TeamLive do
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:name]} label="Name" />
         <div class="grid grid-cols-2 gap-hspacer">
-          <.input field={@form[:lat]} readonly label="Lat" class="bg-base-3" />
-          <.input field={@form[:lng]} readonly label="Lng" class="bg-base-3" />
+          <.input field={@form[:lat]} readonly label="Latitude" class="bg-base-3" />
+          <.input field={@form[:lng]} readonly label="Longitude" class="bg-base-3" />
         </div>
-        <.input field={@form[:timezone]} label="Timezone" readonly class="bg-base-3" />
+        <.input field={@form[:timezone]} label="Time zone" readonly class="bg-base-3" />
         <.input
           field={@form[:mailing_address]}
           label="Mailing address"
@@ -43,12 +43,12 @@ defmodule Web.Settings.TeamLive do
         />
         <.input
           field={@form[:authorized_by_name]}
-          label="Tax letters authorized by"
+          label="Tax credit letters authorized by"
           type="textarea"
           class="h-[10rem]"
         >
-          Should include full name, title, team address, and phone number of the team president or other
-          individual with a similar role from the organization. Used by CRA during tax audits.
+          Include the full name, title, address, and phone number of your team president, or
+          someone in a similar role. The CRA uses this during tax audits.
         </.input>
         <.input
           field={@form[:new_d4h_access_key]}
@@ -76,12 +76,12 @@ defmodule Web.Settings.TeamLive do
               external={true}
               href="https://help.d4h.com/article/377-obtaining-an-api-access-key"
             >
-              create a personal access token
+              create a D4H access key
             </.a>.
           </p>
         </div>
         <.form_actions>
-          <.button variant={:success}>Save</.button>
+          <.button variant={:success}>Save settings</.button>
           <:trailing>
             <.button type="button" phx-click="refresh">Refresh from D4H</.button>
           </:trailing>
@@ -96,7 +96,7 @@ defmodule Web.Settings.TeamLive do
   end
 
   defp key_status(%Team{d4h_access_key: nil}) do
-    "No team key saved, so SAR Duty can't reach D4H for this team."
+    "SAR Duty cannot reach D4H for this team. Save a D4H access key."
   end
 
   defp key_status(%Team{d4h_access_key_saved_at: nil}) do
@@ -120,7 +120,7 @@ defmodule Web.Settings.TeamLive do
           socket
           |> assign(current_team: team)
           |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Changes saved")
+          |> put_flash(:info, "Team settings saved.")
 
         {:noreply, socket}
 
@@ -147,7 +147,7 @@ defmodule Web.Settings.TeamLive do
           socket
           |> assign(current_team: team)
           |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Refreshed from D4H")
+          |> put_flash(:info, "Team refreshed from D4H.")
 
         {:noreply, socket}
 

@@ -45,7 +45,7 @@ defmodule Web.Settings.TeamLiveTest do
       |> log_in_user(user)
       |> live(~p"/settings/team")
 
-    assert has_element?(lv, "#team-key-status", "No team key saved")
+    assert has_element?(lv, "#team-key-status", "SAR Duty cannot reach D4H")
   end
 
   test "saving with a blank key field keeps the saved key", %{conn: conn} do
@@ -61,7 +61,7 @@ defmodule Web.Settings.TeamLiveTest do
       |> form("form", form: %{name: "Renamed SAR", new_d4h_access_key: ""})
       |> render_submit()
 
-    assert html =~ "Changes saved"
+    assert html =~ "Team settings saved."
     refute html =~ @secret
 
     team = Team.get!(team.id)

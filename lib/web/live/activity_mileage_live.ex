@@ -8,7 +8,7 @@ defmodule Web.ActivityMileageLive do
   alias App.Operation.BuildMilesageReport
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Mileage Report")}
+    {:ok, assign(socket, page_title: "Mileage report")}
   end
 
   def handle_params(params, _uri, socket) do
@@ -35,69 +35,69 @@ defmodule Web.ActivityMileageLive do
         label={"#{@activity.ref_id}"}
         path={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}
       />
-      <:item label="Mileage Report" />
+      <:item label="Mileage report" />
     </.breadcrumbs>
 
     <h1 class="title mb-p">{@activity.title}</h1>
     <%= if @activity.coordinate do %>
       <p>
         <div>
-          Activity Location: {App.Model.Coordinate.to_string(@activity.coordinate, 5)}
+          Activity location: {App.Model.Coordinate.to_string(@activity.coordinate, 5)}
         </div>
         <div>
-          Yard Location: {App.Model.Coordinate.to_string(@team.coordinate, 5)}
+          Yard location: {App.Model.Coordinate.to_string(@team.coordinate, 5)}
         </div>
       </p>
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
-        <.button phx-click="generate-report" variant={:success}>Generate Mileage Report</.button>
+        <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
       </p>
     <% else %>
-      <p>Mileage report not available because activity does not have a location coordinate.</p>
+      <p>
+        The mileage report is not available. The activity has no latitude and longitude. Add its location in D4H.
+      </p>
     <% end %>
 
     <%= if @mileage_report do %>
       <.async_result :let={report} assign={@mileage_report}>
         <:loading>
-          <.spinner>Loading mileage report...</.spinner>
+          <.spinner>Calculating driving distances…</.spinner>
         </:loading>
-        <:failed :let={_reason}>There was an error loading the mileage report</:failed>
+        <:failed :let={_reason}>The mileage report did not load. Generate it again.</:failed>
 
         <p>
-          Yard to Activity Round Trip: {report.yard_to_activity_km} km {report.yard_to_activity_hours} hours
+          Yard to activity round trip: {report.yard_to_activity_km} km, {report.yard_to_activity_hours} hours
         </p>
 
         <.table id="mileage_report" rows={report.attendees} class="table-striped">
           <:header_row>
             <th></th>
-            <th colspan="2">To Activity</th>
-            <th colspan="2">To Yard</th>
+            <th colspan="2">To activity</th>
+            <th colspan="2">To yard</th>
             <th colspan="2"></th>
           </:header_row>
           <:col :let={record} label="Name">{record.name}</:col>
-          <:col :let={record} class="text-right" label="KMs">{record.activity_km}</:col>
+          <:col :let={record} class="text-right" label="km">{record.activity_km}</:col>
           <:col :let={record} class="text-right" label="Hours">{record.activity_hours}</:col>
-          <:col :let={record} class="text-right" label="KMs">{record.yard_km}</:col>
+          <:col :let={record} class="text-right" label="km">{record.yard_km}</:col>
           <:col :let={record} class="text-right" label="Hours">{record.yard_hours}</:col>
-          <:col :let={record} label="Home Address">{record.address}</:col>
-          <:col :let={record} label="Coordinate">
+          <:col :let={record} label="Home address">{record.address}</:col>
+          <:col :let={record} label="Latitude and longitude">
             {Coordinate.to_string(record.coordinate, 3)}
           </:col>
         </.table>
         <p class="mt-p">
-          KMs and Hours are round trip driving distance and duration from home address coordinate to activity or yard coordinate.
+          Km and hours are the round trip driving distance and time from each member's home to the activity or the yard.
         </p>
         <p>
-          Address coordinate is geocoded using <.a
+          <.a
             external={true}
             href="https://docs.mapbox.com/playground/geocoding/"
             phx-no-format
-          >Mapbox Geocoder</.a>.
-
-          Distances and durations calculated with <.a
+          >Mapbox Geocoder</.a> finds each home's latitude and longitude. <.a
             external={true}
             href="https://docs.mapbox.com/playground/directions/"
             phx-no-format
-          >Mapbox Directions</.a>.
+          >Mapbox Directions</.a> calculates the distances and durations.
         </p>
       </.async_result>
     <% end %>

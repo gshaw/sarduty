@@ -68,8 +68,9 @@ defmodule Web.ActivityLive do
       <div :if={@attendance_count > 0}>
         <dt>Attendance</dt>
         <dd>
-          {@attendance_count} members
-          · {format_total_effort(@attendances)} effort
+          {Service.Format.count(@attendance_count, one: "%d member", many: "%d members")} · {format_total_effort(
+            @attendances
+          )} effort
         </dd>
       </div>
 
@@ -94,7 +95,7 @@ defmodule Web.ActivityLive do
         <dd>{@activity.address}</dd>
       </div>
       <div :if={@activity.coordinate && @activity.coordinate != Activity.null_island()}>
-        <dt>Coordinate</dt>
+        <dt>Latitude and longitude</dt>
         <dd>
           {@activity.coordinate}
         </dd>
@@ -105,17 +106,17 @@ defmodule Web.ActivityLive do
         <ul class="action-list">
           <li>
             <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
-              Open D4H Activity
+              Open D4H activity
             </.a>
           </li>
           <li>
             <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/attendance"}>
-              Import Attendance
+              Import attendance
             </.a>
           </li>
           <li>
             <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/mileage"}>
-              Mileage Report
+              Mileage report
             </.a>
           </li>
         </ul>

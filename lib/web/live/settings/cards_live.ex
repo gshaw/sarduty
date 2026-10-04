@@ -11,7 +11,7 @@ defmodule Web.Settings.CardsLive do
       if team == nil do
         push_navigate(socket, to: ~p"/settings")
       else
-        socket |> assign(page_title: "ID Cards") |> assign_names(team)
+        socket |> assign(page_title: "ID cards") |> assign_names(team)
       end
 
     {:ok, socket}
@@ -28,7 +28,7 @@ defmodule Web.Settings.CardsLive do
     socket =
       socket
       |> assign_names(team)
-      |> put_flash(:info, "Saved. Passes on members' phones update in a minute or so.")
+      |> put_flash(:info, "ID cards saved. Cards on members' phones update in about a minute.")
 
     {:noreply, socket}
   end
@@ -52,7 +52,7 @@ defmodule Web.Settings.CardsLive do
       </p>
       <h1 class="heading">ID cards</h1>
       <p>
-        Pick the qualifications to list on the back of members' ID cards and on the check page.
+        Select the qualifications to list on the back of members' ID cards and on the verify page.
         They come from named clauses in your groups' rules.
       </p>
 
@@ -67,7 +67,7 @@ defmodule Web.Settings.CardsLive do
           {name}
         </label>
         <.form_actions>
-          <.button variant={:success}>Save</.button>
+          <.button variant={:success}>Save settings</.button>
         </.form_actions>
       </form>
     </div>

@@ -27,9 +27,9 @@ defmodule App.Model.Organization do
     |> validate_length(:name, max: 100)
     |> validate_length(:short_name, max: 20)
     |> validate_format(:slug, ~r/^[a-z0-9-]{2,30}$/,
-      message: "use 2 to 30 lowercase letters, numbers, and dashes"
+      message: "Use 2 to 30 lowercase letters, numbers, and dashes."
     )
-    |> validate_format(:website, ~r{^https://\S+$}, message: "must start with https://")
+    |> validate_format(:website, ~r{^https://\S+$}, message: "Start the address with https://")
     |> unique_constraint(:slug)
   end
 

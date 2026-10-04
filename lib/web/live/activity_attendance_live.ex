@@ -43,15 +43,15 @@ defmodule Web.ActivityAttendanceLive do
 
     <%= if @activity.is_published do %>
       <p>
-        Attendance cannot be modified because activity is published.
+        Attendance cannot be changed. The activity is published in D4H.
       </p>
     <% else %>
       <%= if @recommendations == nil do %>
-        <h2 class="heading mt-p">Import Attendance</h2>
+        <h2 class="heading mt-p">Import attendance</h2>
         <p>
-          Synchronize D4H attendance from SAR Assist.
-          Attendance report is exported by SAR Assist after using QR code check in process.
-          View an <a
+          Change D4H attendance to match a SAR Assist attendance report.
+          SAR Assist exports the report after members use its QR code.
+          See an <a
             target="_blank"
             class="link"
             href="https://gist.github.com/gshaw/ce675c595cd3b765dcee1eda081e1e6d"
@@ -62,14 +62,14 @@ defmodule Web.ActivityAttendanceLive do
             type="textarea"
             name="import_content"
             value={@import_content}
-            label="Attendance record report"
+            label="Attendance report"
             class="h-[16rem]"
           >
-            Copy and paste the attendance report into this text area.
-            Members will be matched by their name, email, or phone in D4H.
-            You will have a chance to review changes before they are performed.
+            Paste the attendance report here.
+            SAR Duty matches members by their name, email, or phone in D4H.
+            You review the changes before SAR Duty makes them.
           </.input>
-          <.button variant={:success}>Import Attendance Report</.button>
+          <.button variant={:success}>Import attendance</.button>
         </form>
       <% else %>
         <h2 class="heading">Recommended changes</h2>
@@ -95,15 +95,15 @@ defmodule Web.ActivityAttendanceLive do
           </.table>
           <.form_actions class="mt-4">
             <.button disabled={disable_perform_recommendations?(@recommendations)} variant={:success}>
-              Perform Checked Recommendations
+              Perform checked changes
             </.button>
-            <.button type="button" phx-click="reset">Reset</.button>
+            <.button type="button" phx-click="reset">Start over</.button>
           </.form_actions>
         </form>
       <% end %>
     <% end %>
 
-    <h2 class="heading mt-p">Current Attendance</h2>
+    <h2 class="heading mt-p">Current attendance</h2>
     <.attendance_table attendance_records={@attendance_records} status="attending" />
     """
   end

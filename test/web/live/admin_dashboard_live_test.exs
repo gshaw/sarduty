@@ -171,7 +171,7 @@ defmodule Web.AdminDashboardLiveTest do
       |> log_in_user(admin)
       |> live(~p"/admin")
 
-    assert has_element?(lv, "#team-#{team.id}", "No users")
+    assert has_element?(lv, "#team-#{team.id}", "No accounts")
   end
 
   test "keeps a team's contacts after a refresh broadcast", %{conn: conn} do

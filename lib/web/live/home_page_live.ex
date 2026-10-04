@@ -29,7 +29,7 @@ defmodule Web.HomePageLive do
       </li>
     </ul>
     <p :if={@current_user && @teams == []} id="no-teams">
-      Your email isn't an Owner or Editor on any team SAR Duty knows. Access comes from D4H:
+      Your email is not an Owner or Editor on any team SAR Duty knows. Access comes from D4H:
       check the email D4H has for you, or ask one of your team's D4H owners.
     </p>
     """

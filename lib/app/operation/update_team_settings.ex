@@ -36,16 +36,24 @@ defmodule App.Operation.UpdateTeamSettings do
       |> put_change(:d4h_access_key_owner, WhoAmI.member_name(whoami, team.d4h_team_id))
       |> put_change(:d4h_access_key_member_id, WhoAmI.member_id(whoami, team.d4h_team_id))
     else
-      add_error(changeset, :new_d4h_access_key, "belongs to a different D4H team")
+      add_error(
+        changeset,
+        :new_d4h_access_key,
+        "Use a D4H access key for this team. This one is for another team."
+      )
     end
   end
 
   def check_new_key(changeset, _team, {:error, :unreachable}, _now) do
-    add_error(changeset, :new_d4h_access_key, "could not be checked. D4H did not respond")
+    add_error(changeset, :new_d4h_access_key, "D4H did not respond. Try again in a few minutes.")
   end
 
   def check_new_key(changeset, _team, {:error, _reason}, _now) do
-    add_error(changeset, :new_d4h_access_key, "is unknown or not authorized")
+    add_error(
+      changeset,
+      :new_d4h_access_key,
+      "Paste the key again. D4H does not accept this one."
+    )
   end
 
   defp fetch_whoami(team, access_key) do

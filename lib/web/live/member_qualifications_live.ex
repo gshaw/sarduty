@@ -67,7 +67,7 @@ defmodule Web.MemberQualificationsLive do
         {award_status(award)}
       </:col>
     </.table>
-    <p :if={@member.member_qualification_awards == []}>No qualifications found.</p>
+    <p :if={@member.member_qualification_awards == []}>No qualifications in D4H.</p>
     """
   end
 

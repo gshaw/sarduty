@@ -85,7 +85,7 @@ defmodule Web.MemberCardLiveTest do
         assert filename =~ ".pkpass"
       end)
 
-      assert render(lv) =~ "Emailed the pass to #{member.email}"
+      assert render(lv) =~ "Emailed the ID card to #{member.email}"
     end
 
     test "offers no email button when D4H has no email", %{conn: conn, team: team} do

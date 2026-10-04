@@ -61,7 +61,7 @@ defmodule Web.AdminDashboardLive do
         </span>
         <.button navigate={~p"/admin/organizations"} size={:sm}>Organizations</.button>
         <.button type="button" variant={:warning} size={:sm} phx-click="refresh-all">
-          Refresh All Teams
+          Refresh all teams
         </.button>
       </div>
     </div>
@@ -91,7 +91,7 @@ defmodule Web.AdminDashboardLive do
         <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
       </:col>
       <:col :let={team} label="Contacts">
-        <span :if={@logins[team.id] == []} class="text-danger-1">No users</span>
+        <span :if={@logins[team.id] == []} class="text-danger-1">No accounts</span>
         <ul :if={@logins[team.id] != []}>
           <li
             :for={user <- @logins[team.id]}
@@ -134,14 +134,17 @@ defmodule Web.AdminDashboardLive do
     <section id="managers" class="mt-p2">
       <h2 class="heading">Team managers</h2>
       <p class="max-w-3xl text-sm text-secondary-1">
-        Everyone D4H makes an Owner or Editor who isn't retired and hasn't left, from the last
+        Everyone D4H makes an Owner or Editor who is not retired and has not left, from the last
         refresh, leaving out the team key's own account. Under #57 these people get access,
         and only these, plus any email an admin let in. Flagged: an email outside the team's
         usual domain, and anyone not operational.
       </p>
       <div :for={team <- @teams} id={"managers-#{team.id}"} class="mb-p2">
         <h3 class="font-bold">
-          {team.name} · {length(@managers[team.id])} managers
+          {team.name} · {Service.Format.count(length(@managers[team.id]),
+            one: "%d manager",
+            many: "%d managers"
+          )}
         </h3>
         <.team_managers
           id={"managers-list-#{team.id}"}
@@ -155,14 +158,14 @@ defmodule Web.AdminDashboardLive do
     <dl id="key-notes" class="mt-p2 max-w-3xl text-sm">
       <dt>Last seen</dt>
       <dd>
-        The last time someone on the team opened a team page. Admin visits don't count.
+        The last time someone on the team opened a team page. Admin visits do not count.
         Dates before mid-September 2026 are last logins, so the real last visit can be up
         to 60 days later.
       </dd>
       <dt>Team key</dt>
       <dd>
-        The team's D4H key, saved in Team Settings, and the D4H member it belongs to. SAR Duty
-        uses it for every D4H request. "Person's key" means the member isn't a SAR Duty
+        The team's D4H key, saved in Team settings, and the D4H member it belongs to. SAR Duty
+        uses it for every D4H request. "Person's key" means the member is not a SAR Duty
         account, so the key stops working if that person leaves.
       </dd>
     </dl>
@@ -192,7 +195,7 @@ defmodule Web.AdminDashboardLive do
     |> ScheduleTeamRefreshesWorker.new()
     |> Oban.insert()
 
-    {:noreply, put_flash(socket, :info, "All team refreshes have been scheduled.")}
+    {:noreply, put_flash(socket, :info, "Refreshes scheduled for all teams.")}
   end
 
   def handle_event("refresh", %{"team-id" => team_id}, socket) do
