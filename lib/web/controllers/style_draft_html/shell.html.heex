@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{@title} · Style Guide (draft)</title>
+    <script>
+      // Before first paint, so a saved theme doesn't flash.
+      (function () {
+        var theme = localStorage.getItem("draft-theme");
+        if (theme) document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap"
+    />
+    <.styles />
+  </head>
+  <body>
+    <header class="site-bar">
+      <div class="container">
+        <a href={page_path(:index)} class="brand">SAR <span>Duty</span><small>Style guide</small></a>
+        <div class="theme-switch" role="group" aria-label="Theme">
+          <button type="button" data-theme-choice="">Auto</button>
+          <button type="button" data-theme-choice="light">Light</button>
+          <button type="button" data-theme-choice="dark">Dark</button>
+        </div>
+      </div>
+    </header>
+    <div class="container guide">
+      <nav class="guide-nav" aria-label="Style guide">
+        <ul>
+          <%= for {group, pages} <- pages() do %>
+            <li class="group caps">{group}</li>
+            <li :for={{page, title} <- pages}>
+              <a href={page_path(page)} aria-current={@current == page && "page"}>{title}</a>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+      <main>
+        {render_slot(@inner_block)}
+      </main>
+    </div>
+    <script>
+      // iOS Safari only applies :active, the pressed look, when a touch listener exists.
+      document.addEventListener("touchstart", function () {}, { passive: true });
+
+      (function () {
+        var buttons = document.querySelectorAll("[data-theme-choice]");
+        function show() {
+          var current = document.documentElement.dataset.theme || "";
+          buttons.forEach(function (b) {
+            b.setAttribute("aria-pressed", b.dataset.themeChoice === current);
+          });
+        }
+        buttons.forEach(function (b) {
+          b.addEventListener("click", function () {
+            var theme = b.dataset.themeChoice;
+            if (theme) {
+              document.documentElement.dataset.theme = theme;
+              localStorage.setItem("draft-theme", theme);
+            } else {
+              delete document.documentElement.dataset.theme;
+              localStorage.removeItem("draft-theme");
+            }
+            show();
+          });
+        });
+        show();
+      })();
+    </script>
+  </body>
+</html>

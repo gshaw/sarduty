@@ -1,0 +1,87 @@
+<.shell title="Overview" current={:index}>
+  <h1>Style guide (draft)</h1>
+  <p class="lead">
+    A design system for operational tools: search and rescue, emergency services, and teams
+    like them. GOV.UK's patterns and plain look, Carbon's dense tables, in light and dark.
+  </p>
+  <p>
+    Standalone: none of this reaches the app yet. <a href="/styles">The current style guide</a>
+    shows what the app uses today.
+  </p>
+
+  <h2>Principles</h2>
+  <ul>
+    <li>
+      <strong>Plain and calm.</strong>
+      People use this between calls and after long days. Short words, one primary action per page,
+      nothing that moves without a reason.
+    </li>
+    <li>
+      <strong>Dense where people scan, roomy where they type.</strong>
+      Tables use 32px rows, or 24px when compact. Forms keep 40px inputs and big targets.
+    </li>
+    <li>
+      <strong>Desktop first, phone second.</strong>
+      Pages are designed for a laptop. On a phone everything still works and nothing breaks:
+      layouts stack, and tables scroll sideways with the useful columns first.
+    </li>
+    <li>
+      <strong>Keyboard first.</strong>
+      Everything you can reach shows the yellow focus, the same in both modes.
+    </li>
+    <li>
+      <strong>Fixed scales.</strong>
+      Six type sizes, eight spaces, and a named palette. No value is invented on a page; if a
+      design needs a new one, it joins the scale.
+    </li>
+    <li>
+      <strong>Tokens, then modes.</strong>
+      Components use colour tokens only, so dark mode is a second set of values, not a second
+      set of styles.
+    </li>
+  </ul>
+
+  <h2>Pages</h2>
+  <dl class="summary">
+    <div>
+      <dt><a href={page_path(:colors)}>Colours</a></dt>
+      <dd>Every token in light and dark, and what each is for.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:typography)}>Typography</a></dt>
+      <dd>The type scale, headings, body text, numbers, and links.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:writing)}>Writing</a></dt>
+      <dd>The rules and glossary for every word a person reads. Agents follow it.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:icons)}>Icons</a></dt>
+      <dd>The small set of icons, their sizes, and when to use one.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:layout)}>Layout</a></dt>
+      <dd>Spacing, page headers, summary lists, panels, and stats.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:components)}>Buttons and tags</a></dt>
+      <dd>Button kinds and sizes, tags, and focus.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:navigation)}>Navigation</a></dt>
+      <dd>Breadcrumbs, back links, tabs, and pagination.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:feedback)}>Messages</a></dt>
+      <dd>Toasts, banners, warnings, errors, empty states, and loading.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:tables)}>Tables</a></dt>
+      <dd>Dense and compact tables, from the app's real pages.</dd>
+    </div>
+    <div>
+      <dt><a href={page_path(:forms)}>Forms</a></dt>
+      <dd>Every input, errors, and the app's real forms.</dd>
+    </div>
+  </dl>
+</.shell>

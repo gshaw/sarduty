@@ -1,0 +1,196 @@
+<.shell title="Forms" current={:forms}>
+  <h1>Forms</h1>
+  <p class="lead">
+    Bold labels above, hints under them, errors listed at the top and on the field.
+  </p>
+  <ul>
+    <li>Label md semibold. Hint sm muted. Error md bold in <code>--danger</code>. Input md.</li>
+    <li>
+      Inputs are 40px tall with a 2px border. Small inputs (32px, sm text) are for filter bars and inline editors only.
+    </li>
+    <li>Fields are 24px apart. Width follows the expected answer, not the page.</li>
+  </ul>
+
+  <h2>Elements</h2>
+
+  <h3>Text input</h3>
+  <div class="demo">
+    <div class="field">
+      <label for="e-name">Full name</label>
+      <input id="e-name" type="text" value="Avery Chen" />
+    </div>
+    <div class="field w-md">
+      <label for="e-email">Email</label>
+      <span class="hint">SAR Duty sends the tax credit letter here.</span>
+      <input id="e-email" type="email" value="avery@example.com" />
+    </div>
+    <div class="field w-sm">
+      <label for="e-ref">Member ID</label>
+      <input id="e-ref" type="text" value="101" />
+    </div>
+  </div>
+  <p class="spec">Three widths: full (640px), medium (320px), small (160px).</p>
+
+  <h3>Select, date, and text area</h3>
+  <div class="demo">
+    <div class="field w-md">
+      <label for="e-kind">Activity kind</label>
+      <select id="e-kind"><option>Incident</option><option>Exercise</option><option>Event</option></select>
+    </div>
+    <div class="field w-md">
+      <label for="e-date">Start date</label>
+      <input id="e-date" type="date" value="2025-09-28" />
+    </div>
+    <div class="field">
+      <label for="e-notes">Notes</label>
+      <textarea id="e-notes" rows="3">Subject found at 21:10, walked out with the team.</textarea>
+    </div>
+  </div>
+
+  <h3>Checkboxes and radios</h3>
+  <div class="demo">
+    <fieldset>
+      <legend>Activities to include</legend>
+      <label class="check"><input type="checkbox" checked /> Incidents</label>
+      <label class="check"><input type="checkbox" checked /> Exercises</label>
+      <label class="check">
+        <input type="checkbox" />
+        <span>Events <span class="hint">Meetings and public events, not training.</span></span>
+      </label>
+    </fieldset>
+    <fieldset>
+      <legend>Hours to count</legend>
+      <label class="check"><input type="radio" name="e-hours" checked /> Primary and secondary</label>
+      <label class="check"><input type="radio" name="e-hours" /> Primary only</label>
+    </fieldset>
+  </div>
+  <p class="spec">
+    24px targets. A fieldset with a legend groups them; the legend is the question.
+  </p>
+
+  <h3>Read-only, disabled, and error</h3>
+  <div class="demo">
+    <div class="field w-md">
+      <label for="e-ro">Latitude</label>
+      <span class="hint">From D4H. Change it there.</span>
+      <input id="e-ro" type="text" value="49.7553" readonly />
+    </div>
+    <div class="field w-md">
+      <label for="e-dis">Region</label>
+      <input id="e-dis" type="text" value="Canada" disabled />
+    </div>
+    <div class="field w-md field-error">
+      <label for="e-err">Yard coordinate</label>
+      <span class="hint">Latitude and longitude, like 49.75533, -123.13110.</span>
+      <span class="error-message">Enter latitude and longitude separated by a comma</span>
+      <input id="e-err" type="text" value="49.7553 -123.131" />
+    </div>
+  </div>
+
+  <h2>Team settings, with errors</h2>
+  <div class="error-summary" role="alert">
+    <h2>There is a problem</h2>
+    <ul>
+      <li><a href="#authorized_by">Enter who authorizes tax letters</a></li>
+      <li><a href="#d4h_key">The D4H access key was not accepted by D4H</a></li>
+    </ul>
+  </div>
+  <form onsubmit="return false">
+    <div class="field">
+      <label for="name">Team name</label>
+      <input id="name" type="text" value="Squamish SAR" />
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="lat">Latitude</label>
+        <input id="lat" type="text" value="49.7553" readonly />
+      </div>
+      <div class="field">
+        <label for="lng">Longitude</label>
+        <input id="lng" type="text" value="-123.1311" readonly />
+      </div>
+    </div>
+    <div class="field w-md">
+      <label for="tz">Time zone</label>
+      <select id="tz"><option>America/Vancouver</option><option>America/Edmonton</option></select>
+    </div>
+    <div class="field">
+      <label for="address">Mailing address</label>
+      <textarea id="address" rows="3">PO Box 123
+Squamish BC V8B 0A1</textarea>
+    </div>
+    <div class="field field-error">
+      <label for="authorized_by">Tax letters authorized by</label>
+      <span class="hint">
+        Full name, title, address, and phone of the president or a similar role. CRA uses it
+        in audits.
+      </span>
+      <span class="error-message">Enter who authorizes tax letters</span>
+      <textarea id="authorized_by" rows="3"></textarea>
+    </div>
+    <div class="field field-error">
+      <label for="d4h_key">D4H access key</label>
+      <span class="hint">One key for every D4H request. Stored encrypted.</span>
+      <span class="error-message">The D4H access key was not accepted by D4H</span>
+      <input id="d4h_key" type="password" value="not-a-real-key" />
+    </div>
+    <fieldset>
+      <legend>Nightly refresh</legend>
+      <label class="check"><input type="checkbox" checked /> Refresh from D4H every night</label>
+      <label class="check"><input type="checkbox" /> Email me when a refresh fails</label>
+    </fieldset>
+    <div class="actions">
+      <button class="btn">Save settings</button>
+      <button type="button" class="btn secondary">Refresh from D4H</button>
+    </div>
+  </form>
+
+  <h2>Group qualification rules</h2>
+  <p>An inline editor: small inputs and small buttons, since it sits inside a page.</p>
+  <div :for={clause <- clauses()} class="clause">
+    <div class="clause-head">
+      <input
+        type="text"
+        value={clause.name}
+        placeholder="Name, for example First Aid"
+        aria-label="Clause name"
+      />
+      <span class="grow muted">Member must hold any of:</span>
+      <button class="btn sm danger">Delete clause</button>
+    </div>
+    <div class="chips">
+      <span
+        :for={q <- clause.qualifications}
+        class={["chip", String.starts_with?(q, "Missing") && "missing"]}
+      >
+        {q}<button title="Remove" aria-label={"Remove #{q}"}><.svg_icon name="x-mark" size={16} /></button>
+      </span>
+      <span :if={clause.qualifications == []} class="muted small">No qualifications yet</span>
+    </div>
+    <div class="clause-add">
+      <select aria-label="Qualification">
+        <option>Add qualification…</option>
+        <option>Rope Rescue Technician</option>
+        <option>Swiftwater Rescue</option>
+      </select>
+      <button class="btn sm secondary">Add</button>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn secondary"><.svg_icon name="plus" size={20} /> Add clause</button>
+    <button class="btn">Done</button>
+  </div>
+
+  <h2>Import attendance</h2>
+  <form onsubmit="return false">
+    <div class="field">
+      <label for="import">Attendance report</label>
+      <span class="hint">
+        Paste the report exported by SAR Assist. Members are matched by name, email, or phone.
+        You review every change before it's made.
+      </span>
+      <textarea id="import" rows="8"></textarea>
+    </div>
+    <button class="btn">Import attendance</button>
+  </form>
+</.shell>

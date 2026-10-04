@@ -1,7 +1,9 @@
 ---
 $schema: "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json"
 version: "0.2"
-language: en
+# en-GB accepts the Canadian spellings the UI uses (colour, centre); cspell has no en-CA
+# dictionary. Code keeps US spelling by convention (docs/writing.md), which cspell can't check.
+language: en,en-GB
 allowCompoundWords: true
 ignorePaths:
   - ".claude"
@@ -13,6 +15,11 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - onsubmit # an HTML attribute
+  - Dhillon # made-up member in style guide sample data
+  - GSAR # Ground Search and Rescue, a qualification in style guide sample data
+  - Squamish # the town of the made-up team in style guide sample data
+  - Stawamus # a mountain near Squamish, in style guide sample data
   - aria-describedby
   - aria-labelledby
   - bcsara # BC Search and Rescue Association, the first parent organization

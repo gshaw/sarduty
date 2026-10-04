@@ -1,0 +1,214 @@
+<.shell title="Buttons and tags" current={:components}>
+  <h1>Buttons and tags</h1>
+  <p class="lead">Flat buttons with a hard bottom edge, and small tags for status.</p>
+
+  <h2>Button kinds</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn">Save settings</button>
+      <button class="btn secondary">Cancel</button>
+      <button class="btn success">Create letter</button>
+      <button class="btn danger">Delete clause</button>
+      <button class="btn link">More information</button>
+    </div>
+  </div>
+  <ul>
+    <li><strong>Primary</strong>: the one main action on a page.</li>
+    <li><strong>Secondary</strong>: everything else, including Cancel and Reset.</li>
+    <li>
+      <strong>Success</strong>: an action that creates or adds, where green helps scanning a table.
+    </li>
+    <li><strong>Danger</strong>: deletes or removes. Ask first when it cannot be undone.</li>
+    <li><strong>Link</strong>: a quiet action inside text or beside other buttons.</li>
+  </ul>
+
+  <h2>Sizes</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn">Default, md text</button>
+      <button class="btn sm">Small, sm text</button>
+      <button class="btn sm secondary">Small secondary</button>
+      <button class="btn sm success">Create letter</button>
+      <button class="btn sm danger">Remove</button>
+    </div>
+  </div>
+  <p class="spec">
+    Default is 36px tall for forms and page actions. Small is 24px, for table rows and toolbars.
+  </p>
+
+  <h2>States</h2>
+  <p>
+    Every kind in every state, frozen so you can compare them on any screen. Try the real ones
+    above: on a phone, press and hold to see the pressed state.
+  </p>
+  <div class="table-wrap">
+    <table class="btn-states">
+      <thead>
+        <tr>
+          <th>Kind</th>
+          <th>Default</th>
+          <th>Hover</th>
+          <th>Pressed</th>
+          <th>Focus</th>
+          <th>Disabled</th>
+          <th>Busy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{kind, label} <- button_kinds()}>
+          <td>{label}</td>
+          <td><button class={["btn", kind]}>Save</button></td>
+          <td><button class={["btn", kind, "is-hover"]} tabindex="-1">Save</button></td>
+          <td><button class={["btn", kind, "is-active"]} tabindex="-1">Save</button></td>
+          <td><button class={["btn", kind, "is-focus"]} tabindex="-1">Save</button></td>
+          <td><button class={["btn", kind]} disabled>Save</button></td>
+          <td>
+            <button class={["btn", kind]} disabled>
+              <span class="spinner" aria-hidden="true"></span> Saving…
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ul>
+    <li><strong>Hover</strong> darkens the button, only on devices with a mouse or trackpad.</li>
+    <li><strong>Pressed</strong> drops the button 2px onto its edge, on every device.</li>
+    <li>
+      <strong>Focus</strong>
+      is yellow with a dark edge for every kind, so keyboard users see one signal.
+    </li>
+    <li>
+      <strong>Disabled</strong> is a last resort. Prefer an error that says what is missing.
+    </li>
+    <li>
+      <strong>Busy</strong> shows a spinner and says what it is doing, for work that takes more
+      than a second.
+    </li>
+  </ul>
+
+  <h2>Button rows</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn">Save settings</button>
+      <button class="btn secondary">Cancel</button>
+      <button class="btn danger push">Delete team</button>
+    </div>
+  </div>
+  <p class="spec">The main action first. A destructive action sits apart, on the right.</p>
+
+  <h2>Tags</h2>
+  <p>
+    Five status tags, the three D4H activity kinds as a tag or a marker, and an outlined tag for D4H's own tags. Tinted tags say what something is. Solid tags ask for action.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">Tag</th>
+          <th class="shrink">Look</th>
+          <th>Means</th>
+          <th>Examples</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag">Not published</span></td>
+          <td>Tinted grey</td>
+          <td>A plain state. Nothing to do.</td>
+          <td>Draft, Not published, Inactive</td>
+        </tr>
+        <tr>
+          <td><span class="tag info">Refreshed</span></td>
+          <td>Tinted blue</td>
+          <td>Worth knowing, not a problem.</td>
+          <td>New, Refreshed, Team admin</td>
+        </tr>
+        <tr>
+          <td><span class="tag success">Qualified</span></td>
+          <td>Tinted green</td>
+          <td>Good, done, or meets the rule.</td>
+          <td>Qualified, Letter sent, Active</td>
+        </tr>
+        <tr>
+          <td><span class="tag warning">12 days</span></td>
+          <td>Solid amber</td>
+          <td>Needs action soon.</td>
+          <td>Expires in 12 days, Missing hours, Key owner leaving</td>
+        </tr>
+        <tr>
+          <td><span class="tag danger">Expired</span></td>
+          <td>Solid red</td>
+          <td>Wrong or blocked now.</td>
+          <td>Expired, Not invited, D4H key rejected</td>
+        </tr>
+        <tr>
+          <td><span class="tag outline">Primary hours</span></td>
+          <td>Outlined</td>
+          <td>A tag from D4H. Data, not status.</td>
+          <td>Whatever D4H holds: Rope, Marine, Avalanche</td>
+        </tr>
+        <tr>
+          <td>
+            <span class="tags">
+              <span class="tag incident">Incident</span>
+              <span class="tag exercise">Exercise</span>
+              <span class="tag event">Event</span>
+            </span>
+          </td>
+          <td>Solid, D4H colours</td>
+          <td>The kind of activity, shown on its own, such as beside a title.</td>
+          <td>Only these three words</td>
+        </tr>
+        <tr>
+          <td>
+            <span class="tags">
+              <span class="kind incident">Incident</span>
+              <span class="kind exercise">Exercise</span>
+              <span class="kind event">Event</span>
+            </span>
+          </td>
+          <td>Marker</td>
+          <td>The kind of activity in a table column, where every row has one.</td>
+          <td>Only these three words</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ul>
+    <li>One to three words. The words carry the meaning; the colour helps people scan.</li>
+    <li>At most one status tag per row or item. If two apply, show the more urgent one.</li>
+    <li>
+      Amber and red are for things a person should act on. If everything is amber, nothing is.
+    </li>
+    <li>
+      A column where every row has a tag is too loud. Show the D4H kind there as a marker, and
+      fold D4H's primary and secondary hours tags into the Hours column as a word.
+    </li>
+    <li>
+      A normal state gets no tag. Show "Draft" on an unpublished activity, never "Published" on the rest.
+    </li>
+    <li>Codes such as tracking numbers are mono text, not tags.</li>
+    <li>
+      Several tags together sit in a <code>.tags</code>
+      group, so they wrap with a gap and never touch.
+    </li>
+    <li>Tags are labels, not buttons. Nothing happens when you select one.</li>
+  </ul>
+  <div class="demo">
+    <p>
+      In a table row: Casey Dhillon, Wilderness First Aid <span class="tag warning">12 days</span>
+    </p>
+    <p>
+      Beside a heading: Missing hiker, Stawamus Chief <span class="tag incident">Incident</span>
+    </p>
+  </div>
+
+  <h2>Focus</h2>
+  <div class="demo">
+    <p>
+      Press Tab. Everything you can reach gets the yellow focus, the same in both modes: <a href="#">a link</a>, <button class="btn sm">a button</button>, and
+      <input type="text" class="input-sm" style="width: 160px" aria-label="An input" />.
+    </p>
+  </div>
+</.shell>

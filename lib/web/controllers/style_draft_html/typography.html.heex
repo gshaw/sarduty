@@ -1,0 +1,104 @@
+<.shell title="Typography" current={:typography}>
+  <h1>Typography</h1>
+  <p class="lead">
+    IBM Plex Sans, six sizes, three weights. Every size has a fixed line height on the 4px grid.
+  </p>
+
+  <h2>Type scale</h2>
+  <p>
+    These six are the only sizes. Each is a token pair: <code>--fs-md</code>
+    and <code>--lh-md</code>.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">Token</th>
+          <th class="num">Size</th>
+          <th class="num">Line</th>
+          <th>Use</th>
+          <th>Sample</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{name, size, line, use} <- type_scale()}>
+          <td class="mono">{name}</td>
+          <td class="num">{size}px</td>
+          <td class="num">{line}px</td>
+          <td>{use}</td>
+          <td class="nowrap" style={"font-size: #{size}px; line-height: #{line}px"}>
+            Missing hiker
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Weights</h2>
+  <div class="demo">
+    <p><span style="font-weight: 400">400 Regular</span>: body text, table cells, hints.</p>
+    <p>
+      <span style="font-weight: 600">600 Semibold</span>: labels, buttons, table headers, tags.
+    </p>
+    <p><span style="font-weight: 700">700 Bold</span>: headings, errors, emphasis.</p>
+  </div>
+
+  <h2>Headings</h2>
+  <div class="demo">
+    <h1>Activities, 2025</h1>
+    <h2 class="first">Attendance</h2>
+    <h3 class="first">Recommended changes</h3>
+    <h4 class="first">Would be added</h4>
+  </div>
+  <p class="spec">
+    h1 2xl, h2 xl, h3 lg, h4 md bold. One h1 per page. Space above a heading is bigger than below,
+    so it belongs to what follows.
+  </p>
+
+  <h2>Body text</h2>
+  <div class="demo">
+    <p class="lead">Lead text introduces a page in one or two sentences.</p>
+    <p>
+      Body text at 16px. Search and rescue managers read this between calls, so it stays short and
+      plain. Lines stop at about 70 characters, which keeps long paragraphs readable on a wide
+      screen.
+    </p>
+    <p class="small">Small text, 14px, for secondary detail under a table or a form.</p>
+    <p class="caption muted">Caption text, 12px, for labels on charts and swatches.</p>
+    <p class="caption caps muted">Caps label, 12px semibold, for column groups</p>
+  </div>
+
+  <h2>Numbers</h2>
+  <div class="demo">
+    <p>Figures are tabular everywhere, so columns of hours line up without extra work:</p>
+    <p class="text-right" style="max-width: 10em">
+      212h 30m<br />18h 05m<br />1,204h 00m
+    </p>
+    <p>
+      Codes and IDs use the mono face: <span class="mono">TCL-2025-014</span>, activity <span class="mono">2025-0412</span>. Dates do not: Sep 28, 2025.
+    </p>
+  </div>
+
+  <h2>Links and lists</h2>
+  <div class="demo">
+    <p>
+      A <a href="#">link in a sentence</a> is underlined and thickens on hover. Link text says
+      where it goes: <a href="#">tax credit letters for 2025</a>, never "click here".
+    </p>
+    <ul>
+      <li>Bulleted lists for things in no order.</li>
+      <li>Each item is short; full sentences end with a period.</li>
+    </ul>
+    <ol>
+      <li>Numbered lists for steps.</li>
+      <li>One action per step.</li>
+    </ol>
+  </div>
+
+  <h2>Writing</h2>
+  <p>
+    How to word things, and which words to use, is on the
+    <a href={page_path(:writing)}>Writing</a>
+    page.
+  </p>
+</.shell>
