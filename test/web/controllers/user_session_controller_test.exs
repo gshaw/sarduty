@@ -53,6 +53,25 @@ defmodule Web.UserSessionControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "used or expired"
     end
 
+    test "returns to the page that asked for a login", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      {token, user_token} = UserToken.build_login_token(user)
+      App.Repo.insert!(user_token)
+
+      conn = get(conn, ~p"/#{team.subdomain}/members")
+      assert redirected_to(conn) == ~p"/login"
+
+      conn = conn |> recycle() |> post(~p"/login", %{"token" => token})
+      assert redirected_to(conn) == ~p"/#{team.subdomain}/members"
+    end
+
+    test "the login form sends someone already logged in to their team", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      conn = conn |> log_in_user(user) |> get(~p"/login")
+      assert redirected_to(conn) == ~p"/#{team.subdomain}"
+    end
+
     test "refuses a bad token", %{conn: conn} do
       conn = post(conn, ~p"/login", %{"token" => "nope"})
 

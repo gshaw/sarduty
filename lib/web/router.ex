@@ -79,9 +79,6 @@ defmodule Web.Router do
       on_mount: [{Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/styles", StyleGuideLive
-      live "/login", UserLoginLive, :new
-      live "/login/sent", UserLoginSentLive, :new
-      live "/login/:token", UserLoginLinkLive, :new
     end
 
     # The check moved to the verify site. Cards linked here before it, in capitals.
@@ -98,8 +95,22 @@ defmodule Web.Router do
     delete "/logout", UserSessionController, :delete
   end
 
+  # Asking for and opening a login link. Someone already logged in goes to their team
+  # instead. /login/sent must come before /login/:token.
   scope "/", Web do
-    pipe_through :browser
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    live_session :login_session, on_mount: [{Web.UserAuth, :mount_current_user}] do
+      live "/login", UserLoginLive, :new
+      live "/login/sent", UserLoginSentLive, :new
+      live "/login/:token", UserLoginLinkLive, :new
+    end
+  end
+
+  # The plug runs on the first page load, so a logged-out visit remembers the page and
+  # logging in returns to it. The on_mount checks cover live navigation.
+  scope "/", Web do
+    pipe_through [:browser, :require_authenticated_user]
 
     live_session :require_authenticated_user_session,
       on_mount: [{Web.UserAuth, :ensure_authenticated}] do
@@ -142,7 +153,7 @@ defmodule Web.Router do
     end
 
     scope "/" do
-      pipe_through [:require_authenticated_user, :require_authorized_team_subdomain]
+      pipe_through :require_authorized_team_subdomain
 
       get "/:subdomain/members/:id/image", MemberController, :image
       get "/:subdomain/members/:id/card/pass", MemberCardController, :pass

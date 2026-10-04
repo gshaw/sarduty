@@ -26,7 +26,7 @@ defmodule Web.UserSessionController do
     case Accounts.log_in_with_token(token) do
       {:ok, user} ->
         conn
-        |> put_flash(:info, "Welcome back!")
+        |> put_flash(:info, "Logged in as #{user.email}.")
         |> UserAuth.log_in_user(user)
 
       :error ->

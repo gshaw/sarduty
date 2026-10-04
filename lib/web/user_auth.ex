@@ -93,13 +93,15 @@ defmodule Web.UserAuth do
   end
 
   @doc """
-  The team pages outside `/:subdomain` (settings, the home page) work on: the first team
-  the user manages, by name, or nil.
+  The team pages outside `/:subdomain` (settings, ID cards) work on: the team the user
+  last opened when they still manage it, else their first by name, or nil.
   """
   def default_team(nil), do: nil
 
-  def default_team(user),
-    do: user.email |> Team.get_managed_by(DateTime.utc_now()) |> List.first()
+  def default_team(user) do
+    teams = Team.get_managed_by(user.email, DateTime.utc_now())
+    Enum.find(teams, &(&1.id == user.last_team_id)) || List.first(teams)
+  end
 
   # The team a URL's subdomain names, when this user may open it: an admin may open any.
   defp authorized_team(user, subdomain) do
@@ -221,6 +223,17 @@ defmodule Web.UserAuth do
     Phoenix.Component.assign(socket, current_team: default_team(current_user))
   end
 
+  @doc "Sends a logged-in user to their team rather than the login form."
+  def redirect_if_user_is_authenticated(conn, _opts) do
+    if user = conn.assigns[:current_user] do
+      conn
+      |> redirect(to: signed_in_path(user))
+      |> halt()
+    else
+      conn
+    end
+  end
+
   @doc """
   Used for routes that require the user to be authenticated.
 
@@ -270,8 +283,7 @@ defmodule Web.UserAuth do
   home page, which says why they have no team.
   """
   def signed_in_path(user) do
-    teams = Team.get_managed_by(user.email, DateTime.utc_now())
-    team = Enum.find(teams, &(&1.id == user.last_team_id)) || List.first(teams)
+    team = default_team(user)
 
     cond do
       team -> ~p"/#{team.subdomain}"
