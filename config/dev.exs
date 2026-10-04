@@ -86,7 +86,9 @@ config :phoenix_live_view,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
 
-if System.get_env("CLOUDFLARE_EMAIL_TOKEN") do
+# Real mail only when asked for: a dev database is often a copy of production, so a test
+# could email a real member. Otherwise everything lands in /dev/mailbox.
+if System.get_env("DEV_SEND_EMAIL") == "true" and System.get_env("CLOUDFLARE_EMAIL_TOKEN") do
   config :swoosh, local: false
 
   config :sarduty, App.Mailer,

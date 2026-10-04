@@ -25,8 +25,10 @@ page. The token is a query parameter.
 
 Swoosh. Production sends through Cloudflare Email Sending's REST API with
 [App.Adapter.CloudflareEmail](../lib/app/adapter/cloudflare_email.ex), since Swoosh has
-no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox` unless both
-variables below are set in dev too; tests use `Swoosh.Adapters.Test`. Mail comes from
+no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox`, linked from the
+footer and the login pages, unless `DEV_SEND_EMAIL=true` and both variables below are set:
+a dev database is often a copy of production, so real mail could reach real members. Tests
+use `Swoosh.Adapters.Test`. Mail comes from
 `noreply@sarduty.com`: login links, and tax credit letters with the PDF attached. Login
 is by emailed link only, so without mail nobody can log in; existing sessions last 60
 days.

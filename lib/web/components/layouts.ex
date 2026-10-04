@@ -101,7 +101,28 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
+    <.dev_footer />
     """
+  end
+
+  # Login and settings pages have no footer, but in dev the mailbox is where login links go.
+  defp dev_footer(assigns) do
+    assigns = assign(assigns, mailbox?: dev_mailbox?())
+
+    ~H"""
+    <footer :if={@mailbox?} id="dev-footer" class="max-w-md m-auto px-2 mb-p2 text-sm">
+      <p class="pt-p border-t border-hr">
+        Development:
+        <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+      </p>
+    </footer>
+    """
+  end
+
+  @doc "Whether mail goes to the local mailbox at /dev/mailbox, as in development."
+  def dev_mailbox? do
+    Application.get_env(:sarduty, :dev_routes) == true and
+      Application.get_env(:swoosh, :local) == true
   end
 
   attr :current_user, :map, default: nil

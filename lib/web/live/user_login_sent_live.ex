@@ -22,6 +22,9 @@ defmodule Web.UserLoginSentLive do
         Nothing after a few minutes? Check your spam folder. Only Owners and Editors on a team
         in D4H get a link, at the email D4H has for them.
       </p>
+      <p :if={Web.Layouts.dev_mailbox?()} id="login-dev-mailbox">
+        In development the email is in the <.a href="/dev/mailbox" external={true}>local mailbox</.a>.
+      </p>
       <p>
         <.a id="login-again" navigate={~p"/login"}>Use a different email</.a>
       </p>
