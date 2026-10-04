@@ -83,7 +83,7 @@ defmodule Web.AdminDashboardLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
 
     assert has_element?(lv, "#managers-#{team.id} h3", "2 managers")
-    assert has_element?(lv, "#manager-#{owner.id}", "Has login")
+    assert has_element?(lv, "#manager-#{owner.id}", "Has logged in")
     assert has_element?(lv, "#manager-#{editor.id}", "Editor")
     refute has_element?(lv, "#managers-#{team.id}", "SAR Duty")
     refute has_element?(lv, "#managers-#{team.id}", "Mo Member")

@@ -203,6 +203,14 @@ defmodule Web.UserAuthTest do
       assert Accounts.get_user!(user.id).last_seen_at
     end
 
+    test "opening a team remembers it for the next login", %{user: user, team: team} do
+      socket = %LiveView.Socket{assigns: %{__changed__: %{}, current_user: user}}
+      params = %{"subdomain" => team.subdomain}
+      {:cont, _socket} = UserAuth.on_mount(:ensure_authorized_team_subdomain, params, %{}, socket)
+
+      assert Accounts.get_user!(user.id).last_team_id == team.id
+    end
+
     test "opening a team controller page records the visit", %{conn: conn, user: user, team: team} do
       conn
       |> assign(:current_user, user)
@@ -221,6 +229,26 @@ defmodule Web.UserAuthTest do
       |> UserAuth.require_authorized_team_subdomain([])
 
       refute Accounts.get_user!(admin.id).last_seen_at
+    end
+  end
+
+  describe "signed_in_path/1" do
+    test "lands on the only team, or the last one opened among several", %{user: user} do
+      north = App.DataFixtures.team_fixture(%{name: "North SAR"})
+      south = App.DataFixtures.team_fixture(%{name: "South SAR"})
+      App.DataFixtures.manager_fixture(north, %{email: user.email})
+
+      assert UserAuth.signed_in_path(user) == ~p"/#{north.subdomain}"
+
+      App.DataFixtures.manager_fixture(south, %{email: user.email})
+      assert UserAuth.signed_in_path(user) == ~p"/#{north.subdomain}"
+      assert UserAuth.signed_in_path(%{user | last_team_id: south.id}) == ~p"/#{south.subdomain}"
+    end
+
+    test "an admin with no team lands on /admin; anyone else on the home page" do
+      admin = user_fixture(%{is_admin: true})
+      assert UserAuth.signed_in_path(admin) == ~p"/admin"
+      assert UserAuth.signed_in_path(user_fixture()) == ~p"/"
     end
   end
 

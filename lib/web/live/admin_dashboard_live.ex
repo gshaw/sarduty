@@ -1,6 +1,8 @@
 defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamManagers
+
   alias App.Accounts.User
   alias App.Model.Member
   alias App.Model.Team
@@ -134,36 +136,12 @@ defmodule Web.AdminDashboardLive do
         <h3 class="font-bold">
           {team.name} · {length(@managers[team.id])} managers
         </h3>
-        <p :if={@managers[team.id] == []} class="text-sm text-secondary-1">
-          None known. The team hasn't refreshed since access levels were added, or its key fails.
-        </p>
-        <ul class="text-sm">
-          <li
-            :for={member <- @managers[team.id]}
-            id={"manager-#{member.id}"}
-            class="flex flex-wrap items-baseline gap-2"
-          >
-            <span>{member.name}</span>
-            <span class="text-secondary-1">{Member.permission_label(member.d4h_permission)}</span>
-            <span>{member.email}</span>
-            <.badge :if={has_login?(member, @login_emails)} kind={:primary}>Has login</.badge>
-            <.badge :if={odd_domain?(member, @managers[team.id])} kind={:warning}>
-              Other domain
-            </.badge>
-            <.badge :if={member.d4h_status != "OPERATIONAL"}>Not operational</.badge>
-          </li>
-        </ul>
-        <ul :if={@grants[team.id]} class="text-sm">
-          <li
-            :for={grant <- @grants[team.id]}
-            id={"grant-#{grant.id}"}
-            class="flex flex-wrap items-baseline gap-2"
-          >
-            <span>{grant.email}</span>
-            <.badge kind={:warning}>Let in by admin</.badge>
-            <span :if={grant.reason} class="text-secondary-1">{grant.reason}</span>
-          </li>
-        </ul>
+        <.team_managers
+          id={"managers-list-#{team.id}"}
+          managers={@managers[team.id]}
+          grants={@grants[team.id] || []}
+          login_emails={@login_emails}
+        />
       </div>
     </section>
 
@@ -235,31 +213,6 @@ defmodule Web.AdminDashboardLive do
     |> Enum.filter(&MapSet.member?(emails, String.downcase(&1.email)))
     |> Enum.sort_by(& &1.email)
   end
-
-  defp has_login?(member, login_emails),
-    do: member.email != nil and MapSet.member?(login_emails, String.downcase(member.email))
-
-  # The team's most common manager email domain is its usual one.
-  defp odd_domain?(member, managers) do
-    usual =
-      managers
-      |> Enum.map(&email_domain/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.frequencies()
-      |> Enum.max_by(&elem(&1, 1), fn -> {nil, 0} end)
-      |> elem(0)
-
-    usual != nil and email_domain(member) != usual
-  end
-
-  defp email_domain(%{email: email}) when is_binary(email) do
-    case String.split(email, "@") do
-      [_, domain] -> String.downcase(domain)
-      _ -> nil
-    end
-  end
-
-  defp email_domain(_member), do: nil
 
   defp key_summary(%Team{d4h_access_key: key}) when key in [nil, ""], do: "No team key"
   defp key_summary(%Team{d4h_access_key_owner: nil}), do: "Team key"

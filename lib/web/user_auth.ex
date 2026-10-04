@@ -36,7 +36,7 @@ defmodule Web.UserAuth do
     |> renew_session()
     |> put_token_in_session(token)
     |> put_resp_cookie(@remember_me_cookie, token, @remember_me_options)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> redirect(to: user_return_to || signed_in_path(user))
   end
 
   # This function renews the session ID and erases the whole
@@ -200,7 +200,7 @@ defmodule Web.UserAuth do
         raise Web.Status.NotFound
 
       team ->
-        RecordUserSeen.call(current_user)
+        RecordUserSeen.call(current_user, team.id)
         {:cont, Phoenix.Component.assign(socket, :current_team, team)}
     end
   end
@@ -247,7 +247,7 @@ defmodule Web.UserAuth do
         raise Web.Status.NotFound
 
       team ->
-        RecordUserSeen.call(current_user)
+        RecordUserSeen.call(current_user, team.id)
         assign(conn, :current_team, team)
     end
   end
@@ -264,5 +264,19 @@ defmodule Web.UserAuth do
 
   defp maybe_store_return_to(conn), do: conn
 
-  defp signed_in_path(_conn), do: ~p"/"
+  @doc """
+  Where logging in lands: the team the user last opened when they still manage it, else
+  their only or first team. An admin who manages none lands on /admin; anyone else on the
+  home page, which says why they have no team.
+  """
+  def signed_in_path(user) do
+    teams = Team.get_managed_by(user.email, DateTime.utc_now())
+    team = Enum.find(teams, &(&1.id == user.last_team_id)) || List.first(teams)
+
+    cond do
+      team -> ~p"/#{team.subdomain}"
+      user.is_admin -> ~p"/admin"
+      true -> ~p"/"
+    end
+  end
 end

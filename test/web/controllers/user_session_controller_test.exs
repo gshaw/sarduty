@@ -15,8 +15,8 @@ defmodule Web.UserSessionControllerTest do
 
       conn = request_link(conn, "pat@example.com")
 
-      assert redirected_to(conn) == ~p"/login"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If pat@example.com can use SAR Duty"
+      assert redirected_to(conn) == ~p"/login/sent"
+      assert get_session(conn, :login_link_email) == "pat@example.com"
       assert_received {:email, %{subject: "Log in to SAR Duty", text_body: body}}
       assert body =~ "/login/"
     end
@@ -24,7 +24,8 @@ defmodule Web.UserSessionControllerTest do
     test "sends nothing to an email that may not log in, with the same reply", %{conn: conn} do
       conn = request_link(conn, "stranger@example.com")
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "If stranger@example.com can use"
+      assert redirected_to(conn) == ~p"/login/sent"
+      assert get_session(conn, :login_link_email) == "stranger@example.com"
       refute_received {:email, _}
     end
 
@@ -39,13 +40,13 @@ defmodule Web.UserSessionControllerTest do
 
   describe "POST /login" do
     test "logs in with a valid token, once", %{conn: conn} do
-      %{user: user} = user_with_team_fixture()
+      %{user: user, team: team} = user_with_team_fixture()
       {token, user_token} = UserToken.build_login_token(user)
       App.Repo.insert!(user_token)
 
       conn = post(conn, ~p"/login", %{"token" => token})
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/#{team.subdomain}"
       assert conn.resp_cookies["_sarduty_remember_me"]
 
       conn = post(build_conn(), ~p"/login", %{"token" => token})

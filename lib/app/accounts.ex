@@ -23,6 +23,17 @@ defmodule App.Accounts do
     |> Repo.one()
   end
 
+  @doc "Which of these emails have a user, lowercase, as a MapSet."
+  def login_emails(emails) do
+    emails = for e <- emails, is_binary(e), do: normalize(e)
+
+    User
+    |> where([u], fragment("lower(?)", u.email) in ^emails)
+    |> select([u], fragment("lower(?)", u.email))
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
   @doc """
   Whether this email may log in: an admin's, or a current manager's on some team.
   """

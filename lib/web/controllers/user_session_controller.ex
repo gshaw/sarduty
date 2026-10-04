@@ -15,12 +15,11 @@ defmodule Web.UserSessionController do
       Accounts.deliver_login_link(email, &url(~p"/login/#{&1}"))
     end
 
+    # The sent page reads the email from the session, so a refresh shows it again rather
+    # than the form.
     conn
-    |> put_flash(
-      :info,
-      "If #{email} can use SAR Duty, a login link is on its way. It works for 15 minutes."
-    )
-    |> redirect(to: ~p"/login")
+    |> put_session(:login_link_email, email)
+    |> redirect(to: ~p"/login/sent")
   end
 
   def create(conn, %{"token" => token}) do

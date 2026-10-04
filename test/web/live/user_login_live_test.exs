@@ -28,4 +28,19 @@ defmodule Web.UserLoginLiveTest do
   test "a used or expired link goes back to the login page", %{conn: conn} do
     assert {:error, {:live_redirect, %{to: "/login"}}} = live(conn, ~p"/login/expired-token")
   end
+
+  test "after asking for a link, the sent page stays on refresh", %{conn: conn} do
+    conn = Phoenix.ConnTest.init_test_session(conn, %{login_link_email: "pat@example.com"})
+
+    {:ok, lv, _html} = live(conn, ~p"/login/sent")
+    assert has_element?(lv, "#login-sent", "pat@example.com")
+    refute has_element?(lv, "#login_form")
+
+    {:ok, lv, _html} = live(conn, ~p"/login/sent")
+    assert has_element?(lv, "#login-sent", "pat@example.com")
+  end
+
+  test "the sent page without a request goes to the login form", %{conn: conn} do
+    assert {:error, {:live_redirect, %{to: "/login"}}} = live(conn, ~p"/login/sent")
+  end
 end

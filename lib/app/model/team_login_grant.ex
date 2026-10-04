@@ -37,6 +37,13 @@ defmodule App.Model.TeamLoginGrant do
     |> Repo.delete_all()
   end
 
+  def get_for_team(%Team{} = team) do
+    TeamLoginGrant
+    |> where([g], g.team_id == ^team.id)
+    |> order_by([g], asc: g.email)
+    |> Repo.all()
+  end
+
   def get_all do
     TeamLoginGrant |> order_by([g], asc: g.email) |> Repo.all()
   end

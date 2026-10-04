@@ -80,6 +80,7 @@ defmodule Web.Router do
       live "/", HomePageLive
       live "/styles", StyleGuideLive
       live "/login", UserLoginLive, :new
+      live "/login/sent", UserLoginSentLive, :new
       live "/login/:token", UserLoginLinkLive, :new
     end
 
@@ -125,6 +126,7 @@ defmodule Web.Router do
       live "/:subdomain/activities/:id", ActivityLive
       live "/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/:subdomain/activities/:id/mileage", ActivityMileageLive
+      live "/:subdomain/managers", TeamManagersLive
       live "/:subdomain/members", MemberCollectionLive
       live "/:subdomain/members/:id", MemberLive
       live "/:subdomain/members/:id/groups", MemberGroupsLive

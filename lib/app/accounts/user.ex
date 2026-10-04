@@ -14,6 +14,8 @@ defmodule App.Accounts.User do
     field :is_admin, :boolean, default: false
     # When the user last opened a team page, to the hour. See App.Operation.RecordUserSeen.
     field :last_seen_at, :utc_datetime
+    # The team they last opened; logging in lands there. See App.Operation.RecordUserSeen.
+    field :last_team_id, :integer
 
     timestamps(type: :utc_datetime)
   end
