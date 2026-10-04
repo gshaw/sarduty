@@ -47,17 +47,28 @@ defmodule App.Accounts do
   @doc """
   Emails a login link when the email may log in, making its user on first use. Does
   nothing otherwise, and returns `:ok` either way, so the page never says which emails
-  are known.
+  are known. A link already sent in the last minute stands, so a double tap on the form
+  sends one email.
   """
   def deliver_login_link(email, url_fun) when is_function(url_fun, 1) do
     if may_log_in?(email) do
       user = get_user_by_email(email) || %{email: email} |> User.new_changeset() |> Repo.insert!()
-      {encoded_token, user_token} = UserToken.build_login_token(user)
-      Repo.insert!(user_token)
-      UserNotifier.deliver_login_link(user, url_fun.(encoded_token))
+
+      unless recent_login_link?(user) do
+        {encoded_token, user_token} = UserToken.build_login_token(user)
+        Repo.insert!(user_token)
+        UserNotifier.deliver_login_link(user, url_fun.(encoded_token))
+      end
     end
 
     :ok
+  end
+
+  defp recent_login_link?(user) do
+    user
+    |> UserToken.by_user_and_contexts_query(["login"])
+    |> where([t], t.inserted_at > ago(60, "second"))
+    |> Repo.exists?()
   end
 
   @doc "The user a login token is for, without using it up. Nil when invalid or expired."

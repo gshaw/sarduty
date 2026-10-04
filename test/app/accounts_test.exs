@@ -116,6 +116,17 @@ defmodule App.AccountsTest do
       assert Accounts.log_in_with_token(token) == :error
     end
 
+    test "a second request within a minute sends nothing more" do
+      manager_fixture(team_fixture(), %{email: "twice@example.com"})
+
+      :ok = Accounts.deliver_login_link("twice@example.com", &"url/#{&1}")
+      :ok = Accounts.deliver_login_link("twice@example.com", &"url/#{&1}")
+
+      assert_received {:email, _}
+      refute_received {:email, _}
+      assert Repo.aggregate(UserToken, :count) == 1
+    end
+
     test "a malformed token is no user" do
       refute Accounts.get_user_by_login_token("not a token")
     end

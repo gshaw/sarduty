@@ -32,7 +32,11 @@ defmodule Web.UserSessionControllerTest do
     test "stops sending after 5 requests for one email", %{conn: conn} do
       manager_fixture(team_fixture(), %{email: "busy@example.com"})
 
-      for _ <- 1..6, do: request_link(conn, "busy@example.com")
+      # Clear each link, so the one-a-minute rule doesn't hide the cap.
+      for _ <- 1..6 do
+        request_link(conn, "busy@example.com")
+        App.Repo.delete_all(UserToken)
+      end
 
       assert length(sent_emails()) == 5
     end

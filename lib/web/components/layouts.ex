@@ -74,6 +74,7 @@ defmodule Web.Layouts do
     """
   end
 
+  # Login and settings forms: one task on the page, so no footer links to wander off to.
   def narrow(assigns) do
     ~H"""
     <.narrow_nav_bar current_user={@current_user} />
@@ -81,7 +82,6 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <.site_footer current_user={@current_user} />
     """
   end
 

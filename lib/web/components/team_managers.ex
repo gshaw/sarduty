@@ -5,6 +5,7 @@ defmodule Web.Components.TeamManagers do
   """
   use Web, :function_component
 
+  import Web.Components.Table
   import Web.Components.UI
 
   alias App.Model.Member
@@ -15,38 +16,65 @@ defmodule Web.Components.TeamManagers do
   attr :login_emails, :any, required: true, doc: "a MapSet of lowercase user emails"
 
   def team_managers(assigns) do
+    assigns = assign(assigns, :rows, rows(assigns))
+
     ~H"""
-    <div id={@id}>
-      <p :if={@managers == []} class="text-sm text-secondary-1">
+    <div>
+      <p :if={@rows == []} class="text-sm text-secondary-1">
         None known. The team hasn't refreshed since access levels were added, or its key fails.
       </p>
-      <ul class="text-sm">
-        <li
-          :for={member <- @managers}
-          id={"manager-#{member.id}"}
-          class="flex flex-wrap items-baseline gap-2"
-        >
-          <span>{member.name}</span>
-          <span class="text-secondary-1">{Member.permission_label(member.d4h_permission)}</span>
-          <span>{member.email}</span>
-          <.badge :if={has_login?(member, @login_emails)} kind={:primary}>Has logged in</.badge>
-          <.badge :if={odd_domain?(member, @managers)} kind={:warning}>Other domain</.badge>
-          <.badge :if={member.d4h_status != "OPERATIONAL"}>Not operational</.badge>
-        </li>
-      </ul>
-      <ul :if={@grants != []} class="text-sm">
-        <li
-          :for={grant <- @grants}
-          id={"grant-#{grant.id}"}
-          class="flex flex-wrap items-baseline gap-2"
-        >
-          <span>{grant.email}</span>
-          <.badge kind={:warning}>Let in by admin</.badge>
-          <span :if={grant.reason} class="text-secondary-1">{grant.reason}</span>
-        </li>
-      </ul>
+      <.table :if={@rows != []} id={@id} rows={@rows} row_id={& &1.id} class="table-striped">
+        <:col :let={row} label="Manager">
+          <div :if={row.name}>{row.name}</div>
+          <div class={["break-all", row.name && "text-sm text-secondary-1"]}>{row.email}</div>
+        </:col>
+        <:col :let={row} label="Access">
+          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span>{row.access}</span>
+            <.badge :for={{kind, text} <- row.badges} kind={kind}>{text}</.badge>
+          </div>
+          <div :if={row.reason} class="text-sm text-secondary-1">{row.reason}</div>
+        </:col>
+      </.table>
     </div>
     """
+  end
+
+  # Managers first, by name, then the emails an admin let in.
+  defp rows(%{managers: managers, grants: grants, login_emails: login_emails}) do
+    manager_rows =
+      for member <- managers do
+        badges =
+          [
+            has_login?(member, login_emails) && {:primary, "Has logged in"},
+            odd_domain?(member, managers) && {:warning, "Other domain"},
+            member.d4h_status != "OPERATIONAL" && {:default, "Not operational"}
+          ]
+          |> Enum.filter(& &1)
+
+        %{
+          id: "manager-#{member.id}",
+          name: member.name,
+          access: Member.permission_label(member.d4h_permission),
+          email: member.email,
+          badges: badges,
+          reason: nil
+        }
+      end
+
+    grant_rows =
+      for grant <- grants do
+        %{
+          id: "grant-#{grant.id}",
+          name: nil,
+          access: "Let in by admin",
+          email: grant.email,
+          badges: [],
+          reason: grant.reason
+        }
+      end
+
+    manager_rows ++ grant_rows
   end
 
   defp has_login?(member, login_emails),
