@@ -1,0 +1,121 @@
+<.shell title="Layout" current={:layout}>
+  <h1>Layout</h1>
+  <p class="lead">
+    Eight spaces on a 4px grid, a page header every page shares, and blocks to group content.
+  </p>
+
+  <h2>Spacing scale</h2>
+  <p>
+    Margins, padding, and gaps come from these eight. Tokens are <code>--sp-1</code>
+    to <code>--sp-8</code>.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">Token</th>
+          <th class="num">Size</th>
+          <th>Typical use</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{step, px, use} <- spacing()}>
+          <td class="mono">sp-{step}</td>
+          <td class="num">{px}px</td>
+          <td>
+            {use}
+          </td>
+          <td><span class="space-bar" style={"width: #{px}px"}></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Page header</h2>
+  <p>Breadcrumbs, the title, a line of context, and the page's actions on the right.</p>
+  <div class="demo">
+    <ol class="breadcrumbs">
+      <li><a href="#">Squamish SAR</a></li>
+      <li><a href="#">Activities</a></li>
+      <li aria-current="page">2025-0412</li>
+    </ol>
+    <div class="page-header">
+      <div>
+        <h1>Missing hiker, Stawamus Chief</h1>
+        <div class="meta">
+          <span class="tag incident">Incident</span> 28 Sep 2025, 14:05 to 22:40
+        </div>
+      </div>
+      <div class="actions" style="margin: 0">
+        <a href="#" class="btn secondary">Open in D4H</a>
+        <a href="#" class="btn">Attendance</a>
+      </div>
+    </div>
+  </div>
+
+  <h2>Summary list</h2>
+  <p>Key facts about one record, with an action per row when it can change.</p>
+  <dl class="summary has-actions">
+    <div>
+      <dt>Name</dt>
+      <dd>Avery Chen</dd>
+      <dd class="action"><a href="#">Change<span class="visually-hidden"> name</span></a></dd>
+    </div>
+    <div>
+      <dt>Email</dt>
+      <dd>avery@example.com</dd>
+      <dd class="action"><a href="#">Change</a></dd>
+    </div>
+    <div>
+      <dt>Qualifications</dt>
+      <dd>OFA Level 1, GSAR Member, Rope Rescue Technician</dd>
+      <dd class="action"></dd>
+    </div>
+    <div>
+      <dt>Hours this year</dt>
+      <dd>212h 30m primary, 18h 00m secondary</dd>
+      <dd class="action"></dd>
+    </div>
+  </dl>
+
+  <h2>Stats</h2>
+  <p>A few numbers at the top of a dashboard.</p>
+  <div class="stats">
+    <div class="stat">
+      <span class="value">47</span><p class="label">Activities this year</p>
+    </div>
+    <div class="stat">
+      <span class="value">1,204h</span><p class="label">Member hours</p>
+    </div>
+    <div class="stat">
+      <span class="value">12</span><p class="label">Letters to create</p>
+    </div>
+    <div class="stat">
+      <span class="value">3</span><p class="label">Qualifications expiring</p>
+    </div>
+  </div>
+
+  <h2>Panel</h2>
+  <div class="panel">
+    <h3 class="first">D4H connection</h3>
+    <p>Last refreshed today at 02:00. 833 members, 1,912 activities.</p>
+    <a href="#" class="btn sm secondary">Refresh now</a>
+  </div>
+
+  <h2>Details</h2>
+  <details>
+    <summary>Why are some members missing?</summary>
+    <div>
+      SAR Duty copies members from D4H each night. Members added in D4H today show up tomorrow, or
+      after a manual refresh.
+    </div>
+  </details>
+
+  <h2>Page width</h2>
+  <ul>
+    <li>Content fills up to 1280px; tables use the full width.</li>
+    <li>Text and forms stop at 640 to 800px, so lines stay readable.</li>
+    <li>Desktop first. On a phone, layouts stack and wide tables scroll sideways.</li>
+  </ul>
+</.shell>

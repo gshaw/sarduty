@@ -1,7 +1,7 @@
 defmodule Web.StyleGuide.SampleData do
   @moduledoc false
 
-  # cspell:ignore Dhillon Tremblay GSAR
+  # cspell:ignore Tremblay
   # Made-up rows for the style guides, shaped like the app's pages.
 
   def letters do

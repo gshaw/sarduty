@@ -87,8 +87,7 @@ defmodule Web.Router do
     end
 
     get "/styles/draft", StyleDraftController, :index
-    get "/styles/draft/tables", StyleDraftController, :tables
-    get "/styles/draft/forms", StyleDraftController, :forms
+    get "/styles/draft/:page", StyleDraftController, :show
 
     # The check moved to the verify site. Cards linked here before it, in capitals.
     get "/verify", VerifyController, :to_verify

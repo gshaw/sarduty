@@ -22,12 +22,7 @@
   <body>
     <header class="site-bar">
       <div class="container">
-        <a href="/styles/draft" class="brand">SAR <span>Duty</span></a>
-        <nav>
-          <a href="/styles/draft" aria-current={@current == :index && "page"}>Overview</a>
-          <a href="/styles/draft/tables" aria-current={@current == :tables && "page"}>Tables</a>
-          <a href="/styles/draft/forms" aria-current={@current == :forms && "page"}>Forms</a>
-        </nav>
+        <a href={page_path(:index)} class="brand">SAR <span>Duty</span><small>Style guide</small></a>
         <div class="theme-switch" role="group" aria-label="Theme">
           <button type="button" data-theme-choice="">Auto</button>
           <button type="button" data-theme-choice="light">Light</button>
@@ -35,9 +30,21 @@
         </div>
       </div>
     </header>
-    <main class="container">
-      {render_slot(@inner_block)}
-    </main>
+    <div class="container guide">
+      <nav class="guide-nav" aria-label="Style guide">
+        <ul>
+          <%= for {group, pages} <- pages() do %>
+            <li class="group caps">{group}</li>
+            <li :for={{page, title} <- pages}>
+              <a href={page_path(page)} aria-current={@current == page && "page"}>{title}</a>
+            </li>
+          <% end %>
+        </ul>
+      </nav>
+      <main>
+        {render_slot(@inner_block)}
+      </main>
+    </div>
     <script>
       (function () {
         var buttons = document.querySelectorAll("[data-theme-choice]");

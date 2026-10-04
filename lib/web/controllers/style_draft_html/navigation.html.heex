@@ -1,0 +1,62 @@
+<.shell title="Navigation" current={:navigation}>
+  <h1>Navigation</h1>
+  <p class="lead">How people move between and within pages.</p>
+
+  <h2>Top bar</h2>
+  <p>
+    Navy, with the amber rule and logo, as at the top of this page. It holds the team, the main
+    sections, and the account menu. The current section is underlined in amber.
+  </p>
+
+  <h2>Breadcrumbs</h2>
+  <div class="demo">
+    <ol class="breadcrumbs">
+      <li><a href="#">Squamish SAR</a></li>
+      <li><a href="#">Members</a></li>
+      <li aria-current="page">Avery Chen</li>
+    </ol>
+  </div>
+  <p class="spec">
+    On every page below a section's list. The last item is the current page and isn't a link.
+  </p>
+
+  <h2>Back link</h2>
+  <div class="demo">
+    <a href="#" class="back-link">Settings</a>
+  </div>
+  <p class="spec">
+    For pages outside the main tree, like a settings form, instead of breadcrumbs.
+  </p>
+
+  <h2>Tabs</h2>
+  <div class="demo">
+    <nav class="tabs" aria-label="Member">
+      <a href="#" aria-current="page">Attendance</a>
+      <a href="#">Qualifications</a>
+      <a href="#">Groups</a>
+      <a href="#">ID card</a>
+    </nav>
+    <p>Each tab is its own page with its own URL, so links and the back button work.</p>
+  </div>
+
+  <h2>Pagination</h2>
+  <div class="demo">
+    <div class="table-summary">
+      <span>Showing 51 to 100 of 1,912 activities</span>
+    </div>
+    <nav aria-label="Pages">
+      <ul class="pagination">
+        <li><a href="#">‹ Previous</a></li>
+        <li><a href="#">1</a></li>
+        <li><span aria-current="page">2</span></li>
+        <li><a href="#">3</a></li>
+        <li><span class="muted">…</span></li>
+        <li><a href="#">39</a></li>
+        <li><a href="#">Next ›</a></li>
+      </ul>
+    </nav>
+  </div>
+  <p class="spec">
+    Under long tables. Prefer filters that shrink the list over paging through it.
+  </p>
+</.shell>

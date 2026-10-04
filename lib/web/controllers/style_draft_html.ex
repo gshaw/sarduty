@@ -5,7 +5,51 @@ defmodule Web.StyleDraftHTML do
 
   embed_templates "style_draft_html/*"
 
-  # cspell:ignore Stawamus Murrin
+  # cspell:ignore Murrin
+
+  # The guide's pages, in sidebar order: {group, [{page, title}]}. The page is also the
+  # template name and the last path segment.
+  def pages do
+    [
+      {"Start", [{:index, "Overview"}]},
+      {"Foundations", [{:colors, "Colors"}, {:typography, "Typography"}, {:layout, "Layout"}]},
+      {"Components",
+       [
+         {:components, "Buttons and tags"},
+         {:navigation, "Navigation"},
+         {:feedback, "Messages"},
+         {:tables, "Tables"},
+         {:forms, "Forms"}
+       ]}
+    ]
+  end
+
+  def page_path(:index), do: "/styles/draft"
+  def page_path(page), do: "/styles/draft/#{page}"
+
+  def type_scale do
+    [
+      {"2xl", 32, 40, "Page title (h1), big numbers"},
+      {"xl", 24, 32, "Section heading (h2)"},
+      {"lg", 19, 28, "Subheading (h3), lead text, legends"},
+      {"md", 16, 24, "Body, labels, inputs, buttons"},
+      {"sm", 14, 20, "Tables, hints, breadcrumbs, small buttons"},
+      {"xs", 12, 16, "Tags, column group labels, captions"}
+    ]
+  end
+
+  def spacing do
+    [
+      {1, 4, "Tag padding, label to input"},
+      {2, 8, "Gaps between buttons in a row, hint to input"},
+      {3, 12, "Table cell sides, card padding"},
+      {4, 16, "Paragraph spacing, panel padding"},
+      {5, 24, "Between form fields, page gutter"},
+      {6, 32, "Between page header and content"},
+      {7, 48, "Above a section heading"},
+      {8, 64, "Bottom of the page"}
+    ]
+  end
 
   # The palette, as {token, light, dark, use}. The CSS is generated from this list, so the
   # swatches on the overview can't drift from what the pages use.
@@ -57,6 +101,17 @@ defmodule Web.StyleDraftHTML do
   defdelegate letters(), to: SampleData
   defdelegate recommendations(), to: SampleData
   defdelegate clauses(), to: SampleData
+
+  def rule_preview do
+    [
+      {"Avery Chen", "Holds OFA Level 1 and GSAR Member, which meets both clauses of the rule.",
+       "Added to D4H 2024-03-02", nil},
+      {"Casey Dhillon", "Wilderness First Aid expires 2025-11-12.",
+       "Renewal course booked for 2025-11-01", 12},
+      {"Devon Okafor", "No First Aid qualification.", "Last held OFA Level 1, expired 2024-06-30",
+       nil}
+    ]
+  end
 
   def activities do
     [

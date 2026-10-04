@@ -1,8 +1,17 @@
 <.shell title="Tables" current={:tables}>
   <h1>Tables</h1>
   <p class="lead">
-    32px rows by default, 24px when compact. Numbers right-aligned, headers stick on scroll.
+    32px rows by default, 24px when compact. Cells line up on their first line of text, so a
+    row with a wrapped cell still reads across.
   </p>
+  <ul>
+    <li>
+      Text at sm (14px). Headers semibold on <code>--surface-alt</code>, and they stick on scroll.
+    </li>
+    <li>Numbers right-aligned with tabular figures. Codes and dates in mono.</li>
+    <li>Sortable headers show an arrow; the sorted column is underlined in primary.</li>
+    <li>Actions in a row are small buttons or links, in the last column.</li>
+  </ul>
 
   <h2>Tax credit letters</h2>
   <form class="filter-bar" onsubmit="return false">
@@ -97,6 +106,31 @@
       <button type="button" class="btn secondary">Reset</button>
     </div>
   </form>
+
+  <h2>Rule preview, with wrapping cells</h2>
+  <p>Long text wraps; the other cells stay on its first line.</p>
+  <div class="table-wrap">
+    <table class="striped">
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Why</th>
+          <th class="shrink"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{name, why, detail, days} <- rule_preview()}>
+          <td class="nowrap"><a href="#">{name}</a></td>
+          <td>
+            {why}
+            <span :if={days} class="tag warning">{days} days</span>
+            <span class="sub small">{detail}</span>
+          </td>
+          <td class="shrink"><button class="btn sm secondary">Review</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <h2>Activities, compact</h2>
   <p>The compact size, for long lists people scan rather than read.</p>

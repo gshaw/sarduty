@@ -1,0 +1,76 @@
+<.shell title="Colors" current={:colors}>
+  <h1>Colors</h1>
+  <p class="lead">
+    Every color is a token with a light and a dark value. Both modes are shown side by side; the
+    switch in the top bar sets the rest of the guide.
+  </p>
+
+  <div class="modes">
+    <div
+      :for={{mode, label} <- [{"theme-light", "Light"}, {"theme-dark", "Dark"}]}
+      class={["mode", mode]}
+    >
+      <h2 class="first">{label}</h2>
+      <div :for={{group, tokens} <- palette()}>
+        <h4>{group}</h4>
+        <div class="swatches">
+          <div :for={{name, light, dark, _use} <- tokens} class="swatch">
+            <div class="chipcolor" style={"background: var(--#{name})"}></div>
+            <strong>{name}</strong>
+            <span>{if mode == "theme-light", do: light, else: dark}</span>
+          </div>
+        </div>
+      </div>
+      <div class="sample-card">
+        <p>Body text with <a href="#">a link</a> and <span class="muted">muted text</span>.</p>
+        <div class="actions">
+          <button class="btn">Primary</button>
+          <button class="btn secondary">Secondary</button>
+          <span class="tag success">Active</span>
+          <span class="tag incident">Incident</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>What each token is for</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">Token</th>
+          <th class="shrink">Light</th>
+          <th class="shrink">Dark</th>
+          <th>Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for {group, tokens} <- palette() do %>
+          <tr>
+            <td colspan="4" class="caps caption muted">{group}</td>
+          </tr>
+          <tr :for={{name, light, dark, use} <- tokens}>
+            <td class="mono">--{name}</td>
+            <td class="mono">{light}</td>
+            <td class="mono">{dark}</td>
+            <td>{use}</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Rules</h2>
+  <ul>
+    <li>Use tokens, never a hex value, in components and pages.</li>
+    <li>
+      Text on <code>--primary</code>, <code>--success</code>, <code>--danger</code>, and the D4H
+      colors is white. Text on <code>--warning</code> is near-black.
+    </li>
+    <li>
+      Red and green always come with a word: <span class="op-add">Add</span>, <span class="op-remove">Remove</span>. Color alone is never the only signal.
+    </li>
+    <li>Focus is <code>--focus</code> yellow in both modes, so it reads the same everywhere.</li>
+    <li>The D4H activity colors match D4H, so people know them on sight.</li>
+  </ul>
+</.shell>

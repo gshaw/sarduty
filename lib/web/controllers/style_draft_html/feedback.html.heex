@@ -1,0 +1,77 @@
+<.shell title="Messages" current={:feedback}>
+  <h1>Messages</h1>
+  <p class="lead">Tell people what happened, what's important, and what to do next.</p>
+
+  <h2>Banners</h2>
+  <p>At the top of the page, under the header. One at a time.</p>
+  <div class="banner success" role="status">
+    <div class="banner-title">Success</div>
+    <div class="banner-body">
+      <p><strong>4 attendance changes were saved to D4H.</strong></p>
+    </div>
+  </div>
+  <div class="banner" role="region" aria-label="Important">
+    <div class="banner-title">Important</div>
+    <div class="banner-body">
+      <p>D4H refreshes every night at 2am. Changes made in D4H today show up tomorrow.</p>
+    </div>
+  </div>
+  <div class="banner warning" role="region" aria-label="Warning">
+    <div class="banner-title">Warning</div>
+    <div class="banner-body">
+      <p>The team's D4H key belongs to a person. If they leave the team, it stops working.</p>
+    </div>
+  </div>
+  <div class="banner danger" role="alert">
+    <div class="banner-title">There's a problem with D4H</div>
+    <div class="banner-body">
+      <p>D4H didn't answer. Nothing was changed. Try again in a few minutes.</p>
+    </div>
+  </div>
+
+  <h2>Error summary</h2>
+  <p>
+    At the top of a form after a failed submit, linking to each field. See <a href={
+      page_path(:forms)
+    }>Forms</a>.
+  </p>
+  <div class="error-summary" role="alert">
+    <h2>There is a problem</h2>
+    <ul>
+      <li><a href="#">Enter who authorizes tax letters</a></li>
+    </ul>
+  </div>
+
+  <h2>Warning text</h2>
+  <div class="warning-text">
+    <span class="icon" aria-hidden="true">!</span>
+    <span>Attendance can't be changed once the activity is published in D4H.</span>
+  </div>
+  <p class="spec">For a consequence people must know before they act.</p>
+
+  <h2>Inset text</h2>
+  <div class="inset">
+    Members are matched by name, email, or phone. You review every change before it's made.
+  </div>
+  <p class="spec">For a note that helps, set apart from the main text.</p>
+
+  <h2>Empty state</h2>
+  <div class="empty">
+    <strong>No letters yet for 2025</strong>
+    <p>Letters are made from attendance in D4H. Create one from the member list.</p>
+    <a href="#" class="btn sm secondary">Go to tax credit letters</a>
+  </div>
+  <p class="spec">Say why it's empty and what to do, not just "No results".</p>
+
+  <h2>Loading</h2>
+  <div class="demo">
+    <p><span class="spinner" aria-hidden="true"></span> Refreshing from D4H…</p>
+    <p class="small muted">
+      <span class="spinner" aria-hidden="true"></span>
+      Calculating driving distances for 14 members…
+    </p>
+  </div>
+  <p class="spec">
+    Name the slow thing. Spinners slow down when the system asks for reduced motion.
+  </p>
+</.shell>

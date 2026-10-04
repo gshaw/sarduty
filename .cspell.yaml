@@ -14,7 +14,10 @@ ignorePaths:
   - "priv/static/assets/*"
 words:
   - onsubmit # an HTML attribute
+  - Dhillon # made-up member in style guide sample data
+  - GSAR # Ground Search and Rescue, a qualification in style guide sample data
   - Squamish # the town of the made-up team in style guide sample data
+  - Stawamus # a mountain near Squamish, in style guide sample data
   - aria-describedby
   - aria-labelledby
   - bcsara # BC Search and Rescue Association, the first parent organization

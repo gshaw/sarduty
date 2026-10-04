@@ -1,0 +1,90 @@
+<.shell title="Buttons and tags" current={:components}>
+  <h1>Buttons and tags</h1>
+  <p class="lead">Flat buttons with a hard bottom edge, and small tags for status.</p>
+
+  <h2>Button kinds</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn">Save settings</button>
+      <button class="btn secondary">Cancel</button>
+      <button class="btn success">Create letter</button>
+      <button class="btn danger">Delete clause</button>
+      <button class="btn link">More information</button>
+    </div>
+  </div>
+  <ul>
+    <li><strong>Primary</strong>: the one main action on a page.</li>
+    <li><strong>Secondary</strong>: everything else, including Cancel and Reset.</li>
+    <li>
+      <strong>Success</strong>: an action that creates or adds, where green helps scanning a table.
+    </li>
+    <li><strong>Danger</strong>: deletes or removes. Ask before it can't be undone.</li>
+    <li><strong>Link</strong>: a quiet action inside text or beside other buttons.</li>
+  </ul>
+
+  <h2>Sizes</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn">Default, md text</button>
+      <button class="btn sm">Small, sm text</button>
+      <button class="btn sm secondary">Small secondary</button>
+      <button class="btn sm success">Create letter</button>
+      <button class="btn sm danger">Remove</button>
+    </div>
+  </div>
+  <p class="spec">
+    Default is 36px tall for forms and page actions. Small is 24px, for table rows and toolbars.
+  </p>
+
+  <h2>States</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn" disabled>Disabled</button>
+      <button class="btn" disabled><span class="spinner" aria-hidden="true"></span> Saving…</button>
+      <a href="#" class="btn secondary">A link styled as a button</a>
+    </div>
+  </div>
+  <p class="spec">
+    A button that starts slow work shows a spinner and says what it's doing. Disabled buttons are
+    a last resort; prefer an error that says what's missing.
+  </p>
+
+  <h2>Button rows</h2>
+  <div class="demo">
+    <div class="actions">
+      <button class="btn">Save settings</button>
+      <button class="btn secondary">Cancel</button>
+      <button class="btn danger push">Delete team</button>
+    </div>
+  </div>
+  <p class="spec">The main action first. A destructive action sits apart, on the right.</p>
+
+  <h2>Tags</h2>
+  <div class="demo">
+    <div class="actions">
+      <span class="tag">Draft</span>
+      <span class="tag primary">Primary</span>
+      <span class="tag success">Qualified</span>
+      <span class="tag warning">Expires in 12 days</span>
+      <span class="tag danger">Not invited</span>
+      <span class="tag info">Synced</span>
+    </div>
+    <div class="actions">
+      <span class="tag incident">Incident</span>
+      <span class="tag exercise">Exercise</span>
+      <span class="tag event">Event</span>
+    </div>
+  </div>
+  <p class="spec">
+    Status tags are tinted; D4H activity tags are solid, matching D4H. Tags are labels, not
+    buttons: nothing happens when you click one.
+  </p>
+
+  <h2>Focus</h2>
+  <div class="demo">
+    <p>
+      Press Tab. Everything you can reach gets the yellow focus, the same in both modes: <a href="#">a link</a>, <button class="btn sm">a button</button>, and
+      <input type="text" class="input-sm" style="width: 160px" aria-label="An input" />.
+    </p>
+  </div>
+</.shell>
