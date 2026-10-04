@@ -1,37 +1,124 @@
 <.shell title="Messages" current={:feedback}>
   <h1>Messages</h1>
   <p class="lead">Tell people what happened, what's important, and what to do next.</p>
+  <ul>
+    <li>
+      <strong>Toast</strong>: the result of something the person just did. It comes and goes.
+    </li>
+    <li><strong>Banner</strong>: something true about the page until it changes. It stays.</li>
+    <li><strong>Error summary</strong>: what to fix in a form after a failed save.</li>
+  </ul>
+
+  <h2>Toasts</h2>
+  <p>
+    LiveView's flash messages. One card per message, stacked at the top right on a desktop and at
+    the bottom on a phone, where a thumb can close it.
+  </p>
+  <div class="demo">
+    <div class="toast-stack">
+      <div class="toast" role="status">
+        <.svg_icon name="check-circle" size={20} />
+        <div class="body">4 attendance changes saved to D4H.</div>
+        <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
+      </div>
+      <div class="toast info" role="status">
+        <.svg_icon name="information-circle" size={20} />
+        <div class="body">Refresh started. It takes about a minute.</div>
+        <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
+      </div>
+      <div class="toast error" role="alert">
+        <.svg_icon name="exclamation-circle" size={20} />
+        <div class="body">
+          <span class="title">D4H did not accept the change</span>
+          Nothing changed. Check the D4H access key in team settings.
+        </div>
+        <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
+      </div>
+      <div class="toast connection" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <div class="body">
+          <span class="title">Reconnecting</span>
+          The connection to SAR Duty dropped. Your changes are kept.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn secondary" data-toast="success">Show a success toast</button>
+    <button class="btn secondary" data-toast="error">Show an error toast</button>
+  </div>
+  <ul>
+    <li>Success and info toasts close after 5 seconds. Error toasts stay until closed.</li>
+    <li>Body text only for success and info. Errors get a short title, then what to do.</li>
+    <li>The connection toast shows while LiveView reconnects and goes when it is back.</li>
+    <li>Never put the only copy of important information in a toast. Use a banner.</li>
+  </ul>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <template id="toast-success">
+    <div class="toast" role="status">
+      <.svg_icon name="check-circle" size={20} />
+      <div class="body">Settings saved.</div>
+      <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
+    </div>
+  </template>
+  <template id="toast-error">
+    <div class="toast error" role="alert">
+      <.svg_icon name="exclamation-circle" size={20} />
+      <div class="body">
+        <span class="title">Letter not created</span>
+        Enter who authorizes tax letters in team settings.
+      </div>
+      <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
+    </div>
+  </template>
+  <script>
+    document.querySelectorAll("[data-toast]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var kind = button.dataset.toast;
+        var toast = document.getElementById("toast-" + kind).content.firstElementChild.cloneNode(true);
+        document.getElementById("toasts").appendChild(toast);
+        toast.querySelector(".close").addEventListener("click", function () { toast.remove(); });
+        if (kind !== "error") setTimeout(function () { toast.remove(); }, 5000);
+      });
+    });
+  </script>
 
   <h2>Banners</h2>
   <p>At the top of the page, under the header. One at a time.</p>
   <div class="banner success" role="status">
-    <div class="banner-title">Success</div>
+    <div class="banner-title"><.svg_icon name="check-circle" size={20} />Success</div>
     <div class="banner-body">
-      <p><strong>4 attendance changes were saved to D4H.</strong></p>
+      <p><strong>12 tax credit letters created for 2025.</strong></p>
     </div>
   </div>
   <div class="banner" role="region" aria-label="Important">
-    <div class="banner-title">Important</div>
+    <div class="banner-title"><.svg_icon name="information-circle" size={20} />Important</div>
     <div class="banner-body">
-      <p>D4H refreshes every night at 2am. Changes made in D4H today show up tomorrow.</p>
+      <p>
+        SAR Duty refreshes from D4H every night at 02:00. Changes made in D4H today show up tomorrow.
+      </p>
     </div>
   </div>
   <div class="banner warning" role="region" aria-label="Warning">
-    <div class="banner-title">Warning</div>
+    <div class="banner-title"><.svg_icon name="exclamation-triangle" size={20} />Warning</div>
     <div class="banner-body">
-      <p>The team's D4H key belongs to a person. If they leave the team, it stops working.</p>
+      <p>
+        The team's D4H access key belongs to a person. If they leave the team, it stops working.
+      </p>
     </div>
   </div>
   <div class="banner danger" role="alert">
-    <div class="banner-title">There's a problem with D4H</div>
+    <div class="banner-title">
+      <.svg_icon name="exclamation-circle" size={20} />D4H is not answering
+    </div>
     <div class="banner-body">
-      <p>D4H did not answer. Nothing changed. Try again in a few minutes.</p>
+      <p>Nothing changed. Try again in a few minutes.</p>
     </div>
   </div>
 
   <h2>Error summary</h2>
   <p>
-    At the top of a form after a failed submit, linking to each field. See <a href={
+    At the top of a form after a failed save, linking to each field. See <a href={
       page_path(:forms)
     }>Forms</a>.
   </p>
@@ -44,7 +131,7 @@
 
   <h2>Warning text</h2>
   <div class="warning-text">
-    <span class="icon" aria-hidden="true">!</span>
+    <.svg_icon name="exclamation-triangle" size={24} />
     <span>Attendance cannot be changed once the activity is published in D4H.</span>
   </div>
   <p class="spec">For a consequence people must know before they act.</p>
@@ -57,7 +144,7 @@
 
   <h2>Empty state</h2>
   <div class="empty">
-    <strong>No letters yet for 2025</strong>
+    <strong>No tax credit letters for 2025 yet</strong>
     <p>Letters are made from attendance in D4H. Create one from the member list.</p>
     <a href="#" class="btn sm secondary">Go to tax credit letters</a>
   </div>

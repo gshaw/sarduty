@@ -98,25 +98,79 @@
   <p class="spec">The main action first. A destructive action sits apart, on the right.</p>
 
   <h2>Tags</h2>
-  <div class="demo">
-    <div class="actions">
-      <span class="tag">Draft</span>
-      <span class="tag primary">Primary</span>
-      <span class="tag success">Qualified</span>
-      <span class="tag warning">Expires in 12 days</span>
-      <span class="tag danger">Not invited</span>
-      <span class="tag info">Synced</span>
-    </div>
-    <div class="actions">
-      <span class="tag incident">Incident</span>
-      <span class="tag exercise">Exercise</span>
-      <span class="tag event">Event</span>
-    </div>
-  </div>
-  <p class="spec">
-    Status tags are tinted; D4H activity tags are solid, matching D4H. Tags are labels, not
-    buttons: nothing happens when you click one.
+  <p>
+    Five status tags and three D4H activity tags. Tinted tags say what something is. Solid tags ask for action.
   </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">Tag</th>
+          <th class="shrink">Look</th>
+          <th>Means</th>
+          <th>Examples</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag">Not published</span></td>
+          <td>Tinted grey</td>
+          <td>A plain state. Nothing to do.</td>
+          <td>Draft, Not published, Inactive</td>
+        </tr>
+        <tr>
+          <td><span class="tag info">Synced</span></td>
+          <td>Tinted blue</td>
+          <td>Worth knowing, not a problem.</td>
+          <td>New, Synced, Team admin</td>
+        </tr>
+        <tr>
+          <td><span class="tag success">Qualified</span></td>
+          <td>Tinted green</td>
+          <td>Good, done, or meets the rule.</td>
+          <td>Qualified, Letter sent, Active</td>
+        </tr>
+        <tr>
+          <td><span class="tag warning">12 days</span></td>
+          <td>Solid amber</td>
+          <td>Needs action soon.</td>
+          <td>Expires in 12 days, Missing hours, Key owner leaving</td>
+        </tr>
+        <tr>
+          <td><span class="tag danger">Expired</span></td>
+          <td>Solid red</td>
+          <td>Wrong or blocked now.</td>
+          <td>Expired, Not invited, D4H key rejected</td>
+        </tr>
+        <tr>
+          <td>
+            <span class="tag incident">Incident</span>
+            <span class="tag exercise">Exercise</span>
+            <span class="tag event">Event</span>
+          </td>
+          <td>Solid, D4H colors</td>
+          <td>The kind of activity.</td>
+          <td>Only these three words</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ul>
+    <li>One to three words. The words carry the meaning; the color helps people scan.</li>
+    <li>At most one status tag per row or item. If two apply, show the more urgent one.</li>
+    <li>
+      Amber and red are for things a person should act on. If everything is amber, nothing is.
+    </li>
+    <li>Tags are labels, not buttons. Nothing happens when you select one.</li>
+  </ul>
+  <div class="demo">
+    <p>
+      In a table row: Casey Dhillon, Wilderness First Aid <span class="tag warning">12 days</span>
+    </p>
+    <p>
+      Beside a heading: Missing hiker, Stawamus Chief <span class="tag incident">Incident</span>
+    </p>
+  </div>
 
   <h2>Focus</h2>
   <div class="demo">

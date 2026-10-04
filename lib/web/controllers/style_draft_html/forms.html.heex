@@ -163,7 +163,7 @@ Squamish BC V8B 0A1</textarea>
         :for={q <- clause.qualifications}
         class={["chip", String.starts_with?(q, "Missing") && "missing"]}
       >
-        {q}<button title="Remove" aria-label={"Remove #{q}"}>&times;</button>
+        {q}<button title="Remove" aria-label={"Remove #{q}"}><.svg_icon name="x-mark" size={16} /></button>
       </span>
       <span :if={clause.qualifications == []} class="muted small">No qualifications yet</span>
     </div>
@@ -177,7 +177,7 @@ Squamish BC V8B 0A1</textarea>
     </div>
   </div>
   <div class="actions">
-    <button class="btn secondary">Add clause</button>
+    <button class="btn secondary"><.svg_icon name="plus" size={20} /> Add clause</button>
     <button class="btn">Done</button>
   </div>
 

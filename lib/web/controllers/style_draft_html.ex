@@ -26,6 +26,7 @@ defmodule Web.StyleDraftHTML do
          {:colors, "Colors"},
          {:typography, "Typography"},
          {:writing, "Writing"},
+         {:icons, "Icons"},
          {:layout, "Layout"}
        ]},
       {"Components",
@@ -41,6 +42,48 @@ defmodule Web.StyleDraftHTML do
 
   def page_path(:index), do: "/styles/draft"
   def page_path(page), do: "/styles/draft/#{page}"
+
+  # The icon set is Heroicons, as in the app. Only these render, so adding one means adding
+  # it here with its use. Sizes: 16 and 20 are solid, 24 is outline.
+  @icons [
+    {"chevron-left", "Back link, previous page"},
+    {"chevron-right", "Breadcrumb separator, next page"},
+    {"chevron-down", "Details and menus that open"},
+    {"arrow-top-right-on-square", "A link that leaves SAR Duty, such as Open in D4H"},
+    {"arrow-path", "Refresh from D4H"},
+    {"arrow-down-tray", "Download a file, such as a letter PDF"},
+    {"plus", "Add a clause or a qualification"},
+    {"x-mark", "Close a toast, remove a chip"},
+    {"check-circle", "Success banners and toasts"},
+    {"information-circle", "Info banners and toasts"},
+    {"exclamation-triangle", "Warning banners and warning text"},
+    {"exclamation-circle", "Error banners, toasts, and error summaries"}
+  ]
+
+  @icon_markup (for {name, _use} <- @icons,
+                    {size, dir} <- [{16, "16/solid"}, {20, "20/solid"}, {24, "24/outline"}],
+                    into: %{} do
+                  svg =
+                    "../../../deps/heroicons/optimized/#{dir}/#{name}.svg"
+                    |> Path.expand(__DIR__)
+                    |> File.read!()
+                    |> String.replace("<svg ", ~s(<svg class="icon icon-#{size}" ), global: false)
+                    |> String.replace(~r/\s+/, " ")
+
+                  {{name, size}, svg}
+                end)
+
+  def icons, do: @icons
+
+  attr :name, :string, required: true
+  attr :size, :integer, default: 20, values: [16, 20, 24]
+
+  def svg_icon(assigns) do
+    svg = @icon_markup |> Map.fetch!({assigns.name, assigns.size}) |> Phoenix.HTML.raw()
+    assigns = assign(assigns, :svg, svg)
+
+    ~H"{@svg}"
+  end
 
   def button_kinds do
     [
@@ -98,21 +141,23 @@ defmodule Web.StyleDraftHTML do
        ]},
       {"Actions and status",
        [
-         {"primary", "#1d4f91", "#3b7dd8", "Main buttons, current tab"},
-         {"primary-hover", "#163d70", "#5592e0", "Main button under the pointer"},
-         {"success", "#00703c", "#2ea56a", "Save, add, done"},
-         {"danger", "#c2301a", "#e5533d", "Delete, remove, errors"},
-         {"warning", "#f47738", "#f5a05a", "Warnings (fill, with dark text)"},
-         {"info", "#1d70b8", "#4f9be6", "Notices"},
+         {"primary", "#1d4f91", "#2f6fc4", "Main buttons, current tab, page number"},
+         {"primary-hover", "#163d70", "#2563b0", "Main button under the pointer or pressed"},
+         {"success", "#00703c", "#1f7f4c", "Fills: save and add buttons, success banner"},
+         {"success-text", "#00703c", "#4cc38a", "Green text: Add, tinted success tags"},
+         {"danger", "#c2301a", "#c93a24", "Fills: delete buttons, danger tags and banners"},
+         {"danger-text", "#c2301a", "#ff8a75", "Red text: Remove, error messages"},
+         {"warning", "#ffb81c", "#ffb81c", "Amber fill with dark text: act soon"},
+         {"info", "#1d70b8", "#2a66b8", "Fills: notices, info banner"},
          {"focus", "#ffdd00", "#ffdd00", "Keyboard focus, both modes"}
        ]},
       {"Brand and D4H",
        [
          {"nav", "#13243a", "#0a111b", "Top bar"},
          {"accent", "#ffb81c", "#ffb81c", "Logo, top bar rule"},
-         {"incident", "#2453a6", "#4d7fd6", "D4H incident"},
-         {"exercise", "#b4500b", "#e07a33", "D4H exercise"},
-         {"event", "#5b3ea6", "#8f72dd", "D4H event"}
+         {"incident", "#2453a6", "#3366c0", "D4H incident"},
+         {"exercise", "#b4500b", "#b8560f", "D4H exercise"},
+         {"event", "#5b3ea6", "#6a4cc0", "D4H event"}
        ]}
     ]
   end

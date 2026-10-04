@@ -37,8 +37,8 @@
   <div class="demo">
     <ol class="breadcrumbs">
       <li><a href="#">Squamish SAR</a></li>
-      <li><a href="#">Activities</a></li>
-      <li aria-current="page">2025-0412</li>
+      <li><.svg_icon name="chevron-right" size={16} /><a href="#">Activities</a></li>
+      <li aria-current="page"><.svg_icon name="chevron-right" size={16} />2025-0412</li>
     </ol>
     <div class="page-header">
       <div>
@@ -48,7 +48,9 @@
         </div>
       </div>
       <div class="actions" style="margin: 0">
-        <a href="#" class="btn secondary">Open in D4H</a>
+        <a href="#" class="btn secondary">
+          Open in D4H <.svg_icon name="arrow-top-right-on-square" size={16} />
+        </a>
         <a href="#" class="btn">Attendance</a>
       </div>
     </div>
@@ -100,12 +102,12 @@
   <div class="panel">
     <h3 class="first">D4H connection</h3>
     <p>Last refreshed today at 02:00. 833 members, 1,912 activities.</p>
-    <a href="#" class="btn sm secondary">Refresh now</a>
+    <a href="#" class="btn sm secondary"><.svg_icon name="arrow-path" size={16} /> Refresh now</a>
   </div>
 
   <h2>Details</h2>
   <details>
-    <summary>Why are some members missing?</summary>
+    <summary><.svg_icon name="chevron-down" size={16} />Why are some members missing?</summary>
     <div>
       SAR Duty copies members from D4H each night. Members added in D4H today show up tomorrow, or
       after a manual refresh.

@@ -1,0 +1,70 @@
+<.shell title="Icons" current={:icons}>
+  <h1>Icons</h1>
+  <p class="lead">
+    Heroicons, the set the app already uses. A small, fixed list: an icon helps people find or
+    recognize something, and never replaces the words.
+  </p>
+
+  <h2>The set</h2>
+  <p>Only these render. To use a new icon, add it to this list with its use first.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">16</th>
+          <th class="shrink">20</th>
+          <th class="shrink">24</th>
+          <th class="shrink">Name</th>
+          <th>Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{name, use} <- icons()}>
+          <td><.svg_icon name={name} size={16} /></td>
+          <td><.svg_icon name={name} size={20} /></td>
+          <td><.svg_icon name={name} size={24} /></td>
+          <td class="mono">{name}</td>
+          <td>{use}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Sizes</h2>
+  <ul>
+    <li>
+      <strong>16, solid</strong>: beside sm text: breadcrumbs, back links, pagination, small buttons, chips.
+    </li>
+    <li><strong>20, solid</strong>: beside md text: buttons, banner titles, toasts.</li>
+    <li><strong>24, outline</strong>: on its own line, such as warning text.</li>
+  </ul>
+
+  <h2>In use</h2>
+  <div class="demo">
+    <div class="actions">
+      <a href="#" class="back-link" style="margin: 0"><.svg_icon name="chevron-left" size={16} />Settings</a>
+      <a href="#" class="btn secondary">Open in D4H
+      <.svg_icon name="arrow-top-right-on-square" size={16} /></a>
+      <button class="btn secondary"><.svg_icon name="arrow-path" size={20} /> Refresh from D4H</button>
+      <a href="#" class="btn sm secondary"><.svg_icon name="arrow-down-tray" size={16} />
+      Download PDF</a>
+    </div>
+  </div>
+
+  <h2>Rules</h2>
+  <ul>
+    <li>
+      An icon sits beside words. The only icon without words is the close or remove ×, and it has an <code>aria-label</code>.
+    </li>
+    <li>At most one icon per button. It leads, except the external-link icon, which trails.</li>
+    <li>
+      Only the uses listed above. No icons beside headings, in table cells, or for decoration.
+    </li>
+    <li>Icons take the text color. Banners and toasts color theirs to match.</li>
+    <li>
+      In the app: <code>&lt;.icon name="hero-chevron-left-micro" /&gt;</code>
+      for 16, <code>-mini</code>
+      for 20, and no suffix for 24.
+    </li>
+  </ul>
+</.shell>
