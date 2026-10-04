@@ -38,8 +38,9 @@ For a PR with a migration:
 - **Litestream** replicates the database continuously to Cloudflare R2
   ([litestream.yml](../litestream.yml)). `bin/server` restores from the replica when the
   database file is missing, then runs `litestream replicate` in the background.
-- **Volume snapshots** by hand: [backups/backup.sh](../backups/backup.sh) tars the whole
-  volume over `fly ssh`, logos included, into `backups/` (gitignored), encrypted with age.
+- **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
+  consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
+  `backups/` (gitignored), encrypted with age and stamped to the minute.
 
 ## Changing production data
 
