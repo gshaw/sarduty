@@ -33,9 +33,9 @@ defmodule App.Operation.BuildApplePassTest do
     assert [%{value: "Alex Example"}] = json.generic.primaryFields
 
     assert [
-             %{label: "STATUS", value: "Active"},
-             %{label: "MEMBER SINCE", value: "Mar 2019"},
-             %{label: "VALID UNTIL", value: "Dec 2026"} = valid_until
+             %{label: "Status", value: "Active"},
+             %{label: "Member since", value: "Mar 2019"},
+             %{label: "Valid until", value: "Dec 2026"} = valid_until
            ] = json.generic.secondaryFields
 
     refute Map.has_key?(valid_until, :changeMessage)
@@ -120,7 +120,7 @@ defmodule App.Operation.BuildApplePassTest do
   test "a cancelled card says so and shows no QR code" do
     json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json([], @config, @now)
     assert [%{value: "Cancelled"} | _] = json.generic.secondaryFields
-    assert [%{label: "CARD CANCELLED", value: "Alex Example"}] = json.generic.primaryFields
+    assert [%{label: "Card cancelled", value: "Alex Example"}] = json.generic.primaryFields
     refute Map.has_key?(json, :barcodes)
   end
 
@@ -129,7 +129,7 @@ defmodule App.Operation.BuildApplePassTest do
     card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
     json = BuildApplePass.pass_json(card, [], @config, @now)
 
-    assert [%{label: "NOT AN ACTIVE MEMBER"}] = json.generic.primaryFields
+    assert [%{label: "Not an active member"}] = json.generic.primaryFields
     refute Map.has_key?(json, :barcodes)
   end
 
@@ -155,7 +155,7 @@ defmodule App.Operation.BuildApplePassTest do
 
     refute Enum.any?(json.generic.backFields, &(&1.key == "test"))
 
-    assert %{label: "Test update", value: "Sep 30, 5:00:00 AM"} =
+    assert %{label: "Test update", value: "Sep 30, 05:00:00"} =
              test_field = Enum.find(tested_json.generic.backFields, &(&1.key == "test"))
 
     assert test_field.changeMessage == "SAR Duty test update %@"

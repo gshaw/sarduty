@@ -40,7 +40,13 @@ defmodule Web.TaxCreditLetterLive do
       </.button>
       <.button variant={:warning} phx-click="email">Email letter</.button>
       <:trailing>
-        <.button variant={:danger} phx-click="destroy">Delete letter</.button>
+        <.button
+          variant={:danger}
+          phx-click="destroy"
+          data-confirm={"Delete letter #{@letter.ref_id}? The member may already have it. A new letter gets a new reference number."}
+        >
+          Delete letter
+        </.button>
       </:trailing>
     </.form_actions>
     <hr class="my-p border-hr" />

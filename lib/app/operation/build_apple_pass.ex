@@ -142,13 +142,13 @@ defmodule App.Operation.BuildApplePass do
     [
       %{
         key: "status",
-        label: "STATUS",
+        label: "Status",
         value: status_text(card, now),
         changeMessage: "Your card is now %@."
       },
       %{
         key: "member-since",
-        label: "MEMBER SINCE",
+        label: "Member since",
         value: Service.Format.month_year(member.joined_at, member.team.timezone)
       },
       valid_until_field(card, now)
@@ -164,7 +164,7 @@ defmodule App.Operation.BuildApplePass do
     if valid_until && MemberCard.status(card, now) == :active do
       %{
         key: "valid-until",
-        label: "VALID UNTIL",
+        label: "Valid until",
         value: Service.Format.month_year(valid_until, member.team.timezone)
       }
     end
@@ -182,7 +182,7 @@ defmodule App.Operation.BuildApplePass do
     List.flatten([
       %{
         key: "verify",
-        label: "How to check this card",
+        label: "How to verify this card",
         value: MemberCard.how_to_check(code)
       },
       qualification_fields(qualifications, team.timezone),
@@ -211,9 +211,9 @@ defmodule App.Operation.BuildApplePass do
 
   defp name_label(card, now) do
     case MemberCard.status(card, now) do
-      :active -> "MEMBER"
-      :inactive -> "NOT AN ACTIVE MEMBER"
-      :revoked -> "CARD CANCELLED"
+      :active -> "Member"
+      :inactive -> "Not an active member"
+      :revoked -> "Card cancelled"
     end
   end
 

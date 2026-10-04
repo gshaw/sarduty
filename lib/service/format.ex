@@ -15,10 +15,10 @@ defmodule Service.Format do
   def datetime_medium(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
 
   def time_short(datetime, timezone), do: datetime(datetime, timezone, "%H:%M")
-  def month_day_time(datetime, timezone), do: datetime(datetime, timezone, "%b %-d, %-I:%M %p")
+  def month_day_time(datetime, timezone), do: datetime(datetime, timezone, "%b %-d, %H:%M")
 
   def month_day_time_seconds(datetime, timezone),
-    do: datetime(datetime, timezone, "%b %-d, %-I:%M:%S %p")
+    do: datetime(datetime, timezone, "%b %-d, %H:%M:%S")
 
   defp datetime(nil, _timezone, _format), do: nil
 
