@@ -27,7 +27,9 @@ Swoosh. Production sends through Cloudflare Email Sending's REST API with
 [App.Adapter.CloudflareEmail](../lib/app/adapter/cloudflare_email.ex), since Swoosh has
 no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox` unless both
 variables below are set in dev too; tests use `Swoosh.Adapters.Test`. Mail comes from
-`noreply@sarduty.com`: account emails, and tax credit letters with the PDF attached.
+`noreply@sarduty.com`: login links, and tax credit letters with the PDF attached. Login
+is by emailed link only, so without mail nobody can log in; existing sessions last 60
+days.
 
 - `CLOUDFLARE_ACCOUNT_ID` — required in production.
 - `CLOUDFLARE_EMAIL_TOKEN` — required in production. An account API token with only the

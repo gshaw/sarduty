@@ -2,35 +2,37 @@ defmodule Web.UserSessionController do
   use Web, :controller
 
   alias App.Accounts
+  alias Web.LoginLimit
   alias Web.UserAuth
+  alias Web.VerifyLimit
 
-  def create(conn, %{"_action" => "registered"} = params) do
-    create(conn, params, "Account created successfully!")
-  end
+  # The reply is the same whether or not the email may log in, so the form can't be
+  # used to find out who has access.
+  def request_link(conn, %{"user" => %{"email" => email}}) do
+    email = email |> String.trim() |> String.slice(0, 160)
 
-  def create(conn, %{"_action" => "password_updated"} = params) do
+    if email != "" and LoginLimit.allow?(email, VerifyLimit.client_ip(conn)) do
+      Accounts.deliver_login_link(email, &url(~p"/login/#{&1}"))
+    end
+
+    # The sent page reads the email from the session, so a refresh shows it again rather
+    # than the form.
     conn
-    |> put_session(:user_return_to, ~p"/settings")
-    |> create(params, "Password updated successfully!")
+    |> put_session(:login_link_email, email)
+    |> redirect(to: ~p"/login/sent")
   end
 
-  def create(conn, params) do
-    create(conn, params, "Welcome back!")
-  end
+  def create(conn, %{"token" => token}) do
+    case Accounts.log_in_with_token(token) do
+      {:ok, user} ->
+        conn
+        |> put_flash(:info, "Logged in as #{user.email}.")
+        |> UserAuth.log_in_user(user)
 
-  defp create(conn, %{"user" => user_params}, info) do
-    %{"email" => email, "password" => password} = user_params
-
-    if user = Accounts.get_user_by_email_and_password(email, password) do
-      conn
-      |> put_flash(:info, info)
-      |> UserAuth.log_in_user(user, user_params)
-    else
-      # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
-      conn
-      |> put_flash(:error, "Invalid email or password")
-      |> put_flash(:email, String.slice(email, 0, 160))
-      |> redirect(to: ~p"/login")
+      :error ->
+        conn
+        |> put_flash(:error, "That login link is used or expired. Ask for a new one.")
+        |> redirect(to: ~p"/login")
     end
   end
 

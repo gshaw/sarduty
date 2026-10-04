@@ -27,23 +27,16 @@ defmodule Web.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def log_in_user(conn, user, params \\ %{}) do
+  # Every login is remembered for 60 days; getting a new link each visit would be a chore.
+  def log_in_user(conn, user) do
     token = Accounts.generate_user_session_token(user)
     user_return_to = get_session(conn, :user_return_to)
 
     conn
     |> renew_session()
     |> put_token_in_session(token)
-    |> maybe_write_remember_me_cookie(token, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
-  end
-
-  defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
-    put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)
-  end
-
-  defp maybe_write_remember_me_cookie(conn, _token, _params) do
-    conn
+    |> put_resp_cookie(@remember_me_cookie, token, @remember_me_options)
+    |> redirect(to: user_return_to || signed_in_path(user))
   end
 
   # This function renews the session ID and erases the whole
@@ -94,12 +87,30 @@ defmodule Web.UserAuth do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
 
-    conn = assign(conn, :current_user, user)
+    conn
+    |> assign(:current_user, user)
+    |> assign(:current_team, default_team(user))
+  end
 
-    if user do
-      assign(conn, :current_team, user.team)
+  @doc """
+  The team pages outside `/:subdomain` (settings, ID cards) work on: the team the user
+  last opened when they still manage it, else their first by name, or nil.
+  """
+  def default_team(nil), do: nil
+
+  def default_team(user) do
+    teams = Team.get_managed_by(user.email, DateTime.utc_now())
+    Enum.find(teams, &(&1.id == user.last_team_id)) || List.first(teams)
+  end
+
+  # The team a URL's subdomain names, when this user may open it: an admin may open any.
+  defp authorized_team(user, subdomain) do
+    if user.is_admin do
+      Team.get_by(subdomain: subdomain)
     else
-      conn
+      user.email
+      |> Team.get_managed_by(DateTime.utc_now())
+      |> Enum.find(&(&1.subdomain == subdomain))
     end
   end
 
@@ -181,28 +192,18 @@ defmodule Web.UserAuth do
     end
   end
 
-  # ensure current_user.team.subdomain matches url and assign it to current_team
-  # admins can access any team
+  # The URL's team, when the user manages it in D4H or is an admin. Otherwise a 404, so
+  # the page doesn't say whether the team exists.
   def on_mount(:ensure_authorized_team_subdomain, params, _session, socket) do
     current_user = socket.assigns.current_user
 
-    cond do
-      current_user.is_admin ->
-        # Admins can access any team - fetch the requested team by subdomain
-        team = Team.get_by(subdomain: params["subdomain"])
-
-        if team do
-          {:cont, Phoenix.Component.assign(socket, :current_team, team)}
-        else
-          raise Web.Status.NotFound
-        end
-
-      current_user.team && current_user.team.subdomain == params["subdomain"] ->
-        RecordUserSeen.call(current_user)
-        {:cont, Phoenix.Component.assign(socket, :current_team, current_user.team)}
-
-      true ->
+    case authorized_team(current_user, params["subdomain"]) do
+      nil ->
         raise Web.Status.NotFound
+
+      team ->
+        RecordUserSeen.call(current_user, team.id)
+        {:cont, Phoenix.Component.assign(socket, :current_team, team)}
     end
   end
 
@@ -219,10 +220,17 @@ defmodule Web.UserAuth do
   defp mount_current_team(socket) do
     current_user = socket.assigns.current_user
 
-    if current_user do
-      Phoenix.Component.assign(socket, current_team: current_user.team)
+    Phoenix.Component.assign(socket, current_team: default_team(current_user))
+  end
+
+  @doc "Sends a logged-in user to their team rather than the login form."
+  def redirect_if_user_is_authenticated(conn, _opts) do
+    if user = conn.assigns[:current_user] do
+      conn
+      |> redirect(to: signed_in_path(user))
+      |> halt()
     else
-      Phoenix.Component.assign(socket, current_team: nil)
+      conn
     end
   end
 
@@ -244,28 +252,16 @@ defmodule Web.UserAuth do
     end
   end
 
-  # Admins can access any team, others are restricted to their own team
   def require_authorized_team_subdomain(conn, _opts) do
     current_user = conn.assigns.current_user
-    subdomain = conn.path_params["subdomain"]
 
-    cond do
-      current_user.is_admin ->
-        # Admins can access any team - fetch the requested team by subdomain
-        team = Team.get_by(subdomain: subdomain)
-
-        if team do
-          assign(conn, :current_team, team)
-        else
-          raise Web.Status.NotFound
-        end
-
-      current_user.team && current_user.team.subdomain == subdomain ->
-        RecordUserSeen.call(current_user)
-        assign(conn, :current_team, current_user.team)
-
-      true ->
+    case authorized_team(current_user, conn.path_params["subdomain"]) do
+      nil ->
         raise Web.Status.NotFound
+
+      team ->
+        RecordUserSeen.call(current_user, team.id)
+        assign(conn, :current_team, team)
     end
   end
 
@@ -281,5 +277,18 @@ defmodule Web.UserAuth do
 
   defp maybe_store_return_to(conn), do: conn
 
-  defp signed_in_path(_conn), do: ~p"/"
+  @doc """
+  Where logging in lands: the team the user last opened when they still manage it, else
+  their only or first team. An admin who manages none lands on /admin; anyone else on the
+  home page, which says why they have no team.
+  """
+  def signed_in_path(user) do
+    team = default_team(user)
+
+    cond do
+      team -> ~p"/#{team.subdomain}"
+      user.is_admin -> ~p"/admin"
+      true -> ~p"/"
+    end
+  end
 end

@@ -1,77 +1,79 @@
 defmodule Web.UserLoginLiveTest do
   use Web.ConnCase
 
+  import App.DataFixtures
   import Phoenix.LiveViewTest
-  import App.AccountsFixtures
 
-  describe "Log in page" do
-    test "renders log in page", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/login")
+  alias App.Accounts.UserToken
+  alias App.Repo
 
-      assert html =~ "Log in"
-      # assert html =~ "Sign up"
-      assert html =~ "Forgot your password?"
-    end
+  test "asks for an email only", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/login")
+
+    assert has_element?(lv, "#login_form input[type=email]")
+    refute has_element?(lv, "#login_form input[type=password]")
   end
 
-  describe "user login" do
-    test "redirects if user login with valid credentials", %{conn: conn} do
-      password = "123456789abcd"
-      user = user_fixture(%{password: password})
+  test "submitting hands the form to the controller", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/login")
 
-      {:ok, lv, _html} = live(conn, ~p"/login")
+    form = form(lv, "#login_form", user: %{email: "pat@example.com"})
+    render_submit(form)
 
-      form =
-        form(lv, "#login_form", user: %{email: user.email, password: password, remember_me: true})
-
-      conn = submit_form(form, conn)
-
-      assert redirected_to(conn) == ~p"/"
-    end
-
-    test "redirects to login page with a flash error if there are no valid credentials", %{
-      conn: conn
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/login")
-
-      form =
-        form(lv, "#login_form",
-          user: %{email: "test@email.com", password: "123456", remember_me: true}
-        )
-
-      conn = submit_form(form, conn)
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Invalid email or password"
-
-      assert redirected_to(conn) == "/login"
-    end
+    conn = follow_trigger_action(form, conn)
+    assert redirected_to(conn) == ~p"/login/sent"
   end
 
-  describe "login navigation" do
-    # test "redirects to sign up page when the sign up button is clicked", %{conn: conn} do
-    #   {:ok, lv, _html} = live(conn, ~p"/login")
+  test "a login link opens a page with a button that logs in", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    {token, user_token} = UserToken.build_login_token(user)
+    Repo.insert!(user_token)
 
-    #   {:ok, _login_live, login_html} =
-    #     lv
-    #     |> element(~s|main a:fl-contains("Sign up")|)
-    #     |> render_click()
-    #     |> follow_redirect(conn, ~p"/signup")
+    {:ok, lv, _html} = live(conn, ~p"/login/#{token}")
 
-    #   assert login_html =~ "Sign up"
-    # end
+    assert has_element?(lv, "#login_link_form", user.email)
+    assert has_element?(lv, ~s(#login_link_form input[name=token][value="#{token}"]))
+  end
 
-    test "redirects to forgot password page when the Forgot Password button is clicked", %{
-      conn: conn
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/login")
+  test "the browser that asked for the link logs in on its own", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    {token, user_token} = UserToken.build_login_token(user)
+    Repo.insert!(user_token)
+    conn = Phoenix.ConnTest.init_test_session(conn, %{login_link_email: user.email})
 
-      {:ok, _lv, html} =
-        lv
-        |> element("main a", "Forgot your password?")
-        |> render_click()
-        |> follow_redirect(conn, ~p"/login/reset")
+    {:ok, lv, _html} = live(conn, ~p"/login/#{token}")
 
-      assert html =~ "Forgot your password?"
-    end
+    assert has_element?(lv, "#login_link_form[phx-trigger-action]")
+    conn = follow_trigger_action(element(lv, "#login_link_form"), conn)
+    assert redirected_to(conn) == ~p"/#{team.subdomain}"
+  end
+
+  test "another browser, like a mail scanner, gets the button only", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    {token, user_token} = UserToken.build_login_token(user)
+    Repo.insert!(user_token)
+
+    {:ok, lv, _html} = live(conn, ~p"/login/#{token}")
+
+    refute has_element?(lv, "#login_link_form[phx-trigger-action]")
+  end
+
+  test "a used or expired link goes back to the login page", %{conn: conn} do
+    assert {:error, {:live_redirect, %{to: "/login"}}} = live(conn, ~p"/login/expired-token")
+  end
+
+  test "after asking for a link, the sent page stays on refresh", %{conn: conn} do
+    conn = Phoenix.ConnTest.init_test_session(conn, %{login_link_email: "pat@example.com"})
+
+    {:ok, lv, _html} = live(conn, ~p"/login/sent")
+    assert has_element?(lv, "#login-sent", "pat@example.com")
+    refute has_element?(lv, "#login_form")
+
+    {:ok, lv, _html} = live(conn, ~p"/login/sent")
+    assert has_element?(lv, "#login-sent", "pat@example.com")
+  end
+
+  test "the sent page without a request goes to the login form", %{conn: conn} do
+    assert {:error, {:live_redirect, %{to: "/login"}}} = live(conn, ~p"/login/sent")
   end
 end

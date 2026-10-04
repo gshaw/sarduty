@@ -67,6 +67,9 @@ defmodule Web.TeamDashboardLive do
         <.a navigate={~p"/#{@team.subdomain}/members"}>Members</.a>
         <ul class="subheading action-list ml-hindent">
           <li>
+            <.a navigate={~p"/#{@team.subdomain}/managers"}>Managers</.a>
+          </li>
+          <li>
             <.a navigate={~p"/#{@team.subdomain}/groups"}>Groups</.a>
           </li>
           <li>

@@ -3,6 +3,8 @@ defmodule App.Operation.RecordUserSeen do
   Stamps `users.last_seen_at` when someone opens a team page, so `/admin` can show which
   teams still use SAR Duty. Writes at most once an hour per user, and never for admins,
   whose visits say nothing about a team.
+
+  Also remembers the team opened, for everyone, so logging in lands on it.
   """
 
   import Ecto.Query
@@ -12,12 +14,13 @@ defmodule App.Operation.RecordUserSeen do
 
   @interval_seconds 60 * 60
 
-  def call(%User{} = user, now \\ DateTime.utc_now()) do
-    if due?(user, now) do
-      now = DateTime.truncate(now, :second)
-      # update_all rather than a changeset, so a page view doesn't bump updated_at.
-      User |> where(id: ^user.id) |> Repo.update_all(set: [last_seen_at: now])
-    end
+  def call(%User{} = user, team_id, now \\ DateTime.utc_now()) do
+    changes =
+      if(due?(user, now), do: [last_seen_at: DateTime.truncate(now, :second)], else: []) ++
+        if user.last_team_id == team_id, do: [], else: [last_team_id: team_id]
+
+    # update_all rather than a changeset, so a page view doesn't bump updated_at.
+    if changes != [], do: User |> where(id: ^user.id) |> Repo.update_all(set: changes)
 
     :ok
   end

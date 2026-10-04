@@ -1,33 +1,48 @@
 defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamManagers
+
+  alias App.Accounts.User
   alias App.Model.Member
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.ScheduleTeamRefreshesWorker
 
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    teams = Team.get_all_with_users()
+    teams = Team.get_all()
     now = DateTime.utc_now()
 
     socket =
       socket
-      |> assign(page_title: "Admin")
-      |> assign(teams: teams)
-      |> assign(now: now)
-      |> assign(managers: Map.new(teams, &{&1.id, Member.get_managers(&1, now)}))
-      |> assign(login_emails: login_emails(teams))
+      |> assign(page_title: "Admin", teams: teams, now: now)
+      |> assign_access(teams, now)
 
     {:ok, socket}
   end
 
+  # Who reaches each team: its D4H managers, emails an admin let in, and which have logins.
+  defp assign_access(socket, teams, now) do
+    managers = Map.new(teams, &{&1.id, Member.get_managers(&1, now)})
+    users = App.Repo.all(User)
+    grants = Enum.group_by(TeamLoginGrant.get_all(), & &1.team_id)
+    logins = Map.new(teams, &{&1.id, logins(users, managers[&1.id], grants[&1.id] || [])})
+
+    assign(socket,
+      managers: managers,
+      grants: grants,
+      logins: logins,
+      login_emails: MapSet.new(users, &String.downcase(&1.email))
+    )
+  end
+
   def handle_info({:team_refreshed, updated_team}, socket) do
-    # The broadcast team has no users loaded, so keep the ones from mount.
     teams =
       Enum.map(socket.assigns.teams, fn team ->
-        if team.id == updated_team.id, do: %{updated_team | users: team.users}, else: team
+        if team.id == updated_team.id, do: updated_team, else: team
       end)
 
     {:noreply, assign(socket, teams: teams)}
@@ -66,12 +81,15 @@ defmodule Web.AdminDashboardLive do
         </div>
       </:col>
       <:col :let={team} label="Last seen" class="whitespace-nowrap">
-        <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @now)}</span>
+        <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
       </:col>
       <:col :let={team} label="Contacts">
-        <span :if={team.users == []} class="text-danger-1">No users</span>
-        <ul :if={team.users != []}>
-          <li :for={user <- team.users} class="flex items-baseline gap-2 md:whitespace-nowrap">
+        <span :if={@logins[team.id] == []} class="text-danger-1">No users</span>
+        <ul :if={@logins[team.id] != []}>
+          <li
+            :for={user <- @logins[team.id]}
+            class="flex items-baseline gap-2 md:whitespace-nowrap"
+          >
             <span>{user.email}</span>
             <span
               :if={user.last_seen_at}
@@ -111,39 +129,19 @@ defmodule Web.AdminDashboardLive do
       <p class="max-w-3xl text-sm text-secondary-1">
         Everyone D4H makes an Owner or Editor who isn't retired and hasn't left, from the last
         refresh, leaving out the team key's own account. Under #57 these people get access,
-        and only these. Flagged: an email outside the team's usual domain, and anyone not
-        operational.
+        and only these, plus any email an admin let in. Flagged: an email outside the team's
+        usual domain, and anyone not operational.
       </p>
       <div :for={team <- @teams} id={"managers-#{team.id}"} class="mb-p2">
         <h3 class="font-bold">
           {team.name} · {length(@managers[team.id])} managers
         </h3>
-        <p :if={@managers[team.id] == []} class="text-sm text-secondary-1">
-          None known. The team hasn't refreshed since access levels were added, or its key fails.
-        </p>
-        <ul class="text-sm">
-          <li
-            :for={member <- @managers[team.id]}
-            id={"manager-#{member.id}"}
-            class="flex flex-wrap items-baseline gap-2"
-          >
-            <span>{member.name}</span>
-            <span class="text-secondary-1">{Member.permission_label(member.d4h_permission)}</span>
-            <span>{member.email}</span>
-            <.badge :if={has_login?(member, @login_emails)} kind={:primary}>Has login</.badge>
-            <.badge :if={odd_domain?(member, @managers[team.id])} kind={:warning}>
-              Other domain
-            </.badge>
-            <.badge :if={member.d4h_status != "OPERATIONAL"}>Not operational</.badge>
-          </li>
-        </ul>
-        <p
-          :for={user <- losing_users(team, @managers[team.id])}
-          id={"loses-#{user.id}"}
-          class="text-sm text-danger-1"
-        >
-          {user.email} has a login but matches no manager, so would lose access.
-        </p>
+        <.team_managers
+          id={"managers-list-#{team.id}"}
+          managers={@managers[team.id]}
+          grants={@grants[team.id] || []}
+          login_emails={@login_emails}
+        />
       </div>
     </section>
 
@@ -203,39 +201,18 @@ defmodule Web.AdminDashboardLive do
     "#{ok_count} of #{length(teams)} teams refreshed OK."
   end
 
-  defp login_emails(teams) do
-    for team <- teams, user <- team.users, into: MapSet.new(), do: String.downcase(user.email)
-  end
-
-  defp has_login?(member, login_emails),
-    do: member.email != nil and MapSet.member?(login_emails, String.downcase(member.email))
-
-  defp losing_users(team, managers) do
-    emails = MapSet.new(managers, &String.downcase(&1.email || ""))
-    Enum.reject(team.users, &MapSet.member?(emails, String.downcase(&1.email)))
-  end
-
-  # The team's most common manager email domain is its usual one.
-  defp odd_domain?(member, managers) do
-    usual =
+  # Users who can reach the team, by email: its managers who have logged in, and emails
+  # an admin let in.
+  defp logins(users, managers, grants) do
+    emails =
       managers
-      |> Enum.map(&email_domain/1)
-      |> Enum.reject(&is_nil/1)
-      |> Enum.frequencies()
-      |> Enum.max_by(&elem(&1, 1), fn -> {nil, 0} end)
-      |> elem(0)
+      |> MapSet.new(&String.downcase(&1.email || ""))
+      |> MapSet.union(MapSet.new(grants, & &1.email))
 
-    usual != nil and email_domain(member) != usual
+    users
+    |> Enum.filter(&MapSet.member?(emails, String.downcase(&1.email)))
+    |> Enum.sort_by(& &1.email)
   end
-
-  defp email_domain(%{email: email}) when is_binary(email) do
-    case String.split(email, "@") do
-      [_, domain] -> String.downcase(domain)
-      _ -> nil
-    end
-  end
-
-  defp email_domain(_member), do: nil
 
   defp key_summary(%Team{d4h_access_key: key}) when key in [nil, ""], do: "No team key"
   defp key_summary(%Team{d4h_access_key_owner: nil}), do: "Team key"
@@ -247,8 +224,8 @@ defmodule Web.AdminDashboardLive do
   end
 
   # The most recent visit by anyone on the team.
-  defp team_last_seen(team, now) do
-    team.users
+  defp team_last_seen(team, logins, now) do
+    logins
     |> Enum.map(& &1.last_seen_at)
     |> Enum.reject(&is_nil/1)
     |> Enum.max(DateTime, fn -> nil end)

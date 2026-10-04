@@ -5,7 +5,7 @@ defmodule Web.Settings.CardsLive do
   alias App.Worker.PushPassUpdatesWorker
 
   def mount(_params, _session, socket) do
-    team = socket.assigns.current_user.team
+    team = socket.assigns.current_team
 
     socket =
       if team == nil do
@@ -18,7 +18,7 @@ defmodule Web.Settings.CardsLive do
   end
 
   def handle_event("save", params, socket) do
-    team = socket.assigns.current_user.team
+    team = socket.assigns.current_team
     known = Map.keys(socket.assigns.names)
     picked = params |> Map.get("names", []) |> Enum.filter(&(&1 in known))
     GroupRuleClause.set_on_card!(team.id, picked)

@@ -3,77 +3,40 @@ defmodule App.Accounts.UserNotifier do
 
   alias App.Mailer
 
-  # Delivers the email using the application mailer.
-  defp deliver(recipient, subject, body) do
+  # The login email: a button in mail apps that show HTML, the plain link otherwise.
+  def deliver_login_link(user, url) do
     email =
       new()
-      |> to(recipient)
+      |> to(user.email)
       |> from({"SAR Duty", "noreply@sarduty.com"})
-      |> subject(subject)
-      |> text_body(body)
+      |> subject("Log in to SAR Duty")
+      |> text_body("""
+      Use this link to log in to SAR Duty:
+
+      #{url}
+
+      It works once, for 15 minutes. If you didn't ask for it, ignore this email.
+      """)
+      |> html_body(login_html(url))
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}
     end
   end
 
-  @doc """
-  Deliver instructions to confirm account.
-  """
-  def deliver_confirmation_instructions(user, url) do
-    deliver(user.email, "Confirmation instructions", """
+  # cspell:ignore Segoe -- Windows' system font, in the email's font stack
+  defp login_html(url) do
+    url = url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
-    ==============================
-
-    Hi #{user.email},
-
-    You can confirm your account by visiting the URL below:
-
-    #{url}
-
-    If you didn't create an account with us, please ignore this.
-
-    ==============================
-    """)
-  end
-
-  @doc """
-  Deliver instructions to reset a user password.
-  """
-  def deliver_reset_password_instructions(user, url) do
-    deliver(user.email, "Reset password instructions", """
-
-    ==============================
-
-    Hi #{user.email},
-
-    You can reset your password by visiting the URL below:
-
-    #{url}
-
-    If you didn't request this change, please ignore this.
-
-    ==============================
-    """)
-  end
-
-  @doc """
-  Deliver instructions to update a user email.
-  """
-  def deliver_update_email_instructions(user, url) do
-    deliver(user.email, "Update email instructions", """
-
-    ==============================
-
-    Hi #{user.email},
-
-    You can change your email by visiting the URL below:
-
-    #{url}
-
-    If you didn't request this change, please ignore this.
-
-    ==============================
-    """)
+    """
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; color: #18181b; max-width: 480px;">
+      <p>Tap the button to log in to SAR Duty.</p>
+      <p style="margin: 24px 0;">
+        <a href="#{url}" style="background: #16a34a; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Log in</a>
+      </p>
+      <p style="color: #52525b; font-size: 14px;">It works once, for 15 minutes. If you didn't ask for it, ignore this email.</p>
+      <p style="color: #71717a; font-size: 12px; word-break: break-all;">Or open #{url}</p>
+    </div>
+    """
   end
 end
