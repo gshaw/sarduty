@@ -218,6 +218,13 @@
   .tag.event { background: var(--event); }
   /* D4H's own tags on an activity: data, not status, so outlined and quiet. */
   .tag.outline { background: none; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--border); font-weight: 400; }
+  /* The D4H kind in a table column: a small square in the D4H colour and the word. Lighter
+     than a solid tag, which stays for a kind shown on its own, such as beside a title. */
+  .kind { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+  .kind::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--c); align-self: center; flex: none; }
+  .kind.incident { --c: var(--incident); }
+  .kind.exercise { --c: var(--exercise); }
+  .kind.event { --c: var(--event); }
   /* A group of tags wraps with a gap, so tags never touch. */
   .tags { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); vertical-align: baseline; }
 

@@ -212,10 +212,20 @@ defmodule Web.StyleDraftHTML do
         title: title,
         count: count,
         hours: hours,
-        tags: tags,
+        hours_type: hours_type(tags),
+        tags: tags -- ["Primary hours", "Secondary hours"],
         number: number,
         draft: draft
       }
     end)
+  end
+
+  # D4H's hours tags become a word in the Hours cell; the rest stay tags.
+  defp hours_type(tags) do
+    cond do
+      "Primary hours" in tags -> "Primary"
+      "Secondary hours" in tags -> "Secondary"
+      true -> nil
+    end
   end
 end
