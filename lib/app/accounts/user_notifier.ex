@@ -24,6 +24,7 @@ defmodule App.Accounts.UserNotifier do
     end
   end
 
+  # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   defp login_html(url) do
     url = url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 

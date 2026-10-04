@@ -94,12 +94,33 @@ writes, via `PATCH /attendance/:id`), the mileage report, team settings refresh,
 member photos. They use the team's key too.
 
 The sync also stores each member's D4H access level (`d4h_permission`) and status. That
-decides who can log in: see `App.Model.Member.manager?/2`. Losing Owner or Editor in D4H
-loses access at the next refresh.
+decides who can log in: see [Who can log in](#who-can-log-in).
 
 Group rule changes are the other write. The review page sends them with the team's key
 and updates `group_members` right away rather
 than waiting for the next refresh. See [group-rules.md](group-rules.md).
+
+## Who can log in
+
+Login is by emailed link only (#57). A user reaches a team when their email matches one of
+its managers in the local copy: a D4H Owner or Editor who isn't retired and hasn't left
+(`App.Model.Member.manager?/2`, and `App.Model.Team.get_managed_by/2` as a query). Losing
+Owner or Editor in D4H loses access at the next refresh. Admins reach every team.
+
+- **The team key's account** is left out when it's a "SAR Duty" account, since it isn't a
+  person. A team key from a person's own account leaves them in.
+- **Login grants** let an email into one team that D4H doesn't list as a manager there: a
+  shared role address, or a team whose key fails. An admin adds one through
+  `bin/sarduty rpc`:
+  `App.Model.TeamLoginGrant.grant!(subdomain, email, reason)`, and removes it with
+  `revoke!(subdomain, email)`. `/admin` and the team's managers page list them.
+- **The link** is 128 random bits, stored only as a hash, valid for 15 minutes and once.
+  A request within a minute of the last one sends nothing, and `Web.LoginLimit` caps
+  requests per email and per IP. Opened in the browser that asked for it, the link logs
+  in on its own; anywhere else it waits for a button, so mail scanners can't use it up.
+- **Landing**: the page that asked for a login, else the team the user last opened
+  (`users.last_team_id`), else their first. An admin with no team lands on `/admin`.
+- `/:subdomain/managers` shows the team who can log in, with the same list on `/admin`.
 
 ## Adapter notes
 
