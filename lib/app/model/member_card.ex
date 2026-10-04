@@ -82,11 +82,10 @@ defmodule App.Model.MemberCard do
   """
   def qr_url(code, verify_url), do: String.upcase("#{verify_url}/#{format_code(code)}")
 
-  @doc "How to check a card, for the back of the pass. `code` is as printed."
+  @doc "How to verify a card, for the back of the pass. `code` is as printed."
   def how_to_check(code) do
-    "Scan the QR code with your phone's camera. Check that the page it opens is " <>
-      "verify.sarduty.com, and that the photo matches the person. Or open " <>
-      "verify.sarduty.com and type #{code}."
+    "Scan the QR code with a phone's camera. The page it opens must be verify.sarduty.com, " <>
+      "and the photo must match the person. Or open verify.sarduty.com and enter #{code}."
   end
 
   @doc """

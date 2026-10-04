@@ -127,7 +127,7 @@ defmodule Web.MemberCardLiveTest do
 
       MemberCard.record_pass_fetched!(card, ~U[2026-09-30 22:42:00.000000Z])
 
-      assert has_element?(lv, "#card-phones", "On 2 phones · last fetched Sep 30, 3:42 PM")
+      assert has_element?(lv, "#card-phones", "On 2 phones · last fetched Sep 30, 15:42")
     end
 
     test "sends a test update to the phone", %{conn: conn, team: team, member: member, card: card} do

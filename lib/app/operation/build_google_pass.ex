@@ -112,7 +112,7 @@ defmodule App.Operation.BuildGooglePass do
       valid_until_text(team, status),
       text(
         "verify",
-        "How to check this card",
+        "How to verify this card",
         MemberCard.how_to_check(MemberCard.format_code(card.code))
       ),
       qualification_texts(qualifications, team.timezone),
