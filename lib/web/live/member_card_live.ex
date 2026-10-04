@@ -31,7 +31,7 @@ defmodule Web.MemberCardLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{member.name} - ID Card")
+      |> assign(:page_title, "#{member.name} - ID card")
       |> assign(:member, member)
       |> assign_card(MemberCard.find_current(team, member))
       |> assign(:qualifications, BuildCardQualifications.call(team, member, DateTime.utc_now()))
@@ -42,7 +42,7 @@ defmodule Web.MemberCardLive do
   def handle_event("issue", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
     {:ok, card} = IssueMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, socket |> assign_card(card) |> put_flash(:info, "Issued a new card.")}
+    {:noreply, socket |> assign_card(card) |> put_flash(:info, "Issued a new ID card.")}
   end
 
   def handle_event("email", _params, socket) do
@@ -50,9 +50,9 @@ defmodule Web.MemberCardLive do
 
     socket =
       case EmailMemberCard.call(team, member, DateTime.utc_now()) do
-        :ok -> put_flash(socket, :info, "Emailed the pass to #{member.email}.")
+        :ok -> put_flash(socket, :info, "Emailed the ID card to #{member.email}.")
         {:error, :no_email} -> put_flash(socket, :error, "#{member.name} has no email in D4H.")
-        {:error, _reason} -> put_flash(socket, :error, "The email didn't send. Try again.")
+        {:error, _reason} -> put_flash(socket, :error, "The email did not send. Try again.")
       end
 
     {:noreply, socket}
@@ -61,7 +61,7 @@ defmodule Web.MemberCardLive do
   def handle_event("revoke", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
     :ok = RevokeMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, socket |> assign_card(nil) |> put_flash(:info, "Cancelled the card.")}
+    {:noreply, socket |> assign_card(nil) |> put_flash(:info, "Cancelled the ID card.")}
   end
 
   def handle_event("test-update", _params, socket) do
@@ -96,7 +96,7 @@ defmodule Web.MemberCardLive do
     ~H"""
     <.breadcrumbs team={@current_team}>
       <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
-      <:item label="ID Card" />
+      <:item label="ID card" />
     </.breadcrumbs>
 
     <h1 class="title">{@member.name}</h1>
@@ -122,7 +122,7 @@ defmodule Web.MemberCardLive do
     <div id="no-card">
       <p>{@member.name} has no ID card.</p>
       <p class="mt-p">
-        <.button id="issue" variant={:primary} phx-click="issue">Issue a card</.button>
+        <.button id="issue" variant={:primary} phx-click="issue">Issue ID card</.button>
       </p>
     </div>
     """
@@ -143,7 +143,7 @@ defmodule Web.MemberCardLive do
           </div>
           <div :if={@qualifications == []}>
             None held.
-            <.a navigate={~p"/settings/cards"}>Pick qualifications to show</.a>
+            <.a navigate={~p"/settings/cards"}>Select qualifications to show</.a>
           </div>
         </dd>
         <dt :if={BuildApplePass.configured?()}>Apple Wallet</dt>
@@ -161,7 +161,7 @@ defmodule Web.MemberCardLive do
         </dd>
       </dl>
       <p class="mt-p">
-        Anyone can check this card at <.a id="card-verify-link" href={verify_url(@card)}>
+        Anyone can verify this ID card at <.a id="card-verify-link" href={verify_url(@card)}>
           {Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}
         </.a>.
       </p>
@@ -172,16 +172,16 @@ defmodule Web.MemberCardLive do
           variant={:primary}
           phx-click="email"
           phx-disable-with="Sending…"
-          data-confirm={"Email the wallet pass to #{@member.email}?"}
+          data-confirm={"Email the ID card to #{@member.email}?"}
         >
-          Email pass to member
+          Email ID card
         </.button>
         <.button
           :if={BuildApplePass.configured?()}
           id="apple-pass"
           href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/pass"}
         >
-          Download Apple Wallet pass
+          Add to Apple Wallet
         </.button>
         <.button
           :if={BuildGooglePass.configured?()}
@@ -195,7 +195,7 @@ defmodule Web.MemberCardLive do
         <.button
           id="replace"
           phx-click="issue"
-          data-confirm="Replace this card? The old code stops working."
+          data-confirm="Replace this ID card? The old code stops working."
         >
           Replace card
         </.button>
@@ -203,7 +203,7 @@ defmodule Web.MemberCardLive do
           id="revoke"
           variant={:danger}
           phx-click="revoke"
-          data-confirm="Cancel this card? The code stops working."
+          data-confirm="Cancel this ID card? The code stops working."
         >
           Cancel card
         </.button>

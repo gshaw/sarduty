@@ -32,7 +32,7 @@ defmodule App.Mailer.MemberCardMailerTest do
 
     assert_email_sent(fn email ->
       assert email.html_body =~ "<p>Hi Alex &lt;Example&gt;,</p>"
-      assert email.html_body =~ "<p>Here is your Search &amp; Rescue member ID card.</p>"
+      assert email.html_body =~ "<p>Here is your Search &amp; Rescue ID card.</p>"
       assert email.text_body =~ "Hi Alex <Example>,\n\n"
       assert email.text_body =~ "Apple Wallet"
       refute email.html_body =~ "Google"

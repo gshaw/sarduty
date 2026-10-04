@@ -14,7 +14,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       {:ok, filter_options, changeset} ->
         socket =
           socket
-          |> assign(:page_title, "#{filter_options.year} Tax Credit Letters")
+          |> assign(:page_title, "#{filter_options.year} tax credit letters")
           |> assign(:filter_options, filter_options)
           |> assign(:form, to_form(changeset, as: "form"))
           |> assign(:path_fn, build_path_fn(socket.assigns.current_team, filter_options))
@@ -64,7 +64,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
     <div class="table-summary">
       <span class="table-summary-links">
-        <.a navigate={@path_fn.(:reset)}>Reset</.a>
+        <.a navigate={@path_fn.(:reset)}>Reset filters</.a>
       </span>
       <span class="table-summary-count">
         {Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
@@ -80,7 +80,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     >
       <:header_row>
         <th colspan="3"></th>
-        <th colspan="3" class="text-center">SARVAC Hours</th>
+        <th colspan="3" class="text-center">SARVAC hours</th>
         <th></th>
       </:header_row>
       <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
@@ -160,7 +160,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     socket =
       socket
       |> assign_records()
-      |> put_flash(:info, "Email sent to #{tax_credit_letter.member.email}")
+      |> put_flash(:info, "Emailed the tax credit letter to #{tax_credit_letter.member.email}.")
 
     {:noreply, socket}
   end

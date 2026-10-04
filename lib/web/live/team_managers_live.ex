@@ -29,7 +29,7 @@ defmodule Web.TeamManagersLive do
     <h1 class="title mb-p">{@page_title}</h1>
     <p class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}: everyone D4H makes an
-      Owner or Editor who isn't retired and hasn't left, as of the last refresh. To add or
+      Owner or Editor who is not retired and has not left, as of the last refresh. To add or
       remove someone, change their access in D4H. SAR Duty follows after the next refresh.
     </p>
     <.team_managers

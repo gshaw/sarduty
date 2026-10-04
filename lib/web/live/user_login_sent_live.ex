@@ -16,7 +16,7 @@ defmodule Web.UserLoginSentLive do
       <h1 class="heading">Check your email</h1>
       <p>
         If <strong>{@email}</strong> can use SAR Duty, we've sent it a link to log in.
-        Open the email "Log in to SAR Duty" and click the link. It works once, for 15 minutes.
+        Open the email "Log in to SAR Duty" and select the link. It works once, for 15 minutes.
       </p>
       <p class="text-secondary-1">
         Nothing after a few minutes? Check your spam folder. Only Owners and Editors on a team

@@ -26,7 +26,11 @@ defmodule App.Operation.SaveOrganization do
     else
       {:error, :logo} ->
         {:error,
-         Ecto.Changeset.add_error(%{changeset | action: :validate}, :logo, "isn't an image")}
+         Ecto.Changeset.add_error(
+           %{changeset | action: :validate},
+           :logo,
+           "Use a PNG or JPEG image."
+         )}
 
       {:error, changeset} ->
         {:error, changeset}

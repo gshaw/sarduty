@@ -38,7 +38,7 @@ defmodule Web.UserSessionController do
 
   def delete(conn, _params) do
     conn
-    |> put_flash(:info, "You are now logged out")
+    |> put_flash(:info, "Logged out.")
     |> UserAuth.log_out_user()
   end
 end

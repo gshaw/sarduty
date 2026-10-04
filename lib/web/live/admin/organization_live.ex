@@ -11,7 +11,7 @@ defmodule Web.Admin.OrganizationLive do
 
     socket =
       socket
-      |> assign(page_title: organization.name || "New Organization")
+      |> assign(page_title: organization.name || "New organization")
       |> assign(organization: organization, teams: Team.get_all() |> Enum.sort_by(& &1.name))
       |> assign(team_ids: if(organization.id, do: Organization.team_ids(organization), else: []))
       |> assign_form(Organization.build_changeset(organization))
@@ -58,7 +58,7 @@ defmodule Web.Admin.OrganizationLive do
           <.live_file_input upload={@uploads.logo} />
         </div>
         <.hint>
-          PNG or JPEG, square or wide. Shown on its scan page, never on a team's card.
+          PNG or JPEG, square or wide. Shown on its verify page, never on a team's card.
         </.hint>
         <p :for={error <- upload_errors(@uploads.logo)} class="text-danger-1">
           {upload_error(error)}
@@ -88,7 +88,7 @@ defmodule Web.Admin.OrganizationLive do
       </fieldset>
 
       <.form_actions>
-        <.button variant={:success}>Save</.button>
+        <.button variant={:success}>Save organization</.button>
       </.form_actions>
     </.form>
 
@@ -155,8 +155,8 @@ defmodule Web.Admin.OrganizationLive do
 
   defp own_host(_organization), do: "verify.example.org"
 
-  defp upload_error(:too_large), do: "That file is too large."
+  defp upload_error(:too_large), do: "That file is too large. Use a smaller one."
   defp upload_error(:not_accepted), do: "Use a PNG or JPEG."
-  defp upload_error(:too_many_files), do: "Pick one file."
-  defp upload_error(_error), do: "That file didn't upload."
+  defp upload_error(:too_many_files), do: "Select one file."
+  defp upload_error(_error), do: "That file did not upload. Try again."
 end

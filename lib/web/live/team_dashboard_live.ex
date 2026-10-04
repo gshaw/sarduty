@@ -76,7 +76,7 @@ defmodule Web.TeamDashboardLive do
             <.a navigate={~p"/#{@team.subdomain}/qualifications"}>Qualifications</.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/tax-credit-letters"}>Tax Credit Letters</.a>
+            <.a navigate={~p"/#{@team.subdomain}/tax-credit-letters"}>Tax credit letters</.a>
           </li>
         </ul>
       </li>
@@ -90,7 +90,7 @@ defmodule Web.TeamDashboardLive do
       <dt>Actions</dt>
       <dd class="border-b-0">
         <div class="mb-p">
-          <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H Dashboard</.a>
+          <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H dashboard</.a>
         </div>
         <%= if refreshing?(@view_data) do %>
           <div class="flex items-center gap-2 text-primary-1">
@@ -104,12 +104,12 @@ defmodule Web.TeamDashboardLive do
             phx-click="refresh"
             disabled={refreshing?(@view_data)}
           >
-            Refresh D4H Data
+            Refresh from D4H
           </.button>
         <% end %>
       </dd>
 
-      <dt>Last Refreshed</dt>
+      <dt>Last refreshed</dt>
       <dd>
         {Service.Format.datetime_short(@view_data.refreshed_at, @team.timezone)}
         <div :if={failed?(@view_data)} id="refresh-error" class="text-sm text-danger-1">
@@ -124,11 +124,11 @@ defmodule Web.TeamDashboardLive do
       <dd>{@view_data.attendance_count}</dd>
       <dt>Qualifications</dt>
       <dd>{@view_data.qualification_count}</dd>
-      <dt>Qualification Awards</dt>
+      <dt>Qualification awards</dt>
       <dd>{@view_data.qualification_award_count}</dd>
       <dt>Groups</dt>
       <dd>{@view_data.group_count}</dd>
-      <dt>Group Members</dt>
+      <dt>Group members</dt>
       <dd>{@view_data.group_member_count}</dd>
     </dl>
     """

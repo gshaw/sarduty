@@ -37,7 +37,7 @@ defmodule Web.Components.MemberSidebar do
       <dd>
         <ul class="action-list">
           <li>
-            <.a external={true} href={D4H.member_url(@member)}>Open D4H Member</.a>
+            <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>
           </li>
         </ul>
       </dd>

@@ -58,7 +58,7 @@ defmodule Web.MemberGroupsLive do
         </.a>
       </:col>
     </.table>
-    <p :if={@member.group_members == []}>No groups found.</p>
+    <p :if={@member.group_members == []}>Not in any groups.</p>
     """
   end
 

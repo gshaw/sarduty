@@ -82,16 +82,16 @@ defmodule Web.QualificationLive do
         <ul class="action-list">
           <li>
             <.a external={true} href={D4H.build_url(@team, "/team/qualifications")}>
-              Open D4H Qualifications
+              Open D4H qualifications
             </.a>
           </li>
         </ul>
       </dd>
-      <dt>Active Members</dt>
+      <dt>Active members</dt>
       <dd>{length(@active_awards)}</dd>
-      <dt>Expired Awards</dt>
+      <dt>Expired awards</dt>
       <dd>{length(@expired_awards)}</dd>
-      <dt>Total Awards</dt>
+      <dt>Total awards</dt>
       <dd>{length(@active_awards) + length(@expired_awards)}</dd>
     </dl>
     """

@@ -6,7 +6,7 @@ defmodule Web.ErrorHTML do
     <.render_custom_error
       code="404"
       description="Not found"
-      help_text="The requested page was not found on this server."
+      help_text="SAR Duty cannot find this page. Check the address, or start from the home page."
     />
     """
   end
@@ -16,7 +16,7 @@ defmodule Web.ErrorHTML do
     <.render_custom_error
       code="429"
       description="Too many requests"
-      help_text="The server is limiting requests for a period of time. Wait a few minutes and try again."
+      help_text="Wait a few minutes and try again. SAR Duty limits how often a connection can ask."
     />
     """
   end
@@ -26,7 +26,7 @@ defmodule Web.ErrorHTML do
     <.render_custom_error
       code="500"
       description="Internal server error"
-      help_text="We've been notified. Try refreshing the page as the problem may be temporary."
+      help_text="SAR Duty stopped working on this page, and we know about it. Reload the page to try again."
     />
     """
   end
@@ -45,7 +45,7 @@ defmodule Web.ErrorHTML do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <.live_title suffix=" · SAR Duty">
-          {assigns[:page_title] || "Untitled Page"}
+          {assigns[:page_title] || "Untitled page"}
         </.live_title>
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
@@ -57,7 +57,7 @@ defmodule Web.ErrorHTML do
         <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
           <h1 class="my-p2">
             <div class="title-hero mb-0">{@code}</div>
-            <div class="title text-danger-1">That is an error</div>
+            <div class="title text-danger-1">SAR Duty cannot show this page</div>
           </h1>
           <p class="heading">{@description}</p>
           <p class="mb-p2">{@help_text}</p>

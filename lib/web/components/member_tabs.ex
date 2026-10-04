@@ -32,7 +32,7 @@ defmodule Web.Components.MemberTabs do
           navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}/card"}
           current={@active_tab == :card}
         >
-          ID Card
+          ID card
         </.tab>
       </nav>
     </div>

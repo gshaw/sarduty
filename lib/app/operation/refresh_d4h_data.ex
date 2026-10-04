@@ -99,7 +99,7 @@ defmodule App.Operation.RefreshD4HData do
     {_count, progress} = RefreshD4HData.UpsertQualifications.call(d4h, team, progress)
     progress = RefreshD4HData.Progress.finish_stage(progress)
 
-    progress = RefreshD4HData.Progress.update_stage(progress, "Qualification Awards")
+    progress = RefreshD4HData.Progress.update_stage(progress, "Qualification awards")
     {_count, progress} = RefreshD4HData.UpsertQualificationAwards.call(d4h, team, progress)
     RefreshD4HData.Progress.finish_stage(progress)
   end
@@ -109,7 +109,7 @@ defmodule App.Operation.RefreshD4HData do
     {_count, progress} = RefreshD4HData.UpsertGroups.call(d4h, team, progress)
     progress = RefreshD4HData.Progress.finish_stage(progress)
 
-    progress = RefreshD4HData.Progress.update_stage(progress, "Group Memberships")
+    progress = RefreshD4HData.Progress.update_stage(progress, "Group memberships")
     {_count, progress} = RefreshD4HData.UpsertGroupMemberships.call(d4h, team, progress)
     RefreshD4HData.Progress.finish_stage(progress)
   end

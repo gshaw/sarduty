@@ -27,7 +27,12 @@ defmodule Web.QualificationCollectionLive do
     <.breadcrumbs team={@current_team} />
     <h1 class="title mb-p">{@page_title}</h1>
 
-    <p class="mb-p text-secondary-1 text-sm">{length(@qualifications)} qualifications</p>
+    <p class="mb-p text-secondary-1 text-sm">
+      {Service.Format.count(length(@qualifications),
+        one: "%d qualification",
+        many: "%d qualifications"
+      )}
+    </p>
 
     <.table id="qualification_collection" rows={@qualifications} class="w-full table-striped">
       <:col :let={q} label="Qualification">
@@ -39,12 +44,14 @@ defmodule Web.QualificationCollectionLive do
       <:col :let={q} label="Expired" class="w-px whitespace-nowrap" align="right">
         {q.expired_count}
       </:col>
-      <:col :let={q} label="Total Awards" class="w-px whitespace-nowrap" align="right">
+      <:col :let={q} label="Total awards" class="w-px whitespace-nowrap" align="right">
         {q.total_count}
       </:col>
     </.table>
 
-    <p :if={@qualifications == []} class="text-secondary-1">No qualifications found.</p>
+    <p :if={@qualifications == []} class="text-secondary-1">
+      No qualifications yet. SAR Duty copies them from D4H when it refreshes.
+    </p>
     """
   end
 

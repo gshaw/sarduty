@@ -13,6 +13,6 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       |> log_in_user(user)
       |> live(~p"/#{team.subdomain}/tax-credit-letters")
 
-    assert html =~ "Tax Credit Letters"
+    assert html =~ "tax credit letters"
   end
 end

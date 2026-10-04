@@ -11,6 +11,6 @@ defmodule Web.ActivityAttendanceLiveTest do
 
     assert {:redirect, %{to: path, flash: flash}} = redirect
     assert path == ~p"/login"
-    assert %{"error" => "You must log in to access this page."} = flash
+    assert %{"error" => "Log in to see this page."} = flash
   end
 end

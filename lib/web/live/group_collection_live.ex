@@ -29,7 +29,9 @@ defmodule Web.GroupCollectionLive do
     <.breadcrumbs team={@current_team} />
     <h1 class="title mb-p">{@page_title}</h1>
 
-    <p class="mb-p text-secondary-1 text-sm">{length(@groups)} groups</p>
+    <p class="mb-p text-secondary-1 text-sm">
+      {Service.Format.count(length(@groups), one: "%d group", many: "%d groups")}
+    </p>
 
     <.table
       id="group_collection"
@@ -48,7 +50,9 @@ defmodule Web.GroupCollectionLive do
       </:col>
     </.table>
 
-    <p :if={@groups == []} class="text-secondary-1">No groups found.</p>
+    <p :if={@groups == []} class="text-secondary-1">
+      No groups yet. SAR Duty copies groups from D4H when it refreshes.
+    </p>
     """
   end
 

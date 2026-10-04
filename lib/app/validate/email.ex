@@ -11,6 +11,6 @@ defmodule App.Validate.Email do
   def call(changeset, field) do
     changeset
     |> validate_length(field, max: @max_length)
-    |> validate_format(field, @email_regex, message: "must be a valid email address")
+    |> validate_format(field, @email_regex, message: "Enter an email like name@example.com.")
   end
 end

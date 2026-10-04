@@ -23,7 +23,12 @@ defmodule Web.Components.AttendanceTable do
         {record.member.email}
       </:col>
     </.table>
-    <p class="my-1">{filter_attendance(@attendance_records, @status) |> Enum.count()} members</p>
+    <p class="my-1">
+      {@attendance_records
+      |> filter_attendance(@status)
+      |> Enum.count()
+      |> Service.Format.count(one: "%d member", many: "%d members")}
+    </p>
     """
   end
 

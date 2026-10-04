@@ -36,21 +36,26 @@ defmodule App.Operation.UpdateTeamSettingsTest do
     changeset = check({:ok, %WhoAmI{d4h_team_ids: [3]}})
 
     refute changeset.valid?
-    assert {"belongs to a different D4H team", _} = changeset.errors[:new_d4h_access_key]
+
+    assert {"Use a D4H access key for this team. This one is for another team.", _} =
+             changeset.errors[:new_d4h_access_key]
+
     refute get_change(changeset, :d4h_access_key)
   end
 
   test "rejects a key D4H doesn't recognize" do
     changeset = check({:error, "Unable to determine team ID"})
 
-    assert {"is unknown or not authorized", _} = changeset.errors[:new_d4h_access_key]
+    assert {"Paste the key again. D4H does not accept this one.", _} =
+             changeset.errors[:new_d4h_access_key]
+
     refute get_change(changeset, :d4h_access_key)
   end
 
   test "says so when D4H doesn't respond" do
     changeset = check({:error, :unreachable})
 
-    assert {"could not be checked. D4H did not respond", _} =
+    assert {"D4H did not respond. Try again in a few minutes.", _} =
              changeset.errors[:new_d4h_access_key]
   end
 

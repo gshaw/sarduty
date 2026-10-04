@@ -23,19 +23,18 @@ defmodule Web.TeamSignupLive do
     <div :if={!@done}>
       <h1 class="heading">Sign up a team</h1>
       <p>
-        SAR Duty works from your team's D4H data. You need a D4H personal access token from an
-        account that can edit the team: ideally a D4H member named "SAR Duty" with Owner or
-        Editor access, so changes show as SAR Duty in D4H. You must be an Owner or Editor on the
-        team in D4H yourself.
+        SAR Duty works from your team's D4H data. You need a D4H access key from a D4H member
+        with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
+        Duty in D4H. You must also be an Owner or Editor on the team in D4H.
       </p>
       <p>
         <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
-          How to create a D4H personal access token
+          How to create a D4H access key
         </.a>
       </p>
       <.form for={@form} id="signup_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:email]} type="email" label="Your email" autocomplete="email">
-          The email D4H has for you. Your login link goes here.
+          The email D4H has for you. We send your login link here.
         </.input>
         <.input
           field={@form[:api_host]}
@@ -46,7 +45,7 @@ defmodule Web.TeamSignupLive do
         <.input
           field={@form[:access_key]}
           type="password"
-          label="D4H personal access token"
+          label="D4H access key"
           autocomplete="off"
         />
         <.form_actions>

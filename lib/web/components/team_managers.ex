@@ -21,7 +21,7 @@ defmodule Web.Components.TeamManagers do
     ~H"""
     <div>
       <p :if={@rows == []} class="text-sm text-secondary-1">
-        None known. The team hasn't refreshed since access levels were added, or its key fails.
+        None known. The team has not refreshed since SAR Duty added access levels, or its D4H access key does not work.
       </p>
       <.table :if={@rows != []} id={@id} rows={@rows} row_id={& &1.id} class="table-striped">
         <:col :let={row} label="Manager">

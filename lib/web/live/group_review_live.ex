@@ -64,13 +64,14 @@ defmodule Web.GroupReviewLive do
 
       {:ok, %{applied: applied, failed: failed}} ->
         message =
-          "Made #{count_changes(applied)} in D4H. #{count_changes(failed)} failed; " <>
-            "see Recent changes."
+          "Made #{count_changes(applied)} in D4H. #{count_changes(failed)} did not go " <>
+            "through. See Recent changes for why."
 
         {:noreply, socket |> put_flash(:error, message) |> push_navigate(to: group_path)}
 
       {:error, :no_team_key} ->
-        {:noreply, put_flash(socket, :error, "Save a team D4H key in Team Settings first.")}
+        {:noreply,
+         put_flash(socket, :error, "Save the team's D4H access key in Team settings first.")}
 
       {:error, :rules_broken} ->
         {:noreply, put_flash(socket, :error, "Fix the group's rules first.")}
@@ -87,8 +88,8 @@ defmodule Web.GroupReviewLive do
 
     <h1 class="title">Review changes</h1>
     <p class="text-secondary-1 mb-p">
-      Clear the box next to anyone you want to skip. Changes are made in D4H right away,
-      using the team's D4H key.
+      Clear the box next to anyone you want to skip. SAR Duty makes the changes in D4H right
+      away, with the team's D4H access key.
     </p>
 
     <div id="data-age" class="flex items-center gap-p mb-p text-sm">
@@ -96,7 +97,7 @@ defmodule Web.GroupReviewLive do
         <.spinner>Refreshing from D4H…</.spinner>
       </span>
       <span :if={failed?(@current_team)} id="refresh-error" class="text-danger-1">
-        {String.replace_prefix(@current_team.d4h_refresh_result, "Error: ", "Refresh failed: ")}
+        {String.replace_prefix(@current_team.d4h_refresh_result, "Error: ", "Cannot refresh: ")}
       </span>
       <span :if={!refreshing?(@current_team) && @current_team.d4h_refreshed_at}>
         Data as of {Service.Format.datetime_short(
@@ -119,8 +120,8 @@ defmodule Web.GroupReviewLive do
       id="no-team-key"
       class="callout mb-p"
     >
-      Applying changes needs a team D4H key.
-      <.a navigate={~p"/settings/team"}>Save one in Team Settings.</.a>
+      Applying changes needs the team's D4H access key.
+      <.a navigate={~p"/settings/team"}>Save it in Team settings.</.a>
     </p>
 
     <p

@@ -27,7 +27,9 @@ defmodule App.Accounts.User do
     |> cast(attrs, [:email])
     |> update_change(:email, &(&1 |> String.trim() |> String.downcase()))
     |> validate_required([:email])
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+      message: "Enter an email with an @ sign and no spaces."
+    )
     |> validate_length(:email, max: 160)
     |> unique_constraint(:email)
   end

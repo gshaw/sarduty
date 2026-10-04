@@ -74,7 +74,7 @@ defmodule Web.Components.ActivityFilterTable do
         <.activity_tags activity={record} />
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
-        <.activity_badges activity={record} />
+        <.activity_kind activity={record} />
       </:col>
       <:col
         :let={record}
@@ -92,6 +92,9 @@ defmodule Web.Components.ActivityFilterTable do
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
+        <span :if={hours_type = activity_hours_type(record)} class="text-secondary-1">
+          {hours_type}
+        </span>
         {Service.Format.duration_as_hours_minutes_short(
           Service.Convert.duration_to_minutes(record.started_at, record.finished_at)
         )}

@@ -17,7 +17,7 @@ defmodule Web.Admin.OrganizationCollectionLive do
     <div class="mb-p flex flex-wrap items-center justify-between gap-p">
       <h1 class="title mb-0">Organizations</h1>
       <.button navigate={~p"/admin/organizations/new"} variant={:success} size={:sm}>
-        New Organization
+        New organization
       </.button>
     </div>
     <p :if={@organizations == []} id="no-organizations">No organizations yet.</p>

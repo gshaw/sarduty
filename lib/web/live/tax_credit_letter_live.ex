@@ -14,7 +14,7 @@ defmodule Web.TaxCreditLetterLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{letter.member.name}ʼs #{letter.year} Tax Credit Letter")
+      |> assign(:page_title, "#{letter.member.name}ʼs #{letter.year} tax credit letter")
       |> assign(:letter, letter)
 
     {:noreply, socket}
@@ -24,7 +24,7 @@ defmodule Web.TaxCreditLetterLive do
     ~H"""
     <.breadcrumbs team={@current_team}>
       <:item
-        label={"#{@letter.year} Tax Credit Letters"}
+        label={"#{@letter.year} tax credit letters"}
         path={~p"/#{@current_team.subdomain}/tax-credit-letters?year=#{@letter.year}"}
       />
       <:item label={@letter.ref_id} />
@@ -38,9 +38,9 @@ defmodule Web.TaxCreditLetterLive do
       >
         Download PDF
       </.button>
-      <.button variant={:warning} phx-click="email">Email PDF to member</.button>
+      <.button variant={:warning} phx-click="email">Email letter</.button>
       <:trailing>
-        <.button variant={:danger} phx-click="destroy">Delete</.button>
+        <.button variant={:danger} phx-click="destroy">Delete letter</.button>
       </:trailing>
     </.form_actions>
     <hr class="my-p border-hr" />
@@ -75,7 +75,7 @@ defmodule Web.TaxCreditLetterLive do
 
     socket =
       socket
-      |> put_flash(:info, "Email sent to #{tax_credit_letter.member.email}")
+      |> put_flash(:info, "Emailed the tax credit letter to #{tax_credit_letter.member.email}.")
 
     {:noreply, socket}
   end
@@ -86,7 +86,7 @@ defmodule Web.TaxCreditLetterLive do
 
     socket =
       socket
-      |> put_flash(:info, "Tax credit letter deleted")
+      |> put_flash(:info, "Tax credit letter deleted.")
       |> redirect(
         to:
           ~p"/#{socket.assigns.current_team.subdomain}/tax-credit-letters?year=#{tax_credit_letter.year}"

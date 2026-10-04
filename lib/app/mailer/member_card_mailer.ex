@@ -40,11 +40,12 @@ defmodule App.Mailer.MemberCardMailer do
     Enum.reject(
       [
         "Hi #{member.name},",
-        "Here is your #{member.team.name} member ID card.",
-        pkpass && "On an iPhone, open the attachment and tap Add to put it in Apple Wallet.",
+        "Here is your #{member.team.name} ID card.",
+        pkpass && "On an iPhone, open the attachment and select Add to put it in Apple Wallet.",
         google_url && {:google, google_url},
-        "To check your card, someone scans its QR code with their phone's camera, which opens verify.sarduty.com, or types your code there: #{MemberCard.format_code(card.code)}",
-        "If you leave the team, or the team replaces or cancels the card, it stops checking out.",
+        "To verify your ID card, someone scans its QR code with their phone's camera. That opens verify.sarduty.com.",
+        "They can also type your code there: #{MemberCard.format_code(card.code)}",
+        "Your ID card stops working if you leave the team, or the team replaces or cancels it.",
         "#{member.team.name}, through SAR Duty"
       ],
       &is_nil/1
@@ -61,7 +62,7 @@ defmodule App.Mailer.MemberCardMailer do
     src = Web.Endpoint.url() <> "/images/add-to-google-wallet.png"
 
     """
-    <p>On an Android phone, tap the button to add it to Google Wallet:</p>
+    <p>On an Android phone, select the button to add it to Google Wallet:</p>
     <p><a href="#{escape(url)}"><img src="#{src}" alt="Add to Google Wallet" width="283" height="50"></a></p>\
     """
   end

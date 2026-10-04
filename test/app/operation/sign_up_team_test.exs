@@ -41,7 +41,7 @@ defmodule App.Operation.SignUpTeamTest do
 
   test "an email no member has may not" do
     assert {:error, {:email, message}} = check("stranger@example.com", [member(%{})])
-    assert message =~ "isn't the email of any member"
+    assert message =~ "No member of"
   end
 
   test "a team already on SAR Duty can't sign up again" do

@@ -13,7 +13,7 @@ defmodule Web.Layouts do
         <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
         <.live_title suffix=" · SAR Duty">
-          {assigns[:page_title] || "Untitled Page"}
+          {assigns[:page_title] || "Untitled page"}
         </.live_title>
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
@@ -121,7 +121,7 @@ defmodule Web.Layouts do
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
         <%= if @admin? do %>
           ·
-          <.a id="footer-styles" navigate="/styles">Style Guide</.a>
+          <.a id="footer-styles" navigate="/styles">Style guide</.a>
           ·
           <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
           ·
@@ -209,19 +209,18 @@ defmodule Web.Layouts do
         phx-connected={hide("#client-error")}
         hidden
       >
-        Attempting to reconnect <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
 
       <.flash
         id="server-error"
         kind={:error}
-        title="Something went wrong!"
+        title="The page stopped responding"
         phx-disconnected={show(".phx-server-error #server-error")}
         phx-connected={hide("#server-error")}
         hidden
       >
-        Hang in there while we get back on track
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
     </div>
     """
