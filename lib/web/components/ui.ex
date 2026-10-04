@@ -90,7 +90,8 @@ defmodule Web.Components.UI do
       :danger,
       :incident,
       :exercise,
-      :event
+      :event,
+      :outline
     ]
 
   attr :rest, :global

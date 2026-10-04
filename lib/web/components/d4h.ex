@@ -14,50 +14,65 @@ defmodule Web.Components.D4H do
   attr :activity, :map, required: true
   attr :rest, :global, include: ~w(class)
 
+  # D4H's own tags on an activity: data, not status, so outlined. The primary and secondary
+  # hours tags aren't shown here; activity_hours_type/1 puts them beside the hours.
   def activity_tags(assigns) do
-    assigns
-    |> Phoenix.Component.assign(:sorted_tags, sort_tags(assigns.activity.tags))
-    |> then(fn assigns ->
-      ~H"""
-      <div {@rest}>
-        <.badge :for={tag <- @sorted_tags}>
-          <%= if tag in [Activity.primary_hours_tag(), Activity.secondary_hours_tag()] do %>
-            <strong>{tag}</strong>
-          <% else %>
-            {tag}
-          <% end %>
-        </.badge>
-      </div>
-      """
-    end)
+    assigns = assign(assigns, :tags, other_tags(assigns.activity.tags))
+
+    ~H"""
+    <div :if={@tags != []} {@rest}>
+      <span class="badges">
+        <.badge :for={tag <- @tags} kind={:outline}>{tag}</.badge>
+      </span>
+    </div>
+    """
   end
 
-  defp sort_tags(tags) do
-    primary_tag = Activity.primary_hours_tag()
-    secondary_tag = Activity.secondary_hours_tag()
+  defp other_tags(tags) do
+    (tags -- [Activity.primary_hours_tag(), Activity.secondary_hours_tag()]) |> Enum.sort()
+  end
 
-    {priority_tags, other_tags} =
-      Enum.split_with(tags, fn tag -> tag in [primary_tag, secondary_tag] end)
-
-    primary = Enum.filter(priority_tags, fn tag -> tag == primary_tag end)
-    secondary = Enum.filter(priority_tags, fn tag -> tag == secondary_tag end)
-    sorted_others = Enum.sort(other_tags)
-
-    primary ++ secondary ++ sorted_others
+  @doc "Which SARVAC hours an activity counts for, from its D4H tags: Primary, Secondary, or nil."
+  def activity_hours_type(activity) do
+    cond do
+      Activity.primary_hours_tag() in activity.tags -> "Primary"
+      Activity.secondary_hours_tag() in activity.tags -> "Secondary"
+      true -> nil
+    end
   end
 
   attr :activity, :map, required: true
 
+  # The kind on its own, as on an activity's page: a solid tag in D4H's colour, "Draft" when
+  # it isn't published, and the tracking number as text.
   def activity_badges(assigns) do
     ~H"""
-    <.badge kind={activity_kind_badge(@activity.activity_kind)} title="Activity kind">
-      {String.capitalize(@activity.activity_kind)}
-    </.badge>
-    <.badge :if={@activity.tracking_number} title="Tracking number">
+    <span class="badges">
+      <.badge kind={activity_kind_badge(@activity.activity_kind)} title="Activity kind">
+        {String.capitalize(@activity.activity_kind)}
+      </.badge>
+      <.badge :if={!@activity.is_published}>Draft</.badge>
+    </span>
+    <span :if={@activity.tracking_number} class="mono ml-1" title="Tracking number">
       {@activity.tracking_number}
-    </.badge>
-    <.badge :if={!@activity.is_published}>Draft</.badge>
-    <.badge :if={@activity.is_published}>Published</.badge>
+    </span>
+    """
+  end
+
+  attr :activity, :map, required: true
+
+  # The kind in a table column, where every row has one: a marker in D4H's colour.
+  def activity_kind(assigns) do
+    ~H"""
+    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}"]}>
+      {String.capitalize(@activity.activity_kind)}
+    </span>
+    <div :if={!@activity.is_published}>
+      <.badge>Draft</.badge>
+    </div>
+    <div :if={@activity.tracking_number} class="mono text-secondary-1">
+      {@activity.tracking_number}
+    </div>
     """
   end
 

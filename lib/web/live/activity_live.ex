@@ -84,6 +84,11 @@ defmodule Web.ActivityLive do
       <dt>Duration</dt>
       <dd>{format_activity_duration(@activity)}</dd>
 
+      <div :if={hours_type = activity_hours_type(@activity)}>
+        <dt>SARVAC hours</dt>
+        <dd>{hours_type}</dd>
+      </div>
+
       <div :if={@activity.address}>
         <dt>Address</dt>
         <dd>{@activity.address}</dd>
