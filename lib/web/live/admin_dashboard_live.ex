@@ -1,6 +1,7 @@
 defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.AdminTabs
   import Web.Components.TeamManagers
 
   alias App.Accounts.User
@@ -53,13 +54,14 @@ defmodule Web.AdminDashboardLive do
 
   def render(assigns) do
     ~H"""
+    <h1 class="title">Admin</h1>
+    <.admin_tabs current={:teams} />
     <div class="mb-p flex flex-wrap items-center justify-between gap-p">
-      <h1 class="title mb-0">Admin</h1>
+      <h2 class="heading mb-0">Teams</h2>
       <div class="flex items-center gap-p">
         <span id="refresh-summary" class="text-sm text-secondary-1">
           {refresh_summary(@teams)}
         </span>
-        <.button navigate={~p"/admin/organizations"} size={:sm}>Organizations</.button>
         <.button type="button" variant={:warning} size={:sm} phx-click="refresh-all">
           Refresh all teams
         </.button>

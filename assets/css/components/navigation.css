@@ -9,11 +9,11 @@
     border-bottom: 4px solid var(--accent);
   }
 
-  .site-bar-inner { display: flex; align-items: center; gap: var(--sp-5); min-height: 52px; }
+  .site-bar-inner { display: flex; align-items: center; gap: var(--sp-4); min-height: 52px; }
   .site-bar .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); text-decoration: none; white-space: nowrap; }
   .site-bar .brand span { color: var(--accent); }
 
-  .site-bar-links { display: flex; gap: var(--sp-1); flex: 1; overflow-x: auto; min-width: 0; }
+  .site-bar-links { display: flex; gap: 2px; flex: 1; overflow-x: auto; min-width: 0; }
 
   .site-bar-links a {
     color: #d5dbe3;
@@ -21,12 +21,26 @@
     font-weight: 600;
     font-size: var(--fs-sm);
     line-height: var(--lh-sm);
-    padding: 14px var(--sp-2) 12px;
+    padding: 14px 6px 12px;
     white-space: nowrap;
   }
 
   .site-bar-links a:hover { color: #fff; }
   .site-bar-links a[aria-current="page"] { color: #fff; box-shadow: inset 0 -3px var(--accent); }
+
+  /* A bar link outside the section links, such as Admin. */
+  .site-bar-link {
+    color: #d5dbe3;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    padding: 14px 6px 12px;
+    white-space: nowrap;
+  }
+
+  .site-bar-link:hover { color: #fff; }
+  .site-bar-link[aria-current="page"] { color: #fff; box-shadow: inset 0 -3px var(--accent); }
 
   .site-bar-menu > summary {
     display: inline-flex;
@@ -62,6 +76,7 @@
 
   .menu a { display: block; padding: var(--sp-2) var(--sp-4); color: var(--text); text-decoration: none; }
   .menu a:hover { background: var(--row-hover); }
+  .menu a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
   .menu .menu-note { padding: var(--sp-2) var(--sp-4); color: var(--text-muted); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .menu hr { margin: var(--sp-1) 0; border-color: var(--border-subtle); }
 

@@ -23,6 +23,11 @@ defmodule App.Accounts do
     |> Repo.one()
   end
 
+  @doc "Every admin, by email."
+  def get_admins do
+    User |> where([u], u.is_admin) |> order_by([u], u.email) |> Repo.all()
+  end
+
   @doc "Every admin's email, for notices like a new team signing up."
   def admin_emails do
     User |> where([u], u.is_admin) |> select([u], u.email) |> Repo.all()

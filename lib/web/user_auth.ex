@@ -96,10 +96,14 @@ defmodule Web.UserAuth do
   The team pages outside `/:subdomain` (settings, ID cards) work on: the team the user
   last opened when they still manage it, else their first by name, or nil.
   """
-  def default_team(nil), do: nil
+  def default_team(user), do: user |> managed_teams() |> pick_default_team(user)
 
-  def default_team(user) do
-    teams = Team.get_managed_by(user.email, DateTime.utc_now())
+  defp managed_teams(nil), do: []
+  defp managed_teams(user), do: Team.get_managed_by(user.email, DateTime.utc_now())
+
+  defp pick_default_team(_teams, nil), do: nil
+
+  defp pick_default_team(teams, user) do
     Enum.find(teams, &(&1.id == user.last_team_id)) || List.first(teams)
   end
 
@@ -160,6 +164,19 @@ defmodule Web.UserAuth do
         live "/profile", ProfileLive, :index
       end
   """
+  # The page's path, kept current on live navigation, so the top bar can mark the section
+  # it's in.
+  def on_mount(:mount_current_path, _params, _session, socket) do
+    socket =
+      socket
+      |> Phoenix.Component.assign(:current_path, nil)
+      |> Phoenix.LiveView.attach_hook(:current_path, :handle_params, fn _params, uri, socket ->
+        {:cont, Phoenix.Component.assign(socket, :current_path, URI.parse(uri).path)}
+      end)
+
+    {:cont, socket}
+  end
+
   def on_mount(:mount_current_user, _params, session, socket) do
     {:cont, mount_current_user(socket, session)}
   end
@@ -217,10 +234,15 @@ defmodule Web.UserAuth do
     |> mount_current_team()
   end
 
+  # The team for pages outside /:subdomain, and every team the user manages, for the
+  # account menu. One query for both.
   defp mount_current_team(socket) do
     current_user = socket.assigns.current_user
+    teams = managed_teams(current_user)
 
-    Phoenix.Component.assign(socket, current_team: default_team(current_user))
+    socket
+    |> Phoenix.Component.assign(current_team: pick_default_team(teams, current_user))
+    |> Phoenix.Component.assign(managed_teams: teams)
   end
 
   @doc "Sends a logged-in user to their team rather than the login form."

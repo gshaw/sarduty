@@ -78,7 +78,7 @@ defmodule Web.Router do
     pipe_through :browser
 
     live_session :current_user_session,
-      on_mount: [{Web.UserAuth, :mount_current_user}] do
+      on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/styles", StyleGuideLive
       live "/styles/tables", StyleGuide.TablesLive
@@ -109,7 +109,8 @@ defmodule Web.Router do
   scope "/", Web do
     pipe_through [:browser, :redirect_if_user_is_authenticated]
 
-    live_session :login_session, on_mount: [{Web.UserAuth, :mount_current_user}] do
+    live_session :login_session,
+      on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/login", UserLoginLive, :new
       live "/login/sent", UserLoginSentLive, :new
       live "/login/:token", UserLoginLinkLive, :new
@@ -122,7 +123,7 @@ defmodule Web.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :require_authenticated_user_session,
-      on_mount: [{Web.UserAuth, :ensure_authenticated}] do
+      on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :ensure_authenticated}] do
       live "/settings", SettingsLive
       live "/settings/team", Settings.TeamLive
       live "/settings/cards", Settings.CardsLive
@@ -130,10 +131,12 @@ defmodule Web.Router do
 
     live_session :require_admin_session,
       on_mount: [
+        {Web.UserAuth, :mount_current_path},
         {Web.UserAuth, :ensure_authenticated},
         {Web.UserAuth, :ensure_admin}
       ] do
       live "/admin", AdminDashboardLive
+      live "/admin/admins", Admin.AdminCollectionLive
       live "/admin/organizations", Admin.OrganizationCollectionLive
       live "/admin/organizations/new", Admin.OrganizationLive, :new
       live "/admin/organizations/:id", Admin.OrganizationLive, :edit
@@ -141,6 +144,7 @@ defmodule Web.Router do
 
     live_session :require_current_team_session,
       on_mount: [
+        {Web.UserAuth, :mount_current_path},
         {Web.UserAuth, :ensure_authenticated},
         {Web.UserAuth, :ensure_authorized_team_subdomain}
       ] do
