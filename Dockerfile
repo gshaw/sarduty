@@ -54,10 +54,12 @@ COPY priv priv
 
 COPY lib lib
 
+# Web.StyleDraftHTML embeds assets/css/tokens.css and docs/writing.md at compile time
+COPY assets assets
+COPY docs/writing.md docs/
+
 # Compile the release
 RUN mix compile
-
-COPY assets assets
 
 # compile assets
 RUN mix assets.deploy

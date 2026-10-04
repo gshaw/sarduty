@@ -16,6 +16,7 @@
 !assets
 !rel
 !litestream.yml
+!docs/writing.md
 
 # Built inside the image, so skip local copies
 /assets/node_modules/
