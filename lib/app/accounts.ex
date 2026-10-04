@@ -23,6 +23,11 @@ defmodule App.Accounts do
     |> Repo.one()
   end
 
+  @doc "Every admin's email, for notices like a new team signing up."
+  def admin_emails do
+    User |> where([u], u.is_admin) |> select([u], u.email) |> Repo.all()
+  end
+
   @doc "Which of these emails have a user, lowercase, as a MapSet."
   def login_emails(emails) do
     emails = for e <- emails, is_binary(e), do: normalize(e)

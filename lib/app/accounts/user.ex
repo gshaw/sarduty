@@ -6,8 +6,7 @@ defmodule App.Accounts.User do
   alias App.Repo
 
   # A person who logs in with an emailed link. Which teams they reach comes from D4H
-  # (#57): see App.Model.Team.get_managed_by/2. The table still has the old team_id and
-  # d4h_access_key columns, unused, so a rollback knows each user's team.
+  # (#57): see App.Model.Team.get_managed_by/2.
   schema "users" do
     field :email, :string
     field :confirmed_at, :naive_datetime

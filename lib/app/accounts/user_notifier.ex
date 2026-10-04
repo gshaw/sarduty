@@ -24,6 +24,26 @@ defmodule App.Accounts.UserNotifier do
     end
   end
 
+  @doc "Tells the admins a team signed itself up. Sends nothing when there are none."
+  def deliver_team_signed_up([], _team, _signer_email), do: {:ok, nil}
+
+  def deliver_team_signed_up(admin_emails, team, signer_email) do
+    new()
+    |> to(admin_emails)
+    |> from({"SAR Duty", "noreply@sarduty.com"})
+    |> subject("New team on SAR Duty: #{team.name}")
+    |> text_body("""
+    #{team.name} signed up to SAR Duty.
+
+    Signed up by: #{signer_email}
+    Team page: #{Web.Endpoint.url()}/#{team.subdomain}
+    D4H key from: #{team.d4h_access_key_owner || "unknown"}
+
+    Its first D4H refresh has started. Review it on #{Web.Endpoint.url()}/admin.
+    """)
+    |> Mailer.deliver()
+  end
+
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   defp login_html(url) do
     url = url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()

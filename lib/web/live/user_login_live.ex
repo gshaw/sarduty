@@ -23,6 +23,10 @@ defmodule Web.UserLoginLive do
           <.button variant={:success} phx-disable-with="Sending…">Email me a login link</.button>
         </.form_actions>
       </.form>
+      <p class="text-secondary-1">
+        Team not on SAR Duty yet?
+        <.a navigate={~p"/signup"}>Sign up your team</.a>
+      </p>
     </div>
     """
   end

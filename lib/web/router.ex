@@ -79,6 +79,7 @@ defmodule Web.Router do
       on_mount: [{Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/styles", StyleGuideLive
+      live "/signup", TeamSignupLive
     end
 
     # The check moved to the verify site. Cards linked here before it, in capitals.

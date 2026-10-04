@@ -121,6 +121,10 @@ Owner or Editor in D4H loses access at the next refresh. Admins reach every team
 - **Landing**: the page that asked for a login, else the team the user last opened
   (`users.last_team_id`), else their first. An admin with no team lands on `/admin`.
 - `/:subdomain/managers` shows the team who can log in, with the same list on `/admin`.
+- **New teams sign themselves up** at `/signup` (`App.Operation.SignUpTeam`): a D4H
+  personal access token becomes the team key, and the person signing up must be a current
+  Owner or Editor on that team in D4H, at the email they give. The team goes live at once,
+  its first refresh starts, every admin gets an email, and the signer gets a login link.
 
 ## Adapter notes
 
