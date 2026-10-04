@@ -99,7 +99,7 @@
 
   <h2>Tags</h2>
   <p>
-    Five status tags and three D4H activity tags. Tinted tags say what something is. Solid tags ask for action.
+    Five status tags, three D4H activity kinds, and an outlined tag for D4H's own tags. Tinted tags say what something is. Solid tags ask for action.
   </p>
   <div class="table-wrap">
     <table>
@@ -143,10 +143,18 @@
           <td>Expired, Not invited, D4H key rejected</td>
         </tr>
         <tr>
+          <td><span class="tag outline">Primary hours</span></td>
+          <td>Outlined</td>
+          <td>A tag from D4H. Data, not status.</td>
+          <td>Whatever D4H holds: Primary hours, Secondary hours, Avalanche</td>
+        </tr>
+        <tr>
           <td>
-            <span class="tag incident">Incident</span>
-            <span class="tag exercise">Exercise</span>
-            <span class="tag event">Event</span>
+            <span class="tags">
+              <span class="tag incident">Incident</span>
+              <span class="tag exercise">Exercise</span>
+              <span class="tag event">Event</span>
+            </span>
           </td>
           <td>Solid, D4H colours</td>
           <td>The kind of activity.</td>
@@ -160,6 +168,14 @@
     <li>At most one status tag per row or item. If two apply, show the more urgent one.</li>
     <li>
       Amber and red are for things a person should act on. If everything is amber, nothing is.
+    </li>
+    <li>
+      A normal state gets no tag. Show "Draft" on an unpublished activity, never "Published" on the rest.
+    </li>
+    <li>Codes such as tracking numbers are mono text, not tags.</li>
+    <li>
+      Several tags together sit in a <code>.tags</code>
+      group, so they wrap with a gap and never touch.
     </li>
     <li>Tags are labels, not buttons. Nothing happens when you select one.</li>
   </ul>

@@ -141,7 +141,10 @@
   </div>
 
   <h2>Activities, compact</h2>
-  <p>The compact size, for long lists people scan rather than read.</p>
+  <p>
+    The compact size, for long lists people scan rather than read. One solid tag for the kind,
+    "Draft" only when it applies, D4H's tags outlined, and the tracking number as text.
+  </p>
   <div class="table-wrap">
     <table class="compact striped">
       <thead>
@@ -151,17 +154,25 @@
           <th>Title</th>
           <th class="num">Attended</th>
           <th class="num">Hours</th>
+          <th>Tags</th>
+          <th class="shrink">Number</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={{date, kind, title, count, hours} <- activities()}>
-          <td class="nowrap">{date}</td>
+        <tr :for={a <- activities()}>
+          <td class="nowrap">{a.date}</td>
           <td>
-            <span class={["tag", kind]}>{kind |> Atom.to_string() |> String.capitalize()}</span>
+            <span class={["tag", a.kind]}>{a.kind |> Atom.to_string() |> String.capitalize()}</span>
           </td>
-          <td><a href="#">{title}</a></td>
-          <td class="num">{count}</td>
-          <td class="num">{hours}</td>
+          <td><a href="#">{a.title}</a> <span :if={a.draft} class="tag">Draft</span></td>
+          <td class="num">{a.count}</td>
+          <td class="num">{a.hours}</td>
+          <td>
+            <span class="tags">
+              <span :for={t <- a.tags} class="tag outline">{t}</span>
+            </span>
+          </td>
+          <td class="mono">{a.number}</td>
         </tr>
       </tbody>
     </table>

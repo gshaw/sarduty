@@ -14,7 +14,7 @@ defmodule Web.StyleDraftHTML do
 
   def writing_html, do: Phoenix.HTML.raw(@writing_html)
 
-  # cspell:ignore Murrin
+  # cspell:ignore Murrin HETS
 
   # The guide's pages, in sidebar order: {group, [{page, title}]}. The page is also the
   # template name and the last path segment.
@@ -185,16 +185,37 @@ defmodule Web.StyleDraftHTML do
 
   def activities do
     [
-      {"Sep 28, 2025", :incident, "Missing hiker, Stawamus Chief", 14, "62h 15m"},
-      {"Sep 24, 2025", :exercise, "Rope rescue, Murrin Park", 11, "33h 00m"},
-      {"Sep 21, 2025", :event, "Squamish Days first aid booth", 6, "24h 00m"},
-      {"Sep 17, 2025", :incident, "Overdue kayaker, Howe Sound", 9, "18h 45m"},
-      {"Sep 14, 2025", :exercise, "Night navigation", 16, "48h 00m"},
-      {"Sep 10, 2025", :event, "Team meeting", 22, "33h 00m"},
-      {"Sep 6, 2025", :incident, "Injured biker, Diamond Head", 12, "29h 30m"},
-      {"Sep 3, 2025", :exercise, "Swiftwater refresher", 8, "32h 00m"},
-      {"Aug 30, 2025", :incident, "Lost child, Alice Lake", 19, "41h 15m"},
-      {"Aug 27, 2025", :exercise, "Helicopter longline", 7, "21h 00m"}
+      {"Sep 28, 2025", :incident, "Missing hiker, Stawamus Chief", 14, "62h 15m",
+       ["Primary hours"], "25-0412", false},
+      {"Sep 24, 2025", :exercise, "Rope rescue, Murrin Park", 11, "33h 00m",
+       ["Secondary hours", "Rope"], nil, false},
+      {"Sep 21, 2025", :event, "Squamish Days first aid booth", 6, "24h 00m", ["Secondary hours"],
+       nil, false},
+      {"Sep 17, 2025", :incident, "Overdue kayaker, Howe Sound", 9, "18h 45m",
+       ["Primary hours", "Marine"], "25-0398", false},
+      {"Sep 14, 2025", :exercise, "Night navigation", 16, "48h 00m", ["Secondary hours"], nil,
+       false},
+      {"Sep 10, 2025", :event, "Team meeting", 22, "33h 00m", [], nil, true},
+      {"Sep 6, 2025", :incident, "Injured biker, Diamond Head", 12, "29h 30m", ["Primary hours"],
+       "25-0371", false},
+      {"Sep 3, 2025", :exercise, "Swiftwater refresher", 8, "32h 00m",
+       ["Secondary hours", "Swiftwater"], nil, true},
+      {"Aug 30, 2025", :incident, "Lost child, Alice Lake", 19, "41h 15m", ["Primary hours"],
+       "25-0355", false},
+      {"Aug 27, 2025", :exercise, "Helicopter longline", 7, "21h 00m",
+       ["Secondary hours", "HETS"], nil, false}
     ]
+    |> Enum.map(fn {date, kind, title, count, hours, tags, number, draft} ->
+      %{
+        date: date,
+        kind: kind,
+        title: title,
+        count: count,
+        hours: hours,
+        tags: tags,
+        number: number,
+        draft: draft
+      }
+    end)
   end
 end
