@@ -86,6 +86,7 @@ The rules that are easy to break:
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
 - [deployment.md](deployment.md) — Fly, Litestream, migrations, backups, and changing production data.
 - [testing-strategy.md](testing-strategy.md) — what the test suite covers and why.
+- [writing.md](writing.md) — the rules and glossary for every word a person reads in the app.
 - [history.md](history.md) — the project's story log, in place of a changelog.
 
 Recurring maintenance prompts for AI agents live in

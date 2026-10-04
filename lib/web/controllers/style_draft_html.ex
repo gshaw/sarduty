@@ -5,6 +5,15 @@ defmodule Web.StyleDraftHTML do
 
   embed_templates "style_draft_html/*"
 
+  # The Writing page shows docs/writing.md, so agents and the guide read the same rules.
+  @writing_path Path.expand("../../../docs/writing.md", __DIR__)
+  @external_resource @writing_path
+  @writing_html @writing_path
+                |> File.read!()
+                |> MDEx.to_html!(extension: [table: true, tasklist: true, header_id_prefix: ""])
+
+  def writing_html, do: Phoenix.HTML.raw(@writing_html)
+
   # cspell:ignore Murrin
 
   # The guide's pages, in sidebar order: {group, [{page, title}]}. The page is also the
@@ -12,7 +21,13 @@ defmodule Web.StyleDraftHTML do
   def pages do
     [
       {"Start", [{:index, "Overview"}]},
-      {"Foundations", [{:colors, "Colors"}, {:typography, "Typography"}, {:layout, "Layout"}]},
+      {"Foundations",
+       [
+         {:colors, "Colors"},
+         {:typography, "Typography"},
+         {:writing, "Writing"},
+         {:layout, "Layout"}
+       ]},
       {"Components",
        [
          {:components, "Buttons and tags"},

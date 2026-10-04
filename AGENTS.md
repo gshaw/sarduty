@@ -161,6 +161,9 @@ fi
   personal fields `redact: true`.
 - **Times are stored in UTC** and shown in the team's zone with `Service.Format`
   (`Service.Format.date_long(datetime, team.timezone)`).
+- **Text people read follows [docs/writing.md](docs/writing.md).** Any page copy, button,
+  label, hint, error, flash, email, PDF, or pass text you write or change uses its rules
+  and its glossary terms. Run its checklist before you commit.
 - Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
   link styled as a button. Badges are `<.badge kind={:incident}>`. Both check their values
   at compile time, so never write `class="btn btn-success"` or `class="badge"` by hand.
@@ -211,6 +214,7 @@ change, read the relevant doc:
 - **Fly, Litestream, and changing production data** →
   [docs/deployment.md](docs/deployment.md).
 - **What is tested and why** → [docs/testing-strategy.md](docs/testing-strategy.md).
+- **Words in the UI, emails, and PDFs** → [docs/writing.md](docs/writing.md).
 
 Recurring maintenance prompts for agents are in
 [agent_prompts/](agent_prompts/README.md).

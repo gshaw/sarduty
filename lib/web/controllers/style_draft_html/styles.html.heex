@@ -318,6 +318,13 @@
   .sample-card { border: 1px solid var(--border-subtle); padding: var(--sp-4); border-radius: var(--radius); }
   .sample-card > :last-child { margin-bottom: 0; }
 
+  /* Writing page: rendered Markdown */
+  .prose table { display: block; overflow-x: auto; margin-bottom: var(--sp-5); border: 1px solid var(--border-subtle); }
+  .prose td { border-bottom: 1px solid var(--border-subtle); }
+  .prose td:first-child { font-weight: 600; white-space: nowrap; }
+  .prose ul:has(input[type="checkbox"]) { list-style: none; padding-left: 0; }
+  .prose li input[type="checkbox"] { width: 18px; height: 18px; margin: 0 var(--sp-2) 0 0; vertical-align: -3px; accent-color: var(--primary); }
+
   /* Layout page */
   .space-bar { display: inline-block; height: 16px; background: var(--primary); vertical-align: middle; }
 
