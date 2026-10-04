@@ -34,7 +34,7 @@ defmodule Web.Components.NavBar do
     ~H"""
     <details class="site-bar-menu relative" role="menu">
       <summary role="button" aria-label="Open account menu">
-        <span class="max-w-48 truncate">{@label}</span>
+        <span class="max-w-40 truncate">{@label}</span>
         <.icon name="hero-chevron-down-micro" class="size-4" />
       </summary>
       <div class="menu" role="menu">

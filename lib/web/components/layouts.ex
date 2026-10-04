@@ -28,7 +28,7 @@ defmodule Web.Layouts do
 
   def marketing(assigns) do
     ~H"""
-    <.marketing_nav_bar current_user={@current_user} />
+    <.main_nav_bar {nav_assigns(assigns)} />
     <main role="main" class="container mx-auto pt-16 px-2 mb-p2">
       <.flash_group flash={@flash} />
       {@inner_content}
@@ -39,7 +39,7 @@ defmodule Web.Layouts do
 
   def app(assigns) do
     ~H"""
-    <.app_nav_bar current_user={@current_user} />
+    <.main_nav_bar {nav_assigns(assigns)} />
     <main role="main" class="container mx-auto pt-16 px-2 mb-p2">
       <.flash_group flash={@flash} />
       {@inner_content}
@@ -96,7 +96,7 @@ defmodule Web.Layouts do
   # Login and settings forms: one task on the page, so no footer links to wander off to.
   def narrow(assigns) do
     ~H"""
-    <.narrow_nav_bar current_user={@current_user} />
+    <.main_nav_bar {nav_assigns(assigns)} size={:narrow} />
     <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
       <.flash_group flash={@flash} />
       {@inner_content}
@@ -124,8 +124,6 @@ defmodule Web.Layouts do
           <.a id="footer-styles" navigate="/styles">Style guide</.a>
           ·
           <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-          ·
-          <.a navigate="/admin">Admin</.a>
         <% end %>
         <%= if @dev_routes? do %>
           ·
@@ -140,49 +138,107 @@ defmodule Web.Layouts do
     """
   end
 
-  attr :current_user, :map, default: nil
-
-  defp narrow_nav_bar(assigns) do
-    ~H"""
-    <.site_bar size={:narrow}>
-      <.account_menu :if={@current_user} current_user={@current_user} />
-    </.site_bar>
-    """
+  # What the top bar needs from a page's assigns. Pages that don't load a user have none.
+  defp nav_assigns(assigns) do
+    %{
+      current_user: assigns[:current_user],
+      current_team: assigns[:current_team],
+      managed_teams: assigns[:managed_teams] || [],
+      current_path: assigns[:current_path]
+    }
   end
 
   attr :current_user, :map, default: nil
+  attr :current_team, :map, default: nil
+  attr :managed_teams, :list, default: []
+  attr :current_path, :string, default: nil
+  attr :size, :atom, default: :wide
 
-  def app_nav_bar(assigns) do
+  # The top bar: the team's sections when there's a team, Admin for site admins, and the
+  # account menu, or Log in. The section the page is in is marked.
+  def main_nav_bar(assigns) do
     ~H"""
-    <.site_bar>
-      <.account_menu current_user={@current_user} />
-    </.site_bar>
-    """
-  end
-
-  attr :current_user, :map, default: nil
-
-  defp account_menu(assigns) do
-    ~H"""
-    <.site_bar_menu label={@current_user.email}>
-      <.a kind={:custom} navigate="/settings">Settings</.a>
-      <.menu_divider />
-      <.a kind={:custom} method="delete" href="/logout">Log out</.a>
-    </.site_bar_menu>
-    """
-  end
-
-  attr :current_user, :map, default: nil
-
-  def marketing_nav_bar(assigns) do
-    ~H"""
-    <.site_bar>
+    <.site_bar size={@size}>
+      <:links :if={@current_user && @current_team}>
+        <.a
+          :for={{label, path} <- team_sections(@current_team)}
+          kind={:custom}
+          navigate={path}
+          id={"nav-" <> (label |> String.downcase() |> String.replace(" ", "-"))}
+          aria-current={section_current?(@current_path, path, @current_team) && "page"}
+        >
+          {label}
+        </.a>
+      </:links>
+      <.a
+        :if={@current_user && @current_user.is_admin}
+        id="nav-admin"
+        kind={:custom}
+        navigate={~p"/admin"}
+        class="site-bar-link"
+        aria-current={admin_path?(@current_path) && "page"}
+      >
+        Admin
+      </.a>
       <%= if @current_user do %>
-        <.account_menu current_user={@current_user} />
+        <.account_menu
+          current_user={@current_user}
+          current_team={@current_team}
+          managed_teams={@managed_teams}
+        />
       <% else %>
         <.button navigate="/login" size={:sm}>Log in</.button>
       <% end %>
     </.site_bar>
+    """
+  end
+
+  defp team_sections(team) do
+    [
+      {"Dashboard", ~p"/#{team.subdomain}"},
+      {"Activities", ~p"/#{team.subdomain}/activities"},
+      {"Members", ~p"/#{team.subdomain}/members"},
+      {"Qualifications", ~p"/#{team.subdomain}/qualifications"},
+      {"Groups", ~p"/#{team.subdomain}/groups"},
+      {"Tax credit letters", ~p"/#{team.subdomain}/tax-credit-letters"}
+    ]
+  end
+
+  # The dashboard is current only on its own page; a section is current on any page under it.
+  defp section_current?(nil, _path, _team), do: false
+
+  defp section_current?(current_path, path, team) do
+    if path == "/#{team.subdomain}",
+      do: current_path in [path, "#{path}/managers"],
+      else: current_path == path or String.starts_with?(current_path, path <> "/")
+  end
+
+  defp admin_path?(nil), do: false
+  defp admin_path?(path), do: path == "/admin" or String.starts_with?(path, "/admin/")
+
+  attr :current_user, :map, required: true
+  attr :current_team, :map, default: nil
+  attr :managed_teams, :list, default: []
+
+  defp account_menu(assigns) do
+    ~H"""
+    <.site_bar_menu label={@current_user.email}>
+      <%= if length(@managed_teams) > 1 do %>
+        <div class="menu-note">Your teams</div>
+        <.a
+          :for={team <- @managed_teams}
+          kind={:custom}
+          navigate={~p"/#{team.subdomain}"}
+          aria-current={@current_team && @current_team.id == team.id && "page"}
+        >
+          {team.name}
+        </.a>
+        <.menu_divider />
+      <% end %>
+      <.a kind={:custom} navigate="/settings">Settings</.a>
+      <.menu_divider />
+      <.a kind={:custom} method="delete" href="/logout">Log out</.a>
+    </.site_bar_menu>
     """
   end
 
