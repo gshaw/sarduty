@@ -9,23 +9,25 @@ defmodule Web.Components.Pagination do
 
   def pagination(assigns) do
     ~H"""
-    <nav
-      :if={@paginated.total_pages > 1}
-      class={["flex items-center justify-between gap-hspacer", @class]}
-      aria-label="pagination"
-    >
+    <nav :if={@paginated.total_pages > 1} class={["pagination", @class]} aria-label="Pages">
       <%= if @paginated.page_number > 1 do %>
-        <.a navigate={@path_fn.(page: @paginated.page_number - 1)}>← Previous Page</.a>
+        <.a kind={:custom} navigate={@path_fn.(page: @paginated.page_number - 1)} class="link">
+          <.icon name="hero-chevron-left-micro" class="size-4" />Previous
+        </.a>
       <% else %>
-        <span class="text-disabled">← Previous Page</span>
+        <span class="pagination-disabled">
+          <.icon name="hero-chevron-left-micro" class="size-4" />Previous
+        </span>
       <% end %>
-      <span>
-        Page {@paginated.page_number} of {@paginated.total_pages}
-      </span>
+      <span>Page {@paginated.page_number} of {@paginated.total_pages}</span>
       <%= if @paginated.page_number < @paginated.total_pages do %>
-        <.a navigate={@path_fn.(page: @paginated.page_number + 1)}>Next Page →</.a>
+        <.a kind={:custom} navigate={@path_fn.(page: @paginated.page_number + 1)} class="link">
+          Next<.icon name="hero-chevron-right-micro" class="size-4" />
+        </.a>
       <% else %>
-        <span class="text-disabled">Next Page →</span>
+        <span class="pagination-disabled">
+          Next<.icon name="hero-chevron-right-micro" class="size-4" />
+        </span>
       <% end %>
     </nav>
     """

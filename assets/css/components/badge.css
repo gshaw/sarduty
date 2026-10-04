@@ -1,13 +1,53 @@
-.badge { @apply text-xs font-medium px-1 py-0.5 rounded inline-block }
+/* Tags (<.badge>). Tinted tags say what something is; solid tags ask for action. The D4H
+   kinds are solid in D4H's colours; in a table column use the kind marker instead. D4H's own
+   tags on an activity are outlined: data, not status. See /styles/draft/components. */
+@layer components {
+  .badge {
+    --c: var(--text-muted);
+    display: inline-block;
+    font-size: var(--fs-xs);
+    line-height: var(--lh-xs);
+    font-weight: 600;
+    padding: 2px var(--sp-2);
+    border-radius: var(--radius);
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--c) 75%, var(--text));
+    background: color-mix(in srgb, var(--c) 16%, var(--bg));
+  }
 
-/* colors */
-.badge { @apply bg-base-2 text-base-content }
-.badge-primary { @apply text-primary-content bg-primary-1 }
-.badge-secondary { @apply text-secondary-content bg-secondary-1 }
-.badge-success { @apply text-success-content bg-success-1 }
-.badge-warning { @apply text-warning-content bg-warning-1 }
-.badge-danger { @apply text-danger-content bg-danger-1 }
+  .badge-primary { --c: var(--link); }
+  .badge-success { --c: var(--success-text); }
+  .badge-warning { background: var(--warning); color: var(--on-warning); }
+  .badge-danger { background: var(--danger); color: var(--on-fill); }
+  .badge-incident, .badge-exercise, .badge-event { color: var(--on-fill); }
+  .badge-incident { background: var(--incident); }
+  .badge-exercise { background: var(--exercise); }
+  .badge-event { background: var(--event); }
 
-.badge-incident { @apply text-primary-content bg-incident }
-.badge-exercise { @apply text-primary-content bg-exercise }
-.badge-event { @apply text-primary-content bg-event }
+  .badge-outline {
+    background: none;
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-weight: 400;
+  }
+
+  /* The D4H kind in a table column: a small square in D4H's colour and the word. */
+  .activity-kind { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+
+  .activity-kind::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--c, var(--text-muted));
+    align-self: center;
+    flex: none;
+  }
+
+  .activity-kind-incident { --c: var(--incident); }
+  .activity-kind-exercise { --c: var(--exercise); }
+  .activity-kind-event { --c: var(--event); }
+
+  /* Several tags together wrap with a gap, so they never touch. */
+  .badges { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); vertical-align: baseline; }
+}

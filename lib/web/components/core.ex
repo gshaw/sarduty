@@ -47,23 +47,19 @@ defmodule Web.Components.Core do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class={[
-        "fixed top-16 right-2 mr-2 w-80 md:w-96 z-50 rounded py-2 px-4",
-        @kind == :info && "bg-base-content text-base-1",
-        @kind == :error && "bg-danger-1 text-danger-content"
-      ]}
+      class={["toast", @kind == :error && "toast-error"]}
       {@rest}
     >
-      <div :if={@title} class="text-lg font-medium">
-        {@title}
+      <.icon
+        name={if @kind == :error, do: "hero-exclamation-circle-mini", else: "hero-check-circle-mini"}
+        class="toast-icon size-5"
+      />
+      <div class="toast-body">
+        <span :if={@title} class="toast-title">{@title}</span>
+        {msg}
       </div>
-      <div class="font-normal mr-6">{msg}</div>
-      <button
-        type="button"
-        class="group absolute top-0 right-0 px-4 py-2"
-        aria-label={gettext("close")}
-      >
-        <.icon name="hero-x-mark" class="h-5 w-5" />
+      <button type="button" class="toast-close" aria-label={gettext("close")}>
+        <.icon name="hero-x-mark-mini" class="size-5" />
       </button>
     </div>
     """
@@ -190,7 +186,7 @@ defmodule Web.Components.Core do
 
     # mt-0.5 is so checkbox can embed in a table nicely
     ~H"""
-    <div class="mt-0.5 flex">
+    <div class="flex gap-3 items-start mb-p">
       <input type="hidden" name={@name} value="false" />
       <input
         type="checkbox"
@@ -198,13 +194,13 @@ defmodule Web.Components.Core do
         name={@name}
         value="true"
         checked={@checked}
-        class={["cursor-pointer h-5 w-5 text-primary-1 shadow-sm rounded", @class]}
+        class={@class}
         {@rest}
       />
-      <div :if={@label} class="ml-2">
-        <.label for={@id}>{@label}</.label>
-        <.error :for={message <- @errors}>{message}</.error>
+      <div :if={@label}>
+        <label for={@id} class="block cursor-pointer">{@label}</label>
         <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+        <.error :for={message <- @errors}>{message}</.error>
       </div>
     </div>
     """
@@ -212,46 +208,36 @@ defmodule Web.Components.Core do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div class="mb-p">
+    <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label :if={@label != nil} for={@id}>{@label}</.label>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
       <select
         id={@id}
         name={@name}
-        class={[
-          "block w-full rounded border shadow-sm",
-          @errors == [] && "text-base-content focus:ring-primary-1 focus:border-primary-1",
-          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
-          @class
-        ]}
+        class={[@errors != [] && "is-invalid", @class]}
         multiple={@multiple}
         {@rest}
       >
         <option :if={@prompt} value="">{@prompt}</option>
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
-      <.error :for={msg <- @errors}>{msg}</.error>
-      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div class="mb-p">
+    <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label :if={@label != nil} for={@id}>{@label}</.label>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
       <textarea
         id={@id}
         name={@name}
-        class={[
-          "min-h-24 block w-full rounded border shadow-sm",
-          @errors == [] && "text-base-content focus:ring-primary-1 focus:border-primary-1",
-          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
-          @class
-        ]}
+        class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors}>{msg}</.error>
-      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
@@ -259,23 +245,18 @@ defmodule Web.Components.Core do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class="mb-p">
+    <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label :if={@label != nil} for={@id}>{@label}</.label>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
-          "block w-full rounded border shadow-sm",
-          @errors == [] && "text-base-content focus:ring-primary-1 focus:border-primary-1",
-          @errors != [] && "border-danger-1 focus:ring-danger-1 focus:border-danger-1 text-danger-1",
-          @class
-        ]}
+        class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       />
-      <.error :for={msg <- @errors}>{msg}</.error>
-      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
     </div>
     """
   end
@@ -293,10 +274,10 @@ defmodule Web.Components.Core do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8 text-base-content">
+        <h1 class="title">
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-secondary-1">
+        <p :if={@subtitle != []} class="lead">
           {render_slot(@subtitle)}
         </p>
       </div>

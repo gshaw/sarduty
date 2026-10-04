@@ -269,7 +269,7 @@ defmodule Web.GroupLive do
       <p
         :if={@preview.missing_qualification_ids != []}
         id="rule-broken"
-        class="rounded bg-warning-1 text-warning-content px-p py-p05 text-sm"
+        class="callout text-sm"
       >
         These rules name a qualification that is no longer in D4H. Edit the rules to
         remove or replace it, then the preview comes back.

@@ -1,25 +1,51 @@
-.table-heading { @apply font-semibold text-sm text-base-content py-1 } /* label */
+/* Dense tables: 32px rows, cells on their first baseline, sticky headers. On a phone the
+   table scrolls sideways inside .table-wrap rather than reflowing. See /styles/draft/tables. */
+@layer components {
+  .table-wrap {
+    overflow-x: auto;
+    margin-bottom: var(--sp-4);
+    border: 1px solid var(--border-subtle);
+  }
 
-table.table { @apply text-left w-full }
-table.table thead th { @apply bg-base-3 md:border-b-2 border-base-content/50 }
-table.table thead th,
-table.table tbody th { @apply py-1 pr-2 align-text-top font-semibold text-sm text-base-content w-full md:w-auto }
-table.table tbody td { @apply py-1 pr-2 align-text-top }
+  .table-heading { font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); padding-block: var(--sp-1); }
 
-/* style header row cells that span multiple columns */
-table.table thead tr.table-header-row th { @apply border-none text-sm font-normal }
+  table.table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); line-height: var(--lh-sm); text-align: left; }
+  table.table :is(th, td) { padding: 6px var(--sp-3); text-align: left; vertical-align: baseline; }
 
-/* alternating row colors requires left padding */
-table.table-striped tbody { @apply [&>*:nth-child(even)]:bg-base-3/70 }
-table.table-striped th,
-table.table-striped td { @apply pl-2 }
+  table.table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-alt);
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
 
-/* vertically stack mobile table cells, each labeled by its column header */
-table.table thead { @apply hidden md:table-header-group }
-table.table tr { @apply flex flex-col md:table-row }
-table.table td[data-label]:not([data-label=""]) {
-  @apply before:block before:text-xs before:font-semibold before:text-secondary-1 before:content-[attr(data-label)] md:before:hidden;
+  /* A header row whose cells span several columns. */
+  table.table thead tr.table-header-row th {
+    font-size: var(--fs-xs);
+    line-height: var(--lh-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  table.table thead th a { color: inherit; text-decoration: none; }
+  table.table tbody th { font-weight: 600; }
+  table.table tbody :is(td, th) { border-bottom: 1px solid var(--border-subtle); }
+  table.table tbody tr:last-child :is(td, th) { border-bottom: 0; }
+  table.table-striped tbody tr:nth-child(even) :is(td, th) { background: var(--row-alt); }
+  table.table tbody tr:hover :is(td, th) { background: var(--row-hover); }
+  table.table td .btn-sm { margin: -3px 0 -1px; }
+
+  table.table-form tbody :is(th, td) { padding-block: var(--sp-1); }
+
+  @media (max-width: 800px) {
+    /* Text cells keep a readable width; the table scrolls instead of squeezing them. */
+    table.table td:not(.w-px, .whitespace-nowrap) { min-width: 8rem; }
+  }
 }
-
-table.table-form tbody th { @apply py-0 }
-table.table-form tbody td { @apply py-0 pb-p05 mb-p05 border-b }

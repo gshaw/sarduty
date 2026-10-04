@@ -43,44 +43,46 @@ defmodule Web.Components.Table do
       end
 
     ~H"""
-    <table class={["table", @class]}>
-      <thead>
-        <tr :if={@header_row != []} class="table-header-row">
-          {render_slot(@header_row)}
-        </tr>
-        <tr>
-          <.table_header
-            :for={col <- @col}
-            label={col[:label]}
-            class={col[:class]}
-            align={col[:align]}
-            sorts={col[:sorts]}
-            sort={@sort}
-            path_fn={@path_fn}
-          />
-        </tr>
-      </thead>
-      <tbody id={@id}>
-        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-          <td
-            :for={col <- @col}
-            data-label={col[:label]}
-            class={[
-              Map.get(col, :class),
-              if(Map.get(col, :align) == "right", do: "md:text-right", else: nil)
-            ]}
-          >
-            {render_slot(col, @row_item.(row))}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table class={["table", @class]}>
+        <thead>
+          <tr :if={@header_row != []} class="table-header-row">
+            {render_slot(@header_row)}
+          </tr>
+          <tr>
+            <.table_header
+              :for={col <- @col}
+              label={col[:label]}
+              class={col[:class]}
+              align={col[:align]}
+              sorts={col[:sorts]}
+              sort={@sort}
+              path_fn={@path_fn}
+            />
+          </tr>
+        </thead>
+        <tbody id={@id}>
+          <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
+            <td
+              :for={col <- @col}
+              data-label={col[:label]}
+              class={[
+                Map.get(col, :class),
+                if(Map.get(col, :align) == "right", do: "text-right", else: nil)
+              ]}
+            >
+              {render_slot(col, @row_item.(row))}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 
   def table_header(assigns) do
     ~H"""
-    <th class={[@class, if(@align == "right", do: "md:text-right", else: nil)]}>
+    <th class={[@class, if(@align == "right", do: "text-right", else: nil)]}>
       <%= if @sorts == nil do %>
         {@label}
       <% else %>

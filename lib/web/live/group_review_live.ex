@@ -93,7 +93,7 @@ defmodule Web.GroupReviewLive do
 
     <div id="data-age" class="flex items-center gap-p mb-p text-sm">
       <span :if={refreshing?(@current_team)}>
-        <.spinner size="size-4">Refreshing from D4H…</.spinner>
+        <.spinner>Refreshing from D4H…</.spinner>
       </span>
       <span :if={failed?(@current_team)} id="refresh-error" class="text-danger-1">
         {String.replace_prefix(@current_team.d4h_refresh_result, "Error: ", "Refresh failed: ")}
@@ -117,7 +117,7 @@ defmodule Web.GroupReviewLive do
     <p
       :if={is_nil(@current_team.d4h_access_key)}
       id="no-team-key"
-      class="rounded bg-warning-1 text-warning-content px-p py-p05 mb-p"
+      class="callout mb-p"
     >
       Applying changes needs a team D4H key.
       <.a navigate={~p"/settings/team"}>Save one in Team Settings.</.a>
@@ -126,7 +126,7 @@ defmodule Web.GroupReviewLive do
     <p
       :if={@preview.missing_qualification_ids != []}
       id="rule-broken"
-      class="rounded bg-warning-1 text-warning-content px-p py-p05 mb-p"
+      class="callout mb-p"
     >
       The group's rules name a qualification that is no longer in D4H. Fix the rules first.
     </p>

@@ -121,7 +121,6 @@ defmodule Web do
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
       import Web.Components.A
-      import Web.Components.Avatar
       import Web.Components.NavBar
 
       # Include general helpers for rendering HTML
