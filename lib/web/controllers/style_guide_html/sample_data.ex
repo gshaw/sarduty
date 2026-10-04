@@ -1,8 +1,8 @@
-defmodule Web.StyleGuide.SampleData do
+defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
   # cspell:ignore Tremblay
-  # Made-up rows for the style guides, shaped like the app's pages.
+  # Made-up rows for the style guide, shaped like the app's pages.
 
   def letters do
     [

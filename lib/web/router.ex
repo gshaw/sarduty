@@ -80,14 +80,11 @@ defmodule Web.Router do
     live_session :current_user_session,
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
-      live "/styles", StyleGuideLive
-      live "/styles/tables", StyleGuide.TablesLive
-      live "/styles/forms", StyleGuide.FormsLive
       live "/signup", TeamSignupLive
     end
 
-    get "/styles/draft", StyleDraftController, :index
-    get "/styles/draft/:page", StyleDraftController, :show
+    get "/styles", StyleGuideController, :index
+    get "/styles/:page", StyleGuideController, :show
 
     # The check moved to the verify site. Cards linked here before it, in capitals.
     get "/verify", VerifyController, :to_verify

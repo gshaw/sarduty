@@ -54,7 +54,7 @@ COPY priv priv
 
 COPY lib lib
 
-# Web.StyleDraftHTML embeds assets/css/tokens.css and docs/writing.md at compile time
+# Web.StyleGuideHTML embeds assets/css/tokens.css and docs/writing.md at compile time
 COPY assets assets
 COPY docs/writing.md docs/
 

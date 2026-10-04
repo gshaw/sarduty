@@ -1,10 +1,10 @@
-defmodule Web.StyleDraftController do
+defmodule Web.StyleGuideController do
   use Web, :controller
 
-  alias Web.StyleDraftHTML
+  alias Web.StyleGuideHTML
 
-  # A draft design system: GOV.UK's patterns, Carbon's density, light and dark. It renders
-  # without the app's layouts, so no Tailwind reaches these pages and nothing else changes.
+  # The design system: GOV.UK's patterns, Carbon's density, light and dark. It renders
+  # without the app's layouts, so it shows the tokens and components on their own.
   plug :put_root_layout, false
   plug :put_layout, false
 
@@ -12,7 +12,7 @@ defmodule Web.StyleDraftController do
 
   def show(conn, %{"page" => slug}) do
     page =
-      Enum.find_value(StyleDraftHTML.pages(), fn {_group, pages} ->
+      Enum.find_value(StyleGuideHTML.pages(), fn {_group, pages} ->
         Enum.find_value(pages, fn {page, _title} -> Atom.to_string(page) == slug && page end)
       end)
 

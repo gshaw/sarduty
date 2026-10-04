@@ -142,7 +142,7 @@ defmodule Web.Layouts do
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
         <%= if @admin? do %>
           ·
-          <.a id="footer-styles" navigate="/styles">Style guide</.a>
+          <.a id="footer-styles" href="/styles">Style guide</.a>
           ·
           <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
         <% end %>

@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{@title} · Style Guide (draft)</title>
+    <title>{@title} · SAR Duty style guide</title>
     <script>
       // Before first paint, so a saved theme doesn't flash.
       (function () {
-        var theme = localStorage.getItem("draft-theme");
+        var theme = localStorage.getItem("styles-theme");
         if (theme) document.documentElement.dataset.theme = theme;
       })();
     </script>
@@ -56,10 +56,10 @@
             var theme = b.dataset.themeChoice;
             if (theme) {
               document.documentElement.dataset.theme = theme;
-              localStorage.setItem("draft-theme", theme);
+              localStorage.setItem("styles-theme", theme);
             } else {
               delete document.documentElement.dataset.theme;
-              localStorage.removeItem("draft-theme");
+              localStorage.removeItem("styles-theme");
             }
             show();
           });
