@@ -1,0 +1,4 @@
+/* A field with an error gets a red bar down its left side. See /styles/draft/forms. */
+@layer components {
+  .field-error { border-left: 5px solid var(--danger-text); padding-left: var(--sp-4); }
+}

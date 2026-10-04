@@ -10,19 +10,22 @@ defmodule Web.Components.Breadcrumbs do
     attr :path, :string
   end
 
+  # The team first, then each level; the last item is the current page and isn't a link.
   def breadcrumbs(assigns) do
     ~H"""
-    <div class="mb-p05 text-sm">
-      <.a :if={@team} navigate={~p"/#{@team.subdomain}"}>{@team.name}</.a>
-      <span :for={item <- @item}>
-        /
+    <ol class="breadcrumbs">
+      <li :if={@team}>
+        <.a kind={:custom} navigate={~p"/#{@team.subdomain}"}>{@team.name}</.a>
+      </li>
+      <li :for={item <- @item}>
+        <.icon name="hero-chevron-right-micro" class="breadcrumb-separator size-4" />
         <%= if Map.get(item, :path) do %>
-          <.a navigate={item.path}>{item.label}</.a>
+          <.a kind={:custom} navigate={item.path}>{item.label}</.a>
         <% else %>
-          {item.label}
+          <span aria-current="page">{item.label}</span>
         <% end %>
-      </span>
-    </div>
+      </li>
+    </ol>
     """
   end
 end

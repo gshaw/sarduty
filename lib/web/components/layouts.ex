@@ -4,13 +4,14 @@ defmodule Web.Layouts do
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en" class="[scrollbar-gutter:stable]" data-theme="tailwind">
+    <html lang="en" class="[scrollbar-gutter:stable]">
       <head>
         <meta charset="utf-8" />
         <meta name="description" content="Helpful tools for search and rescue managers." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
-        <meta name="theme-color" content={theme_color(@conn)} />
+        <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled Page"}
         </.live_title>
@@ -23,12 +24,6 @@ defmodule Web.Layouts do
       </body>
     </html>
     """
-  end
-
-  # Safari tints the status bar with theme-color, so it matches the bar at the top:
-  # zinc-100 (bg-base-2) for the app's navbar, slate-800 for the verify site's.
-  defp theme_color(%Plug.Conn{host: host}) do
-    if host == Web.VerifyHost.host(), do: "#1e293b", else: "#f4f4f5"
   end
 
   def marketing(assigns) do
@@ -61,11 +56,9 @@ defmodule Web.Layouts do
     assigns = assign(assigns, :organization, assigns[:organization])
 
     ~H"""
-    <header class="sticky top-0 z-30 bg-slate-800 text-white">
+    <header class="verify-bar sticky top-0 z-30">
       <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between gap-4">
-        <a :if={@organization == nil} href="/" class="font-semibold">
-          SAR <span class="text-amber-400">Duty</span>
-        </a>
+        <a :if={@organization == nil} href="/" class="brand">SAR <span>Duty</span></a>
         <a
           :if={@organization}
           id="verify-organization"
@@ -80,14 +73,14 @@ defmodule Web.Layouts do
           />
           {@organization.short_name}
         </a>
-        <span id="verify-host" class="text-sm text-slate-300">{Web.VerifyHost.host()}</span>
+        <span id="verify-host" class="verify-host">{Web.VerifyHost.host()}</span>
       </div>
     </header>
     <main role="main" class="max-w-md mx-auto px-4 pt-6 pb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-zinc-400">
+    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-secondary-1">
       <span :if={@organization} id="verify-footer-organization">
         <a :if={@organization.website} href={@organization.website} class="hover:underline">
           {@organization.name}
@@ -151,21 +144,9 @@ defmodule Web.Layouts do
 
   defp narrow_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:narrow} color={:base_2}>
-      <.navbar_links>
-        <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
-      </.navbar_links>
-      <%= if @current_user do %>
-        <.navbar_user_menu color={:base_2}>
-          <:menu_label>
-            <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
-          </:menu_label>
-          <.a kind={:menu_item} navigate="/settings">Settings</.a>
-          <.navbar_menu_divider />
-          <.a kind={:menu_item} method="delete" href="/logout">Log out</.a>
-        </.navbar_user_menu>
-      <% end %>
-    </.navbar>
+    <.site_bar size={:narrow}>
+      <.account_menu :if={@current_user} current_user={@current_user} />
+    </.site_bar>
     """
   end
 
@@ -173,30 +154,21 @@ defmodule Web.Layouts do
 
   def app_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:wide} color={:base_2}>
-      <%!-- <.navbar_mobile_menu color={:base_1}>
-        <.a kind={:menu_item} navigate="/">SAR Duty</.a>
-      </.navbar_mobile_menu> --%>
-      <.navbar_links>
-        <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
-      </.navbar_links>
-      <.current_user_menu current_user={@current_user} />
-    </.navbar>
+    <.site_bar>
+      <.account_menu current_user={@current_user} />
+    </.site_bar>
     """
   end
 
   attr :current_user, :map, default: nil
 
-  defp current_user_menu(assigns) do
+  defp account_menu(assigns) do
     ~H"""
-    <.navbar_user_menu color={:base_2}>
-      <:menu_label>
-        <.avatar initials={"0" <> (@current_user.id |> Integer.to_string())} />
-      </:menu_label>
-      <.a kind={:menu_item} navigate="/settings">Settings</.a>
-      <.navbar_menu_divider />
-      <.a kind={:menu_item} method="delete" href="/logout">Log out</.a>
-    </.navbar_user_menu>
+    <.site_bar_menu label={@current_user.email}>
+      <.a kind={:custom} navigate="/settings">Settings</.a>
+      <.menu_divider />
+      <.a kind={:custom} method="delete" href="/logout">Log out</.a>
+    </.site_bar_menu>
     """
   end
 
@@ -204,25 +176,13 @@ defmodule Web.Layouts do
 
   def marketing_nav_bar(assigns) do
     ~H"""
-    <.navbar size={:wide} color={:base_2}>
-      <%!-- <.navbar_mobile_menu color={:base_1}>
-        <.a kind={:menu_item} navigate="/">SAR Duty</.a>
-        <%= if @current_user == nil do %>
-          <.navbar_menu_divider />
-          <.a kind={:menu_item} navigate="/login">Log in</.a>
-          <.a kind={:menu_item} navigate="/signup">Sign up</.a>
-        <% end %>
-      </.navbar_mobile_menu> --%>
-      <.navbar_links>
-        <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
-      </.navbar_links>
+    <.site_bar>
       <%= if @current_user do %>
-        <.current_user_menu current_user={@current_user} />
+        <.account_menu current_user={@current_user} />
       <% else %>
-        <.button navigate="/login" size={:sm} class="mr-1">Log in</.button>
-        <%!-- <.button navigate="/signup" size={:sm} variant={:primary}>Sign up</.button> --%>
+        <.button navigate="/login" size={:sm}>Log in</.button>
       <% end %>
-    </.navbar>
+    </.site_bar>
     """
   end
 
@@ -238,7 +198,7 @@ defmodule Web.Layouts do
 
   def flash_group(assigns) do
     ~H"""
-    <div id={@id}>
+    <div id={@id} class="toasts">
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} title="Error" flash={@flash} />
       <.flash

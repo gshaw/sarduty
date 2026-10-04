@@ -2,24 +2,16 @@ defmodule Web.Components.A do
   use Web, :function_component
 
   attr :kind, :atom,
-    values: [
-      :default,
-      :custom,
-      :monochrome,
-      :menu_item,
-      :navbar_item,
-      :navbar_title
-    ],
+    values: [:default, :custom, :monochrome],
     default: :default,
-    doc: "used for styling and flash lookup"
+    doc: "default is an underlined link, monochrome is in the text colour, custom is unstyled"
 
   attr :external, :boolean, default: false
-  attr :is_current, :boolean, default: false
   attr :class, :any, default: ""
 
   attr :rest, :global,
     include: ~w(disabled href method navigate role target),
-    doc: "the arbitrary HTML attributes to add to the flash container"
+    doc: "the arbitrary HTML attributes to add to the link"
 
   slot :inner_block, required: true
 
@@ -30,7 +22,11 @@ defmodule Web.Components.A do
       |> assign(:link_target, determine_target(assigns))
 
     ~H"""
-    <.link class={@link_class} target={@link_target} {@rest}>{render_slot(@inner_block)}</.link>
+    <.link class={@link_class} target={@link_target} {@rest}>{render_slot(@inner_block)}<.icon
+      :if={@external}
+      name="hero-arrow-top-right-on-square-micro"
+      class="size-4 ml-0.5 align-[-3px]"
+    /></.link>
     """
   end
 
@@ -38,45 +34,10 @@ defmodule Web.Components.A do
   defp determine_target(_assigns), do: nil
 
   defp determine_link_class(assigns) do
-    [
-      determine_kind_classes(assigns),
-      determine_external_class(assigns),
-      assigns.class
-    ]
+    [determine_kind_classes(assigns), assigns.class]
   end
 
-  defp determine_external_class(%{external: true}), do: "after:content-['_↗']"
-  defp determine_external_class(_assigns), do: nil
-
-  defp determine_kind_classes(%{kind: :default}), do: ["link text-primary-1"]
+  defp determine_kind_classes(%{kind: :default}), do: ["link"]
   defp determine_kind_classes(%{kind: :custom}), do: []
-  defp determine_kind_classes(%{kind: :monochrome}), do: ["link"]
-
-  defp determine_kind_classes(%{kind: :menu_item, is_current: is_current}) do
-    [
-      "block text-sm font-medium",
-      "hover:text-base-content hover:bg-base-3",
-      "px-4 py-2",
-      "focus:outline-none focus:ring-inset focus:ring-2 focus:ring-base-content",
-      is_current && "text-base-content font-bold",
-      !is_current && "text-secondary-1"
-    ]
-  end
-
-  defp determine_kind_classes(%{kind: :navbar_item, is_current: is_current}) do
-    [
-      "border-hr",
-      "mx-4",
-      "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-base-content",
-      is_current && "text-base-content",
-      !is_current && "text-secondary-1 hover:text-base-content"
-    ]
-  end
-
-  defp determine_kind_classes(%{kind: :navbar_title}) do
-    [
-      "font-medium text-base-content",
-      "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-base-content"
-    ]
-  end
+  defp determine_kind_classes(%{kind: :monochrome}), do: ["link text-base-content"]
 end

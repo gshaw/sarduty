@@ -119,54 +119,35 @@ defmodule Web.StyleDraftHTML do
     ]
   end
 
-  # The palette, as {token, light, dark, use}. The CSS is generated from this list, so the
-  # swatches on the overview can't drift from what the pages use.
-  def palette do
-    [
-      {"Surfaces",
-       [
-         {"bg", "#ffffff", "#0d1117", "Page background"},
-         {"surface-alt", "#f3f2f1", "#161c24", "Table headers, panels, sunken areas"},
-         {"row-alt", "#f8f8f7", "#121821", "Zebra rows"},
-         {"row-hover", "#eaf2fa", "#1b2633", "Row under the pointer"},
-         {"border", "#b1b4b6", "#3b4654", "Inputs and table rules"},
-         {"border-subtle", "#dedfe0", "#252e39", "Row dividers"}
-       ]},
-      {"Text",
-       [
-         {"text", "#0b0c0c", "#e6e9ec", "Body text"},
-         {"text-muted", "#505a5f", "#9aa6b2", "Hints, captions, secondary text"},
-         {"link", "#1d70b8", "#7ab8f5", "Links"},
-         {"link-hover", "#003078", "#b3d6fb", "Links under the pointer"}
-       ]},
-      {"Actions and status",
-       [
-         {"primary", "#1d4f91", "#2f6fc4", "Main buttons, current tab, page number"},
-         {"primary-hover", "#163d70", "#2563b0", "Main button under the pointer or pressed"},
-         {"success", "#00703c", "#1f7f4c", "Fills: save and add buttons, success banner"},
-         {"success-text", "#00703c", "#4cc38a", "Green text: Add, tinted success tags"},
-         {"danger", "#c2301a", "#c93a24", "Fills: delete buttons, danger tags and banners"},
-         {"danger-text", "#c2301a", "#ff8a75", "Red text: Remove, error messages"},
-         {"warning", "#ffb81c", "#ffb81c", "Amber fill with dark text: act soon"},
-         {"info", "#1d70b8", "#2a66b8", "Fills: notices, info banner"},
-         {"focus", "#ffdd00", "#ffdd00", "Keyboard focus, both modes"}
-       ]},
-      {"Brand and D4H",
-       [
-         {"nav", "#13243a", "#0a111b", "Top bar"},
-         {"accent", "#ffb81c", "#ffb81c", "Logo, top bar rule"},
-         {"incident", "#2453a6", "#3366c0", "D4H incident"},
-         {"exercise", "#b4500b", "#b8560f", "D4H exercise"},
-         {"event", "#5b3ea6", "#6a4cc0", "D4H event"}
-       ]}
-    ]
-  end
+  # The palette comes from assets/css/tokens.css, the file the app uses, as
+  # [{group, [{token, light, dark, use}]}]. The guide includes the same file, so its swatches
+  # are the app's colours.
+  @tokens_path Path.expand("../../../assets/css/tokens.css", __DIR__)
+  @external_resource @tokens_path
+  @tokens_css File.read!(@tokens_path)
 
-  def palette_css do
-    for {_group, tokens} <- palette(), {name, light, dark, _use} <- tokens, into: "" do
-      "  --#{name}: light-dark(#{light}, #{dark});\n"
-    end
-  end
+  @palette @tokens_css
+           |> String.split("\n")
+           |> Enum.reduce([], fn line, groups ->
+             group = Regex.run(~r{/\* group: (.+?) \*/}, line)
+             token = Regex.run(~r{--([a-z-]+): light-dark\((#\w+), (#\w+)\); /\* (.+?) \*/}, line)
+
+             case {group, token, groups} do
+               {[_, name], _, _} ->
+                 [{name, []} | groups]
+
+               {nil, [_, n, l, d, use], [{g, tokens} | rest]} ->
+                 [{g, [{n, l, d, use} | tokens]} | rest]
+
+               _ ->
+                 groups
+             end
+           end)
+           |> Enum.map(fn {group, tokens} -> {group, Enum.reverse(tokens)} end)
+           |> Enum.reverse()
+
+  def palette, do: @palette
+  def tokens_css, do: Phoenix.HTML.raw(@tokens_css)
 
   defdelegate letters(), to: SampleData
   defdelegate recommendations(), to: SampleData

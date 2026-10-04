@@ -80,9 +80,7 @@ defmodule Web.ActivityAttendanceLive do
             </:col>
             <:col :let={{op, _, _}} label="">
               <%= if op == :not_invited do %>
-                <span class="text-danger-content font-bold bg-danger-1 rounded px-2 py-1">
-                  Not Invited
-                </span>
+                <.badge kind={:danger}>Not invited</.badge>
               <% else %>
                 <%= if op == :add do %>
                   <span class="text-success-1 font-bold">Add</span>

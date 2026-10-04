@@ -67,7 +67,7 @@ defmodule Web.Settings.TeamLive do
           <p
             :if={!Team.key_owner_is_sar_duty?(@current_team)}
             id="team-key-advice"
-            class="rounded bg-warning-1 text-warning-content px-p py-p05"
+            class="callout"
           >
             Create the key from a D4H member named "SAR Duty" rather than a person. D4H history
             then shows SAR Duty for changes made here, and the key keeps working when people

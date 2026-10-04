@@ -105,18 +105,12 @@ defmodule Web.Components.UI do
   end
 
   attr :class, :string, default: nil
-  attr :size, :string, default: "size-6"
   slot :inner_block
 
   def spinner(assigns) do
     ~H"""
-    <span class={["inline-flex items-center", @class]}>
-      <span class="mr-2">
-        <Web.Components.Core.icon
-          name="hero-arrow-path"
-          class={["motion-safe:animate-spin", @size]}
-        />
-      </span>
+    <span class={["inline-flex items-center gap-2", @class]}>
+      <span class="spinner" aria-hidden="true"></span>
       <span :if={@inner_block != []}>{render_slot(@inner_block)}</span>
     </span>
     """
@@ -126,7 +120,7 @@ defmodule Web.Components.UI do
 
   def hint(assigns) do
     ~H"""
-    <div class="block my-1 font-normal text-sm text-secondary-1">
+    <div class="hint block mb-2">
       {render_slot(@inner_block)}
     </div>
     """
@@ -140,7 +134,7 @@ defmodule Web.Components.UI do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block mb-1 label">
+    <label for={@for} class="label block mb-1">
       {render_slot(@inner_block)}
     </label>
     """
@@ -153,7 +147,7 @@ defmodule Web.Components.UI do
 
   def error(assigns) do
     ~H"""
-    <div class="my-1 font-normal text-sm text-danger-1">
+    <div class="mb-2 font-bold text-danger-1">
       {render_slot(@inner_block)}
     </div>
     """

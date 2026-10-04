@@ -9,8 +9,8 @@ defmodule Web.Components.StyleGuide do
     ~H"""
     <header class="mb-8">
       <h1 class="title">Style Guide</h1>
-      <div class="border-b border-hr mt-p">
-        <nav class="flex gap-2" aria-label="Style guide pages">
+      <div class="mt-p">
+        <nav class="tabs" aria-label="Style guide pages">
           <.tab navigate={~p"/styles"} current={@current == :index}>Overview</.tab>
           <.tab navigate={~p"/styles/tables"} current={@current == :tables}>Tables</.tab>
           <.tab navigate={~p"/styles/forms"} current={@current == :forms}>Forms</.tab>
@@ -20,23 +20,13 @@ defmodule Web.Components.StyleGuide do
     """
   end
 
-  # Same look as the member tabs.
   attr :navigate, :string, required: true
   attr :current, :boolean, required: true
   slot :inner_block, required: true
 
   defp tab(assigns) do
     ~H"""
-    <.a
-      kind={:custom}
-      navigate={@navigate}
-      aria-current={@current && "page"}
-      class={[
-        "py-3 px-4 font-medium text-sm border-b-2 transition-colors duration-200",
-        @current && "border-primary-1 text-primary-1 bg-primary-1/10",
-        !@current && "border-transparent text-secondary-1 hover:text-base-content hover:bg-base-2"
-      ]}
-    >
+    <.a kind={:custom} navigate={@navigate} aria-current={@current && "page"}>
       {render_slot(@inner_block)}
     </.a>
     """

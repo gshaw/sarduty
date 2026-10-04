@@ -1,47 +1,99 @@
-.btn { @apply
-  inline-flex items-center
-  text-sm font-medium
-  outline-none focus-visible:ring-2 focus-visible:ring-offset-2 /* keyboard focus only */
-  no-underline hover:no-underline /* needed to style `a` */
-}
-
-/* colors */
-.btn { @apply bg-base-2 text-base-content hover:bg-base-3 focus:bg-base-3 focus:ring-secondary-1 }
-.btn-primary { @apply text-primary-content bg-primary-1 hover:bg-primary-2 focus:bg-primary-2 focus:ring-primary-2 }
-.btn-secondary { @apply text-secondary-content bg-secondary-1 hover:bg-secondary-2 focus:bg-secondary-2 focus:ring-secondary-2 }
-.btn-success { @apply text-success-content bg-success-1 hover:bg-success-2 focus:bg-success-2 focus:ring-success-2 }
-.btn-warning { @apply text-warning-content bg-warning-1 hover:bg-warning-2 focus:bg-warning-2 focus:ring-warning-2 }
-.btn-danger { @apply text-danger-content bg-danger-1 hover:bg-danger-2 focus:bg-danger-2 focus:ring-danger-2 }
-
-
-/* size (h- styles needed to prevent page movement when reloading page) */
-.btn { @apply px-4 py-2 rounded-md h-10 }
-.btn-sm { @apply px-2.5 py-1.5 text-xs rounded h-6 }
-.btn-lg { @apply px-6 py-3 text-base rounded-md h-14 }
-
-/* push button animation and shadow */
-.btn { @apply border-solid border-b-2 border-base-content/50 }
-.btn {
-  &:active:hover,
-  &:active:active {
-    @apply border-b-transparent translate-y-0.5 ;
+/* Buttons: flat, with a hard bottom edge, GOV.UK style. Each variant sets the same four
+   --btn-* properties; hover only where there is a pointer, and a press drops the button
+   onto its edge. See /styles/draft/components. */
+@layer components {
+  .btn {
+    --btn-bg: var(--surface-alt);
+    --btn-bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text));
+    --btn-fg: var(--text);
+    --btn-edge: var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    font: inherit;
+    font-weight: 600;
+    font-size: var(--fs-md);
+    line-height: var(--lh-md);
+    padding: 6px var(--sp-4);
+    border: 0;
+    border-radius: var(--radius);
+    color: var(--btn-fg);
+    background: var(--btn-bg);
+    box-shadow: 0 2px 0 var(--btn-edge);
+    text-decoration: none;
+    cursor: pointer;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
   }
-}
 
-.btn { &:not(:active) { @apply duration-200 } }
-
-/* special case disabled button */
-.btn:disabled, .btn[disabled], .btn-disabled {
-  @apply bg-base-3 text-secondary-1 border-none;
-  &:active:hover,&:active:focus {
-    transform: none;
+  .btn-primary {
+    --btn-bg: var(--primary);
+    --btn-bg-hover: var(--primary-hover);
+    --btn-fg: var(--on-fill);
+    --btn-edge: color-mix(in srgb, var(--primary) 55%, #000);
   }
-}
 
-/* special case link button */
-.btn-link {
-  @apply bg-transparent text-primary-1 border-0 hover:underline hover:bg-transparent focus:bg-transparent focus:ring-primary-2;
-  &:active:hover,&:active:focus {
-    transform: none;
+  /* Secondary is the default look, named. */
+  .btn-secondary {
+    --btn-bg: var(--surface-alt);
+    --btn-bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text));
+    --btn-fg: var(--text);
+    --btn-edge: var(--border);
   }
+
+  .btn-success {
+    --btn-bg: var(--success);
+    --btn-bg-hover: color-mix(in srgb, var(--success) 85%, #000);
+    --btn-fg: var(--on-fill);
+    --btn-edge: color-mix(in srgb, var(--success) 55%, #000);
+  }
+
+  .btn-danger {
+    --btn-bg: var(--danger);
+    --btn-bg-hover: color-mix(in srgb, var(--danger) 85%, #000);
+    --btn-fg: var(--on-fill);
+    --btn-edge: color-mix(in srgb, var(--danger) 55%, #000);
+  }
+
+  .btn-warning {
+    --btn-bg: var(--warning);
+    --btn-bg-hover: color-mix(in srgb, var(--warning) 85%, #000);
+    --btn-fg: var(--on-warning);
+    --btn-edge: color-mix(in srgb, var(--warning) 55%, #000);
+  }
+
+  .btn-link {
+    --btn-bg: transparent;
+    --btn-bg-hover: transparent;
+    --btn-fg: var(--link);
+    box-shadow: none;
+    text-decoration: underline;
+    font-weight: 400;
+    padding-inline: 0;
+  }
+
+  .btn-sm { font-size: var(--fs-sm); line-height: var(--lh-sm); padding: 2px var(--sp-3); }
+  .btn-lg { font-size: var(--fs-lg); line-height: var(--lh-lg); padding: 8px var(--sp-5); }
+
+  @media (hover: hover) {
+    .btn:not(:disabled):hover { background: var(--btn-bg-hover); color: var(--btn-fg); text-decoration: none; }
+    .btn-link:not(:disabled):hover { color: var(--link-hover); text-decoration: underline 3px; }
+  }
+
+  .btn:not(:disabled):active { background: var(--btn-bg-hover); transform: translateY(2px); box-shadow: none; }
+
+  .btn:focus-visible {
+    outline: 3px solid transparent;
+    background: var(--focus);
+    color: #0b0c0c;
+    box-shadow: 0 2px 0 #0b0c0c;
+    text-decoration: none;
+  }
+
+  .btn:disabled, .btn[disabled], .btn-disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Buttons that wrap on a narrow screen keep a gap between rows. */
+  .form-actions .btn { margin-bottom: var(--sp-2); }
 }

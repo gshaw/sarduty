@@ -1,0 +1,98 @@
+/* Page-wide defaults from the design system (/styles/draft). */
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: var(--font);
+    font-size: var(--fs-md);
+    line-height: var(--lh-md);
+    color: var(--text);
+    background: var(--bg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  code, kbd, samp, pre { font-family: var(--mono); }
+
+  /* GOV.UK focus: yellow, the same in both modes, on everything you can tab to. */
+  a:focus-visible {
+    outline: 3px solid transparent;
+    color: #0b0c0c;
+    background: var(--focus);
+    box-shadow: 0 -2px var(--focus), 0 4px #0b0c0c;
+    text-decoration: none;
+  }
+
+  :is(button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 2px #0b0c0c;
+  }
+
+  /* Form controls: 40px, a 2px border in the text colour, square corners. */
+  input:is([type="text"], [type="email"], [type="password"], [type="search"], [type="date"],
+    [type="datetime-local"], [type="time"], [type="month"], [type="week"], [type="tel"],
+    [type="number"], [type="url"]),
+  select,
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 40px;
+    padding: var(--sp-1) var(--sp-2);
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: var(--border-width) solid var(--text);
+    border-radius: 0;
+  }
+
+  textarea { min-height: 96px; resize: vertical; }
+  input[readonly] { background: var(--surface-alt); border-color: var(--border); }
+  :is(input, select, textarea):disabled { opacity: 0.5; cursor: not-allowed; }
+  :is(input, select, textarea).is-invalid { border-color: var(--danger-text); }
+  ::placeholder { color: var(--text-muted); opacity: 1; }
+
+  /* Checkboxes and radios are drawn here so both modes match: a text-coloured border, then a
+     primary fill with a white tick or dot. */
+  input:is([type="checkbox"], [type="radio"]) {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    margin: 0;
+    display: inline-grid;
+    place-content: center;
+    vertical-align: middle;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--text);
+    background: var(--bg);
+    cursor: pointer;
+  }
+
+  input[type="checkbox"] { border-radius: 2px; }
+
+  input[type="checkbox"]::after {
+    content: "";
+    width: 7px;
+    height: 13px;
+    border: solid var(--on-fill);
+    border-width: 0 3px 3px 0;
+    transform: translateY(-2px) rotate(45deg) scale(0);
+  }
+
+  input[type="checkbox"]:checked { background: var(--primary); border-color: var(--primary); }
+  input[type="checkbox"]:checked::after { transform: translateY(-2px) rotate(45deg); }
+  input[type="radio"] { border-radius: 50%; }
+
+  input[type="radio"]:checked {
+    border-color: var(--primary);
+    background: radial-gradient(circle, var(--on-fill) 0 4px, var(--primary) 4.5px);
+  }
+
+  input:is([type="checkbox"], [type="radio"]):disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* In a table row, a 16px box with a smaller tick. */
+  :is(td, th) input[type="checkbox"] { width: 16px; height: 16px; vertical-align: -3px; }
+  :is(td, th) input[type="checkbox"]::after { width: 4px; height: 8px; border-width: 0 2px 2px 0; }
+
+  hr { border-color: var(--border-subtle); }
+}

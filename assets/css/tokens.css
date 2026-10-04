@@ -1,0 +1,108 @@
+/* The design system's tokens: colours with a light and a dark value, the type scale, and
+   the spacing scale. The app and the style guide (/styles/draft) both read this file. The
+   guide parses the palette: keep each colour on one line, as a light-dark() pair with its
+   use in a trailing comment, under a "group:" comment. */
+
+/* cspell:ignore Plex Segoe Menlo */
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-400-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-600-latin.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* group: Surfaces */
+  --bg: light-dark(#ffffff, #0d1117); /* Page background */
+  --surface-alt: light-dark(#f3f2f1, #161c24); /* Table headers, panels, sunken areas */
+  --row-alt: light-dark(#f8f8f7, #121821); /* Zebra rows */
+  --row-hover: light-dark(#eaf2fa, #1b2633); /* Row under the pointer */
+  --border: light-dark(#b1b4b6, #3b4654); /* Inputs and table rules */
+  --border-subtle: light-dark(#dedfe0, #252e39); /* Row dividers */
+
+  /* group: Text */
+  --text: light-dark(#0b0c0c, #e6e9ec); /* Body text */
+  --text-muted: light-dark(#505a5f, #9aa6b2); /* Hints, captions, secondary text */
+  --link: light-dark(#1d70b8, #7ab8f5); /* Links */
+  --link-hover: light-dark(#003078, #b3d6fb); /* Links under the pointer */
+
+  /* group: Actions and status */
+  --primary: light-dark(#1d4f91, #2f6fc4); /* Main buttons, current tab, page number */
+  --primary-hover: light-dark(#163d70, #2563b0); /* Main button under the pointer or pressed */
+  --success: light-dark(#00703c, #1f7f4c); /* Fills: save and add buttons, success banner */
+  --success-text: light-dark(#00703c, #4cc38a); /* Green text: Add, tinted success tags */
+  --danger: light-dark(#c2301a, #c93a24); /* Fills: delete buttons, danger tags and banners */
+  --danger-text: light-dark(#c2301a, #ff8a75); /* Red text: Remove, error messages */
+  --warning: light-dark(#ffb81c, #ffb81c); /* Amber fill with dark text: act soon */
+  --info: light-dark(#1d70b8, #2a66b8); /* Fills: notices, info banner */
+  --focus: light-dark(#ffdd00, #ffdd00); /* Keyboard focus, both modes */
+
+  /* group: Brand and D4H */
+  --nav: light-dark(#13243a, #0a111b); /* Top bar */
+  --accent: light-dark(#ffb81c, #ffb81c); /* Logo, top bar rule */
+  --incident: light-dark(#2453a6, #3366c0); /* D4H incident */
+  --exercise: light-dark(#b4500b, #b8560f); /* D4H exercise */
+  --event: light-dark(#5b3ea6, #6a4cc0); /* D4H event */
+
+  --on-fill: #ffffff;
+  --on-warning: #0b0c0c;
+
+  /* Type scale: size and line height. Nothing else is used. */
+  --fs-xs: 12px;
+  --lh-xs: 16px;
+  --fs-sm: 14px;
+  --lh-sm: 20px;
+  --fs-md: 16px;
+  --lh-md: 24px;
+  --fs-lg: 19px;
+  --lh-lg: 28px;
+  --fs-xl: 24px;
+  --lh-xl: 32px;
+  --fs-2xl: 32px;
+  --lh-2xl: 40px;
+
+  /* Spacing scale, on a 4px grid. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  --radius: 3px;
+  --border-width: 2px;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+:root[data-theme="light"],
+.theme-light {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"],
+.theme-dark {
+  color-scheme: dark;
+}

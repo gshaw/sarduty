@@ -38,7 +38,7 @@ defmodule Web.ErrorHTML do
   defp render_custom_error(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en" class="[scrollbar-gutter:stable]" data-theme="tailwind">
+    <html lang="en" class="[scrollbar-gutter:stable]">
       <head>
         <meta charset="utf-8" />
         <meta name="description" content="Helpful tools for search and rescue managers." />
@@ -52,23 +52,17 @@ defmodule Web.ErrorHTML do
         </script>
       </head>
       <body class="bg-base-1 text-base-content">
-        <.navbar size={:narrow} color={:base_2}>
-          <.navbar_links>
-            <.a kind={:navbar_title} navigate="/">SAR Duty</.a>
-          </.navbar_links>
-        </.navbar>
+        <.site_bar size={:narrow} />
 
         <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
           <h1 class="my-p2">
             <div class="title-hero mb-0">{@code}</div>
-            <div class="title text-danger-1">That&rsquo;s an error</div>
+            <div class="title text-danger-1">That is an error</div>
           </h1>
           <p class="heading">{@description}</p>
           <p class="mb-p2">{@help_text}</p>
           <p>
-            <a href="/" class="link">
-              Home Page
-            </a>
+            <a href="/" class="link">Home page</a>
           </p>
         </main>
       </body>

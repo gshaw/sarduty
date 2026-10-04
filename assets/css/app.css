@@ -6,7 +6,6 @@
 
 @plugin "../vendor/heroicons";
 
-@plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
 /* Add variants based on LiveView classes */
@@ -20,7 +19,9 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
-/* This file is for your main application CSS */
+/* The design system: tokens first, then Tailwind's theme pointed at them. Base styles and
+   components sit in cascade layers, so a utility class in a template still wins. */
+@import "./tokens.css";
+@import "./theme.css";
 @import "./base/all";
 @import "./components/all";
-@import "./theme.css";

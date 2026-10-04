@@ -1,4 +1,6 @@
-@theme {
+/* Tailwind's tokens, pointed at the design system's (tokens.css). The colour names are the
+   ones the templates already use, so pages follow the palette in light and dark. */
+@theme inline {
   /* Spacing - p = paragraph spacing unit, h = horizontal spacing unit */
   --spacing-p05: 0.5rem;
   --spacing-p: 1rem;
@@ -6,39 +8,61 @@
   --spacing-hspacer: 0.5rem;
   --spacing-hindent: 2rem;
 
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+
+  /* The type scale. 5xl and 7xl stay Tailwind's, for the home page's hero only. */
+  --text-xs: var(--fs-xs);
+  --text-xs--line-height: var(--lh-xs);
+  --text-sm: var(--fs-sm);
+  --text-sm--line-height: var(--lh-sm);
+  --text-base: var(--fs-md);
+  --text-base--line-height: var(--lh-md);
+  --text-lg: var(--fs-lg);
+  --text-lg--line-height: var(--lh-lg);
+  --text-xl: var(--fs-xl);
+  --text-xl--line-height: var(--lh-xl);
+  --text-2xl: var(--fs-xl);
+  --text-2xl--line-height: var(--lh-xl);
+  --text-3xl: var(--fs-2xl);
+  --text-3xl--line-height: var(--lh-2xl);
+  --text-4xl: var(--fs-2xl);
+  --text-4xl--line-height: var(--lh-2xl);
+
   /* Colors */
-  --color-base-content: theme(--color-zinc-800);
-  --color-base-0: theme(--color-white);
-  --color-base-1: theme(--color-zinc-50);
-  --color-base-2: theme(--color-zinc-100);
-  --color-base-3: theme(--color-zinc-200);
+  --color-base-content: var(--text);
+  --color-base-0: var(--bg);
+  --color-base-1: var(--bg);
+  --color-base-2: var(--surface-alt);
+  --color-base-3: var(--border-subtle);
 
-  --color-hr: theme(--color-base-3);
-  --color-disabled: theme(--color-zinc-400);
+  --color-hr: var(--border-subtle);
+  --color-disabled: var(--border);
 
-  --color-incident: theme(--color-blue-700);
-  --color-exercise: theme(--color-orange-700);
-  --color-event: theme(--color-purple-700);
+  --color-incident: var(--incident);
+  --color-exercise: var(--exercise);
+  --color-event: var(--event);
 
-  --color-primary-1: theme(--color-blue-600);
-  --color-primary-2: theme(--color-blue-700);
-  --color-primary-content: theme(--color-white);
+  /* Text in these colours reads in both modes; fills come from the components. */
+  --color-primary-1: var(--link);
+  --color-primary-2: var(--link-hover);
+  --color-primary-content: var(--on-fill);
 
-  --color-secondary-1: theme(--color-zinc-600);
-  --color-secondary-2: theme(--color-zinc-700);
-  --color-secondary-content: theme(--color-white);
+  --color-secondary-1: var(--text-muted);
+  --color-secondary-2: var(--text);
+  --color-secondary-content: var(--on-fill);
 
-  --color-success-1: theme(--color-green-600);
-  --color-success-2: theme(--color-green-700);
-  --color-success-content: theme(--color-white);
+  --color-success-1: var(--success-text);
+  --color-success-2: var(--success-text);
+  --color-success-content: var(--on-fill);
 
-  --color-warning-1: theme(--color-yellow-300);
-  --color-warning-2: theme(--color-yellow-400);
-  --color-warning-content: theme(--color-zinc-800);
+  --color-warning-1: var(--warning);
+  --color-warning-2: var(--warning);
+  --color-warning-content: var(--on-warning);
 
-  --color-danger-1: theme(--color-red-600);
-  --color-danger-2: theme(--color-red-700);
-  --color-danger-content: theme(--color-white);
+  --color-danger-1: var(--danger-text);
+  --color-danger-2: var(--danger-text);
+  --color-danger-content: var(--on-fill);
 
   /* List Style Types */
   --list-style-type-arrow: '→ ';

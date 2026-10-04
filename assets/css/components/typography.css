@@ -1,27 +1,56 @@
+/* Type on the design system's scale (tokens.css). See /styles/draft/typography. */
 @layer components {
-  .title-hero { @apply text-5xl md:text-7xl font-bold mb-p05 }
-  .title { @apply text-3xl md:text-5xl font-bold mb-p05 }
-  .lead { @apply text-xl md:text-3xl font-light mb-p05 text-secondary-1 }
-  .heading { @apply text-3xl font-medium mb-p05 }
-  .subheading { @apply text-xl font-medium mb-p05 }
-  .label { @apply font-semibold text-sm text-base-content }
-  .paragraph { @apply mb-p }
-  .link { @apply no-underline hover:underline }
-  .hint { @apply text-secondary-1 text-sm font-normal }
-  .list { @apply list-disc list-inside }
-  .action-list { @apply list-arrow list-inside }
+  /* The home page's hero only; the rest of the app stays on the scale. */
+  .title-hero { font-size: 40px; line-height: 48px; font-weight: 700; margin-bottom: var(--sp-2); }
+  @media (min-width: 40rem) { .title-hero { font-size: 56px; line-height: 64px; } }
 
-  p { @apply mb-p }
+  .title { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; margin-bottom: var(--sp-2); }
+  .lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-2); }
+  .heading { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin-bottom: var(--sp-2); }
+  .subheading { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
+  .label { font-weight: 600; color: var(--text); }
+  .paragraph { margin-bottom: var(--sp-4); }
+  .hint { color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 400; }
+  .list { list-style: disc inside; }
+  .action-list { list-style: var(--list-style-type-arrow) inside; }
 
-  /* definition lists are used for label/value pairs */
-  dl { @apply mb-p }
-  dt { @apply font-semibold text-sm text-base-content } /* label */
-  dd { @apply mb-p05 pb-p05 border-b border-hr }
-  dl > dd { @apply last:border-b-0 }
-  /* used to group related definition list items */
-  .dl-section { @apply mb-p05 pb-p05 border-b border-hr }
-  .dl-section dd { @apply mb-0! pb-0! border-b-0! }
+  .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
+  .link:hover { color: var(--link-hover); text-decoration-thickness: 3px; }
 
-  /* required to gives some space if buttons wrap on narrow screen */
-  .form-actions .btn { @apply mb-2; }
+  p { margin-bottom: var(--sp-4); }
+
+  /* Definition lists are used for label and value pairs. */
+  dl { margin-bottom: var(--sp-4); }
+  dt { font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  dd { margin-bottom: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border-subtle); }
+  dl > dd:last-child { border-bottom: 0; }
+
+  /* Groups related definition list items. */
+  .dl-section { margin-bottom: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border-subtle); }
+  .dl-section dd { margin-bottom: 0 !important; padding-bottom: 0 !important; border-bottom: 0 !important; }
+
+  .mono { font-family: var(--mono); font-size: 0.875em; }
+}
+
+/* Rendered Markdown (the typography plugin's .prose) in the design system's colours, so it
+   follows light and dark. In the utilities layer, where the plugin's own colours are. */
+@layer utilities {
+  .prose {
+    --tw-prose-body: var(--text);
+    --tw-prose-headings: var(--text);
+    --tw-prose-lead: var(--text-muted);
+    --tw-prose-links: var(--link);
+    --tw-prose-bold: var(--text);
+    --tw-prose-counters: var(--text-muted);
+    --tw-prose-bullets: var(--text-muted);
+    --tw-prose-hr: var(--border-subtle);
+    --tw-prose-quotes: var(--text);
+    --tw-prose-quote-borders: var(--border);
+    --tw-prose-captions: var(--text-muted);
+    --tw-prose-code: var(--text);
+    --tw-prose-pre-code: var(--text);
+    --tw-prose-pre-bg: var(--surface-alt);
+    --tw-prose-th-borders: var(--border);
+    --tw-prose-td-borders: var(--border-subtle);
+  }
 }

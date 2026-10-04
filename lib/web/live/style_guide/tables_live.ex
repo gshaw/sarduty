@@ -114,12 +114,7 @@ defmodule Web.StyleGuide.TablesLive do
             <.input :if={r.op != :not_invited} type="checkbox" name={"r#{r.phone}"} checked />
           </:col>
           <:col :let={r} label="">
-            <span
-              :if={r.op == :not_invited}
-              class="text-danger-content font-bold bg-danger-1 rounded px-2 py-1"
-            >
-              Not Invited
-            </span>
+            <.badge :if={r.op == :not_invited} kind={:danger}>Not invited</.badge>
             <span :if={r.op == :add} class="text-success-1 font-bold">Add</span>
             <span :if={r.op == :remove} class="text-danger-1 font-bold">Remove</span>
           </:col>

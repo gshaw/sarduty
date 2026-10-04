@@ -90,7 +90,7 @@ defmodule Web.StyleGuide.FormsLive do
 
       <div class="mt-p">
         <h2 class="subheading mb-p05">Rule Preview</h2>
-        <p class="rounded bg-warning-1 text-warning-content px-p py-p05 text-sm">
+        <p class="callout text-sm">
           These rules name a qualification that is no longer in D4H. Edit the rules to
           remove or replace it, then the preview comes back.
         </p>
@@ -166,7 +166,7 @@ defmodule Web.StyleGuide.FormsLive do
           SAR Duty uses this one key for every D4H request. A key is saved.
         </.input>
         <div class="mb-p text-sm">
-          <p class="rounded bg-warning-1 text-warning-content px-p py-p05">
+          <p class="callout">
             Create the key from a D4H member named "SAR Duty" rather than a person.
           </p>
         </div>

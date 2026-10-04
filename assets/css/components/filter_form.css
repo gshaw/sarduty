@@ -1,5 +1,22 @@
-.filter-form { @apply flex flex-col md:flex-row md:gap-hspacer md:items-center }
+/* Filter bars above tables: small inputs in a row, labels above. */
+@layer components {
+  .filter-form { display: flex; flex-direction: column; }
 
-.table-summary { @apply flex flex-col md:flex-row md:items-center text-sm mb-p }
-.table-summary .table-summary-links { @apply mb-p md:mb-0 }
-.table-summary .table-summary-count { @apply mb-p md:mb-0 md:text-right md:grow }
+  @media (min-width: 40rem) {
+    .filter-form { flex-direction: row; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-end; }
+  }
+
+  .filter-form .label { font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .filter-form :is(input, select) { min-height: 32px; padding: 2px var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+
+  .table-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--sp-2);
+  }
+}
