@@ -8,6 +8,9 @@ defmodule App.Accounts.UserToken do
 
   # A login link is single use and short-lived: anyone who can read the inbox can use it.
   @login_validity_in_minutes 15
+  # 128 random bits: out of reach of guessing, and only the hash is stored. Written as
+  # lowercase base32, it's 26 letters and digits, so the link stays short and plain.
+  @login_rand_size 16
   @session_validity_in_days 60
 
   schema "users_tokens" do
@@ -44,10 +47,10 @@ defmodule App.Accounts.UserToken do
   so a copy of the database can't be used to log in.
   """
   def build_login_token(user) do
-    token = :crypto.strong_rand_bytes(@rand_size)
+    token = :crypto.strong_rand_bytes(@login_rand_size)
     hashed_token = :crypto.hash(@hash_algorithm, token)
 
-    {Base.url_encode64(token, padding: false),
+    {Base.encode32(token, case: :lower, padding: false),
      %UserToken{token: hashed_token, context: "login", sent_to: user.email, user_id: user.id}}
   end
 
@@ -56,7 +59,7 @@ defmodule App.Accounts.UserToken do
   the user's email hasn't changed since it was sent. `:error` for a malformed token.
   """
   def verify_login_token_query(token) do
-    case Base.url_decode64(token, padding: false) do
+    case Base.decode32(token, case: :mixed, padding: false) do
       {:ok, decoded_token} ->
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 

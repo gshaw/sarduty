@@ -127,6 +127,22 @@ defmodule App.AccountsTest do
       assert Repo.aggregate(UserToken, :count) == 1
     end
 
+    test "a link token is 26 lowercase letters and digits" do
+      {token, _user_token} = UserToken.build_login_token(user_fixture())
+      assert token =~ ~r/\A[a-z2-7]{26}\z/
+    end
+
+    test "the email has the link in its text and a Log in button" do
+      manager_fixture(team_fixture(), %{email: "html@example.com"})
+
+      :ok = Accounts.deliver_login_link("html@example.com", &"https://sarduty.test/login/#{&1}")
+
+      assert_received {:email, email}
+      [url] = Regex.run(~r{https://sarduty.test/login/[a-z2-7]+}, email.text_body)
+      assert email.html_body =~ ~s(href="#{url}")
+      assert email.html_body =~ ">Log in</a>"
+    end
+
     test "a malformed token is no user" do
       refute Accounts.get_user_by_login_token("not a token")
     end
