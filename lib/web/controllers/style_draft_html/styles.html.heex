@@ -137,27 +137,43 @@
   .pagination a { font-weight: 600; }
   .pagination [aria-current="page"] { background: var(--primary); color: var(--on-fill); text-decoration: none; border-radius: var(--radius); }
 
-  /* Buttons: flat, a hard bottom edge, GOV.UK style */
+  /* Buttons: flat, a hard bottom edge, GOV.UK style. Each kind sets the same four tokens.
+     The .is-* classes freeze a state for the style guide. */
   .btn {
+    --bg: var(--primary); --bg-hover: var(--primary-hover); --fg: var(--on-fill);
+    --edge: color-mix(in srgb, var(--bg) 55%, #000);
     display: inline-flex; align-items: baseline; gap: var(--sp-2);
     font: inherit; font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md);
     padding: 6px var(--sp-4) 6px; border: 0; border-radius: var(--radius);
-    color: var(--on-fill); background: var(--primary);
-    box-shadow: 0 2px 0 color-mix(in srgb, var(--primary) 55%, #000);
+    color: var(--fg); background: var(--bg); box-shadow: 0 2px 0 var(--edge);
     text-decoration: none; cursor: pointer; margin-bottom: 2px;
+    -webkit-tap-highlight-color: transparent;
   }
-  .btn:hover { background: var(--primary-hover); color: var(--on-fill); text-decoration: none; }
-  .btn:active { transform: translateY(2px); box-shadow: none; }
-  .btn.secondary { color: var(--text); background: var(--surface-alt); box-shadow: 0 2px 0 var(--border); }
-  .btn.secondary:hover { background: color-mix(in srgb, var(--surface-alt) 85%, var(--text)); }
-  .btn.success { background: var(--success); box-shadow: 0 2px 0 color-mix(in srgb, var(--success) 55%, #000); }
-  .btn.success:hover { background: color-mix(in srgb, var(--success) 85%, #000); }
-  .btn.danger { background: var(--danger); box-shadow: 0 2px 0 color-mix(in srgb, var(--danger) 55%, #000); }
-  .btn.danger:hover { background: color-mix(in srgb, var(--danger) 85%, #000); }
-  .btn.link { color: var(--link); background: none; box-shadow: none; text-decoration: underline; font-weight: 400; padding-inline: 0; }
-  .btn.link:hover { color: var(--link-hover); background: none; }
+  .btn.secondary { --bg: var(--surface-alt); --bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text)); --fg: var(--text); --edge: var(--border); }
+  .btn.success { --bg: var(--success); --bg-hover: color-mix(in srgb, var(--success) 85%, #000); }
+  .btn.danger { --bg: var(--danger); --bg-hover: color-mix(in srgb, var(--danger) 85%, #000); }
+  .btn.link { --bg: transparent; --bg-hover: transparent; --fg: var(--link); box-shadow: none; text-decoration: underline; font-weight: 400; padding-inline: 0; }
   .btn.sm { font-size: var(--fs-sm); line-height: var(--lh-sm); padding: 2px var(--sp-3); }
+
+  /* Hover only where there is a pointer, so taps on a phone don't leave a stuck hover. */
+  @media (hover: hover) {
+    .btn:not([disabled]):hover { background: var(--bg-hover); color: var(--fg); text-decoration: none; }
+    .btn.link:not([disabled]):hover { color: var(--link-hover); text-decoration: underline 3px; }
+  }
+  .btn.is-hover { background: var(--bg-hover); }
+  .btn.link.is-hover { color: var(--link-hover); text-decoration: underline 3px; }
+
+  /* Pressed: the button drops onto its edge. */
+  .btn:not([disabled]):active, .btn.is-active { background: var(--bg-hover); transform: translateY(2px); box-shadow: none; }
+
+  /* Focus: yellow with a dark edge, the same for every kind. */
+  .btn:focus-visible, .btn.is-focus {
+    outline: 3px solid transparent; background: var(--focus); color: #0b0c0c;
+    box-shadow: 0 2px 0 #0b0c0c; text-decoration: none;
+  }
+  .btn:focus-visible:active { transform: translateY(2px); box-shadow: none; }
   .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .btn-states td { vertical-align: middle; }
   .actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-3); margin: var(--sp-4) 0; }
   .actions .push { margin-left: auto; }
 

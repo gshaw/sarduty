@@ -46,6 +46,9 @@
       </main>
     </div>
     <script>
+      // iOS Safari only applies :active, the pressed look, when a touch listener exists.
+      document.addEventListener("touchstart", function () {}, { passive: true });
+
       (function () {
         var buttons = document.querySelectorAll("[data-theme-choice]");
         function show() {

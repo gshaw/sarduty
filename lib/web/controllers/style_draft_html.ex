@@ -42,6 +42,16 @@ defmodule Web.StyleDraftHTML do
   def page_path(:index), do: "/styles/draft"
   def page_path(page), do: "/styles/draft/#{page}"
 
+  def button_kinds do
+    [
+      {nil, "Primary"},
+      {"secondary", "Secondary"},
+      {"success", "Success"},
+      {"danger", "Danger"},
+      {"link", "Link"}
+    ]
+  end
+
   def type_scale do
     [
       {"2xl", 32, 40, "Page title (h1), big numbers"},

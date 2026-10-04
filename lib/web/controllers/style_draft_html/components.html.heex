@@ -37,17 +37,55 @@
   </p>
 
   <h2>States</h2>
-  <div class="demo">
-    <div class="actions">
-      <button class="btn" disabled>Disabled</button>
-      <button class="btn" disabled><span class="spinner" aria-hidden="true"></span> Saving…</button>
-      <a href="#" class="btn secondary">A link styled as a button</a>
-    </div>
-  </div>
-  <p class="spec">
-    A button that starts slow work shows a spinner and says what it's doing. Disabled buttons are
-    a last resort; prefer an error that says what's missing.
+  <p>
+    Every kind in every state, frozen so you can compare them on any screen. Try the real ones
+    above: on a phone, press and hold to see the pressed state.
   </p>
+  <div class="table-wrap">
+    <table class="btn-states">
+      <thead>
+        <tr>
+          <th>Kind</th>
+          <th>Default</th>
+          <th>Hover</th>
+          <th>Pressed</th>
+          <th>Focus</th>
+          <th>Disabled</th>
+          <th>Busy</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{kind, label} <- button_kinds()}>
+          <td>{label}</td>
+          <td><button class={["btn", kind]}>Save</button></td>
+          <td><button class={["btn", kind, "is-hover"]} tabindex="-1">Save</button></td>
+          <td><button class={["btn", kind, "is-active"]} tabindex="-1">Save</button></td>
+          <td><button class={["btn", kind, "is-focus"]} tabindex="-1">Save</button></td>
+          <td><button class={["btn", kind]} disabled>Save</button></td>
+          <td>
+            <button class={["btn", kind]} disabled>
+              <span class="spinner" aria-hidden="true"></span> Saving…
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ul>
+    <li><strong>Hover</strong> darkens the button, only on devices with a mouse or trackpad.</li>
+    <li><strong>Pressed</strong> drops the button 2px onto its edge, on every device.</li>
+    <li>
+      <strong>Focus</strong>
+      is yellow with a dark edge for every kind, so keyboard users see one signal.
+    </li>
+    <li>
+      <strong>Disabled</strong> is a last resort. Prefer an error that says what is missing.
+    </li>
+    <li>
+      <strong>Busy</strong> shows a spinner and says what it is doing, for work that takes more
+      than a second.
+    </li>
+  </ul>
 
   <h2>Button rows</h2>
   <div class="demo">
