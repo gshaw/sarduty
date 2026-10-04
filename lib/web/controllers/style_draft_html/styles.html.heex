@@ -127,6 +127,23 @@
   .page-header .meta { color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); margin-top: var(--sp-1); }
   .back-link { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 600; color: var(--text); margin-bottom: var(--sp-4); }
 
+  /* The app's top bar, shown on the Navigation page */
+  .app-bar { background: var(--nav); color: #fff; border-bottom: 4px solid var(--accent); display: flex; align-items: center; gap: var(--sp-5); padding: 0 var(--sp-4); min-height: 52px; overflow-x: auto; }
+  .app-bar .brand { white-space: nowrap; }
+  .app-bar nav { display: flex; gap: var(--sp-1); flex: 1; }
+  .app-bar nav a { color: #d5dbe3; text-decoration: none; font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); padding: 14px var(--sp-2) 12px; white-space: nowrap; }
+  .app-bar nav a:hover { color: #fff; }
+  .app-bar nav a[aria-current="page"] { color: #fff; box-shadow: inset 0 -3px var(--accent); }
+  .app-bar .account { display: inline-flex; align-items: center; gap: var(--sp-1); background: none; border: 0; color: #fff; font: inherit; font-size: var(--fs-sm); padding: var(--sp-1) var(--sp-2); cursor: pointer; white-space: nowrap; }
+
+  /* Menu: a short list under a button, such as the account menu */
+  .menu { list-style: none; margin: 0; padding: var(--sp-1) 0; min-width: 200px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / 0.18); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .menu li { margin: 0; max-width: none; }
+  .menu a { display: block; padding: var(--sp-2) var(--sp-4); color: var(--text); text-decoration: none; }
+  .menu a:hover { background: var(--row-hover); }
+  .menu .muted { padding: var(--sp-2) var(--sp-4); }
+  .menu hr { margin: var(--sp-1) 0; }
+
   /* Tabs */
   .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-5); overflow-x: auto; }
   .tabs a {
@@ -143,34 +160,34 @@
   .pagination a { font-weight: 600; }
   .pagination [aria-current="page"] { background: var(--primary); color: var(--on-fill); text-decoration: none; border-radius: var(--radius); }
 
-  /* Buttons: flat, a hard bottom edge, GOV.UK style. Each kind sets the same four tokens.
+  /* Buttons: flat, a hard bottom edge, GOV.UK style. Each kind sets the same four --btn-* properties.
      The .is-* classes freeze a state for the style guide. */
   .btn {
-    --bg: var(--primary); --bg-hover: var(--primary-hover); --fg: var(--on-fill);
-    --edge: color-mix(in srgb, var(--bg) 55%, #000);
+    --btn-bg: var(--primary); --btn-bg-hover: var(--primary-hover); --btn-fg: var(--on-fill);
+    --btn-edge: color-mix(in srgb, var(--btn-bg) 55%, #000);
     display: inline-flex; align-items: baseline; gap: var(--sp-2);
     font: inherit; font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md);
     padding: 6px var(--sp-4) 6px; border: 0; border-radius: var(--radius);
-    color: var(--fg); background: var(--bg); box-shadow: 0 2px 0 var(--edge);
+    color: var(--btn-fg); background: var(--btn-bg); box-shadow: 0 2px 0 var(--btn-edge);
     text-decoration: none; cursor: pointer; margin-bottom: 2px;
     -webkit-tap-highlight-color: transparent;
   }
-  .btn.secondary { --bg: var(--surface-alt); --bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text)); --fg: var(--text); --edge: var(--border); }
-  .btn.success { --bg: var(--success); --bg-hover: color-mix(in srgb, var(--success) 85%, #000); }
-  .btn.danger { --bg: var(--danger); --bg-hover: color-mix(in srgb, var(--danger) 85%, #000); }
-  .btn.link { --bg: transparent; --bg-hover: transparent; --fg: var(--link); box-shadow: none; text-decoration: underline; font-weight: 400; padding-inline: 0; }
+  .btn.secondary { --btn-bg: var(--surface-alt); --btn-bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text)); --btn-fg: var(--text); --btn-edge: var(--border); }
+  .btn.success { --btn-bg: var(--success); --btn-bg-hover: color-mix(in srgb, var(--success) 85%, #000); }
+  .btn.danger { --btn-bg: var(--danger); --btn-bg-hover: color-mix(in srgb, var(--danger) 85%, #000); }
+  .btn.link { --btn-bg: transparent; --btn-bg-hover: transparent; --btn-fg: var(--link); box-shadow: none; text-decoration: underline; font-weight: 400; padding-inline: 0; }
   .btn.sm { font-size: var(--fs-sm); line-height: var(--lh-sm); padding: 2px var(--sp-3); }
 
   /* Hover only where there is a pointer, so taps on a phone don't leave a stuck hover. */
   @media (hover: hover) {
-    .btn:not([disabled]):hover { background: var(--bg-hover); color: var(--fg); text-decoration: none; }
+    .btn:not([disabled]):hover { background: var(--btn-bg-hover); color: var(--btn-fg); text-decoration: none; }
     .btn.link:not([disabled]):hover { color: var(--link-hover); text-decoration: underline 3px; }
   }
-  .btn.is-hover { background: var(--bg-hover); }
+  .btn.is-hover { background: var(--btn-bg-hover); }
   .btn.link.is-hover { color: var(--link-hover); text-decoration: underline 3px; }
 
   /* Pressed: the button drops onto its edge. */
-  .btn:not([disabled]):active, .btn.is-active { background: var(--bg-hover); transform: translateY(2px); box-shadow: none; }
+  .btn:not([disabled]):active, .btn.is-active { background: var(--btn-bg-hover); transform: translateY(2px); box-shadow: none; }
 
   /* Focus: yellow with a dark edge, the same for every kind. */
   .btn:focus-visible, .btn.is-focus {
@@ -251,6 +268,13 @@
   @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
   @media (prefers-reduced-motion: reduce) { .toasts .toast { animation: none; } }
 
+  /* Confirm dialog: before a change that cannot be undone */
+  .dialog { width: min(480px, calc(100vw - 32px)); padding: var(--sp-5); border: 1px solid var(--border); border-top: 6px solid var(--danger); border-radius: var(--radius); background: var(--bg); color: var(--text); box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
+  .dialog::backdrop { background: rgb(11 12 12 / 0.6); }
+  .dialog h2 { margin-top: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); }
+  .dialog .actions { margin-bottom: 0; }
+  .dialog-static { position: static; display: block; margin: 0; }
+
   /* Summary list, panels, details */
   .summary { display: grid; grid-template-columns: minmax(140px, 30%) 1fr; margin: 0 0 var(--sp-5); max-width: 800px; }
   .summary.has-actions { grid-template-columns: minmax(140px, 30%) 1fr auto; }
@@ -278,7 +302,7 @@
   .field.w-md { max-width: 320px; }
   label, .label { display: block; font-weight: 600; margin-bottom: var(--sp-1); }
   .hint { display: block; color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); margin-bottom: var(--sp-2); }
-  input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="date"],
+  input:is([type="text"], [type="email"], [type="password"], [type="search"], [type="date"], [type="tel"], [type="number"], [type="url"]),
   select, textarea {
     font: inherit; color: var(--text); background: var(--bg);
     width: 100%; height: 40px; padding: var(--sp-1) var(--sp-2);

@@ -4,8 +4,38 @@
 
   <h2>Top bar</h2>
   <p>
-    Navy, with the amber rule and logo, as at the top of this page. It holds the team, the main
-    sections, and the account menu. The current section is underlined in amber.
+    Navy, with the amber rule and logo. It holds the main sections and the account menu. The
+    current section is underlined in amber. On a phone it scrolls sideways.
+  </p>
+  <div class="demo" style="padding: 0">
+    <div class="app-bar">
+      <a href="#" class="brand">SAR <span>Duty</span></a>
+      <nav aria-label="Main">
+        <a href="#" aria-current="page">Activities</a>
+        <a href="#">Members</a>
+        <a href="#">Qualifications</a>
+        <a href="#">Groups</a>
+        <a href="#">Tax credit letters</a>
+      </nav>
+      <button class="account" aria-haspopup="menu">
+        Squamish SAR <.svg_icon name="chevron-down" size={16} />
+      </button>
+    </div>
+  </div>
+
+  <h2>Menu</h2>
+  <p>A short list under a button. The account menu is the only one today.</p>
+  <div class="demo">
+    <ul class="menu" role="menu" style="max-width: 240px">
+      <li class="muted caption">avery@example.com</li>
+      <li role="none"><a href="#" role="menuitem">Settings</a></li>
+      <li role="none"><a href="#" role="menuitem">Team settings</a></li>
+      <li role="none"><hr /></li>
+      <li role="none"><a href="#" role="menuitem">Log out</a></li>
+    </ul>
+  </div>
+  <p class="spec">
+    Keep menus for a few links that do not fit in the bar. Actions on a page are buttons.
   </p>
 
   <h2>Breadcrumbs</h2>

@@ -1,7 +1,7 @@
-<.shell title="Colors" current={:colors}>
-  <h1>Colors</h1>
+<.shell title="Colours" current={:colors}>
+  <h1>Colours</h1>
   <p class="lead">
-    Every color is a token with a light and a dark value. Both modes are shown side by side; the
+    Every colour is a token with a light and a dark value. Both modes are shown side by side; the
     switch in the top bar sets the rest of the guide.
   </p>
 
@@ -64,13 +64,17 @@
   <ul>
     <li>Use tokens, never a hex value, in components and pages.</li>
     <li>
-      Text on <code>--primary</code>, <code>--success</code>, <code>--danger</code>, and the D4H
-      colors is white. Text on <code>--warning</code> is near-black.
+      Text on <code>--primary</code>, <code>--success</code>, <code>--danger</code>, <code>--info</code>, and the D4H
+      colours is white. Text on <code>--warning</code> is near-black.
     </li>
     <li>
-      Red and green always come with a word: <span class="op-add">Add</span>, <span class="op-remove">Remove</span>. Color alone is never the only signal.
+      Green and red text use <code>--success-text</code> and <code>--danger-text</code>, never the
+      fills. In dark mode the fills are too dark to read as text.
+    </li>
+    <li>
+      Red and green always come with a word: <span class="op-add">Add</span>, <span class="op-remove">Remove</span>. Colour alone is never the only signal.
     </li>
     <li>Focus is <code>--focus</code> yellow in both modes, so it reads the same everywhere.</li>
-    <li>The D4H activity colors match D4H, so people know them on sight.</li>
+    <li>The D4H activity colours match D4H, so people know them on sight.</li>
   </ul>
 </.shell>

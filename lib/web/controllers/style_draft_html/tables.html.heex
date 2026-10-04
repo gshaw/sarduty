@@ -8,7 +8,7 @@
     <li>
       Text at sm (14px). Headers semibold on <code>--surface-alt</code>, and they stick on scroll.
     </li>
-    <li>Numbers right-aligned with tabular figures. Codes and dates in mono.</li>
+    <li>Numbers right-aligned with tabular figures. Codes, such as letter numbers, in mono.</li>
     <li>Sortable headers show an arrow; the sorted column is underlined in primary.</li>
     <li>Actions in a row are small buttons or links.</li>
     <li>
@@ -155,7 +155,7 @@
       </thead>
       <tbody>
         <tr :for={{date, kind, title, count, hours} <- activities()}>
-          <td class="mono">{date}</td>
+          <td class="nowrap">{date}</td>
           <td>
             <span class={["tag", kind]}>{kind |> Atom.to_string() |> String.capitalize()}</span>
           </td>

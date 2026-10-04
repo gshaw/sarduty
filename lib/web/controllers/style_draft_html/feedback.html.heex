@@ -3,7 +3,7 @@
   <p class="lead">Tell people what happened, what's important, and what to do next.</p>
   <ul>
     <li>
-      <strong>Toast</strong>: the result of something the person just did. It comes and goes.
+      <strong>Toast</strong>: the result of what the person did. It comes and goes.
     </li>
     <li><strong>Banner</strong>: something true about the page until it changes. It stays.</li>
     <li><strong>Error summary</strong>: what to fix in a form after a failed save.</li>
@@ -83,6 +83,44 @@
     });
   </script>
 
+  <h2>Confirm dialog</h2>
+  <p>
+    Before a change that cannot be undone. The title asks the question and names the thing. The
+    buttons say what happens; Cancel is the default.
+  </p>
+  <div class="demo">
+    <div class="dialog dialog-static" role="dialog" aria-labelledby="confirm-title-static">
+      <h2 id="confirm-title-static">Delete the First Aid clause?</h2>
+      <p>
+        Its 3 qualifications are removed from the group rule. Members stay in the group until you apply the rule.
+      </p>
+      <div class="actions">
+        <button class="btn danger">Delete clause</button>
+        <button class="btn secondary" autofocus>Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn secondary" data-open-dialog="confirm">Show the dialog</button>
+  </div>
+  <dialog class="dialog" id="confirm" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">Delete the First Aid clause?</h2>
+    <p>
+      Its 3 qualifications are removed from the group rule. Members stay in the group until you apply the rule.
+    </p>
+    <form method="dialog" class="actions">
+      <button class="btn danger" value="delete">Delete clause</button>
+      <button class="btn secondary" value="cancel" autofocus>Cancel</button>
+    </form>
+  </dialog>
+  <script>
+    document.querySelectorAll("[data-open-dialog]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        document.getElementById(button.dataset.openDialog).showModal();
+      });
+    });
+  </script>
+
   <h2>Banners</h2>
   <p>At the top of the page, under the header. One at a time.</p>
   <div class="banner success" role="status">
@@ -148,7 +186,7 @@
     <p>Letters are made from attendance in D4H. Create one from the member list.</p>
     <a href="#" class="btn sm secondary">Go to tax credit letters</a>
   </div>
-  <p class="spec">Say why it's empty and what to do, not just "No results".</p>
+  <p class="spec">Say why it's empty and what to do, not only "No results".</p>
 
   <h2>Loading</h2>
   <div class="demo">

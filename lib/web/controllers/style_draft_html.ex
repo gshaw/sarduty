@@ -23,7 +23,7 @@ defmodule Web.StyleDraftHTML do
       {"Start", [{:index, "Overview"}]},
       {"Foundations",
        [
-         {:colors, "Colors"},
+         {:colors, "Colours"},
          {:typography, "Typography"},
          {:writing, "Writing"},
          {:icons, "Icons"},
@@ -175,26 +175,26 @@ defmodule Web.StyleDraftHTML do
   def rule_preview do
     [
       {"Avery Chen", "Holds OFA Level 1 and GSAR Member, which meets both clauses of the rule.",
-       "Added to D4H 2024-03-02", nil},
-      {"Casey Dhillon", "Wilderness First Aid expires 2025-11-12.",
-       "Renewal course booked for 2025-11-01", 12},
-      {"Devon Okafor", "No First Aid qualification.", "Last held OFA Level 1, expired 2024-06-30",
-       nil}
+       "Added to D4H Mar 2, 2024", nil},
+      {"Casey Dhillon", "Wilderness First Aid expires Nov 12, 2025.",
+       "Renewal course booked for Nov 1, 2025", 12},
+      {"Devon Okafor", "No First Aid qualification.",
+       "Last held OFA Level 1, expired Jun 30, 2024", nil}
     ]
   end
 
   def activities do
     [
-      {"2025-09-28", :incident, "Missing hiker, Stawamus Chief", 14, "62h 15m"},
-      {"2025-09-24", :exercise, "Rope rescue, Murrin Park", 11, "33h 00m"},
-      {"2025-09-21", :event, "Squamish Days first aid booth", 6, "24h 00m"},
-      {"2025-09-17", :incident, "Overdue kayaker, Howe Sound", 9, "18h 45m"},
-      {"2025-09-14", :exercise, "Night navigation", 16, "48h 00m"},
-      {"2025-09-10", :event, "Team meeting", 22, "33h 00m"},
-      {"2025-09-06", :incident, "Injured biker, Diamond Head", 12, "29h 30m"},
-      {"2025-09-03", :exercise, "Swiftwater refresher", 8, "32h 00m"},
-      {"2025-08-30", :incident, "Lost child, Alice Lake", 19, "41h 15m"},
-      {"2025-08-27", :exercise, "Helicopter longline", 7, "21h 00m"}
+      {"Sep 28, 2025", :incident, "Missing hiker, Stawamus Chief", 14, "62h 15m"},
+      {"Sep 24, 2025", :exercise, "Rope rescue, Murrin Park", 11, "33h 00m"},
+      {"Sep 21, 2025", :event, "Squamish Days first aid booth", 6, "24h 00m"},
+      {"Sep 17, 2025", :incident, "Overdue kayaker, Howe Sound", 9, "18h 45m"},
+      {"Sep 14, 2025", :exercise, "Night navigation", 16, "48h 00m"},
+      {"Sep 10, 2025", :event, "Team meeting", 22, "33h 00m"},
+      {"Sep 6, 2025", :incident, "Injured biker, Diamond Head", 12, "29h 30m"},
+      {"Sep 3, 2025", :exercise, "Swiftwater refresher", 8, "32h 00m"},
+      {"Aug 30, 2025", :incident, "Lost child, Alice Lake", 19, "41h 15m"},
+      {"Aug 27, 2025", :exercise, "Helicopter longline", 7, "21h 00m"}
     ]
   end
 end

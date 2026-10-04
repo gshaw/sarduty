@@ -1,7 +1,9 @@
 ---
 $schema: "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json"
 version: "0.2"
-language: en
+# en-GB accepts the Canadian spellings the UI uses (colour, centre); cspell has no en-CA
+# dictionary. Code keeps US spelling by convention (docs/writing.md), which cspell can't check.
+language: en,en-GB
 allowCompoundWords: true
 ignorePaths:
   - ".claude"

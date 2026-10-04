@@ -35,8 +35,9 @@ finish a task and leave. Write so a reader understands each sentence the first t
 9. **Write numbers as digits**, including one to nine: "3 changes", "1 member". Use
    `Service.Format.count/2` so the noun agrees with the number.
 10. **Format dates, times, and durations with `Service.Format`.** Never build them by hand.
-    Times use the 24-hour clock ("14:05"). Durations are hours and minutes ("212h 30m").
-    Distances are in km.
+    Dates put the month first: "Sep 28, 2025", or "September 28, 2025" in letters. Times use
+    the 24-hour clock ("14:05"). Durations are hours and minutes ("212h 30m"). Distances are
+    in km.
 11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
     only for SAR Duty the service, and rarely.
 12. **Be plain, not cheerful.** No "please", "sorry", "oops", "simply", "just", "easily",
@@ -44,6 +45,10 @@ finish a task and leave. Write so a reader understands each sentence the first t
 13. **Never blame the reader.** "Enter a date", not "You entered an invalid date".
 14. **No Latin abbreviations or symbols for words.** Write "for example", not "e.g.", and
     "and", not "&". Do not end a list with "etc."; list everything or say "such as".
+15. **Use Canadian spelling in text people read**: colour, centre, kilometre, licence (the
+    noun), cheque, defence, catalogue, travelled. Keep "-ize" endings: organize, authorize.
+    Code stays in US spelling: identifiers, CSS classes and tokens, routes, comments, and
+    commit messages say `color`, not `colour`.
 
 ## Patterns
 
@@ -158,3 +163,4 @@ Before committing text a person will read, check each line:
 - [ ] Buttons are a verb and an object. Links make sense on their own.
 - [ ] Errors say how to fix the problem and match the error summary.
 - [ ] Numbers are digits. Dates, times, and durations come from `Service.Format`.
+- [ ] Text people read uses Canadian spelling. Code uses US spelling.
