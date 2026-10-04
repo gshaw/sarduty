@@ -1,9 +1,9 @@
-defmodule Web.StyleDraftHTML do
+defmodule Web.StyleGuideHTML do
   use Web, :html
 
-  alias Web.StyleGuide.SampleData
+  alias Web.StyleGuideHTML.SampleData
 
-  embed_templates "style_draft_html/*"
+  embed_templates "style_guide_html/*"
 
   # The Writing page shows docs/writing.md, so agents and the guide read the same rules.
   @writing_path Path.expand("../../../docs/writing.md", __DIR__)
@@ -40,8 +40,8 @@ defmodule Web.StyleDraftHTML do
     ]
   end
 
-  def page_path(:index), do: "/styles/draft"
-  def page_path(page), do: "/styles/draft/#{page}"
+  def page_path(:index), do: "/styles"
+  def page_path(page), do: "/styles/#{page}"
 
   # The icon set is Heroicons, as in the app. Only these render, so adding one means adding
   # it here with its use. Sizes: 16 and 20 are solid, 24 is outline.

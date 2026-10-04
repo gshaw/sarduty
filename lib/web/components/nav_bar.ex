@@ -2,7 +2,7 @@ defmodule Web.Components.NavBar do
   use Web, :function_component
 
   # The top bar: navy with the amber rule. The brand on the left, section links after it,
-  # and a menu or a button on the right. See /styles/draft/navigation.
+  # and a menu or a button on the right. See /styles/navigation.
 
   attr :size, :atom, values: ~w(wide narrow)a, default: :wide
   slot :links

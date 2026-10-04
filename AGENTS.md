@@ -164,7 +164,7 @@ fi
 - **Text people read follows [docs/writing.md](docs/writing.md).** Any page copy, button,
   label, hint, error, flash, email, PDF, or pass text you write or change uses its rules
   and its glossary terms. Run its checklist before you commit.
-- **The look comes from the design system**, shown at `/styles/draft`. Colours, type sizes,
+- **The look comes from the design system**, shown at `/styles`. Colours, type sizes,
   and spaces are tokens in [assets/css/tokens.css](assets/css/tokens.css), with light and
   dark values. Use the theme's colour names (`text-secondary-1`, `bg-base-2`) or the
   tokens, never raw Tailwind colours like `text-zinc-600`, which don't follow dark mode.
