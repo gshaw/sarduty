@@ -45,7 +45,7 @@ defmodule Web.MemberCardController do
     member = Member.find!(team, id)
 
     with %MemberCard{} = card <- MemberCard.find_current(team, member),
-         card = Repo.preload(card, member: :team),
+         card = Repo.preload(card, member: [team: :organization]),
          {:ok, pkpass} <- BuildApplePass.call(card, DateTime.utc_now()) do
       send_download(conn, {:binary, pkpass},
         filename: "#{team.subdomain}-member-card.pkpass",
@@ -63,7 +63,7 @@ defmodule Web.MemberCardController do
     member = Member.find!(team, id)
 
     with %MemberCard{} = card <- MemberCard.find_current(team, member),
-         card = Repo.preload(card, member: :team),
+         card = Repo.preload(card, member: [team: :organization]),
          {:ok, url} <- BuildGooglePass.call(card, DateTime.utc_now()) do
       redirect(conn, external: url)
     else

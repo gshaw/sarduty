@@ -11,11 +11,11 @@ defmodule Web.TeamController do
     shape = if params["shape"] == "square", do: :square, else: :round
 
     case Team.get_by(subdomain: subdomain) do
-      %Team{} ->
+      %Team{} = team ->
         conn
         |> put_resp_header("cache-control", "public, max-age=3600")
         |> put_resp_content_type("image/png", nil)
-        |> send_resp(200, LoadImage.logo(subdomain, shape))
+        |> send_resp(200, LoadImage.logo(team, shape))
 
       nil ->
         send_resp(conn, :not_found, "")

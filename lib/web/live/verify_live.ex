@@ -2,6 +2,7 @@ defmodule Web.VerifyLive do
   use Web, :live_view_verify_layout
 
   alias App.Model.MemberCard
+  alias App.Model.Organization
   alias App.Operation.BuildCardQualifications
   alias Web.VerifyLimit
 
@@ -12,6 +13,9 @@ defmodule Web.VerifyLive do
   # Misses count toward a per-IP limit (Web.VerifyLimit). It's checked here rather than in
   # a plug, which would miss checks sent over the open connection. A bad link opened
   # directly counts twice, once for the HTTP render and once on connect.
+  #
+  # An organization's scan page, /o/<slug>, carries its brand until it has its own verify
+  # host. A card's result keeps the team's brand, with the organization's name under it.
   def mount(_params, session, socket) do
     {:ok,
      assign(socket,
@@ -21,13 +25,31 @@ defmodule Web.VerifyLive do
      )}
   end
 
+  def handle_params(%{"slug" => slug}, _uri, socket) do
+    case Organization.get_by_slug(slug) do
+      %Organization{} = organization ->
+        socket =
+          socket
+          |> assign(:form, to_form(%{"code" => ""}, as: "check"))
+          |> assign(result: nil, organization: organization, start_path: ~p"/o/#{slug}")
+
+        {:noreply, socket}
+
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/")}
+    end
+  end
+
   def handle_params(params, _uri, socket) do
     input = params["code"] || ""
+    result = check(input, socket.assigns.client_ip)
+    organization = result_organization(result)
 
     socket =
       socket
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
-      |> assign(:result, check(input, socket.assigns.client_ip))
+      |> assign(result: result, organization: nil)
+      |> assign(:start_path, if(organization, do: ~p"/o/#{organization.slug}", else: ~p"/"))
 
     {:noreply, socket}
   end
@@ -74,6 +96,9 @@ defmodule Web.VerifyLive do
       _ -> %{status: :not_found}
     end
   end
+
+  defp result_organization(%{card: %MemberCard{member: %{team: team}}}), do: team.organization
+  defp result_organization(_result), do: nil
 
   defp qualifications(:active, %MemberCard{member: member}, now),
     do: BuildCardQualifications.call(member.team, member, now)
@@ -144,7 +169,7 @@ defmodule Web.VerifyLive do
     ~H"""
     <.result result={@result} />
     <div class="mt-6">
-      <.button id="check-another" navigate={~p"/"} size={:lg} class="w-full justify-center">
+      <.button id="check-another" navigate={@start_path} size={:lg} class="w-full justify-center">
         Check another card
       </.button>
     </div>
@@ -235,9 +260,14 @@ defmodule Web.VerifyLive do
             alt=""
             class="size-14 shrink-0"
           />
-          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-zinc-900">
-            {@team.name}
-          </p>
+          <div>
+            <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-zinc-900">
+              {@team.name}
+            </p>
+            <p :if={@team.organization} id="result-organization" class="mb-0 text-sm text-zinc-600">
+              {@team.organization.name}
+            </p>
+          </div>
         </div>
 
         <%!-- The same three columns as the front of the Apple pass. --%>

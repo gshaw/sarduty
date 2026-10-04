@@ -3,6 +3,7 @@ defmodule App.Operation.BuildApplePass do
   alias App.Operation.BuildCardQualifications
   alias App.Operation.LoadImage
   alias App.Operation.PushPassUpdates
+  alias App.Repo
 
   # SAR Duty's navy and yellow, the same on every team's card.
   @background_color "rgb(28, 45, 66)"
@@ -21,11 +22,12 @@ defmodule App.Operation.BuildApplePass do
 
   @doc """
   The signed `.pkpass` for a card, with the member's D4H photo and the team's logo.
-  Expects the card with `member: :team` preloaded. If the pass changed, the phones that
+  Expects the card with `member: [team: :organization]` preloaded. If the pass changed, the phones that
   hold it are told, since a refresh won't see the change once it's recorded here.
   """
   def call(%MemberCard{} = card, now) do
     if configured?() do
+      card = Repo.preload(card, member: [team: :organization])
       config = :sarduty |> Application.get_env(:apple_pass) |> Map.new()
       card = MemberCard.ensure_authentication_token!(card)
       member = card.member
@@ -38,8 +40,8 @@ defmodule App.Operation.BuildApplePass do
 
       files = %{
         "pass.json" => Jason.encode!(json),
-        "icon.png" => LoadImage.logo(member.team.subdomain, :icon),
-        "logo.png" => LoadImage.logo(member.team.subdomain, :logo),
+        "icon.png" => LoadImage.logo(member.team, :icon),
+        "logo.png" => LoadImage.logo(member.team, :logo),
         "thumbnail.png" => LoadImage.photo(member, :square)
       }
 
@@ -186,11 +188,7 @@ defmodule App.Operation.BuildApplePass do
       qualification_fields(qualifications, team.timezone),
       %{key: "checked", label: "Last updated", value: last_checked(team)},
       test_field(card, team),
-      %{
-        key: "issuer",
-        label: "Issued by",
-        value: "#{team.name} through SAR Duty. Status comes from the team's records."
-      }
+      %{key: "issuer", label: "Issued by", value: MemberCard.issued_by(team)}
     ])
   end
 
@@ -203,9 +201,13 @@ defmodule App.Operation.BuildApplePass do
       key: "test",
       label: "Test update",
       value: Service.Format.month_day_time_seconds(card.pass_test_at, team.timezone),
-      changeMessage: "SAR Duty test update %@"
+      changeMessage: test_message(team)
     }
   end
+
+  # An organization's teams see no SAR Duty on the pass.
+  defp test_message(%{organization: nil}), do: "SAR Duty test update %@"
+  defp test_message(_team), do: "Test update %@"
 
   defp name_label(card, now) do
     case MemberCard.status(card, now) do

@@ -4,6 +4,7 @@ defmodule App.Model.Team do
   alias App.Field.EncryptedString
   alias App.Field.TrimmedString
   alias App.Model.Member
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
   alias App.Repo
@@ -28,6 +29,8 @@ defmodule App.Model.Team do
     field :new_d4h_access_key, TrimmedString, virtual: true, redact: true
     field :d4h_refresh_result, :string
     field :d4h_refreshed_at, :utc_datetime_usec
+    # Set by an admin on the organization's page, never cast from a form.
+    belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -81,6 +84,7 @@ defmodule App.Model.Team do
   def get_all do
     Team
     |> order_by([t], desc: t.id)
+    |> preload(:organization)
     |> Repo.all()
   end
 

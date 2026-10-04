@@ -15,6 +15,7 @@ ignorePaths:
 words:
   - aria-describedby
   - aria-labelledby
+  - bcsara # BC Search and Rescue Association, the first parent organization
   - behaviour
   - dedup
   - Ecto
