@@ -407,6 +407,8 @@
     .summary dt { border-bottom: 0; padding-bottom: 0; }
     .summary dd.action { text-align: left; }
     .brand small { display: none; }
+    /* Text cells keep a readable width; the table scrolls instead of squeezing them. */
+    .table-wrap td:not(.shrink, .num, .nowrap, .mono) { min-width: 8rem; }
     table.pin-first :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); box-shadow: inset -1px 0 var(--border-subtle); }
     table.pin-first thead th:first-child { z-index: 2; background: var(--surface-alt); }
     table.pin-first.striped tbody tr:nth-child(even) td:first-child { background: var(--row-alt); }
