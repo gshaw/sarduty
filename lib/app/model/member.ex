@@ -9,7 +9,6 @@ defmodule App.Model.Member do
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
-  alias App.Validate
 
   schema "members" do
     belongs_to :team, Team
@@ -37,6 +36,8 @@ defmodule App.Model.Member do
 
   def build_new_changeset(params \\ %{}), do: build_changeset(%Member{}, params)
 
+  # Rows are copies of D4H, so they take whatever D4H holds: no length or format
+  # rules. A refresh that rejects one row fails for the whole team.
   def build_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
@@ -61,9 +62,6 @@ defmodule App.Model.Member do
       :name,
       :joined_at
     ])
-    |> Validate.name(:name)
-    |> Validate.address(:address)
-    |> Validate.email(:email)
   end
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
