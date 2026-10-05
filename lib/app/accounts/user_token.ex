@@ -44,9 +44,10 @@ defmodule App.Accounts.UserToken do
   end
 
   @doc """
-  A six-digit login code. The email gets the code; the database keeps only its hash.
+  A six-digit login code. `sent_to` gets the code: the user's email, or an E.164 number
+  for a text. The database keeps only its hash.
   """
-  def build_login_code(user) do
+  def build_login_code(user, sent_to \\ nil) do
     <<n::32>> = :crypto.strong_rand_bytes(4)
     code = n |> rem(1_000_000) |> Integer.to_string() |> String.pad_leading(6, "0")
 
@@ -54,7 +55,7 @@ defmodule App.Accounts.UserToken do
      %UserToken{
        token: hash_code(user, code),
        context: "login",
-       sent_to: user.email,
+       sent_to: sent_to || user.email,
        user_id: user.id
      }}
   end
@@ -70,13 +71,14 @@ defmodule App.Accounts.UserToken do
   end
 
   @doc """
-  The user's live login code: under 15 minutes old, under 5 wrong tries, and sent to the
-  email the user still has.
+  The user's live login code: under 15 minutes old, under 5 wrong tries, and sent to
+  `sent_to`, the email the user still has or the number being logged in with. A code
+  emailed can't be entered as one texted, or the other way.
   """
-  def live_login_code_query(user) do
+  def live_login_code_query(user, sent_to) do
     from t in UserToken,
       where:
-        t.user_id == ^user.id and t.context == "login" and t.sent_to == ^user.email and
+        t.user_id == ^user.id and t.context == "login" and t.sent_to == ^sent_to and
           t.inserted_at > ago(@login_validity_in_minutes, "minute") and
           t.failed_attempts < @login_max_attempts,
       order_by: [desc: t.id],

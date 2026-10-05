@@ -106,6 +106,25 @@ defmodule App.Model.Member do
     |> Repo.exists?()
   end
 
+  @doc """
+  The emails of current members with this phone number, lowercase. D4H keeps numbers as
+  typed, so each is normalized here rather than matched in SQL.
+  """
+  def current_emails_with_phone(e164, now) do
+    Member
+    |> where(
+      [m],
+      not is_nil(m.phone) and not is_nil(m.email) and
+        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
+        (is_nil(m.left_at) or m.left_at > ^now)
+    )
+    |> select([m], {m.phone, m.email})
+    |> Repo.all()
+    |> Enum.filter(fn {phone, _email} -> Service.Phone.normalize(phone) == e164 end)
+    |> Enum.map(fn {_phone, email} -> email |> String.trim() |> String.downcase() end)
+    |> Enum.uniq()
+  end
+
   def permission_label(0), do: "Owner"
   def permission_label(1), do: "Editor"
   def permission_label(2), do: "Member"

@@ -65,23 +65,61 @@ defmodule App.Accounts do
   """
   def deliver_login_code(email) do
     if may_log_in?(email) do
-      user = get_user_by_email(email) || %{email: email} |> User.new_changeset() |> Repo.insert!()
+      user = get_or_create_user(email)
+      send_login_code(user, user.email)
+    end
 
-      unless recent_login_code?(user) do
-        user |> UserToken.by_user_and_contexts_query(["login"]) |> Repo.delete_all()
-        {code, user_token} = UserToken.build_login_code(user)
-        Repo.insert!(user_token)
-        UserNotifier.deliver_login_code(user, code)
+    :ok
+  end
+
+  @doc "Whether login codes can go out by text: Twilio is set up."
+  def text_login?, do: App.Adapter.Twilio.configured?()
+
+  @doc """
+  Texts a login code to an E.164 number, like deliver_login_code/1 does by email. The
+  number must belong to exactly one email that may log in: D4H holds no other link from
+  a number to an account, and a shared family number can't pick between two people.
+  Returns `:ok` either way.
+  """
+  def deliver_login_text(phone) do
+    if text_login?() do
+      case text_login_email(phone) do
+        nil -> nil
+        email -> email |> get_or_create_user() |> send_login_code(phone)
       end
     end
 
     :ok
   end
 
-  defp recent_login_code?(user) do
+  @doc "The one email that may log in with this number, or nil."
+  def text_login_email(phone, now \\ DateTime.utc_now()) do
+    case phone |> Member.current_emails_with_phone(now) |> Enum.filter(&may_log_in?(&1, now)) do
+      [email] -> email
+      _none_or_many -> nil
+    end
+  end
+
+  defp get_or_create_user(email),
+    do: get_user_by_email(email) || %{email: email} |> User.new_changeset() |> Repo.insert!()
+
+  # The code goes to `sent_to`: the user's email, or an E.164 number for a text.
+  defp send_login_code(user, sent_to) do
+    unless recent_login_code?(user, sent_to) do
+      user |> UserToken.by_user_and_contexts_query(["login"]) |> Repo.delete_all()
+      {code, user_token} = UserToken.build_login_code(user, sent_to)
+      Repo.insert!(user_token)
+
+      if String.starts_with?(sent_to, "+"),
+        do: UserNotifier.deliver_login_text(sent_to, code),
+        else: UserNotifier.deliver_login_code(user, code)
+    end
+  end
+
+  defp recent_login_code?(user, sent_to) do
     user
     |> UserToken.by_user_and_contexts_query(["login"])
-    |> where([t], t.inserted_at > ago(60, "second"))
+    |> where([t], t.sent_to == ^sent_to and t.inserted_at > ago(60, "second"))
     |> Repo.exists?()
   end
 
@@ -90,19 +128,41 @@ defmodule App.Accounts do
   fifth miss kills it. `:error` for a wrong, used, or expired code, or an unknown email.
   """
   def log_in_with_code(email, code) when is_binary(email) and is_binary(code) do
-    code = String.replace(code, ~r/\s/, "")
+    case get_user_by_email(email) do
+      %User{} = user -> check_code(user, user.email, code)
+      nil -> :error
+    end
+  end
 
-    with %User{} = user <- get_user_by_email(email),
-         %UserToken{} = token <- user |> UserToken.live_login_code_query() |> Repo.one() do
-      if user |> UserToken.hash_code(code) |> Plug.Crypto.secure_compare(token.token) do
-        user |> UserToken.by_user_and_contexts_query(["login"]) |> Repo.delete_all()
-        {:ok, user}
-      else
-        UserToken |> where(id: ^token.id) |> Repo.update_all(inc: [failed_attempts: 1])
-        :error
-      end
+  @doc """
+  Logs in with a texted code, like log_in_with_code/2. Only a code texted to this number
+  counts, and only while the number still leads to the same user.
+  """
+  def log_in_with_text_code(phone, code) when is_binary(phone) and is_binary(code) do
+    with true <- text_login?(),
+         email when is_binary(email) <- text_login_email(phone),
+         %User{} = user <- get_user_by_email(email) do
+      check_code(user, phone, code)
     else
       _ -> :error
+    end
+  end
+
+  defp check_code(user, sent_to, code) do
+    code = String.replace(code, ~r/\s/, "")
+
+    case user |> UserToken.live_login_code_query(sent_to) |> Repo.one() do
+      %UserToken{} = token ->
+        if user |> UserToken.hash_code(code) |> Plug.Crypto.secure_compare(token.token) do
+          user |> UserToken.by_user_and_contexts_query(["login"]) |> Repo.delete_all()
+          {:ok, user}
+        else
+          UserToken |> where(id: ^token.id) |> Repo.update_all(inc: [failed_attempts: 1])
+          :error
+        end
+
+      nil ->
+        :error
     end
   end
 

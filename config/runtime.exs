@@ -39,6 +39,18 @@ config :sarduty, :google_wallet,
   service_account: System.get_env("GOOGLE_WALLET_SERVICE_ACCOUNT"),
   images: config_env() == :prod
 
+# Twilio, for texting login codes. Optional: without all four, there is no text login.
+# Dev only logs texts unless DEV_SEND_SMS is set, like DEV_SEND_EMAIL for mail. Tests
+# ignore the env vars and turn text login on themselves.
+if config_env() != :test do
+  config :sarduty, App.Adapter.Twilio,
+    account_sid: System.get_env("TWILIO_ACCOUNT_SID"),
+    api_key_sid: System.get_env("TWILIO_API_KEY_SID"),
+    api_key_secret: System.get_env("TWILIO_API_KEY_SECRET"),
+    from_number: System.get_env("TWILIO_FROM_NUMBER"),
+    deliver: config_env() == :prod or System.get_env("DEV_SEND_SMS") == "true"
+end
+
 if config_env() == :prod do
   config :sarduty, Web.Endpoint,
     secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),

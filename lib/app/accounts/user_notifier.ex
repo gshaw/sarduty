@@ -26,6 +26,18 @@ defmodule App.Accounts.UserNotifier do
     end
   end
 
+  # The login text. The last line is the one-time code format iOS and Android read to
+  # offer the code on the login page, bound to this site's domain.
+  def deliver_login_text(phone, code) do
+    App.Adapter.Twilio.send_sms(phone, """
+    Your SAR Duty login code: #{code}
+
+    It works once, for 15 minutes.
+
+    @#{Web.Endpoint.host()} ##{code}\
+    """)
+  end
+
   @doc "Tells the admins a team signed itself up. Sends nothing when there are none."
   def deliver_team_signed_up([], _team, _signer_email), do: {:ok, nil}
 
