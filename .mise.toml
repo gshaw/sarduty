@@ -76,3 +76,7 @@ run = "mix phx.server"
 
 [tasks.vacuum]
 run = "sqlite3 db/sarduty_dev.db \"VACUUM;\""
+
+[tasks.sanitize]
+description = "Load a production backup into the dev database with personal data replaced"
+run = "MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN:-dummy} mix run --no-start backups/sanitize.exs"
