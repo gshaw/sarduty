@@ -238,7 +238,13 @@ defmodule Web.AttendanceLinkLiveTest do
     team: team,
     activity: activity
   } do
-    made = DateTime.utc_now() |> DateTime.add(-30, :day) |> DateTime.add(-1, :minute)
+    # To the second, as a caller may pass it.
+    made =
+      DateTime.utc_now()
+      |> DateTime.add(-30, :day)
+      |> DateTime.add(-1, :minute)
+      |> DateTime.truncate(:second)
+
     link = CreateAttendanceLink.call(team, activity, user_fixture(), made)
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
     assert has_element?(lv, "#link-closed")
