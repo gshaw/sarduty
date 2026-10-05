@@ -2,7 +2,6 @@ defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
   import Web.Components.AdminTabs
-  import Web.Components.TeamManagers
 
   alias App.Accounts.User
   alias App.Model.Member
@@ -32,12 +31,7 @@ defmodule Web.AdminDashboardLive do
     grants = Enum.group_by(TeamLoginGrant.get_all(), & &1.team_id)
     logins = Map.new(teams, &{&1.id, logins(users, managers[&1.id], grants[&1.id] || [])})
 
-    assign(socket,
-      managers: managers,
-      grants: grants,
-      logins: logins,
-      login_emails: MapSet.new(users, &String.downcase(&1.email))
-    )
+    assign(socket, managers: managers, logins: logins)
   end
 
   def handle_info({:team_refreshed, updated_team}, socket) do
@@ -93,7 +87,10 @@ defmodule Web.AdminDashboardLive do
         <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
       </:col>
       <:col :let={team} label="Contacts">
-        <span :if={@logins[team.id] == []} class="text-danger-1">No accounts</span>
+        <.a id={"team-#{team.id}-managers"} navigate={~p"/#{team.subdomain}/managers"}>
+          {Service.Format.count(length(@managers[team.id]), one: "%d manager", many: "%d managers")}
+        </.a>
+        <span :if={@logins[team.id] == []} class="block text-danger-1">No accounts</span>
         <ul :if={@logins[team.id] != []}>
           <li
             :for={user <- @logins[team.id]}
@@ -132,30 +129,6 @@ defmodule Web.AdminDashboardLive do
         </.button>
       </:col>
     </.table>
-
-    <section id="managers" class="mt-p2">
-      <h2 class="heading">Team managers</h2>
-      <p class="max-w-3xl text-sm text-secondary-1">
-        Everyone D4H makes an Owner or Editor who is not retired and has not left, from the last
-        refresh, leaving out the team key's own account. Under #57 these people get access,
-        and only these, plus any email an admin let in. Flagged: an email outside the team's
-        usual domain, and anyone not operational.
-      </p>
-      <div :for={team <- @teams} id={"managers-#{team.id}"} class="mb-p2">
-        <h3 class="font-bold">
-          {team.name} · {Service.Format.count(length(@managers[team.id]),
-            one: "%d manager",
-            many: "%d managers"
-          )}
-        </h3>
-        <.team_managers
-          id={"managers-list-#{team.id}"}
-          managers={@managers[team.id]}
-          grants={@grants[team.id] || []}
-          login_emails={@login_emails}
-        />
-      </div>
-    </section>
 
     <dl id="key-notes" class="mt-p2 max-w-3xl text-sm">
       <dt>Last seen</dt>
