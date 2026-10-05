@@ -94,69 +94,106 @@ defmodule App.AccountsTest do
     end
   end
 
-  describe "login links" do
-    test "sends a link to a manager, and makes their user" do
+  describe "login codes" do
+    test "emails a manager a six-digit code, and makes their user" do
       manager_fixture(team_fixture(), %{email: "pat@example.com"})
 
-      token = extract_user_token(&deliver(" Pat@Example.com ", &1))
+      code = deliver(" Pat@Example.com ")
 
-      assert %User{email: "pat@example.com"} = Accounts.get_user_by_login_token(token)
+      assert code =~ ~r/\A\d{6}\z/
+
+      assert {:ok, %User{email: "pat@example.com"}} =
+               Accounts.log_in_with_code("pat@example.com", code)
     end
 
     test "sends nothing, and makes no user, for an email that may not log in" do
-      assert Accounts.deliver_login_link("stranger@example.com", &"url/#{&1}") == :ok
+      assert Accounts.deliver_login_code("stranger@example.com") == :ok
       refute Accounts.get_user_by_email("stranger@example.com")
       assert Repo.aggregate(UserToken, :count) == 0
     end
 
-    test "a link works once, and logs in its user" do
+    test "a code works once, with spaces and in any email case" do
       %{user: user} = user_with_team_fixture()
-      token = extract_user_token(&deliver(user.email, &1))
+      code = deliver(user.email)
+      spaced = String.slice(code, 0, 3) <> " " <> String.slice(code, 3, 3)
 
-      assert {:ok, %User{id: id}} = Accounts.log_in_with_token(token)
+      upcased = String.upcase(user.email)
+
+      assert {:ok, %User{id: id}} = Accounts.log_in_with_code(upcased, spaced)
       assert id == user.id
-      assert Accounts.log_in_with_token(token) == :error
+      assert Accounts.log_in_with_code(user.email, code) == :error
     end
 
-    test "a link expires after 15 minutes" do
+    test "a code expires after 15 minutes" do
       %{user: user} = user_with_team_fixture()
-      token = extract_user_token(&deliver(user.email, &1))
+      code = deliver(user.email)
       sixteen_minutes_ago = DateTime.add(DateTime.utc_now(), -16, :minute)
       Repo.update_all(UserToken, set: [inserted_at: sixteen_minutes_ago])
 
-      refute Accounts.get_user_by_login_token(token)
-      assert Accounts.log_in_with_token(token) == :error
+      assert Accounts.log_in_with_code(user.email, code) == :error
+    end
+
+    test "a code dies after 5 wrong tries" do
+      %{user: user} = user_with_team_fixture()
+      code = deliver(user.email)
+      wrong = if code == "000000", do: "111111", else: "000000"
+
+      for _ <- 1..5, do: assert(Accounts.log_in_with_code(user.email, wrong) == :error)
+
+      assert Accounts.log_in_with_code(user.email, code) == :error
+    end
+
+    test "a code is no good for another email" do
+      %{user: user} = user_with_team_fixture()
+      %{user: other} = user_with_team_fixture()
+      code = deliver(user.email)
+
+      assert Accounts.log_in_with_code(other.email, code) == :error
+      assert Accounts.log_in_with_code("nobody@example.com", code) == :error
     end
 
     test "a second request within a minute sends nothing more" do
       manager_fixture(team_fixture(), %{email: "twice@example.com"})
 
-      :ok = Accounts.deliver_login_link("twice@example.com", &"url/#{&1}")
-      :ok = Accounts.deliver_login_link("twice@example.com", &"url/#{&1}")
+      :ok = Accounts.deliver_login_code("twice@example.com")
+      :ok = Accounts.deliver_login_code("twice@example.com")
 
       assert_received {:email, _}
       refute_received {:email, _}
       assert Repo.aggregate(UserToken, :count) == 1
     end
 
-    test "a link token is 26 lowercase letters and digits" do
-      {token, _user_token} = UserToken.build_login_token(user_fixture())
-      assert token =~ ~r/\A[a-z2-7]{26}\z/
+    test "a later request replaces the code" do
+      %{user: user} = user_with_team_fixture()
+      first = deliver(user.email)
+
+      Repo.update_all(UserToken,
+        set: [inserted_at: DateTime.add(DateTime.utc_now(), -2, :minute)]
+      )
+
+      second = deliver(user.email)
+
+      assert Repo.aggregate(UserToken, :count) == 1
+      if first != second, do: assert(Accounts.log_in_with_code(user.email, first) == :error)
+      assert {:ok, _} = Accounts.log_in_with_code(user.email, second)
     end
 
-    test "the email has the link in its text and a Log in button" do
+    test "the database keeps only the code's hash" do
+      %{user: user} = user_with_team_fixture()
+      code = deliver(user.email)
+
+      refute Repo.one!(UserToken).token == code
+    end
+
+    test "the code is in the subject, the text, and the HTML" do
       manager_fixture(team_fixture(), %{email: "html@example.com"})
 
-      :ok = Accounts.deliver_login_link("html@example.com", &"https://sarduty.test/login/#{&1}")
+      :ok = Accounts.deliver_login_code("html@example.com")
 
       assert_received {:email, email}
-      [url] = Regex.run(~r{https://sarduty.test/login/[a-z2-7]+}, email.text_body)
-      assert email.html_body =~ ~s(href="#{url}")
-      assert email.html_body =~ ">Log in</a>"
-    end
-
-    test "a malformed token is no user" do
-      refute Accounts.get_user_by_login_token("not a token")
+      [code] = Regex.run(~r/\d{6}/, email.subject)
+      assert email.text_body =~ code
+      assert email.html_body =~ code
     end
   end
 
@@ -171,10 +208,11 @@ defmodule App.AccountsTest do
     end
   end
 
-  # Delivers through the test mailer and hands the sent email to extract_user_token/1.
-  defp deliver(email, url_fun) do
-    :ok = Accounts.deliver_login_link(email, url_fun)
+  # Sends a code through the test mailer and returns it.
+  defp deliver(email) do
+    :ok = Accounts.deliver_login_code(email)
     assert_received {:email, sent}
-    {:ok, sent}
+    [code] = Regex.run(~r/\d{6}/, sent.subject)
+    code
   end
 end

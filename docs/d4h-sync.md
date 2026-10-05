@@ -102,8 +102,12 @@ than waiting for the next refresh. See [group-rules.md](group-rules.md).
 
 ## Who can log in
 
-Login is by emailed link only (#57). A user reaches a team when their email matches one of
-its managers in the local copy: a D4H Owner or Editor who isn't retired and hasn't left
+Login is by emailed code only (#142, replacing the link from #57). A code is six digits,
+works once for 15 minutes, and dies after 5 wrong tries; `Web.LoginLimit` caps sends and
+misses per email and IP. A login lasts until the browser closes; only ticking "Remember
+me on this computer for 60 days" (off by default) sets the 60-day cookie. A user reaches
+a team when their email matches one of its managers in the local copy: a D4H Owner or
+Editor who isn't retired and hasn't left
 (`App.Model.Member.manager?/2`, and `App.Model.Team.get_managed_by/2` as a query). Losing
 Owner or Editor in D4H loses access at the next refresh. Admins reach every team, but
 an admin logs in only while D4H lists their email as a current member of some team, any
@@ -127,7 +131,7 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
 - **New teams sign themselves up** at `/signup` (`App.Operation.SignUpTeam`): a D4H
   personal access token becomes the team key, and the person signing up must be a current
   Owner or Editor on that team in D4H, at the email they give. The team goes live at once,
-  its first refresh starts, every admin gets an email, and the signer gets a login link.
+  its first refresh starts, every admin gets an email, and the signer gets a login code.
 
 ## Adapter notes
 
