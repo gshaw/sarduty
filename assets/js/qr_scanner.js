@@ -1,5 +1,10 @@
 // Reads a member card's QR code with the phone's camera on /verify and sends the text
 // to the LiveView, which takes the code out of it. It never follows a link from a card.
+// With data-continuous, as on the door's attendance page, it keeps scanning after a read
+// and skips the same card for a few seconds, so one card held up isn't recorded twice.
+const PAUSE_MS = 1500
+const SAME_CARD_MS = 5000
+
 export const QRScanner = {
   mounted() {
     // jsQR is its own chunk, so only this page downloads it. Start now so a tap
@@ -32,6 +37,7 @@ export const QRScanner = {
 
   stop() {
     cancelAnimationFrame(this.frame)
+    clearTimeout(this.frame)
     this.stream?.getTracks().forEach(track => track.stop())
     this.stream = null
     delete this.el.dataset.scanning
@@ -47,9 +53,20 @@ export const QRScanner = {
       context.drawImage(this.video, 0, 0, width, height)
       const found = this.decode(context.getImageData(0, 0, width, height).data, width, height)
       if (found?.data) {
-        this.stop()
-        this.pushEvent("scanned", {code: found.data})
-        return
+        if (!("continuous" in this.el.dataset)) {
+          this.stop()
+          this.pushEvent("scanned", {code: found.data})
+          return
+        }
+        const now = Date.now()
+        if (found.data !== this.lastRead || now - this.lastReadAt > SAME_CARD_MS) {
+          this.pushEvent("scanned", {code: found.data})
+          this.lastRead = found.data
+          this.lastReadAt = now
+          this.frame = setTimeout(() => this.tick(), PAUSE_MS)
+          return
+        }
+        this.lastReadAt = now
       }
     }
     this.frame = requestAnimationFrame(() => this.tick())

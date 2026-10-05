@@ -110,6 +110,11 @@ defmodule Web.ActivityLive do
             </.a>
           </li>
           <li>
+            <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/take-attendance"}>
+              Take attendance
+            </.a>
+          </li>
+          <li>
             <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/attendance"}>
               Import attendance
             </.a>

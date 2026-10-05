@@ -38,6 +38,11 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// A button with JS.dispatch("sarduty:copy", to: "#input") copies the input's value.
+window.addEventListener("sarduty:copy", event => {
+  navigator.clipboard?.writeText(event.target.value)
+})
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

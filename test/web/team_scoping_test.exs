@@ -9,6 +9,7 @@ defmodule Web.TeamScopingTest do
     "/:subdomain/activities/:id",
     "/:subdomain/activities/:id/attendance",
     "/:subdomain/activities/:id/mileage",
+    "/:subdomain/activities/:id/take-attendance",
     "/:subdomain/members/:id",
     "/:subdomain/members/:id/groups",
     "/:subdomain/members/:id/qualifications",
@@ -64,6 +65,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/:subdomain/activities/:id/mileage", s, o),
     do: ~p"/#{s}/activities/#{o.activity.id}/mileage"
+
+  defp path_for("/:subdomain/activities/:id/take-attendance", s, o),
+    do: ~p"/#{s}/activities/#{o.activity.id}/take-attendance"
 
   defp path_for("/:subdomain/members/:id", s, o), do: ~p"/#{s}/members/#{o.member.id}"
 

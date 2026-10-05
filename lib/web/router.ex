@@ -81,6 +81,8 @@ defmodule Web.Router do
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/signup", TeamSignupLive
+      # Taking attendance at the door. The token is the only access: no login.
+      live "/attendance/:token", AttendanceLinkLive
     end
 
     get "/styles", StyleGuideController, :index
@@ -149,6 +151,7 @@ defmodule Web.Router do
       live "/:subdomain/activities/:id", ActivityLive
       live "/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/:subdomain/activities/:id/mileage", ActivityMileageLive
+      live "/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
       live "/:subdomain/managers", TeamManagersLive
       live "/:subdomain/members", MemberCollectionLive
       live "/:subdomain/members/:id", MemberLive

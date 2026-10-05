@@ -1,0 +1,77 @@
+defmodule Web.ActivityTakeAttendanceLiveTest do
+  use Web.ConnCase
+
+  import App.DataFixtures
+  import Phoenix.LiveViewTest
+
+  alias App.Model.AttendanceLink
+  alias App.Model.AttendanceScan
+  alias App.Repo
+
+  setup %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity = activity_fixture(team)
+    %{conn: log_in_user(conn, user), team: team, activity: activity}
+  end
+
+  defp take_path(team, activity),
+    do: ~p"/#{team.subdomain}/activities/#{activity.id}/take-attendance"
+
+  test "the activity page links here", %{conn: conn, team: team, activity: activity} do
+    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/activities/#{activity.id}")
+    assert has_element?(lv, ~s|a[href="#{take_path(team, activity)}"]|, "Take attendance")
+  end
+
+  test "a team admin makes a link, then closes it", %{conn: conn, team: team, activity: activity} do
+    {:ok, lv, _html} = live(conn, take_path(team, activity))
+    assert has_element?(lv, "#no-link")
+
+    lv |> element("#no-link #create-link") |> render_click()
+    link = AttendanceLink.find_current(team, activity)
+    assert has_element?(lv, ~s|#attendance-link-url[value$="/attendance/#{link.token}"]|)
+
+    lv |> element("#close-link") |> render_click()
+    assert has_element?(lv, "#no-link")
+    assert Repo.reload(link).closed_at
+  end
+
+  test "a new link closes the old one", %{conn: conn, team: team, activity: activity} do
+    {:ok, lv, _html} = live(conn, take_path(team, activity))
+    lv |> element("#no-link #create-link") |> render_click()
+    first = AttendanceLink.find_current(team, activity)
+
+    lv |> element("#open-link #create-link") |> render_click()
+    assert Repo.reload(first).closed_at
+    refute AttendanceLink.find_current(team, activity).id == first.id
+  end
+
+  test "arrivals and departures show as the door records them", %{
+    conn: conn,
+    team: team,
+    activity: activity
+  } do
+    member = member_fixture(team, %{name: "Raj Patel"})
+    {:ok, lv, _html} = live(conn, take_path(team, activity))
+    assert has_element?(lv, "#no-times")
+
+    AttendanceScan.insert!(%AttendanceScan{
+      team_id: team.id,
+      activity_id: activity.id,
+      member_id: member.id,
+      kind: "arrived",
+      method: "name",
+      scanned_at: DateTime.utc_now()
+    })
+
+    assert render(lv) =~ "Raj Patel"
+    assert has_element?(lv, "#times", "No departure scan")
+  end
+
+  test "another team's activity is not found", %{conn: conn, team: team} do
+    other = team_fixture() |> activity_fixture()
+
+    assert_raise Ecto.NoResultsError, fn ->
+      live(conn, ~p"/#{team.subdomain}/activities/#{other.id}/take-attendance")
+    end
+  end
+end
