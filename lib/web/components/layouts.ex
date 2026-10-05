@@ -105,7 +105,7 @@ defmodule Web.Layouts do
     """
   end
 
-  # Login and settings pages have no footer, but in dev the mailbox is where login links go.
+  # Login and settings pages have no footer, but in dev the mailbox is where login codes go.
   defp dev_footer(assigns) do
     assigns = assign(assigns, mailbox?: dev_mailbox?())
 

@@ -18,9 +18,14 @@ defmodule App.AccountsFixtures do
     |> Repo.insert!()
   end
 
-  def extract_user_token(fun) do
-    {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
-    [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
-    token
+  @doc "Sends a login code to the email through the test mailer and returns it."
+  def login_code_fixture(email) do
+    :ok = App.Accounts.deliver_login_code(email)
+
+    receive do
+      {:email, %{subject: "Your SAR Duty login code: " <> code}} -> code
+    after
+      0 -> raise "no login code was sent to #{email}"
+    end
   end
 end

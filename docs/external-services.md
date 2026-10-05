@@ -29,8 +29,8 @@ no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox`, linked from
 footer and the login pages, unless `DEV_SEND_EMAIL=true` and both variables below are set:
 a dev database is often a copy of production, so real mail could reach real members. Tests
 use `Swoosh.Adapters.Test`. Mail comes from
-`noreply@sarduty.com`: login links, and tax credit letters with the PDF attached. Login
-is by emailed link only, so without mail nobody can log in; existing sessions last 60
+`noreply@sarduty.com`: login codes, and tax credit letters with the PDF attached. Login
+is by emailed code only, so without mail nobody can log in; existing sessions last 60
 days.
 
 - `CLOUDFLARE_ACCOUNT_ID` — required in production.

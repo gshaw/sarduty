@@ -96,21 +96,20 @@ defmodule Web.Router do
     get "/teams/:subdomain/logo", TeamController, :logo
     get "/organizations/:slug/logo", OrganizationController, :logo
 
-    post "/login/link", UserSessionController, :request_link
+    post "/login/code", UserSessionController, :request_code
     post "/login", UserSessionController, :create
     delete "/logout", UserSessionController, :delete
   end
 
-  # Asking for and opening a login link. Someone already logged in goes to their team
-  # instead. /login/sent must come before /login/:token.
+  # Asking for a login code and entering it. Someone already logged in goes to their team
+  # instead.
   scope "/", Web do
     pipe_through [:browser, :redirect_if_user_is_authenticated]
 
     live_session :login_session,
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/login", UserLoginLive, :new
-      live "/login/sent", UserLoginSentLive, :new
-      live "/login/:token", UserLoginLinkLive, :new
+      live "/login/code", UserLoginCodeLive, :new
     end
   end
 

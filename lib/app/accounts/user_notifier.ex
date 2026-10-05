@@ -3,21 +3,23 @@ defmodule App.Accounts.UserNotifier do
 
   alias App.Mailer
 
-  # The login email: a button in mail apps that show HTML, the plain link otherwise.
-  def deliver_login_link(user, url) do
+  # The login email. The code is in the subject too, so a phone's notification shows it
+  # without opening the email.
+  def deliver_login_code(user, code) do
     email =
       new()
       |> to(user.email)
       |> from({"SAR Duty", "noreply@sarduty.com"})
-      |> subject("Log in to SAR Duty")
+      |> subject("Your SAR Duty login code: #{code}")
       |> text_body("""
-      Use this link to log in to SAR Duty:
+      Your code to log in to SAR Duty:
 
-      #{url}
+      #{code}
 
-      It works once, for 15 minutes. If you did not ask for it, ignore this email.
+      Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it,
+      ignore this email.
       """)
-      |> html_body(login_html(url))
+      |> html_body(login_html(code))
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}
@@ -45,17 +47,12 @@ defmodule App.Accounts.UserNotifier do
   end
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
-  defp login_html(url) do
-    url = url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-
+  defp login_html(code) do
     """
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; color: #18181b; max-width: 480px;">
-      <p>Select the button to log in to SAR Duty.</p>
-      <p style="margin: 24px 0;">
-        <a href="#{url}" style="background: #16a34a; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Log in</a>
-      </p>
-      <p style="color: #52525b; font-size: 14px;">It works once, for 15 minutes. If you did not ask for it, ignore this email.</p>
-      <p style="color: #71717a; font-size: 12px; word-break: break-all;">Or open #{url}</p>
+      <p>Your code to log in to SAR Duty:</p>
+      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{code}</p>
+      <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it, ignore this email.</p>
     </div>
     """
   end

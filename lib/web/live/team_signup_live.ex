@@ -17,8 +17,13 @@ defmodule Web.TeamSignupLive do
       <p>
         Its first D4H refresh has started and takes a few minutes. We've emailed
         <strong>{@done.email}</strong>
-        a link to log in. It works once, for 15 minutes.
+        a code to log in. It works once, for 15 minutes.
       </p>
+      <.form_actions>
+        <.button variant={:success} navigate={~p"/login/code?#{[email: @done.email]}"}>
+          Enter your code
+        </.button>
+      </.form_actions>
     </div>
     <div :if={!@done}>
       <h1 class="heading">Sign up a team</h1>
@@ -34,7 +39,7 @@ defmodule Web.TeamSignupLive do
       </p>
       <.form for={@form} id="signup_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:email]} type="email" label="Your email" autocomplete="email">
-          The email D4H has for you. We send your login link here.
+          The email D4H has for you. We send your login code here.
         </.input>
         <.input
           field={@form[:api_host]}
@@ -66,7 +71,7 @@ defmodule Web.TeamSignupLive do
   end
 
   def handle_event("save", %{"form" => params}, socket) do
-    case SignUpTeam.call(params, &url(~p"/login/#{&1}")) do
+    case SignUpTeam.call(params) do
       {:ok, team} ->
         {:noreply, assign(socket, done: %{name: team.name, email: params["email"]})}
 

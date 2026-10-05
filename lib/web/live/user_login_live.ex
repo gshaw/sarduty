@@ -2,25 +2,25 @@ defmodule Web.UserLoginLive do
   use Web, :live_view_narrow_layout
 
   # The submit goes through LiveView first so the button disables at once, then
-  # phx-trigger-action posts the form to the controller, which sends the link.
+  # phx-trigger-action posts the form to the controller, which sends the code.
   def render(assigns) do
     ~H"""
     <div>
       <h1 class="heading">Log in</h1>
       <p>
         Enter the email D4H has for you. If you're an Owner or Editor on your team in D4H,
-        we'll email you a link to log in. There's no password.
+        we'll email you a code to log in. There's no password.
       </p>
       <.form
         for={@form}
         id="login_form"
-        action={~p"/login/link"}
+        action={~p"/login/code"}
         phx-submit="submit"
         phx-trigger-action={@trigger_submit}
       >
         <.input field={@form[:email]} type="email" label="Email" required autocomplete="email" />
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Sending…">Email me a login link</.button>
+          <.button variant={:success} phx-disable-with="Sending…">Email me a code</.button>
         </.form_actions>
       </.form>
       <p class="text-secondary-1">

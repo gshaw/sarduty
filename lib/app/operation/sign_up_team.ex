@@ -3,7 +3,7 @@ defmodule App.Operation.SignUpTeam do
   Self-service team sign-up (#57 phase 5). A D4H personal access token becomes the team
   key. The person signing up must be a current Owner or Editor on that team in D4H, at
   the email they give, and the team must be new to SAR Duty. Then the team goes live, its
-  first refresh starts, the admins get an email, and the signer gets a login link.
+  first refresh starts, the admins get an email, and the signer gets a login code.
   """
 
   import Ecto.Changeset
@@ -20,10 +20,10 @@ defmodule App.Operation.SignUpTeam do
 
   @manager_permissions [0, 1]
 
-  def call(params, login_url_fun) do
+  def call(params) do
     with {:ok, view_model} <- TeamSignupViewModel.validate(params),
          {:ok, whoami, d4h_team, signer} <- check_with_d4h(view_model) do
-      {:ok, go_live(view_model, whoami, d4h_team, signer, login_url_fun)}
+      {:ok, go_live(view_model, whoami, d4h_team, signer)}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
       {:error, {field, message}} -> {:error, form_error(params, field, message)}
@@ -41,11 +41,11 @@ defmodule App.Operation.SignUpTeam do
     end
   end
 
-  defp go_live(view_model, whoami, d4h_team, signer, login_url_fun) do
+  defp go_live(view_model, whoami, d4h_team, signer) do
     team = create_team(view_model, whoami, d4h_team, signer)
     %{team_id: team.id} |> RefreshTeamDataWorker.new() |> Oban.insert!()
     UserNotifier.deliver_team_signed_up(Accounts.admin_emails(), team, view_model.email)
-    Accounts.deliver_login_link(view_model.email, login_url_fun)
+    Accounts.deliver_login_code(view_model.email)
     team
   end
 
@@ -109,7 +109,7 @@ defmodule App.Operation.SignUpTeam do
     )
   end
 
-  # The team, keyed by the token, and the signer as its first member, so the login link
+  # The team, keyed by the token, and the signer as its first member, so the login code
   # can go out before the first refresh fills in everyone else.
   defp create_team(view_model, whoami, d4h_team, signer) do
     {lat, lng} = d4h_team.coordinate || {0.0, 0.0}

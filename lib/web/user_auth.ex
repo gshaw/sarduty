@@ -27,17 +27,24 @@ defmodule Web.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  # Every login is remembered for 60 days; getting a new link each visit would be a chore.
-  def log_in_user(conn, user) do
+  # A login is remembered for 60 days; a new code each visit would be a chore. On a
+  # shared computer (`remember: false`) only the session cookie is set, and it ends when
+  # the browser closes.
+  def log_in_user(conn, user, opts \\ []) do
     token = Accounts.generate_user_session_token(user)
     user_return_to = get_session(conn, :user_return_to)
 
     conn
     |> renew_session()
     |> put_token_in_session(token)
-    |> put_resp_cookie(@remember_me_cookie, token, @remember_me_options)
+    |> maybe_remember(token, Keyword.get(opts, :remember, true))
     |> redirect(to: user_return_to || signed_in_path(user))
   end
+
+  defp maybe_remember(conn, token, true),
+    do: put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)
+
+  defp maybe_remember(conn, _token, false), do: conn
 
   # This function renews the session ID and erases the whole
   # session to avoid fixation attacks. If there is any data

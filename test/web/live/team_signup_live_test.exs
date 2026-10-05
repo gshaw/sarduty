@@ -82,7 +82,7 @@ defmodule Web.TeamSignupLiveTest do
     }
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      assert {:ok, %Team{name: "Ridge SAR"}} = SignUpTeam.call(params, &"url/#{&1}")
+      assert {:ok, %Team{name: "Ridge SAR"}} = SignUpTeam.call(params)
     end)
 
     team = Team.get_by(d4h_team_id: @d4h_team_id)
@@ -92,7 +92,9 @@ defmodule Web.TeamSignupLiveTest do
 
     assert_received {:email, %{subject: "New team on SAR Duty: Ridge SAR", to: admins}}
     assert [{_, "admin@example.com"}] = admins
-    assert_received {:email, %{subject: "Log in to SAR Duty", to: [{_, "pat@example.com"}]}}
+
+    assert_received {:email,
+                     %{subject: "Your SAR Duty login code: " <> _, to: [{_, "pat@example.com"}]}}
   end
 
   test "a Member can't sign the team up", %{conn: conn} do
