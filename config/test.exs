@@ -41,3 +41,7 @@ config :sarduty, App.Adapter.APNs, plug: {Req.Test, App.Adapter.APNs}
 
 # And so do Google Wallet's.
 config :sarduty, App.Adapter.GoogleWallet, plug: {Req.Test, App.Adapter.GoogleWallet}
+
+# And Twilio's, so no test sends a text. Text login stays off until a test turns it on
+# with App.AccountsFixtures.text_login_fixture/0.
+config :sarduty, App.Adapter.Twilio, plug: {Req.Test, App.Adapter.Twilio}, deliver: true

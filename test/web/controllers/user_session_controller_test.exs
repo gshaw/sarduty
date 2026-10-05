@@ -12,6 +12,13 @@ defmodule Web.UserSessionControllerTest do
   defp log_in(conn, email, code, extra \\ %{}),
     do: post(conn, ~p"/login", %{"user" => Map.merge(%{"email" => email, "code" => code}, extra)})
 
+  defp request_text(conn, phone),
+    do: post(conn, ~p"/login/code", %{"user" => %{"phone" => phone}})
+
+  # A client IP of the test's own, so the per-IP cap other tests use up hides nothing.
+  defp from_ip(conn),
+    do: put_req_header(conn, "fly-client-ip", "test-#{System.unique_integer([:positive])}")
+
   defp wrong(code), do: if(code == "000000", do: "111111", else: "000000")
 
   describe "POST /login/code" do
@@ -115,12 +122,102 @@ defmodule Web.UserSessionControllerTest do
     end
   end
 
+  describe "text login" do
+    test "is off without Twilio: a number goes back to the email form", %{conn: conn} do
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+
+      conn = conn |> from_ip() |> request_text("604-555-1234")
+
+      assert redirected_to(conn) == ~p"/login"
+      refute get_session(conn, :login_phone)
+      refute_received {:text, _, _}
+    end
+
+    test "is off without Twilio: a texted code can't log in", %{conn: conn} do
+      conn =
+        post(conn, ~p"/login", %{"user" => %{"phone" => "+16045551234", "code" => "123456"}})
+
+      refute get_session(conn, :user_token)
+    end
+
+    test "texts a manager a code, and says the same as for anyone", %{conn: conn} do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+
+      conn = conn |> from_ip() |> request_text("(604) 555-1234")
+      assert redirected_to(conn) == ~p"/login/code"
+      assert get_session(conn, :login_phone) == "+16045551234"
+      assert_received {:text, "+16045551234", _body}
+
+      conn = build_conn() |> from_ip() |> request_text("604-555-9999")
+      assert redirected_to(conn) == ~p"/login/code"
+      assert get_session(conn, :login_phone) == "+16045559999"
+      refute_received {:text, _, _}
+    end
+
+    test "asks again for what isn't a number", %{conn: conn} do
+      text_login_fixture()
+
+      conn = conn |> from_ip() |> request_text("555-1234")
+
+      assert redirected_to(conn) == ~p"/login?with=phone"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "area code"
+    end
+
+    test "stops texting after 3 requests for one number", %{conn: conn} do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "busy@example.com", phone: "604-555-7777"})
+      conn = from_ip(conn)
+
+      for _ <- 1..4 do
+        request_text(conn, "604-555-7777")
+        App.Repo.delete_all(UserToken)
+      end
+
+      assert length(sent_texts()) == 3
+    end
+
+    test "logs in with the texted code", %{conn: conn} do
+      text_login_fixture()
+      team = team_fixture()
+      manager_fixture(team, %{email: "pat@example.com", phone: "604-555-1234"})
+      code = text_code_fixture("+16045551234")
+
+      conn =
+        post(conn, ~p"/login", %{"user" => %{"phone" => "+16045551234", "code" => code}})
+
+      assert get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/#{team.subdomain}"
+    end
+
+    test "a wrong code goes back to the code page, keeping the number", %{conn: conn} do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+      code = text_code_fixture("+16045551234")
+
+      conn =
+        post(conn, ~p"/login", %{"user" => %{"phone" => "+16045551234", "code" => wrong(code)}})
+
+      refute get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/login/code"
+      assert get_session(conn, :login_phone) == "+16045551234"
+    end
+  end
+
   describe "DELETE /logout" do
     test "logs the user out", %{conn: conn} do
       conn = conn |> log_in_user(user_fixture()) |> delete(~p"/logout")
 
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
+    end
+  end
+
+  defp sent_texts(acc \\ []) do
+    receive do
+      {:text, _to, body} -> sent_texts([body | acc])
+    after
+      0 -> acc
     end
   end
 
