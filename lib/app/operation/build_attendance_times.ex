@@ -6,9 +6,10 @@ defmodule App.Operation.BuildAttendanceTimes do
   # loads the scans.
   #
   # - The latest scan of each kind wins, so scanning again fixes a mistake.
-  # - Arriving up to 30 minutes before the start counts as the start, and leaving up to
-  #   30 minutes after the end counts as the end. Earlier arrivals and later departures
-  #   keep their own time: they came to set up or stayed to pack.
+  # - Arriving within 30 minutes of the start, early or late, counts as the start.
+  #   Leaving within 30 minutes of the end, early or late, counts as the end. Anything
+  #   further out keeps its own time: they came to set up, came late, left early, or
+  #   stayed to pack.
   # - A missing arrival uses the start, and a missing departure the end, with a note.
   # - Leaving at or before arriving can't be sent: the times need fixing first.
   @grace_minutes 30
@@ -58,18 +59,14 @@ defmodule App.Operation.BuildAttendanceTimes do
     |> Enum.max_by(&{DateTime.to_unix(&1.scanned_at, :microsecond), &1.id}, fn -> nil end)
   end
 
-  defp snap_arrival(%Activity{started_at: started_at}, time) do
-    grace_start = DateTime.add(started_at, -@grace_minutes, :minute)
-    if within?(time, grace_start, started_at), do: started_at, else: time
-  end
+  defp snap_arrival(%Activity{started_at: started_at}, time), do: snap(time, started_at)
+  defp snap_departure(%Activity{finished_at: finished_at}, time), do: snap(time, finished_at)
 
-  defp snap_departure(%Activity{finished_at: finished_at}, time) do
-    grace_end = DateTime.add(finished_at, @grace_minutes, :minute)
-    if within?(time, finished_at, grace_end), do: finished_at, else: time
+  defp snap(time, target) do
+    if abs(DateTime.diff(time, target, :second)) <= @grace_minutes * 60,
+      do: target,
+      else: time
   end
-
-  defp within?(time, from, to),
-    do: DateTime.compare(time, from) != :lt and DateTime.compare(time, to) != :gt
 
   # D4H keeps whole minutes, so seconds would show as a change that isn't one.
   defp truncate(datetime),

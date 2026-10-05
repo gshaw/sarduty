@@ -2,8 +2,9 @@
 
 A team admin makes an attendance link for one activity from its **Take attendance** page
 ([ActivityTakeAttendanceLive](../lib/web/live/activity_take_attendance_live.ex)). Whoever
-holds the link opens it on a phone at `/attendance/<token>`
-([AttendanceLinkLive](../lib/web/live/attendance_link_live.ex)). They scan each member's ID
+holds the link opens it on a phone
+([AttendanceLinkLive](../lib/web/live/attendance_link_live.ex)). The page shows a short
+link, `/s/<code>`, that redirects to `/attendance/<token>`. They scan each member's ID
 card as they arrive and leave, or find a member by name. Issue #139 has the design and
 the D4H test it rests on.
 
@@ -14,9 +15,13 @@ the D4H test it rests on.
   nothing else: no contact details, no other activity. The token is 32 random bytes; the
   database keeps its SHA-256 for lookups and the token itself encrypted, so the admin can
   copy the link again.
-- **A link closes.** Making a new link closes the old ones, a team admin can close it, and
-  it stops a day after the activity ends. The door's page looks the link up again for
-  every scan, so closing it stops an open page at once.
+- **A link is open until it closes.** It opens when it's made, and anyone holding it can
+  record arrivals and departures. It closes when a send to D4H goes through for every
+  change, when a team admin closes it, or when a new link replaces it. As a backstop, it
+  stops working 7 days after the activity ends, so a forgotten link dies. The door's page
+  looks the link up again for every scan, so closing it stops an open page at once.
+- **The short link dies with it.** Closing or replacing a link deletes its short link,
+  and the short link expires on the same backstop.
 - **Only this team's cards count.** A card from another team, a cancelled card, or a
   member who has left records nothing. A link to another site is refused, as on the
   verify site, and the scanner never follows it.
@@ -24,9 +29,23 @@ the D4H test it rests on.
   moment it happened and, when the person at the door typed one, the time it stands for.
 - **Times come from one pure function**,
   [BuildAttendanceTimes](../lib/app/operation/build_attendance_times.ex). The latest scan
-  of each kind wins. Arriving up to 30 minutes before the start counts as the start, and
-  leaving up to 30 minutes after the end counts as the end. A missing scan uses the
-  activity's time and says so. Leaving before arriving can't be sent.
+  of each kind wins. Arriving within 30 minutes of the start, early or late, counts as the
+  start. Leaving within 30 minutes of the end, early or late, counts as the end. Andrew
+  confirmed both sides on #139. A missing scan uses the activity's time and says so.
+  Leaving before arriving can't be sent.
+
+## Short links
+
+[ShortLink](../lib/app/model/short_link.ex) is generic: any feature can make one with
+`ShortLink.create!/2`. `GET /s/:code`
+([ShortLinkController](../lib/web/controllers/short_link_controller.ex)) redirects to the
+target, or shows the not-found page for a missing or expired code.
+
+- Codes are 8 lowercase characters from an alphabet without 0, o, 1, l, or i, about 40
+  bits. They look nothing like an ID card's uppercase `XXXX-XXXX` code at `/verify/:code`.
+- The target is a path, stored encrypted, since it can hold a secret token.
+- [Web.ShortLinkLimit](../lib/web/short_link_limit.ex) allows 20 misses per IP every 10
+  minutes, so the codes cannot be swept.
 
 ## The scanner
 

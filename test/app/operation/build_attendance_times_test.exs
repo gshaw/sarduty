@@ -20,37 +20,48 @@ defmodule App.Operation.BuildAttendanceTimesTest do
 
   defp times(scans), do: BuildAttendanceTimes.call(@activity, scans)
 
-  test "an arrival up to 30 minutes early counts as the start" do
-    [row] =
-      times([
-        scan(@mei, "arrived", ~U[2026-10-10 08:40:00Z]),
-        scan(@mei, "left", ~U[2026-10-10 14:00:00Z])
-      ])
-
-    assert row.arrived_at == ~U[2026-10-10 09:00:00Z]
-    assert row.left_at == ~U[2026-10-10 14:00:00Z]
-    assert row.notes == []
-  end
-
-  test "an earlier arrival keeps its own time, and so does a late one" do
+  test "an arrival within 30 minutes of the start, early or late, counts as the start" do
     [mei, raj] =
       times([
-        scan(@mei, "arrived", ~U[2026-10-10 08:10:00Z]),
-        scan(@raj, "arrived", ~U[2026-10-10 09:20:00Z])
+        scan(@mei, "arrived", ~U[2026-10-10 08:30:00Z]),
+        scan(@raj, "arrived", ~U[2026-10-10 09:30:00Z])
       ])
 
-    assert mei.arrived_at == ~U[2026-10-10 08:10:00Z]
-    assert raj.arrived_at == ~U[2026-10-10 09:20:00Z]
+    assert mei.arrived_at == ~U[2026-10-10 09:00:00Z]
+    assert raj.arrived_at == ~U[2026-10-10 09:00:00Z]
+    assert mei.notes == [:no_departure]
   end
 
-  test "leaving up to 30 minutes late counts as the end, and later keeps its time" do
+  test "an arrival more than 30 minutes from the start keeps its own time" do
     [mei, raj] =
       times([
-        scan(@mei, "left", ~U[2026-10-10 15:25:00Z]),
-        scan(@raj, "left", ~U[2026-10-10 16:00:00Z])
+        scan(@mei, "arrived", ~U[2026-10-10 08:29:00Z]),
+        scan(@raj, "arrived", ~U[2026-10-10 09:31:00Z])
+      ])
+
+    assert mei.arrived_at == ~U[2026-10-10 08:29:00Z]
+    assert raj.arrived_at == ~U[2026-10-10 09:31:00Z]
+  end
+
+  test "leaving within 30 minutes of the end, early or late, counts as the end" do
+    [mei, raj] =
+      times([
+        scan(@mei, "left", ~U[2026-10-10 14:30:00Z]),
+        scan(@raj, "left", ~U[2026-10-10 15:25:00Z])
       ])
 
     assert mei.left_at == ~U[2026-10-10 15:00:00Z]
+    assert raj.left_at == ~U[2026-10-10 15:00:00Z]
+  end
+
+  test "leaving more than 30 minutes from the end keeps its own time" do
+    [mei, raj] =
+      times([
+        scan(@mei, "left", ~U[2026-10-10 14:00:00Z]),
+        scan(@raj, "left", ~U[2026-10-10 16:00:00Z])
+      ])
+
+    assert mei.left_at == ~U[2026-10-10 14:00:00Z]
     assert raj.left_at == ~U[2026-10-10 16:00:00Z]
   end
 
@@ -78,10 +89,10 @@ defmodule App.Operation.BuildAttendanceTimesTest do
   test "a typed time stands in for the moment of the scan" do
     [row] =
       times([
-        scan(@mei, "arrived", ~U[2026-10-10 12:00:00Z], override_at: ~U[2026-10-10 09:15:00Z])
+        scan(@mei, "arrived", ~U[2026-10-10 12:00:00Z], override_at: ~U[2026-10-10 09:45:00Z])
       ])
 
-    assert row.arrived_at == ~U[2026-10-10 09:15:00Z]
+    assert row.arrived_at == ~U[2026-10-10 09:45:00Z]
   end
 
   test "leaving before arriving can't be sent" do
@@ -96,7 +107,7 @@ defmodule App.Operation.BuildAttendanceTimesTest do
   end
 
   test "times drop their seconds, as D4H keeps whole minutes" do
-    [row] = times([scan(@mei, "arrived", ~U[2026-10-10 09:20:42.123456Z])])
-    assert row.arrived_at == ~U[2026-10-10 09:20:00Z]
+    [row] = times([scan(@mei, "arrived", ~U[2026-10-10 09:50:42.123456Z])])
+    assert row.arrived_at == ~U[2026-10-10 09:50:00Z]
   end
 end

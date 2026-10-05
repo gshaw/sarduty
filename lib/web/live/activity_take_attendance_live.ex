@@ -4,6 +4,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Model.Activity
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
+  alias App.Model.ShortLink
   alias App.Operation.BuildAttendanceTimes
   alias App.Operation.CloseAttendanceLink
   alias App.Operation.CreateAttendanceLink
@@ -86,10 +87,9 @@ defmodule Web.ActivityTakeAttendanceLive do
         scan each member's ID card as they arrive and leave. They do not need an account.
       </p>
       <p>
-        The link works until {Service.Format.datetime_medium(
-          AttendanceLink.expires_at(@activity),
-          @activity.team.timezone
-        )}, a day after the activity ends. Anyone with it sees your members' names.
+        The link works from when you make it until you close it. If nobody closes it, it stops
+        on {expires_text(@activity)}, a week after the activity ends. Anyone with it sees your
+        members' names.
       </p>
       <.button id="create-link" variant={:success} phx-click="create-link">
         Make attendance link
@@ -102,26 +102,41 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <div id="open-link">
       <p>
-        Send this link to the person taking attendance at the door. It works until {Service.Format.datetime_medium(
-          AttendanceLink.expires_at(@activity),
-          @activity.team.timezone
-        )}.
+        Send this link to the person taking attendance at the door. It works until you close
+        it, or until {expires_text(@activity)} at the latest.
       </p>
       <div class="flex gap-2 items-center">
         <input
           id="attendance-link-url"
           type="text"
           readonly
-          value={url(~p"/attendance/#{@link.token}")}
-          class="input w-full font-mono text-sm"
+          value={link_url(@link)}
+          class="input w-full max-w-sm font-mono"
         />
         <.button
           id="copy-link"
           type="button"
-          phx-click={JS.dispatch("sarduty:copy", to: "#attendance-link-url")}
+          phx-click={
+            JS.dispatch("sarduty:copy", to: "#attendance-link-url", detail: %{status: "#copy-status"})
+          }
         >
           Copy link
         </.button>
+        <.button
+          id="share-link"
+          type="button"
+          phx-hook="ShareLink"
+          data-url={link_url(@link)}
+          hidden
+        >
+          Share link
+        </.button>
+        <span
+          id="copy-status"
+          role="status"
+          phx-update="ignore"
+          class="text-success-1 font-semibold"
+        ></span>
       </div>
       <.form_actions class="mt-p05">
         <.button
@@ -144,6 +159,18 @@ defmodule Web.ActivityTakeAttendanceLive do
     """
   end
 
+  defp expires_text(activity),
+    do:
+      activity
+      |> AttendanceLink.expires_at()
+      |> Service.Format.datetime_medium(activity.team.timezone)
+
+  # Links made before short links have none, so they show the long one.
+  defp link_url(%AttendanceLink{short_link: %ShortLink{} = short_link}),
+    do: url(~p"/s/#{short_link.code}")
+
+  defp link_url(%AttendanceLink{token: token}), do: url(~p"/attendance/#{token}")
+
   attr :times, :list, required: true
   attr :activity, :any, required: true
 
@@ -159,8 +186,8 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <p>
       {Service.Format.count(length(@times), one: "%d member", many: "%d members")}. SAR Duty uses
-      the start time for anyone who arrives up to {BuildAttendanceTimes.grace_minutes()} minutes
-      early, and the end time for anyone who leaves up to {BuildAttendanceTimes.grace_minutes()} minutes late.
+      the start time for anyone who arrives within {BuildAttendanceTimes.grace_minutes()} minutes
+      of the start, early or late. It uses the end time for anyone who leaves within {BuildAttendanceTimes.grace_minutes()} minutes of the end.
     </p>
     <.table id="times" rows={@times} class="table-striped w-fit">
       <:col :let={row} label="Name">{row.member.name}</:col>

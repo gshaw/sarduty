@@ -170,8 +170,9 @@ defmodule Web.AttendanceLinkLiveTest do
     assert scans(activity) == []
   end
 
-  test "the link closes a day after the activity ends", %{conn: conn, team: team} do
-    ended = DateTime.utc_now() |> DateTime.add(-25, :hour) |> DateTime.truncate(:second)
+  test "the link stops working a week after the activity ends", %{conn: conn, team: team} do
+    ended = DateTime.utc_now() |> DateTime.add(-7, :day) |> DateTime.add(-1, :minute)
+    ended = DateTime.truncate(ended, :second)
 
     activity =
       activity_fixture(team, %{started_at: DateTime.add(ended, -1, :hour), finished_at: ended})
@@ -179,5 +180,16 @@ defmodule Web.AttendanceLinkLiveTest do
     link = CreateAttendanceLink.call(team, activity, user_fixture(), DateTime.utc_now())
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
     assert has_element?(lv, "#link-closed")
+  end
+
+  test "the link still works days after the activity ends", %{conn: conn, team: team} do
+    ended = DateTime.utc_now() |> DateTime.add(-6, :day) |> DateTime.truncate(:second)
+
+    activity =
+      activity_fixture(team, %{started_at: DateTime.add(ended, -1, :hour), finished_at: ended})
+
+    link = CreateAttendanceLink.call(team, activity, user_fixture(), DateTime.utc_now())
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+    assert has_element?(lv, "#activity-summary")
   end
 end

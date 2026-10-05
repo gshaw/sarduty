@@ -6,6 +6,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
 
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
+  alias App.Model.ShortLink
   alias App.Repo
 
   setup %{conn: conn} do
@@ -28,11 +29,14 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
 
     lv |> element("#no-link #create-link") |> render_click()
     link = AttendanceLink.find_current(team, activity)
-    assert has_element?(lv, ~s|#attendance-link-url[value$="/attendance/#{link.token}"]|)
+    assert has_element?(lv, ~s|#attendance-link-url[value$="/s/#{link.short_link.code}"]|)
+    assert has_element?(lv, ~s|#share-link[hidden][data-url$="/s/#{link.short_link.code}"]|)
+    assert has_element?(lv, "#copy-status[role=status]")
 
     lv |> element("#close-link") |> render_click()
     assert has_element?(lv, "#no-link")
     assert Repo.reload(link).closed_at
+    refute Repo.get(ShortLink, link.short_link_id)
   end
 
   test "a new link closes the old one", %{conn: conn, team: team, activity: activity} do
@@ -42,6 +46,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
 
     lv |> element("#open-link #create-link") |> render_click()
     assert Repo.reload(first).closed_at
+    refute Repo.get(ShortLink, first.short_link_id)
     refute AttendanceLink.find_current(team, activity).id == first.id
   end
 

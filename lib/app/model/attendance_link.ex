@@ -5,24 +5,29 @@ defmodule App.Model.AttendanceLink do
   alias App.Field.EncryptedString
   alias App.Model.Activity
   alias App.Model.AttendanceLink
+  alias App.Model.ShortLink
   alias App.Model.Team
   alias App.Repo
 
   # A link a team admin makes so someone at the door can take attendance for one
   # activity, with no account. The token is the secret: whoever holds the link can record
-  # scans and see the team's member names, and nothing else. It works until it's closed
-  # or a day after the activity ends.
+  # scans and see the team's member names, and nothing else. It opens when it's made and
+  # works until it's closed: by a send to D4H, by a team admin, or by a new link. A week
+  # after the activity ends it stops anyway, so a forgotten link dies.
   schema "attendance_links" do
     belongs_to :team, Team
     belongs_to :activity, Activity
     belongs_to :created_by_user, User
+    belongs_to :short_link, ShortLink
     field :token, EncryptedString, redact: true
     field :token_hash, :string
     field :closed_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
-  @open_hours_after_finish 24
+  @open_days_after_finish 7
+
+  def open_days_after_finish, do: @open_days_after_finish
 
   def generate_token, do: 32 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
 
@@ -31,7 +36,7 @@ defmodule App.Model.AttendanceLink do
 
   @doc "When the link stops working, unless it's closed first."
   def expires_at(%Activity{finished_at: finished_at}),
-    do: DateTime.add(finished_at, @open_hours_after_finish, :hour)
+    do: DateTime.add(finished_at, @open_days_after_finish, :day)
 
   def open?(%AttendanceLink{closed_at: nil, activity: %Activity{} = activity}, now),
     do: DateTime.before?(now, expires_at(activity))
@@ -57,14 +62,26 @@ defmodule App.Model.AttendanceLink do
     |> where([l], is_nil(l.closed_at))
     |> order_by([l], desc: l.id)
     |> limit(1)
-    |> preload(activity: :team)
+    |> preload([:short_link, activity: :team])
     |> Repo.one()
   end
 
+  @doc "Closes the activity's open links and deletes their short links."
   def close_all!(%Team{} = team, %Activity{} = activity, now) do
-    AttendanceLink
-    |> where([l], l.team_id == ^team.id and l.activity_id == ^activity.id)
-    |> where([l], is_nil(l.closed_at))
-    |> Repo.update_all(set: [closed_at: now, updated_at: now])
+    open =
+      AttendanceLink
+      |> where([l], l.team_id == ^team.id and l.activity_id == ^activity.id)
+      |> where([l], is_nil(l.closed_at))
+
+    {:ok, result} =
+      Repo.transaction(fn ->
+        short_link_ids =
+          open |> where([l], not is_nil(l.short_link_id)) |> select([l], l.short_link_id)
+
+        ShortLink.delete_all!(team, Repo.all(short_link_ids))
+        Repo.update_all(open, set: [closed_at: now, updated_at: now])
+      end)
+
+    result
   end
 end

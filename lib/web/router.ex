@@ -85,6 +85,9 @@ defmodule Web.Router do
       live "/attendance/:token", AttendanceLinkLive
     end
 
+    # Short links, such as an attendance link. Lowercase codes, unlike an ID card's.
+    get "/s/:code", ShortLinkController, :show
+
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
 
