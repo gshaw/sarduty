@@ -5,7 +5,7 @@
   <h2>Top bar</h2>
   <p>
     Navy, with the amber rule and logo. It holds the main sections and the account menu. The
-    current section is underlined in amber. On a phone it scrolls sideways.
+    current section is underlined in amber.
   </p>
   <div class="demo" style="padding: 0">
     <div class="app-bar">
@@ -23,8 +23,36 @@
     </div>
   </div>
 
+  <h3>On a phone</h3>
+  <p>
+    Below 1024px the sections, Admin, and the account menu move behind a Menu button. The
+    panel opens under the amber rule, the width of the screen, with the current section
+    marked in amber. Going to another page closes it.
+  </p>
+  <div class="demo phone-bar" style="padding: 0">
+    <div class="app-bar">
+      <a href="#" class="brand">SAR <span>Duty</span></a>
+      <button class="account" aria-expanded="true">
+        <.svg_icon name="x-mark" size={24} /> Menu
+      </button>
+    </div>
+    <nav class="phone-menu" aria-label="Main">
+      <a href="#">Dashboard</a>
+      <a href="#" aria-current="page">Activities</a>
+      <a href="#">Members</a>
+      <a href="#">Qualifications</a>
+      <a href="#">Groups</a>
+      <a href="#">Tax credit letters</a>
+      <hr />
+      <div class="note">avery@example.com</div>
+      <a href="#">Settings</a>
+      <hr />
+      <a href="#">Log out</a>
+    </nav>
+  </div>
+
   <h2>Menu</h2>
-  <p>A short list under a button. The account menu is the only one today.</p>
+  <p>A short list under a button, such as the account menu.</p>
   <div class="demo">
     <ul class="menu" role="menu" style="max-width: 240px">
       <li class="muted caption">avery@example.com</li>

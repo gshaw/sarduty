@@ -28,4 +28,27 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, ~s{#nav-admin[href="/admin"]})
     assert has_element?(lv, "#nav-dashboard[aria-current=page]")
   end
+
+  test "phones get the same links behind a menu button", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members")
+
+    assert has_element?(lv, "#phone-menu #phone-menu-button", "Menu")
+
+    assert has_element?(
+             lv,
+             ~s{#phone-menu #phone-nav-activities[href="/#{team.subdomain}/activities"]}
+           )
+
+    assert has_element?(lv, "#phone-menu #phone-nav-members[aria-current=page]")
+    assert has_element?(lv, ~s{#phone-menu #phone-nav-settings[href="/settings"]})
+    assert has_element?(lv, ~s{#phone-menu #phone-nav-log-out[href="/logout"]})
+    refute has_element?(lv, "#phone-nav-admin")
+  end
+
+  test "site admins get Admin in the phone menu", %{conn: conn, user: user} do
+    make_admin(user)
+    {:ok, lv, _html} = live(conn, ~p"/admin")
+
+    assert has_element?(lv, "#phone-menu #phone-nav-admin[aria-current=page]")
+  end
 end

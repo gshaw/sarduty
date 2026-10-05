@@ -44,6 +44,25 @@ defmodule Web.Components.NavBar do
     """
   end
 
+  slot :inner_block, required: true
+
+  # Below 1024px the bar's links and account menu move behind this button. The panel opens
+  # under the bar, and live navigation renders the page again, which closes it.
+  def site_bar_phone_menu(assigns) do
+    ~H"""
+    <details id="phone-menu" class="site-bar-phone group">
+      <summary id="phone-menu-button" aria-label="Menu">
+        <.icon name="hero-bars-3" class="size-6 group-open:hidden" />
+        <.icon name="hero-x-mark" class="hidden size-6 group-open:inline-block" />
+        <span>Menu</span>
+      </summary>
+      <nav class="site-bar-phone-panel" aria-label="Main">
+        {render_slot(@inner_block)}
+      </nav>
+    </details>
+    """
+  end
+
   def menu_divider(assigns) do
     ~H"""
     <hr />

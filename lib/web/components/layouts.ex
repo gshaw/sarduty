@@ -185,7 +185,7 @@ defmodule Web.Layouts do
           :for={{label, path} <- team_sections(@current_team)}
           kind={:custom}
           navigate={path}
-          id={"nav-" <> (label |> String.downcase() |> String.replace(" ", "-"))}
+          id={"nav-" <> nav_id(label)}
           aria-current={section_current?(@current_path, path, @current_team) && "page"}
         >
           {label}
@@ -207,10 +207,56 @@ defmodule Web.Layouts do
           current_team={@current_team}
           managed_teams={@managed_teams}
         />
+        <.phone_menu
+          current_user={@current_user}
+          current_team={@current_team}
+          managed_teams={@managed_teams}
+          current_path={@current_path}
+        />
       <% else %>
         <.button navigate="/login" size={:sm}>Log in</.button>
       <% end %>
     </.site_bar>
+    """
+  end
+
+  attr :current_user, :map, required: true
+  attr :current_team, :map, default: nil
+  attr :managed_teams, :list, default: []
+  attr :current_path, :string, default: nil
+
+  # The same links as the bar and the account menu, in one list for phones.
+  defp phone_menu(assigns) do
+    ~H"""
+    <.site_bar_phone_menu>
+      <%= if @current_team do %>
+        <.a
+          :for={{label, path} <- team_sections(@current_team)}
+          kind={:custom}
+          navigate={path}
+          id={"phone-nav-" <> nav_id(label)}
+          aria-current={section_current?(@current_path, path, @current_team) && "page"}
+        >
+          {label}
+        </.a>
+      <% end %>
+      <.a
+        :if={@current_user.is_admin}
+        id="phone-nav-admin"
+        kind={:custom}
+        navigate={~p"/admin"}
+        aria-current={admin_path?(@current_path) && "page"}
+      >
+        Admin
+      </.a>
+      <.menu_divider :if={@current_team || @current_user.is_admin} />
+      <div class="menu-note truncate">{@current_user.email}</div>
+      <.account_links
+        current_team={@current_team}
+        managed_teams={@managed_teams}
+        id_prefix="phone-"
+      />
+    </.site_bar_phone_menu>
     """
   end
 
@@ -224,6 +270,8 @@ defmodule Web.Layouts do
       {"Tax credit letters", ~p"/#{team.subdomain}/tax-credit-letters"}
     ]
   end
+
+  defp nav_id(label), do: label |> String.downcase() |> String.replace(" ", "-")
 
   # The dashboard is current only on its own page; a section is current on any page under it.
   defp section_current?(nil, _path, _team), do: false
@@ -244,22 +292,35 @@ defmodule Web.Layouts do
   defp account_menu(assigns) do
     ~H"""
     <.site_bar_menu label={@current_user.email}>
-      <%= if length(@managed_teams) > 1 do %>
-        <div class="menu-note">Your teams</div>
-        <.a
-          :for={team <- @managed_teams}
-          kind={:custom}
-          navigate={~p"/#{team.subdomain}"}
-          aria-current={@current_team && @current_team.id == team.id && "page"}
-        >
-          {team.name}
-        </.a>
-        <.menu_divider />
-      <% end %>
-      <.a kind={:custom} navigate="/settings">Settings</.a>
-      <.menu_divider />
-      <.a kind={:custom} method="delete" href="/logout">Log out</.a>
+      <.account_links current_team={@current_team} managed_teams={@managed_teams} />
     </.site_bar_menu>
+    """
+  end
+
+  attr :current_team, :map, default: nil
+  attr :managed_teams, :list, default: []
+  attr :id_prefix, :string, default: ""
+
+  # Switching teams, settings, and logging out: the account menu, and the end of the phone menu.
+  defp account_links(assigns) do
+    ~H"""
+    <%= if length(@managed_teams) > 1 do %>
+      <div class="menu-note">Your teams</div>
+      <.a
+        :for={team <- @managed_teams}
+        kind={:custom}
+        navigate={~p"/#{team.subdomain}"}
+        aria-current={@current_team && @current_team.id == team.id && "page"}
+      >
+        {team.name}
+      </.a>
+      <.menu_divider />
+    <% end %>
+    <.a id={@id_prefix <> "nav-settings"} kind={:custom} navigate="/settings">Settings</.a>
+    <.menu_divider />
+    <.a id={@id_prefix <> "nav-log-out"} kind={:custom} method="delete" href="/logout">
+      Log out
+    </.a>
     """
   end
 

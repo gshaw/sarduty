@@ -57,6 +57,59 @@
 
   .site-bar-menu > summary:hover { background: rgb(255 255 255 / 0.1); }
 
+  /* Phones and narrow windows: the links and account menu move behind a menu button. */
+  .site-bar-phone { display: none; margin-left: auto; }
+
+  .site-bar-phone > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    list-style: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    padding: var(--sp-2);
+    margin-right: calc(-1 * var(--sp-2));
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .site-bar-phone > summary::-webkit-details-marker { display: none; }
+  .site-bar-phone > summary:hover { background: rgb(255 255 255 / 0.1); }
+
+  /* Under the amber rule, the width of the screen. */
+  .site-bar-phone-panel {
+    position: absolute;
+    inset: calc(100% + 4px) 0 auto;
+    max-height: calc(100dvh - 56px);
+    overflow-y: auto;
+    padding: var(--sp-2) 0;
+    background: var(--nav);
+    border-bottom: 4px solid var(--accent);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  }
+
+  .site-bar-phone-panel a {
+    display: block;
+    padding: var(--sp-3) var(--sp-4);
+    color: #d5dbe3;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--fs-md);
+    line-height: var(--lh-md);
+  }
+
+  .site-bar-phone-panel a:hover { color: #fff; background: rgb(255 255 255 / 0.06); }
+  .site-bar-phone-panel a[aria-current="page"] { color: #fff; box-shadow: inset 4px 0 var(--accent); }
+  .site-bar-phone-panel .menu-note { padding: var(--sp-2) var(--sp-4) var(--sp-1); color: rgb(255 255 255 / 0.6); font-size: var(--fs-xs); line-height: var(--lh-xs); }
+  .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
+
+  @media (width < 64rem) {
+    .site-bar-links, .site-bar-link, .site-bar-menu { display: none; }
+    .site-bar-phone { display: block; }
+  }
+
   /* Menu: a short list under a button. */
   .menu {
     position: absolute;
