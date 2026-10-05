@@ -8,6 +8,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Operation.BuildAttendanceTimes
   alias App.Operation.CloseAttendanceLink
   alias App.Operation.CreateAttendanceLink
+  alias App.Operation.SendAttendanceToD4H
   alias App.Repo
 
   # The team admin's side of taking attendance at the door: make or close the link, and
@@ -24,6 +25,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     socket =
       socket
       |> assign(page_title: "Take attendance", activity: activity)
+      |> assign(review: nil, selected: MapSet.new(), failures: [])
       |> load_link()
       |> load_times()
 
@@ -43,6 +45,64 @@ defmodule Web.ActivityTakeAttendanceLive do
     CloseAttendanceLink.call(team, activity, DateTime.utc_now())
     {:noreply, socket |> load_link() |> put_flash(:info, "Attendance link closed.")}
   end
+
+  # Reads D4H live, like the import attendance page, so the plan matches D4H now.
+  def handle_event("review", _params, socket) do
+    %{current_team: team, activity: activity} = socket.assigns
+
+    case SendAttendanceToD4H.preview(team, activity) do
+      {:ok, review} ->
+        selected =
+          for change <- review.changes, change.selected, into: MapSet.new(), do: change.key
+
+        {:noreply, assign(socket, review: review, selected: selected, failures: [])}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_text(error))}
+    end
+  end
+
+  def handle_event("select", params, socket),
+    do: {:noreply, assign(socket, :selected, MapSet.new(params["keys"] || []))}
+
+  def handle_event("cancel-review", _params, socket),
+    do: {:noreply, assign(socket, review: nil, selected: MapSet.new())}
+
+  def handle_event("send", params, socket) do
+    %{current_team: team, activity: activity} = socket.assigns
+    keys = params["keys"] || []
+
+    case SendAttendanceToD4H.call(team, activity, keys, DateTime.utc_now()) do
+      {:ok, results} -> {:noreply, show_results(socket, results)}
+      {:error, error} -> {:noreply, put_flash(socket, :error, error_text(error))}
+    end
+  end
+
+  defp show_results(socket, results) do
+    failures = for {change, {:error, message}} <- results, do: {change, message}
+    saved = length(results) - length(failures)
+    kind = if failures == [], do: :info, else: :error
+
+    socket
+    |> assign(review: nil, selected: MapSet.new(), failures: failures)
+    |> load_link()
+    |> put_flash(kind, sent_text(saved, length(failures)))
+  end
+
+  defp sent_text(saved, 0), do: "#{count_changes(saved)} saved to D4H."
+  defp sent_text(0, failed), do: "#{count_changes(failed)} did not go through."
+
+  defp sent_text(saved, failed),
+    do: "#{count_changes(saved)} saved to D4H. #{count_changes(failed)} did not go through."
+
+  defp count_changes(n),
+    do: Service.Format.count(n, one: "%d attendance change", many: "%d attendance changes")
+
+  defp error_text(:published),
+    do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
+
+  defp error_text(:no_team_key), do: "Save the team's D4H access key in Team settings first."
+  defp error_text(error), do: "D4H did not answer. Try again. #{Exception.message(error)}"
 
   defp load_link(socket) do
     %{current_team: team, activity: activity} = socket.assigns
@@ -73,8 +133,131 @@ defmodule Web.ActivityTakeAttendanceLive do
 
     <h2 class="heading mt-p">Arrivals and departures</h2>
     <.times_section times={@times} activity={@activity} />
+
+    <h2 class="heading mt-p">Send to D4H</h2>
+    <.failures_section failures={@failures} />
+    <.send_section review={@review} selected={@selected} times={@times} activity={@activity} />
     """
   end
+
+  attr :failures, :list, required: true
+
+  defp failures_section(assigns) do
+    ~H"""
+    <div :if={@failures != []} id="failures" class="mb-p">
+      <p class="text-danger-1 font-semibold">These changes did not go through:</p>
+      <ul>
+        <li :for={{change, message} <- @failures}>{change.member.name}: {message}</li>
+      </ul>
+    </div>
+    """
+  end
+
+  attr :review, :any, required: true
+  attr :selected, :any, required: true
+  attr :times, :list, required: true
+  attr :activity, :any, required: true
+
+  defp send_section(%{review: nil} = assigns) do
+    ~H"""
+    <div id="send-start">
+      <p>
+        Review the changes before SAR Duty makes them. Members who arrived are marked attending
+        with their times. Members who signed up but did not arrive are marked absent.
+        When every change goes through, SAR Duty closes the attendance link.
+      </p>
+      <.button id="review" variant={:primary} phx-click="review" phx-disable-with="Reading D4H…">
+        Review changes
+      </.button>
+    </div>
+    """
+  end
+
+  defp send_section(%{review: %{published: true}} = assigns) do
+    ~H"""
+    <p id="published" class="text-danger-1">
+      Attendance cannot be changed once the activity is published. Unpublish it in D4H first.
+    </p>
+    """
+  end
+
+  defp send_section(assigns) do
+    %{review: review, selected: selected} = assigns
+
+    count =
+      Enum.count(review.changes, &(SendAttendanceToD4H.sendable?(&1) and &1.key in selected))
+
+    assigns = assign(assigns, :count, count)
+
+    ~H"""
+    <.form for={%{}} id="send-form" phx-change="select" phx-submit="send">
+      <p :if={@review.changes == []} id="no-changes">
+        No changes. D4H has no members signed up and nobody has arrived.
+      </p>
+      <.table
+        :if={@review.changes != []}
+        id="changes"
+        rows={@review.changes}
+        row_id={&"change-#{&1.key}"}
+        class="table-striped w-full"
+      >
+        <:col :let={change} label="" class="w-px">
+          <input
+            :if={SendAttendanceToD4H.sendable?(change)}
+            type="checkbox"
+            id={"select-#{change.key}"}
+            name="keys[]"
+            value={change.key}
+            checked={change.key in @selected}
+          />
+        </:col>
+        <:col :let={change} label="Member">
+          <label for={"select-#{change.key}"}>{change.member.name}</label>
+        </:col>
+        <:col :let={change} label="Change">
+          <span class={action_class(change.action)}>{action_text(change.action)}</span>
+        </:col>
+        <:col :let={change} label="Times" class="whitespace-nowrap tabular-nums">
+          <span :if={change.arrived_at}>
+            {Service.Format.time_short(change.arrived_at, @activity.team.timezone)}–{Service.Format.time_short(
+              change.left_at,
+              @activity.team.timezone
+            )}
+          </span>
+        </:col>
+        <:col :let={change} label="In D4H now">{status_text(change.status)}</:col>
+        <:col :let={change} label="Notes">
+          <span :for={note <- change.notes} class={["block", note_class(note)]}>
+            {note_text(note)}
+          </span>
+        </:col>
+      </.table>
+      <.form_actions class="mt-p05">
+        <.button id="send" variant={:success} disabled={@count == 0} phx-disable-with="Sending…">
+          Send {Service.Format.count(@count, one: "%d change", many: "%d changes")}
+        </.button>
+        <.button type="button" phx-click="cancel-review">Cancel</.button>
+      </.form_actions>
+    </.form>
+    """
+  end
+
+  defp action_text(:update), do: "Attended"
+  defp action_text(:create), do: "Attended, not signed up"
+  defp action_text(:absent), do: "Absent"
+  defp action_text(:unchanged), do: "No change"
+  defp action_text(:blocked), do: "Fix the times first"
+
+  defp action_class(:absent), do: "text-danger-1 font-semibold"
+  defp action_class(:blocked), do: "text-danger-1"
+  defp action_class(:unchanged), do: "text-secondary-1"
+  defp action_class(_action), do: "text-success-1 font-semibold"
+
+  defp status_text(nil), do: "Not listed"
+  defp status_text("requested"), do: "Signed up"
+  defp status_text("attending"), do: "Attending"
+  defp status_text("absent"), do: "Absent"
+  defp status_text(status), do: status
 
   attr :link, :any, required: true
   attr :activity, :any, required: true
@@ -205,9 +388,13 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   defp note_class(:left_before_arriving), do: "text-danger-1"
+  defp note_class(:attending_without_scan), do: "text-warning-1"
   defp note_class(_note), do: "text-secondary-1"
 
   defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."
   defp note_text(:no_departure), do: "No departure scan. Uses the end time."
   defp note_text(:left_before_arriving), do: "Left before arriving. Fix the times at the door."
+
+  defp note_text(:attending_without_scan),
+    do: "Attending in D4H, but no scan. Check before sending."
 end

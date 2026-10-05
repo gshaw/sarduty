@@ -52,3 +52,24 @@ target, or shows the not-found page for a missing or expired code.
 The door's page uses the verify site's `QRScanner` hook with `data-continuous`: it keeps
 the camera running after a read, waits 1.5 seconds, and ignores the same card until it has
 been out of view for 5 seconds.
+
+## Sending to D4H
+
+The **Send to D4H** part of the Take attendance page
+([SendAttendanceToD4H](../lib/app/operation/send_attendance_to_d4h.ex)) reads the
+activity's attendance from D4H live, plans one change per member, and shows them with
+checkboxes. Sending reads D4H again and plans again before it writes. When every change
+goes through, it closes the attendance link; a failure leaves it open so the door can
+still fix times.
+
+- **A member with a D4H row is always changed, never added.** D4H accepts a second row
+  for the same member and counts their hours twice (tested on 2026-10-04, see #139), so
+  only a member D4H has no row for gets a `POST`. Writes don't retry: a retried `POST`
+  could add someone twice, and a second send plans from what D4H has by then.
+- **Signed up and did not arrive means absent**, checked by default. A member already
+  attending in D4H with no scan is offered as absent but unchecked, since someone may
+  have marked them by hand.
+- **A published activity is refused.** D4H's published flag is read live, not from the
+  nightly copy, and the page says to unpublish it in D4H first.
+- D4H works out the duration from the times. The local copy shows the new attendance
+  after the next refresh.
