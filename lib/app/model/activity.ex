@@ -8,7 +8,6 @@ defmodule App.Model.Activity do
   alias App.Model.Attendance
   alias App.Model.Team
   alias App.Repo
-  alias App.Validate
 
   def primary_hours_tag, do: "Primary Hours"
   def secondary_hours_tag, do: "Secondary Hours"
@@ -36,6 +35,8 @@ defmodule App.Model.Activity do
 
   def build_new_changeset(params \\ %{}), do: build_changeset(%Activity{}, params)
 
+  # Rows are copies of D4H, so they take whatever D4H holds: no length or format
+  # rules. A refresh that rejects one row fails for the whole team.
   def build_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
@@ -63,8 +64,6 @@ defmodule App.Model.Activity do
       :started_at,
       :finished_at
     ])
-    |> Validate.name(:title)
-    |> Validate.address(:address)
   end
 
   def get_all(team_id) do
