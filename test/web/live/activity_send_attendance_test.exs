@@ -210,5 +210,41 @@ defmodule Web.ActivitySendAttendanceTest do
     assert AttendanceLink.find_current(ctx.team, ctx.activity)
   end
 
+  test "when D4H cannot find the activity, review says it may have been deleted", ctx do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"title" => "Not Found"})
+    end)
+
+    lv = open(ctx)
+    lv |> element("#review") |> render_click()
+
+    assert render(lv) =~
+             "It may have been deleted or changed in D4H. D4H API error (404): Not Found"
+  end
+
+  test "a write D4H refuses with a 400 says the activity may have changed", ctx do
+    stub_d4h(ctx)
+    lv = open(ctx)
+    lv |> element("#review") |> render_click()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+
+      case {conn.method, path} do
+        {"GET", "/exercises/" <> _} -> Req.Test.json(conn, %{"published" => false})
+        {"GET", "/attendance"} -> Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+        _ -> conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"title" => "Bad Request"})
+      end
+    end)
+
+    lv |> form("#send-form") |> render_submit(%{"keys" => all_keys(ctx)})
+
+    assert has_element?(
+             lv,
+             "#failures",
+             "The activity may have been deleted or changed in D4H. D4H API error (400): Bad Request"
+           )
+  end
+
   defp all_keys(ctx), do: Enum.map([ctx.mei, ctx.lena, ctx.sam], &"member-#{&1.id}")
 end

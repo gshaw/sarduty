@@ -29,7 +29,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
 
     lv |> element("#no-link #create-link") |> render_click()
     link = AttendanceLink.find_current(team, activity)
-    assert has_element?(lv, ~s|#attendance-link-url[value$="/s/#{link.short_link.code}"]|)
+    assert has_element?(lv, ~s|#attendance-link-url[href$="/s/#{link.short_link.code}"]|)
     assert has_element?(lv, ~s|#share-link[hidden][data-url$="/s/#{link.short_link.code}"]|)
     assert has_element?(lv, "#copy-status[role=status]")
 

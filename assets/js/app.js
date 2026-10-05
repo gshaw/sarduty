@@ -39,15 +39,15 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
-// A button with JS.dispatch("sarduty:copy", to: "#input") copies the input's value. With
-// detail: %{status: "#id"}, that element says "Copied" for 2 seconds. Where the browser
-// will not copy, the input's text is selected instead.
+// A button with JS.dispatch("sarduty:copy", to: "#input") copies the input's value, or a
+// link's href. With detail: %{status: "#id"}, that element says "Copied" for 2 seconds.
+// Where the browser will not copy, an input's text is selected instead.
 window.addEventListener("sarduty:copy", async event => {
   const input = event.target
   try {
-    await navigator.clipboard.writeText(input.value)
+    await navigator.clipboard.writeText(input.value ?? input.href)
   } catch {
-    input.select()
+    input.select?.()
     return
   }
   const status = event.detail?.status && document.querySelector(event.detail.status)

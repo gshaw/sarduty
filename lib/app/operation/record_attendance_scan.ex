@@ -1,4 +1,5 @@
 defmodule App.Operation.RecordAttendanceScan do
+  alias App.Model.Activity
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
@@ -29,6 +30,14 @@ defmodule App.Operation.RecordAttendanceScan do
     else
       nil -> {:error, :not_found}
       error -> error
+    end
+  end
+
+  @doc "Removes one of the link's activity's scans, while the link is open."
+  def undo(%AttendanceLink{} = link, scan_id, now) do
+    with :ok <- check_open(link, now) do
+      AttendanceScan.delete(link.activity, scan_id)
+      :ok
     end
   end
 
@@ -66,7 +75,7 @@ defmodule App.Operation.RecordAttendanceScan do
   defp record(link, member, kind, method, override, now) do
     timezone = link.activity.team.timezone
 
-    case override_at(override, now, timezone) do
+    case override_at(override, link.activity, now, timezone) do
       {:ok, override_at} ->
         scan =
           AttendanceScan.insert!(%AttendanceScan{
@@ -88,25 +97,53 @@ defmodule App.Operation.RecordAttendanceScan do
   end
 
   @doc """
-  The time typed at the door, "HH:MM" on the day of the scan in the team's time zone, as
-  UTC. `{:ok, nil}` when nothing was typed, and `:error` when it isn't a time.
+  The time typed at the door, "HH:MM" in the team's time zone, as UTC. It goes on the
+  date that puts it nearest the activity, so a catch-up the next morning lands on the
+  activity's day, and a time after midnight lands on the right side of it. Between
+  dates equally near, as on a multi-day activity, the one nearest `now` wins. `{:ok, nil}`
+  when nothing was typed, and `:error` when it isn't a time.
   """
-  def override_at(text, now, timezone) do
+  def override_at(text, %Activity{} = activity, now, timezone) do
     case String.trim(text || "") do
       "" ->
         {:ok, nil}
 
       text ->
-        with {:ok, time} <- parse_time(text),
-             date = now |> DateTime.shift_zone!(timezone) |> DateTime.to_date(),
-             {:ok, local} <- DateTime.new(date, time, timezone) do
-          {:ok, to_utc(local)}
-        else
-          # A time skipped by a daylight saving change, or one that happens twice.
-          {:gap, _before, after_gap} -> {:ok, to_utc(after_gap)}
-          {:ambiguous, first, _second} -> {:ok, to_utc(first)}
+        case parse_time(text) do
+          {:ok, time} -> {:ok, nearest(time, activity, now, timezone)}
           _ -> :error
         end
+    end
+  end
+
+  defp nearest(time, activity, now, timezone) do
+    first = activity.started_at |> local_date(timezone) |> Date.add(-1)
+    last = activity.finished_at |> local_date(timezone) |> Date.add(1)
+    dates = Date.range(first, last)
+
+    dates
+    |> Enum.map(&on_date(&1, time, timezone))
+    |> Enum.min_by(&{distance(&1, activity), abs(DateTime.diff(&1, now))})
+  end
+
+  defp local_date(datetime, timezone),
+    do: datetime |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+
+  defp on_date(date, time, timezone) do
+    case DateTime.new(date, time, timezone) do
+      {:ok, local} -> to_utc(local)
+      # A time skipped by a daylight saving change, or one that happens twice.
+      {:gap, _before, after_gap} -> to_utc(after_gap)
+      {:ambiguous, first, _second} -> to_utc(first)
+    end
+  end
+
+  # Seconds from the activity's start-to-end window, 0 inside it.
+  defp distance(at, %Activity{started_at: started_at, finished_at: finished_at}) do
+    cond do
+      DateTime.before?(at, started_at) -> DateTime.diff(started_at, at)
+      DateTime.after?(at, finished_at) -> DateTime.diff(at, finished_at)
+      true -> 0
     end
   end
 

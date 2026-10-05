@@ -14,15 +14,18 @@ defmodule App.Operation.CreateAttendanceLink do
   def call(%Team{} = team, %Activity{team_id: team_id} = activity, %User{} = user, now)
       when team_id == team.id do
     token = AttendanceLink.generate_token()
+    # The link's 30 days count from here, so it's stored as made, to the microsecond.
+    {microsecond, _precision} = now.microsecond
+    made_at = %{now | microsecond: {microsecond, 6}}
 
     {:ok, link} =
       Repo.transaction(fn ->
-        AttendanceLink.close_all!(team, activity, now)
+        AttendanceLink.close_all!(team, activity, made_at)
 
         short_link =
           ShortLink.create!("/attendance/#{token}",
             team_id: team.id,
-            expires_at: AttendanceLink.expires_at(activity)
+            expires_at: AttendanceLink.expires_at(made_at)
           )
 
         AttendanceLink.insert!(%AttendanceLink{
@@ -31,7 +34,9 @@ defmodule App.Operation.CreateAttendanceLink do
           created_by_user_id: user.id,
           short_link_id: short_link.id,
           token: token,
-          token_hash: AttendanceLink.hash_token(token)
+          token_hash: AttendanceLink.hash_token(token),
+          inserted_at: made_at,
+          updated_at: made_at
         })
       end)
 

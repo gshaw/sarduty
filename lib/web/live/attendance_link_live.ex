@@ -14,6 +14,8 @@ defmodule Web.AttendanceLinkLive do
   # so closing it stops the page at once.
   @max_name_matches 8
   @recent_count 30
+  # A good scan's confirmation shows this long, then the page is ready for the next.
+  @confirm_ms 3000
 
   def mount(%{"token" => token}, _session, socket) do
     now = DateTime.utc_now()
@@ -54,11 +56,21 @@ defmodule Web.AttendanceLinkLive do
 
   def handle_info(:attendance_scans_changed, socket), do: {:noreply, load_scans(socket)}
 
+  # Only clears the confirmation it was set for, not a newer one.
+  def handle_info({:clear_message, message}, socket) do
+    if socket.assigns[:message] == message,
+      do: {:noreply, assign(socket, message: nil)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("set_kind", %{"kind" => kind}, socket) when kind in ["arrived", "left"],
     do: {:noreply, assign(socket, kind: kind, message: nil)}
 
   def handle_event("set_override", %{"override" => override}, socket),
     do: {:noreply, assign(socket, override: override)}
+
+  def handle_event("clear_override", _params, socket),
+    do: {:noreply, assign(socket, override: "")}
 
   def handle_event("search", %{"search" => search}, socket),
     do:
@@ -88,19 +100,38 @@ defmodule Web.AttendanceLinkLive do
   end
 
   def handle_event("undo", %{"id" => scan_id}, socket) do
-    AttendanceScan.delete(socket.assigns.activity, scan_id)
-    {:noreply, assign(socket, message: {:info, "Scan removed."})}
+    socket =
+      with_open_link(socket, fn link, now ->
+        case RecordAttendanceScan.undo(link, scan_id, now) do
+          :ok -> assign(socket, message: {:info, "Scan removed."})
+          {:error, reason} -> assign(socket, message: {:error, error_text(reason)})
+        end
+      end)
+
+    {:noreply, socket}
   end
 
   def handle_event("scan_failed", _params, socket),
     do: {:noreply, assign(socket, :scan_failed, true)}
 
   defp record(socket, record) do
+    with_open_link(socket, fn link, now ->
+      message = message(record.(link, now), socket.assigns.team)
+
+      if elem(message, 0) == :ok,
+        do: Process.send_after(self(), {:clear_message, message}, @confirm_ms)
+
+      assign(socket, message: message)
+    end)
+  end
+
+  # Looks the link up again, so a link closed since the page opened stops it at once.
+  defp with_open_link(socket, action) do
     now = DateTime.utc_now()
     link = AttendanceLink.find_by_token(socket.assigns.token)
 
     if link && AttendanceLink.open?(link, now),
-      do: assign(socket, message: message(record.(link, now), socket.assigns.team)),
+      do: action.(link, now),
       else: assign(socket, page_title: "Attendance link closed", link: nil)
   end
 
@@ -149,7 +180,7 @@ defmodule Web.AttendanceLinkLive do
     ~H"""
     <div id="link-closed">
       <h1 class="title">Attendance link closed</h1>
-      <p>This link no longer takes attendance. Ask a team admin for a new link.</p>
+      <p>This attendance link is closed. Ask a team admin for a new link.</p>
     </div>
     """
   end
@@ -193,29 +224,31 @@ defmodule Web.AttendanceLinkLive do
       {elem(@message, 1)}
     </p>
 
-    <div
-      id="scanner"
-      phx-hook="QRScanner"
-      phx-update="ignore"
-      data-continuous
-      class="group mt-p"
-    >
-      <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
-      <div class="group-data-scanning:hidden">
-        <.button
-          type="button"
-          variant={:success}
-          size={:lg}
-          class="w-full justify-center"
-          data-scan-start
-        >
-          Scan ID cards
-        </.button>
-      </div>
-      <div class="hidden group-data-scanning:block mt-2">
-        <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
+    <div id="scanner" phx-hook="QRScanner" phx-update="ignore" data-continuous class="mt-p">
+      <div data-scan-state class="group">
+        <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
+        <div class="group-data-scanning:hidden">
+          <.button
+            type="button"
+            variant={:success}
+            size={:lg}
+            class="w-full justify-center"
+            data-scan-start
+          >
+            Scan ID cards
+          </.button>
+        </div>
+        <div class="hidden group-data-scanning:block mt-2">
+          <.button type="button" class="w-full justify-center" data-scan-stop>
+            Stop scanning
+          </.button>
+        </div>
       </div>
     </div>
+    <p :if={@override != ""} id="override-note" class="mt-2 font-semibold">
+      Recording as {@override} ·
+      <.a id="clear-override" href="#" phx-click="clear_override">Clear time</.a>
+    </p>
     <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
       The camera did not start. Allow camera access, or find members by name.
     </p>
