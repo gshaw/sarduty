@@ -197,6 +197,85 @@ defmodule App.AccountsTest do
     end
   end
 
+  describe "text login codes" do
+    test "are off without Twilio: nothing is texted and no code works" do
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+
+      refute Accounts.text_login?()
+      assert Accounts.deliver_login_text("+16045551234") == :ok
+      refute_received {:text, _, _}
+      assert Repo.aggregate(UserToken, :count) == 0
+      assert Accounts.log_in_with_text_code("+16045551234", "123456") == :error
+    end
+
+    test "texts a manager at the number D4H has, however it's typed" do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "(604) 555-1234"})
+
+      code = text_code_fixture("+16045551234")
+
+      assert {:ok, %User{email: "pat@example.com"}} =
+               Accounts.log_in_with_text_code("+16045551234", code)
+    end
+
+    test "the text has the code and the domain line phones read" do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+
+      :ok = Accounts.deliver_login_text("+16045551234")
+
+      assert_received {:text, "+16045551234", body}
+      [code] = Regex.run(~r/\d{6}/, body)
+      assert body =~ ~r/@\S+ ##{code}\z/
+    end
+
+    test "sends nothing for a member who may not log in, or a number two people share" do
+      text_login_fixture()
+      team = team_fixture()
+      manager_fixture(team, %{email: "member@example.com", phone: "604-555-0001", d4h_permission: 2})
+      manager_fixture(team, %{email: "a@example.com", phone: "604-555-0002"})
+      manager_fixture(team, %{email: "b@example.com", phone: "604 555 0002"})
+
+      for phone <- ["+16045550001", "+16045550002", "+16045550003"] do
+        assert Accounts.deliver_login_text(phone) == :ok
+      end
+
+      refute_received {:text, _, _}
+      assert Repo.aggregate(UserToken, :count) == 0
+    end
+
+    test "one person listed on two teams with one number gets a code" do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+      manager_fixture(team_fixture(), %{email: "Pat@Example.com", phone: "6045551234"})
+
+      assert text_code_fixture("+16045551234") =~ ~r/\A\d{6}\z/
+    end
+
+    test "a texted code works only with the number, and an emailed one only with the email" do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+
+      texted = text_code_fixture("+16045551234")
+      assert Accounts.log_in_with_code("pat@example.com", texted) == :error
+
+      Repo.delete_all(UserToken)
+      emailed = deliver("pat@example.com")
+      assert Accounts.log_in_with_text_code("+16045551234", emailed) == :error
+    end
+
+    test "a texted code dies after 5 wrong tries" do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+      code = text_code_fixture("+16045551234")
+      wrong = if code == "000000", do: "111111", else: "000000"
+
+      for _ <- 1..5, do: Accounts.log_in_with_text_code("+16045551234", wrong)
+
+      assert Accounts.log_in_with_text_code("+16045551234", code) == :error
+    end
+  end
+
   describe "sessions" do
     test "a session token finds its user until deleted" do
       user = user_fixture()

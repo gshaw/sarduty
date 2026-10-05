@@ -13,6 +13,13 @@ TEAM_LOGO_PATH = "/Users/gerry/Developer/sarduty.mount/team-logos"
 # DEV_SEND_EMAIL = "true"
 # CLOUDFLARE_ACCOUNT_ID = ""
 # CLOUDFLARE_EMAIL_TOKEN = ""
+# Optional: text login codes through Twilio. Set all four, or there is no text login.
+# Dev logs texts instead of sending them unless DEV_SEND_SMS is set.
+# TWILIO_ACCOUNT_SID = ""
+# TWILIO_API_KEY_SID = ""
+# TWILIO_API_KEY_SECRET = ""
+# TWILIO_FROM_NUMBER = "+16045550100"
+# DEV_SEND_SMS = "true"
 # For backups/backup.sh: the public half of the backup age key (age1...).
 # BACKUP_AGE_RECIPIENT = ""
 # Optional: pinged after each successful team refresh.

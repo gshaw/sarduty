@@ -30,8 +30,8 @@ footer and the login pages, unless `DEV_SEND_EMAIL=true` and both variables belo
 a dev database is often a copy of production, so real mail could reach real members. Tests
 use `Swoosh.Adapters.Test`. Mail comes from
 `noreply@sarduty.com`: login codes, and tax credit letters with the PDF attached. Login
-is by emailed code only, so without mail nobody can log in; existing sessions last 60
-days.
+is by emailed code, or texted when [Twilio](#twilio) is set up, so without mail most
+people cannot log in; existing sessions last 60 days.
 
 - `CLOUDFLARE_ACCOUNT_ID` — required in production.
 - `CLOUDFLARE_EMAIL_TOKEN` — required in production. An account API token with only the
@@ -45,6 +45,30 @@ over 5 MiB, attachments included, is refused.
 
 Creating a tax credit letter emails it from a `Task.start`, so the "Email sent" flash
 appears before delivery is known.
+
+## Twilio
+
+[App.Adapter.Twilio](../lib/app/adapter/twilio.ex) texts login codes, posting to the
+Messages API with an API key. Optional: without all four variables the login page offers
+no text, and a posted number goes back to the email form. The account is Andrew's, with a
+number of its own for SAR Duty. D4H's callout number on the same account must not be
+used: replies to it go to D4H, and a STOP to it would block D4H callouts too, since
+Twilio honours STOP per sender number.
+
+A number logs in only when it leads to exactly one email that may log in, from the
+phones on current members. A code texted can't be entered as one emailed, or the other
+way. `Web.LoginLimit` allows 3 texts per number per 15 minutes. Dev logs each text instead
+of sending it unless `DEV_SEND_SMS=true`, like `DEV_SEND_EMAIL`. Tests ignore the
+variables and stub Twilio with `Req.Test`.
+
+- `TWILIO_ACCOUNT_SID` — the account's `AC…` id.
+- `TWILIO_API_KEY_SID` — an API key's `SK…` id. A restricted key that can only send
+  messages is enough.
+- `TWILIO_API_KEY_SECRET` — that key's secret, shown once when the key is made.
+- `TWILIO_FROM_NUMBER` — the sending number in E.164, like `+16045550100`.
+
+Not built yet: an inbound webhook for replies (`/webhooks/twilio/sms`, checking
+`X-Twilio-Signature`). Until then leave the number's incoming message webhook empty.
 
 ## Apple Wallet
 
