@@ -89,6 +89,23 @@ defmodule App.Model.Member do
       current?(member, now)
   end
 
+  @doc """
+  Whether this email is a current member on some team, whatever their permission: not
+  retired and not left. The bar an admin's email must meet to log in (#141).
+  """
+  def current_email?(email, now) do
+    email = email |> String.trim() |> String.downcase()
+
+    Member
+    |> where(
+      [m],
+      fragment("lower(?)", m.email) == ^email and
+        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
+        (is_nil(m.left_at) or m.left_at > ^now)
+    )
+    |> Repo.exists?()
+  end
+
   def permission_label(0), do: "Owner"
   def permission_label(1), do: "Editor"
   def permission_label(2), do: "Member"

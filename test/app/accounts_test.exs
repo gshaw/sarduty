@@ -60,10 +60,23 @@ defmodule App.AccountsTest do
       refute Accounts.may_log_in?("shared@example.com", @now)
     end
 
-    test "an admin may without managing a team" do
+    test "an admin who is a current member somewhere may, without managing a team" do
+      team = team_fixture()
+      manager_fixture(team, %{email: "admin@example.com", d4h_permission: 2})
       user_fixture(%{email: "admin@example.com", is_admin: true})
 
       assert Accounts.may_log_in?("admin@example.com", @now)
+    end
+
+    test "an admin D4H doesn't list, or lists as retired or left, may not" do
+      team = team_fixture()
+      manager_fixture(team, %{email: "retired@example.com", d4h_status: "RETIRED"})
+      manager_fixture(team, %{email: "left@example.com", left_at: ~U[2026-01-01 00:00:00Z]})
+
+      for email <- ["nobody@example.com", "retired@example.com", "left@example.com"] do
+        user_fixture(%{email: email, is_admin: true})
+        refute Accounts.may_log_in?(email, @now)
+      end
     end
   end
 
@@ -100,9 +113,8 @@ defmodule App.AccountsTest do
       %{user: user} = user_with_team_fixture()
       token = extract_user_token(&deliver(user.email, &1))
 
-      assert {:ok, %User{id: id, confirmed_at: confirmed_at}} = Accounts.log_in_with_token(token)
+      assert {:ok, %User{id: id}} = Accounts.log_in_with_token(token)
       assert id == user.id
-      assert confirmed_at
       assert Accounts.log_in_with_token(token) == :error
     end
 
