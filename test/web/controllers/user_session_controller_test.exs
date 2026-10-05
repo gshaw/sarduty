@@ -47,28 +47,28 @@ defmodule Web.UserSessionControllerTest do
   end
 
   describe "POST /login" do
-    test "logs in with the right code, once, and remembers the login", %{conn: conn} do
+    test "logs in with the right code, once, without a remember-me cookie", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       code = login_code_fixture(user.email)
 
       conn = log_in(conn, user.email, code)
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/#{team.subdomain}"
-      assert conn.resp_cookies["_sarduty_remember_me"]
+      refute conn.resp_cookies["_sarduty_remember_me"]
 
       conn = log_in(build_conn(), user.email, code)
       refute get_session(conn, :user_token)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "wrong or expired"
     end
 
-    test "on a shared computer, sets no remember-me cookie", %{conn: conn} do
+    test "with remember me ticked, sets the remember-me cookie", %{conn: conn} do
       %{user: user} = user_with_team_fixture()
       code = login_code_fixture(user.email)
 
-      conn = log_in(conn, user.email, code, %{"shared_computer" => "true"})
+      conn = log_in(conn, user.email, code, %{"remember_me" => "true"})
 
       assert get_session(conn, :user_token)
-      refute conn.resp_cookies["_sarduty_remember_me"]
+      assert conn.resp_cookies["_sarduty_remember_me"]
     end
 
     test "returns to the page that asked for a login", %{conn: conn} do

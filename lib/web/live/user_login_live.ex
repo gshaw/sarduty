@@ -2,7 +2,8 @@ defmodule Web.UserLoginLive do
   use Web, :live_view_narrow_layout
 
   # The submit goes through LiveView first so the button disables at once, then
-  # phx-trigger-action posts the form to the controller, which sends the code.
+  # phx-trigger-action posts the form to the controller, which sends the code. The button
+  # stays busy until that POST leaves the page.
   def render(assigns) do
     ~H"""
     <div>
@@ -20,7 +21,14 @@ defmodule Web.UserLoginLive do
       >
         <.input field={@form[:email]} type="email" label="Email" required autocomplete="email" />
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Sending…">Email me a code</.button>
+          <.button
+            id="login_submit"
+            variant={:success}
+            disabled={@trigger_submit}
+            phx-disable-with="Sending…"
+          >
+            {if @trigger_submit, do: "Sending…", else: "Email me a code"}
+          </.button>
         </.form_actions>
       </.form>
       <p class="text-secondary-1">

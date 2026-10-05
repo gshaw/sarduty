@@ -13,8 +13,13 @@ defmodule Web.UserLoginLiveTest do
   test "submitting hands the form to the controller", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/login")
 
+    refute has_element?(lv, "#login_submit[disabled]")
+
     form = form(lv, "#login_form", user: %{email: "pat@example.com"})
     render_submit(form)
+
+    # Busy until the POST below leaves the page.
+    assert has_element?(lv, "#login_submit[disabled]", "Sending…")
 
     conn = follow_trigger_action(form, conn)
     assert redirected_to(conn) == ~p"/login/code"
@@ -33,8 +38,10 @@ defmodule Web.UserLoginLiveTest do
 
     assert has_element?(
              lv,
-             ~s(#login_code_form input[name="user[shared_computer]"][type=checkbox])
+             ~s(#login_code_form input[name="user[remember_me]"][type=checkbox])
            )
+
+    refute has_element?(lv, ~s(#login_code_form input[name="user[remember_me]"][checked]))
 
     {:ok, lv, _html} = live(conn, ~p"/login/code")
     assert has_element?(lv, "#login-code", "pat@example.com")
@@ -53,10 +60,13 @@ defmodule Web.UserLoginLiveTest do
     conn = Phoenix.ConnTest.init_test_session(conn, %{login_email: "pat@example.com"})
     {:ok, lv, _html} = live(conn, ~p"/login/code")
 
-    form = form(lv, "#login_code_form", user: %{code: "123456"})
+    refute has_element?(lv, "#login_code_submit[disabled]")
+
+    form = form(lv, "#login_code_form", user: %{code: "123456", remember_me: "true"})
     render_submit(form)
 
     assert has_element?(lv, "#login_code_form[phx-trigger-action]")
+    assert has_element?(lv, "#login_code_submit[disabled]", "Logging in…")
   end
 
   test "the code page without an email goes to the login form", %{conn: conn} do

@@ -3,7 +3,8 @@ defmodule Web.UserLoginCodeLive do
 
   # Shown after asking for a code. The email comes from the session, so a refresh keeps
   # this page; sign-up links here with it in the query instead. Like the email form, the
-  # submit goes through LiveView, then posts to the controller, which logs in.
+  # submit goes through LiveView, then posts to the controller, which logs in. The button
+  # stays busy until that POST leaves the page.
   def mount(params, session, socket) do
     case session["login_email"] || params["email"] do
       nil ->
@@ -11,7 +12,7 @@ defmodule Web.UserLoginCodeLive do
 
       email ->
         form =
-          to_form(%{"email" => email, "code" => nil, "shared_computer" => "false"}, as: "user")
+          to_form(%{"email" => email, "code" => nil, "remember_me" => "false"}, as: "user")
 
         {:ok,
          assign(socket,
@@ -48,11 +49,22 @@ defmodule Web.UserLoginCodeLive do
           inputmode="numeric"
           maxlength="7"
         />
-        <.input field={@form[:shared_computer]} type="checkbox" label="This is a shared computer">
-          You're logged out when the browser closes, not after 60 days.
+        <.input
+          field={@form[:remember_me]}
+          type="checkbox"
+          label="Remember me on this computer for 60 days"
+        >
+          Leave it off on a shared computer. Then closing the browser logs you out.
         </.input>
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Logging in…">Log in</.button>
+          <.button
+            id="login_code_submit"
+            variant={:success}
+            disabled={@trigger_submit}
+            phx-disable-with="Logging in…"
+          >
+            {if @trigger_submit, do: "Logging in…", else: "Log in"}
+          </.button>
         </.form_actions>
       </.form>
       <p class="text-secondary-1">

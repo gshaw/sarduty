@@ -34,7 +34,7 @@ defmodule Web.UserSessionController do
       {:ok, user} ->
         conn
         |> put_flash(:info, "Logged in as #{user.email}.")
-        |> UserAuth.log_in_user(user, remember: params["shared_computer"] != "true")
+        |> UserAuth.log_in_user(user, remember: params["remember_me"] == "true")
 
       :error ->
         LoginLimit.miss(email, ip)
