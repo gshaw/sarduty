@@ -13,9 +13,10 @@ defmodule Service.Phone do
   def normalize(text) when is_binary(text) do
     text = text |> String.downcase() |> String.split(~r/x|ext/, parts: 2) |> hd()
     digits = String.replace(text, ~r/\D/, "")
+    international = text |> String.trim() |> String.starts_with?("+")
 
     cond do
-      String.starts_with?(String.trim(text), "+") and String.length(digits) in 8..15 ->
+      international and String.length(digits) in 8..15 ->
         "+" <> digits
 
       String.length(digits) == 10 ->

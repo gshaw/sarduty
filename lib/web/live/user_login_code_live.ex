@@ -101,7 +101,8 @@ defmodule Web.UserLoginCodeLive do
         </p>
         <p>
           <.a id="login-again" navigate={~p"/login?with=phone"}>Use a different number</.a>
-          or <.a id="login-with-email" navigate={~p"/login"}>get a code by email</.a>
+          or
+          <.a id="login-with-email" navigate={~p"/login"}>get a code by email</.a>
         </p>
       <% end %>
     </div>

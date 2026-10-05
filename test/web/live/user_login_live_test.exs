@@ -73,6 +73,7 @@ defmodule Web.UserLoginLiveTest do
   test "the code page without an email goes to the login form", %{conn: conn} do
     assert {:error, {:live_redirect, %{to: "/login"}}} = live(conn, ~p"/login/code")
   end
+
   describe "text login" do
     test "without Twilio, the page offers no text and ignores ?with=phone", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/login")

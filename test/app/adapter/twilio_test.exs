@@ -19,7 +19,12 @@ defmodule App.Adapter.TwilioTest do
       assert Base.decode64!(auth) == "SK0:secret"
 
       {:ok, body, conn} = Plug.Conn.read_body(conn)
-      assert URI.decode_query(body) == %{"To" => "+16045551234", "From" => "+16045550100", "Body" => "Hi"}
+
+      assert URI.decode_query(body) == %{
+               "To" => "+16045551234",
+               "From" => "+16045550100",
+               "Body" => "Hi"
+             }
 
       conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"sid" => "SM1"})
     end)

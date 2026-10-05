@@ -10,6 +10,7 @@ defmodule App.Accounts do
   alias App.Accounts.User
   alias App.Accounts.UserNotifier
   alias App.Accounts.UserToken
+  alias App.Adapter.Twilio
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
@@ -73,7 +74,7 @@ defmodule App.Accounts do
   end
 
   @doc "Whether login codes can go out by text: Twilio is set up."
-  def text_login?, do: App.Adapter.Twilio.configured?()
+  def text_login?, do: Twilio.configured?()
 
   @doc """
   Texts a login code to an E.164 number, like deliver_login_code/1 does by email. The

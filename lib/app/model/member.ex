@@ -111,18 +111,21 @@ defmodule App.Model.Member do
   typed, so each is normalized here rather than matched in SQL.
   """
   def current_emails_with_phone(e164, now) do
-    Member
-    |> where(
-      [m],
-      not is_nil(m.phone) and not is_nil(m.email) and
-        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
-        (is_nil(m.left_at) or m.left_at > ^now)
-    )
-    |> select([m], {m.phone, m.email})
+    now
+    |> current_phones_and_emails()
     |> Repo.all()
     |> Enum.filter(fn {phone, _email} -> Service.Phone.normalize(phone) == e164 end)
     |> Enum.map(fn {_phone, email} -> email |> String.trim() |> String.downcase() end)
     |> Enum.uniq()
+  end
+
+  defp current_phones_and_emails(now) do
+    from m in Member,
+      where:
+        not is_nil(m.phone) and not is_nil(m.email) and
+          (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
+          (is_nil(m.left_at) or m.left_at > ^now),
+      select: {m.phone, m.email}
   end
 
   def permission_label(0), do: "Owner"

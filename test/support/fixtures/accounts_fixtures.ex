@@ -35,7 +35,10 @@ defmodule App.AccountsFixtures do
   """
   def text_login_fixture do
     original = Application.get_env(:sarduty, App.Adapter.Twilio)
-    ExUnit.Callbacks.on_exit(fn -> Application.put_env(:sarduty, App.Adapter.Twilio, original) end)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      Application.put_env(:sarduty, App.Adapter.Twilio, original)
+    end)
 
     Application.put_env(
       :sarduty,

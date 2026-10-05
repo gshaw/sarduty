@@ -232,7 +232,13 @@ defmodule App.AccountsTest do
     test "sends nothing for a member who may not log in, or a number two people share" do
       text_login_fixture()
       team = team_fixture()
-      manager_fixture(team, %{email: "member@example.com", phone: "604-555-0001", d4h_permission: 2})
+
+      manager_fixture(team, %{
+        email: "member@example.com",
+        phone: "604-555-0001",
+        d4h_permission: 2
+      })
+
       manager_fixture(team, %{email: "a@example.com", phone: "604-555-0002"})
       manager_fixture(team, %{email: "b@example.com", phone: "604 555 0002"})
 

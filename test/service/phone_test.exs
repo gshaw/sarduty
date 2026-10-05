@@ -4,7 +4,13 @@ defmodule Service.PhoneTest do
   alias Service.Phone
 
   test "reads North American numbers however they're typed" do
-    for text <- ["604-555-1234", "(604) 555-1234", "604.555.1234", "1 604 555 1234", "+1 604 555 1234"] do
+    for text <- [
+          "604-555-1234",
+          "(604) 555-1234",
+          "604.555.1234",
+          "1 604 555 1234",
+          "+1 604 555 1234"
+        ] do
       assert Phone.normalize(text) == "+16045551234"
     end
   end

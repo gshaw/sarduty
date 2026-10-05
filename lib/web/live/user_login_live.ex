@@ -86,15 +86,18 @@ defmodule Web.UserLoginLive do
 
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket, page_title: "Log in", text_login: Accounts.text_login?(), trigger_submit: false)}
+     assign(socket,
+       page_title: "Log in",
+       text_login: Accounts.text_login?(),
+       trigger_submit: false
+     )}
   end
 
   def handle_params(params, _uri, socket) do
     with_phone = socket.assigns.text_login and params["with"] == "phone"
     field = if with_phone, do: "phone", else: "email"
 
-    {:noreply,
-     assign(socket, with_phone: with_phone, form: to_form(%{field => nil}, as: "user"))}
+    {:noreply, assign(socket, with_phone: with_phone, form: to_form(%{field => nil}, as: "user"))}
   end
 
   def handle_event("submit", %{"user" => params}, socket) do
