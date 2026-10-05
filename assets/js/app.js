@@ -25,18 +25,37 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sarduty"
 import topbar from "../vendor/topbar"
 import {QRScanner} from "./qr_scanner"
+import {ShareLink} from "./share_link"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, QRScanner},
+  hooks: {...colocatedHooks, QRScanner, ShareLink},
 })
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+// A button with JS.dispatch("sarduty:copy", to: "#input") copies the input's value. With
+// detail: %{status: "#id"}, that element says "Copied" for 2 seconds. Where the browser
+// will not copy, the input's text is selected instead.
+window.addEventListener("sarduty:copy", async event => {
+  const input = event.target
+  try {
+    await navigator.clipboard.writeText(input.value)
+  } catch {
+    input.select()
+    return
+  }
+  const status = event.detail?.status && document.querySelector(event.detail.status)
+  if (!status) return
+  status.textContent = "Copied"
+  clearTimeout(status.copiedTimer)
+  status.copiedTimer = setTimeout(() => { status.textContent = "" }, 2000)
+})
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()

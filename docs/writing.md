@@ -93,40 +93,42 @@ for 14 members…". Not "Loading…" or "Please wait".
 Use the term in the first column. The second column lists words that mean the same thing
 and must not be used for it.
 
-| Use                            | Not                                           | Meaning                                                                                              |
-| ------------------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| SAR Duty                       | SARDuty, Sar Duty, the app, the system        | This service.                                                                                        |
-| D4H                            | d4h, D4H Decisions, D4H Technologies          | The team's system of record.                                                                         |
-| team                           | organization, unit, group, chapter            | A search and rescue team using SAR Duty.                                                             |
-| member                         | user, responder, volunteer, person, personnel | A person on the team's D4H roster.                                                                   |
-| account                        | user, login, profile                          | What a person logs in to SAR Duty with.                                                              |
-| team admin                     | administrator, owner, manager, superuser      | A person who can change the team's settings.                                                         |
-| activity                       | event, callout, mission, task, deployment     | Anything in D4H that members attend. There are three kinds.                                          |
-| incident                       | callout, call-out, mission, search, task      | An activity responding to a call.                                                                    |
-| exercise                       | training, practice, drill                     | An activity for training.                                                                            |
-| event                          | meeting, function                             | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
-| attendance                     | participation, roll call, check-in            | Which members attended an activity, and for how long.                                                |
-| attended                       | present, participated                         | A member's state on an activity's attendance.                                                        |
-| published                      | locked, closed, finalized                     | An activity whose attendance D4H no longer lets anyone change.                                       |
-| qualification                  | certification, cert, ticket, course, skill    | Something a member holds in D4H, such as a first aid course. It can expire.                          |
-| group                          | team, squad, list, role                       | A D4H group of members.                                                                              |
-| group rule                     | requirement, policy, criteria                 | The qualifications a member must hold to be in a group.                                              |
-| clause                         | condition, line, requirement                  | One part of a group rule: the member must hold any of its qualifications.                            |
-| primary hours, secondary hours | main hours, other hours, type 1, type 2       | Hours as SARVAC counts them for the tax credit.                                                      |
-| tax credit letter              | TCL, tax letter, tax receipt, certificate     | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
-| mileage report                 | distance report, travel claim, kilometres     | Driving distances to an activity, in km.                                                             |
-| ID card                        | member card, pass, badge, ID                  | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
-| verify                         | check, validate, scan                         | Confirming an ID card is real.                                                                       |
-| D4H access key                 | token, API key, personal access token, PAT    | The key that lets SAR Duty read and change the team's D4H data.                                      |
-| refresh                        | sync, update, import, pull, fetch             | Copying the team's data from D4H into SAR Duty.                                                      |
-| import attendance              | upload, sync attendance                       | Reading a SAR Assist attendance report to change D4H attendance.                                     |
-| log in, log out                | sign in, sign out, login (as a verb), logon   | Starting and ending a session. "Log in" is the verb and the button.                                  |
-| sign up                        | register, create account, signup (as a verb)  | Making a new account.                                                                                |
-| email                          | e-mail, mail, email address (as a label)      | The label is "Email".                                                                                |
-| time zone                      | timezone, TZ                                  | Two words in text and labels.                                                                        |
-| latitude, longitude            | lat, lng, long, coordinates                   | Spelled out in labels.                                                                               |
-| km                             | KMs, kms, kilometres                          | Distances, after a number with a space: "42 km".                                                     |
-| select                         | click, tap, press, choose, pick               | What the reader does to a button, link, or option.                                                   |
+| Use                            | Not                                            | Meaning                                                                                              |
+| ------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| SAR Duty                       | SARDuty, Sar Duty, the app, the system         | This service.                                                                                        |
+| D4H                            | d4h, D4H Decisions, D4H Technologies           | The team's system of record.                                                                         |
+| team                           | organization, unit, group, chapter             | A search and rescue team using SAR Duty.                                                             |
+| member                         | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
+| account                        | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
+| team admin                     | administrator, owner, manager, superuser       | A person who can change the team's settings.                                                         |
+| activity                       | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
+| incident                       | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
+| exercise                       | training, practice, drill                      | An activity for training.                                                                            |
+| event                          | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
+| attendance                     | participation, roll call, check-in             | Which members attended an activity, and for how long.                                                |
+| attended                       | present, participated                          | A member's state on an activity's attendance.                                                        |
+| published                      | locked, closed, finalized                      | An activity whose attendance D4H no longer lets anyone change.                                       |
+| qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
+| group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
+| group rule                     | requirement, policy, criteria                  | The qualifications a member must hold to be in a group.                                              |
+| clause                         | condition, line, requirement                   | One part of a group rule: the member must hold any of its qualifications.                            |
+| primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
+| tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
+| mileage report                 | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
+| ID card                        | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
+| verify                         | check, validate, scan                          | Confirming an ID card is real.                                                                       |
+| D4H access key                 | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
+| refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H into SAR Duty.                                                      |
+| attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
+| arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
+| import attendance              | upload, sync attendance                        | Reading a SAR Assist attendance report to change D4H attendance.                                     |
+| log in, log out                | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
+| sign up                        | register, create account, signup (as a verb)   | Making a new account.                                                                                |
+| email                          | e-mail, mail, email address (as a label)       | The label is "Email".                                                                                |
+| time zone                      | timezone, TZ                                   | Two words in text and labels.                                                                        |
+| latitude, longitude            | lat, lng, long, coordinates                    | Spelled out in labels.                                                                               |
+| km                             | KMs, kms, kilometres                           | Distances, after a number with a space: "42 km".                                                     |
+| select                         | click, tap, press, choose, pick                | What the reader does to a button, link, or option.                                                   |
 
 ## Words to avoid
 
