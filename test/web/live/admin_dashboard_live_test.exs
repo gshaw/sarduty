@@ -66,59 +66,33 @@ defmodule Web.AdminDashboardLiveTest do
     assert has_element?(lv, "#team-#{no_key.id}-key", "No team key")
   end
 
-  test "lists each team's managers", %{conn: conn} do
-    %{user: admin} = user_with_team_fixture()
-    admin = make_admin(admin)
-
-    team = team_fixture(%{d4h_access_key_member_id: 900, d4h_access_key_owner: "SAR Duty"})
-    kept = App.AccountsFixtures.user_fixture()
-    manager = &manager_fixture(team, &1)
-
-    owner = manager.(%{name: "Ada Owner", email: kept.email})
-    editor = manager.(%{name: "Eli Editor", email: "eli@other.org", d4h_permission: 1})
-    _sar_duty = manager.(%{name: "SAR Duty", d4h_member_id: 900})
-    _member = manager.(%{name: "Mo Member", d4h_permission: 2})
-    _retired = manager.(%{name: "Rae Retired", d4h_status: "RETIRED"})
-
-    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
-
-    assert has_element?(lv, "#managers-#{team.id} h3", "2 managers")
-    assert has_element?(lv, "#manager-#{owner.id}", "Has logged in")
-    assert has_element?(lv, "#manager-#{editor.id}", "Editor")
-    refute has_element?(lv, "#managers-#{team.id}", "SAR Duty")
-    refute has_element?(lv, "#managers-#{team.id}", "Mo Member")
-    refute has_element?(lv, "#managers-#{team.id}", "Rae Retired")
-  end
-
-  test "lists emails an admin let in, and counts their logins", %{conn: conn} do
+  test "counts each team's managers and links to them", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
     team = team_fixture()
-    grant = TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
+    manager_fixture(team, %{name: "Ada Owner"})
+    manager_fixture(team, %{name: "Eli Editor", d4h_permission: 1})
+    manager_fixture(team, %{name: "Mo Member", d4h_permission: 2})
+
+    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
+
+    assert has_element?(
+             lv,
+             ~s|#team-#{team.id}-managers[href="/#{team.subdomain}/managers"]|,
+             "2 managers"
+           )
+  end
+
+  test "lists the logins of emails an admin let in", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    admin = make_admin(admin)
+    team = team_fixture()
+    TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
     App.AccountsFixtures.user_fixture(%{email: "office@example.com"})
 
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
 
-    assert has_element?(lv, "#grant-#{grant.id}", "role address")
     assert has_element?(lv, "#team-#{team.id} li", "office@example.com")
-  end
-
-  test "keeps a person whose own key is the team key among the managers", %{conn: conn} do
-    %{user: admin} = user_with_team_fixture()
-    admin = make_admin(admin)
-    team = team_fixture(%{d4h_access_key_member_id: 901, d4h_access_key_owner: "Kim Lee"})
-
-    kim =
-      member_fixture(team, %{
-        name: "Kim Lee",
-        d4h_member_id: 901,
-        d4h_permission: 0,
-        d4h_status: "OPERATIONAL"
-      })
-
-    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
-
-    assert has_element?(lv, "#manager-#{kim.id}", "Kim Lee")
   end
 
   test "shows when each team and contact was last seen", %{conn: conn} do
