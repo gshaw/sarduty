@@ -4,10 +4,12 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Model.Activity
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
+  alias App.Model.NoShow
   alias App.Model.ShortLink
   alias App.Operation.BuildAttendanceTimes
   alias App.Operation.CloseAttendanceLink
   alias App.Operation.CreateAttendanceLink
+  alias App.Operation.FollowUpNoShow
   alias App.Operation.SendAttendanceToD4H
   alias App.Repo
 
@@ -28,6 +30,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       |> assign(review: nil, selected: MapSet.new(), failures: [])
       |> load_link()
       |> load_times()
+      |> load_no_shows()
 
     {:noreply, socket}
   end
@@ -62,6 +65,13 @@ defmodule Web.ActivityTakeAttendanceLive do
     end
   end
 
+  # `done` is the state the click asks for, since a checkbox's click carries no state.
+  def handle_event("follow-up", %{"id" => id, "done" => done}, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+    FollowUpNoShow.call(team, id, done == "true", user, DateTime.utc_now())
+    {:noreply, load_no_shows(socket)}
+  end
+
   def handle_event("select", params, socket),
     do: {:noreply, assign(socket, :selected, MapSet.new(params["keys"] || []))}
 
@@ -86,6 +96,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     socket
     |> assign(review: nil, selected: MapSet.new(), failures: failures)
     |> load_link()
+    |> load_no_shows()
     |> put_flash(kind, sent_text(saved, length(failures)))
   end
 
@@ -110,6 +121,9 @@ defmodule Web.ActivityTakeAttendanceLive do
     link = if link && AttendanceLink.open?(link, DateTime.utc_now()), do: link
     assign(socket, link: link)
   end
+
+  defp load_no_shows(socket),
+    do: assign(socket, no_shows: NoShow.get_all(socket.assigns.activity))
 
   defp load_times(socket) do
     activity = socket.assigns.activity
@@ -137,6 +151,48 @@ defmodule Web.ActivityTakeAttendanceLive do
     <h2 class="heading mt-p">Send to D4H</h2>
     <.failures_section failures={@failures} />
     <.send_section review={@review} selected={@selected} times={@times} activity={@activity} />
+
+    <div :if={@no_shows != []} id="no-shows">
+      <h2 class="heading mt-p">No-shows</h2>
+      <.no_shows_section no_shows={@no_shows} activity={@activity} />
+    </div>
+    """
+  end
+
+  attr :no_shows, :list, required: true
+  attr :activity, :any, required: true
+
+  defp no_shows_section(assigns) do
+    ~H"""
+    <p>
+      These members signed up and did not arrive. Check that each one is OK, then mark them
+      followed up.
+    </p>
+    <.table
+      id="no-show-list"
+      rows={@no_shows}
+      row_id={&"no-show-#{&1.id}"}
+      class="table-striped w-fit"
+    >
+      <:col :let={no_show} label="Name">{no_show.member.name}</:col>
+      <:col :let={no_show} label="Phone" class="whitespace-nowrap">{no_show.member.phone}</:col>
+      <:col :let={no_show} label="Email">{no_show.member.email}</:col>
+      <:col :let={no_show} label="Followed up">
+        <label class="flex items-center gap-2 whitespace-nowrap">
+          <input
+            type="checkbox"
+            id={"follow-up-#{no_show.id}"}
+            phx-click="follow-up"
+            phx-value-id={no_show.id}
+            phx-value-done={to_string(no_show.followed_up_at == nil)}
+            checked={no_show.followed_up_at != nil}
+          />
+          <span :if={no_show.followed_up_at} class="text-secondary-1 text-sm">
+            {Service.Format.month_day_time(no_show.followed_up_at, @activity.team.timezone)}
+          </span>
+        </label>
+      </:col>
+    </.table>
     """
   end
 

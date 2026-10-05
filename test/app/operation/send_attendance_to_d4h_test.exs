@@ -58,6 +58,14 @@ defmodule App.Operation.SendAttendanceToD4HTest do
              plan([], [row(sam, "requested")], [sam])
   end
 
+  test "only a member who signed up and didn't come is a no-show" do
+    [sam, jo] = [member(3, "Sam"), member(4, "Jo")]
+    changes = plan([], [row(sam, "requested"), row(jo, "attending")], [sam, jo])
+
+    assert SendAttendanceToD4H.no_show?(changes["Sam"])
+    refute SendAttendanceToD4H.no_show?(changes["Jo"])
+  end
+
   test "a member attending in D4H with no scan is offered as absent, unchecked" do
     jo = member(4, "Jo")
 

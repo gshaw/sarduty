@@ -73,3 +73,11 @@ still fix times.
   nightly copy, and the page says to unpublish it in D4H first.
 - D4H works out the duration from the times. The local copy shows the new attendance
   after the next refresh.
+
+## No-shows
+
+When a send marks a member absent who had signed up (D4H's `REQUESTED`), SAR Duty records
+a no-show ([NoShow](../lib/app/model/no_show.ex)). The Take attendance page lists them with
+phone and email, and a team admin ticks each one followed up once they know the member is
+OK. Sending again doesn't add a second row. A member already attending in D4H whom the
+admin marks absent is not a no-show: someone else decided they weren't there.
