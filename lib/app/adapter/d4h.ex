@@ -313,6 +313,73 @@ defmodule App.Adapter.D4H do
   defp write_error({:error, exception}),
     do: exception |> Exception.message() |> D4H.Error.exception()
 
+  # Taking attendance at the door (#139) reads an activity's attendance fresh before it
+  # writes. D4H accepts a second POST for a member who already has a row and counts
+  # their hours twice, so a write must know what is there now. None of these retry.
+
+  @doc "Whether D4H has published the activity now, as `{:ok, boolean}`."
+  def fetch_activity_published(context, d4h_activity_id, kind)
+      when kind in ["event", "exercise", "incident"] do
+    case Req.request(context, method: :get, url: "/#{kind}s/#{d4h_activity_id}", retry: false) do
+      {:ok, %{status: 200, body: %{"published" => published}}} -> {:ok, published == true}
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  @doc "Every attendance row on the activity now, as `D4H.AttendanceInfo` structs."
+  def fetch_attendance_infos(context, d4h_activity_id) do
+    request = [
+      method: :get,
+      url: "/attendance",
+      params: [activity_id: d4h_activity_id, size: 1000],
+      retry: false
+    ]
+
+    with {:ok, %{status: 200, body: body} = response} <- Req.request(context, request),
+         {:ok, page} <- D4H.Page.build(body),
+         true <- length(page.results) == page.total_size || {:short, response} do
+      {:ok, Enum.map(page.results, &D4H.AttendanceInfo.build/1)}
+    else
+      {:short, response} -> {:error, D4H.Error.exception(response)}
+      :error -> {:error, D4H.Error.exception("D4H sent no attendance list.")}
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  @doc "Marks an existing attendance row attending, with times, or absent."
+  def set_attendance(context, d4h_attendance_id, "ATTENDING", starts_at, ends_at) do
+    json = %{status: "ATTENDING", startsAt: iso(starts_at), endsAt: iso(ends_at)}
+    write_attendance(context, :patch, "/attendance/#{d4h_attendance_id}", json)
+  end
+
+  def set_attendance(context, d4h_attendance_id, "ABSENT", _starts_at, _ends_at),
+    do: write_attendance(context, :patch, "/attendance/#{d4h_attendance_id}", %{status: "ABSENT"})
+
+  @doc "Adds an attending row for a member D4H has no row for: a walk-in."
+  def create_attendance(context, d4h_activity_id, d4h_member_id, starts_at, ends_at) do
+    json = %{
+      activityId: d4h_activity_id,
+      memberId: d4h_member_id,
+      status: "ATTENDING",
+      startsAt: iso(starts_at),
+      endsAt: iso(ends_at)
+    }
+
+    write_attendance(context, :post, "/attendance", json)
+  end
+
+  defp write_attendance(context, method, url, json) do
+    case Req.request(context, method: method, url: url, json: json, retry: false) do
+      {:ok, %{status: status} = response} when status in 200..299 ->
+        {:ok, D4H.AttendanceInfo.build(response.body)}
+
+      result ->
+        {:error, write_error(result)}
+    end
+  end
+
+  defp iso(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
+
   defp update_attendance(context, attendance_id, status) do
     Req.patch!(context, url: "/attendance/#{attendance_id}", json: %{status: status})
   end
