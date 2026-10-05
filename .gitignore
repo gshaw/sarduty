@@ -42,5 +42,7 @@ npm-debug.log
 .mise.local.toml
 
 /backups/*
+!/backups/*.sh
+!/backups/*.exs
 
 .claude/

@@ -41,6 +41,11 @@ For a PR with a migration:
 - **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
   consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
   `backups/` (gitignored), encrypted with age and stamped to the minute.
+- **A dev copy** from a snapshot: `AGE_IDENTITY=<identity file> mise run sanitize
+backups/<snapshot>` writes `db/sarduty_dev.db` with every name, email, phone, address,
+  incident, and credential replaced by stable fakes. Admins and their member rows stay
+  real. It refuses to write if a real value is left anywhere
+  ([backups/sanitize.exs](../backups/sanitize.exs)).
 
 ## Changing production data
 
