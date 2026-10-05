@@ -1,8 +1,8 @@
 defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
-  alias App.Mailer.TaxCreditLetterMailer
   alias App.Operation.CreateTaxCreditLetter
+  alias App.Operation.EmailTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -155,12 +155,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
         year: socket.assigns.filter_options.year
       )
 
-    Task.start(fn -> TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter) end)
-
     socket =
       socket
       |> assign_records()
-      |> put_flash(:info, "Emailed the tax credit letter to #{tax_credit_letter.member.email}.")
+      |> put_email_flash(tax_credit_letter)
 
     {:noreply, socket}
   end
@@ -201,5 +199,26 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp build_filter_path(team, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
     ~p"/#{team.subdomain}/tax-credit-letters?#{query_params}"
+  end
+
+  defp put_email_flash(socket, letter) do
+    case EmailTaxCreditLetter.call(letter) do
+      :ok ->
+        put_flash(socket, :info, "Emailed the tax credit letter to #{letter.member.email}.")
+
+      {:error, :no_email} ->
+        put_flash(
+          socket,
+          :error,
+          "Created the letter. #{letter.member.name} has no email in D4H."
+        )
+
+      {:error, _reason} ->
+        put_flash(
+          socket,
+          :error,
+          "Created the letter, but the email did not send. Open the letter to try again."
+        )
+    end
   end
 end

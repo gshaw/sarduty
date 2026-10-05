@@ -24,9 +24,11 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     case Mailer.deliver(email) do
       {:ok, metadata} ->
         Logger.notice("delivered email metadata: #{inspect(metadata)}")
+        {:ok, metadata}
 
       {:error, reason} ->
         Logger.error("email error: #{inspect(reason)}")
+        {:error, reason}
     end
   end
 

@@ -1,8 +1,8 @@
 defmodule Web.TaxCreditLetterLive do
   use Web, :live_view_app_layout
 
-  alias App.Mailer.TaxCreditLetterMailer
   alias App.Model.TaxCreditLetter
+  alias App.Operation.EmailTaxCreditLetter
   alias App.Repo
 
   def mount(_params, _session, socket) do
@@ -38,7 +38,7 @@ defmodule Web.TaxCreditLetterLive do
       >
         Download PDF
       </.button>
-      <.button variant={:warning} phx-click="email">Email letter</.button>
+      <.button id="email-letter" variant={:warning} phx-click="email">Email letter</.button>
       <:trailing>
         <.button
           variant={:danger}
@@ -75,15 +75,7 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   def handle_event("email", _unsigned_params, socket) do
-    tax_credit_letter = socket.assigns.letter
-
-    Task.start(fn -> TaxCreditLetterMailer.deliver_tax_credit_letter(tax_credit_letter) end)
-
-    socket =
-      socket
-      |> put_flash(:info, "Emailed the tax credit letter to #{tax_credit_letter.member.email}.")
-
-    {:noreply, socket}
+    {:noreply, put_email_flash(socket, socket.assigns.letter)}
   end
 
   def handle_event("destroy", _unsigned_params, socket) do
@@ -99,5 +91,18 @@ defmodule Web.TaxCreditLetterLive do
       )
 
     {:noreply, socket}
+  end
+
+  defp put_email_flash(socket, letter) do
+    case EmailTaxCreditLetter.call(letter) do
+      :ok ->
+        put_flash(socket, :info, "Emailed the tax credit letter to #{letter.member.email}.")
+
+      {:error, :no_email} ->
+        put_flash(socket, :error, "#{letter.member.name} has no email in D4H.")
+
+      {:error, _reason} ->
+        put_flash(socket, :error, "The email did not send. Try again.")
+    end
   end
 end
