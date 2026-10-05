@@ -9,7 +9,6 @@ defmodule App.Accounts.User do
   # (#57): see App.Model.Team.get_managed_by/2.
   schema "users" do
     field :email, :string
-    field :confirmed_at, :naive_datetime
     field :is_admin, :boolean, default: false
     # When the user last opened a team page, to the hour. See App.Operation.RecordUserSeen.
     field :last_seen_at, :utc_datetime
@@ -32,11 +31,5 @@ defmodule App.Accounts.User do
     )
     |> validate_length(:email, max: 160)
     |> unique_constraint(:email)
-  end
-
-  @doc "Marks the email as proven, the first time a login link is used."
-  def confirm_changeset(user) do
-    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-    change(user, confirmed_at: user.confirmed_at || now)
   end
 end

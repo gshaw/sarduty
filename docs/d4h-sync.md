@@ -105,7 +105,10 @@ than waiting for the next refresh. See [group-rules.md](group-rules.md).
 Login is by emailed link only (#57). A user reaches a team when their email matches one of
 its managers in the local copy: a D4H Owner or Editor who isn't retired and hasn't left
 (`App.Model.Member.manager?/2`, and `App.Model.Team.get_managed_by/2` as a query). Losing
-Owner or Editor in D4H loses access at the next refresh. Admins reach every team.
+Owner or Editor in D4H loses access at the next refresh. Admins reach every team, but
+an admin logs in only while D4H lists their email as a current member of some team, any
+permission (`App.Model.Member.current_email?/2`, #141). If D4H drops both admins, the way
+back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
 
 - **The team key's account** is left out when it's a "SAR Duty" account, since it isn't a
   person. A team key from a person's own account leaves them in.

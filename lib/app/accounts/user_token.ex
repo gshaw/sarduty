@@ -82,10 +82,6 @@ defmodule App.Accounts.UserToken do
     from UserToken, where: [token: ^token, context: ^context]
   end
 
-  def by_user_and_contexts_query(user, :all) do
-    from t in UserToken, where: t.user_id == ^user.id
-  end
-
   def by_user_and_contexts_query(user, [_ | _] = contexts) do
     from t in UserToken, where: t.user_id == ^user.id and t.context in ^contexts
   end
