@@ -191,7 +191,16 @@ defmodule App.Operation.SendAttendanceToD4H do
         :ok
 
       {:error, error} ->
-        {:error, Exception.message(error)}
+        {:error, failure_text(error)}
     end
   end
+
+  @doc """
+  What to show for a failed write. D4H answers 400 or 404 when the activity or the
+  attendance row is gone, so that says so before D4H's own text.
+  """
+  def failure_text(%D4H.Error{status: status} = error) when status in [400, 404],
+    do: "The activity may have been deleted or changed in D4H. #{Exception.message(error)}"
+
+  def failure_text(error), do: Exception.message(error)
 end

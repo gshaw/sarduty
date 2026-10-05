@@ -1,6 +1,7 @@
 defmodule Web.ActivityTakeAttendanceLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
@@ -113,6 +114,11 @@ defmodule Web.ActivityTakeAttendanceLive do
     do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
 
   defp error_text(:no_team_key), do: "Save the team's D4H access key in Team settings first."
+
+  defp error_text(%D4H.Error{status: status} = error) when status in [400, 404],
+    do:
+      "D4H cannot find this activity. It may have been deleted or changed in D4H. #{Exception.message(error)}"
+
   defp error_text(error), do: "D4H did not answer. Try again. #{Exception.message(error)}"
 
   defp load_link(socket) do
@@ -326,9 +332,8 @@ defmodule Web.ActivityTakeAttendanceLive do
         scan each member's ID card as they arrive and leave. They do not need an account.
       </p>
       <p>
-        The link works from when you make it until you close it. If nobody closes it, it stops
-        on {expires_text(@activity)}, a week after the activity ends. Anyone with it sees your
-        members' names.
+        The link works until you close it or send to D4H. Anyone with it sees your members'
+        names.
       </p>
       <.button id="create-link" variant={:success} phx-click="create-link">
         Make attendance link
@@ -341,20 +346,22 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <div id="open-link">
       <p>
-        Send this link to the person taking attendance at the door. It works until you close
-        it, or until {expires_text(@activity)} at the latest.
+        Send this link to the person taking attendance at the door. Works until you close it
+        or send to D4H.
       </p>
-      <div class="flex gap-2 items-center">
-        <input
+      <div class="flex flex-wrap gap-2 items-center">
+        <.a
           id="attendance-link-url"
-          type="text"
-          readonly
-          value={link_url(@link)}
-          class="input w-full max-w-sm font-mono"
-        />
+          href={link_url(@link)}
+          external={true}
+          class="font-mono break-all"
+        >
+          {link_url(@link)}
+        </.a>
         <.button
           id="copy-link"
           type="button"
+          size={:sm}
           phx-click={
             JS.dispatch("sarduty:copy", to: "#attendance-link-url", detail: %{status: "#copy-status"})
           }
@@ -364,6 +371,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         <.button
           id="share-link"
           type="button"
+          size={:sm}
           phx-hook="ShareLink"
           data-url={link_url(@link)}
           hidden
@@ -377,32 +385,28 @@ defmodule Web.ActivityTakeAttendanceLive do
           class="text-success-1 font-semibold"
         ></span>
       </div>
-      <.form_actions class="mt-p05">
-        <.button
+      <div class="mt-p05 flex flex-wrap gap-4 items-center">
+        <.a
           id="create-link"
+          href="#"
           phx-click="create-link"
           data-confirm="Make a new link? This link stops working."
         >
           Make new link
-        </.button>
+        </.a>
         <.button
           id="close-link"
           variant={:danger}
+          size={:sm}
           phx-click="close-link"
           data-confirm="Close this link? It stops taking attendance."
         >
           Close link
         </.button>
-      </.form_actions>
+      </div>
     </div>
     """
   end
-
-  defp expires_text(activity),
-    do:
-      activity
-      |> AttendanceLink.expires_at()
-      |> Service.Format.datetime_medium(activity.team.timezone)
 
   # Links made before short links have none, so they show the long one.
   defp link_url(%AttendanceLink{short_link: %ShortLink{} = short_link}),

@@ -2,6 +2,9 @@
 // to the LiveView, which takes the code out of it. It never follows a link from a card.
 // With data-continuous, as on the door's attendance page, it keeps scanning after a read
 // and skips the same card for a few seconds, so one card held up isn't recorded twice.
+// The scanning flag goes on the [data-scan-state] element inside the hook. LiveView
+// patches the data attributes of a phx-update="ignore" container, so a flag on the
+// container itself is wiped by the next render while the camera keeps running.
 const PAUSE_MS = 1500
 const SAME_CARD_MS = 5000
 
@@ -13,6 +16,7 @@ export const QRScanner = {
     this.decoder = import("../vendor/jsqr").then(module => module.default)
     this.video = this.el.querySelector("video")
     this.canvas = document.createElement("canvas")
+    this.state = this.el.querySelector("[data-scan-state]")
     this.el.querySelector("[data-scan-start]").addEventListener("click", () => this.start())
     this.el.querySelector("[data-scan-stop]").addEventListener("click", () => this.stop())
   },
@@ -31,7 +35,7 @@ export const QRScanner = {
     }
     this.video.srcObject = this.stream
     await this.video.play()
-    this.el.dataset.scanning = "true"
+    this.state.dataset.scanning = "true"
     this.tick()
   },
 
@@ -40,7 +44,7 @@ export const QRScanner = {
     clearTimeout(this.frame)
     this.stream?.getTracks().forEach(track => track.stop())
     this.stream = null
-    delete this.el.dataset.scanning
+    delete this.state.dataset.scanning
   },
 
   tick() {

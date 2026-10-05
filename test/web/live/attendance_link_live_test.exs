@@ -170,20 +170,60 @@ defmodule Web.AttendanceLinkLiveTest do
     assert scans(activity) == []
   end
 
-  test "the link stops working a week after the activity ends", %{conn: conn, team: team} do
-    ended = DateTime.utc_now() |> DateTime.add(-7, :day) |> DateTime.add(-1, :minute)
-    ended = DateTime.truncate(ended, :second)
-
-    activity =
-      activity_fixture(team, %{started_at: DateTime.add(ended, -1, :hour), finished_at: ended})
-
-    link = CreateAttendanceLink.call(team, activity, user_fixture(), DateTime.utc_now())
+  test "undo does nothing once the link is closed", %{
+    conn: conn,
+    link: link,
+    team: team,
+    activity: activity,
+    member: member
+  } do
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
-    assert has_element?(lv, "#link-closed")
+    lv |> element("#search-form") |> render_change(%{search: "mei"})
+    lv |> element("#pick-#{member.id}") |> render_click()
+    [scan] = scans(activity)
+
+    CloseAttendanceLink.call(team, activity, DateTime.utc_now())
+    render_click(lv, "undo", %{"id" => scan.id})
+
+    assert has_element?(lv, "#link-closed", "This attendance link is closed.")
+    assert [_scan] = scans(activity)
   end
 
-  test "the link still works days after the activity ends", %{conn: conn, team: team} do
-    ended = DateTime.utc_now() |> DateTime.add(-6, :day) |> DateTime.truncate(:second)
+  test "a typed time shows until it's cleared", %{conn: conn, link: link} do
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+    refute has_element?(lv, "#override-note")
+
+    lv |> element("#override-form") |> render_change(%{override: "14:30"})
+    assert has_element?(lv, "#override-note", "Recording as 14:30")
+
+    lv |> element("#clear-override") |> render_click()
+    refute has_element?(lv, "#override-note")
+  end
+
+  test "a good scan's confirmation clears for the next one", %{
+    conn: conn,
+    link: link,
+    team: team,
+    activity: activity,
+    member: member
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+    lv |> element("#search-form") |> render_change(%{search: "mei"})
+    lv |> element("#pick-#{member.id}") |> render_click()
+    assert has_element?(lv, "#message", "Mei Chen arrived at")
+
+    # A timer from an older scan leaves the newer confirmation alone.
+    send(lv.pid, {:clear_message, {:ok, "Sam Ortiz arrived at 09:00."}})
+    assert has_element?(lv, "#message")
+
+    [scan] = scans(activity)
+    time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
+    send(lv.pid, {:clear_message, {:ok, "Mei Chen arrived at #{time}."}})
+    refute has_element?(lv, "#message")
+  end
+
+  test "a link made weeks after the activity ends still works", %{conn: conn, team: team} do
+    ended = DateTime.utc_now() |> DateTime.add(-20, :day) |> DateTime.truncate(:second)
 
     activity =
       activity_fixture(team, %{started_at: DateTime.add(ended, -1, :hour), finished_at: ended})
@@ -191,5 +231,16 @@ defmodule Web.AttendanceLinkLiveTest do
     link = CreateAttendanceLink.call(team, activity, user_fixture(), DateTime.utc_now())
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
     assert has_element?(lv, "#activity-summary")
+  end
+
+  test "the link stops working 30 days after it's made", %{
+    conn: conn,
+    team: team,
+    activity: activity
+  } do
+    made = DateTime.utc_now() |> DateTime.add(-30, :day) |> DateTime.add(-1, :minute)
+    link = CreateAttendanceLink.call(team, activity, user_fixture(), made)
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+    assert has_element?(lv, "#link-closed")
   end
 end

@@ -12,8 +12,9 @@ defmodule App.Model.AttendanceLink do
   # A link a team admin makes so someone at the door can take attendance for one
   # activity, with no account. The token is the secret: whoever holds the link can record
   # scans and see the team's member names, and nothing else. It opens when it's made and
-  # works until it's closed: by a send to D4H, by a team admin, or by a new link. A week
-  # after the activity ends it stops anyway, so a forgotten link dies.
+  # works until it's closed: by a send to D4H, by a team admin, or by a new link. 30 days
+  # after it's made it stops anyway, so a forgotten link dies. The limit counts from the
+  # link, not the activity, so a late catch-up from a paper list still works.
   schema "attendance_links" do
     belongs_to :team, Team
     belongs_to :activity, Activity
@@ -25,21 +26,19 @@ defmodule App.Model.AttendanceLink do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @open_days_after_finish 7
-
-  def open_days_after_finish, do: @open_days_after_finish
+  @open_days 30
 
   def generate_token, do: 32 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
 
   def hash_token(token),
     do: :sha256 |> :crypto.hash(token) |> Base.url_encode64(padding: false)
 
-  @doc "When the link stops working, unless it's closed first."
-  def expires_at(%Activity{finished_at: finished_at}),
-    do: DateTime.add(finished_at, @open_days_after_finish, :day)
+  @doc "When the link stops working, unless it's closed first: #{@open_days} days after it's made."
+  def expires_at(%AttendanceLink{inserted_at: made_at}), do: expires_at(made_at)
+  def expires_at(%DateTime{} = made_at), do: DateTime.add(made_at, @open_days, :day)
 
-  def open?(%AttendanceLink{closed_at: nil, activity: %Activity{} = activity}, now),
-    do: DateTime.before?(now, expires_at(activity))
+  def open?(%AttendanceLink{closed_at: nil} = link, now),
+    do: DateTime.before?(now, expires_at(link))
 
   def open?(%AttendanceLink{}, _now), do: false
 

@@ -18,8 +18,11 @@ the D4H test it rests on.
 - **A link is open until it closes.** It opens when it's made, and anyone holding it can
   record arrivals and departures. It closes when a send to D4H goes through for every
   change, when a team admin closes it, or when a new link replaces it. As a backstop, it
-  stops working 7 days after the activity ends, so a forgotten link dies. The door's page
-  looks the link up again for every scan, so closing it stops an open page at once.
+  stops working 30 days after it's made, so a forgotten link dies. The limit counts from
+  the link, not the activity, so a link made for a catch-up after the activity still
+  works, and a change to the activity's times in D4H does not move it. The door's page
+  looks the link up again for every scan and every Undo, so closing it stops an open
+  page at once.
 - **The short link dies with it.** Closing or replacing a link deletes its short link,
   and the short link expires on the same backstop.
 - **Only this team's cards count.** A card from another team, a cancelled card, or a
@@ -27,6 +30,11 @@ the D4H test it rests on.
   verify site, and the scanner never follows it.
 - **Scans stay in SAR Duty.** Nothing goes to D4H from the door. Each scan keeps the
   moment it happened and, when the person at the door typed one, the time it stands for.
+- **A typed time goes on the activity's date**, not the day it's typed
+  ([RecordAttendanceScan.override_at/4](../lib/app/operation/record_attendance_scan.ex)).
+  It takes the date that puts it nearest the activity's start-to-end window in the team's
+  time zone, so a catch-up the next morning and a time after midnight both land right.
+  While a time is set, the door's page says "Recording as 14:30" with a way to clear it.
 - **Times come from one pure function**,
   [BuildAttendanceTimes](../lib/app/operation/build_attendance_times.ex). The latest scan
   of each kind wins. Arriving within 30 minutes of the start, early or late, counts as the
@@ -51,7 +59,13 @@ target, or shows the not-found page for a missing or expired code.
 
 The door's page uses the verify site's `QRScanner` hook with `data-continuous`: it keeps
 the camera running after a read, waits 1.5 seconds, and ignores the same card until it has
-been out of view for 5 seconds.
+been out of view for 5 seconds. A good scan's confirmation shows for 3 seconds, then
+clears for the next member.
+
+The hook keeps its scanning flag on the `[data-scan-state]` element inside it, not on the
+`phx-update="ignore"` container. LiveView still patches the container's data attributes,
+so a flag there was wiped by the render after each scan. The page went back to "Scan ID
+cards" while the camera kept running.
 
 ## Sending to D4H
 
@@ -71,6 +85,9 @@ still fix times.
   have marked them by hand.
 - **A published activity is refused.** D4H's published flag is read live, not from the
   nightly copy, and the page says to unpublish it in D4H first.
+- **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity
+  or a row was deleted or changed, so the page says so before D4H's own text. #160 is
+  about the refresh keeping activities deleted in D4H.
 - D4H works out the duration from the times. The local copy shows the new attendance
   after the next refresh.
 

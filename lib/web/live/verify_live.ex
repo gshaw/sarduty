@@ -116,21 +116,23 @@ defmodule Web.VerifyLive do
         of their team, with their photo.
       </p>
 
-      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="group mt-6 mb-6">
-        <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
-        <div class="group-data-scanning:hidden">
-          <.button
-            type="button"
-            variant={:primary}
-            size={:lg}
-            class="w-full justify-center"
-            data-scan-start
-          >
-            Scan a card
-          </.button>
-        </div>
-        <div class="hidden group-data-scanning:block mt-2">
-          <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
+      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="mt-6 mb-6">
+        <div data-scan-state class="group">
+          <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
+          <div class="group-data-scanning:hidden">
+            <.button
+              type="button"
+              variant={:primary}
+              size={:lg}
+              class="w-full justify-center"
+              data-scan-start
+            >
+              Scan a card
+            </.button>
+          </div>
+          <div class="hidden group-data-scanning:block mt-2">
+            <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
+          </div>
         </div>
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">

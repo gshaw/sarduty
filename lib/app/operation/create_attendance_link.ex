@@ -22,7 +22,7 @@ defmodule App.Operation.CreateAttendanceLink do
         short_link =
           ShortLink.create!("/attendance/#{token}",
             team_id: team.id,
-            expires_at: AttendanceLink.expires_at(activity)
+            expires_at: AttendanceLink.expires_at(now)
           )
 
         AttendanceLink.insert!(%AttendanceLink{
@@ -31,7 +31,9 @@ defmodule App.Operation.CreateAttendanceLink do
           created_by_user_id: user.id,
           short_link_id: short_link.id,
           token: token,
-          token_hash: AttendanceLink.hash_token(token)
+          token_hash: AttendanceLink.hash_token(token),
+          inserted_at: now,
+          updated_at: now
         })
       end)
 
