@@ -111,6 +111,16 @@
     .app-bar nav a[aria-current="page"] { color: #fff; box-shadow: inset 0 -3px var(--accent); }
     .app-bar .account { display: inline-flex; align-items: center; gap: var(--sp-1); background: none; border: 0; color: #fff; font: inherit; font-size: var(--fs-sm); padding: var(--sp-1) var(--sp-2); cursor: pointer; white-space: nowrap; }
 
+    /* The top bar on a phone: a menu button, and its panel under the amber rule */
+    .phone-bar { max-width: 390px; }
+    .phone-bar .app-bar { justify-content: space-between; }
+    .phone-bar .account { font-weight: 600; }
+    .phone-menu { background: var(--nav); border-bottom: 4px solid var(--accent); padding: var(--sp-2) 0; }
+    .phone-menu a { display: block; padding: var(--sp-3) var(--sp-4); color: #d5dbe3; text-decoration: none; font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md); }
+    .phone-menu a[aria-current="page"] { color: #fff; box-shadow: inset 4px 0 var(--accent); }
+    .phone-menu .note { padding: var(--sp-2) var(--sp-4) var(--sp-1); color: rgb(255 255 255 / 0.6); font-size: var(--fs-xs); line-height: var(--lh-xs); }
+    .phone-menu hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
+
     /* Menu: a short list under a button, such as the account menu */
     .menu { list-style: none; margin: 0; padding: var(--sp-1) 0; min-width: 200px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / 0.18); font-size: var(--fs-sm); line-height: var(--lh-sm); }
     .menu li { margin: 0; max-width: none; }
