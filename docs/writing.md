@@ -121,6 +121,7 @@ and must not be used for it.
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H into SAR Duty.                                                      |
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
+| no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
 | import attendance              | upload, sync attendance                        | Reading a SAR Assist attendance report to change D4H attendance.                                     |
 | log in, log out                | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
 | sign up                        | register, create account, signup (as a verb)   | Making a new account.                                                                                |

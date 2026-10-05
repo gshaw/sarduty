@@ -6,8 +6,10 @@ defmodule Web.ActivitySendAttendanceTest do
 
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
+  alias App.Model.NoShow
   alias App.Model.Team
   alias App.Operation.CreateAttendanceLink
+  alias App.Repo
 
   # The Send to D4H part of the Take attendance page, with D4H stubbed. Mei signed up
   # and arrived, Lena walked in, and Sam signed up and didn't come.
@@ -111,6 +113,39 @@ defmodule Web.ActivitySendAttendanceTest do
 
     assert render(lv) =~ "3 attendance changes saved to D4H."
     refute AttendanceLink.find_current(ctx.team, ctx.activity)
+
+    sam_id = ctx.sam.id
+    assert [%NoShow{member_id: ^sam_id} = no_show] = NoShow.get_all(ctx.activity)
+    assert has_element?(lv, "#no-show-#{no_show.id}", "Sam Ortiz")
+  end
+
+  test "a team admin marks a no-show followed up, and can undo it", ctx do
+    no_show = NoShow.record!(ctx.activity, ctx.sam)
+    lv = open(ctx)
+
+    lv |> element("#follow-up-#{no_show.id}") |> render_click()
+    assert Repo.reload(no_show).followed_up_at
+    assert Repo.reload(no_show).followed_up_by_user_id == ctx.user.id
+    assert has_element?(lv, "#follow-up-#{no_show.id}[checked]")
+
+    lv |> element("#follow-up-#{no_show.id}") |> render_click()
+    refute Repo.reload(no_show).followed_up_at
+  end
+
+  test "another team's no-show can't be changed", ctx do
+    other_team = team_fixture()
+    other_activity = activity_fixture(other_team)
+    other = NoShow.record!(other_activity, member_fixture(other_team))
+    lv = open(ctx)
+
+    render_click(lv, "follow-up", %{"id" => other.id, "done" => "true"})
+    refute Repo.reload(other).followed_up_at
+  end
+
+  test "sending twice records a no-show once", ctx do
+    assert NoShow.record!(ctx.activity, ctx.sam)
+    NoShow.record!(ctx.activity, ctx.sam)
+    assert length(NoShow.get_all(ctx.activity)) == 1
   end
 
   test "an unchecked change is not sent", ctx do

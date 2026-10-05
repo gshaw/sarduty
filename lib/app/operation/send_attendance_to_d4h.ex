@@ -4,6 +4,7 @@ defmodule App.Operation.SendAttendanceToD4H do
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
+  alias App.Model.NoShow
   alias App.Model.Team
   alias App.Operation.BuildAttendanceTimes
 
@@ -102,6 +103,10 @@ defmodule App.Operation.SendAttendanceToD4H do
   defp action_order(:absent), do: 3
   defp action_order(:unchanged), do: 4
 
+  @doc "Whether a change marks a member who signed up and didn't come."
+  def no_show?(%{action: :absent, status: "requested"}), do: true
+  def no_show?(_change), do: false
+
   @doc "Whether a change writes to D4H when it's kept."
   def sendable?(%{action: action}), do: action in [:update, :create, :absent]
 
@@ -181,8 +186,12 @@ defmodule App.Operation.SendAttendanceToD4H do
       end
 
     case result do
-      {:ok, _info} -> :ok
-      {:error, error} -> {:error, Exception.message(error)}
+      {:ok, _info} ->
+        if no_show?(change), do: NoShow.record!(activity, change.member)
+        :ok
+
+      {:error, error} ->
+        {:error, Exception.message(error)}
     end
   end
 end
