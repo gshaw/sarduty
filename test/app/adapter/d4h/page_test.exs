@@ -36,10 +36,6 @@ defmodule App.Adapter.D4H.PageTest do
     "title" => "Legacy Tokens Not Supported"
   }
 
-  defp page(result_count, total_size) do
-    %Page{results: List.duplicate(%{}, result_count), total_size: total_size}
-  end
-
   test "reads the rows and D4H's total from a list response" do
     assert {:ok, page} = Page.build(@attendance_body)
     assert page.total_size == 1
@@ -50,24 +46,19 @@ defmodule App.Adapter.D4H.PageTest do
     assert Page.build(@unauthorized_body) == :error
   end
 
-  test "stops once the fetched rows cover D4H's total" do
-    last_page = page(500, 2500)
-    assert Page.next(last_page, 2500) == :done
+  test "counts the pages that hold D4H's total" do
+    assert Page.count(%Page{total_size: 2500}, 1000) == 3
+    assert Page.count(%Page{total_size: 2000}, 1000) == 2
   end
 
-  test "asks for another page while rows are still due" do
-    first_page = page(1000, 2500)
-    assert Page.next(first_page, 1000) == :next
+  test "a team with no rows has one page, to learn the total" do
+    assert Page.count(%Page{total_size: 0}, 1000) == 1
   end
 
-  test "an empty page before D4H's total is short" do
-    empty_page = page(0, 2500)
-    assert Page.next(empty_page, 1000) == :short
-  end
-
-  test "a team with no rows is done after one empty page" do
-    empty_page = page(0, 0)
-    assert Page.next(empty_page, 0) == :done
+  test "rows that cover D4H's total pass, fewer are short" do
+    assert Page.check(%Page{total_size: 2500}, 2500) == :ok
+    assert Page.check(%Page{total_size: 2500}, 2000) == :short
+    assert Page.check(%Page{total_size: 0}, 0) == :ok
   end
 
   test "an error response names the status and D4H's reason" do

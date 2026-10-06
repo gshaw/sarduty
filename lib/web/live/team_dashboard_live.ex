@@ -5,17 +5,24 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Team
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
+  alias App.Worker.SyncTeamChangesWorker
 
   def mount(_params, _session, socket) do
-    if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
-
     current_team = socket.assigns.current_team
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
+      # Opening the dashboard catches up with D4H rather than waiting for the next sync.
+      SyncTeamChangesWorker.enqueue_if_stale(current_team, DateTime.utc_now())
+    end
+
     view_data = TeamDashboardViewData.build(current_team)
 
     socket =
       socket
       |> assign(page_title: current_team.name)
       |> assign(view_data: view_data)
+      |> assign(now: DateTime.utc_now())
       |> assign(has_logo: Team.logo_file(current_team.subdomain) != nil)
 
     {:ok, socket}
@@ -35,7 +42,7 @@ defmodule Web.TeamDashboardLive do
     </h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content team={@current_team} view_data={@view_data} />
+        <.sidebar_content team={@current_team} view_data={@view_data} now={@now} />
       </aside>
       <main class="content-2/3">
         <.main_content team={@current_team} />
@@ -109,7 +116,12 @@ defmodule Web.TeamDashboardLive do
         <% end %>
       </dd>
 
-      <dt>Last refreshed</dt>
+      <dt>Updated from D4H</dt>
+      <dd id="d4h-updated">
+        {Service.Format.minutes_ago(Team.d4h_updated_at(@team), @now, @team.timezone) ||
+          "Never"}
+      </dd>
+      <dt>Last full refresh</dt>
       <dd>
         {Service.Format.datetime_short(@view_data.refreshed_at, @team.timezone)}
         <div :if={failed?(@view_data)} id="refresh-error" class="text-sm text-danger-1">
@@ -144,6 +156,7 @@ defmodule Web.TeamDashboardLive do
       {:noreply,
        socket
        |> assign(current_team: updated_team)
+       |> assign(now: DateTime.utc_now())
        |> assign(view_data: view_data)
        |> assign(has_logo: Team.logo_file(updated_team.subdomain) != nil)}
     else

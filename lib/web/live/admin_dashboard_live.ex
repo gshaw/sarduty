@@ -117,6 +117,9 @@ defmodule Web.AdminDashboardLive do
           <div :if={team.d4h_refreshed_at} class="whitespace-nowrap">
             Last OK {format_refreshed_at(team)}
           </div>
+          <div :if={team.d4h_synced_at} id={"team-#{team.id}-synced"} class="whitespace-nowrap">
+            Synced {Service.Format.minutes_ago(team.d4h_synced_at, DateTime.utc_now(), team.timezone)}
+          </div>
         </.hint>
         <.button
           type="button"

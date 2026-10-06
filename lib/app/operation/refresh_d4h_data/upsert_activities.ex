@@ -74,6 +74,44 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
     )
   end
 
+  @doc """
+  Marks the team's activities with these D4H ids deleted, as of `now`, and closes their
+  attendance links. The sync's half of #160: it learns of deletes from D4H's
+  `deleted=true` list rather than by comparing the whole list.
+  """
+  def mark_deleted_by_d4h_ids(_team, [], _now), do: :ok
+
+  def mark_deleted_by_d4h_ids(team, d4h_activity_ids, now) do
+    ids =
+      Activity
+      |> where([a], a.team_id == ^team.id and a.d4h_activity_id in ^d4h_activity_ids)
+      |> where([a], is_nil(a.deleted_at))
+      |> select([a], a.id)
+      |> Repo.all()
+
+    Repo.transaction(fn ->
+      set_deleted_at(team.id, ids, DateTime.truncate(now, :second))
+      AttendanceLink.close_all!(team, ids, now)
+    end)
+
+    :ok
+  end
+
+  @doc "Clears the deleted mark on the team's activities that D4H lists again."
+  def clear_deleted(_team, []), do: :ok
+
+  def clear_deleted(team, d4h_activity_ids) do
+    Activity
+    |> where([a], a.team_id == ^team.id and a.d4h_activity_id in ^d4h_activity_ids)
+    |> where([a], not is_nil(a.deleted_at))
+    |> Repo.update_all(set: [deleted_at: nil, updated_at: DateTime.utc_now()])
+
+    :ok
+  end
+
+  @doc "Saves one D4H activity for the team."
+  def upsert(team_id, d4h_activity), do: upsert_activity(team_id, d4h_activity)
+
   defp set_deleted_at(_team_id, [], _deleted_at), do: :ok
 
   defp set_deleted_at(team_id, ids, deleted_at) do

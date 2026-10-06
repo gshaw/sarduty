@@ -9,7 +9,8 @@ defmodule App.Operation.RefreshD4HData.Progress do
     :team_id,
     :stage,
     :processed_count,
-    :total_count
+    :total_count,
+    quiet: false
   ]
 
   def new(team_id) do
@@ -20,6 +21,12 @@ defmodule App.Operation.RefreshD4HData.Progress do
       total_count: nil
     }
   end
+
+  @doc """
+  Progress that writes and broadcasts nothing. The sync every 10 minutes reuses the
+  refresh's stages without showing them on the dashboards (#163).
+  """
+  def quiet(team_id), do: %{new(team_id) | quiet: true}
 
   def update_stage(progress, stage) when is_binary(stage) do
     progress = %{progress | stage: stage, processed_count: 0, total_count: nil}
@@ -76,6 +83,8 @@ defmodule App.Operation.RefreshD4HData.Progress do
         "#{stage}: #{count}"
     end
   end
+
+  defp broadcast_progress(%__MODULE__{quiet: true}), do: :ok
 
   defp broadcast_progress(progress) do
     team = Team.get!(progress.team_id)

@@ -31,6 +31,10 @@ defmodule App.Model.Team do
     field :new_d4h_access_key, TrimmedString, virtual: true, redact: true
     field :d4h_refresh_result, :string
     field :d4h_refreshed_at, :utc_datetime_usec
+    # The sync every 10 minutes (#163). The state holds each D4H list's last total and
+    # newest change, and how long syncs have been failing. App.Operation.SyncD4HChanges.
+    field :d4h_synced_at, :utc_datetime_usec
+    field :d4h_sync_state, :map
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
@@ -63,6 +67,8 @@ defmodule App.Model.Team do
       :d4h_access_key_member_id,
       :d4h_refresh_result,
       :d4h_refreshed_at,
+      :d4h_synced_at,
+      :d4h_sync_state,
       :mailing_address,
       :authorized_by_name,
       :lat,
@@ -152,6 +158,14 @@ defmodule App.Model.Team do
   end
 
   # def delete(%Team{} = record), do: Repo.delete(record)
+
+  @doc """
+  When the copy last matched D4H: the later of the last sync and the last full refresh,
+  or nil.
+  """
+  def d4h_updated_at(%Team{d4h_synced_at: synced, d4h_refreshed_at: refreshed}) do
+    [synced, refreshed] |> Enum.reject(&is_nil/1) |> Enum.max(DateTime, fn -> nil end)
+  end
 
   @doc """
   How a `d4h_refresh_result` reads: `:never` refreshed, `:ok`, `:failed` (anything the

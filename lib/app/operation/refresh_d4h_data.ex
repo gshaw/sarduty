@@ -1,8 +1,20 @@
 defmodule App.Operation.RefreshD4HData do
+  import Ecto.Query
+
   alias App.Adapter.D4H
+  alias App.Model.Activity
+  alias App.Model.Attendance
+  alias App.Model.Group
+  alias App.Model.GroupMember
+  alias App.Model.Member
+  alias App.Model.MemberQualificationAward
+  alias App.Model.Qualification
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
+  alias App.Operation.SyncD4HChanges
   alias App.Repo
+
+  require Logger
 
   # A missing or rejected key needs a person to fix it, so it comes back as
   # `{:error, reason}` rather than an exception to retry and report.
@@ -47,6 +59,9 @@ defmodule App.Operation.RefreshD4HData do
   @activity_types ["exercises", "events", "incidents"]
 
   defp refresh(d4h, team, progress) do
+    started_at = DateTime.utc_now()
+    # Seen before any stage, so the next sync fetches whatever changes while this runs.
+    heads = SyncD4HChanges.fetch_heads(d4h)
     progress = refresh_team_data(d4h, team, progress)
     {tag_index, progress} = refresh_members_and_tags(d4h, team, progress)
     progress = refresh_all_activities(d4h, team, tag_index, progress)
@@ -54,7 +69,34 @@ defmodule App.Operation.RefreshD4HData do
     progress = refresh_groups(d4h, team, progress)
 
     RefreshD4HData.Progress.complete(progress)
+    log_corrections(team.id, started_at)
+    team = team.id |> Team.get!() |> SyncD4HChanges.save_heads(heads, started_at)
     {:ok, update_team_refreshed_at(team)}
+  end
+
+  # What this refresh changed that the syncs every 10 minutes missed: rows written since
+  # it started. If it stays at zero for a month, run it weekly (#163). Deletes are logged
+  # by each stage.
+  defp log_corrections(team_id, started_at) do
+    member_ids = from(m in Member, where: m.team_id == ^team_id, select: m.id)
+
+    counts = [
+      members: where(Member, team_id: ^team_id),
+      activities: where(Activity, team_id: ^team_id),
+      attendance: where(Attendance, [a], a.member_id in subquery(member_ids)),
+      qualifications: where(Qualification, team_id: ^team_id),
+      awards: where(MemberQualificationAward, [a], a.member_id in subquery(member_ids)),
+      groups: where(Group, team_id: ^team_id),
+      group_members: where(GroupMember, [g], g.member_id in subquery(member_ids))
+    ]
+
+    summary =
+      Enum.map_join(counts, ", ", fn {name, query} ->
+        count = query |> where([r], r.updated_at >= ^started_at) |> Repo.aggregate(:count)
+        "#{name} #{count}"
+      end)
+
+    Logger.info("Full refresh of team #{team_id} wrote rows the syncs missed: #{summary}")
   end
 
   defp refresh_team_data(d4h, team, progress) do

@@ -10,16 +10,13 @@ defmodule App.Adapter.D4H.Page do
 
   def build(_body), do: :error
 
+  @doc "How many pages of `size` rows hold D4H's total. At least one, to learn the total."
+  def count(%__MODULE__{total_size: total_size}, size), do: max(1, ceil(total_size / size))
+
   @doc """
-  What to do after a page, given how many rows have been fetched so far: `:done` once
-  they cover D4H's total, `:next` for another page, or `:short` when D4H ran out of
-  rows before its own total.
+  `:ok` once the fetched rows cover D4H's total, `:short` when D4H ran out of rows first.
+  The refresh deletes what D4H didn't return, so a short fetch must never pass.
   """
-  def next(%__MODULE__{} = page, fetched_count) do
-    cond do
-      fetched_count >= page.total_size -> :done
-      page.results == [] -> :short
-      true -> :next
-    end
-  end
+  def check(%__MODULE__{total_size: total_size}, fetched_count),
+    do: if(fetched_count >= total_size, do: :ok, else: :short)
 end
