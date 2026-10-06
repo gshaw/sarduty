@@ -21,6 +21,7 @@ defmodule Web.VerifyLive do
      assign(socket,
        page_title: "Verify an ID card",
        scan_failed: false,
+       scanned: false,
        client_ip: session["client_ip"]
      )}
   end
@@ -50,6 +51,7 @@ defmodule Web.VerifyLive do
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
       |> assign(result: result, organization: nil)
       |> assign(:start_path, if(organization, do: ~p"/o/#{organization.slug}", else: ~p"/"))
+      |> scan_sound(result)
 
     {:noreply, socket}
   end
@@ -58,11 +60,19 @@ defmodule Web.VerifyLive do
     do: {:noreply, push_patch(socket, to: path_for(input))}
 
   def handle_event("scanned", %{"code" => input}, socket),
-    do: {:noreply, push_patch(socket, to: path_for(input))}
+    do: {:noreply, socket |> assign(scanned: true) |> push_patch(to: path_for(input))}
 
   def handle_event("scan_failed", _params, socket) do
     {:noreply, assign(socket, :scan_failed, true)}
   end
+
+  # Only a camera scan sounds, so a typed code or a card's link opened stays quiet.
+  defp scan_sound(%{assigns: %{scanned: true}} = socket, result) when result != nil do
+    sound = if result.status == :active, do: :ok, else: :error
+    socket |> assign(scanned: false) |> push_event("scan-sound", %{sound: sound})
+  end
+
+  defp scan_sound(socket, _result), do: socket
 
   # A card's own page when the input names one, so the address bar shows its code.
   defp path_for(input) do
@@ -134,6 +144,17 @@ defmodule Web.VerifyLive do
             <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
           </div>
         </div>
+        <.button
+          id="sound-toggle"
+          type="button"
+          variant={:link}
+          size={:sm}
+          class="mt-2"
+          phx-hook="SoundToggle"
+          phx-update="ignore"
+        >
+          Sound on
+        </.button>
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera did not start. Allow camera access, or type the code.

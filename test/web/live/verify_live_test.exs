@@ -136,6 +136,21 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-active")
   end
 
+  test "a scan sounds its result, and a typed code doesn't", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+    lv |> element("#scanner") |> render_hook("scanned", %{code: card.code})
+    assert_push_event(lv, "scan-sound", %{sound: :ok})
+
+    {:ok, lv, _html} = live(conn, ~p"/")
+    lv |> element("#scanner") |> render_hook("scanned", %{code: "ZZZZ-ZZZZ"})
+    assert_push_event(lv, "scan-sound", %{sound: :error})
+
+    {:ok, lv, _html} = live(conn, ~p"/")
+    check(lv, card.code)
+    refute_push_event(lv, "scan-sound", _payload)
+  end
+
   test "the rest of the app isn't on the verify site", %{conn: conn} do
     assert conn |> get("/settings/team") |> redirected_to() ==
              Web.Endpoint.url() <> "/settings/team"

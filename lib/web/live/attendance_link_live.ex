@@ -129,12 +129,14 @@ defmodule Web.AttendanceLinkLive do
 
   defp record(socket, record) do
     with_open_link(socket, fn link, now ->
-      message = message(record.(link, now), socket.assigns.team)
+      {kind, _text} = message = message(record.(link, now), socket.assigns.team)
 
-      if elem(message, 0) == :ok,
+      if kind in [:arrived, :left],
         do: Process.send_after(self(), {:clear_message, message}, @confirm_ms)
 
-      assign(socket, message: message)
+      socket
+      |> assign(message: message)
+      |> push_event("scan-sound", %{sound: kind})
     end)
   end
 
@@ -148,10 +150,15 @@ defmodule Web.AttendanceLinkLive do
       else: assign(socket, page_title: "Attendance link closed", link: nil)
   end
 
+  # `{kind, text}`: `:arrived` or `:left` for a good scan, `:error`, or `:info`. The kind
+  # picks the banner's colour and the scan's sound.
   defp message({:ok, scan}, team) do
     time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
-    verb = if scan.kind == "arrived", do: "arrived", else: "left"
-    {:ok, "#{scan.member.name} #{verb} at #{time}."}
+
+    case scan.kind do
+      "arrived" -> {:arrived, "#{scan.member.name} arrived at #{time}."}
+      "left" -> {:left, "#{scan.member.name} left at #{time}."}
+    end
   end
 
   defp message({:error, reason}, _team), do: {:error, error_text(reason)}
@@ -188,6 +195,43 @@ defmodule Web.AttendanceLinkLive do
     |> Enum.sort_by(& &1.name)
     |> Enum.take(@max_name_matches)
   end
+
+  attr :message, :any, required: true
+
+  # Big and coloured, so the person at the door sees each scan land at a glance.
+  defp message(%{message: {:info, text}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <p id="message" role="status" class="mt-p mb-0 font-semibold">{@text}</p>
+    """
+  end
+
+  defp message(%{message: {kind, text}} = assigns) do
+    assigns = assign(assigns, kind: kind, text: text)
+
+    ~H"""
+    <div
+      id="message"
+      role="status"
+      class={[
+        "mt-p flex items-center gap-3 p-4 rounded-lg text-(--on-fill)",
+        @kind == :arrived && "bg-(--success)",
+        @kind == :left && "bg-(--info)",
+        @kind == :error && "bg-(--danger)"
+      ]}
+    >
+      <.icon name={message_icon(@kind)} class="size-10 shrink-0" />
+      <span class={["font-semibold", @kind == :error && "text-xl", @kind != :error && "text-2xl"]}>
+        {@text}
+      </span>
+    </div>
+    """
+  end
+
+  defp message_icon(:arrived), do: "hero-arrow-right-end-on-rectangle"
+  defp message_icon(:left), do: "hero-arrow-left-start-on-rectangle"
+  defp message_icon(:error), do: "hero-x-circle"
 
   def render(%{link: nil} = assigns) do
     ~H"""
@@ -235,18 +279,7 @@ defmodule Web.AttendanceLinkLive do
         </p>
       </div>
 
-      <p
-        :if={@message}
-        id="message"
-        role="status"
-        class={[
-          "mt-p mb-0 font-semibold",
-          elem(@message, 0) == :error && "text-danger-1",
-          elem(@message, 0) == :ok && "text-success-1"
-        ]}
-      >
-        {elem(@message, 1)}
-      </p>
+      <.message :if={@message} message={@message} />
 
       <div
         id="scanner"
@@ -275,6 +308,17 @@ defmodule Web.AttendanceLinkLive do
             </.button>
           </div>
         </div>
+        <.button
+          id="sound-toggle"
+          type="button"
+          variant={:link}
+          size={:sm}
+          class="mt-2"
+          phx-hook="SoundToggle"
+          phx-update="ignore"
+        >
+          Sound on
+        </.button>
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera did not start. Allow camera access, or find members by name.

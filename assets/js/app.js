@@ -25,14 +25,17 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sarduty"
 import topbar from "../vendor/topbar"
 import {QRScanner} from "./qr_scanner"
+import {SoundToggle, listenForScanSounds} from "./scan_sound"
 import {ShareLink} from "./share_link"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, QRScanner, ShareLink},
+  hooks: {...colocatedHooks, QRScanner, ShareLink, SoundToggle},
 })
+
+listenForScanSounds()
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
