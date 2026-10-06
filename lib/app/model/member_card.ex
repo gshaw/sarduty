@@ -99,10 +99,9 @@ defmodule App.Model.MemberCard do
     do: "#{team.name} through SAR Duty. Status comes from the team's records."
 
   @doc """
-  The code in what a scanner read: a bare code, as on the first cards, or a link to a
-  card's page on one of `hosts`: `/K7Q4-M2XA` on the verify site, or `/verify/K7Q4-M2XA`
-  on the app's host, as cards linked before the verify site. `{:other_site, host}` for a
-  link anywhere else, which is what a forged card would carry. Nil when it's neither.
+  The code in what a scanner read: a bare code, or a link to a card's page,
+  `/K7Q4-M2XA`, on one of `hosts`. `{:other_site, host}` for a link anywhere else, which
+  is what a forged card would carry. Nil when it's neither.
   """
   def code_from_scan(text, hosts) when is_binary(text) do
     case text |> String.trim() |> URI.parse() do
@@ -120,7 +119,7 @@ defmodule App.Model.MemberCard do
   end
 
   defp code_from_path(path) do
-    case Regex.run(~r{^(?:/verify)?/([^/]+)/?$}i, path || "") do
+    case Regex.run(~r{^/([^/]+)/?$}, path || "") do
       [_, code] -> normalize_code(code)
       nil -> nil
     end

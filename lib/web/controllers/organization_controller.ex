@@ -7,7 +7,7 @@ defmodule Web.OrganizationController do
   @doc "The logo's full URL, since the verify site is another host. Changes with the logo."
   def logo_url(%Organization{} = organization) do
     version = DateTime.to_unix(organization.updated_at)
-    "#{Web.Endpoint.url()}/organizations/#{organization.slug}/logo?v=#{version}"
+    Web.Endpoint.url() <> ~p"/orgs/#{organization}/logo?#{[v: version]}"
   end
 
   # The organization's logo padded square, for the verify site's bar and results. Public,

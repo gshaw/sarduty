@@ -17,7 +17,7 @@ defmodule Web.Admin.OrganizationCollectionLive do
     <.admin_tabs current={:organizations} />
     <div class="mb-p flex flex-wrap items-center justify-between gap-p">
       <h2 class="heading mb-0">Organizations</h2>
-      <.button navigate={~p"/admin/organizations/new"} variant={:success} size={:sm}>
+      <.button navigate={~p"/admin/orgs/new"} variant={:success} size={:sm}>
         New organization
       </.button>
     </div>
@@ -40,8 +40,8 @@ defmodule Web.Admin.OrganizationCollectionLive do
             alt=""
           />
           <div>
-            <.a navigate={~p"/admin/organizations/#{organization.id}"}>{organization.name}</.a>
-            <.hint>{organization.short_name} · /o/{organization.slug}</.hint>
+            <.a navigate={~p"/admin/orgs/#{organization.id}"}>{organization.name}</.a>
+            <.hint>{organization.short_name} · /orgs/{organization.slug}</.hint>
           </div>
         </div>
       </:col>

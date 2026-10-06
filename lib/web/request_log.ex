@@ -11,7 +11,7 @@ defmodule Web.RequestLog do
   @filtered "[FILTERED]"
 
   # The verify site's paths that aren't a card code.
-  @verify_paths ["o", "live" | Web.static_paths()]
+  @verify_paths ["orgs", "live" | Web.static_paths()]
 
   def attach do
     :telemetry.attach_many(

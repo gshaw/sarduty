@@ -14,7 +14,7 @@ defmodule Web.Components.AdminTabs do
       </.a>
       <.a
         kind={:custom}
-        navigate={~p"/admin/organizations"}
+        navigate={~p"/admin/orgs"}
         aria-current={@current == :organizations && "page"}
       >
         Organizations

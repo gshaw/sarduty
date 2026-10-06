@@ -101,7 +101,7 @@ defmodule Web.GroupLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Groups" path={~p"/#{@current_team.subdomain}/groups"} />
+      <:item label="Groups" path={~p"/teams/#{@current_team}/groups"} />
       <:item label={@group.title} />
     </.breadcrumbs>
 
@@ -314,7 +314,7 @@ defmodule Web.GroupLive do
         :if={@preview.to_add != [] || @preview.to_remove != []}
         id="review-changes"
         variant={:primary}
-        navigate={~p"/#{@team.subdomain}/groups/#{@group.id}/review"}
+        navigate={~p"/teams/#{@team}/groups/#{@group.id}/review"}
       >
         Review changes
       </.button>
@@ -332,7 +332,7 @@ defmodule Web.GroupLive do
         </:col>
         <:col :let={change} label="Change">
           <span class={change.error && "text-danger-1"}>{change_verb(change)}</span>
-          <.a navigate={~p"/#{@team.subdomain}/members/#{change.member.id}/qualifications"}>
+          <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}/qualifications"}>
             {change.member.name}
           </.a>
           · {change.reason}
@@ -356,7 +356,7 @@ defmodule Web.GroupLive do
       <h3 class={["font-semibold mb-p05", @title_class]}>{@title} ({length(@rows)})</h3>
       <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="w-full table-striped">
         <:col :let={row} label="Member" class="md:w-1/3">
-          <.a navigate={~p"/#{@team.subdomain}/members/#{row.member.id}/qualifications"}>
+          <.a navigate={~p"/teams/#{@team}/members/#{row.member.id}/qualifications"}>
             {row.member.name}
           </.a>
         </:col>
@@ -381,7 +381,7 @@ defmodule Web.GroupLive do
       class="w-full table-striped"
     >
       <:col :let={gm} label="Member">
-        <.a navigate={~p"/#{@team.subdomain}/members/#{gm.member.id}"}>
+        <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>
           {gm.member.name}
         </.a>
       </:col>

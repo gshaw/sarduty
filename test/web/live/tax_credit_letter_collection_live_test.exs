@@ -11,7 +11,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/tax-credit-letters")
+      |> live(~p"/teams/#{team}/tax-credit-letters")
 
     assert html =~ "tax credit letters"
   end

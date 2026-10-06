@@ -30,7 +30,7 @@ defmodule Web.Admin.AdminCollectionLive do
       <:col :let={admin} label="Email">{admin.email}</:col>
       <:col :let={admin} label="Last team">
         <%= if team = @teams[admin.last_team_id] do %>
-          <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
+          <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
         <% end %>
       </:col>
       <:col :let={admin} label="Last seen" class="whitespace-nowrap">

@@ -4,17 +4,10 @@ defmodule Web.Settings.CardsLive do
   alias App.Model.GroupRuleClause
   alias App.Worker.PushPassUpdatesWorker
 
+  # The team comes from the URL, /teams/:subdomain/settings/cards (#153).
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-
-    socket =
-      if team == nil do
-        push_navigate(socket, to: ~p"/settings")
-      else
-        socket |> assign(page_title: "ID cards") |> assign_names(team)
-      end
-
-    {:ok, socket}
+    {:ok, socket |> assign(page_title: "ID cards") |> assign_names(team)}
   end
 
   def handle_event("save", params, socket) do
@@ -48,7 +41,7 @@ defmodule Web.Settings.CardsLive do
     ~H"""
     <div>
       <p>
-        <.a navigate={~p"/settings"}>← Settings</.a>
+        <.a navigate={~p"/teams/#{@current_team}/settings"}>← Team settings</.a>
       </p>
       <h1 class="heading">ID cards</h1>
       <p>

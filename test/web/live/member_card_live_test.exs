@@ -28,7 +28,7 @@ defmodule Web.MemberCardLiveTest do
   end
 
   test "issues a card", %{conn: conn, team: team, member: member} do
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
     assert has_element?(lv, "#no-card")
 
     lv |> element("#issue") |> render_click()
@@ -42,7 +42,7 @@ defmodule Web.MemberCardLiveTest do
 
   test "replacing a card cancels the old one", %{conn: conn, team: team, member: member} do
     old = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
     lv |> element("#replace") |> render_click()
 
@@ -54,7 +54,7 @@ defmodule Web.MemberCardLiveTest do
 
   test "cancels a card", %{conn: conn, team: team, member: member} do
     card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
     lv |> element("#revoke") |> render_click()
 
@@ -71,7 +71,7 @@ defmodule Web.MemberCardLiveTest do
 
     test "emails the pass to the member", %{conn: conn, team: team, member: member} do
       card = member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       lv |> element("#email-pass") |> render_click()
 
@@ -92,7 +92,7 @@ defmodule Web.MemberCardLiveTest do
       member = member_fixture(team, %{email: nil})
       member_card_fixture(member)
 
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       refute has_element?(lv, "#email-pass")
       assert has_element?(lv, "#apple-pass")
@@ -111,7 +111,7 @@ defmodule Web.MemberCardLiveTest do
       team: team,
       member: member
     } do
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       assert has_element?(lv, "#card-phones", "Not on a phone yet")
       refute has_element?(lv, "#test-update")
@@ -121,7 +121,7 @@ defmodule Web.MemberCardLiveTest do
          %{conn: conn, team: team, member: member, card: card} do
       PassRegistration.register!(card, "device-1", "push-token-1")
       PassRegistration.register!(card, "device-2", "push-token-2")
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
       assert has_element?(lv, "#card-phones", "On 2 phones")
       refute render(lv) =~ "last fetched"
 
@@ -139,7 +139,7 @@ defmodule Web.MemberCardLiveTest do
         Plug.Conn.send_resp(conn, 200, "")
       end)
 
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
       lv |> element("#test-update") |> render_click()
 
       assert_received {:pushed, "/3/device/push-token-1"}
@@ -157,7 +157,7 @@ defmodule Web.MemberCardLiveTest do
 
     test "offers the Google pass and no Apple one", %{conn: conn, team: team, member: member} do
       member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       assert has_element?(lv, "#google-pass")
       refute has_element?(lv, "#apple-pass")
@@ -165,7 +165,7 @@ defmodule Web.MemberCardLiveTest do
 
     test "emails the Google Wallet link", %{conn: conn, team: team, member: member} do
       member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/members/#{member.id}/card")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       lv |> element("#email-pass") |> render_click()
 

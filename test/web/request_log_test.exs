@@ -22,7 +22,7 @@ defmodule Web.RequestLogTest do
       assert RequestLog.filter_path(host, "/K7Q4M2XA") == "/[FILTERED]"
       assert RequestLog.filter_path(host, "/K7Q4M2XA/photo") == "/[FILTERED]/photo"
       assert RequestLog.filter_path(host, "/") == "/"
-      assert RequestLog.filter_path(host, "/o/nsr") == "/o/nsr"
+      assert RequestLog.filter_path(host, "/orgs/nsr") == "/orgs/nsr"
       assert RequestLog.filter_path(host, "/assets/app.js") == "/assets/app.js"
     end
 

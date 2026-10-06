@@ -77,7 +77,7 @@ defmodule Web.UserSessionControllerTest do
 
       conn = log_in(conn, user.email, code)
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/#{team.subdomain}"
+      assert redirected_to(conn) == ~p"/teams/#{team}"
       refute conn.resp_cookies["_sarduty_remember_me"]
 
       conn = log_in(build_conn(), user.email, code)
@@ -99,11 +99,11 @@ defmodule Web.UserSessionControllerTest do
       %{user: user, team: team} = user_with_team_fixture()
       code = login_code_fixture(user.email)
 
-      conn = get(conn, ~p"/#{team.subdomain}/members")
+      conn = get(conn, ~p"/teams/#{team}/members")
       assert redirected_to(conn) == ~p"/login"
 
       conn = conn |> recycle() |> log_in(user.email, code)
-      assert redirected_to(conn) == ~p"/#{team.subdomain}/members"
+      assert redirected_to(conn) == ~p"/teams/#{team}/members"
     end
 
     test "a wrong code goes back to the code page, keeping the email", %{conn: conn} do
@@ -190,7 +190,7 @@ defmodule Web.UserSessionControllerTest do
       %{user: user, team: team} = user_with_team_fixture()
 
       conn = conn |> log_in_user(user) |> get(~p"/login")
-      assert redirected_to(conn) == ~p"/#{team.subdomain}"
+      assert redirected_to(conn) == ~p"/teams/#{team}"
     end
   end
 
@@ -259,7 +259,7 @@ defmodule Web.UserSessionControllerTest do
         post(conn, ~p"/login", %{"user" => %{"phone" => "+16045551234", "code" => code}})
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/#{team.subdomain}"
+      assert redirected_to(conn) == ~p"/teams/#{team}"
     end
 
     test "a wrong code goes back to the code page, keeping the number", %{conn: conn} do

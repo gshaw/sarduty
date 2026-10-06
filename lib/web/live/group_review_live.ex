@@ -53,7 +53,7 @@ defmodule Web.GroupReviewLive do
 
   def handle_event("apply", params, socket) do
     %{current_team: team, current_user: user, group: group} = socket.assigns
-    group_path = ~p"/#{team.subdomain}/groups/#{group.id}"
+    group_path = ~p"/teams/#{team}/groups/#{group.id}"
 
     case ApplyGroupRuleChanges.call(team, group, user, selected_ids(params)) do
       {:ok, %{applied: applied, failed: 0}} ->
@@ -81,8 +81,8 @@ defmodule Web.GroupReviewLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Groups" path={~p"/#{@current_team.subdomain}/groups"} />
-      <:item label={@group.title} path={~p"/#{@current_team.subdomain}/groups/#{@group.id}"} />
+      <:item label="Groups" path={~p"/teams/#{@current_team}/groups"} />
+      <:item label={@group.title} path={~p"/teams/#{@current_team}/groups/#{@group.id}"} />
       <:item label="Review changes" />
     </.breadcrumbs>
 
@@ -121,7 +121,7 @@ defmodule Web.GroupReviewLive do
       class="callout mb-p"
     >
       Applying changes needs the team's D4H access key.
-      <.a navigate={~p"/settings/team"}>Save it in Team settings.</.a>
+      <.a navigate={~p"/teams/#{@current_team}/settings"}>Save it in Team settings.</.a>
     </p>
 
     <p
@@ -165,7 +165,7 @@ defmodule Web.GroupReviewLive do
         >
           Apply {count_changes(MapSet.size(@selected))} in D4H
         </.button>
-        <.button navigate={~p"/#{@current_team.subdomain}/groups/#{@group.id}"}>Cancel</.button>
+        <.button navigate={~p"/teams/#{@current_team}/groups/#{@group.id}"}>Cancel</.button>
       </div>
     </.form>
     """

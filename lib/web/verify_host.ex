@@ -8,6 +8,6 @@ defmodule Web.VerifyHost do
 
   def url, do: Web.Endpoint.struct_url() |> Map.put(:host, host()) |> URI.to_string()
 
-  @doc "Hosts whose card links the page's scanner accepts: this one, and the app's from before."
-  def trusted_hosts, do: [host(), Web.Endpoint.host()]
+  @doc "Hosts whose card links the page's scanner accepts."
+  def trusted_hosts, do: [host()]
 end

@@ -25,7 +25,7 @@ defmodule Web.HomePageLive do
     </div>
     <ul :if={@teams != []} id="my-teams" class="heading action-list">
       <li :for={team <- @teams}>
-        <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
+        <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
       </li>
     </ul>
     <p :if={@current_user && @teams == []} id="no-teams">

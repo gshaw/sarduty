@@ -10,6 +10,8 @@ defmodule App.Model.Team do
   alias App.Repo
   alias App.Validate
 
+  # Paths name a team by its subdomain: ~p"/teams/#{team}/members".
+  @derive {Phoenix.Param, key: :subdomain}
   schema "teams" do
     field :name, TrimmedString
     field :subdomain, :string

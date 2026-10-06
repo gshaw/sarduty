@@ -66,14 +66,14 @@ defmodule Web.AdminDashboardLive do
         <div class="flex items-start gap-2">
           <img
             id={"team-#{team.id}-logo"}
-            src={~p"/teams/#{team.subdomain}/logo?shape=square"}
+            src={~p"/teams/#{team}/logo?shape=square"}
             width="32"
             height="32"
             class="size-8 shrink-0 rounded"
             alt=""
           />
           <div>
-            <.a navigate={~p"/#{team.subdomain}"}>{team.name}</.a>
+            <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
             <.hint>
               <span class="whitespace-nowrap">{team.subdomain} · ID {team.id}</span>
               <span :if={team.organization} id={"team-#{team.id}-organization"} class="block">
@@ -87,7 +87,7 @@ defmodule Web.AdminDashboardLive do
         <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
       </:col>
       <:col :let={team} label="Contacts">
-        <.a id={"team-#{team.id}-managers"} navigate={~p"/#{team.subdomain}/managers"}>
+        <.a id={"team-#{team.id}-managers"} navigate={~p"/teams/#{team}/settings/managers"}>
           {Service.Format.count(length(@managers[team.id]), one: "%d manager", many: "%d managers")}
         </.a>
         <span :if={@logins[team.id] == []} class="block text-danger-1">No accounts</span>

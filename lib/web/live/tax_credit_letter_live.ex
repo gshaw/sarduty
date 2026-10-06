@@ -25,7 +25,7 @@ defmodule Web.TaxCreditLetterLive do
     <.breadcrumbs team={@current_team}>
       <:item
         label={"#{@letter.year} tax credit letters"}
-        path={~p"/#{@current_team.subdomain}/tax-credit-letters?year=#{@letter.year}"}
+        path={~p"/teams/#{@current_team}/tax-credit-letters?year=#{@letter.year}"}
       />
       <:item label={@letter.ref_id} />
     </.breadcrumbs>
@@ -33,7 +33,7 @@ defmodule Web.TaxCreditLetterLive do
     <h1 class="title">{@page_title}</h1>
     <.form_actions>
       <.button
-        href={~p"/#{@current_team.subdomain}/tax-credit-letters/#{@letter.id}/pdf"}
+        href={~p"/teams/#{@current_team}/tax-credit-letters/#{@letter.id}/pdf"}
         variant={:success}
       >
         Download PDF
@@ -57,7 +57,7 @@ defmodule Web.TaxCreditLetterLive do
           <dt>Member</dt>
           <dd>
             <.a navigate={
-              ~p"/#{@current_team.subdomain}/members/#{@letter.member.id}?when=#{@letter.year}"
+              ~p"/teams/#{@current_team}/members/#{@letter.member.id}?when=#{@letter.year}"
             }>
               {@letter.member.name}
             </.a>
@@ -87,7 +87,7 @@ defmodule Web.TaxCreditLetterLive do
       |> put_flash(:info, "Tax credit letter deleted.")
       |> redirect(
         to:
-          ~p"/#{socket.assigns.current_team.subdomain}/tax-credit-letters?year=#{tax_credit_letter.year}"
+          ~p"/teams/#{socket.assigns.current_team}/tax-credit-letters?year=#{tax_credit_letter.year}"
       )
 
     {:noreply, socket}

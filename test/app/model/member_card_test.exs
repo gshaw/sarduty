@@ -78,21 +78,25 @@ defmodule App.Model.MemberCardTest do
   end
 
   describe "code_from_scan" do
-    @hosts ["verify.sarduty.com", "sarduty.com"]
+    @hosts ["verify.sarduty.com"]
 
     test "reads a bare code, as on the first cards" do
       assert MemberCard.code_from_scan("K7Q4M2XA", @hosts) == "K7Q4M2XA"
     end
 
-    test "reads the code from a card's link, in any case, on either host" do
+    test "reads the code from a card's link, in any case" do
       for link <- [
             "HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA",
             "https://verify.sarduty.com/k7q4m2xa",
-            "HTTPS://SARDUTY.COM/VERIFY/K7Q4-M2XA",
-            "https://sarduty.com/verify/K7Q4-M2XA/"
+            "https://verify.sarduty.com/K7Q4-M2XA/"
           ] do
         assert MemberCard.code_from_scan(link, @hosts) == "K7Q4M2XA"
       end
+    end
+
+    test "flags the app's own host: cards never linked there (#153)" do
+      assert MemberCard.code_from_scan("https://sarduty.com/verify/K7Q4-M2XA", @hosts) ==
+               {:other_site, "sarduty.com"}
     end
 
     test "flags a link to another site, the way a forged card would" do
@@ -107,7 +111,7 @@ defmodule App.Model.MemberCardTest do
     end
 
     test "is nil for a link to another page here, or text that isn't a code" do
-      assert MemberCard.code_from_scan("https://sarduty.com/login", @hosts) == nil
+      assert MemberCard.code_from_scan("https://verify.sarduty.com/orgs/nsr", @hosts) == nil
       assert MemberCard.code_from_scan("hello", @hosts) == nil
     end
   end

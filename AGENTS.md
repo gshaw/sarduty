@@ -6,8 +6,9 @@
   each team's system of record; SAR Duty copies it into a local **SQLite** database and
   builds what D4H doesn't: tax credit letters, mileage reports, attendance cleanup, and
   group qualification rules.
-- It is multi-team. Team pages live under `/:subdomain/…`, and every query that reads team
-  data filters by `team_id`.
+- It is multi-team. Team pages live under `/teams/:subdomain/…`, and every query that
+  reads team data filters by `team_id`. URL rules and the URLs that can't move are in
+  [docs/urls.md](docs/urls.md).
 - Production is one Fly machine with SQLite on a volume, replicated by Litestream. See
   [docs/deployment.md](docs/deployment.md).
 - Start with [docs/README.md](docs/README.md) for the map.
@@ -218,6 +219,7 @@ change, read the relevant doc:
 - **Fly, Litestream, and changing production data** →
   [docs/deployment.md](docs/deployment.md).
 - **What is tested and why** → [docs/testing-strategy.md](docs/testing-strategy.md).
+- **New routes and URL rules** → [docs/urls.md](docs/urls.md).
 - **Words in the UI, emails, and PDFs** → [docs/writing.md](docs/writing.md).
 
 Recurring maintenance prompts for agents are in

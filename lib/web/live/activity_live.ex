@@ -34,7 +34,7 @@ defmodule Web.ActivityLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
+      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
       <:item label={"#{@activity.ref_id}"} />
     </.breadcrumbs>
 
@@ -117,17 +117,17 @@ defmodule Web.ActivityLive do
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/take-attendance"}>
+            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>
               Take attendance
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/attendance"}>
+            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}>
               Import attendance
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@activity.team.subdomain}/activities/#{@activity.id}/mileage"}>
+            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>
               Mileage report
             </.a>
           </li>
@@ -165,7 +165,7 @@ defmodule Web.ActivityLive do
       </:col>
       <:col :let={record} label="Name">
         <.a navigate={
-          ~p"/#{@activity.team.subdomain}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+          ~p"/teams/#{@activity.team}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
         }>
           {record.member.name}
         </.a>
@@ -193,7 +193,7 @@ defmodule Web.ActivityLive do
   def leave_deleted(socket, activity) do
     socket
     |> put_flash(:error, "This activity is deleted in D4H. Nothing can be sent to it.")
-    |> push_navigate(to: ~p"/#{socket.assigns.current_team.subdomain}/activities/#{activity.id}")
+    |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}")
   end
 
   def fetch_activity(team, activity_id) do

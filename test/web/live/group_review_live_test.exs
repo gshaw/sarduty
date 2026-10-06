@@ -26,7 +26,7 @@ defmodule Web.GroupReviewLiveTest do
       group: group,
       unqualified: unqualified,
       qualified: qualified,
-      path: ~p"/#{team.subdomain}/groups/#{group.id}/review"
+      path: ~p"/teams/#{team}/groups/#{group.id}/review"
     }
   end
 
@@ -58,7 +58,7 @@ defmodule Web.GroupReviewLiveTest do
     |> form("#review-form", %{"member_ids" => ["#{ctx.qualified.id}"]})
     |> render_submit()
 
-    assert_redirect(lv, ~p"/#{ctx.team.subdomain}/groups/#{ctx.group.id}")
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/groups/#{ctx.group.id}")
     assert GroupMember.get_by(group_id: ctx.group.id, member_id: ctx.qualified.id)
     assert GroupMember.get_by(group_id: ctx.group.id, member_id: ctx.unqualified.id)
     assert [%{action: :add}] = Repo.all(GroupMembershipChange)

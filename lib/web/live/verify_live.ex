@@ -14,7 +14,7 @@ defmodule Web.VerifyLive do
   # a plug, which would miss checks sent over the open connection. A bad link opened
   # directly counts twice, once for the HTTP render and once on connect.
   #
-  # An organization's scan page, /o/<slug>, carries its brand until it has its own verify
+  # An organization's scan page, /orgs/<slug>, carries its brand until it has its own verify
   # host. A card's result keeps the team's brand, with the organization's name under it.
   def mount(_params, session, socket) do
     {:ok,
@@ -32,7 +32,7 @@ defmodule Web.VerifyLive do
         socket =
           socket
           |> assign(:form, to_form(%{"code" => ""}, as: "check"))
-          |> assign(result: nil, organization: organization, start_path: ~p"/o/#{slug}")
+          |> assign(result: nil, organization: organization, start_path: ~p"/orgs/#{slug}")
 
         {:noreply, socket}
 
@@ -50,7 +50,7 @@ defmodule Web.VerifyLive do
       socket
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
       |> assign(result: result, organization: nil)
-      |> assign(:start_path, if(organization, do: ~p"/o/#{organization.slug}", else: ~p"/"))
+      |> assign(:start_path, if(organization, do: ~p"/orgs/#{organization}", else: ~p"/"))
       |> scan_sound(result)
 
     {:noreply, socket}

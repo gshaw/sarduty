@@ -1,4 +1,6 @@
 defmodule App.Operation.BuildGooglePass do
+  use Web, :verified_routes
+
   alias App.Adapter.GoogleWallet
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
@@ -179,28 +181,28 @@ defmodule App.Operation.BuildGooglePass do
 
   # Google loads images from URLs it can reach, so dev passes have none. The team logo
   # sits in the round spot beside the team name, and the photo in the banner under the
-  # QR code, from the public URL /verify uses. A cancelled card's photo URL 404s.
+  # QR code, from the verify site. Always SAR Duty's verify host, even for an organization
+  # with its own, since Google holds the URL. A cancelled card's photo URL 404s.
   defp put_images(object, _card, _status, %{images: false}), do: object
 
   defp put_images(object, card, status, _config) do
     team = card.member.team
-    url = Web.Endpoint.url()
 
     object
     |> Map.put(:logo, %{
-      sourceUri: %{uri: "#{url}/teams/#{team.subdomain}/logo"},
+      sourceUri: %{uri: Web.Endpoint.url() <> ~p"/teams/#{team}/logo"},
       contentDescription: localized("#{team.name} logo")
     })
-    |> put_banner(card, status, url)
+    |> put_banner(card, status)
   end
 
   # The banner URL answers only for an active member (#176), and Google refuses a pass
   # whose images it can't load.
-  defp put_banner(object, _card, status, _url) when status in [:revoked, :inactive], do: object
+  defp put_banner(object, _card, status) when status in [:revoked, :inactive], do: object
 
-  defp put_banner(object, card, _status, url) do
+  defp put_banner(object, card, _status) do
     Map.put(object, :heroImage, %{
-      sourceUri: %{uri: "#{url}/verify/#{card.code}/banner"},
+      sourceUri: %{uri: Web.VerifyHost.url() <> ~p"/#{card.code}/banner"},
       contentDescription: localized("Photo of #{card.member.name}")
     })
   end

@@ -67,7 +67,7 @@ defmodule Web.Components.AttendanceFilterTable do
       path_fn={@path_fn}
     >
       <:col :let={record} label="Activity" sorts={[{"↓", "id-"}, {"↑", "id"}]}>
-        <.a navigate={~p"/#{@member.team.subdomain}/activities/#{record.activity.id}"}>
+        <.a navigate={~p"/teams/#{@member.team}/activities/#{record.activity.id}"}>
           <.activity_title activity={record.activity} />
         </.a>
       </:col>

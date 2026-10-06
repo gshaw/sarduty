@@ -88,7 +88,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
         <.a navigate={
-          ~p"/#{@current_team.subdomain}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
+          ~p"/teams/#{@current_team}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
         }>
           {record.member.name}
         </.a>
@@ -134,9 +134,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp record_actions(assigns) do
     ~H"""
     <%= if @record.tax_credit_letter_id do %>
-      <.a navigate={
-        ~p"/#{@current_team.subdomain}/tax-credit-letters/#{@record.tax_credit_letter_id}"
-      }>
+      <.a navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}>
         <span class="font-mono text-sm">{@record.tax_credit_letter_ref_id}</span>
       </.a>
     <% else %>
@@ -198,7 +196,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   defp build_filter_path(team, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
-    ~p"/#{team.subdomain}/tax-credit-letters?#{query_params}"
+    ~p"/teams/#{team}/tax-credit-letters?#{query_params}"
   end
 
   defp put_email_flash(socket, letter) do

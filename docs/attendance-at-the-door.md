@@ -54,7 +54,7 @@ the D4H test it rests on.
 target, or shows the not-found page for a missing or expired code.
 
 - Codes are 8 lowercase characters from an alphabet without 0, o, 1, l, or i, about 40
-  bits. They look nothing like an ID card's uppercase `XXXX-XXXX` code at `/verify/:code`.
+  bits. They look nothing like an ID card's uppercase `XXXX-XXXX` code on the verify site.
 - The target is a path, stored encrypted, since it can hold a secret token.
 - [Web.ShortLinkLimit](../lib/web/short_link_limit.ex) allows 20 misses per IP every 10
   minutes, so the codes cannot be swept.

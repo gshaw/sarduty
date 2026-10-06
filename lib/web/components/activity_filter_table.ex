@@ -65,7 +65,7 @@ defmodule Web.Components.ActivityFilterTable do
       path_fn={@path_fn}
     >
       <:col :let={record} label="Activity" sorts={[{"↓", "id-"}, {"↑", "id"}]}>
-        <.a navigate={~p"/#{@team.subdomain}/activities/#{record.id}"}>
+        <.a navigate={~p"/teams/#{@team}/activities/#{record.id}"}>
           <.activity_title activity={record} />
         </.a>
         <div class="hint">

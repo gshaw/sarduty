@@ -7,7 +7,7 @@ defmodule Web.ActivityMileageLiveTest do
   test "redirects when not authenticated", %{conn: conn} do
     team = team_fixture(%{subdomain: "alpha"})
 
-    assert {:error, redirect} = live(conn, ~p"/#{team.subdomain}/activities/1/mileage")
+    assert {:error, redirect} = live(conn, ~p"/teams/#{team}/activities/1/mileage")
 
     assert {:redirect, %{to: path, flash: flash}} = redirect
     assert path == ~p"/login"

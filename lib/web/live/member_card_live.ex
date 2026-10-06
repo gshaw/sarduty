@@ -95,7 +95,7 @@ defmodule Web.MemberCardLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
+      <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
       <:item label="ID card" />
     </.breadcrumbs>
 
@@ -143,7 +143,9 @@ defmodule Web.MemberCardLive do
           </div>
           <div :if={@qualifications == []}>
             None held.
-            <.a navigate={~p"/settings/cards"}>Select qualifications to show</.a>
+            <.a navigate={~p"/teams/#{@member.team}/settings/cards"}>
+              Select qualifications to show
+            </.a>
           </div>
         </dd>
         <dt :if={BuildApplePass.configured?()}>Apple Wallet</dt>
@@ -179,14 +181,14 @@ defmodule Web.MemberCardLive do
         <.button
           :if={BuildApplePass.configured?()}
           id="apple-pass"
-          href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/pass"}
+          href={~p"/teams/#{@member.team}/members/#{@member.id}/card/apple-wallet"}
         >
           Add to Apple Wallet
         </.button>
         <.button
           :if={BuildGooglePass.configured?()}
           id="google-pass"
-          href={~p"/#{@member.team.subdomain}/members/#{@member.id}/card/google-pass"}
+          href={~p"/teams/#{@member.team}/members/#{@member.id}/card/google-wallet"}
         >
           Add to Google Wallet
         </.button>

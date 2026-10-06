@@ -20,23 +20,22 @@ organization gets its branding: see [organizations.md](organizations.md).
 - **The verify site serves only the check.** The router matches it by its `verify.`
   host ([Web.VerifyHost](../lib/web/verify_host.ex)). There's no login there, and the
   app's session cookie never reaches it, since that cookie is host-only. Other paths go to
-  the app; a one-segment path reads as a code. The app's old `/verify` links redirect
-  there, and the websocket's `check_origin` lists both hosts.
+  the app; a one-segment path reads as a code. The app has no `/verify` (#153), and the
+  websocket's `check_origin` lists both hosts.
 - **Scanning from the verify site is the careful check.** The page's scanner never
-  follows a link. It takes the code out of a card's link (or an older `sarduty.com/verify`
-  one), accepts a bare code from the first cards, and flags a link to anywhere else as
-  forged.
+  follows a link. It takes the code out of a card's link, accepts a bare code, and flags
+  a link to anywhere else as forged.
 - **Codes are random.** They come from `:crypto`, 8 characters from a 30-character
   alphabet ([MemberCard](../lib/app/model/member_card.ex)). Never derive one from the D4H
   member number or the local id: a guessable code would let anyone walk the roster.
 - **Misses are capped per IP.** 20 codes that match no card in 10 minutes, on the page
-  or the photo route, and that IP gets "Too many tries" with no lookup
+  or the photo and banner routes, and that IP gets "Too many tries" with no lookup
   ([Web.VerifyLimit](../lib/web/verify_limit.ex)). Real codes never count, so checking a
   crowd of cards at a callout can't trip it. The counts live in memory (Hammer's ETS
   backend), which is enough on one machine and resets on deploy. The IP is Fly's
   `Fly-Client-IP`, read on the HTTP request and carried into the LiveView's session,
   since a websocket can't see that header.
-- **A cancelled card shows nothing about the member.** `/verify` says it was cancelled,
+- **A cancelled card shows nothing about the member.** The verify site says it was cancelled,
   and its photo route 404s.
 - **A former member's card shows no photo.** The page gives the name, the team, and "Not
   active", and the photo and banner routes 404, as for a cancelled card (#176). "Not
@@ -117,13 +116,13 @@ reach a dev server, so dev passes have none. In production:
   circle clips nothing. Google fills the transparency with white (tested 2026-10-01), so
   pages and Google share one image. It's public, like the logo on the team's D4H pages.
 - **The photo** sits in the banner under the QR code (`heroImage`), from
-  `/verify/:code/banner`: the square photo centered on the pass's navy. Google has no
+  `/:code/banner` on the verify site, always SAR Duty's verify host: the square photo centered on the pass's navy. Google has no
   picture spot beside the name, so this is the only place on the front for both.
 
 ## Why the QR holds a link
 
 Until 2026-10-01 the QR held only the code, so a forged card's QR couldn't open a
-look-alike site: the checker had to open sarduty.com/verify first and scan from there.
+look-alike site: the checker had to open the check page first and scan from there.
 We dropped that. Cards are for shops giving pro deals and for mutual aid teams. A clerk
 whose camera shows a bare code gives up and looks at the pass instead, which is easier
 to fake than a web page. A link gets them to the real check.
@@ -131,7 +130,7 @@ to fake than a web page. A link gets them to the real check.
 What's left: someone who scans a forged card with the plain camera and doesn't look at
 the domain can be fooled by a look-alike site. The camera shows the domain before it
 opens, the result page says to check the address bar, and partners who check often
-should keep sarduty.com/verify on their home screen, where a forged link is flagged. For
+should keep verify.sarduty.com on their home screen, where a forged link is flagged. For
 mutual aid, a call to the member's team is the check; the card speeds it up.
 
 ## Valid until
@@ -160,8 +159,8 @@ A card is active while the member hasn't left the team in D4H (`Member.current?/
 Qualifications don't change that. They're listed, not required.
 
 A team picks what to list at **Settings > ID cards**: any named clause from its groups'
-rules. Clauses that share a name count as one. For each, the back of the pass, `/verify`,
+rules. Clauses that share a name count as one. For each, the back of the pass, the verify site,
 and the ID Card tab say when the member's latest current award ends, or that none is
 current ([BuildCardQualifications](../lib/app/operation/build_card_qualifications.ex)).
-The pass shows them as of when it was made, and `/verify` shows them as of the last
+The pass shows them as of when it was made, and the verify site shows them as of the last
 refresh.

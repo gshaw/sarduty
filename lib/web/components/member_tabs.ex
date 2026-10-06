@@ -11,25 +11,25 @@ defmodule Web.Components.MemberTabs do
     <div>
       <nav class="tabs" aria-label="Tabs">
         <.tab
-          navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}"}
+          navigate={~p"/teams/#{@member.team}/members/#{@member.id}"}
           current={@active_tab == :attendance}
         >
           Attendance
         </.tab>
         <.tab
-          navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}/qualifications"}
+          navigate={~p"/teams/#{@member.team}/members/#{@member.id}/qualifications"}
           current={@active_tab == :qualifications}
         >
           Qualifications
         </.tab>
         <.tab
-          navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}/groups"}
+          navigate={~p"/teams/#{@member.team}/members/#{@member.id}/groups"}
           current={@active_tab == :groups}
         >
           Groups
         </.tab>
         <.tab
-          navigate={~p"/#{@member.team.subdomain}/members/#{@member.id}/card"}
+          navigate={~p"/teams/#{@member.team}/members/#{@member.id}/card"}
           current={@active_tab == :card}
         >
           ID card

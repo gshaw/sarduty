@@ -13,7 +13,7 @@ defmodule Web.QualificationCollectionLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/qualifications")
+      |> live(~p"/teams/#{team}/qualifications")
 
     assert html =~ "Qualifications"
     assert html =~ "First Aid"
@@ -25,7 +25,7 @@ defmodule Web.QualificationCollectionLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/qualifications")
+      |> live(~p"/teams/#{team}/qualifications")
 
     assert html =~ "Qualifications"
     assert html =~ "0 qualifications"
@@ -38,7 +38,7 @@ defmodule Web.QualificationCollectionLiveTest do
     {:ok, lv, _html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/qualifications")
+      |> live(~p"/teams/#{team}/qualifications")
 
     assert has_element?(lv, "a", "Swift Water Rescue")
   end

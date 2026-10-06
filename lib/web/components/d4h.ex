@@ -89,7 +89,7 @@ defmodule Web.Components.D4H do
     ~H"""
     <img
       class="bg-base-0 size-48 rounded"
-      src={~p"/#{@member.team.subdomain}/members/#{@member.id}/image"}
+      src={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
     />
     """
   end

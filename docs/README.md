@@ -81,7 +81,8 @@ The rules that are easy to break:
 
 - [d4h-sync.md](d4h-sync.md) — how D4H data reaches the database, and what is never deleted.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
-- [member-cards.md](member-cards.md) — member ID cards and the public `/verify` page.
+- [member-cards.md](member-cards.md) — member ID cards and the public verify site.
+- [urls.md](urls.md) — how paths are named, and the URLs that can never move.
 - [attendance-at-the-door.md](attendance-at-the-door.md) — attendance links, scanning ID cards at an activity, and the times they record.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.

@@ -142,7 +142,7 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
   in on its own; anywhere else it waits for a button, so mail scanners can't use it up.
 - **Landing**: the page that asked for a login, else the team the user last opened
   (`users.last_team_id`), else their first. An admin with no team lands on `/admin`.
-- `/:subdomain/managers` shows the team who can log in, with the same list on `/admin`.
+- `/teams/:subdomain/settings/managers` shows the team who can log in, with the same list on `/admin`.
 - **New teams sign themselves up** at `/signup` (`App.Operation.SignUpTeam`): a D4H
   personal access token becomes the team key, and the person signing up must be a current
   Owner or Editor on that team in D4H, at the email they give. The team goes live at once,

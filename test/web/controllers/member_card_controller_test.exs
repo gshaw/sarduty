@@ -3,12 +3,20 @@ defmodule Web.MemberCardControllerTest do
 
   import App.DataFixtures
 
-  setup do
+  # Card images are on the verify site, matched by host. Each test gets its own IP, since
+  # misses count against it.
+  setup %{conn: conn} do
     team = team_fixture(%{d4h_access_key: "team-key"})
-    %{member: member_fixture(team)}
+    %{member: member_fixture(team), verify: verify_conn(conn)}
   end
 
-  test "sends the member's D4H photo for a valid card", %{conn: conn, member: member} do
+  defp verify_conn(conn) do
+    conn
+    |> Map.put(:host, Web.VerifyHost.host())
+    |> put_req_header("fly-client-ip", "10.2.#{System.unique_integer([:positive])}")
+  end
+
+  test "sends the member's D4H photo for a valid card", %{verify: conn, member: member} do
     card = member_card_fixture(member)
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -16,74 +24,90 @@ defmodule Web.MemberCardControllerTest do
       Plug.Conn.send_resp(conn, 200, png_fixture(640, 480))
     end)
 
-    conn = get(conn, ~p"/verify/#{card.code}/photo")
+    conn = get(conn, ~p"/#{card.code}/photo")
 
     assert image_size(response(conn, 200)) == {480, 480}
   end
 
-  test "sends a square placeholder when D4H's photo won't decode", %{conn: conn, member: member} do
+  test "sends a square placeholder when D4H's photo won't decode", %{verify: conn, member: member} do
     card = member_card_fixture(member)
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, "not an image"))
 
-    conn = get(conn, ~p"/verify/#{card.code}/photo")
+    conn = get(conn, ~p"/#{card.code}/photo")
 
     {width, height} = image_size(response(conn, 200))
     assert width == height
   end
 
-  test "sends the photo in the Google pass banner", %{conn: conn, member: member} do
+  test "sends the photo in the Google pass banner", %{verify: conn, member: member} do
     card = member_card_fixture(member)
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
 
-    conn = get(conn, ~p"/verify/#{card.code}/banner")
+    conn = get(conn, ~p"/#{card.code}/banner")
 
     assert image_size(response(conn, 200)) == {1032, 336}
   end
 
-  test "the banner 404s for a cancelled card", %{conn: conn, member: member} do
+  test "the banner 404s for a cancelled card", %{verify: conn, member: member} do
     card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
-    assert conn |> get(~p"/verify/#{card.code}/banner") |> response(404)
+    assert conn |> get(~p"/#{card.code}/banner") |> response(404)
   end
 
-  test "sends the placeholder when D4H has no photo", %{conn: conn, member: member} do
+  test "sends the placeholder when D4H has no photo", %{verify: conn, member: member} do
     card = member_card_fixture(member)
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
 
-    conn = get(conn, ~p"/verify/#{card.code}/photo")
+    conn = get(conn, ~p"/#{card.code}/photo")
 
     assert response(conn, 200)
   end
 
-  test "404s for a member who left the team, without calling D4H", %{conn: conn} do
+  test "404s for a member who left the team, without calling D4H", %{verify: conn} do
     team = team_fixture(%{d4h_access_key: "team-key"})
     card = member_card_fixture(member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]}))
 
-    assert conn |> get(~p"/verify/#{card.code}/photo") |> response(404)
-    assert conn |> get(~p"/verify/#{card.code}/banner") |> response(404)
+    assert conn |> get(~p"/#{card.code}/photo") |> response(404)
+    assert conn |> get(~p"/#{card.code}/banner") |> response(404)
   end
 
-  test "404s for a cancelled card without calling D4H", %{conn: conn, member: member} do
+  test "404s for a cancelled card without calling D4H", %{verify: conn, member: member} do
     card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
 
-    conn = get(conn, ~p"/verify/#{card.code}/photo")
+    conn = get(conn, ~p"/#{card.code}/photo")
 
     assert response(conn, 404)
   end
 
   describe "the verify limit" do
-    setup %{conn: conn} do
+    setup %{verify: conn} do
       ip = "10.1.#{System.unique_integer([:positive])}"
-      %{conn: put_req_header(conn, "fly-client-ip", ip)}
+      %{verify: put_req_header(conn, "fly-client-ip", ip)}
     end
 
-    test "photo 404s count, and a limited IP is refused", %{conn: conn, member: member} do
+    test "photo 404s count, and a limited IP is refused", %{verify: conn, member: member} do
       card = member_card_fixture(member)
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(64, 64)))
 
-      for _ <- 1..20, do: assert(conn |> get(~p"/verify/ZZZZZZZZ/photo") |> response(404))
+      for _ <- 1..20, do: assert(conn |> get(~p"/ZZZZZZZZ/photo") |> response(404))
 
-      assert conn |> get(~p"/verify/#{card.code}/photo") |> response(429)
-      assert build_conn() |> get(~p"/verify/#{card.code}/photo") |> response(200)
+      assert conn |> get(~p"/#{card.code}/photo") |> response(429)
+      assert build_conn() |> verify_conn() |> get(~p"/#{card.code}/photo") |> response(200)
+    end
+
+    test "banner 404s count too", %{verify: conn, member: member} do
+      card = member_card_fixture(member)
+
+      for _ <- 1..20, do: assert(conn |> get(~p"/ZZZZZZZZ/banner") |> response(404))
+
+      assert conn |> get(~p"/#{card.code}/banner") |> response(429)
+    end
+  end
+
+  test "the main site has no card images", %{member: member} do
+    card = member_card_fixture(member)
+
+    for path <- ["/verify/#{card.code}/photo", "/verify/#{card.code}/banner"] do
+      assert build_conn() |> get(path) |> response(404)
     end
   end
 
@@ -101,7 +125,7 @@ defmodule Web.MemberCardControllerTest do
       member_card_fixture(member)
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
 
-      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/pass")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/card/apple-wallet")
 
       assert [content_type] = get_resp_header(conn, "content-type")
       assert content_type =~ "application/vnd.apple.pkpass"
@@ -116,7 +140,7 @@ defmodule Web.MemberCardControllerTest do
     end
 
     test "404s when the member has no card", %{conn: conn, team: team, member: member} do
-      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/pass")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/card/apple-wallet")
       assert response(conn, 404)
     end
 
@@ -124,7 +148,7 @@ defmodule Web.MemberCardControllerTest do
       member_card_fixture(member)
       Application.put_env(:sarduty, :apple_pass, [])
 
-      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/pass")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/card/apple-wallet")
       assert response(conn, 404)
     end
   end
@@ -144,14 +168,14 @@ defmodule Web.MemberCardControllerTest do
          %{conn: conn, team: team, member: member} do
       member_card_fixture(member)
 
-      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/google-pass")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/card/google-wallet")
 
       assert redirected_to(conn) =~ "https://pay.google.com/gp/v/save/"
       assert_received {:google, "PUT", "/walletobjects/v1/genericObject/" <> _, _object}
     end
 
     test "404s when the member has no card", %{conn: conn, team: team, member: member} do
-      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/google-pass")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/card/google-wallet")
       assert response(conn, 404)
     end
 
@@ -159,7 +183,7 @@ defmodule Web.MemberCardControllerTest do
       member_card_fixture(member)
       Application.put_env(:sarduty, :google_wallet, [])
 
-      conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/card/google-pass")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/card/google-wallet")
       assert response(conn, 404)
     end
   end

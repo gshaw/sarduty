@@ -12,7 +12,7 @@ defmodule Web.TeamManagersLiveTest do
     _member = manager_fixture(team, %{name: "Mo Member", d4h_permission: 2})
     grant = TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/#{team.subdomain}/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
 
     assert has_element?(lv, "#manager-#{editor.id}", "Editor")
     refute has_element?(lv, "#team-managers", "Mo Member")
@@ -25,7 +25,7 @@ defmodule Web.TeamManagersLiveTest do
 
     _sar_duty = manager_fixture(team, %{name: "SAR Duty", d4h_member_id: 900})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/#{team.subdomain}/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
 
     refute has_element?(lv, "#team-managers", "SAR Duty")
   end
@@ -36,7 +36,7 @@ defmodule Web.TeamManagersLiveTest do
 
     kim = manager_fixture(team, %{name: "Kim Lee", d4h_member_id: 901})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/#{team.subdomain}/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
 
     assert has_element?(lv, "#manager-#{kim.id}", "Kim Lee")
   end

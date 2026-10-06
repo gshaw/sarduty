@@ -13,7 +13,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/tax-credit-letters/#{letter.id}")
+      |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
 
     assert html =~ letter.ref_id
   end
@@ -26,7 +26,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     {:ok, lv, _html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/tax-credit-letters/#{letter.id}")
+      |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
 
     lv |> element("#email-letter") |> render_click()
 
@@ -42,7 +42,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     {:ok, lv, _html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/tax-credit-letters/#{letter.id}")
+      |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
 
     lv |> element("#email-letter") |> render_click()
 

@@ -11,7 +11,7 @@ defmodule Web.ActivityLiveTest do
     {:ok, lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/activities/#{activity.id}")
+      |> live(~p"/teams/#{team}/activities/#{activity.id}")
 
     assert html =~ activity.title
     assert has_element?(lv, "#activity-actions")
@@ -26,14 +26,14 @@ defmodule Web.ActivityLiveTest do
     end
 
     test "says so and offers no actions", %{conn: conn, team: team, activity: activity} do
-      {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
       assert has_element?(lv, "#deleted-in-d4h", "Deleted in D4H")
       refute has_element?(lv, "#activity-actions")
     end
 
     test "sends its D4H pages back to the activity", %{conn: conn, team: team, activity: activity} do
-      activity_path = ~p"/#{team.subdomain}/activities/#{activity.id}"
+      activity_path = ~p"/teams/#{team}/activities/#{activity.id}"
 
       for page <- ["take-attendance", "attendance", "mileage"] do
         assert {:error, {:live_redirect, %{to: ^activity_path}}} =

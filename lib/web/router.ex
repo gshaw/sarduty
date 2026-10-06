@@ -38,12 +38,16 @@ defmodule Web.Router do
 
     live_session :verify, session: {Web.VerifyLimit, :session, []} do
       live "/", VerifyLive
-      # An organization's own start page, until it has its own verify host.
-      live "/o/:slug", VerifyLive
+      # An organization's own start page, until it has its own verify host. Codes look
+      # like K7Q4-M2XA, so "orgs" can't be one.
+      live "/orgs/:slug", VerifyLive
       live "/:code", VerifyLive
     end
 
+    # Card images live here, on the public host with no session cookie. Google Wallet
+    # objects hold the banner's URL.
     get "/:code/photo", MemberCardController, :photo
+    get "/:code/banner", MemberCardController, :banner
     get "/*path", VerifyController, :to_app
   end
 
@@ -74,6 +78,10 @@ defmodule Web.Router do
     end
   end
 
+  # URL rules are in docs/urls.md. Each top-level path here is listed in
+  # test/web/router_test.exs, so a new one is added on purpose. Nothing fixed goes
+  # directly under /teams/ or /orgs/: it would block a team or organization with that
+  # name. That's why sign-up is /signup, not /teams/new.
   scope "/", Web do
     pipe_through :browser
 
@@ -91,15 +99,9 @@ defmodule Web.Router do
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
 
-    # The check moved to the verify site. Cards linked here before it, in capitals.
-    get "/verify", VerifyController, :to_verify
-    get "/verify/:code", VerifyController, :to_verify
-    get "/VERIFY/:code", VerifyController, :to_verify
-
-    get "/verify/:code/photo", MemberCardController, :photo
-    get "/verify/:code/banner", MemberCardController, :banner
+    # Public, before the team scope: Google Wallet objects fetch these.
     get "/teams/:subdomain/logo", TeamController, :logo
-    get "/organizations/:slug/logo", OrganizationController, :logo
+    get "/orgs/:slug/logo", OrganizationController, :logo
 
     post "/login/code", UserSessionController, :request_code
     post "/login", UserSessionController, :create
@@ -125,9 +127,7 @@ defmodule Web.Router do
 
     live_session :require_authenticated_user_session,
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :ensure_authenticated}] do
-      live "/settings", SettingsLive
-      live "/settings/team", Settings.TeamLive
-      live "/settings/cards", Settings.CardsLive
+      live "/account", AccountLive
     end
 
     live_session :require_admin_session,
@@ -138,9 +138,9 @@ defmodule Web.Router do
       ] do
       live "/admin", AdminDashboardLive
       live "/admin/admins", Admin.AdminCollectionLive
-      live "/admin/organizations", Admin.OrganizationCollectionLive
-      live "/admin/organizations/new", Admin.OrganizationLive, :new
-      live "/admin/organizations/:id", Admin.OrganizationLive, :edit
+      live "/admin/orgs", Admin.OrganizationCollectionLive
+      live "/admin/orgs/new", Admin.OrganizationLive, :new
+      live "/admin/orgs/:id", Admin.OrganizationLive, :edit
     end
 
     live_session :require_current_team_session,
@@ -149,34 +149,36 @@ defmodule Web.Router do
         {Web.UserAuth, :ensure_authenticated},
         {Web.UserAuth, :ensure_authorized_team_subdomain}
       ] do
-      live "/:subdomain", TeamDashboardLive
-      live "/:subdomain/activities", ActivityCollectionLive
-      live "/:subdomain/activities/:id", ActivityLive
-      live "/:subdomain/activities/:id/attendance", ActivityAttendanceLive
-      live "/:subdomain/activities/:id/mileage", ActivityMileageLive
-      live "/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
-      live "/:subdomain/managers", TeamManagersLive
-      live "/:subdomain/members", MemberCollectionLive
-      live "/:subdomain/members/:id", MemberLive
-      live "/:subdomain/members/:id/groups", MemberGroupsLive
-      live "/:subdomain/members/:id/qualifications", MemberQualificationsLive
-      live "/:subdomain/members/:id/card", MemberCardLive
-      live "/:subdomain/groups", GroupCollectionLive
-      live "/:subdomain/groups/:id", GroupLive
-      live "/:subdomain/groups/:id/review", GroupReviewLive
-      live "/:subdomain/qualifications", QualificationCollectionLive
-      live "/:subdomain/qualifications/:id", QualificationLive
-      live "/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
-      live "/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
+      live "/teams/:subdomain", TeamDashboardLive
+      live "/teams/:subdomain/activities", ActivityCollectionLive
+      live "/teams/:subdomain/activities/:id", ActivityLive
+      live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
+      live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
+      live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
+      live "/teams/:subdomain/members", MemberCollectionLive
+      live "/teams/:subdomain/members/:id", MemberLive
+      live "/teams/:subdomain/members/:id/groups", MemberGroupsLive
+      live "/teams/:subdomain/members/:id/qualifications", MemberQualificationsLive
+      live "/teams/:subdomain/members/:id/card", MemberCardLive
+      live "/teams/:subdomain/groups", GroupCollectionLive
+      live "/teams/:subdomain/groups/:id", GroupLive
+      live "/teams/:subdomain/groups/:id/review", GroupReviewLive
+      live "/teams/:subdomain/qualifications", QualificationCollectionLive
+      live "/teams/:subdomain/qualifications/:id", QualificationLive
+      live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
+      live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
+      live "/teams/:subdomain/settings", Settings.TeamLive
+      live "/teams/:subdomain/settings/cards", Settings.CardsLive
+      live "/teams/:subdomain/settings/managers", TeamManagersLive
     end
 
-    scope "/" do
+    scope "/teams/:subdomain" do
       pipe_through :require_authorized_team_subdomain
 
-      get "/:subdomain/members/:id/image", MemberController, :image
-      get "/:subdomain/members/:id/card/pass", MemberCardController, :pass
-      get "/:subdomain/members/:id/card/google-pass", MemberCardController, :google_pass
-      get "/:subdomain/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
+      get "/members/:id/image", MemberController, :image
+      get "/members/:id/card/apple-wallet", MemberCardController, :pass
+      get "/members/:id/card/google-wallet", MemberCardController, :google_pass
+      get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
     end
   end
 
