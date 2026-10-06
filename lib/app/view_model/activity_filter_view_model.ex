@@ -28,6 +28,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp build_team_year_options(team) do
     Activity
     |> where([a], a.team_id == ^team.id)
+    |> Activity.not_deleted()
     |> Activity.years(team.timezone)
     |> Enum.map(fn year -> {Integer.to_string(year), Integer.to_string(year)} end)
   end
@@ -54,6 +55,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def build_paginated_content(team, member, filter_options) do
     Activity
     |> Activity.scope(team_id: team.id)
+    |> Activity.not_deleted()
     |> scope(member: member)
     |> scope(q: filter_options.q)
     |> scope(activity: filter_options.activity)

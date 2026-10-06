@@ -37,6 +37,9 @@ defmodule App.Model.AttendanceLink do
   def expires_at(%AttendanceLink{inserted_at: made_at}), do: expires_at(made_at)
   def expires_at(%DateTime{} = made_at), do: DateTime.add(made_at, @open_days, :day)
 
+  # A link on an activity deleted in D4H is closed, even before the refresh closes it.
+  def open?(%AttendanceLink{activity: %Activity{deleted_at: %DateTime{}}}, _now), do: false
+
   def open?(%AttendanceLink{closed_at: nil} = link, now),
     do: DateTime.before?(now, expires_at(link))
 
@@ -65,11 +68,16 @@ defmodule App.Model.AttendanceLink do
     |> Repo.one()
   end
 
-  @doc "Closes the activity's open links and deletes their short links."
-  def close_all!(%Team{} = team, %Activity{} = activity, now) do
+  @doc "Closes the open links of an activity, or a list of activity ids, and deletes their short links."
+  def close_all!(%Team{} = team, %Activity{} = activity, now),
+    do: close_all!(team, [activity.id], now)
+
+  def close_all!(%Team{}, [], _now), do: {0, nil}
+
+  def close_all!(%Team{} = team, activity_ids, now) when is_list(activity_ids) do
     open =
       AttendanceLink
-      |> where([l], l.team_id == ^team.id and l.activity_id == ^activity.id)
+      |> where([l], l.team_id == ^team.id and l.activity_id in ^activity_ids)
       |> where([l], is_nil(l.closed_at))
 
     {:ok, result} =

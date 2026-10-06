@@ -161,6 +161,7 @@ defmodule Web.MCPController do
     activities =
       Activity
       |> where([a], a.team_id == ^team.id)
+      |> Activity.not_deleted()
       |> then(fn q ->
         if kind, do: where(q, [a], a.activity_kind == ^kind), else: q
       end)

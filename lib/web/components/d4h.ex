@@ -52,6 +52,7 @@ defmodule Web.Components.D4H do
         {String.capitalize(@activity.activity_kind)}
       </.badge>
       <.badge :if={!@activity.is_published}>Draft</.badge>
+      <.badge :if={@activity.deleted_at} kind={:danger}>Deleted in D4H</.badge>
     </span>
     <span :if={@activity.tracking_number} class="mono ml-1" title="Tracking number">
       {@activity.tracking_number}

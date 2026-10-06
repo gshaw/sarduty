@@ -43,6 +43,22 @@ defmodule Web.AttendanceLinkLiveTest do
     assert has_element?(lv, "#link-closed")
   end
 
+  test "a link on an activity deleted in D4H takes no scans", %{
+    conn: conn,
+    link: link,
+    activity: activity,
+    member: member
+  } do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+    activity |> Ecto.Changeset.change(deleted_at: ~U[2026-10-05 06:00:00Z]) |> Repo.update!()
+    render_hook(lv, "scanned", %{code: card.code})
+
+    assert has_element?(lv, "#link-closed")
+    assert scans(activity) == []
+  end
+
   test "an ID card scan records the member arriving", %{
     conn: conn,
     link: link,

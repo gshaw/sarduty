@@ -90,6 +90,7 @@ defmodule App.Model.Attendance do
         join: ac in assoc(at, :activity),
         where: m.team_id == ^team.id,
         where: at.status == "attending",
+        where: is_nil(ac.deleted_at),
         where: ^tagged_activity_filter(tags),
         group_by: at.member_id,
         select: %{

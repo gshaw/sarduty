@@ -54,7 +54,9 @@ defmodule App.ViewData.TeamDashboardViewData do
   end
 
   def count_activities(team) do
-    query = from a in Activity, where: a.team_id == ^team.id, select: count(1)
+    query =
+      from a in Activity, where: a.team_id == ^team.id and is_nil(a.deleted_at), select: count(1)
+
     Repo.one(query)
   end
 

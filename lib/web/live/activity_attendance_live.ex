@@ -10,6 +10,13 @@ defmodule Web.ActivityAttendanceLive do
 
   def handle_params(params, _uri, socket) do
     activity = Activity.find!(socket.assigns.current_team, params["id"])
+
+    if Activity.deleted?(activity),
+      do: {:noreply, Web.ActivityLive.leave_deleted(socket, activity)},
+      else: load(socket, activity)
+  end
+
+  defp load(socket, activity) do
     d4h = D4H.build_context_from_team(socket.assigns.current_team)
     team_members = D4H.fetch_team_members(d4h)
 

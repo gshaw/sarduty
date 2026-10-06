@@ -30,6 +30,9 @@ defmodule App.Model.Activity do
     field :started_at, :utc_datetime
     field :finished_at, :utc_datetime
     field :tags, {:array, :string}
+    # Set by the refresh when D4H stops listing the activity. Deleted activities are kept
+    # for their attendance links and scans, and left out of every list.
+    field :deleted_at, :utc_datetime
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -69,6 +72,7 @@ defmodule App.Model.Activity do
   def get_all(team_id) do
     Activity
     |> where([r], r.team_id == ^team_id)
+    |> not_deleted()
     |> order_by([r], desc: r.started_at)
     |> Repo.all()
   end
@@ -76,6 +80,11 @@ defmodule App.Model.Activity do
   def find!(team, id), do: Repo.get_by!(Activity, id: id, team_id: team.id)
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
+
+  @doc "Leaves out activities deleted in D4H."
+  def not_deleted(query), do: where(query, [r], is_nil(r.deleted_at))
+
+  def deleted?(%Activity{deleted_at: deleted_at}), do: deleted_at != nil
 
   @doc "Rows that started in `year` in `timezone`."
   def started_in(query, year, timezone) do
