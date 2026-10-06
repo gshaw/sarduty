@@ -266,9 +266,9 @@ defmodule Web.Components.Core do
   the leading edge and the switch on the trailing edge. Inside a form with a save button,
   use a checkbox instead. See /styles/forms.
 
-  `compact` puts a small label, with an optional icon, beside the switch on the trailing
-  edge. It's for one page-level setting next to the page's main task, not a list of
-  settings.
+  `compact` puts the switch on the trailing edge with a small label beside it, or with an
+  `icon` only, the label left for screen readers. It's for one page-level setting next to
+  the page's main task, not a list of settings.
 
   ## Examples
 
@@ -282,7 +282,7 @@ defmodule Web.Components.Core do
   attr :label, :string, required: true
   attr :checked, :boolean, default: false
   attr :compact, :boolean, default: false
-  attr :icon, :string, default: nil, doc: "a hero- icon before a compact switch's label"
+  attr :icon, :string, default: nil, doc: "a hero- icon shown instead of a compact switch's label"
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled name value)
 
@@ -292,7 +292,8 @@ defmodule Web.Components.Core do
     ~H"""
     <div class={["switch-row justify-end", @class]}>
       <label for={@id} class="flex items-center gap-1 text-sm cursor-pointer">
-        <.icon :if={@icon} name={@icon} class="size-5" />{@label}
+        <.icon :if={@icon} name={@icon} class="size-6" />
+        <span class={@icon && "sr-only"}>{@label}</span>
       </label>
       <input type="checkbox" role="switch" id={@id} class="switch" checked={@checked} {@rest} />
     </div>
