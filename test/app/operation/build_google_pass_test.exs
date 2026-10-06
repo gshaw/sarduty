@@ -98,6 +98,8 @@ defmodule App.Operation.BuildGooglePassTest do
     assert object.state == "ACTIVE"
     assert object.subheader.defaultValue.value == "Not an active member"
     refute Map.has_key?(object, :barcode)
+    # Its banner URL 404s for someone who left, and Google refuses a pass it can't load.
+    refute Map.has_key?(object, :heroImage)
   end
 
   test "lists the team's picked qualifications" do

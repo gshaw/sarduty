@@ -10,6 +10,10 @@ defmodule Web.LoginLimit do
   makes guessing a six-digit code across new ones hopeless. Counters are in memory, so a
   deploy resets them.
 
+  A browser that has logged in to the account before (Web.UserAuth.known_browser?/2)
+  skips the per-account count, so nobody can lock a person out of their own browsers by
+  entering wrong codes for them (#176). Only the per-IP cap applies to it.
+
   A number is passed as `{:phone, e164}`, an email as a string.
   """
 
@@ -36,21 +40,28 @@ defmodule Web.LoginLimit do
     allowed
   end
 
-  @doc "Whether this email or number, or this IP, has used up its wrong codes for now."
-  def guessing_blocked?(who, ip) do
-    misses(miss_key(who)) >= @email_miss_limit or
+  @doc """
+  Whether this email or number, or this IP, has used up its wrong codes for now. A known
+  browser is held only to the IP's cap.
+  """
+  def guessing_blocked?(who, ip, known_browser? \\ false) do
+    (not known_browser? and misses(miss_key(who)) >= @email_miss_limit) or
       misses(ip_key("login:miss:ip", ip)) >= @ip_miss_limit
   end
 
-  @doc "Counts a wrong code, and logs when the email or number, or the IP, reaches its cap."
-  def miss(who, ip) do
-    if count_miss(miss_key(who)) == @email_miss_limit,
-      do: Logger.warning("Login code miss limit reached for an account, from #{ip}")
+  @doc """
+  Counts a wrong code, and logs when the email or number, or the IP, reaches its cap.
+  Returns `:blocked` on the miss that blocks the email or number, else `:ok`. A known
+  browser's misses don't count against the account.
+  """
+  def miss(who, ip, known_browser? \\ false) do
+    blocked? = not known_browser? and count_miss(miss_key(who)) == @email_miss_limit
+    if blocked?, do: Logger.warning("Login code miss limit reached for an account, from #{ip}")
 
     if count_miss(ip_key("login:miss:ip", ip)) == @ip_miss_limit,
       do: Logger.warning("Login code miss limit reached from #{ip}")
 
-    :ok
+    if blocked?, do: :blocked, else: :ok
   end
 
   defp request_key({:phone, phone}), do: {"login:phone:#{phone}", @phone_limit}

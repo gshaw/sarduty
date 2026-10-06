@@ -15,6 +15,12 @@ defmodule Web.UserAuth do
   @remember_me_cookie "_sarduty_remember_me"
   @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
 
+  # Users who have logged in with this browser, kept after logging out, so wrong codes
+  # someone else enters can't lock them out of it (#176). Signed, so it can't be made up.
+  @known_browser_cookie "_sarduty_known_browser"
+  @known_browser_options [sign: true, max_age: 60 * 60 * 24 * 365, same_site: "Lax"]
+  @known_browser_users 5
+
   @doc """
   Logs the user in.
 
@@ -37,6 +43,7 @@ defmodule Web.UserAuth do
     |> renew_session()
     |> put_token_in_session(token)
     |> maybe_remember(token, Keyword.get(opts, :remember, false))
+    |> remember_browser(user)
     |> redirect(to: user_return_to || signed_in_path(user))
   end
 
@@ -44,6 +51,25 @@ defmodule Web.UserAuth do
     do: put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)
 
   defp maybe_remember(conn, _token, false), do: conn
+
+  defp remember_browser(conn, user) do
+    ids = conn |> known_user_ids() |> List.delete(user.id)
+    ids = Enum.take([user.id | ids], @known_browser_users)
+    put_resp_cookie(conn, @known_browser_cookie, ids, @known_browser_options)
+  end
+
+  @doc "Whether this user has logged in with this browser before."
+  def known_browser?(_conn, nil), do: false
+  def known_browser?(conn, user), do: user.id in known_user_ids(conn)
+
+  defp known_user_ids(conn) do
+    conn = fetch_cookies(conn, signed: [@known_browser_cookie])
+
+    case conn.cookies[@known_browser_cookie] do
+      ids when is_list(ids) -> ids
+      _none -> []
+    end
+  end
 
   # This function renews the session ID and erases the whole
   # session to avoid fixation attacks. If there is any data

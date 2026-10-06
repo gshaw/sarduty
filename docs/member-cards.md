@@ -38,6 +38,9 @@ organization gets its branding: see [organizations.md](organizations.md).
   since a websocket can't see that header.
 - **A cancelled card shows nothing about the member.** `/verify` says it was cancelled,
   and its photo route 404s.
+- **A former member's card shows no photo.** The page gives the name, the team, and "Not
+  active", and the photo and banner routes 404, as for a cancelled card (#176). "Not
+  active" is the whole answer a checker needs.
 - **One live card per member.** Issuing a card revokes the one before it, and a code is
   never reused.
 - **Status comes from the local copy of D4H**, so it can be a day old. The result says

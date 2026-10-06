@@ -116,7 +116,10 @@ than waiting for the next refresh. See [group-rules.md](group-rules.md).
 
 Login is by emailed code only (#142, replacing the link from #57). A code is six digits,
 works once for 15 minutes, and dies after 5 wrong tries; `Web.LoginLimit` caps sends and
-misses per email and IP. A login lasts until the browser closes; only ticking "Remember
+misses per email and IP. 20 wrong codes in a day block an email or number, and its owner
+gets an email saying so, but a browser that has logged in to it before (a signed
+`_sarduty_known_browser` cookie) is never blocked by them, so nobody can lock a person out
+of their own browsers (#176). A login lasts until the browser closes; only ticking "Remember
 me on this computer for 60 days" (off by default) sets the 60-day cookie. A user reaches
 a team when their email matches one of its managers in the local copy: a D4H Owner or
 Editor who isn't retired and hasn't left

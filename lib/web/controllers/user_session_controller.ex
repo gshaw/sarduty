@@ -2,6 +2,7 @@ defmodule Web.UserSessionController do
   use Web, :controller
 
   alias App.Accounts
+  alias App.Worker.NotifyLoginBlockedWorker
   alias App.Worker.SendLoginCodeWorker
   alias Web.LoginLimit
   alias Web.UserAuth
@@ -55,9 +56,10 @@ defmodule Web.UserSessionController do
   def create(conn, %{"user" => %{"phone" => phone, "code" => code} = params}) do
     ip = VerifyLimit.client_ip(conn)
     phone = Service.Phone.normalize(phone) || ""
+    known? = known_browser?(conn, Accounts.text_login?() && Accounts.text_login_email(phone))
 
     result =
-      if LoginLimit.guessing_blocked?({:phone, phone}, ip),
+      if LoginLimit.guessing_blocked?({:phone, phone}, ip, known?),
         do: :error,
         else: Accounts.log_in_with_text_code(phone, code)
 
@@ -66,7 +68,7 @@ defmodule Web.UserSessionController do
         log_in(conn, user, params)
 
       :error ->
-        LoginLimit.miss({:phone, phone}, ip)
+        count_miss({:phone, phone}, ip, known?, %{phone: phone})
 
         conn
         |> put_session(:login_phone, phone)
@@ -77,9 +79,10 @@ defmodule Web.UserSessionController do
 
   def create(conn, %{"user" => %{"email" => email, "code" => code} = params}) do
     ip = VerifyLimit.client_ip(conn)
+    known? = known_browser?(conn, email)
 
     result =
-      if LoginLimit.guessing_blocked?(email, ip),
+      if LoginLimit.guessing_blocked?(email, ip, known?),
         do: :error,
         else: Accounts.log_in_with_code(email, code)
 
@@ -88,13 +91,24 @@ defmodule Web.UserSessionController do
         log_in(conn, user, params)
 
       :error ->
-        LoginLimit.miss(email, ip)
+        count_miss(email, ip, known?, %{email: email})
 
         conn
         |> put_session(:login_email, email)
         |> put_flash(:error, "That code is wrong or expired. Check it, or ask for a new one.")
         |> redirect(to: ~p"/login/code")
     end
+  end
+
+  defp known_browser?(conn, email) when is_binary(email),
+    do: UserAuth.known_browser?(conn, Accounts.get_user_by_email(email))
+
+  defp known_browser?(_conn, _no_email), do: false
+
+  # The miss that blocks an account tells its owner, from a job like the login code.
+  defp count_miss(who, ip, known?, args) do
+    if LoginLimit.miss(who, ip, known?) == :blocked,
+      do: args |> NotifyLoginBlockedWorker.new() |> Oban.insert!()
   end
 
   defp log_in(conn, user, params) do

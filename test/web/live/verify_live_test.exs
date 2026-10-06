@@ -91,6 +91,8 @@ defmodule Web.VerifyLiveTest do
 
     assert has_element?(lv, "#result-inactive", "Left the team Dec 2025")
     assert has_element?(lv, "#result-facts", "Not active")
+    assert has_element?(lv, "#result-name", member.name)
+    refute has_element?(lv, "#result-photo")
   end
 
   test "a cancelled card shows no member details", %{conn: conn, member: member} do

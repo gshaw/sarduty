@@ -194,7 +194,9 @@ defmodule App.Operation.BuildGooglePass do
     |> put_banner(card, status, url)
   end
 
-  defp put_banner(object, _card, :revoked, _url), do: object
+  # The banner URL answers only for an active member (#176), and Google refuses a pass
+  # whose images it can't load.
+  defp put_banner(object, _card, status, _url) when status in [:revoked, :inactive], do: object
 
   defp put_banner(object, card, _status, url) do
     Map.put(object, :heroImage, %{

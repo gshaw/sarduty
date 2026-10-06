@@ -27,6 +27,23 @@ defmodule App.Accounts.UserNotifier do
     end
   end
 
+  # Sent when wrong login codes block an email or number for the day (#176). The owner
+  # can still log in from a browser they've used before.
+  def deliver_login_blocked(email_address) do
+    new()
+    |> to(email_address)
+    |> from({"SAR Duty", "noreply@sarduty.com"})
+    |> subject("Wrong login codes entered for your SAR Duty account")
+    |> text_body("""
+    Someone entered 20 wrong login codes for your SAR Duty account today, so new browsers
+    can't log in to it until tomorrow.
+
+    A browser you've logged in with before still can. If this wasn't you, nothing else is
+    needed: the codes were wrong, and they only work for 15 minutes.
+    """)
+    |> Mailer.deliver()
+  end
+
   # The login text. The last line is the one-time code format iOS and Android read to
   # offer the code on the login page, bound to this site's domain.
   def deliver_login_text(phone, code) do
