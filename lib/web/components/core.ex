@@ -262,6 +262,47 @@ defmodule Web.Components.Core do
   end
 
   @doc """
+  Renders a switch: a setting that takes effect the moment it's tapped, with the label on
+  the leading edge and the switch on the trailing edge. Inside a form with a save button,
+  use a checkbox instead. See /styles/forms.
+
+  ## Examples
+
+      <.switch id="sound-switch" label="Sound" phx-hook="SoundSwitch" phx-update="ignore">
+        A tone for each scan.
+      </.switch>
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :checked, :boolean, default: false
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(disabled name value)
+
+  slot :inner_block, doc: "an optional hint under the label"
+
+  def switch(assigns) do
+    ~H"""
+    <div class={["switch-row", @class]}>
+      <div class="grow">
+        <label for={@id} class="block cursor-pointer font-semibold">{@label}</label>
+        <span :if={@inner_block != []} id={"#{@id}-hint"} class="hint block">
+          {render_slot(@inner_block)}
+        </span>
+      </div>
+      <input
+        type="checkbox"
+        role="switch"
+        id={@id}
+        class="switch"
+        checked={@checked}
+        aria-describedby={@inner_block != [] && "#{@id}-hint"}
+        {@rest}
+      />
+    </div>
+    """
+  end
+
+  @doc """
   Renders a header with title.
   """
   attr :class, :string, default: nil

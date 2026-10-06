@@ -3,7 +3,7 @@
 // one of the names in TONES. Browsers play sound only after a tap, so every tap resumes
 // the audio. On an iPhone the silent switch mutes Web Audio unless the page's audio
 // session is "playback" (Safari 17 and later).
-// The sound is on unless turned off with a SoundToggle button, remembered on the device.
+// The sound is on unless turned off with a SoundSwitch, remembered on the device.
 const STORAGE_KEY = "sarduty:scan-sound"
 
 // Each tone is [frequency in Hz, start in seconds, length in seconds, wave].
@@ -63,22 +63,17 @@ export function listenForScanSounds() {
   window.addEventListener("phx:scan-sound", event => play(event.detail.sound))
 }
 
-// A button that turns scan sounds on and off. Its label and aria-pressed come from here,
-// so give it phx-update="ignore".
-export const SoundToggle = {
+// A switch that turns scan sounds on and off. Its checked state comes from here, so give
+// it phx-update="ignore".
+export const SoundSwitch = {
   mounted() {
-    this.show()
-    this.el.addEventListener("click", () => {
-      localStorage.setItem(STORAGE_KEY, soundOn() ? "off" : "on")
-      this.show()
-      if (soundOn()) {
+    this.el.checked = soundOn()
+    this.el.addEventListener("change", () => {
+      localStorage.setItem(STORAGE_KEY, this.el.checked ? "on" : "off")
+      if (this.el.checked) {
         unlock()
         play("ok")
       }
     })
-  },
-  show() {
-    this.el.textContent = soundOn() ? "Sound on" : "Sound off"
-    this.el.setAttribute("aria-pressed", String(soundOn()))
   },
 }

@@ -42,6 +42,7 @@ defmodule Web.AttendanceLinkLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
     assert has_element?(lv, "#activity-summary", activity.title)
     assert has_element?(lv, "#scanner[data-continuous]")
+    assert has_element?(lv, ~s(#sound-switch[role="switch"]))
     assert has_element?(lv, "#no-scans")
   end
 

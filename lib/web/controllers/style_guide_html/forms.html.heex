@@ -9,6 +9,9 @@
       Inputs are 40px tall with a 2px border. Small inputs (32px, sm text) are for filter bars and inline editors only.
     </li>
     <li>Fields are 24px apart. Width follows the expected answer, not the page.</li>
+    <li>
+      A form with a save button uses checkboxes, never switches. A switch is for a setting that takes effect when it's tapped.
+    </li>
   </ul>
 
   <h2>Elements</h2>
@@ -66,6 +69,39 @@
   </div>
   <p class="spec">
     24px targets. A fieldset with a legend groups them; the legend is the question.
+  </p>
+
+  <h3>Switches</h3>
+  <div class="demo">
+    <div class="switch-row">
+      <div>
+        <label for="e-sound">Sound</label>
+        <span id="e-sound-hint" class="hint">A tone for each scan.</span>
+      </div>
+      <input
+        id="e-sound"
+        type="checkbox"
+        role="switch"
+        class="switch"
+        aria-describedby="e-sound-hint"
+        checked
+      />
+    </div>
+    <div class="switch-row">
+      <div><label for="e-off">Off</label></div>
+      <input id="e-off" type="checkbox" role="switch" class="switch" />
+    </div>
+    <div class="switch-row">
+      <div><label for="e-disabled">Disabled</label></div>
+      <input id="e-disabled" type="checkbox" role="switch" class="switch" checked disabled />
+    </div>
+    <div class="switch-row">
+      <div><label for="e-focus">Keyboard focus</label></div>
+      <input id="e-focus" type="checkbox" role="switch" class="switch is-focus" />
+    </div>
+  </div>
+  <p class="spec">
+    A switch changes a setting the moment it's tapped. Label on the leading edge, switch on the trailing edge, a 48 by 28px track. Inside a form with a save button, use a checkbox: a switch says the change already happened. In the app: <code>&lt;.switch id="…" label="…"&gt;</code>.
   </p>
 
   <h3>Read-only, disabled, and error</h3>

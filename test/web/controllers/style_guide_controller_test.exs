@@ -6,6 +6,10 @@ defmodule Web.StyleGuideControllerTest do
     assert html_response(conn, 200) =~ "<h1>Style guide</h1>"
   end
 
+  test "the logo goes to the home page", %{conn: conn} do
+    assert html_response(get(conn, ~p"/styles/forms"), 200) =~ ~s(<a href="/" class="brand">)
+  end
+
   test "every page in the guide renders", %{conn: conn} do
     for {_group, pages} <- Web.StyleGuideHTML.pages(), {page, title} <- pages, page != :index do
       assert html_response(get(conn, "/styles/#{page}"), 200) =~ title

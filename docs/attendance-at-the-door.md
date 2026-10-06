@@ -74,7 +74,7 @@ LiveView pushes a `scan-sound` event, and the verify site uses the same tones fo
 or a typed code: rising for an active member, the buzz for anything else. A browser
 plays sound only after a tap, so any tap on the page turns it on. Safari's camera prompt
 on a first scan pauses the audio, so each tone wakes it first; before that, the first
-check on an iPhone was silent (2026-10-06). **Sound on/off** under the scanner is
+check on an iPhone was silent (2026-10-06). The **Sound** switch under the scanner is
 remembered on the phone. On an iPhone the page sets its audio session to playback, so
 the silent switch doesn't mute it (Safari 17 and later).
 
