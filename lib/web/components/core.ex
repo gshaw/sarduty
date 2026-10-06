@@ -262,6 +262,62 @@ defmodule Web.Components.Core do
   end
 
   @doc """
+  Renders a switch: a setting that takes effect the moment it's tapped, with the label on
+  the leading edge and the switch on the trailing edge. Inside a form with a save button,
+  use a checkbox instead. See /styles/forms.
+
+  `compact` puts a small, muted label and the switch together on the trailing edge. It's
+  for one page-level setting under the page's main action, not a list of settings.
+
+  ## Examples
+
+      <.switch id="email-switch" label="Email me when a refresh fails">
+        Sent to the address on your account.
+      </.switch>
+
+      <.switch id="sound-switch" label="Sound" compact />
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :checked, :boolean, default: false
+  attr :compact, :boolean, default: false
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(disabled name value)
+
+  slot :inner_block, doc: "an optional hint under the label, not shown when compact"
+
+  def switch(%{compact: true} = assigns) do
+    ~H"""
+    <div class={["switch-row justify-end", @class]}>
+      <label for={@id} class="text-sm text-secondary-1 cursor-pointer">{@label}</label>
+      <input type="checkbox" role="switch" id={@id} class="switch" checked={@checked} {@rest} />
+    </div>
+    """
+  end
+
+  def switch(assigns) do
+    ~H"""
+    <div class={["switch-row", @class]}>
+      <div class="grow">
+        <label for={@id} class="block cursor-pointer font-semibold">{@label}</label>
+        <span :if={@inner_block != []} id={"#{@id}-hint"} class="hint block">
+          {render_slot(@inner_block)}
+        </span>
+      </div>
+      <input
+        type="checkbox"
+        role="switch"
+        id={@id}
+        class="switch"
+        checked={@checked}
+        aria-describedby={@inner_block != [] && "#{@id}-hint"}
+        {@rest}
+      />
+    </div>
+    """
+  end
+
+  @doc """
   Renders a header with title.
   """
   attr :class, :string, default: nil

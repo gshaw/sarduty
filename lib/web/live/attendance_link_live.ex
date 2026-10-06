@@ -308,17 +308,15 @@ defmodule Web.AttendanceLinkLive do
             </.button>
           </div>
         </div>
-        <.button
-          id="sound-toggle"
-          type="button"
-          variant={:link}
-          size={:sm}
+        <.switch
+          id="sound-switch"
+          label="Sound"
+          compact
           class="mt-2"
-          phx-hook="SoundToggle"
+          checked
+          phx-hook="SoundSwitch"
           phx-update="ignore"
-        >
-          Sound on
-        </.button>
+        />
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera did not start. Allow camera access, or find members by name.

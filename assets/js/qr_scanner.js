@@ -7,6 +7,8 @@
 // The scanning flag goes on the [data-scan-state] element inside the hook. LiveView
 // patches the data attributes of a phx-update="ignore" container, so a flag on the
 // container itself is wiped by the next render while the camera keeps running.
+// The camera stops when the page goes to the background. Back on the page, the tap on
+// Scan restarts it, and an iPhone needs that tap before a scan can make a sound.
 const PAUSE_MS = 1500
 const SAME_CARD_MS = 5000
 
@@ -21,9 +23,12 @@ export const QRScanner = {
     this.state = this.el.querySelector("[data-scan-state]")
     this.el.querySelector("[data-scan-start]").addEventListener("click", () => this.start())
     this.el.querySelector("[data-scan-stop]").addEventListener("click", () => this.stop())
+    this.onVisibility = () => document.hidden && this.stop()
+    document.addEventListener("visibilitychange", this.onVisibility)
   },
 
   destroyed() {
+    document.removeEventListener("visibilitychange", this.onVisibility)
     this.stop()
   },
 

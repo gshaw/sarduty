@@ -329,6 +329,24 @@
     input[type="radio"]:checked { border-color: var(--primary); background: radial-gradient(circle, var(--on-fill) 0 4px, var(--primary) 4.5px); }
     input:is([type="checkbox"], [type="radio"]):disabled { opacity: 0.5; cursor: not-allowed; }
     .check .hint { margin: 0; }
+    /* A switch: a checkbox drawn as a track and knob, on the trailing edge of its row. */
+    .switch-row { display: flex; align-items: center; gap: var(--sp-3); max-width: 400px; margin-bottom: var(--sp-4); }
+    .switch-row label { margin: 0; cursor: pointer; }
+    .switch-row .hint { margin: 0; }
+    .switch-row > div { flex-grow: 1; }
+    .switch-row.compact { justify-content: flex-end; }
+    .switch-row.compact { margin: var(--sp-2) 0 0; }
+    .compact-demo { max-width: 400px; }
+    .compact-demo .btn { width: 100%; justify-content: center; }
+    .switch-row.compact label { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 400; color: var(--text-muted); }
+    input[type="checkbox"].switch { display: inline-block; position: relative; width: 48px; height: 28px; border-radius: 14px; }
+    input[type="checkbox"].switch::after {
+      position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border: 0; border-radius: 50%;
+      background: var(--text); transform: none; transition: left 0.15s;
+    }
+    input[type="checkbox"].switch:checked { background: var(--primary); border-color: var(--primary); }
+    input[type="checkbox"].switch:checked::after { left: 24px; background: var(--on-fill); transform: none; }
+    input.switch.is-focus { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
     fieldset { border: 0; padding: 0; margin: 0 0 var(--sp-5); min-width: 0; }
     legend { font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); margin-bottom: var(--sp-2); padding: 0; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--sp-5); max-width: 640px; }

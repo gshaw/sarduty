@@ -145,17 +145,15 @@ defmodule Web.VerifyLive do
             <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
           </div>
         </div>
-        <.button
-          id="sound-toggle"
-          type="button"
-          variant={:link}
-          size={:sm}
+        <.switch
+          id="sound-switch"
+          label="Sound"
+          compact
           class="mt-2"
-          phx-hook="SoundToggle"
+          checked
+          phx-hook="SoundSwitch"
           phx-update="ignore"
-        >
-          Sound on
-        </.button>
+        />
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera did not start. Allow camera access, or type the code.
