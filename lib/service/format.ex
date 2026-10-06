@@ -34,6 +34,23 @@ defmodule Service.Format do
   end
 
   @doc """
+  How long before `now` a datetime was, for things that change by the minute: "just
+  now", "4 min ago", "3 hours ago", then the date and time in `timezone`.
+  """
+  def minutes_ago(nil, _now, _timezone), do: nil
+
+  def minutes_ago(datetime, now, timezone) do
+    minutes = div(DateTime.diff(now, datetime), 60)
+
+    cond do
+      minutes < 1 -> "just now"
+      minutes < 60 -> "#{minutes} min ago"
+      minutes < 24 * 60 -> count(div(minutes, 60), one: "%d hour ago", many: "%d hours ago")
+      true -> datetime_short(datetime, timezone)
+    end
+  end
+
+  @doc """
   How long before `now` a datetime was, counted in calendar days in `timezone`: "Today",
   "Yesterday", "12 days ago", then "4 months ago".
   """

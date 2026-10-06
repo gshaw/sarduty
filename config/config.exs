@@ -76,8 +76,14 @@ config :logger, :console,
 config :sarduty, Oban,
   engine: Oban.Engines.Lite,
   repo: App.Repo,
-  queues: [default: 5, refresh: 1],
-  cron: [crontab: [{"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}]]
+  queues: [default: 5, refresh: 1, sync: 2],
+  cron: [
+    crontab: [
+      {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker},
+      # The sync every 10 minutes (#163). The nightly full refresh is its safety net.
+      {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker}
+    ]
+  ]
 
 # Setting this replaces Phoenix's default of ["password"], so list it too. Each entry
 # matches any param name that contains it: "token" covers attendance links, and "code"

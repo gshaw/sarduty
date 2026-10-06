@@ -12,10 +12,7 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   require Logger
 
   def call(d4h, team, progress) when is_map(d4h) when is_map(team) do
-    context = %{
-      d4h_member_index: build_d4h_member_index(team.id),
-      d4h_activity_index: build_d4h_activity_index(team.id)
-    }
+    context = build_context(team.id)
 
     # Raises before the delete when D4H returns fewer rows than its own total.
     {count, progress, d4h_attendance_ids} =
@@ -23,6 +20,14 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
 
     delete_stale_attendances(team.id, d4h_attendance_ids)
     {count, progress}
+  end
+
+  @doc "The team's members and activities by D4H id, for upsert/2."
+  def build_context(team_id) do
+    %{
+      d4h_member_index: build_d4h_member_index(team_id),
+      d4h_activity_index: build_d4h_activity_index(team_id)
+    }
   end
 
   defp build_d4h_activity_index(team_id) do
@@ -50,6 +55,12 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
 
     {total_count + count, Progress.add_page(progress, count), d4h_attendance_ids}
   end
+
+  @doc """
+  Saves one D4H attendance row. Skipped, as `:skip`, when its member or activity isn't
+  in this team's copy.
+  """
+  def upsert(context, d4h_attendance), do: upsert_attendance(context, d4h_attendance)
 
   defp upsert_attendance(context, d4h_attendance) do
     member_id = context.d4h_member_index[d4h_attendance.d4h_member_id]
@@ -86,14 +97,40 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   end
 
   defp delete_stale_attendances(team_id, synced_d4h_ids) do
-    team_member_ids = from(m in Member, where: m.team_id == ^team_id, select: m.id)
-
-    stale_ids =
-      Attendance
-      |> where([a], a.member_id in subquery(team_member_ids))
-      |> StaleRows.ids(:d4h_attendance_id, synced_d4h_ids)
-
-    {count, _} = Attendance |> where([a], a.id in ^stale_ids) |> Repo.delete_all()
+    count = team_id |> team_attendances() |> delete_stale(synced_d4h_ids)
     Logger.info("Deleted #{count} stale attendance records for team #{team_id}")
+  end
+
+  @doc """
+  Deletes one activity's attendance D4H no longer has, after a complete fetch of that
+  activity's rows. Scoped through the team's members, like the full refresh.
+  """
+  def delete_stale_for_activity(team_id, activity_id, synced_d4h_ids) do
+    team_id
+    |> team_attendances()
+    |> where([a], a.activity_id == ^activity_id)
+    |> delete_stale(synced_d4h_ids)
+  end
+
+  @doc """
+  Deletes attendance starting in `[starts_after, starts_before)` that D4H no longer has,
+  after a complete fetch of that window.
+  """
+  def delete_stale_between(team_id, starts_after, starts_before, synced_d4h_ids) do
+    team_id
+    |> team_attendances()
+    |> where([a], a.started_at >= ^starts_after and a.started_at < ^starts_before)
+    |> delete_stale(synced_d4h_ids)
+  end
+
+  defp team_attendances(team_id) do
+    team_member_ids = from(m in Member, where: m.team_id == ^team_id, select: m.id)
+    where(Attendance, [a], a.member_id in subquery(team_member_ids))
+  end
+
+  defp delete_stale(query, synced_d4h_ids) do
+    stale_ids = StaleRows.ids(query, :d4h_attendance_id, synced_d4h_ids)
+    {count, _} = Attendance |> where([a], a.id in ^stale_ids) |> Repo.delete_all()
+    count
   end
 end

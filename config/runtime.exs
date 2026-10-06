@@ -22,6 +22,8 @@ end
 
 config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
 config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
+# Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
+config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")
 
 # Apple Wallet passes for member ID cards. Optional: without them the ID Card tab
 # offers no pass. The certificate and key are PEM text.

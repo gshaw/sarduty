@@ -7,7 +7,8 @@ defmodule App.Adapter.D4H.AttendanceInfo do
             started_at: nil,
             finished_at: nil,
             duration_in_minutes: nil,
-            status: nil
+            status: nil,
+            updated_at: nil
 
   def build(record) do
     {:ok, d4h_activity_id, _kind} = Parse.activity(record["activity"])
@@ -19,7 +20,8 @@ defmodule App.Adapter.D4H.AttendanceInfo do
       started_at: Parse.datetime(record["startsAt"]),
       finished_at: Parse.datetime(record["endsAt"]),
       duration_in_minutes: record["duration"],
-      status: String.downcase(record["status"])
+      status: String.downcase(record["status"]),
+      updated_at: Parse.optional_datetime(record["updatedAt"])
     }
   end
 end

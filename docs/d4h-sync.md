@@ -6,6 +6,48 @@ covers how the copy is refreshed and where it drifts from D4H.
 
 ## When it runs
 
+Two runs keep the copy fresh: a sync of what changed, every 10 minutes, and a full
+refresh once a night as the safety net (#163).
+
+### The sync every 10 minutes
+
+- Oban cron runs [ScheduleTeamSyncsWorker](../lib/app/worker/schedule_team_syncs_worker.ex)
+  every 10 minutes. It enqueues one
+  [SyncTeamChangesWorker](../lib/app/worker/sync_team_changes_worker.ex) per team with a
+  key, on the `sync` queue, so it never waits behind another team's full refresh. Oban's
+  `unique` keeps it to one job per team, and a team whose full refresh is running is
+  skipped.
+- Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
+- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 10 lists for
+  one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
+  change. If none moved since the last look (`teams.d4h_sync_state`), it stops: 10 small
+  requests.
+- A small list that moved (members, qualifications, awards, groups, memberships) is
+  fetched whole through the full refresh's own stage, along with the lists that point at
+  it, so rows skipped for an unknown parent come in. Their stale-row deletes and the
+  member departure rule keep working.
+- Activities that moved are fetched with `updated_after`, and `deleted=true&updated_after`
+  marks new deletes (#160). A tag change refetches every activity, since activities store
+  tag titles.
+- Attendance has no `updated_after`, so it pages by `updatedAt` descending until rows are
+  older than the cursor. Then each activity touched by either step has its attendance
+  fetched whole, and local rows D4H didn't return are deleted.
+- When the attendance totals still differ, counts by year and then by month find a
+  window, and that month is fetched again with its stale rows deleted. This finds deletes
+  on activities nothing else touched. At most one month per sync, and it's logged: rows
+  D4H has but this copy skips keep the counts apart.
+- The cursor is the newest `updatedAt` D4H showed last time, less 5 minutes, so the
+  server's clock never matters.
+- Nothing changed means no broadcast. A change broadcasts on `team_refresh` and queues
+  pass updates. Syncs never write `d4h_refresh_result`; they set `teams.d4h_synced_at`,
+  and the dashboards say "Updated from D4H 4 min ago".
+- A failed sync isn't retried, since the next is 10 minutes away. Honeybadger hears about
+  it once, after an hour of failures. A missing or rejected key is left for the nightly
+  refresh to report. Each sync pings `HEALTHCHECKS_SYNC_URL` when it's set: give it its
+  own check with a 10-minute period.
+
+### The full refresh every night
+
 - Oban cron runs [ScheduleTeamRefreshesWorker](../lib/app/worker/schedule_team_refreshes_worker.ex)
   at 06:00 UTC daily (`config/config.exs`). It enqueues one
   [RefreshTeamDataWorker](../lib/app/worker/refresh_team_data_worker.ex) per team that has
@@ -13,6 +55,9 @@ covers how the copy is refreshed and where it drifts from D4H.
 - The team dashboard's refresh button and the admin dashboard enqueue the same jobs.
 - The `refresh` queue has a limit of 1, so one team refreshes at a time. A failed job
   retries after 15 minutes, then 30 (`max_attempts: 3`), before waiting for the next day.
+- It records the list heads it saw before its first stage, so the next sync picks up
+  whatever changed while it ran. At the end it logs how many rows it wrote that the
+  syncs missed. If that stays at zero for a month, run it weekly.
 - A successful run pings `HEALTHCHECKS_URL`. A failed one writes `Error: …` to
   `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
   error goes to Honeybadger.
@@ -62,6 +107,11 @@ topic. `Team.refresh_state/1` reads the column for both dashboards: `OK`, anythi
 starting `Error:` is a failure, and any other text is a stage in progress.
 
 ## Where the copy drifts
+
+- **Up to 10 minutes behind** for anything D4H marks with a new `updatedAt`, and for
+  adds and deletes, which move a list's total. A change that moves neither waits for
+  the nightly refresh. Whether D4H moves `updatedAt` for a member's permission or status
+  change wasn't tested in #163.
 
 - **Attendance, qualifications, awards, groups, and group memberships are deleted** when
   D4H stops returning them, at the end of each one's stage. A deleted qualification takes
@@ -124,7 +174,7 @@ me on this computer for 60 days" (off by default) sets the 60-day cookie. A user
 a team when their email matches one of its managers in the local copy: a D4H Owner or
 Editor who isn't retired and hasn't left
 (`App.Model.Member.manager?/2`, and `App.Model.Team.get_managed_by/2` as a query). Losing
-Owner or Editor in D4H loses access at the next refresh. Admins reach every team, but
+Owner or Editor in D4H loses access at the next sync, when D4H marks the change. Admins reach every team, but
 an admin logs in only while D4H lists their email as a current member of some team, any
 permission (`App.Model.Member.current_email?/2`, #141). If D4H drops both admins, the way
 back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
@@ -152,9 +202,10 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
 
 - The base URL is `https://<team.d4h_api_host>/v3/team/<d4h_team_id>`. The host is the
   team's D4H region; `D4H.regions/0` lists them.
-- Every list endpoint goes through `reduce_pages` in the adapter, `page` from 0 with
-  `size: 1000`. It stops when the rows reach D4H's `totalSize`, and raises `D4H.Error` on
-  a non-200 response or a short fetch.
+- Every list endpoint goes through `reduce_pages` in the adapter, `size: 1000`. Page 0
+  gives D4H's `totalSize`; the rest are fetched 4 at a time and handed on in order. It
+  raises `D4H.Error` on a non-200 response or when the rows fall short of the total. A
+  full attendance list took 35 s one page at a time and 15 s four at a time.
 - Other calls read the body without checking the status. A bad key there surfaces as a
   `MatchError` that the worker turns into `D4H API error (status): …`. #33 covers them.
 - `Parse.datetime/1` expects D4H timestamps in UTC and raises on any other offset.
