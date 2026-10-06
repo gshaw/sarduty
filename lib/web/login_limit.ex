@@ -29,7 +29,7 @@ defmodule Web.LoginLimit do
   def allow?(who, ip) do
     {key, limit} = request_key(who)
     who_count = RateLimit.inc(key, @scale)
-    ip_count = RateLimit.inc("login:ip:#{ip}", @scale)
+    ip_count = "login:ip" |> ip_key(ip) |> RateLimit.inc(@scale)
     allowed = who_count <= limit and ip_count <= @ip_limit
 
     unless allowed, do: Logger.warning("Login code limit reached from #{ip}")
@@ -39,7 +39,7 @@ defmodule Web.LoginLimit do
   @doc "Whether this email or number, or this IP, has used up its wrong codes for now."
   def guessing_blocked?(who, ip) do
     misses(miss_key(who)) >= @email_miss_limit or
-      misses("login:miss:ip:#{ip}") >= @ip_miss_limit
+      misses(ip_key("login:miss:ip", ip)) >= @ip_miss_limit
   end
 
   @doc "Counts a wrong code, and logs when the email or number, or the IP, reaches its cap."
@@ -47,7 +47,7 @@ defmodule Web.LoginLimit do
     if count_miss(miss_key(who)) == @email_miss_limit,
       do: Logger.warning("Login code miss limit reached for an account, from #{ip}")
 
-    if count_miss("login:miss:ip:#{ip}") == @ip_miss_limit,
+    if count_miss(ip_key("login:miss:ip", ip)) == @ip_miss_limit,
       do: Logger.warning("Login code miss limit reached from #{ip}")
 
     :ok
@@ -61,6 +61,8 @@ defmodule Web.LoginLimit do
 
   defp miss_key({:phone, phone}), do: "login:miss:phone:#{phone}"
   defp miss_key(email), do: "login:miss:email:#{normalize(email)}"
+
+  defp ip_key(prefix, ip), do: "#{prefix}:#{RateLimit.ip_key(ip)}"
 
   defp normalize(email), do: email |> String.trim() |> String.downcase()
 end

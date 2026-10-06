@@ -146,10 +146,11 @@ on `/admin` and never reaches Honeybadger. Dev and test send nothing.
   Without it in production the app still boots, logs
   `Mandatory config key :api_key not set`, and reports nothing.
 
-Passwords, access keys, tokens, and the cookie header are filtered before sending, at
-every level of the params ([Web.HoneybadgerFilter](../lib/web/honeybadger_filter.ex)).
-Request paths are not, so reset and confirm links reach Honeybadger the same way they
-reach the logs.
+Any key whose name contains `key`, `token`, `code` or `password`, and the cookie header,
+is filtered before sending, at every level, for errors and Insights events alike
+([Web.HoneybadgerFilter](../lib/web/honeybadger_filter.ex)). Attendance tokens, short
+link codes and card codes are cut from paths, URLs and the referrer, the same way
+[Web.RequestLog](../lib/web/request_log.ex) cuts them from Fly's request logs (#176).
 
 ## MCP endpoint
 

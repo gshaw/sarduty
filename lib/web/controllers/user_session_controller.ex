@@ -2,6 +2,7 @@ defmodule Web.UserSessionController do
   use Web, :controller
 
   alias App.Accounts
+  alias App.Worker.SendLoginCodeWorker
   alias Web.LoginLimit
   alias Web.UserAuth
   alias Web.VerifyLimit
@@ -15,7 +16,7 @@ defmodule Web.UserSessionController do
 
       e164 when is_binary(e164) ->
         if LoginLimit.allow?({:phone, e164}, VerifyLimit.client_ip(conn)) do
-          Accounts.deliver_login_text(e164)
+          send_code(%{phone: e164})
         end
 
         conn
@@ -36,7 +37,7 @@ defmodule Web.UserSessionController do
     email = email |> String.trim() |> String.slice(0, 160)
 
     if email != "" and LoginLimit.allow?(email, VerifyLimit.client_ip(conn)) do
-      Accounts.deliver_login_code(email)
+      send_code(%{email: email})
     end
 
     # The code page reads the email from the session, so a refresh shows it again rather
@@ -46,6 +47,10 @@ defmodule Web.UserSessionController do
     |> put_session(:login_email, email)
     |> redirect(to: ~p"/login/code")
   end
+
+  # A job sends the code, or doesn't, after the reply. Sending inline made the reply a
+  # few hundred ms slower for someone with access (#176).
+  defp send_code(args), do: args |> SendLoginCodeWorker.new() |> Oban.insert!()
 
   def create(conn, %{"user" => %{"phone" => phone, "code" => code} = params}) do
     ip = VerifyLimit.client_ip(conn)

@@ -23,5 +23,5 @@ defmodule Web.ShortLinkLimit do
     :ok
   end
 
-  defp key(ip), do: "short_link:#{ip}"
+  defp key(ip), do: "short_link:#{RateLimit.ip_key(ip)}"
 end

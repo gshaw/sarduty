@@ -155,6 +155,22 @@ defmodule Web.WalletControllerTest do
     assert response(conn, 200)
   end
 
+  test "logs at most 10 messages a post, cut to 500 characters", %{conn: conn} do
+    long = String.duplicate("x", 600)
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("fly-client-ip", "wallet-#{System.unique_integer([:positive])}")
+        |> post("/wallet/v1/log", %{logs: List.duplicate(long, 12)})
+      end)
+
+    assert log |> String.split("Wallet: ") |> length() == 11
+    assert log =~ "Wallet: " <> String.duplicate("x", 500) <> "\n"
+    refute log =~ String.duplicate("x", 501)
+  end
+
   describe "after a replacement" do
     setup %{card: old} do
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))

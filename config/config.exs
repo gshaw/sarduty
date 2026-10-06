@@ -80,13 +80,15 @@ config :sarduty, Oban,
   cron: [crontab: [{"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker}]]
 
 # Setting this replaces Phoenix's default of ["password"], so list it too. Each entry
-# matches any param name that contains it: "token" covers the confirm and reset links.
-config :phoenix, :filter_parameters, ["password", "access_key", "token"]
+# matches any param name that contains it: "token" covers attendance links, and "code"
+# login, card and short link codes. Paths are filtered by Web.RequestLog.
+config :phoenix, :filter_parameters, ["password", "access_key", "token", "code"]
 
 # Honeybadger reports errors, and Insights sends request and job timings. It
 # sends nothing in dev or test, or without HONEYBADGER_API_KEY. Its filter_keys match
-# whole key names, not substrings like the list above, so each variant is listed;
-# http_cookie drops the session cookie from the request headers. filter_args keeps
+# whole key names, so Web.HoneybadgerFilter also drops any key containing "key",
+# "token", "code" or "password", and cuts secrets from paths, for errors and Insights
+# alike; http_cookie drops the session cookie from the request headers. filter_args keeps
 # function arguments, which can be members, out of backtraces. Query events are off: the
 # nightly refresh writes row by row, and they filled the plan's daily Insights cap.
 config :honeybadger,
@@ -97,13 +99,17 @@ config :honeybadger,
   use_logger: true,
   ecto_repos: [App.Repo],
   filter: Web.HoneybadgerFilter,
+  notice_filter: Web.HoneybadgerFilter,
+  event_filter: Web.HoneybadgerFilter,
   filter_args: true,
   filter_keys: [
     :password,
     :current_password,
     :password_confirmation,
     :access_key,
+    :new_d4h_access_key,
     :token,
+    :code,
     :http_cookie,
     :__changed__,
     :flash,
