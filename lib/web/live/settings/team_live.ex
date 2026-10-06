@@ -30,9 +30,8 @@ defmodule Web.Settings.TeamLive do
           qualifications on the back
         </li>
         <li>
-          <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>
-            Managers
-          </.a>: who can log in
+          <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>Managers</.a>:
+          who can log in
         </li>
       </ul>
 
