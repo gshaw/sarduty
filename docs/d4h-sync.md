@@ -110,8 +110,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 - **Up to 10 minutes behind** for anything D4H marks with a new `updatedAt`, and for
   adds and deletes, which move a list's total. A change that moves neither waits for
-  the nightly refresh. Whether D4H moves `updatedAt` for a member's permission or status
-  change wasn't tested in #163.
+  the nightly refresh. A member's status change and permission change (Owner to Editor
+  and back, in D4H's web app) both move the member's `updatedAt`, so losing manager
+  access reaches SAR Duty within 10 minutes (tested 2026-10-06).
 
 - **Attendance, qualifications, awards, groups, and group memberships are deleted** when
   D4H stops returning them, at the end of each one's stage. A deleted qualification takes
@@ -174,7 +175,7 @@ me on this computer for 60 days" (off by default) sets the 60-day cookie. A user
 a team when their email matches one of its managers in the local copy: a D4H Owner or
 Editor who isn't retired and hasn't left
 (`App.Model.Member.manager?/2`, and `App.Model.Team.get_managed_by/2` as a query). Losing
-Owner or Editor in D4H loses access at the next sync, when D4H marks the change. Admins reach every team, but
+Owner or Editor in D4H loses access at the next sync, within 10 minutes. Admins reach every team, but
 an admin logs in only while D4H lists their email as a current member of some team, any
 permission (`App.Model.Member.current_email?/2`, #141). If D4H drops both admins, the way
 back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
