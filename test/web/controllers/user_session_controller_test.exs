@@ -129,6 +129,61 @@ defmodule Web.UserSessionControllerTest do
       code = login_code_fixture(user.email)
       conn = log_in(conn, user.email, code)
       refute get_session(conn, :user_token)
+
+      # The owner hears about it, once.
+      assert_received {:email, %{subject: "Wrong login codes entered" <> _, to: [{_, email}]}}
+      assert email == user.email
+      refute_received {:email, %{subject: "Wrong login codes entered" <> _}}
+    end
+
+    test "a browser that logged in before isn't locked out by someone else's wrong codes",
+         %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      first = log_in(conn, user.email, login_code_fixture(user.email))
+      known = first.resp_cookies["_sarduty_known_browser"].value
+
+      for _ <- 1..4 do
+        code = login_code_fixture(user.email)
+        for _ <- 1..5, do: build_conn() |> from_ip() |> log_in(user.email, wrong(code))
+        Repo.delete_all(UserToken)
+      end
+
+      code = login_code_fixture(user.email)
+      stranger = build_conn() |> from_ip() |> log_in(user.email, code)
+      refute get_session(stranger, :user_token)
+
+      Repo.delete_all(UserToken)
+      code = login_code_fixture(user.email)
+
+      mine =
+        build_conn()
+        |> from_ip()
+        |> put_req_cookie("_sarduty_known_browser", known)
+        |> log_in(user.email, code)
+
+      assert get_session(mine, :user_token)
+    end
+
+    test "a made-up known-browser cookie doesn't count", %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+
+      for _ <- 1..4 do
+        code = login_code_fixture(user.email)
+        for _ <- 1..5, do: build_conn() |> from_ip() |> log_in(user.email, wrong(code))
+        Repo.delete_all(UserToken)
+      end
+
+      code = login_code_fixture(user.email)
+      # The cookie's term, unsigned.
+      forged = [user.id] |> :erlang.term_to_binary() |> Base.encode64()
+
+      conn =
+        conn
+        |> from_ip()
+        |> put_req_cookie("_sarduty_known_browser", forged)
+        |> log_in(user.email, code)
+
+      refute get_session(conn, :user_token)
     end
 
     test "the login form sends someone already logged in to their team", %{conn: conn} do

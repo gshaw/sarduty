@@ -9,8 +9,9 @@ defmodule Web.MemberCardController do
   alias App.Repo
   alias Web.VerifyLimit
 
-  # The photo on /verify, also the Apple thumbnail. Public, so it answers only for a card
-  # that isn't cancelled, and its 404s count toward the verify site's limit.
+  # The photo on /verify. Public, so it answers only for an active member's card: not for
+  # a cancelled card, nor for someone who has left the team (#176). Its 404s count toward
+  # the verify site's limit.
   def photo(conn, %{"code" => input}) do
     ip = VerifyLimit.client_ip(conn)
 
@@ -28,7 +29,8 @@ defmodule Web.MemberCardController do
 
   defp send_photo(conn, input, shape) do
     with code when is_binary(code) <- MemberCard.normalize_code(input),
-         %MemberCard{revoked_at: nil} = card <- MemberCard.find_by_code(code) do
+         %MemberCard{} = card <- MemberCard.find_by_code(code),
+         :active <- MemberCard.status(card, DateTime.utc_now()) do
       conn
       |> put_resp_header("cache-control", "private, max-age=300")
       |> put_resp_content_type("image/png", nil)

@@ -264,8 +264,10 @@ defmodule Web.VerifyLive do
       </.band>
 
       <.panel>
+        <%!-- No photo for someone who has left: "not active" needs none (#176). --%>
         <div class="flex items-center gap-4">
           <img
+            :if={@status == :active}
             id="result-photo"
             src={~p"/#{@result.card.code}/photo"}
             alt={"Photo of #{@member.name}"}
@@ -304,7 +306,6 @@ defmodule Web.VerifyLive do
             </.fact>
           <% else %>
             <.fact label="Status">Not active</.fact>
-            <.fact label="Member" class="col-span-2">{member_years(@member, @team.timezone)}</.fact>
           <% end %>
         </div>
 
@@ -392,11 +393,6 @@ defmodule Web.VerifyLive do
 
   defp left_text(member),
     do: "Left the team #{Service.Format.month_year(member.left_at, member.team.timezone)}"
-
-  defp member_years(%{joined_at: joined_at, left_at: left_at}, timezone) do
-    year = &(&1 |> DateTime.shift_zone!(timezone) |> Calendar.strftime("%Y"))
-    if left_at, do: "#{year.(joined_at)} – #{year.(left_at)}", else: "Since #{year.(joined_at)}"
-  end
 
   defp last_checked(%{d4h_refreshed_at: nil}), do: "never"
 

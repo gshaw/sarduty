@@ -54,6 +54,14 @@ defmodule Web.MemberCardControllerTest do
     assert response(conn, 200)
   end
 
+  test "404s for a member who left the team, without calling D4H", %{conn: conn} do
+    team = team_fixture(%{d4h_access_key: "team-key"})
+    card = member_card_fixture(member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]}))
+
+    assert conn |> get(~p"/verify/#{card.code}/photo") |> response(404)
+    assert conn |> get(~p"/verify/#{card.code}/banner") |> response(404)
+  end
+
   test "404s for a cancelled card without calling D4H", %{conn: conn, member: member} do
     card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
 
