@@ -66,18 +66,25 @@ defmodule Web.AttendanceLinkLive do
   def handle_event("set_kind", %{"kind" => kind}, socket) when kind in ["arrived", "left"],
     do: {:noreply, assign(socket, kind: kind, message: nil)}
 
-  def handle_event("set_override", %{"override" => override}, socket),
-    do: {:noreply, assign(socket, override: override)}
+  def handle_event("change", params, socket) do
+    search = params["search"] || ""
+
+    {:noreply,
+     assign(socket,
+       override: params["override"] || "",
+       search: search,
+       matches: matches(socket.assigns.members, search)
+     )}
+  end
 
   def handle_event("clear_override", _params, socket),
     do: {:noreply, assign(socket, override: "")}
 
-  def handle_event("search", %{"search" => search}, socket),
-    do:
-      {:noreply, assign(socket, search: search, matches: matches(socket.assigns.members, search))}
-
-  def handle_event("scanned", %{"code" => input}, socket) do
-    %{kind: kind, override: override} = socket.assigns
+  # The scanner sends the time box's value with each read, so the scan uses what the
+  # box shows even when the phone never sent a change for it.
+  def handle_event("scanned", %{"code" => input} = params, socket) do
+    kind = socket.assigns.kind
+    override = params["override"] || socket.assigns.override
     hosts = Web.VerifyHost.trusted_hosts()
 
     socket =
@@ -88,16 +95,22 @@ defmodule Web.AttendanceLinkLive do
     {:noreply, socket}
   end
 
-  def handle_event("pick", %{"id" => member_id}, socket) do
-    %{kind: kind, override: override} = socket.assigns
+  # A member's button submits the whole form, so the pick carries the time box as it
+  # shows (#168). Enter in the search box submits with no member and only searches.
+  def handle_event("pick", %{"pick" => member_id} = params, socket) do
+    kind = socket.assigns.kind
+    override = params["override"] || ""
 
     socket =
       socket
+      |> assign(override: override)
       |> record(&RecordAttendanceScan.from_name(&1, member_id, kind, override, &2))
       |> assign(search: "", matches: [])
 
     {:noreply, socket}
   end
+
+  def handle_event("pick", params, socket), do: handle_event("change", params, socket)
 
   def handle_event("undo", %{"id" => scan_id}, socket) do
     socket =
@@ -211,82 +224,86 @@ defmodule Web.AttendanceLinkLive do
       </.button>
     </div>
 
-    <p
-      :if={@message}
-      id="message"
-      role="status"
-      class={[
-        "mt-p mb-0 font-semibold",
-        elem(@message, 0) == :error && "text-danger-1",
-        elem(@message, 0) == :ok && "text-success-1"
-      ]}
-    >
-      {elem(@message, 1)}
-    </p>
+    <form id="door-form" phx-change="change" phx-submit="pick">
+      <div class="mt-p">
+        <.input type="time" id="override" name="override" value={@override} label="Time (optional)">
+          Leave this empty to use the time of each scan. Set it to catch up from a paper list.
+        </.input>
+        <p :if={@override != ""} id="override-note" class="-mt-4 font-semibold">
+          Recording as {@override} ·
+          <.a id="clear-override" href="#" phx-click="clear_override">Clear time</.a>
+        </p>
+      </div>
 
-    <div id="scanner" phx-hook="QRScanner" phx-update="ignore" data-continuous class="mt-p">
-      <div data-scan-state class="group">
-        <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
-        <div class="group-data-scanning:hidden">
-          <.button
-            type="button"
-            variant={:success}
-            size={:lg}
-            class="w-full justify-center"
-            data-scan-start
-          >
-            Scan ID cards
-          </.button>
-        </div>
-        <div class="hidden group-data-scanning:block mt-2">
-          <.button type="button" class="w-full justify-center" data-scan-stop>
-            Stop scanning
-          </.button>
+      <p
+        :if={@message}
+        id="message"
+        role="status"
+        class={[
+          "mt-p mb-0 font-semibold",
+          elem(@message, 0) == :error && "text-danger-1",
+          elem(@message, 0) == :ok && "text-success-1"
+        ]}
+      >
+        {elem(@message, 1)}
+      </p>
+
+      <div
+        id="scanner"
+        phx-hook="QRScanner"
+        phx-update="ignore"
+        data-continuous
+        data-override-input="override"
+        class="mt-p"
+      >
+        <div data-scan-state class="group">
+          <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
+          <div class="group-data-scanning:hidden">
+            <.button
+              type="button"
+              variant={:success}
+              size={:lg}
+              class="w-full justify-center"
+              data-scan-start
+            >
+              Scan ID cards
+            </.button>
+          </div>
+          <div class="hidden group-data-scanning:block mt-2">
+            <.button type="button" class="w-full justify-center" data-scan-stop>
+              Stop scanning
+            </.button>
+          </div>
         </div>
       </div>
-    </div>
-    <p :if={@override != ""} id="override-note" class="mt-2 font-semibold">
-      Recording as {@override} ·
-      <.a id="clear-override" href="#" phx-click="clear_override">Clear time</.a>
-    </p>
-    <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
-      The camera did not start. Allow camera access, or find members by name.
-    </p>
+      <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
+        The camera did not start. Allow camera access, or find members by name.
+      </p>
 
-    <form id="search-form" phx-change="search" phx-submit="search" class="mt-p">
-      <.input
-        type="search"
-        name="search"
-        value={@search}
-        label="Find a member by name"
-        autocomplete="off"
-        phx-debounce="150"
-      >
-        For a member without their ID card.
-      </.input>
-    </form>
-    <ul :if={@matches != []} id="matches" class="mt-2">
-      <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
-        <span>{member.name}</span>
-        <.button
-          id={"pick-#{member.id}"}
-          type="button"
-          size={:sm}
-          phx-click="pick"
-          phx-value-id={member.id}
+      <div class="mt-p">
+        <.input
+          type="search"
+          id="search"
+          name="search"
+          value={@search}
+          label="Find a member by name"
+          autocomplete="off"
+          phx-debounce="150"
         >
-          {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
-        </.button>
-      </li>
-    </ul>
-    <p :if={@matches == [] and String.length(@search) >= 2} id="no-matches" class="mt-2">
-      No current member has that name.
-    </p>
-
-    <form id="override-form" phx-change="set_override" class="mt-p">
-      <.input type="time" name="override" value={@override} label="Time (optional)">
-        Leave this empty to use the time of each scan. Set it to catch up from a paper list.
-      </.input>
+          For a member without their ID card.
+        </.input>
+      </div>
+      <ul :if={@matches != []} id="matches" class="-mt-4">
+        <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
+          <span>{member.name}</span>
+          <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id} size={:sm}>
+            {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
+          </.button>
+        </li>
+      </ul>
+      <p :if={@matches == [] and String.length(@search) >= 2} id="no-matches" class="-mt-4">
+        No current member has that name.
+      </p>
     </form>
 
     <h2 class="heading mt-p">Recorded</h2>
