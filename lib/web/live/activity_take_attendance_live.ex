@@ -22,6 +22,12 @@ defmodule Web.ActivityTakeAttendanceLive do
     team = socket.assigns.current_team
     activity = team |> Activity.find!(params["id"]) |> Repo.preload(:team)
 
+    if Activity.deleted?(activity),
+      do: {:noreply, Web.ActivityLive.leave_deleted(socket, activity)},
+      else: load(socket, activity)
+  end
+
+  defp load(socket, activity) do
     if connected?(socket),
       do: Phoenix.PubSub.subscribe(App.PubSub, AttendanceScan.topic(activity.id))
 
@@ -112,6 +118,8 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   defp error_text(:published),
     do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
+
+  defp error_text(:deleted), do: "This activity is deleted in D4H. Nothing can be sent to it."
 
   defp error_text(:no_team_key), do: "Save the team's D4H access key in Team settings first."
 

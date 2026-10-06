@@ -113,7 +113,13 @@ defmodule App.DataFixtures do
         attrs
       )
 
-    Activity.insert!(params)
+    # The refresh sets `deleted_at` itself; the changeset never casts it.
+    {deleted_at, params} = Map.pop(params, :deleted_at)
+    activity = Activity.insert!(params)
+
+    if deleted_at,
+      do: activity |> Ecto.Changeset.change(deleted_at: deleted_at) |> Repo.update!(),
+      else: activity
   end
 
   def member_fixture(%Team{} = team, attrs \\ %{}) do

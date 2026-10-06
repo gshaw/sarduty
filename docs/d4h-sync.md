@@ -69,11 +69,23 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   [StaleRows](../lib/app/operation/refresh_d4h_data/stale_rows.ex) finds the rows, always
   within one team.
 - **Members and activities are never deleted.** A member deleted in D4H keeps their
-  contact details here. Attendance and tax credit letters point at them.
+  contact details here. Attendance and tax credit letters point at them, and attendance
+  links, scans, and no-shows point at activities.
 - **A member D4H stops listing is marked departed.** D4H's `GET /members` leaves deleted
   members out, so the members stage sets `left_at` to the refresh time on any active
   member it didn't see (#72). It skips this when D4H returns no members at all. If D4H
   lists the member again, the next refresh copies D4H's `endsAt` back.
+- **An activity D4H stops listing is marked deleted** (#160). D4H leaves deleted
+  activities out of `GET /events`, `/exercises`, and `/incidents`, and a fetch for one
+  returns 404. At the end of each kind's stage, `UpsertActivities.plan_deleted/2` picks
+  this team's activities of that kind D4H didn't list, and the stage sets
+  `activities.deleted_at` to the refresh time and closes their open attendance links. It
+  skips a kind D4H returns none of. If D4H lists one again, the mark clears.
+- Deleted activities are left out of the activity list, its years, the dashboard count,
+  and letter hours. D4H already returns no attendance for them, so the attendance stage
+  deletes theirs. Their page says "Deleted in D4H" and offers no actions. Take attendance,
+  import attendance, and the mileage report send you back to it, an attendance link on one
+  takes no scans, and `SendAttendanceToD4H` refuses it.
 - Group rule clauses are never deleted by the sync. A clause for a deleted group is left
   unused; a clause naming a deleted qualification shows a warning on the group page.
 - **A short fetch fails the refresh.** Every D4H list response has a `totalSize`. The

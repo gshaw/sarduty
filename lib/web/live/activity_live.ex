@@ -39,6 +39,12 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title">{@activity.title}</h1>
+    <p :if={@activity.deleted_at} id="deleted-in-d4h" class="text-danger-1 font-semibold mb-p">
+      Deleted in D4H. SAR Duty saw it was gone on {Service.Format.date_long(
+        @activity.deleted_at,
+        @activity.team.timezone
+      )}.
+    </p>
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content
@@ -101,9 +107,10 @@ defmodule Web.ActivityLive do
         </dd>
       </div>
 
-      <dt>Actions</dt>
-      <dd>
-        <ul class="action-list">
+      <%!-- Each action reads or writes the activity in D4H, which no longer has it. --%>
+      <dt :if={!@activity.deleted_at}>Actions</dt>
+      <dd :if={!@activity.deleted_at}>
+        <ul id="activity-actions" class="action-list">
           <li>
             <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
               Open D4H activity
@@ -180,6 +187,13 @@ defmodule Web.ActivityLive do
       </:col>
     </.table>
     """
+  end
+
+  @doc "Sends a page that calls D4H back to a deleted activity's page."
+  def leave_deleted(socket, activity) do
+    socket
+    |> put_flash(:error, "This activity is deleted in D4H. Nothing can be sent to it.")
+    |> push_navigate(to: ~p"/#{socket.assigns.current_team.subdomain}/activities/#{activity.id}")
   end
 
   def fetch_activity(team, activity_id) do

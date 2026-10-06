@@ -112,8 +112,10 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   @doc """
   Reads D4H and plans. `{:ok, %{published: boolean, changes: [change]}}`, or
-  `{:error, %D4H.Error{}}` when D4H can't be read, or `{:error, :no_team_key}`.
+  `{:error, %D4H.Error{}}` when D4H can't be read, `{:error, :no_team_key}`, or
+  `{:error, :deleted}` for an activity deleted in D4H.
   """
+  def preview(%Team{}, %Activity{deleted_at: %DateTime{}}), do: {:error, :deleted}
   def preview(%Team{d4h_access_key: nil}, %Activity{}), do: {:error, :no_team_key}
 
   def preview(%Team{} = team, %Activity{team_id: team_id} = activity)

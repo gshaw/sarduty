@@ -2,7 +2,9 @@ defmodule App.Operation.SendAttendanceToD4HTest do
   use ExUnit.Case, async: true
 
   alias App.Adapter.D4H.AttendanceInfo
+  alias App.Model.Activity
   alias App.Model.Member
+  alias App.Model.Team
   alias App.Operation.SendAttendanceToD4H
 
   @start ~U[2026-10-10 16:00:00Z]
@@ -105,5 +107,13 @@ defmodule App.Operation.SendAttendanceToD4HTest do
 
     assert [%{action: :update, d4h_attendance_id: 5001}] =
              SendAttendanceToD4H.plan([time(mei)], rows, [mei])
+  end
+
+  test "refuses an activity deleted in D4H before reading D4H" do
+    team = %Team{id: 1, d4h_access_key: "key"}
+    activity = %Activity{team_id: 1, deleted_at: ~U[2026-10-05 06:00:00Z]}
+
+    assert SendAttendanceToD4H.preview(team, activity) == {:error, :deleted}
+    assert SendAttendanceToD4H.call(team, activity, [], @start) == {:error, :deleted}
   end
 end
