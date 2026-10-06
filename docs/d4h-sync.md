@@ -152,15 +152,16 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 ## Pages that skip the copy
 
-Some pages call D4H live instead of reading the database: activity attendance (which
-writes, via `PATCH /attendance/:id`), the mileage report, team settings refresh, and
-member photos. They use the team's key too.
+Some pages call D4H live instead of reading the database: activity attendance, the
+mileage report, team settings refresh, and member photos. They use the team's key too.
+Every write, including the attendance import's, is a change set: see
+[change-sets.md](change-sets.md).
 
 The sync also stores each member's D4H access level (`d4h_permission`) and status. That
 decides who can log in: see [Who can log in](#who-can-log-in).
 
-Group rule changes are the other write. The review page sends them with the team's key
-and updates `group_members` right away rather
+Group rule changes are another write. The review page sends them as a change set and
+updates `group_members` right away rather
 than waiting for the next refresh. See [group-rules.md](group-rules.md).
 
 ## Who can log in

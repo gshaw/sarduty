@@ -48,10 +48,11 @@
 ## External integrations (know where to look)
 
 - **D4H v3 API**: [lib/app/adapter/d4h.ex](lib/app/adapter/d4h.ex). Each team has its own
-  API host (region) and bearer token. Almost everything reads. The writes are the
-  attendance `PATCH` fired from `Web.ActivityAttendanceLive`, and group membership adds
-  and removes from `ApplyGroupRuleChanges`. How the local copy is kept
-  fresh is in [docs/d4h-sync.md](docs/d4h-sync.md).
+  API host (region) and bearer token. Almost everything reads. Every write is a change
+  set, applied by `App.Operation.ApplyChangeSet`: attendance from the door and from a
+  pasted report, and group membership adds and removes. See
+  [docs/change-sets.md](docs/change-sets.md). How the local copy is kept fresh is in
+  [docs/d4h-sync.md](docs/d4h-sync.md).
 - **Mapbox**: geocoding and driving distances for the mileage report, and the static map
   on the activity page.
 - **Cloudflare Email Sending** through Swoosh, with our own adapter in
@@ -148,6 +149,9 @@ fi
 - **New side effects go in an Operation**, not a LiveView `handle_event`. Some older
   LiveViews call the D4H adapter directly (`ActivityAttendanceLive`,
   `ActivityMileageLive`, `Settings.TeamLive`); don't copy that.
+- **Every D4H write is a change set.** Build rows with `ChangeSet.propose!/2` and apply
+  them with `ApplyChangeSet.call/4`. Never call D4H's write functions from anywhere
+  else; a test fails if you do.
 - **Only adapters know D4H's JSON.** A new D4H resource is a struct in
   `lib/app/adapter/d4h/` with a `build/1` that maps the response, plus a fetch function in
   `d4h.ex`. Use `Req`; never `:httpoison`, `:tesla`, or `:httpc`.

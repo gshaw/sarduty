@@ -92,7 +92,8 @@ cards" while the camera kept running.
 The **Send to D4H** part of the Take attendance page
 ([SendAttendanceToD4H](../lib/app/operation/send_attendance_to_d4h.ex)) reads the
 activity's attendance from D4H live, plans one change per member, and shows them with
-checkboxes. Sending reads D4H again and plans again before it writes. When every change
+checkboxes. Sending reads D4H again, plans again, and sends the kept changes as a
+[change set](change-sets.md). When every change
 goes through, it closes the attendance link; a failure leaves it open so the door can
 still fix times.
 

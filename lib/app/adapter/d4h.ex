@@ -366,6 +366,9 @@ defmodule App.Adapter.D4H do
       else: fetch_changed_pages(request, since, page_number + 1, acc)
   end
 
+  # Only App.Operation.ApplyChangeSet calls the writes below: add_group_member,
+  # remove_group_membership, set_attendance, and create_attendance (#174).
+  #
   # The two group writes return D4H.Error instead of raising, so one failed change
   # doesn't stop the rest. Neither is retried: a person is watching and can apply
   # again, and a retried POST could add someone twice.
@@ -438,7 +441,15 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  @doc "Marks an existing attendance row attending, with times, or absent."
+  @doc """
+  Marks an existing attendance row attending, with times, or absent. Attending without
+  times keeps the row's times.
+  """
+  def set_attendance(context, d4h_attendance_id, "ATTENDING", nil, nil) do
+    json = %{status: "ATTENDING"}
+    write_attendance(context, :patch, "/attendance/#{d4h_attendance_id}", json)
+  end
+
   def set_attendance(context, d4h_attendance_id, "ATTENDING", starts_at, ends_at) do
     json = %{status: "ATTENDING", startsAt: iso(starts_at), endsAt: iso(ends_at)}
     write_attendance(context, :patch, "/attendance/#{d4h_attendance_id}", json)
@@ -471,14 +482,4 @@ defmodule App.Adapter.D4H do
   end
 
   defp iso(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
-
-  defp update_attendance(context, attendance_id, status) do
-    Req.patch!(context, url: "/attendance/#{attendance_id}", json: %{status: status})
-  end
-
-  def add_attendance(context, attendance_id),
-    do: update_attendance(context, attendance_id, "ATTENDING")
-
-  def remove_attendance(context, attendance_id),
-    do: update_attendance(context, attendance_id, "ABSENT")
 end

@@ -80,6 +80,7 @@ The rules that are easy to break:
 ## The docs
 
 - [d4h-sync.md](d4h-sync.md) — how D4H data reaches the database, and what is never deleted.
+- [change-sets.md](change-sets.md) — how every write to D4H goes through one applier, and what it records.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.

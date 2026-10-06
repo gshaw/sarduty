@@ -89,7 +89,13 @@ defmodule Web.ActivityTakeAttendanceLive do
     %{current_team: team, activity: activity} = socket.assigns
     keys = params["keys"] || []
 
-    case SendAttendanceToD4H.call(team, activity, keys, DateTime.utc_now()) do
+    case SendAttendanceToD4H.call(
+           team,
+           activity,
+           socket.assigns.current_user,
+           keys,
+           DateTime.utc_now()
+         ) do
       {:ok, results} -> {:noreply, show_results(socket, results)}
       {:error, error} -> {:noreply, put_flash(socket, :error, error_text(error))}
     end

@@ -3,6 +3,8 @@ defmodule App.Operation.ApplyGroupRuleChangesTest do
 
   import App.DataFixtures
 
+  alias App.Model.ChangeSet
+  alias App.Model.ChangeSetRow
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
   alias App.Model.Member
@@ -63,6 +65,14 @@ defmodule App.Operation.ApplyGroupRuleChangesTest do
              GroupMembershipChange |> order_by([c], c.id) |> Repo.all()
 
     assert user_id == ctx.user.id
+
+    assert %{source: :group_rule, applied_by_user_id: ^user_id} = Repo.one(ChangeSet)
+    membership_id = ctx.membership.d4h_group_membership_id
+
+    assert [
+             %{action: :remove_group_member, status: :applied, d4h_record_id: ^membership_id},
+             %{action: :add_group_member, status: :applied, d4h_record_id: 4242}
+           ] = ChangeSetRow |> order_by(:id) |> Repo.all()
   end
 
   test "a member not ticked, or one the plan doesn't list, is left alone", ctx do
@@ -100,6 +110,9 @@ defmodule App.Operation.ApplyGroupRuleChangesTest do
 
     assert %{error: "D4H API error (403): Forbidden"} =
              Repo.get_by(GroupMembershipChange, action: :add)
+
+    assert %{status: :failed, error: "D4H API error (403): Forbidden"} =
+             Repo.get_by(ChangeSetRow, action: :add_group_member)
   end
 
   test "without a team key nothing is sent", ctx do
