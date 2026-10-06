@@ -67,11 +67,15 @@ defmodule Web.HoneybadgerFilter do
   @impl Honeybadger.EventFilter
   def filter_event(event), do: event
 
+  # LiveView events carry the page's assigns, which can be a whole team's members with
+  # their addresses. Honeybadger also prints an event it fails to send, so they reached
+  # Fly's logs too. Never send them.
   @impl Honeybadger.EventFilter
   def filter_telemetry_event(data, raw, _event) do
     host = with %Plug.Conn{host: host} <- raw[:conn], do: host
 
     data
+    |> Map.drop([:assigns, "assigns"])
     |> scrub()
     |> update_present(:request_path, &RequestLog.filter_path(host, &1))
     |> update_present(:url, &filter_url/1)

@@ -72,6 +72,15 @@ defmodule Web.HoneybadgerFilterTest do
     refute inspect(filtered) =~ "K7Q4M2XA"
   end
 
+  test "never sends a LiveView's assigns to Insights" do
+    data = %{view: "Web.AttendanceLinkLive", assigns: %{members: [%{address: "1 Main St"}]}}
+
+    filtered = HoneybadgerFilter.filter_telemetry_event(data, %{}, [:phoenix, :live_view])
+
+    refute Map.has_key?(filtered, :assigns)
+    assert filtered.view == "Web.AttendanceLinkLive"
+  end
+
   test "cuts tokens from a LiveView's URL in Insights" do
     data = %{url: "https://sarduty.com/attendance/secret-token", params: %{}}
 
