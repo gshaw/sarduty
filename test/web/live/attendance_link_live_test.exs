@@ -236,12 +236,12 @@ defmodule Web.AttendanceLinkLiveTest do
     assert has_element?(lv, "#message", "Mei Chen arrived at")
 
     # A timer from an older scan leaves the newer confirmation alone.
-    send(lv.pid, {:clear_message, {:ok, "Sam Ortiz arrived at 09:00."}})
+    send(lv.pid, {:clear_message, {:arrived, "Sam Ortiz arrived at 09:00."}})
     assert has_element?(lv, "#message")
 
     [scan] = scans(activity)
     time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
-    send(lv.pid, {:clear_message, {:ok, "Mei Chen arrived at #{time}."}})
+    send(lv.pid, {:clear_message, {:arrived, "Mei Chen arrived at #{time}."}})
     refute has_element?(lv, "#message")
   end
 
@@ -313,5 +313,20 @@ defmodule Web.AttendanceLinkLiveTest do
 
     assert has_element?(lv, "#matches")
     assert scans(activity) == []
+  end
+
+  test "each scan plays a sound for its result", %{conn: conn, link: link, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+    render_hook(lv, "scanned", %{code: card.code})
+    assert_push_event(lv, "scan-sound", %{sound: :arrived})
+
+    lv |> element("#kind-left") |> render_click()
+    render_hook(lv, "scanned", %{code: card.code})
+    assert_push_event(lv, "scan-sound", %{sound: :left})
+
+    render_hook(lv, "scanned", %{code: "ZZZZ-ZZZZ"})
+    assert_push_event(lv, "scan-sound", %{sound: :error})
   end
 end
