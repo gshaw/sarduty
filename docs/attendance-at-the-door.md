@@ -80,6 +80,7 @@ the silent switch doesn't mute it (Safari 17 and later). Sound stopped for good 
 switching apps (2026-10-06): an iPhone pauses a background page's audio and often never
 resumes it. The page now drops its audio when hidden and starts fresh on the next tap,
 so after switching back, the first scan sounds only once someone has tapped the page.
+The camera stops when the page is hidden, so that tap is the one on the scan button.
 
 The hook keeps its scanning flag on the `[data-scan-state]` element inside it, not on the
 `phx-update="ignore"` container. LiveView still patches the container's data attributes,
