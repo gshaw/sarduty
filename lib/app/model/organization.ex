@@ -8,6 +8,9 @@ defmodule App.Model.Organization do
 
   # A parent organization, like BCSARA. Its member teams' cards and check pages carry its
   # name and logo. Set up by an admin; teams can't join or leave one themselves.
+  # Public paths name an organization by its slug: ~p"/orgs/#{organization}/logo".
+  # Admin pages use the id.
+  @derive {Phoenix.Param, key: :slug}
   schema "organizations" do
     field :name, TrimmedString
     field :short_name, TrimmedString

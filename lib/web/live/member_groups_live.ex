@@ -27,7 +27,7 @@ defmodule Web.MemberGroupsLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
+      <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
       <:item label="Groups" />
     </.breadcrumbs>
 
@@ -53,7 +53,7 @@ defmodule Web.MemberGroupsLive do
       class="w-full table-striped"
     >
       <:col :let={gm} label="Group">
-        <.a navigate={~p"/#{@member.team.subdomain}/groups/#{gm.group.id}"}>
+        <.a navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>
           {gm.group.title}
         </.a>
       </:col>

@@ -79,6 +79,6 @@ defmodule Web.ActivityCollectionLive do
 
   def build_filter_path(team, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
-    ~p"/#{team.subdomain}/activities?#{query_params}"
+    ~p"/teams/#{team}/activities?#{query_params}"
   end
 end

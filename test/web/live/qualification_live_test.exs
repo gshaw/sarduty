@@ -25,7 +25,7 @@ defmodule Web.QualificationLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/qualifications/#{qualification.id}")
+      |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
 
     assert html =~ "Rope Rescue"
     assert html =~ "Alice Active"
@@ -39,7 +39,7 @@ defmodule Web.QualificationLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/qualifications/#{qualification.id}")
+      |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
 
     assert html =~ "Empty Qual"
     assert html =~ "No active awards"

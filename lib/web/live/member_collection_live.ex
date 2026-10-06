@@ -88,7 +88,7 @@ defmodule Web.MemberCollectionLive do
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
-        <.a navigate={~p"/#{@current_team.subdomain}/members/#{record.member.id}"}>
+        <.a navigate={~p"/teams/#{@current_team}/members/#{record.member.id}"}>
           {record.member.name}
         </.a>
       </:col>
@@ -162,6 +162,6 @@ defmodule Web.MemberCollectionLive do
 
   def build_filter_path(team, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
-    ~p"/#{team.subdomain}/members?#{query_params}"
+    ~p"/teams/#{team}/members?#{query_params}"
   end
 end

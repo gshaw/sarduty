@@ -12,7 +12,7 @@ defmodule Web.TeamDashboardLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}")
+      |> live(~p"/teams/#{team}")
 
     assert html =~ team.name
   end
@@ -21,12 +21,12 @@ defmodule Web.TeamDashboardLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     conn = log_in_user(conn, user)
 
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     refute has_element?(lv, "#team-logo")
 
     team_logo_fixture(team)
 
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#team-logo")
   end
 
@@ -41,7 +41,7 @@ defmodule Web.TeamDashboardLiveTest do
     {:ok, lv, _html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}")
+      |> live(~p"/teams/#{team}")
 
     assert has_element?(lv, "#refresh-error", "No D4H key. Save a team key in Team Settings.")
   end

@@ -87,7 +87,7 @@ defmodule Web.ActivitySendAttendanceTest do
 
   defp open(ctx) do
     {:ok, lv, _html} =
-      live(ctx.conn, ~p"/#{ctx.team.subdomain}/activities/#{ctx.activity.id}/take-attendance")
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/take-attendance")
 
     Req.Test.allow(App.Adapter.D4H, self(), lv.pid)
     lv

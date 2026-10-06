@@ -11,7 +11,7 @@ defmodule Web.MemberControllerTest do
   test "sends the member's photo cropped square", %{conn: conn, team: team, member: member} do
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
 
-    conn = get(conn, ~p"/#{team.subdomain}/members/#{member.id}/image")
+    conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/image")
 
     image = conn |> response(200) |> Image.from_binary!()
     assert {Image.width(image), Image.height(image)} == {480, 480}

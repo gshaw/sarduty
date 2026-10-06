@@ -12,8 +12,8 @@ defmodule Web.Settings.CardsLiveTest do
     %{conn: log_in_user(conn, user), team: team}
   end
 
-  test "says so when the team has no named clauses", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+  test "says so when the team has no named clauses", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
     assert has_element?(lv, "#no-names")
   end
 
@@ -25,7 +25,7 @@ defmodule Web.Settings.CardsLiveTest do
     rope = group_rule_clause_fixture(group, %{name: "Rope"})
     group_rule_clause_fixture(group)
 
-    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
     lv |> form("#cards-form") |> render_submit(%{"names" => ["", "First Aid"]})
 
     assert Repo.reload!(first_aid).on_card
@@ -42,7 +42,7 @@ defmodule Web.Settings.CardsLiveTest do
     theirs =
       group_rule_clause_fixture(group_fixture(team_fixture()), %{name: "First Aid", on_card: true})
 
-    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
     lv |> form("#cards-form") |> render_submit(%{"names" => [""]})
 
     assert Repo.reload!(theirs).on_card
@@ -62,7 +62,7 @@ defmodule Web.Settings.CardsLiveTest do
     PassRegistration.register!(card, "device-1", "push-token-1")
     group_rule_clause_fixture(group_fixture(team), %{name: "First Aid"})
 
-    {:ok, lv, _html} = live(conn, ~p"/settings/cards")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
     lv |> form("#cards-form") |> render_submit(%{"names" => ["", "First Aid"]})
 
     assert_received {:pushed, "/3/device/push-token-1"}

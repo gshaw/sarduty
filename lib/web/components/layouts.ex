@@ -62,7 +62,7 @@ defmodule Web.Layouts do
         <a
           :if={@organization}
           id="verify-organization"
-          href={~p"/o/#{@organization.slug}"}
+          href={~p"/orgs/#{@organization}"}
           class="flex items-center gap-2 font-semibold"
         >
           <img
@@ -262,12 +262,12 @@ defmodule Web.Layouts do
 
   defp team_sections(team) do
     [
-      {"Dashboard", ~p"/#{team.subdomain}"},
-      {"Activities", ~p"/#{team.subdomain}/activities"},
-      {"Members", ~p"/#{team.subdomain}/members"},
-      {"Qualifications", ~p"/#{team.subdomain}/qualifications"},
-      {"Groups", ~p"/#{team.subdomain}/groups"},
-      {"Tax credit letters", ~p"/#{team.subdomain}/tax-credit-letters"}
+      {"Dashboard", ~p"/teams/#{team}"},
+      {"Activities", ~p"/teams/#{team}/activities"},
+      {"Members", ~p"/teams/#{team}/members"},
+      {"Qualifications", ~p"/teams/#{team}/qualifications"},
+      {"Groups", ~p"/teams/#{team}/groups"},
+      {"Tax credit letters", ~p"/teams/#{team}/tax-credit-letters"}
     ]
   end
 
@@ -277,8 +277,8 @@ defmodule Web.Layouts do
   defp section_current?(nil, _path, _team), do: false
 
   defp section_current?(current_path, path, team) do
-    if path == "/#{team.subdomain}",
-      do: current_path in [path, "#{path}/managers"],
+    if path == ~p"/teams/#{team}",
+      do: current_path == path,
       else: current_path == path or String.starts_with?(current_path, path <> "/")
   end
 
@@ -309,14 +309,22 @@ defmodule Web.Layouts do
       <.a
         :for={team <- @managed_teams}
         kind={:custom}
-        navigate={~p"/#{team.subdomain}"}
+        navigate={~p"/teams/#{team}"}
         aria-current={@current_team && @current_team.id == team.id && "page"}
       >
         {team.name}
       </.a>
       <.menu_divider />
     <% end %>
-    <.a id={@id_prefix <> "nav-settings"} kind={:custom} navigate="/settings">Settings</.a>
+    <.a
+      :if={@current_team}
+      id={@id_prefix <> "nav-team-settings"}
+      kind={:custom}
+      navigate={~p"/teams/#{@current_team}/settings"}
+    >
+      Team settings
+    </.a>
+    <.a id={@id_prefix <> "nav-account"} kind={:custom} navigate={~p"/account"}>Account</.a>
     <.menu_divider />
     <.a id={@id_prefix <> "nav-log-out"} kind={:custom} method="delete" href="/logout">
       Log out

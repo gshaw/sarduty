@@ -1,39 +1,38 @@
-defmodule Web.SettingsLive do
+defmodule Web.AccountLive do
+  @moduledoc """
+  Your own page: who you're logged in as, and each team's settings. Settings live under
+  each team, so the URL names the team they change (#153).
+  """
+
   use Web, :live_view_narrow_layout
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Settings")}
+    {:ok, assign(socket, page_title: "Account")}
   end
 
   def render(assigns) do
     ~H"""
     <div>
-      <h1 class="heading mb-4">Settings</h1>
-      <p id="settings-email">
+      <h1 class="heading mb-4">Account</h1>
+      <p id="account-email" class="mb-4">
         Logged in as {@current_user.email}. Your email and your teams come from D4H.
       </p>
-      <nav class="space-y-2" aria-label="Sidebar">
+      <nav :if={@managed_teams != []} class="space-y-2" aria-label="Team settings">
         <.navlist_item
-          :if={@current_team}
-          path={~p"/settings/team"}
+          :for={team <- @managed_teams}
+          id={"account-team-#{team.id}-settings"}
+          path={~p"/teams/#{team}/settings"}
           icon="hero-users"
-          title="Team settings"
+          title={team.name}
         >
-          {@current_team.name}
-        </.navlist_item>
-        <.navlist_item
-          :if={@current_team}
-          path={~p"/settings/cards"}
-          icon="hero-identification"
-          title="ID cards"
-        >
-          Qualifications on the back
+          Team settings
         </.navlist_item>
       </nav>
     </div>
     """
   end
 
+  attr :id, :string, required: true
   attr :path, :string, required: true
   attr :icon, :string, required: true
   attr :title, :string, required: true
@@ -42,6 +41,7 @@ defmodule Web.SettingsLive do
   def navlist_item(assigns) do
     ~H"""
     <.a
+      id={@id}
       navigate={@path}
       kind={:custom}
       class={[

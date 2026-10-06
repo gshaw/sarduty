@@ -42,9 +42,11 @@ data?
 - Which D4H key a refresh uses, and so which key a failure blames:
   `test/app/operation/refresh_d4h_data/resolve_access_key_test.exs`.
 - Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
-  `/:subdomain/…/:id` route and expects a 404. It fails when a new route of that shape is
-  not in its list. `test/web/live/group_live_test.exs` does the same for the rule editor's
+  `/teams/:subdomain/…/:id` route and expects a 404. It fails when a new route of that
+  shape is not in its list. `test/web/live/group_live_test.exs` does the same for the rule editor's
   events.
+- URLs: `test/web/router_test.exs` checks every top-level path against the list in
+  [urls.md](urls.md), and that the URLs devices and shared links hold still route.
 - Most LiveViews have one smoke test that the page renders or redirects.
 
 The two worker tests are `assert true` placeholders.

@@ -52,7 +52,7 @@ defmodule Web.MemberLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
+      <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
       <:item label="Attendance" />
     </.breadcrumbs>
 
@@ -88,7 +88,7 @@ defmodule Web.MemberLive do
 
   defp build_filter_path(member, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
-    ~p"/#{member.team.subdomain}/members/#{member.id}?#{query_params}"
+    ~p"/teams/#{member.team}/members/#{member.id}?#{query_params}"
   end
 
   defp find_member(team, member_id) do

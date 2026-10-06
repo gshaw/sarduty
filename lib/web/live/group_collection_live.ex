@@ -40,7 +40,7 @@ defmodule Web.GroupCollectionLive do
       class="w-full table-striped"
     >
       <:col :let={g} label="Group">
-        <.a navigate={~p"/#{@current_team.subdomain}/groups/#{g.group.id}"}>{g.group.title}</.a>
+        <.a navigate={~p"/teams/#{@current_team}/groups/#{g.group.id}"}>{g.group.title}</.a>
       </:col>
       <:col :let={g} label="Rules" class="w-px whitespace-nowrap">
         <.rules_status status={g.rules} />

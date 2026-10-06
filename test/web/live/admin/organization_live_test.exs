@@ -14,7 +14,7 @@ defmodule Web.Admin.OrganizationLiveTest do
 
   test "an admin creates an organization with a logo and member teams", %{conn: conn, team: team} do
     other = team_fixture()
-    {:ok, lv, _html} = live(conn, ~p"/admin/organizations/new")
+    {:ok, lv, _html} = live(conn, ~p"/admin/orgs/new")
 
     logo =
       file_input(lv, "#organization-form", :logo, [
@@ -46,7 +46,7 @@ defmodule Web.Admin.OrganizationLiveTest do
 
   test "clearing a team's box takes it out", %{conn: conn, team: team} do
     organization = organization_fixture([team])
-    {:ok, lv, _html} = live(conn, ~p"/admin/organizations/#{organization.id}")
+    {:ok, lv, _html} = live(conn, ~p"/admin/orgs/#{organization.id}")
 
     lv |> form("#organization-form") |> render_submit(%{team_ids: [""]})
 
@@ -54,7 +54,7 @@ defmodule Web.Admin.OrganizationLiveTest do
   end
 
   test "a bad slug shows an error and saves nothing", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/organizations/new")
+    {:ok, lv, _html} = live(conn, ~p"/admin/orgs/new")
 
     html =
       lv
@@ -69,7 +69,7 @@ defmodule Web.Admin.OrganizationLiveTest do
 
   test "lists organizations with their teams", %{conn: conn, team: team} do
     organization = organization_fixture([team])
-    {:ok, lv, _html} = live(conn, ~p"/admin/organizations")
+    {:ok, lv, _html} = live(conn, ~p"/admin/orgs")
 
     assert has_element?(lv, "#organization-#{organization.id}", team.name)
   end
@@ -78,6 +78,6 @@ defmodule Web.Admin.OrganizationLiveTest do
     %{user: user} = user_with_team_fixture()
     conn = log_in_user(build_conn(), user)
 
-    assert {:error, {:redirect, _}} = live(conn, ~p"/admin/organizations")
+    assert {:error, {:redirect, _}} = live(conn, ~p"/admin/orgs")
   end
 end

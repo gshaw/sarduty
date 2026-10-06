@@ -24,13 +24,13 @@ defmodule Web.GroupLiveTest do
       group_rule_clause_qualification_fixture(other_clause, qualification_fixture(other_team))
 
     conn = log_in_user(conn, user)
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/groups/#{group.id}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}")
 
     %{
       team: team,
       group: group,
       conn: conn,
-      path: ~p"/#{team.subdomain}/groups/#{group.id}",
+      path: ~p"/teams/#{team}/groups/#{group.id}",
       lv: lv,
       qualification: qualification,
       clause: clause,

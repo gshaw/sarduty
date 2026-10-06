@@ -25,7 +25,10 @@ defmodule Web.TeamManagersLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team} />
+    <.breadcrumbs team={@current_team}>
+      <:item label="Team settings" path={~p"/teams/#{@current_team}/settings"} />
+      <:item label={@page_title} />
+    </.breadcrumbs>
     <h1 class="title mb-p">{@page_title}</h1>
     <p class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}: everyone D4H makes an

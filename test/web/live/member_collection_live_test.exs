@@ -10,7 +10,7 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/#{team.subdomain}/members")
+      |> live(~p"/teams/#{team}/members")
 
     assert html =~ "Members"
   end

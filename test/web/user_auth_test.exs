@@ -243,11 +243,11 @@ defmodule Web.UserAuthTest do
       south = App.DataFixtures.team_fixture(%{name: "South SAR"})
       App.DataFixtures.manager_fixture(north, %{email: user.email})
 
-      assert UserAuth.signed_in_path(user) == ~p"/#{north.subdomain}"
+      assert UserAuth.signed_in_path(user) == ~p"/teams/#{north}"
 
       App.DataFixtures.manager_fixture(south, %{email: user.email})
-      assert UserAuth.signed_in_path(user) == ~p"/#{north.subdomain}"
-      assert UserAuth.signed_in_path(%{user | last_team_id: south.id}) == ~p"/#{south.subdomain}"
+      assert UserAuth.signed_in_path(user) == ~p"/teams/#{north}"
+      assert UserAuth.signed_in_path(%{user | last_team_id: south.id}) == ~p"/teams/#{south}"
     end
 
     test "an admin with no team lands on /admin; anyone else on the home page" do

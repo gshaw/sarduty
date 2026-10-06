@@ -16,10 +16,10 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
   end
 
   defp take_path(team, activity),
-    do: ~p"/#{team.subdomain}/activities/#{activity.id}/take-attendance"
+    do: ~p"/teams/#{team}/activities/#{activity.id}/take-attendance"
 
   test "the activity page links here", %{conn: conn, team: team, activity: activity} do
-    {:ok, lv, _html} = live(conn, ~p"/#{team.subdomain}/activities/#{activity.id}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
     assert has_element?(lv, ~s|a[href="#{take_path(team, activity)}"]|, "Take attendance")
   end
 
@@ -76,7 +76,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     other = team_fixture() |> activity_fixture()
 
     assert_raise Ecto.NoResultsError, fn ->
-      live(conn, ~p"/#{team.subdomain}/activities/#{other.id}/take-attendance")
+      live(conn, ~p"/teams/#{team}/activities/#{other.id}/take-attendance")
     end
   end
 end

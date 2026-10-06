@@ -5,17 +5,14 @@ defmodule Web.Settings.TeamLive do
   alias App.Model.Team
   alias App.Operation.UpdateTeamSettings
 
+  # The team comes from the URL, /teams/:subdomain/settings (#153).
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
     socket =
-      if team == nil do
-        push_navigate(socket, to: ~p"/settings")
-      else
-        socket
-        |> assign(page_title: "Team settings")
-        |> assign_form(Team.build_settings_changeset(team))
-      end
+      socket
+      |> assign(page_title: "Team settings")
+      |> assign_form(Team.build_settings_changeset(team))
 
     {:ok, socket}
   end
@@ -24,9 +21,19 @@ defmodule Web.Settings.TeamLive do
     ~H"""
     <div>
       <p>
-        <.a navigate={~p"/settings"}>← Settings</.a>
+        <.a navigate={~p"/teams/#{@current_team}"}>← {@current_team.name}</.a>
       </p>
       <h1 class="heading">Team settings</h1>
+      <ul class="mb-p">
+        <li>
+          <.a id="settings-cards" navigate={~p"/teams/#{@current_team}/settings/cards"}>ID cards</.a>:
+          qualifications on the back
+        </li>
+        <li>
+          <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>Managers</.a>:
+          who can log in
+        </li>
+      </ul>
 
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:name]} label="Name" />

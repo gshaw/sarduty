@@ -128,18 +128,6 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-qualifications", "First Aid")
   end
 
-  test "a card scanned from before the verify site still checks", %{conn: conn, member: member} do
-    card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/")
-
-    old_link =
-      "HTTPS://#{String.upcase(Web.Endpoint.host())}/VERIFY/#{MemberCard.format_code(card.code)}"
-
-    lv |> element("#scanner") |> render_hook("scanned", %{code: old_link})
-
-    assert has_element?(lv, "#result-active")
-  end
-
   test "a scan or a typed code sounds its result, and an opened link doesn't", %{
     conn: conn,
     member: member
@@ -222,14 +210,9 @@ defmodule Web.VerifyLiveTest do
   describe "on the app's host" do
     setup %{conn: conn}, do: %{conn: %{conn | host: Web.Endpoint.host()}}
 
-    test "/verify links from before the verify site go there", %{conn: conn} do
-      assert conn |> get("/VERIFY/K7Q4-M2XA") |> redirected_to() ==
-               Web.VerifyHost.url() <> "/K7Q4-M2XA"
-
-      assert build_conn() |> get("/verify?code=K7Q4M2XA") |> redirected_to() ==
-               Web.VerifyHost.url() <> "/?code=K7Q4M2XA"
-
-      assert build_conn() |> get("/verify") |> redirected_to() == Web.VerifyHost.url() <> "/"
+    test "there is no /verify (#153)", %{conn: conn} do
+      assert conn |> get("/verify/K7Q4-M2XA") |> response(404)
+      assert build_conn() |> get("/VERIFY/K7Q4-M2XA") |> response(404)
     end
   end
 
@@ -245,7 +228,7 @@ defmodule Web.VerifyLiveTest do
       assert has_element?(lv, "#result-organization", organization.name)
       refute has_element?(lv, "#result-organization a")
       refute has_element?(lv, "#verify-organization")
-      assert has_element?(lv, "#check-another[href='/o/#{organization.slug}']")
+      assert has_element?(lv, "#check-another[href='/orgs/#{organization.slug}']")
     end
 
     test "a card from a team with no organization shows SAR Duty", %{conn: conn, member: member} do
@@ -260,7 +243,7 @@ defmodule Web.VerifyLiveTest do
     test "the organization's start page carries its brand", %{conn: conn} do
       organization = organization_fixture()
 
-      {:ok, lv, _html} = live(conn, ~p"/o/#{organization.slug}")
+      {:ok, lv, _html} = live(conn, ~p"/orgs/#{organization.slug}")
 
       assert has_element?(lv, "#verify-footer-organization", organization.name)
       assert has_element?(lv, "#verify-organization img")
@@ -268,7 +251,7 @@ defmodule Web.VerifyLiveTest do
     end
 
     test "an unknown organization goes to the plain start page", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/"}}} = live(conn, ~p"/o/nobody")
+      assert {:error, {:live_redirect, %{to: "/"}}} = live(conn, ~p"/orgs/nobody")
     end
   end
 end

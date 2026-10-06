@@ -36,7 +36,7 @@ defmodule Web.QualificationCollectionLive do
 
     <.table id="qualification_collection" rows={@qualifications} class="w-full table-striped">
       <:col :let={q} label="Qualification">
-        <.a navigate={~p"/#{@current_team.subdomain}/qualifications/#{q.id}"}>{q.title}</.a>
+        <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
       </:col>
       <:col :let={q} label="Active" class="w-px whitespace-nowrap" align="right">
         {q.active_count}

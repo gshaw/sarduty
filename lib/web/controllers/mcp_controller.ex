@@ -1,6 +1,7 @@
 defmodule Web.MCPController do
   # No route points here: the test endpoint is off until teams can opt in with
-  # their own tokens (#28). Kept as the starting point for that work.
+  # their own tokens (#28). Kept as the starting point for that work. Its route goes
+  # under the team, /teams/:subdomain/mcp, like every team page (#153).
   use Web, :controller
 
   import Ecto.Query

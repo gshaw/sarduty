@@ -78,7 +78,7 @@ defmodule Web.AdminDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s|#team-#{team.id}-managers[href="/#{team.subdomain}/managers"]|,
+             ~s|#team-#{team.id}-managers[href="/teams/#{team.subdomain}/settings/managers"]|,
              "2 managers"
            )
   end

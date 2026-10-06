@@ -125,8 +125,9 @@ defmodule Web.UserAuth do
   end
 
   @doc """
-  The team pages outside `/:subdomain` (settings, ID cards) work on: the team the user
-  last opened when they still manage it, else their first by name, or nil.
+  The team a page outside `/teams/:subdomain` treats as current, for the nav and where
+  logging in lands: the team the user last opened when they still manage it, else their
+  first by name, or nil.
   """
   def default_team(user), do: user |> managed_teams() |> pick_default_team(user)
 
@@ -266,7 +267,7 @@ defmodule Web.UserAuth do
     |> mount_current_team()
   end
 
-  # The team for pages outside /:subdomain, and every team the user manages, for the
+  # The team for pages outside /teams/:subdomain, and every team the user manages, for the
   # account menu. One query for both.
   defp mount_current_team(socket) do
     current_user = socket.assigns.current_user
@@ -340,7 +341,7 @@ defmodule Web.UserAuth do
     team = default_team(user)
 
     cond do
-      team -> ~p"/#{team.subdomain}"
+      team -> ~p"/teams/#{team}"
       user.is_admin -> ~p"/admin"
       true -> ~p"/"
     end

@@ -6,22 +6,22 @@ defmodule Web.TeamScopingTest do
   import App.DataFixtures
 
   @templates [
-    "/:subdomain/activities/:id",
-    "/:subdomain/activities/:id/attendance",
-    "/:subdomain/activities/:id/mileage",
-    "/:subdomain/activities/:id/take-attendance",
-    "/:subdomain/members/:id",
-    "/:subdomain/members/:id/groups",
-    "/:subdomain/members/:id/qualifications",
-    "/:subdomain/members/:id/card",
-    "/:subdomain/members/:id/card/pass",
-    "/:subdomain/members/:id/card/google-pass",
-    "/:subdomain/members/:id/image",
-    "/:subdomain/groups/:id",
-    "/:subdomain/groups/:id/review",
-    "/:subdomain/qualifications/:id",
-    "/:subdomain/tax-credit-letters/:id",
-    "/:subdomain/tax-credit-letters/:id/pdf"
+    "/teams/:subdomain/activities/:id",
+    "/teams/:subdomain/activities/:id/attendance",
+    "/teams/:subdomain/activities/:id/mileage",
+    "/teams/:subdomain/activities/:id/take-attendance",
+    "/teams/:subdomain/members/:id",
+    "/teams/:subdomain/members/:id/groups",
+    "/teams/:subdomain/members/:id/qualifications",
+    "/teams/:subdomain/members/:id/card",
+    "/teams/:subdomain/members/:id/card/apple-wallet",
+    "/teams/:subdomain/members/:id/card/google-wallet",
+    "/teams/:subdomain/members/:id/image",
+    "/teams/:subdomain/groups/:id",
+    "/teams/:subdomain/groups/:id/review",
+    "/teams/:subdomain/qualifications/:id",
+    "/teams/:subdomain/tax-credit-letters/:id",
+    "/teams/:subdomain/tax-credit-letters/:id/pdf"
   ]
 
   setup %{conn: conn} do
@@ -44,7 +44,7 @@ defmodule Web.TeamScopingTest do
     routed =
       Web.Router.__routes__()
       |> Enum.map(& &1.path)
-      |> Enum.filter(&(String.starts_with?(&1, "/:subdomain/") and &1 =~ "/:id"))
+      |> Enum.filter(&(String.starts_with?(&1, "/teams/:subdomain/") and &1 =~ "/:id"))
       |> MapSet.new()
 
     assert MapSet.new(@templates) == routed
@@ -58,48 +58,49 @@ defmodule Web.TeamScopingTest do
     end
   end
 
-  defp path_for("/:subdomain/activities/:id", s, o), do: ~p"/#{s}/activities/#{o.activity.id}"
+  defp path_for("/teams/:subdomain/activities/:id", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}"
 
-  defp path_for("/:subdomain/activities/:id/attendance", s, o),
-    do: ~p"/#{s}/activities/#{o.activity.id}/attendance"
+  defp path_for("/teams/:subdomain/activities/:id/attendance", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/attendance"
 
-  defp path_for("/:subdomain/activities/:id/mileage", s, o),
-    do: ~p"/#{s}/activities/#{o.activity.id}/mileage"
+  defp path_for("/teams/:subdomain/activities/:id/mileage", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/mileage"
 
-  defp path_for("/:subdomain/activities/:id/take-attendance", s, o),
-    do: ~p"/#{s}/activities/#{o.activity.id}/take-attendance"
+  defp path_for("/teams/:subdomain/activities/:id/take-attendance", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/take-attendance"
 
-  defp path_for("/:subdomain/members/:id", s, o), do: ~p"/#{s}/members/#{o.member.id}"
+  defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 
-  defp path_for("/:subdomain/members/:id/groups", s, o),
-    do: ~p"/#{s}/members/#{o.member.id}/groups"
+  defp path_for("/teams/:subdomain/members/:id/groups", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/groups"
 
-  defp path_for("/:subdomain/members/:id/qualifications", s, o),
-    do: ~p"/#{s}/members/#{o.member.id}/qualifications"
+  defp path_for("/teams/:subdomain/members/:id/qualifications", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/qualifications"
 
-  defp path_for("/:subdomain/members/:id/card", s, o),
-    do: ~p"/#{s}/members/#{o.member.id}/card"
+  defp path_for("/teams/:subdomain/members/:id/card", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/card"
 
-  defp path_for("/:subdomain/members/:id/card/pass", s, o),
-    do: ~p"/#{s}/members/#{o.member.id}/card/pass"
+  defp path_for("/teams/:subdomain/members/:id/card/apple-wallet", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/card/apple-wallet"
 
-  defp path_for("/:subdomain/members/:id/card/google-pass", s, o),
-    do: ~p"/#{s}/members/#{o.member.id}/card/google-pass"
+  defp path_for("/teams/:subdomain/members/:id/card/google-wallet", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/card/google-wallet"
 
-  defp path_for("/:subdomain/members/:id/image", s, o),
-    do: ~p"/#{s}/members/#{o.member.id}/image"
+  defp path_for("/teams/:subdomain/members/:id/image", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/image"
 
-  defp path_for("/:subdomain/groups/:id", s, o), do: ~p"/#{s}/groups/#{o.group.id}"
+  defp path_for("/teams/:subdomain/groups/:id", s, o), do: ~p"/teams/#{s}/groups/#{o.group.id}"
 
-  defp path_for("/:subdomain/groups/:id/review", s, o),
-    do: ~p"/#{s}/groups/#{o.group.id}/review"
+  defp path_for("/teams/:subdomain/groups/:id/review", s, o),
+    do: ~p"/teams/#{s}/groups/#{o.group.id}/review"
 
-  defp path_for("/:subdomain/qualifications/:id", s, o),
-    do: ~p"/#{s}/qualifications/#{o.qualification.id}"
+  defp path_for("/teams/:subdomain/qualifications/:id", s, o),
+    do: ~p"/teams/#{s}/qualifications/#{o.qualification.id}"
 
-  defp path_for("/:subdomain/tax-credit-letters/:id", s, o),
-    do: ~p"/#{s}/tax-credit-letters/#{o.letter.id}"
+  defp path_for("/teams/:subdomain/tax-credit-letters/:id", s, o),
+    do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}"
 
-  defp path_for("/:subdomain/tax-credit-letters/:id/pdf", s, o),
-    do: ~p"/#{s}/tax-credit-letters/#{o.letter.id}/pdf"
+  defp path_for("/teams/:subdomain/tax-credit-letters/:id/pdf", s, o),
+    do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}/pdf"
 end

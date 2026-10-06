@@ -28,7 +28,7 @@ defmodule Web.TeamDashboardLive do
       <img
         :if={@has_logo}
         id="team-logo"
-        src={~p"/teams/#{@current_team.subdomain}/logo?shape=square"}
+        src={~p"/teams/#{@current_team}/logo?shape=square"}
         class="h-32"
         alt="Team logo"
       />
@@ -48,35 +48,35 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <ul class="action-list">
       <li class="heading">
-        <.a navigate={~p"/#{@team.subdomain}/activities"}>Activities</.a>
+        <.a navigate={~p"/teams/#{@team}/activities"}>Activities</.a>
 
         <ul class="subheading action-list ml-hindent">
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/activities?&when=future&sort=date"}>
+            <.a navigate={~p"/teams/#{@team}/activities?&when=future&sort=date"}>
               Future
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/activities?when=past&sort=date-"}>
+            <.a navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>
               Past
             </.a>
           </li>
         </ul>
       </li>
       <li class="heading">
-        <.a navigate={~p"/#{@team.subdomain}/members"}>Members</.a>
+        <.a navigate={~p"/teams/#{@team}/members"}>Members</.a>
         <ul class="subheading action-list ml-hindent">
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/managers"}>Managers</.a>
+            <.a navigate={~p"/teams/#{@team}/settings/managers"}>Managers</.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/groups"}>Groups</.a>
+            <.a navigate={~p"/teams/#{@team}/groups"}>Groups</.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/qualifications"}>Qualifications</.a>
+            <.a navigate={~p"/teams/#{@team}/qualifications"}>Qualifications</.a>
           </li>
           <li>
-            <.a navigate={~p"/#{@team.subdomain}/tax-credit-letters"}>Tax credit letters</.a>
+            <.a navigate={~p"/teams/#{@team}/tax-credit-letters"}>Tax credit letters</.a>
           </li>
         </ul>
       </li>

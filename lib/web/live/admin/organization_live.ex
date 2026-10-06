@@ -23,7 +23,7 @@ defmodule Web.Admin.OrganizationLive do
   def render(assigns) do
     ~H"""
     <p>
-      <.a navigate={~p"/admin/organizations"}>← Organizations</.a>
+      <.a navigate={~p"/admin/orgs"}>← Organizations</.a>
     </p>
     <h1 class="title">{@organization.name || "New organization"}</h1>
 
@@ -41,7 +41,7 @@ defmodule Web.Admin.OrganizationLive do
         Beside the logo in the verify site's bar: "BCSARA".
       </.input>
       <.input field={@form[:slug]} label="Slug">
-        Its start page on the verify site: {Web.VerifyHost.host()}/o/{@form[:slug].value || "slug"}.
+        Its start page on the verify site: {Web.VerifyHost.host()}/orgs/{@form[:slug].value || "slug"}.
       </.input>
       <.input field={@form[:website]} label="Website" placeholder="https://" />
 
@@ -130,7 +130,7 @@ defmodule Web.Admin.OrganizationLive do
         socket =
           socket
           |> put_flash(:info, "Saved #{organization.name}.")
-          |> push_navigate(to: ~p"/admin/organizations/#{organization.id}")
+          |> push_navigate(to: ~p"/admin/orgs/#{organization.id}")
 
         {:noreply, socket}
 

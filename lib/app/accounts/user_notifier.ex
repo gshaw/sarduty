@@ -68,7 +68,7 @@ defmodule App.Accounts.UserNotifier do
     #{team.name} signed up to SAR Duty.
 
     Signed up by: #{signer_email}
-    Team page: #{Web.Endpoint.url()}/#{team.subdomain}
+    Team page: #{Web.Endpoint.url()}/teams/#{team.subdomain}
     D4H access key from: #{team.d4h_access_key_owner || "unknown"}
 
     Its first D4H refresh has started. Review it on #{Web.Endpoint.url()}/admin.

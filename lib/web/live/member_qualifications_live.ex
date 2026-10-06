@@ -27,7 +27,7 @@ defmodule Web.MemberQualificationsLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Members" path={~p"/#{@current_team.subdomain}/members/"} />
+      <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
       <:item label="Qualifications" />
     </.breadcrumbs>
 
@@ -53,7 +53,7 @@ defmodule Web.MemberQualificationsLive do
       class="w-full table-striped"
     >
       <:col :let={award} label="Qualification">
-        <.a navigate={~p"/#{@member.team.subdomain}/qualifications/#{award.qualification.id}"}>
+        <.a navigate={~p"/teams/#{@member.team}/qualifications/#{award.qualification.id}"}>
           {award.qualification.title}
         </.a>
       </:col>

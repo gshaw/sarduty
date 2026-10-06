@@ -2,12 +2,12 @@
 
 A team can belong to one parent organization, like BCSARA (bcsara.com). Its cards and
 check pages then carry the organization's name and logo instead of SAR Duty's. An admin
-sets organizations up at `/admin/organizations`; teams can't join or leave one
+sets organizations up at `/admin/orgs`; teams can't join or leave one
 themselves. Issue #87 has the design.
 
 ## What an organization changes today
 
-- **Its scan page**, `verify.sarduty.com/o/<slug>`, shows the organization's logo and
+- **Its scan page**, `verify.sarduty.com/orgs/<slug>`, shows the organization's logo and
   short name in the bar and its name in the footer. The check itself is unchanged, since
   it works for any card. The host on the right and the "Powered by" footer stay, since the
   host is what checkers are told to look for.

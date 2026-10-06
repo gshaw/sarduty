@@ -37,10 +37,10 @@ defmodule Web.ActivityMileageLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Activities" path={~p"/#{@current_team.subdomain}/activities"} />
+      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
       <:item
         label={"#{@activity.ref_id}"}
-        path={~p"/#{@current_team.subdomain}/activities/#{@activity.id}"}
+        path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
       />
       <:item label="Mileage report" />
     </.breadcrumbs>

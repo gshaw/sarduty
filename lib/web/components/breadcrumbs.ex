@@ -15,7 +15,7 @@ defmodule Web.Components.Breadcrumbs do
     ~H"""
     <ol class="breadcrumbs">
       <li :if={@team}>
-        <.a kind={:custom} navigate={~p"/#{@team.subdomain}"}>{@team.name}</.a>
+        <.a kind={:custom} navigate={~p"/teams/#{@team}"}>{@team.name}</.a>
       </li>
       <li :for={item <- @item}>
         <.icon name="hero-chevron-right-micro" class="breadcrumb-separator size-4" />

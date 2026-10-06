@@ -154,7 +154,7 @@ link codes and card codes are cut from paths, URLs and the referrer, the same wa
 
 ## MCP endpoint
 
-Off. The test version served `GET|POST /:subdomain/mcp` to every team behind one
+Off. The test version served `GET|POST /:subdomain/mcp`, which would now be `/teams/:subdomain/mcp`, to every team behind one
 `MCP_ACCESS_KEY` sent as `?access=…`, and returned member home addresses. Its controller,
 [lib/web/controllers/mcp_controller.ex](../lib/web/controllers/mcp_controller.ex), has
 no route until #28 brings it back as an opt-in team feature: per-team tokens in an

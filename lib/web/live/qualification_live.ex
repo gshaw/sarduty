@@ -48,7 +48,7 @@ defmodule Web.QualificationLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Qualifications" path={~p"/#{@current_team.subdomain}/qualifications"} />
+      <:item label="Qualifications" path={~p"/teams/#{@current_team}/qualifications"} />
       <:item label={@qualification.title} />
     </.breadcrumbs>
 
@@ -107,7 +107,7 @@ defmodule Web.QualificationLive do
       class="w-full table-striped mb-p2"
     >
       <:col :let={award} label="Member">
-        <.a navigate={~p"/#{@team.subdomain}/members/#{award.member.id}/qualifications"}>
+        <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
           {award.member.name}
         </.a>
       </:col>
@@ -128,7 +128,7 @@ defmodule Web.QualificationLive do
       class="w-full table-striped"
     >
       <:col :let={award} label="Member">
-        <.a navigate={~p"/#{@team.subdomain}/members/#{award.member.id}/qualifications"}>
+        <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
           {award.member.name}
         </.a>
       </:col>
