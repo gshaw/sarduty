@@ -70,13 +70,13 @@ Each scan sounds and shows its result, since a read is too fast to notice otherw
 (#169). The confirmation is a big banner: green for arrived, blue for left, red for an
 error. The tones come from [scan_sound.js](../assets/js/scan_sound.js), made with Web
 Audio: rising for arrived, falling for left, a low double buzz for an error. The
-LiveView pushes a `scan-sound` event, and the verify site uses the same tones for a
-camera scan: rising for an active member, the buzz for anything else. A browser plays
-sound only after a tap, so any tap on the page turns it on. Safari's camera prompt on a
-first scan pauses the audio, so each tone wakes it first; before that, the first check
-on an iPhone was silent (2026-10-06). **Sound on/off** under the
-scanner is remembered on the phone. On an iPhone the page sets its audio session to
-playback, so the silent switch doesn't mute it (Safari 17 and later).
+LiveView pushes a `scan-sound` event, and the verify site uses the same tones for a scan
+or a typed code: rising for an active member, the buzz for anything else. A browser
+plays sound only after a tap, so any tap on the page turns it on. Safari's camera prompt
+on a first scan pauses the audio, so each tone wakes it first; before that, the first
+check on an iPhone was silent (2026-10-06). **Sound on/off** under the scanner is
+remembered on the phone. On an iPhone the page sets its audio session to playback, so
+the silent switch doesn't mute it (Safari 17 and later).
 
 The hook keeps its scanning flag on the `[data-scan-state]` element inside it, not on the
 `phx-update="ignore"` container. LiveView still patches the container's data attributes,
