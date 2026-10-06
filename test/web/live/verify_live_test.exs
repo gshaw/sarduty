@@ -25,7 +25,7 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#check-form")
     assert has_element?(lv, "#scanner")
     assert has_element?(lv, ~s(#sound-switch[role="switch"]))
-    assert has_element?(lv, ~s(label[for="sound-switch"] .sr-only), "Sound")
+    assert has_element?(lv, ~s(label[for="sound-switch"]), "Sound")
     assert has_element?(lv, "#verify-footer a", Web.Endpoint.host())
   end
 

@@ -266,9 +266,8 @@ defmodule Web.Components.Core do
   the leading edge and the switch on the trailing edge. Inside a form with a save button,
   use a checkbox instead. See /styles/forms.
 
-  `compact` puts the switch on the trailing edge with a small label beside it, or with an
-  `icon` only, the label left for screen readers. It's for one page-level setting next to
-  the page's main task, not a list of settings.
+  `compact` puts a small, muted label and the switch together on the trailing edge. It's
+  for one page-level setting under the page's main action, not a list of settings.
 
   ## Examples
 
@@ -276,13 +275,12 @@ defmodule Web.Components.Core do
         Sent to the address on your account.
       </.switch>
 
-      <.switch id="sound-switch" label="Sound" icon="hero-speaker-wave" compact />
+      <.switch id="sound-switch" label="Sound" compact />
   """
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :checked, :boolean, default: false
   attr :compact, :boolean, default: false
-  attr :icon, :string, default: nil, doc: "a hero- icon shown instead of a compact switch's label"
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled name value)
 
@@ -291,10 +289,7 @@ defmodule Web.Components.Core do
   def switch(%{compact: true} = assigns) do
     ~H"""
     <div class={["switch-row justify-end", @class]}>
-      <label for={@id} class="flex items-center gap-1 text-sm cursor-pointer">
-        <.icon :if={@icon} name={@icon} class="size-6" />
-        <span class={@icon && "sr-only"}>{@label}</span>
-      </label>
+      <label for={@id} class="text-sm text-secondary-1 cursor-pointer">{@label}</label>
       <input type="checkbox" role="switch" id={@id} class="switch" checked={@checked} {@rest} />
     </div>
     """

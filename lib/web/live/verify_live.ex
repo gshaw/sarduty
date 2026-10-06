@@ -148,7 +148,6 @@ defmodule Web.VerifyLive do
         <.switch
           id="sound-switch"
           label="Sound"
-          icon="hero-speaker-wave"
           compact
           class="mt-2"
           checked
