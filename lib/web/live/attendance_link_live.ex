@@ -244,7 +244,18 @@ defmodule Web.AttendanceLinkLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title mb-0">Take attendance</h1>
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="title mb-0">Take attendance</h1>
+      <.switch
+        id="sound-switch"
+        label="Sound"
+        icon="hero-speaker-wave"
+        compact
+        checked
+        phx-hook="SoundSwitch"
+        phx-update="ignore"
+      />
+    </div>
     <p id="activity-summary" class="mt-1 text-secondary-1">
       <b class="text-base-content">{@activity.title}</b>
       · {@team.name} · {Service.Format.month_day_time(@activity.started_at, @team.timezone)}–{Service.Format.time_short(
@@ -308,16 +319,6 @@ defmodule Web.AttendanceLinkLive do
             </.button>
           </div>
         </div>
-        <.switch
-          id="sound-switch"
-          label="Sound"
-          checked
-          class="mt-p"
-          phx-hook="SoundSwitch"
-          phx-update="ignore"
-        >
-          A tone for each scan.
-        </.switch>
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera did not start. Allow camera access, or find members by name.

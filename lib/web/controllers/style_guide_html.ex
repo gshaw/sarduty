@@ -54,6 +54,7 @@ defmodule Web.StyleGuideHTML do
     {"arrow-down-tray", "Download a file, such as a letter PDF"},
     {"plus", "Add a clause or a qualification"},
     {"bars-3", "Open the top bar's menu on a phone"},
+    {"speaker-wave", "The Sound switch at the door and on verify"},
     {"x-mark", "Close a toast, remove a chip, close the phone menu"},
     {"check-circle", "Success banners and toasts"},
     {"information-circle", "Info banners and toasts"},

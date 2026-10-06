@@ -148,13 +148,13 @@ defmodule Web.VerifyLive do
         <.switch
           id="sound-switch"
           label="Sound"
+          icon="hero-speaker-wave"
+          compact
+          class="mt-2"
           checked
-          class="mt-p"
           phx-hook="SoundSwitch"
           phx-update="ignore"
-        >
-          A tone for each scan.
-        </.switch>
+        />
       </div>
       <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
         The camera did not start. Allow camera access, or type the code.

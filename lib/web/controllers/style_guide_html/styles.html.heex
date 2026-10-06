@@ -334,6 +334,9 @@
     .switch-row label { margin: 0; cursor: pointer; }
     .switch-row .hint { margin: 0; }
     .switch-row > div { flex-grow: 1; }
+    .switch-row.compact { justify-content: flex-end; }
+    .switch-row.compact label { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 400; }
+    .switch-row.compact .demo-title { flex-grow: 1; margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); }
     input[type="checkbox"].switch { display: inline-block; position: relative; width: 48px; height: 28px; border-radius: 14px; }
     input[type="checkbox"].switch::after {
       position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border: 0; border-radius: 50%;

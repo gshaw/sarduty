@@ -266,19 +266,38 @@ defmodule Web.Components.Core do
   the leading edge and the switch on the trailing edge. Inside a form with a save button,
   use a checkbox instead. See /styles/forms.
 
+  `compact` puts a small label, with an optional icon, beside the switch on the trailing
+  edge. It's for one page-level setting next to the page's main task, not a list of
+  settings.
+
   ## Examples
 
-      <.switch id="sound-switch" label="Sound" phx-hook="SoundSwitch" phx-update="ignore">
-        A tone for each scan.
+      <.switch id="email-switch" label="Email me when a refresh fails">
+        Sent to the address on your account.
       </.switch>
+
+      <.switch id="sound-switch" label="Sound" icon="hero-speaker-wave" compact />
   """
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :checked, :boolean, default: false
+  attr :compact, :boolean, default: false
+  attr :icon, :string, default: nil, doc: "a hero- icon before a compact switch's label"
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled name value)
 
-  slot :inner_block, doc: "an optional hint under the label"
+  slot :inner_block, doc: "an optional hint under the label, not shown when compact"
+
+  def switch(%{compact: true} = assigns) do
+    ~H"""
+    <div class={["switch-row justify-end", @class]}>
+      <label for={@id} class="flex items-center gap-1 text-sm cursor-pointer">
+        <.icon :if={@icon} name={@icon} class="size-5" />{@label}
+      </label>
+      <input type="checkbox" role="switch" id={@id} class="switch" checked={@checked} {@rest} />
+    </div>
+    """
+  end
 
   def switch(assigns) do
     ~H"""

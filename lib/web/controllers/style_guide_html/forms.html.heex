@@ -104,6 +104,18 @@
     A switch changes a setting the moment it's tapped. Label on the leading edge, switch on the trailing edge, a 48 by 28px track. Inside a form with a save button, use a checkbox: a switch says the change already happened. In the app: <code>&lt;.switch id="…" label="…"&gt;</code>.
   </p>
 
+  <h3>Compact switch</h3>
+  <div class="demo">
+    <div class="switch-row compact">
+      <h2 class="demo-title">Take attendance</h2>
+      <label for="e-compact"><.svg_icon name="speaker-wave" size={20} />Sound</label>
+      <input id="e-compact" type="checkbox" role="switch" class="switch" checked />
+    </div>
+  </div>
+  <p class="spec">
+    One page-level setting beside the page's main task, such as Sound at the door. A small label, an optional icon, and the switch, together on the trailing edge of a line the page already has. No hint. The track stays full size, since it's tapped in a hurry. In the app: <code>&lt;.switch … compact icon="hero-speaker-wave"&gt;</code>.
+  </p>
+
   <h3>Read-only, disabled, and error</h3>
   <div class="demo">
     <div class="field w-md">
