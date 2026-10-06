@@ -35,6 +35,10 @@ the D4H test it rests on.
   It takes the date that puts it nearest the activity's start-to-end window in the team's
   time zone, so a catch-up the next morning and a time after midnight both land right.
   While a time is set, the door's page says "Recording as 14:30" with a way to clear it.
+- **A typed time travels with each record**, not only through a change event. The time
+  box and the name search are one form, and a member's button submits it; the scanner
+  sends the time box's value with each read. A phone that never sent the change, as on
+  Andrew's test (#168), still records the time it shows.
 - **Times come from one pure function**,
   [BuildAttendanceTimes](../lib/app/operation/build_attendance_times.ex). The latest scan
   of each kind wins. Arriving within 30 minutes of the start, early or late, counts as the

@@ -27,6 +27,13 @@ defmodule Web.AttendanceLinkLiveTest do
 
   defp scans(activity), do: AttendanceScan.get_all(activity)
 
+  defp pick(lv, member) do
+    lv
+    |> form("#door-form")
+    |> put_submitter("#pick-#{member.id}")
+    |> render_submit()
+  end
+
   test "anyone with the link can open it without logging in", %{
     conn: conn,
     link: link,
@@ -123,8 +130,8 @@ defmodule Web.AttendanceLinkLiveTest do
   } do
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
 
-    lv |> form("#search-form", search: "mei") |> render_change()
-    lv |> element("#pick-#{member.id}") |> render_click()
+    lv |> form("#door-form", search: "mei") |> render_change()
+    pick(lv, member)
 
     assert has_element?(lv, "#message", "Mei Chen arrived at")
     assert [%{method: "name"}] = scans(activity)
@@ -138,7 +145,7 @@ defmodule Web.AttendanceLinkLiveTest do
     other = team_fixture() |> member_fixture()
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
 
-    render_click(lv, "pick", %{id: other.id})
+    render_submit(lv, "pick", %{"pick" => other.id})
     assert scans(activity) == []
   end
 
@@ -151,7 +158,7 @@ defmodule Web.AttendanceLinkLiveTest do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
 
-    lv |> form("#override-form", override: "09:15") |> render_change()
+    lv |> form("#door-form", override: "09:15") |> render_change()
     render_hook(lv, "scanned", %{code: card.code})
 
     assert has_element?(lv, "#message", "arrived at 09:15")
@@ -194,8 +201,8 @@ defmodule Web.AttendanceLinkLiveTest do
     member: member
   } do
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
-    lv |> element("#search-form") |> render_change(%{search: "mei"})
-    lv |> element("#pick-#{member.id}") |> render_click()
+    lv |> form("#door-form", search: "mei") |> render_change()
+    pick(lv, member)
     [scan] = scans(activity)
 
     CloseAttendanceLink.call(team, activity, DateTime.utc_now())
@@ -209,7 +216,7 @@ defmodule Web.AttendanceLinkLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
     refute has_element?(lv, "#override-note")
 
-    lv |> element("#override-form") |> render_change(%{override: "14:30"})
+    lv |> form("#door-form", override: "14:30") |> render_change()
     assert has_element?(lv, "#override-note", "Recording as 14:30")
 
     lv |> element("#clear-override") |> render_click()
@@ -224,8 +231,8 @@ defmodule Web.AttendanceLinkLiveTest do
     member: member
   } do
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
-    lv |> element("#search-form") |> render_change(%{search: "mei"})
-    lv |> element("#pick-#{member.id}") |> render_click()
+    lv |> form("#door-form", search: "mei") |> render_change()
+    pick(lv, member)
     assert has_element?(lv, "#message", "Mei Chen arrived at")
 
     # A timer from an older scan leaves the newer confirmation alone.
@@ -264,5 +271,47 @@ defmodule Web.AttendanceLinkLiveTest do
     link = CreateAttendanceLink.call(team, activity, user_fixture(), made)
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
     assert has_element?(lv, "#link-closed")
+  end
+
+  # The phone may never send a change for the time box, so a pick reads it from the form.
+  test "a typed time is recorded with a member picked by name", %{
+    conn: conn,
+    link: link,
+    activity: activity,
+    member: member
+  } do
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+    lv |> form("#door-form", search: "mei") |> render_change()
+
+    lv
+    |> form("#door-form", override: "09:15", search: "mei")
+    |> put_submitter("#pick-#{member.id}")
+    |> render_submit()
+
+    assert has_element?(lv, "#message", "Mei Chen arrived at 09:15")
+    assert [%{method: "name", override_at: %DateTime{}}] = scans(activity)
+  end
+
+  test "a scan uses the time the scanner sends with it", %{
+    conn: conn,
+    link: link,
+    activity: activity,
+    member: member
+  } do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+    render_hook(lv, "scanned", %{code: card.code, override: "09:15"})
+
+    assert has_element?(lv, "#message", "arrived at 09:15")
+    assert [%{override_at: %DateTime{}}] = scans(activity)
+  end
+
+  test "enter in the search box records nothing", %{conn: conn, link: link, activity: activity} do
+    {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+    lv |> form("#door-form", search: "mei") |> render_submit()
+
+    assert has_element?(lv, "#matches")
+    assert scans(activity) == []
   end
 end

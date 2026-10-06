@@ -2,6 +2,8 @@
 // to the LiveView, which takes the code out of it. It never follows a link from a card.
 // With data-continuous, as on the door's attendance page, it keeps scanning after a read
 // and skips the same card for a few seconds, so one card held up isn't recorded twice.
+// With data-override-input, each read also sends that input's value, so the time box on
+// the door's page counts even if the phone never sent a change for it.
 // The scanning flag goes on the [data-scan-state] element inside the hook. LiveView
 // patches the data attributes of a phx-update="ignore" container, so a flag on the
 // container itself is wiped by the next render while the camera keeps running.
@@ -47,6 +49,11 @@ export const QRScanner = {
     delete this.state.dataset.scanning
   },
 
+  pushScanned(code) {
+    const input = document.getElementById(this.el.dataset.overrideInput || "")
+    this.pushEvent("scanned", input ? {code, override: input.value} : {code})
+  },
+
   tick() {
     if (!this.stream) return
     const {videoWidth: width, videoHeight: height} = this.video
@@ -59,12 +66,12 @@ export const QRScanner = {
       if (found?.data) {
         if (!("continuous" in this.el.dataset)) {
           this.stop()
-          this.pushEvent("scanned", {code: found.data})
+          this.pushScanned(found.data)
           return
         }
         const now = Date.now()
         if (found.data !== this.lastRead || now - this.lastReadAt > SAME_CARD_MS) {
-          this.pushEvent("scanned", {code: found.data})
+          this.pushScanned(found.data)
           this.lastRead = found.data
           this.lastReadAt = now
           this.frame = setTimeout(() => this.tick(), PAUSE_MS)
