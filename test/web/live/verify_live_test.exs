@@ -136,7 +136,10 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-active")
   end
 
-  test "a scan sounds its result, and a typed code doesn't", %{conn: conn, member: member} do
+  test "a scan or a typed code sounds its result, and an opened link doesn't", %{
+    conn: conn,
+    member: member
+  } do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/")
     lv |> element("#scanner") |> render_hook("scanned", %{code: card.code})
@@ -144,6 +147,10 @@ defmodule Web.VerifyLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/")
     lv |> element("#scanner") |> render_hook("scanned", %{code: "ZZZZ-ZZZZ"})
+    assert_push_event(lv, "scan-sound", %{sound: :error})
+
+    {:ok, lv, _html} = live(conn, ~p"/")
+    lv |> form("#check-form", check: %{code: "ZZZZ-ZZZZ"}) |> render_submit()
     assert_push_event(lv, "scan-sound", %{sound: :error})
 
     {:ok, lv, _html} = live(conn, ~p"/")

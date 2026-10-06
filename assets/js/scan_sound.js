@@ -20,15 +20,27 @@ function soundOn() {
   return localStorage.getItem(STORAGE_KEY) !== "off"
 }
 
+// iOS lets a page start audio only from a finished tap, and the first one counts only
+// if it plays something, so this plays a silent sound.
 function unlock() {
   if (navigator.audioSession) navigator.audioSession.type = "playback"
   context ??= new AudioContext()
-  if (context.state === "suspended") context.resume()
+  if (context.state !== "running") context.resume()
+  const silence = context.createBufferSource()
+  silence.buffer = context.createBuffer(1, 1, 22050)
+  silence.connect(context.destination)
+  silence.start()
 }
 
-function play(name) {
-  const tones = TONES[name]
-  if (!tones || !soundOn() || !context) return
+// Safari's camera prompt on a first scan pauses the audio ("interrupted"), so wake it
+// before playing rather than losing the tone.
+async function play(name) {
+  if (!TONES[name] || !soundOn() || !context) return
+  if (context.state !== "running") await context.resume().catch(() => {})
+  if (context.state === "running") playTones(TONES[name])
+}
+
+function playTones(tones) {
   const start = context.currentTime + 0.02
   for (const [frequency, offset, length, wave] of tones) {
     const oscillator = context.createOscillator()
@@ -46,7 +58,8 @@ function play(name) {
 }
 
 export function listenForScanSounds() {
-  document.addEventListener("pointerdown", unlock, {capture: true})
+  for (const type of ["pointerdown", "touchend", "click"])
+    document.addEventListener(type, unlock, {capture: true})
   window.addEventListener("phx:scan-sound", event => play(event.detail.sound))
 }
 

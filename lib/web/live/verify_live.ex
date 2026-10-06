@@ -21,7 +21,7 @@ defmodule Web.VerifyLive do
      assign(socket,
        page_title: "Verify an ID card",
        scan_failed: false,
-       scanned: false,
+       sound_next: false,
        client_ip: session["client_ip"]
      )}
   end
@@ -57,19 +57,20 @@ defmodule Web.VerifyLive do
   end
 
   def handle_event("check", %{"check" => %{"code" => input}}, socket),
-    do: {:noreply, push_patch(socket, to: path_for(input))}
+    do: {:noreply, socket |> assign(sound_next: true) |> push_patch(to: path_for(input))}
 
   def handle_event("scanned", %{"code" => input}, socket),
-    do: {:noreply, socket |> assign(scanned: true) |> push_patch(to: path_for(input))}
+    do: {:noreply, socket |> assign(sound_next: true) |> push_patch(to: path_for(input))}
 
   def handle_event("scan_failed", _params, socket) do
     {:noreply, assign(socket, :scan_failed, true)}
   end
 
-  # Only a camera scan sounds, so a typed code or a card's link opened stays quiet.
-  defp scan_sound(%{assigns: %{scanned: true}} = socket, result) when result != nil do
+  # A scan or a typed code sounds its result. A card's link opened directly stays quiet,
+  # since a browser plays nothing before a tap.
+  defp scan_sound(%{assigns: %{sound_next: true}} = socket, result) when result != nil do
     sound = if result.status == :active, do: :ok, else: :error
-    socket |> assign(scanned: false) |> push_event("scan-sound", %{sound: sound})
+    socket |> assign(sound_next: false) |> push_event("scan-sound", %{sound: sound})
   end
 
   defp scan_sound(socket, _result), do: socket
