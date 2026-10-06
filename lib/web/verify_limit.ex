@@ -28,7 +28,6 @@ defmodule Web.VerifyLimit do
   The client's IP. Behind Fly's proxy, `remote_ip` is Fly's, so read `Fly-Client-IP`;
   without it (dev, tests) use the peer address.
   """
-  # cspell:ignore ntoa -- Erlang's :inet.ntoa/1, an IP tuple to a string
   def client_ip(%Plug.Conn{} = conn) do
     case Plug.Conn.get_req_header(conn, "fly-client-ip") do
       [ip | _] -> ip
@@ -41,5 +40,5 @@ defmodule Web.VerifyLimit do
   # its own address last in X-Forwarded-For, so the IP rides in from here.
   def session(conn), do: %{"client_ip" => client_ip(conn)}
 
-  defp key(ip), do: "verify:#{ip}"
+  defp key(ip), do: "verify:#{RateLimit.ip_key(ip)}"
 end

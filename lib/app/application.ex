@@ -14,6 +14,7 @@ defmodule App.Application do
 
     :ok = Oban.Telemetry.attach_default_logger()
     :ok = ErrorReporter.attach()
+    :ok = Web.RequestLog.attach()
 
     children = [
       Web.Telemetry,

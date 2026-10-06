@@ -1,10 +1,13 @@
 defmodule Web.UserSessionControllerTest do
   use Web.ConnCase
+  use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
   import App.AccountsFixtures
   import App.DataFixtures
 
   alias App.Accounts.UserToken
+  alias App.Repo
+  alias App.Worker.SendLoginCodeWorker
 
   defp request_code(conn, email),
     do: post(conn, ~p"/login/code", %{"user" => %{"email" => email}})
@@ -40,13 +43,27 @@ defmodule Web.UserSessionControllerTest do
       refute_received {:email, _}
     end
 
+    test "queues a job and sends nothing inline, with or without access", %{conn: conn} do
+      manager_fixture(team_fixture(), %{email: "pat@example.com"})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        request_code(conn, "pat@example.com")
+        request_code(conn, "stranger@example.com")
+
+        refute_received {:email, _}
+        refute Repo.exists?(UserToken)
+        assert_enqueued(worker: SendLoginCodeWorker, args: %{email: "pat@example.com"})
+        assert_enqueued(worker: SendLoginCodeWorker, args: %{email: "stranger@example.com"})
+      end)
+    end
+
     test "stops sending after 5 requests for one email", %{conn: conn} do
       manager_fixture(team_fixture(), %{email: "busy@example.com"})
 
       # Clear each code, so the one-a-minute rule doesn't hide the cap.
       for _ <- 1..6 do
         request_code(conn, "busy@example.com")
-        App.Repo.delete_all(UserToken)
+        Repo.delete_all(UserToken)
       end
 
       assert length(sent_emails()) == 5
@@ -106,7 +123,7 @@ defmodule Web.UserSessionControllerTest do
       for _ <- 1..4 do
         code = login_code_fixture(user.email)
         for _ <- 1..5, do: log_in(conn, user.email, wrong(code))
-        App.Repo.delete_all(UserToken)
+        Repo.delete_all(UserToken)
       end
 
       code = login_code_fixture(user.email)
@@ -171,7 +188,7 @@ defmodule Web.UserSessionControllerTest do
 
       for _ <- 1..4 do
         request_text(conn, "604-555-7777")
-        App.Repo.delete_all(UserToken)
+        Repo.delete_all(UserToken)
       end
 
       assert length(sent_texts()) == 3

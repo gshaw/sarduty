@@ -15,6 +15,8 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - ntoa # Erlang's :inet.ntoa/1, an IP tuple to a string
+  - REFERER # the HTTP Referer header, as Plug and Honeybadger spell it
   - onsubmit # an HTML attribute
   - Dhillon # made-up member in style guide sample data
   - GSAR # Ground Search and Rescue, a qualification in style guide sample data

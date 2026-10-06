@@ -9,6 +9,8 @@ defmodule Web.WalletController do
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
   alias App.Operation.BuildApplePass
+  alias App.RateLimit
+  alias Web.VerifyLimit
 
   require Logger
 
@@ -76,9 +78,22 @@ defmodule Web.WalletController do
     end
   end
 
-  # Wallet posts its own error messages here. They help when a pass won't update.
+  @log_messages 10
+  @log_length 500
+  @log_ip_limit 50
+
+  # Wallet posts its own error messages here. They help when a pass won't update. Apple
+  # sends no auth, so anyone can post: keep 10 messages a post, 500 characters each, and
+  # 50 messages an hour from one IP (#176).
   def log(conn, params) do
-    for message <- List.wrap(params["logs"]), do: Logger.warning("Wallet: #{message}")
+    key = "wallet_log:#{conn |> VerifyLimit.client_ip() |> RateLimit.ip_key()}"
+
+    for message <- params["logs"] |> List.wrap() |> Enum.take(@log_messages),
+        is_binary(message),
+        RateLimit.inc(key, :timer.hours(1)) <= @log_ip_limit do
+      Logger.warning("Wallet: #{String.slice(message, 0, @log_length)}")
+    end
+
     send_resp(conn, 200, "")
   end
 

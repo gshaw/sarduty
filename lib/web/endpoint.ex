@@ -41,7 +41,8 @@ defmodule Web.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  # Web.RequestLog logs requests instead of Phoenix, with secrets cut from the path.
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
