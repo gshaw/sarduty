@@ -18,6 +18,7 @@ defmodule App.ViewData.TeamAttentionTest do
         expiring_count: 0,
         missing_details_count: 0,
         group_change_count: 0,
+        proposed_change_count: 0,
         letters: nil
       },
       attrs
@@ -100,9 +101,10 @@ defmodule App.ViewData.TeamAttentionTest do
         expiring_count: 1,
         missing_details_count: 1,
         group_change_count: 1,
+        proposed_change_count: 1,
         letters: %{year: 2025, count: 1}
       }
 
-    assert everything |> items(@march) |> length() == 6
+    assert everything |> items(@march) |> length() == 7
   end
 end

@@ -39,4 +39,8 @@ defmodule App.Model.ChangeSetRow do
   def record!(%ChangeSetRow{} = row, {status, error}, _now) when status in [:failed, :skipped] do
     row |> change(status: status, error: error) |> Repo.update!()
   end
+
+  @doc "Puts a row back to proposed."
+  def reset!(%ChangeSetRow{} = row),
+    do: row |> change(status: :proposed, error: nil) |> Repo.update!()
 end

@@ -57,7 +57,7 @@ defmodule Web.Components.ChangeHistory do
   defp by_text(%{by: :d4h}), do: "Someone in D4H"
 
   defp by_text(%{by: :sar_duty, source: source, applied_by: applied_by}) do
-    from = "SAR Duty, from #{ChangeHistory.source_label(source)}"
+    from = "SAR Duty (#{ChangeHistory.source_label(source)})"
     if applied_by, do: "#{from}, sent by #{applied_by}", else: from
   end
 end

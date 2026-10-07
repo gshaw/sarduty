@@ -5,6 +5,8 @@ defmodule Web.TeamScopingTest do
 
   import App.DataFixtures
 
+  alias App.Model.ChangeSet
+
   @templates [
     "/teams/:subdomain/activities/:id",
     "/teams/:subdomain/activities/:id/attendance",
@@ -21,6 +23,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/image",
     "/teams/:subdomain/groups/:id",
     "/teams/:subdomain/groups/:id/review",
+    "/teams/:subdomain/proposed-changes/:id",
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/tax-credit-letters/:id",
     "/teams/:subdomain/tax-credit-letters/:id/pdf"
@@ -36,7 +39,12 @@ defmodule Web.TeamScopingTest do
       member: member,
       group: group_fixture(other_team),
       qualification: qualification_fixture(other_team),
-      letter: tax_credit_letter_fixture(member)
+      letter: tax_credit_letter_fixture(member),
+      change_set:
+        ChangeSet.propose!(
+          %ChangeSet{team_id: other_team.id, source: :agent},
+          []
+        )
     }
 
     %{conn: log_in_user(conn, user), team: team, other: other}
@@ -102,6 +110,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/groups/:id/review", s, o),
     do: ~p"/teams/#{s}/groups/#{o.group.id}/review"
+
+  defp path_for("/teams/:subdomain/proposed-changes/:id", s, o),
+    do: ~p"/teams/#{s}/proposed-changes/#{o.change_set.id}"
 
   defp path_for("/teams/:subdomain/qualifications/:id", s, o),
     do: ~p"/teams/#{s}/qualifications/#{o.qualification.id}"

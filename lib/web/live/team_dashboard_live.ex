@@ -241,6 +241,9 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :group_changes}), do: ~p"/teams/#{team}/groups"
 
+  defp attention_path(team, %{key: :proposed_changes}),
+    do: ~p"/teams/#{team}/proposed-changes"
+
   defp attention_path(team, %{key: :letters, year: year}),
     do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
 
