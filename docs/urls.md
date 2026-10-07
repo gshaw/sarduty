@@ -32,6 +32,7 @@ Devices, Google, Apple, and shared links hold these. They don't move.
 - `/wallet/v1/…`: Apple's web service path, in every issued pass.
 - `/s/:code` and `/attendance/:token`: shared attendance links.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
+- `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
   Wallet banner), `/orgs/:slug`, and `/letters/:ref` (the QR code on every tax credit
   letter since #207).

@@ -154,11 +154,11 @@ link codes and card codes are cut from paths, URLs and the referrer, the same wa
 
 ## MCP endpoint
 
-Off. The test version served `GET|POST /:subdomain/mcp`, which would now be `/teams/:subdomain/mcp`, to every team behind one
-`MCP_ACCESS_KEY` sent as `?access=…`, and returned member home addresses. Its controller,
-[lib/web/controllers/mcp_controller.ex](../lib/web/controllers/mcp_controller.ex), has
-no route until #28 brings it back as an opt-in team feature: per-team tokens in an
-`Authorization` header, and member names, email, and phone but never addresses.
+Agents call in rather than SAR Duty calling out: `POST /teams/:subdomain/mcp`, read-only,
+for teams an admin turns it on for (#28). Each manager's token is in the database, hashed,
+so there is no environment variable. The old test version's `MCP_ACCESS_KEY` and its
+`?access=…` parameter are gone; unset the Fly secret if it is still there. See
+[mcp.md](mcp.md).
 
 ## Other secrets
 
