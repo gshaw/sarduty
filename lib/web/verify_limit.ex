@@ -5,6 +5,7 @@ defmodule Web.VerifyLimit do
   The page and the photo route share one counter.
   """
 
+  alias App.Model.Event
   alias App.RateLimit
 
   require Logger
@@ -15,10 +16,11 @@ defmodule Web.VerifyLimit do
   @doc "Whether this IP has used up its misses for now."
   def limited?(ip), do: ip |> key() |> RateLimit.get(@scale) >= @limit
 
-  @doc "Counts a code that matched no card, and logs when the IP reaches the limit."
+  @doc "Counts a code that matched no card, and logs and records when the IP reaches the limit."
   def miss(ip) do
     if ip |> key() |> RateLimit.inc(@scale) == @limit do
       Logger.warning("Verify limit reached: #{@limit} failed checks from #{ip}")
+      Event.record!(:verify_limit_reached, ip: ip)
     end
 
     :ok

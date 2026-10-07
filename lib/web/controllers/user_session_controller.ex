@@ -5,6 +5,7 @@ defmodule Web.UserSessionController do
   alias App.Worker.NotifyLoginBlockedWorker
   alias App.Worker.SendLoginCodeWorker
   alias Web.LoginLimit
+  alias Web.SecurityEvent
   alias Web.UserAuth
   alias Web.VerifyLimit
 
@@ -16,9 +17,7 @@ defmodule Web.UserSessionController do
         redirect(conn, to: ~p"/login")
 
       e164 when is_binary(e164) ->
-        if LoginLimit.allow?({:phone, e164}, VerifyLimit.client_ip(conn)) do
-          send_code(%{phone: e164})
-        end
+        if request_allowed?(conn, {:phone, e164}), do: send_code(%{phone: e164})
 
         conn
         |> delete_session(:login_email)
@@ -37,9 +36,7 @@ defmodule Web.UserSessionController do
   def request_code(conn, %{"user" => %{"email" => email}}) do
     email = email |> String.trim() |> String.slice(0, 160)
 
-    if email != "" and LoginLimit.allow?(email, VerifyLimit.client_ip(conn)) do
-      send_code(%{email: email})
-    end
+    if email != "" and request_allowed?(conn, email), do: send_code(%{email: email})
 
     # The code page reads the email from the session, so a refresh shows it again rather
     # than the form.
@@ -48,6 +45,23 @@ defmodule Web.UserSessionController do
     |> put_session(:login_email, email)
     |> redirect(to: ~p"/login/code")
   end
+
+  # Records each request within the limits, and the first one over them.
+  defp request_allowed?(conn, who) do
+    result = LoginLimit.check(who, VerifyLimit.client_ip(conn))
+    data = %{via: via(who), who: SecurityEvent.who(who)}
+
+    case result do
+      :ok -> SecurityEvent.record(conn, :login_code_requested, data: data)
+      :limit_reached -> SecurityEvent.record(conn, :login_code_limited, data: data)
+      :limited -> :ok
+    end
+
+    result == :ok
+  end
+
+  defp via({:phone, _phone}), do: "text"
+  defp via(_email), do: "email"
 
   # A job sends the code, or doesn't, after the reply. Sending inline made the reply a
   # few hundred ms slower for someone with access (#176).
@@ -58,17 +72,15 @@ defmodule Web.UserSessionController do
     phone = Service.Phone.normalize(phone) || ""
     known? = known_browser?(conn, Accounts.text_login?() && Accounts.text_login_email(phone))
 
-    result =
-      if LoginLimit.guessing_blocked?({:phone, phone}, ip, known?),
-        do: :error,
-        else: Accounts.log_in_with_text_code(phone, code)
+    blocked? = LoginLimit.guessing_blocked?({:phone, phone}, ip, known?)
+    result = if blocked?, do: :error, else: Accounts.log_in_with_text_code(phone, code)
 
     case result do
       {:ok, user} ->
-        log_in(conn, user, params)
+        log_in(conn, user, params, {:phone, phone}, known?)
 
       :error ->
-        count_miss({:phone, phone}, ip, known?, %{phone: phone})
+        count_miss(conn, {:phone, phone}, blocked?, known?, %{phone: phone})
 
         conn
         |> put_session(:login_phone, phone)
@@ -81,17 +93,15 @@ defmodule Web.UserSessionController do
     ip = VerifyLimit.client_ip(conn)
     known? = known_browser?(conn, email)
 
-    result =
-      if LoginLimit.guessing_blocked?(email, ip, known?),
-        do: :error,
-        else: Accounts.log_in_with_code(email, code)
+    blocked? = LoginLimit.guessing_blocked?(email, ip, known?)
+    result = if blocked?, do: :error, else: Accounts.log_in_with_code(email, code)
 
     case result do
       {:ok, user} ->
-        log_in(conn, user, params)
+        log_in(conn, user, params, email, known?)
 
       :error ->
-        count_miss(email, ip, known?, %{email: email})
+        count_miss(conn, email, blocked?, known?, %{email: email})
 
         conn
         |> put_session(:login_email, email)
@@ -106,18 +116,39 @@ defmodule Web.UserSessionController do
   defp known_browser?(_conn, _no_email), do: false
 
   # The miss that blocks an account tells its owner, from a job like the login code.
-  defp count_miss(who, ip, known?, args) do
-    if LoginLimit.miss(who, ip, known?) == :blocked,
-      do: args |> NotifyLoginBlockedWorker.new() |> Oban.insert!()
+  # Tries after a block aren't recorded, so a flood can't fill the events table; the
+  # block itself is.
+  defp count_miss(conn, who, blocked?, known?, args) do
+    ip = VerifyLimit.client_ip(conn)
+    data = %{via: via(who), who: SecurityEvent.who(who), known_browser: known?}
+    blocks = LoginLimit.miss(who, ip, known?)
+
+    unless blocked?, do: SecurityEvent.record(conn, :login_code_missed, data: data)
+
+    for scope <- blocks do
+      SecurityEvent.record(conn, :login_blocked, data: Map.put(data, :scope, scope))
+    end
+
+    if :account in blocks, do: args |> NotifyLoginBlockedWorker.new() |> Oban.insert!()
   end
 
-  defp log_in(conn, user, params) do
+  defp log_in(conn, user, params, who, known?) do
+    remember? = params["remember_me"] == "true"
+
+    SecurityEvent.record(conn, :logged_in,
+      user_id: user.id,
+      data: %{via: via(who), known_browser: known?, remember: remember?}
+    )
+
     conn
     |> put_flash(:info, "Logged in as #{user.email}.")
-    |> UserAuth.log_in_user(user, remember: params["remember_me"] == "true")
+    |> UserAuth.log_in_user(user, remember: remember?)
   end
 
   def delete(conn, _params) do
+    if user = conn.assigns[:current_user],
+      do: SecurityEvent.record(conn, :logged_out, user_id: user.id)
+
     conn
     |> put_flash(:info, "Logged out.")
     |> UserAuth.log_out_user()

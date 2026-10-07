@@ -210,6 +210,13 @@ an admin logs in only while D4H lists their email as a current member of some te
 permission (`App.Model.Member.current_email?/2`, #141). If D4H drops both admins, the way
 back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
 
+- **Security events.** Each login code request, the first request over a limit, each
+  wrong code until a block, each block, login, and logout is an event with the client's
+  IP and user agent, kept 90 days. So are failed sign-ups and the card check limit. The
+  typed email or number is stored only as `who`, a keyed hash (`App.Model.Event.who/1`),
+  so tries on one account group together. A team key change and login grants added or
+  removed are kept two years. `/admin/events` lists the IPs with the most wrong codes,
+  limits, blocks, and failed sign-ups over the last 7 days.
 - **The team key's account** is left out when it's a "SAR Duty" account, since it isn't a
   person. A team key from a person's own account leaves them in.
 - **Login grants** let an email into one team that D4H doesn't list as a manager there: a

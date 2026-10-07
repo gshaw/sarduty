@@ -6,6 +6,7 @@ defmodule Web.UserSessionControllerTest do
   import App.DataFixtures
 
   alias App.Accounts.UserToken
+  alias App.Model.Event
   alias App.Repo
   alias App.Worker.SendLoginCodeWorker
 
@@ -278,10 +279,61 @@ defmodule Web.UserSessionControllerTest do
 
   describe "DELETE /logout" do
     test "logs the user out", %{conn: conn} do
-      conn = conn |> log_in_user(user_fixture()) |> delete(~p"/logout")
+      user = user_fixture()
+      conn = conn |> log_in_user(user) |> delete(~p"/logout")
 
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
+      assert %Event{user_id: user_id} = Event.get_last(:logged_out)
+      assert user_id == user.id
+    end
+  end
+
+  describe "security events" do
+    test "a request, a login, and their IP and browser, without the email",
+         %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      conn = conn |> from_ip() |> put_req_header("user-agent", "Firefox/131")
+      [ip] = get_req_header(conn, "fly-client-ip")
+
+      request_code(conn, user.email)
+      code = login_code_fixture(user.email)
+      log_in(conn, user.email, code, %{"remember_me" => "true"})
+
+      who = Event.who(user.email)
+      assert who == Event.who(" " <> String.upcase(user.email))
+      refute who =~ "@"
+
+      assert %Event{ip: ^ip, user_agent: "Firefox/131", data: %{"via" => "email", "who" => ^who}} =
+               Event.get_last(:login_code_requested)
+
+      assert %Event{ip: ^ip, data: %{"remember" => true, "known_browser" => false}} =
+               logged_in = Event.get_last(:logged_in)
+
+      assert logged_in.user_id == user.id
+    end
+
+    test "records the first request over the limit, and none after", %{conn: conn} do
+      email = "flood-#{System.unique_integer([:positive])}@example.com"
+      for _ <- 1..8, do: conn |> from_ip() |> request_code(email)
+
+      who = Event.who(email)
+      since = DateTime.add(DateTime.utc_now(), -1, :minute)
+      assert Event.count_since(:login_code_requested, since, %{who: who}) == 5
+      assert Event.count_since(:login_code_limited, since, %{who: who}) == 1
+    end
+
+    test "records wrong codes until the block, then the block, then nothing", %{conn: conn} do
+      email = "guess-#{System.unique_integer([:positive])}@example.com"
+      user_fixture(%{email: email})
+
+      for _ <- 1..22, do: conn |> from_ip() |> log_in(email, "000000")
+
+      who = Event.who(email)
+      since = DateTime.add(DateTime.utc_now(), -1, :minute)
+      assert Event.count_since(:login_code_missed, since, %{who: who}) == 20
+
+      assert Event.count_since(:login_blocked, since, %{who: who, scope: "account"}) == 1
     end
   end
 

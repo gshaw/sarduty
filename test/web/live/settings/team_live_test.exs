@@ -4,6 +4,7 @@ defmodule Web.Settings.TeamLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Event
   alias App.Model.Team
 
   @secret "SECRET-TEAM-PAT-123"
@@ -67,6 +68,33 @@ defmodule Web.Settings.TeamLiveTest do
     team = Team.get!(team.id)
     assert team.name == "Renamed SAR"
     assert team.d4h_access_key == @secret
+  end
+
+  test "a new key is saved and recorded as changed, by whom", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      owner = %{"resourceType" => "Team", "id" => team.d4h_team_id, "title" => team.name}
+
+      Req.Test.json(conn, %{
+        "members" => [
+          %{"resourceType" => "Member", "id" => 900, "name" => "SAR Duty", "owner" => owner}
+        ]
+      })
+    end)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+    assert lv
+           |> form("form", form: %{new_d4h_access_key: "new-key"})
+           |> render_submit() =~ "Team settings saved."
+
+    assert Team.get!(team.id).d4h_access_key == "new-key"
+
+    assert %Event{team_id: team_id, user_id: user_id, data: %{"sar_duty_account" => true}} =
+             Event.get_last(:team_key_changed)
+
+    assert {team_id, user_id} == {team.id, user.id}
   end
 
   test "names the key's D4H member and asks for a SAR Duty account", %{conn: conn} do

@@ -4,6 +4,7 @@ defmodule Web.TeamSignupLiveTest do
   import App.AccountsFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.SignUpTeam
 
@@ -104,5 +105,10 @@ defmodule Web.TeamSignupLiveTest do
     assert has_element?(lv, "#signup_form", "Use the email of an Owner or Editor")
 
     refute Team.get_by(d4h_team_id: @d4h_team_id)
+
+    assert %Event{ip: "127.0.0.1", data: %{"fields" => ["email"], "who" => who}} =
+             Event.get_last(:team_signup_failed)
+
+    refute who =~ "@"
   end
 end

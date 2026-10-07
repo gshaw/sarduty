@@ -121,7 +121,11 @@ defmodule Web.Settings.TeamLive do
   end
 
   def handle_event("save", %{"form" => form_params}, socket) do
-    case UpdateTeamSettings.call(socket.assigns.current_team, form_params) do
+    case UpdateTeamSettings.call(
+           socket.assigns.current_team,
+           form_params,
+           socket.assigns.current_user
+         ) do
       {:ok, team} ->
         socket =
           socket
