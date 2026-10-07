@@ -61,9 +61,21 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
 
 
-    #{team.authorized_by_name || team.name}
+    #{signer_block(team)}
 
     Reference: #{ref_id}
     """
+  end
+
+  @doc "The signer's name, then their title, phone, and email when the team has them."
+  def signer_block(team) do
+    [
+      team.authorized_by_name || team.name,
+      team.authorized_by_title,
+      team.authorized_by_phone,
+      team.authorized_by_email
+    ]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join("\n")
   end
 end

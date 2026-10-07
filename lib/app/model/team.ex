@@ -19,6 +19,9 @@ defmodule App.Model.Team do
     field :d4h_api_host, :string
     field :mailing_address, TrimmedString
     field :authorized_by_name, TrimmedString
+    field :authorized_by_title, TrimmedString
+    field :authorized_by_phone, TrimmedString
+    field :authorized_by_email, TrimmedString
     field :lat, :float
     field :lng, :float
     field :timezone, :string
@@ -46,11 +49,22 @@ defmodule App.Model.Team do
   # castable here; UpdateTeamSettings sets the key after checking it with D4H.
   def build_settings_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:name, :mailing_address, :authorized_by_name, :new_d4h_access_key])
+    |> cast(params, [
+      :name,
+      :mailing_address,
+      :authorized_by_name,
+      :authorized_by_title,
+      :authorized_by_phone,
+      :authorized_by_email,
+      :new_d4h_access_key
+    ])
     |> validate_required([:name])
     |> Validate.name(:name)
     |> Validate.address(:mailing_address)
     |> validate_length(:authorized_by_name, max: 250)
+    |> validate_length(:authorized_by_title, max: 100)
+    |> validate_length(:authorized_by_phone, max: 30)
+    |> Validate.email(:authorized_by_email)
     |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
   end
 

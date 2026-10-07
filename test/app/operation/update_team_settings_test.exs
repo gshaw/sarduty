@@ -78,4 +78,28 @@ defmodule App.Operation.UpdateTeamSettingsTest do
 
     assert changeset.changes == %{name: "Renamed"}
   end
+
+  describe "the signer's details" do
+    test "are optional" do
+      assert Team.build_settings_changeset(@team, %{"authorized_by_title" => ""}).valid?
+    end
+
+    test "the email must look like one" do
+      changeset = Team.build_settings_changeset(@team, %{"authorized_by_email" => "president"})
+
+      assert {"Enter an email like name@example.com.", _} =
+               changeset.errors[:authorized_by_email]
+    end
+
+    test "are trimmed" do
+      changeset =
+        Team.build_settings_changeset(@team, %{
+          "authorized_by_title" => " President ",
+          "authorized_by_phone" => " 604-555-0100 "
+        })
+
+      assert get_change(changeset, :authorized_by_title) == "President"
+      assert get_change(changeset, :authorized_by_phone) == "604-555-0100"
+    end
+  end
 end

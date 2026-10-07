@@ -54,9 +54,20 @@ defmodule Web.Settings.TeamLive do
           type="textarea"
           class="h-[10rem]"
         >
-          Include the full name, title, address, and phone number of your team president, or
-          someone in a similar role. The CRA uses this during tax audits.
+          The full name of your team president, or someone in a similar role. The CRA uses
+          this during tax audits.
         </.input>
+        <.input field={@form[:authorized_by_title]} label="Signer's title (optional)">
+          Printed under the name on tax credit letters, like President.
+        </.input>
+        <div class="grid grid-cols-2 gap-hspacer">
+          <.input field={@form[:authorized_by_phone]} label="Signer's phone (optional)" />
+          <.input
+            field={@form[:authorized_by_email]}
+            label="Signer's email (optional)"
+            type="email"
+          />
+        </div>
         <.input
           field={@form[:new_d4h_access_key]}
           label="D4H access key (team)"
