@@ -1,0 +1,136 @@
+/* Charts and maps, drawn on the server in HTML and SVG and coloured by tokens.css. The
+   style guide includes this file, so its samples are the app's. Not in a cascade layer:
+   the guide's own rules sit outside any layer, and a layered rule would lose to them. */
+
+/* cspell:ignore nums */
+
+/* A mark takes its colour from its series class: background for boxes, fill for SVG. */
+.series-incident { --c: var(--incident); }
+.series-exercise { --c: var(--exercise); }
+.series-event { --c: var(--event); }
+.series-primary { --c: var(--primary); }
+.series-compare { --c: var(--compare); }
+
+.chart { position: relative; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.chart-title { font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 700; color: var(--text); margin: 0; }
+.chart-caption { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin: 0 0 var(--sp-3); }
+
+.chart-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: 0 0 var(--sp-3); padding: 0; list-style: none; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); }
+.chart-legend li { display: flex; align-items: center; gap: var(--sp-2); margin: 0; }
+.chart-key { width: 12px; height: 12px; border-radius: 2px; background: var(--c); flex: none; }
+.chart-key.is-line { height: 2px; border-radius: 1px; width: 16px; }
+.chart-key.is-dot { border-radius: 50%; }
+
+/* Plot area with value gridlines. The 32px on the left holds the tick labels. */
+.chart-plot { position: relative; height: var(--plot-h, 200px); margin-left: 32px; border-bottom: 1px solid var(--border); }
+.chart-tick { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border-subtle); }
+.chart-tick span { position: absolute; right: calc(100% + 6px); top: -8px; white-space: nowrap; }
+.chart-labels { display: flex; margin-left: 32px; padding-top: var(--sp-1); }
+.chart-labels span { flex: 1; text-align: center; white-space: nowrap; }
+
+/* Columns: one per bucket, segments stacked from the baseline with a 2px gap. */
+.chart-columns { position: absolute; inset: 0; display: flex; align-items: stretch; }
+.chart-column { flex: 1; position: relative; display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; }
+.chart-column > i { width: min(24px, 64%); background: var(--c); flex: none; }
+.chart-column > i:last-child { border-radius: 4px 4px 0 0; }
+.chart-column:hover { background: var(--row-hover); }
+
+/* Hover tooltips. Every value is also in the chart's table, so a tooltip never gates one. */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute; z-index: 10; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  white-space: pre; text-align: left; pointer-events: none;
+  padding: var(--sp-1) var(--sp-2); border-radius: var(--radius);
+  background: var(--text); color: var(--bg);
+  font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 400;
+}
+
+/* Lines: an SVG stretched to the plot, with strokes that stay 2px. */
+.chart-line { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.chart-line polyline { fill: none; stroke: var(--c); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.chart-line polygon { fill: var(--c); opacity: 0.1; }
+.chart-dot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--c); border: 2px solid var(--bg); }
+.chart-end-label { position: absolute; transform: translate(8px, -50%); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); font-weight: 600; white-space: nowrap; }
+.chart-hover { position: absolute; inset: 0; display: flex; }
+.chart-hover > span { flex: 1; }
+.chart-hover > span:hover { background: color-mix(in srgb, var(--row-hover) 70%, transparent); }
+
+/* Sparkline: a trend with no axes, inside a stat. */
+.sparkline { position: relative; height: 32px; margin-top: var(--sp-2); }
+
+/* Stats: a number, what it counts, and how it compares. */
+.chart-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.chart-stat { border-top: 4px solid var(--c, var(--primary)); background: var(--surface-alt); padding: var(--sp-3) var(--sp-4); }
+.chart-stat .value { display: block; font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); font-variant-numeric: proportional-nums; }
+.chart-stat .label { display: block; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+.chart-stat .delta { display: block; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+.chart-stat a.label { color: var(--link); }
+
+/* Heat cells: 5 shades of one blue, none to the busiest. */
+.shade-0 { background: var(--surface-alt); }
+.shade-1 { background: var(--shade-1); }
+.shade-2 { background: var(--shade-2); }
+.shade-3 { background: var(--shade-3); }
+.shade-4 { background: var(--shade-4); }
+.chart-scale { display: flex; align-items: center; gap: 3px; margin-top: var(--sp-2); }
+.chart-scale i { width: 11px; height: 11px; border-radius: 2px; }
+.chart-scale span { margin: 0 var(--sp-1); }
+
+/* Calendar: a column per week, Monday at the top. */
+.chart-calendar { display: grid; grid-template-columns: 28px 1fr; gap: var(--sp-1) var(--sp-2); }
+.chart-calendar-days { display: grid; grid-template-rows: repeat(7, 1fr); gap: 3px; }
+.chart-calendar-days span { line-height: 1; align-self: center; }
+.chart-calendar-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); grid-auto-columns: 1fr; gap: 3px; }
+.chart-calendar-grid > i { aspect-ratio: 1; border-radius: 2px; min-width: 6px; }
+.chart-calendar-grid > i.is-empty { background: none; }
+.chart-calendar-months { position: relative; height: var(--lh-xs); grid-column: 2; }
+.chart-calendar-months span { position: absolute; }
+
+/* Week grid: a row per day, a column per hour. */
+.chart-week { display: grid; grid-template-columns: 32px repeat(24, 1fr); gap: 2px; }
+.chart-week > i { height: 18px; border-radius: 2px; }
+.chart-week > span { align-self: center; }
+.chart-week > .hour { grid-column: span 6; padding-top: var(--sp-1); }
+
+/* Bar list: a row per thing, the bar to scale, the value at its tip. */
+.chart-bars { display: grid; grid-template-columns: minmax(0, max-content) 1fr; gap: var(--sp-2) var(--sp-3); align-items: center; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); }
+.chart-bars > li { display: contents; }
+.chart-bars .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 16rem; }
+.chart-bars .track { display: flex; align-items: center; gap: var(--sp-2); }
+.chart-bars .track i { height: 8px; border-radius: 0 4px 4px 0; background: var(--c, var(--primary)); min-width: 2px; }
+.chart-bars .track span { color: var(--text-muted); white-space: nowrap; }
+
+/* Map: a static Mapbox image, with the points drawn on top in SVG. */
+.chart-map { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--surface-alt); border: 1px solid var(--border-subtle); }
+.chart-map img, .chart-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chart-map img.is-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chart-map img.is-light { display: none; }
+  :root:not([data-theme="light"]) .chart-map img.is-dark { display: block; }
+}
+:root[data-theme="dark"] .chart-map img.is-light { display: none; }
+:root[data-theme="dark"] .chart-map img.is-dark { display: block; }
+.chart-map circle { fill: var(--c); stroke: var(--bg); stroke-width: 2px; }
+.chart-map circle:hover { stroke: var(--text); }
+.chart-map .is-recent { r: 8; }
+.chart-map-overlay { position: absolute; z-index: 2; background: color-mix(in srgb, var(--bg) 92%, transparent); padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); box-shadow: 0 1px 4px rgb(0 0 0 / 0.2); }
+
+/* A chart's numbers as a table, for screen readers. */
+.chart-table { display: block; top: 0; left: 0; position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* A dashboard card: a chart or list with its heading. */
+.dash-grid { display: grid; gap: var(--sp-5); grid-template-columns: repeat(12, minmax(0, 1fr)); margin-bottom: var(--sp-5); }
+.dash-card, .dash-stack { grid-column: span 12; }
+.dash-stack { display: grid; gap: var(--sp-5); align-content: start; min-width: 0; }
+.dash-stack > .dash-card { grid-column: auto; }
+.dash-card { border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: var(--sp-4); background: var(--bg); min-width: 0; }
+@media (min-width: 960px) {
+  .dash-grid > .span-4 { grid-column: span 4; }
+  .dash-grid > .span-5 { grid-column: span 5; }
+  .dash-grid > .span-6 { grid-column: span 6; }
+  .dash-grid > .span-7 { grid-column: span 7; }
+  .dash-grid > .span-8 { grid-column: span 8; }
+}
+.dash-card > header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-1); }
+.dash-card > header a { font-size: var(--fs-sm); line-height: var(--lh-sm); white-space: nowrap; }

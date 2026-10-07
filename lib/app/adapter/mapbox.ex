@@ -37,6 +37,23 @@ defmodule App.Adapter.Mapbox do
     end
   end
 
+  @doc """
+  A static map with no pins, centred on `{lat, lng}` at `zoom`, `width` by `height` pixels
+  at 2x. `style` is a Mapbox style such as "outdoors-v12" or "dark-v11". Nil without a
+  token, or with the "dummy" token tests run with, so the page draws its points on a
+  plain background instead.
+  """
+  def build_static_view_url(context, style, {lat, lng}, zoom, {width, height}) do
+    base_url = context.options.base_url
+    token = context.options.params[:access_token]
+
+    if token in [nil, "", "dummy"] do
+      nil
+    else
+      "#{base_url}styles/v1/mapbox/#{style}/static/#{lng},#{lat},#{zoom},0/#{width}x#{height}@2x?access_token=#{token}"
+    end
+  end
+
   def fetch_coordinate(context, address), do: fetch_coordinate(context, address, nil)
 
   def fetch_coordinate(context, address, {lat, lng} = _proximity) do

@@ -7,6 +7,16 @@ defmodule Service.FormatTest do
   @now ~U[2026-09-14 16:00:00Z]
   @zone "America/Vancouver"
 
+  test "chart labels: numbers with separators, whole hours, and plain dates" do
+    assert Format.number(7) == "7"
+    assert Format.number(1204) == "1,204"
+    assert Format.number(-1_234_567) == "-1,234,567"
+    assert Format.number(12.6) == "13"
+    assert Format.hours(72_299) == "1,204h"
+    assert Format.day(~D[2025-09-28]) == "Sep 28, 2025"
+    assert Format.month_short(~D[2025-09-01]) == "Sep"
+  end
+
   describe "minutes_ago/3" do
     test "counts minutes, then hours, then gives the time" do
       assert @now |> DateTime.add(-30, :second) |> Format.minutes_ago(@now, @zone) == "just now"

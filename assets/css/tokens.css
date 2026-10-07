@@ -64,6 +64,13 @@
   --exercise: light-dark(#b4500b, #b8560f); /* D4H exercise */
   --event: light-dark(#5b3ea6, #6a4cc0); /* D4H event */
 
+  /* group: Charts */
+  --shade-1: light-dark(#dbe7f5, #172b45); /* Heat cells: a little */
+  --shade-2: light-dark(#a9c6e8, #1f4a80); /* Heat cells: some */
+  --shade-3: light-dark(#5b8fd1, #3474c8); /* Heat cells: a lot */
+  --shade-4: light-dark(#1d4f91, #7ab8f5); /* Heat cells: the busiest */
+  --compare: light-dark(#8c9297, #66717d); /* Last year's line, beside this year's */
+
   --on-fill: #ffffff;
   --on-warning: #0b0c0c;
 
