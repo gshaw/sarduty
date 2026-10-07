@@ -1,5 +1,6 @@
 defmodule App.Adapter.D4H do
   alias App.Adapter.D4H
+  alias App.Model.Event
   alias App.Model.Team
 
   require Logger
@@ -48,11 +49,9 @@ defmodule App.Adapter.D4H do
   end
 
   def build_context_from_team(%Team{} = team) do
-    build_context(
-      access_key: team.d4h_access_key,
-      api_host: team.d4h_api_host,
-      d4h_team_id: team.d4h_team_id
-    )
+    [access_key: team.d4h_access_key, api_host: team.d4h_api_host, d4h_team_id: team.d4h_team_id]
+    |> build_context()
+    |> Req.Request.put_private(:team_id, team.id)
   end
 
   def build_context(access_key: access_key, api_host: api_host, d4h_team_id: d4h_team_id) do
@@ -72,7 +71,7 @@ defmodule App.Adapter.D4H do
 
   # D4H sends no rate-limit headers, so a 429 is the only sign of a limit. This step goes
   # ahead of Req's retry, which would otherwise retry it unseen. Honeybadger groups them
-  # into one error, and its first email is the cue to slow down.
+  # into one error, and its first email is the cue to slow down; the event counts them.
   defp report_rate_limits(request),
     do: Req.Request.prepend_response_steps(request, d4h_rate_limit: &report_rate_limit/1)
 
@@ -86,6 +85,11 @@ defmodule App.Adapter.D4H do
     }
 
     Logger.warning("D4H rate limit (429): #{inspect(details)}")
+
+    Event.record!(:d4h_rate_limited,
+      team_id: Req.Request.get_private(request, :team_id),
+      data: details
+    )
 
     response
     |> D4H.Error.exception()

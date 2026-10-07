@@ -4,6 +4,9 @@ defmodule App.Worker.SyncTeamChangesWorker do
   a manager opens the team's dashboard after more than 2 minutes (#163). One job per team
   at a time, on its own queue so it never waits behind another team's full refresh.
 
+  A sync that changed something, failed, or found the key rejected is recorded as a
+  `d4h_team_sync` event; a quiet one isn't.
+
   A failed sync isn't retried: the next one is 10 minutes away. Honeybadger hears about
   it only after an hour of failures. A missing or rejected key is left for the nightly
   refresh to report on the dashboards, and a rejected one stops the syncs until a new
@@ -15,6 +18,7 @@ defmodule App.Worker.SyncTeamChangesWorker do
     max_attempts: 1,
     unique: [keys: [:team_id], states: [:available, :scheduled, :executing]]
 
+  alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.SyncD4HChanges
   alias App.Worker.PushPassUpdatesWorker
@@ -49,16 +53,20 @@ defmodule App.Worker.SyncTeamChangesWorker do
   end
 
   defp sync(team) do
+    started_at = DateTime.utc_now()
+
     case SyncD4HChanges.call(team) do
       {:ok, _team, []} ->
         :ok
 
-      {:ok, team, _changed} ->
+      {:ok, team, changed} ->
+        record(team, started_at, %{outcome: "changed", lists: changed})
         Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
         %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
         :ok
 
-      {:error, {:key_rejected, _status} = reason} ->
+      {:error, {:key_rejected, status} = reason} ->
+        record(team, started_at, %{outcome: "key_rejected", status: status})
         SyncD4HChanges.record_key_rejected(team)
         {:cancel, inspect(reason)}
 
@@ -67,6 +75,7 @@ defmodule App.Worker.SyncTeamChangesWorker do
     end
   rescue
     error ->
+      record(team, nil, %{outcome: "failed", error: error |> Exception.message() |> short()})
       {_team, report?} = SyncD4HChanges.record_failure(team, DateTime.utc_now())
       Logger.warning("D4H sync failed for team #{team.id}: #{Exception.message(error)}")
 
@@ -75,4 +84,18 @@ defmodule App.Worker.SyncTeamChangesWorker do
 
       {:cancel, Exception.message(error)}
   end
+
+  defp record(team, started_at, data) do
+    now = DateTime.utc_now()
+    duration_ms = started_at && Event.duration_ms(started_at, now)
+
+    Event.record!(:d4h_team_sync,
+      team_id: team.id,
+      duration_ms: duration_ms,
+      data: data,
+      occurred_at: now
+    )
+  end
+
+  defp short(message), do: String.slice(message, 0, 500)
 end

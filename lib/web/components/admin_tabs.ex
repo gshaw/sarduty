@@ -3,7 +3,7 @@ defmodule Web.Components.AdminTabs do
 
   import Web.Components.A
 
-  attr :current, :atom, required: true, values: [:teams, :organizations, :admins]
+  attr :current, :atom, required: true, values: [:teams, :organizations, :admins, :events]
 
   # The admin section's pages, under the Admin link in the top bar.
   def admin_tabs(assigns) do
@@ -21,6 +21,9 @@ defmodule Web.Components.AdminTabs do
       </.a>
       <.a kind={:custom} navigate={~p"/admin/admins"} aria-current={@current == :admins && "page"}>
         Admins
+      </.a>
+      <.a kind={:custom} navigate={~p"/admin/events"} aria-current={@current == :events && "page"}>
+        Events
       </.a>
     </nav>
     """

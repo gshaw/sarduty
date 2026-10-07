@@ -69,15 +69,15 @@ defmodule App.Operation.RefreshD4HData do
     progress = refresh_groups(d4h, team, progress)
 
     RefreshD4HData.Progress.complete(progress)
-    log_corrections(team.id, started_at)
+    missed = count_corrections(team.id, started_at)
     team = team.id |> Team.get!() |> SyncD4HChanges.save_heads(heads, started_at)
-    {:ok, update_team_refreshed_at(team)}
+    {:ok, update_team_refreshed_at(team), missed}
   end
 
   # What this refresh changed that the syncs every 10 minutes missed: rows written since
   # it started. If it stays at zero for a month, run it weekly (#163). Deletes are logged
-  # by each stage.
-  defp log_corrections(team_id, started_at) do
+  # by each stage. Returns the counts, by name.
+  defp count_corrections(team_id, started_at) do
     member_ids = from(m in Member, where: m.team_id == ^team_id, select: m.id)
 
     counts = [
@@ -90,13 +90,14 @@ defmodule App.Operation.RefreshD4HData do
       group_members: where(GroupMember, [g], g.member_id in subquery(member_ids))
     ]
 
-    summary =
-      Enum.map_join(counts, ", ", fn {name, query} ->
-        count = query |> where([r], r.updated_at >= ^started_at) |> Repo.aggregate(:count)
-        "#{name} #{count}"
+    missed =
+      Map.new(counts, fn {name, query} ->
+        {name, query |> where([r], r.updated_at >= ^started_at) |> Repo.aggregate(:count)}
       end)
 
+    summary = Enum.map_join(counts, ", ", fn {name, _query} -> "#{name} #{missed[name]}" end)
     Logger.info("Full refresh of team #{team_id} wrote rows the syncs missed: #{summary}")
+    missed
   end
 
   defp refresh_team_data(d4h, team, progress) do

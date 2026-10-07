@@ -81,7 +81,8 @@ config :sarduty, Oban,
     crontab: [
       {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker},
       # The sync every 10 minutes (#163). The nightly full refresh is its safety net.
-      {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker}
+      {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker},
+      {"30 5 * * *", App.Worker.PruneEventsWorker}
     ]
   ]
 

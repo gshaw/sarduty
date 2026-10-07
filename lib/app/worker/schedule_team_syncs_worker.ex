@@ -14,11 +14,9 @@ defmodule App.Worker.ScheduleTeamSyncsWorker do
   def perform(%Oban.Job{}) do
     now = DateTime.utc_now()
 
-    Team.get_all()
-    |> Enum.filter(&SyncTeamChangesWorker.syncs?/1)
-    |> Enum.each(&SyncTeamChangesWorker.enqueue/1)
-
-    FinishRunWorker.start("sync", now)
+    teams = Enum.filter(Team.get_all(), &SyncTeamChangesWorker.syncs?/1)
+    Enum.each(teams, &SyncTeamChangesWorker.enqueue/1)
+    FinishRunWorker.start("sync", length(teams), now)
     :ok
   end
 end

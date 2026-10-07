@@ -60,10 +60,11 @@ refresh once a night as the safety net (#163).
 - The `refresh` queue has a limit of 1, so one team refreshes at a time. A failed job
   retries after 15 minutes, then 30 (`max_attempts: 3`), before waiting for the next day.
 - It records the list heads it saw before its first stage, so the next sync picks up
-  whatever changed while it ran. At the end it logs how many rows it wrote that the
-  syncs missed. If that stays at zero for a month, run it weekly.
-- The run pings `HEALTHCHECKS_URL` once: see [Monitoring](#monitoring). A failed team writes `Error: …` to
-  `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
+  whatever changed while it ran. At the end it counts the rows it wrote that the syncs
+  missed, in its `d4h_team_refresh` event. If that stays at zero for a month, run it
+  weekly.
+- The run pings `HEALTHCHECKS_URL` once: see [Monitoring](#monitoring). A failed team
+  writes `Error: …` to `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
   error goes to Honeybadger.
 - A missing key, or one D4H rejects with 401 or 403, is not an app error. The job writes
   `Error: No D4H key…` or `Error: D4H rejected the team key (401)…` and cancels, so it is
@@ -81,9 +82,17 @@ refresh once a night as the safety net (#163).
     October 2026.
   - The nightly check (`HEALTHCHECKS_URL`): period 1 day, grace 2 hours. A full refresh
     was 26 s per team.
-- **D4H rate limits.** D4H sends no rate-limit headers. Every 429 is logged and sent to
-  Honeybadger as one grouped error (`d4h-429`), before Req's retry hides it. The first
-  one is the cue to sync less often or fetch fewer pages at once.
+- **D4H rate limits.** D4H sends no rate-limit headers. Every 429 is logged, recorded
+  as a `d4h_rate_limited` event, and sent to Honeybadger as one grouped error
+  (`d4h-429`), before Req's retry hides it. The first one is the cue to sync less often
+  or fetch fewer pages at once.
+- **Events, for looking back.** The `events` table ([Event](../lib/app/model/event.ex))
+  records each run (`d4h_sync_round`, `d4h_refresh_run`: how long, how many teams,
+  changed, failed, rejected keys, 429s), each team refresh, and each team sync that
+  changed something, failed, or found its key rejected. Quiet syncs record nothing.
+  `/admin/events` shows the last round and night, the last day's failures and 429s, and
+  the events by kind and team. Events are kept 90 days. They don't alert; Healthchecks
+  and Honeybadger do.
 
 ## Which key
 
