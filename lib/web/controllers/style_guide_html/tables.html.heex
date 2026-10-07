@@ -9,7 +9,10 @@
       Text at sm (14px). Headers semibold on <code>--surface-alt</code>, and they stick on scroll.
     </li>
     <li>Numbers right-aligned with tabular figures. Codes, such as letter numbers, in mono.</li>
-    <li>Sortable headers show an arrow; the sorted column is underlined in primary.</li>
+    <li>
+      Sortable headers show an arrow, or ⇅ when the column sorts both ways. The sorted column is
+      underlined in primary and has <code>aria-sort</code>.
+    </li>
     <li>Actions in a row are small buttons or links.</li>
     <li>
       Columns go in order of use: what identifies the row first, then what people act on, then
@@ -55,7 +58,9 @@
           <th><a href="#">Name<span class="sort">↑</span></a></th>
           <th class="num"><a href="#">Primary<span class="sort">↓</span></a></th>
           <th class="num"><a href="#">Secondary<span class="sort">↓</span></a></th>
-          <th class="num sorted"><a href="#">Total<span class="sort">↓</span></a></th>
+          <th class="num" aria-sort="descending">
+            <a href="#">Total<span class="sort">↓</span></a>
+          </th>
           <th class="shrink">Letter</th>
           <th>Email</th>
           <th class="shrink"><a href="#">ID<span class="sort">↑</span></a></th>
@@ -150,7 +155,9 @@
     <table class="compact striped">
       <thead>
         <tr>
-          <th class="shrink sorted"><a href="#">Date<span class="sort">↓</span></a></th>
+          <th class="shrink" aria-sort="descending">
+            <a href="#">Date<span class="sort">↓</span></a>
+          </th>
           <th class="shrink">Kind</th>
           <th>Title</th>
           <th class="num">Attended</th>

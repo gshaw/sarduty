@@ -82,6 +82,16 @@ defmodule Web.ActivityCollectionLiveTest do
     assert :binary.match(html, "Next week") < :binary.match(html, "Next year")
   end
 
+  test "the sorted column header says which way it sorts", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?sort=date")
+
+    assert has_element?(lv, ~s|th[aria-sort="ascending"]|, "Date")
+    assert lv |> element("th[aria-sort]") |> render() =~ "sort=date-"
+  end
+
   test "the draft filter lists only activities D4H hasn't published", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, %{title: "Still a draft", is_published: false})
