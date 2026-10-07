@@ -140,8 +140,8 @@ fi
   [its test](test/app/operation/build_group_rule_preview_test.exs).
 - **Never call D4H or Mapbox from a test.** In tests every D4H request goes to
   `Req.Test` (`config/test.exs`), so stub it with `Req.Test.stub(App.Adapter.D4H, …)`; a call
-  with no stub fails. Mapbox has no stub yet. Oban runs with `testing: :inline`, so a
-  test that enqueues a refresh runs it.
+  with no stub fails. Mapbox goes to `Req.Test` the same way. Oban runs with
+  `testing: :inline`, so a test that enqueues a refresh runs it.
 - LiveView tests use `Phoenix.LiveViewTest` and target element IDs (`has_element?/2`),
   not raw HTML.
 - Test files mirror `lib/`: `lib/app/operation/x.ex` → `test/app/operation/x_test.exs`.

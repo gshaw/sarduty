@@ -8,6 +8,7 @@ defmodule Web.Components.ActivityMap do
   use Phoenix.Component
 
   alias App.Adapter.Mapbox
+  alias Web.MapImage
 
   @doc """
   Builds the map for `points`, each `%{lat: 49.7, lng: -123.1, kind: :incident, tip:
@@ -24,21 +25,21 @@ defmodule Web.Components.ActivityMap do
         nil
 
       view ->
-        mapbox = Mapbox.build_context()
-
         %{
           width: width,
           height: height,
-          light_url:
-            Mapbox.build_static_view_url(mapbox, "outdoors-v12", view.center, view.zoom, size),
-          dark_url:
-            Mapbox.build_static_view_url(mapbox, "dark-v11", view.center, view.zoom, size),
+          light_url: image_url("outdoors-v12", view, size),
+          dark_url: image_url("dark-v11", view, size),
           dots:
             points
             |> Enum.zip(view.positions)
             |> Enum.map(fn {point, {x, y}} -> Map.merge(point, %{x: x, y: y}) end)
         }
     end
+  end
+
+  defp image_url(style, view, size) do
+    style |> Mapbox.static_view_path(view.center, view.zoom, size) |> MapImage.url()
   end
 
   @doc "Draws a map from `build/3`. The inner block sits over the map's top left corner."

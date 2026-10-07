@@ -36,6 +36,9 @@ config :phoenix, :plug_init_mode, :runtime
 # calling the real API.
 config :sarduty, App.Adapter.D4H, plug: {Req.Test, App.Adapter.D4H}
 
+# Mapbox too: map images and the mileage report's lookups.
+config :sarduty, App.Adapter.Mapbox, plug: {Req.Test, App.Adapter.Mapbox}
+
 # Healthchecks pings too, when a test sets a check's URL.
 config :sarduty, App.Adapter.Healthchecks, plug: {Req.Test, App.Adapter.Healthchecks}
 

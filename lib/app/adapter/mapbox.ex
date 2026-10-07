@@ -5,30 +5,52 @@ defmodule App.Adapter.Mapbox do
       headers: %{"User-Agent" => "sarduty.com"},
       params: [access_token: access_token]
     )
+    |> Req.merge(Keyword.take(config(), [:plug]))
   end
 
   def build_context do
     build_context(%{mapbox_access_token: access_token()})
   end
 
-  defp access_token, do: Application.get_env(:sarduty, App.Adapter.Mapbox)[:access_token]
+  defp access_token, do: config()[:access_token]
+
+  defp config, do: Application.get_env(:sarduty, __MODULE__, [])
 
   @doc """
-  A static map with no pins, centred on `{lat, lng}` at `zoom`, `width` by `height` pixels
-  at 2x. `style` is a Mapbox style such as "outdoors-v12" or "dark-v11". Nil without a
-  token, or with the "dummy" token tests run with, so the page draws its points on a
+  The path of a static map with no pins, centred on `{lat, lng}` at `zoom`, `width` by
+  `height` pixels at 2x. `style` is a Mapbox style such as "outdoors-v12" or "dark-v11".
+  Pages show it through `Web.MapImage`, so the token never reaches a browser. Nil without
+  a token, or with the "dummy" token tests run with, so the page draws its points on a
   plain background instead.
   """
-  def build_static_view_url(context, style, {lat, lng}, zoom, {width, height}) do
-    base_url = context.options.base_url
-    token = context.options.params[:access_token]
-
-    if token in [nil, "", "dummy"] do
+  def static_view_path(style, {lat, lng}, zoom, {width, height}) do
+    if access_token() in [nil, "", "dummy"] do
       nil
     else
-      "#{base_url}styles/v1/mapbox/#{style}/static/#{lng},#{lat},#{zoom},0/#{width}x#{height}@2x?access_token=#{token}"
+      "styles/v1/mapbox/#{style}/static/#{lng},#{lat},#{zoom},0/#{width}x#{height}@2x"
     end
   end
+
+  @doc "Fetches the image at a path from `static_view_path/4`."
+  def fetch_static_image(context, path) do
+    case Req.get(context, url: path, decode_body: false, retry: false) do
+      {:ok, %{status: 200} = response} ->
+        {:ok,
+         %{
+           body: response.body,
+           content_type: header(response, "content-type") || "image/png",
+           cache_control: header(response, "cache-control")
+         }}
+
+      {:ok, %{status: status}} ->
+        {:error, status}
+
+      {:error, _exception} ->
+        {:error, :unreachable}
+    end
+  end
+
+  defp header(response, name), do: response |> Req.Response.get_header(name) |> List.first()
 
   def fetch_coordinate(context, address), do: fetch_coordinate(context, address, nil)
 
