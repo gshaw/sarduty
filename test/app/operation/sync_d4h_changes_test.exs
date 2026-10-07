@@ -45,7 +45,7 @@ defmodule App.Operation.SyncD4HChangesTest do
     assert plan.activities == %{
              "events" => %{
                updated_after: ~U[2026-10-05 11:55:00Z],
-               deleted_after: ~U[2026-10-05 11:55:00Z],
+               compare_ids?: true,
                touch?: true
              }
            }
@@ -53,11 +53,11 @@ defmodule App.Operation.SyncD4HChangesTest do
     assert plan.attendance_since == ~U[2026-10-05 11:55:00Z]
   end
 
-  test "a delete alone moves the total, and still looks for deleted activities" do
+  test "a delete alone moves the total, and still compares ids to find it" do
     previous = heads()
     now = heads(%{"incidents" => %{previous["incidents"] | total_size: 9}})
 
-    assert %{"incidents" => %{deleted_after: %DateTime{}}} =
+    assert %{"incidents" => %{compare_ids?: true}} =
              SyncD4HChanges.plan(previous, now).activities
   end
 
@@ -68,7 +68,7 @@ defmodule App.Operation.SyncD4HChangesTest do
 
     for {_kind, cursors} <- plan.activities do
       assert cursors.updated_after == ~U[2000-01-01 00:00:00Z]
-      assert cursors.deleted_after == nil
+      refute cursors.compare_ids?
       refute cursors.touch?
     end
   end

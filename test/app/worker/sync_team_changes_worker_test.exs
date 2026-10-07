@@ -91,6 +91,39 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     assert_received {:team_refreshed, %Team{}}
   end
 
+  test "marks an activity D4H deleted, by comparing the ids it lists" do
+    team = synced_team()
+    deleted = activity_fixture(team, %{activity_kind: "event"})
+    kept = activity_fixture(team, %{activity_kind: "event"})
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+      params = conn.query_params
+
+      cond do
+        list_name(conn) != "events" and params["size"] == "1" ->
+          Req.Test.json(conn, head(10))
+
+        list_name(conn) != "events" ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        params["size"] == "1" ->
+          Req.Test.json(conn, head(9))
+
+        params["updated_after"] ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        true ->
+          Req.Test.json(conn, %{"results" => [%{"id" => kept.d4h_activity_id}], "totalSize" => 1})
+      end
+    end)
+
+    assert perform(team) == :ok
+
+    assert Repo.reload(deleted).deleted_at
+    refute Repo.reload(kept).deleted_at
+  end
+
   test "skips a team whose full refresh is running" do
     team = synced_team()
     {:ok, team} = Team.update(team, %{d4h_refresh_result: "Members: 10/100 (10%)"})
