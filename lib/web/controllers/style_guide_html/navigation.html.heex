@@ -88,12 +88,13 @@
 
   <h2>Tabs</h2>
   <div class="demo">
-    <nav class="tabs" aria-label="Member">
-      <a href="#" aria-current="page">Attendance</a>
-      <a href="#">Qualifications</a>
-      <a href="#">Groups</a>
-      <a href="#">ID card</a>
-    </nav>
+    <.tabs label="Member">
+      <:tab navigate="#" current>Attendance</:tab>
+      <:tab navigate="#">Qualifications</:tab>
+      <:tab navigate="#">Groups</:tab>
+      <:tab navigate="#">ID card</:tab>
+      <:tab navigate="#">History</:tab>
+    </.tabs>
     <p>Each tab is its own page with its own URL, so links and the back button work.</p>
   </div>
   <p class="spec">
@@ -106,21 +107,13 @@
   <h2>Pagination</h2>
   <div class="demo">
     <div class="table-summary">
-      <span>Showing 51 to 100 of 1,912 activities</span>
+      <span class="table-summary-count">1,912 activities</span>
     </div>
-    <nav aria-label="Pages">
-      <ul class="pagination">
-        <li><a href="#"><.svg_icon name="chevron-left" size={16} />Previous</a></li>
-        <li><a href="#">1</a></li>
-        <li><span aria-current="page">2</span></li>
-        <li><a href="#">3</a></li>
-        <li><span class="muted">…</span></li>
-        <li><a href="#">39</a></li>
-        <li><a href="#">Next<.svg_icon name="chevron-right" size={16} /></a></li>
-      </ul>
-    </nav>
+    <.pagination paginated={sample_page()} path_fn={fn _ -> "#" end} />
   </div>
   <p class="spec">
-    Under long tables. Prefer filters that shrink the list over paging through it.
+    Under long tables, and only when there is more than 1 page. In the app: <code>&lt;.pagination paginated=&#123;@paginated&#125; path_fn=&#123;@path_fn&#125; /&gt;</code>, with the
+    <code>App.Page</code>
+    from <code>Repo.paginate/2</code>. Prefer filters that shrink the list over paging through it.
   </p>
 </.shell>

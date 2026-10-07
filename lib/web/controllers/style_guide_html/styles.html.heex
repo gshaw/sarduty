@@ -25,7 +25,7 @@
     h4 { margin-top: var(--sp-4); margin-bottom: var(--sp-2); }
     p, ul, ol, dl { margin: 0 0 var(--sp-4); }
     p, li { max-width: 70ch; }
-    ul, ol { padding-left: var(--sp-5); }
+    ul, ol { padding-left: var(--sp-5); list-style: revert; }
     li + li { margin-top: var(--sp-1); }
     .lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); }
     .small, .text-sm { font-size: var(--fs-sm); line-height: var(--lh-sm); }
@@ -64,7 +64,7 @@
 
     /* Top bar and guide layout */
     .container { max-width: 1280px; margin: 0 auto; padding: 0 var(--sp-5); }
-    .site-bar { background: var(--nav); color: #fff; border-bottom: 4px solid var(--accent); }
+    .site-bar { position: static; background: var(--nav); color: #fff; border-bottom: 4px solid var(--accent); }
     .site-bar .container { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); height: 56px; }
     .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); text-decoration: none; }
     .brand span { color: var(--accent); }

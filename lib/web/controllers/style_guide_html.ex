@@ -3,6 +3,8 @@ defmodule Web.StyleGuideHTML do
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.Chart
+  import Web.Components.Pagination
+  import Web.Components.Table
 
   alias Web.StyleGuideHTML.SampleData
 
@@ -190,6 +192,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate chart_map(), to: SampleData
 
   defdelegate letters(), to: SampleData
+  defdelegate sample_page(), to: SampleData
   defdelegate recommendations(), to: SampleData
   defdelegate clauses(), to: SampleData
 
