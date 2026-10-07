@@ -81,7 +81,8 @@
   <h2>Calendar</h2>
   <p>
     A year of days, a column per week, Monday at the top. 5 shades of one blue, from none to
-    the busiest day. Hover a day for its date and count.
+    the busiest day. Hover a day for its date and count. It needs about 720px, so on a
+    phone it scrolls sideways. The component does this itself; don't wrap it.
   </p>
   <div class="demo">
     <.calendar id="sample-calendar" days={chart_days()} />

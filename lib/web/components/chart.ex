@@ -233,7 +233,7 @@ defmodule Web.Components.Chart do
       assign(assigns, max: max, pad: pad, months: calendar_months(days, pad, weeks), weeks: weeks)
 
     ~H"""
-    <figure id={@id} class="chart" style="margin: 0">
+    <figure id={@id} class="chart chart-calendar-scroll" style="margin: 0">
       <div class="chart-calendar">
         <div class="chart-calendar-months">
           <span :for={{label, left} <- @months} style={"left: #{left}%"}>{label}</span>
