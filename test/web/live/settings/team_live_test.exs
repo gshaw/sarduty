@@ -6,6 +6,7 @@ defmodule Web.Settings.TeamLiveTest do
 
   alias App.Model.Event
   alias App.Model.Team
+  alias App.Repo
 
   @secret "SECRET-TEAM-PAT-123"
 
@@ -141,6 +142,50 @@ defmodule Web.Settings.TeamLiveTest do
 
     assert_error_sent 404, fn ->
       conn |> log_in_user(user) |> get(~p"/teams/#{other}/settings")
+    end
+  end
+
+  describe "the signer's signature" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      %{conn: log_in_user(conn, user), team: team}
+    end
+
+    defp upload(lv, bytes, name \\ "signature.png") do
+      lv
+      |> file_input("#team_settings_form", :signature, [
+        %{name: name, content: bytes, type: "image/png"}
+      ])
+      |> render_upload(name)
+
+      lv |> form("#team_settings_form") |> render_submit()
+    end
+
+    test "uploads as a PNG, shows a preview, and removes", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
+      refute has_element?(lv, "#signature-preview")
+
+      upload(lv, png_fixture(1800, 400))
+
+      assert has_element?(lv, "#signature-preview")
+      signature = Repo.get!(Team, team.id).signature
+      assert {:ok, image} = Image.from_binary(signature)
+      # Scaled down to fit 900 pixels.
+      assert Image.width(image) == 900
+
+      lv |> element("#remove-signature") |> render_click()
+
+      refute has_element?(lv, "#signature-preview")
+      assert Repo.get!(Team, team.id).signature == nil
+    end
+
+    test "a file that is not an image is not saved", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
+
+      upload(lv, "not an image")
+
+      assert has_element?(lv, "#signature-error", "Use a PNG or JPEG image of the signature.")
+      assert Repo.get!(Team, team.id).signature == nil
     end
   end
 end

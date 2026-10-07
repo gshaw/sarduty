@@ -3,6 +3,7 @@ defmodule Web.Settings.TeamLive do
 
   alias App.Adapter.D4H
   alias App.Model.Team
+  alias App.Operation.SaveTeamSignature
   alias App.Operation.UpdateTeamSettings
 
   # The team comes from the URL, /teams/:subdomain/settings (#153).
@@ -13,6 +14,12 @@ defmodule Web.Settings.TeamLive do
       socket
       |> assign(page_title: "Team settings")
       |> assign_form(Team.build_settings_changeset(team))
+      |> assign(signature_error: nil)
+      |> allow_upload(:signature,
+        accept: ~w(.png .jpg .jpeg),
+        max_entries: 1,
+        max_file_size: 5_000_000
+      )
 
     {:ok, socket}
   end
@@ -67,6 +74,39 @@ defmodule Web.Settings.TeamLive do
             label="Signer's email (optional)"
             type="email"
           />
+        </div>
+        <div id="team-signature" class="mb-p">
+          <label for={@uploads.signature.ref} class="block font-semibold">
+            Signer's signature (optional)
+          </label>
+          <.hint>
+            A PNG or JPEG of the signature, on white or transparent. New tax credit letters
+            print it above the signer's name. Letters already made keep theirs.
+          </.hint>
+          <div :if={@current_team.signature} class="my-2 flex items-center gap-p">
+            <img
+              id="signature-preview"
+              src={Web.ImageData.png_data_url(@current_team.signature)}
+              class="h-16 max-w-xs border border-hr bg-white p-1"
+              alt="The signer's signature"
+            />
+            <.button
+              id="remove-signature"
+              type="button"
+              size={:sm}
+              phx-click="remove_signature"
+              data-confirm="Remove the signature? New tax credit letters go out unsigned until you add one."
+            >
+              Remove signature
+            </.button>
+          </div>
+          <.live_file_input upload={@uploads.signature} class="my-2" />
+          <p :for={error <- upload_errors(@uploads.signature)} class="text-danger-1">
+            {upload_error(error)}
+          </p>
+          <p :if={@signature_error} id="signature-error" class="text-danger-1">
+            {@signature_error}
+          </p>
         </div>
         <.input
           field={@form[:new_d4h_access_key]}
@@ -132,23 +172,40 @@ defmodule Web.Settings.TeamLive do
   end
 
   def handle_event("save", %{"form" => form_params}, socket) do
-    case UpdateTeamSettings.call(
-           socket.assigns.current_team,
-           form_params,
-           socket.assigns.current_user
-         ) do
-      {:ok, team} ->
-        socket =
-          socket
-          |> assign(current_team: team)
-          |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Team settings saved.")
+    signature = consume_signature(socket)
 
-        {:noreply, socket}
+    with {:ok, team} <-
+           UpdateTeamSettings.call(
+             socket.assigns.current_team,
+             form_params,
+             socket.assigns.current_user
+           ),
+         {:ok, team} <- save_signature(team, signature) do
+      socket =
+        socket
+        |> assign(current_team: team, signature_error: nil)
+        |> assign_form(Team.build_settings_changeset(team))
+        |> put_flash(:info, "Team settings saved.")
+
+      {:noreply, socket}
+    else
+      {:error, :image} ->
+        {:noreply, assign(socket, signature_error: "Use a PNG or JPEG image of the signature.")}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
+  end
+
+  def handle_event("remove_signature", _params, socket) do
+    {:ok, team} = SaveTeamSignature.call(socket.assigns.current_team, nil)
+
+    socket =
+      socket
+      |> assign(current_team: team)
+      |> put_flash(:info, "Signature removed.")
+
+    {:noreply, socket}
   end
 
   def handle_event("refresh", _params, socket) do
@@ -177,4 +234,22 @@ defmodule Web.Settings.TeamLive do
         {:noreply, assign_form(socket, changeset)}
     end
   end
+
+  defp consume_signature(socket) do
+    case consume_uploaded_entries(socket, :signature, fn %{path: path}, _entry ->
+           {:ok, File.read!(path)}
+         end) do
+      [bytes] -> bytes
+      [] -> nil
+    end
+  end
+
+  # No upload keeps the saved signature; only the remove button clears it.
+  defp save_signature(team, nil), do: {:ok, team}
+  defp save_signature(team, bytes), do: SaveTeamSignature.call(team, bytes)
+
+  defp upload_error(:too_large), do: "That file is too large. Use one under 5 MB."
+  defp upload_error(:not_accepted), do: "Use a PNG or JPEG."
+  defp upload_error(:too_many_files), do: "Select one file."
+  defp upload_error(_error), do: "That file did not upload. Try again."
 end
