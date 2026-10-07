@@ -116,7 +116,7 @@ and must not be used for it.
 | tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
 | mileage report                 | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
 | ID card                        | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
-| verify                         | check, validate, scan                          | Confirming an ID card is real.                                                                       |
+| verify                         | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
 | D4H access key                 | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H into SAR Duty.                                                      |
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |

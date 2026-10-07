@@ -83,6 +83,7 @@ The rules that are easy to break:
 - [change-sets.md](change-sets.md) — how every write to D4H goes through one applier, and what it records.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
+- [tax-credit-letters.md](tax-credit-letters.md) — verifying a tax credit letter, its reference numbers, and the locked PDF.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.
 - [attendance-at-the-door.md](attendance-at-the-door.md) — attendance links, scanning ID cards at an activity, and the times they record.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.

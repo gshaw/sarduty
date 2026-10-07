@@ -1,0 +1,307 @@
+defmodule Web.VerifyLetterLive do
+  use Web, :live_view_verify_layout
+
+  alias App.Model.ReplacedTaxCreditLetter
+  alias App.Model.TaxCreditLetter
+  alias Service.Format
+  alias Web.VerifyLimit
+
+  # Public, on the verify site (Web.VerifyHost), beside the ID card check. A letter's QR
+  # code opens /letters/<reference number>. It shows the hours the team issued, so a
+  # reader can compare them with the paper. A replaced letter still verifies, marked as
+  # replaced, with the hours it said. An old reference number (before #207) was easy to
+  # guess, so it shows nothing until the reader also gives the member's last name.
+  # Misses share the ID card check's per-IP limit.
+  def mount(_params, session, socket) do
+    {:ok,
+     assign(socket,
+       page_title: "Verify a tax credit letter",
+       client_ip: session["client_ip"]
+     )}
+  end
+
+  def handle_params(%{"ref" => input}, _uri, socket) do
+    result =
+      case TaxCreditLetter.parse_ref_id(input) do
+        {:old, ref_id} -> %{status: :needs_last_name, ref_id: ref_id}
+        parsed -> check(socket.assigns.client_ip, fn -> look_up(parsed) end)
+      end
+
+    {:noreply, assign_result(socket, result, input)}
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, assign_result(socket, nil, "")}
+
+  def handle_event("check", %{"check" => %{"ref" => input}}, socket) do
+    case TaxCreditLetter.parse_ref_id(input) do
+      {_kind, ref_id} ->
+        {:noreply, push_patch(socket, to: ~p"/letters/#{ref_id}")}
+
+      nil ->
+        result = check(socket.assigns.client_ip, fn -> %{status: :not_found} end)
+        {:noreply, assign_result(socket, result, input)}
+    end
+  end
+
+  def handle_event("check_name", %{"check" => %{"last_name" => last_name}}, socket) do
+    parsed = {:old, socket.assigns.result.ref_id}
+    result = check(socket.assigns.client_ip, fn -> look_up(parsed, last_name) end)
+    {:noreply, assign(socket, :result, result)}
+  end
+
+  defp assign_result(socket, result, input) do
+    socket
+    |> assign(:result, result)
+    |> assign(:form, to_form(%{"ref" => input, "last_name" => ""}, as: "check"))
+  end
+
+  defp check(ip, look_up) do
+    if VerifyLimit.limited?(ip) do
+      %{status: :limited}
+    else
+      result = look_up.()
+      if result.status == :not_found, do: VerifyLimit.miss(ip)
+      result
+    end
+  end
+
+  defp look_up(nil), do: %{status: :not_found}
+
+  defp look_up(parsed) do
+    found(
+      TaxCreditLetter.find_by_ref_id(parsed) || ReplacedTaxCreditLetter.find_by_ref_id(parsed)
+    )
+  end
+
+  defp look_up(parsed, last_name) do
+    found(
+      TaxCreditLetter.find_by_ref_id(parsed, last_name) ||
+        ReplacedTaxCreditLetter.find_by_ref_id(parsed, last_name)
+    )
+  end
+
+  defp found(%TaxCreditLetter{} = letter) do
+    %{
+      status: :issued,
+      ref_id: letter.ref_id,
+      member: letter.member,
+      team: letter.member.team,
+      year: letter.year,
+      certified_at: letter.inserted_at,
+      primary_minutes: letter.primary_minutes,
+      secondary_minutes: letter.secondary_minutes
+    }
+  end
+
+  defp found(%ReplacedTaxCreditLetter{tax_credit_letter: letter} = replaced) do
+    %{
+      status: :replaced,
+      ref_id: replaced.ref_id,
+      member: letter.member,
+      team: letter.member.team,
+      year: letter.year,
+      certified_at: replaced.certified_at,
+      replaced_at: replaced.inserted_at,
+      primary_minutes: replaced.primary_minutes,
+      secondary_minutes: replaced.secondary_minutes
+    }
+  end
+
+  defp found(nil), do: %{status: :not_found}
+
+  def render(%{result: nil} = assigns) do
+    ~H"""
+    <div id="start">
+      <h1 class="text-2xl font-semibold text-base-content">Verify a tax credit letter</h1>
+      <p class="mt-2 mb-6 text-secondary-1">
+        Enter the reference number at the bottom of the letter. You'll see the hours the team
+        issued it with.
+      </p>
+
+      <.form for={@form} id="check-form" phx-submit="check">
+        <.input
+          field={@form[:ref]}
+          label="Reference number"
+          placeholder="SRVTC-XXXXXXXX"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          class="font-mono"
+        />
+        <.button size={:lg} class="w-full justify-center">Verify letter</.button>
+      </.form>
+
+      <section class="mt-8 pt-6 border-t border-hr text-sm text-secondary-1">
+        <h2 class="mb-2 font-semibold text-base-content">How it works</h2>
+        <p class="mb-0">
+          Each team makes its tax credit letters in SAR Duty. This page shows what the team issued
+          for a reference number. The hours on the paper letter must match.
+        </p>
+      </section>
+    </div>
+    """
+  end
+
+  def render(%{result: %{status: :needs_last_name}} = assigns) do
+    ~H"""
+    <div id="needs-last-name">
+      <h1 class="text-2xl font-semibold text-base-content">Verify a tax credit letter</h1>
+      <p class="mt-2 mb-6 text-secondary-1">
+        Enter the member's last name, as it is on the letter. Older letters need it with their
+        reference number.
+      </p>
+
+      <.form for={@form} id="last-name-form" phx-submit="check_name">
+        <p class="mb-2 font-mono text-base-content">{@result.ref_id}</p>
+        <.input field={@form[:last_name]} label="Last name" autocomplete="off" spellcheck="false" />
+        <.button size={:lg} class="w-full justify-center">Verify letter</.button>
+      </.form>
+    </div>
+    """
+  end
+
+  def render(assigns) do
+    ~H"""
+    <.result result={@result} />
+    <div class="mt-6">
+      <.button
+        id="check-another"
+        navigate={~p"/letters"}
+        size={:lg}
+        class="w-full justify-center"
+      >
+        Verify another letter
+      </.button>
+    </div>
+    """
+  end
+
+  defp result(%{result: %{status: :limited}} = assigns) do
+    ~H"""
+    <div id="result-limited">
+      <.band kind={:bad} title="Too many tries">Wait a few minutes and try again</.band>
+      <.panel>Too many reference numbers from this connection did not match a letter.</.panel>
+    </div>
+    """
+  end
+
+  defp result(%{result: %{status: :not_found}} = assigns) do
+    ~H"""
+    <div id="result-not-found">
+      <.band kind={:bad} title="No letter has this reference number">
+        Check the number and try again
+      </.band>
+      <.panel>
+        A tax credit letter that SAR Duty cannot verify here was not issued by the team.
+        Reference numbers start with SRVTC, at the bottom of the letter.
+      </.panel>
+    </div>
+    """
+  end
+
+  defp result(assigns) do
+    ~H"""
+    <div id={"result-#{@result.status}"}>
+      <.band :if={@result.status == :issued} kind={:ok} title="Issued by the team">
+        Verified just now
+      </.band>
+      <.band :if={@result.status == :replaced} kind={:warn} title="This letter was replaced">
+        Replaced on {Format.date_long(@result.replaced_at, @result.team.timezone)}
+      </.band>
+
+      <.panel>
+        <h2 id="result-name" class="text-2xl font-semibold text-base-content">
+          {@result.member.name}
+        </h2>
+        <p class="mb-0 font-mono text-sm text-secondary-1">{@result.ref_id}</p>
+
+        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-hr">
+          <img
+            src={"#{Web.Endpoint.url()}/teams/#{@result.team.subdomain}/logo?shape=square"}
+            alt=""
+            class="size-14 shrink-0"
+          />
+          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-base-content">
+            {@result.team.name}
+          </p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <.fact label="Year">{@result.year}</.fact>
+          <.fact label="Certified on" class="text-right">
+            {Format.date_long(@result.certified_at, @result.team.timezone)}
+          </.fact>
+        </div>
+
+        <div
+          :if={@result.primary_minutes && @result.secondary_minutes}
+          id="result-hours"
+          class="mt-4 pt-3 border-t border-hr"
+        >
+          <.hours label="Primary hours" minutes={@result.primary_minutes} />
+          <.hours label="Secondary hours" minutes={@result.secondary_minutes} />
+          <.hours label="Total hours" minutes={@result.primary_minutes + @result.secondary_minutes} />
+        </div>
+        <p :if={!@result.primary_minutes} id="result-no-hours" class="mt-4 mb-0 text-secondary-1">
+          This letter's hours were not saved. Contact the team to confirm them.
+        </p>
+      </.panel>
+
+      <p :if={@result.status == :issued} id="result-check" class="callout mt-4 mb-0 text-sm">
+        <b>Match the hours to the paper letter.</b>
+        If they differ, the letter was changed after the team issued it.
+      </p>
+      <p :if={@result.status == :replaced} id="result-check" class="callout mt-4 mb-0 text-sm">
+        <b>These are the hours the replaced letter said.</b>
+        The team issued a new letter with a new reference number. Ask the member for it.
+      </p>
+
+      <.contact team={@result.team} />
+    </div>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :minutes, :integer, required: true
+
+  defp hours(assigns) do
+    ~H"""
+    <div class="flex justify-between gap-4 py-1">
+      <span class="text-base-content">{@label}</span>
+      <span class="shrink-0 font-semibold text-base-content">
+        {Format.duration_as_hours_minutes_long(@minutes)}
+      </span>
+    </div>
+    """
+  end
+
+  attr :team, :map, required: true
+
+  defp contact(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :lines,
+        Enum.reject(
+          [
+            assigns.team.authorized_by_name,
+            assigns.team.authorized_by_title,
+            assigns.team.authorized_by_phone,
+            assigns.team.authorized_by_email
+          ],
+          &(&1 in [nil, ""])
+        )
+      )
+
+    ~H"""
+    <section :if={@lines != []} id="result-contact" class="mt-4 text-sm text-secondary-1">
+      <h2 class="mb-1 font-semibold text-base-content">Questions about this letter</h2>
+      <p class="mb-0">
+        <%= for {line, index} <- Enum.with_index(@lines) do %>
+          <br :if={index > 0} />{line}
+        <% end %>
+      </p>
+    </section>
+    """
+  end
+end

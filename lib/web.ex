@@ -100,6 +100,8 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: {Web.Layouts, :verify}
 
+      import Web.Components.Verify
+
       unquote(html_helpers())
     end
   end

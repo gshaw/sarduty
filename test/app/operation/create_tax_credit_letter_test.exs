@@ -53,7 +53,9 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     assert letter.letter_content =~ "Total Hours: 4 hours, 30 minutes"
     assert letter.letter_content =~ "Certified on January 15, 2026."
     assert letter.letter_content =~ "Pat Lee"
-    assert letter.letter_content =~ "Reference: SRVTC-ABCDE"
+
+    assert letter.letter_content =~
+             "Reference: SRVTC-ABCDE\nVerify this letter at verify.sarduty.com/letters\n"
   end
 
   test "a member with no hours gets a letter that says 0 hours" do

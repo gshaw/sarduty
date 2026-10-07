@@ -1,10 +1,64 @@
 defmodule App.Model.TaxCreditLetterTest do
   use ExUnit.Case, async: true
 
+  alias App.Model.Member
   alias App.Model.TaxCreditLetter
 
   @timezone "America/Vancouver"
   @now ~U[2026-01-15 18:00:00Z]
+
+  describe "reference numbers" do
+    # cspell:ignore ABCDEFGHJKMNPQRSTVWXYZ SRVTCK -- the code alphabet, and a typed number
+    test "a new one is SRVTC and 8 characters from the ID card alphabet" do
+      ref_id = TaxCreditLetter.generate_ref_id()
+      assert ref_id =~ ~r/^SRVTC-[23456789ABCDEFGHJKMNPQRSTVWXYZ]{8}$/
+      assert TaxCreditLetter.parse_ref_id(ref_id) == {:current, ref_id}
+    end
+
+    test "case, spaces, dashes, and the prefix do not matter" do
+      for typed <- ["srvtc-k7q4m2xa", "K7Q4-M2XA", " SRVTC K7Q4 M2XA ", "SRVTCK7Q4M2XA"] do
+        assert TaxCreditLetter.parse_ref_id(typed) == {:current, "SRVTC-K7Q4M2XA"}, typed
+      end
+    end
+
+    test "a reference number from before #207 is old" do
+      assert TaxCreditLetter.parse_ref_id("SRVTC-M4K11") == {:old, "SRVTC-M4K11"}
+      assert TaxCreditLetter.parse_ref_id("m4k11") == {:old, "SRVTC-M4K11"}
+    end
+
+    test "anything else is nil" do
+      for typed <- ["", "SRVTC-", "K7Q4M2X", "K7Q4M2XAB", "SRVTC-K7Q4M2X0", "../etc", nil] do
+        assert TaxCreditLetter.parse_ref_id(typed) == nil, inspect(typed)
+      end
+    end
+
+    test "only a current reference number can verify alone" do
+      assert TaxCreditLetter.current_ref_id?(%TaxCreditLetter{ref_id: "SRVTC-K7Q4M2XA"})
+      refute TaxCreditLetter.current_ref_id?(%TaxCreditLetter{ref_id: "SRVTC-M4K11"})
+    end
+
+    test "the verify link is the letter's page on the verify site" do
+      letter = %TaxCreditLetter{ref_id: "SRVTC-K7Q4M2XA"}
+
+      assert TaxCreditLetter.verify_url(letter, "https://verify.sarduty.com") ==
+               "https://verify.sarduty.com/letters/SRVTC-K7Q4M2XA"
+    end
+  end
+
+  describe "last_name_matches?/2" do
+    test "reads both ways D4H writes names, ignoring case" do
+      assert TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "mercer")
+      assert TaxCreditLetter.last_name_matches?(%Member{name: "Mercer, Nadia"}, " Mercer ")
+      assert TaxCreditLetter.last_name_matches?(%Member{name: "Ana de la Cruz"}, "de la Cruz")
+    end
+
+    test "a first name, part of a name, or nothing does not match" do
+      refute TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "Nadia")
+      refute TaxCreditLetter.last_name_matches?(%Member{name: "Mercer, Nadia"}, "Nadia")
+      refute TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "cer")
+      refute TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "")
+    end
+  end
 
   describe "parse_minutes/1" do
     defp parse(primary, secondary) do

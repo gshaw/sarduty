@@ -5,6 +5,7 @@ defmodule Web.TaxCreditLetterLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
+  alias App.Model.ReplacedTaxCreditLetter
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
@@ -91,9 +92,14 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert has_element?(lv, "#letter-hours", "1h 30m")
 
       replaced = Repo.get!(TaxCreditLetter, letter.id)
-      assert replaced.ref_id == letter.ref_id
+      assert {:current, _ref_id} = TaxCreditLetter.parse_ref_id(replaced.ref_id)
+      assert replaced.ref_id != letter.ref_id
       assert replaced.primary_minutes == 90
       assert replaced.letter_content =~ "Primary Hours: 1 hour, 30 minutes"
+      assert replaced.letter_content =~ "Reference: #{replaced.ref_id}"
+
+      old = Repo.get_by!(ReplacedTaxCreditLetter, tax_credit_letter_id: letter.id)
+      assert {old.ref_id, old.primary_minutes} == {letter.ref_id, 60}
       assert_no_email_sent()
     end
 

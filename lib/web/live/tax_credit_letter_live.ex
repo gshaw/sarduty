@@ -84,14 +84,15 @@ defmodule Web.TaxCreditLetterLive do
         <p>
           This letter says {format_minutes(TaxCreditLetter.total_minutes(@letter))}.
           Attendance now adds up to {format_minutes(@hours.total_minutes)}.
-          Replace the letter to use the new hours. It keeps its reference number and is not emailed.
+          Replace the letter to use the new hours. It gets a new reference number and is not emailed.
+          The old reference number still verifies, with the old hours.
         </p>
         <.button
           id="replace-letter"
           variant={:warning}
           size={:sm}
           phx-click="replace"
-          data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It is not emailed."}
+          data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It gets a new reference number and is not emailed."}
         >
           Replace letter
         </.button>
@@ -156,7 +157,7 @@ defmodule Web.TaxCreditLetterLive do
         |> assign_letter(letter)
         |> put_flash(
           :info,
-          "Letter replaced. It now says #{format_minutes(TaxCreditLetter.total_minutes(letter))}."
+          "Letter replaced. #{letter.ref_id} says #{format_minutes(TaxCreditLetter.total_minutes(letter))}."
         )
 
       {:noreply, socket}

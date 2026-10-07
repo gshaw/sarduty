@@ -3,13 +3,12 @@ alias App.Model.TaxCreditLetter
 alias App.Operation.CountTaxCreditHours
 alias App.Repo
 alias Service.Format
-alias Service.Random
 
 defmodule App.Operation.CreateTaxCreditLetter do
   def call(team: team, member_id: member_id, year: year) do
     member = Member.get_by(id: member_id, team_id: team.id)
     rows = CountTaxCreditHours.load_rows(team, year, [member.id])
-    ref_id = "SRVTC-#{Random.token(5)}"
+    ref_id = TaxCreditLetter.generate_ref_id()
 
     team
     |> plan(member, rows, year, ref_id, DateTime.utc_now())
@@ -65,6 +64,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
     #{signer_block(team)}
 
     Reference: #{ref_id}
+    Verify this letter at verify.sarduty.com/letters
     """
   end
 
