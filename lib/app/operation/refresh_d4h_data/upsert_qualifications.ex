@@ -4,6 +4,7 @@ defmodule App.Operation.RefreshD4HData.UpsertQualifications do
   alias App.Adapter.D4H
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.StaleRows
   alias App.Repo
@@ -37,7 +38,9 @@ defmodule App.Operation.RefreshD4HData.UpsertQualifications do
       |> where([q], q.team_id == ^team_id)
       |> StaleRows.ids(:d4h_qualification_id, synced_d4h_ids)
 
-    MemberQualificationAward |> where([a], a.qualification_id in ^stale_ids) |> Repo.delete_all()
+    awards = where(MemberQualificationAward, [a], a.qualification_id in ^stale_ids)
+    RecordD4HChanges.removed(:award, Repo.all(awards))
+    Repo.delete_all(awards)
     {count, _} = Qualification |> where([q], q.id in ^stale_ids) |> Repo.delete_all()
     Logger.info("Deleted #{count} stale qualifications for team #{team_id}")
   end

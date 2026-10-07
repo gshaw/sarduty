@@ -151,10 +151,10 @@
   .tabs a:hover { color: var(--link-hover); text-decoration: underline; }
   .tabs a[aria-current="page"] { background: var(--bg); border-color: var(--border); border-top-color: var(--primary); }
 
-  /* Phones: tighter tabs, so a member's four fit across. */
+  /* Phones: tighter tabs, so a member's five fit across. */
   @media (width < 40rem) {
     .tabs { gap: 0; }
-    .tabs a { padding-inline: var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+    .tabs a { padding-inline: var(--sp-1); font-size: var(--fs-sm); line-height: var(--lh-sm); }
   }
 
   .breadcrumbs {

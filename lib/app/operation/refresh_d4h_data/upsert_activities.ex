@@ -5,6 +5,7 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
   alias App.Model.Activity
   alias App.Model.AttendanceLink
   alias App.Model.Coordinate
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Repo
 
@@ -81,10 +82,14 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
   def clear_deleted(_team, []), do: :ok
 
   def clear_deleted(team, d4h_activity_ids) do
-    Activity
-    |> where([a], a.team_id == ^team.id and a.d4h_activity_id in ^d4h_activity_ids)
-    |> where([a], not is_nil(a.deleted_at))
-    |> Repo.update_all(set: [deleted_at: nil, updated_at: DateTime.utc_now()])
+    query =
+      Activity
+      |> where([a], a.team_id == ^team.id and a.d4h_activity_id in ^d4h_activity_ids)
+      |> where([a], not is_nil(a.deleted_at))
+
+    restored = Repo.all(query)
+    Repo.update_all(query, set: [deleted_at: nil, updated_at: DateTime.utc_now()])
+    Enum.each(restored, &RecordD4HChanges.record(:activity, &1, %{&1 | deleted_at: nil}))
 
     :ok
   end
@@ -95,9 +100,14 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
   defp set_deleted_at(_team_id, [], _deleted_at), do: :ok
 
   defp set_deleted_at(team_id, ids, deleted_at) do
-    Activity
-    |> where([a], a.team_id == ^team_id and a.id in ^ids)
-    |> Repo.update_all(set: [deleted_at: deleted_at, updated_at: DateTime.utc_now()])
+    query = where(Activity, [a], a.team_id == ^team_id and a.id in ^ids)
+    activities = Repo.all(query)
+    Repo.update_all(query, set: [deleted_at: deleted_at, updated_at: DateTime.utc_now()])
+
+    Enum.each(
+      activities,
+      &RecordD4HChanges.record(:activity, &1, %{&1 | deleted_at: deleted_at})
+    )
   end
 
   defp upsert_page(team_id, d4h_activities, {total_count, progress, synced_d4h_ids}) do
@@ -126,11 +136,7 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
     }
 
     activity = Activity.get_by(team_id: team_id, d4h_activity_id: d4h_activity.d4h_activity_id)
-
-    if activity do
-      Activity.update!(activity, params)
-    else
-      Activity.insert!(params)
-    end
+    saved = if activity, do: Activity.update!(activity, params), else: Activity.insert!(params)
+    RecordD4HChanges.record(:activity, activity, saved)
   end
 end

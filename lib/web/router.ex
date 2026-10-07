@@ -162,12 +162,14 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id", ActivityLive
       live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
+      live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive
       live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
       live "/teams/:subdomain/members", MemberCollectionLive
       live "/teams/:subdomain/members/:id", MemberLive
       live "/teams/:subdomain/members/:id/groups", MemberGroupsLive
       live "/teams/:subdomain/members/:id/qualifications", MemberQualificationsLive
       live "/teams/:subdomain/members/:id/card", MemberCardLive
+      live "/teams/:subdomain/members/:id/history", MemberHistoryLive
       live "/teams/:subdomain/groups", GroupCollectionLive
       live "/teams/:subdomain/groups/:id", GroupLive
       live "/teams/:subdomain/groups/:id/review", GroupReviewLive

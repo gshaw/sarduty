@@ -70,6 +70,12 @@ refresh once a night as the safety net (#163).
   `Error: No D4H key…` or `Error: D4H rejected the team key (401)…` and cancels, so it is
   neither retried nor sent to Honeybadger. It tries again the next night.
 
+### What changed
+
+Both runs record what they change in the copy as `d4h_changes`, the history on member and
+activity pages. A team's first refresh records nothing. See
+[change-history.md](change-history.md).
+
 ## Monitoring
 
 - **Healthchecks, once per run.** Each scheduler pings its check's `/start` and queues

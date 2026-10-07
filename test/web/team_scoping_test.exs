@@ -8,12 +8,14 @@ defmodule Web.TeamScopingTest do
   @templates [
     "/teams/:subdomain/activities/:id",
     "/teams/:subdomain/activities/:id/attendance",
+    "/teams/:subdomain/activities/:id/history",
     "/teams/:subdomain/activities/:id/mileage",
     "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/groups",
     "/teams/:subdomain/members/:id/qualifications",
     "/teams/:subdomain/members/:id/card",
+    "/teams/:subdomain/members/:id/history",
     "/teams/:subdomain/members/:id/card/apple-wallet",
     "/teams/:subdomain/members/:id/card/google-wallet",
     "/teams/:subdomain/members/:id/image",
@@ -64,6 +66,9 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/activities/:id/attendance", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/attendance"
 
+  defp path_for("/teams/:subdomain/activities/:id/history", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/history"
+
   defp path_for("/teams/:subdomain/activities/:id/mileage", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/mileage"
 
@@ -80,6 +85,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/members/:id/card", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/card"
+
+  defp path_for("/teams/:subdomain/members/:id/history", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/history"
 
   defp path_for("/teams/:subdomain/members/:id/card/apple-wallet", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/card/apple-wallet"
