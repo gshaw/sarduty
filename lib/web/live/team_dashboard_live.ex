@@ -250,7 +250,7 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :refresh}), do: ~p"/teams/#{team}/settings"
 
   defp attention_path(team, %{key: :drafts}),
-    do: ~p"/teams/#{team}/activities?status=draft&when=past&sort=date-"
+    do: ~p"/teams/#{team}/activities?status=draft&when=recent&sort=date-"
 
   defp attention_path(team, %{key: :expiring}),
     do: ~p"/teams/#{team}/qualifications?view=expiring"
@@ -333,7 +333,9 @@ defmodule Web.TeamDashboardLive do
           <header>
             <h2 class="chart-title">Where the team went</h2>
           </header>
-          <p class="chart-caption">Activities in the last 12 months. Large dots are this month.</p>
+          <p :if={@map} class="chart-caption">
+            Activities in the last 12 months. Large dots are this month.
+          </p>
           <.activity_map
             :if={@map}
             id="activity-map"
@@ -350,7 +352,9 @@ defmodule Web.TeamDashboardLive do
             <h2 class="chart-title">Every day out</h2>
           </header>
           <p class="chart-caption">Activities on each day of the last 12 months</p>
-          <.calendar id="activity-calendar" days={@charts.calendar_days} />
+          <div class="dash-scroll">
+            <.calendar id="activity-calendar" days={@charts.calendar_days} />
+          </div>
         </section>
       </div>
     </div>

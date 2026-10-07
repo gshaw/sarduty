@@ -32,15 +32,17 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     do: [
       {"All", "all"},
       {"Current", "current"},
+      {"Last 30 days", "recent"},
       {"Past", "past"},
       {"Future", "future"} | build_team_year_options(team)
     ]
 
   @doc """
   The sort that suits `when`, or nil to keep the sort as it is: oldest first
-  for Current and Future, newest first for Past.
+  for Current and Future, newest first for Last 30 days and Past.
   """
   def sort_for_when("current"), do: "date"
+  def sort_for_when("recent"), do: "date-"
   def sort_for_when("future"), do: "date"
   def sort_for_when("past"), do: "date-"
   def sort_for_when(_when), do: nil
@@ -105,7 +107,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, Enum.map(activity_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
-    |> validate_format(:when, ~r/\A(all|current|past|future|\d{4})\z/)
+    |> validate_format(:when, ~r/\A(all|current|recent|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,
@@ -144,6 +146,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     {start, finish} = Service.DayRange.around(DateTime.utc_now(), timezone, @current_days)
     Activity.overlapping(q, start, finish)
   end
+
+  defp scope(q, when: "recent", timezone: _),
+    do: Activity.finished_recently(q, DateTime.utc_now())
 
   defp scope(q, when: "past", timezone: _), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
 

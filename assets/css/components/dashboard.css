@@ -17,3 +17,8 @@
 .attention > li { align-items: flex-start; }
 .attention-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--info); }
 .is-warning .attention-mark { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent); }
+
+/* A year of days needs about 720px to read. Narrower, it scrolls sideways inside its card
+   rather than squeezing or pushing the page wider. */
+.dash-scroll { overflow-x: auto; }
+.dash-scroll > * { min-width: 720px; }

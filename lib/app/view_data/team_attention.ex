@@ -9,13 +9,8 @@ defmodule App.ViewData.TeamAttention do
 
   @max_items 6
 
-  # Drafts from this many days back are worth checking; older ones are left alone.
-  @draft_days 30
-
   # Members file their taxes by April 30, so letters are worth a nudge until then.
   @letter_months 1..4
-
-  def draft_days, do: @draft_days
 
   @doc "Whether `now` falls in the months the tax credit letters item can show."
   def letter_season?(now, timezone),

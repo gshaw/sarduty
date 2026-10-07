@@ -126,13 +126,10 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   # Finished in the last 30 days and still a draft in D4H.
   defp count_recent_drafts(team, now) do
-    since = DateTime.add(now, -TeamAttention.draft_days(), :day)
-
     Activity
     |> where([a], a.team_id == ^team.id and a.is_published == false)
     |> Activity.not_deleted()
-    |> where([a], a.started_at >= type(^naive(since), :naive_datetime))
-    |> where([a], a.finished_at <= type(^naive(now), :naive_datetime))
+    |> Activity.finished_recently(now)
     |> Repo.aggregate(:count)
   end
 

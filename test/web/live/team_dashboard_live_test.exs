@@ -108,7 +108,7 @@ defmodule Web.TeamDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#attention-drafts a[href="/teams/#{team.subdomain}/activities?status=draft&when=past&sort=date-"]}
+             ~s{#attention-drafts a[href="/teams/#{team.subdomain}/activities?status=draft&when=recent&sort=date-"]}
            )
 
     assert has_element?(lv, "#attention-missing_details", "2 members missing details")
@@ -117,6 +117,24 @@ defmodule Web.TeamDashboardLiveTest do
              lv,
              ~s{#attention-missing_details a[href="/teams/#{team.subdomain}/members?details=missing"]}
            )
+  end
+
+  test "Check activities lists the same drafts the dashboard counts", %{conn: conn} do
+    %{user: user, team: team} = admin_with_team_fixture()
+    activity_fixture(team, at(-48, %{title: "Counted draft", is_published: false}))
+    activity_fixture(team, at(-24 * 40, %{title: "Old draft", is_published: false}))
+    activity_fixture(team, at(-1, %{title: "Running draft", is_published: false}))
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+    assert has_element?(lv, "#attention-drafts", "1 activity to check")
+
+    {:ok, list, _html} =
+      lv |> element("#attention-drafts a") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(list, "#activity_collection", "Counted draft")
+    refute has_element?(list, "#activity_collection", "Old draft")
+    refute has_element?(list, "#activity_collection", "Running draft")
   end
 
   test "a qualification running out needs attention", %{conn: conn} do
