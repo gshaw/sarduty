@@ -43,7 +43,8 @@ defmodule Web.Admin.MCPLive do
     <.admin_tabs current={:mcp} />
     <p class="mb-p max-w-3xl">
       Team admins can create MCP tokens once MCP is on for their team. Agents read
-      members, attendance hours, activities, and qualifications, and change nothing.
+      members, attendance hours, activities, qualifications, and change history. They cannot
+      change D4H; they can propose attendance changes for a team admin to send.
       Turning MCP off revokes every token on the team. See <code>docs/mcp.md</code>.
     </p>
     <.table id="mcp-teams" rows={@teams} row_id={&"mcp-team-#{&1.id}"} class="mb-p2 table-striped">

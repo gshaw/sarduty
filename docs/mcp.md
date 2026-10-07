@@ -46,9 +46,15 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 [App.MCP.Tools](../lib/app/mcp/tools.ex). Adding a tool is a module with the
 [App.MCP.Tool](../lib/app/mcp/tool.ex) behaviour and a line in that list.
 
-- **Read-only.** No tool writes to SAR Duty or D4H. A tool that proposes D4H changes
-  must only build a change set with `ChangeSet.propose!/2` for a person to review, and
-  never apply it ([change-sets.md](change-sets.md)).
+- **Read-only, except for proposals.** No tool writes to D4H. One tool,
+  `propose_attendance_changes` (#216), saves a change set that waits for a team admin
+  under "Proposed changes". It implements `call_as/4`, which also gets the token's user,
+  and `read_only?/0` returning false, so `tools/list` drops its `readOnlyHint`. A test
+  fails if anything in `lib/app/mcp/` mentions `ApplyChangeSet` or the D4H adapter. See
+  [change-sets.md](change-sets.md).
+- **History.** `member_history` and `activity_history` return the same entries as the
+  history pages ([change-history.md](change-history.md)), without the account email of
+  whoever sent a change.
 - **Allowlisted fields.** Each tool builds explicit maps and lists every key it may
   return in `fields/0`; a test fails on any other key. Never email, phone, an address,
   coordinates, an activity's description, letter text, or a key.

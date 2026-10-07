@@ -79,12 +79,13 @@ defmodule Web.Settings.MCPLive do
       <h1 class="heading">MCP tokens</h1>
       <p>
         An MCP token lets your AI agent, such as Claude Code, read {@current_team.name}'s data
-        in SAR Duty. It can read members, groups, attendance hours, activities, and
-        qualifications.
+        in SAR Duty. It can read members, groups, attendance hours, activities,
+        qualifications, and change history.
       </p>
       <p class="mt-p">
-        Agents cannot change anything in SAR Duty or D4H. They never see email, phone numbers,
-        or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
+        Agents cannot change D4H. They can propose attendance changes, and nothing happens
+        until a team admin sends them from Proposed changes. Agents never see email, phone
+        numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
       <p class="mt-p">
         Each token is yours. It stops working when you revoke it, or when D4H no longer makes

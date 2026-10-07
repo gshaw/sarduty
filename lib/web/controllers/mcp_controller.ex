@@ -123,8 +123,9 @@ defmodule Web.MCPController do
        "capabilities" => %{"tools" => %{"listChanged" => false}},
        "serverInfo" => %{"name" => "sarduty", "title" => "SAR Duty", "version" => "1.0.0"},
        "instructions" =>
-         "Read-only data for #{team.name}, copied from D4H by SAR Duty. " <>
-           "Times are in #{team.timezone}. Nothing here changes D4H or SAR Duty."
+         "Data for #{team.name}, copied from D4H by SAR Duty. Times are in " <>
+           "#{team.timezone}. Nothing here changes D4H. propose_attendance_changes saves " <>
+           "a proposal that a team admin reviews and sends in SAR Duty."
      }}
   end
 
