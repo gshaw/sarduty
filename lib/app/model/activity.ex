@@ -95,6 +95,13 @@ defmodule App.Model.Activity do
     |> where([r], r.started_at < type(^finish, :naive_datetime))
   end
 
+  @doc "Rows that overlap `start` to `finish`, so a weekend course stays in while it runs."
+  def overlapping(query, start, finish) do
+    query
+    |> where([r], r.started_at < type(^finish, :naive_datetime))
+    |> where([r], r.finished_at > type(^start, :naive_datetime))
+  end
+
   @doc "The years `query`'s rows span, newest first, in `timezone`."
   def years(query, timezone) do
     {first, last} =

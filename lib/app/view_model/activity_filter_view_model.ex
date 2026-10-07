@@ -7,6 +7,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   alias App.Model.Activity
   alias App.Repo
 
+  # Days either side of today that Current shows. A busy team runs about six
+  # activities a week, so this fits on one screen.
+  @current_days 7
+
   @primary_key false
   embedded_schema do
     field :q, Field.TrimmedString
@@ -21,7 +25,21 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     do: [{"All", "all"}, {"Exercise", "exercise"}, {"Event", "event"}, {"Incident", "incident"}]
 
   def when_kinds(team),
-    do: [{"All", "all"}, {"Past", "past"}, {"Future", "future"} | build_team_year_options(team)]
+    do: [
+      {"All", "all"},
+      {"Current", "current"},
+      {"Past", "past"},
+      {"Future", "future"} | build_team_year_options(team)
+    ]
+
+  @doc """
+  The sort that suits `when`, or nil to keep the sort as it is: oldest first
+  for Current and Future, newest first for Past.
+  """
+  def sort_for_when("current"), do: "date"
+  def sort_for_when("future"), do: "date"
+  def sort_for_when("past"), do: "date-"
+  def sort_for_when(_when), do: nil
 
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
@@ -80,7 +98,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> cast(params, [:q, :activity, :when, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, Enum.map(activity_kinds(), fn {_, v} -> v end))
-    |> validate_format(:when, ~r/\A(all|past|future|\d{4})\z/)
+    |> validate_format(:when, ~r/\A(all|current|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
       greater_than_or_equal_to: 1,
@@ -114,6 +132,12 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   end
 
   defp scope(q, when: "all", timezone: _), do: q
+
+  defp scope(q, when: "current", timezone: timezone) do
+    {start, finish} = Service.DayRange.around(DateTime.utc_now(), timezone, @current_days)
+    Activity.overlapping(q, start, finish)
+  end
+
   defp scope(q, when: "past", timezone: _), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
 
   defp scope(q, when: "future", timezone: _),
