@@ -30,6 +30,19 @@ defmodule App.Operation.BuildTaxCreditLetterAttachmentTest do
     refute attachment.content =~ "/Subtype /Image"
   end
 
+  describe "the QR code" do
+    test "opens the letter's page on the verify site", %{letter: letter} do
+      letter = %{letter | ref_id: "SRVTC-K7Q4M2XA"}
+
+      assert BuildTaxCreditLetterAttachment.qr_url(letter) ==
+               "#{Web.VerifyHost.url()}/letters/SRVTC-K7Q4M2XA"
+    end
+
+    test "a letter from before #207 gets none", %{letter: letter} do
+      assert BuildTaxCreditLetterAttachment.qr_url(%{letter | ref_id: "SRVTC-M4K11"}) == nil
+    end
+  end
+
   describe "the signature" do
     setup %{team: team} do
       member = member_fixture(team)

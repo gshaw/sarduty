@@ -32,7 +32,8 @@ Devices, Google, Apple, and shared links hold these. They don't move.
 - `/s/:code` and `/attendance/:token`: shared attendance links.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
-  Wallet banner), and `/orgs/:slug`.
+  Wallet banner), `/orgs/:slug`, and `/letters/:ref` (the QR code on every tax credit
+  letter since #207).
 
 Card images always use SAR Duty's verify host, even for an organization with its own,
 since Google Wallet objects hold the banner URL.

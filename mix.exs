@@ -41,6 +41,7 @@ defmodule App.MixProject do
       {:dns_cluster, "~> 0.2"},
       {:ecto_sql, "~> 3.12"},
       {:ecto_sqlite3, "~> 0.22"},
+      {:eqrcode, "~> 0.2.1"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:floki, ">= 0.30.0"},
       {:gettext, "~> 1.0"},

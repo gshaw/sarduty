@@ -6,8 +6,13 @@ defmodule Service.PDFLetter do
   @signature_max_height 0.75 * @one_inch
   # Space above and below the signature.
   @signature_gap 6
+  @qr_size @one_inch
 
-  def build(options) do
+  @doc "The letter's PDF, locked against edits so it can only be printed."
+  def build(options), do: options |> render() |> Service.PDFLock.lock()
+
+  @doc "The letter's PDF before `build/1` locks it."
+  def render(options) do
     temp_path = write_to_temp_path(options)
     pdf_contents = File.read!(temp_path)
     File.rm(temp_path)
@@ -29,6 +34,7 @@ defmodule Service.PDFLetter do
     )
     |> add_logo(options)
     |> add_text_content(options)
+    |> add_qr_code(options)
     |> Pdf.write_to(temp_path)
     |> Pdf.cleanup()
 
@@ -89,6 +95,42 @@ defmodule Service.PDFLetter do
       {width - 2 * @one_inch, height - 2 * @one_inch},
       options.content
     )
+  end
+
+  # The letter's verify link, bottom right, its bottom edge level with the last line of
+  # text. That's the signer block and reference number, short lines that leave the space.
+  # Each run of dark modules in a row is one rectangle, so no seams show between them.
+  defp add_qr_code(pdf, %{qr_url: url}) when is_binary(url) do
+    %{width: width} = Pdf.size(pdf)
+    top_left = {width - @one_inch - @qr_size, Pdf.cursor(pdf) + @qr_size}
+
+    url
+    |> qr_rectangles(top_left)
+    |> Enum.reduce(Pdf.set_fill_color(pdf, :black), fn {origin, size}, pdf ->
+      Pdf.rectangle(pdf, origin, size)
+    end)
+    |> Pdf.fill()
+  end
+
+  defp add_qr_code(pdf, _options), do: pdf
+
+  # `{origin, size}` of each rectangle, in PDF points, which run up from the bottom.
+  defp qr_rectangles(url, {left, top}) do
+    rows = url |> EQRCode.encode(:m) |> Map.fetch!(:matrix) |> Tuple.to_list()
+    module = @qr_size / length(rows)
+
+    for {row, y} <- Enum.with_index(rows), {x, length} <- dark_runs(Tuple.to_list(row)) do
+      {{left + x * module, top - (y + 1) * module}, {length * module, module}}
+    end
+  end
+
+  # `{start, length}` of each run of 1s.
+  defp dark_runs(modules) do
+    modules
+    |> Enum.with_index()
+    |> Enum.chunk_by(fn {module, _x} -> module end)
+    |> Enum.filter(fn [{module, _x} | _rest] -> module == 1 end)
+    |> Enum.map(fn [{_module, x} | _rest] = run -> {x, length(run)} end)
   end
 
   defp set_text_font(pdf) do
