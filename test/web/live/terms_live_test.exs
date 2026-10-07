@@ -3,10 +3,16 @@ defmodule Web.TermsLiveTest do
 
   import Phoenix.LiveViewTest
 
-  test "renders the placeholder", %{conn: conn} do
+  test "anyone can read the terms", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/terms")
 
-    assert has_element?(lv, "#terms-title")
-    assert has_element?(lv, "#terms-placeholder")
+    assert has_element?(lv, "#terms h1", "Terms")
+    assert has_element?(lv, ~s(#terms-privacy[href="/privacy"]))
+  end
+
+  test "the footer links to them", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/")
+
+    assert has_element?(lv, ~s(#footer-terms[href="/terms"]))
   end
 end

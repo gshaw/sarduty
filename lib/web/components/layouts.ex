@@ -91,6 +91,14 @@ defmodule Web.Layouts do
         ·
       </span>
       Powered by <a href={Web.Endpoint.url()} class="hover:underline">{Web.Endpoint.host()}</a>
+      ·
+      <a id="verify-footer-privacy" href={Web.Endpoint.url() <> "/privacy"} class="hover:underline">
+        Privacy
+      </a>
+      ·
+      <a id="verify-footer-terms" href={Web.Endpoint.url() <> "/terms"} class="hover:underline">
+        Terms
+      </a>
     </footer>
     """
   end
@@ -146,6 +154,8 @@ defmodule Web.Layouts do
         <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         ·
         <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
+        ·
+        <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         <%= if @admin? do %>
           ·
           <.a id="footer-styles" href="/styles">Style guide</.a>
