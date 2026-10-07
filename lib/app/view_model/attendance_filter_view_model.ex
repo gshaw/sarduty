@@ -78,7 +78,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     |> scope(tag: filter_options.tag)
     |> scope(sort: filter_options.sort)
     |> preload(:activity)
-    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
+    |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
   end
 
   def total_duration(member, filter_options) do

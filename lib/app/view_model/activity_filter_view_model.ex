@@ -86,7 +86,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
     |> scope(sort: filter_options.sort)
-    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
+    |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
   end
 
   defp build_new do
