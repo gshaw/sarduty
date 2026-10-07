@@ -123,8 +123,8 @@ defmodule Web.VerifyLive do
         Verify a search and rescue ID card
       </h1>
       <p class="mt-2 mb-0 text-secondary-1">
-        Scan the QR code on the member's ID card. You'll see whether they're an active member
-        of their team, with their photo.
+        Scan the QR code on the member's ID card. SAR Duty shows whether they are an active
+        member of their team, with their photo.
       </p>
 
       <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="mt-6 mb-6">
@@ -162,7 +162,7 @@ defmodule Web.VerifyLive do
       <.form for={@form} id="check-form" phx-submit="check">
         <.input
           field={@form[:code]}
-          label="Or type the code printed under the QR code"
+          label="Or type the code under the QR code"
           placeholder="XXXX-XXXX"
           autocomplete="off"
           autocapitalize="characters"
@@ -175,12 +175,12 @@ defmodule Web.VerifyLive do
       <section class="mt-8 pt-6 border-t border-hr text-sm text-secondary-1">
         <h2 class="mb-2 font-semibold text-base-content">How it works</h2>
         <p class="mb-2">
-          Each team keeps member records. SAR Duty verifies the card against them, so a
-          cancelled card, or a member who has left, shows here.
+          SAR Duty verifies each card against the team's D4H records. A cancelled card shows
+          here, and so does a member who has left.
         </p>
         <p class="mb-0">
-          A real card's QR code always opens <b class="text-base-content">{Web.VerifyHost.host()}</b>. Keep this page
-          on your home screen if you verify ID cards often.
+          A real card's QR code always opens <b class="text-base-content">{Web.VerifyHost.host()}</b>. Add this page
+          to your home screen if you verify ID cards often.
         </p>
       </section>
     </div>
@@ -212,8 +212,8 @@ defmodule Web.VerifyLive do
     <div id="result-not-found">
       <.band kind={:bad} title="No card has this code">Check the code and try again</.band>
       <.panel>
-        A card that SAR Duty cannot verify here is not valid. Codes are 8 letters and numbers,
-        printed under the QR code.
+        Codes are 8 letters and numbers, under the QR code. If the code is right, the card is
+        not valid.
       </.panel>
     </div>
     """
@@ -222,14 +222,14 @@ defmodule Web.VerifyLive do
   defp result(%{result: %{status: :other_site}} = assigns) do
     ~H"""
     <div id="result-other-site">
-      <.band kind={:bad} title="Not a SAR Duty card">Treat this card as forged</.band>
+      <.band kind={:bad} title="Not a SAR Duty card">Do not accept this card</.band>
       <.panel>
         <p>
           Its QR code links to <span class="font-mono text-danger-1">{@result.host}</span>.
         </p>
         <p class="mt-2">
-          A real card's code only ever opens <b>{Web.VerifyHost.host()}</b>. Do not trust any
-          page the card opened.
+          A real card's QR code always opens <b>{Web.VerifyHost.host()}</b>. Do not trust any
+          page this card opened.
         </p>
       </.panel>
     </div>
@@ -317,7 +317,7 @@ defmodule Web.VerifyLive do
           <li :for={q <- @result.qualifications} class="flex justify-between gap-4 py-1">
             <span class="text-base-content">{q.name}</span>
             <span class="shrink-0 text-secondary-1">
-              {BuildCardQualifications.status_text(q, @team.timezone)}
+              {expiry_text(q, @team.timezone)}
             </span>
           </li>
         </ul>
@@ -328,8 +328,8 @@ defmodule Web.VerifyLive do
         id="result-check"
         class="callout mt-4 mb-0 text-sm"
       >
-        <b>Match the photo to the person.</b>
-        And check that the address bar says {Web.VerifyHost.host()}.
+        <b>Compare the photo with the person.</b>
+        Make sure the address bar shows {Web.VerifyHost.host()}.
       </p>
       <p :if={@status == :inactive} class="mt-4 mb-0 text-base-content">
         This card does not qualify for member benefits.
@@ -340,6 +340,11 @@ defmodule Web.VerifyLive do
     </div>
     """
   end
+
+  defp expiry_text(%{ends_at: nil}, _timezone), do: "No expiry"
+
+  defp expiry_text(%{ends_at: ends_at}, timezone),
+    do: "Expires #{Service.Format.month_year(ends_at, timezone)}"
 
   defp left_text(%{left_at: nil}), do: "Not a current member"
 
