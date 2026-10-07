@@ -1,7 +1,6 @@
 defmodule App.Model.Member do
   use App, :model
 
-  alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.GroupMember
   alias App.Model.Member
@@ -159,48 +158,5 @@ defmodule App.Model.Member do
   def update!(%Member{} = record, params) do
     changeset = Member.build_changeset(record, params)
     Repo.update!(changeset)
-  end
-
-  def include_primary_and_secondary_minutes(query, team, year) do
-    query
-    |> join_activity_minutes(team, year, Activity.primary_hours_tag())
-    |> join_activity_minutes(team, year, Activity.secondary_hours_tag())
-    |> join_tax_credit_letter_id(year)
-    |> select_primary_secondary_minutes_summary()
-  end
-
-  defp join_activity_minutes(query, team, year, tag) do
-    from(
-      m in query,
-      left_join: a in subquery(Attendance.tagged_minutes_summary(team, year, [tag])),
-      on: m.id == a.member_id
-    )
-  end
-
-  defp join_tax_credit_letter_id(query, year) do
-    from(
-      m in query,
-      left_join: tcl in assoc(m, :tax_credit_letters),
-      on: tcl.year == ^year
-    )
-  end
-
-  defp select_primary_secondary_minutes_summary(query) do
-    from(
-      [m, primary, secondary, tcl] in query,
-      select: %{
-        member: m,
-        tax_credit_letter_id: tcl.id,
-        tax_credit_letter_ref_id: tcl.ref_id,
-        primary_minutes: fragment("? as primary_minutes", coalesce(primary.minutes, 0)),
-        secondary_minutes: fragment("? as secondary_minutes", coalesce(secondary.minutes, 0)),
-        total_minutes:
-          fragment(
-            "(? + ?) as total_minutes",
-            coalesce(primary.minutes, 0),
-            coalesce(secondary.minutes, 0)
-          )
-      }
-    )
   end
 end

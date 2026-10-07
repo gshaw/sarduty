@@ -1,7 +1,6 @@
-import Ecto.Query
-
 alias App.Model.Member
 alias App.Model.TaxCreditLetter
+alias App.Operation.CountTaxCreditHours
 alias App.Repo
 alias Service.Format
 alias Service.Random
@@ -9,24 +8,34 @@ alias Service.Random
 defmodule App.Operation.CreateTaxCreditLetter do
   def call(team: team, member_id: member_id, year: year) do
     member = Member.get_by(id: member_id, team_id: team.id)
+    rows = CountTaxCreditHours.load_rows(team, year, [member.id])
     ref_id = "SRVTC-#{Random.token(5)}"
-    letter_content = build_letter_content(team, member, ref_id, year)
 
-    %{
-      member_id: member.id,
-      ref_id: ref_id,
-      year: year,
-      letter_content: letter_content
-    }
+    team
+    |> plan(member, rows, year, ref_id, DateTime.utc_now())
     |> TaxCreditLetter.build_new_changeset()
     |> Repo.insert!()
     |> Repo.preload(member: :team)
   end
 
-  defp build_letter_content(team, member, ref_id, year) do
-    summary = build_minutes_summary(team, member, year)
-    certified_at = DateTime.utc_now()
-    formatted_certified_on = Format.date_long(certified_at, team.timezone)
+  @doc """
+  The new letter's fields for `member`, from their attendance `rows` as
+  `CountTaxCreditHours.count/3` takes them.
+  """
+  def plan(team, member, rows, year, ref_id, now) do
+    hours =
+      rows |> CountTaxCreditHours.count(year, team.timezone) |> CountTaxCreditHours.get(member.id)
+
+    %{
+      member_id: member.id,
+      ref_id: ref_id,
+      year: year,
+      letter_content: build_letter_content(team, member, hours, ref_id, year, now)
+    }
+  end
+
+  defp build_letter_content(team, member, hours, ref_id, year, now) do
+    formatted_certified_on = Format.date_long(now, team.timezone)
 
     """
     #{team.mailing_address}
@@ -39,9 +48,9 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
     This letter serves to confirm that the above noted individual has completed eligible volunteer search and rescue hours for #{team.name}, an ‘Eligible Search and Rescue Organization recognized by the RCMP’ in the #{year} calendar year.
 
-    Primary Hours: #{Format.duration_as_hours_minutes_long(summary.primary_minutes)}
-    Secondary Hours: #{Format.duration_as_hours_minutes_long(summary.secondary_minutes)}
-    Total Hours: #{Format.duration_as_hours_minutes_long(summary.total_minutes)}
+    Primary Hours: #{Format.duration_as_hours_minutes_long(hours.primary_minutes)}
+    Secondary Hours: #{Format.duration_as_hours_minutes_long(hours.secondary_minutes)}
+    Total Hours: #{Format.duration_as_hours_minutes_long(hours.total_minutes)}
 
     Please contact the writer if you have any questions.
 
@@ -54,12 +63,5 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
     Reference: #{ref_id}
     """
-  end
-
-  defp build_minutes_summary(team, member, year) do
-    Member
-    |> where(id: ^member.id)
-    |> Member.include_primary_and_secondary_minutes(team, year)
-    |> Repo.one()
   end
 end

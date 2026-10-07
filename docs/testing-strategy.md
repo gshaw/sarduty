@@ -35,6 +35,10 @@ data?
   `user_*` LiveView tests — the generated suite, kept.
 - Group rules: `test/app/operation/build_group_rule_preview_test.exs`, and applying
   them to D4H against a stub: `test/app/operation/apply_group_rule_changes_test.exs`.
+- Tax credit letter hours: `test/app/operation/count_tax_credit_hours_test.exs` counts
+  each row's own times, merges overlaps (primary wins), and picks the year in the team's
+  time zone. The letter list and the letter count the same way
+  (`test/app/view_model/tax_credit_letter_filter_view_model_test.exs`).
 - Short D4H fetches, which the refresh must never treat as complete:
   `test/app/adapter/d4h/page_test.exs`.
 - The refresh deleting rows D4H no longer has, and only the current team's:
@@ -53,20 +57,16 @@ The two worker tests are `assert true` placeholders.
 
 ## High-value targets
 
-| Target                                               | Why                                                 | Shape                             |
-| ---------------------------------------------------- | --------------------------------------------------- | --------------------------------- |
-| Letter hours (`Attendance.tagged_minutes_summary/2`) | The number CRA sees. Status, tag, and year filters. | `DataCase` with fixtures          |
-| Team scoping in MCP tools                            | One team reading or changing another's data         | `ConnCase`, two teams             |
-| D4H struct `build/1` and `App.Adapter.D4H.Parse`     | A D4H format change corrupts the copy quietly       | Pure, against recorded D4H JSON   |
-| Mileage round trips (`BuildMilesageReport`)          | Reimbursement numbers                               | Extract the arithmetic, test pure |
+| Target                                           | Why                                           | Shape                             |
+| ------------------------------------------------ | --------------------------------------------- | --------------------------------- |
+| Team scoping in MCP tools                        | One team reading or changing another's data   | `ConnCase`, two teams             |
+| D4H struct `build/1` and `App.Adapter.D4H.Parse` | A D4H format change corrupts the copy quietly | Pure, against recorded D4H JSON   |
+| Mileage round trips (`BuildMilesageReport`)      | Reimbursement numbers                         | Extract the arithmetic, test pure |
 
 ## Known gaps
 
 - **Few D4H stubs.** Every D4H request in tests goes to `Req.Test`, but only the group
   membership writes have tests against it. The refresh and the `build/1` functions still
   need recorded D4H JSON (#33).
-- **Letter year uses the UTC date.** `tagged_minutes_summary/2` picks the year with
-  `strftime('%Y', started_at)` on UTC, so an activity on the evening of December 31
-  Pacific counts toward the next year. A test should pin down which is intended.
 - **Fixtures must come from D4H**, not be invented, when they stand for D4H's format —
   otherwise the test only proves the code agrees with itself.

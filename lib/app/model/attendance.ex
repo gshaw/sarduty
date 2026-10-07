@@ -81,29 +81,4 @@ defmodule App.Model.Attendance do
 
     Service.YearRange.years(first, last, timezone)
   end
-
-  def tagged_minutes_summary(team, year, tags) do
-    query =
-      from(
-        at in Attendance,
-        join: m in assoc(at, :member),
-        join: ac in assoc(at, :activity),
-        where: m.team_id == ^team.id,
-        where: at.status == "attending",
-        where: is_nil(ac.deleted_at),
-        where: ^tagged_activity_filter(tags),
-        group_by: at.member_id,
-        select: %{
-          member_id: at.member_id,
-          count: count(at.id),
-          minutes: sum(at.duration_in_minutes)
-        }
-      )
-
-    started_in(query, year, team.timezone)
-  end
-
-  defp tagged_activity_filter(tags) do
-    Enum.reduce(tags, false, fn tag, acc -> dynamic([at, m, ac], ^acc or ^tag in ac.tags) end)
-  end
 end
