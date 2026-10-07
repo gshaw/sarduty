@@ -21,7 +21,7 @@ defmodule App.Accounts.UserNotifier do
 
       #{code}
 
-      Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it,
+      Enter it on the login page. It works once, for 15 minutes. If you did not ask for it,
       ignore this email.
 
       @#{host} ##{code}
@@ -41,10 +41,10 @@ defmodule App.Accounts.UserNotifier do
     |> from({"SAR Duty", "noreply@sarduty.com"})
     |> subject("Wrong login codes entered for your SAR Duty account")
     |> text_body("""
-    Someone entered 20 wrong login codes for your SAR Duty account today, so new browsers
-    can't log in to it until tomorrow.
+    Someone entered 20 wrong login codes for your SAR Duty account today. New browsers
+    cannot log in to it until tomorrow.
 
-    A browser you've logged in with before still can. If this wasn't you, nothing else is
+    A browser you've logged in with before still can. If this was not you, nothing else is
     needed: the codes were wrong, and they only work for 15 minutes.
     """)
     |> Mailer.deliver()
@@ -93,7 +93,7 @@ defmodule App.Accounts.UserNotifier do
       <img src="#{logo}" width="48" height="48" alt="SAR Duty" style="display: block; border: 0;">
       <p>Your code to log in to SAR Duty:</p>
       <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{code}</p>
-      <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it, ignore this email.</p>
+      <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you did not ask for it, ignore this email.</p>
       <p style="display: none; font-size: 0; line-height: 0; max-height: 0; overflow: hidden;">@#{host} ##{code}</p>
     </div>
     """

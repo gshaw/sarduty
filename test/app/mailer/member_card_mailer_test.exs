@@ -36,7 +36,7 @@ defmodule App.Mailer.MemberCardMailerTest do
       assert email.text_body =~ "Hi Alex <Example>,\n\n"
       assert email.text_body =~ "Apple Wallet"
       refute email.html_body =~ "Google"
-      assert [%{filename: "example-member-card.pkpass"}] = email.attachments
+      assert [%{filename: "example-id-card.pkpass"}] = email.attachments
     end)
   end
 end

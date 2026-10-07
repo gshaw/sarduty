@@ -36,7 +36,7 @@ defmodule Web.GroupReviewLiveTest do
     assert has_element?(lv, "#review-remove-#{ctx.unqualified.id}", "on record")
     assert has_element?(lv, "#select-#{ctx.unqualified.id}[checked]")
     assert has_element?(lv, "#review-add-#{ctx.qualified.id}", "Meets all rules")
-    assert has_element?(lv, "#apply", "Apply 2 changes in D4H")
+    assert has_element?(lv, "#apply", "Apply 2 changes")
   end
 
   test "applying sends only the ticked changes and returns to the group", ctx do
@@ -52,7 +52,7 @@ defmodule Web.GroupReviewLiveTest do
     end)
 
     lv |> form("#review-form", %{"member_ids" => ["#{ctx.qualified.id}"]}) |> render_change()
-    assert has_element?(lv, "#apply", "Apply 1 change in D4H")
+    assert has_element?(lv, "#apply", "Apply 1 change")
 
     lv
     |> form("#review-form", %{"member_ids" => ["#{ctx.qualified.id}"]})

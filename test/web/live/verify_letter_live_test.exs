@@ -96,7 +96,7 @@ defmodule Web.VerifyLetterLiveTest do
       replaced = ReplaceTaxCreditLetter.call(team, letter)
 
       {:ok, lv, _html} = live(conn, ~p"/letters/#{letter.ref_id}")
-      assert has_element?(lv, "#result-replaced", "This letter was replaced")
+      assert has_element?(lv, "#result-replaced", "This tax credit letter was replaced")
       assert has_element?(lv, "#result-hours", "230 hours, 30 minutes")
 
       {:ok, lv, _html} = live(conn, ~p"/letters/#{replaced.ref_id}")

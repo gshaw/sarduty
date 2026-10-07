@@ -46,7 +46,12 @@ defmodule Web.Settings.MCPLive do
         {:noreply, assign(socket, :form, to_form(changeset, as: "token", action: :insert))}
 
       {:error, :not_allowed} ->
-        {:noreply, put_flash(socket, :error, "Only a D4H Owner or Editor can create a token.")}
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Only a member D4H makes an Owner or Editor can create a token."
+         )}
     end
   end
 
@@ -123,7 +128,7 @@ defmodule Web.Settings.MCPLive do
           label="I'll use this token only with an AI service set not to train on my data"
         >
           In Claude, turn off "Help improve Claude". In ChatGPT, turn off "Improve the model
-          for everyone". Work and API accounts often don't train by default; check yours.
+          for everyone". Work and API accounts often do not train by default. Check yours.
         </.input>
         <.form_actions>
           <.button variant={:success}>Create token</.button>
@@ -197,7 +202,7 @@ defmodule Web.Settings.MCPLive do
     "Authorization: Bearer <token>"`. In another app, add it to that app's MCP settings. \
     Then list its tools to check it works.
 
-    The token is a password. Don't print it again or save it anywhere but the MCP \
+    The token is a password. Do not print it again or save it anywhere but the MCP \
     settings.\
     """
   end

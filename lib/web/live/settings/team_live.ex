@@ -137,8 +137,8 @@ defmodule Web.Settings.TeamLive do
           >
             Create the key from a D4H member named "SAR Duty" rather than a person. D4H history
             then shows SAR Duty for changes made here, and the key keeps working when people
-            leave the team. In D4H, add a member named SAR Duty with Owner or Editor access,
-            log in as it, and <.a
+            leave the team. In D4H, add a member named SAR Duty with Owner or Editor access. Log
+            in as that member and <.a
               external={true}
               href="https://help.d4h.com/article/377-obtaining-an-api-access-key"
             >

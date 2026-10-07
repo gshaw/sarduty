@@ -29,7 +29,7 @@ defmodule Web.Components.NotAPersonSwitch do
         phx-click="toggle"
         phx-target={@myself}
       >
-        For a bot or a shared D4H account. SAR Duty leaves it out of member counts, home page
+        For a bot or a shared D4H account. SAR Duty leaves it out of member counts, dashboard
         checks, team admins, and attendance at the door.
       </.switch>
       <p

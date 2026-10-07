@@ -21,7 +21,7 @@ defmodule Web.VerifyLive do
   def mount(_params, session, socket) do
     {:ok,
      assign(socket,
-       page_title: "Verify an ID card",
+       page_title: "Verify a search and rescue ID card",
        scan_failed: false,
        sound_next: false,
        client_ip: session["client_ip"]

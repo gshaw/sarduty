@@ -35,10 +35,10 @@ defmodule App.Operation.RefreshD4HData do
       end
   end
 
-  def error_message(:no_key), do: "No D4H key. Save a team key in Team Settings."
+  def error_message(:no_key), do: "No D4H access key. Save one in team settings."
 
   def error_message({:key_rejected, status}),
-    do: "D4H rejected the team key (#{status}). Save a new one in Team Settings."
+    do: "D4H rejected your D4H access key (#{status}). Save a new one in team settings."
 
   # Keys saved before the owner was recorded get it here. A rejected key is left for the
   # refresh's own requests to report.

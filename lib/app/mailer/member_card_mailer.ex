@@ -28,7 +28,7 @@ defmodule App.Mailer.MemberCardMailer do
     attachment(
       email,
       Swoosh.Attachment.new({:data, pkpass},
-        filename: "#{team.subdomain}-member-card.pkpass",
+        filename: "#{team.subdomain}-id-card.pkpass",
         content_type: "application/vnd.apple.pkpass"
       )
     )
