@@ -40,6 +40,10 @@ defmodule Web.Settings.TeamLive do
           <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>Team admins</.a>:
           who can log in
         </li>
+        <li :if={@current_team.mcp_enabled}>
+          <.a id="settings-mcp" navigate={~p"/teams/#{@current_team}/settings/mcp"}>MCP tokens</.a>:
+          let your AI agent read the team's data
+        </li>
       </ul>
 
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
