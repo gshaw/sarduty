@@ -4,6 +4,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   import App.DataFixtures
 
   alias App.Model.Attendance
+  alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.SyncD4HChanges
   alias App.Worker.SyncTeamChangesWorker
@@ -44,6 +45,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     refute_received {:d4h, _}
     refute_received {:team_refreshed, _}
     assert Repo.reload(team).d4h_synced_at
+    refute Event.get_last(:d4h_team_sync)
   end
 
   test "drops an attendance row D4H deleted, found through its activity" do
@@ -148,6 +150,11 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     assert {:cancel, _} = perform(team)
     team = Repo.reload(team)
     assert SyncD4HChanges.key_rejected?(team)
+
+    assert %Event{team_id: team_id, data: %{"outcome" => "key_rejected", "status" => 401}} =
+             Event.get_last(:d4h_team_sync)
+
+    assert team_id == team.id
     refute SyncTeamChangesWorker.syncs?(team)
     refute SyncTeamChangesWorker.stale?(team, DateTime.add(DateTime.utc_now(), 1, :hour))
 

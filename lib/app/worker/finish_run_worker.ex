@@ -8,6 +8,9 @@ defmodule App.Worker.FinishRunWorker do
   cancels the job instead, so it doesn't count: only the team can fix it, and the
   dashboards already say so. A sync never fails the run, since a failed sync is
   cancelled and the next is 10 minutes away.
+
+  It also records the run as an event: how long it took, how many teams, and what the
+  team events since it started say, for the admin events page.
   """
 
   use Oban.Worker,
@@ -19,22 +22,35 @@ defmodule App.Worker.FinishRunWorker do
   import Ecto.Query
 
   alias App.Adapter.Healthchecks
+  alias App.Model.Event
   alias App.Repo
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.SyncTeamChangesWorker
 
   @runs %{
-    "sync" => %{check: :sync, worker: SyncTeamChangesWorker, wait: 5},
-    "refresh" => %{check: :refresh, worker: RefreshTeamDataWorker, wait: 60}
+    "sync" => %{
+      check: :sync,
+      worker: SyncTeamChangesWorker,
+      wait: 5,
+      event: :d4h_sync_round,
+      team_event: :d4h_team_sync
+    },
+    "refresh" => %{
+      check: :refresh,
+      worker: RefreshTeamDataWorker,
+      wait: 60,
+      event: :d4h_refresh_run,
+      team_event: :d4h_team_refresh
+    }
   }
 
   # A job in any of these will still run, now or after a retry.
   @pending ~w(available scheduled executing retryable)
 
-  @doc "Pings the run's start and queues the job that pings its end."
-  def start(run, now) when is_map_key(@runs, run) do
+  @doc "Pings the start of a run of `teams` jobs and queues the job that pings its end."
+  def start(run, teams, now) when is_map_key(@runs, run) do
     Healthchecks.ping(@runs[run].check, :start)
-    %{run: run, started_at: now} |> new() |> Oban.insert!()
+    %{run: run, teams: teams, started_at: now} |> new() |> Oban.insert!()
   end
 
   @doc "`:wait` while jobs are left, then `:fail` if any ran out of attempts, else `:success`."
@@ -43,8 +59,8 @@ defmodule App.Worker.FinishRunWorker do
   def outcome(0, _discarded), do: :fail
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"run" => run, "started_at" => started_at}}) do
-    %{check: check, worker: worker, wait: wait} = Map.fetch!(@runs, run)
+  def perform(%Oban.Job{args: %{"run" => run, "started_at" => started_at} = args}) do
+    %{check: check, worker: worker, wait: wait} = config = Map.fetch!(@runs, run)
     {:ok, started_at, 0} = DateTime.from_iso8601(started_at)
     jobs = jobs(worker)
     pending = jobs |> where([j], j.state in @pending) |> Repo.aggregate(:count)
@@ -60,8 +76,27 @@ defmodule App.Worker.FinishRunWorker do
 
       signal ->
         Healthchecks.ping(check, signal)
+        record(config, args["teams"], started_at, signal)
         :ok
     end
+  end
+
+  defp record(config, teams, started_at, signal) do
+    now = DateTime.utc_now()
+    count = &Event.count_since(config.team_event, started_at, %{outcome: &1})
+
+    Event.record!(config.event,
+      duration_ms: Event.duration_ms(started_at, now),
+      occurred_at: now,
+      data: %{
+        outcome: Atom.to_string(signal),
+        teams: teams,
+        changed: count.("changed"),
+        failed: count.("failed"),
+        key_rejected: count.("key_rejected") + count.("key_error"),
+        rate_limited: Event.count_since(:d4h_rate_limited, started_at)
+      }
+    )
   end
 
   defp jobs(worker), do: where(Oban.Job, worker: ^inspect(worker))

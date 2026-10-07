@@ -1,6 +1,7 @@
 defmodule App.Worker.FinishRunWorkerTest do
   use App.DataCase
 
+  alias App.Model.Event
   alias App.Worker.FinishRunWorker
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.ScheduleTeamRefreshesWorker
@@ -20,7 +21,7 @@ defmodule App.Worker.FinishRunWorkerTest do
   end
 
   defp perform(run) do
-    args = %{"run" => run, "started_at" => DateTime.to_iso8601(@started_at)}
+    args = %{"run" => run, "teams" => 3, "started_at" => DateTime.to_iso8601(@started_at)}
     FinishRunWorker.perform(%Oban.Job{args: args})
   end
 
@@ -59,6 +60,29 @@ defmodule App.Worker.FinishRunWorkerTest do
 
     assert perform("refresh") == :ok
     assert_received {:ping, "/refresh"}
+  end
+
+  test "records the run, with what its team events and rate limits say" do
+    during = DateTime.add(@started_at, 1, :minute)
+    before = DateTime.add(@started_at, -1, :minute)
+    Event.record!(:d4h_team_sync, data: %{outcome: "changed"}, occurred_at: during)
+    Event.record!(:d4h_team_sync, data: %{outcome: "failed"}, occurred_at: during)
+    Event.record!(:d4h_team_sync, data: %{outcome: "failed"}, occurred_at: before)
+    Event.record!(:d4h_rate_limited, occurred_at: during)
+
+    assert perform("sync") == :ok
+
+    assert %Event{data: data, duration_ms: duration_ms} = Event.get_last(:d4h_sync_round)
+    assert is_integer(duration_ms)
+
+    assert data == %{
+             "outcome" => "success",
+             "teams" => 3,
+             "changed" => 1,
+             "failed" => 1,
+             "key_rejected" => 0,
+             "rate_limited" => 1
+           }
   end
 
   test "the scheduler pings the start, and the run's end once its jobs are done" do

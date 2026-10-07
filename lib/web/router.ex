@@ -138,6 +138,7 @@ defmodule Web.Router do
       ] do
       live "/admin", AdminDashboardLive
       live "/admin/admins", Admin.AdminCollectionLive
+      live "/admin/events", Admin.EventCollectionLive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationLive, :new
       live "/admin/orgs/:id", Admin.OrganizationLive, :edit
