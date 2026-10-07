@@ -72,11 +72,16 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+# SQLite allows one writer at a time. The SQLite driver's default 2 s wait for the lock lost races
+# with syncs, and Oban's job updates failed with "Database busy".
+config :sarduty, App.Repo, busy_timeout: 5_000
+
 # Configure Oban
 config :sarduty, Oban,
   engine: Oban.Engines.Lite,
   repo: App.Repo,
-  queues: [default: 5, refresh: 1, sync: 2],
+  # One sync at a time, so two teams' syncs never hold the SQLite write lock together.
+  queues: [default: 5, refresh: 1, sync: 1],
   # Lifeline puts back a job left executing by a restart, so it runs again rather than
   # sitting there for good; an hour is far longer than any team's refresh. Pruner keeps a
   # week of finished jobs for looking into a run; events keep the longer history.
