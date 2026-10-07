@@ -30,7 +30,7 @@ defmodule Web.PrivacyLive do
         SAR Duty does not sell data, show ads, or use tracking cookies. Its cookies keep you logged in.
       </p>
       <p>
-        SAR Duty keeps its database in Canada. Service providers host SAR Duty, send its email and texts, and store its backups. Some are in the United States. Each gets only what its work needs.
+        SAR Duty runs on a server in Canada, and keeps its database there. Other service providers send its email and texts, store its backups, and report errors. Their servers can be anywhere in the world. Each gets only what its work needs.
       </p>
       <p id="privacy-operator">
         Gerry Shaw, a volunteer member of South Fraser Search and Rescue, runs SAR Duty. SAR Duty is an independent project. South Fraser Search and Rescue and the other teams that use it do not run, own, or endorse it.
