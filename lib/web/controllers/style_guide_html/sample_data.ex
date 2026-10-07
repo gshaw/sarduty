@@ -56,6 +56,11 @@ defmodule Web.StyleGuideHTML.SampleData do
     ]
   end
 
+  # Page 2 of a long activity list, for the pagination example.
+  def sample_page do
+    %App.Page{entries: [], page_number: 2, page_size: 50, total_entries: 1912, total_pages: 39}
+  end
+
   def recommendations do
     [
       %{op: :add, name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"},

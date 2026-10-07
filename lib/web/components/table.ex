@@ -80,56 +80,86 @@ defmodule Web.Components.Table do
     """
   end
 
-  def table_header(assigns) do
+  attr :label, :string, default: nil
+  attr :class, :string, default: nil
+  attr :align, :string, default: nil, values: [nil, "left", "right"]
+
+  attr :sorts, :list,
+    default: nil,
+    doc: ~s(the column's {suffix, sort} pairs, such as [{"↓", "date-"}, {"↑", "date"}])
+
+  attr :sort, :string, default: nil, doc: "the sort the table has now"
+  attr :path_fn, :any, default: nil
+
+  def table_header(%{sorts: nil} = assigns) do
     ~H"""
-    <th class={[@class, if(@align == "right", do: "text-right", else: nil)]}>
-      <%= if @sorts == nil do %>
-        {@label}
-      <% else %>
-        <%= case Enum.find(@sorts, fn {_k, v} -> v == @sort end) do %>
-          <% nil -> %>
-            <% {suffix, sort} = List.first(@sorts) %>
-            <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
-              <.sort_header_content
-                label={@label}
-                suffix={if Enum.count(@sorts) == 1, do: suffix, else: "⇅"}
-                suffix_class="text-disabled"
-                align={@align}
-              />
-            </.a>
-          <% {suffix, current_sort} -> %>
-            <%= if Enum.count(@sorts) == 1 do %>
-              <.sort_header_content label={@label} suffix={suffix} align={@align} />
-            <% else %>
-              <% sort = find_next_sort(@sorts, current_sort) %>
-              <.a kind={:custom} class="w-full inline-block" navigate={@path_fn.(page: 1, sort: sort)}>
-                <.sort_header_content label={@label} suffix={suffix} align={@align} />
-              </.a>
-            <% end %>
-        <% end %>
-      <% end %>
+    <th class={[@class, @align == "right" && "text-right"]}>{@label}</th>
+    """
+  end
+
+  def table_header(assigns) do
+    assigns = assign(assigns, :header, sort_header(assigns.sorts, assigns.sort))
+
+    ~H"""
+    <th class={[@class, @align == "right" && "text-right"]} aria-sort={@header.aria_sort}>
+      <.a
+        :if={@header.link?}
+        kind={:custom}
+        class="w-full inline-block"
+        navigate={@path_fn.(page: 1, sort: @header.next_sort)}
+      >
+        <.sort_header_content label={@label} header={@header} align={@align} />
+      </.a>
+      <.sort_header_content :if={!@header.link?} label={@label} header={@header} align={@align} />
     </th>
     """
   end
 
+  @doc """
+  Works out a sortable column header from its `{suffix, sort}` pairs and the table's sort.
+
+  A column the table isn't sorted by links to its first sort, with a faded suffix: its
+  arrow, or ⇅ when it sorts both ways. The sorted column shows its arrow, sets `aria-sort`,
+  and links to its other sort, or isn't a link when it sorts one way only.
+  """
+  def sort_header(sorts, sort) do
+    case List.keyfind(sorts, sort, 1) do
+      nil ->
+        [{suffix, first_sort} | _] = sorts
+        suffix = if length(sorts) == 1, do: suffix, else: "⇅"
+        %{suffix: suffix, current?: false, link?: true, next_sort: first_sort, aria_sort: nil}
+
+      {suffix, _sort} ->
+        next_sort = next_sort(sorts, sort)
+
+        %{
+          suffix: suffix,
+          current?: true,
+          link?: next_sort != nil,
+          next_sort: next_sort,
+          aria_sort: aria_sort(suffix)
+        }
+    end
+  end
+
+  defp next_sort([_only], _sort), do: nil
+  defp next_sort([{_, sort}, {_, other}], sort), do: other
+  defp next_sort([{_, other}, _], _sort), do: other
+
+  defp aria_sort("↑"), do: "ascending"
+  defp aria_sort("↓"), do: "descending"
+
   attr :label, :string, required: true
-  attr :suffix, :string, required: true
-  attr :suffix_class, :string, default: nil
-  attr :align, :string, values: ["left", "right"]
+  attr :header, :map, required: true
+  attr :align, :string, default: nil
 
   defp sort_header_content(assigns) do
     ~H"""
     <%= if @align == "right" do %>
-      <span class={@suffix_class}>{@suffix}</span>{StringHelpers.no_break_space()}{@label}
+      <span class={!@header.current? && "text-disabled"}>{@header.suffix}</span>{StringHelpers.no_break_space()}{@label}
     <% else %>
-      {@label}{StringHelpers.no_break_space()}<span class={@suffix_class}>{@suffix}</span>
+      {@label}{StringHelpers.no_break_space()}<span class={!@header.current? && "text-disabled"}>{@header.suffix}</span>
     <% end %>
     """
-  end
-
-  defp find_next_sort([{_label, sort}] = _sorts, _current_sort), do: sort
-
-  defp find_next_sort([{_label1, sort1}, {_label2, sort2}] = _sorts, current_sort) do
-    if current_sort == sort1, do: sort2, else: sort1
   end
 end

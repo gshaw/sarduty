@@ -9,7 +9,10 @@
       Text at sm (14px). Headers semibold on <code>--surface-alt</code>, and they stick on scroll.
     </li>
     <li>Numbers right-aligned with tabular figures. Codes, such as letter numbers, in mono.</li>
-    <li>Sortable headers show an arrow; the sorted column is underlined in primary.</li>
+    <li>
+      Sortable headers show an arrow, or ⇅ when the column sorts both ways. The sorted column is
+      underlined in primary and has <code>aria-sort</code>.
+    </li>
     <li>Actions in a row are small buttons or links.</li>
     <li>
       Columns go in order of use: what identifies the row first, then what people act on, then
@@ -43,40 +46,41 @@
     <a href="#">Reset filters</a>
     <span>{length(letters())} members</span>
   </div>
-  <div class="table-wrap">
-    <table class="striped pin-first">
-      <thead>
-        <tr class="group">
-          <th></th>
-          <th colspan="3" class="span">SARVAC hours</th>
-          <th colspan="3"></th>
-        </tr>
-        <tr>
-          <th><a href="#">Name<span class="sort">↑</span></a></th>
-          <th class="num"><a href="#">Primary<span class="sort">↓</span></a></th>
-          <th class="num"><a href="#">Secondary<span class="sort">↓</span></a></th>
-          <th class="num sorted"><a href="#">Total<span class="sort">↓</span></a></th>
-          <th class="shrink">Letter</th>
-          <th>Email</th>
-          <th class="shrink"><a href="#">ID<span class="sort">↑</span></a></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={r <- letters()}>
-          <td class="nowrap"><a href="#">{r.name}</a></td>
-          <td class="num">{r.primary}</td>
-          <td class="num">{r.secondary}</td>
-          <td class="num"><strong>{r.total}</strong></td>
-          <td class="shrink">
-            <a :if={r.letter} href="#" class="mono">{r.letter}</a>
-            <button :if={!r.letter} class="btn sm success">Create letter</button>
-          </td>
-          <td>{r.email}</td>
-          <td class="num">{r.id}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <.table
+    id="sample-letters"
+    rows={letters()}
+    class="table-striped"
+    sort="total"
+    path_fn={fn _ -> "#" end}
+  >
+    <:header_row>
+      <th></th>
+      <th colspan="3">SARVAC hours</th>
+      <th colspan="3"></th>
+    </:header_row>
+    <:col :let={r} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
+      <a href="#" class="link">{r.name}</a>
+    </:col>
+    <:col :let={r} label="Primary" align="right" sorts={[{"↓", "primary"}]}>{r.primary}</:col>
+    <:col :let={r} label="Secondary" align="right" sorts={[{"↓", "secondary"}]}>
+      {r.secondary}
+    </:col>
+    <:col :let={r} label="Total" align="right" sorts={[{"↓", "total"}]}>
+      <strong>{r.total}</strong>
+    </:col>
+    <:col :let={r} label="Letter" class="w-px">
+      <a :if={r.letter} href="#" class="link mono">{r.letter}</a>
+      <.button :if={!r.letter} variant={:success} size={:sm}>Create letter</.button>
+    </:col>
+    <:col :let={r} label="Email">{r.email}</:col>
+    <:col :let={r} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>{r.id}</:col>
+  </.table>
+  <p class="spec">
+    In the app:
+    <code>&lt;.table id="…" rows=&#123;…&#125; sort=&#123;@sort&#125; path_fn=&#123;@path_fn&#125;&gt;</code>
+    with a <code>&lt;:col label="…" sorts=&#123;[&#123;"↓", "total"&#125;]&#125;&gt;</code>
+    for each column. A column that sorts both ways lists 2 sorts, such as <code>[&#123;"↓", "date-"&#125;, &#123;"↑", "date"&#125;]</code>.
+  </p>
 
   <h2>Attendance recommendations</h2>
   <p>Check the changes to make, then perform them.</p>
@@ -150,7 +154,9 @@
     <table class="compact striped">
       <thead>
         <tr>
-          <th class="shrink sorted"><a href="#">Date<span class="sort">↓</span></a></th>
+          <th class="shrink" aria-sort="descending">
+            <a href="#">Date<span class="sort">↓</span></a>
+          </th>
           <th class="shrink">Kind</th>
           <th>Title</th>
           <th class="num">Attended</th>

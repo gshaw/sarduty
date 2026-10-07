@@ -36,6 +36,7 @@
   }
 
   table.table thead th a { color: inherit; text-decoration: none; }
+  table.table thead th[aria-sort] { box-shadow: inset 0 -2px var(--primary); }
   table.table tbody th { font-weight: 600; }
   table.table tbody :is(td, th) { border-bottom: 1px solid var(--border-subtle); }
   table.table tbody tr:last-child :is(td, th) { border-bottom: 0; }
