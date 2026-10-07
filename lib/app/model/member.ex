@@ -30,6 +30,8 @@ defmodule App.Model.Member do
     # D4H's access level: 0 OWNER, 1 EDITOR, 2 MEMBER, 3 MEMBER_PLUS, 4 NO_ACCESS.
     field :d4h_permission, :integer
     field :d4h_status, :string
+    # Set by a team admin in SAR Duty, never from D4H, so build_changeset/2 leaves it out.
+    field :not_a_person, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -101,6 +103,25 @@ defmodule App.Model.Member do
     )
   end
 
+  @doc "Narrows `query` to people, leaving out members a team admin marked not a person."
+  def people_query(query), do: where(query, [m], not m.not_a_person)
+
+  @doc """
+  Whether the member looks like a bot or a shared account: no email, no mobile phone,
+  and no attendance. Only a hint; a new member looks the same until their first activity.
+  """
+  def looks_like_not_a_person?(%Member{not_a_person: true}, _attended?), do: false
+
+  def looks_like_not_a_person?(%Member{} = member, attended?),
+    do: missing_details(member) == [:mobile_phone, :email] and not attended?
+
+  @doc "Whether the member attended any activity."
+  def attended?(%Member{id: id}) do
+    Attendance
+    |> where([a], a.member_id == ^id and a.status == "attending")
+    |> Repo.exists?()
+  end
+
   # D4H sets endsAt when a member retires. Takes any map with left_at.
   def current?(%{left_at: left_at}, now), do: is_nil(left_at) or DateTime.after?(left_at, now)
 
@@ -162,15 +183,16 @@ defmodule App.Model.Member do
   def permission_label(_), do: "Unknown"
 
   @doc """
-  The team's managers, by name. A team key from a "SAR Duty" account is left out: it
-  isn't a person. A team key from a person's account leaves them in, since they manage
-  the team too.
+  The team's managers, by name. Members marked not a person are left out, and so is a
+  team key from a "SAR Duty" account. A team key from a person's account leaves them in,
+  since they manage the team too.
   """
   def get_managers(%Team{} = team, now) do
     key_account = if Team.key_owner_is_sar_duty?(team), do: team.d4h_access_key_member_id
 
     Member
     |> where([m], m.team_id == ^team.id and m.d4h_permission in @manager_permissions)
+    |> people_query()
     |> order_by([m], asc: m.name)
     |> Repo.all()
     |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != key_account))

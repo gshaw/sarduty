@@ -5,6 +5,7 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.D4H
 
   alias App.Adapter.D4H
+  alias Web.Components.NotAPersonSwitch
 
   attr :member, :map, required: true
 
@@ -42,6 +43,7 @@ defmodule Web.Components.MemberSidebar do
         </ul>
       </dd>
     </dl>
+    <.live_component module={NotAPersonSwitch} id="not-a-person" member={@member} />
     """
   end
 end
