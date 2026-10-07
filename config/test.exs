@@ -36,6 +36,9 @@ config :phoenix, :plug_init_mode, :runtime
 # calling the real API.
 config :sarduty, App.Adapter.D4H, plug: {Req.Test, App.Adapter.D4H}
 
+# Healthchecks pings too, when a test sets a check's URL.
+config :sarduty, App.Adapter.Healthchecks, plug: {Req.Test, App.Adapter.Healthchecks}
+
 # Wallet pass pushes go to Req.Test too, so no test reaches Apple.
 config :sarduty, App.Adapter.APNs, plug: {Req.Test, App.Adapter.APNs}
 

@@ -8,7 +8,12 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   alias App.Operation.UpdateTeamSettings
 
   @now ~U[2026-09-10 12:00:00.000000Z]
-  @team %Team{name: "Ridge Valley SAR", d4h_team_id: 7, d4h_access_key: "old-key"}
+  @team %Team{
+    name: "Ridge Valley SAR",
+    d4h_team_id: 7,
+    d4h_access_key: "old-key",
+    d4h_sync_state: %{"heads" => %{}, "key_rejected" => true}
+  }
 
   defp check(lookup) do
     @team
@@ -30,6 +35,7 @@ defmodule App.Operation.UpdateTeamSettingsTest do
     assert get_change(changeset, :d4h_access_key_saved_at) == @now
     assert get_change(changeset, :d4h_access_key_owner) == "SAR Duty"
     assert get_change(changeset, :d4h_access_key_member_id) == 70
+    assert get_change(changeset, :d4h_sync_state) == %{"heads" => %{}}
   end
 
   test "rejects a key for a different D4H team" do

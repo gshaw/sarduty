@@ -1,6 +1,8 @@
 defmodule App.Adapter.D4HTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias App.Adapter.D4H
 
   defp context do
@@ -114,5 +116,32 @@ defmodule App.Adapter.D4HTest do
       rows = D4H.fetch_attendances_changed_since(context(), ~U[2026-10-06 07:55:00Z])
       assert Enum.map(rows, & &1.d4h_attendance_id) == [3, 2]
     end
+  end
+
+  test "logs a 429 that Req's retry then gets past" do
+    {:ok, attempts} = Agent.start_link(fn -> 0 end)
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      if Agent.get_and_update(attempts, &{&1, &1 + 1}) == 0 do
+        conn
+        |> Plug.Conn.put_resp_header("retry-after", "0")
+        |> Plug.Conn.put_status(429)
+        |> Req.Test.json(%{"title" => "Too Many Requests"})
+      else
+        Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+      end
+    end)
+
+    log =
+      capture_log(fn ->
+        assert D4H.fetch_list_head(context(), "/members") == %{
+                 total_size: 0,
+                 newest_updated_at: nil
+               }
+      end)
+
+    assert log =~ "D4H rate limit (429)"
+    assert log =~ "/v3/team/1/members"
+    assert Agent.get(attempts, & &1) == 2
   end
 end

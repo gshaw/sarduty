@@ -2,10 +2,13 @@ defmodule App.Worker.ScheduleTeamRefreshesWorker do
   use Oban.Worker, queue: :default, max_attempts: 1
 
   alias App.Model.Team
+  alias App.Worker.FinishRunWorker
   alias App.Worker.RefreshTeamDataWorker
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
+    now = DateTime.utc_now()
+
     Team.get_all()
     |> Enum.filter(& &1.d4h_team_id)
     |> Enum.each(fn team ->
@@ -14,6 +17,7 @@ defmodule App.Worker.ScheduleTeamRefreshesWorker do
       |> Oban.insert()
     end)
 
+    FinishRunWorker.start("refresh", now)
     :ok
   end
 end

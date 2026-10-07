@@ -133,12 +133,28 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   test "a team synced over 2 minutes ago is stale, one without a key never is" do
     now = ~U[2026-10-06 12:00:00Z]
-    team = %Team{d4h_access_key: "key", d4h_synced_at: ~U[2026-10-06 11:57:00Z]}
+    team = %Team{d4h_team_id: 1, d4h_access_key: "key", d4h_synced_at: ~U[2026-10-06 11:57:00Z]}
 
     assert SyncTeamChangesWorker.stale?(team, now)
     refute SyncTeamChangesWorker.stale?(%{team | d4h_synced_at: ~U[2026-10-06 11:59:00Z]}, now)
     assert SyncTeamChangesWorker.stale?(%{team | d4h_synced_at: nil}, now)
     refute SyncTeamChangesWorker.stale?(%{team | d4h_access_key: nil}, now)
+  end
+
+  test "a rejected key stops the syncs until a new key or a refresh" do
+    team = synced_team()
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 401, ""))
+
+    assert {:cancel, _} = perform(team)
+    team = Repo.reload(team)
+    assert SyncD4HChanges.key_rejected?(team)
+    refute SyncTeamChangesWorker.syncs?(team)
+    refute SyncTeamChangesWorker.stale?(team, DateTime.add(DateTime.utc_now(), 1, :hour))
+
+    team =
+      SyncD4HChanges.save_heads(team, SyncD4HChanges.previous_heads(team), DateTime.utc_now())
+
+    assert SyncTeamChangesWorker.syncs?(team)
   end
 
   test "a failing sync tells Honeybadger only after an hour, and once" do
