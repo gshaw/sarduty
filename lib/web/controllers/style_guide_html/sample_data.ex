@@ -1,7 +1,9 @@
 defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
-  # cspell:ignore Tremblay
+  alias Web.Components.ActivityMap
+
+  # cspell:ignore Tremblay exsss
   # Made-up rows for the style guide, shaped like the app's pages.
 
   def letters do
@@ -79,5 +81,97 @@ defmodule Web.StyleGuideHTML.SampleData do
         %{name: "Casey Dhillon", reason: "Wilderness First Aid expires Nov 12", days: 12}
       ]
     }
+  end
+
+  # Charts. Made-up numbers with a summer peak, as a coastal team's year looks.
+  @months ~w(Nov Dec Jan Feb Mar Apr May Jun Jul Aug Sep Oct)
+  @incidents [5, 4, 3, 4, 5, 6, 8, 11, 15, 14, 9, 2]
+  @exercises [6, 5, 5, 6, 6, 5, 6, 5, 4, 5, 6, 2]
+  @events [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+
+  def chart_columns do
+    [@months, @incidents, @exercises, @events]
+    |> Enum.zip()
+    |> Enum.map(fn {month, i, x, e} ->
+      %{
+        label: month,
+        values: %{incident: i, exercise: x, event: e},
+        tip: "#{month}\n#{i} incidents\n#{x} exercises\n#{e} events"
+      }
+    end)
+  end
+
+  def chart_hours do
+    [
+      %{
+        key: :primary,
+        label: "2025",
+        values: [180, 390, 640, 900, 1210, 1580, 2140, 2830, 3300, nil, nil, nil]
+      },
+      %{
+        key: :compare,
+        label: "2024",
+        values: [150, 320, 560, 820, 1100, 1460, 1910, 2480, 2950, 3240, 3460, 3700]
+      }
+    ]
+  end
+
+  def chart_members do
+    [
+      %{label: "Avery Chen", value: 212, text: "212h"},
+      %{label: "Casey Dhillon", value: 188, text: "188h"},
+      %{label: "Devon Okafor", value: 161, text: "161h"},
+      %{label: "Jordan Larsen", value: 140, text: "140h"},
+      %{label: "Riley Moreau", value: 97, text: "97h"}
+    ]
+  end
+
+  # A year of days from Oct 1, 2024: weekly Wednesday exercises, and incidents that pick up
+  # in summer and on weekends. Seeded, so the guide looks the same on every load.
+  def chart_days do
+    :rand.seed(:exsss, {1, 2, 3})
+    first = ~D[2024-10-01]
+
+    Enum.map(0..364, fn offset ->
+      date = Date.add(first, offset)
+      summer = if date.month in 6..9, do: 2, else: 1
+      weekend = if Date.day_of_week(date) in [6, 7], do: 2, else: 1
+      exercise = if Date.day_of_week(date) == 3, do: 1, else: 0
+      incidents = Enum.count(1..(summer * weekend), fn _ -> :rand.uniform() < 0.18 end)
+      {date, exercise + incidents}
+    end)
+  end
+
+  def chart_week do
+    :rand.seed(:exsss, {4, 5, 6})
+
+    for day <- 1..7, do: for(hour <- 0..23, do: sample_count(day, hour))
+  end
+
+  # More in the afternoon and evening, and twice as many at weekends.
+  defp sample_count(day, hour) do
+    daytime = if hour in 12..21, do: 3, else: 1
+    weekend = if day in [6, 7], do: 2, else: 1
+    Enum.count(1..(daytime * weekend), fn _ -> :rand.uniform() < 0.3 end)
+  end
+
+  # Made-up activities around Squamish, at real landmarks.
+  def chart_map do
+    points = [
+      {49.6833, -123.1450, :incident, "Missing hiker, Stawamus Chief"},
+      {49.6890, -123.1380, :incident, "Injured climber, Stawamus Chief"},
+      {49.7760, -123.1180, :incident, "Lost child, Alice Lake"},
+      {49.8000, -123.0600, :incident, "Injured biker, Diamond Head"},
+      {49.5600, -123.2500, :incident, "Overdue kayaker, Howe Sound"},
+      {49.9333, -123.0300, :incident, "Stranded hikers, Garibaldi Lake"},
+      {49.6450, -123.2050, :exercise, "Rope rescue, Murrin Park"},
+      {49.7016, -123.1558, :exercise, "Night navigation"},
+      {49.7400, -123.0700, :exercise, "Swiftwater refresher, Mamquam River"},
+      {49.7016, -123.1580, :event, "Team meeting"}
+    ]
+
+    points
+    |> Enum.map(fn {lat, lng, kind, title} -> %{lat: lat, lng: lng, kind: kind, tip: title} end)
+    |> ActivityMap.build({720, 400}, padding: 48)
   end
 end

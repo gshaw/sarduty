@@ -1,6 +1,9 @@
 defmodule Web.StyleGuideHTML do
   use Web, :html
 
+  import Web.Components.ActivityMap, only: [activity_map: 1]
+  import Web.Components.Chart
+
   alias Web.StyleGuideHTML.SampleData
 
   embed_templates "style_guide_html/*"
@@ -14,7 +17,7 @@ defmodule Web.StyleGuideHTML do
 
   def writing_html, do: Phoenix.HTML.raw(@writing_html)
 
-  # cspell:ignore Murrin HETS
+  # cspell:ignore HETS
 
   # The guide's pages, in sidebar order: {group, [{page, title}]}. The page is also the
   # template name and the last path segment.
@@ -35,7 +38,8 @@ defmodule Web.StyleGuideHTML do
          {:navigation, "Navigation"},
          {:feedback, "Messages"},
          {:tables, "Tables"},
-         {:forms, "Forms"}
+         {:forms, "Forms"},
+         {:charts, "Charts and maps"}
        ]}
     ]
   end
@@ -149,6 +153,20 @@ defmodule Web.StyleGuideHTML do
 
   def palette, do: @palette
   def tokens_css, do: Phoenix.HTML.raw(@tokens_css)
+
+  # The app's chart styles, so the guide's charts are drawn by the same rules.
+  @chart_css_path Path.expand("../../../assets/css/components/chart.css", __DIR__)
+  @external_resource @chart_css_path
+  @chart_css File.read!(@chart_css_path)
+
+  def chart_css, do: Phoenix.HTML.raw(@chart_css)
+
+  defdelegate chart_columns(), to: SampleData
+  defdelegate chart_hours(), to: SampleData
+  defdelegate chart_days(), to: SampleData
+  defdelegate chart_week(), to: SampleData
+  defdelegate chart_members(), to: SampleData
+  defdelegate chart_map(), to: SampleData
 
   defdelegate letters(), to: SampleData
   defdelegate recommendations(), to: SampleData

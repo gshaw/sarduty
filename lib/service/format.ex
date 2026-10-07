@@ -20,6 +20,28 @@ defmodule Service.Format do
   def month_day_time_seconds(datetime, timezone),
     do: datetime(datetime, timezone, "%b %-d, %H:%M:%S")
 
+  @doc "A calendar date with no time or zone: \"Sep 28, 2025\"."
+  def day(%Date{} = date), do: Calendar.strftime(date, "%b %-d, %Y")
+
+  @doc "A month's short name, for chart labels: \"Sep\"."
+  def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
+
+  @doc "A whole number with thousands separators: \"1,204\"."
+  def number(n) when is_float(n), do: number(round(n))
+
+  def number(n) when is_integer(n) and n < 0, do: "-" <> number(-n)
+
+  def number(n) when is_integer(n) do
+    n
+    |> Integer.to_string()
+    |> String.reverse()
+    |> String.replace(~r/(\d{3})(?=\d)/, "\\1,")
+    |> String.reverse()
+  end
+
+  @doc "Minutes as whole hours, for totals too big for minutes to matter: \"1,204h\"."
+  def hours(minutes), do: number(div(round(minutes), 60)) <> "h"
+
   defp datetime(nil, _timezone, _format), do: nil
 
   defp datetime(datetime, timezone, format) do
