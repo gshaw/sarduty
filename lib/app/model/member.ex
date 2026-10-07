@@ -30,6 +30,9 @@ defmodule App.Model.Member do
     # D4H's access level: 0 OWNER, 1 EDITOR, 2 MEMBER, 3 MEMBER_PLUS, 4 NO_ACCESS.
     field :d4h_permission, :integer
     field :d4h_status, :string
+    # Nil until the refresh asks D4H (`CheckMemberPhotos`). Never cast: D4H's member
+    # record doesn't carry it.
+    field :has_photo, :boolean
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -70,6 +73,44 @@ defmodule App.Model.Member do
     |> where([r], r.team_id == ^team_id)
     |> order_by([r], asc: r.name)
     |> Repo.all()
+  end
+
+  @doc """
+  What the member lacks that ID cards and login need, in the order the members page
+  shows it: `:photo`, `:mobile_phone`, `:email`. A photo nobody has checked yet isn't
+  missing.
+  """
+  def missing_details(%{} = member) do
+    Enum.filter(
+      [
+        member.has_photo == false && :photo,
+        blank?(member.phone) && :mobile_phone,
+        blank?(member.email) && :email
+      ],
+      & &1
+    )
+  end
+
+  defp blank?(value), do: value in [nil, ""]
+
+  @doc "Narrows `query` to members `missing_details/1` finds something for."
+  def missing_details_query(query) do
+    where(
+      query,
+      [m],
+      m.has_photo == false or is_nil(m.phone) or m.phone == "" or is_nil(m.email) or
+        m.email == ""
+    )
+  end
+
+  @doc "Narrows `query` to current members: not left as of `now`, and not retired."
+  def current_query(query, now) do
+    where(
+      query,
+      [m],
+      (is_nil(m.left_at) or m.left_at > ^now) and
+        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
+    )
   end
 
   # D4H sets endsAt when a member retires. Takes any map with left_at.

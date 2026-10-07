@@ -73,6 +73,35 @@ defmodule Service.Format do
   end
 
   @doc """
+  The day of an activity coming up, in `timezone`: "Today", "Tomorrow", then "Sat Oct 11".
+  """
+  def day_coming_up(datetime, now, timezone) do
+    days = datetime |> local_date(timezone) |> Date.diff(local_date(now, timezone))
+
+    case days do
+      0 -> "Today"
+      1 -> "Tomorrow"
+      _days -> datetime(datetime, timezone, "%a %b %-d")
+    end
+  end
+
+  @doc """
+  How soon an activity starts, or how long ago it started: "in 25 min", "in 3 hours",
+  "started 40 min ago", "started 2 hours ago".
+  """
+  def starts_in(datetime, now) do
+    minutes = div(DateTime.diff(datetime, now), 60)
+
+    cond do
+      minutes >= 60 -> count(div(minutes, 60), one: "in %d hour", many: "in %d hours")
+      minutes > 0 -> "in #{minutes} min"
+      minutes == 0 -> "starting now"
+      minutes > -60 -> "started #{-minutes} min ago"
+      true -> count(div(-minutes, 60), one: "started %d hour ago", many: "started %d hours ago")
+    end
+  end
+
+  @doc """
   How long before `now` a datetime was, counted in calendar days in `timezone`: "Today",
   "Yesterday", "12 days ago", then "4 months ago".
   """

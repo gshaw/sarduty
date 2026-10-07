@@ -16,6 +16,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :q, Field.TrimmedString
     field :activity, :string
     field :when, :string
+    field :status, :string
     field :page, :integer
     field :limit, :integer
     field :sort, :string
@@ -23,6 +24,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   def activity_kinds,
     do: [{"All", "all"}, {"Exercise", "exercise"}, {"Event", "event"}, {"Incident", "incident"}]
+
+  # "draft": attendance can still change in D4H, so a team admin checks it (#205).
+  def status_kinds, do: [{"All", "all"}, {"Draft", "draft"}, {"Published", "published"}]
 
   def when_kinds(team),
     do: [
@@ -78,6 +82,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(q: filter_options.q)
     |> scope(activity: filter_options.activity)
     |> scope(when: filter_options.when, timezone: team.timezone)
+    |> scope(status: filter_options.status)
     |> scope(sort: filter_options.sort)
     |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
   end
@@ -86,6 +91,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     %__MODULE__{
       when: "all",
       activity: "all",
+      status: "all",
       limit: 50,
       sort: "date-"
     }
@@ -95,9 +101,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :activity, :when, :page, :limit, :sort])
+    |> cast(params, [:q, :activity, :when, :status, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, Enum.map(activity_kinds(), fn {_, v} -> v end))
+    |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
     |> validate_format(:when, ~r/\A(all|current|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
@@ -148,6 +155,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp scope(q, activity: "all"), do: q
   defp scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
+
+  defp scope(q, status: "draft"), do: where(q, [r], r.is_published == false)
+  defp scope(q, status: "published"), do: where(q, [r], r.is_published == true)
+  defp scope(q, status: _all), do: q
 
   # defp scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
 

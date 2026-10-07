@@ -13,6 +13,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :q, Field.TrimmedString
     field :when, :string
     field :status, :string
+    field :details, :string
     field :page, :integer
     field :limit, :integer
     field :sort, :string
@@ -21,6 +22,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   def status_kinds, do: [{"All", "all"}, {"Active", "active"}, {"Departed", "departed"}]
+
+  # "missing": current members with no photo, mobile phone, or email (#205).
+  def details_kinds, do: [{"All", "all"}, {"Missing", "missing"}]
 
   def sort_kinds,
     do: %{
@@ -64,6 +68,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
+    |> scope(details: filter_options.details)
     |> join_attendance_summary(team, filter_options.when)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
@@ -74,6 +79,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     %__MODULE__{
       when: current_year(),
       status: "active",
+      details: "all",
       limit: 500,
       sort: "name"
     }
@@ -83,9 +89,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :when, :status, :page, :limit, :sort])
+    |> cast(params, [:q, :when, :status, :details, :page, :limit, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
+    |> validate_inclusion(:details, Enum.map(details_kinds(), fn {_, v} -> v end))
     |> validate_format(:when, ~r/\A(all|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page,
@@ -164,6 +171,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, status: "all"), do: q
   defp scope(q, status: "active"), do: where(q, [r], is_nil(r.left_at))
   defp scope(q, status: "departed"), do: where(q, [r], not is_nil(r.left_at))
+
+  defp scope(q, details: "missing"),
+    do: q |> Member.current_query(DateTime.utc_now()) |> Member.missing_details_query()
+
+  defp scope(q, details: _all), do: q
 
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)

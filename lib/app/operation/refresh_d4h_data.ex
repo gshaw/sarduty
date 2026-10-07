@@ -111,6 +111,10 @@ defmodule App.Operation.RefreshD4HData do
     {_count, progress} = RefreshD4HData.UpsertMembers.call(d4h, team, progress)
     progress = RefreshD4HData.Progress.finish_stage(progress)
 
+    progress = RefreshD4HData.Progress.update_stage(progress, "Member photos")
+    RefreshD4HData.CheckMemberPhotos.call(d4h, team, :current)
+    progress = RefreshD4HData.Progress.finish_stage(progress)
+
     progress = RefreshD4HData.Progress.update_stage(progress, "Tags")
     tag_index = build_d4h_tag_index(d4h)
     progress = RefreshD4HData.Progress.finish_stage(progress)

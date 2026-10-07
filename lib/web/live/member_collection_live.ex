@@ -3,6 +3,7 @@ defmodule Web.MemberCollectionLive do
 
   import Web.Components.Pagination
 
+  alias App.Model.Member
   alias App.ViewModel.MemberFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -19,6 +20,7 @@ defmodule Web.MemberCollectionLive do
           socket
           |> assign(:sort, filter_options.sort)
           |> assign(:status, filter_options.status)
+          |> assign(:details, filter_options.details)
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
@@ -53,6 +55,12 @@ defmodule Web.MemberCollectionLive do
         field={@form[:status]}
         type="select"
         options={MemberFilterViewModel.status_kinds()}
+      />
+      <.input
+        label="Details"
+        field={@form[:details]}
+        type="select"
+        options={MemberFilterViewModel.details_kinds()}
       />
       <.input
         label="Sort"
@@ -95,6 +103,9 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
         {record.member.position}
       </:col>
+      <:col :let={record} :if={@details == "missing"} label="Missing">
+        <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
+      </:col>
       <:col :let={record} label="Activities" align="right" class="w-px whitespace-nowrap tabular-nums">
         {record.activity_count}
       </:col>
@@ -132,6 +143,16 @@ defmodule Web.MemberCollectionLive do
     <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
     """
   end
+
+  defp missing_text(member) do
+    member
+    |> Member.missing_details()
+    |> Enum.map_join(", ", &missing_label/1)
+  end
+
+  defp missing_label(:photo), do: "Photo"
+  defp missing_label(:mobile_phone), do: "Mobile phone"
+  defp missing_label(:email), do: "Email"
 
   def handle_event("change", %{"form" => form_params}, socket) do
     case MemberFilterViewModel.validate(form_params) do

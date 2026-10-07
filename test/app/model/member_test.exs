@@ -3,6 +3,8 @@ defmodule App.Model.MemberTest do
 
   import App.DataFixtures
 
+  alias App.Model.Member
+
   test "takes whatever D4H holds, however long or odd" do
     # A D4H address field once held a paragraph of notes and broke a team's first refresh.
     member =
@@ -13,5 +15,25 @@ defmodule App.Model.MemberTest do
       })
 
     assert String.length(member.address) == 500
+  end
+
+  test "missing details are a photo D4H says it lacks, a mobile phone, and an email" do
+    assert Member.missing_details(%{
+             has_photo: true,
+             phone: "604-555-0100",
+             email: "a@example.com"
+           }) ==
+             []
+
+    assert Member.missing_details(%{has_photo: false, phone: nil, email: ""}) ==
+             [:photo, :mobile_phone, :email]
+
+    # Nobody has asked D4H about the photo yet, so it isn't counted as missing.
+    assert Member.missing_details(%{
+             has_photo: nil,
+             phone: "604-555-0100",
+             email: "a@example.com"
+           }) ==
+             []
   end
 end

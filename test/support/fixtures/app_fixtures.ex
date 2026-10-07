@@ -124,6 +124,8 @@ defmodule App.DataFixtures do
 
   def member_fixture(%Team{} = team, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
+    # The refresh sets this from D4H's image endpoint, never from a changeset.
+    {has_photo, attrs} = Map.pop(attrs, :has_photo, true)
 
     params =
       Map.merge(
@@ -141,7 +143,10 @@ defmodule App.DataFixtures do
         attrs
       )
 
-    Member.insert!(params)
+    params
+    |> Member.insert!()
+    |> Ecto.Changeset.change(has_photo: has_photo)
+    |> Repo.update!()
   end
 
   def attendance_fixture(%Activity{} = activity, %Member{} = member, attrs \\ %{}) do
