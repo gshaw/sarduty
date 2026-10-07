@@ -3,6 +3,7 @@ defmodule Web.ActivityAttendanceLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Operation.ApplyAttendanceImport
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -155,52 +156,86 @@ defmodule Web.ActivityAttendanceLive do
     {:noreply, socket}
   end
 
-  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   def handle_event("perform-recommendations", params, socket) do
+    %{current_team: team, activity: activity, current_user: user} = socket.assigns
+
     attendance_ids =
-      Enum.reduce(params, [], fn {k, v}, a ->
-        if v == "true", do: [String.to_integer(k) | a], else: a
-      end)
+      for {key, "true"} <- params, {id, ""} <- [Integer.parse(key)], into: MapSet.new(), do: id
 
-    recommendations =
-      socket.assigns.recommendations
-      |> Enum.filter(fn {_, id, _} -> id != nil && Enum.member?(attendance_ids, id) end)
-
-    d4h = D4H.build_context_from_team(socket.assigns.current_team)
-
-    for {op, attendance_id, _member} <- recommendations do
-      case op do
-        :add ->
-          D4H.add_attendance(d4h, attendance_id)
-
-        :remove ->
-          D4H.remove_attendance(d4h, attendance_id)
-
-        _ ->
-          nil
-      end
-    end
-
-    new_recommendations =
-      socket.assigns.recommendations
-      |> Enum.reject(fn {_, attendance_id, _} -> Enum.member?(attendance_ids, attendance_id) end)
-
-    new_attendance_records =
-      D4H.fetch_activity_attendance(
-        d4h,
-        socket.assigns.activity.d4h_activity_id,
-        socket.assigns.team_members
-      )
+    changes = selected_changes(socket.assigns, attendance_ids)
 
     socket =
-      assign(
-        socket,
-        attendance_records: new_attendance_records,
-        recommendations: new_recommendations
-      )
+      if changes == [], do: socket, else: apply_import(socket, team, activity, user, changes)
 
-    {:noreply, socket}
+    d4h = D4H.build_context_from_team(team)
+
+    new_recommendations =
+      Enum.reject(socket.assigns.recommendations, fn {_, id, _} ->
+        MapSet.member?(attendance_ids, id)
+      end)
+
+    new_attendance_records =
+      D4H.fetch_activity_attendance(d4h, activity.d4h_activity_id, socket.assigns.team_members)
+
+    {:noreply,
+     assign(socket,
+       attendance_records: new_attendance_records,
+       recommendations: new_recommendations
+     )}
   end
+
+  defp apply_import(socket, team, activity, user, changes) do
+    case ApplyAttendanceImport.call(team, activity, user, changes, DateTime.utc_now()) do
+      {:ok, results} -> show_results(socket, results)
+      {:error, error} -> put_flash(socket, :error, error_text(error))
+    end
+  end
+
+  defp selected_changes(assigns, attendance_ids) do
+    records = Map.new(assigns.attendance_records, &{&1.d4h_attendance_id, &1})
+
+    for {action, id, member} <- assigns.recommendations,
+        action in [:add, :remove],
+        MapSet.member?(attendance_ids, id),
+        record <- List.wrap(records[id]) do
+      %{
+        action: action,
+        d4h_attendance_id: id,
+        d4h_member_id: member.d4h_member_id,
+        status: record.status,
+        name: member.name
+      }
+    end
+  end
+
+  defp show_results(socket, results) do
+    failures =
+      for {change, %{status: status, error: error}} <- results,
+          status != :applied,
+          do: "#{change.name}: #{error}"
+
+    case failures do
+      [] ->
+        put_flash(socket, :info, "#{count_changes(length(results))} saved to D4H.")
+
+      _ ->
+        put_flash(
+          socket,
+          :error,
+          "#{count_changes(length(failures))} did not go through. #{Enum.join(failures, " ")}"
+        )
+    end
+  end
+
+  defp count_changes(1), do: "1 attendance change"
+  defp count_changes(count), do: "#{count} attendance changes"
+
+  defp error_text(:published),
+    do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
+
+  defp error_text(:deleted), do: "This activity is deleted in D4H. Nothing can be sent to it."
+  defp error_text(:no_team_key), do: "Save the team's D4H access key in Team settings first."
+  defp error_text(error), do: "D4H did not answer. Try again. #{Exception.message(error)}"
 
   def parse_import_content(import_content) do
     import_content

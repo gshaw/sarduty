@@ -1,6 +1,7 @@
 defmodule App.Operation.SendAttendanceToD4HTest do
   use ExUnit.Case, async: true
 
+  alias App.Accounts.User
   alias App.Adapter.D4H.AttendanceInfo
   alias App.Model.Activity
   alias App.Model.Member
@@ -114,6 +115,6 @@ defmodule App.Operation.SendAttendanceToD4HTest do
     activity = %Activity{team_id: 1, deleted_at: ~U[2026-10-05 06:00:00Z]}
 
     assert SendAttendanceToD4H.preview(team, activity) == {:error, :deleted}
-    assert SendAttendanceToD4H.call(team, activity, [], @start) == {:error, :deleted}
+    assert SendAttendanceToD4H.call(team, activity, %User{}, [], @start) == {:error, :deleted}
   end
 end

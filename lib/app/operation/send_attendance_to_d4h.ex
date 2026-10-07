@@ -1,18 +1,22 @@
 defmodule App.Operation.SendAttendanceToD4H do
+  alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
+  alias App.Model.ChangeSet
+  alias App.Model.ChangeSetRow
   alias App.Model.Member
   alias App.Model.NoShow
   alias App.Model.Team
+  alias App.Operation.ApplyChangeSet
   alias App.Operation.BuildAttendanceTimes
 
   # Sends the door's attendance to D4H. `preview` reads the activity's D4H attendance
   # and plans the changes for a team admin to review; `call` reads it again, plans
-  # again, and makes the changes the admin kept. Planning from a fresh read matters:
-  # D4H accepts a second row for a member and counts their hours twice, so a member
-  # with a row is always changed, never added. Writes don't retry; a person is watching
+  # again, and sends the changes the admin kept as a change set (#174). Planning from a
+  # fresh read matters: D4H accepts a second row for a member and counts their hours
+  # twice, so a member with a row is always changed, never added. Writes don't retry; a person is watching
   # and can send again, which plans from what D4H has by then.
 
   @doc """
@@ -131,28 +135,19 @@ defmodule App.Operation.SendAttendanceToD4H do
   end
 
   @doc """
-  Makes the kept changes, named by `keys`, from a fresh plan. When they all go
-  through, it closes the activity's attendance links. `{:ok, results}` with `{change, :ok | {:error, message}}`
-  for each change sent; `{:error, :published}` when D4H has published the activity;
-  otherwise the error from `preview/2`.
+  Makes the kept changes, named by `keys`, from a fresh plan, as a change set applied
+  by `user`. When they all go through, it closes the activity's attendance links.
+  `{:ok, results}` with `{change, :ok | {:error, message}}` for each change sent;
+  `{:error, :published}` when D4H has published the activity; otherwise the error from
+  `preview/2`.
   """
-  def call(%Team{} = team, %Activity{} = activity, keys, now) do
+  def call(%Team{} = team, %Activity{} = activity, %User{} = user, keys, now) do
     keys = MapSet.new(keys)
 
     case preview(team, activity) do
       {:ok, %{published: false, changes: changes}} ->
-        d4h = D4H.build_context_from_team(team)
-
-        results =
-          for change <- changes, sendable?(change), change.key in keys do
-            {change, write(d4h, activity, change)}
-          end
-
-        # A failed change keeps the link open, so the door can still fix times.
-        if Enum.all?(results, &match?({_change, :ok}, &1)),
-          do: AttendanceLink.close_all!(team, activity, now)
-
-        {:ok, results}
+        kept = for change <- changes, sendable?(change), change.key in keys, do: change
+        send_kept(team, activity, user, kept, now)
 
       {:ok, %{published: true}} ->
         {:error, :published}
@@ -162,47 +157,90 @@ defmodule App.Operation.SendAttendanceToD4H do
     end
   end
 
-  defp write(d4h, activity, change) do
-    result =
-      case change.action do
-        :update ->
-          D4H.set_attendance(
-            d4h,
-            change.d4h_attendance_id,
-            "ATTENDING",
-            change.arrived_at,
-            change.left_at
-          )
+  defp send_kept(team, activity, user, kept, now) do
+    with {:ok, results} <- apply_changes(team, activity, user, kept, now) do
+      # A failed change keeps the link open, so the door can still fix times.
+      if Enum.all?(results, &match?({_change, :ok}, &1)),
+        do: AttendanceLink.close_all!(team, activity, now)
 
-        :create ->
-          D4H.create_attendance(
-            d4h,
-            activity.d4h_activity_id,
-            change.member.d4h_member_id,
-            change.arrived_at,
-            change.left_at
-          )
-
-        :absent ->
-          D4H.set_attendance(d4h, change.d4h_attendance_id, "ABSENT", nil, nil)
-      end
-
-    case result do
-      {:ok, _info} ->
-        if no_show?(change), do: NoShow.record!(activity, change.member)
-        :ok
-
-      {:error, error} ->
-        {:error, failure_text(error)}
+      {:ok, results}
     end
   end
 
-  @doc """
-  What to show for a failed write. D4H answers 400 or 404 when the activity or the
-  attendance row is gone, so that says so before D4H's own text.
-  """
-  def failure_text(%D4H.Error{status: status} = error) when status in [400, 404],
-    do: "The activity may have been deleted or changed in D4H. #{Exception.message(error)}"
+  defp apply_changes(_team, _activity, _user, [], _now), do: {:ok, []}
 
-  def failure_text(error), do: Exception.message(error)
+  defp apply_changes(team, activity, user, changes, now) do
+    change_set =
+      ChangeSet.propose!(
+        %ChangeSet{
+          team_id: team.id,
+          source: :door,
+          activity_id: activity.id,
+          proposed_by_user_id: user.id
+        },
+        Enum.map(changes, &change_set_row(activity, &1))
+      )
+
+    with {:ok, rows} <- ApplyChangeSet.call(team, change_set, user, now) do
+      {:ok, Enum.zip_with(changes, rows, &result(activity, &1, &2))}
+    end
+  end
+
+  defp result(activity, change, %ChangeSetRow{status: :applied}) do
+    if no_show?(change), do: NoShow.record!(activity, change.member)
+    {change, :ok}
+  end
+
+  defp result(_activity, change, %ChangeSetRow{error: error}), do: {change, {:error, error}}
+
+  @doc "The change set row for a change."
+  def change_set_row(activity, change) do
+    row = %ChangeSetRow{member_id: change.member.id, reason: reason(change)}
+
+    case change.action do
+      :update ->
+        %{
+          row
+          | action: :update_attendance,
+            d4h_record_id: change.d4h_attendance_id,
+            old_value: %{"status" => change.status},
+            new_value: attending(change)
+        }
+
+      :create ->
+        %{
+          row
+          | action: :create_attendance,
+            new_value:
+              change
+              |> attending()
+              |> Map.merge(%{
+                "d4h_activity_id" => activity.d4h_activity_id,
+                "d4h_member_id" => change.member.d4h_member_id
+              })
+        }
+
+      :absent ->
+        %{
+          row
+          | action: :update_attendance,
+            d4h_record_id: change.d4h_attendance_id,
+            old_value: %{"status" => change.status},
+            new_value: %{"status" => "ABSENT"}
+        }
+    end
+  end
+
+  defp attending(change) do
+    %{
+      "status" => "ATTENDING",
+      "starts_at" => ApplyChangeSet.iso(change.arrived_at),
+      "ends_at" => ApplyChangeSet.iso(change.left_at)
+    }
+  end
+
+  defp reason(%{action: :update}), do: "Scanned at the door"
+  defp reason(%{action: :create}), do: "Scanned at the door, not signed up"
+  defp reason(%{action: :absent, status: "requested"}), do: "Signed up, not scanned at the door"
+  defp reason(%{action: :absent}), do: "Attending in D4H, not scanned at the door"
 end
