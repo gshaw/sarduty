@@ -1,7 +1,4 @@
 defmodule App.Adapter.Mapbox do
-  # alias App.Adapter.Mapbox
-  alias App.Model.Coordinate
-
   def build_context(%{mapbox_access_token: access_token}) do
     Req.new(
       base_url: "https://api.mapbox.com/",
@@ -15,27 +12,6 @@ defmodule App.Adapter.Mapbox do
   end
 
   defp access_token, do: Application.get_env(:sarduty, App.Adapter.Mapbox)[:access_token]
-
-  def build_static_map_url(_context, nil), do: nil
-
-  def build_static_map_url(context, coordinate) do
-    base_url = context.options.base_url
-    token = context.options.params[:access_token]
-
-    coordinate = Coordinate.build(coordinate)
-
-    if coordinate == {0.0, 0.0} do
-      nil
-    else
-      mapbox_coordinate = Coordinate.build_mapbox(coordinate)
-      zoom = "10"
-      size = "640x480"
-      pin_color = "ff2600"
-
-      # https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff2600(-122.7267,49.1916)/-122.7267,49.1916,10,0/480x320@2x?access_token=pk.eyJ1
-      "#{base_url}styles/v1/mapbox/streets-v12/static/pin-s+#{pin_color}(#{mapbox_coordinate})/#{mapbox_coordinate},#{zoom},0/#{size}@2x?access_token=#{token}"
-    end
-  end
 
   @doc """
   A static map with no pins, centred on `{lat, lng}` at `zoom`, `width` by `height` pixels

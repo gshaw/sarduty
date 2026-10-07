@@ -102,12 +102,24 @@
     <.bar_list id="sample-bars" rows={chart_members()} />
   </div>
 
-  <h2>Activity map</h2>
+  <h2>Maps</h2>
+  <ul>
+    <li>
+      Every map is <code>Web.Components.ActivityMap</code>, never a bare Mapbox image. It
+      draws Mapbox's <code>outdoors-v12</code> in light mode and <code>dark-v11</code> in dark
+      mode, so a map never glares on a dark page.
+    </li>
+    <li>
+      Places are our dots in the kind's colour, not Mapbox pins. One place is one dot.
+    </li>
+    <li>Without a Mapbox token the dots sit on a plain panel, and the page still works.</li>
+  </ul>
+
+  <h3>Activity map</h3>
   <p>
-    A plain Mapbox map, outdoors in light mode and dark in dark mode, with a dot per
-    activity in its kind's colour. Dots have a 2px ring so they read where they overlap, and
-    incidents sit on top. Hover a dot for the activity. Without a Mapbox token the dots sit on
-    a plain panel.
+    A plain Mapbox map with a dot per activity in its kind's colour. Dots have a 2px ring so
+    they read where they overlap, and incidents sit on top. Hover a dot for the activity. The
+    activity page uses the same map with one dot.
   </p>
   <div style="max-width: 720px">
     <.activity_map

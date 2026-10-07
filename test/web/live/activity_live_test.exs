@@ -15,6 +15,7 @@ defmodule Web.ActivityLiveTest do
 
     assert html =~ activity.title
     assert has_element?(lv, "#activity-actions")
+    assert has_element?(lv, "#activity-map circle")
     refute has_element?(lv, "#deleted-in-d4h")
   end
 
