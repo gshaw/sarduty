@@ -1,8 +1,6 @@
 defmodule Web.AttendanceLinkLive do
   use Web, :live_view_narrow_layout
 
-  import Web.Components.Table
-
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member

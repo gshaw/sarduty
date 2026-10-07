@@ -1,8 +1,6 @@
 defmodule Web.Settings.MCPLive do
   use Web, :live_view_narrow_layout
 
-  import Web.Components.Table
-
   alias App.Model.MCPToken
   alias App.Model.Team
   alias App.Operation.CreateMCPToken

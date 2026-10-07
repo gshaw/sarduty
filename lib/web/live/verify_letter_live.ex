@@ -1,6 +1,8 @@
 defmodule Web.VerifyLetterLive do
   use Web, :live_view_verify_layout
 
+  import Web.Components.Verify
+
   alias App.Model.ReplacedTaxCreditLetter
   alias App.Model.TaxCreditLetter
   alias Service.Format

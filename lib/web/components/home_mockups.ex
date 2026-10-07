@@ -6,7 +6,7 @@ defmodule Web.Components.HomeMockups do
   """
   use Phoenix.Component
 
-  alias Web.Components.UI
+  alias Web.Components.Core
 
   # cspell:ignore viewbox Okafor Nakamura Dhillon Moreau Larsen SAMP — made-up names, and the
   # sample ID card code SAMP-LE00
@@ -80,7 +80,7 @@ defmodule Web.Components.HomeMockups do
             <strong class="home-big">19:10</strong>
           </div>
           <div>
-            <UI.badge kind={:exercise}>Exercise</UI.badge>
+            <Core.badge kind={:exercise}>Exercise</Core.badge>
             <strong>Rope rescue, Elfin Lakes</strong>
             <span class="home-muted">Today</span>
           </div>

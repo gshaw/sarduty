@@ -72,9 +72,10 @@ The rules that are easy to break:
 - **New side effect** → an Operation in `lib/app/operation/`. If it has logic worth
   testing, give it a pure function and test that; see
   [testing-strategy.md](testing-strategy.md).
-- **New shared UI** → a function component in `lib/web/components/` (`core.ex` for form
-  primitives, `ui.ex` for app-wide pieces). Import it in the layout macro in `lib/web.ex`
-  that needs it. Icons are `<.icon name="hero-…">`; styling is Tailwind utilities with no
+- **New shared UI** → a function component in `lib/web/components/`: `core.ex` for the
+  pieces every page uses, or its own module. Every LiveView layout imports the same shared
+  modules (`live_view/1` in `lib/web.ex`); a component only one or two pages use is
+  imported by those pages. Icons are `<.icon name="hero-…">`; styling is Tailwind utilities with no
   `@apply` and no UI kit.
 - **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,
   listed in `App.MCP.Tools`. See [mcp.md](mcp.md).

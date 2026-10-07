@@ -1,24 +1,11 @@
 defmodule Web.Components.Core do
   @moduledoc """
-  Provides core UI components.
-
-  At first glance, this module may seem daunting, but its goal is to provide
-  core building blocks for your application, such as modals, tables, and
-  forms. The components consist mostly of markup and are well-documented
-  with doc strings and declarative assigns. You may customize and style
-  them in any way you want, based on your application growth and needs.
-
-  The default components use Tailwind CSS, a utility-first CSS framework.
-  See the [Tailwind CSS documentation](https://tailwindcss.com) to learn
-  how to customize them or feel free to swap in another framework altogether.
-
-  Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
+  The components any page can use: flash, buttons, badges, form inputs, switches, and
+  icons. The design system at /styles shows each one.
   """
   use Phoenix.Component
 
   use Gettext, backend: Web.Gettext
-
-  import Web.Components.UI
 
   alias Phoenix.LiveView.JS
 
@@ -113,6 +100,134 @@ defmodule Web.Components.Core do
       size != :md && "btn-#{size}",
       class
     ]
+  end
+
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+  slot :trailing
+
+  def form_actions(assigns) do
+    ~H"""
+    <div class={["form-actions flex flex-wrap", @class]}>
+      <div class="flex gap-hspacer grow">
+        {render_slot(@inner_block)}
+      </div>
+      <div :if={@trailing != []} class="flex gap-hspacer">
+        {render_slot(@trailing)}
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a badge.
+
+  ## Examples
+
+      <.badge>Draft</.badge>
+      <.badge kind={:incident} title="Activity kind">Incident</.badge>
+  """
+  attr :kind, :atom,
+    default: :default,
+    values: [
+      :default,
+      :primary,
+      :secondary,
+      :success,
+      :warning,
+      :danger,
+      :incident,
+      :exercise,
+      :event,
+      :outline
+    ]
+
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def badge(assigns) do
+    ~H"""
+    <span class={["badge", @kind != :default && "badge-#{@kind}"]} {@rest}>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  attr :class, :string, default: nil
+  slot :inner_block
+
+  def spinner(assigns) do
+    ~H"""
+    <span class={["inline-flex items-center gap-2", @class]}>
+      <span class="spinner" aria-hidden="true"></span>
+      <span :if={@inner_block != []}>{render_slot(@inner_block)}</span>
+    </span>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def hint(assigns) do
+    ~H"""
+    <div class="hint block mb-2">
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a label.
+  """
+  attr :for, :string, default: nil
+  slot :inner_block, required: true
+
+  def label(assigns) do
+    ~H"""
+    <label for={@for} class="label block mb-1">
+      {render_slot(@inner_block)}
+    </label>
+    """
+  end
+
+  @doc """
+  Generates a generic error message.
+  """
+  slot :inner_block, required: true
+
+  def error(assigns) do
+    ~H"""
+    <div class="mb-2 font-bold text-danger-1">
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc ~S"""
+  Renders tabs: links to sibling pages, each with its own URL. Mark the page you're on
+  with `current`, which sets `aria-current="page"`.
+
+  ## Examples
+
+      <.tabs label="Member">
+        <:tab navigate={~p"/teams/#{@team}/members/#{@member.id}"} current>Attendance</:tab>
+        <:tab navigate={~p"/teams/#{@team}/members/#{@member.id}/groups"}>Groups</:tab>
+      </.tabs>
+  """
+  attr :label, :string, required: true, doc: "the aria-label of the nav"
+
+  slot :tab, required: true do
+    attr :navigate, :string, required: true
+    attr :current, :boolean
+  end
+
+  def tabs(assigns) do
+    ~H"""
+    <nav class="tabs" aria-label={@label}>
+      <.link :for={tab <- @tab} navigate={tab.navigate} aria-current={tab[:current] && "page"}>
+        {render_slot(tab)}
+      </.link>
+    </nav>
+    """
   end
 
   @doc """
@@ -318,31 +433,6 @@ defmodule Web.Components.Core do
   end
 
   @doc """
-  Renders a header with title.
-  """
-  attr :class, :string, default: nil
-
-  slot :inner_block, required: true
-  slot :subtitle
-  slot :actions
-
-  def header(assigns) do
-    ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
-      <div>
-        <h1 class="title">
-          {render_slot(@inner_block)}
-        </h1>
-        <p :if={@subtitle != []} class="lead">
-          {render_slot(@subtitle)}
-        </p>
-      </div>
-      <div class="flex-none">{render_slot(@actions)}</div>
-    </header>
-    """
-  end
-
-  @doc """
   Renders a [Heroicon](https://heroicons.com).
 
   Heroicons come in three styles – outline, solid, and mini.
@@ -390,30 +480,6 @@ defmodule Web.Components.Core do
          "opacity-100 translate-y-0 md:scale-100",
          "opacity-0 translate-y-4 md:translate-y-0 md:scale-95"}
     )
-  end
-
-  def show_modal(js \\ %JS{}, id) when is_binary(id) do
-    js
-    |> JS.show(to: "##{id}")
-    |> JS.show(
-      to: "##{id}-bg",
-      transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
-    )
-    |> show("##{id}-container")
-    |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "##{id}-content")
-  end
-
-  def hide_modal(js \\ %JS{}, id) do
-    js
-    |> JS.hide(
-      to: "##{id}-bg",
-      transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
-    )
-    |> hide("##{id}-container")
-    |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
-    |> JS.remove_class("overflow-hidden", to: "body")
-    |> JS.pop_focus()
   end
 
   @doc """

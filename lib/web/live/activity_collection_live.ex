@@ -1,6 +1,8 @@
 defmodule Web.ActivityCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.ActivityFilterTable
+
   alias App.ViewModel.ActivityFilterViewModel
 
   def mount(_params, _session, socket) do
