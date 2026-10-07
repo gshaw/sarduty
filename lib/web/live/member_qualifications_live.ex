@@ -18,7 +18,7 @@ defmodule Web.MemberQualificationsLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{member.name} - Qualifications")
+      |> assign(:page_title, "#{member.name} · Qualifications")
       |> assign(:member, member)
 
     {:noreply, socket}
@@ -67,7 +67,9 @@ defmodule Web.MemberQualificationsLive do
         {award_status(award)}
       </:col>
     </.table>
-    <p :if={@member.member_qualification_awards == []}>No qualifications in D4H.</p>
+    <p :if={@member.member_qualification_awards == []} id="no-qualifications">
+      {@member.name} has no qualifications in D4H.
+    </p>
     """
   end
 

@@ -227,7 +227,7 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
   shared role address, or a team whose key fails. An admin adds one through
   `bin/sarduty rpc`:
   `App.Model.TeamLoginGrant.grant!(subdomain, email, reason)`, and removes it with
-  `revoke!(subdomain, email)`. `/admin` and the team's managers page list them.
+  `revoke!(subdomain, email)`. `/admin` and the team's Team admins page list them.
 - **The link** is 128 random bits, stored only as a hash, valid for 15 minutes and once.
   A request within a minute of the last one sends nothing, and `Web.LoginLimit` caps
   requests per email and per IP. Opened in the browser that asked for it, the link logs

@@ -37,7 +37,7 @@ defmodule Web.Settings.TeamLive do
           qualifications on the back
         </li>
         <li>
-          <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>Managers</.a>:
+          <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>Team admins</.a>:
           who can log in
         </li>
       </ul>
@@ -110,7 +110,7 @@ defmodule Web.Settings.TeamLive do
         </div>
         <.input
           field={@form[:new_d4h_access_key]}
-          label="D4H access key (team)"
+          label="D4H access key"
           type="password"
           autocomplete="off"
         >

@@ -60,7 +60,7 @@ defmodule Web.GroupCollectionLive do
 
   defp rules_status(%{status: :broken} = assigns) do
     ~H"""
-    <.badge kind={:danger}>Rules broken</.badge>
+    <.badge kind={:danger}>Rules need fixing</.badge>
     """
   end
 

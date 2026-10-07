@@ -58,7 +58,7 @@ defmodule Web.Components.Core do
         <span :if={@title} class="toast-title">{@title}</span>
         {msg}
       </div>
-      <button type="button" class="toast-close" aria-label={gettext("close")}>
+      <button type="button" class="toast-close" aria-label={gettext("Close")}>
         <.icon name="hero-x-mark-mini" class="size-5" />
       </button>
     </div>

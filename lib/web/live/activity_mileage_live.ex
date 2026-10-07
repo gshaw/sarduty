@@ -47,14 +47,12 @@ defmodule Web.ActivityMileageLive do
 
     <h1 class="title mb-p">{@activity.title}</h1>
     <%= if @activity.coordinate do %>
-      <p>
-        <div>
-          Activity location: {App.Model.Coordinate.to_string(@activity.coordinate, 5)}
-        </div>
-        <div>
-          Yard location: {App.Model.Coordinate.to_string(@team.coordinate, 5)}
-        </div>
-      </p>
+      <dl>
+        <dt>Activity latitude and longitude</dt>
+        <dd>{App.Model.Coordinate.to_string(@activity.coordinate, 5)}</dd>
+        <dt>Yard latitude and longitude</dt>
+        <dd>{App.Model.Coordinate.to_string(@team.coordinate, 5)}</dd>
+      </dl>
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
         <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
       </p>
@@ -93,7 +91,8 @@ defmodule Web.ActivityMileageLive do
           </:col>
         </.table>
         <p class="mt-p">
-          Km and hours are the round trip driving distance and time from each member's home to the activity or the yard.
+          Distances and times are round trips by car, from each member's home to the activity
+          and to the yard.
         </p>
         <p>
           <.a

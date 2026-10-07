@@ -24,7 +24,7 @@ defmodule Web.Components.TeamManagers do
         None known. The team has not refreshed since SAR Duty added access levels, or its D4H access key does not work.
       </p>
       <.table :if={@rows != []} id={@id} rows={@rows} row_id={& &1.id} class="table-striped">
-        <:col :let={row} label="Manager">
+        <:col :let={row} label="Team admin">
           <div :if={row.name}>{row.name}</div>
           <div class={["break-all", row.name && "text-sm text-secondary-1"]}>{row.email}</div>
         </:col>
@@ -47,7 +47,7 @@ defmodule Web.Components.TeamManagers do
         badges =
           [
             has_login?(member, login_emails) && {:primary, "Has logged in"},
-            odd_domain?(member, managers) && {:warning, "Other domain"},
+            odd_domain?(member, managers) && {:warning, "Other email domain"},
             member.d4h_status != "OPERATIONAL" && {:default, "Not operational"}
           ]
           |> Enum.filter(& &1)
@@ -67,7 +67,7 @@ defmodule Web.Components.TeamManagers do
         %{
           id: "grant-#{grant.id}",
           name: nil,
-          access: "Let in by admin",
+          access: "Let in by a SAR Duty admin",
           email: grant.email,
           badges: [],
           reason: grant.reason

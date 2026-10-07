@@ -27,7 +27,7 @@ defmodule Web.MemberLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{member.name} - Attendance")
+      |> assign(:page_title, "#{member.name} · Attendance")
       |> assign(:member, member)
       |> assign(:filter_form, to_form(filter_changeset, as: :filter))
       |> assign(:paginated, paginated)
