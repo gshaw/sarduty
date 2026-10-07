@@ -104,8 +104,6 @@ defmodule Web.Router do
       live "/terms", TermsLive
       live "/privacy", PrivacyLive
       live "/signup", TeamSignupLive
-      live "/privacy", PrivacyLive
-      live "/terms", TermsLive
       # Taking attendance at the door. The token is the only access: no login.
       live "/attendance/:token", AttendanceLinkLive
     end

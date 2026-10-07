@@ -29,6 +29,9 @@ defmodule Web.TermsLive do
       <p>
         These terms can change. The date above shows the last change. The laws of British Columbia and Canada apply.
       </p>
+      <p id="terms-operator">
+        Gerry Shaw runs SAR Duty as an independent project. No team that uses SAR Duty runs it or is responsible for it.
+      </p>
       <p>
         <.a id="terms-privacy" navigate={~p"/privacy"}>Privacy</.a>
       </p>

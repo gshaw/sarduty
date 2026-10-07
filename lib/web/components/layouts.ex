@@ -154,8 +154,6 @@ defmodule Web.Layouts do
         <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         ·
         <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
-        ·
-        <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         <%= if @admin? do %>
           ·
           <.a id="footer-styles" href="/styles">Style guide</.a>
