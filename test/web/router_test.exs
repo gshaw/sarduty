@@ -50,7 +50,8 @@ defmodule Web.RouterTest do
     {"POST", "/wallet/v1/log", Web.WalletController, :log},
     {"GET", "/s/abc123", Web.ShortLinkController, :show},
     {"GET", "/attendance/token", Web.AttendanceLinkLive, nil},
-    {"GET", "/teams/nsr/logo", Web.TeamController, :logo}
+    {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
+    {"POST", "/teams/nsr/mcp", Web.MCPController, :post}
   ]
 
   @pinned_verify [

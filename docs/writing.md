@@ -118,6 +118,7 @@ and must not be used for it.
 | ID card                        | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
 | verify                         | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
 | D4H access key                 | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
+| MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H into SAR Duty.                                                      |
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |

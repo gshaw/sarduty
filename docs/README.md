@@ -31,6 +31,7 @@ runs as one Fly machine with Litestream replicating the database.
 | Models      | `lib/app/model/`, `lib/app/accounts/` | Ecto schemas and their queries                        | `Repo`, fields, validators           |
 | View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                               |
 | View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                               |
+| MCP tools   | `lib/app/mcp/`                        | Read-only views of a team's data for agents           | Models                               |
 | Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)               |
 
 The rules that are easy to break:
@@ -75,6 +76,8 @@ The rules that are easy to break:
   primitives, `ui.ex` for app-wide pieces). Import it in the layout macro in `lib/web.ex`
   that needs it. Icons are `<.icon name="hero-…">`; styling is Tailwind utilities with no
   `@apply` and no UI kit.
+- **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,
+  listed in `App.MCP.Tools`. See [mcp.md](mcp.md).
 - **New displayed value** → a function in `Service.Format`, not arithmetic in a template.
 
 ## The docs
@@ -86,6 +89,7 @@ The rules that are easy to break:
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
 - [tax-credit-letters.md](tax-credit-letters.md) — verifying a tax credit letter, its reference numbers, and the locked PDF.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.
+- [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
 - [attendance-at-the-door.md](attendance-at-the-door.md) — attendance links, scanning ID cards at an activity, and the times they record.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
