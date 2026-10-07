@@ -6,7 +6,8 @@ defmodule App.Worker.SyncTeamChangesWorker do
 
   A failed sync isn't retried: the next one is 10 minutes away. Honeybadger hears about
   it only after an hour of failures. A missing or rejected key is left for the nightly
-  refresh to report on the dashboards.
+  refresh to report on the dashboards, and a rejected one stops the syncs until a new
+  key is saved or a nightly refresh works again.
   """
 
   use Oban.Worker,
@@ -23,14 +24,20 @@ defmodule App.Worker.SyncTeamChangesWorker do
   @doc "Queues a sync for the team, unless one is already queued or running."
   def enqueue(%Team{} = team), do: %{team_id: team.id} |> new() |> Oban.insert()
 
-  @doc "Queues a sync when the team has a key and its last one is over 2 minutes old."
+  @doc "Queues a sync when the team syncs and its last one is over 2 minutes old."
   def enqueue_if_stale(%Team{} = team, now) do
     if stale?(team, now), do: enqueue(team), else: :fresh
   end
 
-  def stale?(%Team{d4h_access_key: key}, _now) when key in [nil, ""], do: false
-  def stale?(%Team{d4h_synced_at: nil}, _now), do: true
-  def stale?(%Team{d4h_synced_at: synced_at}, now), do: DateTime.diff(now, synced_at) > 120
+  def stale?(%Team{} = team, now) do
+    syncs?(team) and (team.d4h_synced_at == nil or DateTime.diff(now, team.d4h_synced_at) > 120)
+  end
+
+  @doc "Whether the team has a key D4H hasn't rejected."
+  def syncs?(%Team{} = team) do
+    team.d4h_team_id != nil and team.d4h_access_key not in [nil, ""] and
+      not SyncD4HChanges.key_rejected?(team)
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"team_id" => team_id}}) do
@@ -44,14 +51,16 @@ defmodule App.Worker.SyncTeamChangesWorker do
   defp sync(team) do
     case SyncD4HChanges.call(team) do
       {:ok, _team, []} ->
-        ping_healthchecks()
         :ok
 
       {:ok, team, _changed} ->
         Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
         %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
-        ping_healthchecks()
         :ok
+
+      {:error, {:key_rejected, _status} = reason} ->
+        SyncD4HChanges.record_key_rejected(team)
+        {:cancel, inspect(reason)}
 
       {:error, reason} ->
         {:cancel, inspect(reason)}
@@ -65,12 +74,5 @@ defmodule App.Worker.SyncTeamChangesWorker do
         do: Honeybadger.notify(error, metadata: %{team_id: team.id}, stacktrace: __STACKTRACE__)
 
       {:cancel, Exception.message(error)}
-  end
-
-  defp ping_healthchecks do
-    case Application.get_env(:sarduty, :healthchecks_sync_url) do
-      url when url in [nil, ""] -> :ok
-      url -> Req.get(url)
-    end
   end
 end

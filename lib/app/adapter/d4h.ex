@@ -2,6 +2,8 @@ defmodule App.Adapter.D4H do
   alias App.Adapter.D4H
   alias App.Model.Team
 
+  require Logger
+
   def default_region, do: "api.ca.d4h.org"
 
   def regions do
@@ -65,7 +67,34 @@ defmodule App.Adapter.D4H do
     |> Keyword.merge(test_options())
     |> Req.new()
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
+    |> report_rate_limits()
   end
+
+  # D4H sends no rate-limit headers, so a 429 is the only sign of a limit. This step goes
+  # ahead of Req's retry, which would otherwise retry it unseen. Honeybadger groups them
+  # into one error, and its first email is the cue to slow down.
+  defp report_rate_limits(request),
+    do: Req.Request.prepend_response_steps(request, d4h_rate_limit: &report_rate_limit/1)
+
+  @doc false
+  def report_rate_limit({request, %Req.Response{status: 429} = response}) do
+    details = %{
+      d4h_team_id: Req.Request.get_private(request, :d4h_team_id),
+      host: request.url.host,
+      path: request.url.path,
+      retry_after: response |> Req.Response.get_header("retry-after") |> List.first()
+    }
+
+    Logger.warning("D4H rate limit (429): #{inspect(details)}")
+
+    response
+    |> D4H.Error.exception()
+    |> Honeybadger.notify(metadata: details, fingerprint: "d4h-429")
+
+    {request, response}
+  end
+
+  def report_rate_limit({request, response}), do: {request, response}
 
   # config/test.exs routes every request to `Req.Test`, so no test reaches D4H.
   defp test_options, do: Application.get_env(:sarduty, App.Adapter.D4H, [])
@@ -86,6 +115,7 @@ defmodule App.Adapter.D4H do
       ]
       |> Keyword.merge(test_options())
       |> Req.new()
+      |> report_rate_limits()
 
     response = Req.get!(context, url: "/whoami")
 

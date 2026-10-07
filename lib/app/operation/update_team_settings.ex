@@ -4,6 +4,7 @@ defmodule App.Operation.UpdateTeamSettings do
   alias App.Adapter.D4H
   alias App.Adapter.D4H.WhoAmI
   alias App.Model.Team
+  alias App.Operation.SyncD4HChanges
   alias App.Repo
 
   def call(%Team{} = team, params) do
@@ -35,6 +36,7 @@ defmodule App.Operation.UpdateTeamSettings do
       |> put_change(:d4h_access_key_saved_at, now)
       |> put_change(:d4h_access_key_owner, WhoAmI.member_name(whoami, team.d4h_team_id))
       |> put_change(:d4h_access_key_member_id, WhoAmI.member_id(whoami, team.d4h_team_id))
+      |> put_change(:d4h_sync_state, SyncD4HChanges.forget_key_rejected(team.d4h_sync_state))
     else
       add_error(
         changeset,

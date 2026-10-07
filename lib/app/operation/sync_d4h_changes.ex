@@ -201,6 +201,22 @@ defmodule App.Operation.SyncD4HChanges do
   end
 
   @doc """
+  Notes that D4H rejected the team key, which stops the syncs until a new key is saved
+  (`forget_key_rejected/1`) or a refresh gets far enough to save its heads.
+  """
+  def record_key_rejected(%Team{} = team) do
+    state = Map.put(team.d4h_sync_state || %{}, "key_rejected", true)
+    {:ok, team} = Team.update(team, %{d4h_sync_state: state})
+    team
+  end
+
+  def key_rejected?(%Team{d4h_sync_state: %{"key_rejected" => true}}), do: true
+  def key_rejected?(%Team{}), do: false
+
+  @doc "The sync state without the rejected key mark, for when a new key is saved."
+  def forget_key_rejected(state), do: Map.delete(state || %{}, "key_rejected")
+
+  @doc """
   Notes a failed sync. Returns the team and whether to tell Honeybadger: only once, after
   an hour of failures, since the next sync is 10 minutes away and usually works.
   """

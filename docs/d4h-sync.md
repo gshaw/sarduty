@@ -16,7 +16,9 @@ refresh once a night as the safety net (#163).
   [SyncTeamChangesWorker](../lib/app/worker/sync_team_changes_worker.ex) per team with a
   key, on the `sync` queue, so it never waits behind another team's full refresh. Oban's
   `unique` keeps it to one job per team, and a team whose full refresh is running is
-  skipped.
+  skipped. So is a team whose key D4H rejected (`d4h_sync_state["key_rejected"]`): its
+  first 401 or 403 stops the syncs until a new key is saved in team settings or a nightly
+  refresh gets past the key.
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
 - [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 10 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
@@ -43,8 +45,8 @@ refresh once a night as the safety net (#163).
   and the dashboards say "Updated from D4H 4 min ago".
 - A failed sync isn't retried, since the next is 10 minutes away. Honeybadger hears about
   it once, after an hour of failures. A missing or rejected key is left for the nightly
-  refresh to report. Each sync pings `HEALTHCHECKS_SYNC_URL` when it's set: give it its
-  own check with a 10-minute period.
+  refresh to report.
+- Each round pings `HEALTHCHECKS_SYNC_URL` once: see [Monitoring](#monitoring).
 
 ### The full refresh every night
 
@@ -58,12 +60,28 @@ refresh once a night as the safety net (#163).
 - It records the list heads it saw before its first stage, so the next sync picks up
   whatever changed while it ran. At the end it logs how many rows it wrote that the
   syncs missed. If that stays at zero for a month, run it weekly.
-- A successful run pings `HEALTHCHECKS_URL`. A failed one writes `Error: …` to
+- The run pings `HEALTHCHECKS_URL` once: see [Monitoring](#monitoring). A failed team writes `Error: …` to
   `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
   error goes to Honeybadger.
 - A missing key, or one D4H rejects with 401 or 403, is not an app error. The job writes
   `Error: No D4H key…` or `Error: D4H rejected the team key (401)…` and cancels, so it is
   neither retried nor sent to Honeybadger. It tries again the next night.
+
+## Monitoring
+
+- **Healthchecks, once per run.** Each scheduler pings its check's `/start` and queues
+  [FinishRunWorker](../lib/app/worker/finish_run_worker.ex), which waits until no team job
+  is left (retries included) and then pings success. The nightly run pings `/fail`
+  instead when a team's job ran out of attempts; a missing or rejected key cancels the job,
+  so it doesn't count. Healthchecks emails when a run is missing or runs past its grace.
+  - `sarduty-sync` (`HEALTHCHECKS_SYNC_URL`): period 10 minutes, grace 5 minutes. A late
+    ping means a round no longer fits in 10 minutes. A round was about 1 s per team in
+    October 2026.
+  - The nightly check (`HEALTHCHECKS_URL`): period 1 day, grace 2 hours. A full refresh
+    was 26 s per team.
+- **D4H rate limits.** D4H sends no rate-limit headers. Every 429 is logged and sent to
+  Honeybadger as one grouped error (`d4h-429`), before Req's retry hides it. The first
+  one is the cue to sync less often or fetch fewer pages at once.
 
 ## Which key
 

@@ -20,7 +20,6 @@ defmodule App.Worker.RefreshTeamDataWorker do
         {:ok, team} ->
           {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
           broadcast_team_refresh(team)
-          ping_healthchecks()
           %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
           :ok
 
@@ -44,13 +43,5 @@ defmodule App.Worker.RefreshTeamDataWorker do
 
   defp broadcast_team_refresh(team) do
     Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
-  end
-
-  defp ping_healthchecks do
-    case Application.get_env(:sarduty, :healthchecks_url) do
-      nil -> :ok
-      "" -> :ok
-      url -> Req.get(url)
-    end
   end
 end
