@@ -77,6 +77,10 @@ refresh once a night as the safety net (#163).
   is left (retries included) and then pings success. The nightly run pings `/fail`
   instead when a team's job ran out of attempts; a missing or rejected key cancels the job,
   so it doesn't count. Healthchecks emails when a run is missing or runs past its grace.
+  Only jobs queued since the run started count. Oban's Lifeline puts a job left
+  executing by a restart back after an hour, and its Pruner drops finished jobs after a
+  week (`config/config.exs`). Before both, a job orphaned on 2026-06-09 held the first
+  run open until it was cancelled by hand.
   - `sarduty-sync` (`HEALTHCHECKS_SYNC_URL`): period 10 minutes, grace 5 minutes. A late
     ping means a round no longer fits in 10 minutes. A round was about 1 s per team in
     October 2026.

@@ -29,7 +29,9 @@ defmodule App.Worker.FinishRunWorkerTest do
   defp refresh_job(state, attrs \\ %{}) do
     %{team_id: 1}
     |> RefreshTeamDataWorker.new()
-    |> Ecto.Changeset.change(Map.put(attrs, :state, state))
+    |> Ecto.Changeset.change(
+      Map.merge(%{state: state, inserted_at: DateTime.add(@started_at, 1, :second)}, attrs)
+    )
     |> Repo.insert!()
   end
 
@@ -45,6 +47,13 @@ defmodule App.Worker.FinishRunWorkerTest do
 
     assert perform("refresh") == {:snooze, 60}
     refute_received {:ping, _}
+  end
+
+  test "a job left executing from before the run doesn't hold it open" do
+    refresh_job("executing", %{inserted_at: DateTime.add(@started_at, -120, :day)})
+
+    assert perform("refresh") == :ok
+    assert_received {:ping, "/refresh"}
   end
 
   test "fails the run for a refresh that ran out of attempts during it" do
