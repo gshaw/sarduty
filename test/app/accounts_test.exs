@@ -198,6 +198,18 @@ defmodule App.AccountsTest do
       assert email.html_body =~
                ~s(/images/sarduty-logo-96.png" width="48" height="48" alt="SAR Duty")
     end
+
+    test "the email ends with the domain line Safari reads" do
+      manager_fixture(team_fixture(), %{email: "otp@example.com"})
+
+      :ok = Accounts.deliver_login_code("otp@example.com")
+
+      assert_received {:email, email}
+      [code] = Regex.run(~r/\d{6}/, email.subject)
+      host = Web.Endpoint.host()
+      assert email.text_body =~ ~r/@#{Regex.escape(host)} ##{code}\n\z/
+      assert email.html_body =~ "@#{host} ##{code}"
+    end
   end
 
   describe "text login codes" do

@@ -5,8 +5,12 @@ defmodule App.Accounts.UserNotifier do
   alias App.Mailer
 
   # The login email. The code is in the subject too, so a phone's notification shows it
-  # without opening the email.
+  # without opening the email. The last line binds the code to this site's domain, in the
+  # format of Apple's origin-bound code draft, so Safari can suggest it. The draft's
+  # One-Time-Code header would do the same, but Cloudflare rejects headers off its list.
   def deliver_login_code(user, code) do
+    host = Web.Endpoint.host()
+
     email =
       new()
       |> to(user.email)
@@ -19,8 +23,10 @@ defmodule App.Accounts.UserNotifier do
 
       Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it,
       ignore this email.
+
+      @#{host} ##{code}
       """)
-      |> html_body(login_html(code))
+      |> html_body(login_html(code, host))
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}
@@ -78,7 +84,8 @@ defmodule App.Accounts.UserNotifier do
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
-  defp login_html(code) do
+  # The domain line is hidden: it's for Mail, not people.
+  defp login_html(code, host) do
     logo = Web.Endpoint.url() <> "/images/sarduty-logo-96.png"
 
     """
@@ -87,6 +94,7 @@ defmodule App.Accounts.UserNotifier do
       <p>Your code to log in to SAR Duty:</p>
       <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{code}</p>
       <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it, ignore this email.</p>
+      <p style="display: none; font-size: 0; line-height: 0; max-height: 0; overflow: hidden;">@#{host} ##{code}</p>
     </div>
     """
   end
