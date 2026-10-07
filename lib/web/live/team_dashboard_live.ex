@@ -56,7 +56,7 @@ defmodule Web.TeamDashboardLive do
   def render(assigns) do
     ~H"""
     <div class="flex items-center justify-between gap-4 mb-p">
-      <div>
+      <div class="min-w-0">
         <h1 class="title-hero mb-0">{@current_team.name}</h1>
         <.refresh_line team={@current_team} view_data={@view_data} now={@now} />
       </div>
@@ -99,25 +99,34 @@ defmodule Web.TeamDashboardLive do
   attr :view_data, :map, required: true
   attr :now, :any, required: true
 
+  # Two lines that keep their size while a refresh runs, so nothing under them moves: what
+  # SAR Duty last did, cut to one line, then the links, which stay put. Refresh now is
+  # disabled while a refresh runs rather than hidden.
   defp refresh_line(assigns) do
+    assigns = assign(assigns, :refreshing?, refreshing?(assigns.view_data))
+
     ~H"""
-    <div class="text-sm text-secondary-1 flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-      <%= if refreshing?(@view_data) do %>
-        <span id="refreshing" class="flex items-center gap-2 text-primary-1">
-          <span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+    <div class="text-sm text-secondary-1 mt-1">
+      <p id="refresh-status" class="mb-0 truncate">
+        <span :if={@refreshing?} id="refreshing" class="text-primary-1">
+          <span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent align-[-1px] mr-1"></span>
           {refreshing_text(@view_data.refresh_result)}
         </span>
-      <% else %>
-        <span id="d4h-updated">
-          {refreshed_ago(@team, @now)}
-        </span>
-        <span aria-hidden="true">·</span>
-        <button id="refresh-now" type="button" phx-click="refresh" class="text-primary-1 underline">
+        <span :if={!@refreshing?} id="d4h-updated">{refreshed_ago(@team, @now)}</span>
+      </p>
+      <p class="mb-0 flex items-center gap-3">
+        <button
+          id="refresh-now"
+          type="button"
+          phx-click="refresh"
+          disabled={@refreshing?}
+          class="text-primary-1 underline disabled:no-underline disabled:text-secondary-1 disabled:cursor-default"
+        >
           Refresh now
         </button>
-      <% end %>
-      <span aria-hidden="true">·</span>
-      <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H</.a>
+        <span aria-hidden="true">·</span>
+        <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H</.a>
+      </p>
     </div>
     """
   end
@@ -383,7 +392,15 @@ defmodule Web.TeamDashboardLive do
     end
   end
 
+  # A second refresh while one runs does nothing; the button is disabled, but a page open
+  # in 2 tabs can still send one.
   def handle_event("refresh", _params, socket) do
+    if refreshing?(socket.assigns.view_data),
+      do: {:noreply, socket},
+      else: start_refresh(socket)
+  end
+
+  defp start_refresh(socket) do
     %{team_id: socket.assigns.current_team.id}
     |> RefreshTeamDataWorker.new()
     |> Oban.insert()

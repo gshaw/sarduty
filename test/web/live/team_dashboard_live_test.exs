@@ -49,6 +49,20 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#attention-refresh", "No D4H key. Save a team key in Team Settings.")
   end
 
+  test "the refresh line keeps its links while a refresh runs", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#d4h-updated")
+    assert has_element?(lv, "#refresh-now:not([disabled])")
+
+    {:ok, team} = Team.update(team, %{d4h_refresh_result: "Refreshing"})
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#refreshing", "Refreshing from D4H…")
+    assert has_element?(lv, "#refresh-now[disabled]")
+  end
+
   test "an empty team has nothing coming up and nothing to do", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
