@@ -1,31 +1,47 @@
 defmodule Web.PrivacyLive do
   use Web, :live_view_marketing_layout
 
-  # A placeholder until the real text is written. It lists what the page must cover.
+  # Kept short and general on purpose, so it holds while features change. Update the date
+  # when the meaning changes.
+  @contact "privacy@sarduty.com"
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Privacy")}
+    {:ok, assign(socket, page_title: "Privacy", contact: @contact)}
   end
 
   def render(assigns) do
     ~H"""
-    <div class="container mx-auto px-2 pt-p2 pb-p2">
-      <h1 id="privacy-title" class="title">Privacy</h1>
-      <p id="privacy-placeholder">
-        <.badge kind={:warning}>Placeholder</.badge>
-        The full text is not written yet. It will cover:
+    <article id="privacy" class="max-w-prose">
+      <h1 class="title">Privacy</h1>
+      <p class="hint">Last changed October 7, 2026.</p>
+      <p>
+        SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
       </p>
-      <ul class="list mb-p">
-        <li>What SAR Duty copies from D4H: members, attendance, qualifications, and groups.</li>
-        <li>What it adds: tax credit letters, ID cards, and member photos on ID cards.</li>
-        <li>Who can see it: team admins, and anyone verifying a letter or ID card.</li>
-        <li>What a verify page shows about a member, and what it leaves out.</li>
-        <li>Apple Wallet and Google Wallet: what an ID card holds, and how it changes.</li>
-        <li>Where the data is stored, how long it is kept, and how to have it deleted.</li>
-        <li>Email and text messages, and who sends them.</li>
-        <li>Who to contact about your data.</li>
-      </ul>
-    </div>
+      <p>
+        Your team is responsible for its members' data. SAR Duty handles that data for your team as a service provider.
+      </p>
+      <p>
+        SAR Duty also keeps the email or phone number you log in with. It keeps records of each login, with the IP address, for 90 days.
+      </p>
+      <p>
+        Anyone with a member's ID card code can see the member's name, photo, and team on the verify site.
+      </p>
+      <p>
+        SAR Duty does not sell data, show ads, or use tracking cookies. Its cookies keep you logged in.
+      </p>
+      <p>
+        SAR Duty's server and database are in Canada. The other services it uses can be anywhere, and get only what they need.
+      </p>
+      <p id="privacy-operator">
+        Gerry Shaw, a volunteer member of South Fraser Search and Rescue, runs SAR Duty. SAR Duty is an independent project. South Fraser Search and Rescue and the other teams that use it do not run, own, or endorse it.
+      </p>
+      <p>
+        To see, fix, or remove your data, ask your team. Most of it comes from D4H, so the change is made there. For anything else, email <.a
+          id="privacy-contact"
+          href={"mailto:" <> @contact}
+        >{@contact}</.a>.
+      </p>
+    </article>
     """
   end
 end

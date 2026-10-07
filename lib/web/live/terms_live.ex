@@ -1,28 +1,41 @@
 defmodule Web.TermsLive do
   use Web, :live_view_marketing_layout
 
-  # A placeholder until the real text is written. It lists what the page must cover.
-
+  # Kept short and general on purpose, like Web.PrivacyLive.
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Terms of use")}
+    {:ok, assign(socket, page_title: "Terms")}
   end
 
   def render(assigns) do
     ~H"""
-    <div class="container mx-auto px-2 pt-p2 pb-p2">
-      <h1 id="terms-title" class="title">Terms of use</h1>
-      <p id="terms-placeholder">
-        <.badge kind={:warning}>Placeholder</.badge>
-        The full text is not written yet. It will cover:
+    <article id="terms" class="max-w-prose">
+      <h1 class="title">Terms</h1>
+      <p class="hint">Last changed October 7, 2026.</p>
+      <p>
+        You use SAR Duty for your team. You must be allowed to give SAR Duty your team's D4H access key.
       </p>
-      <ul class="list mb-p">
-        <li>Who may use SAR Duty, and who can sign up a team.</li>
-        <li>What a team admin agrees to when they connect D4H.</li>
-        <li>What SAR Duty changes in D4H, and that the team stays responsible for its records.</li>
-        <li>Cost, if any, and how a team leaves.</li>
-        <li>Who runs SAR Duty, and how to reach them.</li>
-      </ul>
-    </div>
+      <p>
+        Your team is responsible for its data and for the changes SAR Duty makes in D4H for you. Check each tax credit letter before a member uses it.
+      </p>
+      <p>
+        SAR Duty is provided as is, with no warranty. It can change or stop at any time. Keep D4H as your system of record.
+      </p>
+      <p>
+        As far as the law allows, SAR Duty is not liable for lost data, wrong letters, or time it is not available.
+      </p>
+      <p>
+        Your team can stop using SAR Duty at any time. SAR Duty can suspend a team that misuses it.
+      </p>
+      <p>
+        These terms can change. The date above shows the last change. The laws of British Columbia and Canada apply.
+      </p>
+      <p id="terms-operator">
+        Gerry Shaw runs SAR Duty as an independent project. No team that uses SAR Duty runs it or is responsible for it.
+      </p>
+      <p>
+        <.a id="terms-privacy" navigate={~p"/privacy"}>Privacy</.a>
+      </p>
+    </article>
     """
   end
 end
