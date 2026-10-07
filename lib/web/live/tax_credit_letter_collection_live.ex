@@ -137,6 +137,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <.a navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}>
         <span class="font-mono text-sm">{@record.tax_credit_letter_ref_id}</span>
       </.a>
+      <.badge
+        :if={@record.letter_hours_status == :changed}
+        id={"hours-changed-#{@record.tax_credit_letter_id}"}
+        kind={:warning}
+        title={"The letter says #{Service.Format.duration_as_hours_minutes_medium(@record.letter_minutes)}"}
+      >
+        Hours changed
+      </.badge>
     <% else %>
       <.button variant={:success} size={:sm} phx-click="create" value={@record.member.id}>
         Create letter

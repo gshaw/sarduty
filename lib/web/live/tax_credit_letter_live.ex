@@ -2,7 +2,9 @@ defmodule Web.TaxCreditLetterLive do
   use Web, :live_view_app_layout
 
   alias App.Model.TaxCreditLetter
+  alias App.Operation.CountTaxCreditHours
   alias App.Operation.EmailTaxCreditLetter
+  alias App.Operation.ReplaceTaxCreditLetter
   alias App.Repo
 
   def mount(_params, _session, socket) do
@@ -15,9 +17,26 @@ defmodule Web.TaxCreditLetterLive do
     socket =
       socket
       |> assign(:page_title, "#{letter.member.name}ʼs #{letter.year} tax credit letter")
-      |> assign(:letter, letter)
+      |> assign_letter(letter)
 
     {:noreply, socket}
+  end
+
+  defp assign_letter(socket, letter) do
+    team = socket.assigns.current_team
+
+    hours =
+      team
+      |> CountTaxCreditHours.call(letter.year, [letter.member_id])
+      |> CountTaxCreditHours.get(letter.member_id)
+
+    socket
+    |> assign(:letter, letter)
+    |> assign(:hours, hours)
+    |> assign(
+      :hours_status,
+      TaxCreditLetter.hours_status(letter, hours, DateTime.utc_now(), team.timezone)
+    )
   end
 
   def render(assigns) do
@@ -51,6 +70,34 @@ defmodule Web.TaxCreditLetterLive do
     </.form_actions>
     <hr class="my-p border-hr" />
 
+    <div
+      :if={@hours_status == :changed}
+      id="hours-changed"
+      class="banner banner-warning"
+      role="region"
+      aria-label="Hours changed"
+    >
+      <div class="banner-title">
+        <.icon name="hero-exclamation-triangle" class="size-5" />Hours changed
+      </div>
+      <div class="banner-body">
+        <p>
+          This letter says {format_minutes(TaxCreditLetter.total_minutes(@letter))}.
+          Attendance now adds up to {format_minutes(@hours.total_minutes)}.
+          Replace the letter to use the new hours. It keeps its reference number and is not emailed.
+        </p>
+        <.button
+          id="replace-letter"
+          variant={:warning}
+          size={:sm}
+          phx-click="replace"
+          data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It is not emailed."}
+        >
+          Replace letter
+        </.button>
+      </div>
+    </div>
+
     <div class="content-wrapper">
       <aside class="content-1/3">
         <dl>
@@ -65,6 +112,14 @@ defmodule Web.TaxCreditLetterLive do
           </dd>
           <dt>Created</dt>
           <dd>{Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}</dd>
+          <%= if @hours_status != :unknown do %>
+            <dt>Hours on the letter</dt>
+            <dd id="letter-hours">{format_minutes(TaxCreditLetter.total_minutes(@letter))}</dd>
+          <% end %>
+          <%= if @hours_status in [:changed, :changed_old] do %>
+            <dt>Hours from attendance now</dt>
+            <dd id="attendance-hours">{format_minutes(@hours.total_minutes)}</dd>
+          <% end %>
         </dl>
       </aside>
       <main class="content-2/3">
@@ -76,6 +131,26 @@ defmodule Web.TaxCreditLetterLive do
 
   def handle_event("email", _unsigned_params, socket) do
     {:noreply, put_email_flash(socket, socket.assigns.letter)}
+  end
+
+  def handle_event("replace", _unsigned_params, socket) do
+    team = socket.assigns.current_team
+
+    if socket.assigns.hours_status == :changed do
+      letter = ReplaceTaxCreditLetter.call(team, socket.assigns.letter)
+
+      socket =
+        socket
+        |> assign_letter(letter)
+        |> put_flash(
+          :info,
+          "Letter replaced. It now says #{format_minutes(TaxCreditLetter.total_minutes(letter))}."
+        )
+
+      {:noreply, socket}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("destroy", _unsigned_params, socket) do
@@ -105,4 +180,6 @@ defmodule Web.TaxCreditLetterLive do
         put_flash(socket, :error, "The email did not send. Try again.")
     end
   end
+
+  defp format_minutes(minutes), do: Service.Format.duration_as_hours_minutes_medium(minutes)
 end

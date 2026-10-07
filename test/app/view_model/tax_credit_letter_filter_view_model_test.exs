@@ -27,12 +27,12 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     )
   end
 
-  defp find_all(team, year, filter \\ "any", sort \\ "total") do
-    TaxCreditLetterFilterViewModel.find_all(team, %TaxCreditLetterFilterViewModel{
-      year: year,
-      filter: filter,
-      sort: sort
-    })
+  defp find_all(team, year, filter \\ "any", sort \\ "total", now \\ DateTime.utc_now()) do
+    TaxCreditLetterFilterViewModel.find_all(
+      team,
+      %TaxCreditLetterFilterViewModel{year: year, filter: filter, sort: sort},
+      now
+    )
   end
 
   test "lists the same hours the letter counts, overlaps merged", %{team: team, member: member} do
@@ -98,5 +98,21 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
     assert [%{tax_credit_letter_id: id, tax_credit_letter_ref_id: ref_id}] = find_all(team, 2025)
     assert {id, ref_id} == {letter.id, letter.ref_id}
+  end
+
+  test "marks a current letter whose hours changed", %{team: team, member: member} do
+    attend(team, member, ~U[2025-03-01 17:00:00Z], 90)
+    tax_credit_letter_fixture(member, %{year: 2025, primary_minutes: 60, secondary_minutes: 0})
+
+    same = member_fixture(team, %{name: "Blake"})
+    attend(team, same, ~U[2025-03-01 17:00:00Z], 60)
+    tax_credit_letter_fixture(same, %{year: 2025, primary_minutes: 60, secondary_minutes: 0})
+
+    records = find_all(team, 2025, "any", "name", ~U[2026-01-15 18:00:00Z])
+
+    assert Enum.map(records, &{&1.member.name, &1.letter_hours_status, &1.letter_minutes}) == [
+             {"Avery", :changed, 60},
+             {"Blake", :same, 60}
+           ]
   end
 end

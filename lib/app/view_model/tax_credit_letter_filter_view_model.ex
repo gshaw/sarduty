@@ -6,6 +6,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   alias App.Field
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
   alias App.Repo
 
@@ -70,9 +71,10 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   @doc """
   One record per member: their hours for the year, from `CountTaxCreditHours`, and
-  their letter for the year if they have one.
+  their letter for the year if they have one, with how its hours compare
+  (`TaxCreditLetter.hours_status/4`).
   """
-  def find_all(team, filter_options) do
+  def find_all(team, filter_options, now \\ DateTime.utc_now()) do
     hours = CountTaxCreditHours.call(team, filter_options.year)
 
     Member
@@ -81,15 +83,23 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
       on: tcl.year == ^filter_options.year
     )
     |> scope(q: filter_options.q)
-    |> select([m, tcl], %{
-      member: m,
-      tax_credit_letter_id: tcl.id,
-      tax_credit_letter_ref_id: tcl.ref_id
-    })
+    |> select([m, tcl], %{member: m, letter: tcl})
     |> Repo.all()
-    |> Enum.map(&Map.merge(&1, CountTaxCreditHours.get(hours, &1.member.id)))
+    |> Enum.map(&build_record(&1, CountTaxCreditHours.get(hours, &1.member.id), team, now))
     |> filter_records(filter_options.filter)
     |> sort_records(filter_options.sort)
+  end
+
+  defp build_record(%{member: member, letter: letter}, hours, team, now) do
+    hours
+    |> Map.put(:member, member)
+    |> Map.put(:tax_credit_letter_id, letter && letter.id)
+    |> Map.put(:tax_credit_letter_ref_id, letter && letter.ref_id)
+    |> Map.put(:letter_minutes, letter && TaxCreditLetter.total_minutes(letter))
+    |> Map.put(
+      :letter_hours_status,
+      letter && TaxCreditLetter.hours_status(letter, hours, now, team.timezone)
+    )
   end
 
   defp build_new do
