@@ -93,6 +93,8 @@ defmodule Web.Router do
       session: {Web.VerifyLimit, :session, []},
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
+      live "/terms", TermsLive
+      live "/privacy", PrivacyLive
       live "/signup", TeamSignupLive
       # Taking attendance at the door. The token is the only access: no login.
       live "/attendance/:token", AttendanceLinkLive
