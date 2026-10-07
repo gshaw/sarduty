@@ -18,8 +18,8 @@ defmodule App.ViewData.TeamAttention do
 
   @doc """
   The items to show, at most #{@max_items}. Each is a map with `key`, `level`
-  (`:warning` or `:info`), `title`, `detail`, and `action`, the text of its link. The
-  letters item also carries the `year`.
+  (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
+  `action`, the text of its link. The letters item also carries the `year`.
   """
   def items(rows, now) do
     [
@@ -50,7 +50,7 @@ defmodule App.ViewData.TeamAttention do
       key: :refresh,
       level: :warning,
       title: "SAR Duty cannot refresh from D4H",
-      detail: "D4H rejected the team key. Save a new one in team settings.",
+      detail: "Your D4H access key no longer works.",
       action: "Open team settings"
     }
   end
@@ -63,9 +63,13 @@ defmodule App.ViewData.TeamAttention do
     %{
       key: :drafts,
       level: :warning,
-      title: Format.count(count, one: "%d activity to check", many: "%d activities to check"),
-      detail: "Attendance can still change until the activity is published in D4H.",
-      action: "Check activities"
+      title: Format.count(count, one: "%d draft activity", many: "%d draft activities"),
+      detail:
+        Format.count(count,
+          one: "Check its attendance, then publish it in D4H.",
+          many: "Check their attendance, then publish them in D4H."
+        ),
+      action: "Show drafts"
     }
   end
 
@@ -77,11 +81,11 @@ defmodule App.ViewData.TeamAttention do
       level: :warning,
       title:
         Format.count(count,
-          one: "%d qualification expires in #{days} days",
-          many: "%d qualifications expire in #{days} days"
+          one: "%d qualification expires within #{days} days",
+          many: "%d qualifications expire within #{days} days"
         ),
-      detail: "Renew them in D4H, or members drop out of groups that need them.",
-      action: "Review qualifications"
+      detail: "Record renewals in D4H.",
+      action: "Show qualifications"
     }
   end
 
@@ -92,23 +96,29 @@ defmodule App.ViewData.TeamAttention do
       key: :missing_details,
       level: :info,
       title:
-        Format.count(count, one: "%d member missing details", many: "%d members missing details"),
-      detail: "Login codes go by email or text, and tax credit letters by email.",
+        Format.count(count,
+          one: "%d member has no email or mobile phone",
+          many: "%d members have no email or mobile phone"
+        ),
+      detail: "Add the missing details in D4H.",
       action: "Show members"
     }
   end
 
   defp group_changes_item(0), do: nil
 
+  # The changes go to D4H only from the review page, so no detail is needed.
   defp group_changes_item(count) do
     %{
       key: :group_changes,
       level: :info,
       title:
-        Format.count(count, one: "%d group change waiting", many: "%d group changes waiting"),
-      detail:
-        "Group rules would add or remove members. Review the changes before they go to D4H.",
-      action: "Review groups"
+        Format.count(count,
+          one: "%d change from group rules",
+          many: "%d changes from group rules"
+        ),
+      detail: nil,
+      action: "Review changes"
     }
   end
 
@@ -126,7 +136,7 @@ defmodule App.ViewData.TeamAttention do
             one: "%d tax credit letter to create for #{year}",
             many: "%d tax credit letters to create for #{year}"
           ),
-        detail: "Members with hours in #{year} need theirs before they file by April 30.",
+        detail: "Members file by April 30.",
         action: "Create letters"
       }
     end

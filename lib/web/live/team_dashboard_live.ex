@@ -101,11 +101,11 @@ defmodule Web.TeamDashboardLive do
 
     <.async_result :let={pulse} assign={@pulse}>
       <:loading>
-        <p id="pulse-loading" class="chart-caption">Drawing the team's year…</p>
+        <p id="pulse-loading" class="chart-caption">Drawing the charts…</p>
       </:loading>
       <:failed>
         <p id="pulse-failed" class="chart-caption">
-          The team's year cannot be drawn right now. Reload the page to try again.
+          The charts cannot load. Reload the page.
         </p>
       </:failed>
       <.pulse team={@current_team} charts={pulse.charts} map={pulse.map} />
@@ -123,12 +123,11 @@ defmodule Web.TeamDashboardLive do
       <%= if refreshing?(@view_data) do %>
         <span id="refreshing" class="flex items-center gap-2 text-primary-1">
           <span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-          {@view_data.refresh_result}
+          {refreshing_text(@view_data.refresh_result)}
         </span>
       <% else %>
         <span id="d4h-updated">
-          Updated from D4H {Format.minutes_ago(Team.d4h_updated_at(@team), @now, @team.timezone) ||
-            "never"}
+          {refreshed_ago(@team, @now)}
         </span>
         <span aria-hidden="true">·</span>
         <button id="refresh-now" type="button" phx-click="refresh" class="text-primary-1 underline">
@@ -192,7 +191,7 @@ defmodule Web.TeamDashboardLive do
         <span class="text-sm text-secondary-1">Next 14 days</span>
       </header>
       <p :if={@activities == []} id="coming-up-empty" class="chart-caption">
-        No activities planned in D4H for the next 14 days.
+        No activities planned in D4H.
       </p>
       <ul :if={@activities != []} id="coming-up-list" class="dash-rows">
         <li :for={activity <- @activities} id={"coming-up-#{activity.id}"}>
@@ -238,7 +237,7 @@ defmodule Web.TeamDashboardLive do
           <span class="attention-mark" aria-hidden="true"></span>
           <span class="dash-row-title">
             <strong>{item.title}</strong>
-            <span class="text-sm text-secondary-1">{item.detail}</span>
+            <span :if={item.detail} class="text-sm text-secondary-1">{item.detail}</span>
           </span>
           <.button size={:sm} navigate={attention_path(@team, item)}>{item.action}</.button>
         </li>
@@ -294,7 +293,7 @@ defmodule Web.TeamDashboardLive do
           id="stat-incidents"
           series={:incident}
           value={Format.number(@charts.incidents_ytd)}
-          label="Incidents"
+          label={"Incidents in #{@charts.year}"}
           delta={versus(@charts.incidents_ytd, @charts.incidents_last_ytd)}
         >
           <.sparkline values={@charts.monthly_incidents} series={:incident} />
@@ -302,8 +301,8 @@ defmodule Web.TeamDashboardLive do
         <.stat
           id="stat-hours"
           value={Format.hours(@charts.minutes_ytd)}
-          label="Member hours"
-          delta={versus(div(@charts.minutes_ytd, 60), div(@charts.minutes_last_ytd, 60))}
+          label={"Member hours in #{@charts.year}"}
+          delta={versus(div(@charts.minutes_ytd, 60), div(@charts.minutes_last_ytd, 60), "h")}
         >
           <.sparkline values={@charts.monthly_hours} />
         </.stat>
@@ -334,7 +333,7 @@ defmodule Web.TeamDashboardLive do
             <h2 class="chart-title">Where the team went</h2>
           </header>
           <p :if={@map} class="chart-caption">
-            Activities in the last 12 months. Large dots are this month.
+            The last 12 months. Large dots are the last 30 days.
           </p>
           <.activity_map
             :if={@map}
@@ -351,7 +350,7 @@ defmodule Web.TeamDashboardLive do
           <header>
             <h2 class="chart-title">Every day out</h2>
           </header>
-          <p class="chart-caption">Activities on each day of the last 12 months</p>
+          <p class="chart-caption">The last 12 months</p>
           <div class="dash-scroll">
             <.calendar id="activity-calendar" days={@charts.calendar_days} />
           </div>
@@ -361,12 +360,24 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
-  # Against the same days of last year.
-  defp versus(now, before) do
+  # Against the same days of last year: "12 more than this time last year".
+  defp versus(now, before, unit \\ "") do
     cond do
-      now > before -> "Up #{Format.number(now - before)} on this time last year"
-      now < before -> "Down #{Format.number(before - now)} on this time last year"
+      now > before -> "#{Format.number(now - before)}#{unit} more than this time last year"
+      now < before -> "#{Format.number(before - now)}#{unit} fewer than this time last year"
       true -> "Same as this time last year"
+    end
+  end
+
+  # The refresh's own progress, such as "Members: 120/480 (25%)", after the slow thing.
+  defp refreshing_text("Refreshing"), do: "Refreshing from D4H…"
+  defp refreshing_text(stage), do: "Refreshing from D4H… #{stage}"
+
+  # "Refreshed from D4H 7 min ago". Glossary: refresh, never update or sync.
+  defp refreshed_ago(team, now) do
+    case team |> Team.d4h_updated_at() |> Format.minutes_ago(now, team.timezone) do
+      nil -> "Not refreshed from D4H yet"
+      ago -> "Refreshed from D4H #{ago}"
     end
   end
 

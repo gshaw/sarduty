@@ -54,10 +54,17 @@ defmodule App.ViewData.TeamAttentionTest do
     one = items(%{draft_count: 1, missing_details_count: 1}, @october)
     many = items(%{draft_count: 3, missing_details_count: 9}, @october)
 
-    assert Enum.map(one, & &1.title) == ["1 activity to check", "1 member missing details"]
-    assert Enum.map(many, & &1.title) == ["3 activities to check", "9 members missing details"]
+    assert Enum.map(one, & &1.title) == [
+             "1 draft activity",
+             "1 member has no email or mobile phone"
+           ]
 
-    assert [%{title: "6 qualifications expire in 60 days"}] =
+    assert Enum.map(many, & &1.title) == [
+             "3 draft activities",
+             "9 members have no email or mobile phone"
+           ]
+
+    assert [%{title: "6 qualifications expire within 60 days"}] =
              items(%{expiring_count: 6}, @october)
   end
 
@@ -67,7 +74,7 @@ defmodule App.ViewData.TeamAttentionTest do
 
     rejected = %{refresh: %{state: :key_rejected, message: nil}}
     assert [%{key: :refresh, detail: detail}] = items(rejected, @october)
-    assert detail =~ "rejected the team key"
+    assert detail == "Your D4H access key no longer works."
 
     assert items(%{refresh: %{state: :refreshing, message: nil}}, @october) ==
              []
