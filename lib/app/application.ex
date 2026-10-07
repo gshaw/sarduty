@@ -19,13 +19,15 @@ defmodule App.Application do
     children = [
       Web.Telemetry,
       App.Repo,
+      # Before Oban: jobs broadcast refresh progress, and children stop in reverse
+      # order, so a job still draining at shutdown needs PubSub running.
+      {Phoenix.PubSub, name: App.PubSub},
       App.Vault,
       {App.RateLimit, clean_period: :timer.minutes(1)},
       {Oban, Application.fetch_env!(:sarduty, Oban)},
       {Ecto.Migrator,
        repos: Application.fetch_env!(:sarduty, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:sarduty, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: App.PubSub},
       # Start to serve requests, typically the last entry
       Web.Endpoint
     ]
