@@ -57,7 +57,10 @@ defmodule Web.HomePageLive do
               <p>
                 Make each member's tax credit letter from their D4H attendance, and email it to them.
               </p>
-              <p>Anyone can verify a letter online, so the CRA knows the hours are real.</p>
+              <p>
+                Anyone can verify a letter at <a href={Web.VerifyHost.url() <> "/letters"}>verify.sarduty.com/letters</a>, so the
+                CRA knows the hours are real.
+              </p>
             </div>
             <HomeMockups.letter />
           </div>
@@ -65,8 +68,8 @@ defmodule Web.HomePageLive do
             <div>
               <h2>ID cards on members' phones</h2>
               <p>
-                Members carry their ID card in Apple Wallet or Google Wallet. Anyone can verify a
-                card by scanning its QR code.
+                Each team issues ID cards to its own members, who carry them in Apple Wallet or
+                Google Wallet. Anyone can verify a card by scanning its QR code.
               </p>
             </div>
             <HomeMockups.id_card />
@@ -78,37 +81,6 @@ defmodule Web.HomePageLive do
             </div>
             <HomeMockups.door />
           </div>
-        </div>
-      </section>
-
-      <section id="verify" class="home-section home-verify-band">
-        <div class="home-wrap">
-          <h2>Verify a tax credit letter or an ID card</h2>
-          <div class="home-verify-grid">
-            <div>
-              <h3>Tax credit letter</h3>
-              <p>
-                Enter the letter's reference number at <a href={Web.VerifyHost.url() <> "/letters"}>verify.sarduty.com/letters</a>, or scan
-                its QR code. The page shows the hours the team issued.
-              </p>
-              <HomeMockups.verify kind={:letter} />
-            </div>
-            <div>
-              <h3>ID card</h3>
-              <p>
-                Scan the card's QR code with a phone's camera. The page must be <a href={
-                  Web.VerifyHost.url()
-                }>verify.sarduty.com</a>, and the photo must match the
-                person.
-              </p>
-              <HomeMockups.verify kind={:card} />
-            </div>
-          </div>
-          <h3>Who issues the ID cards</h3>
-          <p class="home-measure">
-            Each search and rescue team issues ID cards to its own members, through SAR Duty. A card
-            shows the member's name, photo, team, and status, from the team's records.
-          </p>
         </div>
       </section>
 

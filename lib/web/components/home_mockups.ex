@@ -207,35 +207,4 @@ defmodule Web.Components.HomeMockups do
     </figure>
     """
   end
-
-  attr :kind, :atom, values: [:card, :letter], required: true
-
-  @doc "What someone sees on the verify site."
-  def verify(assigns) do
-    assigns = assign(assigns, team: @team)
-
-    ~H"""
-    <figure
-      class="home-verify"
-      aria-label={"A sample verify page for #{if @kind == :card, do: "an ID card", else: "a tax credit letter"}"}
-    >
-      <div class="home-verify-bar">
-        <span class="brand">SAR <span>Duty</span></span><span>verify.sarduty.com</span>
-      </div>
-      <div :if={@kind == :card} class="home-verify-body is-card">
-        <span class="home-photo" aria-hidden="true">AC</span>
-        <strong class="home-ok">Active member</strong>
-        <strong class="home-verify-name">Avery Chen</strong>
-        <span class="home-muted">{@team}</span>
-      </div>
-      <div :if={@kind == :letter} class="home-verify-body">
-        <strong class="home-ok">Issued by the team</strong>
-        <strong class="home-verify-name">Avery Chen</strong>
-        <span>2025 · 212h 30m primary · 48h 15m secondary</span>
-        <span class="home-muted">{@team} · SRVTC-SAMPLE00</span>
-      </div>
-      <.sample />
-    </figure>
-    """
-  end
 end

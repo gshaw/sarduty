@@ -24,10 +24,6 @@
   .home-feature > figure { justify-self: center; }
   .home-feature > div p { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); }
 
-  .home-verify-band { background: var(--nav); color: #fff; border-top: 4px solid var(--accent); }
-  .home-verify-band p { color: rgb(255 255 255 / 0.85); }
-  .home-verify-band a { color: #fff; font-weight: 600; }
-  .home-verify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); margin: var(--sp-5) 0 var(--sp-7); }
   .home-start { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-5); flex-wrap: wrap; }
   .home-start p { margin: 0; }
 
@@ -103,21 +99,10 @@
   .home-door-scan i { width: 80px; height: 80px; border: 3px solid var(--accent); border-radius: 10px; }
   .home-phone li { display: flex; justify-content: space-between; gap: var(--sp-2); padding: 6px 0; border-bottom: 1px solid var(--border-subtle); }
 
-  .home-verify { max-width: 420px; overflow: hidden; border-radius: var(--radius); background: var(--bg); color: var(--text); box-shadow: 0 8px 30px rgb(0 0 0 / 0.3); }
-  .home-verify-bar { display: flex; justify-content: space-between; align-items: center; padding: var(--sp-2) var(--sp-4); background: #13243a; color: #fff; font-size: var(--fs-sm); border-bottom: 3px solid var(--accent); }
-  .home-verify-bar .brand { font-weight: 700; margin-right: 64px; }
-  .home-verify-bar .brand span { color: var(--accent); }
-  .home-verify-body { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-4); }
-  .home-verify-body.is-card { align-items: center; text-align: center; }
-  .home-verify-body .home-photo { margin-bottom: var(--sp-2); }
-  .home-verify .home-sample { top: 44px; }
-  .home-ok { color: var(--success-text); }
-  .home-verify-name { font-size: var(--fs-xl); line-height: var(--lh-xl); }
 
   @media (max-width: 900px) {
     .home-hero-split, .home-feature { grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); }
     .home-feature.is-flipped > :first-child { order: 0; }
-    .home-verify-grid { grid-template-columns: minmax(0, 1fr); }
   }
 
   @media (max-width: 600px) {
@@ -132,6 +117,5 @@
     .home-letter { width: 100%; padding: 22px 24px; font-size: 8.5px; line-height: 12.5px; }
     .home-letter p { margin-bottom: 7px; }
     .home-letter .home-qr { width: 54px; }
-    .home-verify { max-width: none; }
   }
 }

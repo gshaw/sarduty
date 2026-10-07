@@ -13,11 +13,10 @@ defmodule Web.HomePageLiveTest do
     refute has_element?(lv, "#my-teams")
   end
 
-  test "the page tells anyone how to verify a letter or an ID card", %{conn: conn} do
+  test "the page links to where a tax credit letter is verified", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 
-    assert has_element?(lv, ~s(#verify a[href="#{Web.VerifyHost.url()}/letters"]))
-    assert has_element?(lv, ~s(#verify a[href="#{Web.VerifyHost.url()}"]))
+    assert has_element?(lv, ~s(a[href="#{Web.VerifyHost.url()}/letters"]))
   end
 
   test "a logged-in user with no team is told where access comes from", %{conn: conn} do
