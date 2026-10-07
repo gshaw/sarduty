@@ -57,7 +57,7 @@ The rules that are easy to break:
 - **New filterable list** → a view model in `lib/app/view_model/` with
   `use App, :view_model`: an embedded schema for the filters and a `validate/1` that
   returns `{:ok, options, changeset}`. The LiveView calls it in `handle_params/3`, assigns
-  `to_form(changeset, as: "form")`, pages with `Repo.paginate/2` (Scrivener), keeps filters
+  `to_form(changeset, as: "form")`, pages with `Repo.paginate/2` (an `App.Page`), keeps filters
   in the URL with `push_patch`, and raises `Web.Status.NotFound` on invalid params.
   [TaxCreditLetterFilterViewModel](../lib/app/view_model/tax_credit_letter_filter_view_model.ex)
   is the fullest example.

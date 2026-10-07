@@ -72,7 +72,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> join_attendance_summary(team, filter_options.when)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
-    |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
+    |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
   end
 
   defp build_new do
