@@ -30,22 +30,12 @@ defmodule Web.HomePageLive do
               SAR Duty works from your team's D4H data. It does the jobs D4H does not, so team
               admins spend less time at a desk.
             </p>
-            <%= if @current_user do %>
-              <ul :if={@teams != []} id="my-teams" class="home-teams">
-                <li :for={team <- @teams}>
-                  <.button navigate={~p"/teams/#{team}"} variant={:primary}>{team.name}</.button>
-                </li>
-              </ul>
-              <p :if={@teams == []} id="no-teams">
-                Your email is not an Owner or Editor on any team SAR Duty knows. Access comes from
-                D4H: check the email D4H has for you, or ask one of your team's D4H owners.
-              </p>
-            <% else %>
-              <.cta />
-              <p class="home-note">For teams that keep their records in D4H.</p>
-            <% end %>
+            <.start id="start-top" current_user={@current_user} teams={@teams} />
           </div>
-          <HomeMockups.team_home />
+          <figure class="home-hero-art">
+            <HomeMockups.team_home />
+            <figcaption>A sample team</figcaption>
+          </figure>
         </div>
       </section>
 
@@ -84,24 +74,51 @@ defmodule Web.HomePageLive do
         </div>
       </section>
 
-      <section :if={!@current_user} class="home-section is-alt">
-        <div class="home-wrap home-start">
-          <div>
-            <h2>Try it with your team</h2>
-            <p>You need Owner or Editor access to your team in D4H, and a D4H access key.</p>
-          </div>
-          <.cta />
+      <section class="home-section is-alt">
+        <div class="home-wrap home-end">
+          <.start id="start-end" current_user={@current_user} teams={@teams} />
         </div>
       </section>
     </div>
     """
   end
 
-  defp cta(assigns) do
+  attr :id, :string, required: true
+  attr :current_user, :map, default: nil
+  attr :teams, :list, required: true
+
+  # The page's one call to action, the same box in the same places for everyone: sign up or
+  # log in for a visitor, your teams once logged in, or why you have none.
+  defp start(assigns) do
     ~H"""
-    <div class="home-cta">
-      <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
-      <.button navigate={~p"/login"}>Log in</.button>
+    <div id={@id} class="home-start">
+      <%= cond do %>
+        <% @current_user == nil -> %>
+          <p class="home-start-title">Is your team on D4H?</p>
+          <p>
+            Sign up with your D4H access key. You need Owner or Editor access to the team in D4H.
+          </p>
+          <div class="home-cta">
+            <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
+            <.button navigate={~p"/login"}>Log in</.button>
+          </div>
+        <% @teams != [] -> %>
+          <p class="home-start-title">Your teams</p>
+          <ul class="home-cta">
+            <li :for={team <- @teams}>
+              <.button navigate={~p"/teams/#{team}"} variant={:primary}>{team.name}</.button>
+            </li>
+          </ul>
+        <% true -> %>
+          <p class="home-start-title">You are not on a team yet</p>
+          <p>
+            Your email is not an Owner or Editor on any team SAR Duty knows. Check the email D4H
+            has for you, or ask one of your team's D4H owners.
+          </p>
+          <div class="home-cta">
+            <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
+          </div>
+      <% end %>
     </div>
     """
   end

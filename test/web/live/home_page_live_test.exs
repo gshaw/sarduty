@@ -8,9 +8,9 @@ defmodule Web.HomePageLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/")
 
     assert has_element?(lv, "#home-title")
-    assert has_element?(lv, ~s(.home-cta a[href="/signup"]))
-    assert has_element?(lv, ~s(.home-cta a[href="/login"]))
-    refute has_element?(lv, "#my-teams")
+    assert has_element?(lv, ~s(#start-top a[href="/signup"]))
+    assert has_element?(lv, ~s(#start-top a[href="/login"]))
+    assert has_element?(lv, ~s(#start-end a[href="/signup"]))
   end
 
   test "the page links to where a tax credit letter is verified", %{conn: conn} do
@@ -22,8 +22,20 @@ defmodule Web.HomePageLiveTest do
   test "a logged-in user with no team is told where access comes from", %{conn: conn} do
     {:ok, lv, _html} = conn |> log_in_user(user_fixture()) |> live(~p"/")
 
-    assert has_element?(lv, "#no-teams")
-    refute has_element?(lv, ".home-cta")
+    assert has_element?(lv, "#start-top", "You are not on a team yet")
+    assert has_element?(lv, ~s(#start-top a[href="/signup"]))
+    refute has_element?(lv, ~s(#start-top a[href="/login"]))
+  end
+
+  test "a logged-in user sees their teams, and the rest of the page", %{conn: conn} do
+    user = user_fixture()
+    team = App.DataFixtures.team_fixture()
+    _member = App.DataFixtures.member_fixture(team, %{email: user.email, d4h_permission: 0})
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/")
+
+    assert has_element?(lv, ~s(#start-top a[href="/teams/#{team.subdomain}"]))
+    assert has_element?(lv, ~s(#start-end a[href="/teams/#{team.subdomain}"]))
+    assert has_element?(lv, "#home-title")
   end
 
   test "the footer links to the terms and privacy pages", %{conn: conn} do
