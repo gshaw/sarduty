@@ -3,11 +3,13 @@ defmodule App.Operation.UpdateTeamSettings do
 
   alias App.Adapter.D4H
   alias App.Adapter.D4H.WhoAmI
+  alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.SyncD4HChanges
   alias App.Repo
 
-  def call(%Team{} = team, params) do
+  @doc "Saves the settings form. A new key is recorded as a `team_key_changed` event by `user`."
+  def call(%Team{} = team, params, user) do
     changeset = Team.build_settings_changeset(team, params)
     new_key = get_change(changeset, :new_d4h_access_key)
 
@@ -21,6 +23,7 @@ defmodule App.Operation.UpdateTeamSettings do
     # The typed key is applied to the returned struct too; clear it so a form
     # rebuilt from this team renders the field blank.
     with {:ok, team} <- Repo.update(changeset) do
+      if get_change(changeset, :d4h_access_key), do: record_key_changed(team, user)
       {:ok, %{team | new_d4h_access_key: nil}}
     end
   end
@@ -55,6 +58,14 @@ defmodule App.Operation.UpdateTeamSettings do
       changeset,
       :new_d4h_access_key,
       "Paste the key again. D4H does not accept this one."
+    )
+  end
+
+  defp record_key_changed(team, user) do
+    Event.record!(:team_key_changed,
+      team_id: team.id,
+      user_id: user && user.id,
+      data: %{sar_duty_account: Team.key_owner_is_sar_duty?(team)}
     )
   end
 

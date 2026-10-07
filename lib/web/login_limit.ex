@@ -29,15 +29,26 @@ defmodule Web.LoginLimit do
   @email_miss_limit 20
   @ip_miss_limit 50
 
-  @doc "Counts a request, and says whether it's within both caps."
-  def allow?(who, ip) do
+  @doc """
+  Counts a request. `:ok` within both caps, `:limit_reached` for the one that first goes
+  over either, and `:limited` after that, so a flood records one event, not thousands.
+  """
+  def check(who, ip) do
     {key, limit} = request_key(who)
     who_count = RateLimit.inc(key, @scale)
     ip_count = "login:ip" |> ip_key(ip) |> RateLimit.inc(@scale)
-    allowed = who_count <= limit and ip_count <= @ip_limit
 
-    unless allowed, do: Logger.warning("Login code limit reached from #{ip}")
-    allowed
+    cond do
+      who_count <= limit and ip_count <= @ip_limit ->
+        :ok
+
+      who_count == limit + 1 or ip_count == @ip_limit + 1 ->
+        Logger.warning("Login code limit reached from #{ip}")
+        :limit_reached
+
+      true ->
+        :limited
+    end
   end
 
   @doc """
@@ -51,17 +62,17 @@ defmodule Web.LoginLimit do
 
   @doc """
   Counts a wrong code, and logs when the email or number, or the IP, reaches its cap.
-  Returns `:blocked` on the miss that blocks the email or number, else `:ok`. A known
-  browser's misses don't count against the account.
+  Returns what this miss blocked: `:account`, `:ip`, both, or neither. A known browser's
+  misses don't count against the account.
   """
   def miss(who, ip, known_browser? \\ false) do
-    blocked? = not known_browser? and count_miss(miss_key(who)) == @email_miss_limit
-    if blocked?, do: Logger.warning("Login code miss limit reached for an account, from #{ip}")
+    account? = not known_browser? and count_miss(miss_key(who)) == @email_miss_limit
+    if account?, do: Logger.warning("Login code miss limit reached for an account, from #{ip}")
 
-    if count_miss(ip_key("login:miss:ip", ip)) == @ip_miss_limit,
-      do: Logger.warning("Login code miss limit reached from #{ip}")
+    ip? = count_miss(ip_key("login:miss:ip", ip)) == @ip_miss_limit
+    if ip?, do: Logger.warning("Login code miss limit reached from #{ip}")
 
-    if blocked?, do: :blocked, else: :ok
+    for {scope, true} <- [account: account?, ip: ip?], do: scope
   end
 
   defp request_key({:phone, phone}), do: {"login:phone:#{phone}", @phone_limit}

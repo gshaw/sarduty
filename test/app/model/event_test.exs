@@ -4,6 +4,7 @@ defmodule App.Model.EventTest do
   import App.DataFixtures
 
   alias App.Model.Event
+  alias App.Model.TeamLoginGrant
 
   @now ~U[2026-10-07 12:00:00.000000Z]
 
@@ -47,6 +48,18 @@ defmodule App.Model.EventTest do
     assert Event.prune(@now) == 1
     refute Repo.get(Event, old.id)
     assert Repo.get(Event, kept.id)
+  end
+
+  test "a login grant, added and removed, is recorded without its email" do
+    team = team_fixture()
+    TeamLoginGrant.grant!(team.subdomain, "Office@Example.org", "shared inbox")
+    TeamLoginGrant.revoke!(team.subdomain, "office@example.org")
+    TeamLoginGrant.revoke!(team.subdomain, "office@example.org")
+
+    who = Event.who("office@example.org")
+    assert %Event{team_id: team_id, data: %{"who" => ^who}} = Event.get_last(:login_grant_added)
+    assert team_id == team.id
+    assert Event.count_since(:login_grant_removed, DateTime.add(@now, -1, :day)) == 1
   end
 
   test "cuts a long user agent to fit" do

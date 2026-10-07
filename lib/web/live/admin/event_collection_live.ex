@@ -9,6 +9,15 @@ defmodule Web.Admin.EventCollectionLive do
 
   @limit 200
 
+  # Signs of someone guessing or flooding, for the top IPs list.
+  @attack_kinds [
+    :login_code_missed,
+    :login_code_limited,
+    :login_blocked,
+    :verify_limit_reached,
+    :team_signup_failed
+  ]
+
   def mount(_params, _session, socket) do
     now = DateTime.utc_now()
 
@@ -22,8 +31,18 @@ defmodule Web.Admin.EventCollectionLive do
         sync_failures:
           Event.count_since(:d4h_team_sync, DateTime.add(now, -1, :day), %{outcome: "failed"})
       )
+      |> assign_logins(DateTime.add(now, -7, :day))
 
     {:ok, socket}
+  end
+
+  defp assign_logins(socket, since) do
+    assign(socket,
+      logins: Event.count_since(:logged_in, since),
+      misses: Event.count_since(:login_code_missed, since),
+      blocks: Event.count_since(:login_blocked, since),
+      top_ips: Event.get_top_ips(@attack_kinds, since, 10)
+    )
   end
 
   def handle_params(params, _uri, socket) do
@@ -68,6 +87,32 @@ defmodule Web.Admin.EventCollectionLive do
       </dd>
     </dl>
 
+    <h2 class="heading">Logins</h2>
+    <dl id="login-summary" class="mb-p max-w-3xl">
+      <dt>In the last 7 days</dt>
+      <dd id="last-week">
+        {Service.Format.count(@logins, one: "%d login", many: "%d logins")}, {Service.Format.count(
+          @misses,
+          one: "%d wrong code",
+          many: "%d wrong codes"
+        )}, {Service.Format.count(@blocks, one: "%d block", many: "%d blocks")}
+      </dd>
+    </dl>
+    <.table
+      :if={@top_ips != []}
+      id="top-ips"
+      rows={Enum.with_index(@top_ips, 1)}
+      row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
+      class="mb-p2 table-striped"
+    >
+      <:col :let={{{ip, _count}, _rank}} label="IP">
+        <.a navigate={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>
+      </:col>
+      <:col :let={{{_ip, count}, _rank}} label="Wrong codes, limits, blocks, and failed sign-ups">
+        {count}
+      </:col>
+    </.table>
+
     <h2 class="heading">Events</h2>
     <.form for={@form} id="event_filter_form" phx-change="change" class="filter-form">
       <.input label="Kind" field={@form[:kind]} type="select" options={EventFilterViewModel.kinds()} />
@@ -77,6 +122,7 @@ defmodule Web.Admin.EventCollectionLive do
         type="select"
         options={EventFilterViewModel.teams(@teams)}
       />
+      <.input label="IP" field={@form[:ip]} phx-debounce="500" />
     </.form>
     <.table id="events" rows={@events} row_id={&"event-#{&1.id}"} class="table-striped">
       <:col :let={event} label="When (UTC)" class="whitespace-nowrap">
@@ -87,6 +133,9 @@ defmodule Web.Admin.EventCollectionLive do
       </:col>
       <:col :let={event} label="Team">{event.team && event.team.name}</:col>
       <:col :let={event} label="Took" class="whitespace-nowrap">{took(event.duration_ms)}</:col>
+      <:col :let={event} label="From">
+        <span :if={event.ip} title={event.user_agent}>{event.ip}</span>
+      </:col>
       <:col :let={event} label="Details">{details(event.data)}</:col>
     </.table>
     <.hint :if={@events == []}>No events.</.hint>

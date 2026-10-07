@@ -4,8 +4,15 @@ defmodule Web.TeamSignupLive do
   alias App.Adapter.D4H
   alias App.Operation.SignUpTeam
   alias App.ViewModel.TeamSignupViewModel
+  alias Web.SecurityEvent
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
+    socket =
+      assign(socket,
+        client_ip: session["client_ip"],
+        user_agent: get_connect_info(socket, :user_agent)
+      )
+
     changeset = TeamSignupViewModel.build_new_changeset(%{api_host: D4H.default_region()})
     {:ok, socket |> assign(page_title: "Sign up a team", done: nil) |> assign_form(changeset)}
   end
@@ -71,11 +78,17 @@ defmodule Web.TeamSignupLive do
   end
 
   def handle_event("save", %{"form" => params}, socket) do
+    who = SecurityEvent.who(params["email"] || "")
+
     case SignUpTeam.call(params) do
       {:ok, team} ->
+        SecurityEvent.record(socket.assigns, :team_signed_up, team_id: team.id, data: %{who: who})
         {:noreply, assign(socket, done: %{name: team.name, email: params["email"]})}
 
       {:error, changeset} ->
+        fields = changeset.errors |> Keyword.keys() |> Enum.uniq()
+        data = %{who: who, fields: fields}
+        SecurityEvent.record(socket.assigns, :team_signup_failed, data: data)
         {:noreply, assign_form(socket, changeset)}
     end
   end

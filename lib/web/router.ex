@@ -85,7 +85,9 @@ defmodule Web.Router do
   scope "/", Web do
     pipe_through :browser
 
+    # The client IP rides in the session for sign-up's security events (Web.VerifyLimit).
     live_session :current_user_session,
+      session: {Web.VerifyLimit, :session, []},
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/", HomePageLive
       live "/signup", TeamSignupLive
