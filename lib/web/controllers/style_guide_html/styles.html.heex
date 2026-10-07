@@ -409,6 +409,13 @@
     /* Colors page */
     .modes { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border-subtle); margin-bottom: var(--sp-6); }
     .mode { background: var(--bg); color: var(--text); padding: var(--sp-5); }
+
+    /* Logo page */
+    .logo-forms, .logo-ladder { display: flex; gap: var(--sp-5); align-items: end; flex-wrap: wrap; }
+    .logo-ladder { gap: var(--sp-4); }
+    .mode figure, .logo-ladder figure { margin: 0; text-align: center; }
+    .mode figcaption, .logo-ladder figcaption { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: var(--sp-2); }
+    .logo-wide { margin-top: var(--sp-5) !important; text-align: left !important; }
     .mode h3 { margin-top: 0; }
     .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
     .swatch { font-size: var(--fs-xs); line-height: var(--lh-xs); }

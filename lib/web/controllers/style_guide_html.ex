@@ -29,6 +29,7 @@ defmodule Web.StyleGuideHTML do
          {:colors, "Colours"},
          {:typography, "Typography"},
          {:writing, "Writing"},
+         {:logo, "Logo"},
          {:icons, "Icons"},
          {:layout, "Layout"}
        ]},
@@ -46,6 +47,26 @@ defmodule Web.StyleGuideHTML do
 
   def page_path(:index), do: "/styles"
   def page_path(page), do: "/styles/#{page}"
+
+  # The logo files that uv run assets/brand/draw_logo.py writes, and where each goes.
+  def logo_files do
+    [
+      {"sarduty-logo.svg", "Stacked, with rounded corners. Pages that show the logo."},
+      {"sarduty-logo-square.svg",
+       "Stacked, square corners. The source for phones and Google, which round it themselves."},
+      {"sarduty-logo-square.png",
+       "1024 pixels. Google's business profile, which crops it to a circle."},
+      {"apple-touch-icon.png", "180 pixels. The phone home screen."},
+      {"sarduty-logo-96.png", "The login email, shown at 48 pixels."},
+      {"sarduty-favicon.svg", "SD. The browser tab."},
+      {"priv/static/favicon.ico",
+       "SD at 16, 32, and 48 pixels, for browsers that ask for it by name."},
+      {"sarduty-logo-wide.svg", "Wide, for where text can't go."},
+      {"sarduty-logo-wide.png",
+       "Wide, 828 by 256 pixels, for email and sites that won't take SVG."},
+      {"priv/apple/sarduty_logo.png", "Apple Wallet's logo and icon for a team with no logo."}
+    ]
+  end
 
   # The icon set is Heroicons, as in the app. Only these render, so adding one means adding
   # it here with its use. Sizes: 16 and 20 are solid, 24 is outline.

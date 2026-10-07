@@ -47,6 +47,7 @@ defmodule Web.ErrorHTML do
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled page"}
         </.live_title>
+        <Web.Layouts.favicon_links />
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
         </script>

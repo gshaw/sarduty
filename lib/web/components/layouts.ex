@@ -15,6 +15,7 @@ defmodule Web.Layouts do
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled page"}
         </.live_title>
+        <.favicon_links />
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
         </script>
@@ -36,6 +37,15 @@ defmodule Web.Layouts do
       {@inner_content}
     </main>
     <.site_footer current_user={@current_user} />
+    """
+  end
+
+  @doc "The SD favicon and the home screen icon. See /styles/logo."
+  def favicon_links(assigns) do
+    ~H"""
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href={~p"/images/sarduty-favicon.svg"} type="image/svg+xml" />
+    <link rel="apple-touch-icon" href={~p"/images/apple-touch-icon.png"} />
     """
   end
 

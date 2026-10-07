@@ -107,8 +107,8 @@ defmodule Service.PDFLockTest do
     assert PDFLock.file_key(locked, "wrong") == :error
 
     decrypted = locked |> streams() |> Enum.map(&decrypt(key, &1))
-    # The logo, its alpha mask, the signature, and the page content.
-    assert length(decrypted) == 4
+    # The logo and the signature, each with an alpha mask, and the page content.
+    assert length(decrypted) == 5
     assert decrypted == streams(plain)
     assert Enum.any?(decrypted, &(:zlib.uncompress(&1) =~ "volunteering"))
 

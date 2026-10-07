@@ -185,7 +185,7 @@ defmodule App.AccountsTest do
       refute Repo.one!(UserToken).token == code
     end
 
-    test "the code is in the subject, the text, and the HTML" do
+    test "the code is in the subject, the text, and the HTML, under the logo" do
       manager_fixture(team_fixture(), %{email: "html@example.com"})
 
       :ok = Accounts.deliver_login_code("html@example.com")
@@ -194,6 +194,9 @@ defmodule App.AccountsTest do
       [code] = Regex.run(~r/\d{6}/, email.subject)
       assert email.text_body =~ code
       assert email.html_body =~ code
+
+      assert email.html_body =~
+               ~s(/images/sarduty-logo-96.png" width="48" height="48" alt="SAR Duty")
     end
   end
 
