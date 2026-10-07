@@ -2,11 +2,13 @@ defmodule Web.ActivityLive do
   use Web, :live_view_app_layout
 
   import Ecto.Query
+  import Web.Components.ActivityMap
 
   alias App.Adapter.D4H
-  alias App.Adapter.Mapbox
   alias App.Model.Activity
+  alias App.Model.Coordinate
   alias App.Repo
+  alias Web.Components.ActivityMap
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -16,19 +18,37 @@ defmodule Web.ActivityLive do
     activity = fetch_activity(socket.assigns.current_team, params["id"])
     attendances = fetch_attendances(activity)
 
-    mapbox = Mapbox.build_context()
-    map_image_url = Mapbox.build_static_map_url(mapbox, activity.coordinate)
-
     socket =
       assign(socket,
         page_title: activity.title,
         activity: activity,
         attendances: attendances,
         attendance_count: length(attendances),
-        map_image_url: map_image_url
+        map: build_map(activity)
       )
 
     {:noreply, socket}
+  end
+
+  @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
+
+  # One dot on the same light and dark map as the dashboard. Zoom 10 shows the town around it.
+  defp build_map(activity) do
+    case Coordinate.build(activity.coordinate) do
+      {lat, lng} when {lat, lng} != {0.0, 0.0} ->
+        point = %{
+          lat: lat,
+          lng: lng,
+          kind: Map.get(@kinds, activity.activity_kind, :event),
+          recent: true,
+          tip: activity.title
+        }
+
+        ActivityMap.build([point], {640, 480}, max_zoom: 10.0)
+
+      _none ->
+        nil
+    end
   end
 
   def render(assigns) do
@@ -56,7 +76,7 @@ defmodule Web.ActivityLive do
       <main class="content-2/3">
         <.main_content
           activity={@activity}
-          map_image_url={@map_image_url}
+          map={@map}
           attendances={@attendances}
           attendance_count={@attendance_count}
         />
@@ -152,8 +172,8 @@ defmodule Web.ActivityLive do
     <div>
       <div class="mb-p"><.activity_tags activity={@activity} /></div>
 
-      <div :if={@map_image_url} class="mb-p">
-        <img src={@map_image_url} width="640" height="480" alt="Map of activity" />
+      <div :if={@map} class="mb-p" style="max-width: 640px">
+        <.activity_map id="activity-map" map={@map} label="Map of activity" />
       </div>
 
       <div class="mb-p">
