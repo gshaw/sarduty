@@ -7,7 +7,7 @@ defmodule App.ViewData.TeamAttention do
 
   alias Service.Format
 
-  @max_items 6
+  @max_items 7
 
   # Members file their taxes by April 30, so letters are worth a nudge until then.
   @letter_months 1..4
@@ -28,6 +28,7 @@ defmodule App.ViewData.TeamAttention do
       expiring_item(rows.expiring_count, rows.expiring_days),
       missing_details_item(rows.missing_details_count),
       group_changes_item(rows.group_change_count),
+      proposed_changes_item(rows.proposed_change_count),
       letters_item(rows.letters, now, rows.timezone)
     ]
     |> Enum.reject(&is_nil/1)
@@ -119,6 +120,23 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: nil,
       action: "Review changes"
+    }
+  end
+
+  defp proposed_changes_item(0), do: nil
+
+  # An AI agent's change sets wait for a team admin (#216).
+  defp proposed_changes_item(count) do
+    %{
+      key: :proposed_changes,
+      level: :info,
+      title:
+        Format.count(count,
+          one: "%d proposed change to D4H",
+          many: "%d proposed changes to D4H"
+        ),
+      detail: "An AI agent proposed them. Nothing changes in D4H until you send them.",
+      action: "Review proposed changes"
     }
   end
 

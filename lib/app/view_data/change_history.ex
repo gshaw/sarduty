@@ -214,6 +214,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:door), do: "attendance link"
   def source_label(:group_rule), do: "group rule"
   def source_label(:attendance_import), do: "import attendance"
+  def source_label(:agent), do: "AI agent"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

@@ -6,6 +6,8 @@ defmodule Web.MCPControllerTest do
 
   alias App.AccountsFixtures
   alias App.MCP.Tools
+  alias App.Model.ChangeSet
+  alias App.Model.D4HChange
   alias App.Model.MCPCall
   alias App.Model.MCPToken
   alias App.Model.Member
@@ -181,7 +183,23 @@ defmodule Web.MCPControllerTest do
         team.mailing_address
       ]
 
-      for {name, args} <- tool_calls() do
+      D4HChange.insert!(%D4HChange{
+        team_id: team.id,
+        member_id: member.id,
+        record_kind: :member,
+        action: :changed,
+        fields: ["email", "phone"],
+        old_value: %{},
+        new_value: %{},
+        seen_at: ~U[2026-03-02 17:00:00.000000Z]
+      })
+
+      history_calls = [
+        {"member_history", %{"member_id" => member.id}},
+        {"activity_history", %{"activity_id" => activity.id}}
+      ]
+
+      for {name, args} <- tool_calls() ++ history_calls do
         {result, text} = call_tool(conn, token, team, name, args)
         refute result["isError"], name
         output = Jason.decode!(text)
@@ -260,6 +278,50 @@ defmodule Web.MCPControllerTest do
     end
   end
 
+  describe "proposing changes" do
+    test "saves a proposal for a team admin and never calls D4H", ctx do
+      activity = activity_fixture(ctx.team, %{title: "Rope rescue"})
+      member = member_fixture(ctx.team, %{name: "Mei Chen"})
+
+      # No Req.Test stub: a call to D4H would fail the test.
+      {result, text} =
+        call_tool(ctx.conn, ctx.token, ctx.team, "propose_attendance_changes", %{
+          "activity_id" => activity.id,
+          "summary" => "Sign-in sheet",
+          "changes" => [
+            %{"member_id" => member.id, "status" => "attended", "reason" => "Row 1"},
+            %{"member_id" => 999_999, "status" => "attended"}
+          ]
+        })
+
+      refute result["isError"]
+      output = Jason.decode!(text)
+      assert output["proposed"] == 1
+      assert output["left_out"] == ["No member 999999 on this team."]
+      assert output["review_url"] =~ "/teams/#{ctx.team.subdomain}/proposed-changes/"
+
+      [change_set] = ChangeSet.get_waiting(ctx.team.id)
+      assert change_set.source == :agent
+      assert change_set.proposed_by_user_id == ctx.user.id
+      assert change_set.applied_at == nil
+    end
+
+    test "can't propose for another team's activity", ctx do
+      other = activity_fixture(team_fixture())
+
+      {result, text} =
+        call_tool(ctx.conn, ctx.token, ctx.team, "propose_attendance_changes", %{
+          "activity_id" => other.id,
+          "summary" => "x",
+          "changes" => [%{"member_id" => 1, "status" => "attended"}]
+        })
+
+      assert result["isError"]
+      assert text =~ "No activity #{other.id} on this team."
+      assert ChangeSet.count_waiting(ctx.team.id) == 0
+    end
+  end
+
   describe "the protocol" do
     test "initialize offers tools and agrees on a version", %{conn: conn, team: team} = ctx do
       conn =
@@ -277,15 +339,17 @@ defmodule Web.MCPControllerTest do
       assert json_response(conn, 200)["result"]["protocolVersion"] == "2025-11-25"
     end
 
-    test "tools/list lists the 5 read-only tools", %{conn: conn, team: team} = ctx do
-      conn = rpc(conn, ctx.token, team.subdomain, "tools/list")
-      tools = json_response(conn, 200)
-      tools = tools["result"]["tools"]
+    test "tools/list lists the tools, and marks the one that proposes", ctx do
+      conn = rpc(ctx.conn, ctx.token, ctx.team.subdomain, "tools/list")
+      tools = json_response(conn, 200)["result"]["tools"]
 
       assert Enum.map(tools, & &1["name"]) ==
-               ~w(get_team list_members attendance_summary list_activities list_qualifications)
+               ~w(get_team list_members attendance_summary list_activities list_qualifications
+                  member_history activity_history propose_attendance_changes)
 
-      assert Enum.all?(tools, & &1["annotations"]["readOnlyHint"])
+      read_only = for t <- tools, t["annotations"]["readOnlyHint"], do: t["name"]
+      refute "propose_attendance_changes" in read_only
+      assert length(read_only) == 7
     end
 
     test "notifications/initialized gets 202 and no body", %{conn: conn, team: team} = ctx do

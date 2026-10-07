@@ -4,6 +4,7 @@ defmodule App.Operation.CallMCPTool do
   (#28). Every call is logged, an unknown tool or a failed one included.
   """
 
+  alias App.MCP.Tool
   alias App.MCP.Tools
   alias App.Model.MCPCall
   alias App.Model.MCPToken
@@ -21,23 +22,27 @@ defmodule App.Operation.CallMCPTool do
         {:error, :unknown_tool}
 
       tool ->
-        logged_args = Tools.loggable_arguments(tool, args)
+        run(token, tool, name, args, now, started)
+    end
+  end
 
-        try do
-          tool.call(token.team, args, now)
-        rescue
-          exception ->
-            record!(token, name, logged_args, started, error: "Crashed")
-            reraise exception, __STACKTRACE__
-        else
-          {:ok, output, rows} ->
-            record!(token, name, logged_args, started, row_count: rows)
-            {:ok, output}
+  defp run(token, tool, name, args, now, started) do
+    logged_args = Tools.loggable_arguments(tool, args)
 
-          {:error, message} ->
-            record!(token, name, logged_args, started, error: message)
-            {:error, message}
-        end
+    try do
+      Tool.run(tool, token.team, token.user, args, now)
+    rescue
+      exception ->
+        record!(token, name, logged_args, started, error: "Crashed")
+        reraise exception, __STACKTRACE__
+    else
+      {:ok, output, rows} ->
+        record!(token, name, logged_args, started, row_count: rows)
+        {:ok, output}
+
+      {:error, message} ->
+        record!(token, name, logged_args, started, error: message)
+        {:error, message}
     end
   end
 

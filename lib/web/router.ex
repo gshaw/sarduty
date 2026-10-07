@@ -182,6 +182,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/groups", GroupCollectionLive
       live "/teams/:subdomain/groups/:id", GroupLive
       live "/teams/:subdomain/groups/:id/review", GroupReviewLive
+      live "/teams/:subdomain/proposed-changes", ProposedChangeCollectionLive
+      live "/teams/:subdomain/proposed-changes/:id", ProposedChangeLive
       live "/teams/:subdomain/qualifications", QualificationCollectionLive
       live "/teams/:subdomain/qualifications/:id", QualificationLive
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive

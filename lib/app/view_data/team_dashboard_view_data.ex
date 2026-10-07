@@ -8,6 +8,7 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChangeSet
   alias App.Model.Group
   alias App.Model.GroupRuleClause
   alias App.Model.Member
@@ -46,6 +47,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       expiring_count: count_expiring(team, now),
       missing_details_count: count_missing_details(team, now),
       group_change_count: count_group_changes(team, now),
+      proposed_change_count: ChangeSet.count_waiting(team.id),
       letters: letters_row(team, now)
     }
   end
