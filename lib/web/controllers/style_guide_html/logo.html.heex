@@ -1,0 +1,123 @@
+<.shell title="Logo" current={:logo}>
+  <h1>Logo</h1>
+  <p class="lead">
+    SAR over DUTY, white and amber on the top bar's navy. It comes in three forms: stacked for
+    square spaces, wide for a line, and SD for a browser tab.
+  </p>
+
+  <div class="modes">
+    <div
+      :for={{mode, label} <- [{"theme-light", "Light"}, {"theme-dark", "Dark"}]}
+      class={["mode", mode]}
+    >
+      <h2 class="first">{label}</h2>
+      <div class="logo-forms">
+        <figure>
+          <img src={~p"/images/sarduty-logo.svg"} width="128" height="128" alt="SAR Duty" />
+          <figcaption>Stacked</figcaption>
+        </figure>
+        <figure>
+          <img src={~p"/images/sarduty-favicon.svg"} width="32" height="32" alt="SAR Duty" />
+          <figcaption>SD</figcaption>
+        </figure>
+      </div>
+      <figure class="logo-wide">
+        <img src={~p"/images/sarduty-logo-wide.svg"} width="207" height="64" alt="SAR Duty" />
+        <figcaption>Wide</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <h2>Which form to use</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">Form</th>
+          <th>Use it for</th>
+          <th>Where it is today</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Wide</strong></td>
+          <td>
+            A line of space: a bar, a header, a footer. Write it as text, <code>&lt;a class="brand"&gt;SAR &lt;span&gt;Duty&lt;/span&gt;&lt;/a&gt;</code>, so it stays sharp and
+            readable. Use the picture only where text can't go, such as a README, a slide, or a link from
+            another site.
+          </td>
+          <td>The top bar, this guide's bar, and the verify site's bar.</td>
+        </tr>
+        <tr>
+          <td><strong>Stacked</strong></td>
+          <td>A square, 48 pixels or larger. The words need that much room to read.</td>
+          <td>
+            The login email, the phone home screen, Google's business profile, and Apple Wallet cards
+            for a team with no logo.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>SD</strong></td>
+          <td>A square under 48 pixels, where SAR DUTY turns to a smudge.</td>
+          <td>The browser tab.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Sizes</h2>
+  <div class="demo logo-ladder">
+    <figure :for={size <- [128, 96, 64, 48]}>
+      <img src={~p"/images/sarduty-logo.svg"} width={size} height={size} alt="" />
+      <figcaption>{size}</figcaption>
+    </figure>
+    <figure :for={size <- [32, 16]}>
+      <img src={~p"/images/sarduty-favicon.svg"} width={size} height={size} alt="" />
+      <figcaption>{size}</figcaption>
+    </figure>
+  </div>
+
+  <h2>Rules</h2>
+  <ul>
+    <li>
+      The logo always sits on its navy. Amber on white is too faint to read, and the navy lets one
+      file work on light and dark pages.
+    </li>
+    <li>
+      SAR and DUTY are the same width, measured on the letters. Don't change the colours or the type.
+    </li>
+    <li>
+      Use one form at a time. A stacked logo beside the wide one says the name twice, so the top bar
+      has no tile.
+    </li>
+    <li>
+      A team's own brand comes first. Tax credit letters and ID cards carry the team's name and logo,
+      and an organization's verify pages carry the organization's. SAR Duty goes in the footer, if anywhere.
+    </li>
+    <li>Email gets PNGs, since Gmail won't show SVG. Everywhere else gets the SVG.</li>
+  </ul>
+
+  <h2>Files</h2>
+  <p>
+    In <code>priv/static/images/</code>
+    unless shown. To change them, edit <code>assets/brand/draw_logo.py</code>
+    and run <code>uv run assets/brand/draw_logo.py</code>. It draws the letters from the app's IBM
+    Plex Sans Bold, as outlines.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="shrink">File</th>
+          <th>Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{file, use} <- logo_files()}>
+          <td class="mono">{file}</td>
+          <td>{use}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</.shell>

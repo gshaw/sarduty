@@ -77,9 +77,13 @@ defmodule App.Accounts.UserNotifier do
   end
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
+  # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
   defp login_html(code) do
+    logo = Web.Endpoint.url() <> "/images/sarduty-logo-96.png"
+
     """
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; color: #18181b; max-width: 480px;">
+      <img src="#{logo}" width="48" height="48" alt="SAR Duty" style="display: block; border: 0;">
       <p>Your code to log in to SAR Duty:</p>
       <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{code}</p>
       <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you didn't ask for it, ignore this email.</p>
