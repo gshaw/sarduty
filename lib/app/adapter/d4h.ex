@@ -334,14 +334,13 @@ defmodule App.Adapter.D4H do
   end
 
   @doc """
-  D4H ids of activities of one kind deleted after `updated_after`. A deleted activity's
-  `updatedAt` is at or after its `deletedAt`, so new deletes show up here.
+  D4H ids of every activity of one kind D4H lists, which leaves out deleted ones. The
+  sync compares them to find deletes: D4H's `deleted=true` list comes back empty for a
+  service account's key (tested 2026-10-07), though a person's key sees it.
   """
-  def fetch_deleted_activity_ids(context, kind, updated_after) do
-    params = [deleted: true, updated_after: iso(updated_after)]
-
+  def fetch_activity_ids(context, kind) do
     context
-    |> reduce_pages("/#{kind}", & &1["id"], [], &[&1 | &2], params)
+    |> reduce_pages("/#{kind}", & &1["id"], [], &[&1 | &2])
     |> Enum.concat()
   end
 

@@ -35,6 +35,7 @@ defmodule App.Operation.SyncD4HChanges do
             member-qualification-awards member-groups member-group-memberships)
 
   @activity_kinds ~w(exercises events incidents)
+  @activity_kind %{"exercises" => "exercise", "events" => "event", "incidents" => "incident"}
 
   # Fetched whole when they change, in this order, since later ones point at earlier ones.
   @small_lists ~w(members member-qualifications member-qualification-awards member-groups
@@ -59,8 +60,8 @@ defmodule App.Operation.SyncD4HChanges do
 
   `:seed` when there is no previous look, `:unchanged` when no head moved. Otherwise a
   map: `lists` to fetch whole, in order; `activities`, by kind, with the `updated_after`
-  cursor, the `deleted_after` cursor (nil when the kind's own head didn't move), and
-  whether its rows count as touched; and `attendance_since`, nil when attendance didn't
+  cursor, whether to compare every id to find deletes (when the kind's own head moved),
+  and whether its rows count as touched; and `attendance_since`, nil when attendance didn't
   move. A tag change refetches every activity, since activities store tag titles; those
   don't count as touched, or every activity's attendance would be fetched.
   """
@@ -84,7 +85,7 @@ defmodule App.Operation.SyncD4HChanges do
         {kind,
          %{
            updated_after: if(refetch_all?, do: @start_of_time, else: since),
-           deleted_after: if(kind in changed, do: since),
+           compare_ids?: kind in changed,
            touch?: not refetch_all?
          }}
       end
@@ -272,14 +273,21 @@ defmodule App.Operation.SyncD4HChanges do
       end)
 
     UpsertActivities.clear_deleted(team, listed)
-
-    deleted =
-      if cursors.deleted_after,
-        do: D4H.fetch_deleted_activity_ids(d4h, kind, cursors.deleted_after),
-        else: []
-
-    UpsertActivities.mark_deleted_by_d4h_ids(team, deleted, now)
+    deleted = if cursors.compare_ids?, do: mark_deleted(d4h, team, kind, now), else: []
     if cursors.touch?, do: listed ++ deleted, else: deleted
+  end
+
+  # D4H leaves deleted activities out of its lists, so compare every id it lists with
+  # this copy, as the full refresh does. One or two pages per kind. Returns the D4H ids
+  # newly marked deleted, so their attendance is checked too.
+  defp mark_deleted(d4h, team, kind, now) do
+    listed_ids = d4h |> D4H.fetch_activity_ids(kind) |> MapSet.new()
+    plan = UpsertActivities.mark_deleted(team, Map.fetch!(@activity_kind, kind), listed_ids, now)
+
+    Activity
+    |> where([a], a.team_id == ^team.id and a.id in ^plan.delete)
+    |> select([a], a.d4h_activity_id)
+    |> Repo.all()
   end
 
   defp sync_attendance(_d4h, _team, nil), do: MapSet.new()

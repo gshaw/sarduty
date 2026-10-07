@@ -26,9 +26,11 @@ refresh once a night as the safety net (#163).
   fetched whole through the full refresh's own stage, along with the lists that point at
   it, so rows skipped for an unknown parent come in. Their stale-row deletes and the
   member departure rule keep working.
-- Activities that moved are fetched with `updated_after`, and `deleted=true&updated_after`
-  marks new deletes (#160). A tag change refetches every activity, since activities store
-  tag titles.
+- Activities that moved are fetched with `updated_after`. Then every id D4H lists for
+  that kind, one or two pages, is compared with this copy to mark deletes (#160), as the
+  full refresh does. D4H's `deleted=true` list would be cheaper, but it comes back empty
+  for the team's service-account key (tested 2026-10-07). A tag change refetches every
+  activity, since activities store tag titles.
 - Attendance has no `updated_after`, so it pages by `updatedAt` descending until rows are
   older than the cursor. Then each activity touched by either step has its attendance
   fetched whole, and local rows D4H didn't return are deleted.
