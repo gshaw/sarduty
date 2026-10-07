@@ -5,21 +5,32 @@ defmodule Web.QualificationCollectionLive do
 
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Operation.BuildGroupRulePreview
   alias App.Repo
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :page_title, "Qualifications")}
   end
 
-  def handle_params(_params, _uri, socket) do
+  # `?view=expiring` lists each current member's qualifications that run out in the next
+  # 60 days, the dashboard's "qualifications expire" link (#205).
+  def handle_params(params, _uri, socket) do
     current_team = socket.assigns.current_team
-    qualifications = list_qualifications_with_counts(current_team)
 
-    socket =
-      socket
-      |> assign(:qualifications, qualifications)
+    case params["view"] do
+      nil ->
+        qualifications = list_qualifications_with_counts(current_team)
+        {:noreply, assign(socket, view: :all, qualifications: qualifications)}
 
-    {:noreply, socket}
+      "expiring" ->
+        now = DateTime.utc_now()
+        until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
+        expiring = MemberQualificationAward.expiring(current_team.id, now, until)
+        {:noreply, assign(socket, view: :expiring, expiring: expiring)}
+
+      _other ->
+        raise Web.Status.NotFound
+    end
   end
 
   def render(assigns) do
@@ -27,14 +38,36 @@ defmodule Web.QualificationCollectionLive do
     <.breadcrumbs team={@current_team} />
     <h1 class="title mb-p">{@page_title}</h1>
 
-    <p class="mb-p text-secondary-1 text-sm">
-      {Service.Format.count(length(@qualifications),
-        one: "%d qualification",
-        many: "%d qualifications"
-      )}
-    </p>
+    <div class="table-summary">
+      <span class="table-summary-links">
+        <.a navigate={~p"/teams/#{@current_team}/qualifications"}>All</.a>
+        ·
+        <.a navigate={~p"/teams/#{@current_team}/qualifications?view=expiring"}>
+          Expiring in {BuildGroupRulePreview.expiring_days()} days
+        </.a>
+      </span>
+      <span :if={@view == :all} class="table-summary-count">
+        {Service.Format.count(length(@qualifications),
+          one: "%d qualification",
+          many: "%d qualifications"
+        )}
+      </span>
+      <span :if={@view == :expiring} class="table-summary-count">
+        {Service.Format.count(length(@expiring),
+          one: "%d qualification expiring",
+          many: "%d qualifications expiring"
+        )}
+      </span>
+    </div>
 
-    <.table id="qualification_collection" rows={@qualifications} class="w-full table-striped">
+    <.expiring_table :if={@view == :expiring} team={@current_team} expiring={@expiring} />
+
+    <.table
+      :if={@view == :all}
+      id="qualification_collection"
+      rows={@qualifications}
+      class="w-full table-striped"
+    >
       <:col :let={q} label="Qualification">
         <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
       </:col>
@@ -49,8 +82,39 @@ defmodule Web.QualificationCollectionLive do
       </:col>
     </.table>
 
-    <p :if={@qualifications == []} class="text-secondary-1">
+    <p :if={@view == :all and @qualifications == []} class="text-secondary-1">
       No qualifications yet. SAR Duty copies them from D4H when it refreshes.
+    </p>
+    """
+  end
+
+  attr :team, :map, required: true
+  attr :expiring, :list, required: true
+
+  defp expiring_table(assigns) do
+    ~H"""
+    <.table
+      id="expiring_qualifications"
+      rows={@expiring}
+      row_id={&"expiring-#{&1.member_id}-#{&1.qualification_id}"}
+      class="w-full table-striped"
+    >
+      <:col :let={row} label="Member">
+        <.a navigate={~p"/teams/#{@team}/members/#{row.member_id}/qualifications"}>
+          {row.member_name}
+        </.a>
+      </:col>
+      <:col :let={row} label="Qualification">
+        <.a navigate={~p"/teams/#{@team}/qualifications/#{row.qualification_id}"}>
+          {row.qualification}
+        </.a>
+      </:col>
+      <:col :let={row} label="Expires" align="right" class="w-1/12 whitespace-nowrap tabular-nums">
+        {Service.Format.date_short(row.ends_at, @team.timezone)}
+      </:col>
+    </.table>
+    <p :if={@expiring == []} class="text-secondary-1">
+      No qualifications expire in the next {BuildGroupRulePreview.expiring_days()} days.
     </p>
     """
   end

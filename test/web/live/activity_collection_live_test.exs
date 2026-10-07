@@ -81,4 +81,18 @@ defmodule Web.ActivityCollectionLiveTest do
     html = lv |> element("#activity_collection") |> render()
     assert :binary.match(html, "Next week") < :binary.match(html, "Next year")
   end
+
+  test "the draft filter lists only activities D4H hasn't published", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{title: "Still a draft", is_published: false})
+    activity_fixture(team, %{title: "Already published", is_published: true})
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/activities?status=draft")
+
+    assert has_element?(lv, "#activity_collection", "Still a draft")
+    refute has_element?(lv, "#activity_collection", "Already published")
+  end
 end

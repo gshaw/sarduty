@@ -1,0 +1,24 @@
+/* The team dashboard's top half (#205): NextUp, Coming up, and Needs attention. The
+   cards and grid are chart.css's .dash-card and .dash-grid. */
+
+.next-up { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-5); align-items: center; border-left: 4px solid var(--primary); margin-bottom: var(--sp-5); }
+.next-up-when { display: flex; flex-direction: column; min-width: 110px; }
+.next-up-day { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; color: var(--text); }
+.next-up-time { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); }
+.next-up-title { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin: var(--sp-1) 0; }
+
+.dash-rows { list-style: none; padding: 0; margin: 0; }
+.dash-rows > li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border-subtle); }
+.dash-rows > li:last-child { border-bottom: 0; }
+.dash-row-when { display: flex; flex-direction: column; min-width: 92px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+.dash-row-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dash-card > footer { margin-top: var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+
+.attention > li { align-items: flex-start; }
+.attention-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--info); }
+.is-warning .attention-mark { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent); }
+
+/* A year of days needs about 720px to read. Narrower, it scrolls sideways inside its card
+   rather than squeezing or pushing the page wider. */
+.dash-scroll { overflow-x: auto; }
+.dash-scroll > * { min-width: 720px; }

@@ -31,6 +31,12 @@ defmodule Web.Components.ActivityFilterTable do
         options={ActivityFilterViewModel.when_kinds(@team)}
       />
       <.input
+        label="Status"
+        field={@form[:status]}
+        type="select"
+        options={ActivityFilterViewModel.status_kinds()}
+      />
+      <.input
         label="Sort"
         field={@form[:sort]}
         type="select"

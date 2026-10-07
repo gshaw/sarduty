@@ -72,6 +72,35 @@ defmodule App.Model.Member do
     |> Repo.all()
   end
 
+  @doc """
+  What the member lacks that login and emailed letters need, in the order the members
+  page shows it: `:mobile_phone`, `:email`.
+  """
+  def missing_details(%{} = member) do
+    Enum.filter([blank?(member.phone) && :mobile_phone, blank?(member.email) && :email], & &1)
+  end
+
+  defp blank?(value), do: value in [nil, ""]
+
+  @doc "Narrows `query` to members `missing_details/1` finds something for."
+  def missing_details_query(query) do
+    where(
+      query,
+      [m],
+      is_nil(m.phone) or m.phone == "" or is_nil(m.email) or m.email == ""
+    )
+  end
+
+  @doc "Narrows `query` to current members: not left as of `now`, and not retired."
+  def current_query(query, now) do
+    where(
+      query,
+      [m],
+      (is_nil(m.left_at) or m.left_at > ^now) and
+        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
+    )
+  end
+
   # D4H sets endsAt when a member retires. Takes any map with left_at.
   def current?(%{left_at: left_at}, now), do: is_nil(left_at) or DateTime.after?(left_at, now)
 
