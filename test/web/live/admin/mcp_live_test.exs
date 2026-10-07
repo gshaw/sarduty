@@ -18,7 +18,10 @@ defmodule Web.Admin.MCPLiveTest do
     assert Repo.reload!(team).mcp_enabled
 
     team = Repo.reload!(team)
-    {:ok, _token, record} = CreateMCPToken.call(team, user, %{"name" => "Laptop"})
+
+    {:ok, _token, record} =
+      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
+
     record = Repo.preload(record, :team)
 
     call =

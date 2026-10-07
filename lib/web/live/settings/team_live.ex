@@ -44,6 +44,10 @@ defmodule Web.Settings.TeamLive do
           <.a id="settings-mcp" navigate={~p"/teams/#{@current_team}/settings/mcp"}>MCP tokens</.a>:
           let your AI agent read the team's data
         </li>
+        <li :if={!@current_team.mcp_enabled} id="settings-mcp-off">
+          MCP tokens: let your AI agent read the team's data. A trial, so ask a SAR Duty admin
+          to turn it on for your team.
+        </li>
       </ul>
 
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">

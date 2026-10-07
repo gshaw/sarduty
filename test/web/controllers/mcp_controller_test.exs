@@ -20,7 +20,10 @@ defmodule Web.MCPControllerTest do
     admin = make_admin(AccountsFixtures.user_fixture())
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, team} = SetTeamMCP.call(team, true, admin)
-    {:ok, token, record} = CreateMCPToken.call(team, user, %{"name" => "Laptop"})
+
+    {:ok, token, record} =
+      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
+
     %{admin: admin, user: user, team: team, token: token, record: record}
   end
 
