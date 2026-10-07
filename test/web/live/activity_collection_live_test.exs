@@ -25,4 +25,60 @@ defmodule Web.ActivityCollectionLiveTest do
     assert has_element?(lv, "#activity_collection", listed.title)
     refute has_element?(lv, "#activity_collection", "NO MIT Training")
   end
+
+  test "Current shows a week either side of today, oldest first", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    days = fn n -> DateTime.add(now, n * 86_400, :second) end
+
+    activity_fixture(team, %{
+      title: "Rope rescue night",
+      started_at: days.(-3),
+      finished_at: days.(-3)
+    })
+
+    activity_fixture(team, %{title: "Board meeting", started_at: days.(4), finished_at: days.(4)})
+
+    activity_fixture(team, %{
+      title: "Rope tech weekend",
+      started_at: days.(-10),
+      finished_at: days.(1)
+    })
+
+    activity_fixture(team, %{title: "Old search", started_at: days.(-30), finished_at: days.(-30)})
+
+    activity_fixture(team, %{title: "Next year", started_at: days.(300), finished_at: days.(300)})
+
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
+
+    {:ok, lv, _html} =
+      lv |> element("#activities_current_link") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(lv, "#activity_collection", "Rope rescue night")
+    assert has_element?(lv, "#activity_collection", "Board meeting")
+    assert has_element?(lv, "#activity_collection", "Rope tech weekend")
+    refute has_element?(lv, "#activity_collection", "Old search")
+    refute has_element?(lv, "#activity_collection", "Next year")
+
+    html = lv |> element("#activity_collection") |> render()
+    assert :binary.match(html, "Rope rescue night") < :binary.match(html, "Board meeting")
+  end
+
+  test "picking Future from the menu sorts it oldest first", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    days = fn n -> DateTime.add(now, n * 86_400, :second) end
+    activity_fixture(team, %{title: "Next week", started_at: days.(7), finished_at: days.(7)})
+    activity_fixture(team, %{title: "Next year", started_at: days.(300), finished_at: days.(300)})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=past&sort=date-")
+
+    lv |> form("#activity_filter_form", form: %{when: "future"}) |> render_change()
+
+    assert has_element?(lv, ~s|#activity_filter_form option[value="date"][selected]|)
+    html = lv |> element("#activity_collection") |> render()
+    assert :binary.match(html, "Next week") < :binary.match(html, "Next year")
+  end
 end

@@ -46,11 +46,13 @@ defmodule Web.Components.ActivityFilterTable do
 
     <div class="table-summary">
       <span class="table-summary-links">
-        <.a navigate={@path_fn.(:all)}>All</.a>
+        <.a id="activities_current_link" navigate={@path_fn.(:current)}>Current</.a>
         ·
         <.a navigate={@path_fn.(:future)}>Future</.a>
         ·
         <.a navigate={@path_fn.(:past)}>Past</.a>
+        ·
+        <.a navigate={@path_fn.(:all)}>All</.a>
       </span>
       <span class="table-summary-count">
         {Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")}

@@ -59,6 +59,11 @@ defmodule Web.TeamDashboardLive do
 
         <ul class="subheading action-list ml-hindent">
           <li>
+            <.a navigate={~p"/teams/#{@team}/activities?when=current&sort=date"}>
+              Current
+            </.a>
+          </li>
+          <li>
             <.a navigate={~p"/teams/#{@team}/activities?&when=future&sort=date"}>
               Future
             </.a>

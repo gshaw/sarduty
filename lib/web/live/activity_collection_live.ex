@@ -16,6 +16,7 @@ defmodule Web.ActivityCollectionLive do
         socket =
           socket
           |> assign(:sort, filter_options.sort)
+          |> assign(:when, filter_options.when)
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
@@ -44,6 +45,8 @@ defmodule Web.ActivityCollectionLive do
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do
+    form_params = sort_for_new_when(form_params, socket.assigns.when)
+
     case ActivityFilterViewModel.validate(form_params) do
       {:ok, filter_options, _changeset} ->
         current_team = socket.assigns.current_team
@@ -55,6 +58,18 @@ defmodule Web.ActivityCollectionLive do
     end
   end
 
+  # Picking Past or Future from the menu also picks the sort, as the links do,
+  # so Future doesn't open on next year.
+  defp sort_for_new_when(%{"when" => new_when} = form_params, old_when)
+       when new_when != old_when do
+    case ActivityFilterViewModel.sort_for_when(new_when) do
+      nil -> form_params
+      sort -> Map.put(form_params, "sort", sort)
+    end
+  end
+
+  defp sort_for_new_when(form_params, _old_when), do: form_params
+
   def build_paginated_content(team, filter_options) do
     ActivityFilterViewModel.build_paginated_content(team, nil, filter_options)
   end
@@ -62,11 +77,10 @@ defmodule Web.ActivityCollectionLive do
   def build_path_fn(team, filter_options) do
     fn changed_options ->
       case changed_options do
-        :future ->
-          build_filter_path(team, %ActivityFilterViewModel{when: "future", sort: "date"})
-
-        :past ->
-          build_filter_path(team, %ActivityFilterViewModel{when: "past", sort: "date-"})
+        when_link when when_link in [:current, :future, :past] ->
+          when_name = Atom.to_string(when_link)
+          sort = ActivityFilterViewModel.sort_for_when(when_name)
+          build_filter_path(team, %ActivityFilterViewModel{when: when_name, sort: sort})
 
         :all ->
           build_filter_path(team, %ActivityFilterViewModel{})
