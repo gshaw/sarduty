@@ -169,8 +169,14 @@ defmodule App.Operation.RecordD4HChanges do
     |> where([r], r.d4h_record_id == ^record.d4h_attendance_id and r.applied_at >= ^since)
     |> select([r], r.new_value)
     |> Repo.all()
-    |> Enum.any?(&(&1["status"] == record.status))
+    |> Enum.any?(&same_status?(&1["status"], record.status))
   end
 
   defp own_write?(_run, _kind, _change, _record), do: false
+
+  # Change sets hold D4H's status, "ATTENDING"; the copy holds it lowercased.
+  defp same_status?(a, b) when is_binary(a) and is_binary(b),
+    do: String.downcase(a) == String.downcase(b)
+
+  defp same_status?(_a, _b), do: false
 end

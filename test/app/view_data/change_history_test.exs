@@ -15,8 +15,8 @@ defmodule App.ViewData.ChangeHistoryTest do
       record_kind: :attendance,
       action: :changed,
       fields: ["status"],
-      old_value: %{"status" => "ABSENT"},
-      new_value: %{"status" => "ATTENDING"},
+      old_value: %{"status" => "absent"},
+      new_value: %{"status" => "attending"},
       activity: %{title: "Rope rescue"},
       member: %{name: "Jane Doe"}
     }

@@ -43,11 +43,11 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
   test "records a change the sync saw, with the window it happened in", ctx do
     attendance =
       ctx.activity
-      |> attendance_fixture(ctx.member, %{status: "ABSENT"})
+      |> attendance_fixture(ctx.member, %{status: "absent"})
       |> Repo.preload([:member, :activity])
 
     RecordD4HChanges.recording(ctx.team, @now, fn ->
-      upsert(ctx.team, d4h_row(attendance, %{status: "ATTENDING"}))
+      upsert(ctx.team, d4h_row(attendance, %{status: "attending"}))
     end)
 
     assert [change] = Repo.all(D4HChange)
@@ -55,8 +55,8 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     assert change.action == :changed
     assert change.member_id == ctx.member.id
     assert change.activity_id == ctx.activity.id
-    assert change.old_value == %{"status" => "ABSENT"}
-    assert change.new_value == %{"status" => "ATTENDING"}
+    assert change.old_value == %{"status" => "absent"}
+    assert change.new_value == %{"status" => "attending"}
     assert change.seen_after == @synced
     assert change.seen_at == @now
   end
@@ -64,10 +64,10 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
   test "records nothing outside a run", ctx do
     attendance =
       ctx.activity
-      |> attendance_fixture(ctx.member, %{status: "ABSENT"})
+      |> attendance_fixture(ctx.member, %{status: "absent"})
       |> Repo.preload([:member, :activity])
 
-    upsert(ctx.team, d4h_row(attendance, %{status: "ATTENDING"}))
+    upsert(ctx.team, d4h_row(attendance, %{status: "attending"}))
     assert Repo.all(D4HChange) == []
   end
 
@@ -110,7 +110,7 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
   test "skips SAR Duty's own write, already on the page from its change set", ctx do
     attendance =
       ctx.activity
-      |> attendance_fixture(ctx.member, %{status: "ABSENT"})
+      |> attendance_fixture(ctx.member, %{status: "absent"})
       |> Repo.preload([:member, :activity])
 
     change_set =
@@ -131,7 +131,7 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     ChangeSetRow.record!(row, {:applied, attendance.d4h_attendance_id}, @synced)
 
     RecordD4HChanges.recording(ctx.team, @now, fn ->
-      upsert(ctx.team, d4h_row(attendance, %{status: "ATTENDING"}))
+      upsert(ctx.team, d4h_row(attendance, %{status: "attending"}))
     end)
 
     assert Repo.all(D4HChange) == []

@@ -237,10 +237,15 @@ defmodule App.ViewData.ChangeHistory do
   defp permission(nil), do: "none"
   defp permission(level), do: Member.permission_label(level)
 
-  defp status("ATTENDING"), do: "attended"
-  defp status("ABSENT"), do: "absent"
+  # The copy holds D4H's status lowercased and change sets hold it as D4H sends it.
   defp status(nil), do: "unknown"
-  defp status(other), do: other |> String.downcase() |> String.replace("_", " ")
+
+  defp status(status) do
+    case String.downcase(status) do
+      "attending" -> "attended"
+      other -> String.replace(other, "_", " ")
+    end
+  end
 
   # Values are stored as ISO 8601 in UTC and shown in the team's time zone.
   defp day(nil, _tz), do: "none"

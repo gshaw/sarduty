@@ -18,8 +18,8 @@ defmodule Web.ChangeHistoryLiveTest do
       record_kind: :attendance,
       action: :changed,
       fields: ["status"],
-      old_value: %{"status" => "ABSENT"},
-      new_value: %{"status" => "ATTENDING"},
+      old_value: %{"status" => "absent"},
+      new_value: %{"status" => "attending"},
       seen_after: ~U[2026-10-09 17:00:00.000000Z],
       seen_at: ~U[2026-10-09 17:10:00.000000Z]
     })
