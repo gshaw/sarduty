@@ -14,8 +14,13 @@ removes from the group review page. See [d4h-sync.md](d4h-sync.md).
 ## Mapbox
 
 [lib/app/adapter/mapbox.ex](../lib/app/adapter/mapbox.ex). Geocodes member addresses and
-gets driving distances for the mileage report, and draws the static map on the activity
-page. The token is a query parameter.
+gets driving distances for the mileage report, and draws the static maps on the team home
+and activity pages. The token is a query parameter, and it never reaches a browser: map
+images come from `/maps/<key>` ([Web.MapImage](../lib/web/map_image.ex)), where the key
+is a Mapbox path the app signed. The server adds the token, fetches the image, and passes
+on Mapbox's cache header. Since every call comes from the server, the token can't have URL
+restrictions: Mapbox checks those against the browser's `Referer`, so they block the
+mileage report and the map proxy alike.
 
 - `MAPBOX_ACCESS_TOKEN` — read with `fetch_env!` in **every** environment, so the app,
   the tests, and migrations won't start without it. `dummy` is fine locally unless you are
