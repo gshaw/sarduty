@@ -12,6 +12,7 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     authorized_by_name: "Pat Lee"
   }
   @member %Member{id: 7, name: "Sam Doe", address: "1 Elm St"}
+  @now ~U[2026-01-15 18:00:00Z]
 
   defp row(started_at, finished_at, tags) do
     %{
@@ -66,5 +67,32 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
       )
 
     assert letter.letter_content =~ "Total Hours: 0 hours"
+  end
+
+  describe "the signer block" do
+    test "prints the signer's title, phone, and email under their name" do
+      team = %{
+        @team
+        | authorized_by_title: "President",
+          authorized_by_phone: "604-555-0100",
+          authorized_by_email: "president@example.com"
+      }
+
+      letter = CreateTaxCreditLetter.plan(team, @member, [], 2025, "SRVTC-ABCDE", @now)
+
+      assert letter.letter_content =~
+               "Pat Lee\nPresident\n604-555-0100\npresident@example.com\n\nReference: SRVTC-ABCDE"
+    end
+
+    test "leaves out what the team left empty" do
+      team = %{@team | authorized_by_title: "President", authorized_by_phone: ""}
+      letter = CreateTaxCreditLetter.plan(team, @member, [], 2025, "SRVTC-ABCDE", @now)
+      assert letter.letter_content =~ "Pat Lee\nPresident\n\nReference: SRVTC-ABCDE"
+    end
+
+    test "without a signer, the team's name signs" do
+      team = %{@team | authorized_by_name: nil}
+      assert CreateTaxCreditLetter.signer_block(team) == "North Shore Rescue"
+    end
   end
 end
