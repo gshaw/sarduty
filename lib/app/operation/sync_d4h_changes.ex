@@ -19,7 +19,6 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.Team
-  alias App.Operation.RefreshD4HData.CheckMemberPhotos
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
@@ -254,11 +253,7 @@ defmodule App.Operation.SyncD4HChanges do
     Logger.info("Synced #{Enum.join(plan.changed, ", ")} for team #{team.id}")
   end
 
-  # New members' photos are checked here; the nightly refresh rechecks everyone's.
-  defp fetch_list("members", d4h, team, progress) do
-    UpsertMembers.call(d4h, team, progress)
-    CheckMemberPhotos.call(d4h, team, :unchecked)
-  end
+  defp fetch_list("members", d4h, team, progress), do: UpsertMembers.call(d4h, team, progress)
 
   defp fetch_list("member-qualifications", d4h, team, progress),
     do: UpsertQualifications.call(d4h, team, progress)

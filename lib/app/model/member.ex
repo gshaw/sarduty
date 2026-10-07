@@ -30,9 +30,6 @@ defmodule App.Model.Member do
     # D4H's access level: 0 OWNER, 1 EDITOR, 2 MEMBER, 3 MEMBER_PLUS, 4 NO_ACCESS.
     field :d4h_permission, :integer
     field :d4h_status, :string
-    # Nil until the refresh asks D4H (`CheckMemberPhotos`). Never cast: D4H's member
-    # record doesn't carry it.
-    field :has_photo, :boolean
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -76,19 +73,11 @@ defmodule App.Model.Member do
   end
 
   @doc """
-  What the member lacks that ID cards and login need, in the order the members page
-  shows it: `:photo`, `:mobile_phone`, `:email`. A photo nobody has checked yet isn't
-  missing.
+  What the member lacks that login and emailed letters need, in the order the members
+  page shows it: `:mobile_phone`, `:email`.
   """
   def missing_details(%{} = member) do
-    Enum.filter(
-      [
-        member.has_photo == false && :photo,
-        blank?(member.phone) && :mobile_phone,
-        blank?(member.email) && :email
-      ],
-      & &1
-    )
+    Enum.filter([blank?(member.phone) && :mobile_phone, blank?(member.email) && :email], & &1)
   end
 
   defp blank?(value), do: value in [nil, ""]
@@ -98,8 +87,7 @@ defmodule App.Model.Member do
     where(
       query,
       [m],
-      m.has_photo == false or is_nil(m.phone) or m.phone == "" or is_nil(m.email) or
-        m.email == ""
+      is_nil(m.phone) or m.phone == "" or is_nil(m.email) or m.email == ""
     )
   end
 

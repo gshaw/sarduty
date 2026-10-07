@@ -120,8 +120,7 @@ and saves it only if the key's member is on this team. A blank field keeps the s
 process, **without a transaction** — a failure halfway leaves the earlier stages written:
 
 1. Team logo, saved to `$TEAM_LOGO_PATH/<subdomain>.png` (disk, not the database).
-2. Members, then whether each current member has a photo (see
-   [Member photos](#member-photos)).
+2. Members.
 3. Tags (kept in memory to turn activity tag references into titles).
 4. Exercises, events, incidents → `activities`.
 5. Attendance.
@@ -130,28 +129,6 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 
 Order matters: attendance needs members and activities, awards need qualifications,
 memberships need groups. A row whose parent is unknown locally is skipped.
-
-### Member photos
-
-`members.has_photo` says whether D4H has a photo for the member, for the dashboard's
-"members missing details" (#205). ID cards need one. D4H's member record doesn't say:
-there is no image field in the v3 spec or in a real `/members` response (checked
-2026-10-07). The image endpoint does: `/members/:id/image` answers 200 with a photo and 204
-without, and a `HEAD` request gets the same answer without the image.
-
-[CheckMemberPhotos](../lib/app/operation/refresh_d4h_data/check_member_photos.ex) sends
-that `HEAD` request, 4 at a time, after the members stage:
-
-- The nightly refresh asks for every current member, so a photo added or removed in D4H
-  shows within a day. That is one small request per member, once a night.
-- The sync every 10 minutes asks only for members never checked (`has_photo` is null). It
-  runs only when the members list moved, so it adds nothing to a quiet sync.
-- Fetching a photo for an ID card, the verify page, or the member page records the answer
-  too (`LoadImage.photo/3`).
-
-Checking only members whose D4H `updatedAt` moved would be cheaper, but nobody has tested
-whether a new photo moves it. An unchecked photo isn't counted as missing. The check never
-sets `updated_at`, so it doesn't count as a row the syncs missed.
 
 Each stage does `get_by` then `update!` or `insert!` on the D4H id, rather than an
 `on_conflict` upsert, because the real upsert does not set `updated_at`

@@ -98,7 +98,7 @@ defmodule App.ViewData.TeamAttention do
       level: :info,
       title:
         Format.count(count, one: "%d member missing details", many: "%d members missing details"),
-      detail: "ID cards need a photo, and login by text needs a mobile phone.",
+      detail: "Login codes go by email or text, and tax credit letters by email.",
       action: "Show members"
     }
   end

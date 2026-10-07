@@ -150,7 +150,6 @@ defmodule Web.MemberCollectionLive do
     |> Enum.map_join(", ", &missing_label/1)
   end
 
-  defp missing_label(:photo), do: "Photo"
   defp missing_label(:mobile_phone), do: "Mobile phone"
   defp missing_label(:email), do: "Email"
 

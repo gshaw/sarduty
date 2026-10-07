@@ -48,8 +48,7 @@ data?
 - The team dashboard (#205): which activity is NextUp and what Coming up holds
   (`test/app/view_data/team_dashboard_view_data_test.exs`), which "Needs attention" items
   show and in what order (`team_attention_test.exs`), and the year's stats and charts
-  (`team_dashboard_charts_test.exs`), all pure. The photo check reads D4H's 200 and 204
-  from a stub (`check_member_photos_test.exs`).
+  (`team_dashboard_charts_test.exs`), all pure.
 - Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
   `/teams/:subdomain/…/:id` route and expects a 404. It fails when a new route of that
   shape is not in its list. `test/web/live/group_live_test.exs` does the same for the rule editor's

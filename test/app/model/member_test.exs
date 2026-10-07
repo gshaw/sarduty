@@ -17,23 +17,9 @@ defmodule App.Model.MemberTest do
     assert String.length(member.address) == 500
   end
 
-  test "missing details are a photo D4H says it lacks, a mobile phone, and an email" do
-    assert Member.missing_details(%{
-             has_photo: true,
-             phone: "604-555-0100",
-             email: "a@example.com"
-           }) ==
-             []
-
-    assert Member.missing_details(%{has_photo: false, phone: nil, email: ""}) ==
-             [:photo, :mobile_phone, :email]
-
-    # Nobody has asked D4H about the photo yet, so it isn't counted as missing.
-    assert Member.missing_details(%{
-             has_photo: nil,
-             phone: "604-555-0100",
-             email: "a@example.com"
-           }) ==
-             []
+  test "missing details are a mobile phone and an email, blank or not there" do
+    assert Member.missing_details(%{phone: "604-555-0100", email: "a@example.com"}) == []
+    assert Member.missing_details(%{phone: nil, email: ""}) == [:mobile_phone, :email]
+    assert Member.missing_details(%{phone: "", email: "a@example.com"}) == [:mobile_phone]
   end
 end

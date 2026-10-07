@@ -23,7 +23,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   def status_kinds, do: [{"All", "all"}, {"Active", "active"}, {"Departed", "departed"}]
 
-  # "missing": current members with no photo, mobile phone, or email (#205).
+  # "missing": current members with no mobile phone or no email (#205).
   def details_kinds, do: [{"All", "all"}, {"Missing", "missing"}]
 
   def sort_kinds,

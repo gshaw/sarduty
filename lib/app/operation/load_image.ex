@@ -9,7 +9,6 @@ defmodule App.Operation.LoadImage do
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.Team
-  alias App.Operation.RefreshD4HData.CheckMemberPhotos
 
   require Logger
 
@@ -30,17 +29,8 @@ defmodule App.Operation.LoadImage do
 
     bytes =
       case D4H.fetch_member_image(d4h, member.d4h_member_id) do
-        {:ok, image, _filename} ->
-          CheckMemberPhotos.record(member, true)
-          image
-
-        # D4H answers 204 for a member with no photo.
-        {:error, %{status: 204}} ->
-          CheckMemberPhotos.record(member, false)
-          nil
-
-        {:error, _response} ->
-          nil
+        {:ok, image, _filename} -> image
+        {:error, _response} -> nil
       end
 
     shape_or_default(bytes, &shape_photo(&1, shape), default_photo())

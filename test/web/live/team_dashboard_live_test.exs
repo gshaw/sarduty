@@ -95,7 +95,7 @@ defmodule Web.TeamDashboardLiveTest do
     # Drafts from before the last 30 days are left alone.
     activity_fixture(team, at(-24 * 40, %{is_published: false}))
     member_fixture(team, %{phone: nil})
-    member_fixture(team, %{has_photo: false})
+    member_fixture(team, %{email: nil})
     member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
 
     other = team_fixture()

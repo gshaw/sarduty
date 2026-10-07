@@ -142,19 +142,6 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  @doc """
-  Whether D4H has a photo for the member. The member record doesn't say, but the image
-  endpoint answers 200 with a photo and 204 without, and a HEAD request downloads neither.
-  """
-  def member_has_image(context, member_id) do
-    case Req.head(context, url: "/members/#{member_id}/image", params: [size: "THUMBNAIL"]) do
-      {:ok, %{status: 200}} -> {:ok, true}
-      {:ok, %{status: 204}} -> {:ok, false}
-      {:ok, response} -> {:error, response}
-      {:error, exception} -> {:error, exception}
-    end
-  end
-
   def fetch_team_image_document(context) do
     response =
       Req.get!(context,
