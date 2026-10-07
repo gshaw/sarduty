@@ -114,8 +114,7 @@ defmodule Web.VerifyLetterLive do
     <div id="start">
       <h1 class="text-2xl font-semibold text-base-content">Verify a tax credit letter</h1>
       <p class="mt-2 mb-6 text-secondary-1">
-        Enter the reference number at the bottom of the letter. You'll see the hours the team
-        issued it with.
+        Enter the reference number from the bottom of the letter.
       </p>
 
       <.form for={@form} id="check-form" phx-submit="check">
@@ -134,8 +133,8 @@ defmodule Web.VerifyLetterLive do
       <section class="mt-8 pt-6 border-t border-hr text-sm text-secondary-1">
         <h2 class="mb-2 font-semibold text-base-content">How it works</h2>
         <p class="mb-0">
-          Each team makes its tax credit letters in SAR Duty. This page shows what the team issued
-          for a reference number. The hours on the paper letter must match.
+          Teams make tax credit letters in SAR Duty. This page shows the hours the team issued
+          for a reference number. They should match the paper letter.
         </p>
       </section>
     </div>
@@ -147,8 +146,7 @@ defmodule Web.VerifyLetterLive do
     <div id="needs-last-name">
       <h1 class="text-2xl font-semibold text-base-content">Verify a tax credit letter</h1>
       <p class="mt-2 mb-6 text-secondary-1">
-        Enter the member's last name, as it is on the letter. Older letters need it with their
-        reference number.
+        Older letters need the member's last name too. Enter it as it is on the letter.
       </p>
 
       <.form for={@form} id="last-name-form" phx-submit="check_name">
@@ -192,7 +190,6 @@ defmodule Web.VerifyLetterLive do
         Check the number and try again
       </.band>
       <.panel>
-        A tax credit letter that SAR Duty cannot verify here was not issued by the team.
         Reference numbers start with SRVTC, at the bottom of the letter.
       </.panel>
     </div>
@@ -226,9 +223,9 @@ defmodule Web.VerifyLetterLive do
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 mt-4">
+        <div class="flex justify-between gap-4 mt-4">
           <.fact label="Year">{@result.year}</.fact>
-          <.fact label="Certified on" class="text-right">
+          <.fact label="Certified on" class="text-right whitespace-nowrap">
             {Format.date_long(@result.certified_at, @result.team.timezone)}
           </.fact>
         </div>
@@ -248,11 +245,10 @@ defmodule Web.VerifyLetterLive do
       </.panel>
 
       <p :if={@result.status == :issued} id="result-check" class="callout mt-4 mb-0 text-sm">
-        <b>Match the hours to the paper letter.</b>
-        If they differ, the letter was changed after the team issued it.
+        <b>Compare these hours with the paper letter.</b> If they are not the same, contact the team.
       </p>
       <p :if={@result.status == :replaced} id="result-check" class="callout mt-4 mb-0 text-sm">
-        <b>These are the hours the replaced letter said.</b>
+        <b>These hours are from the old letter.</b>
         The team issued a new letter with a new reference number. Ask the member for it.
       </p>
 
