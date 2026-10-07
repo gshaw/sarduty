@@ -45,6 +45,7 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     assert letter.member_id == 7
     assert letter.year == 2025
     assert letter.ref_id == "SRVTC-ABCDE"
+    assert {letter.primary_minutes, letter.secondary_minutes} == {210, 60}
     assert letter.letter_content =~ "Primary Hours: 3 hours, 30 minutes"
     assert letter.letter_content =~ "Secondary Hours: 1 hour\n"
     assert letter.letter_content =~ "Total Hours: 4 hours, 30 minutes"
