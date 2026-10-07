@@ -67,7 +67,7 @@ defmodule Web.Settings.TeamLive do
         <.input field={@form[:authorized_by_title]} label="Signer's title (optional)">
           Printed under the name on tax credit letters, like President.
         </.input>
-        <div class="grid grid-cols-2 gap-hspacer">
+        <div class="grid sm:grid-cols-2 gap-x-hspacer">
           <.input field={@form[:authorized_by_phone]} label="Signer's phone (optional)" />
           <.input
             field={@form[:authorized_by_email]}
@@ -83,7 +83,7 @@ defmodule Web.Settings.TeamLive do
             A PNG or JPEG of the signature, on white or transparent. New tax credit letters
             print it above the signer's name. Letters already made keep theirs.
           </.hint>
-          <div :if={@current_team.signature} class="my-2 flex items-center gap-p">
+          <div :if={@current_team.signature} class="my-2 flex flex-wrap items-center gap-p">
             <img
               id="signature-preview"
               src={Web.ImageData.png_data_url(@current_team.signature)}

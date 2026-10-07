@@ -190,8 +190,7 @@ defmodule Web.VerifyLetterLive do
         Check the number and try again
       </.band>
       <.panel>
-        Reference numbers start with SRVTC and are at the bottom of the letter. If the number is
-        right, contact the team that issued the letter.
+        Reference numbers start with SRVTC, at the bottom of the letter.
       </.panel>
     </div>
     """
