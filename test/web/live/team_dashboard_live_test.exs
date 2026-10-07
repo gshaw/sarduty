@@ -91,6 +91,7 @@ defmodule Web.TeamDashboardLiveTest do
     member_fixture(team, %{phone: nil})
     member_fixture(team, %{email: nil})
     member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
+    member_fixture(team, %{phone: nil, email: nil, not_a_person: true})
 
     other = team_fixture()
     activity_fixture(other, at(-48, %{is_published: false}))

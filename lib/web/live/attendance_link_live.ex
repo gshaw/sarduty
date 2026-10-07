@@ -28,7 +28,7 @@ defmodule Web.AttendanceLinkLive do
       members =
         link.team_id
         |> Member.get_all()
-        |> Enum.filter(&Member.current?(&1, now))
+        |> Enum.filter(&(Member.current?(&1, now) and not &1.not_a_person))
 
       socket =
         socket

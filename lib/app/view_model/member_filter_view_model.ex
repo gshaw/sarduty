@@ -173,7 +173,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, status: "departed"), do: where(q, [r], not is_nil(r.left_at))
 
   defp scope(q, details: "missing"),
-    do: q |> Member.current_query(DateTime.utc_now()) |> Member.missing_details_query()
+    do:
+      q
+      |> Member.current_query(DateTime.utc_now())
+      |> Member.people_query()
+      |> Member.missing_details_query()
 
   defp scope(q, details: _all), do: q
 

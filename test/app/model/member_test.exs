@@ -22,4 +22,13 @@ defmodule App.Model.MemberTest do
     assert Member.missing_details(%{phone: nil, email: ""}) == [:mobile_phone, :email]
     assert Member.missing_details(%{phone: "", email: "a@example.com"}) == [:mobile_phone]
   end
+
+  test "looks like not a person with no email, no mobile phone, and no attendance" do
+    bot = %Member{phone: nil, email: ""}
+
+    assert Member.looks_like_not_a_person?(bot, false)
+    refute Member.looks_like_not_a_person?(bot, true)
+    refute Member.looks_like_not_a_person?(%{bot | not_a_person: true}, false)
+    refute Member.looks_like_not_a_person?(%{bot | email: "a@example.com"}, false)
+  end
 end

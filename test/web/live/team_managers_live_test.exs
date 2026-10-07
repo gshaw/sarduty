@@ -30,6 +30,15 @@ defmodule Web.TeamManagersLiveTest do
     refute has_element?(lv, "#team-managers", "SAR Duty")
   end
 
+  test "leaves out a member marked not a person", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    _bot = manager_fixture(team, %{name: "Roster Bot", not_a_person: true})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
+
+    refute has_element?(lv, "#team-managers", "Roster Bot")
+  end
+
   test "keeps a person whose own key is the team key", %{conn: conn} do
     key = %{d4h_access_key_member_id: 901, d4h_access_key_owner: "Kim Lee"}
     %{user: user, team: team} = user_with_team_fixture(%{team: key})

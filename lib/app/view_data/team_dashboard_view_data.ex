@@ -144,6 +144,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
+    |> Member.people_query()
     |> Member.missing_details_query()
     |> Repo.aggregate(:count)
   end
@@ -233,6 +234,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
+    |> Member.people_query()
     |> select([m], %{id: m.id, joined_at: m.joined_at})
     |> Repo.all()
   end

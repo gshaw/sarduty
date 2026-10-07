@@ -165,6 +165,13 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   members out, so the members stage sets `left_at` to the refresh time on any active
   member it didn't see (#72). It skips this when D4H returns no members at all. If D4H
   lists the member again, the next refresh copies D4H's `endsAt` back.
+- **"Not a person" is SAR Duty's own field.** A team admin turns it on from the member
+  page for a bot or a shared D4H account, and the members stage never writes it.
+  `Member.people_query/1` leaves those members out of the dashboard's member counts and
+  missing-details check, and the members list's missing-details filter.
+  `Member.get_managers/2` and the attendance link's member list leave them out as well.
+  The member page suggests it for a member with no email, no mobile phone, and no
+  attendance.
 - **An activity D4H stops listing is marked deleted** (#160). D4H leaves deleted
   activities out of `GET /events`, `/exercises`, and `/incidents`, and a fetch for one
   returns 404. At the end of each kind's stage, `UpsertActivities.plan_deleted/2` picks

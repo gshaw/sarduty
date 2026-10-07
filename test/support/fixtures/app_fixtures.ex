@@ -122,8 +122,10 @@ defmodule App.DataFixtures do
       else: activity
   end
 
+  # `not_a_person` is set in SAR Duty, not copied from D4H, so it skips the changeset.
   def member_fixture(%Team{} = team, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
+    {not_a_person, attrs} = Map.pop(attrs, :not_a_person, false)
 
     params =
       Map.merge(
@@ -141,7 +143,11 @@ defmodule App.DataFixtures do
         attrs
       )
 
-    Member.insert!(params)
+    member = Member.insert!(params)
+
+    if not_a_person,
+      do: member |> Ecto.Changeset.change(not_a_person: true) |> Repo.update!(),
+      else: member
   end
 
   def attendance_fixture(%Activity{} = activity, %Member{} = member, attrs \\ %{}) do
