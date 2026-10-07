@@ -1,8 +1,6 @@
 defmodule Web.MemberCollectionLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.Pagination
-
   alias App.Model.Member
   alias App.ViewModel.MemberFilterViewModel
 

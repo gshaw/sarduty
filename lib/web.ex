@@ -57,50 +57,24 @@ defmodule Web do
     end
   end
 
-  def live_view_marketing_layout do
+  def live_view_marketing_layout, do: live_view({Web.Layouts, :marketing})
+  def live_view_app_layout, do: live_view({Web.Layouts, :app})
+  def live_view_narrow_layout, do: live_view({Web.Layouts, :narrow})
+  def live_view_verify_layout, do: live_view({Web.Layouts, :verify})
+
+  # Every layout gets the same components, so a page can move to another layout
+  # without changing its imports. Components only one or two pages use are imported
+  # by those pages.
+  defp live_view(layout) do
     quote do
-      use Phoenix.LiveView, layout: {Web.Layouts, :marketing}
+      use Phoenix.LiveView, layout: unquote(layout)
 
       import Web.Components.A
-      import Web.Components.Table
-
-      unquote(html_helpers())
-    end
-  end
-
-  def live_view_app_layout do
-    quote do
-      use Phoenix.LiveView, layout: {Web.Layouts, :app}
-
-      import Web.Components.A
-      import Web.Components.ActivityFilterTable
-      import Web.Components.AttendanceTable
       import Web.Components.Breadcrumbs
       import Web.Components.D4H
       import Web.Components.Markdown
       import Web.Components.Pagination
       import Web.Components.Table
-      import Web.Components.UI
-
-      unquote(html_helpers())
-    end
-  end
-
-  def live_view_narrow_layout do
-    quote do
-      use Phoenix.LiveView, layout: {Web.Layouts, :narrow}
-
-      import Web.Components.A
-
-      unquote(html_helpers())
-    end
-  end
-
-  def live_view_verify_layout do
-    quote do
-      use Phoenix.LiveView, layout: {Web.Layouts, :verify}
-
-      import Web.Components.Verify
 
       unquote(html_helpers())
     end
@@ -136,7 +110,6 @@ defmodule Web do
       import Phoenix.HTML
       # Core UI components and translation
       import Web.Components.Core
-      import Web.Components.UI
       import Web.Gettext
 
       alias Phoenix.LiveView.AsyncResult

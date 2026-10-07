@@ -6,7 +6,6 @@ defmodule Web.Components.TeamManagers do
   use Web, :function_component
 
   import Web.Components.Table
-  import Web.Components.UI
 
   alias App.Model.Member
 

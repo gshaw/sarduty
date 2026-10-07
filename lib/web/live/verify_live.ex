@@ -1,6 +1,8 @@
 defmodule Web.VerifyLive do
   use Web, :live_view_verify_layout
 
+  import Web.Components.Verify
+
   alias App.Model.MemberCard
   alias App.Model.Organization
   alias App.Operation.BuildCardQualifications

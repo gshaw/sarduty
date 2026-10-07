@@ -19,7 +19,8 @@
   and [lib/web/components/](lib/web/components). A LiveView picks its layout with
   `use Web, :live_view_app_layout` (team pages), `:live_view_narrow_layout` (auth and
   settings forms), or `:live_view_marketing_layout` (public pages) — see
-  [lib/web.ex](lib/web.ex). The layout macro also decides which components are imported.
+  [lib/web.ex](lib/web.ex). Every layout imports the same shared components; a page
+  imports the ones only it uses.
 - **Operations**: [lib/app/operation/](lib/app/operation) hold side effects and
   orchestration, one module per operation with a `call` entry point:
   `App.Operation.CreateTaxCreditLetter.call(…)`.

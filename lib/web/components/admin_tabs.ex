@@ -1,34 +1,18 @@
 defmodule Web.Components.AdminTabs do
   use Web, :function_component
 
-  import Web.Components.A
-
   attr :current, :atom, required: true, values: [:teams, :organizations, :admins, :events, :mcp]
 
   # The admin section's pages, under the Admin link in the top bar.
   def admin_tabs(assigns) do
     ~H"""
-    <nav class="tabs" aria-label="Admin">
-      <.a kind={:custom} navigate={~p"/admin"} aria-current={@current == :teams && "page"}>
-        Teams
-      </.a>
-      <.a
-        kind={:custom}
-        navigate={~p"/admin/orgs"}
-        aria-current={@current == :organizations && "page"}
-      >
-        Organizations
-      </.a>
-      <.a kind={:custom} navigate={~p"/admin/admins"} aria-current={@current == :admins && "page"}>
-        Admins
-      </.a>
-      <.a kind={:custom} navigate={~p"/admin/events"} aria-current={@current == :events && "page"}>
-        Events
-      </.a>
-      <.a kind={:custom} navigate={~p"/admin/mcp"} aria-current={@current == :mcp && "page"}>
-        MCP
-      </.a>
-    </nav>
+    <.tabs label="Admin">
+      <:tab navigate={~p"/admin"} current={@current == :teams}>Teams</:tab>
+      <:tab navigate={~p"/admin/orgs"} current={@current == :organizations}>Organizations</:tab>
+      <:tab navigate={~p"/admin/admins"} current={@current == :admins}>Admins</:tab>
+      <:tab navigate={~p"/admin/events"} current={@current == :events}>Events</:tab>
+      <:tab navigate={~p"/admin/mcp"} current={@current == :mcp}>MCP</:tab>
+    </.tabs>
     """
   end
 end

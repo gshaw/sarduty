@@ -1,6 +1,8 @@
 defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.AttendanceTable
+
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Operation.ApplyAttendanceImport
