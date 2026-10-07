@@ -64,6 +64,14 @@ defmodule Web.Router do
     post "/log", WalletController, :log
   end
 
+  # The MCP endpoint (#28): a bearer token only, so no session, CSRF token, or Accept
+  # check. The token decides the team. docs/mcp.md.
+  scope "/teams/:subdomain", Web do
+    post "/mcp", MCPController, :post
+    get "/mcp", MCPController, :get
+    delete "/mcp", MCPController, :delete
+  end
+
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:sarduty, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
@@ -146,6 +154,7 @@ defmodule Web.Router do
       live "/admin", AdminDashboardLive
       live "/admin/admins", Admin.AdminCollectionLive
       live "/admin/events", Admin.EventCollectionLive
+      live "/admin/mcp", Admin.MCPLive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationLive, :new
       live "/admin/orgs/:id", Admin.OrganizationLive, :edit
@@ -180,6 +189,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/cards", Settings.CardsLive
       live "/teams/:subdomain/settings/managers", TeamManagersLive
+      live "/teams/:subdomain/settings/mcp", Settings.MCPLive
     end
 
     scope "/teams/:subdomain" do
@@ -191,7 +201,4 @@ defmodule Web.Router do
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
     end
   end
-
-  # No route to the MCP endpoint (Web.MCPController) until teams can opt in
-  # with their own tokens: #28.
 end

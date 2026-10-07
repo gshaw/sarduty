@@ -100,9 +100,10 @@ config :phoenix, :filter_parameters, ["password", "access_key", "token", "code"]
 # sends nothing in dev or test, or without HONEYBADGER_API_KEY. Its filter_keys match
 # whole key names, so Web.HoneybadgerFilter also drops any key containing "key",
 # "token", "code" or "password", and cuts secrets from paths, for errors and Insights
-# alike; http_cookie drops the session cookie from the request headers. filter_args keeps
-# function arguments, which can be members, out of backtraces, and filter_disable_assigns
-# keeps LiveView assigns out of Insights for the same reason. Query events are off: the
+# alike; http_cookie drops the session cookie from the request headers, and
+# http_authorization an MCP token. filter_args keeps function arguments, which can be
+# members, out of backtraces, and filter_disable_assigns keeps LiveView assigns out of
+# Insights for the same reason. Query events are off: the
 # nightly refresh writes row by row, and they filled the plan's daily Insights cap.
 config :honeybadger,
   app: :sarduty,
@@ -125,6 +126,7 @@ config :honeybadger,
     :token,
     :code,
     :http_cookie,
+    :http_authorization,
     :__changed__,
     :flash,
     :_csrf_token
