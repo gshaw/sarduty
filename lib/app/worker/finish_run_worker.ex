@@ -44,7 +44,8 @@ defmodule App.Worker.FinishRunWorker do
     }
   }
 
-  # A job in any of these will still run, now or after a retry.
+  # A job in any of these will still run, now or after a retry. Only jobs queued since the
+  # run started count, so one orphaned long ago can't hold every run open.
   @pending ~w(available scheduled executing retryable)
 
   @doc "Pings the start of a run of `teams` jobs and queues the job that pings its end."
@@ -62,7 +63,7 @@ defmodule App.Worker.FinishRunWorker do
   def perform(%Oban.Job{args: %{"run" => run, "started_at" => started_at} = args}) do
     %{check: check, worker: worker, wait: wait} = config = Map.fetch!(@runs, run)
     {:ok, started_at, 0} = DateTime.from_iso8601(started_at)
-    jobs = jobs(worker)
+    jobs = jobs(worker, started_at)
     pending = jobs |> where([j], j.state in @pending) |> Repo.aggregate(:count)
 
     discarded =
@@ -99,5 +100,9 @@ defmodule App.Worker.FinishRunWorker do
     )
   end
 
-  defp jobs(worker), do: where(Oban.Job, worker: ^inspect(worker))
+  # Oban stores inserted_at to the second, after the run's start was read.
+  defp jobs(worker, started_at) do
+    since = DateTime.truncate(started_at, :second)
+    where(Oban.Job, [j], j.worker == ^inspect(worker) and j.inserted_at >= ^since)
+  end
 end

@@ -77,6 +77,11 @@ config :sarduty, Oban,
   engine: Oban.Engines.Lite,
   repo: App.Repo,
   queues: [default: 5, refresh: 1, sync: 2],
+  # Lifeline puts back a job left executing by a restart, so it runs again rather than
+  # sitting there for good; an hour is far longer than any team's refresh. Pruner keeps a
+  # week of finished jobs for looking into a run; events keep the longer history.
+  lifeline: [rescue_after: {1, :hour}],
+  pruner: [max_age: {7, :days}],
   cron: [
     crontab: [
       {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker},
