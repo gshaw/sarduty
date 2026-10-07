@@ -3,9 +3,11 @@ defmodule Web.TeamDashboardLive do
 
   import Web.Components.ActivityMap
   import Web.Components.Chart
+  import Web.Components.TeamCounts
 
   alias App.Adapter.D4H
   alias App.Model.Team
+  alias App.ViewData.TeamCountsViewData
   alias App.ViewData.TeamDashboardCharts
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
@@ -15,6 +17,7 @@ defmodule Web.TeamDashboardLive do
 
   # The top half is what needs doing: what's next, and what needs a team admin. The lower
   # half is the team's year, loaded after it so the work never waits on the charts (#205).
+  # Only SAR Duty admins see it for now; everyone else keeps the counts page.
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -28,10 +31,20 @@ defmodule Web.TeamDashboardLive do
     socket =
       socket
       |> assign(page_title: current_team.name)
-      |> assign_top_half(current_team)
-      |> assign_pulse(current_team)
+      |> assign(admin?: socket.assigns.current_user.is_admin)
+      |> assign_page(current_team)
 
     {:ok, socket}
+  end
+
+  defp assign_page(%{assigns: %{admin?: true}} = socket, team),
+    do: socket |> assign_top_half(team) |> assign_pulse(team)
+
+  defp assign_page(socket, team) do
+    socket
+    |> assign(now: DateTime.utc_now())
+    |> assign(view_data: TeamCountsViewData.build(team))
+    |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
   end
 
   defp assign_top_half(socket, team) do
@@ -50,6 +63,12 @@ defmodule Web.TeamDashboardLive do
   defp build_pulse(team) do
     charts = team |> TeamDashboardViewData.chart_rows() |> TeamDashboardCharts.shape(team)
     %{charts: charts, map: ActivityMap.build(charts.map_points, {520, 380}, padding: 24)}
+  end
+
+  def render(%{admin?: false} = assigns) do
+    ~H"""
+    <.team_counts team={@current_team} view_data={@view_data} now={@now} has_logo={@has_logo} />
+    """
   end
 
   def render(assigns) do
@@ -357,7 +376,7 @@ defmodule Web.TeamDashboardLive do
         view_data = %{socket.assigns.view_data | refresh_result: updated_team.d4h_refresh_result}
         {:noreply, assign(socket, view_data: view_data)}
       else
-        {:noreply, socket |> assign_top_half(updated_team) |> assign_pulse(updated_team)}
+        {:noreply, assign_page(socket, updated_team)}
       end
     else
       {:noreply, socket}

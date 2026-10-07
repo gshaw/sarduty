@@ -4,7 +4,13 @@ defmodule Web.TeamDashboardLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.AccountsFixtures
   alias App.Model.Team
+
+  # The new dashboard shows only for SAR Duty admins for now (#205).
+  defp admin_with_team_fixture do
+    %{user: AccountsFixtures.user_fixture(%{is_admin: true}), team: team_fixture()}
+  end
 
   defp open(conn, user, team), do: conn |> log_in_user(user) |> live(~p"/teams/#{team}")
 
@@ -17,7 +23,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "renders team dashboard", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
 
     {:ok, _lv, html} = open(conn, user, team)
 
@@ -25,7 +31,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "shows the team logo only once one is saved", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
 
     {:ok, lv, _html} = open(conn, user, team)
     refute has_element?(lv, "#team-logo")
@@ -37,7 +43,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "a failed refresh needs attention and says why", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
 
     {:ok, team} =
       Team.update(team, %{
@@ -50,7 +56,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "an empty team has nothing coming up and nothing to do", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
 
     {:ok, lv, _html} = open(conn, user, team)
 
@@ -61,7 +67,7 @@ defmodule Web.TeamDashboardLiveTest do
 
   test "the activity starting soon is NextUp, with the page's take attendance button",
        %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
     soon = activity_fixture(team, at(3, %{title: "Rope rescue"}))
     later = activity_fixture(team, at(72, %{title: "Night navigation"}))
     activity_fixture(team, at(24 * 20, %{title: "Too far off"}))
@@ -83,7 +89,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "this team's drafts and members missing details need attention", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
     activity_fixture(team, at(-48, %{is_published: false}))
     activity_fixture(team, at(-48, %{is_published: true}))
     # Drafts from before the last 30 days are left alone.
@@ -114,7 +120,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "a qualification running out needs attention", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
     qualification = qualification_fixture(team)
 
     qualification_award_fixture(qualification, member_fixture(team), %{
@@ -127,7 +133,7 @@ defmodule Web.TeamDashboardLiveTest do
   end
 
   test "the team's year loads after the rest of the page", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+    %{user: user, team: team} = admin_with_team_fixture()
     activity_fixture(team, at(-24 * 5, %{activity_kind: "incident"}))
 
     {:ok, lv, _html} = open(conn, user, team)
@@ -135,5 +141,29 @@ defmodule Web.TeamDashboardLiveTest do
     assert render_async(lv) =~ "Activities by month"
     assert has_element?(lv, "#stat-incidents", "1")
     assert has_element?(lv, "#activity-calendar")
+  end
+
+  describe "a team admin who isn't a SAR Duty admin" do
+    test "sees the counts page, not the new dashboard", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      activity_fixture(team, at(3, %{title: "Rope rescue"}))
+
+      {:ok, lv, html} = open(conn, user, team)
+
+      assert html =~ team.name
+      assert has_element?(lv, "#d4h-updated")
+      refute has_element?(lv, "#next-up")
+      refute has_element?(lv, "#needs-attention")
+      refute has_element?(lv, "#team-pulse")
+    end
+
+    test "a failed refresh says why", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: No D4H key."})
+
+      {:ok, lv, _html} = open(conn, user, team)
+
+      assert has_element?(lv, "#refresh-error", "No D4H key.")
+    end
   end
 end
