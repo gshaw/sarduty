@@ -26,7 +26,7 @@ defmodule Web.ActivityAttendanceLive do
 
     socket =
       assign(socket,
-        page_title: "Attendance",
+        page_title: "Import attendance",
         activity: activity,
         team_members: team_members,
         attendance_records: attendance_records,
@@ -45,7 +45,7 @@ defmodule Web.ActivityAttendanceLive do
         label={"#{@activity.ref_id}"}
         path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
       />
-      <:item label="Attendance" />
+      <:item label="Import attendance" />
     </.breadcrumbs>
     <h1 class="title">{@activity.title}</h1>
 
@@ -82,13 +82,13 @@ defmodule Web.ActivityAttendanceLive do
       <% else %>
         <h2 class="heading">Recommended changes</h2>
         <form phx-submit="perform-recommendations" _phx-change="validate-recommendations">
-          <.table id="recommendations" rows={@recommendations} class="table-striped">
-            <:col :let={{_op, attendance_id, _member}} label="">
+          <.table id="recommendations" rows={@recommendations} class="table-striped table-stack">
+            <:col :let={{_op, attendance_id, _member}} label="" class="stack-check">
               <.input :if={attendance_id} type="checkbox" name={attendance_id} checked />
             </:col>
-            <:col :let={{op, _, _}} label="">
+            <:col :let={{op, _, _}} label="" class="stack-full">
               <%= if op == :not_invited do %>
-                <.badge kind={:danger}>Not invited</.badge>
+                <.badge kind={:danger}>Not signed up</.badge>
               <% else %>
                 <%= if op == :add do %>
                   <span class="text-success-1 font-bold">Add</span>
@@ -97,8 +97,10 @@ defmodule Web.ActivityAttendanceLive do
                 <% end %>
               <% end %>
             </:col>
-            <:col :let={{_, _, member}} label="Name">{member.name}</:col>
-            <:col :let={{_, _, member}} label="Email">{member.email}</:col>
+            <:col :let={{_, _, member}} label="Name" class="stack-title">{member.name}</:col>
+            <:col :let={{_, _, member}} label="Email" class="stack-full break-all">
+              {member.email}
+            </:col>
             <:col :let={{_, _, member}} label="Phone">{member.phone}</:col>
           </.table>
           <.form_actions class="mt-4">
@@ -227,8 +229,8 @@ defmodule Web.ActivityAttendanceLive do
     end
   end
 
-  defp count_changes(1), do: "1 attendance change"
-  defp count_changes(count), do: "#{count} attendance changes"
+  defp count_changes(count),
+    do: Service.Format.count(count, one: "%d attendance change", many: "%d attendance changes")
 
   defp error_text(:published),
     do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."

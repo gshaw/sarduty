@@ -6,6 +6,13 @@
     .filter-form { flex-direction: row; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-end; }
   }
 
+  /* Phones: menus two to a row, so the table starts on the first screen. A text box keeps
+     the full width. */
+  @media (width < 40rem) {
+    .filter-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--sp-3); }
+    .filter-form > :has(input:not([type="checkbox"], [type="radio"], [type="hidden"])) { grid-column: 1 / -1; }
+  }
+
   .filter-form .label { font-size: var(--fs-sm); line-height: var(--lh-sm); }
   .filter-form :is(input, select) { min-height: 32px; padding: 2px var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
 

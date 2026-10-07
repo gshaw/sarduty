@@ -100,7 +100,7 @@ defmodule Web.GroupReviewLive do
         {String.replace_prefix(@current_team.d4h_refresh_result, "Error: ", "Cannot refresh: ")}
       </span>
       <span :if={!refreshing?(@current_team) && App.Model.Team.d4h_updated_at(@current_team)}>
-        Updated from D4H {Service.Format.minutes_ago(
+        Refreshed from D4H {Service.Format.minutes_ago(
           App.Model.Team.d4h_updated_at(@current_team),
           DateTime.utc_now(),
           @current_team.timezone

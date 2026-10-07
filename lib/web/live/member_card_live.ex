@@ -31,7 +31,7 @@ defmodule Web.MemberCardLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{member.name} - ID card")
+      |> assign(:page_title, "#{member.name} · ID card")
       |> assign(:member, member)
       |> assign_card(MemberCard.find_current(team, member))
       |> assign(:qualifications, BuildCardQualifications.call(team, member, DateTime.utc_now()))
@@ -167,7 +167,10 @@ defmodule Web.MemberCardLive do
           {Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}
         </.a>.
       </p>
-      <p :if={BuildApplePass.configured?() or BuildGooglePass.configured?()} class="mt-p flex gap-2">
+      <p
+        :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
+        class="mt-p flex flex-wrap gap-2"
+      >
         <.button
           :if={@member.email}
           id="email-pass"
@@ -193,7 +196,7 @@ defmodule Web.MemberCardLive do
           Add to Google Wallet
         </.button>
       </p>
-      <p class="mt-p flex gap-2">
+      <p class="mt-p flex flex-wrap gap-2">
         <.button
           id="replace"
           phx-click="issue"
@@ -220,8 +223,11 @@ defmodule Web.MemberCardLive do
     on = "On #{Service.Format.count(phones, one: "1 phone", many: "%d phones")}"
 
     case card.pass_fetched_at do
-      nil -> on
-      fetched_at -> "#{on} · last fetched #{Service.Format.month_day_time(fetched_at, timezone)}"
+      nil ->
+        on
+
+      fetched_at ->
+        "#{on} · last downloaded #{Service.Format.month_day_time(fetched_at, timezone)}"
     end
   end
 

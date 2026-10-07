@@ -35,7 +35,7 @@ defmodule Web.Admin.OrganizationLive do
       class="max-w-xl"
     >
       <.input field={@form[:name]} label="Name">
-        In full, as on the back of the pass: "BC Search and Rescue Association".
+        In full, as on the back of the ID card: "BC Search and Rescue Association".
       </.input>
       <.input field={@form[:short_name]} label="Short name">
         Beside the logo in the verify site's bar: "BCSARA".
@@ -58,7 +58,7 @@ defmodule Web.Admin.OrganizationLive do
           <.live_file_input upload={@uploads.logo} />
         </div>
         <.hint>
-          PNG or JPEG, square or wide. Shown on its verify page, never on a team's card.
+          PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
         </.hint>
         <p :for={error <- upload_errors(@uploads.logo)} class="text-danger-1">
           {upload_error(error)}
@@ -68,7 +68,9 @@ defmodule Web.Admin.OrganizationLive do
 
       <fieldset id="organization-teams" class="mb-p">
         <legend class="font-semibold">Member teams</legend>
-        <.hint>Their passes are rebuilt when you save, and phones update in a minute or so.</.hint>
+        <.hint>
+          SAR Duty rebuilds their ID cards when you save. Phones show the change within a minute.
+        </.hint>
         <input type="hidden" name="team_ids[]" value="" />
         <label :for={team <- @teams} class="flex items-center gap-2 my-1">
           <input
@@ -80,7 +82,7 @@ defmodule Web.Admin.OrganizationLive do
           {team.name}
           <span
             :if={team.organization_id && team.organization_id != @organization.id}
-            class="text-sm text-warning-1"
+            class="text-sm font-semibold"
           >
             (in another organization)
           </span>

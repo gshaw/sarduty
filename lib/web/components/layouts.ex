@@ -352,7 +352,7 @@ defmodule Web.Layouts do
     ~H"""
     <div id={@id} class="toasts">
       <.flash kind={:info} flash={@flash} />
-      <.flash kind={:error} title="Error" flash={@flash} />
+      <.flash kind={:error} flash={@flash} />
       <.flash
         id="client-error"
         kind={:error}

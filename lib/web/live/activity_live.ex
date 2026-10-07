@@ -76,7 +76,7 @@ defmodule Web.ActivityLive do
         <dd>
           {Service.Format.count(@attendance_count, one: "%d member", many: "%d members")} · {format_total_effort(
             @attendances
-          )} effort
+          )} in total
         </dd>
       </div>
 

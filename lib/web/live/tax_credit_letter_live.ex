@@ -16,7 +16,7 @@ defmodule Web.TaxCreditLetterLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{letter.member.name}ʼs #{letter.year} tax credit letter")
+      |> assign(:page_title, "#{letter.member.name}'s #{letter.year} tax credit letter")
       |> assign_letter(letter)
 
     {:noreply, socket}

@@ -136,7 +136,6 @@ defmodule Web.MemberCollectionLive do
         sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
       >
         {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
-        <span :if={!record.member.left_at} class="text-disabled">-</span>
       </:col>
     </.table>
 

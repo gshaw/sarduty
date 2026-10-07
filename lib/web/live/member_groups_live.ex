@@ -18,7 +18,7 @@ defmodule Web.MemberGroupsLive do
 
     socket =
       socket
-      |> assign(:page_title, "#{member.name} - Groups")
+      |> assign(:page_title, "#{member.name} · Groups")
       |> assign(:member, member)
 
     {:noreply, socket}
@@ -58,7 +58,9 @@ defmodule Web.MemberGroupsLive do
         </.a>
       </:col>
     </.table>
-    <p :if={@member.group_members == []}>Not in any groups.</p>
+    <p :if={@member.group_members == []} id="no-groups">
+      {@member.name} is not in any D4H groups.
+    </p>
     """
   end
 

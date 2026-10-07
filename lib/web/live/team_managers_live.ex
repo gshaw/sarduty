@@ -14,7 +14,7 @@ defmodule Web.TeamManagersLive do
 
     socket =
       assign(socket,
-        page_title: "Managers",
+        page_title: "Team admins",
         managers: managers,
         grants: TeamLoginGrant.get_for_team(team),
         login_emails: login_emails
@@ -31,9 +31,10 @@ defmodule Web.TeamManagersLive do
     </.breadcrumbs>
     <h1 class="title mb-p">{@page_title}</h1>
     <p class="max-w-3xl">
-      These people can log in to SAR Duty for {@current_team.name}: everyone D4H makes an
-      Owner or Editor who is not retired and has not left, as of the last refresh. To add or
-      remove someone, change their access in D4H. SAR Duty follows after the next refresh.
+      These people can log in to SAR Duty for {@current_team.name}. They are the members D4H
+      makes an Owner or Editor, as of the last refresh. Members who are retired or have left
+      cannot log in. To add or remove someone, change their access in D4H. SAR Duty follows
+      after the next refresh.
     </p>
     <.team_managers
       id="team-managers"

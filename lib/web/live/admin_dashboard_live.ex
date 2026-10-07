@@ -88,7 +88,10 @@ defmodule Web.AdminDashboardLive do
       </:col>
       <:col :let={team} label="Contacts">
         <.a id={"team-#{team.id}-managers"} navigate={~p"/teams/#{team}/settings/managers"}>
-          {Service.Format.count(length(@managers[team.id]), one: "%d manager", many: "%d managers")}
+          {Service.Format.count(length(@managers[team.id]),
+            one: "%d team admin",
+            many: "%d team admins"
+          )}
         </.a>
         <span :if={@logins[team.id] == []} class="block text-danger-1">No accounts</span>
         <ul :if={@logins[team.id] != []}>
@@ -142,7 +145,7 @@ defmodule Web.AdminDashboardLive do
       </dd>
       <dt>Team key</dt>
       <dd>
-        The team's D4H key, saved in Team settings, and the D4H member it belongs to. SAR Duty
+        The team's D4H access key, saved in Team settings, and the D4H member it belongs to. SAR Duty
         uses it for every D4H request. "Person's key" means the member is not a SAR Duty
         account, so the key stops working if that person leaves.
       </dd>
