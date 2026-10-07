@@ -1,5 +1,5 @@
-/* Toasts (LiveView flash), banners, warning text, empty states, and the spinner. See
-   /styles/draft/feedback. */
+/* Toasts (LiveView flash), banners, warning text, empty states, the error summary, the
+   confirm dialog, and the spinner. See /styles/feedback. */
 @layer components {
   .toasts {
     position: fixed;
@@ -60,6 +60,18 @@
   .inset { border-left: 6px solid var(--border); padding: var(--sp-1) 0 var(--sp-1) var(--sp-4); margin-bottom: var(--sp-4); }
 
   .empty-state { border: 1px dashed var(--border); padding: var(--sp-6) var(--sp-5); text-align: center; color: var(--text-muted); margin-bottom: var(--sp-4); }
+  .empty-state strong { display: block; color: var(--text); font-size: var(--fs-lg); line-height: var(--lh-lg); margin-bottom: var(--sp-1); }
+
+  /* At the top of a form after a failed save, linking to each field. No form uses it yet. */
+  .error-summary { border: 4px solid var(--danger-text); padding: var(--sp-4) var(--sp-5); margin-bottom: var(--sp-6); }
+  .error-summary h2 { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
+  .error-summary a { color: var(--danger-text); font-weight: 600; text-decoration: underline; }
+
+  /* A confirm dialog before a change that cannot be undone. Buttons use data-confirm today,
+     which shows the browser's own dialog. */
+  .dialog { width: min(480px, calc(100vw - 32px)); padding: var(--sp-5); border: 1px solid var(--border); border-top: 6px solid var(--danger); border-radius: var(--radius); background: var(--bg); color: var(--text); box-shadow: 0 12px 40px rgb(0 0 0 / 0.3); }
+  .dialog::backdrop { background: rgb(11 12 12 / 0.6); }
+  .dialog h2 { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
 
   .spinner {
     display: inline-block;

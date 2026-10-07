@@ -1,4 +1,4 @@
-/* Type on the design system's scale (tokens.css). See /styles/draft/typography. */
+/* Type on the design system's scale (tokens.css). See /styles/typography. */
 @layer components {
   /* The home page's hero only; the rest of the app stays on the scale. */
   .title-hero { font-size: 40px; line-height: 48px; font-weight: 700; margin-bottom: var(--sp-2); }

@@ -7,21 +7,16 @@
     Navy, with the amber rule and logo. It holds the main sections and the account menu. The
     current section is underlined in amber.
   </p>
-  <div class="demo" style="padding: 0">
-    <div class="app-bar">
-      <a href="#" class="brand">SAR <span>Duty</span></a>
-      <nav aria-label="Main">
-        <a href="#" aria-current="page">Activities</a>
-        <a href="#">Members</a>
-        <a href="#">Qualifications</a>
-        <a href="#">Groups</a>
-        <a href="#">Tax credit letters</a>
-      </nav>
-      <button class="account" aria-haspopup="menu">
-        Squamish SAR <.svg_icon name="chevron-down" size={16} />
-      </button>
-    </div>
+  <div class="demo bar-demo" style="padding: 0">
+    <Web.Layouts.main_nav_bar
+      current_user={sample_user()}
+      current_team={sample_team()}
+      current_path="/teams/squamish/activities"
+    />
   </div>
+  <p class="spec">
+    In the app: the layout's <code>main_nav_bar</code>, built from <code>&lt;.site_bar&gt;</code>, with the account menu open here.
+  </p>
 
   <h3>On a phone</h3>
   <p>
@@ -29,61 +24,49 @@
     panel opens under the amber rule, the width of the screen, with the current section
     marked in amber. Going to another page closes it.
   </p>
-  <div class="demo phone-bar" style="padding: 0">
-    <div class="app-bar">
-      <a href="#" class="brand">SAR <span>Duty</span></a>
-      <button class="account" aria-expanded="true">
-        <.svg_icon name="x-mark" size={24} /> Menu
-      </button>
-    </div>
-    <nav class="phone-menu" aria-label="Main">
-      <a href="#">Dashboard</a>
-      <a href="#" aria-current="page">Activities</a>
-      <a href="#">Members</a>
-      <a href="#">Qualifications</a>
-      <a href="#">Groups</a>
-      <a href="#">Tax credit letters</a>
-      <hr />
-      <div class="note">avery@example.com</div>
-      <a href="#">Settings</a>
-      <hr />
-      <a href="#">Log out</a>
-    </nav>
+  <div class="demo phone-width phone-bar-demo" style="padding: 0">
+    <Web.Layouts.main_nav_bar
+      current_user={sample_user()}
+      current_team={sample_team()}
+      current_path="/teams/squamish/activities"
+    />
   </div>
+  <script>
+    // Open the menus, so the examples show them.
+    document.querySelectorAll(".bar-demo .site-bar-menu, .phone-bar-demo .site-bar-phone")
+      .forEach(function (menu) { menu.open = true; });
+  </script>
 
   <h2>Menu</h2>
-  <p>A short list under a button, such as the account menu.</p>
-  <div class="demo">
-    <ul class="menu" role="menu" style="max-width: 240px">
-      <li class="muted caption">avery@example.com</li>
-      <li role="none"><a href="#" role="menuitem">Settings</a></li>
-      <li role="none"><a href="#" role="menuitem">Team settings</a></li>
-      <li role="none"><hr /></li>
-      <li role="none"><a href="#" role="menuitem">Log out</a></li>
-    </ul>
-  </div>
+  <p>A short list under a button, such as the account menu above.</p>
   <p class="spec">
     Keep menus for a few links that do not fit in the bar. Actions on a page are buttons.
   </p>
 
   <h2>Breadcrumbs</h2>
   <div class="demo">
-    <ol class="breadcrumbs">
-      <li><a href="#">Squamish SAR</a></li>
-      <li><.svg_icon name="chevron-right" size={16} /><a href="#">Members</a></li>
-      <li aria-current="page"><.svg_icon name="chevron-right" size={16} />Avery Chen</li>
-    </ol>
+    <.breadcrumbs team={sample_team()}>
+      <:item label="Members" path="#" />
+      <:item label="Avery Chen" />
+    </.breadcrumbs>
   </div>
   <p class="spec">
-    On every page below a section's list. The last item is the current page and is not a link.
+    On every page below a section's list. The last item is the current page and is not a link. In the app:
+    <code>&lt;.breadcrumbs team=&#123;@current_team&#125;&gt;</code>
+    with an <code>&lt;:item label="…" path=&#123;…&#125; /&gt;</code>
+    for each level.
   </p>
 
   <h2>Back link</h2>
   <div class="demo">
-    <a href="#" class="back-link"><.svg_icon name="chevron-left" size={16} />Settings</a>
+    <p>
+      <.a href="#">← Squamish SAR</.a>
+    </p>
   </div>
   <p class="spec">
-    For pages outside the main tree, like a settings form, instead of breadcrumbs.
+    For pages outside the main tree, like settings, instead of breadcrumbs. In the app: an
+    <code>&lt;.a&gt;</code>
+    whose text starts with ←, as on the team settings page.
   </p>
 
   <h2>Tabs</h2>

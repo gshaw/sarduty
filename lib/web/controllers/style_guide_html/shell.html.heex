@@ -12,12 +12,12 @@
       })();
     </script>
     <Web.Layouts.favicon_links />
-    <%!-- The app's stylesheet, so examples built from the app's components look as they do in the app. --%>
+    <%!-- The app's stylesheet, so every example looks as it does in the app. --%>
     <link rel="stylesheet" href={~p"/assets/css/app.css"} />
     <.styles />
   </head>
   <body>
-    <header class="site-bar">
+    <header class="guide-bar">
       <div class="container">
         <a href="/" class="brand">SAR <span>Duty</span><small>Style guide</small></a>
         <div class="theme-switch" role="group" aria-label="Theme">
@@ -38,7 +38,7 @@
           <% end %>
         </ul>
       </nav>
-      <main>
+      <main class="guide-main">
         {render_slot(@inner_block)}
       </main>
     </div>

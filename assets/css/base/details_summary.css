@@ -26,4 +26,13 @@
   details[role='menu'][open] .display-when-details-closed {
     display: none;
   }
+
+  /* A question that opens to its answer. No page uses it yet. See /styles/layout. */
+  details.disclosure { margin-bottom: var(--sp-4); }
+  details.disclosure > summary { display: inline-flex; align-items: center; gap: var(--sp-1); list-style: none; color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; }
+  details.disclosure > summary::-webkit-details-marker { display: none; }
+  details.disclosure > summary .hero-chevron-down-micro { transform: rotate(-90deg); transition: transform 0.15s; }
+  details.disclosure[open] > summary .hero-chevron-down-micro { transform: none; }
+  details.disclosure[open] > summary { margin-bottom: var(--sp-2); }
+  details.disclosure > div { border-left: 4px solid var(--border); padding: var(--sp-2) 0 var(--sp-2) var(--sp-4); }
 }

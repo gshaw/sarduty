@@ -61,6 +61,50 @@ defmodule Web.StyleGuideHTML.SampleData do
     %App.Page{entries: [], page_number: 2, page_size: 50, total_entries: 1912, total_pages: 39}
   end
 
+  def sample_user, do: %App.Accounts.User{id: 0, email: "avery@example.com", is_admin: false}
+
+  def sample_team do
+    %App.Model.Team{
+      id: 0,
+      name: "Squamish SAR",
+      subdomain: "squamish",
+      timezone: "America/Vancouver"
+    }
+  end
+
+  # Activities as App.Model.Activity, so the guide renders them with the app's own table.
+  # Times are UTC; the table shows them in Vancouver time.
+  def activities do
+    [
+      {1, "25-0412", "Missing hiker, Stawamus Chief", "incident", "2025-09-28T21:05:00Z", 505,
+       ["Primary Hours"], "25-0412", true,
+       "Hiker overdue on the Chief's back trail. Found at 21:10 and walked out with the team."},
+      {2, "25-0409", "Rope rescue, Murrin Park", "exercise", "2025-09-24T16:00:00Z", 180,
+       ["Secondary Hours", "Rope"], nil, true, nil},
+      {3, "25-0405", "Squamish Days first aid booth", "event", "2025-09-21T17:00:00Z", 240,
+       ["Secondary Hours"], nil, true, nil},
+      {4, "25-0398", "Overdue kayaker, Howe Sound", "incident", "2025-09-17T02:30:00Z", 225,
+       ["Primary Hours", "Marine"], "25-0398", true, nil},
+      {5, "25-0396", "Team meeting", "event", "2025-09-11T02:00:00Z", 90, [], nil, false, nil}
+    ]
+    |> Enum.map(fn {id, ref_id, title, kind, started, minutes, tags, number, published, about} ->
+      {:ok, started_at, 0} = DateTime.from_iso8601(started)
+
+      %App.Model.Activity{
+        id: id,
+        ref_id: ref_id,
+        title: title,
+        activity_kind: kind,
+        started_at: started_at,
+        finished_at: DateTime.add(started_at, minutes * 60),
+        tags: tags,
+        tracking_number: number,
+        is_published: published,
+        description: about
+      }
+    end)
+  end
+
   def recommendations do
     [
       %{op: :add, name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"},
