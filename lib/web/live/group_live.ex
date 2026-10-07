@@ -174,12 +174,12 @@ defmodule Web.GroupLive do
     </p>
 
     <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
-      <div class="flex justify-between items-center mb-p05">
+      <div class="flex flex-wrap md:flex-nowrap justify-between items-center gap-2 mb-p05">
         <form
           id={"clause-name-form-#{clause.id}"}
           phx-change="rename-clause"
           phx-submit="rename-clause"
-          class="flex items-center gap-2"
+          class="flex flex-wrap md:flex-nowrap items-center gap-2"
         >
           <input type="hidden" name="clause-id" value={clause.id} />
           <input
@@ -198,7 +198,6 @@ defmodule Web.GroupLive do
         <.button
           variant={:danger}
           size={:sm}
-          class="ml-p"
           phx-click="delete-clause"
           phx-value-clause-id={clause.id}
           data-confirm={delete_clause_confirmation(clause)}
@@ -237,13 +236,13 @@ defmodule Web.GroupLive do
         </span>
       </div>
 
-      <form phx-submit="add-qualification" class="flex gap-2 items-end">
+      <form phx-submit="add-qualification" class="flex flex-wrap gap-2 items-end">
         <input type="hidden" name="clause-id" value={clause.id} />
         <select
           name="qualification-id"
           class="block rounded border shadow-sm text-sm max-w-xs truncate"
         >
-          <option value="">Add qualification...</option>
+          <option value="">Select a qualification</option>
           {Phoenix.HTML.Form.options_for_select(
             available_qualifications(@qualifications, clause.group_rule_clause_qualifications),
             nil
@@ -253,8 +252,8 @@ defmodule Web.GroupLive do
       </form>
     </div>
 
-    <div class="flex gap-2">
-      <.button size={:sm} phx-click="add-clause">+ Add clause</.button>
+    <div class="flex flex-wrap gap-2">
+      <.button size={:sm} phx-click="add-clause">Add clause</.button>
       <.button id="done-editing" variant={:primary} size={:sm} phx-click="done-editing">
         Done
       </.button>

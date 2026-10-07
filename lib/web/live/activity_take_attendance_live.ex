@@ -192,13 +192,21 @@ defmodule Web.ActivityTakeAttendanceLive do
       id="no-show-list"
       rows={@no_shows}
       row_id={&"no-show-#{&1.id}"}
-      class="table-striped w-fit"
+      class="table-striped table-stack w-full md:w-fit"
     >
-      <:col :let={no_show} label="Name">{no_show.member.name}</:col>
-      <:col :let={no_show} label="Phone" class="whitespace-nowrap">{no_show.member.phone}</:col>
-      <:col :let={no_show} label="Email">{no_show.member.email}</:col>
-      <:col :let={no_show} label="Followed up">
-        <label class="flex items-center gap-2 whitespace-nowrap">
+      <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
+      <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
+        <.a :if={no_show.member.phone} href={"tel:#{no_show.member.phone}"}>
+          {no_show.member.phone}
+        </.a>
+      </:col>
+      <:col :let={no_show} label="Email" class="stack-full stack-optional break-all">
+        <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>
+          {no_show.member.email}
+        </.a>
+      </:col>
+      <:col :let={no_show} label="Followed up" class="stack-full">
+        <label class="flex items-center gap-2 whitespace-nowrap min-h-6">
           <input
             type="checkbox"
             id={"follow-up-#{no_show.id}"}
@@ -275,9 +283,9 @@ defmodule Web.ActivityTakeAttendanceLive do
         id="changes"
         rows={@review.changes}
         row_id={&"change-#{&1.key}"}
-        class="table-striped w-full"
+        class="table-striped table-stack w-full"
       >
-        <:col :let={change} label="" class="w-px">
+        <:col :let={change} label="" class="w-px stack-check">
           <input
             :if={SendAttendanceToD4H.sendable?(change)}
             type="checkbox"
@@ -287,13 +295,13 @@ defmodule Web.ActivityTakeAttendanceLive do
             checked={change.key in @selected}
           />
         </:col>
-        <:col :let={change} label="Member">
+        <:col :let={change} label="Member" class="stack-title">
           <label for={"select-#{change.key}"}>{change.member.name}</label>
         </:col>
         <:col :let={change} label="Change">
           <span class={action_class(change.action)}>{action_text(change.action)}</span>
         </:col>
-        <:col :let={change} label="Times" class="whitespace-nowrap tabular-nums">
+        <:col :let={change} label="Times" class="whitespace-nowrap tabular-nums stack-optional">
           <span :if={change.arrived_at}>
             {Service.Format.time_short(change.arrived_at, @activity.team.timezone)}–{Service.Format.time_short(
               change.left_at,
@@ -302,7 +310,7 @@ defmodule Web.ActivityTakeAttendanceLive do
           </span>
         </:col>
         <:col :let={change} label="In D4H now">{status_text(change.status)}</:col>
-        <:col :let={change} label="Notes">
+        <:col :let={change} label="Notes" class="stack-full stack-optional">
           <span :for={note <- change.notes} class={["block", note_class(note)]}>
             {note_text(note)}
           </span>
@@ -360,8 +368,8 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <div id="open-link">
       <p>
-        Send this link to the person taking attendance at the door. Works until you close it
-        or send to D4H.
+        Send this link to the person taking attendance at the door. It works until you close
+        it or send to D4H.
       </p>
       <div class="flex flex-wrap gap-2 items-center">
         <.a
@@ -446,15 +454,15 @@ defmodule Web.ActivityTakeAttendanceLive do
       the start time for anyone who arrives within {BuildAttendanceTimes.grace_minutes()} minutes
       of the start, early or late. It uses the end time for anyone who leaves within {BuildAttendanceTimes.grace_minutes()} minutes of the end.
     </p>
-    <.table id="times" rows={@times} class="table-striped w-fit">
-      <:col :let={row} label="Name">{row.member.name}</:col>
+    <.table id="times" rows={@times} class="table-striped table-stack w-full md:w-fit">
+      <:col :let={row} label="Name" class="stack-title">{row.member.name}</:col>
       <:col :let={row} label="Arrived" align="right" class="tabular-nums">
         {Service.Format.time_short(row.arrived_at, @activity.team.timezone)}
       </:col>
       <:col :let={row} label="Left" align="right" class="tabular-nums">
         {Service.Format.time_short(row.left_at, @activity.team.timezone)}
       </:col>
-      <:col :let={row} label="Notes">
+      <:col :let={row} label="Notes" class="stack-full stack-optional">
         <span :for={note <- row.notes} class={["block", note_class(note)]}>{note_text(note)}</span>
       </:col>
     </.table>
@@ -462,7 +470,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   defp note_class(:left_before_arriving), do: "text-danger-1"
-  defp note_class(:attending_without_scan), do: "text-warning-1"
+  defp note_class(:attending_without_scan), do: "font-semibold"
   defp note_class(_note), do: "text-secondary-1"
 
   defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."

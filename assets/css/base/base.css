@@ -94,5 +94,11 @@
   :is(td, th) input[type="checkbox"] { width: 16px; height: 16px; vertical-align: -3px; }
   :is(td, th) input[type="checkbox"]::after { width: 4px; height: 8px; border-width: 0 2px 2px 0; }
 
+  /* On a touch screen, the full 24px box, so a thumb can hit it. */
+  @media (pointer: coarse) {
+    :is(td, th) input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
+    :is(td, th) input[type="checkbox"]::after { width: 7px; height: 13px; border-width: 0 3px 3px 0; }
+  }
+
   hr { border-color: var(--border-subtle); }
 }

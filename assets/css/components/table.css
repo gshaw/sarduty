@@ -1,5 +1,6 @@
 /* Dense tables: 32px rows, cells on their first baseline, sticky headers. On a phone the
-   table scrolls sideways inside .table-wrap rather than reflowing. See /styles/draft/tables. */
+   table scrolls sideways inside .table-wrap rather than reflowing, unless it is a
+   .table-stack. See /styles/draft/tables. */
 @layer components {
   .table-wrap {
     overflow-x: auto;
@@ -48,4 +49,47 @@
     /* Text cells keep a readable width; the table scrolls instead of squeezing them. */
     table.table td:not(.w-px, .whitespace-nowrap) { min-width: 8rem; }
   }
+}
+
+/* .table-stack: on a phone each row is a block, and each cell sits under its column's
+   label (data-label), so nothing hides off the side (#27). For short tables used on a
+   phone, such as the door's. The .stack-title cell names the row and spans the block,
+   .stack-full cells span it too, a .stack-check cell's checkbox sits at its left, and an
+   empty .stack-optional cell is left out. Outside the layer, so it beats a cell's
+   text-right and a table's w-fit. */
+@media (width < 40rem) {
+  table.table.table-stack, table.table-stack tbody { display: block; width: 100%; }
+  table.table-stack thead { display: none; }
+
+  table.table-stack tbody tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-1) var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  table.table-stack tbody tr:last-child { border-bottom: 0; }
+  table.table-stack tbody tr:has(> td.stack-check) { padding-left: 48px; }
+  table.table-striped.table-stack tbody tr:nth-child(even) { background: var(--row-alt); }
+
+  table.table.table-stack tbody :is(td, th) { display: block; min-width: 0; padding: 0; border: 0; text-align: left; background: none; }
+  table.table-stack tbody td.stack-title { order: -1; grid-column: 1 / -1; font-weight: 600; }
+  table.table-stack tbody td.stack-full { grid-column: 1 / -1; }
+  table.table-stack tbody td.stack-check { position: absolute; left: var(--sp-3); top: var(--sp-2); }
+  table.table-stack tbody td.stack-optional:not(:has(*)) { display: none; }
+
+  table.table-stack td[data-label]:not([data-label=""], .stack-title)::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--fs-xs);
+    line-height: var(--lh-xs);
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  /* A thumb-sized box. */
+  table.table-stack td input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
+  table.table-stack td input[type="checkbox"]::after { width: 7px; height: 13px; border-width: 0 3px 3px 0; }
 }

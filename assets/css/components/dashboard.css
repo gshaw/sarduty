@@ -22,3 +22,20 @@
    rather than squeezing or pushing the page wider. */
 .dash-scroll { overflow-x: auto; }
 .dash-scroll > * { min-width: 720px; }
+
+/* Phones: NextUp stacks, with a full-width button, and a row's button drops under its
+   title when the title would get squeezed. The stats sit two to a row. */
+@media (width < 40rem) {
+  .next-up { grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+  .next-up-when { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 var(--sp-2); min-width: 0; }
+  .next-up-when > :first-child { flex-basis: 100%; }
+  .next-up-time { font-size: var(--fs-lg); line-height: var(--lh-lg); }
+  .next-up > .btn { width: 100%; }
+
+  .dash-rows > li { flex-wrap: wrap; }
+  .dash-row-title { flex: 1 1 10rem; }
+  #coming-up-list > li > .btn { margin-left: calc(92px + var(--sp-3)); }
+  .attention > li > .btn { margin-left: calc(10px + var(--sp-3)); }
+
+  .chart-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+}
