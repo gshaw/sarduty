@@ -12,7 +12,10 @@ policy. The policy lives in the agent's prompt, not in SAR Duty.
   ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)). Turning it off revokes every token
   on the team, so turning it back on wakes none of them.
 - **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, which
-  exists only while the switch is on. The token shows once; the database keeps its
+  exists only while the switch is on. Creating one takes a checked box promising to use it
+  only with an AI service set not to train on the manager's data; the
+  `mcp_token_created` event records it. While the switch is off, team settings says to
+  ask a SAR Duty admin. The token shows once; the database keeps its
   SHA-256 hash ([MCPToken](../lib/app/model/mcp_token.ex)). It belongs to a user and a
   team. An admin who doesn't manage the team can't create one, but anyone who can open
   the page can revoke any of the team's tokens.
@@ -75,7 +78,8 @@ switch are events, kept two years.
 
 ## Connecting
 
-The token page has the commands. Claude Code:
+The token page shows the new token with a prompt to paste into any agent, which
+tells it the URL, the header, and how to add the server. It also has the commands. Claude Code:
 `claude mcp add --transport http sarduty <url> --header "Authorization: Bearer <token>"`.
 Claude Desktop runs `npx mcp-remote <url> --header "Authorization:${SARDUTY_AUTH}"`. The
 claude.ai and ChatGPT connectors need OAuth, which SAR Duty doesn't offer yet.

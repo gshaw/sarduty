@@ -21,6 +21,9 @@ defmodule App.Model.MCPToken do
     field :token_hash, :binary, redact: true
     field :last_used_at, :utc_datetime_usec
     field :revoked_at, :utc_datetime_usec
+    # The manager's promise to use the token only with an AI service that doesn't train
+    # on their data. Required to create one, and recorded on the event.
+    field :no_training, :boolean, virtual: true
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
@@ -33,9 +36,12 @@ defmodule App.Model.MCPToken do
 
     changeset =
       %MCPToken{team_id: team.id, user_id: user.id, token_hash: hash(token)}
-      |> cast(params, [:name])
+      |> cast(params, [:name, :no_training])
       |> validate_required([:name], message: "Enter a name for the token")
       |> validate_length(:name, max: 60, message: "Use 60 characters or fewer")
+      |> validate_acceptance(:no_training,
+        message: "Turn off training on your data in your AI service, then check this box"
+      )
       |> unique_constraint(:token_hash)
 
     {token, changeset}

@@ -26,6 +26,7 @@ defmodule Web.Settings.MCPLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
     refute has_element?(lv, "#settings-mcp")
+    assert has_element?(lv, "#settings-mcp-off", "ask a SAR Duty admin")
   end
 
   test "a manager creates a token, sees it once, and revokes it", ctx do
@@ -38,19 +39,22 @@ defmodule Web.Settings.MCPLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     assert has_element?(lv, "#no-tokens")
 
-    lv |> form("#new-token-form", token: %{name: "Laptop"}) |> render_submit()
+    lv
+    |> form("#new-token-form", token: %{name: "Laptop", no_training: "true"})
+    |> render_submit()
 
     [record] = MCPToken.get_live_for_team(team)
 
     token =
       lv
-      |> element("#new-token pre")
+      |> element("#new-token-value")
       |> render()
       |> then(&Regex.run(~r/sarduty_mcp_[\w-]+/, &1))
       |> hd()
 
     assert MCPToken.hash(token) == record.token_hash
     assert has_element?(lv, "#claude-code-command", token)
+    assert has_element?(lv, "#setup-prompt", token)
     assert has_element?(lv, "#token-#{record.id}", "Laptop")
 
     {:ok, lv, html} = live(conn, ~p"/teams/#{team}/settings/mcp")
@@ -71,6 +75,20 @@ defmodule Web.Settings.MCPLiveTest do
     assert MCPToken.get_live_for_team(team) == []
   end
 
+  test "a token needs the promise not to train", %{conn: conn, admin: admin} = ctx do
+    team = turn_on(ctx.team, admin)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
+    assert has_element?(lv, "#no-training")
+
+    html =
+      lv
+      |> form("#new-token-form", token: %{name: "Laptop", no_training: "false"})
+      |> render_submit()
+
+    assert html =~ "then check this box"
+    assert MCPToken.get_live_for_team(team) == []
+  end
+
   test "an admin who doesn't manage the team cannot create one", %{admin: admin} = ctx do
     team = turn_on(ctx.team, admin)
     {:ok, lv, _html} = live(log_in_user(build_conn(), admin), ~p"/teams/#{team}/settings/mcp")
@@ -83,7 +101,9 @@ defmodule Web.Settings.MCPLiveTest do
     team = turn_on(ctx.team, admin)
     %{user: other_user, team: other_team} = user_with_team_fixture()
     other_team = turn_on(other_team, admin)
-    {:ok, _token, theirs} = CreateMCPToken.call(other_team, other_user, %{"name" => "Theirs"})
+
+    {:ok, _token, theirs} =
+      CreateMCPToken.call(other_team, other_user, %{"name" => "Theirs", "no_training" => "true"})
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     render_click(lv, "revoke", %{"id" => Integer.to_string(theirs.id)})

@@ -87,6 +87,10 @@ defmodule Web.Settings.MCPLive do
         until a team admin sends them from Proposed changes. Agents never see email, phone
         numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
+      <p id="no-training" class="mt-p font-semibold">
+        Use a token only with an AI service set not to train on your data. The token gives
+        it your team members' names, hours, and history.
+      </p>
       <p class="mt-p">
         Each token is yours. It stops working when you revoke it, or when D4H no longer makes
         you an Owner or Editor.
@@ -94,7 +98,15 @@ defmodule Web.Settings.MCPLive do
 
       <div :if={@new_token} id="new-token" class="callout mt-p">
         <p class="font-semibold">Copy your token now. SAR Duty shows it only once.</p>
-        <pre class="my-2 p-p rounded bg-base-2 overflow-x-auto whitespace-pre-wrap break-all">{@new_token}</pre>
+        <pre
+          id="new-token-value"
+          class="my-2 p-p rounded bg-base-2 overflow-x-auto whitespace-pre-wrap break-all"
+        >{@new_token}</pre>
+        <p class="mt-p">
+          To set it up, paste this into your AI agent. It has the token, so treat it like a
+          password.
+        </p>
+        <pre id="setup-prompt" class="my-2 p-p rounded bg-base-2 whitespace-pre-wrap">{setup_prompt(@endpoint_url, @new_token)}</pre>
       </div>
 
       <.form
@@ -106,6 +118,14 @@ defmodule Web.Settings.MCPLive do
       >
         <.input field={@form[:name]} label="Name">
           Where you use the token, like "Claude Code on my laptop".
+        </.input>
+        <.input
+          field={@form[:no_training]}
+          type="checkbox"
+          label="I'll use this token only with an AI service set not to train on my data"
+        >
+          In Claude, turn off "Help improve Claude". In ChatGPT, turn off "Improve the model
+          for everyone". Work and API accounts often don't train by default; check yours.
         </.input>
         <.form_actions>
           <.button variant={:success}>Create token</.button>
@@ -165,6 +185,24 @@ defmodule Web.Settings.MCPLive do
     do: Service.Format.minutes_ago(used, DateTime.utc_now(), timezone)
 
   @placeholder "YOUR_TOKEN"
+
+  defp setup_prompt(url, token) do
+    """
+    Connect to SAR Duty's MCP server for me. It is a remote MCP server over Streamable \
+    HTTP, so it needs no install.
+
+    - Name: sarduty
+    - URL: #{url}
+    - Header: Authorization: Bearer #{token}
+
+    In Claude Code, run `claude mcp add --transport http sarduty <URL> --header \
+    "Authorization: Bearer <token>"`. In another app, add it to that app's MCP settings. \
+    Then list its tools to check it works.
+
+    The token is a password. Don't print it again or save it anywhere but the MCP \
+    settings.\
+    """
+  end
 
   defp claude_code_command(url, token) do
     "claude mcp add --transport http sarduty #{url} \\\n" <>

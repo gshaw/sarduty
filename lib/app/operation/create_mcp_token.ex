@@ -2,7 +2,8 @@ defmodule App.Operation.CreateMCPToken do
   @moduledoc """
   Creates a manager's personal MCP token (#28). Only on a team with MCP on, and only for
   a user who passes the D4H bar for it: an admin who doesn't manage the team can't make
-  one. Returns the token once; the database keeps its hash.
+  one. The manager must promise to use it only with an AI
+  service that doesn't train on their data. Returns the token once; the database keeps its hash.
   """
 
   alias App.Accounts.User
@@ -19,7 +20,7 @@ defmodule App.Operation.CreateMCPToken do
         Event.record!(:mcp_token_created,
           team_id: team.id,
           user_id: user.id,
-          data: %{mcp_token_id: record.id}
+          data: %{mcp_token_id: record.id, no_training: true}
         )
 
         {:ok, token, record}
