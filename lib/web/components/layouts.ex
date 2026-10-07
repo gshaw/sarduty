@@ -7,7 +7,7 @@ defmodule Web.Layouts do
     <html lang="en" class="[scrollbar-gutter:stable]">
       <head>
         <meta charset="utf-8" />
-        <meta name="description" content="Helpful tools for search and rescue managers." />
+        <meta name="description" content="Less paperwork for search and rescue teams that use D4H." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
@@ -26,10 +26,12 @@ defmodule Web.Layouts do
     """
   end
 
+  # Public pages run edge to edge under the bar, so the home page's bands can; a page sets
+  # its own width.
   def marketing(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
-    <main role="main" class="container mx-auto pt-16 px-2 mb-p2">
+    <main role="main" class="pt-14 mb-p2">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -140,6 +142,10 @@ defmodule Web.Layouts do
     <footer id="site-footer" class="container mx-auto px-2 mb-p2">
       <p class="pt-p border-t border-hr">
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
+        ·
+        <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
+        ·
+        <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         <%= if @admin? do %>
           ·
           <.a id="footer-styles" href="/styles">Style guide</.a>
