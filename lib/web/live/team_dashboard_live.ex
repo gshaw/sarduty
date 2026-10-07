@@ -345,9 +345,7 @@ defmodule Web.TeamDashboardLive do
             <h2 class="chart-title">Every day out</h2>
           </header>
           <p class="chart-caption">The last 12 months</p>
-          <div class="dash-scroll">
-            <.calendar id="activity-calendar" days={@charts.calendar_days} />
-          </div>
+          <.calendar id="activity-calendar" days={@charts.calendar_days} />
         </section>
       </div>
     </div>
