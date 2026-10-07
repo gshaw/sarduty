@@ -3,6 +3,7 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
 
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.StaleRows
   alias App.Repo
@@ -42,10 +43,14 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
       |> where([m], m.team_id == ^team_id and is_nil(m.left_at))
       |> StaleRows.ids(:d4h_member_id, synced_d4h_ids)
 
+    departed = Member |> where([m], m.id in ^stale_ids) |> Repo.all()
+
     {count, _} =
       Member
       |> where([m], m.id in ^stale_ids)
       |> Repo.update_all(set: [left_at: now, updated_at: DateTime.utc_now()])
+
+    Enum.each(departed, &RecordD4HChanges.record(:member, &1, %{&1 | left_at: now}))
 
     Logger.info("Marked #{count} members D4H no longer lists as departed for team #{team_id}")
   end
@@ -68,11 +73,8 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
 
     member = Member.get_by(team_id: team.id, d4h_member_id: d4h_member.d4h_member_id)
 
-    if member do
-      Member.update!(member, params)
-    else
-      Member.insert!(params)
-    end
+    saved = if member, do: Member.update!(member, params), else: Member.insert!(params)
+    RecordD4HChanges.record(:member, member, saved)
 
     # This is how to do an actual upsert but it doesn't set updated_at correctly.
     #

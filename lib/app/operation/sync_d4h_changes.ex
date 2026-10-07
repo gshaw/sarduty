@@ -19,6 +19,7 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.Team
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
@@ -142,7 +143,10 @@ defmodule App.Operation.SyncD4HChanges do
     changed =
       case plan(previous_heads(team), heads) do
         plan when is_map(plan) ->
-          apply_plan(d4h, team, plan, heads, now)
+          RecordD4HChanges.recording(team, now, fn ->
+            apply_plan(d4h, team, plan, heads, now)
+          end)
+
           plan.changed
 
         _seed_or_unchanged ->

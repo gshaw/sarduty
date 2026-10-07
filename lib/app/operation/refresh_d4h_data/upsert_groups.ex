@@ -4,6 +4,7 @@ defmodule App.Operation.RefreshD4HData.UpsertGroups do
   alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.StaleRows
   alias App.Repo
@@ -38,7 +39,9 @@ defmodule App.Operation.RefreshD4HData.UpsertGroups do
       |> where([g], g.team_id == ^team_id)
       |> StaleRows.ids(:d4h_group_id, synced_d4h_ids)
 
-    GroupMember |> where([gm], gm.group_id in ^stale_ids) |> Repo.delete_all()
+    memberships = where(GroupMember, [gm], gm.group_id in ^stale_ids)
+    RecordD4HChanges.removed(:group_membership, Repo.all(memberships))
+    Repo.delete_all(memberships)
     {count, _} = Group |> where([g], g.id in ^stale_ids) |> Repo.delete_all()
     Logger.info("Deleted #{count} stale groups for team #{team_id}")
   end

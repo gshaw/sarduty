@@ -217,6 +217,7 @@ change, read the relevant doc:
 - **Layers, and where new code goes** → [docs/README.md](docs/README.md).
 - **How D4H data reaches the database, and what never gets deleted** →
   [docs/d4h-sync.md](docs/d4h-sync.md).
+- **Member and activity history** → [docs/change-history.md](docs/change-history.md).
 - **Group qualification rules** → [docs/group-rules.md](docs/group-rules.md).
 - **Every external service and its credentials** →
   [docs/external-services.md](docs/external-services.md).

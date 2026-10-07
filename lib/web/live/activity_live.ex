@@ -107,6 +107,16 @@ defmodule Web.ActivityLive do
         </dd>
       </div>
 
+      <dt>History</dt>
+      <dd>
+        <.a
+          id="activity-history-link"
+          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
+        >
+          Changes to this activity
+        </.a>
+      </dd>
+
       <%!-- Each action reads or writes the activity in D4H, which no longer has it. --%>
       <dt :if={!@activity.deleted_at}>Actions</dt>
       <dd :if={!@activity.deleted_at}>

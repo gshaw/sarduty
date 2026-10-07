@@ -5,6 +5,7 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.StaleRows
   alias App.Repo
@@ -89,11 +90,12 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
         d4h_attendance_id: d4h_attendance.d4h_attendance_id
       )
 
-    if attendance do
-      Attendance.update!(attendance, params)
-    else
-      Attendance.insert!(params)
-    end
+    saved =
+      if attendance,
+        do: Attendance.update!(attendance, params),
+        else: Attendance.insert!(params)
+
+    RecordD4HChanges.record(:attendance, attendance, saved)
   end
 
   defp delete_stale_attendances(team_id, synced_d4h_ids) do
@@ -130,7 +132,9 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
 
   defp delete_stale(query, synced_d4h_ids) do
     stale_ids = StaleRows.ids(query, :d4h_attendance_id, synced_d4h_ids)
-    {count, _} = Attendance |> where([a], a.id in ^stale_ids) |> Repo.delete_all()
+    stale = Attendance |> where([a], a.id in ^stale_ids)
+    RecordD4HChanges.removed(:attendance, Repo.all(stale))
+    {count, _} = Repo.delete_all(stale)
     count
   end
 end

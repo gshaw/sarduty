@@ -10,6 +10,7 @@ defmodule App.Operation.RefreshD4HData do
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData
   alias App.Operation.SyncD4HChanges
   alias App.Repo
@@ -62,13 +63,16 @@ defmodule App.Operation.RefreshD4HData do
     started_at = DateTime.utc_now()
     # Seen before any stage, so the next sync fetches whatever changes while this runs.
     heads = SyncD4HChanges.fetch_heads(d4h)
-    progress = refresh_team_data(d4h, team, progress)
-    {tag_index, progress} = refresh_members_and_tags(d4h, team, progress)
-    progress = refresh_all_activities(d4h, team, tag_index, progress)
-    progress = refresh_qualifications(d4h, team, progress)
-    progress = refresh_groups(d4h, team, progress)
 
-    RefreshD4HData.Progress.complete(progress)
+    RecordD4HChanges.recording(team, started_at, fn ->
+      progress = refresh_team_data(d4h, team, progress)
+      {tag_index, progress} = refresh_members_and_tags(d4h, team, progress)
+      progress = refresh_all_activities(d4h, team, tag_index, progress)
+      progress = refresh_qualifications(d4h, team, progress)
+      progress = refresh_groups(d4h, team, progress)
+      RefreshD4HData.Progress.complete(progress)
+    end)
+
     missed = count_corrections(team.id, started_at)
     team = team.id |> Team.get!() |> SyncD4HChanges.save_heads(heads, started_at)
     {:ok, update_team_refreshed_at(team), missed}

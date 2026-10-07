@@ -29,5 +29,8 @@ new kind of write is a new row action there, not a new call from a page or an op
   update `group_members` from the rows that applied. Group rules still log to
   `group_membership_changes`, which the group page shows.
 
-Still to come from #174: review settings per source, Oban for big sets, undo, a history
-page from the sync's differences, and agents proposing sets through MCP.
+Applied rows show on each member's and activity's history page, beside what the refresh
+saw change in D4H: see [change-history.md](change-history.md).
+
+Still to come from #174: review settings per source, Oban for big sets, undo, and agents
+proposing sets through MCP.
