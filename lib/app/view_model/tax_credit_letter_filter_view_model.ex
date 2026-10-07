@@ -6,6 +6,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   alias App.Field
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Operation.CountTaxCreditHours
   alias App.Repo
 
   @primary_key false
@@ -67,16 +68,28 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     end
   end
 
+  @doc """
+  One record per member: their hours for the year, from `CountTaxCreditHours`, and
+  their letter for the year if they have one.
+  """
   def find_all(team, filter_options) do
+    hours = CountTaxCreditHours.call(team, filter_options.year)
+
     Member
     |> Member.scope(team_id: team.id)
-    |> Member.include_primary_and_secondary_minutes(team, filter_options.year)
+    |> join(:left, [m], tcl in assoc(m, :tax_credit_letters),
+      on: tcl.year == ^filter_options.year
+    )
     |> scope(q: filter_options.q)
-    |> scope(sort: filter_options.sort)
-    |> scope(filter: filter_options.filter)
+    |> select([m, tcl], %{
+      member: m,
+      tax_credit_letter_id: tcl.id,
+      tax_credit_letter_ref_id: tcl.ref_id
+    })
     |> Repo.all()
-
-    # |> Repo.paginate(%{page: filter_options.page, page_size: filter_options.limit})
+    |> Enum.map(&Map.merge(&1, CountTaxCreditHours.get(hours, &1.member.id)))
+    |> filter_records(filter_options.filter)
+    |> sort_records(filter_options.sort)
   end
 
   defp build_new do
@@ -101,16 +114,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     )
   end
 
-  defp scope(q, filter: "none"), do: where(q, [r], fragment("total_minutes") == 0)
-  defp scope(q, filter: "any"), do: where(q, [r], fragment("total_minutes") > 0)
-
-  defp scope(q, filter: filter) when is_binary(filter) do
-    case Integer.parse(filter) do
-      {hours, ""} -> where(q, [r], fragment("total_minutes") >= ^(hours * 60))
-      _ -> q
-    end
-  end
-
   defp scope(q, q: nil), do: q
   defp scope(q, q: ""), do: q
 
@@ -125,9 +128,26 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
-  defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
-  defp scope(q, sort: "primary"), do: order_by(q, [r], desc: fragment("primary_minutes"))
-  defp scope(q, sort: "secondary"), do: order_by(q, [r], desc: fragment("secondary_minutes"))
-  defp scope(q, sort: "total"), do: order_by(q, [r], desc: fragment("total_minutes"))
+  defp filter_records(records, "none"), do: Enum.filter(records, &(&1.total_minutes == 0))
+  defp filter_records(records, "any"), do: Enum.filter(records, &(&1.total_minutes > 0))
+
+  defp filter_records(records, filter) when is_binary(filter) do
+    case Integer.parse(filter) do
+      {hours, ""} -> Enum.filter(records, &(&1.total_minutes >= hours * 60))
+      _ -> records
+    end
+  end
+
+  defp filter_records(records, nil), do: records
+
+  # Name breaks ties, so the order holds still between page loads.
+  defp sort_records(records, "id"),
+    do: Enum.sort_by(records, &{is_nil(&1.member.ref_id), &1.member.ref_id, &1.member.name})
+
+  defp sort_records(records, "name"), do: Enum.sort_by(records, & &1.member.name)
+  defp sort_records(records, "primary"), do: sort_desc(records, :primary_minutes)
+  defp sort_records(records, "secondary"), do: sort_desc(records, :secondary_minutes)
+  defp sort_records(records, _total), do: sort_desc(records, :total_minutes)
+
+  defp sort_desc(records, key), do: Enum.sort_by(records, &{-Map.fetch!(&1, key), &1.member.name})
 end
