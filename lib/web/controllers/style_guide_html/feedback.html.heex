@@ -15,69 +15,51 @@
     the bottom on a phone, where a thumb can close it.
   </p>
   <div class="demo">
-    <div class="toast-stack">
-      <div class="toast" role="status">
-        <.svg_icon name="check-circle" size={20} />
-        <div class="body">4 attendance changes saved to D4H.</div>
-        <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
-      </div>
-      <div class="toast info" role="status">
-        <.svg_icon name="information-circle" size={20} />
-        <div class="body">Refresh started. It takes about a minute.</div>
-        <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
-      </div>
-      <div class="toast error" role="alert">
-        <.svg_icon name="exclamation-circle" size={20} />
-        <div class="body">
-          <span class="title">D4H did not accept the change</span>
-          Nothing changed. Check the D4H access key in team settings.
-        </div>
-        <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
-      </div>
-      <div class="toast connection" role="status">
-        <span class="spinner" aria-hidden="true"></span>
-        <div class="body">
-          <span class="title">Reconnecting</span>
-          The connection to SAR Duty dropped. Your changes are kept.
-        </div>
-      </div>
+    <div class="toasts">
+      <.flash id="sample-flash-info" kind={:info}>4 attendance changes saved to D4H.</.flash>
+      <.flash id="sample-flash-error" kind={:error} title="D4H did not accept the change">
+        Nothing changed. Check the D4H access key in team settings.
+      </.flash>
+      <.flash id="sample-flash-disconnected" kind={:error} title="Server disconnected">
+        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+      </.flash>
     </div>
   </div>
-  <div class="actions">
-    <button class="btn secondary" data-toast="success">Show a success toast</button>
-    <button class="btn secondary" data-toast="error">Show an error toast</button>
-  </div>
+  <.form_actions>
+    <.button data-toast="info">Show an info toast</.button>
+    <.button data-toast="error">Show an error toast</.button>
+  </.form_actions>
   <ul>
-    <li>Success and info toasts close after 5 seconds. Error toasts stay until closed.</li>
-    <li>Body text only for success and info. Errors get a short title, then what to do.</li>
-    <li>The connection toast shows while LiveView reconnects and goes when it is back.</li>
+    <li>
+      Info toasts are for success and progress. Error toasts get a short title, then what to do.
+    </li>
+    <li>
+      The Server disconnected toast shows while LiveView reconnects and goes when it is back.
+    </li>
     <li>Never put the only copy of important information in a toast. Use a banner.</li>
+    <li>
+      In the app: <code>put_flash(socket, :info, "…")</code>. The layout's
+      <code>&lt;.flash_group&gt;</code>
+      shows them with <code>&lt;.flash&gt;</code>.
+    </li>
   </ul>
   <div class="toasts" id="toasts" aria-live="polite"></div>
-  <template id="toast-success">
-    <div class="toast" role="status">
-      <.svg_icon name="check-circle" size={20} />
-      <div class="body">Settings saved.</div>
-      <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
-    </div>
+  <template id="toast-info">
+    <.flash id="sample-toast-info" kind={:info}>Settings saved.</.flash>
   </template>
   <template id="toast-error">
-    <div class="toast error" role="alert">
-      <.svg_icon name="exclamation-circle" size={20} />
-      <div class="body">
-        <span class="title">Letter not created</span>
-        Enter who authorizes tax letters in team settings.
-      </div>
-      <button class="close" aria-label="Close"><.svg_icon name="x-mark" size={20} /></button>
-    </div>
+    <.flash id="sample-toast-error" kind={:error} title="Letter not created">
+      Enter who authorizes tax letters in team settings.
+    </.flash>
   </template>
   <script>
     document.querySelectorAll("[data-toast]").forEach(function (button) {
       button.addEventListener("click", function () {
         var kind = button.dataset.toast;
         var toast = document.getElementById("toast-" + kind).content.firstElementChild.cloneNode(true);
+        toast.removeAttribute("id");
         document.getElementById("toasts").appendChild(toast);
-        toast.querySelector(".close").addEventListener("click", function () { toast.remove(); });
+        toast.addEventListener("click", function () { toast.remove(); });
         if (kind !== "error") setTimeout(function () { toast.remove(); }, 5000);
       });
     });
@@ -85,74 +67,87 @@
 
   <h2>Confirm dialog</h2>
   <p>
-    Before a change that cannot be undone. The title asks the question and names the thing. The
-    buttons say what happens; Cancel is the default.
+    Before a change that cannot be undone. The question names the thing and says what happens.
   </p>
   <div class="demo">
-    <div class="dialog dialog-static" role="dialog" aria-labelledby="confirm-title-static">
+    <.button
+      variant={:danger}
+      data-confirm="Delete the First Aid clause? Its 3 qualifications are removed from the group rule."
+    >
+      Delete clause
+    </.button>
+  </div>
+  <p class="spec">
+    In the app: <code>data-confirm="…"</code>
+    on the button. The browser shows its own dialog, with OK and Cancel.
+  </p>
+  <div class="demo">
+    <div class="dialog" role="dialog" aria-labelledby="confirm-title-static">
       <h2 id="confirm-title-static">Delete the First Aid clause?</h2>
-      <p>
+      <p class="paragraph">
         Its 3 qualifications are removed from the group rule. Members stay in the group until you apply the rule.
       </p>
-      <div class="actions">
-        <button class="btn danger">Delete clause</button>
-        <button class="btn secondary">Cancel</button>
-      </div>
+      <.form_actions>
+        <.button variant={:danger}>Delete clause</.button>
+        <.button>Cancel</.button>
+      </.form_actions>
     </div>
   </div>
-  <div class="actions">
-    <button class="btn secondary" data-open-dialog="confirm">Show the dialog</button>
-  </div>
-  <dialog class="dialog" id="confirm" aria-labelledby="confirm-title">
-    <h2 id="confirm-title">Delete the First Aid clause?</h2>
-    <p>
-      Its 3 qualifications are removed from the group rule. Members stay in the group until you apply the rule.
-    </p>
-    <form method="dialog" class="actions">
-      <button class="btn danger" value="delete">Delete clause</button>
-      <button class="btn secondary" value="cancel" autofocus>Cancel</button>
-    </form>
-  </dialog>
+  <p class="spec not-yet">
+    Not used in the app yet: a <code>.dialog</code>
+    whose buttons say what happens. Today every confirm is the browser's.
+  </p>
   <script>
-    document.querySelectorAll("[data-open-dialog]").forEach(function (button) {
-      button.addEventListener("click", function () {
-        document.getElementById(button.dataset.openDialog).showModal();
-      });
+    document.querySelectorAll("[data-confirm]").forEach(function (button) {
+      button.addEventListener("click", function () { window.confirm(button.dataset.confirm); });
     });
   </script>
 
   <h2>Banners</h2>
   <p>At the top of the page, under the header. One at a time.</p>
-  <div class="banner success" role="status">
-    <div class="banner-title"><.svg_icon name="check-circle" size={20} />Success</div>
-    <div class="banner-body">
-      <p><strong>12 tax credit letters created for 2025.</strong></p>
+  <div class="example">
+    <div class="banner banner-success" role="status">
+      <div class="banner-title">
+        <.icon name="hero-check-circle-mini" class="size-5" />Success
+      </div>
+      <div class="banner-body">
+        <p><strong>12 tax credit letters created for 2025.</strong></p>
+      </div>
+    </div>
+    <div class="banner" role="region" aria-label="Important">
+      <div class="banner-title">
+        <.icon name="hero-information-circle-mini" class="size-5" />Important
+      </div>
+      <div class="banner-body">
+        <p>
+          SAR Duty refreshes from D4H every night at 02:00. Changes made in D4H today show up tomorrow.
+        </p>
+      </div>
+    </div>
+    <div class="banner banner-warning" role="region" aria-label="Warning">
+      <div class="banner-title">
+        <.icon name="hero-exclamation-triangle-mini" class="size-5" />Warning
+      </div>
+      <div class="banner-body">
+        <p>
+          The team's D4H access key belongs to a person. If they leave the team, it stops working.
+        </p>
+      </div>
+    </div>
+    <div class="banner banner-danger" role="alert">
+      <div class="banner-title">
+        <.icon name="hero-exclamation-circle-mini" class="size-5" />D4H is not answering
+      </div>
+      <div class="banner-body">
+        <p>Nothing changed. Try again in a few minutes.</p>
+      </div>
     </div>
   </div>
-  <div class="banner" role="region" aria-label="Important">
-    <div class="banner-title"><.svg_icon name="information-circle" size={20} />Important</div>
-    <div class="banner-body">
-      <p>
-        SAR Duty refreshes from D4H every night at 02:00. Changes made in D4H today show up tomorrow.
-      </p>
-    </div>
-  </div>
-  <div class="banner warning" role="region" aria-label="Warning">
-    <div class="banner-title"><.svg_icon name="exclamation-triangle" size={20} />Warning</div>
-    <div class="banner-body">
-      <p>
-        The team's D4H access key belongs to a person. If they leave the team, it stops working.
-      </p>
-    </div>
-  </div>
-  <div class="banner danger" role="alert">
-    <div class="banner-title">
-      <.svg_icon name="exclamation-circle" size={20} />D4H is not answering
-    </div>
-    <div class="banner-body">
-      <p>Nothing changed. Try again in a few minutes.</p>
-    </div>
-  </div>
+  <p class="spec">
+    In the app: <code>.banner</code>, with <code>.banner-success</code>, <code>.banner-warning</code>, or <code>.banner-danger</code>, and a
+    <code>.banner-title</code>
+    and <code>.banner-body</code>.
+  </p>
 
   <h2>Error summary</h2>
   <p>
@@ -160,43 +155,65 @@
       page_path(:forms)
     }>Forms</a>.
   </p>
-  <div class="error-summary" role="alert">
-    <h2>There is a problem</h2>
-    <ul>
-      <li><a href="#">Enter who authorizes tax letters</a></li>
-    </ul>
+  <div class="example">
+    <div class="error-summary" role="alert">
+      <h2>There is a problem</h2>
+      <ul>
+        <li><a href="#">Enter who authorizes tax letters</a></li>
+      </ul>
+    </div>
   </div>
+  <p class="spec not-yet">
+    Not used in the app yet: forms show each error on its field.
+  </p>
 
   <h2>Warning text</h2>
-  <div class="warning-text">
-    <.svg_icon name="exclamation-triangle" size={24} />
-    <span>Attendance cannot be changed once the activity is published in D4H.</span>
+  <div class="example">
+    <div class="warning-text">
+      <.icon name="hero-exclamation-triangle" class="size-6" />
+      <span>Attendance cannot be changed once the activity is published in D4H.</span>
+    </div>
   </div>
   <p class="spec">For a consequence people must know before they act.</p>
 
   <h2>Inset text</h2>
-  <div class="inset">
-    Members are matched by name, email, or phone. You review every change before it's made.
+  <div class="example">
+    <div class="inset">
+      Members are matched by name, email, or phone. You review every change before it's made.
+    </div>
   </div>
   <p class="spec">For a note that helps, set apart from the main text.</p>
+  <p class="spec not-yet">Not used in the app yet.</p>
+
+  <h2>Callout</h2>
+  <div class="example">
+    <div class="callout">
+      Use the president's full name and title. CRA reads it in an audit.
+    </div>
+  </div>
+  <p class="spec">Advice beside a form field, such as on the team settings page.</p>
 
   <h2>Empty state</h2>
-  <div class="empty">
-    <strong>No tax credit letters for 2025 yet</strong>
-    <p>Letters are made from attendance in D4H. Create one from the member list.</p>
-    <a href="#" class="btn sm secondary">Go to tax credit letters</a>
+  <div class="example">
+    <div class="empty-state">
+      <strong>No tax credit letters for 2025 yet</strong>
+      <p>Letters are made from attendance in D4H. Create one from the member list.</p>
+      <.button size={:sm} href="#">Go to tax credit letters</.button>
+    </div>
   </div>
   <p class="spec">Say why it's empty and what to do, not only "No results".</p>
+  <p class="spec not-yet">Not used in the app yet: empty lists say so in a line of text.</p>
 
   <h2>Loading</h2>
   <div class="demo">
-    <p><span class="spinner" aria-hidden="true"></span> Refreshing from D4H…</p>
-    <p class="small muted">
-      <span class="spinner" aria-hidden="true"></span>
-      Calculating driving distances for 14 members…
+    <p class="paragraph">
+      <.spinner>Refreshing from D4H…</.spinner>
+    </p>
+    <p class="text-sm text-secondary-1">
+      <.spinner>Calculating driving distances for 14 members…</.spinner>
     </p>
   </div>
   <p class="spec">
-    Name the slow thing. Spinners slow down when the system asks for reduced motion.
+    Name the slow thing. Spinners slow down when the system asks for reduced motion. In the app: <code>&lt;.spinner&gt;Refreshing from D4H…&lt;/.spinner&gt;</code>.
   </p>
 </.shell>

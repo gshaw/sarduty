@@ -1,5 +1,5 @@
 /* The design system's tokens: colours with a light and a dark value, the type scale, and
-   the spacing scale. The app and the style guide (/styles/draft) both read this file. The
+   the spacing scale. The app and the style guide (/styles) both read this file. The
    guide parses the palette: keep each colour on one line, as a light-dark() pair with its
    use in a trailing comment, under a "group:" comment. */
 

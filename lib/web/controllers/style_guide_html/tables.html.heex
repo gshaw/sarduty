@@ -19,33 +19,73 @@
       the rest. IDs and contact details go last.
     </li>
     <li>
-      On a phone, tables scroll sideways rather than reflow. When the first column names the row,
-      it stays pinned while the rest scrolls.
+      On a phone, tables scroll sideways rather than reflow. A short table used on a phone, such
+      as the door's, stacks each row instead with <code>.table-stack</code>.
     </li>
   </ul>
 
-  <h2>Tax credit letters</h2>
-  <form class="filter-bar" onsubmit="return false">
-    <div class="field">
-      <label for="year">Year</label>
-      <select id="year" name="year"><option>2025</option><option>2024</option></select>
+  <h2>Activities</h2>
+  <p>The activity list: filters, a summary line, the table, and pages.</p>
+  <div class="example">
+    <form class="filter-form" onsubmit="return false">
+      <.input id="f-q" name="q" label="Search" value="" />
+      <.input
+        id="f-kind"
+        name="activity"
+        type="select"
+        label="Kind"
+        options={[
+          {"All", "all"},
+          {"Incident", "incident"},
+          {"Exercise", "exercise"},
+          {"Event", "event"}
+        ]}
+        value="all"
+      />
+      <.input
+        id="f-when"
+        name="when"
+        type="select"
+        label="When"
+        options={[{"All", "all"}, {"Current", "current"}, {"Past", "past"}, {"2025", "2025"}]}
+        value="2025"
+      />
+      <.input
+        id="f-sort"
+        name="sort"
+        type="select"
+        label="Sort"
+        options={[{"Date ↓", "date-"}, {"Date ↑", "date"}]}
+        value="date-"
+      />
+    </form>
+    <div class="table-summary">
+      <span class="table-summary-links">
+        <.a href="#">Current</.a>
+        ·
+        <.a href="#">Future</.a>
+        ·
+        <.a href="#">Past</.a>
+        ·
+        <.a href="#">All</.a>
+      </span>
+      <span class="table-summary-count">1,912 activities</span>
     </div>
-    <div class="field">
-      <label for="q">Search</label>
-      <input id="q" type="search" name="q" />
-    </div>
-    <div class="field">
-      <label for="hours">Hours</label>
-      <select id="hours" name="hours">
-        <option>200 hours or more</option>
-        <option>Everyone</option>
-      </select>
-    </div>
-  </form>
-  <div class="table-summary">
-    <a href="#">Reset filters</a>
-    <span>{length(letters())} members</span>
+    <.activity_table
+      id="sample-activities"
+      rows={activities()}
+      sort="date-"
+      path_fn={fn _ -> "#" end}
+      team={sample_team()}
+    />
+    <.pagination class="my-p" paginated={sample_page()} path_fn={fn _ -> "#" end} />
   </div>
+  <p class="spec">
+    In the app: <code>&lt;.activity_filter_table&gt;</code>. Filters are <code>&lt;.input&gt;</code>s in a <code>.filter-form</code>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
+  </p>
+
+  <h2>Tax credit letters</h2>
+  <p>A header row over a group of columns, and an action in a row.</p>
   <.table
     id="sample-letters"
     rows={letters()}
@@ -84,106 +124,57 @@
 
   <h2>Attendance recommendations</h2>
   <p>Check the changes to make, then perform them.</p>
-  <form onsubmit="return false">
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="shrink"><input type="checkbox" checked aria-label="All" /></th>
-            <th class="shrink">Change</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={r <- recommendations()}>
-            <td>
-              <input :if={r.op != :not_invited} type="checkbox" checked aria-label={r.name} />
-            </td>
-            <td>
-              <span :if={r.op == :add} class="op-add">Add</span>
-              <span :if={r.op == :remove} class="op-remove">Remove</span>
-              <span :if={r.op == :not_invited} class="tag danger">Not signed up</span>
-            </td>
-            <td>{r.name}</td>
-            <td>{r.email}</td>
-            <td>{r.phone}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="actions">
-      <button class="btn success">Perform 3 changes</button>
-      <button type="button" class="btn secondary">Reset</button>
-    </div>
+  <form class="example" onsubmit="return false">
+    <.table id="sample-recommendations" rows={recommendations()} class="table-striped table-stack">
+      <:col :let={r} label="" class="stack-check">
+        <.input :if={r.op != :not_invited} type="checkbox" name={"r-#{r.name}"} checked />
+      </:col>
+      <:col :let={r} label="" class="stack-full">
+        <.badge :if={r.op == :not_invited} kind={:danger}>Not signed up</.badge>
+        <span :if={r.op == :add} class="text-success-1 font-bold">Add</span>
+        <span :if={r.op == :remove} class="text-danger-1 font-bold">Remove</span>
+      </:col>
+      <:col :let={r} label="Name" class="stack-title">{r.name}</:col>
+      <:col :let={r} label="Email" class="stack-full break-all">{r.email}</:col>
+      <:col :let={r} label="Phone">{r.phone}</:col>
+    </.table>
+    <.form_actions class="mt-4">
+      <.button variant={:success}>Perform checked changes</.button>
+    </.form_actions>
   </form>
-
-  <h2>Rule preview, with wrapping cells</h2>
-  <p>Long text wraps; the other cells stay on its first line.</p>
-  <div class="table-wrap">
-    <table class="striped pin-first">
-      <thead>
-        <tr>
-          <th>Member</th>
-          <th>Why</th>
-          <th class="shrink"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={{name, why, detail, days} <- rule_preview()}>
-          <td class="nowrap"><a href="#">{name}</a></td>
-          <td>
-            {why}
-            <span :if={days} class="tag warning">{days} days</span>
-            <span class="sub small">{detail}</span>
-          </td>
-          <td class="shrink"><button class="btn sm secondary">Review</button></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>Activities, compact</h2>
-  <p>
-    The compact size, for long lists people scan rather than read. The kind as a marker, "Draft"
-    only when it applies, primary or secondary beside the hours, D4H's other tags outlined, and
-    the tracking number as text.
+  <p class="spec">
+    The markup of the recommended changes in <code>Web.ActivityAttendanceLive</code>. Below 640px each row stacks.
   </p>
-  <div class="table-wrap">
-    <table class="compact striped">
-      <thead>
-        <tr>
-          <th class="shrink" aria-sort="descending">
-            <a href="#">Date<span class="sort">↓</span></a>
-          </th>
-          <th class="shrink">Kind</th>
-          <th>Title</th>
-          <th class="num">Attended</th>
-          <th class="num">Hours</th>
-          <th>Tags</th>
-          <th class="shrink">Number</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={a <- activities()}>
-          <td class="nowrap">{a.date}</td>
-          <td>
-            <span class={["kind", a.kind]}>{a.kind |> Atom.to_string() |> String.capitalize()}</span>
-          </td>
-          <td><a href="#">{a.title}</a> <span :if={a.draft} class="tag">Draft</span></td>
-          <td class="num">{a.count}</td>
-          <td class="num">
-            <span :if={a.hours_type} class="muted">{a.hours_type}</span> {a.hours}
-          </td>
-          <td>
-            <span class="tags">
-              <span :for={t <- a.tags} class="tag outline">{t}</span>
-            </span>
-          </td>
-          <td class="mono">{a.number}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+
+  <h2>Wrapping cells</h2>
+  <p>Long text wraps; the other cells stay on its first line.</p>
+  <.table id="sample-wrapping" rows={rule_preview()} class="table-striped">
+    <:col :let={{name, _why, _detail, _days}} label="Member" class="whitespace-nowrap">
+      <.a href="#">{name}</.a>
+    </:col>
+    <:col :let={{_name, why, detail, days}} label="Why">
+      {why}
+      <.badge :if={days} kind={:warning}>{days} days</.badge>
+      <span class="block text-secondary-1">{detail}</span>
+    </:col>
+    <:col :let={_row} label="" class="w-px">
+      <.button size={:sm}>Review</.button>
+    </:col>
+  </.table>
+
+  <h2>Compact</h2>
+  <p>
+    24px rows, for long lists people scan rather than read.
+  </p>
+  <.table id="sample-compact" rows={Enum.take(letters(), 3)} class="table-compact table-striped">
+    <:col :let={r} label="Name">{r.name}</:col>
+    <:col :let={r} label="Total" align="right">{r.total}</:col>
+    <:col :let={r} label="Letter" class="w-px whitespace-nowrap">
+      <span :if={r.letter} class="mono">{r.letter}</span>
+      <.badge :if={!r.letter} kind={:warning}>No letter</.badge>
+    </:col>
+  </.table>
+  <p class="spec not-yet">
+    Not used in the app yet: <code>class="table-compact"</code>. Also ready: <code>table-pin-first</code>, which keeps the first column in place while a wide table scrolls on a phone.
+  </p>
 </.shell>

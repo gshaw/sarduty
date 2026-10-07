@@ -65,9 +65,24 @@ defmodule Web.Components.ActivityFilterTable do
       </span>
     </div>
 
+    <.activity_table rows={@paginated.entries} sort={@sort} path_fn={@path_fn} team={@team} />
+
+    <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
+    """
+  end
+
+  attr :id, :string, default: "activity_collection"
+  attr :rows, :list, required: true
+  attr :sort, :string, required: true
+  attr :path_fn, :any, required: true
+  attr :team, :map, required: true
+
+  # The activity list's table, without its filters. The style guide shows it with made-up rows.
+  def activity_table(assigns) do
+    ~H"""
     <.table
-      id="activity_collection"
-      rows={@paginated.entries}
+      id={@id}
+      rows={@rows}
       class="w-full table-striped"
       sort={@sort}
       path_fn={@path_fn}
@@ -108,8 +123,6 @@ defmodule Web.Components.ActivityFilterTable do
         )}
       </:col>
     </.table>
-
-    <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
     """
   end
 

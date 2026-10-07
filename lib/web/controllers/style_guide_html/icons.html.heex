@@ -6,29 +6,26 @@
   </p>
 
   <h2>The set</h2>
-  <p>Only these render. To use a new icon, add it to this list with its use first.</p>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th class="shrink">16</th>
-          <th class="shrink">20</th>
-          <th class="shrink">24</th>
-          <th class="shrink">Name</th>
-          <th>Use</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={{name, use} <- icons()}>
-          <td><.svg_icon name={name} size={16} /></td>
-          <td><.svg_icon name={name} size={20} /></td>
-          <td><.svg_icon name={name} size={24} /></td>
-          <td class="mono">{name}</td>
-          <td>{use}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <p>Use only these. To use a new icon, add it to this list with its use first.</p>
+  <.table id="icon-set" rows={icons()}>
+    <:col :let={{_name, micro, _mini, _outline, _use}} label="16" class="w-px">
+      <.icon name={micro} class="size-4" />
+    </:col>
+    <:col :let={{_name, _micro, mini, _outline, _use}} label="20" class="w-px">
+      <.icon name={mini} class="size-5" />
+    </:col>
+    <:col :let={{_name, _micro, _mini, outline, _use}} label="24" class="w-px">
+      <.icon name={outline} class="size-6" />
+    </:col>
+    <:col
+      :let={{name, _micro, _mini, _outline, _use}}
+      label="Name"
+      class="w-px mono whitespace-nowrap"
+    >
+      {name}
+    </:col>
+    <:col :let={{_name, _micro, _mini, _outline, use}} label="Use">{use}</:col>
+  </.table>
 
   <h2>Sizes</h2>
   <ul>
@@ -41,14 +38,15 @@
 
   <h2>In use</h2>
   <div class="demo">
-    <div class="actions">
-      <a href="#" class="back-link" style="margin: 0"><.svg_icon name="chevron-left" size={16} />Settings</a>
-      <a href="#" class="btn secondary">Open in D4H
-      <.svg_icon name="arrow-top-right-on-square" size={16} /></a>
-      <button class="btn secondary"><.svg_icon name="arrow-path" size={20} /> Refresh from D4H</button>
-      <a href="#" class="btn sm secondary"><.svg_icon name="arrow-down-tray" size={16} />
-      Download PDF</a>
-    </div>
+    <.form_actions>
+      <.button href="#">
+        Open in D4H <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />
+      </.button>
+      <.button><.icon name="hero-arrow-path-mini" class="size-5" /> Refresh from D4H</.button>
+      <.button size={:sm} href="#">
+        <.icon name="hero-arrow-down-tray-micro" class="size-4" /> Download PDF
+      </.button>
+    </.form_actions>
   </div>
 
   <h2>Rules</h2>

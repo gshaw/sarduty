@@ -2,7 +2,10 @@ defmodule Web.StyleGuideHTML do
   use Web, :html
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
+  import Web.Components.ActivityFilterTable, only: [activity_table: 1]
+  import Web.Components.Breadcrumbs
   import Web.Components.Chart
+  import Web.Components.D4H
   import Web.Components.Pagination
   import Web.Components.Table
 
@@ -70,56 +73,108 @@ defmodule Web.StyleGuideHTML do
     ]
   end
 
-  # The icon set is Heroicons, as in the app. Only these render, so adding one means adding
-  # it here with its use. Sizes: 16 and 20 are solid, 24 is outline.
-  @icons [
-    {"chevron-left", "Back link, previous page"},
-    {"chevron-right", "Breadcrumb separator, next page"},
-    {"chevron-down", "Details and menus that open"},
-    {"arrow-top-right-on-square", "A link that leaves SAR Duty, such as Open in D4H"},
-    {"arrow-path", "Refresh from D4H"},
-    {"arrow-down-tray", "Download a file, such as a letter PDF"},
-    {"plus", "Add a clause or a qualification"},
-    {"bars-3", "Open the top bar's menu on a phone"},
-    {"x-mark", "Close a toast, remove a chip, close the phone menu"},
-    {"check-circle", "Success banners and toasts"},
-    {"information-circle", "Info banners and toasts"},
-    {"exclamation-triangle", "Warning banners and warning text"},
-    {"exclamation-circle", "Error banners, toasts, and error summaries"}
-  ]
-
-  @icon_markup (for {name, _use} <- @icons,
-                    {size, dir} <- [{16, "16/solid"}, {20, "20/solid"}, {24, "24/outline"}],
-                    into: %{} do
-                  svg =
-                    "../../../deps/heroicons/optimized/#{dir}/#{name}.svg"
-                    |> Path.expand(__DIR__)
-                    |> File.read!()
-                    |> String.replace("<svg ", ~s(<svg class="icon icon-#{size}" ), global: false)
-                    |> String.replace(~r/\s+/, " ")
-
-                  {{name, size}, svg}
-                end)
-
-  def icons, do: @icons
-
-  attr :name, :string, required: true
-  attr :size, :integer, default: 20, values: [16, 20, 24]
-
-  def svg_icon(assigns) do
-    svg = @icon_markup |> Map.fetch!({assigns.name, assigns.size}) |> Phoenix.HTML.raw()
-    assigns = assign(assigns, :svg, svg)
-
-    ~H"{@svg}"
+  # The icon set: Heroicons through <.icon>, as in the app. Each name is written out in full
+  # so Tailwind's heroicons plugin finds it and builds its class.
+  def icons do
+    [
+      {"chevron-left", "hero-chevron-left-micro", "hero-chevron-left-mini", "hero-chevron-left",
+       "Back link, previous page"},
+      {"chevron-right", "hero-chevron-right-micro", "hero-chevron-right-mini",
+       "hero-chevron-right", "Breadcrumb separator, next page"},
+      {"chevron-down", "hero-chevron-down-micro", "hero-chevron-down-mini", "hero-chevron-down",
+       "Details and menus that open"},
+      {"arrow-top-right-on-square", "hero-arrow-top-right-on-square-micro",
+       "hero-arrow-top-right-on-square-mini", "hero-arrow-top-right-on-square",
+       "A link that leaves SAR Duty, such as Open in D4H"},
+      {"arrow-path", "hero-arrow-path-micro", "hero-arrow-path-mini", "hero-arrow-path",
+       "Refresh from D4H"},
+      {"arrow-down-tray", "hero-arrow-down-tray-micro", "hero-arrow-down-tray-mini",
+       "hero-arrow-down-tray", "Download a file, such as a letter PDF"},
+      {"plus", "hero-plus-micro", "hero-plus-mini", "hero-plus",
+       "Add a clause or a qualification"},
+      {"bars-3", "hero-bars-3-micro", "hero-bars-3-mini", "hero-bars-3",
+       "Open the top bar's menu on a phone"},
+      {"x-mark", "hero-x-mark-micro", "hero-x-mark-mini", "hero-x-mark",
+       "Close a toast, remove a chip, close the phone menu"},
+      {"check-circle", "hero-check-circle-micro", "hero-check-circle-mini", "hero-check-circle",
+       "Success banners and toasts"},
+      {"information-circle", "hero-information-circle-micro", "hero-information-circle-mini",
+       "hero-information-circle", "Info banners and toasts"},
+      {"exclamation-triangle", "hero-exclamation-triangle-micro",
+       "hero-exclamation-triangle-mini", "hero-exclamation-triangle",
+       "Warning banners and warning text"},
+      {"exclamation-circle", "hero-exclamation-circle-micro", "hero-exclamation-circle-mini",
+       "hero-exclamation-circle", "Error banners, toasts, and error summaries"}
+    ]
   end
 
   def button_kinds do
     [
-      {nil, "Primary"},
-      {"secondary", "Secondary"},
-      {"success", "Success"},
-      {"danger", "Danger"},
-      {"link", "Link"}
+      {:primary, "Primary"},
+      {:secondary, "Secondary"},
+      {:success, "Success"},
+      {:danger, "Danger"},
+      {:link, "Link"}
+    ]
+  end
+
+  # The tags table on the Buttons and tags page, one row per <.badge> kind.
+  def tag_kinds do
+    [
+      %{
+        kind: :default,
+        sample: "Not published",
+        look: "Tinted grey",
+        means: "A plain state. Nothing to do.",
+        examples: "Draft, Not published, Inactive"
+      },
+      %{
+        kind: :primary,
+        sample: "Refreshed",
+        look: "Tinted blue",
+        means: "Worth knowing, not a problem.",
+        examples: "New, Refreshed, Team admin"
+      },
+      %{
+        kind: :success,
+        sample: "Qualified",
+        look: "Tinted green",
+        means: "Good, done, or meets the rule.",
+        examples: "Qualified, Letter sent, Active"
+      },
+      %{
+        kind: :warning,
+        sample: "12 days",
+        look: "Solid amber",
+        means: "Needs action soon.",
+        examples: "Expires in 12 days, Missing hours, Key owner leaving"
+      },
+      %{
+        kind: :danger,
+        sample: "Expired",
+        look: "Solid red",
+        means: "Wrong or blocked now.",
+        examples: "Expired, Not signed up, D4H key rejected"
+      },
+      %{
+        kind: :outline,
+        sample: "Primary hours",
+        look: "Outlined",
+        means: "A tag from D4H. Data, not status.",
+        examples: "Whatever D4H holds: Rope, Marine, Avalanche"
+      },
+      %{
+        kind: :kinds,
+        look: "Solid, D4H colours",
+        means: "The kind of activity, shown on its own, such as beside a title.",
+        examples: "Only these three words"
+      },
+      %{
+        kind: :markers,
+        look: "Marker",
+        means: "The kind of activity in a table column, where every row has one.",
+        examples: "Only these three words"
+      }
     ]
   end
 
@@ -148,8 +203,8 @@ defmodule Web.StyleGuideHTML do
   end
 
   # The palette comes from assets/css/tokens.css, the file the app uses, as
-  # [{group, [{token, light, dark, use}]}]. The guide includes the same file, so its swatches
-  # are the app's colours.
+  # [{group, [{token, light, dark, use}]}]. The guide loads the app's stylesheet, so its
+  # swatches are the app's colours.
   @tokens_path Path.expand("../../../assets/css/tokens.css", __DIR__)
   @external_resource @tokens_path
   @tokens_css File.read!(@tokens_path)
@@ -175,14 +230,6 @@ defmodule Web.StyleGuideHTML do
            |> Enum.reverse()
 
   def palette, do: @palette
-  def tokens_css, do: Phoenix.HTML.raw(@tokens_css)
-
-  # The app's chart styles, so the guide's charts are drawn by the same rules.
-  @chart_css_path Path.expand("../../../assets/css/components/chart.css", __DIR__)
-  @external_resource @chart_css_path
-  @chart_css File.read!(@chart_css_path)
-
-  def chart_css, do: Phoenix.HTML.raw(@chart_css)
 
   defdelegate chart_columns(), to: SampleData
   defdelegate chart_hours(), to: SampleData
@@ -207,49 +254,7 @@ defmodule Web.StyleGuideHTML do
     ]
   end
 
-  def activities do
-    [
-      {"Sep 28, 2025", :incident, "Missing hiker, Stawamus Chief", 14, "62h 15m",
-       ["Primary hours"], "25-0412", false},
-      {"Sep 24, 2025", :exercise, "Rope rescue, Murrin Park", 11, "33h 00m",
-       ["Secondary hours", "Rope"], nil, false},
-      {"Sep 21, 2025", :event, "Squamish Days first aid booth", 6, "24h 00m", ["Secondary hours"],
-       nil, false},
-      {"Sep 17, 2025", :incident, "Overdue kayaker, Howe Sound", 9, "18h 45m",
-       ["Primary hours", "Marine"], "25-0398", false},
-      {"Sep 14, 2025", :exercise, "Night navigation", 16, "48h 00m", ["Secondary hours"], nil,
-       false},
-      {"Sep 10, 2025", :event, "Team meeting", 22, "33h 00m", [], nil, true},
-      {"Sep 6, 2025", :incident, "Injured biker, Diamond Head", 12, "29h 30m", ["Primary hours"],
-       "25-0371", false},
-      {"Sep 3, 2025", :exercise, "Swiftwater refresher", 8, "32h 00m",
-       ["Secondary hours", "Swiftwater"], nil, true},
-      {"Aug 30, 2025", :incident, "Lost child, Alice Lake", 19, "41h 15m", ["Primary hours"],
-       "25-0355", false},
-      {"Aug 27, 2025", :exercise, "Helicopter longline", 7, "21h 00m",
-       ["Secondary hours", "HETS"], nil, false}
-    ]
-    |> Enum.map(fn {date, kind, title, count, hours, tags, number, draft} ->
-      %{
-        date: date,
-        kind: kind,
-        title: title,
-        count: count,
-        hours: hours,
-        hours_type: hours_type(tags),
-        tags: tags -- ["Primary hours", "Secondary hours"],
-        number: number,
-        draft: draft
-      }
-    end)
-  end
-
-  # D4H's hours tags become a word in the Hours cell; the rest stay tags.
-  defp hours_type(tags) do
-    cond do
-      "Primary hours" in tags -> "Primary"
-      "Secondary hours" in tags -> "Secondary"
-      true -> nil
-    end
-  end
+  defdelegate activities(), to: SampleData
+  defdelegate sample_team(), to: SampleData
+  defdelegate sample_user(), to: SampleData
 end

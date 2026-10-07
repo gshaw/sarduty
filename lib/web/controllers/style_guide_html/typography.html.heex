@@ -9,91 +9,94 @@
     These six are the only sizes. Each is a token pair: <code>--fs-md</code>
     and <code>--lh-md</code>.
   </p>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th class="shrink">Token</th>
-          <th class="num">Size</th>
-          <th class="num">Line</th>
-          <th>Use</th>
-          <th>Sample</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={{name, size, line, use} <- type_scale()}>
-          <td class="mono">{name}</td>
-          <td class="num">{size}px</td>
-          <td class="num">{line}px</td>
-          <td>{use}</td>
-          <td class="nowrap" style={"font-size: #{size}px; line-height: #{line}px"}>
-            Missing hiker
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <.table id="type-scale" rows={type_scale()}>
+    <:col :let={{name, _size, _line, _use}} label="Token" class="w-px mono">{name}</:col>
+    <:col :let={{_name, size, _line, _use}} label="Size" class="w-px" align="right">
+      {size}px
+    </:col>
+    <:col :let={{_name, _size, line, _use}} label="Line" class="w-px" align="right">
+      {line}px
+    </:col>
+    <:col :let={{_name, _size, _line, use}} label="Use">{use}</:col>
+    <:col :let={{_name, size, line, _use}} label="Sample" class="whitespace-nowrap">
+      <span style={"font-size: #{size}px; line-height: #{line}px"}>Missing hiker</span>
+    </:col>
+  </.table>
 
   <h2>Weights</h2>
   <div class="demo">
-    <p><span style="font-weight: 400">400 Regular</span>: body text, table cells, hints.</p>
-    <p>
-      <span style="font-weight: 600">600 Semibold</span>: labels, buttons, table headers, tags.
+    <p class="paragraph">
+      <span class="font-normal">400 Regular</span>: body text, table cells, hints.
     </p>
-    <p><span style="font-weight: 700">700 Bold</span>: headings, errors, emphasis.</p>
+    <p class="paragraph">
+      <span class="font-semibold">600 Semibold</span>: labels, buttons, table headers, tags.
+    </p>
+    <p class="paragraph"><span class="font-bold">700 Bold</span>: headings, errors, emphasis.</p>
   </div>
 
   <h2>Headings</h2>
   <div class="demo">
-    <h1>Activities, 2025</h1>
-    <h2 class="first">Attendance</h2>
-    <h3 class="first">Recommended changes</h3>
-    <h4 class="first">Would be added</h4>
+    <h1 class="title">Activities, 2025</h1>
+    <h2 class="heading">Attendance</h2>
+    <h3 class="subheading">Recommended changes</h3>
   </div>
   <p class="spec">
-    h1 2xl, h2 xl, h3 lg, h4 md bold. One h1 per page. Space above a heading is bigger than below,
-    so it belongs to what follows.
+    <code>.title</code>
+    on the h1, 2xl. <code>.heading</code>
+    on an h2, xl. <code>.subheading</code>
+    on an h3, lg. One h1 per page. Space above a heading is bigger than below, so it belongs to what follows.
   </p>
 
   <h2>Body text</h2>
   <div class="demo">
     <p class="lead">Lead text introduces a page in one or two sentences.</p>
-    <p>
+    <p class="paragraph max-w-[70ch]">
       Body text at 16px. Search and rescue managers read this between calls, so it stays short and
       plain. Lines stop at about 70 characters, which keeps long paragraphs readable on a wide
       screen.
     </p>
-    <p class="small">Small text, 14px, for secondary detail under a table or a form.</p>
-    <p class="caption muted">Caption text, 12px, for labels on charts and swatches.</p>
-    <p class="caption caps muted">Caps label, 12px semibold, for column groups</p>
+    <p class="paragraph text-sm">
+      Small text, 14px, for secondary detail under a table or a form.
+    </p>
+    <p class="hint">A hint, 14px and muted, under a label.</p>
   </div>
+  <p class="spec">
+    <code>.lead</code>, <code>.paragraph</code>, <code>text-sm</code>, and <code>.hint</code>. Muted text is <code>text-secondary-1</code>.
+  </p>
 
   <h2>Numbers</h2>
   <div class="demo">
-    <p>Figures are tabular everywhere, so columns of hours line up without extra work:</p>
-    <p class="text-right" style="max-width: 10em">
+    <p class="paragraph">
+      Figures are tabular everywhere, so columns of hours line up without extra work:
+    </p>
+    <p class="paragraph text-right max-w-[10em]">
       212h 30m<br />18h 05m<br />1,204h 00m
     </p>
-    <p>
+    <p class="paragraph">
       Codes and IDs use the mono face: <span class="mono">TCL-2025-014</span>, activity <span class="mono">2025-0412</span>. Dates do not: Sep 28, 2025.
     </p>
   </div>
 
   <h2>Links and lists</h2>
   <div class="demo">
-    <p>
-      A <a href="#">link in a sentence</a> is underlined and thickens on hover. Link text says
-      where it goes: <a href="#">tax credit letters for 2025</a>, never "click here".
+    <p class="paragraph">
+      A
+      <.a href="#">link in a sentence</.a>
+      is underlined and thickens on hover. Link text says
+      where it goes: <.a href="#">tax credit letters for 2025</.a>, never "click here".
     </p>
-    <ul>
+    <ul class="list paragraph">
       <li>Bulleted lists for things in no order.</li>
       <li>Each item is short; full sentences end with a period.</li>
     </ul>
-    <ol>
+    <ol class="list-decimal list-inside paragraph">
       <li>Numbered lists for steps.</li>
       <li>One action per step.</li>
     </ol>
   </div>
+  <p class="spec">
+    In the app: <code>&lt;.a&gt;</code> for a link, <code>.list</code> for bullets.
+  </p>
 
   <h2>Writing</h2>
   <p>

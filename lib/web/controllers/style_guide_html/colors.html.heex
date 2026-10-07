@@ -21,44 +21,34 @@
           </div>
         </div>
       </div>
-      <div class="sample-card">
-        <p>Body text with <a href="#">a link</a> and <span class="muted">muted text</span>.</p>
-        <div class="actions">
-          <button class="btn">Primary</button>
-          <button class="btn secondary">Secondary</button>
-          <span class="tag success">Active</span>
-          <span class="tag incident">Incident</span>
+      <div class="example dash-card">
+        <p class="paragraph">
+          Body text with
+          <.a href="#">a link</.a>
+          and <span class="text-secondary-1">muted text</span>.
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <.button variant={:primary}>Primary</.button>
+          <.button>Secondary</.button>
+          <.badge kind={:success}>Active</.badge>
+          <.badge kind={:incident}>Incident</.badge>
         </div>
       </div>
     </div>
   </div>
 
   <h2>What each token is for</h2>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th class="shrink">Token</th>
-          <th class="shrink">Light</th>
-          <th class="shrink">Dark</th>
-          <th>Use</th>
-        </tr>
-      </thead>
-      <tbody>
-        <%= for {group, tokens} <- palette() do %>
-          <tr>
-            <td colspan="4" class="caps caption muted">{group}</td>
-          </tr>
-          <tr :for={{name, light, dark, use} <- tokens}>
-            <td class="mono">--{name}</td>
-            <td class="mono">{light}</td>
-            <td class="mono">{dark}</td>
-            <td>{use}</td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+  <%= for {group, tokens} <- palette() do %>
+    <h4>{group}</h4>
+    <.table id={"tokens-" <> String.replace(String.downcase(group), " ", "-")} rows={tokens}>
+      <:col :let={{name, _light, _dark, _use}} label="Token" class="w-px mono whitespace-nowrap">
+        --{name}
+      </:col>
+      <:col :let={{_name, light, _dark, _use}} label="Light" class="w-px mono">{light}</:col>
+      <:col :let={{_name, _light, dark, _use}} label="Dark" class="w-px mono">{dark}</:col>
+      <:col :let={{_name, _light, _dark, use}} label="Use">{use}</:col>
+    </.table>
+  <% end %>
 
   <h2>Rules</h2>
   <ul>
@@ -72,7 +62,7 @@
       fills. In dark mode the fills are too dark to read as text.
     </li>
     <li>
-      Red and green always come with a word: <span class="op-add">Add</span>, <span class="op-remove">Remove</span>. Colour alone is never the only signal.
+      Red and green always come with a word: <span class="text-success-1 font-bold">Add</span>, <span class="text-danger-1 font-bold">Remove</span>. Colour alone is never the only signal.
     </li>
     <li>Focus is <code>--focus</code> yellow in both modes, so it reads the same everywhere.</li>
     <li>The D4H activity colours match D4H, so people know them on sight.</li>

@@ -37,51 +37,34 @@
     </li>
   </ul>
 
+  <h2>How the examples are made</h2>
+  <p>
+    Every example is drawn by the app's own components and stylesheet, so it looks as it does
+    in the app. A few show a design no page uses yet, and say so.
+  </p>
+
   <h2>Pages</h2>
-  <dl class="summary">
-    <div>
-      <dt><a href={page_path(:colors)}>Colours</a></dt>
-      <dd>Every token in light and dark, and what each is for.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:typography)}>Typography</a></dt>
-      <dd>The type scale, headings, body text, numbers, and links.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:writing)}>Writing</a></dt>
-      <dd>The rules and glossary for every word a person reads. Agents follow it.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:icons)}>Icons</a></dt>
-      <dd>The small set of icons, their sizes, and when to use one.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:layout)}>Layout</a></dt>
-      <dd>Spacing, page headers, summary lists, panels, and stats.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:components)}>Buttons and tags</a></dt>
-      <dd>Button kinds and sizes, tags, and focus.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:navigation)}>Navigation</a></dt>
-      <dd>Breadcrumbs, back links, tabs, and pagination.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:feedback)}>Messages</a></dt>
-      <dd>Toasts, banners, warnings, errors, empty states, and loading.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:tables)}>Tables</a></dt>
-      <dd>Dense and compact tables, from the app's real pages.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:forms)}>Forms</a></dt>
-      <dd>Every input, errors, and the app's real forms.</dd>
-    </div>
-    <div>
-      <dt><a href={page_path(:charts)}>Charts and maps</a></dt>
-      <dd>Stats, columns, lines, heat grids, bar lists, and the activity map.</dd>
-    </div>
-  </dl>
+  <.table
+    id="guide-pages"
+    rows={[
+      {:colors, "Colours", "Every token in light and dark, and what each is for."},
+      {:typography, "Typography", "The type scale, headings, body text, numbers, and links."},
+      {:writing, "Writing",
+       "The rules and glossary for every word a person reads. Agents follow it."},
+      {:icons, "Icons", "The small set of icons, their sizes, and when to use one."},
+      {:layout, "Layout", "Spacing, page headers, detail lists, cards, and stats."},
+      {:components, "Buttons and tags", "Button kinds and sizes, tags, and focus."},
+      {:navigation, "Navigation", "The top bar, breadcrumbs, tabs, and pagination."},
+      {:feedback, "Messages", "Toasts, banners, warnings, errors, empty states, and loading."},
+      {:tables, "Tables", "Dense and compact tables, from the app's real pages."},
+      {:forms, "Forms", "Every input, errors, and the app's real forms."},
+      {:charts, "Charts and maps",
+       "Stats, columns, lines, heat grids, bar lists, and the activity map."}
+    ]}
+  >
+    <:col :let={{page, title, _about}} label="Page" class="w-px whitespace-nowrap">
+      <.a href={page_path(page)}>{title}</.a>
+    </:col>
+    <:col :let={{_page, _title, about}} label="What it covers">{about}</:col>
+  </.table>
 </.shell>

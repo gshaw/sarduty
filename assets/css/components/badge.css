@@ -1,6 +1,6 @@
 /* Tags (<.badge>). Tinted tags say what something is; solid tags ask for action. The D4H
    kinds are solid in D4H's colours; in a table column use the kind marker instead. D4H's own
-   tags on an activity are outlined: data, not status. See /styles/draft/components. */
+   tags on an activity are outlined: data, not status. See /styles/components. */
 @layer components {
   .badge {
     --c: var(--text-muted);

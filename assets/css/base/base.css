@@ -1,4 +1,4 @@
-/* Page-wide defaults from the design system (/styles/draft). */
+/* Page-wide defaults from the design system (/styles). */
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
 
