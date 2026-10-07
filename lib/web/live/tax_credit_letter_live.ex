@@ -123,7 +123,19 @@ defmodule Web.TaxCreditLetterLive do
         </dl>
       </aside>
       <main class="content-2/3">
-        <.markdown content={@letter.letter_content} />
+        <%= case @letter.signature && TaxCreditLetter.split_at_signature(@letter.letter_content) do %>
+          <% {body, signer} -> %>
+            <.markdown content={body} />
+            <img
+              id="letter-signature"
+              src={Web.ImageData.png_data_url(@letter.signature)}
+              class="my-p h-16 bg-white"
+              alt="The signer's signature"
+            />
+            <.markdown content={signer} />
+          <% _unsigned -> %>
+            <.markdown content={@letter.letter_content} />
+        <% end %>
       </main>
     </div>
     """

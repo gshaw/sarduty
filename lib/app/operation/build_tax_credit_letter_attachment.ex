@@ -1,4 +1,5 @@
 defmodule App.Operation.BuildTaxCreditLetterAttachment do
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.LoadImage
   alias Service.PDFLetter
@@ -8,13 +9,15 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
     title = "#{tax_credit_letter.year} SRVTC #{team.name}"
 
     content =
-      PDFLetter.build(%{
+      %{
         title: title,
         author: team.name,
         creator: "SARDuty.com",
         logo: logo(team),
         content: tax_credit_letter.letter_content
-      })
+      }
+      |> Map.merge(signature_parts(tax_credit_letter))
+      |> PDFLetter.build()
 
     %{
       content: content,
@@ -23,6 +26,18 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
       content_type: "application/pdf"
     }
   end
+
+  # The letter's own copy of the signature, never the team's current one. A letter
+  # whose text has no gap to sign in is drawn as one block, unsigned.
+  defp signature_parts(%TaxCreditLetter{signature: signature} = letter)
+       when is_binary(signature) do
+    case TaxCreditLetter.split_at_signature(letter.letter_content) do
+      {body, signer} -> %{signature: signature, body: body, signer: signer}
+      :error -> %{}
+    end
+  end
+
+  defp signature_parts(_letter), do: %{}
 
   # A team without a logo gets none on its letters, not SAR Duty's.
   defp logo(team) do

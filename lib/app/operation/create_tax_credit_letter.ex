@@ -32,6 +32,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
       year: year,
       primary_minutes: hours.primary_minutes,
       secondary_minutes: hours.secondary_minutes,
+      signature: team.signature,
       letter_content: build_letter_content(team, member, hours, ref_id, year, now)
     }
   end

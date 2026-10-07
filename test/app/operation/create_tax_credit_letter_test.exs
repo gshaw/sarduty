@@ -2,6 +2,7 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
   use ExUnit.Case, async: true
 
   alias App.Model.Member
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.CreateTaxCreditLetter
 
@@ -88,6 +89,24 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
       team = %{@team | authorized_by_title: "President", authorized_by_phone: ""}
       letter = CreateTaxCreditLetter.plan(team, @member, [], 2025, "SRVTC-ABCDE", @now)
       assert letter.letter_content =~ "Pat Lee\nPresident\n\nReference: SRVTC-ABCDE"
+    end
+
+    test "copies the team's signature onto the letter" do
+      team = %{@team | signature: "png bytes"}
+
+      assert CreateTaxCreditLetter.plan(team, @member, [], 2025, "SRVTC-ABCDE", @now).signature ==
+               "png bytes"
+
+      assert CreateTaxCreditLetter.plan(@team, @member, [], 2025, "SRVTC-ABCDE", @now).signature ==
+               nil
+    end
+
+    test "leaves the gap the signature goes in, between the closing and the name" do
+      letter = CreateTaxCreditLetter.plan(@team, @member, [], 2025, "SRVTC-ABCDE", @now)
+
+      assert {body, signer} = TaxCreditLetter.split_at_signature(letter.letter_content)
+      assert body =~ ~r/Certified on January 15, 2026\.$/
+      assert signer =~ ~r/^Pat Lee\n/
     end
 
     test "without a signer, the team's name signs" do
