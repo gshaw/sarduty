@@ -31,6 +31,7 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:team_key_changed), do: "Team key changed"
   def label(:login_grant_added), do: "Login grant added"
   def label(:login_grant_removed), do: "Login grant removed"
+  def label(:tax_credit_letters_sent), do: "Tax credit letters sent"
 
   def validate(params) do
     changeset =

@@ -2,11 +2,18 @@ defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
   alias App.Operation.CreateTaxCreditLetter
+  alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.EmailTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
+  alias App.Worker.CreateTaxCreditLettersWorker
 
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    team = socket.assigns.current_team
+
+    if connected?(socket),
+      do: Phoenix.PubSub.subscribe(App.PubSub, CreateTaxCreditLetters.topic(team.id))
+
+    {:ok, assign(socket, sending: nil, sent: nil)}
   end
 
   def handle_params(params, _uri, socket) do
@@ -34,6 +41,21 @@ defmodule Web.TaxCreditLetterCollectionLive do
     </.breadcrumbs>
 
     <h1 class="title mb-p">{@page_title}</h1>
+
+    <.sent_banner :if={@sent} sent={@sent} />
+    <div :if={@sending} id="letters-sending" class="banner" role="status">
+      <div class="banner-title">
+        <.icon name="hero-envelope" class="size-5" />Sending letters
+      </div>
+      <div class="banner-body">
+        <p>
+          Creating and emailing {Service.Format.count(@sending.count,
+            one: "%d tax credit letter",
+            many: "%d tax credit letters"
+          )} for {@sending.year}. This page updates when they are done.
+        </p>
+      </div>
+    </div>
     <.form
       for={@form}
       id="tax_credit_letter_filter_form"
@@ -61,6 +83,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
         options={TaxCreditLetterFilterViewModel.filters()}
       />
     </.form>
+
+    <.send_all
+      :if={!@sending && @to_send != []}
+      count={length(@to_send)}
+      year={@filter_options.year}
+      team={@current_team}
+    />
 
     <div class="table-summary">
       <span class="table-summary-links">
@@ -131,6 +160,65 @@ defmodule Web.TaxCreditLetterCollectionLive do
     """
   end
 
+  defp send_all(assigns) do
+    ~H"""
+    <div id="send-all" class="mb-p flex flex-wrap items-center gap-p">
+      <.button
+        id="send-all-button"
+        variant={:success}
+        phx-click="send_all"
+        data-confirm={send_all_confirm(@count, @year, @team)}
+      >
+        Send {Service.Format.count(@count, one: "%d letter", many: "%d letters")}
+      </.button>
+      <span class="text-sm text-secondary-1">
+        Creates and emails a letter to each member shown with hours and no letter yet.
+      </span>
+      <div :if={!@team.signature} id="send-all-unsigned" class="warning-text w-full">
+        <.icon name="hero-exclamation-triangle" class="size-6" />
+        <span>
+          These letters go out unsigned. Add the signer's signature in
+          <.a navigate={~p"/teams/#{@team}/settings"}>team settings</.a>
+          first.
+        </span>
+      </div>
+    </div>
+    """
+  end
+
+  defp send_all_confirm(count, year, team) do
+    letters = Service.Format.count(count, one: "%d letter", many: "%d letters")
+    question = "Create and email #{letters} for #{year}?"
+    if team.signature, do: question, else: question <> " They go out unsigned."
+  end
+
+  defp sent_banner(assigns) do
+    ~H"""
+    <div id="letters-sent" class="banner banner-success" role="status">
+      <div class="banner-title">
+        <.icon name="hero-check-circle" class="size-5" />Letters sent
+      </div>
+      <div class="banner-body">
+        <p>
+          <strong>
+            {Service.Format.count(@sent.created,
+              one: "%d tax credit letter",
+              many: "%d tax credit letters"
+            )} created for {@sent.year}. {@sent.emailed} emailed.
+          </strong>
+        </p>
+        <p :if={@sent.no_email != []} id="letters-no-email">
+          No email in D4H, so not emailed: {Enum.map_join(@sent.no_email, ", ", & &1.name)}.
+        </p>
+        <p :if={@sent.failed != []} id="letters-failed">
+          The email did not send to {Enum.map_join(@sent.failed, ", ", & &1.name)}. Open
+          their letters to try again.
+        </p>
+      </div>
+    </div>
+    """
+  end
+
   defp record_actions(assigns) do
     ~H"""
     <%= if @record.tax_credit_letter_id do %>
@@ -169,6 +257,22 @@ defmodule Web.TaxCreditLetterCollectionLive do
     {:noreply, socket}
   end
 
+  def handle_event("send_all", _params, socket) do
+    %{current_team: team, filter_options: filter_options, to_send: to_send} = socket.assigns
+
+    %{
+      team_id: team.id,
+      year: filter_options.year,
+      member_ids: Enum.map(to_send, & &1.member.id),
+      user_id: socket.assigns.current_user.id
+    }
+    |> CreateTaxCreditLettersWorker.new()
+    |> Oban.insert!()
+
+    {:noreply,
+     assign(socket, sending: %{count: length(to_send), year: filter_options.year}, sent: nil)}
+  end
+
   def handle_event("change", %{"form" => form_params}, socket) do
     case TaxCreditLetterFilterViewModel.validate(form_params) do
       {:ok, filter_options, _changeset} ->
@@ -187,8 +291,21 @@ defmodule Web.TaxCreditLetterCollectionLive do
         socket.assigns.filter_options
       )
 
-    assign(socket, :records, records)
+    socket
+    |> assign(:records, records)
+    |> assign(
+      :to_send,
+      Enum.filter(records, &(is_nil(&1.tax_credit_letter_id) and &1.total_minutes > 0))
+    )
   end
+
+  def handle_info({:tax_credit_letters_sent, summary}, socket) do
+    {:noreply, socket |> assign(sending: nil, sent: summary) |> assign_records()}
+  end
+
+  # Swoosh's test adapter tells the process that sent the email, which in tests is this
+  # one, since Oban runs the job inline.
+  def handle_info({:email, _email}, socket), do: {:noreply, socket}
 
   defp build_path_fn(team, filter_options) do
     fn changed_options ->

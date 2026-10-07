@@ -27,7 +27,8 @@ defmodule App.Model.Event do
     team_signed_up: 730,
     team_key_changed: 730,
     login_grant_added: 730,
-    login_grant_removed: 730
+    login_grant_removed: 730,
+    tax_credit_letters_sent: 730
   }
 
   @kinds Map.keys(@retention_days)
