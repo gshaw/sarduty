@@ -1,6 +1,7 @@
 defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
+  alias App.Model.Team
   alias Web.Components.ActivityMap
 
   # cspell:ignore Tremblay exsss
@@ -111,7 +112,8 @@ defmodule Web.StyleGuideHTML.SampleData do
       {:add, 1, %{name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"}},
       {:add, 2, %{name: "Casey Dhillon", email: "casey@example.com", phone: "604-555-0123"}},
       {:remove, 3, %{name: "Devon Okafor", email: "devon@example.com", phone: "604-555-0131"}},
-      {:not_invited, nil, %{name: "Jordan Park", email: "jordan@example.com", phone: "604-555-0177"}}
+      {:not_invited, nil,
+       %{name: "Jordan Park", email: "jordan@example.com", phone: "604-555-0177"}}
     ]
   end
 
@@ -162,7 +164,7 @@ defmodule Web.StyleGuideHTML.SampleData do
     }
 
     team
-    |> App.Model.Team.build_settings_changeset(params)
+    |> Team.build_settings_changeset(params)
     |> Map.put(:action, :update)
     |> Phoenix.Component.to_form(as: "form", id: "settings")
   end

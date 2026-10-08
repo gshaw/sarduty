@@ -6,7 +6,7 @@ defmodule Web.Components.Messages do
   """
   use Phoenix.Component
 
-  import Web.Components.Core, only: [icon: 1]
+  import Web.Components.Core, only: [icon: 1, translate_error: 1]
 
   @doc """
   Renders a banner: something true about the page until it changes.
@@ -120,7 +120,7 @@ defmodule Web.Components.Messages do
   defp form_errors(%Phoenix.HTML.Form{source: %Ecto.Changeset{action: action} = changeset} = form)
        when action not in [nil, :validate, :ignore] do
     for {field, error} <- changeset.errors,
-        do: {Phoenix.HTML.Form.input_id(form, field), Web.Components.Core.translate_error(error)}
+        do: {Phoenix.HTML.Form.input_id(form, field), translate_error(error)}
   end
 
   defp form_errors(_form), do: []

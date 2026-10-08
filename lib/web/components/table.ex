@@ -158,7 +158,10 @@ defmodule Web.Components.Table do
     <%= if @align == "right" do %>
       <span class={["sort-suffix", @header.current? && "is-current"]}>{@header.suffix}</span>{StringHelpers.no_break_space()}{@label}
     <% else %>
-      {@label}{StringHelpers.no_break_space()}<span class={["sort-suffix", @header.current? && "is-current"]}>{@header.suffix}</span>
+      {@label}{StringHelpers.no_break_space()}<span class={[
+        "sort-suffix",
+        @header.current? && "is-current"
+      ]}>{@header.suffix}</span>
     <% end %>
     """
   end

@@ -12,7 +12,9 @@
     <:col :let={{step, _px, _use}} label="Class" class="w-px mono whitespace-nowrap">
       mt-{step}, gap-{step}
     </:col>
-    <:col :let={{step, _px, _use}} label="Token" class="w-px mono">--sp-{step}</:col>
+    <:col :let={{step, _px, _use}} label="Token" class="w-px mono whitespace-nowrap">
+      --sp-{step}
+    </:col>
     <:col :let={{_step, px, _use}} label="Size" class="w-px" align="right">{px}px</:col>
     <:col :let={{_step, _px, use}} label="Typical use">{use}</:col>
     <:col :let={{_step, px, _use}} label="">
@@ -27,15 +29,16 @@
       builds nothing. If a design needs a new space, it joins the scale.
     </li>
     <li>
-      The steps are not Tailwind's: <code>mt-6</code> is 32px here, not 24px. 24px is
-      <code>mt-5</code>.
+      The steps are not Tailwind's: <code>mt-6</code>
+      is 32px here, not 24px. 24px is <code>mt-5</code>.
     </li>
     <li>
       Closer things belong together: a label sits 4px from its input, fields sit 24px apart.
     </li>
     <li>
       Widths that aren't spaces use Tailwind's named sizes, such as <code>max-w-xs</code>
-      (320px), or <code>.measure</code> (640px) for text and forms.
+      (320px), or <code>.measure</code>
+      (640px) for text and forms.
     </li>
   </ul>
 </.shell>
