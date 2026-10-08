@@ -55,7 +55,7 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row">
+    <div class="heading-row team-heading">
       <div class="min-w-0">
         <h1 class="title-hero mb-0">{@current_team.name}</h1>
         <.refresh_line team={@current_team} view_data={@view_data} now={@now} />
