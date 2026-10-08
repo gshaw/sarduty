@@ -530,5 +530,63 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  # Editing records (docs/hosted-d4h.md). ApplyChangeSet calls these for a change set of
+  # source :edit. `attrs` have SAR Duty's names, with string keys and times as ISO 8601
+  # strings, as change set rows store them; only the keys given are sent.
+
+  @member_fields %{
+    "name" => "name",
+    "ref_id" => "ref",
+    "position" => "position",
+    "email" => "email",
+    "address" => "deprecatedAddress",
+    "status" => "status",
+    "joined_at" => "startsAt",
+    # Only SAR Duty's hosted store takes this. D4H sets access in its web app.
+    "permission" => "permission"
+  }
+
+  @doc "Adds a member. POST /members is SAR Duty's own; D4H adds members in its web app."
+  def create_member(context, attrs),
+    do: write(context, :post, "/members", member_json(attrs), &D4H.Member.build/1)
+
+  def update_member(context, d4h_member_id, attrs),
+    do:
+      write(context, :patch, "/members/#{d4h_member_id}", member_json(attrs), &D4H.Member.build/1)
+
+  @doc "Marks a member as left on `left_at`, as D4H's retire does."
+  def retire_member(context, d4h_member_id, left_at) do
+    json = %{date: left_at, direction: "RETIRE"}
+    write(context, :patch, "/members/#{d4h_member_id}/retire", json, &D4H.Member.build/1)
+  end
+
+  def rejoin_member(context, d4h_member_id) do
+    json = %{direction: "UNRETIRE"}
+    write(context, :patch, "/members/#{d4h_member_id}/retire", json, &D4H.Member.build/1)
+  end
+
+  defp member_json(attrs) do
+    attrs
+    |> rename(@member_fields)
+    |> then(fn json ->
+      if Map.has_key?(attrs, "phone"),
+        do: Map.put(json, "phone", %{mobile: attrs["phone"]}),
+        else: json
+    end)
+  end
+
+  defp rename(attrs, fields) do
+    for {name, d4h_name} <- fields, Map.has_key?(attrs, name), into: %{} do
+      {d4h_name, attrs[name]}
+    end
+  end
+
+  defp write(context, method, url, json, build) do
+    case Req.request(context, method: method, url: url, json: json, retry: false) do
+      {:ok, %{status: status} = response} when status in 200..299 -> {:ok, build.(response.body)}
+      result -> {:error, write_error(result)}
+    end
+  end
+
   defp iso(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 end

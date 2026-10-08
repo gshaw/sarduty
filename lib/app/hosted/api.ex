@@ -21,8 +21,6 @@ defmodule App.Hosted.API do
 
   @activities ~w(events exercises incidents)
 
-  # cspell:ignore UNRETIRE -- D4H's word, in the retire endpoint's direction field
-
   get "/v3/whoami" do
     send_json(conn, 200, JSON.whoami(conn.assigns.hosted_team))
   end

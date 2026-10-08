@@ -20,7 +20,8 @@ defmodule App.Model.ChangeSet do
     belongs_to :group, Group
     belongs_to :proposed_by_user, User
     belongs_to :applied_by_user, User
-    field :source, Ecto.Enum, values: [:door, :group_rule, :attendance_import, :agent]
+    # :edit is a team admin changing one record of a hosted team (docs/hosted-d4h.md).
+    field :source, Ecto.Enum, values: [:door, :group_rule, :attendance_import, :agent, :edit]
     field :summary, :string
     field :applied_at, :utc_datetime_usec
     field :discarded_at, :utc_datetime_usec

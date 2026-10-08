@@ -34,10 +34,15 @@ defmodule Web.Components.MemberSidebar do
         )} ago
       </dd>
 
-      <dt :if={!D4H.hosted?(@member.team)}>Actions</dt>
-      <dd :if={!D4H.hosted?(@member.team)}>
+      <dt>Actions</dt>
+      <dd>
         <ul class="action-list">
-          <li>
+          <li :if={D4H.hosted?(@member.team)}>
+            <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>
+              Change details
+            </.a>
+          </li>
+          <li :if={!D4H.hosted?(@member.team)}>
             <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>
           </li>
         </ul>

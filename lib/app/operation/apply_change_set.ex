@@ -44,6 +44,9 @@ defmodule App.Operation.ApplyChangeSet do
   defp read_current(_d4h, %ChangeSet{activity: %{deleted_at: %DateTime{}}}),
     do: {:error, :deleted}
 
+  # An edit changes the record its row names, whatever D4H holds now.
+  defp read_current(_d4h, %ChangeSet{source: :edit}), do: {:ok, nil}
+
   defp read_current(d4h, %ChangeSet{activity: activity}) do
     case D4H.fetch_activity_published(d4h, activity.d4h_activity_id, activity.activity_kind) do
       {:ok, false} -> D4H.fetch_attendance_infos(d4h, activity.d4h_activity_id)
@@ -85,6 +88,10 @@ defmodule App.Operation.ApplyChangeSet do
       when action in [:add_group_member, :remove_group_member],
       do: :ok
 
+  def check(%ChangeSetRow{action: action}, nil)
+      when action in [:create_member, :update_member, :retire_member, :rejoin_member],
+      do: :ok
+
   defp write(d4h, %ChangeSetRow{action: :update_attendance, new_value: new_value} = row) do
     d4h
     |> D4H.set_attendance(
@@ -120,6 +127,27 @@ defmodule App.Operation.ApplyChangeSet do
       {:error, error} -> {:failed, Exception.message(error)}
     end
   end
+
+  defp write(d4h, %ChangeSetRow{action: :create_member, new_value: new_value}),
+    do: d4h |> D4H.create_member(new_value) |> record_result(& &1.d4h_member_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_member} = row),
+    do:
+      d4h
+      |> D4H.update_member(row.d4h_record_id, row.new_value)
+      |> record_result(& &1.d4h_member_id)
+
+  defp write(d4h, %ChangeSetRow{action: :retire_member} = row),
+    do:
+      d4h
+      |> D4H.retire_member(row.d4h_record_id, row.new_value["left_at"])
+      |> record_result(& &1.d4h_member_id)
+
+  defp write(d4h, %ChangeSetRow{action: :rejoin_member} = row),
+    do: d4h |> D4H.rejoin_member(row.d4h_record_id) |> record_result(& &1.d4h_member_id)
+
+  defp record_result({:ok, record}, id), do: {:applied, id.(record)}
+  defp record_result({:error, error}, _id), do: {:failed, Exception.message(error)}
 
   defp attendance_result({:ok, info}), do: {:applied, info.d4h_attendance_id}
   defp attendance_result({:error, error}), do: {:failed, attendance_failure_text(error)}

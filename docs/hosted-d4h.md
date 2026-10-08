@@ -48,6 +48,18 @@ A hosted team's pages hide what only D4H has: the "Open D4H" links and the D4H k
 team settings. The nightly refresh and the sync every 10 minutes run for it as for any
 team.
 
+## Editing records
+
+A hosted team's admins change its records in SAR Duty. Each change is a change set of
+one row with source `edit`, applied at once by
+[ApplyEdit](../lib/app/operation/apply_edit.ex), which then syncs so the page that
+follows shows it. So every edit is in the member's or activity's history, and the store
+is only ever written through its API. The pages are for hosted teams only; a D4H team
+gets a 404 and edits in D4H.
+
+- **Members**: add, change details, make a team admin (`permission` 0) or not (2), and
+  mark as left or rejoined (D4H's retire). `/members/new`, `/members/:id/edit`.
+
 ## What it serves
 
 Every endpoint the [D4H adapter](../lib/app/adapter/d4h.ex) calls, with D4H's paging

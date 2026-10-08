@@ -13,6 +13,7 @@ defmodule App.DataFixtures do
   alias App.Model.Qualification
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
+  alias App.Operation.CreateHostedTeam
   alias App.Repo
 
   def team_fixture(attrs \\ %{}) do
@@ -79,6 +80,27 @@ defmodule App.DataFixtures do
     user = AccountsFixtures.user_fixture()
     team = team_fixture(Map.get(attrs, :team, %{}))
     manager_fixture(team, %{email: user.email})
+    %{user: user, team: team}
+  end
+
+  @doc """
+  A team without D4H (docs/hosted-d4h.md), refreshed from its store, with a user who
+  manages it. `sample_data: true` fills it with made-up records.
+  """
+  def hosted_team_with_user_fixture(attrs \\ %{}) do
+    user = AccountsFixtures.user_fixture()
+    unique = System.unique_integer([:positive])
+
+    {:ok, team} =
+      CreateHostedTeam.call(%{
+        "name" => "Hosted #{unique}",
+        "subdomain" => "hosted#{unique}",
+        "timezone" => "America/Halifax",
+        "manager_name" => "Robin Example",
+        "manager_email" => user.email,
+        "sample_data" => Map.get(attrs, :sample_data, false)
+      })
+
     %{user: user, team: team}
   end
 
