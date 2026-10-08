@@ -63,6 +63,16 @@ defmodule App.Model.Attendance do
     |> where([r], r.status == "attending")
   end
 
+  @doc "The members D4H shows as signed up (requested) for the activity."
+  def signed_up_members(%Activity{} = activity) do
+    Member
+    |> join(:inner, [m], a in Attendance, on: a.member_id == m.id)
+    |> where([m, a], a.activity_id == ^activity.id and a.status == "requested")
+    |> where([m], m.team_id == ^activity.team_id)
+    |> distinct(true)
+    |> Repo.all()
+  end
+
   @doc "Rows that started in `year` in `timezone`."
   def started_in(query, year, timezone) do
     {start, finish} = Service.YearRange.bounds(year, timezone)

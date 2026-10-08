@@ -79,4 +79,37 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       live(conn, ~p"/teams/#{team}/activities/#{other.id}/take-attendance")
     end
   end
+
+  test "yet to arrive lists who signed up and updates as the door records them", %{
+    conn: conn,
+    team: team,
+    activity: activity
+  } do
+    raj = member_fixture(team, %{name: "Raj Patel"})
+    attendance_fixture(activity, raj, %{status: "requested"})
+    walk_in = member_fixture(team)
+
+    {:ok, lv, _html} = live(conn, take_path(team, activity))
+    assert has_element?(lv, "#yet-to-arrive-section", "1 of 1 signed up")
+    assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}")
+
+    for member <- [raj, walk_in] do
+      AttendanceScan.insert!(%AttendanceScan{
+        team_id: team.id,
+        activity_id: activity.id,
+        member_id: member.id,
+        kind: "arrived",
+        method: "name",
+        scanned_at: DateTime.utc_now()
+      })
+    end
+
+    assert has_element?(lv, "#yet-to-arrive-none")
+
+    assert has_element?(
+             lv,
+             "#yet-to-arrive-count",
+             "2 members arrived, including 1 who did not sign up."
+           )
+  end
 end
