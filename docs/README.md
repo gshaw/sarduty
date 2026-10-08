@@ -32,6 +32,7 @@ runs as one Fly machine with Litestream replicating the database.
 | View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                               |
 | View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                               |
 | MCP tools   | `lib/app/mcp/`                        | Read-only views of a team's data for agents           | Models                               |
+| Hosted D4H  | `lib/app/hosted/`                     | The D4H-compatible store for teams without D4H        | `Repo`                               |
 | Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)               |
 
 The rules that are easy to break:
@@ -85,6 +86,7 @@ The rules that are easy to break:
 
 - [d4h-sync.md](d4h-sync.md) — how D4H data reaches the database, and what is never deleted.
 - [change-sets.md](change-sets.md) — how every write to D4H goes through one applier, and what it records.
+- [hosted-d4h.md](hosted-d4h.md) — teams without D4H: SAR Duty's own D4H-compatible store and API.
 - [change-history.md](change-history.md) — each member's and activity's history: SAR Duty's writes and what the refresh saw change in D4H.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.

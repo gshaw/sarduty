@@ -80,7 +80,7 @@ defmodule App.Adapter.D4HTest do
       end)
 
       assert D4H.fetch_list_head(context(), "/members") ==
-               %{total_size: 189, newest_updated_at: ~U[2026-10-05 12:00:00Z]}
+               %{total_size: 189, newest_updated_at: ~U[2026-10-05 12:00:00.123Z]}
     end
 
     test "changed attendance stops at the first row older than the cursor" do

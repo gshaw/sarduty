@@ -7,6 +7,14 @@ defmodule App.Adapter.D4H do
 
   def default_region, do: "api.ca.d4h.org"
 
+  @doc """
+  The api host of a team SAR Duty hosts itself (docs/hosted-d4h.md). Requests for it
+  never leave the app: Req hands them to App.Hosted.API.
+  """
+  def hosted_host, do: "hosted.sarduty.com"
+
+  def hosted?(%Team{d4h_api_host: api_host}), do: api_host == hosted_host()
+
   def regions do
     %{
       "America" => "api.d4h.org",
@@ -64,6 +72,7 @@ defmodule App.Adapter.D4H do
       compressed: true
     ]
     |> Keyword.merge(test_options())
+    |> Keyword.merge(hosted_options(api_host))
     |> Req.new()
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
     |> report_rate_limits()
@@ -103,6 +112,11 @@ defmodule App.Adapter.D4H do
   # config/test.exs routes every request to `Req.Test`, so no test reaches D4H.
   defp test_options, do: Application.get_env(:sarduty, App.Adapter.D4H, [])
 
+  # A hosted team's requests go to the hosted API in this process, in tests too.
+  defp hosted_options(api_host) do
+    if api_host == hosted_host(), do: [plug: App.Hosted.API], else: []
+  end
+
   def determine_team_id(access_key: access_key, api_host: api_host) do
     case fetch_whoami(access_key: access_key, api_host: api_host) do
       {:ok, whoami} -> {:ok, whoami.d4h_team_id}
@@ -118,6 +132,7 @@ defmodule App.Adapter.D4H do
         auth: {:bearer, access_key || ""}
       ]
       |> Keyword.merge(test_options())
+      |> Keyword.merge(hosted_options(api_host))
       |> Req.new()
       |> report_rate_limits()
 
@@ -339,7 +354,8 @@ defmodule App.Adapter.D4H do
 
     newest =
       case page.results do
-        [row | _] -> D4H.Parse.optional_datetime(row["updatedAt"])
+        # Not truncated: two changes within a second must still look different.
+        [row | _] -> D4H.Parse.precise_datetime(row["updatedAt"])
         [] -> nil
       end
 

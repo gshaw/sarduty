@@ -72,6 +72,10 @@ defmodule Web.Router do
     delete "/mcp", MCPController, :delete
   end
 
+  # SAR Duty's D4H-compatible API for teams it hosts (docs/hosted-d4h.md). A bearer key
+  # only, like the MCP endpoint. A hosted team's own pages call it in-process instead.
+  forward "/d4h", App.Hosted.API
+
   # Map images (Web.MapImage). Signed keys, no session: the style guide shows one too.
   scope "/maps", Web do
     get "/:key", MapImageController, :show

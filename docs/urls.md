@@ -16,8 +16,9 @@ enforces the top-level list and the held URLs.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
-  `login`, `logout`, `s`, `attendance`, `wallet`, `styles`, `terms`, `privacy`, `maps`, and
-  `dev` in development. A new one is added to the router test on purpose.
+  `login`, `logout`, `s`, `attendance`, `wallet`, `styles`, `terms`, `privacy`, `maps`,
+  `d4h` (the hosted D4H API, [hosted-d4h.md](hosted-d4h.md)), and `dev` in development.
+  A new one is added to the router test on purpose.
 - **Anything printed or texted goes through `/s/` or the verify site**, so it stays short
   and never depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives
