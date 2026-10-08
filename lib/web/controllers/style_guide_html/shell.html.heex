@@ -4,11 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{@title} · SAR Duty style guide</title>
+    <%!-- The bar's navy, as in the app, so iOS fills the area under the clock with it. --%>
+    <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
     <script>
-      // Before first paint, so a saved theme doesn't flash.
+      // Before first paint, so a saved theme doesn't flash. A chosen theme also sets the
+      // browser's colour, which otherwise follows the system's.
       (function () {
+        var navy = { light: "#13243a", dark: "#0a111b" };
+        window.setThemeColor = function (theme) {
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+            var system = meta.media.indexOf("dark") >= 0 ? "dark" : "light";
+            meta.content = navy[theme || system];
+          });
+        };
         var theme = localStorage.getItem("styles-theme");
         if (theme) document.documentElement.dataset.theme = theme;
+        window.setThemeColor(theme);
       })();
     </script>
     <Web.Layouts.favicon_links />
@@ -71,6 +83,7 @@
               delete document.documentElement.dataset.theme;
               localStorage.removeItem("styles-theme");
             }
+            window.setThemeColor(theme);
             show();
           });
         });

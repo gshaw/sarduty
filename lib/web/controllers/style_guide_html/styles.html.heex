@@ -2,7 +2,9 @@
 example inside a .demo or .example comes from the app's stylesheet alone, so it looks as it
 does in the app. The page-text rules skip anything inside one. --%>
 <style>
-  .guide-bar { background: var(--nav); color: #fff; border-bottom: 4px solid var(--accent); }
+  /* Sticky, like the app's fixed bar, so iOS fills the area under the clock with its navy. */
+  .guide-bar { position: sticky; top: 0; z-index: 45; background: var(--nav); color: #fff; border-bottom: 4px solid var(--accent); }
+  html { scroll-padding-top: 80px; }
   .guide-bar .container { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); height: 56px; }
   .guide-bar .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); text-decoration: none; }
   .guide-bar .brand span { color: var(--accent); }
@@ -17,7 +19,7 @@ does in the app. The page-text rules skip anything inside one. --%>
 
   .container { max-width: 1280px; margin: 0 auto; padding: 0 var(--sp-5); }
   .guide { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--sp-6); padding-top: var(--sp-6); padding-bottom: var(--sp-8); }
-  .guide-nav ul { position: sticky; top: var(--sp-5); }
+  .guide-nav ul { position: sticky; top: calc(60px + var(--sp-5)); }
   .guide-nav a { display: block; padding: var(--sp-1) var(--sp-3); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); text-decoration: none; border-left: 4px solid transparent; }
   .guide-nav a:hover { color: var(--link-hover); text-decoration: underline; }
   .guide-nav a[aria-current="page"] { border-left-color: var(--primary); font-weight: 700; background: var(--surface-alt); }
@@ -79,6 +81,7 @@ does in the app. The page-text rules skip anything inside one. --%>
   .mode figure, .logo-ladder figure { margin: 0; text-align: center; }
   .mode figcaption, .logo-ladder figcaption { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: var(--sp-2); }
   .logo-wide { margin-top: var(--sp-5) !important; text-align: left !important; }
+  .logo-wide .site-bar { position: relative; z-index: auto; }
 
   /* Spacing page */
   .space-bar { display: inline-block; height: 16px; background: var(--primary); vertical-align: middle; }
@@ -91,11 +94,15 @@ does in the app. The page-text rules skip anything inside one. --%>
     .guide { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); padding-top: var(--sp-4); }
     .guide-nav ul { position: static; display: flex; flex-wrap: wrap; gap: var(--sp-1); }
     .guide-bar .container { flex-wrap: wrap; height: auto; padding-top: var(--sp-2); row-gap: 0; }
-    .guide-tabs { order: 3; width: 100%; overflow-x: auto; margin-right: 0; }
-    .guide-tabs a { padding: var(--sp-2) var(--sp-3); white-space: nowrap; }
+    /* The four tabs share the width and never scroll. */
+    .guide-tabs { order: 3; width: 100%; margin-right: 0; justify-content: space-between; gap: 0; }
+    .guide-tabs a { padding: var(--sp-2) var(--sp-1); white-space: nowrap; }
     .guide-nav a { border: 1px solid var(--border-subtle); border-radius: var(--radius); }
     .guide-nav a[aria-current="page"] { border-color: var(--primary); }
     .modes { grid-template-columns: minmax(0, 1fr); }
     .guide-bar .brand small { display: none; }
+  }
+  @media (max-width: 360px) {
+    .guide-tabs a { font-size: var(--fs-xs); line-height: var(--lh-xs); }
   }
 </style>

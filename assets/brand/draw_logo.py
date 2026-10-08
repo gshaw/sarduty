@@ -93,17 +93,6 @@ def monogram():
     return centred("S", 520, 700, WHITE, 350) + centred("D", 520, 700, AMBER, 682)
 
 
-def wide():
-    """The top bar's "SAR Duty" on one line, for places that need it as a picture."""
-    size, pad, space = 160, 72, 0.25 * 160
-    sar_w, duty_w = ink("SAR")[1] * size / UPM, ink("Duty")[1] * size / UPM
-    width = round(2 * pad + sar_w + space + duty_w)
-    height = 2 * pad + round(CAP * size)
-    baseline = pad + CAP * size
-    body = text("SAR", size, pad, baseline, WHITE) + text("Duty", size, pad + sar_w + space, baseline, AMBER)
-    return svg(body, width, height, 32), width, height
-
-
 def png(svg_path, out, width, height):
     """Export with headless Chrome, transparent outside the tile."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -139,15 +128,12 @@ if __name__ == "__main__":
         "sarduty-logo-square.svg": svg(stacked(), rx=0),
         "sarduty-favicon.svg": svg(monogram()),
     }
-    wide_svg, wide_w, wide_h = wide()
-    files["sarduty-logo-wide.svg"] = wide_svg
     for name, body in files.items():
         (IMAGES / name).write_text(body)
 
     png(IMAGES / "sarduty-logo-square.svg", IMAGES / "sarduty-logo-square.png", 1024, 1024)
     png(IMAGES / "sarduty-logo-square.svg", IMAGES / "apple-touch-icon.png", 180, 180)
     png(IMAGES / "sarduty-logo.svg", IMAGES / "sarduty-logo-96.png", 96, 96)
-    png(IMAGES / "sarduty-logo-wide.svg", IMAGES / "sarduty-logo-wide.png", wide_w, wide_h)
     png(IMAGES / "sarduty-logo.svg", ROOT / "priv/apple/sarduty_logo.png", 660, 660)
     with tempfile.TemporaryDirectory() as tmp:
         sizes = []

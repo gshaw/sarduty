@@ -1,0 +1,170 @@
+<.shell title="Forms" current={:forms}>
+  <h1>Forms</h1>
+  <p class="lead">Bold labels above, hints under them, errors on the field.</p>
+  <.used_on pages={["every form"]} />
+
+  <h2>Which to use</h2>
+  <ul>
+    <li>Text input: a short answer people type, such as a name.</li>
+    <li>Select: one answer from a long list, such as a time zone.</li>
+    <li>Radios: one answer from a few choices people should see side by side.</li>
+    <li>
+      Checkboxes: a yes or no setting in a form with a save button, or any number of things from a list.
+    </li>
+    <li>
+      Switch: a setting with no save button, which changes the moment it's tapped. Inside a form with a save button, use a checkbox: a switch says the change already happened.
+    </li>
+  </ul>
+
+  <h2>Text input</h2>
+  <div class="demo">
+    <.input id="e-name" name="e-name" label="Full name" value="Avery Chen" />
+    <div class="max-w-80">
+      <.input id="e-email" name="e-email" type="email" label="Email" value="avery@example.com">
+        SAR Duty sends the tax credit letter here.
+      </.input>
+    </div>
+    <div class="max-w-40">
+      <.input id="e-ref" name="e-ref" label="Member ID" value="101" />
+    </div>
+  </div>
+  <p class="spec">
+    Three widths: full, medium (<code>max-w-80</code>, 320px), and small (<code>max-w-40</code>, 160px). Width follows the expected answer, not the page.
+  </p>
+
+  <h2>Select, date, and text area</h2>
+  <div class="demo">
+    <div class="max-w-80">
+      <.input
+        id="e-kind"
+        name="e-kind"
+        type="select"
+        label="Activity kind"
+        options={["Incident", "Exercise", "Event"]}
+        value="Incident"
+      />
+      <.input id="e-date" name="e-date" type="date" label="Start date" value="2025-09-28" />
+    </div>
+    <.input
+      id="e-notes"
+      name="e-notes"
+      type="textarea"
+      label="Notes"
+      rows="3"
+      value="Subject found at 21:10, walked out with the team."
+    />
+  </div>
+
+  <h2>Read-only, disabled, and error</h2>
+  <div class="demo">
+    <div class="max-w-80">
+      <.input id="e-ro" name="e-ro" label="Latitude" value="49.7553" readonly>
+        From D4H. Change it there.
+      </.input>
+      <.input id="e-dis" name="e-dis" label="Region" value="Canada" disabled />
+      <.input
+        id="e-err"
+        name="e-err"
+        label="Yard coordinate"
+        value="49.7553 -123.131"
+        errors={["Enter latitude and longitude separated by a comma"]}
+      >
+        Latitude and longitude, like 49.75533, -123.13110.
+      </.input>
+    </div>
+  </div>
+  <p class="spec">
+    Read-only is for a value from D4H; the hint says where to change it. A field shows its error only after the person has typed in it or tried to save. See <a href={
+      page_path(:fix_form_errors)
+    }>Fix form errors</a>.
+  </p>
+
+  <h2>Checkboxes</h2>
+  <div class="demo">
+    <.input
+      id="e-refresh"
+      name="e-refresh"
+      type="checkbox"
+      label="Refresh from D4H every night"
+      checked
+    >
+      SAR Duty refreshes at 02:00.
+    </.input>
+    <fieldset class="mb-p">
+      <legend class="font-semibold">Activities to include</legend>
+      <.hint>Meetings and public events count as events.</.hint>
+      <label class="flex items-center gap-2 my-1"><input type="checkbox" checked /> Incidents</label>
+      <label class="flex items-center gap-2 my-1"><input type="checkbox" checked /> Exercises</label>
+      <label class="flex items-center gap-2 my-1"><input type="checkbox" /> Events</label>
+    </fieldset>
+  </div>
+
+  <p class="spec">
+    24px boxes. Several that answer one question sit in a fieldset whose legend is the question.
+  </p>
+
+  <h2>Radios</h2>
+  <div class="demo">
+    <fieldset class="mb-p">
+      <legend class="font-semibold">Hours to count</legend>
+      <label class="flex items-center gap-2 my-1">
+        <input type="radio" name="e-hours" checked /> Primary and secondary
+      </label>
+      <label class="flex items-center gap-2 my-1">
+        <input type="radio" name="e-hours" /> Primary only
+      </label>
+    </fieldset>
+  </div>
+
+  <p class="spec not-yet">Not used in the app yet. They take the checkbox list's markup.</p>
+
+  <h2 id="switch">Switch</h2>
+  <div class="demo">
+    <div class="max-w-100 space-y-4">
+      <.switch id="e-sound" label="Sound" checked>A tone for each scan.</.switch>
+      <.switch id="e-off" label="Off" />
+      <.switch id="e-disabled" label="Disabled" checked disabled />
+      <.switch id="e-focus" label="Keyboard focus" class="is-focus" />
+    </div>
+  </div>
+
+  <p class="spec">
+    Label on the leading edge, switch on the trailing edge, a 48 by 28px track. Used on taking attendance at the door and the ID card check.
+  </p>
+
+  <h3>Compact switch</h3>
+  <div class="demo">
+    <div class="max-w-100">
+      <.button variant={:success} class="w-full">Scan ID cards</.button>
+      <.switch id="e-compact" label="Sound" compact checked class="mt-2" />
+    </div>
+  </div>
+  <p class="spec">
+    One page-level setting under the page's main action, such as Sound under the scan button. A small muted label and the switch, together on the trailing edge. No hint. The track stays full size, since it's tapped in a hurry.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Label md semibold. Hint sm muted. Error md bold in <code>--danger</code>. Input md.</li>
+    <li>
+      Inputs are 40px tall with a 2px border. Small inputs (32px, sm text) are for filter bars only.
+    </li>
+    <li>Fields are 24px apart.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <ul>
+    <li>
+      <code>&lt;.input field=&#123;@form[:name]&#125; label="Full name"&gt;</code>, with the hint as its inner block.
+      <code>type</code>
+      picks select, date, textarea, password, or checkbox.
+    </li>
+    <li>
+      A checkbox or radio list is a <code>&lt;fieldset&gt;</code>
+      of labelled inputs, as on the organization page.
+    </li>
+    <li>
+      <code>&lt;.switch id="…" label="…"&gt;</code>, with <code>compact</code> for the small one.
+    </li>
+  </ul>
+</.shell>
