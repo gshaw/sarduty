@@ -45,7 +45,7 @@ defmodule Web.TeamSignupLive do
         </.a>
       </p>
       <.form for={@form} id="signup_form" phx-submit="save" phx-change="validate">
-        <.input field={@form[:email]} type="email" label="Your email" autocomplete="email">
+        <.input field={@form[:email]} type="email" label="Email" autocomplete="email">
           The email D4H has for you. We send your login code here.
         </.input>
         <.input

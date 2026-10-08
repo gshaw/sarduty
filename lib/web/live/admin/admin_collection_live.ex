@@ -23,8 +23,8 @@ defmodule Web.Admin.AdminCollectionLive do
     <.admin_tabs current={:admins} />
     <h2 class="heading">Admins</h2>
     <p class="max-w-prose">
-      Admins can open every team, refresh any team from D4H, and set up organizations. An
-      admin is added from a production console; see <code>docs/deployment.md</code>.
+      Admins can open every team, refresh any team from D4H, and set up organizations. Add an
+      admin from a production console. See <code>docs/deployment.md</code>.
     </p>
     <.table id="admins" rows={@admins} row_id={&"admin-#{&1.id}"} class="table-striped">
       <:col :let={admin} label="Email">{admin.email}</:col>

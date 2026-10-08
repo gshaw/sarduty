@@ -17,7 +17,7 @@ defmodule Web.ProposedChangeLive do
     waiting = for row <- change_set.rows, row.status == :proposed, do: row.id
 
     assign(socket,
-      page_title: "Proposed changes",
+      page_title: change_set.summary || "Attendance changes",
       change_set: change_set,
       selected: MapSet.new(waiting)
     )
@@ -74,7 +74,7 @@ defmodule Web.ProposedChangeLive do
 
   defp error_text(:decided), do: "These changes were already sent or discarded."
   defp error_text(:none_selected), do: "Select at least 1 change to send."
-  defp error_text(:no_team_key), do: "Save the team's D4H access key in Team settings first."
+  defp error_text(:no_team_key), do: "Save your team's D4H access key in team settings first."
 
   defp error_text(:published),
     do: "Attendance cannot be changed. The activity is published in D4H."

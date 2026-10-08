@@ -53,7 +53,7 @@ defmodule Web.MemberCardController do
          card = Repo.preload(card, member: [team: :organization]),
          {:ok, pkpass} <- BuildApplePass.call(card, DateTime.utc_now()) do
       send_download(conn, {:binary, pkpass},
-        filename: "#{team.subdomain}-member-card.pkpass",
+        filename: "#{team.subdomain}-id-card.pkpass",
         content_type: "application/vnd.apple.pkpass"
       )
     else

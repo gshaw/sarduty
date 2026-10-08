@@ -54,13 +54,13 @@ defmodule Web.Components.HomeMockups do
       )
 
     ~H"""
-    <figure class="home-browser" aria-label="A sample team's home page">
+    <figure class="home-browser" aria-label="A sample team's dashboard">
       <div class="home-browser-bar" aria-hidden="true">
         <i></i><i></i><i></i><span>sarduty.com/teams/coastrange</span>
       </div>
       <div class="home-app-bar">
         <span class="brand">SAR <span>Duty</span></span>
-        <span class="is-current">Home</span>
+        <span class="is-current">Dashboard</span>
         <span>Activities</span>
         <span class="home-hide-sm">Members</span>
         <span class="home-hide-sm">Qualifications</span>

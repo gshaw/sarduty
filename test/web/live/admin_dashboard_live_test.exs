@@ -124,7 +124,7 @@ defmodule Web.AdminDashboardLiveTest do
 
     {:ok, _team} =
       Team.update(team, %{
-        d4h_refresh_result: "Error: No D4H key. Save a team key in Team Settings."
+        d4h_refresh_result: "Error: No D4H access key. Save one in team settings."
       })
 
     {:ok, lv, _html} =
@@ -132,7 +132,7 @@ defmodule Web.AdminDashboardLiveTest do
       |> log_in_user(admin)
       |> live(~p"/admin")
 
-    assert has_element?(lv, "#team-#{team.id} .text-danger-1", "No D4H key.")
+    assert has_element?(lv, "#team-#{team.id} .text-danger-1", "No D4H access key.")
   end
 
   test "flags a team with no users", %{conn: conn} do

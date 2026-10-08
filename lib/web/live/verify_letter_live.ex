@@ -188,7 +188,7 @@ defmodule Web.VerifyLetterLive do
   defp result(%{result: %{status: :not_found}} = assigns) do
     ~H"""
     <div id="result-not-found">
-      <.band kind={:bad} title="No letter has this reference number">
+      <.band kind={:bad} title="No tax credit letter has this reference number">
         Check the number and try again
       </.band>
       <.panel>
@@ -204,7 +204,11 @@ defmodule Web.VerifyLetterLive do
       <.band :if={@result.status == :issued} kind={:ok} title="Issued by the team">
         Verified just now
       </.band>
-      <.band :if={@result.status == :replaced} kind={:warn} title="This letter was replaced">
+      <.band
+        :if={@result.status == :replaced}
+        kind={:warn}
+        title="This tax credit letter was replaced"
+      >
         Replaced on {Format.date_long(@result.replaced_at, @result.team.timezone)}
       </.band>
 

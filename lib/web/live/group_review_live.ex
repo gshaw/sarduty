@@ -164,7 +164,7 @@ defmodule Web.GroupReviewLive do
           disabled={MapSet.size(@selected) == 0 || is_nil(@current_team.d4h_access_key)}
           phx-disable-with="Applying…"
         >
-          Apply {count_changes(MapSet.size(@selected))} in D4H
+          Apply {count_changes(MapSet.size(@selected))}
         </.button>
         <.button navigate={~p"/teams/#{@current_team}/groups/#{@group.id}"}>Cancel</.button>
       </div>
