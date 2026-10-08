@@ -69,7 +69,6 @@
 
   /* The result of a check, big and in colour: a verified card, a scan at the door. */
   .band { --c: var(--info); display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--radius); background: var(--c); color: var(--on-fill); }
-  .band > :first-child { flex: none; width: 32px; height: 32px; mask-size: 100%; -webkit-mask-size: 100%; }
   .band-title { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 600; }
   .band-detail { font-size: var(--fs-sm); line-height: var(--lh-sm); }
   .band-success { --c: var(--success); }
@@ -93,3 +92,6 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 }
+
+/* The band's icon at 32px. Outside the layer: the icon plugin's own size is a utility. */
+.band > .band-icon { flex: none; width: 32px; height: 32px; mask-size: 100%; -webkit-mask-size: 100%; }

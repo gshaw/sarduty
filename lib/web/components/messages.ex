@@ -144,7 +144,7 @@ defmodule Web.Components.Messages do
   def band(assigns) do
     ~H"""
     <div class={["band", "band-#{@kind}", @class]} {@rest}>
-      <.icon name={@icon || kind_icon(@kind)} />
+      <.icon name={@icon || kind_icon(@kind)} class="band-icon" />
       <div>
         <div class="band-title">{@title}</div>
         <div :if={@inner_block != []} class="band-detail">{render_slot(@inner_block)}</div>
