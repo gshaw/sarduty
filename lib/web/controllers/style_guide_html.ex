@@ -138,9 +138,6 @@ defmodule Web.StyleGuideHTML do
       {"sarduty-favicon.svg", "SD. The browser tab."},
       {"priv/static/favicon.ico",
        "SD at 16, 32, and 48 pixels, for browsers that ask for it by name."},
-      {"sarduty-logo-wide.svg",
-       "Wide, as a picture. Not used: the top bar writes it as text, and pictures elsewhere are stacked."},
-      {"sarduty-logo-wide.png", "Wide, 828 by 256 pixels, as a PNG. Not used."},
       {"priv/apple/sarduty_logo.png", "Apple Wallet's logo and icon for a team with no logo."}
     ]
   end

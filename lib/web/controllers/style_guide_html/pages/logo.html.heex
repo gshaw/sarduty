@@ -22,7 +22,10 @@
         </figure>
       </div>
       <figure class="logo-wide">
-        <img src={~p"/images/sarduty-logo-wide.svg"} width="207" height="64" alt="SAR Duty" />
+        <%!-- The wide form is text, so this is the app's own bar, not a picture. --%>
+        <header class="site-bar">
+          <div class="site-bar-inner px-4"><span class="brand">SAR <span>Duty</span></span></div>
+        </header>
         <figcaption>Wide</figcaption>
       </figure>
     </div>
