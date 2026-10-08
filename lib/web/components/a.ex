@@ -25,7 +25,7 @@ defmodule Web.Components.A do
     <.link class={@link_class} target={@link_target} {@rest}>{render_slot(@inner_block)}<.icon
       :if={@external}
       name="hero-arrow-top-right-on-square-micro"
-      class="size-4 ml-0.5 align-[-3px]"
+      class="link-icon"
     /></.link>
     """
   end
@@ -39,5 +39,5 @@ defmodule Web.Components.A do
 
   defp determine_kind_classes(%{kind: :default}), do: ["link"]
   defp determine_kind_classes(%{kind: :custom}), do: []
-  defp determine_kind_classes(%{kind: :monochrome}), do: ["link text-base-content"]
+  defp determine_kind_classes(%{kind: :monochrome}), do: ["link text-text"]
 end

@@ -1,24 +1,31 @@
 <.shell title="Empty state" current={:empty_state}>
   <h1>Empty state</h1>
   <p class="lead">Why a list is empty and what to do.</p>
-  <.used_on />
 
   <div class="example">
-    <div class="empty-state">
-      <strong>No tax credit letters for 2025 yet</strong>
-      <p>Letters are made from attendance in D4H. Create one from the member list.</p>
-      <.button size={:sm} href="#">Go to tax credit letters</.button>
-    </div>
+    <.empty_state title="No groups yet">
+      SAR Duty copies groups from D4H when it refreshes.
+      <:action><.button size={:sm}>Refresh from D4H</.button></:action>
+    </.empty_state>
   </div>
 
   <h2>When to use</h2>
-  <p>A list that people expect to have rows, such as letters for a new year.</p>
+  <p>
+    In place of a page's main list when it has no rows, such as groups, qualifications, or
+    proposed changes.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>A short list inside a page, such as a member's groups. A sentence is enough.</p>
 
   <h2>How it works</h2>
-  <p>Say why it's empty and what to do, not only "No results". Link to the place to do it.</p>
+  <p>
+    The title says what is missing. The text says why, and what to do. Not only "No results". An
+    action, when there is one, goes under it.
+  </p>
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;div class="empty-state"&gt;</code>. Today empty lists say so in a line of text.
+    <code>&lt;.empty_state title="No groups yet"&gt;</code>, with the reason inside and an optional <code>&lt;:action&gt;</code>. Show it instead of the table, not under an empty one.
   </p>
 </.shell>

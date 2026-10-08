@@ -4,8 +4,8 @@
   .title-hero { font-size: 40px; line-height: 48px; font-weight: 700; margin-bottom: var(--sp-2); }
   @media (min-width: 40rem) { .title-hero { font-size: 56px; line-height: 64px; } }
 
-  .title { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; margin-bottom: var(--sp-2); }
-  .lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-2); }
+  .title { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; margin-bottom: var(--sp-4); }
+  .lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-4); }
   .heading { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin-bottom: var(--sp-2); }
   .subheading { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
   .label { font-weight: 600; color: var(--text); }
@@ -16,6 +16,8 @@
 
   .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
   .link:hover { color: var(--link-hover); text-decoration-thickness: 3px; }
+  /* The arrow after a link that leaves SAR Duty. */
+  .link-icon { margin-left: 2px; vertical-align: -3px; }
 
   p { margin-bottom: var(--sp-4); }
 
@@ -30,6 +32,21 @@
   .dl-section dd { margin-bottom: 0 !important; padding-bottom: 0 !important; border-bottom: 0 !important; }
 
   .mono { font-family: var(--mono); font-size: 0.875em; }
+
+  /* A block of code or a command to copy. */
+  .code-block { font-size: var(--fs-sm); line-height: var(--lh-sm); padding: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); border-radius: var(--radius); background: var(--surface-alt); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  /* Small capitals over a value, such as the facts on a verified card. */
+  .caps { font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+
+  /* Notes at the end of a page, under a rule: how it works, who to ask. */
+  .small-print { margin-top: var(--sp-8); padding-top: var(--sp-6); border-top: 1px solid var(--border-subtle); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  .small-print h2 { font-weight: 600; color: var(--text); margin-bottom: var(--sp-1); }
+  .small-print p { margin-bottom: var(--sp-2); }
+  .small-print > :last-child { margin-bottom: 0; }
+
+  /* A fieldset's legend reads as a label. */
+  legend { font-weight: 600; }
 }
 
 /* Rendered Markdown (the typography plugin's .prose) in the design system's colours, so it

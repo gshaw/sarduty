@@ -15,13 +15,15 @@ defmodule Web.Admin.OrganizationCollectionLive do
     ~H"""
     <h1 class="title">Admin</h1>
     <.admin_tabs current={:organizations} />
-    <div class="mb-p flex flex-wrap items-center justify-between gap-p">
-      <h2 class="heading mb-0">Organizations</h2>
+    <div class="heading-row">
+      <h2 class="heading">Organizations</h2>
       <.button navigate={~p"/admin/orgs/new"} variant={:success} size={:sm}>
         New organization
       </.button>
     </div>
-    <p :if={@organizations == []} id="no-organizations">No organizations yet.</p>
+    <.empty_state :if={@organizations == []} id="no-organizations" title="No organizations yet">
+      Add one with New organization.
+    </.empty_state>
     <.table
       :if={@organizations != []}
       id="organizations"
@@ -30,13 +32,13 @@ defmodule Web.Admin.OrganizationCollectionLive do
       class="table-striped"
     >
       <:col :let={organization} label="Organization">
-        <div class="flex items-center gap-2">
+        <div class="media">
           <img
             :if={organization.logo}
             src={Web.OrganizationController.logo_url(organization)}
             width="32"
             height="32"
-            class="size-8 shrink-0 rounded"
+            class="size-8 rounded"
             alt=""
           />
           <div>

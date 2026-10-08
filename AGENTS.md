@@ -177,12 +177,19 @@ fi
   and its glossary terms. Run its checklist before you commit.
 - **The look comes from the design system**, shown at `/styles`. Colours, type sizes,
   and spaces are tokens in [assets/css/tokens.css](assets/css/tokens.css), with light and
-  dark values. Use the theme's colour names (`text-secondary-1`, `bg-base-2`) or the
-  tokens, never raw Tailwind colours like `text-zinc-600`, which don't follow dark mode.
+  dark values. Classes speak the same names. Spaces are Tailwind's numbers, but only the
+  guide's 8: 1, 2, 3, 4, 6, 8, 12, and 16 (`mt-6` is `--sp-6`, 24px). A colour is the
+  property and its token (`text-text-muted`, `bg-surface-alt`). Anything else, like
+  `mt-5`, `mt-10`, or `text-zinc-600`, builds nothing, and
+  `test/web/design_system_test.exs` fails on it.
+- **Reach for a component or a class before utilities.** Banners, warning text, empty
+  states, the error summary, back links, and the result band are components; `.hint`,
+  `.lead`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
+  classes. Utilities on the scale are for one-off layout only.
 - **The style guide's examples are the app's own components**, styled only by `app.css`.
   Its own stylesheet is just its frame. A new shared component gets its own page under
-  Components, listed in `Web.StyleGuideHTML.groups/0` A to Z, with an example, when to use
-  it, and `<.used_on>` naming the app's pages that use it (none: "Not used yet").
+  Components, listed in `Web.StyleGuideHTML.groups/0` A to Z, with an example and when to
+  use it. A pattern renders the same component the page does, never a copy of its markup.
 - Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
   link styled as a button. Badges are `<.badge kind={:incident}>`. Both check their values
   at compile time, so never write `class="btn btn-success"` or `class="badge"` by hand.

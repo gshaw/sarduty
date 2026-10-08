@@ -64,7 +64,7 @@ defmodule Web.TeamSignupLive do
           <.button variant={:success} phx-disable-with="Checking with D4H…">Sign up</.button>
         </.form_actions>
       </.form>
-      <p class="text-secondary-1">
+      <p class="text-text-muted">
         Already on SAR Duty?
         <.a navigate={~p"/login"}>Log in</.a>
       </p>

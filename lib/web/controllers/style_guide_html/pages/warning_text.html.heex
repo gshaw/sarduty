@@ -1,13 +1,11 @@
 <.shell title="Warning text" current={:warning_text}>
   <h1>Warning text</h1>
   <p class="lead">A consequence people must know before they act.</p>
-  <.used_on pages={["tax credit letters"]} />
 
   <div class="example">
-    <div class="warning-text">
-      <.icon name="hero-exclamation-triangle" class="size-6" />
-      <span>Attendance cannot be changed once the activity is published in D4H.</span>
-    </div>
+    <.warning_text>
+      Attendance cannot be changed once the activity is published. Unpublish it in D4H first.
+    </.warning_text>
   </div>
 
   <h2>When to use</h2>
@@ -17,9 +15,5 @@
   <p>A risk about the whole page. Use a warning <a href={page_path(:banner)}>banner</a>.</p>
 
   <h2>In the app</h2>
-  <p>
-    <code>&lt;div class="warning-text"&gt;</code>, with a 24px
-    <code>hero-exclamation-triangle</code>
-    icon and the text in a span.
-  </p>
+  <p><code>&lt;.warning_text&gt;</code>, with the warning inside. It draws the icon.</p>
 </.shell>

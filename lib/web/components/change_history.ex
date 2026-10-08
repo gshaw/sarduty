@@ -20,14 +20,14 @@ defmodule Web.Components.ChangeHistory do
       id={@id}
       rows={@entries}
       row_id={&"#{@id}-#{&1.id}"}
-      class="w-full table-striped table-stack"
+      class="table-striped table-stack"
     >
       <:col :let={entry} label="When" class="w-px whitespace-nowrap">
         {when_text(entry, @timezone)}
       </:col>
       <:col :let={entry} label="Change">
         {entry.text}
-        <div :if={entry[:reason]} class="text-secondary-1">{entry.reason}</div>
+        <div :if={entry[:reason]} class="text-text-muted">{entry.reason}</div>
       </:col>
       <:col :let={entry} label="By">
         {by_text(entry)}

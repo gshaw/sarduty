@@ -34,7 +34,7 @@ defmodule Web.ActivityCollectionLive do
     ~H"""
     <.breadcrumbs team={@current_team} />
 
-    <h1 class="title mb-p">Activities</h1>
+    <h1 class="title">Activities</h1>
 
     <.activity_filter_table
       form={@form}

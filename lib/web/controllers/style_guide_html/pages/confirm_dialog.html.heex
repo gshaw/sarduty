@@ -1,13 +1,6 @@
 <.shell title="Confirm dialog" current={:confirm_dialog}>
   <h1>Confirm dialog</h1>
   <p class="lead">A question before a change that can't be undone.</p>
-  <.used_on pages={[
-    "tax credit letters",
-    "group rules",
-    "ID cards",
-    "MCP tokens",
-    "taking attendance"
-  ]} />
 
   <div class="demo">
     <.button
@@ -30,23 +23,6 @@
     <li>The browser shows its own dialog, with OK and Cancel.</li>
   </ul>
 
-  <h3>A dialog of our own</h3>
-  <div class="demo">
-    <div class="dialog" role="dialog" aria-labelledby="confirm-title-static">
-      <h2 id="confirm-title-static">Delete the First Aid clause?</h2>
-      <p class="paragraph">
-        Its 3 qualifications are removed from the group rule. Members stay in the group until you apply the rule.
-      </p>
-      <.form_actions>
-        <.button variant={:danger}>Delete clause</.button>
-        <.button>Cancel</.button>
-      </.form_actions>
-    </div>
-  </div>
-  <p class="spec not-yet">
-    Not used yet: a <code>.dialog</code>
-    whose buttons say what happens. Today every confirm is the browser's.
-  </p>
   <script>
     document.querySelectorAll("[data-confirm]").forEach(function (button) {
       button.addEventListener("click", function () { window.confirm(button.dataset.confirm); });

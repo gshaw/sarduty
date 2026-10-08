@@ -15,13 +15,47 @@
   </div>
   <p class="spec">
     In the app: <code>&lt;.breadcrumbs&gt;</code>, then an <code>h1</code>
-    with <code>class="title"</code>. A page's actions sit with its content, not in the header.
+    with <code>class="title"</code>, which keeps 16px under it. A page's actions sit with its content, not in the header.
+  </p>
+
+  <h2>A heading with an action</h2>
+  <div class="demo">
+    <div class="heading-row">
+      <h2 class="heading">Organizations</h2>
+      <.button variant={:success} size={:sm}>New organization</.button>
+    </div>
+  </div>
+  <p class="spec">
+    <code>.heading-row</code>: the heading on the left, its action on the right, wrapping on a phone.
+  </p>
+
+  <h2>A picture beside its words</h2>
+  <div class="demo">
+    <div class="media">
+      <img src={~p"/images/sarduty-logo.svg"} alt="" class="logo-md" />
+      <div>
+        <p class="subheading mb-0">Squamish SAR</p>
+        <p class="hint mb-0">BC Search and Rescue Association</p>
+      </div>
+    </div>
+  </div>
+  <p class="spec">
+    <code>.media</code>: a logo or photo, then its words, centred. Photos and logos use <code>.photo</code>, <code>.photo-sm</code>, <code>.logo-md</code>, and <code>.logo-lg</code>, or a
+    size from the <a href={page_path(:spacing)}>spacing</a> scale, such as <code>size-8</code>.
   </p>
 
   <h2>Page width</h2>
   <ul>
-    <li>Content fills up to 1280px; tables use the full width.</li>
-    <li>Text and forms stop at 640 to 800px, so lines stay readable.</li>
+    <li>Content fills up to 960px; tables use the full width.</li>
+    <li>
+      Text, forms, and maps stop at 640px with <code>.measure</code>, so lines stay readable. An article uses <code>max-w-prose</code>.
+    </li>
+    <li>
+      A record's page puts its <a href={page_path(:detail_list)}>details</a>
+      in a sidebar beside the main
+      content: <code>.content-wrapper</code>, with <code>.content-1/3</code>
+      and <code>.content-2/3</code>.
+    </li>
     <li>Desktop first. On a phone, layouts stack and wide tables scroll sideways.</li>
   </ul>
 </.shell>

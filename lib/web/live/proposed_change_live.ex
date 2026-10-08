@@ -90,7 +90,7 @@ defmodule Web.ProposedChangeLive do
     </.breadcrumbs>
 
     <h1 class="title">{@change_set.summary || "Attendance changes"}</h1>
-    <dl id="change-set-details" class="mb-p">
+    <dl id="change-set-details" class="mb-4">
       <div :if={@change_set.activity}>
         <dt>Activity</dt>
         <dd>
@@ -120,7 +120,7 @@ defmodule Web.ProposedChangeLive do
       </div>
     </dl>
 
-    <p :if={ChangeSet.waiting?(@change_set)} class="text-secondary-1 mb-p">
+    <p :if={ChangeSet.waiting?(@change_set)} class="lead">
       Clear the box next to any change you do not want. SAR Duty reads D4H again before it
       sends, and skips a change if someone changed that attendance in D4H first.
     </p>
@@ -130,7 +130,7 @@ defmodule Web.ProposedChangeLive do
         id="proposed-rows"
         rows={@change_set.rows}
         row_id={&"row-#{&1.id}"}
-        class="w-full table-striped table-stack mb-p"
+        class="table-striped table-stack"
       >
         <:col :let={row} :if={ChangeSet.waiting?(@change_set)} label="" class="w-px">
           <input
@@ -147,14 +147,14 @@ defmodule Web.ProposedChangeLive do
         </:col>
         <:col :let={row} label="Change">
           {describe(row, @current_team.timezone)}
-          <div :if={row.reason} class="text-secondary-1">{row.reason}</div>
+          <div :if={row.reason} class="hint">{row.reason}</div>
         </:col>
         <:col :let={row} :if={!ChangeSet.waiting?(@change_set)} label="Result">
           {result(row)}
         </:col>
       </.table>
 
-      <div :if={ChangeSet.waiting?(@change_set)} class="flex flex-wrap gap-2">
+      <.form_actions :if={ChangeSet.waiting?(@change_set)}>
         <.button
           id="send"
           variant={:primary}
@@ -171,7 +171,7 @@ defmodule Web.ProposedChangeLive do
         >
           Discard changes
         </.button>
-      </div>
+      </.form_actions>
     </.form>
     """
   end

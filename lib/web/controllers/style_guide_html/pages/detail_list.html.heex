@@ -1,15 +1,8 @@
 <.shell title="Detail list" current={:detail_list}>
   <h1>Detail list</h1>
   <p class="lead">Key facts about one record.</p>
-  <.used_on pages={[
-    "an activity",
-    "a member",
-    "a group",
-    "a qualification",
-    "a tax credit letter"
-  ]} />
 
-  <div class="demo max-w-100">
+  <div class="demo max-w-sm">
     <dl>
       <dt>Kind</dt>
       <dd><.activity_badges activity={hd(activities())} /></dd>

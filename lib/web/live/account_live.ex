@@ -13,54 +13,21 @@ defmodule Web.AccountLive do
   def render(assigns) do
     ~H"""
     <div>
-      <h1 class="heading mb-4">Account</h1>
-      <p id="account-email" class="mb-4">
+      <h1 class="heading">Account</h1>
+      <p id="account-email">
         Logged in as {@current_user.email}. Your email and your teams come from D4H.
       </p>
-      <nav :if={@managed_teams != []} class="space-y-2" aria-label="Team settings">
-        <.navlist_item
-          :for={team <- @managed_teams}
-          id={"account-team-#{team.id}-settings"}
-          path={~p"/teams/#{team}/settings"}
-          icon="hero-users"
-          title={team.name}
-        >
-          Team settings
-        </.navlist_item>
+      <nav :if={@managed_teams != []} aria-label="Team settings">
+        <h2 class="subheading">Team settings</h2>
+        <ul class="action-list">
+          <li :for={team <- @managed_teams}>
+            <.a id={"account-team-#{team.id}-settings"} navigate={~p"/teams/#{team}/settings"}>
+              {team.name}
+            </.a>
+          </li>
+        </ul>
       </nav>
     </div>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :path, :string, required: true
-  attr :icon, :string, required: true
-  attr :title, :string, required: true
-  slot :inner_block
-
-  def navlist_item(assigns) do
-    ~H"""
-    <.a
-      id={@id}
-      navigate={@path}
-      kind={:custom}
-      class={[
-        "flex items-center",
-        "bg-base-0 hover:bg-base-2 border border-hr hover:border-base-content",
-        "px-3 py-2 rounded-md",
-        "focus:outline-none focus:ring-2 focus:ring-base-content"
-      ]}
-    >
-      <span class="mr-2">
-        <.icon name={@icon} class="h-6 w-6" />
-      </span>
-      <div>
-        <div>{@title}</div>
-        <div :if={@inner_block != []} class="truncate text-sm text-secondary-1">
-          {render_slot(@inner_block)}
-        </div>
-      </div>
-    </.a>
     """
   end
 end

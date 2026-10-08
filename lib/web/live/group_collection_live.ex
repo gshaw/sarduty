@@ -27,17 +27,20 @@ defmodule Web.GroupCollectionLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team} />
-    <h1 class="title mb-p">{@page_title}</h1>
+    <h1 class="title">{@page_title}</h1>
 
-    <p class="mb-p text-secondary-1 text-sm">
-      {Service.Format.count(length(@groups), one: "%d group", many: "%d groups")}
-    </p>
+    <div :if={@groups != []} class="table-summary">
+      <span class="table-summary-count">
+        {Service.Format.count(length(@groups), one: "%d group", many: "%d groups")}
+      </span>
+    </div>
 
     <.table
+      :if={@groups != []}
       id="group_collection"
       rows={@groups}
       row_id={&"group-#{&1.group.id}"}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={g} label="Group">
         <.a navigate={~p"/teams/#{@current_team}/groups/#{g.group.id}"}>{g.group.title}</.a>
@@ -50,9 +53,9 @@ defmodule Web.GroupCollectionLive do
       </:col>
     </.table>
 
-    <p :if={@groups == []} class="text-secondary-1">
-      No groups yet. SAR Duty copies groups from D4H when it refreshes.
-    </p>
+    <.empty_state :if={@groups == []} id="no-groups" title="No groups yet">
+      SAR Duty copies groups from D4H when it refreshes.
+    </.empty_state>
     """
   end
 

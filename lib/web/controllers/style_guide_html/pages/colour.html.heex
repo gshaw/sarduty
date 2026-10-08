@@ -21,11 +21,11 @@
           </div>
         </div>
       </div>
-      <div class="example dash-card">
+      <div class="example card">
         <p class="paragraph">
           Body text with
           <.a href="#">a link</.a>
-          and <span class="text-secondary-1">muted text</span>.
+          and <span class="text-text-muted">muted text</span>.
         </p>
         <div class="flex flex-wrap items-center gap-2">
           <.button variant={:primary}>Primary</.button>
@@ -37,6 +37,13 @@
     </div>
   </div>
 
+  <h2>In a class list</h2>
+  <p>
+    A colour is the property and the token's name: <code>text-text-muted</code>, <code>bg-surface-alt</code>, <code>border-border-subtle</code>. Every token is there and
+    nothing else, so a raw Tailwind colour such as <code>text-zinc-600</code> builds nothing.
+    Reach for a class that already says it first: <code>.hint</code> is small muted text.
+  </p>
+
   <h2>What each token is for</h2>
   <%= for {group, tokens} <- palette() do %>
     <h4>{group}</h4>
@@ -46,6 +53,9 @@
       </:col>
       <:col :let={{_name, light, _dark, _use}} label="Light" class="w-px mono">{light}</:col>
       <:col :let={{_name, _light, dark, _use}} label="Dark" class="w-px mono">{dark}</:col>
+      <:col :let={{name, _light, _dark, _use}} label="Class" class="w-px mono whitespace-nowrap">
+        {token_class(name)}
+      </:col>
       <:col :let={{_name, _light, _dark, use}} label="Use">{use}</:col>
     </.table>
   <% end %>
@@ -62,7 +72,7 @@
       fills. In dark mode the fills are too dark to read as text.
     </li>
     <li>
-      Red and green always come with a word: <span class="text-success-1 font-bold">Add</span>, <span class="text-danger-1 font-bold">Remove</span>. Colour alone is never the only signal.
+      Red and green always come with a word: <strong class="text-success-text">Add</strong>, <strong class="text-danger-text">Remove</strong>. Colour alone is never the only signal.
     </li>
     <li>Focus is <code>--focus</code> yellow in both modes, so it reads the same everywhere.</li>
     <li>The D4H activity colours match D4H, so people know them on sight.</li>

@@ -1,6 +1,8 @@
 defmodule Web.AttendanceLinkLive do
   use Web, :live_view_narrow_layout
 
+  import Web.Components.Scanner
+
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
@@ -201,7 +203,7 @@ defmodule Web.AttendanceLinkLive do
     assigns = assign(assigns, :text, text)
 
     ~H"""
-    <p id="message" role="status" class="mt-p mb-0 font-semibold">{@text}</p>
+    <p id="message" role="status" class="mt-4 mb-0 font-semibold">{@text}</p>
     """
   end
 
@@ -209,27 +211,24 @@ defmodule Web.AttendanceLinkLive do
     assigns = assign(assigns, kind: kind, text: text)
 
     ~H"""
-    <div
+    <.band
       id="message"
       role="status"
-      class={[
-        "mt-p flex items-center gap-3 p-4 rounded-lg text-(--on-fill)",
-        @kind == :arrived && "bg-(--success)",
-        @kind == :left && "bg-(--info)",
-        @kind == :error && "bg-(--danger)"
-      ]}
-    >
-      <.icon name={message_icon(@kind)} class="size-10 shrink-0" />
-      <span class={["font-semibold", @kind == :error && "text-xl", @kind != :error && "text-2xl"]}>
-        {@text}
-      </span>
-    </div>
+      kind={message_kind(@kind)}
+      icon={message_icon(@kind)}
+      title={@text}
+      class="mt-4"
+    />
     """
   end
 
+  defp message_kind(:arrived), do: :success
+  defp message_kind(:left), do: :info
+  defp message_kind(:error), do: :danger
+
   defp message_icon(:arrived), do: "hero-arrow-right-end-on-rectangle"
   defp message_icon(:left), do: "hero-arrow-left-start-on-rectangle"
-  defp message_icon(:error), do: "hero-x-circle"
+  defp message_icon(:error), do: "hero-exclamation-circle"
 
   def render(%{link: nil} = assigns) do
     ~H"""
@@ -242,22 +241,22 @@ defmodule Web.AttendanceLinkLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title mb-0">Take attendance</h1>
-    <p id="activity-summary" class="mt-1 text-secondary-1">
-      <b class="text-base-content">{@activity.title}</b>
+    <h1 class="title mb-1">Take attendance</h1>
+    <p id="activity-summary" class="text-text-muted">
+      <b class="text-text">{@activity.title}</b>
       · {@team.name} · {Service.Format.month_day_time(@activity.started_at, @team.timezone)}–{Service.Format.time_short(
         @activity.finished_at,
         @team.timezone
       )}
     </p>
 
-    <div id="kind" class="mt-p flex gap-2" role="group" aria-label="Members are">
+    <div id="kind" class="mt-4 flex gap-2" role="group" aria-label="Members are">
       <.button
         :for={{kind, label} <- [{"arrived", "Arriving"}, {"left", "Leaving"}]}
         id={"kind-#{kind}"}
         type="button"
         variant={if @kind == kind, do: :primary, else: :default}
-        class="flex-1 justify-center"
+        class="flex-1"
         aria-pressed={to_string(@kind == kind)}
         phx-click="set_kind"
         phx-value-kind={kind}
@@ -267,7 +266,7 @@ defmodule Web.AttendanceLinkLive do
     </div>
 
     <form id="door-form" phx-change="change" phx-submit="pick">
-      <div class="mt-p">
+      <div class="mt-4">
         <.input type="time" id="override" name="override" value={@override} label="Time (optional)">
           Leave this empty to use the time of each scan. Set it to catch up from a paper list.
         </.input>
@@ -279,48 +278,18 @@ defmodule Web.AttendanceLinkLive do
 
       <.message :if={@message} message={@message} />
 
-      <div
-        id="scanner"
-        phx-hook="QRScanner"
-        phx-update="ignore"
+      <.qr_scanner
+        label="Scan ID cards"
+        variant={:success}
         data-continuous
         data-override-input="override"
-        class="mt-p"
-      >
-        <div data-scan-state class="group">
-          <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
-          <div class="group-data-scanning:hidden">
-            <.button
-              type="button"
-              variant={:success}
-              size={:lg}
-              class="w-full justify-center"
-              data-scan-start
-            >
-              Scan ID cards
-            </.button>
-          </div>
-          <div class="hidden group-data-scanning:block mt-2">
-            <.button type="button" class="w-full justify-center" data-scan-stop>
-              Stop scanning
-            </.button>
-          </div>
-        </div>
-        <.switch
-          id="sound-switch"
-          label="Sound"
-          compact
-          class="mt-2"
-          checked
-          phx-hook="SoundSwitch"
-          phx-update="ignore"
-        />
-      </div>
-      <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
+        class="mt-4"
+      />
+      <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
         The camera did not start. Allow camera access, or find members by name.
       </p>
 
-      <div class="mt-p">
+      <div class="mt-4">
         <.input
           type="search"
           id="search"
@@ -346,11 +315,11 @@ defmodule Web.AttendanceLinkLive do
       </p>
     </form>
 
-    <h2 class="heading mt-p">Recorded</h2>
+    <h2 class="heading mt-4">Recorded</h2>
     <p :if={@scans == []} id="no-scans">Nobody yet. Scans show here as you take them.</p>
     <.table :if={@scans != []} id="scans" rows={@scans} class="table-striped">
       <:col :let={scan} label="Name">{scan.member.name}</:col>
-      <:col :let={scan} label="Scan" class="whitespace-nowrap tabular-nums">
+      <:col :let={scan} label="Scan" class="whitespace-nowrap">
         {if scan.kind == "arrived", do: "Arrived", else: "Left"} {Service.Format.time_short(
           AttendanceScan.time(scan),
           @team.timezone

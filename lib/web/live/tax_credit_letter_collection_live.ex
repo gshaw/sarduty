@@ -40,22 +40,17 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <:item label={@page_title} />
     </.breadcrumbs>
 
-    <h1 class="title mb-p">{@page_title}</h1>
+    <h1 class="title">{@page_title}</h1>
 
     <.sent_banner :if={@sent} sent={@sent} />
-    <div :if={@sending} id="letters-sending" class="banner" role="status">
-      <div class="banner-title">
-        <.icon name="hero-envelope" class="size-5" />Sending letters
-      </div>
-      <div class="banner-body">
-        <p>
-          Creating and emailing {Service.Format.count(@sending.count,
-            one: "%d tax credit letter",
-            many: "%d tax credit letters"
-          )} for {@sending.year}. This page updates when they are done.
-        </p>
-      </div>
-    </div>
+    <.banner :if={@sending} id="letters-sending" title="Sending letters" role="status">
+      <p>
+        Creating and emailing {Service.Format.count(@sending.count,
+          one: "%d tax credit letter",
+          many: "%d tax credit letters"
+        )} for {@sending.year}. This page updates when they are done.
+      </p>
+    </.banner>
     <.form
       for={@form}
       id="tax_credit_letter_filter_form"
@@ -105,7 +100,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       rows={@records}
       sort={@filter_options.sort}
       path_fn={@path_fn}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:header_row>
         <th colspan="3"></th>
@@ -130,7 +125,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         :let={record}
         label="Primary"
         align="right"
-        class="w-px whitespace-nowrap tabular-nums"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "primary"}]}
       >
         {Service.Format.duration_as_hours_minutes_medium(record.primary_minutes)}
@@ -139,7 +134,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         :let={record}
         label="Secondary"
         align="right"
-        class="w-px whitespace-nowrap tabular-nums"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "secondary"}]}
       >
         {Service.Format.duration_as_hours_minutes_medium(record.secondary_minutes)}
@@ -148,7 +143,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         :let={record}
         label="Total"
         align="right"
-        class="w-px whitespace-nowrap tabular-nums"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "total"}]}
       >
         {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
@@ -162,7 +157,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   defp send_all(assigns) do
     ~H"""
-    <div id="send-all" class="mb-p flex flex-wrap items-center gap-p">
+    <div id="send-all" class="mb-4 flex flex-wrap items-center gap-4">
       <.button
         id="send-all-button"
         variant={:success}
@@ -171,17 +166,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
       >
         Send {Service.Format.count(@count, one: "%d letter", many: "%d letters")}
       </.button>
-      <span class="text-sm text-secondary-1">
+      <span class="hint">
         Creates and emails a letter to each member shown with hours and no letter yet.
       </span>
-      <div :if={!@team.signature} id="send-all-unsigned" class="warning-text w-full">
-        <.icon name="hero-exclamation-triangle" class="size-6" />
-        <span>
-          These letters go out unsigned. Add the signer's signature in
-          <.a navigate={~p"/teams/#{@team}/settings"}>team settings</.a>
-          first.
-        </span>
-      </div>
+      <.warning_text :if={!@team.signature} id="send-all-unsigned" class="w-full">
+        These letters go out unsigned. Add the signer's signature in
+        <.a navigate={~p"/teams/#{@team}/settings"}>team settings</.a>
+        first.
+      </.warning_text>
     </div>
     """
   end
@@ -194,28 +186,23 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   defp sent_banner(assigns) do
     ~H"""
-    <div id="letters-sent" class="banner banner-success" role="status">
-      <div class="banner-title">
-        <.icon name="hero-check-circle" class="size-5" />Letters sent
-      </div>
-      <div class="banner-body">
-        <p>
-          <strong>
-            {Service.Format.count(@sent.created,
-              one: "%d tax credit letter",
-              many: "%d tax credit letters"
-            )} created for {@sent.year}. {@sent.emailed} emailed.
-          </strong>
-        </p>
-        <p :if={@sent.no_email != []} id="letters-no-email">
-          No email in D4H, so not emailed: {Enum.map_join(@sent.no_email, ", ", & &1.name)}.
-        </p>
-        <p :if={@sent.failed != []} id="letters-failed">
-          The email did not send to {Enum.map_join(@sent.failed, ", ", & &1.name)}. Open
-          their letters to try again.
-        </p>
-      </div>
-    </div>
+    <.banner id="letters-sent" kind={:success} title="Letters sent">
+      <p>
+        <strong>
+          {Service.Format.count(@sent.created,
+            one: "%d tax credit letter",
+            many: "%d tax credit letters"
+          )} created for {@sent.year}. {@sent.emailed} emailed.
+        </strong>
+      </p>
+      <p :if={@sent.no_email != []} id="letters-no-email">
+        No email in D4H, so not emailed: {Enum.map_join(@sent.no_email, ", ", & &1.name)}.
+      </p>
+      <p :if={@sent.failed != []} id="letters-failed">
+        The email did not send to {Enum.map_join(@sent.failed, ", ", & &1.name)}. Open
+        their letters to try again.
+      </p>
+    </.banner>
     """
   end
 
@@ -223,7 +210,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     ~H"""
     <%= if @record.tax_credit_letter_id do %>
       <.a navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}>
-        <span class="font-mono text-sm">{@record.tax_credit_letter_ref_id}</span>
+        <span class="mono">{@record.tax_credit_letter_ref_id}</span>
       </.a>
       <.badge
         :if={@record.letter_hours_status == :changed}

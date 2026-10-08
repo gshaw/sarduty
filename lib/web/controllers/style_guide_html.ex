@@ -3,10 +3,13 @@ defmodule Web.StyleGuideHTML do
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityFilterTable, only: [activity_table: 1]
+  import Web.Components.AttendanceImport
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
   import Web.Components.D4H
+  import Web.Components.GroupRule
   import Web.Components.Pagination
+  import Web.Components.Scanner
   import Web.Components.Table
 
   alias Web.StyleGuideHTML.SampleData
@@ -35,12 +38,12 @@ defmodule Web.StyleGuideHTML do
        [{:index, "Overview", "What the guide is for and the principles behind it."}]},
       {:foundations, "Foundations", "What every page shares: colour, type, space, and words.",
        [
-         {:colour, "Colour", "Every token in light and dark, and what each is for."},
+         {:colour, "Colour", "Every token in light and dark, what each is for, and its class."},
          {:focus, "Focus", "The yellow keyboard focus on everything you can reach."},
          {:icons, "Icons", "The small set of icons, their sizes, and when to use one."},
-         {:layout, "Layout", "The page header and how wide content goes."},
+         {:layout, "Layout", "The page header, how wide content goes, and the layout classes."},
          {:logo, "Logo", "The logo's forms, sizes, and files."},
-         {:spacing, "Spacing", "The 8 spaces on a 4px grid."},
+         {:spacing, "Spacing", "The 8 spaces on a 4px grid, and their classes."},
          {:typography, "Typography", "The type scale, headings, body text, numbers, and links."},
          {:writing, "Writing",
           "The rules and glossary for every word a person reads. Agents follow it."}
@@ -48,24 +51,25 @@ defmodule Web.StyleGuideHTML do
       {:components, "Components", "The parts pages are built from, one per page.",
        [
          {:back_link, "Back link", "A way back for pages outside the main tree."},
+         {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
          {:button, "Button", "Kinds, sizes, states, and rows of buttons."},
          {:callout, "Callout", "Advice set apart beside a form field."},
-         {:card, "Card", "A box for one topic on a dashboard."},
+         {:card, "Card", "A box for one topic: on a dashboard, or under a result."},
          {:chart, "Chart", "Columns, lines, a calendar, a week grid, and a bar list."},
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
          {:detail_list, "Detail list", "Key facts about one record."},
-         {:details, "Details", "A question that opens to its answer."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},
          {:map, "Map", "A dot per activity on a Mapbox map."},
          {:pagination, "Pagination", "Pages under a long table."},
+         {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
-         {:table, "Table", "Dense rows, sorting, header groups, and compact tables."},
+         {:table, "Table", "Dense rows, sorting, and header groups."},
          {:tabs, "Tabs", "Pages about one record, a link each."},
          {:tag, "Tag", "A word or two of status."},
          {:toast, "Toast", "The result of what the person did. It comes and goes."},
@@ -112,19 +116,6 @@ defmodule Web.StyleGuideHTML do
     end)
   end
 
-  # Under a component's lead: the app's pages that use it, or a tag when none does yet.
-  attr :pages, :list, default: []
-  attr :rest, :global
-
-  def used_on(assigns) do
-    ~H"""
-    <p :if={@pages != []} class="used-on" {@rest}>Used on {Enum.join(@pages, ", ")}.</p>
-    <p :if={@pages == []} class="used-on" {@rest}>
-      <.badge>Not used yet</.badge>
-    </p>
-    """
-  end
-
   # The logo files that uv run assets/brand/draw_logo.py writes, and where each goes.
   def logo_files do
     [
@@ -166,14 +157,20 @@ defmodule Web.StyleGuideHTML do
       {"x-mark", "hero-x-mark-micro", "hero-x-mark-mini", "hero-x-mark",
        "Close a toast, remove a chip, close the phone menu"},
       {"check-circle", "hero-check-circle-micro", "hero-check-circle-mini", "hero-check-circle",
-       "Success banners and toasts"},
+       "Success banners, toasts, and bands"},
       {"information-circle", "hero-information-circle-micro", "hero-information-circle-mini",
-       "hero-information-circle", "Info banners and toasts"},
+       "hero-information-circle", "Info banners and bands"},
       {"exclamation-triangle", "hero-exclamation-triangle-micro",
        "hero-exclamation-triangle-mini", "hero-exclamation-triangle",
-       "Warning banners and warning text"},
+       "Warning banners, warning text, and bands"},
       {"exclamation-circle", "hero-exclamation-circle-micro", "hero-exclamation-circle-mini",
-       "hero-exclamation-circle", "Error banners, toasts, and error summaries"}
+       "hero-exclamation-circle", "Danger banners, error toasts, and bands"},
+      {"arrow-right-end-on-rectangle", "hero-arrow-right-end-on-rectangle-micro",
+       "hero-arrow-right-end-on-rectangle-mini", "hero-arrow-right-end-on-rectangle",
+       "A member arrived, at the door"},
+      {"arrow-left-start-on-rectangle", "hero-arrow-left-start-on-rectangle-micro",
+       "hero-arrow-left-start-on-rectangle-mini", "hero-arrow-left-start-on-rectangle",
+       "A member left, at the door"}
     ]
   end
 
@@ -262,12 +259,12 @@ defmodule Web.StyleGuideHTML do
     [
       {1, 4, "Tag padding, label to input"},
       {2, 8, "Gaps between buttons in a row, hint to input"},
-      {3, 12, "Table cell sides, card padding"},
-      {4, 16, "Paragraph spacing, panel padding"},
-      {5, 24, "Between form fields, page gutter"},
-      {6, 32, "Between page header and content"},
-      {7, 48, "Above a section heading"},
-      {8, 64, "Bottom of the page"}
+      {3, 12, "Table cell sides, a picture to its words"},
+      {4, 16, "Paragraph spacing, card padding, title to content"},
+      {6, 24, "Between form fields, page gutter"},
+      {8, 32, "Between sections of a page, page bottom"},
+      {12, 48, "Above a section heading in the guide"},
+      {16, 64, "Top of a page, under the top bar"}
     ]
   end
 
@@ -300,6 +297,15 @@ defmodule Web.StyleGuideHTML do
 
   def palette, do: @palette
 
+  # The class a token is most often used as: text for text colours, border for rules, and
+  # bg for surfaces and fills. Any property works: border-danger-text, text-incident.
+  @text_tokens ~w(text text-muted link link-hover success-text danger-text)
+  @border_tokens ~w(border border-subtle)
+
+  def token_class(token) when token in @text_tokens, do: "text-" <> token
+  def token_class(token) when token in @border_tokens, do: "border-" <> token
+  def token_class(token), do: "bg-" <> token
+
   defdelegate chart_columns(), to: SampleData
   defdelegate chart_hours(), to: SampleData
   defdelegate chart_days(), to: SampleData
@@ -311,6 +317,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_page(), to: SampleData
   defdelegate recommendations(), to: SampleData
   defdelegate clauses(), to: SampleData
+  defdelegate settings_form(), to: SampleData
 
   def rule_preview do
     [

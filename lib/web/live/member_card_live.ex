@@ -121,9 +121,7 @@ defmodule Web.MemberCardLive do
     ~H"""
     <div id="no-card">
       <p>{@member.name} has no ID card.</p>
-      <p class="mt-p">
-        <.button id="issue" variant={:primary} phx-click="issue">Issue ID card</.button>
-      </p>
+      <.button id="issue" variant={:primary} phx-click="issue">Issue ID card</.button>
     </div>
     """
   end
@@ -133,7 +131,7 @@ defmodule Web.MemberCardLive do
     <div id="card">
       <dl>
         <dt>Code</dt>
-        <dd id="card-code" class="font-mono text-lg">{MemberCard.format_code(@card.code)}</dd>
+        <dd id="card-code" class="mono text-lg">{MemberCard.format_code(@card.code)}</dd>
         <dt>Issued</dt>
         <dd>{Service.Format.date_long(@card.inserted_at, @member.team.timezone)}</dd>
         <dt>On the back</dt>
@@ -162,14 +160,14 @@ defmodule Web.MemberCardLive do
           </.button>
         </dd>
       </dl>
-      <p class="mt-p">
+      <p>
         Anyone can verify this ID card at <.a id="card-verify-link" href={verify_url(@card)}>
           {Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}
         </.a>.
       </p>
-      <p
+      <.form_actions
         :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
-        class="mt-p flex flex-wrap gap-2"
+        class="mb-4"
       >
         <.button
           :if={@member.email}
@@ -195,8 +193,8 @@ defmodule Web.MemberCardLive do
         >
           Add to Google Wallet
         </.button>
-      </p>
-      <p class="mt-p flex flex-wrap gap-2">
+      </.form_actions>
+      <.form_actions>
         <.button
           id="replace"
           phx-click="issue"
@@ -212,7 +210,7 @@ defmodule Web.MemberCardLive do
         >
           Cancel card
         </.button>
-      </p>
+      </.form_actions>
     </div>
     """
   end

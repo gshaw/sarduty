@@ -21,7 +21,7 @@ defmodule Web.Components.NotAPersonSwitch do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class="mt-p">
+    <div id={@id} class="mt-4">
       <.switch
         id={"#{@id}-switch"}
         label="Not a person"

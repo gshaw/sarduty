@@ -50,7 +50,7 @@ defmodule Web.MemberQualificationsLive do
       :if={@member.member_qualification_awards != []}
       id="member_qualifications"
       rows={@member.member_qualification_awards}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={award} label="Qualification">
         <.a navigate={~p"/teams/#{@member.team}/qualifications/#{award.qualification.id}"}>

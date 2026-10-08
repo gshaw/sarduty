@@ -1,12 +1,9 @@
 <.shell title="Back link" current={:back_link}>
   <h1>Back link</h1>
   <p class="lead">A way back for pages outside the main tree.</p>
-  <.used_on pages={["team settings", "ID cards", "MCP tokens", "an organization"]} />
 
   <div class="demo">
-    <p>
-      <.a href="#">← Squamish SAR</.a>
-    </p>
+    <.back_link navigate="#">Team settings</.back_link>
   </div>
 
   <h2>When to use</h2>
@@ -17,6 +14,6 @@
 
   <h2>In the app</h2>
   <p>
-    An <code>&lt;.a&gt;</code> whose text starts with ← and names the page it goes back to.
+    <code>&lt;.back_link navigate=&#123;…&#125;&gt;Team settings&lt;/.back_link&gt;</code>. The text names the page it goes back to.
   </p>
 </.shell>

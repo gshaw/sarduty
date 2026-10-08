@@ -60,7 +60,7 @@
 .sparkline { position: relative; height: 32px; margin-top: var(--sp-2); }
 
 /* Stats: a number, what it counts, and how it compares. */
-.chart-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.chart-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--sp-4); margin-bottom: var(--sp-6); }
 .chart-stat { border-top: 4px solid var(--c, var(--primary)); background: var(--surface-alt); padding: var(--sp-3) var(--sp-4); }
 .chart-stat .value { display: block; font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); font-variant-numeric: proportional-nums; }
 .chart-stat .label { display: block; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
@@ -123,17 +123,22 @@
 .chart-table { display: block; top: 0; left: 0; position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* A dashboard card: a chart or list with its heading. */
-.dash-grid { display: grid; gap: var(--sp-5); grid-template-columns: repeat(12, minmax(0, 1fr)); margin-bottom: var(--sp-5); }
-.dash-card, .dash-stack { grid-column: span 12; }
-.dash-stack { display: grid; gap: var(--sp-5); align-content: start; min-width: 0; }
-.dash-stack > .dash-card { grid-column: auto; }
-.dash-card { border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: var(--sp-4); background: var(--bg); min-width: 0; }
+.card-grid { display: grid; gap: var(--sp-6); grid-template-columns: repeat(12, minmax(0, 1fr)); margin-bottom: var(--sp-6); }
+.card, .card-stack { grid-column: span 12; }
+.card-stack { display: grid; gap: var(--sp-6); align-content: start; min-width: 0; }
+.card-stack > .card { grid-column: auto; }
+.card { border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: var(--sp-4); background: var(--bg); min-width: 0; }
 @media (min-width: 960px) {
-  .dash-grid > .span-4 { grid-column: span 4; }
-  .dash-grid > .span-5 { grid-column: span 5; }
-  .dash-grid > .span-6 { grid-column: span 6; }
-  .dash-grid > .span-7 { grid-column: span 7; }
-  .dash-grid > .span-8 { grid-column: span 8; }
+  .card-grid > .span-4 { grid-column: span 4; }
+  .card-grid > .span-5 { grid-column: span 5; }
+  .card-grid > .span-6 { grid-column: span 6; }
+  .card-grid > .span-7 { grid-column: span 7; }
+  .card-grid > .span-8 { grid-column: span 8; }
 }
-.dash-card > header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-1); }
-.dash-card > header a { font-size: var(--fs-sm); line-height: var(--lh-sm); white-space: nowrap; }
+.card > header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-1); }
+.card > header a { font-size: var(--fs-sm); line-height: var(--lh-sm); white-space: nowrap; }
+/* A part of a card under a rule, and rows of a name and its value. */
+.card-section { margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--border-subtle); }
+.value-rows { list-style: none; margin: 0; padding-left: 0; }
+.value-rows > * { display: flex; justify-content: space-between; gap: var(--sp-4); padding-block: var(--sp-1); }
+.value-rows > * > :last-child { flex: none; }

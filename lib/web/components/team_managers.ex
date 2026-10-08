@@ -19,20 +19,20 @@ defmodule Web.Components.TeamManagers do
 
     ~H"""
     <div>
-      <p :if={@rows == []} class="text-sm text-secondary-1">
+      <p :if={@rows == []} class="hint">
         None known. The team has not refreshed since SAR Duty added access levels, or its D4H access key does not work.
       </p>
       <.table :if={@rows != []} id={@id} rows={@rows} row_id={& &1.id} class="table-striped">
         <:col :let={row} label="Team admin">
           <div :if={row.name}>{row.name}</div>
-          <div class={["break-all", row.name && "text-sm text-secondary-1"]}>{row.email}</div>
+          <div class={["break-all", row.name && "text-sm text-text-muted"]}>{row.email}</div>
         </:col>
         <:col :let={row} label="Access">
           <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span>{row.access}</span>
             <.badge :for={{kind, text} <- row.badges} kind={kind}>{text}</.badge>
           </div>
-          <div :if={row.reason} class="text-sm text-secondary-1">{row.reason}</div>
+          <div :if={row.reason} class="hint">{row.reason}</div>
         </:col>
       </.table>
     </div>

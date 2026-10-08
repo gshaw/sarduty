@@ -44,20 +44,13 @@
   table.table tbody tr:hover :is(td, th) { background: var(--row-hover); }
   table.table td .btn-sm { margin: -3px 0 -1px; }
 
-  table.table-form tbody :is(th, td) { padding-block: var(--sp-1); }
-
-  /* 24px rows, for long lists people scan. No page uses it yet. */
-  table.table-compact :is(th, td) { padding: 2px var(--sp-2); }
-  table.table-compact td :is(.btn-sm, .badge) { margin-block: -2px; }
+  /* A sortable header's arrow, faded until the table sorts by that column. */
+  table.table thead .sort-suffix { color: var(--border); }
+  table.table thead .sort-suffix.is-current { color: inherit; }
 
   @media (max-width: 800px) {
     /* Text cells keep a readable width; the table scrolls instead of squeezing them. */
     table.table td:not(.w-px, .whitespace-nowrap) { min-width: 8rem; }
-
-    /* The first column stays in place while the rest scrolls. No page uses it yet. */
-    table.table-pin-first :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); box-shadow: inset -1px 0 var(--border-subtle); }
-    table.table-pin-first thead th:first-child { z-index: 2; background: var(--surface-alt); }
-    table.table-pin-first.table-striped tbody tr:nth-child(even) td:first-child { background: var(--row-alt); }
   }
 }
 

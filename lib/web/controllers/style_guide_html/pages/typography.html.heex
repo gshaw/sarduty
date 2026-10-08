@@ -50,7 +50,7 @@
   <h2>Body text</h2>
   <div class="demo">
     <p class="lead">Lead text introduces a page in one or two sentences.</p>
-    <p class="paragraph max-w-[70ch]">
+    <p class="paragraph max-w-prose">
       Body text at 16px. Search and rescue managers read this between calls, so it stays short and
       plain. Lines stop at about 70 characters, which keeps long paragraphs readable on a wide
       screen.
@@ -61,7 +61,7 @@
     <p class="hint">A hint, 14px and muted, under a label.</p>
   </div>
   <p class="spec">
-    <code>.lead</code>, <code>.paragraph</code>, <code>text-sm</code>, and <code>.hint</code>. Muted text is <code>text-secondary-1</code>.
+    <code>.lead</code>, <code>.paragraph</code>, <code>text-sm</code>, and <code>.hint</code>, which is also the class for any small, muted line. Muted text at body size is <code>text-text-muted</code>.
   </p>
 
   <h2>Numbers</h2>
@@ -69,13 +69,29 @@
     <p class="paragraph">
       Figures are tabular everywhere, so columns of hours line up without extra work:
     </p>
-    <p class="paragraph text-right max-w-[10em]">
+    <p class="paragraph text-right w-fit">
       212h 30m<br />18h 05m<br />1,204h 00m
     </p>
     <p class="paragraph">
       Codes and IDs use the mono face: <span class="mono">TCL-2025-014</span>, activity <span class="mono">2025-0412</span>. Dates do not: Sep 28, 2025.
     </p>
   </div>
+
+  <h2>Code, captions, and small print</h2>
+  <div class="demo">
+    <pre class="code-block">claude mcp add --transport http sarduty https://sarduty.com/teams/squamish/mcp</pre>
+    <div class="caps">Member since</div>
+    <p class="paragraph text-lg font-semibold">Sep 2023</p>
+    <section class="small-print">
+      <h2>How it works</h2>
+      <p>SAR Duty verifies each card against the team's D4H records.</p>
+    </section>
+  </div>
+  <p class="spec">
+    <code>.code-block</code>
+    on a <code>&lt;pre&gt;</code>
+    for a command or a token to copy. <code>.caps</code>, xs semibold capitals, over a value. <code>.small-print</code>, under a rule at the end of a page.
+  </p>
 
   <h2>Links and lists</h2>
   <div class="demo">

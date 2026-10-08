@@ -38,7 +38,7 @@ defmodule Web.ErrorHTML do
   defp render_custom_error(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en" class="[scrollbar-gutter:stable]">
+    <html lang="en">
       <head>
         <meta charset="utf-8" />
         <meta name="description" content="Helpful tools for search and rescue managers." />
@@ -52,16 +52,16 @@ defmodule Web.ErrorHTML do
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
         </script>
       </head>
-      <body class="bg-base-1 text-base-content">
+      <body>
         <.site_bar size={:narrow} />
 
-        <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
-          <h1 class="my-p2">
+        <main role="main" class="max-w-md m-auto px-2 pt-16 mb-8">
+          <h1 class="my-8">
             <div class="title-hero mb-0">{@code}</div>
-            <div class="title text-danger-1">SAR Duty cannot show this page</div>
+            <div class="title text-danger-text">SAR Duty cannot show this page</div>
           </h1>
           <p class="heading">{@description}</p>
-          <p class="mb-p2">{@help_text}</p>
+          <p class="mb-8">{@help_text}</p>
           <p>
             <a href="/" class="link">Home page</a>
           </p>

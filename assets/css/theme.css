@@ -1,12 +1,19 @@
-/* Tailwind's tokens, pointed at the design system's (tokens.css). The colour names are the
-   ones the templates already use, so pages follow the palette in light and dark. */
+/* Tailwind's theme, pointed at the design system's tokens (tokens.css), so utility classes
+   speak the guide's names and follow the palette in light and dark. */
 @theme inline {
-  /* Spacing - p = paragraph spacing unit, h = horizontal spacing unit */
-  --spacing-p05: 0.5rem;
-  --spacing-p: 1rem;
-  --spacing-p2: 2rem;
-  --spacing-hspacer: 0.5rem;
-  --spacing-hindent: 2rem;
+  /* Spacing: Tailwind's numbers, but only the design system's 8 steps, so mt-6 is 24px as
+     everywhere else and --sp-6 is its token. Steps off the scale, like mt-5 or mt-10,
+     build nothing. */
+  --spacing-*: initial;
+  --spacing-0: 0px;
+  --spacing-1: var(--sp-1);
+  --spacing-2: var(--sp-2);
+  --spacing-3: var(--sp-3);
+  --spacing-4: var(--sp-4);
+  --spacing-6: var(--sp-6);
+  --spacing-8: var(--sp-8);
+  --spacing-12: var(--sp-12);
+  --spacing-16: var(--sp-16);
 
   --font-sans: var(--font);
   --font-mono: var(--mono);
@@ -29,40 +36,41 @@
   --text-4xl: var(--fs-2xl);
   --text-4xl--line-height: var(--lh-2xl);
 
-  /* Colors */
-  --color-base-content: var(--text);
-  --color-base-0: var(--bg);
-  --color-base-1: var(--bg);
-  --color-base-2: var(--surface-alt);
-  --color-base-3: var(--border-subtle);
-
-  --color-hr: var(--border-subtle);
-  --color-disabled: var(--border);
-
+  /* Colours: every colour token, by its own name, and nothing else. The class is the
+     property and the token: text-text-muted, bg-surface-alt, border-border-subtle. */
+  --color-*: initial;
+  --color-bg: var(--bg);
+  --color-surface-alt: var(--surface-alt);
+  --color-row-alt: var(--row-alt);
+  --color-row-hover: var(--row-hover);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-paper: var(--paper);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-success: var(--success);
+  --color-success-text: var(--success-text);
+  --color-danger: var(--danger);
+  --color-danger-text: var(--danger-text);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-focus: var(--focus);
+  --color-nav: var(--nav);
+  --color-accent: var(--accent);
   --color-incident: var(--incident);
   --color-exercise: var(--exercise);
   --color-event: var(--event);
-
-  /* Text in these colours reads in both modes; fills come from the components. */
-  --color-primary-1: var(--link);
-  --color-primary-2: var(--link-hover);
-  --color-primary-content: var(--on-fill);
-
-  --color-secondary-1: var(--text-muted);
-  --color-secondary-2: var(--text);
-  --color-secondary-content: var(--on-fill);
-
-  --color-success-1: var(--success-text);
-  --color-success-2: var(--success-text);
-  --color-success-content: var(--on-fill);
-
-  --color-warning-1: var(--warning);
-  --color-warning-2: var(--warning);
-  --color-warning-content: var(--on-warning);
-
-  --color-danger-1: var(--danger-text);
-  --color-danger-2: var(--danger-text);
-  --color-danger-content: var(--on-fill);
+  --color-shade-1: var(--shade-1);
+  --color-shade-2: var(--shade-2);
+  --color-shade-3: var(--shade-3);
+  --color-shade-4: var(--shade-4);
+  --color-compare: var(--compare);
+  --color-on-fill: var(--on-fill);
+  --color-on-warning: var(--on-warning);
 
   /* List Style Types */
   --list-style-type-arrow: '→ ';

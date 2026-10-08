@@ -50,7 +50,7 @@ defmodule Web.MemberGroupsLive do
       :if={@member.group_members != []}
       id="member_groups"
       rows={@member.group_members}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={gm} label="Group">
         <.a navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>

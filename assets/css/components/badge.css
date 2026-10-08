@@ -48,6 +48,13 @@
   .activity-kind-exercise { --c: var(--exercise); }
   .activity-kind-event { --c: var(--event); }
 
+  /* A chip: a choice in an editor, with a button that removes it. Red when it names
+     something that no longer exists. */
+  .chip { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-2); border-radius: var(--radius); background: var(--surface-alt); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .chip-danger { background: none; color: var(--danger-text); box-shadow: inset 0 0 0 1px var(--danger-text); }
+  .chip-remove { display: inline-flex; padding: 2px; border: 0; border-radius: var(--radius); background: none; color: var(--danger-text); cursor: pointer; }
+  .chip-remove:hover { background: color-mix(in srgb, var(--danger-text) 15%, transparent); }
+
   /* Several tags together wrap with a gap, so they never touch. */
   .badges { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); vertical-align: baseline; }
 }

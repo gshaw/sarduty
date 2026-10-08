@@ -1,10 +1,9 @@
 <.shell title="Table" current={:table}>
   <h1>Table</h1>
   <p class="lead">
-    32px rows by default, 24px when compact. Cells line up on their first line of text, so a
-    row with a wrapped cell still reads across.
+    32px rows. Cells line up on their first line of text, so a row with a wrapped cell still
+    reads across.
   </p>
-  <.used_on pages={["every list", "such as activities, members, and tax credit letters"]} />
 
   <.table
     id="sample-letters"
@@ -66,26 +65,12 @@
     <:col :let={{_name, why, detail, days}} label="Why">
       {why}
       <.badge :if={days} kind={:warning}>{days} days</.badge>
-      <span class="block text-secondary-1">{detail}</span>
+      <span class="hint block">{detail}</span>
     </:col>
     <:col :let={_row} label="" class="w-px">
       <.button size={:sm}>Review</.button>
     </:col>
   </.table>
-
-  <h2>Compact</h2>
-  <p>24px rows, for long lists people scan rather than read.</p>
-  <.table id="sample-compact" rows={Enum.take(letters(), 3)} class="table-compact table-striped">
-    <:col :let={r} label="Name">{r.name}</:col>
-    <:col :let={r} label="Total" align="right">{r.total}</:col>
-    <:col :let={r} label="Letter" class="w-px whitespace-nowrap">
-      <span :if={r.letter} class="mono">{r.letter}</span>
-      <.badge :if={!r.letter} kind={:warning}>No letter</.badge>
-    </:col>
-  </.table>
-  <p class="spec not-yet">
-    Not used yet: <code>class="table-compact"</code>. Also ready: <code>table-pin-first</code>, which keeps the first column in place while a wide table scrolls on a phone.
-  </p>
 
   <h2>In the app</h2>
   <p>

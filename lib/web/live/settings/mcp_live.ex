@@ -76,40 +76,35 @@ defmodule Web.Settings.MCPLive do
   def render(assigns) do
     ~H"""
     <div>
-      <p>
-        <.a navigate={~p"/teams/#{@current_team}/settings"}>← Team settings</.a>
-      </p>
+      <.back_link navigate={~p"/teams/#{@current_team}/settings"}>Team settings</.back_link>
       <h1 class="heading">MCP tokens</h1>
       <p>
         An MCP token lets your AI agent, such as Claude Code, read {@current_team.name}'s data
         in SAR Duty. It can read members, groups, attendance hours, activities,
         qualifications, and change history.
       </p>
-      <p class="mt-p">
+      <p>
         Agents cannot change D4H. They can propose attendance changes, and nothing happens
         until a team admin sends them from Proposed changes. Agents never see email, phone
         numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
-      <p id="no-training" class="mt-p font-semibold">
+      <p id="no-training" class="font-semibold">
         Use a token only with an AI service set not to train on your data. The token gives
         it your team members' names, hours, and history.
       </p>
-      <p class="mt-p">
+      <p>
         Each token is yours. It stops working when you revoke it, or when D4H no longer makes
         you an Owner or Editor.
       </p>
 
-      <div :if={@new_token} id="new-token" class="callout mt-p">
+      <div :if={@new_token} id="new-token" class="callout mb-4">
         <p class="font-semibold">Copy your token now. SAR Duty shows it only once.</p>
-        <pre
-          id="new-token-value"
-          class="my-2 p-p rounded bg-base-2 overflow-x-auto whitespace-pre-wrap break-all"
-        >{@new_token}</pre>
-        <p class="mt-p">
+        <pre id="new-token-value" class="code-block">{@new_token}</pre>
+        <p>
           To set it up, paste this into your AI agent. It has the token, so treat it like a
           password.
         </p>
-        <pre id="setup-prompt" class="my-2 p-p rounded bg-base-2 whitespace-pre-wrap">{setup_prompt(@endpoint_url, @new_token)}</pre>
+        <pre id="setup-prompt" class="code-block">{setup_prompt(@endpoint_url, @new_token)}</pre>
       </div>
 
       <.form
@@ -117,7 +112,7 @@ defmodule Web.Settings.MCPLive do
         for={@form}
         id="new-token-form"
         phx-submit="create"
-        class="mt-p"
+        class="mt-4"
       >
         <.input field={@form[:name]} label="Name">
           Where you use the token, like "Claude Code on my laptop".
@@ -134,12 +129,14 @@ defmodule Web.Settings.MCPLive do
           <.button variant={:success}>Create token</.button>
         </.form_actions>
       </.form>
-      <p :if={!@can_create} id="cannot-create" class="mt-p text-secondary-1">
+      <p :if={!@can_create} id="cannot-create" class="text-text-muted">
         Only a member D4H makes an Owner or Editor can create a token.
       </p>
 
-      <h2 class="heading mt-p2">Tokens</h2>
-      <p :if={@tokens == []} id="no-tokens">No tokens yet. Create one above.</p>
+      <h2 class="heading mt-8">Tokens</h2>
+      <.empty_state :if={@tokens == []} id="no-tokens" title="No tokens yet">
+        Create one above.
+      </.empty_state>
       <.table :if={@tokens != []} id="tokens" rows={@tokens} row_id={&"token-#{&1.id}"}>
         <:col :let={token} label="Name">{token.name}</:col>
         <:col :let={token} label="Owner">{token.user.email}</:col>
@@ -164,20 +161,20 @@ defmodule Web.Settings.MCPLive do
         </:col>
       </.table>
 
-      <h2 class="heading mt-p2">Connect an agent</h2>
+      <h2 class="heading mt-8">Connect an agent</h2>
       <p>
         Agents connect with the token in a header. The claude.ai and ChatGPT connectors cannot
         send one yet.
       </p>
-      <h3 class="font-semibold mt-p">Claude Code</h3>
+      <h3 class="subheading mt-4">Claude Code</h3>
       <p>Run this in a terminal:</p>
-      <pre id="claude-code-command" class="my-2 p-p rounded bg-base-2 whitespace-pre-wrap break-all">{claude_code_command(@endpoint_url, @new_token)}</pre>
-      <h3 class="font-semibold mt-p">Claude Desktop</h3>
+      <pre id="claude-code-command" class="code-block">{claude_code_command(@endpoint_url, @new_token)}</pre>
+      <h3 class="subheading mt-4">Claude Desktop</h3>
       <p>
         Add this to <code>claude_desktop_config.json</code>, then restart Claude Desktop. It
         needs Node.js, and uses <code>mcp-remote</code> to send the token.
       </p>
-      <pre id="claude-desktop-config" class="my-2 p-p rounded bg-base-2 whitespace-pre-wrap break-all">{claude_desktop_config(@endpoint_url, @new_token)}</pre>
+      <pre id="claude-desktop-config" class="code-block">{claude_desktop_config(@endpoint_url, @new_token)}</pre>
     </div>
     """
   end

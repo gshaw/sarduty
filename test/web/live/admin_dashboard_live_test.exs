@@ -132,7 +132,7 @@ defmodule Web.AdminDashboardLiveTest do
       |> log_in_user(admin)
       |> live(~p"/admin")
 
-    assert has_element?(lv, "#team-#{team.id} .text-danger-1", "No D4H access key.")
+    assert has_element?(lv, "#team-#{team.id} .text-danger-text", "No D4H access key.")
   end
 
   test "flags a team with no users", %{conn: conn} do

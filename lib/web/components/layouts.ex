@@ -4,7 +4,7 @@ defmodule Web.Layouts do
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en" class="[scrollbar-gutter:stable]">
+    <html lang="en">
       <head>
         <meta charset="utf-8" />
         <meta name="description" content="Less paperwork for search and rescue teams that use D4H." />
@@ -20,7 +20,7 @@ defmodule Web.Layouts do
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
         </script>
       </head>
-      <body class="bg-base-1 text-base-content">
+      <body>
         {@inner_content}
       </body>
     </html>
@@ -32,7 +32,7 @@ defmodule Web.Layouts do
   def marketing(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
-    <main role="main" class="pt-14 mb-p2">
+    <main role="main" class="under-site-bar mb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -52,7 +52,7 @@ defmodule Web.Layouts do
   def app(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
-    <main role="main" class="container mx-auto pt-16 px-2 mb-p2">
+    <main role="main" class="container mx-auto pt-16 px-2 mb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -92,7 +92,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-secondary-1">
+    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-text-muted">
       <span :if={@organization} id="verify-footer-organization">
         <a :if={@organization.website} href={@organization.website} class="hover:underline">
           {@organization.name}
@@ -117,7 +117,7 @@ defmodule Web.Layouts do
   def narrow(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} size={:narrow} />
-    <main role="main" class="max-w-md m-auto px-2 pt-16 mb-p2">
+    <main role="main" class="max-w-md m-auto px-2 pt-16 mb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -130,8 +130,8 @@ defmodule Web.Layouts do
     assigns = assign(assigns, mailbox?: dev_mailbox?())
 
     ~H"""
-    <footer :if={@mailbox?} id="dev-footer" class="max-w-md m-auto px-2 mb-p2 text-sm">
-      <p class="pt-p border-t border-hr">
+    <footer :if={@mailbox?} id="dev-footer" class="max-w-md m-auto px-2 mb-8 text-sm">
+      <p class="pt-4 border-t border-border-subtle">
         Development:
         <.a href="/dev/mailbox" external={true}>Mailbox</.a>
       </p>
@@ -157,8 +157,8 @@ defmodule Web.Layouts do
       )
 
     ~H"""
-    <footer id="site-footer" class="container mx-auto px-2 mb-p2">
-      <p class="pt-p border-t border-hr">
+    <footer id="site-footer" class="container mx-auto px-2 mb-8">
+      <p class="pt-4 border-t border-border-subtle">
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
         ·
         <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
@@ -379,7 +379,7 @@ defmodule Web.Layouts do
         phx-connected={hide("#client-error")}
         hidden
       >
-        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        Reconnecting… <.spinner />
       </.flash>
 
       <.flash
@@ -390,7 +390,7 @@ defmodule Web.Layouts do
         phx-connected={hide("#server-error")}
         hidden
       >
-        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        Reconnecting… <.spinner />
       </.flash>
     </div>
     """

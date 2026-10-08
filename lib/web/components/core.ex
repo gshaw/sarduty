@@ -39,14 +39,14 @@ defmodule Web.Components.Core do
     >
       <.icon
         name={if @kind == :error, do: "hero-exclamation-circle-mini", else: "hero-check-circle-mini"}
-        class="toast-icon size-5"
+        class="toast-icon"
       />
       <div class="toast-body">
         <span :if={@title} class="toast-title">{@title}</span>
         {msg}
       </div>
       <button type="button" class="toast-close" aria-label={gettext("Close")}>
-        <.icon name="hero-x-mark-mini" class="size-5" />
+        <.icon name="hero-x-mark-mini" />
       </button>
     </div>
     """
@@ -109,10 +109,10 @@ defmodule Web.Components.Core do
   def form_actions(assigns) do
     ~H"""
     <div class={["form-actions flex flex-wrap", @class]}>
-      <div class="flex gap-hspacer grow">
+      <div class="flex gap-2 grow">
         {render_slot(@inner_block)}
       </div>
-      <div :if={@trailing != []} class="flex gap-hspacer">
+      <div :if={@trailing != []} class="flex gap-2">
         {render_slot(@trailing)}
       </div>
     </div>
@@ -154,11 +154,12 @@ defmodule Web.Components.Core do
   end
 
   attr :class, :string, default: nil
+  attr :rest, :global
   slot :inner_block
 
   def spinner(assigns) do
     ~H"""
-    <span class={["inline-flex items-center gap-2", @class]}>
+    <span class={["spinner-text", @class]} {@rest}>
       <span class="spinner" aria-hidden="true"></span>
       <span :if={@inner_block != []}>{render_slot(@inner_block)}</span>
     </span>
@@ -190,13 +191,14 @@ defmodule Web.Components.Core do
   end
 
   @doc """
-  Generates a generic error message.
+  Renders an error message: what to fix, in bold red, above the input.
   """
+  attr :rest, :global
   slot :inner_block, required: true
 
   def error(assigns) do
     ~H"""
-    <div class="mb-2 font-bold text-danger-1">
+    <div class="mb-2 font-bold text-danger-text" {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -299,9 +301,8 @@ defmodule Web.Components.Core do
         Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
       end)
 
-    # mt-0.5 is so checkbox can embed in a table nicely
     ~H"""
-    <div class={["flex gap-3 items-start", @label && "mb-p"]}>
+    <div class={["flex gap-3 items-start", @label && "mb-4"]}>
       <input type="hidden" name={@name} value="false" />
       <input
         type="checkbox"
@@ -404,7 +405,7 @@ defmodule Web.Components.Core do
   def switch(%{compact: true} = assigns) do
     ~H"""
     <div class={["switch-row justify-end", @class]}>
-      <label for={@id} class="text-sm text-secondary-1 cursor-pointer">{@label}</label>
+      <label for={@id} class="hint cursor-pointer">{@label}</label>
       <input type="checkbox" role="switch" id={@id} class="switch" checked={@checked} {@rest} />
     </div>
     """
@@ -435,12 +436,9 @@ defmodule Web.Components.Core do
   @doc """
   Renders a [Heroicon](https://heroicons.com).
 
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
+  Heroicons come in four styles: outline and solid at 24px, mini at 20px, and micro at
+  16px, picked with the `-solid`, `-mini`, and `-micro` suffix. Each draws at its own
+  size, so an icon needs no size class. It takes the text colour.
 
   Icons are extracted from the `deps/heroicons` directory and bundled within
   your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
@@ -448,10 +446,10 @@ defmodule Web.Components.Core do
   ## Examples
 
       <.icon name="hero-x-mark" />
-      <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
+      <.icon name="hero-chevron-right-micro" class="breadcrumb-separator" />
   """
   attr :name, :string, required: true
-  attr :class, :any, default: "size-4"
+  attr :class, :any, default: nil
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""

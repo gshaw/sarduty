@@ -1,7 +1,6 @@
 <.shell title="Forms" current={:forms}>
   <h1>Forms</h1>
   <p class="lead">Bold labels above, hints under them, errors on the field.</p>
-  <.used_on pages={["every form"]} />
 
   <h2>Which to use</h2>
   <ul>
@@ -19,22 +18,20 @@
   <h2>Text input</h2>
   <div class="demo">
     <.input id="e-name" name="e-name" label="Full name" value="Avery Chen" />
-    <div class="max-w-80">
+    <div class="max-w-xs">
       <.input id="e-email" name="e-email" type="email" label="Email" value="avery@example.com">
         SAR Duty sends the tax credit letter here.
       </.input>
     </div>
-    <div class="max-w-40">
-      <.input id="e-ref" name="e-ref" label="Member ID" value="101" />
-    </div>
   </div>
   <p class="spec">
-    Three widths: full, medium (<code>max-w-80</code>, 320px), and small (<code>max-w-40</code>, 160px). Width follows the expected answer, not the page.
+    Two widths: full, and <code>max-w-xs</code>
+    (320px) for a short answer. Width follows the expected answer, not the page.
   </p>
 
   <h2>Select, date, and text area</h2>
   <div class="demo">
-    <div class="max-w-80">
+    <div class="max-w-xs">
       <.input
         id="e-kind"
         name="e-kind"
@@ -57,7 +54,7 @@
 
   <h2>Read-only, disabled, and error</h2>
   <div class="demo">
-    <div class="max-w-80">
+    <div class="max-w-xs">
       <.input id="e-ro" name="e-ro" label="Latitude" value="49.7553" readonly>
         From D4H. Change it there.
       </.input>
@@ -90,40 +87,36 @@
     >
       SAR Duty refreshes at 02:00.
     </.input>
-    <fieldset class="mb-p">
-      <legend class="font-semibold">Activities to include</legend>
+    <fieldset>
+      <legend>Activities to include</legend>
       <.hint>Meetings and public events count as events.</.hint>
-      <label class="flex items-center gap-2 my-1"><input type="checkbox" checked /> Incidents</label>
-      <label class="flex items-center gap-2 my-1"><input type="checkbox" checked /> Exercises</label>
-      <label class="flex items-center gap-2 my-1"><input type="checkbox" /> Events</label>
+      <label class="choice"><input type="checkbox" checked /> Incidents</label>
+      <label class="choice"><input type="checkbox" checked /> Exercises</label>
+      <label class="choice"><input type="checkbox" /> Events</label>
     </fieldset>
   </div>
 
   <p class="spec">
-    24px boxes. Several that answer one question sit in a fieldset whose legend is the question.
+    24px boxes. Several that answer one question sit in a fieldset whose legend is the question, each in a <code>&lt;label class="choice"&gt;</code>.
   </p>
 
   <h2>Radios</h2>
   <div class="demo">
-    <fieldset class="mb-p">
-      <legend class="font-semibold">Hours to count</legend>
-      <label class="flex items-center gap-2 my-1">
-        <input type="radio" name="e-hours" checked /> Primary and secondary
-      </label>
-      <label class="flex items-center gap-2 my-1">
-        <input type="radio" name="e-hours" /> Primary only
-      </label>
+    <fieldset>
+      <legend>Hours to count</legend>
+      <label class="choice"><input type="radio" name="e-hours" checked /> Primary and secondary</label>
+      <label class="choice"><input type="radio" name="e-hours" /> Primary only</label>
     </fieldset>
   </div>
 
-  <p class="spec not-yet">Not used in the app yet. They take the checkbox list's markup.</p>
+  <p class="spec">The checkbox list's markup, with radios. One answer, every choice in view.</p>
 
   <h2 id="switch">Switch</h2>
   <div class="demo">
-    <div class="max-w-100 space-y-4">
-      <.switch id="e-sound" label="Sound" checked>A tone for each scan.</.switch>
-      <.switch id="e-off" label="Off" />
-      <.switch id="e-disabled" label="Disabled" checked disabled />
+    <div class="max-w-sm">
+      <.switch id="e-sound" label="Sound" checked class="mb-4">A tone for each scan.</.switch>
+      <.switch id="e-off" label="Off" class="mb-4" />
+      <.switch id="e-disabled" label="Disabled" checked disabled class="mb-4" />
       <.switch id="e-focus" label="Keyboard focus" class="is-focus" />
     </div>
   </div>
@@ -134,7 +127,7 @@
 
   <h3>Compact switch</h3>
   <div class="demo">
-    <div class="max-w-100">
+    <div class="max-w-sm">
       <.button variant={:success} class="w-full">Scan ID cards</.button>
       <.switch id="e-compact" label="Sound" compact checked class="mt-2" />
     </div>
@@ -147,7 +140,9 @@
   <ul>
     <li>Label md semibold. Hint sm muted. Error md bold in <code>--danger</code>. Input md.</li>
     <li>
-      Inputs are 40px tall with a 2px border. Small inputs (32px, sm text) are for filter bars only.
+      Inputs are 40px tall with a 2px border. Small inputs (32px, sm text) are for filter bars and editors inside a page, with
+      <code>class="input-sm"</code>
+      outside a filter bar.
     </li>
     <li>Fields are 24px apart.</li>
   </ul>
@@ -161,7 +156,8 @@
     </li>
     <li>
       A checkbox or radio list is a <code>&lt;fieldset&gt;</code>
-      of labelled inputs, as on the organization page.
+      of <code>&lt;label class="choice"&gt;</code>
+      inputs, as on the organization page.
     </li>
     <li>
       <code>&lt;.switch id="…" label="…"&gt;</code>, with <code>compact</code> for the small one.

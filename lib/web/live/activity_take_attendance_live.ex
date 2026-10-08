@@ -165,15 +165,15 @@ defmodule Web.ActivityTakeAttendanceLive do
     <h2 class="heading">Attendance link</h2>
     <.link_section link={@link} activity={@activity} />
 
-    <h2 class="heading mt-p">Arrivals and departures</h2>
+    <h2 class="heading mt-4">Arrivals and departures</h2>
     <.times_section times={@times} activity={@activity} />
 
-    <h2 class="heading mt-p">Send to D4H</h2>
+    <h2 class="heading mt-4">Send to D4H</h2>
     <.failures_section failures={@failures} />
     <.send_section review={@review} selected={@selected} times={@times} activity={@activity} />
 
     <div :if={@no_shows != []} id="no-shows">
-      <h2 class="heading mt-p">No-shows</h2>
+      <h2 class="heading mt-4">No-shows</h2>
       <.no_shows_section no_shows={@no_shows} activity={@activity} />
     </div>
     """
@@ -192,7 +192,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       id="no-show-list"
       rows={@no_shows}
       row_id={&"no-show-#{&1.id}"}
-      class="table-striped table-stack w-full md:w-fit"
+      class="table-striped table-stack md:w-fit"
     >
       <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
       <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
@@ -215,7 +215,7 @@ defmodule Web.ActivityTakeAttendanceLive do
             phx-value-done={to_string(no_show.followed_up_at == nil)}
             checked={no_show.followed_up_at != nil}
           />
-          <span :if={no_show.followed_up_at} class="text-secondary-1 text-sm">
+          <span :if={no_show.followed_up_at} class="hint">
             {Service.Format.month_day_time(no_show.followed_up_at, @activity.team.timezone)}
           </span>
         </label>
@@ -228,8 +228,8 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   defp failures_section(assigns) do
     ~H"""
-    <div :if={@failures != []} id="failures" class="mb-p">
-      <p class="text-danger-1 font-semibold">These changes did not go through:</p>
+    <div :if={@failures != []} id="failures" class="mb-4">
+      <p class="text-danger-text font-semibold">These changes did not go through:</p>
       <ul>
         <li :for={{change, message} <- @failures}>{change.member.name}: {message}</li>
       </ul>
@@ -259,9 +259,9 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   defp send_section(%{review: %{published: true}} = assigns) do
     ~H"""
-    <p id="published" class="text-danger-1">
+    <.warning_text id="published">
       Attendance cannot be changed once the activity is published. Unpublish it in D4H first.
-    </p>
+    </.warning_text>
     """
   end
 
@@ -283,7 +283,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         id="changes"
         rows={@review.changes}
         row_id={&"change-#{&1.key}"}
-        class="table-striped table-stack w-full"
+        class="table-striped table-stack"
       >
         <:col :let={change} label="" class="w-px stack-check">
           <input
@@ -301,7 +301,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         <:col :let={change} label="Change">
           <span class={action_class(change.action)}>{action_text(change.action)}</span>
         </:col>
-        <:col :let={change} label="Times" class="whitespace-nowrap tabular-nums stack-optional">
+        <:col :let={change} label="Times" class="whitespace-nowrap stack-optional">
           <span :if={change.arrived_at}>
             {Service.Format.time_short(change.arrived_at, @activity.team.timezone)}–{Service.Format.time_short(
               change.left_at,
@@ -316,7 +316,7 @@ defmodule Web.ActivityTakeAttendanceLive do
           </span>
         </:col>
       </.table>
-      <.form_actions class="mt-p05">
+      <.form_actions class="mt-2">
         <.button id="send" variant={:success} disabled={@count == 0} phx-disable-with="Sending…">
           Send {Service.Format.count(@count, one: "%d change", many: "%d changes")}
         </.button>
@@ -332,10 +332,10 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp action_text(:unchanged), do: "No change"
   defp action_text(:blocked), do: "Fix the times first"
 
-  defp action_class(:absent), do: "text-danger-1 font-semibold"
-  defp action_class(:blocked), do: "text-danger-1"
-  defp action_class(:unchanged), do: "text-secondary-1"
-  defp action_class(_action), do: "text-success-1 font-semibold"
+  defp action_class(:absent), do: "text-danger-text font-semibold"
+  defp action_class(:blocked), do: "text-danger-text"
+  defp action_class(:unchanged), do: "text-text-muted"
+  defp action_class(_action), do: "text-success-text font-semibold"
 
   defp status_text(nil), do: "Not listed"
   defp status_text("requested"), do: "Signed up"
@@ -404,10 +404,10 @@ defmodule Web.ActivityTakeAttendanceLive do
           id="copy-status"
           role="status"
           phx-update="ignore"
-          class="text-success-1 font-semibold"
+          class="text-success-text font-semibold"
         ></span>
       </div>
-      <div class="mt-p05 flex flex-wrap gap-4 items-center">
+      <div class="mt-2 flex flex-wrap gap-4 items-center">
         <.a
           id="create-link"
           href="#"
@@ -454,12 +454,12 @@ defmodule Web.ActivityTakeAttendanceLive do
       the start time for anyone who arrives within {BuildAttendanceTimes.grace_minutes()} minutes
       of the start, early or late. It uses the end time for anyone who leaves within {BuildAttendanceTimes.grace_minutes()} minutes of the end.
     </p>
-    <.table id="times" rows={@times} class="table-striped table-stack w-full md:w-fit">
+    <.table id="times" rows={@times} class="table-striped table-stack md:w-fit">
       <:col :let={row} label="Name" class="stack-title">{row.member.name}</:col>
-      <:col :let={row} label="Arrived" align="right" class="tabular-nums">
+      <:col :let={row} label="Arrived" align="right">
         {Service.Format.time_short(row.arrived_at, @activity.team.timezone)}
       </:col>
-      <:col :let={row} label="Left" align="right" class="tabular-nums">
+      <:col :let={row} label="Left" align="right">
         {Service.Format.time_short(row.left_at, @activity.team.timezone)}
       </:col>
       <:col :let={row} label="Notes" class="stack-full stack-optional">
@@ -469,9 +469,9 @@ defmodule Web.ActivityTakeAttendanceLive do
     """
   end
 
-  defp note_class(:left_before_arriving), do: "text-danger-1"
+  defp note_class(:left_before_arriving), do: "text-danger-text"
   defp note_class(:attending_without_scan), do: "font-semibold"
-  defp note_class(_note), do: "text-secondary-1"
+  defp note_class(_note), do: "text-text-muted"
 
   defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."
   defp note_text(:no_departure), do: "No departure scan. Uses the end time."

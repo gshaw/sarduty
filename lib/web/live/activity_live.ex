@@ -59,12 +59,14 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title">{@activity.title}</h1>
-    <p :if={@activity.deleted_at} id="deleted-in-d4h" class="text-danger-1 font-semibold mb-p">
-      Deleted in D4H. SAR Duty saw it was gone on {Service.Format.date_long(
-        @activity.deleted_at,
-        @activity.team.timezone
-      )}.
-    </p>
+    <.banner :if={@activity.deleted_at} id="deleted-in-d4h" kind={:danger} title="Deleted in D4H">
+      <p>
+        SAR Duty saw it was gone on {Service.Format.date_long(
+          @activity.deleted_at,
+          @activity.team.timezone
+        )}.
+      </p>
+    </.banner>
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content
@@ -170,13 +172,13 @@ defmodule Web.ActivityLive do
   def main_content(assigns) do
     ~H"""
     <div>
-      <div class="mb-p"><.activity_tags activity={@activity} /></div>
+      <div class="mb-4"><.activity_tags activity={@activity} /></div>
 
-      <div :if={@map} class="mb-p" style="max-width: 640px">
+      <div :if={@map} class="measure mb-4">
         <.activity_map id="activity-map" map={@map} label="Map of activity" />
       </div>
 
-      <div class="mb-p">
+      <div class="mb-4">
         <.markdown content={@activity.description} />
       </div>
 
@@ -189,7 +191,7 @@ defmodule Web.ActivityLive do
 
   def activity_attendance_table(assigns) do
     ~H"""
-    <.table id="attendance_collection" rows={@attendances} class="mt-p05 table-striped w-fit">
+    <.table id="attendance_collection" rows={@attendances} class="table-striped w-fit">
       <:col :let={record} label="ID" class="w-px">
         {record.member.ref_id}
       </:col>
@@ -200,19 +202,19 @@ defmodule Web.ActivityLive do
           {record.member.name}
         </.a>
       </:col>
-      <:col :let={record} label="Start" align="right" class="whitespace-nowrap tabular-nums">
+      <:col :let={record} label="Start" align="right" class="whitespace-nowrap">
         {Service.Format.datetime_short(
           record.started_at,
           @activity.team.timezone
         )}
       </:col>
-      <:col :let={record} label="Finish" align="right" class="whitespace-nowrap tabular-nums">
+      <:col :let={record} label="Finish" align="right" class="whitespace-nowrap">
         {Service.Format.time_short(
           record.finished_at,
           @activity.team.timezone
         )}
       </:col>
-      <:col :let={record} label="Duration" align="right" class="whitespace-nowrap tabular-nums">
+      <:col :let={record} label="Duration" align="right" class="whitespace-nowrap">
         {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
       </:col>
     </.table>

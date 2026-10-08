@@ -41,19 +41,19 @@ defmodule Web.Admin.MCPLive do
     ~H"""
     <h1 class="title">Admin</h1>
     <.admin_tabs current={:mcp} />
-    <p class="mb-p max-w-3xl">
+    <p class="mb-4 max-w-3xl">
       Team admins can create MCP tokens once MCP is on for their team. Agents read
       members, attendance hours, activities, qualifications, and change history. They cannot
       change D4H; they can propose attendance changes for a team admin to send.
       Turning MCP off revokes every token on the team. See <code>docs/mcp.md</code>.
     </p>
-    <.table id="mcp-teams" rows={@teams} row_id={&"mcp-team-#{&1.id}"} class="mb-p2 table-striped">
+    <.table id="mcp-teams" rows={@teams} row_id={&"mcp-team-#{&1.id}"} class="mb-8 table-striped">
       <:col :let={team} label="Team">
         <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
       </:col>
       <:col :let={team} label="MCP">
-        <span :if={team.mcp_enabled} class="text-success-1">On</span>
-        <span :if={!team.mcp_enabled} class="text-secondary-1">Off</span>
+        <span :if={team.mcp_enabled} class="text-success-text">On</span>
+        <span :if={!team.mcp_enabled} class="text-text-muted">Off</span>
       </:col>
       <:col :let={team} label="Tokens">
         {Map.get(@token_counts, team.id, 0)}
@@ -99,7 +99,7 @@ defmodule Web.Admin.MCPLive do
       <:col :let={call} label="Tool">{call.tool}</:col>
       <:col :let={call} label="Arguments">{arguments(call.arguments)}</:col>
       <:col :let={call} label="Rows">
-        <span :if={call.error} class="text-danger-1">{call.error}</span>
+        <span :if={call.error} class="text-danger-text">{call.error}</span>
         <span :if={!call.error}>{call.row_count}</span>
       </:col>
       <:col :let={call} label="Took" class="whitespace-nowrap">

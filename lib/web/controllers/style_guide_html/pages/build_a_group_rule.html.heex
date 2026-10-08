@@ -4,63 +4,24 @@
     An editor inside a page: small inputs and small buttons, since it sits among other content.
   </p>
 
-  <div class="example">
-    <div :for={clause <- clauses()} class="mb-p border rounded px-p py-p05">
-      <div class="flex flex-wrap md:flex-nowrap justify-between items-center gap-2 mb-p05">
-        <div class="flex flex-wrap md:flex-nowrap items-center gap-2">
-          <input
-            type="text"
-            value={clause.name}
-            placeholder="Name, for example First Aid"
-            aria-label="Clause name"
-            class="rounded border shadow-sm text-sm font-semibold"
-          />
-          <h3 class="font-semibold">— member must hold any of:</h3>
-        </div>
-        <.button variant={:danger} size={:sm}>Delete clause</.button>
-      </div>
-      <div class="flex flex-wrap gap-2 mb-p05">
-        <span
-          :for={q <- clause.qualifications}
-          class={[
-            "inline-flex items-center gap-2 rounded px-2 py-1 text-sm",
-            if(String.starts_with?(q, "Missing"),
-              do: "border border-danger-1 text-danger-1",
-              else: "bg-base-2"
-            )
-          ]}
-        >
-          {q}
-          <button class="text-danger-1 hover:text-danger-2 font-bold" title="Remove qualification">
-            &times;
-          </button>
-        </span>
-        <span :if={clause.qualifications == []} class="text-secondary-1 text-sm italic">
-          No qualifications yet
-        </span>
-      </div>
-      <div class="flex flex-wrap gap-2 items-end">
-        <select class="block rounded border shadow-sm text-sm max-w-xs truncate">
-          <option value="">Select a qualification</option>
-          <option>Rope Rescue Technician</option>
-          <option>Swiftwater Rescue</option>
-        </select>
-        <.button size={:sm}>Add qualification</.button>
-      </div>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <.button size={:sm}>Add clause</.button>
-      <.button variant={:primary} size={:sm}>Done</.button>
-    </div>
+  <div class="example measure">
+    <.clause_editor clauses={clauses()} />
   </div>
 
   <h2>How it works</h2>
   <ul>
-    <li>Each clause is a box with a name and the qualifications a member must hold any of.</li>
-    <li>A qualification D4H no longer has shows in red, so it's easy to remove.</li>
+    <li>
+      Each clause is a <a href={page_path(:card)}>card</a>
+      with a name and the qualifications a member must hold any of.
+    </li>
+    <li>
+      Each qualification is a chip with a button that removes it. A qualification D4H no longer
+      has is a red chip, so it's easy to find and remove.
+    </li>
     <li>Done closes the editor. Members change only after you review and send the changes.</li>
   </ul>
   <p class="spec">
-    The markup of the clause editor in <code>Web.GroupLive</code>, with made-up clauses.
+    <code>&lt;.clause_editor clauses=&#123;…&#125; /&gt;</code>
+    from <code>Web.Components.GroupRule</code>, as on a group's page, with made-up clauses.
   </p>
 </.shell>

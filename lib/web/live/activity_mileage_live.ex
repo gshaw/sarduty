@@ -45,7 +45,7 @@ defmodule Web.ActivityMileageLive do
       <:item label="Mileage report" />
     </.breadcrumbs>
 
-    <h1 class="title mb-p">{@activity.title}</h1>
+    <h1 class="title">{@activity.title}</h1>
     <%= if @activity.coordinate do %>
       <dl>
         <dt>Activity latitude and longitude</dt>
@@ -81,16 +81,16 @@ defmodule Web.ActivityMileageLive do
             <th colspan="2"></th>
           </:header_row>
           <:col :let={record} label="Name">{record.name}</:col>
-          <:col :let={record} class="text-right" label="km">{record.activity_km}</:col>
-          <:col :let={record} class="text-right" label="Hours">{record.activity_hours}</:col>
-          <:col :let={record} class="text-right" label="km">{record.yard_km}</:col>
-          <:col :let={record} class="text-right" label="Hours">{record.yard_hours}</:col>
+          <:col :let={record} align="right" label="km">{record.activity_km}</:col>
+          <:col :let={record} align="right" label="Hours">{record.activity_hours}</:col>
+          <:col :let={record} align="right" label="km">{record.yard_km}</:col>
+          <:col :let={record} align="right" label="Hours">{record.yard_hours}</:col>
           <:col :let={record} label="Home address">{record.address}</:col>
           <:col :let={record} label="Latitude and longitude">
             {Coordinate.to_string(record.coordinate, 3)}
           </:col>
         </.table>
-        <p class="mt-p">
+        <p class="mt-4">
           Distances and times are round trips by car, from each member's home to the activity
           and to the yard.
         </p>

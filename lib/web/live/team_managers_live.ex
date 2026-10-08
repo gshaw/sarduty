@@ -29,7 +29,7 @@ defmodule Web.TeamManagersLive do
       <:item label="Team settings" path={~p"/teams/#{@current_team}/settings"} />
       <:item label={@page_title} />
     </.breadcrumbs>
-    <h1 class="title mb-p">{@page_title}</h1>
+    <h1 class="title">{@page_title}</h1>
     <p class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}. They are the members D4H
       makes an Owner or Editor, as of the last refresh. Members who are retired or have left
