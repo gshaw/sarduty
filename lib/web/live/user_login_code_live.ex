@@ -100,9 +100,7 @@ defmodule Web.UserLoginCodeLive do
           In development the text message is in the server log, not sent.
         </p>
         <p>
-          <.a id="login-again" navigate={~p"/login?with=phone"}>Use a different number</.a>
-          or
-          <.a id="login-with-email" navigate={~p"/login"}>get a code by email</.a>
+          <.a id="login-again" navigate={~p"/login"}>Use a different number or an email</.a>
         </p>
       <% end %>
     </div>

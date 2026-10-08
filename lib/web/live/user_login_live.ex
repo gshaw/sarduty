@@ -5,77 +5,58 @@ defmodule Web.UserLoginLive do
 
   # The submit goes through LiveView first so the button disables at once, then
   # phx-trigger-action posts the form to the controller, which sends the code. The button
-  # stays busy until that POST leaves the page. With Twilio set up, `?with=phone` asks for
-  # a mobile number instead of an email.
+  # stays busy until that POST leaves the page. With Twilio set up, the one field takes an
+  # email or a mobile number, and the controller tells them apart.
   def render(assigns) do
     ~H"""
     <div>
       <h1 class="heading">Log in</h1>
-      <%= if @with_phone do %>
-        <p>
-          Enter the mobile number D4H has for you. If you're an Owner or Editor on your team
-          in D4H, we'll text you a code to log in. There's no password.
-        </p>
-        <.form
-          for={@form}
-          id="login_phone_form"
-          action={~p"/login/code"}
-          phx-submit="submit"
-          phx-trigger-action={@trigger_submit}
+      <p :if={@text_login}>
+        Enter the email or mobile number D4H has for you. If you're an Owner or Editor on
+        your team in D4H, we'll send you a code to log in. There's no password.
+      </p>
+      <p :if={not @text_login}>
+        Enter the email D4H has for you. If you're an Owner or Editor on your team in D4H,
+        we'll email you a code to log in. There's no password.
+      </p>
+      <.form
+        for={@form}
+        id="login_form"
+        action={~p"/login/code"}
+        phx-submit="submit"
+        phx-trigger-action={@trigger_submit}
+      >
+        <.input
+          :if={@text_login}
+          field={@form[:login]}
+          type="text"
+          label="Email or mobile number"
+          required
+          autocomplete="username"
+          autocapitalize="none"
+          spellcheck="false"
         >
-          <.input
-            field={@form[:phone]}
-            type="tel"
-            label="Mobile number"
-            required
-            autocomplete="tel"
+          For a mobile number, include the area code, like 604-555-1234.
+        </.input>
+        <.input
+          :if={not @text_login}
+          field={@form[:login]}
+          type="email"
+          label="Email"
+          required
+          autocomplete="email"
+        />
+        <.form_actions>
+          <.button
+            id="login_submit"
+            variant={:success}
+            disabled={@trigger_submit}
+            phx-disable-with="Sending…"
           >
-            Include the area code, like 604-555-1234.
-          </.input>
-          <.form_actions>
-            <.button
-              id="login_phone_submit"
-              variant={:success}
-              disabled={@trigger_submit}
-              phx-disable-with="Sending…"
-            >
-              {if @trigger_submit, do: "Sending…", else: "Text me a code"}
-            </.button>
-          </.form_actions>
-        </.form>
-        <p>
-          <.a id="login-with-email" navigate={~p"/login"}>Get a code by email instead</.a>
-        </p>
-      <% else %>
-        <p>
-          Enter the email D4H has for you. If you're an Owner or Editor on your team in D4H,
-          we'll email you a code to log in. There's no password.
-        </p>
-        <.form
-          for={@form}
-          id="login_form"
-          action={~p"/login/code"}
-          phx-submit="submit"
-          phx-trigger-action={@trigger_submit}
-        >
-          <.input field={@form[:email]} type="email" label="Email" required autocomplete="email" />
-          <.form_actions>
-            <.button
-              id="login_submit"
-              variant={:success}
-              disabled={@trigger_submit}
-              phx-disable-with="Sending…"
-            >
-              {if @trigger_submit, do: "Sending…", else: "Email me a code"}
-            </.button>
-          </.form_actions>
-        </.form>
-        <p :if={@text_login}>
-          <.a id="login-with-phone" navigate={~p"/login?with=phone"}>
-            Get a code by text message instead
-          </.a>
-        </p>
-      <% end %>
+            {if @trigger_submit, do: "Sending…", else: "Send me a code"}
+          </.button>
+        </.form_actions>
+      </.form>
       <p class="text-secondary-1">
         Team not on SAR Duty yet?
         <.a navigate={~p"/signup"}>Sign up your team</.a>
@@ -89,15 +70,9 @@ defmodule Web.UserLoginLive do
      assign(socket,
        page_title: "Log in",
        text_login: Accounts.text_login?(),
+       form: to_form(%{"login" => nil}, as: "user"),
        trigger_submit: false
      )}
-  end
-
-  def handle_params(params, _uri, socket) do
-    with_phone = socket.assigns.text_login and params["with"] == "phone"
-    field = if with_phone, do: "phone", else: "email"
-
-    {:noreply, assign(socket, with_phone: with_phone, form: to_form(%{field => nil}, as: "user"))}
   end
 
   def handle_event("submit", %{"user" => params}, socket) do
