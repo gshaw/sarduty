@@ -11,13 +11,13 @@ defmodule Web.UserSessionControllerTest do
   alias App.Worker.SendLoginCodeWorker
 
   defp request_code(conn, email),
-    do: post(conn, ~p"/login/code", %{"user" => %{"email" => email}})
+    do: post(conn, ~p"/login/code", %{"user" => %{"login" => email}})
 
   defp log_in(conn, email, code, extra \\ %{}),
     do: post(conn, ~p"/login", %{"user" => Map.merge(%{"email" => email, "code" => code}, extra)})
 
   defp request_text(conn, phone),
-    do: post(conn, ~p"/login/code", %{"user" => %{"phone" => phone}})
+    do: post(conn, ~p"/login/code", %{"user" => %{"login" => phone}})
 
   # A client IP of the test's own, so the per-IP cap other tests use up hides nothing.
   defp from_ip(conn),
@@ -202,6 +202,7 @@ defmodule Web.UserSessionControllerTest do
       conn = conn |> from_ip() |> request_text("604-555-1234")
 
       assert redirected_to(conn) == ~p"/login"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Enter your email."
       refute get_session(conn, :login_phone)
       refute_received {:text, _, _}
     end
@@ -233,7 +234,7 @@ defmodule Web.UserSessionControllerTest do
 
       conn = conn |> from_ip() |> request_text("555-1234")
 
-      assert redirected_to(conn) == ~p"/login?with=phone"
+      assert redirected_to(conn) == ~p"/login"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "area code"
     end
 

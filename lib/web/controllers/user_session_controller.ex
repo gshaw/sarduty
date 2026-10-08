@@ -9,34 +9,33 @@ defmodule Web.UserSessionController do
   alias Web.UserAuth
   alias Web.VerifyLimit
 
-  # The reply is the same whether or not the number may log in. With text login off,
-  # nothing is sent and the email form comes back.
-  def request_code(conn, %{"user" => %{"phone" => phone}}) do
-    case Accounts.text_login?() && Service.Phone.normalize(phone) do
-      false ->
-        redirect(conn, to: ~p"/login")
+  # One field takes an email or, with text login on, a mobile number: an "@" means email.
+  # The reply is the same whether or not either may log in, so the form can't be used to
+  # find out who has access.
+  def request_code(conn, %{"user" => %{"login" => login}}) do
+    login = login |> String.trim() |> String.slice(0, 160)
+    text_login? = Accounts.text_login?()
 
-      e164 when is_binary(e164) ->
-        if request_allowed?(conn, {:phone, e164}), do: send_code(%{phone: e164})
+    cond do
+      String.contains?(login, "@") ->
+        request_email_code(conn, login)
 
-        conn
-        |> delete_session(:login_email)
-        |> put_session(:login_phone, e164)
-        |> redirect(to: ~p"/login/code")
+      e164 = text_login? && Service.Phone.normalize(login) ->
+        request_text_code(conn, e164)
 
-      nil ->
-        conn
-        |> put_flash(:error, "Enter your mobile number with its area code, like 604-555-1234.")
-        |> redirect(to: ~p"/login?with=phone")
+      text_login? ->
+        ask_again(
+          conn,
+          "Enter your email, or a mobile number with its area code, like 604-555-1234."
+        )
+
+      true ->
+        ask_again(conn, "Enter your email.")
     end
   end
 
-  # The reply is the same whether or not the email may log in, so the form can't be
-  # used to find out who has access.
-  def request_code(conn, %{"user" => %{"email" => email}}) do
-    email = email |> String.trim() |> String.slice(0, 160)
-
-    if email != "" and request_allowed?(conn, email), do: send_code(%{email: email})
+  defp request_email_code(conn, email) do
+    if request_allowed?(conn, email), do: send_code(%{email: email})
 
     # The code page reads the email from the session, so a refresh shows it again rather
     # than the form.
@@ -44,6 +43,21 @@ defmodule Web.UserSessionController do
     |> delete_session(:login_phone)
     |> put_session(:login_email, email)
     |> redirect(to: ~p"/login/code")
+  end
+
+  defp request_text_code(conn, e164) do
+    if request_allowed?(conn, {:phone, e164}), do: send_code(%{phone: e164})
+
+    conn
+    |> delete_session(:login_email)
+    |> put_session(:login_phone, e164)
+    |> redirect(to: ~p"/login/code")
+  end
+
+  defp ask_again(conn, message) do
+    conn
+    |> put_flash(:error, message)
+    |> redirect(to: ~p"/login")
   end
 
   # Records each request within the limits, and the first one over them.

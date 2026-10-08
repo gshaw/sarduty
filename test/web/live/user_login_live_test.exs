@@ -4,10 +4,10 @@ defmodule Web.UserLoginLiveTest do
   import App.AccountsFixtures
   import Phoenix.LiveViewTest
 
-  test "asks for an email only", %{conn: conn} do
+  test "without Twilio, asks for an email only", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/login")
 
-    assert has_element?(lv, "#login_form input[type=email]")
+    assert has_element?(lv, ~s(#login_form input[name="user[login]"][type=email]))
     refute has_element?(lv, "#login_form input[type=password]")
   end
 
@@ -16,7 +16,7 @@ defmodule Web.UserLoginLiveTest do
 
     refute has_element?(lv, "#login_submit[disabled]")
 
-    form = form(lv, "#login_form", user: %{email: "pat@example.com"})
+    form = form(lv, "#login_form", user: %{login: "pat@example.com"})
     render_submit(form)
 
     # Busy until the POST below leaves the page.
@@ -75,35 +75,28 @@ defmodule Web.UserLoginLiveTest do
   end
 
   describe "text login" do
-    test "without Twilio, the page offers no text and ignores ?with=phone", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/login")
-      refute has_element?(lv, "#login-with-phone")
-
-      {:ok, lv, _html} = live(conn, ~p"/login?with=phone")
-      assert has_element?(lv, "#login_form input[type=email]")
-      refute has_element?(lv, "#login_phone_form")
-    end
-
-    test "with Twilio, the email page links to the number form", %{conn: conn} do
+    test "with Twilio, one field takes an email or a number", %{conn: conn} do
       text_login_fixture()
       {:ok, lv, _html} = live(conn, ~p"/login")
 
-      assert has_element?(lv, ~s(#login-with-phone[href="/login?with=phone"]))
+      assert has_element?(
+               lv,
+               ~s(#login_form input[name="user[login]"][type=text][autocomplete=username])
+             )
 
-      {:ok, lv, _html} = live(conn, ~p"/login?with=phone")
-      assert has_element?(lv, ~s(#login_phone_form input[name="user[phone]"][type=tel]))
-      assert has_element?(lv, ~s(#login-with-email[href="/login"]))
+      assert has_element?(lv, "#login_form label", "Email or mobile number")
     end
 
     test "submitting a number hands the form to the controller", %{conn: conn} do
       text_login_fixture()
-      {:ok, lv, _html} = live(conn, ~p"/login?with=phone")
+      {:ok, lv, _html} = live(conn, ~p"/login")
 
-      form = form(lv, "#login_phone_form", user: %{phone: "604-555-1234"})
+      form = form(lv, "#login_form", user: %{login: "604-555-1234"})
       render_submit(form)
 
       conn = follow_trigger_action(form, conn)
       assert redirected_to(conn) == ~p"/login/code"
+      assert get_session(conn, :login_phone) == "+16045551234"
     end
 
     test "the code page shows the number and sends it with the code", %{conn: conn} do
