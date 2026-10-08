@@ -167,6 +167,7 @@ defmodule Web.Router do
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationLive, :new
       live "/admin/orgs/:id", Admin.OrganizationLive, :edit
+      live "/admin/teams/new", Admin.TeamLive
     end
 
     live_session :require_current_team_session,

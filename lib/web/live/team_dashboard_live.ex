@@ -124,8 +124,10 @@ defmodule Web.TeamDashboardLive do
         >
           Refresh now
         </.button>
-        <span aria-hidden="true">·</span>
-        <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H</.a>
+        <span :if={!D4H.hosted?(@team)} aria-hidden="true">·</span>
+        <.a :if={!D4H.hosted?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>
+          Open D4H
+        </.a>
       </p>
     </div>
     """

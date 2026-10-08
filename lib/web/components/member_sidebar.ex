@@ -34,8 +34,8 @@ defmodule Web.Components.MemberSidebar do
         )} ago
       </dd>
 
-      <dt>Actions</dt>
-      <dd>
+      <dt :if={!D4H.hosted?(@member.team)}>Actions</dt>
+      <dd :if={!D4H.hosted?(@member.team)}>
         <ul class="action-list">
           <li>
             <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>

@@ -4,6 +4,7 @@ defmodule Web.AdminDashboardLive do
   import Web.Components.AdminTabs
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
@@ -56,6 +57,7 @@ defmodule Web.AdminDashboardLive do
         <span id="refresh-summary" class="hint">
           {refresh_summary(@teams)}
         </span>
+        <.button navigate={~p"/admin/teams/new"} size={:sm}>New team without D4H</.button>
         <.button type="button" variant={:warning} size={:sm} phx-click="refresh-all">
           Refresh all teams
         </.button>
@@ -202,13 +204,14 @@ defmodule Web.AdminDashboardLive do
     |> Enum.sort_by(& &1.email)
   end
 
-  defp key_summary(%Team{d4h_access_key: key}) when key in [nil, ""], do: "No team key"
-  defp key_summary(%Team{d4h_access_key_owner: nil}), do: "Team key"
-
   defp key_summary(%Team{} = team) do
-    if Team.key_owner_is_sar_duty?(team),
-      do: "Team key: #{team.d4h_access_key_owner}",
-      else: "Person's key: #{team.d4h_access_key_owner}"
+    cond do
+      D4H.hosted?(team) -> "No D4H: SAR Duty keeps its records"
+      team.d4h_access_key in [nil, ""] -> "No team key"
+      team.d4h_access_key_owner == nil -> "Team key"
+      Team.key_owner_is_sar_duty?(team) -> "Team key: #{team.d4h_access_key_owner}"
+      true -> "Person's key: #{team.d4h_access_key_owner}"
+    end
   end
 
   # The most recent visit by anyone on the team.

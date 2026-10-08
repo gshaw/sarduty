@@ -104,39 +104,45 @@ defmodule Web.Settings.TeamLive do
           <.error :for={error <- upload_errors(@uploads.signature)}>{upload_error(error)}</.error>
           <.error :if={@signature_error} id="signature-error">{@signature_error}</.error>
         </div>
-        <.input
-          field={@form[:new_d4h_access_key]}
-          label="D4H access key"
-          type="password"
-          autocomplete="off"
-        >
-          SAR Duty uses this one key for every D4H request: the nightly refresh, attendance,
-          mileage, photos, and group changes.
-          <span id="team-key-status">{key_status(@current_team)}</span>
-        </.input>
-        <div id="team-key-owner" class="mb-4 text-sm">
-          <p :if={@current_team.d4h_access_key_owner}>
-            The key belongs to the D4H member <strong>{@current_team.d4h_access_key_owner}</strong>.
+        <%= if D4H.hosted?(@current_team) do %>
+          <p id="team-hosted" class="callout">
+            SAR Duty keeps this team's records itself. There is no D4H key to save.
           </p>
-          <p
-            :if={!Team.key_owner_is_sar_duty?(@current_team)}
-            id="team-key-advice"
-            class="callout"
+        <% else %>
+          <.input
+            field={@form[:new_d4h_access_key]}
+            label="D4H access key"
+            type="password"
+            autocomplete="off"
           >
-            Create the key from a D4H member named "SAR Duty" rather than a person. D4H history
-            then shows SAR Duty for changes made here, and the key keeps working when people
-            leave the team. In D4H, add a member named SAR Duty with Owner or Editor access. Log
-            in as that member and <.a
-              external={true}
-              href="https://help.d4h.com/article/377-obtaining-an-api-access-key"
+            SAR Duty uses this one key for every D4H request: the nightly refresh, attendance,
+            mileage, photos, and group changes.
+            <span id="team-key-status">{key_status(@current_team)}</span>
+          </.input>
+          <div id="team-key-owner" class="mb-4 text-sm">
+            <p :if={@current_team.d4h_access_key_owner}>
+              The key belongs to the D4H member <strong>{@current_team.d4h_access_key_owner}</strong>.
+            </p>
+            <p
+              :if={!Team.key_owner_is_sar_duty?(@current_team)}
+              id="team-key-advice"
+              class="callout"
             >
-              create a D4H access key
-            </.a>.
-          </p>
-        </div>
+              Create the key from a D4H member named "SAR Duty" rather than a person. D4H history
+              then shows SAR Duty for changes made here, and the key keeps working when people
+              leave the team. In D4H, add a member named SAR Duty with Owner or Editor access. Log
+              in as that member and <.a
+                external={true}
+                href="https://help.d4h.com/article/377-obtaining-an-api-access-key"
+              >
+                create a D4H access key
+              </.a>.
+            </p>
+          </div>
+        <% end %>
         <.form_actions>
           <.button variant={:success}>Save settings</.button>
-          <:trailing>
+          <:trailing :if={!D4H.hosted?(@current_team)}>
             <.button type="button" phx-click="refresh">Refresh from D4H</.button>
           </:trailing>
         </.form_actions>

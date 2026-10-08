@@ -35,6 +35,19 @@ Canadian database the privacy page promises.
 - Hosted team ids start at 2,000,000,000, so a hosted `d4h_team_id` never matches a real
   D4H team's, which are small.
 
+## Creating a hosted team
+
+An admin creates one at `/admin/teams/new` (`App.Operation.CreateHostedTeam`): the
+team's name, short name (its subdomain), time zone, and first manager. The manager is an
+Owner in the store, so they log in with that email as soon as the page saves. The first
+refresh runs right there rather than on the queue. A box adds made-up members,
+activities, attendance, qualifications, and groups (`App.Operation.SeedHostedTeam`) for a
+team trying SAR Duty out.
+
+A hosted team's pages hide what only D4H has: the "Open D4H" links and the D4H key in
+team settings. The nightly refresh and the sync every 10 minutes run for it as for any
+team.
+
 ## What it serves
 
 Every endpoint the [D4H adapter](../lib/app/adapter/d4h.ex) calls, with D4H's paging
