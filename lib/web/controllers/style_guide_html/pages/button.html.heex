@@ -1,0 +1,119 @@
+<.shell title="Button" current={:button}>
+  <h1>Button</h1>
+  <p class="lead">Flat buttons with a hard bottom edge.</p>
+  <.used_on pages={[
+    "every form",
+    "the activity's attendance",
+    "tax credit letters",
+    "group rules"
+  ]} />
+
+  <div class="demo">
+    <.form_actions>
+      <.button variant={:primary}>Save settings</.button>
+      <.button>Cancel</.button>
+      <.button variant={:success}>Create letter</.button>
+      <.button variant={:danger}>Delete clause</.button>
+      <.button variant={:link}>More information</.button>
+    </.form_actions>
+  </div>
+
+  <h2>When to use</h2>
+  <ul>
+    <li><strong>Primary</strong>: the one main action on a page.</li>
+    <li><strong>Secondary</strong>: everything else, including Cancel and Reset.</li>
+    <li>
+      <strong>Success</strong>: an action that creates or adds, where green helps scanning a table.
+    </li>
+    <li><strong>Danger</strong>: deletes or removes. Ask first when it cannot be undone.</li>
+    <li><strong>Link</strong>: a quiet action inside text or beside other buttons.</li>
+  </ul>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>Going to another page from inside text. Use a link.</li>
+    <li>
+      A setting that takes effect when it's tapped. Use a <a href={page_path(:switch)}>switch</a>.
+    </li>
+  </ul>
+
+  <h2>Sizes</h2>
+  <div class="demo">
+    <.form_actions>
+      <.button variant={:primary}>Default, md text</.button>
+      <.button variant={:primary} size={:sm}>Small, sm text</.button>
+      <.button size={:sm}>Small secondary</.button>
+      <.button variant={:success} size={:sm}>Create letter</.button>
+      <.button variant={:danger} size={:sm}>Remove</.button>
+    </.form_actions>
+  </div>
+  <p class="spec">
+    Default is 36px tall for forms and page actions. Small is 24px, for table rows and toolbars. Large, <code>size=&#123;:lg&#125;</code>, is only for the one action on the door's scan page and the ID card check.
+  </p>
+
+  <h2>States</h2>
+  <p>
+    Every kind in every state, frozen so you can compare them on any screen. Try the real ones
+    above: on a phone, press and hold to see the pressed state.
+  </p>
+  <.table id="button-states" rows={button_kinds()}>
+    <:col :let={{_variant, label}} label="Kind">{label}</:col>
+    <:col :let={{variant, _label}} label="Default">
+      <.button variant={variant}>Save</.button>
+    </:col>
+    <:col :let={{variant, _label}} label="Hover">
+      <.button variant={variant} class="is-hover" tabindex="-1">Save</.button>
+    </:col>
+    <:col :let={{variant, _label}} label="Pressed">
+      <.button variant={variant} class="is-active" tabindex="-1">Save</.button>
+    </:col>
+    <:col :let={{variant, _label}} label="Focus">
+      <.button variant={variant} class="is-focus" tabindex="-1">Save</.button>
+    </:col>
+    <:col :let={{variant, _label}} label="Disabled">
+      <.button variant={variant} disabled>Save</.button>
+    </:col>
+    <:col :let={{variant, _label}} label="Busy">
+      <.button variant={variant} disabled><.spinner>Saving…</.spinner></.button>
+    </:col>
+  </.table>
+  <ul>
+    <li><strong>Hover</strong> darkens the button, only on devices with a mouse or trackpad.</li>
+    <li><strong>Pressed</strong> drops the button 2px onto its edge, on every device.</li>
+    <li>
+      <strong>Focus</strong>
+      is yellow with a dark edge for every kind, so keyboard users see one signal.
+    </li>
+    <li>
+      <strong>Disabled</strong> is a last resort. Prefer an error that says what is missing.
+    </li>
+    <li>
+      <strong>Busy</strong> shows a spinner and says what it is doing, for work that takes more
+      than a second.
+    </li>
+  </ul>
+
+  <h2>Button rows</h2>
+  <div class="demo">
+    <.form_actions>
+      <.button variant={:primary}>Save settings</.button>
+      <.button>Cancel</.button>
+      <:trailing>
+        <.button variant={:danger}>Delete team</.button>
+      </:trailing>
+    </.form_actions>
+  </div>
+  <p class="spec">
+    The main action first. A destructive action sits apart, on the right.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.button variant=&#123;:primary&#125;&gt;</code>. With no variant, a button is secondary. Give it
+    <code>navigate</code>
+    or <code>href</code>
+    for a link that looks like a button. A row is <code>&lt;.form_actions&gt;</code>, with the destructive action in its
+    <code>&lt;:trailing&gt;</code>
+    slot. The kind and size are checked when the app compiles.
+  </p>
+</.shell>

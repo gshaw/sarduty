@@ -8,14 +8,13 @@ defmodule Web.StyleGuideController do
   plug :put_root_layout, false
   plug :put_layout, false
 
-  def index(conn, _params), do: render(conn, :index)
+  def index(conn, _params), do: render(conn, :index_page)
 
   def show(conn, %{"page" => slug}) do
-    page =
-      Enum.find_value(StyleGuideHTML.pages(), fn {_group, pages} ->
-        Enum.find_value(pages, fn {page, _title} -> Atom.to_string(page) == slug && page end)
-      end)
-
-    if page && page != :index, do: render(conn, page), else: raise(Web.Status.NotFound)
+    case StyleGuideHTML.find(slug) do
+      {:group, group} -> render(conn, :group_page, group: group)
+      {:page, template} -> render(conn, template)
+      nil -> raise Web.Status.NotFound
+    end
   end
 end

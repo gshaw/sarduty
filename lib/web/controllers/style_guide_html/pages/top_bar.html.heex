@@ -1,0 +1,47 @@
+<.shell title="Top bar" current={:top_bar}>
+  <h1>Top bar</h1>
+  <p class="lead">
+    Navy, with the amber rule and logo. It holds the main sections and the account menu.
+  </p>
+  <.used_on pages={["every team page"]} />
+
+  <div class="demo bar-demo" style="padding: 0">
+    <Web.Layouts.main_nav_bar
+      current_user={sample_user()}
+      current_team={sample_team()}
+      current_path="/teams/squamish/activities"
+    />
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>The current section is underlined in amber.</li>
+    <li>
+      The account menu is a short list under a button. Keep menus for a few links that don't fit in the bar. Actions on a page are buttons.
+    </li>
+  </ul>
+
+  <h3>On a phone</h3>
+  <p>
+    Below 1024px the sections, Admin, and the account menu move behind a Menu button. The
+    panel opens under the amber rule, the width of the screen, with the current section
+    marked in amber. Going to another page closes it.
+  </p>
+  <div class="demo phone-width phone-bar-demo" style="padding: 0">
+    <Web.Layouts.main_nav_bar
+      current_user={sample_user()}
+      current_team={sample_team()}
+      current_path="/teams/squamish/activities"
+    />
+  </div>
+  <script>
+    // Open the menus, so the examples show them.
+    document.querySelectorAll(".bar-demo .site-bar-menu, .phone-bar-demo .site-bar-phone")
+      .forEach(function (menu) { menu.open = true; });
+  </script>
+
+  <h2>In the app</h2>
+  <p>
+    The layout's <code>main_nav_bar</code>, built from <code>&lt;.site_bar&gt;</code>. The menus are open here so you can see them.
+  </p>
+</.shell>

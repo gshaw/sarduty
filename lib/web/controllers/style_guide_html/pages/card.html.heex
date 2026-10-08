@@ -1,0 +1,29 @@
+<.shell title="Card" current={:card}>
+  <h1>Card</h1>
+  <p class="lead">A box for one topic on a dashboard.</p>
+  <.used_on pages={["the team's home page"]} />
+
+  <div class="demo">
+    <section class="dash-card">
+      <header>
+        <h2 class="chart-title">D4H connection</h2>
+        <span class="text-sm text-secondary-1">Last refreshed today at 02:00</span>
+      </header>
+      <p class="paragraph">833 members, 1,912 activities.</p>
+      <.button size={:sm}>
+        <.icon name="hero-arrow-path-micro" class="size-4" /> Refresh now
+      </.button>
+    </section>
+  </div>
+
+  <h2>When to use</h2>
+  <p>A dashboard with several topics, each with its own heading and maybe an action.</p>
+
+  <h2>When not to use</h2>
+  <p>To box the content of an ordinary page. Headings and space group it already.</p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;section class="dash-card"&gt;</code>, with the title and a note in its <code>&lt;header&gt;</code>.
+  </p>
+</.shell>

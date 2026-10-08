@@ -27,7 +27,7 @@
     display: none;
   }
 
-  /* A question that opens to its answer. No page uses it yet. See /styles/layout. */
+  /* A question that opens to its answer. No page uses it yet. See /styles/details. */
   details.disclosure { margin-bottom: var(--sp-4); }
   details.disclosure > summary { display: inline-flex; align-items: center; gap: var(--sp-1); list-style: none; color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; }
   details.disclosure > summary::-webkit-details-marker { display: none; }

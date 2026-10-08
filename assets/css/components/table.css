@@ -1,6 +1,6 @@
 /* Dense tables: 32px rows, cells on their first baseline, sticky headers. On a phone the
    table scrolls sideways inside .table-wrap rather than reflowing, unless it is a
-   .table-stack. See /styles/tables. */
+   .table-stack. See /styles/table. */
 @layer components {
   .table-wrap {
     overflow-x: auto;

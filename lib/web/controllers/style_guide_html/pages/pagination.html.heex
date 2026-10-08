@@ -1,0 +1,27 @@
+<.shell title="Pagination" current={:pagination}>
+  <h1>Pagination</h1>
+  <p class="lead">Pages under a long table.</p>
+  <.used_on pages={["the activity list", "the member list", "a member's attendance"]} />
+
+  <div class="demo">
+    <div class="table-summary">
+      <span class="table-summary-count">1,912 activities</span>
+    </div>
+    <.pagination paginated={sample_page()} path_fn={fn _ -> "#" end} />
+  </div>
+
+  <h2>When to use</h2>
+  <p>Under a long table, and only when there is more than 1 page.</p>
+
+  <h2>When not to use</h2>
+  <p>
+    As the main way through a list. Prefer filters that shrink the list over paging through it.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.pagination paginated=&#123;@paginated&#125; path_fn=&#123;@path_fn&#125; /&gt;</code>, with the
+    <code>App.Page</code>
+    from <code>Repo.paginate/2</code>.
+  </p>
+</.shell>

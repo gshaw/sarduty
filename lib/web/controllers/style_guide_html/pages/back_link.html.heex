@@ -1,0 +1,22 @@
+<.shell title="Back link" current={:back_link}>
+  <h1>Back link</h1>
+  <p class="lead">A way back for pages outside the main tree.</p>
+  <.used_on pages={["team settings", "ID cards", "MCP tokens", "an organization"]} />
+
+  <div class="demo">
+    <p>
+      <.a href="#">← Squamish SAR</.a>
+    </p>
+  </div>
+
+  <h2>When to use</h2>
+  <p>At the top of a page outside the main tree, such as settings, instead of breadcrumbs.</p>
+
+  <h2>When not to use</h2>
+  <p>A page under a section's list. Use <a href={page_path(:breadcrumbs)}>breadcrumbs</a>.</p>
+
+  <h2>In the app</h2>
+  <p>
+    An <code>&lt;.a&gt;</code> whose text starts with ← and names the page it goes back to.
+  </p>
+</.shell>

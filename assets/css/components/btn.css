@@ -1,6 +1,6 @@
 /* Buttons: flat, with a hard bottom edge, GOV.UK style. Each variant sets the same four
    --btn-* properties; hover only where there is a pointer, and a press drops the button
-   onto its edge. See /styles/components. */
+   onto its edge. See /styles/button. */
 @layer components {
   .btn {
     --btn-bg: var(--surface-alt);

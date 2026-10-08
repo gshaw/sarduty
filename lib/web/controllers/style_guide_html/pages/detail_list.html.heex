@@ -1,0 +1,37 @@
+<.shell title="Detail list" current={:detail_list}>
+  <h1>Detail list</h1>
+  <p class="lead">Key facts about one record.</p>
+  <.used_on pages={[
+    "an activity",
+    "a member",
+    "a group",
+    "a qualification",
+    "a tax credit letter"
+  ]} />
+
+  <div class="demo max-w-100">
+    <dl>
+      <dt>Kind</dt>
+      <dd><.activity_badges activity={hd(activities())} /></dd>
+      <dt>Attendance</dt>
+      <dd>14 members · 62h 15m in total</dd>
+      <dt>Start</dt>
+      <dd>
+        {Service.Format.datetime_medium(hd(activities()).started_at, sample_team().timezone)}
+      </dd>
+      <dt>Finish</dt>
+      <dd>
+        {Service.Format.datetime_medium(hd(activities()).finished_at, sample_team().timezone)}
+      </dd>
+    </dl>
+  </div>
+
+  <h2>When to use</h2>
+  <p>The facts at the top of a record's page, a label and a value each.</p>
+
+  <h2>When not to use</h2>
+  <p>Many records side by side. Use a <a href={page_path(:table)}>table</a>.</p>
+
+  <h2>In the app</h2>
+  <p>A plain <code>&lt;dl&gt;</code>. Each <code>dd</code> gets a rule under it.</p>
+</.shell>

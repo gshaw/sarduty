@@ -1,0 +1,39 @@
+<.shell title="Tabs" current={:tabs}>
+  <h1>Tabs</h1>
+  <p class="lead">Pages about one record, a link each.</p>
+  <.used_on pages={["a member's pages", "the admin pages"]} />
+
+  <div class="demo">
+    <.tabs label="Member">
+      <:tab navigate="#" current>Attendance</:tab>
+      <:tab navigate="#">Qualifications</:tab>
+      <:tab navigate="#">Groups</:tab>
+      <:tab navigate="#">ID card</:tab>
+      <:tab navigate="#">History</:tab>
+    </.tabs>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A few pages about the same record, such as a member's attendance, qualifications, and groups.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    To hide part of one page. Show it, or put it under <a href={page_path(:details)}>details</a>.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Each tab is its own page with its own URL, so links and the back button work.</li>
+    <li>The tab for the page you are on is marked.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.tabs label="Member"&gt;</code>
+    with a <code>&lt;:tab navigate=&#123;…&#125; current&gt;</code>
+    for each page. <code>current</code>
+    marks the page you are on.
+  </p>
+</.shell>

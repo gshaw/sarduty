@@ -1,0 +1,34 @@
+<.shell title="Review changes" current={:review_changes}>
+  <h1>Review changes</h1>
+  <p class="lead">Check the changes to make, then send them.</p>
+
+  <form class="example" onsubmit="return false">
+    <.table id="sample-recommendations" rows={recommendations()} class="table-striped table-stack">
+      <:col :let={r} label="" class="stack-check">
+        <.input :if={r.op != :not_invited} type="checkbox" name={"r-#{r.name}"} checked />
+      </:col>
+      <:col :let={r} label="" class="stack-full">
+        <.badge :if={r.op == :not_invited} kind={:danger}>Not signed up</.badge>
+        <span :if={r.op == :add} class="text-success-1 font-bold">Add</span>
+        <span :if={r.op == :remove} class="text-danger-1 font-bold">Remove</span>
+      </:col>
+      <:col :let={r} label="Name" class="stack-title">{r.name}</:col>
+      <:col :let={r} label="Email" class="stack-full break-all">{r.email}</:col>
+      <:col :let={r} label="Phone">{r.phone}</:col>
+    </.table>
+    <.form_actions class="mt-4">
+      <.button variant={:success}>Perform checked changes</.button>
+    </.form_actions>
+  </form>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Every change starts checked. Uncheck one to leave it out.</li>
+    <li>A row that can't change says why with a tag, and has no checkbox.</li>
+    <li>One button sends the checked changes.</li>
+    <li>Below 640px each row stacks.</li>
+  </ul>
+  <p class="spec">
+    The markup of the recommended changes in <code>Web.ActivityAttendanceLive</code>.
+  </p>
+</.shell>

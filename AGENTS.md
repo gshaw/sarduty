@@ -180,8 +180,9 @@ fi
   dark values. Use the theme's colour names (`text-secondary-1`, `bg-base-2`) or the
   tokens, never raw Tailwind colours like `text-zinc-600`, which don't follow dark mode.
 - **The style guide's examples are the app's own components**, styled only by `app.css`.
-  Its own stylesheet is just its frame. A new shared component gets an example there, and
-  a design no page uses yet is marked as such.
+  Its own stylesheet is just its frame. A new shared component gets its own page under
+  Components, listed in `Web.StyleGuideHTML.groups/0` A to Z, with an example, when to use
+  it, and `<.used_on>` naming the app's pages that use it (none: "Not used yet").
 - Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
   link styled as a button. Badges are `<.badge kind={:incident}>`. Both check their values
   at compile time, so never write `class="btn btn-success"` or `class="badge"` by hand.

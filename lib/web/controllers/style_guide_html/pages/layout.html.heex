@@ -1,0 +1,27 @@
+<.shell title="Layout" current={:layout}>
+  <h1>Layout</h1>
+  <p class="lead">
+    Every team page starts with the same header, and content stops at a readable width.
+  </p>
+
+  <h2>Page header</h2>
+  <p>Breadcrumbs, then the title.</p>
+  <div class="demo">
+    <.breadcrumbs team={sample_team()}>
+      <:item label="Activities" path="#" />
+      <:item label="25-0412" />
+    </.breadcrumbs>
+    <h1 class="title">Missing hiker, Stawamus Chief</h1>
+  </div>
+  <p class="spec">
+    In the app: <code>&lt;.breadcrumbs&gt;</code>, then an <code>h1</code>
+    with <code>class="title"</code>. A page's actions sit with its content, not in the header.
+  </p>
+
+  <h2>Page width</h2>
+  <ul>
+    <li>Content fills up to 1280px; tables use the full width.</li>
+    <li>Text and forms stop at 640 to 800px, so lines stay readable.</li>
+    <li>Desktop first. On a phone, layouts stack and wide tables scroll sideways.</li>
+  </ul>
+</.shell>

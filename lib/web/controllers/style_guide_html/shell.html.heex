@@ -17,9 +17,19 @@
     <.styles />
   </head>
   <body>
+    <% {current_group, _title, _about, current_pages} = group_of(@current) %>
     <header class="guide-bar">
       <div class="container">
         <a href="/" class="brand">SAR <span>Duty</span><small>Style guide</small></a>
+        <nav class="guide-tabs" aria-label="Style guide sections">
+          <a
+            :for={{group, title, _about, _pages} <- groups()}
+            href={page_path(group)}
+            aria-current={group == current_group && "true"}
+          >
+            {title}
+          </a>
+        </nav>
         <div class="theme-switch" role="group" aria-label="Theme">
           <button type="button" data-theme-choice="">Auto</button>
           <button type="button" data-theme-choice="light">Light</button>
@@ -28,14 +38,11 @@
       </div>
     </header>
     <div class="container guide">
-      <nav class="guide-nav" aria-label="Style guide">
+      <nav class="guide-nav" aria-label="Pages">
         <ul>
-          <%= for {group, pages} <- pages() do %>
-            <li class="group caps">{group}</li>
-            <li :for={{page, title} <- pages}>
-              <a href={page_path(page)} aria-current={@current == page && "page"}>{title}</a>
-            </li>
-          <% end %>
+          <li :for={{page, title, _about} <- current_pages}>
+            <a href={page_path(page)} aria-current={@current == page && "page"}>{title}</a>
+          </li>
         </ul>
       </nav>
       <main class="guide-main">

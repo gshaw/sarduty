@@ -1,0 +1,20 @@
+<.shell title="Paste a report" current={:paste_a_report}>
+  <h1>Paste a report</h1>
+  <p class="lead">Turn a pasted attendance report into changes to review.</p>
+
+  <div class="example max-w-160">
+    <.input id="import" name="import" type="textarea" label="Attendance report" rows="8" value="">
+      Paste the report exported by SAR Assist. Members are matched by name, email, or phone.
+      You review every change before it's made.
+    </.input>
+    <.button variant={:primary}>Import attendance</.button>
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>One big text area and one button. The hint says where the report comes from.</li>
+    <li>
+      Nothing changes yet. The next page lists the changes to <a href={page_path(:review_changes)}>review</a>.
+    </li>
+  </ul>
+</.shell>

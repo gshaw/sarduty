@@ -1,0 +1,33 @@
+<.shell title="Error summary" current={:error_summary}>
+  <h1>Error summary</h1>
+  <p class="lead">What to fix in a form after a failed save.</p>
+  <.used_on />
+
+  <div class="example">
+    <div class="error-summary" role="alert">
+      <h2>There is a problem</h2>
+      <ul>
+        <li><a href="#">Enter who authorizes tax letters</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    At the top of a long form after a failed save, as in <a href={page_path(:fix_form_errors)}>Fix form errors</a>.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>A short form, where every error is in view. The error on the field is enough.</p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>The title is always "There is a problem".</li>
+    <li>Each line is the field's error, word for word, and links to the field.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;div class="error-summary" role="alert"&gt;</code>. Today forms show each error on its field only.
+  </p>
+</.shell>

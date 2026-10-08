@@ -1,0 +1,98 @@
+<.shell title="Table" current={:table}>
+  <h1>Table</h1>
+  <p class="lead">
+    32px rows by default, 24px when compact. Cells line up on their first line of text, so a
+    row with a wrapped cell still reads across.
+  </p>
+  <.used_on pages={["every list", "such as activities, members, and tax credit letters"]} />
+
+  <.table
+    id="sample-letters"
+    rows={letters()}
+    class="table-striped"
+    sort="total"
+    path_fn={fn _ -> "#" end}
+  >
+    <:header_row>
+      <th></th>
+      <th colspan="3">SARVAC hours</th>
+      <th colspan="3"></th>
+    </:header_row>
+    <:col :let={r} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
+      <a href="#" class="link">{r.name}</a>
+    </:col>
+    <:col :let={r} label="Primary" align="right" sorts={[{"↓", "primary"}]}>{r.primary}</:col>
+    <:col :let={r} label="Secondary" align="right" sorts={[{"↓", "secondary"}]}>
+      {r.secondary}
+    </:col>
+    <:col :let={r} label="Total" align="right" sorts={[{"↓", "total"}]}>
+      <strong>{r.total}</strong>
+    </:col>
+    <:col :let={r} label="Letter" class="w-px">
+      <a :if={r.letter} href="#" class="link mono">{r.letter}</a>
+      <.button :if={!r.letter} variant={:success} size={:sm}>Create letter</.button>
+    </:col>
+    <:col :let={r} label="Email">{r.email}</:col>
+    <:col :let={r} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>{r.id}</:col>
+  </.table>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      Text at sm (14px). Headers semibold on <code>--surface-alt</code>, and they stick on scroll.
+    </li>
+    <li>Numbers right-aligned with tabular figures. Codes, such as letter numbers, in mono.</li>
+    <li>
+      Sortable headers show an arrow, or ⇅ when the column sorts both ways. The sorted column is
+      underlined in primary and has <code>aria-sort</code>.
+    </li>
+    <li>Actions in a row are small buttons or links.</li>
+    <li>
+      Columns go in order of use: what identifies the row first, then what people act on, then
+      the rest. IDs and contact details go last.
+    </li>
+    <li>
+      On a phone, tables scroll sideways rather than reflow. A short table used on a phone, such
+      as the door's, stacks each row instead with <code>.table-stack</code>.
+    </li>
+  </ul>
+
+  <h2>Wrapping cells</h2>
+  <p>Long text wraps; the other cells stay on its first line.</p>
+  <.table id="sample-wrapping" rows={rule_preview()} class="table-striped">
+    <:col :let={{name, _why, _detail, _days}} label="Member" class="whitespace-nowrap">
+      <.a href="#">{name}</.a>
+    </:col>
+    <:col :let={{_name, why, detail, days}} label="Why">
+      {why}
+      <.badge :if={days} kind={:warning}>{days} days</.badge>
+      <span class="block text-secondary-1">{detail}</span>
+    </:col>
+    <:col :let={_row} label="" class="w-px">
+      <.button size={:sm}>Review</.button>
+    </:col>
+  </.table>
+
+  <h2>Compact</h2>
+  <p>24px rows, for long lists people scan rather than read.</p>
+  <.table id="sample-compact" rows={Enum.take(letters(), 3)} class="table-compact table-striped">
+    <:col :let={r} label="Name">{r.name}</:col>
+    <:col :let={r} label="Total" align="right">{r.total}</:col>
+    <:col :let={r} label="Letter" class="w-px whitespace-nowrap">
+      <span :if={r.letter} class="mono">{r.letter}</span>
+      <.badge :if={!r.letter} kind={:warning}>No letter</.badge>
+    </:col>
+  </.table>
+  <p class="spec not-yet">
+    Not used yet: <code>class="table-compact"</code>. Also ready: <code>table-pin-first</code>, which keeps the first column in place while a wide table scrolls on a phone.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.table id="…" rows=&#123;…&#125; sort=&#123;@sort&#125; path_fn=&#123;@path_fn&#125;&gt;</code>
+    with a <code>&lt;:col label="…" sorts=&#123;[&#123;"↓", "total"&#125;]&#125;&gt;</code>
+    for each column. A column that sorts both ways lists 2 sorts, such as <code>[&#123;"↓", "date-"&#125;, &#123;"↑", "date"&#125;]</code>. A
+    <code>&lt;:header_row&gt;</code>
+    groups columns under one heading.
+  </p>
+</.shell>

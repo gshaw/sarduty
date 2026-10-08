@@ -1,0 +1,33 @@
+<.shell title="Focus" current={:focus}>
+  <h1>Focus</h1>
+  <p class="lead">
+    Everything you can reach with the keyboard shows the same yellow focus, in both modes.
+  </p>
+
+  <div class="demo">
+    <p class="paragraph">
+      Press Tab. Everything you can reach gets the yellow focus, the same in both modes: <.a href="#">a link</.a>, <.button size={
+        :sm
+      }>a button</.button>, and
+      <input type="text" class="inline-block max-w-40" aria-label="An input" />.
+    </p>
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      A link turns yellow with a thick dark underline. A button turns yellow with a dark bottom edge.
+    </li>
+    <li>Inputs, selects, text areas, and switches get a 3px yellow outline with a dark edge.</li>
+    <li>
+      The yellow is <code>--focus</code>, the one token with the same value in light and dark.
+    </li>
+    <li>It shows only for the keyboard, through <code>:focus-visible</code>, not on a click.</li>
+  </ul>
+
+  <h2>Rules</h2>
+  <ul>
+    <li>Never remove the focus style, and never restyle it on one page.</li>
+    <li>A custom control takes the base styles in <code>assets/css/base/base.css</code>.</li>
+  </ul>
+</.shell>
