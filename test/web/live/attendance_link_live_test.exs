@@ -330,4 +330,40 @@ defmodule Web.AttendanceLinkLiveTest do
     render_hook(lv, "scanned", %{code: "ZZZZ-ZZZZ"})
     assert_push_event(lv, "scan-sound", %{sound: :error})
   end
+
+  describe "yet to arrive" do
+    test "lists who signed up and has not arrived, and drops a member once scanned", %{
+      conn: conn,
+      team: team,
+      link: link,
+      activity: activity,
+      member: member
+    } do
+      raj = member_fixture(team, %{name: "Raj Patel", phone: "604 555 1234"})
+      attendance_fixture(activity, member, %{status: "requested"})
+      attendance_fixture(activity, raj, %{status: "requested"})
+      attendance_fixture(activity, member_fixture(team), %{status: "absent"})
+
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+      assert has_element?(lv, "#toggle-yet-to-arrive", "2 of 2 signed up")
+      refute has_element?(lv, "#yet-to-arrive")
+
+      lv |> element("#toggle-yet-to-arrive") |> render_click()
+      assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}", "604-555-1234")
+      assert has_element?(lv, ~s|#yet-to-arrive-call-#{raj.id}[href="tel:+16045551234"]|)
+      assert has_element?(lv, ~s|#yet-to-arrive-text-#{raj.id}[href="sms:+16045551234"]|)
+
+      lv |> form("#door-form", %{search: "Raj"}) |> render_change()
+      pick(lv, raj)
+      refute has_element?(lv, "#yet-to-arrive-member-#{raj.id}")
+      assert has_element?(lv, "#yet-to-arrive-member-#{member.id}")
+      assert has_element?(lv, "#toggle-yet-to-arrive", "1 of 2 signed up")
+      assert has_element?(lv, "#yet-to-arrive-count", "1 member arrived.")
+    end
+
+    test "shows no button when nobody signed up", %{conn: conn, link: link} do
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+      refute has_element?(lv, "#toggle-yet-to-arrive")
+    end
+  end
 end

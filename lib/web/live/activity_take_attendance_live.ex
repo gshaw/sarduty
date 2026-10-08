@@ -1,13 +1,17 @@
 defmodule Web.ActivityTakeAttendanceLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.YetToArrive
+
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Attendance
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.NoShow
   alias App.Model.ShortLink
   alias App.Operation.BuildAttendanceTimes
+  alias App.Operation.BuildYetToArrive
   alias App.Operation.CloseAttendanceLink
   alias App.Operation.CreateAttendanceLink
   alias App.Operation.FollowUpNoShow
@@ -147,7 +151,12 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   defp load_times(socket) do
     activity = socket.assigns.activity
-    assign(socket, times: BuildAttendanceTimes.call(activity, AttendanceScan.get_all(activity)))
+    scans = AttendanceScan.get_all(activity)
+
+    assign(socket,
+      times: BuildAttendanceTimes.call(activity, scans),
+      yet_to_arrive: activity |> Attendance.signed_up_members() |> BuildYetToArrive.call(scans)
+    )
   end
 
   def render(assigns) do
@@ -167,6 +176,15 @@ defmodule Web.ActivityTakeAttendanceLive do
 
     <h2 class="heading mt-4">Arrivals and departures</h2>
     <.times_section times={@times} activity={@activity} />
+
+    <div :if={@yet_to_arrive.signed_up > 0} id="yet-to-arrive-section">
+      <h2 class="heading mt-4">Yet to arrive · {count_text(@yet_to_arrive)}</h2>
+      <p>
+        Members D4H shows as signed up who have not arrived. Call or text to check whether
+        they're still coming.
+      </p>
+      <.yet_to_arrive_list yet_to_arrive={@yet_to_arrive} class="md:max-w-xl" />
+    </div>
 
     <h2 class="heading mt-4">Send to D4H</h2>
     <.failures_section failures={@failures} />
@@ -355,7 +373,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       </p>
       <p>
         The link works until you close it or send to D4H. Anyone with it sees your members'
-        names.
+        names, and the mobile numbers of members who signed up and have not arrived.
       </p>
       <.button id="create-link" variant={:success} phx-click="create-link">
         Make attendance link

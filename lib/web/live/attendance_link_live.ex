@@ -2,10 +2,13 @@ defmodule Web.AttendanceLinkLive do
   use Web, :live_view_narrow_layout
 
   import Web.Components.Scanner
+  import Web.Components.YetToArrive
 
+  alias App.Model.Attendance
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
+  alias App.Operation.BuildYetToArrive
   alias App.Operation.RecordAttendanceScan
 
   # The door's page for taking attendance: no login, only the link's token. It shows the
@@ -44,7 +47,8 @@ defmodule Web.AttendanceLinkLive do
           search: "",
           matches: [],
           message: nil,
-          scan_failed: false
+          scan_failed: false,
+          show_yet_to_arrive: false
         )
         |> load_scans()
 
@@ -124,6 +128,9 @@ defmodule Web.AttendanceLinkLive do
     {:noreply, socket}
   end
 
+  def handle_event("toggle_yet_to_arrive", _params, socket),
+    do: {:noreply, update(socket, :show_yet_to_arrive, &(!&1))}
+
   def handle_event("scan_failed", _params, socket),
     do: {:noreply, assign(socket, :scan_failed, true)}
 
@@ -171,14 +178,13 @@ defmodule Web.AttendanceLinkLive do
   defp error_text(:bad_time), do: "Enter the time as hours and minutes, like 09:30."
   defp error_text(:closed), do: "This attendance link is closed."
 
+  # Signed up is read again with the scans, so the 10-minute sync's changes show too.
   defp load_scans(socket) do
-    scans =
-      socket.assigns.activity
-      |> AttendanceScan.get_all()
-      |> Enum.reverse()
-      |> Enum.take(@recent_count)
-
-    assign(socket, scans: scans)
+    activity = socket.assigns.activity
+    all_scans = AttendanceScan.get_all(activity)
+    yet_to_arrive = activity |> Attendance.signed_up_members() |> BuildYetToArrive.call(all_scans)
+    scans = all_scans |> Enum.reverse() |> Enum.take(@recent_count)
+    assign(socket, scans: scans, yet_to_arrive: yet_to_arrive)
   end
 
   @doc "Current members whose name contains every word typed, up to #{@max_name_matches}."
@@ -249,6 +255,24 @@ defmodule Web.AttendanceLinkLive do
         @team.timezone
       )}
     </p>
+
+    <div :if={@yet_to_arrive.signed_up > 0} class="mt-4">
+      <.button
+        id="toggle-yet-to-arrive"
+        type="button"
+        size={:sm}
+        aria-expanded={to_string(@show_yet_to_arrive)}
+        aria-controls="yet-to-arrive"
+        phx-click="toggle_yet_to_arrive"
+      >
+        Yet to arrive · {count_text(@yet_to_arrive)}
+      </.button>
+      <.yet_to_arrive_list
+        :if={@show_yet_to_arrive}
+        yet_to_arrive={@yet_to_arrive}
+        class="mt-2"
+      />
+    </div>
 
     <div id="kind" class="mt-4 flex gap-2" role="group" aria-label="Members are">
       <.button
