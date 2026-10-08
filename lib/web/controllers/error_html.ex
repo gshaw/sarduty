@@ -45,7 +45,7 @@ defmodule Web.ErrorHTML do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <.live_title suffix=" · SAR Duty">
-          {assigns[:page_title] || "Untitled page"}
+          {@code} {@description}
         </.live_title>
         <Web.Layouts.favicon_links />
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />

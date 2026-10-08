@@ -6,7 +6,7 @@ defmodule Web.ActivityCollectionLive do
   alias App.ViewModel.ActivityFilterViewModel
 
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, page_title: "Activities")}
   end
 
   def handle_params(params, _uri, socket) do
