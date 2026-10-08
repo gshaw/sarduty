@@ -55,7 +55,7 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="flex items-center justify-between gap-4 mb-p">
+    <div class="heading-row">
       <div class="min-w-0">
         <h1 class="title-hero mb-0">{@current_team.name}</h1>
         <.refresh_line team={@current_team} view_data={@view_data} now={@now} />
@@ -64,7 +64,7 @@ defmodule Web.TeamDashboardLive do
         :if={@has_logo}
         id="team-logo"
         src={~p"/teams/#{@current_team}/logo?shape=square"}
-        class="h-24"
+        class="logo-lg"
         alt="Team logo"
       />
     </div>
@@ -76,7 +76,7 @@ defmodule Web.TeamDashboardLive do
       now={@now}
     />
 
-    <div class="dash-grid">
+    <div class="card-grid">
       <.coming_up team={@current_team} activities={@view_data.coming_up} now={@now} />
       <.needs_attention team={@current_team} items={@view_data.attention} />
     </div>
@@ -106,24 +106,24 @@ defmodule Web.TeamDashboardLive do
     assigns = assign(assigns, :refreshing?, refreshing?(assigns.view_data))
 
     ~H"""
-    <div class="text-sm text-secondary-1 mt-1">
+    <div class="hint mt-1">
       <p id="refresh-status" class="mb-0 truncate">
-        <span :if={@refreshing?} id="refreshing" class="text-primary-1">
-          <span class="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent align-[-1px] mr-1"></span>
+        <.spinner :if={@refreshing?} id="refreshing" class="text-link">
           {refreshing_text(@view_data.refresh_result)}
-        </span>
+        </.spinner>
         <span :if={!@refreshing?} id="d4h-updated">{refreshed_ago(@team, @now)}</span>
       </p>
       <p class="mb-0 flex items-center gap-3">
-        <button
+        <.button
           id="refresh-now"
           type="button"
+          variant={:link}
+          size={:sm}
           phx-click="refresh"
           disabled={@refreshing?}
-          class="text-primary-1 underline disabled:no-underline disabled:text-secondary-1 disabled:cursor-default"
         >
           Refresh now
-        </button>
+        </.button>
         <span aria-hidden="true">·</span>
         <.a external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H</.a>
       </p>
@@ -137,9 +137,9 @@ defmodule Web.TeamDashboardLive do
 
   defp next_up(assigns) do
     ~H"""
-    <section id="next-up" class="dash-card next-up">
+    <section id="next-up" class="card next-up">
       <div class="next-up-when">
-        <span class="text-sm text-secondary-1">Next up</span>
+        <span class="hint">Next up</span>
         <span class="next-up-day">
           {Format.day_coming_up(@activity.started_at, @now, @team.timezone)}
         </span>
@@ -150,7 +150,7 @@ defmodule Web.TeamDashboardLive do
         <h2 class="next-up-title">
           <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
         </h2>
-        <p class="text-sm text-secondary-1">{where_and_when(@activity, @now)}</p>
+        <p class="hint">{where_and_when(@activity, @now)}</p>
       </div>
       <.button
         id="next-up-take-attendance"
@@ -176,10 +176,10 @@ defmodule Web.TeamDashboardLive do
 
   defp coming_up(assigns) do
     ~H"""
-    <section id="coming-up" class="dash-card span-6">
+    <section id="coming-up" class="card span-6">
       <header>
         <h2 class="chart-title">Coming up</h2>
-        <span class="text-sm text-secondary-1">Next 14 days</span>
+        <span class="hint">Next 14 days</span>
       </header>
       <p :if={@activities == []} id="coming-up-empty" class="chart-caption">
         No activities planned in D4H.
@@ -188,7 +188,7 @@ defmodule Web.TeamDashboardLive do
         <li :for={activity <- @activities} id={"coming-up-#{activity.id}"}>
           <span class="dash-row-when">
             <strong>{Format.day_coming_up(activity.started_at, @now, @team.timezone)}</strong>
-            <span class="text-secondary-1">{Format.time_short(activity.started_at, @team.timezone)}</span>
+            <span class="text-text-muted">{Format.time_short(activity.started_at, @team.timezone)}</span>
           </span>
           <span class="dash-row-title">
             <.kind activity={activity} />
@@ -216,7 +216,7 @@ defmodule Web.TeamDashboardLive do
 
   defp needs_attention(assigns) do
     ~H"""
-    <section id="needs-attention" class="dash-card span-6">
+    <section id="needs-attention" class="card span-6">
       <header>
         <h2 class="chart-title">Needs attention</h2>
       </header>
@@ -228,7 +228,7 @@ defmodule Web.TeamDashboardLive do
           <span class="attention-mark" aria-hidden="true"></span>
           <span class="dash-row-title">
             <strong>{item.title}</strong>
-            <span :if={item.detail} class="text-sm text-secondary-1">{item.detail}</span>
+            <span :if={item.detail} class="hint">{item.detail}</span>
           </span>
           <.button size={:sm} navigate={attention_path(@team, item)}>{item.action}</.button>
         </li>
@@ -308,8 +308,8 @@ defmodule Web.TeamDashboardLive do
           delta={"#{@charts.members_joined} joined in #{@charts.year}"}
         />
       </div>
-      <div class="dash-grid">
-        <section class="dash-card span-7">
+      <div class="card-grid">
+        <section class="card span-7">
           <header>
             <h2 class="chart-title">Activities by month</h2>
             <.a navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>All activities</.a>
@@ -322,7 +322,7 @@ defmodule Web.TeamDashboardLive do
             caption="Activities by month"
           />
         </section>
-        <section class="dash-card span-5">
+        <section class="card span-5">
           <header>
             <h2 class="chart-title">Where the team went</h2>
           </header>
@@ -340,7 +340,7 @@ defmodule Web.TeamDashboardLive do
             No activities with a place in D4H in the last 12 months.
           </p>
         </section>
-        <section class="dash-card">
+        <section class="card">
           <header>
             <h2 class="chart-title">Every day out</h2>
           </header>

@@ -40,15 +40,12 @@ does in the app. The page-text rules skip anything inside one. --%>
   .guide-main a:hover:not(.demo *, .example *, .table-wrap *, .guide-nav *) { color: var(--link-hover); text-decoration-thickness: 3px; }
   .guide-main code:not(.demo *, .example *, .table-wrap *) { font-size: 0.875em; }
   .guide-main .first { margin-top: 0 !important; }
-  .caps { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); }
 
   /* Examples: .demo is boxed, .example is not. */
   .demo { border: 1px solid var(--border-subtle); padding: var(--sp-5); margin-bottom: var(--sp-5); border-radius: var(--radius); }
   .demo > :last-child, .example > :last-child { margin-bottom: 0; }
   .example { margin-bottom: var(--sp-5); }
   .spec { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: calc(-1 * var(--sp-3)); margin-bottom: var(--sp-5); max-width: 70ch; }
-  .used-on { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-bottom: var(--sp-5); }
-  .not-yet { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); font-style: italic; }
 
   /* The app's bar, menu, and toasts are fixed or floating in the app. Here they sit in place. */
   .demo .site-bar { position: relative; }
@@ -58,7 +55,6 @@ does in the app. The page-text rules skip anything inside one. --%>
   .phone-bar-demo .site-bar-phone { display: block; }
   .phone-bar-demo { padding-bottom: 560px !important; }
   .demo .toasts { position: static; width: auto; max-width: 400px; }
-  .demo .dialog { position: static; display: block; margin: 0; }
   .phone-width { max-width: 390px; }
 
   /* Frozen states, so every state of a button or switch can be seen at once. */

@@ -36,7 +36,7 @@ defmodule Web.QualificationCollectionLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team} />
-    <h1 class="title mb-p">{@page_title}</h1>
+    <h1 class="title">{@page_title}</h1>
 
     <div class="table-summary">
       <span class="table-summary-links">
@@ -63,10 +63,10 @@ defmodule Web.QualificationCollectionLive do
     <.expiring_table :if={@view == :expiring} team={@current_team} expiring={@expiring} />
 
     <.table
-      :if={@view == :all}
+      :if={@view == :all and @qualifications != []}
       id="qualification_collection"
       rows={@qualifications}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={q} label="Qualification">
         <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
@@ -82,9 +82,13 @@ defmodule Web.QualificationCollectionLive do
       </:col>
     </.table>
 
-    <p :if={@view == :all and @qualifications == []} class="text-secondary-1">
-      No qualifications yet. SAR Duty copies them from D4H when it refreshes.
-    </p>
+    <.empty_state
+      :if={@view == :all and @qualifications == []}
+      id="no-qualifications"
+      title="No qualifications yet"
+    >
+      SAR Duty copies them from D4H when it refreshes.
+    </.empty_state>
     """
   end
 
@@ -94,10 +98,11 @@ defmodule Web.QualificationCollectionLive do
   defp expiring_table(assigns) do
     ~H"""
     <.table
+      :if={@expiring != []}
       id="expiring_qualifications"
       rows={@expiring}
       row_id={&"expiring-#{&1.member_id}-#{&1.qualification_id}"}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={row} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{row.member_id}/qualifications"}>
@@ -109,13 +114,13 @@ defmodule Web.QualificationCollectionLive do
           {row.qualification}
         </.a>
       </:col>
-      <:col :let={row} label="Expires" align="right" class="w-1/12 whitespace-nowrap tabular-nums">
+      <:col :let={row} label="Expires" align="right" class="w-1/12 whitespace-nowrap">
         {Service.Format.date_short(row.ends_at, @team.timezone)}
       </:col>
     </.table>
-    <p :if={@expiring == []} class="text-secondary-1">
+    <.empty_state :if={@expiring == []} id="none-expiring" title="Nothing expiring">
       No qualifications expire in the next {BuildGroupRulePreview.expiring_days()} days.
-    </p>
+    </.empty_state>
     """
   end
 

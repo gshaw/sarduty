@@ -27,11 +27,9 @@ defmodule Web.Settings.TeamLive do
   def render(assigns) do
     ~H"""
     <div>
-      <p>
-        <.a navigate={~p"/teams/#{@current_team}"}>← {@current_team.name}</.a>
-      </p>
+      <.back_link navigate={~p"/teams/#{@current_team}"}>{@current_team.name}</.back_link>
       <h1 class="heading">Team settings</h1>
-      <ul class="mb-p">
+      <ul class="mb-4">
         <li>
           <.a id="settings-cards" navigate={~p"/teams/#{@current_team}/settings/cards"}>ID cards</.a>:
           qualifications on the back
@@ -51,23 +49,19 @@ defmodule Web.Settings.TeamLive do
       </ul>
 
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
+        <.error_summary form={@form} />
         <.input field={@form[:name]} label="Name" />
-        <div class="grid grid-cols-2 gap-hspacer">
-          <.input field={@form[:lat]} readonly label="Latitude" class="bg-base-3" />
-          <.input field={@form[:lng]} readonly label="Longitude" class="bg-base-3" />
+        <div class="grid grid-cols-2 gap-x-5">
+          <.input field={@form[:lat]} readonly label="Latitude" />
+          <.input field={@form[:lng]} readonly label="Longitude" />
         </div>
-        <.input field={@form[:timezone]} label="Time zone" readonly class="bg-base-3" />
-        <.input
-          field={@form[:mailing_address]}
-          label="Mailing address"
-          type="textarea"
-          class="h-[10rem]"
-        />
+        <.input field={@form[:timezone]} label="Time zone" readonly />
+        <.input field={@form[:mailing_address]} label="Mailing address" type="textarea" rows="6" />
         <.input
           field={@form[:authorized_by_name]}
           label="Tax credit letters authorized by"
           type="textarea"
-          class="h-[10rem]"
+          rows="6"
         >
           The full name of your team president, or someone in a similar role. The CRA uses
           this during tax audits.
@@ -75,7 +69,7 @@ defmodule Web.Settings.TeamLive do
         <.input field={@form[:authorized_by_title]} label="Signer's title (optional)">
           Printed under the name on tax credit letters, like President.
         </.input>
-        <div class="grid sm:grid-cols-2 gap-x-hspacer">
+        <div class="grid md:grid-cols-2 gap-x-5">
           <.input field={@form[:authorized_by_phone]} label="Signer's phone (optional)" />
           <.input
             field={@form[:authorized_by_email]}
@@ -83,19 +77,17 @@ defmodule Web.Settings.TeamLive do
             type="email"
           />
         </div>
-        <div id="team-signature" class="mb-p">
-          <label for={@uploads.signature.ref} class="block font-semibold">
-            Signer's signature (optional)
-          </label>
+        <div id="team-signature" class="mb-5">
+          <.label for={@uploads.signature.ref}>Signer's signature (optional)</.label>
           <.hint>
             A PNG or JPEG of the signature, on white or transparent. New tax credit letters
             print it above the signer's name. Letters already made keep theirs.
           </.hint>
-          <div :if={@current_team.signature} class="my-2 flex flex-wrap items-center gap-p">
+          <div :if={@current_team.signature} class="my-2 flex flex-wrap items-center gap-4">
             <img
               id="signature-preview"
               src={Web.ImageData.png_data_url(@current_team.signature)}
-              class="h-16 max-w-xs border border-hr bg-white p-1"
+              class="h-8 max-w-xs border border-border-subtle bg-paper p-1"
               alt="The signer's signature"
             />
             <.button
@@ -109,12 +101,8 @@ defmodule Web.Settings.TeamLive do
             </.button>
           </div>
           <.live_file_input upload={@uploads.signature} class="my-2" />
-          <p :for={error <- upload_errors(@uploads.signature)} class="text-danger-1">
-            {upload_error(error)}
-          </p>
-          <p :if={@signature_error} id="signature-error" class="text-danger-1">
-            {@signature_error}
-          </p>
+          <.error :for={error <- upload_errors(@uploads.signature)}>{upload_error(error)}</.error>
+          <.error :if={@signature_error} id="signature-error">{@signature_error}</.error>
         </div>
         <.input
           field={@form[:new_d4h_access_key]}
@@ -126,7 +114,7 @@ defmodule Web.Settings.TeamLive do
           mileage, photos, and group changes.
           <span id="team-key-status">{key_status(@current_team)}</span>
         </.input>
-        <div id="team-key-owner" class="mb-p text-sm">
+        <div id="team-key-owner" class="mb-4 text-sm">
           <p :if={@current_team.d4h_access_key_owner}>
             The key belongs to the D4H member <strong>{@current_team.d4h_access_key_owner}</strong>.
           </p>

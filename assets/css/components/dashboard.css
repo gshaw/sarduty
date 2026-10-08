@@ -1,5 +1,5 @@
 /* The team dashboard's top half (#205): NextUp, Coming up, and Needs attention. The
-   cards and grid are chart.css's .dash-card and .dash-grid. */
+   cards and grid are chart.css's .card and .card-grid. */
 
 .next-up { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-5); align-items: center; border-left: 4px solid var(--primary); margin-bottom: var(--sp-5); }
 .next-up-when { display: flex; flex-direction: column; min-width: 110px; }
@@ -12,7 +12,7 @@
 .dash-rows > li:last-child { border-bottom: 0; }
 .dash-row-when { display: flex; flex-direction: column; min-width: 92px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
 .dash-row-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.dash-card > footer { margin-top: var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+.card > footer { margin-top: var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
 
 .attention > li { align-items: flex-start; }
 .attention-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--info); }

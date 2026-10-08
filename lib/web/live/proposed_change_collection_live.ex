@@ -23,7 +23,7 @@ defmodule Web.ProposedChangeCollectionLive do
     </.breadcrumbs>
 
     <h1 class="title">Proposed changes</h1>
-    <p class="text-secondary-1 mb-p">
+    <p class="lead">
       An AI agent connected to SAR Duty can propose attendance changes. Nothing changes in D4H
       until a team admin reviews them and sends them.
     </p>
@@ -34,10 +34,12 @@ defmodule Web.ProposedChangeCollectionLive do
       change_sets={@waiting}
       team={@current_team}
     />
-    <p :if={@waiting == []} id="none-waiting" class="mb-p">No proposed changes to review.</p>
+    <.empty_state :if={@waiting == []} id="none-waiting" title="No proposed changes to review">
+      Changes an AI agent proposes show here for a team admin to send.
+    </.empty_state>
 
-    <div :if={@decided != []} class="mt-p">
-      <h2 class="subheading mb-p05">Reviewed</h2>
+    <div :if={@decided != []} class="mt-4">
+      <h2 class="subheading">Reviewed</h2>
       <.change_set_table id="decided" change_sets={@decided} team={@current_team} />
     </div>
     """
@@ -49,7 +51,7 @@ defmodule Web.ProposedChangeCollectionLive do
 
   defp change_set_table(assigns) do
     ~H"""
-    <.table id={@id} rows={@change_sets} row_id={&"#{@id}-#{&1.id}"} class="w-full table-striped">
+    <.table id={@id} rows={@change_sets} row_id={&"#{@id}-#{&1.id}"} class="table-striped">
       <:col :let={set} label="Proposed" class="w-px whitespace-nowrap">
         {Service.Format.month_day_time(set.inserted_at, @team.timezone)}
       </:col>
@@ -57,7 +59,7 @@ defmodule Web.ProposedChangeCollectionLive do
         <.a navigate={~p"/teams/#{@team}/proposed-changes/#{set.id}"}>
           {set.summary || "Attendance changes"}
         </.a>
-        <div class="text-secondary-1">
+        <div class="hint">
           {set.activity && set.activity.title} · {Service.Format.count(length(set.rows),
             one: "%d change",
             many: "%d changes"

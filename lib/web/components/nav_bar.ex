@@ -34,8 +34,8 @@ defmodule Web.Components.NavBar do
     ~H"""
     <details class="site-bar-menu relative" role="menu">
       <summary role="button" aria-label="Open account menu">
-        <span class="max-w-40 truncate">{@label}</span>
-        <.icon name="hero-chevron-down-micro" class="size-4" />
+        <span class="truncate">{@label}</span>
+        <.icon name="hero-chevron-down-micro" />
       </summary>
       <div class="menu" role="menu">
         {render_slot(@inner_block)}
@@ -52,8 +52,8 @@ defmodule Web.Components.NavBar do
     ~H"""
     <details id="phone-menu" class="site-bar-phone group">
       <summary id="phone-menu-button" aria-label="Menu">
-        <.icon name="hero-bars-3" class="size-6 group-open:hidden" />
-        <.icon name="hero-x-mark" class="hidden size-6 group-open:inline-block" />
+        <.icon name="hero-bars-3" class="group-open:hidden" />
+        <.icon name="hero-x-mark" class="hidden group-open:inline-block" />
         <span>Menu</span>
       </summary>
       <nav class="site-bar-phone-panel" aria-label="Main">

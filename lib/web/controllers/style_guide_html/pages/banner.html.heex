@@ -1,51 +1,29 @@
 <.shell title="Banner" current={:banner}>
   <h1>Banner</h1>
   <p class="lead">Something true about the page until it changes. It stays.</p>
-  <.used_on pages={["tax credit letters"]} />
 
   <div class="example">
-    <div class="banner banner-success" role="status">
-      <div class="banner-title">
-        <.icon name="hero-check-circle-mini" class="size-5" />Success
-      </div>
-      <div class="banner-body">
-        <p><strong>12 tax credit letters created for 2025.</strong></p>
-      </div>
-    </div>
-    <div class="banner" role="region" aria-label="Important">
-      <div class="banner-title">
-        <.icon name="hero-information-circle-mini" class="size-5" />Important
-      </div>
-      <div class="banner-body">
-        <p>
-          SAR Duty refreshes from D4H every night at 02:00. Changes made in D4H today show up tomorrow.
-        </p>
-      </div>
-    </div>
-    <div class="banner banner-warning" role="region" aria-label="Warning">
-      <div class="banner-title">
-        <.icon name="hero-exclamation-triangle-mini" class="size-5" />Warning
-      </div>
-      <div class="banner-body">
-        <p>
-          The team's D4H access key belongs to a person. If they leave the team, it stops working.
-        </p>
-      </div>
-    </div>
-    <div class="banner banner-danger" role="alert">
-      <div class="banner-title">
-        <.icon name="hero-exclamation-circle-mini" class="size-5" />D4H is not answering
-      </div>
-      <div class="banner-body">
-        <p>Nothing changed. Try again in a few minutes.</p>
-      </div>
-    </div>
+    <.banner kind={:success} title="Letters sent">
+      <p><strong>12 tax credit letters created for 2025.</strong></p>
+    </.banner>
+    <.banner title="Important">
+      <p>
+        SAR Duty refreshes from D4H every night at 02:00. Changes made in D4H today show up tomorrow.
+      </p>
+    </.banner>
+    <.banner kind={:warning} title="Hours changed">
+      <p>This letter says 212h 30m. Attendance now adds up to 214h 00m.</p>
+      <.button variant={:warning} size={:sm}>Replace letter</.button>
+    </.banner>
+    <.banner kind={:danger} title="Deleted in D4H">
+      <p>SAR Duty saw it was gone on October 2, 2026.</p>
+    </.banner>
   </div>
 
   <h2>When to use</h2>
   <ul>
     <li>Success: the result of a big action, kept on the page.</li>
-    <li>Important: something people should know about the whole page.</li>
+    <li>Info, the default: something people should know about the whole page.</li>
     <li>Warning: a risk that isn't a problem yet.</li>
     <li>Danger: the page can't do its job until something changes.</li>
   </ul>
@@ -54,15 +32,19 @@
   <ul>
     <li>A quick result that can go away. Use a <a href={page_path(:toast)}>toast</a>.</li>
     <li>A problem with one field. Show the error on the field.</li>
+    <li>A consequence right before an action. Use <a href={page_path(:warning_text)}>warning text</a>.</li>
   </ul>
 
   <h2>How it works</h2>
-  <p>At the top of the page, under the header. One at a time.</p>
+  <p>
+    At the top of the page, under the header. One at a time. The icon follows the kind. Success
+    is a status, danger an alert, and the others a labelled region.
+  </p>
 
   <h2>In the app</h2>
   <p>
-    <code>.banner</code>, with <code>.banner-success</code>, <code>.banner-warning</code>, or <code>.banner-danger</code>, and a
-    <code>.banner-title</code>
-    and <code>.banner-body</code>.
+    <code>&lt;.banner kind=&#123;:warning&#125; title="Hours changed"&gt;</code>, with paragraphs
+    and an optional button inside. <code>kind</code> is <code>:info</code>, <code>:success</code>,
+    <code>:warning</code>, or <code>:danger</code>.
   </p>
 </.shell>

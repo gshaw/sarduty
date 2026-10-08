@@ -1,0 +1,28 @@
+<.shell title="QR scanner" current={:qr_scanner}>
+  <h1>QR scanner</h1>
+  <p class="lead">Scan ID cards with the phone's camera.</p>
+
+  <div class="example measure">
+    <.qr_scanner id="sample-scanner" label="Scan ID cards" variant={:success} />
+  </div>
+
+  <h2>When to use</h2>
+  <p>A page used on a phone to read QR codes, such as checking an ID card or taking attendance at the door.</p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>One big button starts the camera. The picture fills the width while it scans.</li>
+    <li>Stop scanning puts the button back.</li>
+    <li>
+      The Sound switch is a <a href={page_path(:forms) <> "#switch"}>compact switch</a>
+      under the button. The phone remembers it.
+    </li>
+    <li>Each read goes to the page, which answers with a <a href={page_path(:band)}>band</a>.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.qr_scanner label="Scan ID cards" /&gt;</code>. The page handles
+    <code>"scanned"</code>. <code>data-continuous</code> keeps scanning after a read.
+  </p>
+</.shell>

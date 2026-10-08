@@ -62,7 +62,7 @@ defmodule Web.Components.AttendanceFilterTable do
       :if={Enum.any?(@paginated.entries)}
       id="attendance_collection"
       rows={@paginated.entries}
-      class="w-full table-striped"
+      class="table-striped"
       sort={@sort}
       path_fn={@path_fn}
     >
@@ -75,7 +75,7 @@ defmodule Web.Components.AttendanceFilterTable do
         :let={record}
         label="Start"
         align="right"
-        class="w-1/12 whitespace-nowrap  tabular-nums"
+        class="w-1/12 whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
         {Service.Format.datetime_short(
@@ -83,7 +83,7 @@ defmodule Web.Components.AttendanceFilterTable do
           @member.team.timezone
         )}
       </:col>
-      <:col :let={record} label="Finish" align="right" class="w-1/12 whitespace-nowrap tabular-nums">
+      <:col :let={record} label="Finish" align="right" class="w-1/12 whitespace-nowrap">
         {Service.Format.time_short(
           record.finished_at,
           @member.team.timezone
@@ -93,14 +93,14 @@ defmodule Web.Components.AttendanceFilterTable do
         :let={record}
         label="Duration"
         align="right"
-        class="w-1/12 whitespace-nowrap tabular-nums"
+        class="w-1/12 whitespace-nowrap"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
         {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
       </:col>
     </.table>
 
-    <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
+    <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
   end
 end

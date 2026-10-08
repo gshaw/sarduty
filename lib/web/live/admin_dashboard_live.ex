@@ -50,10 +50,10 @@ defmodule Web.AdminDashboardLive do
     ~H"""
     <h1 class="title">Admin</h1>
     <.admin_tabs current={:teams} />
-    <div class="mb-p flex flex-wrap items-center justify-between gap-p">
-      <h2 class="heading mb-0">Teams</h2>
-      <div class="flex items-center gap-p">
-        <span id="refresh-summary" class="text-sm text-secondary-1">
+    <div class="heading-row">
+      <h2 class="heading">Teams</h2>
+      <div class="flex items-center gap-4">
+        <span id="refresh-summary" class="hint">
           {refresh_summary(@teams)}
         </span>
         <.button type="button" variant={:warning} size={:sm} phx-click="refresh-all">
@@ -62,14 +62,14 @@ defmodule Web.AdminDashboardLive do
       </div>
     </div>
     <.table id="teams" rows={@teams} row_id={&"team-#{&1.id}"} class="table-striped">
-      <:col :let={team} label="Team" class="md:w-56">
-        <div class="flex items-start gap-2">
+      <:col :let={team} label="Team">
+        <div class="media items-start">
           <img
             id={"team-#{team.id}-logo"}
             src={~p"/teams/#{team}/logo?shape=square"}
             width="32"
             height="32"
-            class="size-8 shrink-0 rounded"
+            class="size-6 rounded"
             alt=""
           />
           <div>
@@ -93,7 +93,7 @@ defmodule Web.AdminDashboardLive do
             many: "%d team admins"
           )}
         </.a>
-        <span :if={@logins[team.id] == []} class="block text-danger-1">No accounts</span>
+        <span :if={@logins[team.id] == []} class="block text-danger-text">No accounts</span>
         <ul :if={@logins[team.id] != []}>
           <li
             :for={user <- @logins[team.id]}
@@ -102,7 +102,7 @@ defmodule Web.AdminDashboardLive do
             <span>{user.email}</span>
             <span
               :if={user.last_seen_at}
-              class="ml-auto pl-p text-sm text-secondary-1"
+              class="hint ml-auto pl-4"
               title={Service.Format.datetime_short(user.last_seen_at, team.timezone)}
             >
               {Service.Format.days_ago(user.last_seen_at, @now, team.timezone)}
@@ -136,7 +136,7 @@ defmodule Web.AdminDashboardLive do
       </:col>
     </.table>
 
-    <dl id="key-notes" class="mt-p2 max-w-3xl text-sm">
+    <dl id="key-notes" class="mt-6 max-w-3xl text-sm">
       <dt>Last seen</dt>
       <dd>
         The last time someone on the team opened a team page. Admin visits do not count.
@@ -159,13 +159,10 @@ defmodule Web.AdminDashboardLive do
     assigns = assign(assigns, :state, Team.refresh_state(assigns.result))
 
     ~H"""
-    <span :if={@state == :never} class="text-secondary-1">Never refreshed</span>
-    <span :if={@state == :ok} class="text-success-1">OK</span>
-    <span :if={@state == :refreshing} class="text-sm text-primary-1">
-      <span class="mr-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-      {@result}
-    </span>
-    <span :if={@state == :failed} class="text-sm text-danger-1">
+    <span :if={@state == :never} class="text-text-muted">Never refreshed</span>
+    <span :if={@state == :ok} class="text-success-text">OK</span>
+    <.spinner :if={@state == :refreshing} class="text-sm text-link">{@result}</.spinner>
+    <span :if={@state == :failed} class="text-sm text-danger-text">
       {String.replace_prefix(@result, "Error: ", "")}
     </span>
     """

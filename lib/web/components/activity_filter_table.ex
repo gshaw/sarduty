@@ -67,7 +67,7 @@ defmodule Web.Components.ActivityFilterTable do
 
     <.activity_table rows={@paginated.entries} sort={@sort} path_fn={@path_fn} team={@team} />
 
-    <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
+    <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
   end
 
@@ -83,7 +83,7 @@ defmodule Web.Components.ActivityFilterTable do
     <.table
       id={@id}
       rows={@rows}
-      class="w-full table-striped"
+      class="table-striped"
       sort={@sort}
       path_fn={@path_fn}
     >
@@ -103,7 +103,7 @@ defmodule Web.Components.ActivityFilterTable do
         :let={record}
         label="Date"
         align="right"
-        class="w-1/12 whitespace-nowrap tabular-nums"
+        class="w-1/12 whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
         {Service.Format.datetime_short(record.started_at, @team.timezone)}
@@ -111,11 +111,11 @@ defmodule Web.Components.ActivityFilterTable do
       <:col
         :let={record}
         label="Duration"
-        class="w-1/12 whitespace-nowrap tabular-nums"
+        class="w-1/12 whitespace-nowrap"
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span :if={hours_type = activity_hours_type(record)} class="text-secondary-1">
+        <span :if={hours_type = activity_hours_type(record)} class="text-text-muted">
           {hours_type}
         </span>
         {Service.Format.duration_as_hours_minutes_short(

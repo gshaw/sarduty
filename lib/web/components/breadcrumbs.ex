@@ -18,7 +18,7 @@ defmodule Web.Components.Breadcrumbs do
         <.a kind={:custom} navigate={~p"/teams/#{@team}"}>{@team.name}</.a>
       </li>
       <li :for={item <- @item}>
-        <.icon name="hero-chevron-right-micro" class="breadcrumb-separator size-4" />
+        <.icon name="hero-chevron-right-micro" class="breadcrumb-separator" />
         <%= if Map.get(item, :path) do %>
           <.a kind={:custom} navigate={item.path}>{item.label}</.a>
         <% else %>
@@ -26,6 +26,19 @@ defmodule Web.Components.Breadcrumbs do
         <% end %>
       </li>
     </ol>
+    """
+  end
+
+  attr :navigate, :string, required: true
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  # A way back for a page outside the main tree, such as settings. Name the page it goes to.
+  def back_link(assigns) do
+    ~H"""
+    <.link navigate={@navigate} class="back-link" {@rest}>
+      <.icon name="hero-chevron-left-micro" />{render_slot(@inner_block)}
+    </.link>
     """
   end
 end

@@ -2,6 +2,7 @@ defmodule Web.GroupLive do
   use Web, :live_view_app_layout
 
   import Ecto.Query
+  import Web.Components.GroupRule
 
   alias App.Adapter.D4H
   alias App.Model.Group
@@ -112,18 +113,13 @@ defmodule Web.GroupLive do
         <.sidebar_content group={@group} members={@members} team={@current_team} />
       </aside>
       <main class="content-2/3">
-        <h2 class="subheading mb-p05">Group rules</h2>
+        <h2 class="subheading">Group rules</h2>
         <.rule_summary
           :if={!@editing}
           clauses={@clauses}
           qualifications={@qualifications}
         />
-        <.clause_editor
-          :if={@editing}
-          clauses={@clauses}
-          qualifications={@qualifications}
-          team={@current_team}
-        />
+        <.clause_editor :if={@editing} clauses={editor_clauses(@clauses, @qualifications)} />
         <.rule_preview
           preview={@preview}
           team={@current_team}
@@ -158,8 +154,8 @@ defmodule Web.GroupLive do
 
   defp rule_summary(assigns) do
     ~H"""
-    <div class="flex items-center justify-between gap-p border rounded px-p py-p05">
-      <p id="rule-sentence">{rule_sentence(@clauses, @qualifications)}</p>
+    <div class="card flex items-center justify-between gap-4">
+      <p id="rule-sentence" class="mb-0">{rule_sentence(@clauses, @qualifications)}</p>
       <.button id="edit-rules" size={:sm} class="shrink-0" phx-click="edit-rules">
         {if @clauses == [], do: "Add rules", else: "Edit rules"}
       </.button>
@@ -167,104 +163,10 @@ defmodule Web.GroupLive do
     """
   end
 
-  defp clause_editor(assigns) do
-    ~H"""
-    <p class="text-secondary-1 mb-p">
-      Set the qualifications members must hold to be in this group.
-    </p>
-
-    <div :for={clause <- @clauses} class="mb-p border rounded px-p py-p05">
-      <div class="flex flex-wrap md:flex-nowrap justify-between items-center gap-2 mb-p05">
-        <form
-          id={"clause-name-form-#{clause.id}"}
-          phx-change="rename-clause"
-          phx-submit="rename-clause"
-          class="flex flex-wrap md:flex-nowrap items-center gap-2"
-        >
-          <input type="hidden" name="clause-id" value={clause.id} />
-          <input
-            type="text"
-            name="name"
-            id={"clause-name-#{clause.id}"}
-            value={clause.name}
-            placeholder="Name, for example First Aid"
-            aria-label="Clause name"
-            maxlength="60"
-            phx-debounce="blur"
-            class="rounded border shadow-sm text-sm font-semibold"
-          />
-          <h3 class="font-semibold">— member must hold any of:</h3>
-        </form>
-        <.button
-          variant={:danger}
-          size={:sm}
-          phx-click="delete-clause"
-          phx-value-clause-id={clause.id}
-          data-confirm={delete_clause_confirmation(clause)}
-        >
-          Delete clause
-        </.button>
-      </div>
-
-      <div class="flex flex-wrap gap-2 mb-p05">
-        <span
-          :for={cq <- clause.group_rule_clause_qualifications}
-          id={"clause-qualification-#{cq.id}"}
-          class={[
-            "inline-flex items-center gap-2 rounded px-2 py-1 text-sm",
-            if(qualification_known?(@qualifications, cq.d4h_qualification_id),
-              do: "bg-base-2",
-              else: "border border-danger-1 text-danger-1"
-            )
-          ]}
-        >
-          {qualification_title(@qualifications, cq.d4h_qualification_id)}
-          <button
-            phx-click="remove-qualification"
-            phx-value-qualification-id={cq.id}
-            class="text-danger-1 hover:text-danger-2 font-bold"
-            title="Remove qualification"
-          >
-            &times;
-          </button>
-        </span>
-        <span
-          :if={clause.group_rule_clause_qualifications == []}
-          class="text-secondary-1 text-sm italic"
-        >
-          No qualifications yet
-        </span>
-      </div>
-
-      <form phx-submit="add-qualification" class="flex flex-wrap gap-2 items-end">
-        <input type="hidden" name="clause-id" value={clause.id} />
-        <select
-          name="qualification-id"
-          class="block rounded border shadow-sm text-sm max-w-xs truncate"
-        >
-          <option value="">Select a qualification</option>
-          {Phoenix.HTML.Form.options_for_select(
-            available_qualifications(@qualifications, clause.group_rule_clause_qualifications),
-            nil
-          )}
-        </select>
-        <.button size={:sm}>Add qualification</.button>
-      </form>
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <.button size={:sm} phx-click="add-clause">Add clause</.button>
-      <.button id="done-editing" variant={:primary} size={:sm} phx-click="done-editing">
-        Done
-      </.button>
-    </div>
-    """
-  end
-
   defp rule_preview(assigns) do
     ~H"""
-    <div :if={@clauses != []} class="mt-p">
-      <h2 class="subheading mb-p05">Rule preview</h2>
+    <div :if={@clauses != []} class="mt-4">
+      <h2 class="subheading">Rule preview</h2>
       <p
         :if={@preview.missing_qualification_ids != []}
         id="rule-broken"
@@ -273,28 +175,28 @@ defmodule Web.GroupLive do
         These rules name a qualification that is no longer in D4H. Remove or replace it to
         see the preview.
       </p>
-      <p :if={@preview.missing_qualification_ids == []} class="text-secondary-1 text-sm mb-p05">
+      <p :if={@preview.missing_qualification_ids == []} class="hint mb-2">
         What these rules would change in the D4H group.
       </p>
 
       <.change_list
         id="would-remove"
         title="Would be removed"
-        title_class="text-danger-1"
+        title_class="text-danger-text"
         rows={@preview.to_remove}
         team={@team}
       />
       <.change_list
         id="would-add"
         title="Would be added"
-        title_class="text-success-1"
+        title_class="text-success-text"
         rows={@preview.to_add}
         team={@team}
       />
       <.change_list
         id="expiring"
         title={"Expiring within #{BuildGroupRulePreview.expiring_days()} days"}
-        title_class="text-base-content"
+        title_class=""
         rows={@preview.expiring}
         team={@team}
       />
@@ -304,7 +206,7 @@ defmodule Web.GroupLive do
           @preview.missing_qualification_ids == [] && @preview.to_add == [] &&
             @preview.to_remove == []
         }
-        class="text-secondary-1 text-sm"
+        class="hint"
       >
         No changes. The group matches its rules.
       </p>
@@ -323,20 +225,20 @@ defmodule Web.GroupLive do
 
   defp recent_changes(assigns) do
     ~H"""
-    <div :if={@changes != []} class="mt-p">
-      <h2 class="subheading mb-p05">Recent changes</h2>
-      <.table id="recent-changes" rows={@changes} class="w-full table-striped">
+    <div :if={@changes != []} class="mt-4">
+      <h2 class="subheading">Recent changes</h2>
+      <.table id="recent-changes" rows={@changes} class="table-striped">
         <:col :let={change} label="When" class="w-px whitespace-nowrap">
           {Service.Format.datetime_short(change.inserted_at, @team.timezone)}
         </:col>
         <:col :let={change} label="Change">
-          <span class={change.error && "text-danger-1"}>{change_verb(change)}</span>
+          <span class={change.error && "text-danger-text"}>{change_verb(change)}</span>
           <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}/qualifications"}>
             {change.member.name}
           </.a>
           · {change.reason}
           <span :if={change.user}>· by {change.user.email}</span>
-          <div :if={change.error} class="text-sm text-danger-1">{change.error}</div>
+          <div :if={change.error} class="text-sm text-danger-text">{change.error}</div>
         </:col>
       </.table>
     </div>
@@ -351,9 +253,9 @@ defmodule Web.GroupLive do
 
   defp change_list(assigns) do
     ~H"""
-    <div :if={@rows != []} class="mb-p">
-      <h3 class={["font-semibold mb-p05", @title_class]}>{@title} ({length(@rows)})</h3>
-      <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="w-full table-striped">
+    <div :if={@rows != []} class="mb-4">
+      <h3 class={["font-semibold mb-2", @title_class]}>{@title} ({length(@rows)})</h3>
+      <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="table-striped">
         <:col :let={row} label="Member" class="md:w-1/3">
           <.a navigate={~p"/teams/#{@team}/members/#{row.member.id}/qualifications"}>
             {row.member.name}
@@ -361,7 +263,7 @@ defmodule Web.GroupLive do
         </:col>
         <:col :let={row} label="Why">
           {row.reason}
-          <.badge :if={row[:days]} kind={:warning} class="ml-2 whitespace-nowrap">
+          <.badge :if={row[:days]} kind={:warning}>
             {Service.Format.count(row.days, one: "%d day", many: "%d days")}
           </.badge>
         </:col>
@@ -372,12 +274,12 @@ defmodule Web.GroupLive do
 
   defp main_content(assigns) do
     ~H"""
-    <h2 class="subheading mb-p05 mt-p">Members ({length(@members)})</h2>
+    <h2 class="subheading mt-4">Members ({length(@members)})</h2>
     <.table
       :if={@members != []}
       id="group_members"
       rows={@members}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={gm} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>
@@ -385,7 +287,7 @@ defmodule Web.GroupLive do
         </.a>
       </:col>
     </.table>
-    <p :if={@members == []} class="text-secondary-1">No members in this group.</p>
+    <p :if={@members == []} class="text-text-muted">No members in this group.</p>
     """
   end
 
@@ -393,6 +295,26 @@ defmodule Web.GroupLive do
   defp change_verb(%{action: :remove, error: nil}), do: "Removed"
   defp change_verb(%{action: :add}), do: "Could not add"
   defp change_verb(%{action: :remove}), do: "Could not remove"
+
+  # The editor's clauses as plain maps, so the style guide can render it too.
+  defp editor_clauses(clauses, qualifications) do
+    for clause <- clauses do
+      %{
+        id: clause.id,
+        name: clause.name,
+        confirm: delete_clause_confirmation(clause),
+        qualifications:
+          for cq <- clause.group_rule_clause_qualifications do
+            %{
+              id: cq.id,
+              title: qualification_title(qualifications, cq.d4h_qualification_id),
+              known?: qualification_known?(qualifications, cq.d4h_qualification_id)
+            }
+          end,
+        options: available_qualifications(qualifications, clause.group_rule_clause_qualifications)
+      }
+    end
+  end
 
   defp delete_clause_confirmation(clause) do
     name = if clause.name, do: "the #{clause.name} clause", else: "this clause"

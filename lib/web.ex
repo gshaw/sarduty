@@ -110,6 +110,7 @@ defmodule Web do
       import Phoenix.HTML
       # Core UI components and translation
       import Web.Components.Core
+      import Web.Components.Messages
       import Web.Gettext
 
       alias Phoenix.LiveView.AsyncResult

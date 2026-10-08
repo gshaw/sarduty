@@ -9,13 +9,13 @@
   <p>Use only these. To use a new icon, add it to this list with its use first.</p>
   <.table id="icon-set" rows={icons()}>
     <:col :let={{_name, micro, _mini, _outline, _use}} label="16" class="w-px">
-      <.icon name={micro} class="size-4" />
+      <.icon name={micro} />
     </:col>
     <:col :let={{_name, _micro, mini, _outline, _use}} label="20" class="w-px">
-      <.icon name={mini} class="size-5" />
+      <.icon name={mini} />
     </:col>
     <:col :let={{_name, _micro, _mini, outline, _use}} label="24" class="w-px">
-      <.icon name={outline} class="size-6" />
+      <.icon name={outline} />
     </:col>
     <:col
       :let={{name, _micro, _mini, _outline, _use}}
@@ -33,18 +33,18 @@
       <strong>16, solid</strong>: beside sm text: breadcrumbs, back links, pagination, small buttons, chips.
     </li>
     <li><strong>20, solid</strong>: beside md text: buttons, banner titles, toasts.</li>
-    <li><strong>24, outline</strong>: on its own line, such as warning text.</li>
+    <li><strong>24, outline</strong>: on its own line, such as warning text. A band draws it at 32.</li>
   </ul>
 
   <h2>In use</h2>
   <div class="demo">
     <.form_actions>
       <.button href="#">
-        Open in D4H <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />
+        Open in D4H <.icon name="hero-arrow-top-right-on-square-micro" />
       </.button>
-      <.button><.icon name="hero-arrow-path-mini" class="size-5" /> Refresh from D4H</.button>
+      <.button><.icon name="hero-arrow-path-mini" /> Refresh from D4H</.button>
       <.button size={:sm} href="#">
-        <.icon name="hero-arrow-down-tray-micro" class="size-4" /> Download PDF
+        <.icon name="hero-arrow-down-tray-micro" /> Download PDF
       </.button>
     </.form_actions>
   </div>
@@ -62,7 +62,7 @@
     <li>
       In the app: <code>&lt;.icon name="hero-chevron-left-micro" /&gt;</code>
       for 16, <code>-mini</code>
-      for 20, and no suffix for 24.
+      for 20, and no suffix for 24. Each draws at its own size, so it needs no size class.
     </li>
   </ul>
 </.shell>

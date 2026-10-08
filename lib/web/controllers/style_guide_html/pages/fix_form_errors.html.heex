@@ -2,63 +2,32 @@
   <h1>Fix form errors</h1>
   <p class="lead">Team settings after a failed save.</p>
 
-  <div class="example max-w-160">
-    <div class="error-summary" role="alert">
-      <h2>There is a problem</h2>
-      <ul>
-        <li><a href="#authorized_by">Enter who authorizes tax letters</a></li>
-        <li><a href="#d4h_key">The D4H access key was not accepted by D4H</a></li>
-      </ul>
-    </div>
-    <.input id="name" name="name" label="Team name" value="Squamish SAR" />
+  <.form :let={f} for={settings_form()} class="example measure" onsubmit="return false">
+    <.error_summary form={f} />
+    <.input field={f[:name]} label="Name" />
     <div class="grid grid-cols-2 gap-x-5">
-      <.input id="lat" name="lat" label="Latitude" value="49.7553" readonly />
-      <.input id="lng" name="lng" label="Longitude" value="-123.1311" readonly />
+      <.input field={f[:lat]} label="Latitude" readonly />
+      <.input field={f[:lng]} label="Longitude" readonly />
     </div>
-    <div class="max-w-80">
-      <.input
-        id="tz"
-        name="tz"
-        type="select"
-        label="Time zone"
-        options={["America/Vancouver", "America/Edmonton"]}
-        value="America/Vancouver"
-      />
-    </div>
+    <.input field={f[:timezone]} label="Time zone" readonly />
+    <.input field={f[:mailing_address]} label="Mailing address" type="textarea" rows="3" />
     <.input
-      id="address"
-      name="address"
+      field={f[:authorized_by_name]}
+      label="Tax credit letters authorized by"
       type="textarea"
-      label="Mailing address"
       rows="3"
-      value={Enum.join(["PO Box 123", "Squamish BC V8B 0A1"], "\n")}
-    />
-    <.input
-      id="authorized_by"
-      name="authorized_by"
-      type="textarea"
-      label="Tax letters authorized by"
-      rows="3"
-      value=""
-      errors={["Enter who authorizes tax letters"]}
     >
-      Full name, title, address, and phone of the president or a similar role. CRA uses it in audits.
+      The full name of your team president, or someone in a similar role. The CRA uses this during
+      tax audits.
     </.input>
-    <.input
-      id="d4h_key"
-      name="d4h_key"
-      type="password"
-      label="D4H access key"
-      value="not-a-real-key"
-      errors={["The D4H access key was not accepted by D4H"]}
-    >
-      One key for every D4H request. Stored encrypted.
-    </.input>
+    <.input field={f[:authorized_by_email]} label="Signer's email (optional)" type="email" />
     <.form_actions>
-      <.button variant={:primary}>Save settings</.button>
-      <.button>Refresh from D4H</.button>
+      <.button variant={:success}>Save settings</.button>
+      <:trailing>
+        <.button type="button">Refresh from D4H</.button>
+      </:trailing>
     </.form_actions>
-  </div>
+  </.form>
 
   <h2>How it works</h2>
   <ul>
@@ -69,7 +38,7 @@
     <li>Each field shows its own error, in the same words, above the input.</li>
     <li>What came from D4H is read-only.</li>
   </ul>
-  <p class="spec not-yet">
-    The app's settings form shows errors on the fields, without the summary yet.
+  <p class="spec">
+    The same components as the team settings page, given a made-up changeset that failed to save.
   </p>
 </.shell>

@@ -114,8 +114,8 @@ defmodule Web.VerifyLetterLive do
   def render(%{result: nil} = assigns) do
     ~H"""
     <div id="start">
-      <h1 class="text-2xl font-semibold text-base-content">Verify a tax credit letter</h1>
-      <p class="mt-2 mb-6 text-secondary-1">
+      <h1 class="heading">Verify a tax credit letter</h1>
+      <p class="text-text-muted">
         Enter the reference number from the bottom of the letter.
       </p>
 
@@ -129,12 +129,12 @@ defmodule Web.VerifyLetterLive do
           spellcheck="false"
           class="font-mono"
         />
-        <.button size={:lg} class="w-full justify-center">Verify letter</.button>
+        <.button size={:lg} class="w-full">Verify letter</.button>
       </.form>
 
-      <section class="mt-8 pt-6 border-t border-hr text-sm text-secondary-1">
-        <h2 class="mb-2 font-semibold text-base-content">How it works</h2>
-        <p class="mb-0">
+      <section class="small-print">
+        <h2>How it works</h2>
+        <p>
           Teams make tax credit letters in SAR Duty. This page shows the hours the team issued
           for a reference number. They should match the paper letter.
         </p>
@@ -146,15 +146,15 @@ defmodule Web.VerifyLetterLive do
   def render(%{result: %{status: :needs_last_name}} = assigns) do
     ~H"""
     <div id="needs-last-name">
-      <h1 class="text-2xl font-semibold text-base-content">Verify a tax credit letter</h1>
-      <p class="mt-2 mb-6 text-secondary-1">
+      <h1 class="heading">Verify a tax credit letter</h1>
+      <p class="text-text-muted">
         Older letters need the member's last name too. Enter it as it is on the letter.
       </p>
 
       <.form for={@form} id="last-name-form" phx-submit="check_name">
-        <p class="mb-2 font-mono text-base-content">{@result.ref_id}</p>
+        <p class="mono">{@result.ref_id}</p>
         <.input field={@form[:last_name]} label="Last name" autocomplete="off" spellcheck="false" />
-        <.button size={:lg} class="w-full justify-center">Verify letter</.button>
+        <.button size={:lg} class="w-full">Verify letter</.button>
       </.form>
     </div>
     """
@@ -163,13 +163,8 @@ defmodule Web.VerifyLetterLive do
   def render(assigns) do
     ~H"""
     <.result result={@result} />
-    <div class="mt-6">
-      <.button
-        id="check-another"
-        navigate={~p"/letters"}
-        size={:lg}
-        class="w-full justify-center"
-      >
+    <div class="mt-5">
+      <.button id="check-another" navigate={~p"/letters"} size={:lg} class="w-full">
         Verify another letter
       </.button>
     </div>
@@ -179,7 +174,7 @@ defmodule Web.VerifyLetterLive do
   defp result(%{result: %{status: :limited}} = assigns) do
     ~H"""
     <div id="result-limited">
-      <.band kind={:bad} title="Too many tries">Wait a few minutes and try again</.band>
+      <.band kind={:danger} title="Too many tries">Wait a few minutes and try again</.band>
       <.panel>Too many reference numbers from this connection did not match a letter.</.panel>
     </div>
     """
@@ -188,7 +183,7 @@ defmodule Web.VerifyLetterLive do
   defp result(%{result: %{status: :not_found}} = assigns) do
     ~H"""
     <div id="result-not-found">
-      <.band kind={:bad} title="No tax credit letter has this reference number">
+      <.band kind={:danger} title="No tax credit letter has this reference number">
         Check the number and try again
       </.band>
       <.panel>
@@ -201,32 +196,28 @@ defmodule Web.VerifyLetterLive do
   defp result(assigns) do
     ~H"""
     <div id={"result-#{@result.status}"}>
-      <.band :if={@result.status == :issued} kind={:ok} title="Issued by the team">
+      <.band :if={@result.status == :issued} kind={:success} title="Issued by the team">
         Verified just now
       </.band>
       <.band
         :if={@result.status == :replaced}
-        kind={:warn}
+        kind={:warning}
         title="This tax credit letter was replaced"
       >
         Replaced on {Format.date_long(@result.replaced_at, @result.team.timezone)}
       </.band>
 
       <.panel>
-        <h2 id="result-name" class="text-2xl font-semibold text-base-content">
-          {@result.member.name}
-        </h2>
-        <p class="mb-0 font-mono text-sm text-secondary-1">{@result.ref_id}</p>
+        <h2 id="result-name" class="heading mb-0">{@result.member.name}</h2>
+        <p class="hint mono mb-0">{@result.ref_id}</p>
 
-        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-hr">
+        <div class="card-section media">
           <img
             src={"#{Web.Endpoint.url()}/teams/#{@result.team.subdomain}/logo?shape=square"}
             alt=""
-            class="size-14 shrink-0"
+            class="logo-md"
           />
-          <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-base-content">
-            {@result.team.name}
-          </p>
+          <p id="result-team" class="subheading mb-0">{@result.team.name}</p>
         </div>
 
         <div class="flex justify-between gap-4 mt-4">
@@ -239,21 +230,21 @@ defmodule Web.VerifyLetterLive do
         <div
           :if={@result.primary_minutes && @result.secondary_minutes}
           id="result-hours"
-          class="mt-4 pt-3 border-t border-hr"
+          class="card-section value-rows"
         >
           <.hours label="Primary hours" minutes={@result.primary_minutes} />
           <.hours label="Secondary hours" minutes={@result.secondary_minutes} />
           <.hours label="Total hours" minutes={@result.primary_minutes + @result.secondary_minutes} />
         </div>
-        <p :if={!@result.primary_minutes} id="result-no-hours" class="mt-4 mb-0 text-secondary-1">
+        <p :if={!@result.primary_minutes} id="result-no-hours" class="mt-4 mb-0 text-text-muted">
           This letter's hours were not saved. Contact the team to confirm them.
         </p>
       </.panel>
 
-      <p :if={@result.status == :issued} id="result-check" class="callout mt-4 mb-0 text-sm">
+      <p :if={@result.status == :issued} id="result-check" class="callout mt-4 text-sm">
         <b>Compare these hours with the paper letter.</b> If they are not the same, contact the team.
       </p>
-      <p :if={@result.status == :replaced} id="result-check" class="callout mt-4 mb-0 text-sm">
+      <p :if={@result.status == :replaced} id="result-check" class="callout mt-4 text-sm">
         <b>These hours are from the old letter.</b>
         The team issued a new letter with a new reference number. Ask the member for it.
       </p>
@@ -268,11 +259,9 @@ defmodule Web.VerifyLetterLive do
 
   defp hours(assigns) do
     ~H"""
-    <div class="flex justify-between gap-4 py-1">
-      <span class="text-base-content">{@label}</span>
-      <span class="shrink-0 font-semibold text-base-content">
-        {Format.duration_as_hours_minutes_long(@minutes)}
-      </span>
+    <div>
+      <span>{@label}</span>
+      <strong>{Format.duration_as_hours_minutes_long(@minutes)}</strong>
     </div>
     """
   end
@@ -296,9 +285,9 @@ defmodule Web.VerifyLetterLive do
       )
 
     ~H"""
-    <section :if={@lines != []} id="result-contact" class="mt-4 text-sm text-secondary-1">
-      <h2 class="mb-1 font-semibold text-base-content">Questions about this letter</h2>
-      <p class="mb-0">
+    <section :if={@lines != []} id="result-contact" class="small-print">
+      <h2>Questions about this letter</h2>
+      <p>
         <%= for {line, index} <- Enum.with_index(@lines) do %>
           <br :if={index > 0} />{line}
         <% end %>

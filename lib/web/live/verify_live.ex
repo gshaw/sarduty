@@ -1,6 +1,7 @@
 defmodule Web.VerifyLive do
   use Web, :live_view_verify_layout
 
+  import Web.Components.Scanner
   import Web.Components.Verify
 
   alias App.Model.MemberCard
@@ -121,43 +122,16 @@ defmodule Web.VerifyLive do
   def render(%{result: nil} = assigns) do
     ~H"""
     <div id="start">
-      <h1 class="text-2xl font-semibold text-base-content">
+      <h1 class="heading">
         Verify a search and rescue ID card
       </h1>
-      <p class="mt-2 mb-0 text-secondary-1">
+      <p class="text-text-muted">
         Scan the QR code on the member's ID card. SAR Duty shows whether they are an active
         member of their team, with their photo.
       </p>
 
-      <div id="scanner" phx-hook="QRScanner" phx-update="ignore" class="mt-6 mb-6">
-        <div data-scan-state class="group">
-          <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
-          <div class="group-data-scanning:hidden">
-            <.button
-              type="button"
-              variant={:primary}
-              size={:lg}
-              class="w-full justify-center"
-              data-scan-start
-            >
-              Scan a card
-            </.button>
-          </div>
-          <div class="hidden group-data-scanning:block mt-2">
-            <.button type="button" class="w-full justify-center" data-scan-stop>Stop scanning</.button>
-          </div>
-        </div>
-        <.switch
-          id="sound-switch"
-          label="Sound"
-          compact
-          class="mt-2"
-          checked
-          phx-hook="SoundSwitch"
-          phx-update="ignore"
-        />
-      </div>
-      <p :if={@scan_failed} id="scan-failed" class="text-danger-1">
+      <.qr_scanner label="Scan a card" class="mb-5" />
+      <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
         The camera did not start. Allow camera access, or type the code.
       </p>
 
@@ -171,17 +145,17 @@ defmodule Web.VerifyLive do
           spellcheck="false"
           class="font-mono"
         />
-        <.button size={:lg} class="w-full justify-center">Verify card</.button>
+        <.button size={:lg} class="w-full">Verify card</.button>
       </.form>
 
-      <section class="mt-8 pt-6 border-t border-hr text-sm text-secondary-1">
-        <h2 class="mb-2 font-semibold text-base-content">How it works</h2>
-        <p class="mb-2">
+      <section class="small-print">
+        <h2>How it works</h2>
+        <p>
           SAR Duty verifies each card against the team's D4H records. A cancelled card shows
           here, and so does a member who has left.
         </p>
-        <p class="mb-0">
-          A real card's QR code always opens <b class="text-base-content">{Web.VerifyHost.host()}</b>. Add this page
+        <p>
+          A real card's QR code always opens <b class="text-text">{Web.VerifyHost.host()}</b>. Add this page
           to your home screen if you verify ID cards often.
         </p>
       </section>
@@ -192,8 +166,8 @@ defmodule Web.VerifyLive do
   def render(assigns) do
     ~H"""
     <.result result={@result} />
-    <div class="mt-6">
-      <.button id="check-another" navigate={@start_path} size={:lg} class="w-full justify-center">
+    <div class="mt-5">
+      <.button id="check-another" navigate={@start_path} size={:lg} class="w-full">
         Verify another card
       </.button>
     </div>
@@ -203,7 +177,7 @@ defmodule Web.VerifyLive do
   defp result(%{result: %{status: :limited}} = assigns) do
     ~H"""
     <div id="result-limited">
-      <.band kind={:bad} title="Too many tries">Wait a few minutes and try again</.band>
+      <.band kind={:danger} title="Too many tries">Wait a few minutes and try again</.band>
       <.panel>Too many codes from this connection did not match a card.</.panel>
     </div>
     """
@@ -212,7 +186,7 @@ defmodule Web.VerifyLive do
   defp result(%{result: %{status: :not_found}} = assigns) do
     ~H"""
     <div id="result-not-found">
-      <.band kind={:bad} title="No card has this code">Check the code and try again</.band>
+      <.band kind={:danger} title="No card has this code">Check the code and try again</.band>
       <.panel>
         Codes are 8 letters and numbers, under the QR code. If the code is right, the card is
         not valid.
@@ -224,12 +198,12 @@ defmodule Web.VerifyLive do
   defp result(%{result: %{status: :other_site}} = assigns) do
     ~H"""
     <div id="result-other-site">
-      <.band kind={:bad} title="Not a SAR Duty card">Do not accept this card</.band>
+      <.band kind={:danger} title="Not a SAR Duty card">Do not accept this card</.band>
       <.panel>
         <p>
-          Its QR code links to <span class="font-mono text-danger-1">{@result.host}</span>.
+          Its QR code links to <span class="font-mono text-danger-text">{@result.host}</span>.
         </p>
-        <p class="mt-2">
+        <p>
           A real card's QR code always opens <b>{Web.VerifyHost.host()}</b>. Do not trust any
           page this card opened.
         </p>
@@ -241,7 +215,7 @@ defmodule Web.VerifyLive do
   defp result(%{result: %{status: :revoked}} = assigns) do
     ~H"""
     <div id="result-revoked">
-      <.band kind={:bad} title="This card was cancelled">It is not valid</.band>
+      <.band kind={:danger} title="This card was cancelled">It is not valid</.band>
       <.panel>The team replaced or withdrew this card.</.panel>
     </div>
     """
@@ -260,37 +234,33 @@ defmodule Web.VerifyLive do
 
     ~H"""
     <div id={"result-#{@status}"}>
-      <.band :if={@status == :active} kind={:ok} title="Active member">Verified just now</.band>
-      <.band :if={@status == :inactive} kind={:warn} title="Not an active member">
+      <.band :if={@status == :active} kind={:success} title="Active member">Verified just now</.band>
+      <.band :if={@status == :inactive} kind={:warning} title="Not an active member">
         {left_text(@member)}
       </.band>
 
       <.panel>
         <%!-- No photo for someone who has left: "not active" needs none (#176). --%>
-        <div class="flex items-center gap-4">
+        <div class="media">
           <img
             :if={@status == :active}
             id="result-photo"
             src={~p"/#{@result.card.code}/photo"}
             alt={"Photo of #{@member.name}"}
-            class="size-28 shrink-0 rounded-lg border border-hr object-cover"
+            class="photo photo-sm"
           />
-          <h2 id="result-name" class="text-2xl font-semibold text-base-content">
-            {@member.name}
-          </h2>
+          <h2 id="result-name" class="heading mb-0">{@member.name}</h2>
         </div>
 
-        <div class="flex items-center gap-3 mt-4 pt-4 border-t border-hr">
+        <div class="card-section media">
           <img
             src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo?shape=square"}
             alt=""
-            class="size-14 shrink-0"
+            class="logo-md"
           />
           <div>
-            <p id="result-team" class="mb-0 text-lg font-semibold leading-snug text-base-content">
-              {@team.name}
-            </p>
-            <p :if={@team.organization} id="result-organization" class="mb-0 text-sm text-secondary-1">
+            <p id="result-team" class="subheading mb-0">{@team.name}</p>
+            <p :if={@team.organization} id="result-organization" class="hint mb-0">
               {@team.organization.name}
             </p>
           </div>
@@ -314,29 +284,23 @@ defmodule Web.VerifyLive do
         <ul
           :if={@result.qualifications != []}
           id="result-qualifications"
-          class="mt-4 pt-3 border-t border-hr text-sm"
+          class="card-section value-rows text-sm"
         >
-          <li :for={q <- @result.qualifications} class="flex justify-between gap-4 py-1">
-            <span class="text-base-content">{q.name}</span>
-            <span class="shrink-0 text-secondary-1">
-              {expiry_text(q, @team.timezone)}
-            </span>
+          <li :for={q <- @result.qualifications}>
+            <span>{q.name}</span>
+            <span class="text-text-muted">{expiry_text(q, @team.timezone)}</span>
           </li>
         </ul>
       </.panel>
 
-      <p
-        :if={@status == :active}
-        id="result-check"
-        class="callout mt-4 mb-0 text-sm"
-      >
+      <p :if={@status == :active} id="result-check" class="callout mt-4 text-sm">
         <b>Compare the photo with the person.</b>
         Make sure the address bar shows {Web.VerifyHost.host()}.
       </p>
-      <p :if={@status == :inactive} class="mt-4 mb-0 text-base-content">
+      <p :if={@status == :inactive} class="mt-4">
         This card does not qualify for member benefits.
       </p>
-      <p class="mt-3 mb-0 text-sm text-secondary-1">
+      <p class="hint">
         From the team's D4H records, last refreshed {last_checked(@team)}.
       </p>
     </div>

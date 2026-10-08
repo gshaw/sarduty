@@ -39,6 +39,7 @@
   --row-hover: light-dark(#eaf2fa, #1b2633); /* Row under the pointer */
   --border: light-dark(#b1b4b6, #3b4654); /* Inputs and table rules */
   --border-subtle: light-dark(#dedfe0, #252e39); /* Row dividers */
+  --paper: light-dark(#ffffff, #ffffff); /* Behind an image made for paper, such as a signature */
 
   /* group: Text */
   --text: light-dark(#0b0c0c, #e6e9ec); /* Body text */

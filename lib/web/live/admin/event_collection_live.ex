@@ -72,7 +72,7 @@ defmodule Web.Admin.EventCollectionLive do
     <h1 class="title">Admin</h1>
     <.admin_tabs current={:events} />
     <h2 class="heading">D4H sync</h2>
-    <dl id="sync-summary" class="mb-p2 max-w-3xl">
+    <dl id="sync-summary" class="mb-6 max-w-3xl">
       <dt>Last sync round</dt>
       <dd id="last-round">{run_summary(@last_round, @now)}</dd>
       <dt>Last nightly refresh</dt>
@@ -88,7 +88,7 @@ defmodule Web.Admin.EventCollectionLive do
     </dl>
 
     <h2 class="heading">Logins</h2>
-    <dl id="login-summary" class="mb-p max-w-3xl">
+    <dl id="login-summary" class="mb-4 max-w-3xl">
       <dt>In the last 7 days</dt>
       <dd id="last-week">
         {Service.Format.count(@logins, one: "%d login", many: "%d logins")}, {Service.Format.count(
@@ -103,7 +103,7 @@ defmodule Web.Admin.EventCollectionLive do
       id="top-ips"
       rows={Enum.with_index(@top_ips, 1)}
       row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
-      class="mb-p2 table-striped"
+      class="mb-6 table-striped"
     >
       <:col :let={{{ip, _count}, _rank}} label="IP">
         <.a navigate={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>

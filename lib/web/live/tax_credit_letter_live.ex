@@ -68,36 +68,30 @@ defmodule Web.TaxCreditLetterLive do
         </.button>
       </:trailing>
     </.form_actions>
-    <hr class="my-p border-hr" />
+    <hr class="my-4" />
 
-    <div
+    <.banner
       :if={@hours_status == :changed}
       id="hours-changed"
-      class="banner banner-warning"
-      role="region"
-      aria-label="Hours changed"
+      kind={:warning}
+      title="Hours changed"
     >
-      <div class="banner-title">
-        <.icon name="hero-exclamation-triangle" class="size-5" />Hours changed
-      </div>
-      <div class="banner-body">
-        <p>
-          This letter says {format_minutes(TaxCreditLetter.total_minutes(@letter))}.
-          Attendance now adds up to {format_minutes(@hours.total_minutes)}.
-          Replace the letter to use the new hours. It gets a new reference number and is not emailed.
-          The old reference number still verifies, with the old hours.
-        </p>
-        <.button
-          id="replace-letter"
-          variant={:warning}
-          size={:sm}
-          phx-click="replace"
-          data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It gets a new reference number and is not emailed."}
-        >
-          Replace letter
-        </.button>
-      </div>
-    </div>
+      <p>
+        This letter says {format_minutes(TaxCreditLetter.total_minutes(@letter))}.
+        Attendance now adds up to {format_minutes(@hours.total_minutes)}.
+        Replace the letter to use the new hours. It gets a new reference number and is not emailed.
+        The old reference number still verifies, with the old hours.
+      </p>
+      <.button
+        id="replace-letter"
+        variant={:warning}
+        size={:sm}
+        phx-click="replace"
+        data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It gets a new reference number and is not emailed."}
+      >
+        Replace letter
+      </.button>
+    </.banner>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -130,7 +124,7 @@ defmodule Web.TaxCreditLetterLive do
             <img
               id="letter-signature"
               src={Web.ImageData.png_data_url(@letter.signature)}
-              class="my-p h-16 bg-white"
+              class="my-4 h-8 bg-paper"
               alt="The signer's signature"
             />
             <.markdown content={signer} />

@@ -99,12 +99,12 @@ defmodule Web.QualificationLive do
 
   defp main_content(assigns) do
     ~H"""
-    <h2 class="subheading mb-p05">Active ({length(@active_awards)})</h2>
+    <h2 class="subheading">Active ({length(@active_awards)})</h2>
     <.table
       :if={@active_awards != []}
       id="active_awards"
       rows={@active_awards}
-      class="w-full table-striped mb-p2"
+      class="table-striped mb-6"
     >
       <:col :let={award} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
@@ -118,14 +118,14 @@ defmodule Web.QualificationLive do
         {Service.Format.date_short(award.ends_at, @team.timezone)}
       </:col>
     </.table>
-    <p :if={@active_awards == []} class="text-secondary-1 mb-p2">No active awards.</p>
+    <p :if={@active_awards == []} class="text-text-muted mb-6">No active awards.</p>
 
-    <h2 class="subheading mb-p05">Expired ({length(@expired_awards)})</h2>
+    <h2 class="subheading">Expired ({length(@expired_awards)})</h2>
     <.table
       :if={@expired_awards != []}
       id="expired_awards"
       rows={@expired_awards}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={award} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
@@ -139,7 +139,7 @@ defmodule Web.QualificationLive do
         {Service.Format.date_short(award.ends_at, @team.timezone)}
       </:col>
     </.table>
-    <p :if={@expired_awards == []} class="text-secondary-1">No expired awards.</p>
+    <p :if={@expired_awards == []} class="text-text-muted">No expired awards.</p>
     """
   end
 

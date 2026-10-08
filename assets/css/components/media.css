@@ -1,0 +1,12 @@
+/* Photos and logos, at the few sizes pages use. A logo or photo that fits the spacing
+   scale uses a size class instead, like size-6 for 32px. */
+@layer components {
+  .photo { width: 192px; height: 192px; border-radius: var(--radius); background: var(--bg); object-fit: cover; }
+  .photo-sm { width: 112px; height: 112px; border: 1px solid var(--border-subtle); }
+  .logo-md { width: 56px; height: 56px; flex: none; }
+  .logo-lg { height: 96px; }
+
+  /* A picture beside its words: a photo and a name, a logo and a team. */
+  .media { display: flex; align-items: center; gap: var(--sp-3); }
+  .media > img { flex: none; }
+}

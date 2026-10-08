@@ -33,7 +33,7 @@ defmodule Web.MemberCollectionLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team} />
-    <h1 class="title mb-p">{@page_title}</h1>
+    <h1 class="title">{@page_title}</h1>
     <.form
       for={@form}
       id="member_filter_form"
@@ -88,7 +88,7 @@ defmodule Web.MemberCollectionLive do
       rows={@paginated.entries}
       sort={@sort}
       path_fn={@path_fn}
-      class="w-full table-striped"
+      class="table-striped"
     >
       <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
@@ -104,14 +104,14 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} :if={@details == "missing"} label="Missing">
         <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
       </:col>
-      <:col :let={record} label="Activities" align="right" class="w-px whitespace-nowrap tabular-nums">
+      <:col :let={record} label="Activities" align="right" class="w-px whitespace-nowrap">
         {record.activity_count}
       </:col>
       <:col
         :let={record}
         label="Duration"
         align="right"
-        class="w-px whitespace-nowrap tabular-nums"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
       >
         {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
@@ -120,7 +120,7 @@ defmodule Web.MemberCollectionLive do
         :let={record}
         label="Joined"
         align="right"
-        class="w-1/12 whitespace-nowrap tabular-nums"
+        class="w-1/12 whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
         {Service.Format.date_short(record.member.joined_at, @current_team.timezone)}
@@ -130,14 +130,14 @@ defmodule Web.MemberCollectionLive do
         :if={@status != "active"}
         label="Departed"
         align="right"
-        class="w-1/12 whitespace-nowrap tabular-nums"
+        class="w-1/12 whitespace-nowrap"
         sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
       >
         {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
       </:col>
     </.table>
 
-    <.pagination class="my-p" paginated={@paginated} path_fn={@path_fn} />
+    <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
   end
 

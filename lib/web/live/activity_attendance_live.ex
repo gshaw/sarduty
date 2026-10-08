@@ -1,6 +1,7 @@
 defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.AttendanceImport
   import Web.Components.AttendanceTable
 
   alias App.Adapter.D4H
@@ -52,85 +53,32 @@ defmodule Web.ActivityAttendanceLive do
     <h1 class="title">{@activity.title}</h1>
 
     <%= if @activity.is_published do %>
-      <p>
+      <.warning_text>
         Attendance cannot be changed. The activity is published in D4H.
-      </p>
+      </.warning_text>
     <% else %>
       <%= if @recommendations == nil do %>
-        <h2 class="heading mt-p">Import attendance</h2>
+        <h2 class="heading">Import attendance</h2>
         <p>
           Change D4H attendance to match a SAR Assist attendance report.
           SAR Assist exports the report after members use its QR code.
-          See an <a
-            target="_blank"
-            class="link"
+          See an <.a
+            external={true}
             href="https://gist.github.com/gshaw/ce675c595cd3b765dcee1eda081e1e6d"
-          >example attendance report</a>.
+            phx-no-format
+          >example attendance report</.a>.
         </p>
-        <form phx-submit="import-attendance">
-          <.input
-            type="textarea"
-            name="import_content"
-            value={@import_content}
-            label="Attendance report"
-            class="h-[16rem]"
-          >
-            Paste the attendance report here.
-            SAR Duty matches members by their name, email, or phone in D4H.
-            You review the changes before SAR Duty makes them.
-          </.input>
-          <.button variant={:success}>Import attendance</.button>
-        </form>
+        <.paste_report value={@import_content} />
       <% else %>
         <h2 class="heading">Recommended changes</h2>
-        <form phx-submit="perform-recommendations" _phx-change="validate-recommendations">
-          <.table id="recommendations" rows={@recommendations} class="table-striped table-stack">
-            <:col :let={{_op, attendance_id, _member}} label="" class="stack-check">
-              <.input :if={attendance_id} type="checkbox" name={attendance_id} checked />
-            </:col>
-            <:col :let={{op, _, _}} label="" class="stack-full">
-              <%= if op == :not_invited do %>
-                <.badge kind={:danger}>Not signed up</.badge>
-              <% else %>
-                <%= if op == :add do %>
-                  <span class="text-success-1 font-bold">Add</span>
-                <% else %>
-                  <span class="text-danger-1 font-bold">Remove</span>
-                <% end %>
-              <% end %>
-            </:col>
-            <:col :let={{_, _, member}} label="Name" class="stack-title">{member.name}</:col>
-            <:col :let={{_, _, member}} label="Email" class="stack-full break-all">
-              {member.email}
-            </:col>
-            <:col :let={{_, _, member}} label="Phone">{member.phone}</:col>
-          </.table>
-          <.form_actions class="mt-4">
-            <.button disabled={disable_perform_recommendations?(@recommendations)} variant={:success}>
-              Perform checked changes
-            </.button>
-            <.button type="button" phx-click="reset">Start over</.button>
-          </.form_actions>
-        </form>
+        <.recommended_changes rows={@recommendations} />
       <% end %>
     <% end %>
 
-    <h2 class="heading mt-p">Current attendance</h2>
+    <h2 class="heading mt-4">Current attendance</h2>
     <.attendance_table attendance_records={@attendance_records} status="attending" />
     """
   end
-
-  def disable_perform_recommendations?(recommendations) do
-    !Enum.any?(recommendations, fn {op, _, _} ->
-      op == :add || op == :remove
-    end)
-  end
-
-  def operation_css_class(:unknown), do: "text-danger-1"
-  def operation_css_class(_), do: ""
-  def operation_description(:add), do: "Add"
-  def operation_description(:remove), do: "Remove"
-  def operation_description(:unknown), do: "Unknown"
 
   def handle_event("import-attendance", %{"import_content" => import_content}, socket) do
     d4h_activity_id = socket.assigns.activity.d4h_activity_id

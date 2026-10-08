@@ -4,11 +4,15 @@
 
   <h2>Scale</h2>
   <p>
-    Margins, padding, and gaps come from these eight. Tokens are <code>--sp-1</code>
-    to <code>--sp-8</code>.
+    Margins, padding, gaps, and sizes come from these eight. In a class list the step is the
+    number: <code>mt-5</code>, <code>gap-2</code>, <code>px-4</code>, <code>size-6</code>. In CSS it
+    is the token: <code>var(--sp-5)</code>.
   </p>
   <.table id="spacing" rows={spacing()}>
-    <:col :let={{step, _px, _use}} label="Token" class="w-px mono">sp-{step}</:col>
+    <:col :let={{step, _px, _use}} label="Class" class="w-px mono whitespace-nowrap">
+      mt-{step}, gap-{step}
+    </:col>
+    <:col :let={{step, _px, _use}} label="Token" class="w-px mono">--sp-{step}</:col>
     <:col :let={{_step, px, _use}} label="Size" class="w-px" align="right">{px}px</:col>
     <:col :let={{_step, _px, use}} label="Typical use">{use}</:col>
     <:col :let={{_step, px, _use}} label="">
@@ -18,9 +22,20 @@
 
   <h2>Rules</h2>
   <ul>
-    <li>No space is invented on a page. If a design needs a new one, it joins the scale.</li>
+    <li>
+      No space is invented on a page. Tailwind's own numbers are off, so <code>mt-10</code>
+      builds nothing. If a design needs a new space, it joins the scale.
+    </li>
+    <li>
+      The steps are not Tailwind's: <code>mt-6</code> is 32px here, not 24px. 24px is
+      <code>mt-5</code>.
+    </li>
     <li>
       Closer things belong together: a label sits 4px from its input, fields sit 24px apart.
+    </li>
+    <li>
+      Widths that aren't spaces use Tailwind's named sizes, such as <code>max-w-xs</code>
+      (320px), or <code>.measure</code> (640px) for text and forms.
     </li>
   </ul>
 </.shell>

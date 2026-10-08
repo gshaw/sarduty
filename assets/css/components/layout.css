@@ -1,5 +1,16 @@
+/* Page layout: a page's content beside its sidebar, and the space under the top bar. */
 @layer components {
-  .content-wrapper { @apply md:flex md:flex-row-reverse gap-p }
+  .content-wrapper { @apply md:flex md:flex-row-reverse gap-4 }
   .content-1\/3 { @apply md:w-1/3 }
   .content-2\/3 { @apply md:w-2/3 }
+
+  /* A readable width for text, forms, and maps beside a table's full width. */
+  .measure { max-width: 640px; }
+
+  /* Edge-to-edge pages start right under the fixed bar: 52px and its 4px rule. */
+  .under-site-bar { padding-top: 56px; }
+
+  /* A heading with an action beside it, such as a section's New button. */
+  .heading-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+  .heading-row > :is(h1, h2, h3) { margin-bottom: 0; }
 }

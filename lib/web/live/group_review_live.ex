@@ -87,16 +87,16 @@ defmodule Web.GroupReviewLive do
     </.breadcrumbs>
 
     <h1 class="title">Review changes</h1>
-    <p class="text-secondary-1 mb-p">
+    <p class="lead">
       Clear the box next to anyone you want to skip. SAR Duty makes the changes in D4H right
       away, with the team's D4H access key.
     </p>
 
-    <div id="data-age" class="flex items-center gap-p mb-p text-sm">
+    <div id="data-age" class="flex items-center gap-4 mb-4 text-sm">
       <span :if={refreshing?(@current_team)}>
         <.spinner>Refreshing from D4H…</.spinner>
       </span>
-      <span :if={failed?(@current_team)} id="refresh-error" class="text-danger-1">
+      <span :if={failed?(@current_team)} id="refresh-error" class="text-danger-text">
         {String.replace_prefix(@current_team.d4h_refresh_result, "Error: ", "Cannot refresh: ")}
       </span>
       <span :if={!refreshing?(@current_team) && App.Model.Team.d4h_updated_at(@current_team)}>
@@ -119,7 +119,7 @@ defmodule Web.GroupReviewLive do
     <p
       :if={is_nil(@current_team.d4h_access_key)}
       id="no-team-key"
-      class="callout mb-p"
+      class="callout mb-4"
     >
       Applying changes needs the team's D4H access key.
       <.a navigate={~p"/teams/#{@current_team}/settings"}>Save it in Team settings.</.a>
@@ -128,7 +128,7 @@ defmodule Web.GroupReviewLive do
     <p
       :if={@preview.missing_qualification_ids != []}
       id="rule-broken"
-      class="callout mb-p"
+      class="callout mb-4"
     >
       The group's rules name a qualification that is no longer in D4H. Fix the rules first.
     </p>
@@ -137,14 +137,14 @@ defmodule Web.GroupReviewLive do
       <.review_list
         id="review-remove"
         title="Remove from group"
-        title_class="text-danger-1"
+        title_class="text-danger-text"
         rows={@preview.to_remove}
         selected={@selected}
       />
       <.review_list
         id="review-add"
         title="Add to group"
-        title_class="text-success-1"
+        title_class="text-success-text"
         rows={@preview.to_add}
         selected={@selected}
       />
@@ -152,12 +152,12 @@ defmodule Web.GroupReviewLive do
       <p
         :if={@preview.to_add == [] && @preview.to_remove == []}
         id="no-changes"
-        class="text-secondary-1 mb-p"
+        class="text-text-muted mb-4"
       >
         No changes. The group matches its rules.
       </p>
 
-      <div class="flex gap-2">
+      <.form_actions>
         <.button
           id="apply"
           variant={:primary}
@@ -167,7 +167,7 @@ defmodule Web.GroupReviewLive do
           Apply {count_changes(MapSet.size(@selected))}
         </.button>
         <.button navigate={~p"/teams/#{@current_team}/groups/#{@group.id}"}>Cancel</.button>
-      </div>
+      </.form_actions>
     </.form>
     """
   end
@@ -180,9 +180,9 @@ defmodule Web.GroupReviewLive do
 
   defp review_list(assigns) do
     ~H"""
-    <div :if={@rows != []} class="mb-p">
-      <h2 class={["font-semibold mb-p05", @title_class]}>{@title} ({length(@rows)})</h2>
-      <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="w-full table-striped">
+    <div :if={@rows != []} class="mb-4">
+      <h2 class={["font-semibold mb-2", @title_class]}>{@title} ({length(@rows)})</h2>
+      <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="table-striped">
         <:col :let={row} label="" class="w-px">
           <input
             type="checkbox"

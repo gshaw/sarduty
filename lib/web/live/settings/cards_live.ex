@@ -40,22 +40,20 @@ defmodule Web.Settings.CardsLive do
   def render(assigns) do
     ~H"""
     <div>
-      <p>
-        <.a navigate={~p"/teams/#{@current_team}/settings"}>← Team settings</.a>
-      </p>
+      <.back_link navigate={~p"/teams/#{@current_team}/settings"}>Team settings</.back_link>
       <h1 class="heading">ID cards</h1>
       <p>
         Select the qualifications to list on the back of members' ID cards and on the verify page.
         They come from named clauses in your groups' rules.
       </p>
 
-      <p :if={@names == %{}} id="no-names" class="mt-p">
-        No named clauses yet. Name a clause in a group's rules, like "First Aid", and it shows up here.
-      </p>
+      <.empty_state :if={@names == %{}} id="no-names" title="No named clauses yet">
+        Name a clause in a group's rules, like "First Aid", and it shows up here.
+      </.empty_state>
 
-      <form :if={@names != %{}} id="cards-form" phx-submit="save" class="mt-p">
+      <form :if={@names != %{}} id="cards-form" phx-submit="save">
         <input type="hidden" name="names[]" value="" />
-        <label :for={{name, on_card} <- Enum.sort(@names)} class="flex items-center gap-2 my-2">
+        <label :for={{name, on_card} <- Enum.sort(@names)} class="choice">
           <input type="checkbox" name="names[]" value={name} checked={on_card} />
           {name}
         </label>

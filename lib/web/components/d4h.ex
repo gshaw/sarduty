@@ -71,7 +71,7 @@ defmodule Web.Components.D4H do
     <div :if={!@activity.is_published}>
       <.badge>Draft</.badge>
     </div>
-    <div :if={@activity.tracking_number} class="mono text-secondary-1">
+    <div :if={@activity.tracking_number} class="mono text-text-muted">
       {@activity.tracking_number}
     </div>
     """
@@ -88,7 +88,7 @@ defmodule Web.Components.D4H do
   def member_image(assigns) do
     ~H"""
     <img
-      class="bg-base-0 size-48 rounded"
+      class="photo"
       src={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
     />
     """

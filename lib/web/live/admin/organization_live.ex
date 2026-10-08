@@ -22,9 +22,7 @@ defmodule Web.Admin.OrganizationLive do
 
   def render(assigns) do
     ~H"""
-    <p>
-      <.a navigate={~p"/admin/orgs"}>← Organizations</.a>
-    </p>
+    <.back_link navigate={~p"/admin/orgs"}>Organizations</.back_link>
     <h1 class="title">{@organization.name || "New organization"}</h1>
 
     <.form
@@ -45,14 +43,14 @@ defmodule Web.Admin.OrganizationLive do
       </.input>
       <.input field={@form[:website]} label="Website" placeholder="https://" />
 
-      <div class="mb-p">
-        <label for={@uploads.logo.ref} class="block font-semibold">Logo</label>
-        <div class="my-2 flex items-center gap-p">
+      <div class="mb-5">
+        <.label for={@uploads.logo.ref}>Logo</.label>
+        <div class="media my-2">
           <img
             :if={@organization.logo}
             id="organization-logo"
             src={Web.OrganizationController.logo_url(@organization)}
-            class="size-16 rounded border border-hr"
+            class="size-8 rounded border border-border-subtle"
             alt=""
           />
           <.live_file_input upload={@uploads.logo} />
@@ -60,19 +58,17 @@ defmodule Web.Admin.OrganizationLive do
         <.hint>
           PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
         </.hint>
-        <p :for={error <- upload_errors(@uploads.logo)} class="text-danger-1">
-          {upload_error(error)}
-        </p>
-        <p :for={{message, _opts} <- @form[:logo].errors} class="text-danger-1">{message}</p>
+        <.error :for={error <- upload_errors(@uploads.logo)}>{upload_error(error)}</.error>
+        <.error :for={{message, _opts} <- @form[:logo].errors}>{message}</.error>
       </div>
 
-      <fieldset id="organization-teams" class="mb-p">
-        <legend class="font-semibold">Member teams</legend>
+      <fieldset id="organization-teams">
+        <legend>Member teams</legend>
         <.hint>
           SAR Duty rebuilds their ID cards when you save. Phones show the change within a minute.
         </.hint>
         <input type="hidden" name="team_ids[]" value="" />
-        <label :for={team <- @teams} class="flex items-center gap-2 my-1">
+        <label :for={team <- @teams} class="choice">
           <input
             type="checkbox"
             name="team_ids[]"
@@ -94,14 +90,14 @@ defmodule Web.Admin.OrganizationLive do
       </.form_actions>
     </.form>
 
-    <section :if={@organization.id} id="organization-host" class="mt-p2 max-w-xl text-sm">
+    <section :if={@organization.id} id="organization-host" class="mt-6 max-w-xl">
       <h2 class="heading">Their own verify address</h2>
       <p>
         Until then, cards link to {Web.VerifyHost.host()} and show the organization's name and
         logo. When they want {own_host(@organization)}, they add this DNS record. Then we add
         the certificate and deploy, as in docs/organizations.md.
       </p>
-      <pre class="p-p rounded bg-base-2 overflow-x-auto">{own_host(@organization)}  CNAME  {Web.VerifyHost.host()}</pre>
+      <pre class="code-block">{own_host(@organization)}  CNAME  {Web.VerifyHost.host()}</pre>
     </section>
     """
   end

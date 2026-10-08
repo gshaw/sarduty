@@ -1,7 +1,6 @@
 <.shell title="Toast" current={:toast}>
   <h1>Toast</h1>
   <p class="lead">The result of what the person did. It comes and goes.</p>
-  <.used_on pages={["every page"]} />
 
   <div class="demo">
     <div class="toasts">
@@ -10,7 +9,7 @@
         Nothing changed. Check the D4H access key in team settings.
       </.flash>
       <.flash id="sample-flash-disconnected" kind={:error} title="Server disconnected">
-        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        Reconnecting… <.spinner />
       </.flash>
     </div>
   </div>

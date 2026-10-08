@@ -1,6 +1,6 @@
 /* Page-wide defaults from the design system (/styles). */
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
 
   body {
     font-family: var(--font);

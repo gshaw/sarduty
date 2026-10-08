@@ -80,7 +80,7 @@ defmodule Web.UserLoginCodeLive do
         </.form_actions>
       </.form>
       <%= if @field == "email" do %>
-        <p class="text-secondary-1">
+        <p class="text-text-muted">
           No email after a few minutes? Check your spam folder. Only Owners and Editors on a
           team in D4H get a code, at the email D4H has for them.
         </p>
@@ -91,7 +91,7 @@ defmodule Web.UserLoginCodeLive do
           <.a id="login-again" navigate={~p"/login"}>Use a different email</.a>
         </p>
       <% else %>
-        <p class="text-secondary-1">
+        <p class="text-text-muted">
           No text after a few minutes? Only Owners and Editors on a team in D4H get a code,
           at the mobile number D4H has for them. Two people with the same number get a code
           by email instead.

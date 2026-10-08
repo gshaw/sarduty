@@ -1,0 +1,38 @@
+<.shell title="Band" current={:band}>
+  <h1>Band</h1>
+  <p class="lead">The result of a check, big and in colour.</p>
+
+  <div class="example measure">
+    <.band kind={:success} title="Active member" class="mb-4">Verified just now</.band>
+    <.band kind={:warning} title="Not an active member" class="mb-4">Left the team in June 2026</.band>
+    <.band kind={:danger} title="No card has this code" class="mb-4">
+      Check the code and try again
+    </.band>
+    <.band kind={:info} icon="hero-arrow-left-start-on-rectangle" title="Avery Chen left 21:40" />
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    The answer people came for, read at a glance: whether an ID card or a letter is real, or the
+    scan just taken at the door.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    Something about the page that stays true. Use a <a href={page_path(:banner)}>banner</a>. The
+    result of saving a form. Use a <a href={page_path(:toast)}>toast</a>.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>A solid fill in the kind's colour, a 32px icon, the result, and a line of detail.</li>
+    <li>The details go in a <a href={page_path(:card)}>card</a> under it.</li>
+    <li>An icon can stand in for the kind's, such as arriving and leaving at the door.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.band kind=&#123;:success&#125; title="Active member"&gt;Verified just now&lt;/.band&gt;</code>
+    on the verify pages and the door.
+  </p>
+</.shell>

@@ -105,31 +105,66 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
+  # The recommended changes on Import attendance, as {op, D4H attendance id, member}.
   def recommendations do
     [
-      %{op: :add, name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"},
-      %{op: :add, name: "Casey Dhillon", email: "casey@example.com", phone: "604-555-0123"},
-      %{op: :remove, name: "Devon Okafor", email: "devon@example.com", phone: "604-555-0131"},
-      %{op: :not_invited, name: "Jordan Park", email: "jordan@example.com", phone: "604-555-0177"}
+      {:add, 1, %{name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"}},
+      {:add, 2, %{name: "Casey Dhillon", email: "casey@example.com", phone: "604-555-0123"}},
+      {:remove, 3, %{name: "Devon Okafor", email: "devon@example.com", phone: "604-555-0131"}},
+      {:not_invited, nil, %{name: "Jordan Park", email: "jordan@example.com", phone: "604-555-0177"}}
     ]
   end
 
+  # The group rule editor's clauses, in the shape Web.Components.GroupRule takes.
   def clauses do
+    options = [{"Rope Rescue Technician", 11}, {"Swiftwater Rescue", 12}]
+
     [
-      %{name: "First Aid", qualifications: ["OFA Level 1", "Wilderness First Aid", "EMR"]},
-      %{name: "Ground Search", qualifications: ["GSAR Member", "Missing: Team Leader 2019"]},
-      %{name: "", qualifications: []}
+      %{
+        id: 1,
+        name: "First Aid",
+        confirm: "Delete the First Aid clause and its 3 qualifications?",
+        qualifications: [
+          %{id: 1, title: "OFA Level 1", known?: true},
+          %{id: 2, title: "Wilderness First Aid", known?: true},
+          %{id: 3, title: "EMR", known?: true}
+        ],
+        options: options
+      },
+      %{
+        id: 2,
+        name: "Ground Search",
+        confirm: "Delete the Ground Search clause and its 2 qualifications?",
+        qualifications: [
+          %{id: 4, title: "GSAR Member", known?: true},
+          %{id: 5, title: "Deleted in D4H (4471)", known?: false}
+        ],
+        options: options
+      },
+      %{id: 3, name: nil, confirm: "Delete this clause?", qualifications: [], options: options}
     ]
   end
 
-  def preview do
-    %{
-      to_remove: [%{name: "Devon Okafor", reason: "No First Aid qualification"}],
-      to_add: [%{name: "Avery Chen", reason: "Holds OFA Level 1 and GSAR Member"}],
-      expiring: [
-        %{name: "Casey Dhillon", reason: "Wilderness First Aid expires Nov 12", days: 12}
-      ]
+  # Team settings after a failed save: the app's own changeset, with a blank name and an
+  # email that isn't one.
+  def settings_form do
+    team = %{
+      sample_team()
+      | lat: 49.70161,
+        lng: -123.15583,
+        mailing_address: "PO Box 123\nSquamish BC V8B 0A1"
     }
+
+    params = %{
+      "name" => "",
+      "authorized_by_name" => "Avery Chen",
+      "authorized_by_email" => "avery at example"
+    }
+
+    team
+    |> App.Model.Team.build_settings_changeset(params)
+    |> Map.put(:action, :update)
+    |> Phoenix.Component.to_form(as: "form", id: "settings")
   end
 
   # Charts. Made-up numbers with a summer peak, as a coastal team's year looks.
