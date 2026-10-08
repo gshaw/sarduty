@@ -9,7 +9,7 @@ defmodule Web.StyleGuideControllerTest do
   end
 
   test "the logo goes to the home page", %{conn: conn} do
-    assert html_response(get(conn, ~p"/styles/input"), 200) =~ ~s(<a href="/" class="brand">)
+    assert html_response(get(conn, ~p"/styles/forms"), 200) =~ ~s(<a href="/" class="brand">)
   end
 
   test "every group lists its pages", %{conn: conn} do

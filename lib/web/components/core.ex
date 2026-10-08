@@ -379,7 +379,7 @@ defmodule Web.Components.Core do
   @doc """
   Renders a switch: a setting that takes effect the moment it's tapped, with the label on
   the leading edge and the switch on the trailing edge. Inside a form with a save button,
-  use a checkbox instead. See /styles/switch.
+  use a checkbox instead. See /styles/forms.
 
   `compact` puts a small, muted label and the switch together on the trailing edge. It's
   for one page-level setting under the page's main action, not a list of settings.

@@ -1,9 +1,9 @@
-/* A field with an error gets a red bar down its left side. See /styles/input. */
+/* A field with an error gets a red bar down its left side. See /styles/forms. */
 @layer components {
   .field-error { border-left: 5px solid var(--danger-text); padding-left: var(--sp-4); }
 
   /* A switch: a checkbox drawn as a track and knob, on the trailing edge of its row. See
-     /styles/switch. */
+     /styles/forms. */
   .switch-row { display: flex; align-items: center; gap: var(--sp-3); }
   input.switch {
     display: inline-block;
