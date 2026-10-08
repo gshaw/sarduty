@@ -177,10 +177,11 @@ fi
   and its glossary terms. Run its checklist before you commit.
 - **The look comes from the design system**, shown at `/styles`. Colours, type sizes,
   and spaces are tokens in [assets/css/tokens.css](assets/css/tokens.css), with light and
-  dark values. Classes speak the same names: spaces are the 8 steps (`mt-5` is `--sp-5`,
-  24px), and a colour is the property and its token (`text-text-muted`, `bg-surface-alt`).
-  Tailwind's own numbers and colours build nothing, so `mt-10` or `text-zinc-600` does
-  nothing.
+  dark values. Classes speak the same names. Spaces are Tailwind's numbers, but only the
+  guide's 8: 1, 2, 3, 4, 6, 8, 12, and 16 (`mt-6` is `--sp-6`, 24px). A colour is the
+  property and its token (`text-text-muted`, `bg-surface-alt`). Anything else, like
+  `mt-5`, `mt-10`, or `text-zinc-600`, builds nothing, and
+  `test/web/design_system_test.exs` fails on it.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
   states, the error summary, back links, and the result band are components; `.hint`,
   `.lead`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are

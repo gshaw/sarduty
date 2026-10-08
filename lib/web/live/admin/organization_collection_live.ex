@@ -38,7 +38,7 @@ defmodule Web.Admin.OrganizationCollectionLive do
             src={Web.OrganizationController.logo_url(organization)}
             width="32"
             height="32"
-            class="size-6 rounded"
+            class="size-8 rounded"
             alt=""
           />
           <div>

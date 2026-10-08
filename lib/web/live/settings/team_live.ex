@@ -51,7 +51,7 @@ defmodule Web.Settings.TeamLive do
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
         <.error_summary form={@form} />
         <.input field={@form[:name]} label="Name" />
-        <div class="grid grid-cols-2 gap-x-5">
+        <div class="grid grid-cols-2 gap-x-6">
           <.input field={@form[:lat]} readonly label="Latitude" />
           <.input field={@form[:lng]} readonly label="Longitude" />
         </div>
@@ -69,7 +69,7 @@ defmodule Web.Settings.TeamLive do
         <.input field={@form[:authorized_by_title]} label="Signer's title (optional)">
           Printed under the name on tax credit letters, like President.
         </.input>
-        <div class="grid md:grid-cols-2 gap-x-5">
+        <div class="grid md:grid-cols-2 gap-x-6">
           <.input field={@form[:authorized_by_phone]} label="Signer's phone (optional)" />
           <.input
             field={@form[:authorized_by_email]}
@@ -77,7 +77,7 @@ defmodule Web.Settings.TeamLive do
             type="email"
           />
         </div>
-        <div id="team-signature" class="mb-5">
+        <div id="team-signature" class="mb-6">
           <.label for={@uploads.signature.ref}>Signer's signature (optional)</.label>
           <.hint>
             A PNG or JPEG of the signature, on white or transparent. New tax credit letters
@@ -87,7 +87,7 @@ defmodule Web.Settings.TeamLive do
             <img
               id="signature-preview"
               src={Web.ImageData.png_data_url(@current_team.signature)}
-              class="h-8 max-w-xs border border-border-subtle bg-paper p-1"
+              class="h-16 max-w-xs border border-border-subtle bg-paper p-1"
               alt="The signer's signature"
             />
             <.button

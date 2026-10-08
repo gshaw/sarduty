@@ -47,7 +47,7 @@ defmodule Web.Admin.MCPLive do
       change D4H; they can propose attendance changes for a team admin to send.
       Turning MCP off revokes every token on the team. See <code>docs/mcp.md</code>.
     </p>
-    <.table id="mcp-teams" rows={@teams} row_id={&"mcp-team-#{&1.id}"} class="mb-6 table-striped">
+    <.table id="mcp-teams" rows={@teams} row_id={&"mcp-team-#{&1.id}"} class="mb-8 table-striped">
       <:col :let={team} label="Team">
         <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
       </:col>

@@ -4,9 +4,9 @@
 
   <h2>Scale</h2>
   <p>
-    Margins, padding, gaps, and sizes come from these eight. In a class list the step is the
-    number: <code>mt-5</code>, <code>gap-2</code>, <code>px-4</code>, <code>size-6</code>. In CSS it
-    is the token: <code>var(--sp-5)</code>.
+    Margins, padding, gaps, and sizes come from these eight. Each step is named by Tailwind's
+    number for its size, so a class means what it means in Tailwind's docs: <code>mt-6</code>
+    is 24px. In CSS it is the token of the same number: <code>var(--sp-6)</code>.
   </p>
   <.table id="spacing" rows={spacing()}>
     <:col :let={{step, _px, _use}} label="Class" class="w-px mono whitespace-nowrap">
@@ -25,12 +25,10 @@
   <h2>Rules</h2>
   <ul>
     <li>
-      No space is invented on a page. Tailwind's own numbers are off, so <code>mt-10</code>
-      builds nothing. If a design needs a new space, it joins the scale.
-    </li>
-    <li>
-      The steps are not Tailwind's: <code>mt-6</code>
-      is 32px here, not 24px. 24px is <code>mt-5</code>.
+      No space is invented on a page. Only these eight numbers build, so <code>mt-5</code>
+      and <code>mt-10</code>
+      build nothing, and a test fails on them. If a design needs a new space,
+      it joins the scale.
     </li>
     <li>
       Closer things belong together: a label sits 4px from its input, fields sit 24px apart.

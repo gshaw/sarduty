@@ -69,7 +69,7 @@ defmodule Web.AdminDashboardLive do
             src={~p"/teams/#{team}/logo?shape=square"}
             width="32"
             height="32"
-            class="size-6 rounded"
+            class="size-8 rounded"
             alt=""
           />
           <div>
@@ -136,7 +136,7 @@ defmodule Web.AdminDashboardLive do
       </:col>
     </.table>
 
-    <dl id="key-notes" class="mt-6 max-w-3xl text-sm">
+    <dl id="key-notes" class="mt-8 max-w-3xl text-sm">
       <dt>Last seen</dt>
       <dd>
         The last time someone on the team opened a team page. Admin visits do not count.

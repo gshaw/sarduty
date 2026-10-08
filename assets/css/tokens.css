@@ -89,15 +89,15 @@
   --fs-2xl: 32px;
   --lh-2xl: 40px;
 
-  /* Spacing scale, on a 4px grid. */
+  /* Spacing scale: 8 steps on a 4px grid, named like Tailwind's numbers (--sp-6 is 24px). */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
-  --sp-5: 24px;
-  --sp-6: 32px;
-  --sp-7: 48px;
-  --sp-8: 64px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-12: 48px;
+  --sp-16: 64px;
 
   --radius: 3px;
   --border-width: 2px;

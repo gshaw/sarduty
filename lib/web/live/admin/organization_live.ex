@@ -43,14 +43,14 @@ defmodule Web.Admin.OrganizationLive do
       </.input>
       <.input field={@form[:website]} label="Website" placeholder="https://" />
 
-      <div class="mb-5">
+      <div class="mb-6">
         <.label for={@uploads.logo.ref}>Logo</.label>
         <div class="media my-2">
           <img
             :if={@organization.logo}
             id="organization-logo"
             src={Web.OrganizationController.logo_url(@organization)}
-            class="size-8 rounded border border-border-subtle"
+            class="size-16 rounded border border-border-subtle"
             alt=""
           />
           <.live_file_input upload={@uploads.logo} />
@@ -90,7 +90,7 @@ defmodule Web.Admin.OrganizationLive do
       </.form_actions>
     </.form>
 
-    <section :if={@organization.id} id="organization-host" class="mt-6 max-w-xl">
+    <section :if={@organization.id} id="organization-host" class="mt-8 max-w-xl">
       <h2 class="heading">Their own verify address</h2>
       <p>
         Until then, cards link to {Web.VerifyHost.host()} and show the organization's name and

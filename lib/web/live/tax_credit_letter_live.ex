@@ -124,7 +124,7 @@ defmodule Web.TaxCreditLetterLive do
             <img
               id="letter-signature"
               src={Web.ImageData.png_data_url(@letter.signature)}
-              class="my-4 h-8 bg-paper"
+              class="my-4 h-16 bg-paper"
               alt="The signer's signature"
             />
             <.markdown content={signer} />

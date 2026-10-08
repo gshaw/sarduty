@@ -130,7 +130,7 @@ defmodule Web.VerifyLive do
         member of their team, with their photo.
       </p>
 
-      <.qr_scanner label="Scan a card" class="mb-5" />
+      <.qr_scanner label="Scan a card" class="mb-6" />
       <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
         The camera did not start. Allow camera access, or type the code.
       </p>
@@ -166,7 +166,7 @@ defmodule Web.VerifyLive do
   def render(assigns) do
     ~H"""
     <.result result={@result} />
-    <div class="mt-5">
+    <div class="mt-6">
       <.button id="check-another" navigate={@start_path} size={:lg} class="w-full">
         Verify another card
       </.button>

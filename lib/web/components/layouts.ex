@@ -32,7 +32,7 @@ defmodule Web.Layouts do
   def marketing(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
-    <main role="main" class="under-site-bar mb-6">
+    <main role="main" class="under-site-bar mb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -52,7 +52,7 @@ defmodule Web.Layouts do
   def app(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
-    <main role="main" class="container mx-auto pt-8 px-2 mb-6">
+    <main role="main" class="container mx-auto pt-16 px-2 mb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -69,7 +69,7 @@ defmodule Web.Layouts do
 
     ~H"""
     <header class="verify-bar sticky top-0 z-30">
-      <div class="max-w-md mx-auto px-4 h-7 flex items-center justify-between gap-4">
+      <div class="max-w-md mx-auto px-4 h-12 flex items-center justify-between gap-4">
         <a :if={@organization == nil} href="/" class="brand">SAR <span>Duty</span></a>
         <a
           :if={@organization}
@@ -81,18 +81,18 @@ defmodule Web.Layouts do
             :if={@organization.logo}
             src={Web.OrganizationController.logo_url(@organization)}
             alt=""
-            class="size-6 shrink-0"
+            class="size-8 shrink-0"
           />
           {@organization.short_name}
         </a>
         <span id="verify-host" class="verify-host">{Web.VerifyHost.host()}</span>
       </div>
     </header>
-    <main role="main" class="max-w-md mx-auto px-4 pt-5 pb-6">
+    <main role="main" class="max-w-md mx-auto px-4 pt-6 pb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-6 text-center text-xs text-text-muted">
+    <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-text-muted">
       <span :if={@organization} id="verify-footer-organization">
         <a :if={@organization.website} href={@organization.website} class="hover:underline">
           {@organization.name}
@@ -117,7 +117,7 @@ defmodule Web.Layouts do
   def narrow(assigns) do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} size={:narrow} />
-    <main role="main" class="max-w-md m-auto px-2 pt-8 mb-6">
+    <main role="main" class="max-w-md m-auto px-2 pt-16 mb-8">
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
@@ -130,7 +130,7 @@ defmodule Web.Layouts do
     assigns = assign(assigns, mailbox?: dev_mailbox?())
 
     ~H"""
-    <footer :if={@mailbox?} id="dev-footer" class="max-w-md m-auto px-2 mb-6 text-sm">
+    <footer :if={@mailbox?} id="dev-footer" class="max-w-md m-auto px-2 mb-8 text-sm">
       <p class="pt-4 border-t border-border-subtle">
         Development:
         <.a href="/dev/mailbox" external={true}>Mailbox</.a>
@@ -157,7 +157,7 @@ defmodule Web.Layouts do
       )
 
     ~H"""
-    <footer id="site-footer" class="container mx-auto px-2 mb-6">
+    <footer id="site-footer" class="container mx-auto px-2 mb-8">
       <p class="pt-4 border-t border-border-subtle">
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
         ·

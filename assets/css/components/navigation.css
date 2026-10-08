@@ -135,7 +135,7 @@
   .menu hr { margin: var(--sp-1) 0; border-color: var(--border-subtle); }
 
   /* Tabs: each tab is its own page. */
-  .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-5); overflow-x: auto; }
+  .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-6); overflow-x: auto; }
 
   .tabs a {
     padding: var(--sp-2) var(--sp-4);

@@ -206,7 +206,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         </.a>
       </:col>
       <:col :let={no_show} label="Followed up" class="stack-full">
-        <label class="flex items-center gap-2 whitespace-nowrap min-h-5">
+        <label class="flex items-center gap-2 whitespace-nowrap min-h-6">
           <input
             type="checkbox"
             id={"follow-up-#{no_show.id}"}

@@ -261,10 +261,10 @@ defmodule Web.StyleGuideHTML do
       {2, 8, "Gaps between buttons in a row, hint to input"},
       {3, 12, "Table cell sides, a picture to its words"},
       {4, 16, "Paragraph spacing, card padding, title to content"},
-      {5, 24, "Between form fields, page gutter"},
-      {6, 32, "Between sections of a page, page bottom"},
-      {7, 48, "Above a section heading in the guide"},
-      {8, 64, "Top of a page, under the top bar"}
+      {6, 24, "Between form fields, page gutter"},
+      {8, 32, "Between sections of a page, page bottom"},
+      {12, 48, "Above a section heading in the guide"},
+      {16, 64, "Top of a page, under the top bar"}
     ]
   end
 

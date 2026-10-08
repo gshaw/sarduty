@@ -1,18 +1,19 @@
 /* Tailwind's theme, pointed at the design system's tokens (tokens.css), so utility classes
    speak the guide's names and follow the palette in light and dark. */
 @theme inline {
-  /* Spacing: the design system's 8 steps and nothing else, so mt-5 is --sp-5 (24px). With
-     Tailwind's own number scale gone, a class off the scale, like mt-10, builds nothing. */
+  /* Spacing: Tailwind's numbers, but only the design system's 8 steps, so mt-6 is 24px as
+     everywhere else and --sp-6 is its token. Steps off the scale, like mt-5 or mt-10,
+     build nothing. */
   --spacing-*: initial;
   --spacing-0: 0px;
   --spacing-1: var(--sp-1);
   --spacing-2: var(--sp-2);
   --spacing-3: var(--sp-3);
   --spacing-4: var(--sp-4);
-  --spacing-5: var(--sp-5);
   --spacing-6: var(--sp-6);
-  --spacing-7: var(--sp-7);
   --spacing-8: var(--sp-8);
+  --spacing-12: var(--sp-12);
+  --spacing-16: var(--sp-16);
 
   --font-sans: var(--font);
   --font-mono: var(--mono);

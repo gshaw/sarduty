@@ -75,7 +75,7 @@
   }
 
   .btn-sm { font-size: var(--fs-sm); line-height: var(--lh-sm); padding: 2px var(--sp-3); }
-  .btn-lg { font-size: var(--fs-lg); line-height: var(--lh-lg); padding: 8px var(--sp-5); }
+  .btn-lg { font-size: var(--fs-lg); line-height: var(--lh-lg); padding: 8px var(--sp-6); }
 
   @media (hover: hover) {
     .btn:not(:disabled):hover { background: var(--btn-bg-hover); color: var(--btn-fg); text-decoration: none; }

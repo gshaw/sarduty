@@ -72,7 +72,7 @@ defmodule Web.Admin.EventCollectionLive do
     <h1 class="title">Admin</h1>
     <.admin_tabs current={:events} />
     <h2 class="heading">D4H sync</h2>
-    <dl id="sync-summary" class="mb-6 max-w-3xl">
+    <dl id="sync-summary" class="mb-8 max-w-3xl">
       <dt>Last sync round</dt>
       <dd id="last-round">{run_summary(@last_round, @now)}</dd>
       <dt>Last nightly refresh</dt>
@@ -103,7 +103,7 @@ defmodule Web.Admin.EventCollectionLive do
       id="top-ips"
       rows={Enum.with_index(@top_ips, 1)}
       row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
-      class="mb-6 table-striped"
+      class="mb-8 table-striped"
     >
       <:col :let={{{ip, _count}, _rank}} label="IP">
         <.a navigate={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>

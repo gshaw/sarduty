@@ -55,13 +55,13 @@ defmodule Web.ErrorHTML do
       <body>
         <.site_bar size={:narrow} />
 
-        <main role="main" class="max-w-md m-auto px-2 pt-8 mb-6">
-          <h1 class="my-6">
+        <main role="main" class="max-w-md m-auto px-2 pt-16 mb-8">
+          <h1 class="my-8">
             <div class="title-hero mb-0">{@code}</div>
             <div class="title text-danger-text">SAR Duty cannot show this page</div>
           </h1>
           <p class="heading">{@description}</p>
-          <p class="mb-6">{@help_text}</p>
+          <p class="mb-8">{@help_text}</p>
           <p>
             <a href="/" class="link">Home page</a>
           </p>

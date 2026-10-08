@@ -5,7 +5,7 @@
   <.form :let={f} for={settings_form()} class="example measure" onsubmit="return false">
     <.error_summary form={f} />
     <.input field={f[:name]} label="Name" />
-    <div class="grid grid-cols-2 gap-x-5">
+    <div class="grid grid-cols-2 gap-x-6">
       <.input field={f[:lat]} label="Latitude" readonly />
       <.input field={f[:lng]} label="Longitude" readonly />
     </div>

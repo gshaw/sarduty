@@ -133,7 +133,7 @@ defmodule Web.Settings.MCPLive do
         Only a member D4H makes an Owner or Editor can create a token.
       </p>
 
-      <h2 class="heading mt-6">Tokens</h2>
+      <h2 class="heading mt-8">Tokens</h2>
       <.empty_state :if={@tokens == []} id="no-tokens" title="No tokens yet">
         Create one above.
       </.empty_state>
@@ -161,7 +161,7 @@ defmodule Web.Settings.MCPLive do
         </:col>
       </.table>
 
-      <h2 class="heading mt-6">Connect an agent</h2>
+      <h2 class="heading mt-8">Connect an agent</h2>
       <p>
         Agents connect with the token in a header. The claude.ai and ChatGPT connectors cannot
         send one yet.

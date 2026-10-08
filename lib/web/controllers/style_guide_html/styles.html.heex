@@ -5,7 +5,7 @@ does in the app. The page-text rules skip anything inside one. --%>
   /* Sticky, like the app's fixed bar, so iOS fills the area under the clock with its navy. */
   .guide-bar { position: sticky; top: 0; z-index: 45; background: var(--nav); color: #fff; border-bottom: 4px solid var(--accent); }
   html { scroll-padding-top: 80px; }
-  .guide-bar .container { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); height: 56px; }
+  .guide-bar .container { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-6); height: 56px; }
   .guide-bar .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); text-decoration: none; }
   .guide-bar .brand span { color: var(--accent); }
   .guide-bar .brand small { color: #aeb8c4; font-weight: 400; font-size: var(--fs-sm); margin-left: var(--sp-2); }
@@ -17,9 +17,9 @@ does in the app. The page-text rules skip anything inside one. --%>
   .theme-switch button { background: none; border: 0; color: #d5dbe3; font-size: var(--fs-xs); line-height: var(--lh-xs); padding: var(--sp-1) var(--sp-3); cursor: pointer; }
   .theme-switch button[aria-pressed="true"] { background: rgb(255 255 255 / 0.16); color: #fff; }
 
-  .container { max-width: 1280px; margin: 0 auto; padding: 0 var(--sp-5); }
-  .guide { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--sp-6); padding-top: var(--sp-6); padding-bottom: var(--sp-8); }
-  .guide-nav ul { position: sticky; top: calc(60px + var(--sp-5)); }
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 var(--sp-6); }
+  .guide { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--sp-8); padding-top: var(--sp-8); padding-bottom: var(--sp-16); }
+  .guide-nav ul { position: sticky; top: calc(60px + var(--sp-6)); }
   .guide-nav a { display: block; padding: var(--sp-1) var(--sp-3); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); text-decoration: none; border-left: 4px solid transparent; }
   .guide-nav a:hover { color: var(--link-hover); text-decoration: underline; }
   .guide-nav a[aria-current="page"] { border-left-color: var(--primary); font-weight: 700; background: var(--surface-alt); }
@@ -27,12 +27,12 @@ does in the app. The page-text rules skip anything inside one. --%>
   /* Page text, outside the examples. */
   .guide-main :is(h1, h2, h3, h4):not(.demo *, .example *, .table-wrap *) { font-weight: 700; margin: 0 0 var(--sp-3); }
   .guide-main h1:not(.demo *, .example *, .table-wrap *) { font-size: var(--fs-2xl); line-height: var(--lh-2xl); }
-  .guide-main h2:not(.demo *, .example *, .table-wrap *) { font-size: var(--fs-xl); line-height: var(--lh-xl); margin-top: var(--sp-7); }
-  .guide-main h3:not(.demo *, .example *, .table-wrap *) { font-size: var(--fs-lg); line-height: var(--lh-lg); margin-top: var(--sp-5); }
+  .guide-main h2:not(.demo *, .example *, .table-wrap *) { font-size: var(--fs-xl); line-height: var(--lh-xl); margin-top: var(--sp-12); }
+  .guide-main h3:not(.demo *, .example *, .table-wrap *) { font-size: var(--fs-lg); line-height: var(--lh-lg); margin-top: var(--sp-6); }
   .guide-main h4:not(.demo *, .example *, .table-wrap *) { font-size: var(--fs-md); line-height: var(--lh-md); margin-top: var(--sp-4); margin-bottom: var(--sp-2); }
   .guide-main :is(p, ul, ol):not(.demo *, .example *, .table-wrap *) { margin: 0 0 var(--sp-4); }
   .guide-main :is(p, li):not(.demo *, .example *, .table-wrap *) { max-width: 70ch; }
-  .guide-main :is(ul, ol):not(.demo *, .example *, .table-wrap *) { padding-left: var(--sp-5); }
+  .guide-main :is(ul, ol):not(.demo *, .example *, .table-wrap *) { padding-left: var(--sp-6); }
   .guide-main ul:not(.demo *, .example *, .table-wrap *) { list-style: disc; }
   .guide-main ol:not(.demo *, .example *, .table-wrap *) { list-style: decimal; }
   .guide-main li + li:not(.demo *, .example *, .table-wrap *) { margin-top: var(--sp-1); }
@@ -42,10 +42,10 @@ does in the app. The page-text rules skip anything inside one. --%>
   .guide-main .first { margin-top: 0 !important; }
 
   /* Examples: .demo is boxed, .example is not. */
-  .demo { border: 1px solid var(--border-subtle); padding: var(--sp-5); margin-bottom: var(--sp-5); border-radius: var(--radius); }
+  .demo { border: 1px solid var(--border-subtle); padding: var(--sp-6); margin-bottom: var(--sp-6); border-radius: var(--radius); }
   .demo > :last-child, .example > :last-child { margin-bottom: 0; }
-  .example { margin-bottom: var(--sp-5); }
-  .spec { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: calc(-1 * var(--sp-3)); margin-bottom: var(--sp-5); max-width: 70ch; }
+  .example { margin-bottom: var(--sp-6); }
+  .spec { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: calc(-1 * var(--sp-3)); margin-bottom: var(--sp-6); max-width: 70ch; }
 
   /* The app's bar, menu, and toasts are fixed or floating in the app. Here they sit in place. */
   .demo .site-bar { position: relative; }
@@ -65,18 +65,18 @@ does in the app. The page-text rules skip anything inside one. --%>
   .is-focus input.switch { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
 
   /* Colours and logo pages: light and dark side by side. */
-  .modes { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border-subtle); margin-bottom: var(--sp-6); }
-  .mode { background: var(--bg); color: var(--text); padding: var(--sp-5); }
-  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border-subtle); margin-bottom: var(--sp-8); }
+  .mode { background: var(--bg); color: var(--text); padding: var(--sp-6); }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-6); }
   .swatch { font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .swatch .chipcolor { height: 44px; border-radius: var(--radius); border: 1px solid var(--border-subtle); margin-bottom: var(--sp-1); }
   .swatch strong { display: block; font-family: var(--mono); }
   .swatch span { color: var(--text-muted); font-family: var(--mono); }
-  .logo-forms, .logo-ladder { display: flex; gap: var(--sp-5); align-items: end; flex-wrap: wrap; }
+  .logo-forms, .logo-ladder { display: flex; gap: var(--sp-6); align-items: end; flex-wrap: wrap; }
   .logo-ladder { gap: var(--sp-4); }
   .mode figure, .logo-ladder figure { margin: 0; text-align: center; }
   .mode figcaption, .logo-ladder figcaption { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: var(--sp-2); }
-  .logo-wide { margin-top: var(--sp-5) !important; text-align: left !important; }
+  .logo-wide { margin-top: var(--sp-6) !important; text-align: left !important; }
   .logo-wide .site-bar { position: relative; z-index: auto; }
 
   /* Spacing page */

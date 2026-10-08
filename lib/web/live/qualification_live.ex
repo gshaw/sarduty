@@ -104,7 +104,7 @@ defmodule Web.QualificationLive do
       :if={@active_awards != []}
       id="active_awards"
       rows={@active_awards}
-      class="table-striped mb-6"
+      class="table-striped mb-8"
     >
       <:col :let={award} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
@@ -118,7 +118,7 @@ defmodule Web.QualificationLive do
         {Service.Format.date_short(award.ends_at, @team.timezone)}
       </:col>
     </.table>
-    <p :if={@active_awards == []} class="text-text-muted mb-6">No active awards.</p>
+    <p :if={@active_awards == []} class="text-text-muted mb-8">No active awards.</p>
 
     <h2 class="subheading">Expired ({length(@expired_awards)})</h2>
     <.table

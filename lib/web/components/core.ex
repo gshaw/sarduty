@@ -324,7 +324,7 @@ defmodule Web.Components.Core do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div class={["mb-5", @errors != [] && "field-error"]}>
+    <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label :if={@label != nil} for={@id}>{@label}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -344,7 +344,7 @@ defmodule Web.Components.Core do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div class={["mb-5", @errors != [] && "field-error"]}>
+    <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label :if={@label != nil} for={@id}>{@label}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -361,7 +361,7 @@ defmodule Web.Components.Core do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class={["mb-5", @errors != [] && "field-error"]}>
+    <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label :if={@label != nil} for={@id}>{@label}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>

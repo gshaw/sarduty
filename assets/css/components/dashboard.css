@@ -1,7 +1,7 @@
 /* The team dashboard's top half (#205): NextUp, Coming up, and Needs attention. The
    cards and grid are chart.css's .card and .card-grid. */
 
-.next-up { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-5); align-items: center; border-left: 4px solid var(--primary); margin-bottom: var(--sp-5); }
+.next-up { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-6); align-items: center; border-left: 4px solid var(--primary); margin-bottom: var(--sp-6); }
 .next-up-when { display: flex; flex-direction: column; min-width: 110px; }
 .next-up-day { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; color: var(--text); }
 .next-up-time { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); }

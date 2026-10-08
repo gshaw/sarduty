@@ -163,7 +163,7 @@ defmodule Web.VerifyLetterLive do
   def render(assigns) do
     ~H"""
     <.result result={@result} />
-    <div class="mt-5">
+    <div class="mt-6">
       <.button id="check-another" navigate={~p"/letters"} size={:lg} class="w-full">
         Verify another letter
       </.button>

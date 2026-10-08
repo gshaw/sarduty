@@ -40,7 +40,7 @@
   .caps { font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 
   /* Notes at the end of a page, under a rule: how it works, who to ask. */
-  .small-print { margin-top: var(--sp-6); padding-top: var(--sp-5); border-top: 1px solid var(--border-subtle); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  .small-print { margin-top: var(--sp-8); padding-top: var(--sp-6); border-top: 1px solid var(--border-subtle); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
   .small-print h2 { font-weight: 600; color: var(--text); margin-bottom: var(--sp-1); }
   .small-print p { margin-bottom: var(--sp-2); }
   .small-print > :last-child { margin-bottom: 0; }
