@@ -7,6 +7,10 @@ does in the app. The page-text rules skip anything inside one. --%>
   .guide-bar .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); text-decoration: none; }
   .guide-bar .brand span { color: var(--accent); }
   .guide-bar .brand small { color: #aeb8c4; font-weight: 400; font-size: var(--fs-sm); margin-left: var(--sp-2); }
+  .guide-tabs { display: flex; gap: var(--sp-1); margin-right: auto; align-self: stretch; }
+  .guide-tabs a { display: flex; align-items: center; padding: 0 var(--sp-3); color: #d5dbe3; font-size: var(--fs-sm); line-height: var(--lh-sm); text-decoration: none; border-bottom: 4px solid transparent; margin-bottom: -4px; }
+  .guide-tabs a:hover { color: #fff; text-decoration: underline; }
+  .guide-tabs a[aria-current] { color: #fff; font-weight: 700; border-bottom-color: #fff; }
   .theme-switch { display: flex; border: 1px solid rgb(255 255 255 / 0.3); border-radius: var(--radius); }
   .theme-switch button { background: none; border: 0; color: #d5dbe3; font-size: var(--fs-xs); line-height: var(--lh-xs); padding: var(--sp-1) var(--sp-3); cursor: pointer; }
   .theme-switch button[aria-pressed="true"] { background: rgb(255 255 255 / 0.16); color: #fff; }
@@ -17,8 +21,6 @@ does in the app. The page-text rules skip anything inside one. --%>
   .guide-nav a { display: block; padding: var(--sp-1) var(--sp-3); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); text-decoration: none; border-left: 4px solid transparent; }
   .guide-nav a:hover { color: var(--link-hover); text-decoration: underline; }
   .guide-nav a[aria-current="page"] { border-left-color: var(--primary); font-weight: 700; background: var(--surface-alt); }
-  .guide-nav .group { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); padding: var(--sp-4) var(--sp-3) var(--sp-1); }
-  .guide-nav .group:first-child { padding-top: 0; }
 
   /* Page text, outside the examples. */
   .guide-main :is(h1, h2, h3, h4):not(.demo *, .example *, .table-wrap *) { font-weight: 700; margin: 0 0 var(--sp-3); }
@@ -43,6 +45,7 @@ does in the app. The page-text rules skip anything inside one. --%>
   .demo > :last-child, .example > :last-child { margin-bottom: 0; }
   .example { margin-bottom: var(--sp-5); }
   .spec { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: calc(-1 * var(--sp-3)); margin-bottom: var(--sp-5); max-width: 70ch; }
+  .used-on { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-bottom: var(--sp-5); }
   .not-yet { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); font-style: italic; }
 
   /* The app's bar, menu, and toasts are fixed or floating in the app. Here they sit in place. */
@@ -77,7 +80,7 @@ does in the app. The page-text rules skip anything inside one. --%>
   .mode figcaption, .logo-ladder figcaption { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin-top: var(--sp-2); }
   .logo-wide { margin-top: var(--sp-5) !important; text-align: left !important; }
 
-  /* Layout page */
+  /* Spacing page */
   .space-bar { display: inline-block; height: 16px; background: var(--primary); vertical-align: middle; }
 
   /* Writing page: docs/writing.md, rendered as the app renders Markdown. */
@@ -87,7 +90,9 @@ does in the app. The page-text rules skip anything inside one. --%>
     .container { padding: 0 var(--sp-4); }
     .guide { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); padding-top: var(--sp-4); }
     .guide-nav ul { position: static; display: flex; flex-wrap: wrap; gap: var(--sp-1); }
-    .guide-nav .group { display: none; }
+    .guide-bar .container { flex-wrap: wrap; height: auto; padding-top: var(--sp-2); row-gap: 0; }
+    .guide-tabs { order: 3; width: 100%; overflow-x: auto; margin-right: 0; }
+    .guide-tabs a { padding: var(--sp-2) var(--sp-3); white-space: nowrap; }
     .guide-nav a { border: 1px solid var(--border-subtle); border-radius: var(--radius); }
     .guide-nav a[aria-current="page"] { border-color: var(--primary); }
     .modes { grid-template-columns: minmax(0, 1fr); }

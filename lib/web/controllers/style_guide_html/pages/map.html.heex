@@ -1,0 +1,48 @@
+<.shell title="Map" current={:map}>
+  <h1>Map</h1>
+  <p class="lead">
+    A plain Mapbox map with a dot per activity in its kind's colour.
+  </p>
+  <.used_on pages={["the team's home page", "an activity"]} />
+
+  <div style="max-width: 720px">
+    <.activity_map
+      :if={chart_map()}
+      id="sample-map"
+      map={chart_map()}
+      label="Map of sample activities"
+    >
+      <ul class="chart-legend" style="flex-direction: column; margin: 0">
+        <li><i class="chart-key is-dot series-incident"></i>6 incidents</li>
+        <li><i class="chart-key is-dot series-exercise"></i>3 exercises</li>
+        <li><i class="chart-key is-dot series-event"></i>1 event</li>
+      </ul>
+    </.activity_map>
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      It draws Mapbox's <code>outdoors-v12</code> in light mode and <code>dark-v11</code> in dark
+      mode, so a map never glares on a dark page.
+    </li>
+    <li>
+      Places are our dots in the kind's colour, not Mapbox pins. One place is one dot.
+    </li>
+    <li>Without a Mapbox token the dots sit on a plain panel, and the page still works.</li>
+    <li>
+      Dots have a 2px ring so they read where they overlap, and incidents sit on top. Hover a dot for the activity.
+    </li>
+    <li>The activity page uses the same map with one dot.</li>
+    <li>
+      Points more than 150 km from the team's base are left off, so one activity with a wrong
+      place in D4H does not zoom the map out to the whole province.
+    </li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    Every map is <code>&lt;.activity_map&gt;</code>
+    from <code>Web.Components.ActivityMap</code>, never a bare Mapbox image.
+  </p>
+</.shell>

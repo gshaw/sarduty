@@ -1,4 +1,4 @@
-/* The top bar, its menu, tabs, breadcrumbs, and pagination. See /styles/navigation. */
+/* The top bar, its menu, tabs, breadcrumbs, and pagination. See /styles/components. */
 @layer components {
   .site-bar {
     position: fixed;

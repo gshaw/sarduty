@@ -1,0 +1,73 @@
+<.shell title="Toast" current={:toast}>
+  <h1>Toast</h1>
+  <p class="lead">The result of what the person did. It comes and goes.</p>
+  <.used_on pages={["every page"]} />
+
+  <div class="demo">
+    <div class="toasts">
+      <.flash id="sample-flash-info" kind={:info}>4 attendance changes saved to D4H.</.flash>
+      <.flash id="sample-flash-error" kind={:error} title="D4H did not accept the change">
+        Nothing changed. Check the D4H access key in team settings.
+      </.flash>
+      <.flash id="sample-flash-disconnected" kind={:error} title="Server disconnected">
+        Reconnecting… <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+      </.flash>
+    </div>
+  </div>
+  <.form_actions>
+    <.button data-toast="info">Show an info toast</.button>
+    <.button data-toast="error">Show an error toast</.button>
+  </.form_actions>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <template id="toast-info">
+    <.flash id="sample-toast-info" kind={:info}>Settings saved.</.flash>
+  </template>
+  <template id="toast-error">
+    <.flash id="sample-toast-error" kind={:error} title="Letter not created">
+      Enter who authorizes tax letters in team settings.
+    </.flash>
+  </template>
+  <script>
+    document.querySelectorAll("[data-toast]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var kind = button.dataset.toast;
+        var toast = document.getElementById("toast-" + kind).content.firstElementChild.cloneNode(true);
+        toast.removeAttribute("id");
+        document.getElementById("toasts").appendChild(toast);
+        toast.addEventListener("click", function () { toast.remove(); });
+        if (kind !== "error") setTimeout(function () { toast.remove(); }, 5000);
+      });
+    });
+  </script>
+
+  <h2>When to use</h2>
+  <ul>
+    <li>Info toasts are for success and progress.</li>
+    <li>Error toasts are for an action that failed. A short title, then what to do.</li>
+  </ul>
+
+  <h2>When not to use</h2>
+  <p>
+    Never put the only copy of important information in a toast. Use a <a href={
+      page_path(:banner)
+    }>banner</a>.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      One card per message, stacked at the top right on a desktop and at the bottom on a phone, where a thumb can close it.
+    </li>
+    <li>A toast goes when it is selected or the person goes to another page.</li>
+    <li>
+      The Server disconnected toast shows while LiveView reconnects and goes when it is back.
+    </li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    LiveView's flash: <code>put_flash(socket, :info, "…")</code>. The layout's
+    <code>&lt;.flash_group&gt;</code>
+    shows them with <code>&lt;.flash&gt;</code>.
+  </p>
+</.shell>

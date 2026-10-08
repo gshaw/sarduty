@@ -1,0 +1,35 @@
+<.shell title="Breadcrumbs" current={:breadcrumbs}>
+  <h1>Breadcrumbs</h1>
+  <p class="lead">Where a page sits under its section.</p>
+  <.used_on pages={["every page below a section's list", "such as an activity or a member"]} />
+
+  <div class="demo">
+    <.breadcrumbs team={sample_team()}>
+      <:item label="Members" path="#" />
+      <:item label="Avery Chen" />
+    </.breadcrumbs>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    On every page below a section's list, at the top of the <a href={page_path(:layout)}>page header</a>.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    Pages outside the main tree, like settings. Use a <a href={page_path(:back_link)}>back link</a>.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>It starts at the team and names each level down.</li>
+    <li>The last item is the current page and is not a link.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.breadcrumbs team=&#123;@current_team&#125;&gt;</code>
+    with an <code>&lt;:item label="…" path=&#123;…&#125; /&gt;</code>
+    for each level.
+  </p>
+</.shell>

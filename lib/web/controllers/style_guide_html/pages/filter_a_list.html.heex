@@ -1,0 +1,71 @@
+<.shell title="Filter a list" current={:filter_a_list}>
+  <h1>Filter a list</h1>
+  <p class="lead">The activity list: filters, a summary line, the table, and pages.</p>
+
+  <div class="example">
+    <form class="filter-form" onsubmit="return false">
+      <.input id="f-q" name="q" label="Search" value="" />
+      <.input
+        id="f-kind"
+        name="activity"
+        type="select"
+        label="Kind"
+        options={[
+          {"All", "all"},
+          {"Incident", "incident"},
+          {"Exercise", "exercise"},
+          {"Event", "event"}
+        ]}
+        value="all"
+      />
+      <.input
+        id="f-when"
+        name="when"
+        type="select"
+        label="When"
+        options={[{"All", "all"}, {"Current", "current"}, {"Past", "past"}, {"2025", "2025"}]}
+        value="2025"
+      />
+      <.input
+        id="f-sort"
+        name="sort"
+        type="select"
+        label="Sort"
+        options={[{"Date ↓", "date-"}, {"Date ↑", "date"}]}
+        value="date-"
+      />
+    </form>
+    <div class="table-summary">
+      <span class="table-summary-links">
+        <.a href="#">Current</.a>
+        ·
+        <.a href="#">Future</.a>
+        ·
+        <.a href="#">Past</.a>
+        ·
+        <.a href="#">All</.a>
+      </span>
+      <span class="table-summary-count">1,912 activities</span>
+    </div>
+    <.activity_table
+      id="sample-activities"
+      rows={activities()}
+      sort="date-"
+      path_fn={fn _ -> "#" end}
+      team={sample_team()}
+    />
+    <.pagination class="my-p" paginated={sample_page()} path_fn={fn _ -> "#" end} />
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      Filters sit in a row above the table, with small inputs. Changing one updates the list.
+    </li>
+    <li>The summary line has quick links on the left and the count on the right.</li>
+    <li><a href={page_path(:pagination)}>Pagination</a> goes under the table.</li>
+  </ul>
+  <p class="spec">
+    In the app: <code>&lt;.activity_filter_table&gt;</code>. Filters are <code>&lt;.input&gt;</code>s in a <code>.filter-form</code>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
+  </p>
+</.shell>

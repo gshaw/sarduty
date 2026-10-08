@@ -1,0 +1,28 @@
+<.shell title="Details" current={:details}>
+  <h1>Details</h1>
+  <p class="lead">A question that opens to its answer.</p>
+  <.used_on />
+
+  <div class="demo">
+    <details class="disclosure">
+      <summary>
+        <.icon name="hero-chevron-down-micro" class="size-4" />Why are some members missing?
+      </summary>
+      <div>
+        SAR Duty copies members from D4H each night. Members added in D4H today show up tomorrow, or
+        after a manual refresh.
+      </div>
+    </details>
+  </div>
+
+  <h2>When to use</h2>
+  <p>Help that only some people need, where the question tells them whether to open it.</p>
+
+  <h2>When not to use</h2>
+  <p>Anything most people need. Show it.</p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;details class="disclosure"&gt;</code>, with the question in its <code>&lt;summary&gt;</code>.
+  </p>
+</.shell>

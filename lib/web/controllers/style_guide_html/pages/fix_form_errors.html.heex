@@ -1,0 +1,75 @@
+<.shell title="Fix form errors" current={:fix_form_errors}>
+  <h1>Fix form errors</h1>
+  <p class="lead">Team settings after a failed save.</p>
+
+  <div class="example max-w-160">
+    <div class="error-summary" role="alert">
+      <h2>There is a problem</h2>
+      <ul>
+        <li><a href="#authorized_by">Enter who authorizes tax letters</a></li>
+        <li><a href="#d4h_key">The D4H access key was not accepted by D4H</a></li>
+      </ul>
+    </div>
+    <.input id="name" name="name" label="Team name" value="Squamish SAR" />
+    <div class="grid grid-cols-2 gap-x-5">
+      <.input id="lat" name="lat" label="Latitude" value="49.7553" readonly />
+      <.input id="lng" name="lng" label="Longitude" value="-123.1311" readonly />
+    </div>
+    <div class="max-w-80">
+      <.input
+        id="tz"
+        name="tz"
+        type="select"
+        label="Time zone"
+        options={["America/Vancouver", "America/Edmonton"]}
+        value="America/Vancouver"
+      />
+    </div>
+    <.input
+      id="address"
+      name="address"
+      type="textarea"
+      label="Mailing address"
+      rows="3"
+      value={Enum.join(["PO Box 123", "Squamish BC V8B 0A1"], "\n")}
+    />
+    <.input
+      id="authorized_by"
+      name="authorized_by"
+      type="textarea"
+      label="Tax letters authorized by"
+      rows="3"
+      value=""
+      errors={["Enter who authorizes tax letters"]}
+    >
+      Full name, title, address, and phone of the president or a similar role. CRA uses it in audits.
+    </.input>
+    <.input
+      id="d4h_key"
+      name="d4h_key"
+      type="password"
+      label="D4H access key"
+      value="not-a-real-key"
+      errors={["The D4H access key was not accepted by D4H"]}
+    >
+      One key for every D4H request. Stored encrypted.
+    </.input>
+    <.form_actions>
+      <.button variant={:primary}>Save settings</.button>
+      <.button>Refresh from D4H</.button>
+    </.form_actions>
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      An <a href={page_path(:error_summary)}>error summary</a>
+      at the top links to each field with a problem.
+    </li>
+    <li>Each field shows its own error, in the same words, above the input.</li>
+    <li>What came from D4H is read-only.</li>
+  </ul>
+  <p class="spec not-yet">
+    The app's settings form shows errors on the fields, without the summary yet.
+  </p>
+</.shell>

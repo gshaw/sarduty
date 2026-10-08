@@ -1,0 +1,23 @@
+<.shell title="Callout" current={:callout}>
+  <h1>Callout</h1>
+  <p class="lead">Advice set apart beside a form field.</p>
+  <.used_on pages={["team settings", "group rules", "MCP tokens", "the ID card check"]} />
+
+  <div class="example">
+    <div class="callout">
+      Use the president's full name and title. CRA reads it in an audit.
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>A note that helps someone fill in a field well, or explains what a page does.</p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>A short hint for one field. Use the input's hint.</li>
+    <li>A consequence of acting. Use <a href={page_path(:warning_text)}>warning text</a>.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p><code>&lt;div class="callout"&gt;</code>.</p>
+</.shell>

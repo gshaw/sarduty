@@ -1,0 +1,11 @@
+<% {group, title, about, pages} = @group %>
+<.shell title={title} current={group}>
+  <h1>{title}</h1>
+  <p class="lead">{about}</p>
+  <.table id="guide-pages" rows={pages}>
+    <:col :let={{page, title, _about}} label="Page" class="w-px whitespace-nowrap">
+      <.a href={page_path(page)}>{title}</.a>
+    </:col>
+    <:col :let={{_page, _title, about}} label="What it covers">{about}</:col>
+  </.table>
+</.shell>

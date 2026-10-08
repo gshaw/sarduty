@@ -1,5 +1,5 @@
 /* Toasts (LiveView flash), banners, warning text, empty states, the error summary, the
-   confirm dialog, and the spinner. See /styles/feedback. */
+   confirm dialog, and the spinner. See /styles/components. */
 @layer components {
   .toasts {
     position: fixed;
@@ -57,7 +57,6 @@
   .callout { background: color-mix(in srgb, var(--warning) 22%, var(--bg)); color: var(--text); border-left: 6px solid var(--warning); padding: var(--sp-2) var(--sp-4); }
 
   .warning-text { display: flex; gap: var(--sp-3); align-items: flex-start; font-weight: 600; margin-bottom: var(--sp-4); }
-  .inset { border-left: 6px solid var(--border); padding: var(--sp-1) 0 var(--sp-1) var(--sp-4); margin-bottom: var(--sp-4); }
 
   .empty-state { border: 1px dashed var(--border); padding: var(--sp-6) var(--sp-5); text-align: center; color: var(--text-muted); margin-bottom: var(--sp-4); }
   .empty-state strong { display: block; color: var(--text); font-size: var(--fs-lg); line-height: var(--lh-lg); margin-bottom: var(--sp-1); }

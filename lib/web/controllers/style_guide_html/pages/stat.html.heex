@@ -1,0 +1,39 @@
+<.shell title="Stat" current={:stat}>
+  <h1>Stat</h1>
+  <p class="lead">A number, what it counts, and how it compares.</p>
+  <.used_on pages={["the team's home page"]} />
+
+  <div class="chart-stats">
+    <.stat value="124" label="Activities in 2025" delta="Up 12 on this time last year">
+      <.sparkline values={[12, 10, 9, 11, 12, 12, 15, 17, 20, 20, 16, 4]} />
+    </.stat>
+    <.stat
+      series={:incident}
+      value="70"
+      label="Incidents in 2025"
+      delta="Up 1 on this time last year"
+    >
+      <.sparkline series={:incident} values={[5, 4, 3, 4, 5, 6, 8, 11, 15, 14, 9, 2]} />
+    </.stat>
+    <.stat value="6,289h" label="Member hours" delta="Up 875 on this time last year" />
+    <.stat value="59" label="Current members" delta="8 joined in 2025" />
+  </div>
+
+  <h2>When to use</h2>
+  <p>A few numbers at the top of a dashboard. One number is a stat, not a chart.</p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>The label says what it counts and over when.</li>
+    <li>The line under it compares with the same days last year.</li>
+    <li>A sparkline shows the last 12 months. The top rule takes the series colour.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.stat value="…" label="…" delta="…"&gt;</code>, with an optional
+    <code>&lt;.sparkline values=&#123;…&#125; /&gt;</code>
+    inside, in a <code>.chart-stats</code>
+    row. From <code>Web.Components.Chart</code>.
+  </p>
+</.shell>

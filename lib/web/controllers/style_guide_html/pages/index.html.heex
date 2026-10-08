@@ -43,28 +43,18 @@
     in the app. A few show a design no page uses yet, and say so.
   </p>
 
-  <h2>Pages</h2>
-  <.table
-    id="guide-pages"
-    rows={[
-      {:colors, "Colours", "Every token in light and dark, and what each is for."},
-      {:typography, "Typography", "The type scale, headings, body text, numbers, and links."},
-      {:writing, "Writing",
-       "The rules and glossary for every word a person reads. Agents follow it."},
-      {:icons, "Icons", "The small set of icons, their sizes, and when to use one."},
-      {:layout, "Layout", "Spacing, page headers, detail lists, cards, and stats."},
-      {:components, "Buttons and tags", "Button kinds and sizes, tags, and focus."},
-      {:navigation, "Navigation", "The top bar, breadcrumbs, tabs, and pagination."},
-      {:feedback, "Messages", "Toasts, banners, warnings, errors, empty states, and loading."},
-      {:tables, "Tables", "Dense and compact tables, from the app's real pages."},
-      {:forms, "Forms", "Every input, errors, and the app's real forms."},
-      {:charts, "Charts and maps",
-       "Stats, columns, lines, heat grids, bar lists, and the activity map."}
-    ]}
-  >
-    <:col :let={{page, title, _about}} label="Page" class="w-px whitespace-nowrap">
-      <.a href={page_path(page)}>{title}</.a>
+  <h2>What's in it</h2>
+  <.table id="guide-groups" rows={tl(groups())}>
+    <:col :let={{group, title, _about, _pages}} label="Section" class="w-px whitespace-nowrap">
+      <.a href={page_path(group)}>{title}</.a>
     </:col>
-    <:col :let={{_page, _title, about}} label="What it covers">{about}</:col>
+    <:col :let={{_group, _title, about, _pages}} label="What it covers">{about}</:col>
+    <:col :let={{_group, _title, _about, pages}} label="Pages" align="right">
+      {length(pages)}
+    </:col>
   </.table>
+  <p>
+    Each component's page shows it, says when to use it and when not to, how it works, and
+    the code to use it in the app. Pages in each section go A to Z.
+  </p>
 </.shell>

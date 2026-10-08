@@ -11,7 +11,9 @@ defmodule Web.StyleGuideHTML do
 
   alias Web.StyleGuideHTML.SampleData
 
+  # Pages take a suffix, so the Button page doesn't clash with <.button>.
   embed_templates "style_guide_html/*"
+  embed_templates "style_guide_html/pages/*", suffix: "_page"
 
   # The Writing page shows docs/writing.md, so agents and the guide read the same rules.
   @writing_path Path.expand("../../../docs/writing.md", __DIR__)
@@ -24,34 +26,106 @@ defmodule Web.StyleGuideHTML do
 
   # cspell:ignore HETS
 
-  # The guide's pages, in sidebar order: {group, [{page, title}]}. The page is also the
-  # template name and the last path segment.
-  def pages do
+  # The guide's groups, in the bar's order: {group, title, about, [{page, title, about}]}.
+  # A group lists its pages at /styles/<group>, A to Z after Get started. A page is also
+  # its template name, and its path is the name with dashes.
+  def groups do
     [
-      {"Start", [{:index, "Overview"}]},
-      {"Foundations",
+      {:index, "Get started", "What the guide is for and the principles behind it.",
+       [{:index, "Overview", "What the guide is for and the principles behind it."}]},
+      {:foundations, "Foundations", "What every page shares: colour, type, space, and words.",
        [
-         {:colors, "Colours"},
-         {:typography, "Typography"},
-         {:writing, "Writing"},
-         {:logo, "Logo"},
-         {:icons, "Icons"},
-         {:layout, "Layout"}
+         {:colour, "Colour", "Every token in light and dark, and what each is for."},
+         {:focus, "Focus", "The yellow keyboard focus on everything you can reach."},
+         {:icons, "Icons", "The small set of icons, their sizes, and when to use one."},
+         {:layout, "Layout", "The page header and how wide content goes."},
+         {:logo, "Logo", "The logo's forms, sizes, and files."},
+         {:spacing, "Spacing", "The 8 spaces on a 4px grid."},
+         {:typography, "Typography", "The type scale, headings, body text, numbers, and links."},
+         {:writing, "Writing",
+          "The rules and glossary for every word a person reads. Agents follow it."}
        ]},
-      {"Components",
+      {:components, "Components", "The parts pages are built from, one per page.",
        [
-         {:components, "Buttons and tags"},
-         {:navigation, "Navigation"},
-         {:feedback, "Messages"},
-         {:tables, "Tables"},
-         {:forms, "Forms"},
-         {:charts, "Charts and maps"}
+         {:back_link, "Back link", "A way back for pages outside the main tree."},
+         {:banner, "Banner", "Something true about the page until it changes."},
+         {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
+         {:button, "Button", "Kinds, sizes, states, and rows of buttons."},
+         {:callout, "Callout", "Advice set apart beside a form field."},
+         {:card, "Card", "A box for one topic on a dashboard."},
+         {:chart, "Chart", "Columns, lines, a calendar, a week grid, and a bar list."},
+         {:checkboxes, "Checkboxes", "One setting, or several answers to one question."},
+         {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
+         {:detail_list, "Detail list", "Key facts about one record."},
+         {:details, "Details", "A question that opens to its answer."},
+         {:empty_state, "Empty state", "Why a list is empty and what to do."},
+         {:error_summary, "Error summary", "What to fix in a form after a failed save."},
+         {:input, "Input", "Text, select, date, and text area fields, and their states."},
+         {:map, "Map", "A dot per activity on a Mapbox map."},
+         {:pagination, "Pagination", "Pages under a long table."},
+         {:radios, "Radios", "One answer from a short list."},
+         {:spinner, "Spinner", "Says what slow thing is happening."},
+         {:stat, "Stat", "A number, what it counts, and how it compares."},
+         {:switch, "Switch", "A setting that changes the moment it's tapped."},
+         {:table, "Table", "Dense rows, sorting, header groups, and compact tables."},
+         {:tabs, "Tabs", "Pages about one record, a link each."},
+         {:tag, "Tag", "A word or two of status."},
+         {:toast, "Toast", "The result of what the person did. It comes and goes."},
+         {:top_bar, "Top bar", "The main sections and the account menu."},
+         {:warning_text, "Warning text", "A consequence people must know before they act."}
+       ]},
+      {:patterns, "Patterns", "Whole screens from the app, built from the components.",
+       [
+         {:build_a_group_rule, "Build a group rule", "An editor inside a page."},
+         {:filter_a_list, "Filter a list", "Filters, a summary line, a table, and pages."},
+         {:fix_form_errors, "Fix form errors", "A settings form after a failed save."},
+         {:paste_a_report, "Paste a report", "Turn a pasted attendance report into changes."},
+         {:review_changes, "Review changes", "Check the changes to make, then send them."}
        ]}
     ]
   end
 
   def page_path(:index), do: "/styles"
-  def page_path(page), do: "/styles/#{page}"
+  def page_path(page), do: "/styles/" <> (page |> Atom.to_string() |> String.replace("_", "-"))
+
+  # What /styles/<slug> shows: {:group, group}, {:page, template}, or nil. A page's template
+  # is its name with _page, as embed_templates names it.
+  def find(slug) do
+    path = "/styles/" <> slug
+
+    Enum.find_value(groups(), fn {group, _title, _about, pages} = g ->
+      if group != :index && page_path(group) == path,
+        do: {:group, g},
+        else: find_page(pages, path)
+    end)
+  end
+
+  defp find_page(pages, path) do
+    Enum.find_value(pages, fn {page, _title, _about} ->
+      page != :index && page_path(page) == path &&
+        {:page, String.to_existing_atom("#{page}_page")}
+    end)
+  end
+
+  # The group a page or group belongs to, for the bar's tabs and the side nav.
+  def group_of(current) do
+    Enum.find(groups(), fn {group, _title, _about, pages} ->
+      group == current || Enum.any?(pages, &(elem(&1, 0) == current))
+    end)
+  end
+
+  # Under a component's lead: the app's pages that use it, or a tag when none does yet.
+  attr :pages, :list, default: []
+  attr :rest, :global
+
+  def used_on(assigns) do
+    ~H"""
+    <p :if={@pages != []} class="used-on" {@rest}>Used on {Enum.join(@pages, ", ")}.</p>
+    <p :if={@pages == []} class="used-on" {@rest}>
+      <.badge>Not used yet</.badge>
+    </p>
+    """
+  end
 
   # The logo files that uv run assets/brand/draw_logo.py writes, and where each goes.
   def logo_files do
@@ -118,7 +192,7 @@ defmodule Web.StyleGuideHTML do
     ]
   end
 
-  # The tags table on the Buttons and tags page, one row per <.badge> kind.
+  # The tags table on the Tag page, one row per <.badge> kind.
   def tag_kinds do
     [
       %{

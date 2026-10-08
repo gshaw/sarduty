@@ -1,0 +1,31 @@
+<.shell title="Spinner" current={:spinner}>
+  <h1>Spinner</h1>
+  <p class="lead">Says what slow thing is happening.</p>
+  <.used_on pages={["mileage", "reviewing group changes"]} />
+
+  <div class="demo">
+    <p class="paragraph">
+      <.spinner>Refreshing from D4H…</.spinner>
+    </p>
+    <p class="text-sm text-secondary-1">
+      <.spinner>Calculating driving distances for 14 members…</.spinner>
+    </p>
+  </div>
+
+  <h2>When to use</h2>
+  <p>Work that takes more than a second, such as a call to D4H or Mapbox.</p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Name the slow thing, with an ellipsis.</li>
+    <li>
+      In a button, it replaces the button's text. See the busy state on <a href={
+        page_path(:button)
+      }>Button</a>.
+    </li>
+    <li>Spinners slow down when the system asks for reduced motion.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p><code>&lt;.spinner&gt;Refreshing from D4H…&lt;/.spinner&gt;</code>.</p>
+</.shell>

@@ -1,7 +1,7 @@
 defmodule Web.Components.Chart do
   @moduledoc """
   Charts drawn on the server, in HTML and SVG, with no JavaScript. Styles are in
-  assets/css/components/chart.css and the guide's samples at /styles/charts.
+  assets/css/components/chart.css and the guide's samples at /styles/chart.
 
   A series is `{key, label}`. The key picks the colour (`series-incident`,
   `series-exercise`, `series-event`, `series-primary`, `series-compare`), so an entity keeps
