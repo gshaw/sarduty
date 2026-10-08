@@ -7,12 +7,13 @@ defmodule Web.ActivityCollectionLiveTest do
   test "renders activities collection", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
-    {:ok, _lv, html} =
+    {:ok, lv, html} =
       conn
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/activities")
 
     assert html =~ "Activities"
+    assert page_title(lv) =~ "Activities"
   end
 
   test "leaves out activities deleted in D4H", %{conn: conn} do
