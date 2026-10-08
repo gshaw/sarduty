@@ -1,6 +1,11 @@
 /* The team dashboard's top half (#205): NextUp, Coming up, and Needs attention. The
    cards and grid are chart.css's .card and .card-grid. */
 
+/* The logo stays beside the team name at every width rather than wrapping onto a line
+   of its own; a long name wraps instead. */
+.team-heading { flex-wrap: nowrap; align-items: flex-start; }
+.team-heading > .logo-lg { flex: none; }
+
 .next-up { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-6); align-items: center; border-left: 4px solid var(--primary); margin-bottom: var(--sp-6); }
 .next-up-when { display: flex; flex-direction: column; min-width: 110px; }
 .next-up-day { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; color: var(--text); }
@@ -18,9 +23,11 @@
 .attention-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--info); }
 .is-warning .attention-mark { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent); }
 
-/* Phones: NextUp stacks, with a full-width button, and a row's button drops under its
-   title when the title would get squeezed. The stats sit two to a row. */
+/* Phones: the logo is smaller. NextUp stacks, with a full-width button, and a row's
+   button drops under its title when the title would get squeezed. The stats sit two to a row. */
 @media (width < 40rem) {
+  .team-heading > .logo-lg { height: 64px; }
+
   .next-up { grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
   .next-up-when { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 var(--sp-2); min-width: 0; }
   .next-up-when > :first-child { flex-basis: 100%; }
