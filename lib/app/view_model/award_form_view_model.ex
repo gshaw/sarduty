@@ -15,6 +15,7 @@ defmodule App.ViewModel.AwardFormViewModel do
     |> validate_required([:qualification_id], message: "Select a qualification.")
     |> validate_required([:starts_on], message: "Enter the day it starts.")
     |> validate_ends_after_starts()
+    |> App.Validate.in_field_order([:qualification_id, :starts_on, :ends_on])
   end
 
   defp validate_ends_after_starts(changeset) do
