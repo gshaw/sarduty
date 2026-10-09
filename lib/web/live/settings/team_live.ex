@@ -236,7 +236,9 @@ defmodule Web.Settings.TeamLive do
   def handle_event("refresh", _params, socket) do
     d4h = D4H.build_context_from_team(socket.assigns.current_team)
     {:ok, d4h_team} = D4H.fetch_team(d4h)
-    {lat, lng} = d4h_team.coordinate
+    team = socket.assigns.current_team
+    # A team with no place on its record keeps the one it has.
+    {lat, lng} = d4h_team.coordinate || {team.lat, team.lng}
 
     params = %{
       name: d4h_team.name,
