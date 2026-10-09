@@ -101,7 +101,7 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(lv, "#change-member-#{ctx.mei.id}", "Attended")
     assert has_element?(lv, "#change-member-#{ctx.lena.id}", "not signed up")
     assert has_element?(lv, "#change-member-#{ctx.sam.id}", "Absent")
-    assert has_element?(lv, "#send", "Send 3 changes")
+    assert has_element?(lv, "#send", "Send 2 changes")
 
     lv |> form("#send-form") |> render_submit(%{"keys" => all_keys(ctx)})
 

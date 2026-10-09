@@ -101,9 +101,11 @@ still fix times.
   for the same member and counts their hours twice (tested on 2026-10-04, see #139), so
   only a member D4H has no row for gets a `POST`. Writes don't retry: a retried `POST`
   could add someone twice, and a second send plans from what D4H has by then.
-- **Signed up and did not arrive means absent**, checked by default. Signed up is D4H's
-  `ATTENDING`. `REQUESTED` only means invited: D4H gives every invited member that row
-  until they reply, so a requested row with no scan is left alone.
+- **Signed up and did not arrive is offered as absent, unchecked.** Signed up is D4H's
+  `ATTENDING`, which also means someone marked the member there by hand, so the admin
+  checks each one. With no scans at all the door wasn't used, and nothing is offered.
+  `REQUESTED` only means invited: D4H gives every invited member that row until they
+  reply, so a requested row with no scan is left alone.
 - **A published activity is refused.** D4H's published flag is read live, not from the
   nightly copy, and the page says to unpublish it in D4H first.
 - **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity

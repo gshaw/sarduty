@@ -28,11 +28,15 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   - `:update`: mark the member's row attending with the door's times.
   - `:create`: add a row for a member D4H has none for, as a walk-in.
-  - `:absent`: mark a member who signed up (attending) and has no scans absent. A
-    requested row is an invite nobody replied to, so it's left alone.
+  - `:absent`: mark a member who signed up (attending) and has no scans absent. It
+    starts unchecked: D4H's attending also means marked there by hand. With no scans at
+    all the door wasn't used, so nobody is offered. A requested row is an invite nobody
+    replied to, so it's left alone.
   - `:unchanged`: D4H already has these times.
   - `:blocked`: the times can't be sent until they're fixed at the door.
   """
+  def plan([], _rows, _members), do: []
+
   def plan(times, rows, members) do
     rows_by_d4h_member_id = rows |> Enum.reverse() |> Map.new(&{&1.d4h_member_id, &1})
 
@@ -56,7 +60,7 @@ defmodule App.Operation.SendAttendanceToD4H do
     for row <- rows,
         row.status == "attending",
         member <- List.wrap(members_by_d4h_id[row.d4h_member_id]) do
-      change(member, :absent, row, selected: true)
+      change(member, :absent, row, selected: false, notes: [:signed_up_without_scan])
     end
   end
 
