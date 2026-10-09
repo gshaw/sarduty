@@ -108,6 +108,7 @@ defmodule Web.GroupReviewLive do
       </span>
       <.button
         id="refresh"
+        variant={:link}
         size={:sm}
         phx-click="refresh"
         disabled={refreshing?(@current_team)}

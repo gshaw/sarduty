@@ -260,7 +260,6 @@ defmodule Web.AttendanceLinkLive do
       <.button
         id="toggle-yet-to-arrive"
         type="button"
-        size={:sm}
         aria-expanded={to_string(@show_yet_to_arrive)}
         aria-controls="yet-to-arrive"
         phx-click="toggle_yet_to_arrive"

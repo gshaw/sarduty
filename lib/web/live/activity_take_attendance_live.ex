@@ -401,7 +401,6 @@ defmodule Web.ActivityTakeAttendanceLive do
         <.button
           id="copy-link"
           type="button"
-          size={:sm}
           phx-click={
             JS.dispatch("sarduty:copy", to: "#attendance-link-url", detail: %{status: "#copy-status"})
           }
@@ -411,7 +410,6 @@ defmodule Web.ActivityTakeAttendanceLive do
         <.button
           id="share-link"
           type="button"
-          size={:sm}
           phx-hook="ShareLink"
           data-url={link_url(@link)}
           hidden
@@ -437,7 +435,6 @@ defmodule Web.ActivityTakeAttendanceLive do
         <.button
           id="close-link"
           variant={:danger}
-          size={:sm}
           phx-click="close-link"
           data-confirm="Close this link? It stops taking attendance."
         >

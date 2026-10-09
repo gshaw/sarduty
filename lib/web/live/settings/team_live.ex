@@ -102,7 +102,6 @@ defmodule Web.Settings.TeamLive do
             <.button
               id="remove-signature"
               type="button"
-              size={:sm}
               phx-click="remove_signature"
               data-confirm="Remove the signature? New tax credit letters go out unsigned until you add one."
             >

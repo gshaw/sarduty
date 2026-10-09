@@ -30,11 +30,11 @@ defmodule Web.Components.YetToArrive do
             <span :if={!phone(member)} class="block hint">No mobile number in D4H</span>
           </span>
           <span :if={phone(member)} class="flex gap-2">
-            <.button id={"#{@id}-call-#{member.id}"} href={"tel:#{phone(member)}"} size={:sm}>
+            <.button id={"#{@id}-call-#{member.id}"} href={"tel:#{phone(member)}"}>
               Call
             </.button>
             <%!-- Phoenix's link allows tel: but not sms:, so the scheme goes as a tuple. --%>
-            <.button id={"#{@id}-text-#{member.id}"} href={{:sms, phone(member)}} size={:sm}>
+            <.button id={"#{@id}-text-#{member.id}"} href={{:sms, phone(member)}}>
               Text
             </.button>
           </span>
