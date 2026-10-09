@@ -86,6 +86,12 @@ defmodule Web.MeLive do
 
       <ul class="row-links mt-6">
         <li>
+          <.row_link id="contact-link" navigate={~p"/teams/#{@member.team}/me/contact"}>
+            <span class="text-link">Your email and mobile number</span>
+            <span class="hint block">What you log in with</span>
+          </.row_link>
+        </li>
+        <li>
           <.row_link id="details-link" navigate={~p"/teams/#{@member.team}/me/details"}>
             <span class="text-link">Your contact details</span>
             <span class="hint block">

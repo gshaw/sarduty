@@ -168,6 +168,7 @@ defmodule Web.Router do
     # A member's own page (#156), on a team with member logins on. Separate from the team
     # pages, which only the team's admins reach.
     live_session :require_team_member_session,
+      session: {Web.VerifyLimit, :session, []},
       on_mount: [
         {Web.UserAuth, :mount_current_path},
         {Web.UserAuth, :ensure_authenticated},
@@ -175,6 +176,7 @@ defmodule Web.Router do
       ] do
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/details", MeDetailsLive
+      live "/teams/:subdomain/me/contact", MeContactLive
     end
 
     scope "/teams/:subdomain/me" do
@@ -183,6 +185,7 @@ defmodule Web.Router do
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
+      post "/contact/confirm", MeContactController, :confirm
     end
 
     live_session :require_current_team_session,
