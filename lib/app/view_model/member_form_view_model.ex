@@ -77,5 +77,6 @@ defmodule App.ViewModel.MemberFormViewModel do
     |> validate_inclusion(:status, Enum.map(@statuses, &elem(&1, 1)))
   end
 
-  def validate(form, params), do: form |> changeset(params) |> apply_action(:validate)
+  # :insert, not :validate, so a failed save shows the error summary.
+  def validate(form, params), do: form |> changeset(params) |> apply_action(:insert)
 end

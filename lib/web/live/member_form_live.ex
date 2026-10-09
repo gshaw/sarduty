@@ -43,8 +43,8 @@ defmodule Web.MemberFormLive do
       <.error_summary form={@form} />
       <.input field={@form[:name]} label="Name" />
       <div class="grid grid-cols-2 gap-x-6">
-        <.input field={@form[:ref_id]} label="Member number (optional)" />
-        <.input field={@form[:position]} label="Position (optional)" />
+        <.input field={@form[:ref_id]} label="ID (optional)" />
+        <.input field={@form[:position]} label="Role (optional)" />
       </div>
       <.input field={@form[:email]} type="email" label="Email (optional)">
         Team admins log in with it, and tax credit letters go to it.
