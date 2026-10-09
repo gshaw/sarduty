@@ -29,22 +29,31 @@ defmodule Web.Settings.TeamLive do
     <div>
       <.back_link navigate={~p"/teams/#{@current_team}"}>{@current_team.name}</.back_link>
       <h1 class="heading">Team settings</h1>
-      <ul class="mb-4">
+      <ul class="row-links mb-4">
         <li>
-          <.a id="settings-cards" navigate={~p"/teams/#{@current_team}/settings/cards"}>ID cards</.a>:
-          qualifications on the back
+          <.row_link id="settings-cards" navigate={~p"/teams/#{@current_team}/settings/cards"}>
+            <span class="text-link">ID cards</span>
+            <span class="hint block">Qualifications on the back</span>
+          </.row_link>
         </li>
         <li>
-          <.a id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>Team admins</.a>:
-          who can log in
+          <.row_link id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>
+            <span class="text-link">Team admins</span>
+            <span class="hint block">Who can log in</span>
+          </.row_link>
         </li>
         <li :if={@current_team.mcp_enabled}>
-          <.a id="settings-mcp" navigate={~p"/teams/#{@current_team}/settings/mcp"}>MCP tokens</.a>:
-          let your AI agent read the team's data
+          <.row_link id="settings-mcp" navigate={~p"/teams/#{@current_team}/settings/mcp"}>
+            <span class="text-link">MCP tokens</span>
+            <span class="hint block">Let your AI agent read the team's data</span>
+          </.row_link>
         </li>
-        <li :if={!@current_team.mcp_enabled} id="settings-mcp-off">
-          MCP tokens: let your AI agent read the team's data. A trial, so ask a SAR Duty admin
-          to turn it on for your team.
+        <li :if={!@current_team.mcp_enabled} id="settings-mcp-off" class="py-2">
+          MCP tokens
+          <span class="hint block">
+            Let your AI agent read the team's data. A trial, so ask a SAR Duty admin
+            to turn it on for your team.
+          </span>
         </li>
       </ul>
 

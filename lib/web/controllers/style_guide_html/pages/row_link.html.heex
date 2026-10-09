@@ -1,0 +1,40 @@
+<.shell title="Row link" current={:row_link}>
+  <h1>Row link</h1>
+  <p class="lead">A list row that goes to one place.</p>
+
+  <div class="demo max-w-md">
+    <ul id="row-link-demo" class="row-links">
+      <li>
+        <.row_link navigate="#">
+          <strong class="text-link">2 draft activities</strong>
+          <span class="hint block">Check their attendance, then publish them in D4H.</span>
+        </.row_link>
+      </li>
+      <li>
+        <.row_link navigate="#">
+          <strong class="text-link">1 member has no email or mobile phone</strong>
+          <span class="hint block">Add the missing details in D4H.</span>
+        </.row_link>
+      </li>
+    </ul>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A list where each row goes somewhere, such as Coming up and Needs attention on the team home page. The whole row takes a tap, so it works on a phone.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A row that starts something or changes something. Use a <a href={page_path(:button)}>button</a>. Links to other places from a record's details go in an action list, in a <a href={
+      page_path(:detail_list)
+    }>detail list</a>.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;ul class="row-links"&gt;</code>
+    with a <code>&lt;.row_link navigate=&#123;…&#125;&gt;</code>
+    in each item. Give the row's title <code>text-link</code>. Each row is at least 44px tall, with a chevron at the end.
+  </p>
+</.shell>

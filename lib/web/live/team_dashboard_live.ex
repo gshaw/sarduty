@@ -184,22 +184,22 @@ defmodule Web.TeamDashboardLive do
       <p :if={@activities == []} id="coming-up-empty" class="chart-caption">
         No activities planned in D4H.
       </p>
-      <ul :if={@activities != []} id="coming-up-list" class="dash-rows">
+      <ul :if={@activities != []} id="coming-up-list" class="row-links">
         <li :for={activity <- @activities} id={"coming-up-#{activity.id}"}>
-          <span class="dash-row-when">
-            <strong>{Format.day_coming_up(activity.started_at, @now, @team.timezone)}</strong>
-            <span class="text-text-muted">{Format.time_short(activity.started_at, @team.timezone)}</span>
-          </span>
-          <span class="dash-row-title">
-            <.kind activity={activity} />
-            <.a navigate={~p"/teams/#{@team}/activities/#{activity.id}"}>{activity.title}</.a>
-          </span>
-          <.button
-            size={:sm}
-            navigate={~p"/teams/#{@team}/activities/#{activity.id}/take-attendance"}
-          >
-            Take attendance
-          </.button>
+          <.row_link navigate={~p"/teams/#{@team}/activities/#{activity.id}"}>
+            <span class="dash-row">
+              <span class="dash-row-when">
+                <strong>{Format.day_coming_up(activity.started_at, @now, @team.timezone)}</strong>
+                <span class="text-text-muted">
+                  {Format.time_short(activity.started_at, @team.timezone)}
+                </span>
+              </span>
+              <span class="dash-row-title">
+                <.kind activity={activity} />
+                <span class="text-link">{activity.title}</span>
+              </span>
+            </span>
+          </.row_link>
         </li>
       </ul>
       <footer>
@@ -223,14 +223,17 @@ defmodule Web.TeamDashboardLive do
       <p :if={@items == []} id="needs-attention-empty" class="chart-caption">
         Nothing needs you right now.
       </p>
-      <ul :if={@items != []} id="needs-attention-list" class="dash-rows attention">
+      <ul :if={@items != []} id="needs-attention-list" class="row-links attention">
         <li :for={item <- @items} id={"attention-#{item.key}"} class={"is-#{item.level}"}>
-          <span class="attention-mark" aria-hidden="true"></span>
-          <span class="dash-row-title">
-            <strong>{item.title}</strong>
-            <span :if={item.detail} class="hint">{item.detail}</span>
-          </span>
-          <.button size={:sm} navigate={attention_path(@team, item)}>{item.action}</.button>
+          <.row_link navigate={attention_path(@team, item)}>
+            <span class="dash-row">
+              <span class="attention-mark" aria-hidden="true"></span>
+              <span class="dash-row-title">
+                <strong class="text-link">{item.title}</strong>
+                <span :if={item.detail} class="hint">{item.detail}</span>
+              </span>
+            </span>
+          </.row_link>
         </li>
       </ul>
     </section>
