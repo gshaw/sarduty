@@ -55,6 +55,19 @@ defmodule App.DataFixtures do
     organization
   end
 
+  @doc "A team with member logins on (#156), so its current members may log in."
+  def member_logins_team_fixture(attrs \\ %{}) do
+    attrs |> team_fixture() |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+  end
+
+  @doc "A team with member logins on, a member on it, and that member's user."
+  def member_with_login_fixture(attrs \\ %{}) do
+    team = member_logins_team_fixture()
+    member = team |> member_fixture(Map.merge(%{d4h_permission: 2}, attrs)) |> Repo.preload(:team)
+    user = AccountsFixtures.user_fixture(%{email: member.email})
+    %{team: team, member: member, user: user}
+  end
+
   @doc "PNG bytes of a plain image, as D4H sends a photo or logo."
   def png_fixture(width, height) do
     width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: ".png")

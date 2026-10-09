@@ -102,6 +102,7 @@ and must not be used for it.
 | member                         | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
 | account                        | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
 | team admin                     | administrator, owner, manager, superuser       | A person who can change the team's settings.                                                         |
+| member logins                  | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
 | activity                       | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
 | incident                       | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
 | exercise                       | training, practice, drill                      | An activity for training.                                                                            |

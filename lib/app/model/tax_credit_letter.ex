@@ -60,6 +60,22 @@ defmodule App.Model.TaxCreditLetter do
     Repo.one!(query)
   end
 
+  @doc "A letter of this member's, by id, for the member's own page (#156). Raises when not."
+  def find_for_member!(%Member{} = member, id) do
+    TaxCreditLetter
+    |> where([tcl], tcl.id == ^id and tcl.member_id == ^member.id)
+    |> preload(member: :team)
+    |> Repo.one!()
+  end
+
+  @doc "The member's letters, newest year first."
+  def get_all_for_member(%Member{} = member) do
+    TaxCreditLetter
+    |> where([tcl], tcl.member_id == ^member.id)
+    |> order_by([tcl], desc: tcl.year, desc: tcl.inserted_at)
+    |> Repo.all()
+  end
+
   @ref_prefix "SRVTC-"
 
   @doc """

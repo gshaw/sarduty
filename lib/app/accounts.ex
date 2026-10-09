@@ -1,8 +1,10 @@
 defmodule App.Accounts do
   @moduledoc """
   Users and their login codes and sessions. A user is an email that may log in: a
-  manager of some team in D4H (#57), or an admin who is a current member of one (#141).
-  Which teams they reach is App.Model.Team.get_managed_by/2.
+  manager of some team in D4H (#57), an admin who is a current member of one (#141), or
+  a member of a team with member logins on (#156). Which teams they manage is
+  App.Model.Team.get_managed_by/2; which they're a member of is
+  App.Model.Member.get_logins/2.
   """
 
   import Ecto.Query, warn: false
@@ -47,14 +49,17 @@ defmodule App.Accounts do
   end
 
   @doc """
-  Whether this email may log in: a current manager's on some team, or an admin's that
-  D4H still lists as a current member somewhere. Being an admin alone isn't enough, so
-  every login stands on D4H (#141).
+  Whether this email may log in: a current manager's on some team, a current member's on
+  a team with member logins on, or an admin's that D4H still lists as a current member
+  somewhere. Being an admin alone isn't enough, so every login stands on D4H (#141).
   """
   def may_log_in?(email, now \\ DateTime.utc_now()) do
     case get_user_by_email(email) do
-      %User{is_admin: true} -> Member.current_email?(email, now)
-      _user -> Team.get_managed_by(email, now) != []
+      %User{is_admin: true} ->
+        Member.current_email?(email, now)
+
+      _user ->
+        Team.get_managed_by(email, now) != [] or Member.get_logins(email, now) != []
     end
   end
 

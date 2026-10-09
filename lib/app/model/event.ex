@@ -32,7 +32,9 @@ defmodule App.Model.Event do
     mcp_turned_on: 730,
     mcp_turned_off: 730,
     mcp_token_created: 730,
-    mcp_token_revoked: 730
+    mcp_token_revoked: 730,
+    member_logins_turned_on: 730,
+    member_logins_turned_off: 730
   }
 
   @kinds Map.keys(@retention_days)

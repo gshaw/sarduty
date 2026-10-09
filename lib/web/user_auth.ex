@@ -5,6 +5,7 @@ defmodule Web.UserAuth do
   import Phoenix.Controller
 
   alias App.Accounts
+  alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
 
@@ -134,6 +135,15 @@ defmodule Web.UserAuth do
   defp managed_teams(nil), do: []
   defp managed_teams(user), do: Team.get_managed_by(user.email, DateTime.utc_now())
 
+  # The members this user logs in as, one per team with member logins on (#156).
+  defp member_logins(nil), do: []
+  defp member_logins(user), do: Member.get_logins(user.email, DateTime.utc_now())
+
+  # The URL's team's member who is this user, or nil. Admins get no pass here: a member
+  # page only ever shows the person logged in.
+  defp member_login(user, subdomain),
+    do: user |> member_logins() |> Enum.find(&(&1.team.subdomain == subdomain))
+
   defp pick_default_team(_teams, nil), do: nil
 
   defp pick_default_team(teams, user) do
@@ -257,6 +267,17 @@ defmodule Web.UserAuth do
     end
   end
 
+  # A member's own pages, /teams/:subdomain/me (#156): the URL's team must have member
+  # logins on and list this user as a current member. Otherwise a 404, as for team pages.
+  # Assigns `member`, with its team, and leaves `current_team` alone, so the top bar
+  # shows team sections only to someone who manages the team.
+  def on_mount(:ensure_team_member, params, _session, socket) do
+    case member_login(socket.assigns.current_user, params["subdomain"]) do
+      nil -> raise Web.Status.NotFound
+      member -> {:cont, Phoenix.Component.assign(socket, :member, member)}
+    end
+  end
+
   defp mount_current_user(socket, session) do
     socket
     |> Phoenix.Component.assign_new(:current_user, fn ->
@@ -268,7 +289,7 @@ defmodule Web.UserAuth do
   end
 
   # The team for pages outside /teams/:subdomain, and every team the user manages, for the
-  # account menu. One query for both.
+  # account menu. One query for both. The member logins are for the menu too.
   defp mount_current_team(socket) do
     current_user = socket.assigns.current_user
     teams = managed_teams(current_user)
@@ -276,6 +297,7 @@ defmodule Web.UserAuth do
     socket
     |> Phoenix.Component.assign(current_team: pick_default_team(teams, current_user))
     |> Phoenix.Component.assign(managed_teams: teams)
+    |> Phoenix.Component.assign(member_logins: member_logins(current_user))
   end
 
   @doc "Sends a logged-in user to their team rather than the login form."
@@ -320,6 +342,14 @@ defmodule Web.UserAuth do
     end
   end
 
+  @doc "The plug for a member's own downloads, like `on_mount(:ensure_team_member, …)`."
+  def require_team_member(conn, _opts) do
+    case member_login(conn.assigns.current_user, conn.path_params["subdomain"]) do
+      nil -> raise Web.Status.NotFound
+      member -> assign(conn, :member, member)
+    end
+  end
+
   defp put_token_in_session(conn, token) do
     conn
     |> put_session(:user_token, token)
@@ -334,14 +364,15 @@ defmodule Web.UserAuth do
 
   @doc """
   Where logging in lands: the team the user last opened when they still manage it, else
-  their only or first team. An admin who manages none lands on /admin; anyone else on the
-  home page, which says why they have no team.
+  their only or first team. Someone who manages none lands on their own member page, an
+  admin on /admin, and anyone else on the home page, which says why they have no team.
   """
   def signed_in_path(user) do
     team = default_team(user)
 
     cond do
       team -> ~p"/teams/#{team}"
+      member = user |> member_logins() |> List.first() -> ~p"/teams/#{member.team}/me"
       user.is_admin -> ~p"/admin"
       true -> ~p"/"
     end

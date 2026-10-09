@@ -16,7 +16,12 @@ defmodule Web.HomePageLive do
         user -> Team.get_managed_by(user.email, DateTime.utc_now())
       end
 
-    {:ok, assign(socket, page_title: "Less paperwork for search and rescue teams", teams: teams)}
+    {:ok,
+     assign(socket,
+       page_title: "Less paperwork for search and rescue teams",
+       teams: teams,
+       members: socket.assigns[:member_logins] || []
+     )}
   end
 
   def render(assigns) do
@@ -30,7 +35,7 @@ defmodule Web.HomePageLive do
               SAR Duty works from your team's D4H data. It does the jobs D4H does not, so team
               admins spend less time at a desk.
             </p>
-            <.start id="start-top" current_user={@current_user} teams={@teams} />
+            <.start id="start-top" current_user={@current_user} teams={@teams} members={@members} />
           </div>
           <figure class="home-hero-art">
             <HomeMockups.team_home />
@@ -76,7 +81,7 @@ defmodule Web.HomePageLive do
 
       <section class="home-section is-alt">
         <div class="home-wrap home-end">
-          <.start id="start-end" current_user={@current_user} teams={@teams} />
+          <.start id="start-end" current_user={@current_user} teams={@teams} members={@members} />
         </div>
       </section>
     </div>
@@ -86,9 +91,11 @@ defmodule Web.HomePageLive do
   attr :id, :string, required: true
   attr :current_user, :map, default: nil
   attr :teams, :list, required: true
+  attr :members, :list, required: true
 
   # The page's one call to action, the same box in the same places for everyone: sign up or
-  # log in for a visitor, your teams once logged in, or why you have none.
+  # log in for a visitor, your teams once logged in, your own ID card for a member, or why
+  # you have none.
   defp start(assigns) do
     ~H"""
     <div id={@id} class="home-start">
@@ -107,6 +114,15 @@ defmodule Web.HomePageLive do
           <ul class="home-cta">
             <li :for={team <- @teams}>
               <.button navigate={~p"/teams/#{team}"} variant={:primary}>{team.name}</.button>
+            </li>
+          </ul>
+        <% @members != [] -> %>
+          <p class="home-start-title">Your ID card</p>
+          <ul class="home-cta">
+            <li :for={member <- @members}>
+              <.button navigate={~p"/teams/#{member.team}/me"} variant={:primary}>
+                {member.team.name}
+              </.button>
             </li>
           </ul>
         <% true -> %>

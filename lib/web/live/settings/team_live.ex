@@ -42,6 +42,19 @@ defmodule Web.Settings.TeamLive do
             <span class="hint block">Who can log in</span>
           </.row_link>
         </li>
+        <li>
+          <.row_link
+            id="settings-member-logins"
+            navigate={~p"/teams/#{@current_team}/settings/member-logins"}
+          >
+            <span class="text-link">Member logins</span>
+            <span class="hint block">
+              {if @current_team.member_logins,
+                do: "On: members get their own ID card and tax credit letters",
+                else: "Off: only team admins can log in"}
+            </span>
+          </.row_link>
+        </li>
         <li :if={@current_team.mcp_enabled}>
           <.row_link id="settings-mcp" navigate={~p"/teams/#{@current_team}/settings/mcp"}>
             <span class="text-link">MCP tokens</span>

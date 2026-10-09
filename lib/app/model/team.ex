@@ -42,6 +42,9 @@ defmodule App.Model.Team do
     field :d4h_sync_state, :map
     # The MCP trial's switch (#28). Set only by App.Operation.SetTeamMCP from /admin/mcp.
     field :mcp_enabled, :boolean, default: false
+    # Lets current members log in for their own ID card and tax credit letters (#156).
+    # Set only by App.Operation.SetTeamMemberLogins from the team's settings.
+    field :member_logins, :boolean, default: false
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)

@@ -189,6 +189,7 @@ defmodule Web.Layouts do
       current_user: assigns[:current_user],
       current_team: assigns[:current_team],
       managed_teams: assigns[:managed_teams] || [],
+      member_logins: assigns[:member_logins] || [],
       current_path: assigns[:current_path]
     }
   end
@@ -196,6 +197,7 @@ defmodule Web.Layouts do
   attr :current_user, :map, default: nil
   attr :current_team, :map, default: nil
   attr :managed_teams, :list, default: []
+  attr :member_logins, :list, default: []
   attr :current_path, :string, default: nil
   attr :size, :atom, default: :wide
 
@@ -230,11 +232,13 @@ defmodule Web.Layouts do
           current_user={@current_user}
           current_team={@current_team}
           managed_teams={@managed_teams}
+          member_logins={@member_logins}
         />
         <.phone_menu
           current_user={@current_user}
           current_team={@current_team}
           managed_teams={@managed_teams}
+          member_logins={@member_logins}
           current_path={@current_path}
         />
       <% else %>
@@ -249,6 +253,7 @@ defmodule Web.Layouts do
   attr :current_user, :map, required: true
   attr :current_team, :map, default: nil
   attr :managed_teams, :list, default: []
+  attr :member_logins, :list, default: []
   attr :current_path, :string, default: nil
 
   # The same links as the bar and the account menu, in one list for phones.
@@ -280,6 +285,7 @@ defmodule Web.Layouts do
       <.account_links
         current_team={@current_team}
         managed_teams={@managed_teams}
+        member_logins={@member_logins}
         id_prefix="phone-"
       />
     </.site_bar_phone_menu>
@@ -314,22 +320,41 @@ defmodule Web.Layouts do
   attr :current_user, :map, required: true
   attr :current_team, :map, default: nil
   attr :managed_teams, :list, default: []
+  attr :member_logins, :list, default: []
 
   defp account_menu(assigns) do
     ~H"""
     <.site_bar_menu label={@current_user.email}>
-      <.account_links current_team={@current_team} managed_teams={@managed_teams} />
+      <.account_links
+        current_team={@current_team}
+        managed_teams={@managed_teams}
+        member_logins={@member_logins}
+      />
     </.site_bar_menu>
     """
   end
 
   attr :current_team, :map, default: nil
   attr :managed_teams, :list, default: []
+  attr :member_logins, :list, default: []
   attr :id_prefix, :string, default: ""
 
-  # Switching teams, settings, and logging out: the account menu, and the end of the phone menu.
+  # Switching teams, your own member pages, settings, and logging out: the account menu,
+  # and the end of the phone menu.
   defp account_links(assigns) do
     ~H"""
+    <%= for member <- @member_logins do %>
+      <.a
+        id={@id_prefix <> "nav-me-" <> member.team.subdomain}
+        kind={:custom}
+        navigate={~p"/teams/#{member.team}/me"}
+      >
+        {if length(@member_logins) > 1,
+          do: "Your ID card: #{member.team.name}",
+          else: "Your ID card"}
+      </.a>
+    <% end %>
+    <.menu_divider :if={@member_logins != []} />
     <%= if length(@managed_teams) > 1 do %>
       <div class="menu-note">Your teams</div>
       <.a

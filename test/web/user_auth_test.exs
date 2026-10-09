@@ -250,6 +250,11 @@ defmodule Web.UserAuthTest do
       assert UserAuth.signed_in_path(%{user | last_team_id: south.id}) == ~p"/teams/#{south}"
     end
 
+    test "a member who manages no team lands on their own member page" do
+      %{team: team, user: user} = App.DataFixtures.member_with_login_fixture()
+      assert UserAuth.signed_in_path(user) == ~p"/teams/#{team}/me"
+    end
+
     test "an admin with no team lands on /admin; anyone else on the home page" do
       admin = user_fixture(%{is_admin: true})
       assert UserAuth.signed_in_path(admin) == ~p"/admin"

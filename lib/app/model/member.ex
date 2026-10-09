@@ -137,6 +137,35 @@ defmodule App.Model.Member do
   end
 
   @doc """
+  The members this email logs in as (#156): one per team with member logins on, where a
+  current member with this email isn't marked not a person. A team where two such
+  members share the email is left out, since SAR Duty can't tell whose card to show.
+  With the team, by team name.
+  """
+  def get_logins(email, now) when is_binary(email) do
+    email
+    |> logins_query(now)
+    |> Repo.all()
+    |> Enum.group_by(& &1.team_id)
+    |> Enum.flat_map(fn
+      {_team_id, [member]} -> [member]
+      {_team_id, _shared} -> []
+    end)
+    |> Enum.sort_by(& &1.team.name)
+  end
+
+  defp logins_query(email, now) do
+    email = email |> String.trim() |> String.downcase()
+
+    Member
+    |> join(:inner, [m], t in assoc(m, :team))
+    |> where([m, t], t.member_logins and fragment("lower(?)", m.email) == ^email)
+    |> current_query(now)
+    |> people_query()
+    |> preload([m, t], team: t)
+  end
+
+  @doc """
   Whether this email is a current member on some team, whatever their permission: not
   retired and not left. The bar an admin's email must meet to log in (#141).
   """
