@@ -51,7 +51,9 @@ defmodule App.Operation.ApplyChangeSetTest do
 
   @writes ~w(add_group_member remove_group_membership set_attendance create_attendance
              create_member update_member retire_member rejoin_member create_activity
-             update_activity delete_activity)
+             update_activity delete_activity create_qualification update_qualification
+             delete_qualification award_qualification remove_award create_group update_group
+             delete_group)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do

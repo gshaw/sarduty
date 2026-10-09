@@ -189,12 +189,16 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/:id/card", MemberCardLive
       live "/teams/:subdomain/members/:id/history", MemberHistoryLive
       live "/teams/:subdomain/groups", GroupCollectionLive
+      live "/teams/:subdomain/groups/new", TitledRecordFormLive, :new_group
       live "/teams/:subdomain/groups/:id", GroupLive
+      live "/teams/:subdomain/groups/:id/edit", TitledRecordFormLive, :edit_group
       live "/teams/:subdomain/groups/:id/review", GroupReviewLive
       live "/teams/:subdomain/proposed-changes", ProposedChangeCollectionLive
       live "/teams/:subdomain/proposed-changes/:id", ProposedChangeLive
       live "/teams/:subdomain/qualifications", QualificationCollectionLive
+      live "/teams/:subdomain/qualifications/new", TitledRecordFormLive, :new_qualification
       live "/teams/:subdomain/qualifications/:id", QualificationLive
+      live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive

@@ -3,6 +3,7 @@ defmodule Web.QualificationCollectionLive do
 
   import Ecto.Query
 
+  alias App.Adapter.D4H
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Operation.BuildGroupRulePreview
@@ -36,7 +37,16 @@ defmodule Web.QualificationCollectionLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team} />
-    <h1 class="title">{@page_title}</h1>
+    <div class="heading-row">
+      <h1 class="title">{@page_title}</h1>
+      <.button
+        :if={D4H.records?(@current_team)}
+        id="qualification-add"
+        navigate={~p"/teams/#{@current_team}/qualifications/new"}
+      >
+        Add qualification
+      </.button>
+    </div>
 
     <div class="table-summary">
       <span class="table-summary-links">

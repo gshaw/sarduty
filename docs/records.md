@@ -57,6 +57,16 @@ that title.
   hours choice sets the Primary Hours or Secondary Hours tag and keeps any others. A
   new activity keeps its id even if its tags or published flag fail, so a retry never
   makes a second one. Times are on the team's clock, to the minute.
+- **Qualifications and groups**: add, rename, delete. A qualification's awards and a
+  member's groups change on the member's Qualifications and Groups tabs. `DELETE` on
+  qualifications and awards is Records' own; groups and group members use D4H's own
+  endpoints. Deleting a qualification takes its awards with it, and a group its members.
+
+Every Records-only write: `POST /members`, `permission` on a member, `DELETE` on
+`/events`, `/exercises`, and `/incidents`, `DELETE /member-qualifications/<id>`, and
+`DELETE /member-qualification-awards/<id>`. The guard test in
+`test/app/operation/apply_change_set_test.exs` lists every write function, so only
+`ApplyChangeSet` calls them.
 
 ## Where the code is
 

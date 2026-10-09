@@ -6,8 +6,10 @@ defmodule Web.MemberGroupsLive do
   import Web.Components.MemberTabs
 
   alias App.Adapter.D4H
+  alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Member
+  alias App.Operation.SetGroupMember
   alias App.Repo
 
   def mount(_params, _session, socket) do
@@ -20,9 +22,59 @@ defmodule Web.MemberGroupsLive do
     socket =
       socket
       |> assign(:page_title, "#{member.name} · Groups")
-      |> assign(:member, member)
+      |> assign(:records?, D4H.records?(socket.assigns.current_team))
+      |> assign_member(member)
 
     {:noreply, socket}
+  end
+
+  # Adding to and removing from groups, for a team on SAR Duty Records (docs/records.md).
+  def handle_event("add-group", %{"group_id" => group_id}, socket) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+    true = socket.assigns.records?
+
+    case Enum.find(socket.assigns.other_groups, &(Integer.to_string(&1.id) == group_id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Select a group.")}
+
+      group ->
+        case SetGroupMember.add(team, member, group, user, DateTime.utc_now()) do
+          :ok -> {:noreply, reload(socket, "Added to #{group.title}.")}
+          {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+        end
+    end
+  end
+
+  def handle_event("remove-group", %{"id" => id}, socket) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+    true = socket.assigns.records?
+    group_member = Enum.find(member.group_members, &(Integer.to_string(&1.id) == id))
+
+    # Gone already, say from another tab.
+    result =
+      if group_member,
+        do: SetGroupMember.remove(team, group_member, user, DateTime.utc_now()),
+        else: :gone
+
+    case result do
+      :ok -> {:noreply, reload(socket, "Removed from #{group_member.group.title}.")}
+      :gone -> {:noreply, reload(socket, "#{member.name} left that group already.")}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
+  defp reload(socket, text) do
+    member = find_member(socket.assigns.current_team, socket.assigns.member.id)
+    socket |> put_flash(:info, text) |> assign_member(member)
+  end
+
+  defp assign_member(socket, member) do
+    in_groups = MapSet.new(member.group_members, & &1.group_id)
+
+    others =
+      socket.assigns.current_team.id |> Group.get_all() |> Enum.reject(&(&1.id in in_groups))
+
+    assign(socket, member: member, other_groups: others)
   end
 
   def render(assigns) do
@@ -39,7 +91,27 @@ defmodule Web.MemberGroupsLive do
       </aside>
       <main class="content-2/3">
         <.member_tabs member={@member} active_tab={:groups} />
-        <.groups_content member={@member} />
+        <.groups_content member={@member} records?={@records?} />
+        <form
+          :if={@records? and @other_groups != []}
+          id="add-group-form"
+          phx-submit="add-group"
+          class="mt-8 max-w-xl"
+        >
+          <h2 class="heading">Add to a group</h2>
+          <.input
+            name="group_id"
+            id="add-group-id"
+            type="select"
+            label="Group"
+            value=""
+            prompt="Select a group"
+            options={Enum.map(@other_groups, &{&1.title, &1.id})}
+          />
+          <.form_actions>
+            <.button variant={:success}>Add to group</.button>
+          </.form_actions>
+        </form>
       </main>
     </div>
     """
@@ -57,6 +129,19 @@ defmodule Web.MemberGroupsLive do
         <.a navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>
           {gm.group.title}
         </.a>
+      </:col>
+      <:col :let={gm} :if={@records?} label="" class="w-px whitespace-nowrap">
+        <.button
+          id={"remove-group-#{gm.id}"}
+          type="button"
+          variant={:link}
+          size={:sm}
+          phx-click="remove-group"
+          phx-value-id={gm.id}
+          data-confirm={"Remove #{@member.name} from #{gm.group.title}?"}
+        >
+          Remove
+        </.button>
       </:col>
     </.table>
     <p :if={@member.group_members == []} id="no-groups">
