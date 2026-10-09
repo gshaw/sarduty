@@ -6,8 +6,9 @@ and land on their own page, `/teams/:subdomain/me`
 ([MeLive](../lib/web/live/me_live.ex)). It shows their ID card, with a button to get one
 when they have none, their tax credit letters as PDFs, their hours and activities for a
 year, and their qualifications. On `/teams/:subdomain/me/details` they change their
-mailing address and emergency contacts in D4H, and on `/teams/:subdomain/me/contact`
-their email and mobile number. Issue #156 has the design.
+mailing address and emergency contacts in D4H, and on `/teams/:subdomain/me/mobile` their
+mobile number. Members don't change their email: teams keep it consistent, and team
+admins change it in D4H. Issue #156 has the design.
 
 ## What must stay true
 
@@ -47,13 +48,8 @@ their email and mobile number. Issue #156 has the design.
   it opens. The change set row keeps the old and new contact, as every row keeps what it
   changed. SAR Duty Records has no emergency contacts, so its members change only their
   address.
-- **A new email or mobile number needs a code first.** They are how a member logs in, so
-  [ChangeOwnContact](../lib/app/operation/change_own_contact.ex) sends a code to the new
-  one, a `"confirm"` user token that lives and dies like a login code, with the login
-  rate limits. Only a matching code sends the change to D4H. The old email then gets a
-  notice, in case someone else made the change. An email already used by another member
-  of the team is refused, since it would match neither of them.
-- **A new email moves the session.** An account is an email, and the old one may still
-  manage another team, so it isn't renamed. The code posts to
-  [MeContactController](../lib/web/controllers/me_contact_controller.ex), which logs the
-  browser in as the user for the new email, keeping remember-me if it was on.
+- **A new mobile number needs a code first.** Text login uses it, so
+  [ChangeOwnPhone](../lib/app/operation/change_own_phone.ex) texts a code to the new
+  number, a `"confirm"` user token that lives and dies like a login code, with the login
+  rate limits. Only a matching code sends the change to D4H. The member's email then gets
+  a notice, in case someone else made the change.

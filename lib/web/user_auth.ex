@@ -48,12 +48,6 @@ defmodule Web.UserAuth do
     |> redirect(to: user_return_to || signed_in_path(user))
   end
 
-  @doc "Whether this browser has the remember-me cookie, so a new session should keep it."
-  def remembered?(conn) do
-    conn = fetch_cookies(conn, signed: [@remember_me_cookie])
-    conn.cookies[@remember_me_cookie] != nil
-  end
-
   defp maybe_remember(conn, token, true),
     do: put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)
 

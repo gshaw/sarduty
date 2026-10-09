@@ -176,7 +176,7 @@ defmodule Web.Router do
       ] do
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/details", MeDetailsLive
-      live "/teams/:subdomain/me/contact", MeContactLive
+      live "/teams/:subdomain/me/mobile", MePhoneLive
     end
 
     scope "/teams/:subdomain/me" do
@@ -185,7 +185,6 @@ defmodule Web.Router do
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
-      post "/contact/confirm", MeContactController, :confirm
     end
 
     live_session :require_current_team_session,

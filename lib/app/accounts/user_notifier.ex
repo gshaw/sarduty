@@ -53,31 +53,6 @@ defmodule App.Accounts.UserNotifier do
 
   # The login text. The last line is the one-time code format iOS and Android read to
   # offer the code on the login page, bound to this site's domain.
-  @doc "A code that proves a member gets email at a new address (#156)."
-  def deliver_confirm_code(email_address, code) do
-    host = Web.Endpoint.host()
-
-    email =
-      new()
-      |> to(email_address)
-      |> from({"SAR Duty", "noreply@sarduty.com"})
-      |> subject("Your SAR Duty confirmation code: #{code}")
-      |> text_body("""
-      Your code to confirm this email for SAR Duty:
-
-      #{code}
-
-      Enter it on your contact details page. It works once, for 15 minutes. If you did not
-      ask for it, ignore this email.
-
-      @#{host} ##{code}
-      """)
-
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
-    end
-  end
-
   @doc "A code that proves a member gets texts at a new number (#156)."
   def deliver_confirm_text(phone, code) do
     Twilio.send_sms(phone, """
@@ -89,8 +64,8 @@ defmodule App.Accounts.UserNotifier do
     """)
   end
 
-  @doc "Tells a member, at their old email, that their email or mobile number changed."
-  def deliver_contact_changed(email_address, team, what, new_value) do
+  @doc "Tells a member, at their email, that their mobile number changed (#156)."
+  def deliver_phone_changed(email_address, team, new_phone) do
     team_name = team.name
     service = D4H.service_name(team)
 
@@ -98,9 +73,9 @@ defmodule App.Accounts.UserNotifier do
       new()
       |> to(email_address)
       |> from({"SAR Duty", "noreply@sarduty.com"})
-      |> subject("Your #{what} on #{team_name} changed")
+      |> subject("Your mobile number on #{team_name} changed")
       |> text_body("""
-      Your #{what} on #{team_name} is now #{new_value}. You changed it in SAR Duty, and
+      Your mobile number on #{team_name} is now #{new_phone}. You changed it in SAR Duty, and
       #{service} has it too.
 
       If you did not make this change, tell one of your team admins.
