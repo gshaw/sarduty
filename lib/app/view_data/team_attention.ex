@@ -28,7 +28,7 @@ defmodule App.ViewData.TeamAttention do
       refresh_item(rows.refresh, rows.service),
       drafts_item(rows.draft_count),
       expiring_item(rows.expiring_count, rows.expiring_days),
-      missing_details_item(rows.missing_details_count),
+      missing_details_item(rows.missing_details_count, rows.service),
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service),
       letters_item(rows.letters, now, rows.timezone)
@@ -92,9 +92,9 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp missing_details_item(0), do: nil
+  defp missing_details_item(0, _service), do: nil
 
-  defp missing_details_item(count) do
+  defp missing_details_item(count, service) do
     %{
       key: :missing_details,
       level: :info,
@@ -103,10 +103,14 @@ defmodule App.ViewData.TeamAttention do
           one: "%d member has no email or mobile phone",
           many: "%d members have no email or mobile phone"
         ),
-      detail: "Add the missing details in D4H.",
+      detail: missing_details_where(service),
       action: "Show members"
     }
   end
+
+  # A team on SAR Duty Records changes its members in SAR Duty.
+  defp missing_details_where(:d4h), do: "Add the missing details in D4H."
+  defp missing_details_where(:records), do: "Add the missing details on each member's page."
 
   defp group_changes_item(0), do: nil
 

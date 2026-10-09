@@ -25,6 +25,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   rows are recorded as skipped, "Not selected". A set can be discarded instead. An agent
   can never apply a set, and it can't propose group or award changes yet: group rules
   own their groups, and awards wait on #174's step 4.
+- **An edit is a set of one row** (source `edit`): a team admin changing one record of
+  a team on SAR Duty Records ([records.md](records.md)).
+  [ApplyEdit](../lib/app/operation/apply_edit.ex) proposes and applies it in one step,
+  then runs the sync so the next page shows the change. The row names only the fields
+  that changed, with their old values. Edits don't read D4H first.
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H

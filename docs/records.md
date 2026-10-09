@@ -35,6 +35,24 @@ like a D4H key. Existing D4H teams need no change.
 - `D4H.records_host/0` is `records.sarduty.com`. In dev, `RECORDS_HOST` points it at a
   local copy.
 
+## Editing records
+
+D4H teams change their records in D4H. A Records team has nowhere else to do it, so
+SAR Duty shows editing screens for Records teams only; a D4H team gets a 404 and no
+buttons. Each change is a change set of one row, source `:edit`, applied at once by
+[App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex) through `ApplyChangeSet`,
+then the sync copies it back. The row names only the fields that changed, with their old
+values, so it shows in the record's history. ApplyEdit refuses a D4H team.
+
+Records refuses a bad write with a 400 whose `title` says what is wrong; the page shows
+that title.
+
+- **Members**: add, change details, team admin or not, mark as left or rejoined.
+  `POST /members` and `permission` are Records' own; D4H adds members and sets access
+  only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
+  admin cannot stop being one or leave, and saving a retired member's details keeps
+  them retired.
+
 ## Where the code is
 
 - [App.Adapter.D4H](../lib/app/adapter/d4h.ex) calls Records exactly as it calls D4H,

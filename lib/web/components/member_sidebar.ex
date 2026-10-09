@@ -34,11 +34,16 @@ defmodule Web.Components.MemberSidebar do
         )} ago
       </dd>
 
-      <%!-- A team on SAR Duty Records has no D4H to open. --%>
-      <dt :if={!D4H.records?(@member.team)}>Actions</dt>
-      <dd :if={!D4H.records?(@member.team)}>
-        <ul class="action-list">
-          <li>
+      <%!-- A team on SAR Duty Records has no D4H to open, so it changes members here. --%>
+      <dt>Actions</dt>
+      <dd>
+        <ul id="member-actions" class="action-list">
+          <li :if={D4H.records?(@member.team)}>
+            <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>
+              Change details
+            </.a>
+          </li>
+          <li :if={!D4H.records?(@member.team)}>
             <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>
           </li>
         </ul>

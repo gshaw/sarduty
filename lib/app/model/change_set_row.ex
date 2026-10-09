@@ -17,7 +17,16 @@ defmodule App.Model.ChangeSetRow do
     belongs_to :member, Member
 
     field :action, Ecto.Enum,
-      values: [:update_attendance, :create_attendance, :add_group_member, :remove_group_member]
+      values: [
+        :update_attendance,
+        :create_attendance,
+        :add_group_member,
+        :remove_group_member,
+        :create_member,
+        :update_member,
+        :retire_member,
+        :rejoin_member
+      ]
 
     field :d4h_record_id, :integer
     field :old_value, :map

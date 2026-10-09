@@ -71,11 +71,7 @@ defmodule App.ViewData.ChangeHistory do
       at: row.applied_at,
       seen_after: nil,
       by: :sar_duty,
-      kind:
-        if(row.action in [:update_attendance, :create_attendance],
-          do: :attendance,
-          else: :group_membership
-        ),
+      kind: row_kind(row.action),
       source: row.change_set.source,
       applied_by: row.change_set.applied_by_user && row.change_set.applied_by_user.email,
       reason: row.reason,
@@ -189,6 +185,13 @@ defmodule App.ViewData.ChangeHistory do
     Enum.join(status ++ times ++ hours, ", ")
   end
 
+  defp row_kind(action) when action in [:update_attendance, :create_attendance], do: :attendance
+
+  defp row_kind(action) when action in [:add_group_member, :remove_group_member],
+    do: :group_membership
+
+  defp row_kind(_action), do: :record
+
   @doc "One change SAR Duty applied, as a sentence."
   def describe_row(%ChangeSetRow{action: action} = row, page)
       when action in [:update_attendance, :create_attendance] do
@@ -200,6 +203,16 @@ defmodule App.ViewData.ChangeHistory do
 
     "#{subject || "Attendance"} set to #{status(row.new_value["status"])}"
   end
+
+  def describe_row(%ChangeSetRow{action: :create_member}, _page), do: "Added in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :update_member}, _page),
+    do: "Details changed in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :retire_member}, _page), do: "Marked as left in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :rejoin_member}, _page),
+    do: "Marked as rejoined in SAR Duty"
 
   def describe_row(%ChangeSetRow{action: :add_group_member} = row, _page),
     do: "Added to the #{row_group(row)} group"
@@ -215,6 +228,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:group_rule), do: "group rule"
   def source_label(:attendance_import), do: "import attendance"
   def source_label(:agent), do: "AI agent"
+  def source_label(:edit), do: "edit"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

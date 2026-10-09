@@ -49,7 +49,8 @@ defmodule App.Operation.ApplyChangeSetTest do
     assert %ChangeSetRow{action: :remove_group_member} |> ApplyChangeSet.check(nil) == :ok
   end
 
-  @writes ~w(add_group_member remove_group_membership set_attendance create_attendance)
+  @writes ~w(add_group_member remove_group_membership set_attendance create_attendance
+             create_member update_member retire_member rejoin_member)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do
