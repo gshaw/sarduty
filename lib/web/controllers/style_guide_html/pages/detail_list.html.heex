@@ -16,6 +16,20 @@
       <dd>
         {Service.Format.datetime_medium(hd(activities()).finished_at, sample_team().timezone)}
       </dd>
+      <dt>Actions</dt>
+      <dd>
+        <ul id="detail-list-actions" class="action-list">
+          <li>
+            <.a href="#" external={true}>Open D4H activity</.a>
+          </li>
+          <li>
+            <.a href="#">Take attendance</.a>
+          </li>
+          <li>
+            <.a href="#">Mileage report</.a>
+          </li>
+        </ul>
+      </dd>
     </dl>
   </div>
 
@@ -27,4 +41,9 @@
 
   <h2>In the app</h2>
   <p>A plain <code>&lt;dl&gt;</code>. Each <code>dd</code> gets a rule under it.</p>
+  <p>
+    Things to do with the record go last, under Actions, as a
+    <code>&lt;ul class="action-list"&gt;</code>
+    of links. Each link fills its row, so the whole row takes a tap. On a touch screen each row is 44px tall.
+  </p>
 </.shell>

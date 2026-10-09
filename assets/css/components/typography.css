@@ -12,7 +12,13 @@
   .paragraph { margin-bottom: var(--sp-4); }
   .hint { color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 400; }
   .list { list-style: disc inside; }
-  .action-list { list-style: var(--list-style-type-arrow) inside; }
+  /* Each link fills its row, arrow included, so the whole row takes a tap.
+     Touch screens get 44px rows. The negative margin keeps the outer
+     spacing as it was. */
+  .action-list { --action-pad: var(--sp-1); margin-block: calc(-1 * var(--action-pad)); }
+  @media (pointer: coarse) { .action-list { --action-pad: calc((44px - var(--lh-md)) / 2); } }
+  .action-list a { display: block; padding-block: var(--action-pad); }
+  .action-list a::before { content: var(--list-style-type-arrow); display: inline-block; white-space: pre; color: var(--text); }
 
   .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
   .link:hover { color: var(--link-hover); text-decoration-thickness: 3px; }
