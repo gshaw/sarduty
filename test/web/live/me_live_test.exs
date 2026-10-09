@@ -63,6 +63,73 @@ defmodule Web.MeLiveTest do
     end
   end
 
+  describe "the member's records" do
+    setup %{team: team} do
+      year = DateTime.utc_now() |> DateTime.shift_zone!(team.timezone) |> Map.get(:year)
+      mid_year = year |> Date.new!(6, 1) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+      %{year: year, mid_year: mid_year}
+    end
+
+    test "shows this year's hours and activities, and no one else's",
+         %{conn: conn, team: team, member: member, mid_year: mid_year} do
+      attended = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})
+      finish = DateTime.add(mid_year, 2 * 3600)
+
+      attendance =
+        attendance_fixture(attended, member, %{started_at: mid_year, finished_at: finish})
+
+      other = activity_fixture(team, %{title: "Not mine", started_at: mid_year})
+      other_attendance = attendance_fixture(other, member_fixture(team), %{started_at: mid_year})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#hours-primary", "2 hours")
+      assert has_element?(lv, "#attendance-#{attendance.id}", "Swiftwater exercise")
+      refute has_element?(lv, "#attendance-#{other_attendance.id}")
+    end
+
+    test "switches to an earlier year the member attended in",
+         %{conn: conn, team: team, member: member, year: year, mid_year: mid_year} do
+      last_year = DateTime.add(mid_year, -365, :day)
+      activity = activity_fixture(team, %{title: "Last year's search", started_at: last_year})
+      attendance = attendance_fixture(activity, member, %{started_at: last_year})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#no-attendance")
+
+      lv |> element("#year-#{year - 1}") |> render_click()
+
+      assert_patch(lv, ~p"/teams/#{team}/me?year=#{year - 1}")
+      assert has_element?(lv, "#attendance-#{attendance.id}", "Last year's search")
+    end
+
+    test "a year with no attendance, or not a year, is a 404", %{conn: conn, team: team} do
+      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=1999") end
+      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
+    end
+
+    test "lists qualifications soonest to expire first, then expired ones",
+         %{conn: conn, team: team, member: member} do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      first_aid = qualification_fixture(team, %{title: "First Aid"})
+      rope = qualification_fixture(team, %{title: "Rope Rescue"})
+      avalanche = qualification_fixture(team, %{title: "Avalanche"})
+      other_team = qualification_fixture(team_fixture(), %{title: "Other team's"})
+
+      qualification_award_fixture(first_aid, member, %{ends_at: DateTime.add(now, 30, :day)})
+      qualification_award_fixture(rope, member)
+      qualification_award_fixture(avalanche, member, %{ends_at: DateTime.add(now, -30, :day)})
+      qualification_award_fixture(other_team, member)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#qualifications #qualification-#{first_aid.id}", "Expires soon")
+      assert has_element?(lv, "#qualifications #qualification-#{rope.id}", "Does not expire")
+      assert has_element?(lv, "#expired-qualifications #qualification-#{avalanche.id}")
+      refute has_element?(lv, "#qualification-#{other_team.id}")
+    end
+  end
+
   describe "who reaches it" do
     test "a member reaches no team admin page", %{conn: conn, team: team, member: member} do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}") end

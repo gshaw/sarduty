@@ -4,9 +4,9 @@ A team admin turns on member logins in **Team settings → Member logins**. Then
 current member of the team can log in with the email or mobile number D4H has for them,
 and land on their own page, `/teams/:subdomain/me`
 ([MeLive](../lib/web/live/me_live.ex)). It shows their ID card, with a button to get one
-when they have none, and their tax credit letters as PDFs. Issue #156 has the design and
-the later stages: hours, attendance, and qualifications, then profile edits written to
-D4H.
+when they have none, their tax credit letters as PDFs, their hours and activities for a
+year, and their qualifications. Issue #156 has the design and the stage still to come:
+profile edits written to D4H.
 
 ## What must stay true
 
@@ -33,3 +33,7 @@ D4H.
   tab.
 - **Member visits don't count as team use.** `RecordUserSeen` isn't called from member
   pages, so `/admin` still shows which teams' admins use SAR Duty.
+- **Hours match the letter.** The page counts with `CountTaxCreditHours`, as the letter
+  and the letter list do, so a member sees the number their letter will say. Their
+  records come from [MemberRecords](../lib/app/view_data/member_records.ex), which filters
+  by the member and their team.
