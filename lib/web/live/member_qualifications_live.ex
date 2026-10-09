@@ -164,6 +164,7 @@ defmodule Web.MemberQualificationsLive do
         phx-submit="award"
         class="max-w-xl"
       >
+        <.error_summary form={@form} />
         <.input
           field={@form[:qualification_id]}
           type="select"
@@ -172,8 +173,8 @@ defmodule Web.MemberQualificationsLive do
           options={@qualifications}
         />
         <div class="grid grid-cols-2 gap-x-6">
-          <.input field={@form[:starts_on]} type="date" label="Starts" />
-          <.input field={@form[:ends_on]} type="date" label="Expires (optional)" />
+          <.input field={@form[:starts_on]} type="date" label="Start" />
+          <.input field={@form[:ends_on]} type="date" label="End (optional)" />
         </div>
         <.form_actions>
           <.button variant={:success}>Award qualification</.button>

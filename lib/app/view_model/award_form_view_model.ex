@@ -22,9 +22,10 @@ defmodule App.ViewModel.AwardFormViewModel do
     ends_on = get_field(changeset, :ends_on)
 
     if starts_on && ends_on && Date.compare(ends_on, starts_on) != :gt,
-      do: add_error(changeset, :ends_on, "Enter an expiry after the start."),
+      do: add_error(changeset, :ends_on, "Enter an end after the start."),
       else: changeset
   end
 
-  def validate(form, params), do: form |> changeset(params) |> apply_action(:validate)
+  # :insert, not :validate, so a failed save shows the error summary.
+  def validate(form, params), do: form |> changeset(params) |> apply_action(:insert)
 end

@@ -50,6 +50,7 @@ defmodule Web.TitledRecordFormLive do
     <h1 class="title">{@page_title}</h1>
 
     <.form for={@form} id="titled-record-form" phx-submit="save" class="max-w-xl">
+      <.error_summary form={@form} />
       <.input field={@form[:title]} label="Title" />
       <.form_actions>
         <.button variant={:success}>{if @record, do: "Save #{@kind}", else: @page_title}</.button>

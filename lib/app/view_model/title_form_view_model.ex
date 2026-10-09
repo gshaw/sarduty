@@ -17,5 +17,5 @@ defmodule App.ViewModel.TitleFormViewModel do
   end
 
   def validate(form, params, max_length),
-    do: form |> changeset(params, max_length) |> apply_action(:validate)
+    do: form |> changeset(params, max_length) |> apply_action(:insert)
 end
