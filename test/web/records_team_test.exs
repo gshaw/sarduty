@@ -33,6 +33,28 @@ defmodule Web.RecordsTeamTest do
     end
   end
 
+  test "every editing page opens", %{conn: conn, team: team} do
+    member = member_fixture(team)
+    activity = activity_fixture(team)
+    group = group_fixture(team)
+    qualification = qualification_fixture(team)
+
+    paths = [
+      ~p"/teams/#{team}/members/new",
+      ~p"/teams/#{team}/members/#{member.id}/edit",
+      ~p"/teams/#{team}/activities/new",
+      ~p"/teams/#{team}/activities/#{activity.id}/edit",
+      ~p"/teams/#{team}/groups/new",
+      ~p"/teams/#{team}/groups/#{group.id}/edit",
+      ~p"/teams/#{team}/qualifications/new",
+      ~p"/teams/#{team}/qualifications/#{qualification.id}/edit"
+    ]
+
+    for path <- paths do
+      assert get(conn, path).status == 200, path
+    end
+  end
+
   test "the team home names Records", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#d4h-updated", "SAR Duty Records")

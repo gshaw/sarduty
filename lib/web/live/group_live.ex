@@ -136,10 +136,15 @@ defmodule Web.GroupLive do
   defp sidebar_content(assigns) do
     ~H"""
     <dl>
-      <dt :if={!D4H.records?(@team)}>Actions</dt>
-      <dd :if={!D4H.records?(@team)}>
-        <ul class="action-list">
-          <li>
+      <dt>Actions</dt>
+      <dd>
+        <ul id="group-actions" class="action-list">
+          <li :if={D4H.records?(@team)}>
+            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>
+              Rename or delete
+            </.a>
+          </li>
+          <li :if={!D4H.records?(@team)}>
             <.a external={true} href={D4H.build_url(@team, "/team/members")}>
               Open D4H members
             </.a>

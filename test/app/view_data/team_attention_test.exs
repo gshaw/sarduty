@@ -115,7 +115,8 @@ defmodule App.ViewData.TeamAttentionTest do
       refresh: %{state: :key_rejected},
       proposed_change_count: 2,
       missing_details_count: 3,
-      draft_count: 2
+      draft_count: 2,
+      expiring_count: 1
     }
 
     for item <- items(attrs, @october) do

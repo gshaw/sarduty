@@ -27,7 +27,7 @@ defmodule App.ViewData.TeamAttention do
     [
       refresh_item(rows.refresh, rows.service),
       drafts_item(rows.draft_count, rows.service),
-      expiring_item(rows.expiring_count, rows.expiring_days),
+      expiring_item(rows.expiring_count, rows.expiring_days, rows.service),
       missing_details_item(rows.missing_details_count, rows.service),
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service),
@@ -87,9 +87,16 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp expiring_item(0, _days), do: nil
+  defp expiring_item(0, _days, _service), do: nil
 
-  defp expiring_item(count, days) do
+  # A team on SAR Duty Records awards qualifications on each member's tab in SAR Duty.
+  defp expiring_item(count, days, :records),
+    do: %{
+      expiring_item(count, days, :d4h)
+      | detail: "Record renewals on each member's Qualifications tab."
+    }
+
+  defp expiring_item(count, days, :d4h) do
     %{
       key: :expiring,
       level: :warning,

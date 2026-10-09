@@ -221,6 +221,23 @@ defmodule App.ViewData.ChangeHistory do
 
   def describe_row(%ChangeSetRow{action: :delete_activity}, _page), do: "Deleted in SAR Duty"
 
+  def describe_row(%ChangeSetRow{action: :award_qualification} = row, _page),
+    do: "#{row.new_value["title"] || "A qualification"} awarded in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :remove_award} = row, _page),
+    do: "#{row.old_value["title"] || "A qualification"} removed in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: action}, _page)
+      when action in [
+             :create_qualification,
+             :update_qualification,
+             :delete_qualification,
+             :create_group,
+             :update_group,
+             :delete_group
+           ],
+      do: "Changed in SAR Duty"
+
   def describe_row(%ChangeSetRow{action: :add_group_member} = row, _page),
     do: "Added to the #{row_group(row)} group"
 
