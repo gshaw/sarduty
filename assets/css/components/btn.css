@@ -77,21 +77,9 @@
   .btn-sm { font-size: var(--fs-sm); line-height: var(--lh-sm); padding: 2px var(--sp-3); }
   .btn-lg { font-size: var(--fs-lg); line-height: var(--lh-lg); padding: 8px var(--sp-6); }
 
-  /* Touch screens: every button takes a 44px tap (WCAG 2.5.5). A filled button grows to
-     44px. A link keeps its look; an empty box centred on it takes the tap. */
-  @media (pointer: coarse) {
-    .btn:not(.btn-link) { min-width: 44px; min-height: 44px; }
-    .btn-link { position: relative; }
-    .btn-link::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: max(100%, 44px);
-      height: max(100%, 44px);
-      transform: translate(-50%, -50%);
-    }
-  }
+  /* Touch screens: every button, link look included, is at least 44px square (WCAG
+     2.5.5). A link has no box, so only the space around it grows. */
+  @media (pointer: coarse) { .btn { min-width: 44px; min-height: 44px; } }
 
   @media (hover: hover) {
     .btn:not(:disabled):hover { background: var(--btn-bg-hover); color: var(--btn-fg); text-decoration: none; }
