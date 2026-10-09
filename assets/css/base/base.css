@@ -45,6 +45,15 @@
     border-radius: 0;
   }
 
+  /* iOS Safari gives date and time inputs a native min-width that overflows a phone-width
+     column, centres the value, and collapses the box when empty. */
+  input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"], [type="week"]) {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
+  ::-webkit-date-and-time-value { text-align: left; min-height: 1lh; }
+
   textarea { min-height: 96px; resize: vertical; }
   input[readonly] { background: var(--surface-alt); border-color: var(--border); }
   :is(input, select, textarea):disabled { opacity: 0.5; cursor: not-allowed; }
