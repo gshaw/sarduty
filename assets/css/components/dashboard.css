@@ -12,19 +12,19 @@
 .next-up-time { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); }
 .next-up-title { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin: var(--sp-1) 0; }
 
-.dash-rows { list-style: none; padding: 0; margin: 0; }
-.dash-rows > li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border-subtle); }
-.dash-rows > li:last-child { border-bottom: 0; }
-.dash-row-when { display: flex; flex-direction: column; min-width: 92px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+/* A row inside a row link: when, or a mark, beside the title. */
+.dash-row { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.dash-row-when { display: flex; flex-direction: column; flex: none; width: 92px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
 .dash-row-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .card > footer { margin-top: var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+/* A finger-sized target on touch screens, without moving the text. */
+@media (pointer: coarse) { .card > footer > a { display: inline-block; padding-block: var(--sp-3); margin-block: calc(-1 * var(--sp-3)); } }
 
-.attention > li { align-items: flex-start; }
 .attention-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--info); }
 .is-warning .attention-mark { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent); }
 
-/* Phones: the logo is smaller. NextUp stacks, with a full-width button, and a row's
-   button drops under its title when the title would get squeezed. The stats sit two to a row. */
+/* Phones: the logo is smaller. NextUp stacks, with a full-width button. The stats sit
+   two to a row. */
 @media (width < 40rem) {
   .team-heading > .logo-lg { height: 64px; }
 
@@ -34,10 +34,9 @@
   .next-up-time { font-size: var(--fs-lg); line-height: var(--lh-lg); }
   .next-up > .btn { width: 100%; }
 
-  .dash-rows > li { flex-wrap: wrap; }
-  .dash-row-title { flex: 1 1 10rem; }
-  #coming-up-list > li > .btn { margin-left: calc(92px + var(--sp-3)); }
-  .attention > li > .btn { margin-left: calc(10px + var(--sp-3)); }
+  /* Coming up: the day and time go on one line above the title, which gets the full width. */
+  #coming-up-list .dash-row { flex-direction: column; gap: 0; }
+  #coming-up-list .dash-row-when { flex-direction: row; gap: var(--sp-2); width: auto; }
 
   .chart-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
 }

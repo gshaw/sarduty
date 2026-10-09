@@ -1,0 +1,22 @@
+/* A list row that is one link (row_link.ex). See /styles/row-link. */
+@layer components {
+  .row-links { list-style: none; padding: 0; margin: 0; }
+  .row-links > li { border-bottom: 1px solid var(--border-subtle); }
+  .row-links > li:last-child { border-bottom: 0; }
+
+  /* The negative margin lets the hover colour reach past the text without moving it. */
+  .row-link {
+    display: flex; align-items: center; gap: var(--sp-3); min-height: 44px;
+    padding: var(--sp-2); margin-inline: calc(-1 * var(--sp-2));
+    color: var(--text); text-decoration: none; border-radius: 4px;
+  }
+  .row-link-body { flex: 1; min-width: 0; }
+  .row-link-chevron { flex: none; color: var(--text-muted); }
+  .row-link .text-link { text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
+
+  @media (hover: hover) {
+    .row-link:hover { background: var(--surface-alt); }
+    .row-link:hover .text-link { color: var(--link-hover); text-decoration-thickness: 3px; }
+    .row-link:hover .row-link-chevron { color: var(--text); }
+  }
+}

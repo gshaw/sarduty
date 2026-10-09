@@ -74,6 +74,7 @@ defmodule Web do
       import Web.Components.D4H
       import Web.Components.Markdown
       import Web.Components.Pagination
+      import Web.Components.RowLink
       import Web.Components.Table
 
       unquote(html_helpers())

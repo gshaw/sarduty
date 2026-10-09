@@ -90,7 +90,12 @@ defmodule Web.TeamDashboardLiveTest do
              ~s{#next-up-take-attendance[href="/teams/#{team.subdomain}/activities/#{soon.id}/take-attendance"]}
            )
 
-    assert has_element?(lv, "#coming-up-#{later.id}", "Take attendance")
+    assert has_element?(
+             lv,
+             ~s{#coming-up-#{later.id} a[href="/teams/#{team.subdomain}/activities/#{later.id}"]},
+             "Night navigation"
+           )
+
     refute has_element?(lv, "#coming-up-#{soon.id}")
     refute has_element?(lv, "#coming-up-list", "Too far off")
     refute has_element?(lv, "#next-up", "Another team's")

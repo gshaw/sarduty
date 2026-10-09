@@ -9,6 +9,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.D4H
   import Web.Components.GroupRule
   import Web.Components.Pagination
+  import Web.Components.RowLink
   import Web.Components.Scanner
   import Web.Components.Table
 
@@ -67,6 +68,7 @@ defmodule Web.StyleGuideHTML do
          {:map, "Map", "A dot per activity on a Mapbox map."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
+         {:row_link, "Row link", "A list row that goes to one place."},
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
          {:table, "Table", "Dense rows, sorting, and header groups."},
