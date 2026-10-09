@@ -1,5 +1,6 @@
 defmodule App.Hosted.APITest do
-  use App.DataCase, async: true
+  # Not async: a hosted refresh holds SQLite's write lock long enough to stall other tests.
+  use App.DataCase
 
   import Plug.Conn
   import Plug.Test
