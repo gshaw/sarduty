@@ -42,8 +42,23 @@
     </.form_actions>
   </div>
   <p class="spec">
-    Default is 36px tall for forms and page actions. Small is 24px, for table rows and toolbars. Large, <code>size=&#123;:lg&#125;</code>, is only for the one action on the door's scan page and the ID card check.
+    Default is 36px tall for forms and page actions. Small is 24px. Large, <code>size=&#123;:lg&#125;</code>, is only for the one action on the door's scan page and the ID card check.
   </p>
+  <ul>
+    <li>
+      <strong>Small</strong>
+      buttons belong in table rows and the forms of the group rule editor. Nowhere else.
+    </li>
+    <li>
+      Everywhere else, use the default size. If it goes somewhere, use a link, or a
+      <a href={page_path(:row_link)}>row link</a>
+      in a list of places.
+    </li>
+    <li>
+      On a touch screen, every button is at least 44px tall and wide. A link button keeps its
+      look; the space around it grows.
+    </li>
+  </ul>
 
   <h2>States</h2>
   <p>
