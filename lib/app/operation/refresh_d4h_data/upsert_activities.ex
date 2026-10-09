@@ -51,6 +51,17 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
     end
   end
 
+  @doc """
+  Marks one activity deleted now, when SAR Duty deleted it in a hosted team's store. The
+  sync can't always: it never marks the last activity of a kind (plan_deleted/2).
+  """
+  def mark_one_deleted(team, activity_id, now) do
+    Repo.transaction(fn ->
+      set_deleted_at(team.id, [activity_id], DateTime.truncate(now, :second))
+      AttendanceLink.close_all!(team, [activity_id], now)
+    end)
+  end
+
   # Kept, not deleted: attendance links, scans, and no-shows point at them. Their open
   # attendance links close, so the door stops taking scans. Returns the plan, with local
   # ids. The sync calls this too, with the D4H ids of one kind (#163).

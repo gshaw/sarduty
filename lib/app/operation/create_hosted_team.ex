@@ -12,6 +12,7 @@ defmodule App.Operation.CreateHostedTeam do
 
   alias App.Adapter.D4H
   alias App.Hosted
+  alias App.Model.Activity
   alias App.Model.Team
   alias App.Operation.SeedHostedTeam
   alias App.Repo
@@ -61,6 +62,11 @@ defmodule App.Operation.CreateHostedTeam do
           status: "OPERATIONAL",
           starts_at: DateTime.truncate(now, :second)
         })
+
+      # Tax credit letters count activities by these tags' titles.
+      for title <- [Activity.primary_hours_tag(), Activity.secondary_hours_tag()] do
+        {:ok, _tag} = Hosted.create(hosted, "tags", %{title: title})
+      end
 
       if view_model.sample_data, do: SeedHostedTeam.call(hosted, now)
 

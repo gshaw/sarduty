@@ -565,6 +565,77 @@ defmodule App.Adapter.D4H do
     write(context, :patch, "/members/#{d4h_member_id}/retire", json, &D4H.Member.build/1)
   end
 
+  @activity_fields %{
+    "title" => "referenceDescription",
+    "description" => "description",
+    "tracking_number" => "trackingNumber",
+    "started_at" => "startsAt",
+    "finished_at" => "endsAt"
+  }
+
+  @doc """
+  Adds an activity of `kind` ("event", "exercise", or "incident"), then sets its tags and
+  published flag when `attrs` name them.
+  """
+  def create_activity(context, kind, attrs) when kind in ["event", "exercise", "incident"] do
+    with {:ok, activity} <-
+           write(context, :post, "/#{kind}s", activity_json(attrs), &D4H.Activity.build/1) do
+      finish_activity(context, kind, activity.d4h_activity_id, attrs)
+    end
+  end
+
+  def update_activity(context, kind, d4h_activity_id, attrs)
+      when kind in ["event", "exercise", "incident"] do
+    url = "/#{kind}s/#{d4h_activity_id}"
+
+    with {:ok, _activity} <-
+           write(context, :patch, url, activity_json(attrs), &D4H.Activity.build/1) do
+      finish_activity(context, kind, d4h_activity_id, attrs)
+    end
+  end
+
+  @doc "Deletes an activity. DELETE is SAR Duty's own; D4H has no delete in its API."
+  def delete_activity(context, kind, d4h_activity_id)
+      when kind in ["event", "exercise", "incident"],
+      do:
+        write(context, :delete, "/#{kind}s/#{d4h_activity_id}", nil, fn _body ->
+          d4h_activity_id
+        end)
+
+  defp finish_activity(context, kind, d4h_activity_id, attrs) do
+    url = "/#{kind}s/#{d4h_activity_id}"
+    build = &D4H.Activity.build/1
+
+    with {:ok, activity} <-
+           maybe_write(
+             attrs,
+             "tag_ids",
+             &write(context, :post, url <> "/tags", %{tagIds: &1}, build)
+           ),
+         {:ok, activity} <-
+           maybe_write(
+             attrs,
+             "published",
+             &write(context, :post, url <> "/publish", %{published: &1}, build),
+             activity
+           ) do
+      {:ok, activity || %D4H.Activity{d4h_activity_id: d4h_activity_id}}
+    end
+  end
+
+  defp maybe_write(attrs, key, write, previous \\ nil) do
+    if Map.has_key?(attrs, key), do: write.(attrs[key]), else: {:ok, previous}
+  end
+
+  defp activity_json(attrs) do
+    json = rename(attrs, @activity_fields)
+
+    if Map.has_key?(attrs, "place"),
+      do:
+        Map.put(json, "address", %{street: attrs["place"], town: nil, region: nil, country: nil}),
+      else: json
+  end
+
   defp member_json(attrs) do
     attrs
     |> rename(@member_fields)
@@ -582,7 +653,9 @@ defmodule App.Adapter.D4H do
   end
 
   defp write(context, method, url, json, build) do
-    case Req.request(context, method: method, url: url, json: json, retry: false) do
+    options = [method: method, url: url, retry: false] ++ if(json, do: [json: json], else: [])
+
+    case Req.request(context, options) do
       {:ok, %{status: status} = response} when status in 200..299 -> {:ok, build.(response.body)}
       result -> {:error, write_error(result)}
     end

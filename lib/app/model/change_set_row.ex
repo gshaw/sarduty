@@ -25,7 +25,10 @@ defmodule App.Model.ChangeSetRow do
         :create_member,
         :update_member,
         :retire_member,
-        :rejoin_member
+        :rejoin_member,
+        :create_activity,
+        :update_activity,
+        :delete_activity
       ]
 
     field :d4h_record_id, :integer

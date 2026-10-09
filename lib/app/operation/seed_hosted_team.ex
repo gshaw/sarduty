@@ -6,7 +6,6 @@ defmodule App.Operation.SeedHostedTeam do
   """
 
   alias App.Hosted
-  alias App.Model.Activity
 
   @members [
     {"Avery Morrison", "Team Leader"},
@@ -27,7 +26,10 @@ defmodule App.Operation.SeedHostedTeam do
     {"Search Manager", 60}
   ]
 
+  # Days ago, so a negative number is still to come. Activities from the last 2 weeks
+  # stay drafts, so their attendance can still change.
   @activities [
+    {"event", "Monthly meeting", -5, 2, ["Secondary Hours"]},
     {"exercise", "Night navigation", 7, 3, ["Primary Hours", "Training"]},
     {"event", "Monthly meeting", 14, 2, ["Secondary Hours"]},
     {"incident", "Missing hiker", 20, 6, ["Primary Hours"]},
@@ -70,12 +72,11 @@ defmodule App.Operation.SeedHostedTeam do
     member
   end
 
+  # The hours tags come with every hosted team; Training is the sample's own.
   defp create_tags(team) do
-    for title <- [Activity.primary_hours_tag(), Activity.secondary_hours_tag(), "Training"],
-        into: %{} do
-      {:ok, tag} = Hosted.create(team, "tags", %{title: title})
-      {title, tag.id}
-    end
+    {:ok, _training} = Hosted.create(team, "tags", %{title: "Training"})
+    {tags, _total} = Hosted.list(team, "tags", %{})
+    Map.new(tags, &{&1.title, &1.id})
   end
 
   defp create_activity(
@@ -101,18 +102,23 @@ defmodule App.Operation.SeedHostedTeam do
     {:ok, _activity} =
       Hosted.update(team, "#{kind}s", activity.id, %{
         tag_ids: Enum.map(tags, &tag_ids[&1]),
-        published: true
+        published: days_ago > 14
       })
 
-    # Every member but a few, a different few each time.
+    # Nobody has attended one still to come.
+    if days_ago > 0, do: attend(team, activity, members, index)
+  end
+
+  # Every member but a few, a different few each time.
+  defp attend(team, activity, members, index) do
     for {member, member_index} <- Enum.with_index(members), rem(member_index + index, 4) != 0 do
       {:ok, _attendance} =
         Hosted.create(team, "attendance", %{
           activity_id: activity.id,
           member_id: member.id,
           status: "ATTENDING",
-          starts_at: starts_at,
-          ends_at: ends_at
+          starts_at: activity.starts_at,
+          ends_at: activity.ends_at
         })
     end
   end

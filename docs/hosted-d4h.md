@@ -59,6 +59,14 @@ gets a 404 and edits in D4H.
 
 - **Members**: add, change details, make a team admin (`permission` 0) or not (2), and
   mark as left or rejoined (D4H's retire). `/members/new`, `/members/:id/edit`.
+- **Activities**: add any kind, change its title, times, place, tracking number,
+  description, and published flag, and delete it. The tax credit hours choice sets the
+  `Primary Hours` or `Secondary Hours` tag, which every hosted team gets when it's
+  created. The place is one line, kept as the address's street. A delete also marks the
+  copy at once, since the sync never marks the last activity of a kind.
+  `/activities/new`, `/activities/:id/edit`.
+- **Attendance** needs nothing new: the door, import attendance, and an AI agent's
+  proposals write to the store through change sets as they write to D4H.
 
 ## What it serves
 

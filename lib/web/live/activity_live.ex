@@ -143,6 +143,14 @@ defmodule Web.ActivityLive do
       <dt :if={!@activity.deleted_at}>Actions</dt>
       <dd :if={!@activity.deleted_at}>
         <ul id="activity-actions" class="action-list">
+          <li :if={D4H.hosted?(@activity.team)}>
+            <.a
+              id="activity-edit"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
+            >
+              Change details
+            </.a>
+          </li>
           <li :if={!D4H.hosted?(@activity.team)}>
             <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
               Open D4H activity

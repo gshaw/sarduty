@@ -44,7 +44,7 @@ defmodule App.Operation.CreateHostedTeamTest do
     member_ids = from(m in Member, where: m.team_id == ^team.id, select: m.id)
 
     assert team.id |> Member.get_all() |> length() == 11
-    assert count(where(Activity, team_id: ^team.id)) == 8
+    assert count(where(Activity, team_id: ^team.id)) == 9
     assert count(where(Group, team_id: ^team.id)) == 2
     assert count(where(Attendance, [a], a.member_id in subquery(member_ids))) > 40
     assert count(where(MemberQualificationAward, [a], a.member_id in subquery(member_ids))) > 10

@@ -178,7 +178,9 @@ defmodule Web.Router do
       ] do
       live "/teams/:subdomain", TeamDashboardLive
       live "/teams/:subdomain/activities", ActivityCollectionLive
+      live "/teams/:subdomain/activities/new", ActivityFormLive, :new
       live "/teams/:subdomain/activities/:id", ActivityLive
+      live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit
       live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
       live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive
