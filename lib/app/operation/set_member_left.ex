@@ -10,14 +10,19 @@ defmodule App.Operation.SetMemberLeft do
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.ApplyEdit
+  alias App.Operation.SaveMember
 
   @doc "`{:ok, member}` or `{:error, text}`."
   def call(%Team{} = team, %Member{team_id: team_id} = member, left?, %User{} = user, now)
       when team_id == team.id do
-    row = plan(member, left?, now)
+    if left? and SaveMember.last_admin?(team, member, now) do
+      {:error, "Make another member a team admin first."}
+    else
+      row = plan(member, left?, now)
 
-    with {:ok, _d4h_member_id} <- ApplyEdit.call(team, user, row, now) do
-      {:ok, Member.find!(team, member.id)}
+      with {:ok, _d4h_member_id} <- ApplyEdit.call(team, user, row, now) do
+        {:ok, Member.find!(team, member.id)}
+      end
     end
   end
 

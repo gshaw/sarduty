@@ -54,5 +54,6 @@ defmodule App.Operation.SaveMemberTest do
     retired = %{member() | d4h_status: "RETIRED"}
     form = MemberFormViewModel.from_member(retired, @tz, nil)
     assert SaveMember.plan(retired, form, @tz) == :unchanged
+    assert SaveMember.plan(retired, %{form | status: "OBSERVER"}, @tz) == :unchanged
   end
 end

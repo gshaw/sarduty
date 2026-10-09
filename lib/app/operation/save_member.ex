@@ -23,11 +23,25 @@ defmodule App.Operation.SaveMember do
     form = MemberFormViewModel.from_member(member, team.timezone, nil)
 
     with {:ok, values} <- MemberFormViewModel.validate(form, params) do
-      case plan(member, values, team.timezone) do
-        :unchanged -> {:ok, member}
-        row -> apply_row(team, user, row, now)
-      end
+      member |> plan(values, team.timezone) |> save(team, member, user, now)
     end
+  end
+
+  defp save(:unchanged, _team, member, _user, _now), do: {:ok, member}
+
+  defp save(%{new_value: %{"permission" => @member}} = row, team, member, user, now) do
+    if last_admin?(team, member, now),
+      do: {:error, "Make another member a team admin first."},
+      else: apply_row(team, user, row, now)
+  end
+
+  defp save(row, team, _member, user, now), do: apply_row(team, user, row, now)
+
+  @doc "Whether `member` is the team's only team admin, so taking it away locks the team out."
+  def last_admin?(_team, nil, _now), do: false
+
+  def last_admin?(team, member, now) do
+    team |> Member.get_managers(now) |> Enum.map(& &1.id) == [member.id]
   end
 
   defp apply_row(team, user, row, now) do
@@ -45,7 +59,12 @@ defmodule App.Operation.SaveMember do
 
   def plan(%Member{} = member, %MemberFormViewModel{} = values, timezone) do
     old = current(member, timezone)
-    new = values |> fields(timezone) |> Map.reject(fn {key, value} -> old[key] == value end)
+
+    new =
+      values
+      |> fields(timezone)
+      |> Map.reject(fn {key, value} -> old[key] == value end)
+      |> keep_retired(member)
 
     if new == %{} do
       :unchanged
@@ -59,6 +78,11 @@ defmodule App.Operation.SaveMember do
       }
     end
   end
+
+  # A retired member's status stays RETIRED: "Mark as rejoined" brings them back, with
+  # their left date cleared.
+  defp keep_retired(new, %Member{d4h_status: "RETIRED"}), do: Map.delete(new, "status")
+  defp keep_retired(new, _member), do: new
 
   defp fields(values, timezone) do
     %{

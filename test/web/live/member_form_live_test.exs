@@ -34,7 +34,33 @@ defmodule Web.MemberFormLiveTest do
     assert Repo.get_by!(ChangeSet, team_id: team.id, source: :edit)
   end
 
+  test "the only team admin can't stop being one or leave", %{conn: conn, team: team} do
+    member = Repo.get_by!(Member, team_id: team.id, name: "Robin Example")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
+
+    html = lv |> form("#member-form", form: %{team_admin: "false"}) |> render_submit()
+    assert html =~ "Make another member a team admin first."
+
+    assert lv |> element("#member-leave") |> render_click() =~
+             "Make another member a team admin first."
+
+    assert Repo.reload!(member).d4h_permission == 0
+  end
+
   test "a team admin changes a member's details and marks them as left", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/new")
+
+    lv
+    |> form("#member-form",
+      form: %{
+        name: "Second Admin",
+        email: "second@example.com",
+        joined_on: "2026-01-15",
+        team_admin: "true"
+      }
+    )
+    |> render_submit()
+
     member = Repo.get_by!(Member, team_id: team.id, name: "Robin Example")
     {:ok, page, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}")
     assert has_element?(page, "#member-edit")
