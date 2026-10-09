@@ -54,26 +54,18 @@ defmodule App.Operation.SendAttendanceToD4HTest do
              plan([time(lena)], [], [lena])
   end
 
-  test "a member who signed up and didn't arrive is marked absent" do
+  test "a member who signed up and didn't arrive is marked absent, a no-show" do
     sam = member(3, "Sam")
 
-    assert %{"Sam" => %{action: :absent, selected: true, notes: []}} =
-             plan([], [row(sam, "requested")], [sam])
+    assert %{"Sam" => %{action: :absent, selected: true, notes: []} = change} =
+             plan([], [row(sam, "attending")], [sam])
+
+    assert SendAttendanceToD4H.no_show?(change)
   end
 
-  test "only a member who signed up and didn't come is a no-show" do
-    [sam, jo] = [member(3, "Sam"), member(4, "Jo")]
-    changes = plan([], [row(sam, "requested"), row(jo, "attending")], [sam, jo])
-
-    assert SendAttendanceToD4H.no_show?(changes["Sam"])
-    refute SendAttendanceToD4H.no_show?(changes["Jo"])
-  end
-
-  test "a member attending in D4H with no scan is offered as absent, unchecked" do
+  test "an invite nobody replied to is left alone" do
     jo = member(4, "Jo")
-
-    assert %{"Jo" => %{action: :absent, selected: false, notes: [:attending_without_scan]}} =
-             plan([], [row(jo, "attending")], [jo])
+    assert plan([], [row(jo, "requested")], [jo]) == %{}
   end
 
   test "an absent row with no scan is left alone" do
@@ -99,7 +91,7 @@ defmodule App.Operation.SendAttendanceToD4HTest do
 
   test "a D4H row for someone not on the team is skipped" do
     stranger = member(9, "Stranger")
-    assert plan([], [row(stranger, "requested")], []) == %{}
+    assert plan([], [row(stranger, "attending")], []) == %{}
   end
 
   test "a member with two D4H rows gets one change, on the first row" do

@@ -101,9 +101,9 @@ still fix times.
   for the same member and counts their hours twice (tested on 2026-10-04, see #139), so
   only a member D4H has no row for gets a `POST`. Writes don't retry: a retried `POST`
   could add someone twice, and a second send plans from what D4H has by then.
-- **Signed up and did not arrive means absent**, checked by default. A member already
-  attending in D4H with no scan is offered as absent but unchecked, since someone may
-  have marked them by hand.
+- **Signed up and did not arrive means absent**, checked by default. Signed up is D4H's
+  `ATTENDING`. `REQUESTED` only means invited: D4H gives every invited member that row
+  until they reply, so a requested row with no scan is left alone.
 - **A published activity is refused.** D4H's published flag is read live, not from the
   nightly copy, and the page says to unpublish it in D4H first.
 - **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity
@@ -114,8 +114,7 @@ still fix times.
 
 ## No-shows
 
-When a send marks a member absent who had signed up (D4H's `REQUESTED`), SAR Duty records
-a no-show ([NoShow](../lib/app/model/no_show.ex)). The Take attendance page lists them with
-phone and email, and a team admin ticks each one followed up once they know the member is
-OK. Sending again doesn't add a second row. A member already attending in D4H whom the
-admin marks absent is not a no-show: someone else decided they weren't there.
+When a send marks a member absent who had signed up (D4H's `ATTENDING`), SAR Duty
+records a no-show ([NoShow](../lib/app/model/no_show.ex)). The Take attendance page lists
+them with phone and email, and a team admin ticks each one followed up once they know the
+member is OK. Sending again doesn't add a second row.

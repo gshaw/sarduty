@@ -86,7 +86,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     activity: activity
   } do
     raj = member_fixture(team, %{name: "Raj Patel"})
-    attendance_fixture(activity, raj, %{status: "requested"})
+    attendance_fixture(activity, raj, %{status: "attending"})
     walk_in = member_fixture(team)
 
     {:ok, lv, _html} = live(conn, take_path(team, activity))

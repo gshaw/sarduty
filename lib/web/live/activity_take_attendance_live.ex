@@ -356,8 +356,8 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp action_class(_action), do: "text-success-text font-semibold"
 
   defp status_text(nil), do: "Not listed"
-  defp status_text("requested"), do: "Signed up"
-  defp status_text("attending"), do: "Attending"
+  defp status_text("requested"), do: "No reply"
+  defp status_text("attending"), do: "Signed up"
   defp status_text("absent"), do: "Absent"
   defp status_text(status), do: status
 
@@ -488,13 +488,9 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   defp note_class(:left_before_arriving), do: "text-danger-text"
-  defp note_class(:attending_without_scan), do: "font-semibold"
   defp note_class(_note), do: "text-text-muted"
 
   defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."
   defp note_text(:no_departure), do: "No departure scan. Uses the end time."
   defp note_text(:left_before_arriving), do: "Left before arriving. Fix the times at the door."
-
-  defp note_text(:attending_without_scan),
-    do: "Attending in D4H, but no scan. Check before sending."
 end

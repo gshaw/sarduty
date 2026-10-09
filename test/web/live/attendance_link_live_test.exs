@@ -340,9 +340,11 @@ defmodule Web.AttendanceLinkLiveTest do
       member: member
     } do
       raj = member_fixture(team, %{name: "Raj Patel", phone: "604 555 1234"})
-      attendance_fixture(activity, member, %{status: "requested"})
-      attendance_fixture(activity, raj, %{status: "requested"})
+      attendance_fixture(activity, member, %{status: "attending"})
+      attendance_fixture(activity, raj, %{status: "attending"})
       attendance_fixture(activity, member_fixture(team), %{status: "absent"})
+      # An invite nobody replied to is not a sign-up.
+      attendance_fixture(activity, member_fixture(team), %{status: "requested"})
 
       {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
       assert has_element?(lv, "#toggle-yet-to-arrive", "2 of 2 signed up")

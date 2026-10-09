@@ -11,7 +11,7 @@ defmodule Web.ActivitySendAttendanceTest do
   alias App.Operation.CreateAttendanceLink
   alias App.Repo
 
-  # The Send to D4H part of the Take attendance page, with D4H stubbed. Mei signed up
+  # The Send to D4H part of the Take attendance page, with D4H stubbed. Mei was invited
   # and arrived, Lena walked in, and Sam signed up and didn't come.
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})
@@ -59,7 +59,7 @@ defmodule Web.ActivitySendAttendanceTest do
   # Answers reads like D4H and reports each write to the test.
   defp stub_d4h(ctx, published \\ false) do
     test_pid = self()
-    rows = [row(ctx, 501, ctx.mei, "REQUESTED"), row(ctx, 503, ctx.sam, "REQUESTED")]
+    rows = [row(ctx, 501, ctx.mei, "REQUESTED"), row(ctx, 503, ctx.sam, "ATTENDING")]
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
