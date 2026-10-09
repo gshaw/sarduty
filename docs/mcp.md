@@ -1,7 +1,8 @@
 # MCP endpoint
 
 A team's managers can connect their own AI agent to SAR Duty, which reads a few
-allowlisted views of the team's data and changes nothing (#28). It is a trial: an admin
+allowlisted views of the team's data (#28). The one write is a proposal of attendance
+changes, which waits for a team admin to send it. It is a trial: an admin
 turns it on per team, starting with South Fraser. The use case that shaped the tools is
 a quarterly check of each member's hours by activity tag against the team's attendance
 policy. The policy lives in the agent's prompt, not in SAR Duty.
@@ -22,7 +23,7 @@ policy. The policy lives in the agent's prompt, not in SAR Duty.
 - **Every request rechecks** the token is live, the team's switch is on, and the user
   still passes the D4H bar, `Team.managed_by?/3`
   ([AuthorizeMCPRequest](../lib/app/operation/authorize_mcp_request.ex)). Losing Owner or
-  Editor in D4H ends a token's access within a day, after the next refresh.
+  Editor in D4H ends a token's access at the next sync, within 10 minutes.
 - **Bearer only**: `Authorization: Bearer sarduty_mcp_…`. The token decides the team; a
   URL naming another team gets 404. There is no `?access=` and no `MCP_ACCESS_KEY`.
   Honeybadger drops the header (`http_authorization` in `filter_keys`).

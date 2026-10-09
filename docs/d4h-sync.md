@@ -212,9 +212,11 @@ than waiting for the next refresh. See [group-rules.md](group-rules.md).
 
 ## Who can log in
 
-Login is by emailed code only (#142, replacing the link from #57). A code is six digits,
-works once for 15 minutes, and dies after 5 wrong tries; `Web.LoginLimit` caps sends and
-misses per email and IP. 20 wrong codes in a day block an email or number, and its owner
+Login is by a code, emailed, or texted when Twilio is set up (#142, #150, #241; the
+link from #57 is gone). One field takes an email or a mobile number. A code is six
+digits, works once for 15 minutes, and dies after 5 wrong tries. A code sent in the last
+minute stands, so a double tap sends one. `Web.LoginLimit` caps sends and misses per
+email, number, and IP. 20 wrong codes in a day block an email or number, and its owner
 gets an email saying so, but a browser that has logged in to it before (a signed
 `_sarduty_known_browser` cookie) is never blocked by them, so nobody can lock a person out
 of their own browsers (#176). A login lasts until the browser closes; only ticking "Remember
@@ -241,16 +243,13 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
   `bin/sarduty rpc`:
   `App.Model.TeamLoginGrant.grant!(subdomain, email, reason)`, and removes it with
   `revoke!(subdomain, email)`. `/admin` and the team's Team admins page list them.
-- **The link** is 128 random bits, stored only as a hash, valid for 15 minutes and once.
-  A request within a minute of the last one sends nothing, and `Web.LoginLimit` caps
-  requests per email and per IP. Opened in the browser that asked for it, the link logs
-  in on its own; anywhere else it waits for a button, so mail scanners can't use it up.
 - **Landing**: the page that asked for a login, else the team the user last opened
   (`users.last_team_id`), else their first. An admin with no team lands on `/admin`.
 - `/teams/:subdomain/settings/managers` shows the team who can log in, with the same list on `/admin`.
 - **New teams sign themselves up** at `/signup` (`App.Operation.SignUpTeam`): a D4H
-  personal access token becomes the team key, and the person signing up must be a current
-  Owner or Editor on that team in D4H, at the email they give. The team goes live at once,
+  personal access token, or a Records access key ([records.md](records.md)), becomes the
+  team key, and the person signing up must be a current Owner or Editor on that team
+  there, at the email they give. The team goes live at once,
   its first refresh starts, every admin gets an email, and the signer gets a login code.
 
 ## Adapter notes

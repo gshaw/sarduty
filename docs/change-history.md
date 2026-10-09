@@ -35,7 +35,9 @@ process dictionary, so the stages don't each carry it. Outside a run nothing is 
 - **SAR Duty's own writes aren't logged twice.** Attendance written by a change set comes
   back on the next sync like anyone's change. A change to an attendance row that an
   applied row wrote in the last day, with the same status, is skipped. Group rules update
-  the copy as they write, so their changes never reach the recorder.
+  the copy as they write, so their changes never reach the recorder. An edit of a team on
+  SAR Duty Records ([records.md](records.md)) is skipped by the sync that copies it back:
+  any change to that record seen since the edit applied.
 - **Deleted qualifications and groups** take their awards and memberships with them, and
   those are recorded as removed. Each row keeps the qualification's or group's name in
   `label`, since the row it points at is gone.

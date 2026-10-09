@@ -4,6 +4,7 @@ defmodule Web.TeamManagersLive do
   import Web.Components.TeamManagers
 
   alias App.Accounts
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.TeamLoginGrant
 
@@ -30,11 +31,15 @@ defmodule Web.TeamManagersLive do
       <:item label={@page_title} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
-    <p class="max-w-3xl">
+    <p :if={!D4H.records?(@current_team)} class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}. They are the members D4H
-      makes an Owner or Editor, as of the last refresh. Members who are retired or have left
-      cannot log in. To add or remove someone, change their access in D4H. SAR Duty follows
-      after the next refresh.
+      makes an Owner or Editor. Members who are retired or have left cannot log in. To add or
+      remove someone, change their access in D4H. SAR Duty follows within 10 minutes.
+    </p>
+    <p :if={D4H.records?(@current_team)} class="max-w-3xl">
+      These people can log in to SAR Duty for {@current_team.name}. They are the members who
+      are team admins. Members who are retired or have left cannot log in. To add or remove
+      someone, change Team admin on their Change details page.
     </p>
     <.team_managers
       id="team-managers"

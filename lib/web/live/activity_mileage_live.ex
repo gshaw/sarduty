@@ -5,7 +5,7 @@ defmodule Web.ActivityMileageLive do
   alias App.Model.Activity
   alias App.Model.Coordinate
 
-  alias App.Operation.BuildMilesageReport
+  alias App.Operation.BuildMileageReport
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Mileage report")}
@@ -69,9 +69,10 @@ defmodule Web.ActivityMileageLive do
         </:loading>
         <:failed :let={_reason}>The mileage report did not load. Generate it again.</:failed>
 
-        <p>
+        <p :if={report.yard_to_activity_km}>
           Yard to activity round trip: {report.yard_to_activity_km} km, {report.yard_to_activity_hours} hours
         </p>
+        <p :if={!report.yard_to_activity_km}>Mapbox found no route from the yard to the activity.</p>
 
         <.table id="mileage_report" rows={report.attendees} class="table-striped">
           <:header_row>
@@ -120,7 +121,7 @@ defmodule Web.ActivityMileageLive do
       |> assign(mileage_report: nil)
       |> assign_async(:mileage_report, fn ->
         d4h = D4H.build_context_from_team(current_team)
-        report = BuildMilesageReport.call(d4h, d4h_activity_id, activity_kind)
+        report = BuildMileageReport.call(d4h, d4h_activity_id, activity_kind)
         {:ok, %{mileage_report: report}}
       end)
 

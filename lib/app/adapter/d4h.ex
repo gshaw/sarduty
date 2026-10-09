@@ -276,8 +276,10 @@ defmodule App.Adapter.D4H do
     |> D4H.Activity.build()
   end
 
+  # One page, sized past any activity's attendance; D4H's spec gives no default size.
   def fetch_activity_attendance(context, activity_id, team_members) do
-    response = Req.get!(context, url: "/attendance", params: [activity_id: activity_id])
+    response =
+      Req.get!(context, url: "/attendance", params: [activity_id: activity_id, size: 1000])
 
     response.body["results"]
     |> Enum.map(&D4H.Attendance.build(&1, team_members))

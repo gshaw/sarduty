@@ -14,9 +14,10 @@ describing it.
 ## The app in one paragraph
 
 SAR Duty is a Phoenix LiveView app for search and rescue team managers. D4H is each
-team's system of record. A daily Oban job copies each team's members, activities,
-attendance, qualifications, and groups from the D4H API into a local SQLite database, and
-the pages read from that copy. On top of it the app builds what D4H doesn't: tax credit
+team's system of record. Oban jobs copy each team's members, activities, attendance,
+qualifications, and groups from the D4H API into a local SQLite database, syncing what
+changed every 10 minutes, and the pages read from that copy. A team without D4H keeps
+its records in SAR Duty Records, which serves the same API. On top of it the app builds what D4H doesn't: tax credit
 letters as PDFs, mileage reports, attendance cleanup, and group qualification rules. It
 runs as one Fly machine with Litestream replicating the database.
 
@@ -31,7 +32,7 @@ runs as one Fly machine with Litestream replicating the database.
 | Models      | `lib/app/model/`, `lib/app/accounts/` | Ecto schemas and their queries                        | `Repo`, fields, validators           |
 | View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                               |
 | View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                               |
-| MCP tools   | `lib/app/mcp/`                        | Read-only views of a team's data for agents           | Models                               |
+| MCP tools   | `lib/app/mcp/`                        | Views of a team's data for agents, and proposals      | Models, operations                   |
 | Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)               |
 
 The rules that are easy to break:
@@ -75,8 +76,9 @@ The rules that are easy to break:
 - **New shared UI** → a function component in `lib/web/components/`: `core.ex` for the
   pieces every page uses, or its own module. Every LiveView layout imports the same shared
   modules (`live_view/1` in `lib/web.ex`); a component only one or two pages use is
-  imported by those pages. Icons are `<.icon name="hero-…">`; styling is Tailwind utilities with no
-  `@apply` and no UI kit.
+  imported by those pages. Icons are `<.icon name="hero-…">`. Styling is the design system at
+  `/styles`: components and classes first, Tailwind utilities on its scale for one-off
+  layout (AGENTS.md has the rules).
 - **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,
   listed in `App.MCP.Tools`. See [mcp.md](mcp.md).
 - **New displayed value** → a function in `Service.Format`, not arithmetic in a template.

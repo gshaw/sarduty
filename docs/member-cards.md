@@ -42,7 +42,8 @@ organization gets its branding: see [organizations.md](organizations.md).
   active" is the whole answer a checker needs.
 - **One live card per member.** Issuing a card revokes the one before it, and a code is
   never reused.
-- **Status comes from the local copy of D4H**, so it can be a day old. The result says
+- **Status comes from the local copy of D4H**, so it can be 10 minutes behind, or a day
+  for a change D4H doesn't mark ([d4h-sync.md](d4h-sync.md#where-the-copy-drifts)). The result says
   when the team last refreshed.
 
 ## Apple Wallet
