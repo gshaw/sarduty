@@ -110,7 +110,12 @@ defmodule App.ViewData.TeamAttentionTest do
   end
 
   test "a team on SAR Duty Records hears about Records, not D4H" do
-    attrs = %{service: :records, refresh: %{state: :key_rejected}, proposed_change_count: 2}
+    attrs = %{
+      service: :records,
+      refresh: %{state: :key_rejected},
+      proposed_change_count: 2,
+      missing_details_count: 3
+    }
 
     for item <- items(attrs, @october) do
       refute item.title =~ "D4H", item.title

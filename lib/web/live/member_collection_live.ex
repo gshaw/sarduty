@@ -1,6 +1,7 @@
 defmodule Web.MemberCollectionLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.ViewModel.MemberFilterViewModel
 
@@ -33,7 +34,16 @@ defmodule Web.MemberCollectionLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team} />
-    <h1 class="title">{@page_title}</h1>
+    <div class="heading-row">
+      <h1 class="title">{@page_title}</h1>
+      <.button
+        :if={D4H.records?(@current_team)}
+        id="member-add"
+        navigate={~p"/teams/#{@current_team}/members/new"}
+      >
+        Add member
+      </.button>
+    </div>
     <.form
       for={@form}
       id="member_filter_form"

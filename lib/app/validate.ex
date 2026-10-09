@@ -3,6 +3,7 @@ defmodule App.Validate do
 
   defdelegate address(changeset, field), to: Validate.Address, as: :call
   defdelegate email(changeset, field), to: Validate.Email, as: :call
+  defdelegate in_field_order(changeset, fields), to: Validate.FieldOrder, as: :call
   defdelegate name(changeset, field), to: Validate.Name, as: :call
 
   # defdelegate password_strength(changeset, field), to: Validate.PasswordStrength, as: :call

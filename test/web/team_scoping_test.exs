@@ -14,6 +14,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/mileage",
     "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/members/:id",
+    "/teams/:subdomain/members/:id/edit",
     "/teams/:subdomain/members/:id/groups",
     "/teams/:subdomain/members/:id/qualifications",
     "/teams/:subdomain/members/:id/card",
@@ -67,6 +68,9 @@ defmodule Web.TeamScopingTest do
       assert_error_sent 404, fn -> get(conn, path) end
     end
   end
+
+  defp path_for("/teams/:subdomain/members/:id/edit", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/edit"
 
   defp path_for("/teams/:subdomain/activities/:id", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}"
