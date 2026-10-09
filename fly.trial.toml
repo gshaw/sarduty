@@ -1,0 +1,36 @@
+# The trial app: teams without D4H try SAR Duty here (docs/hosted-d4h.md,
+# docs/deployment.md). Its own volume and secrets, no Litestream, and never
+# production's data. Deploy with `fly deploy -c fly.trial.toml`.
+
+app = "sarduty-trial"
+primary_region = "yyz"
+kill_signal = "SIGTERM"
+
+[build]
+
+[env]
+DATABASE_PATH = "/mnt/sarduty/sarduty.db"
+PHX_HOST = "sarduty-trial.fly.dev"
+PORT = "8080"
+TEAM_LOGO_PATH = "/mnt/sarduty/team-logos"
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = "off"
+auto_start_machines = true
+min_machines_running = 1
+processes = ["app"]
+[http_service.concurrency]
+type = "connections"
+hard_limit = 1000
+soft_limit = 1000
+
+[mounts]
+source = "sarduty_trial"
+destination = "/mnt/sarduty"
+
+[[vm]]
+cpu_kind = "shared"
+cpus = 1 # cspell:ignore cpus
+memory_mb = 1024

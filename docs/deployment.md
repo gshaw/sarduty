@@ -33,6 +33,28 @@ For a PR with a migration:
   only if you have to, with `App.Release.rollback(App.Repo, <previous version>)` through
   `bin/sarduty eval`. The other order leaves the new code reading a column that is gone.
 
+## The trial app
+
+A second Fly app, `sarduty-trial` at <https://sarduty-trial.fly.dev>, for teams without
+D4H to try SAR Duty ([hosted-d4h.md](hosted-d4h.md)). It runs the same release with
+[fly.trial.toml](../fly.trial.toml): its own volume (`sarduty_trial`), its own
+`SECRET_KEY_BASE` and `CLOAK_KEY`, and never production's data.
+
+```sh
+fly deploy -c fly.trial.toml
+```
+
+- **No backups.** It has no R2 key, so `bin/server` skips Litestream, and its database
+  lives only on the volume. Give it its own R2 path before a team keeps real records
+  there.
+- **Secrets**: `SECRET_KEY_BASE`, `CLOAK_KEY`, `MAPBOX_ACCESS_TOKEN`, and the Cloudflare
+  email pair, so login codes go out. No Honeybadger, Healthchecks, Twilio, or wallet
+  passes.
+- **Admins** are made with `bin/sarduty eval`, as below with `-a sarduty-trial`. An
+  admin logs in only while some team lists their email as a current member, so the first
+  admin is also the manager of a hosted team made the same way:
+  `App.Operation.CreateHostedTeam.call(%{"name" => …, "manager_email" => …, …})`.
+
 ## Database and backups
 
 - **Litestream** replicates the database continuously to Cloudflare R2

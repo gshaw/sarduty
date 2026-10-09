@@ -1,13 +1,17 @@
 #!/bin/sh
 set -eu
 
-# Restore database from Litestream if it doesn't exist
-if [ ! -f /mnt/sarduty/sarduty.db ]; then
-  litestream restore -if-replica-exists -config /app/litestream.yml /mnt/sarduty/sarduty.db
-fi
+# Litestream only where its R2 key is set. The trial app (fly.trial.toml) has none, so
+# it never restores or replicates production's database.
+if [ -n "${R2_ACCESS_KEY_ID:-}" ]; then
+  # Restore database from Litestream if it doesn't exist
+  if [ ! -f /mnt/sarduty/sarduty.db ]; then
+    litestream restore -if-replica-exists -config /app/litestream.yml /mnt/sarduty/sarduty.db
+  fi
 
-# Start Litestream in the background
-litestream replicate -config /app/litestream.yml &
+  # Start Litestream in the background
+  litestream replicate -config /app/litestream.yml &
+fi
 
 # Start Phoenix
 cd -P -- "$(dirname -- "$0")"
