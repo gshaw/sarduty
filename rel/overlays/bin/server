@@ -11,6 +11,8 @@ if [ -n "${R2_ACCESS_KEY_ID:-}" ]; then
 
   # Start Litestream in the background
   litestream replicate -config /app/litestream.yml &
+else
+  echo "No R2_ACCESS_KEY_ID: Litestream is off, so nothing backs up this database."
 fi
 
 # Start Phoenix
