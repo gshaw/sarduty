@@ -20,10 +20,13 @@ defmodule Web.Admin.TeamLive do
     <h1 class="title">New team without D4H</h1>
     <p class="lead max-w-xl">
       SAR Duty keeps this team's members, activities, attendance, qualifications, and groups
-      itself. A team with D4H signs up at {url(~p"/signup")} instead.
+      itself. A team with D4H
+      <.a navigate={~p"/signup"}>signs up</.a>
+      instead.
     </p>
 
     <.form for={@form} id="hosted-team-form" phx-change="validate" phx-submit="save" class="max-w-xl">
+      <.error_summary form={@form} />
       <.input field={@form[:name]} label="Team name" />
       <.input field={@form[:subdomain]} label="Short name">
         In the team's address: {url(~p"/teams")}/{@form[:subdomain].value || "shortname"}. Lowercase

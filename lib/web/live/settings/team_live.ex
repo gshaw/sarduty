@@ -51,7 +51,7 @@ defmodule Web.Settings.TeamLive do
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
         <.error_summary form={@form} />
         <.input field={@form[:name]} label="Name" />
-        <div class="grid grid-cols-2 gap-x-6">
+        <div :if={!D4H.hosted?(@current_team)} class="grid grid-cols-2 gap-x-6">
           <.input field={@form[:lat]} readonly label="Latitude" />
           <.input field={@form[:lng]} readonly label="Longitude" />
         </div>

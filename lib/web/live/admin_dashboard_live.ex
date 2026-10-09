@@ -53,7 +53,7 @@ defmodule Web.AdminDashboardLive do
     <.admin_tabs current={:teams} />
     <div class="heading-row">
       <h2 class="heading">Teams</h2>
-      <div class="flex items-center gap-4">
+      <div class="flex flex-wrap items-center gap-4">
         <span id="refresh-summary" class="hint">
           {refresh_summary(@teams)}
         </span>

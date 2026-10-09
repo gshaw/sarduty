@@ -107,4 +107,12 @@ defmodule App.ViewData.TeamAttentionTest do
 
     assert everything |> items(@march) |> length() == 7
   end
+
+  test "a team without D4H fixes things in SAR Duty, so no item sends it to D4H" do
+    attrs = %{hosted?: true, draft_count: 2, expiring_count: 1, missing_details_count: 3}
+
+    for item <- items(attrs, @october) do
+      refute item.detail =~ "D4H", item.title
+    end
+  end
 end

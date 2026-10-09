@@ -58,7 +58,13 @@ defmodule Web.TeamDashboardLive do
     <div class="heading-row team-heading">
       <div class="min-w-0">
         <h1 class="title-hero mb-0">{@current_team.name}</h1>
-        <.refresh_line team={@current_team} view_data={@view_data} now={@now} />
+        <%!-- A hosted team's records are SAR Duty's own, so there is nothing to refresh from. --%>
+        <.refresh_line
+          :if={!D4H.hosted?(@current_team)}
+          team={@current_team}
+          view_data={@view_data}
+          now={@now}
+        />
       </div>
       <img
         :if={@has_logo}
@@ -184,7 +190,7 @@ defmodule Web.TeamDashboardLive do
         <span class="hint">Next 14 days</span>
       </header>
       <p :if={@activities == []} id="coming-up-empty" class="chart-caption">
-        No activities planned in D4H.
+        No activities planned{if !D4H.hosted?(@team), do: " in D4H"}.
       </p>
       <ul :if={@activities != []} id="coming-up-list" class="dash-rows">
         <li :for={activity <- @activities} id={"coming-up-#{activity.id}"}>
@@ -339,7 +345,7 @@ defmodule Web.TeamDashboardLive do
             overlay={false}
           />
           <p :if={!@map} id="activity-map" class="chart-caption">
-            No activities with a place in D4H in the last 12 months.
+            No activities with a place{if !D4H.hosted?(@team), do: " in D4H"} in the last 12 months.
           </p>
         </section>
         <section class="card">

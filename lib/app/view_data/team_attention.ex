@@ -24,9 +24,9 @@ defmodule App.ViewData.TeamAttention do
   def items(rows, now) do
     [
       refresh_item(rows.refresh),
-      drafts_item(rows.draft_count),
-      expiring_item(rows.expiring_count, rows.expiring_days),
-      missing_details_item(rows.missing_details_count),
+      drafts_item(rows.draft_count, where(rows)),
+      expiring_item(rows.expiring_count, rows.expiring_days, where(rows)),
+      missing_details_item(rows.missing_details_count, where(rows)),
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count),
       letters_item(rows.letters, now, rows.timezone)
@@ -58,9 +58,24 @@ defmodule App.ViewData.TeamAttention do
 
   defp refresh_item(_ok_or_refreshing), do: nil
 
-  defp drafts_item(0), do: nil
+  # Where a fix happens: in D4H, or for a team without D4H, in SAR Duty itself.
+  defp where(%{hosted?: true}), do: :sar_duty
+  defp where(_rows), do: :d4h
 
-  defp drafts_item(count) do
+  defp drafts_item(0, _where), do: nil
+
+  defp drafts_item(count, :sar_duty) do
+    %{
+      drafts_item(count, :d4h)
+      | detail:
+          Format.count(count,
+            one: "Check its attendance, then publish it.",
+            many: "Check their attendance, then publish them."
+          )
+    }
+  end
+
+  defp drafts_item(count, :d4h) do
     %{
       key: :drafts,
       level: :warning,
@@ -74,9 +89,15 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp expiring_item(0, _days), do: nil
+  defp expiring_item(0, _days, _where), do: nil
 
-  defp expiring_item(count, days) do
+  defp expiring_item(count, days, :sar_duty),
+    do: %{
+      expiring_item(count, days, :d4h)
+      | detail: "Record renewals on each member's Qualifications tab."
+    }
+
+  defp expiring_item(count, days, :d4h) do
     %{
       key: :expiring,
       level: :warning,
@@ -90,9 +111,15 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp missing_details_item(0), do: nil
+  defp missing_details_item(0, _where), do: nil
 
-  defp missing_details_item(count) do
+  defp missing_details_item(count, :sar_duty),
+    do: %{
+      missing_details_item(count, :d4h)
+      | detail: "Add the missing details on each member's page."
+    }
+
+  defp missing_details_item(count, :d4h) do
     %{
       key: :missing_details,
       level: :info,
