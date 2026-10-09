@@ -26,6 +26,8 @@ defmodule App.ViewModel.MemberFormViewModel do
     field :joined_on, :date
   end
 
+  @fields [:name, :ref_id, :position, :email, :phone, :address, :joined_on, :status, :team_admin]
+
   def statuses, do: @statuses
 
   @doc "The form for a member, in the team's time zone, or an empty one joining `today`."
@@ -75,6 +77,7 @@ defmodule App.ViewModel.MemberFormViewModel do
     |> validate_length(:phone, max: 30)
     |> validate_length(:address, max: 300)
     |> validate_inclusion(:status, Enum.map(@statuses, &elem(&1, 1)))
+    |> Validate.in_field_order(@fields)
   end
 
   # :insert, not :validate, so a failed save shows the error summary.
