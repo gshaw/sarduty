@@ -18,6 +18,15 @@ defmodule App.Operation.SyncD4HChangesTest do
     assert SyncD4HChanges.plan(nil, heads()) == :seed
   end
 
+  # Heads saved to the second before they kept fractions (2026-10-08).
+  test "a head saved to the second matches the same time with milliseconds" do
+    precise =
+      heads(%{"members" => %{total_size: 10, newest_updated_at: ~U[2026-10-05 12:00:00.123Z]}})
+
+    assert SyncD4HChanges.plan(heads(), precise) == :unchanged
+    assert SyncD4HChanges.plan(heads(), heads(%{"members" => moved()})) != :unchanged
+  end
+
   test "when no head moved, there is nothing to fetch" do
     assert SyncD4HChanges.plan(heads(), heads()) == :unchanged
   end

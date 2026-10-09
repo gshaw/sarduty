@@ -139,7 +139,7 @@ defmodule App.Hosted.API do
       do: fun.(conn, team),
       else: send_json(conn, 403, JSON.error(403, "Forbidden"))
   rescue
-    error in [ArgumentError, MatchError] ->
+    error in [ArgumentError, MatchError, FunctionClauseError] ->
       bad_request(conn, Exception.message(error))
   end
 

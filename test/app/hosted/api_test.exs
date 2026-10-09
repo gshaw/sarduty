@@ -74,6 +74,29 @@ defmodule App.Hosted.APITest do
              })
   end
 
+  test "hosted ids never match a D4H team's", %{hosted: hosted} do
+    assert hosted.id >= 2_000_000_000
+  end
+
+  test "a tag on an activity can't be deleted", %{hosted: hosted, key: key} do
+    tag = create!(hosted, key, "tags", %{title: "Primary Hours"})
+
+    event =
+      create!(hosted, key, "events", %{
+        startsAt: "2026-02-01T18:00:00Z",
+        endsAt: "2026-02-01T21:00:00Z"
+      })
+
+    {200, _} =
+      call(:post, path(hosted, "events/#{event["id"]}/tags"), key, %{tagIds: [tag["id"]]})
+
+    assert {400, _} = call(:delete, path(hosted, "tags/#{tag["id"]}"), key)
+  end
+
+  test "an odd query parameter is a 400", %{hosted: hosted, key: key} do
+    assert {400, _} = call(:get, path(hosted, "attendance?member_id[a]=1"), key)
+  end
+
   test "whoami names the team as a SAR Duty account", %{hosted: hosted, key: key} do
     assert {200, body} = call(:get, "/v3/whoami", key)
     whoami = D4H.WhoAmI.build(body)

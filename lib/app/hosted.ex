@@ -34,15 +34,25 @@ defmodule App.Hosted do
   ## Teams and keys
 
   @doc """
-  Creates a hosted team and its key. Returns `{:ok, team, key}`; the key is shown once
-  and saved only as a hash, and encrypted as the SAR Duty team's D4H key.
+  Creates a hosted team and its key. Returns `{:ok, team, key}`. The store keeps only the
+  key's hash; the caller saves the key as the SAR Duty team's encrypted D4H key.
   """
   def create_team(attrs) do
     key = generate_key()
 
-    changeset = Hosted.Team.changeset(%Hosted.Team{access_key_hash: hash_key(key)}, attrs)
+    team = %Hosted.Team{id: next_team_id(), access_key_hash: hash_key(key)}
+    changeset = Hosted.Team.changeset(team, attrs)
 
     with {:ok, team} <- Repo.insert(changeset), do: {:ok, team, key}
+  end
+
+  # A hosted team's id is its d4h_team_id, which must never match a real D4H team's.
+  # D4H's are small and fit in 32 bits, so hosted ones start near the top of that range.
+  @first_team_id 2_000_000_000
+
+  defp next_team_id do
+    max = Repo.aggregate(Hosted.Team, :max, :id) || 0
+    max(max, @first_team_id - 1) + 1
   end
 
   @doc "The hosted team a bearer key opens, or nil."
@@ -210,6 +220,9 @@ defmodule App.Hosted do
       %Hosted.Member{} ->
         {:error, :not_allowed}
 
+      %Hosted.Tag{} = tag ->
+        delete_unused_tag(team, tag)
+
       %Hosted.Activity{} = activity ->
         activity
         |> Ecto.Changeset.change(deleted_at: now(), updated_at: now())
@@ -218,6 +231,21 @@ defmodule App.Hosted do
       row ->
         Repo.delete(row)
     end
+  end
+
+  # Activities name tags by id, and letters count hours by the tag's title, so a tag in
+  # use stays.
+  defp delete_unused_tag(team, tag) do
+    in_use =
+      Hosted.Activity
+      |> where([a], a.hosted_team_id == ^team.id)
+      |> select([a], a.tag_ids)
+      |> Repo.all()
+      |> Enum.any?(&(tag.id in &1))
+
+    if in_use,
+      do: {:error, "The tag is on an activity. Remove it from them first."},
+      else: Repo.delete(tag)
   end
 
   @doc "Sets an activity's tags to exactly these of the team's tag ids."

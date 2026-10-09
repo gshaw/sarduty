@@ -30,7 +30,10 @@ Canadian database the privacy page promises.
   any D4H key. The store keeps only its SHA-256. `whoami` names the key's member
   "SAR Duty", id 0, so the key never counts as a manager.
 - The API is also served at `/d4h/v3/…` with the same bearer key, for anything else that
-  speaks D4H. The key decides the team, and a path naming another team is a 403.
+  speaks D4H. The key decides the team, and a path naming another team is a 403. No page
+  shows the key; read it with `bin/sarduty rpc` as `Team.get_by(subdomain: …).d4h_access_key`.
+- Hosted team ids start at 2,000,000,000, so a hosted `d4h_team_id` never matches a real
+  D4H team's, which are small.
 
 ## What it serves
 
@@ -57,6 +60,6 @@ roles, custom fields, and animals.
   and `fetch_list_head` keeps them to the microsecond, since in-process writes land within
   the same second.
 - **Members are never deleted**, only retired, as in D4H: attendance and letters point at
-  them.
+  them. A tag on any activity can't be deleted either: letters count hours by its title.
 - **Activity references are numbered** when a write gives none: five digits, after the
   team's count of activities.
