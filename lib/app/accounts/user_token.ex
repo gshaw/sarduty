@@ -47,15 +47,21 @@ defmodule App.Accounts.UserToken do
   A six-digit login code. `sent_to` gets the code: the user's email, or an E.164 number
   for a text. The database keeps only its hash.
   """
-  def build_login_code(user, sent_to \\ nil) do
+  def build_login_code(user, sent_to \\ nil), do: build_code(user, "login", sent_to || user.email)
+
+  @doc """
+  A six-digit code in `context`: "login", or "confirm" for a member proving they get
+  mail or texts at a new email or number (#156). It lives and dies like a login code.
+  """
+  def build_code(user, context, sent_to) when context in ["login", "confirm"] do
     <<n::32>> = :crypto.strong_rand_bytes(4)
     code = n |> rem(1_000_000) |> Integer.to_string() |> String.pad_leading(6, "0")
 
     {code,
      %UserToken{
        token: hash_code(user, code),
-       context: "login",
-       sent_to: sent_to || user.email,
+       context: context,
+       sent_to: sent_to,
        user_id: user.id
      }}
   end
@@ -75,10 +81,24 @@ defmodule App.Accounts.UserToken do
   `sent_to`, the email the user still has or the number being logged in with. A code
   emailed can't be entered as one texted, or the other way.
   """
-  def live_login_code_query(user, sent_to) do
+  def live_login_code_query(user, sent_to), do: live_code_query(user, "login", sent_to)
+
+  @doc "The user's live code in `context`, as live_login_code_query/2."
+  def live_code_query(user, context, sent_to) do
     from t in UserToken,
       where:
-        t.user_id == ^user.id and t.context == "login" and t.sent_to == ^sent_to and
+        t.user_id == ^user.id and t.context == ^context and t.sent_to == ^sent_to and
+          t.inserted_at > ago(@login_validity_in_minutes, "minute") and
+          t.failed_attempts < @login_max_attempts,
+      order_by: [desc: t.id],
+      limit: 1
+  end
+
+  @doc "The user's newest live code in `context`, whoever it went to."
+  def live_code_any_query(user, context) do
+    from t in UserToken,
+      where:
+        t.user_id == ^user.id and t.context == ^context and
           t.inserted_at > ago(@login_validity_in_minutes, "minute") and
           t.failed_attempts < @login_max_attempts,
       order_by: [desc: t.id],

@@ -59,6 +59,9 @@
 - **SAR Duty Records**: teams without D4H keep their records in a separate app,
   `records.sarduty.com`, that serves D4H's API. The adapter calls it like a D4H region;
   `D4H.records?/1` says which a team uses. See [docs/records.md](docs/records.md).
+  Changed `lib/app/adapter/d4h.ex`? Run `bin/check-sarduty <this checkout>` in the
+  `sarduty-records` repo. It runs this adapter against a throwaway Records and checks
+  every call; a new call gets a check added there.
 - **Mapbox**: geocoding and driving distances for the mileage report, and the static maps
   on the team home and activity pages, served through `/maps/`.
 - **Cloudflare Email Sending** through Swoosh, with our own adapter in
