@@ -265,7 +265,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     <div id="send-start">
       <p>
         Review the changes before SAR Duty makes them. Members who arrived are marked attending
-        with their times. Members who signed up but did not arrive can be marked absent.
+        with their times. Members who signed up but did not arrive are marked absent.
         When every change goes through, SAR Duty closes the attendance link.
       </p>
       <.button id="review" variant={:primary} phx-click="review" phx-disable-with="Reading D4H…">
@@ -496,5 +496,5 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp note_text(:left_before_arriving), do: "Left before arriving. Fix the times at the door."
 
   defp note_text(:signed_up_without_scan),
-    do: "Signed up in D4H, but no scan. Check they didn't come before marking them absent."
+    do: "Signed up in D4H, but no scan. Uncheck if they came."
 end
