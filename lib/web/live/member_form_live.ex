@@ -5,6 +5,7 @@ defmodule Web.MemberFormLive do
   alias App.Model.Member
   alias App.Operation.SaveMember
   alias App.Operation.SetMemberLeft
+  alias App.Operation.SetMemberPhoto
   alias App.ViewModel.MemberFormViewModel
 
   # Adding and changing members of a team on SAR Duty Records (docs/records.md). A D4H team
@@ -20,8 +21,16 @@ defmodule Web.MemberFormLive do
     socket =
       socket
       |> assign(page_title: if(member, do: "Change #{member.name}", else: "Add member"))
-      |> assign(member: member, form_data: form)
+      |> assign(member: member, form_data: form, photo_version: 0)
       |> assign_form(MemberFormViewModel.changeset(form))
+      # cspell:ignore webp -- the WebP file extension
+      # Records takes up to 10 MB and shrinks it. HEIC is refused there, but an iPhone's
+      # browser sends a JPEG from a file input.
+      |> allow_upload(:photo,
+        accept: ~w(.jpg .jpeg .png .webp),
+        max_entries: 1,
+        max_file_size: 10_000_000
+      )
 
     {:ok, socket}
   end
@@ -70,6 +79,43 @@ defmodule Web.MemberFormLive do
         <.button variant={:success}>{if @member, do: "Save member", else: "Add member"}</.button>
       </.form_actions>
     </.form>
+
+    <section :if={@member} id="member-photo" class="mt-8 max-w-xl">
+      <h2 class="heading">Photo</h2>
+      <%!-- The version changes after a save, so the browser loads the new photo. --%>
+      <p>
+        <img
+          id="member-photo-image"
+          class="photo"
+          src={~p"/teams/#{@current_team}/members/#{@member.id}/image?#{[v: @photo_version]}"}
+          alt={"#{@member.name}'s photo"}
+        />
+      </p>
+      <form id="photo-form" phx-change="validate-photo" phx-submit="save-photo">
+        <.label for={@uploads.photo.ref}>New photo</.label>
+        <.hint>
+          A JPEG, PNG, or WebP of the member's face, under 10 MB. Their ID card shows it.
+        </.hint>
+        <.live_file_input upload={@uploads.photo} class="my-2" />
+        <.error :for={error <- upload_errors(@uploads.photo)}>{upload_error(error)}</.error>
+        <%= for entry <- @uploads.photo.entries do %>
+          <.error :for={error <- upload_errors(@uploads.photo, entry)}>{upload_error(error)}</.error>
+        <% end %>
+        <.form_actions>
+          <.button id="save-photo" variant={:success}>Save photo</.button>
+          <:trailing>
+            <.button
+              id="remove-photo"
+              type="button"
+              phx-click="remove-photo"
+              data-confirm={"Remove #{@member.name}'s photo? Their ID card shows a placeholder until you add one."}
+            >
+              Remove photo
+            </.button>
+          </:trailing>
+        </.form_actions>
+      </form>
+    </section>
 
     <section :if={@member} id="member-left" class="mt-8 max-w-xl">
       <h2 class="heading">Leaving the team</h2>
@@ -128,6 +174,34 @@ defmodule Web.MemberFormLive do
         {:noreply, put_flash(socket, :error, text)}
     end
   end
+
+  def handle_event("validate-photo", _params, socket), do: {:noreply, socket}
+
+  def handle_event("save-photo", _params, socket) do
+    case consume_uploaded_entries(socket, :photo, fn %{path: path}, _entry ->
+           {:ok, File.read!(path)}
+         end) do
+      [bytes] -> {:noreply, set_photo(socket, bytes, "Photo saved.")}
+      [] -> {:noreply, put_flash(socket, :error, "Select a photo.")}
+    end
+  end
+
+  def handle_event("remove-photo", _params, socket),
+    do: {:noreply, set_photo(socket, nil, "Photo removed.")}
+
+  defp set_photo(socket, bytes, text) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+
+    case SetMemberPhoto.call(team, member, bytes, user, DateTime.utc_now()) do
+      :ok -> socket |> put_flash(:info, text) |> update(:photo_version, &(&1 + 1))
+      {:error, text} -> put_flash(socket, :error, text)
+    end
+  end
+
+  defp upload_error(:too_large), do: "That file is too large. Use one under 10 MB."
+  defp upload_error(:not_accepted), do: "Use a JPEG, PNG, or WebP."
+  defp upload_error(:too_many_files), do: "Select one file."
+  defp upload_error(_error), do: "That file did not upload. Try again."
 
   # The member page, or the list when the copy hasn't caught up yet.
   defp saved(socket, member, text) do

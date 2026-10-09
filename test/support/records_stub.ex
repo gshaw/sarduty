@@ -24,11 +24,16 @@ defmodule App.RecordsStub do
   defp write(conn, test, reply) do
     path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
     {:ok, body, conn} = Plug.Conn.read_body(conn)
-    json = if body == "", do: nil, else: Jason.decode!(body)
+    json = decode(body, Plug.Conn.get_req_header(conn, "content-type"))
     send(test, {:records, conn.method, path, json})
     {status, response} = reply.(conn.method, path, json)
     conn |> Plug.Conn.put_status(status) |> Req.Test.json(response)
   end
+
+  # A photo arrives as its bytes, anything else as JSON.
+  defp decode("", _content_type), do: nil
+  defp decode(body, ["application/octet-stream" | _]), do: {:bytes, body}
+  defp decode(body, _content_type), do: Jason.decode!(body)
 
   @doc "A member as Records answers with one."
   def member_json(id, attrs \\ %{}) do

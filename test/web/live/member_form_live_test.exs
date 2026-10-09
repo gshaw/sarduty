@@ -111,6 +111,41 @@ defmodule Web.MemberFormLiveTest do
     assert html =~ "Enter a shorter name."
   end
 
+  test "a team admin uploads a photo, which goes to Records and is not kept here",
+       %{conn: conn, team: team, admin: admin} do
+    stub_ok()
+    photo = png_fixture(40, 30)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+
+    lv
+    |> file_input("#photo-form", :photo, [%{name: "face.png", content: photo, type: "image/png"}])
+    |> render_upload("face.png")
+
+    assert lv |> form("#photo-form") |> render_submit() =~ "Photo saved."
+
+    path = "/members/#{admin.d4h_member_id}/image"
+    assert_received {:records, "PUT", ^path, {:bytes, ^photo}}
+
+    [row] = Repo.all(ChangeSetRow)
+    assert {row.action, row.status} == {:set_member_photo, :applied}
+    assert row.new_value == %{"size" => byte_size(photo)}
+  end
+
+  test "a team admin removes a photo", %{conn: conn, team: team, admin: admin} do
+    stub_ok()
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+
+    assert lv |> element("#remove-photo") |> render_click() =~ "Photo removed."
+
+    path = "/members/#{admin.d4h_member_id}/image"
+    assert_received {:records, "DELETE", ^path, nil}
+  end
+
+  test "saving with no photo selected asks for one", %{conn: conn, team: team, admin: admin} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+    assert lv |> form("#photo-form") |> render_submit() =~ "Select a photo."
+  end
+
   test "a name is needed, and the error summary lists it", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/new")
     lv |> form("#member-form", form: %{name: "", joined_on: ""}) |> render_submit()
