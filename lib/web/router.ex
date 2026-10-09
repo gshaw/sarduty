@@ -165,6 +165,25 @@ defmodule Web.Router do
       live "/admin/orgs/:id", Admin.OrganizationLive, :edit
     end
 
+    # A member's own page (#156), on a team with member logins on. Separate from the team
+    # pages, which only the team's admins reach.
+    live_session :require_team_member_session,
+      on_mount: [
+        {Web.UserAuth, :mount_current_path},
+        {Web.UserAuth, :ensure_authenticated},
+        {Web.UserAuth, :ensure_team_member}
+      ] do
+      live "/teams/:subdomain/me", MeLive
+    end
+
+    scope "/teams/:subdomain/me" do
+      pipe_through :require_team_member
+
+      get "/card/apple-wallet", MeController, :apple_pass
+      get "/card/google-wallet", MeController, :google_pass
+      get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
+    end
+
     live_session :require_current_team_session,
       on_mount: [
         {Web.UserAuth, :mount_current_path},
@@ -204,6 +223,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/cards", Settings.CardsLive
       live "/teams/:subdomain/settings/managers", TeamManagersLive
+      live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
     end
 

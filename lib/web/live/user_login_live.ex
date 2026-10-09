@@ -12,12 +12,15 @@ defmodule Web.UserLoginLive do
     <div>
       <h1 class="heading">Log in</h1>
       <p :if={@text_login}>
-        Enter the email or mobile number D4H has for you. If you're an Owner or Editor on
-        your team in D4H, we'll send you a code to log in. There's no password.
+        Enter the email or mobile number D4H has for you. If you may log in, we'll send you a
+        code. There's no password.
       </p>
       <p :if={not @text_login}>
-        Enter the email D4H has for you. If you're an Owner or Editor on your team in D4H,
-        we'll email you a code to log in. There's no password.
+        Enter the email D4H has for you. If you may log in, we'll email you a code. There's
+        no password.
+      </p>
+      <p class="hint">
+        Team admins can log in. Members can too, when their team turns on member logins.
       </p>
       <.form
         for={@form}

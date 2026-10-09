@@ -11,6 +11,9 @@ enforces the top-level list and the held URLs.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/cards`, `/settings/managers`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
+- **A member's own page is `/teams/:subdomain/me`**, with its downloads under it (#156).
+  It names the team; the member is always the person logged in. See
+  [members.md](members.md).
 - **Organizations are `/orgs/:slug`** on both sites. Admin pages use the id:
   `/admin/orgs/:id`.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an

@@ -44,7 +44,9 @@
   emailed or texted (no passwords), with `phx.gen.auth`-style sessions (`current_user` and
   `current_team`, not `current_scope`) and an admin flag. Access comes from D4H: a user
   reaches a team when their email matches a member D4H makes an Owner or Editor
-  (`Team.get_managed_by/2`). Admins reach every team.
+  (`Team.get_managed_by/2`). Admins reach every team. On a team with member logins on,
+  any current member logs in to their own page, `/teams/:subdomain/me`
+  (`Member.get_logins/2`); see [docs/members.md](docs/members.md).
 
 ## External integrations (know where to look)
 

@@ -36,6 +36,8 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:mcp_turned_off), do: "MCP turned off"
   def label(:mcp_token_created), do: "MCP token created"
   def label(:mcp_token_revoked), do: "MCP token revoked"
+  def label(:member_logins_turned_on), do: "Member logins turned on"
+  def label(:member_logins_turned_off), do: "Member logins turned off"
 
   def validate(params) do
     changeset =

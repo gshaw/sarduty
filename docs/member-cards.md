@@ -1,6 +1,8 @@
 # Member ID cards
 
-A team manager issues a member an ID card from the member's **ID Card** tab. Anyone can
+A team manager issues a member an ID card from the member's **ID Card** tab. With
+member logins on, a member with no card can get one from their own page
+([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the
 verify site, `verify.sarduty.com/K7Q4-M2XA`
 ([VerifyLive](../lib/web/live/verify_live.ex)), or by typing the code printed under it

@@ -7,6 +7,7 @@ defmodule App.AccountsTest do
   alias App.Accounts
   alias App.Accounts.User
   alias App.Accounts.UserToken
+  alias App.Model.Member
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
 
@@ -77,6 +78,60 @@ defmodule App.AccountsTest do
         user_fixture(%{email: email, is_admin: true})
         refute Accounts.may_log_in?(email, @now)
       end
+    end
+  end
+
+  describe "member logins" do
+    test "a current member of a team with member logins on may, in any letter case" do
+      team = member_logins_team_fixture()
+      member_fixture(team, %{email: "member@example.com", d4h_permission: 2})
+
+      assert Accounts.may_log_in?("Member@Example.com", @now)
+      assert [%{team: %Team{id: id}}] = Member.get_logins("member@example.com", @now)
+      assert id == team.id
+    end
+
+    test "a member of a team with member logins off may not" do
+      member_fixture(team_fixture(), %{email: "member@example.com", d4h_permission: 2})
+      refute Accounts.may_log_in?("member@example.com", @now)
+    end
+
+    test "retired members, members who left, and not a person may not" do
+      team = member_logins_team_fixture()
+      member_fixture(team, %{email: "retired@example.com", d4h_status: "RETIRED"})
+      member_fixture(team, %{email: "left@example.com", left_at: ~U[2026-01-01 00:00:00Z]})
+      member_fixture(team, %{email: "bot@example.com", not_a_person: true})
+
+      refute Accounts.may_log_in?("retired@example.com", @now)
+      refute Accounts.may_log_in?("left@example.com", @now)
+      refute Accounts.may_log_in?("bot@example.com", @now)
+    end
+
+    test "two members on one team with the same email match neither" do
+      team = member_logins_team_fixture()
+      member_fixture(team, %{email: "family@example.com"})
+      member_fixture(team, %{email: "family@example.com"})
+
+      refute Accounts.may_log_in?("family@example.com", @now)
+    end
+
+    test "one person on two teams logs in as each, by team name" do
+      north = member_logins_team_fixture(%{name: "North"})
+      south = member_logins_team_fixture(%{name: "South"})
+      member_fixture(south, %{email: "both@example.com"})
+      member_fixture(north, %{email: "both@example.com"})
+
+      assert ["North", "South"] =
+               "both@example.com" |> Member.get_logins(@now) |> Enum.map(& &1.team.name)
+    end
+
+    test "a member gets an emailed code, and their number gets a texted one" do
+      text_login_fixture()
+      team = member_logins_team_fixture()
+      member_fixture(team, %{email: "member@example.com", phone: "604-555-0199"})
+
+      assert login_code_fixture("member@example.com") =~ ~r/^\d{6}$/
+      assert text_code_fixture("+16045550199") =~ ~r/^\d{6}$/
     end
   end
 
