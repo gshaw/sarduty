@@ -49,20 +49,21 @@ defmodule Web.ActivityFormLive do
         options={ActivityFormViewModel.kinds()}
       />
       <.input field={@form[:title]} label="Title" />
-      <div class="grid grid-cols-2 gap-x-6">
-        <.input field={@form[:starts_at]} type="datetime-local" label="Starts" />
-        <.input field={@form[:ends_at]} type="datetime-local" label="Ends" />
+      <%!-- Side by side only where a date and time fit in half the width. --%>
+      <div class="grid md:grid-cols-2 gap-x-6">
+        <.input field={@form[:starts_at]} type="datetime-local" label="Start" />
+        <.input field={@form[:ends_at]} type="datetime-local" label="Finish" />
       </div>
-      <.input field={@form[:place]} label="Place (optional)">
-        An address or a place name, like "Victoria Park, Truro".
+      <.input field={@form[:place]} label="Address (optional)">
+        An address or a place name, like Victoria Park, Truro.
       </.input>
       <.input
         field={@form[:hours]}
         type="select"
-        label="Tax credit hours"
+        label="SARVAC hours"
         options={ActivityFormViewModel.hours()}
       >
-        Which SARVAC hours the activity counts for on tax credit letters.
+        Which hours the activity counts for on tax credit letters.
       </.input>
       <.input field={@form[:tracking_number]} label="Tracking number (optional)" />
       <.input field={@form[:description]} type="textarea" rows="5" label="Description (optional)" />

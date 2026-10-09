@@ -5,7 +5,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
   alias App.Model.Activity
 
   @kinds [{"Exercise", "exercise"}, {"Incident", "incident"}, {"Event", "event"}]
-  @hours [{"Primary hours", "primary"}, {"Secondary hours", "secondary"}, {"Neither", "none"}]
+  @hours [{"Primary", "primary"}, {"Secondary", "secondary"}, {"Neither", "none"}]
 
   # Adding or changing a hosted team's activity. Times are on the team's wall clock.
   @primary_key false
@@ -70,7 +70,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
     ])
     |> validate_required([:title], message: "Enter a title.")
     |> validate_required([:starts_at], message: "Enter when it starts.")
-    |> validate_required([:ends_at], message: "Enter when it ends.")
+    |> validate_required([:ends_at], message: "Enter when it finishes.")
     |> validate_inclusion(:kind, Enum.map(@kinds, &elem(&1, 1)))
     |> validate_inclusion(:hours, Enum.map(@hours, &elem(&1, 1)))
     |> validate_length(:title, max: 100)
@@ -85,9 +85,10 @@ defmodule App.ViewModel.ActivityFormViewModel do
     ends_at = get_field(changeset, :ends_at)
 
     if starts_at && ends_at && NaiveDateTime.compare(ends_at, starts_at) != :gt,
-      do: add_error(changeset, :ends_at, "Enter an end after the start."),
+      do: add_error(changeset, :ends_at, "Enter a finish after the start."),
       else: changeset
   end
 
-  def validate(form, params), do: form |> changeset(params) |> apply_action(:validate)
+  # :insert, not :validate, so a failed save shows the error summary.
+  def validate(form, params), do: form |> changeset(params) |> apply_action(:insert)
 end

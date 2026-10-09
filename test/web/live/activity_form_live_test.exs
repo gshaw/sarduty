@@ -119,6 +119,6 @@ defmodule Web.ActivityFormLiveTest do
       )
       |> render_submit()
 
-    assert html =~ "Enter an end after the start."
+    assert html =~ "Enter a finish after the start."
   end
 end
