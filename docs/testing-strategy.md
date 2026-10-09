@@ -43,16 +43,29 @@ data?
   `test/app/adapter/d4h/page_test.exs`.
 - The refresh deleting rows D4H no longer has, and only the current team's:
   `test/app/operation/refresh_d4h_data/upsert_*_test.exs`.
-- Which D4H key a refresh uses, and so which key a failure blames:
-  `test/app/operation/refresh_d4h_data/resolve_access_key_test.exs`.
+- The sync every 10 minutes: what it fetches when lists move, and the deletes it finds
+  (`test/app/operation/sync_d4h_changes_test.exs`,
+  `test/app/worker/sync_team_changes_worker_test.exs`), and the nightly run's Healthchecks
+  pings (`finish_run_worker_test.exs`).
+- Change sets: `test/app/operation/apply_change_set_test.exs` fails when anything but the
+  applier calls a D4H write function, and checks a row D4H changed first is skipped.
+- Attendance at the door: the times a send uses (`build_attendance_times_test.exs`), the
+  day a typed time lands on (`record_attendance_scan_test.exs`), and what a send plans
+  (`send_attendance_to_d4h_test.exs`), never a second row for a member.
+- Change history: what the refresh and the sync record, and SAR Duty's own writes not
+  recorded twice (`test/app/operation/record_d4h_changes*_test.exs`).
+- Records edits: `SaveMember.plan/3` and `SaveActivity.plan/4` name only what changed,
+  pure, and the form LiveView tests run each edit against a stubbed Records.
+- Mileage round trips: `test/app/operation/build_mileage_report_test.exs`, pure, with
+  distances worked out by hand.
 - The team dashboard (#205): which activity is NextUp and what Coming up holds
   (`test/app/view_data/team_dashboard_view_data_test.exs`), which "Needs attention" items
   show and in what order (`team_attention_test.exs`), and the year's stats and charts
   (`team_dashboard_charts_test.exs`), all pure.
 - Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
   `/teams/:subdomain/…/:id` route and expects a 404. It fails when a new route of that
-  shape is not in its list. `test/web/live/group_live_test.exs` does the same for the rule editor's
-  events.
+  shape is not in its list. `test/web/live/group_live_test.exs` does the same for the rule
+  editor's events.
 - The MCP endpoint (#28): `test/web/controllers/mcp_controller_test.exs` checks a token
   reads only its own team, that revoked tokens, teams with MCP off, and users who lost
   the D4H bar get 401, and that no tool returns a key outside its `fields/0` or any
@@ -61,19 +74,16 @@ data?
   [urls.md](urls.md), and that the URLs devices and shared links hold still route.
 - Most LiveViews have one smoke test that the page renders or redirects.
 
-The two worker tests are `assert true` placeholders.
-
 ## High-value targets
 
 | Target                                           | Why                                           | Shape                             |
 | ------------------------------------------------ | --------------------------------------------- | --------------------------------- |
 | D4H struct `build/1` and `App.Adapter.D4H.Parse` | A D4H format change corrupts the copy quietly | Pure, against recorded D4H JSON   |
-| Mileage round trips (`BuildMileageReport`)      | Reimbursement numbers                         | Extract the arithmetic, test pure |
 
 ## Known gaps
 
-- **Few D4H stubs.** Every D4H request in tests goes to `Req.Test`, but only the group
-  membership writes have tests against it. The refresh and the `build/1` functions still
-  need recorded D4H JSON (#33).
+- **No recorded D4H JSON.** Every D4H request in tests goes to `Req.Test`, and the
+  writes, the sync, and Records edits have tests against it. The stubs' JSON is written
+  by hand, so the `build/1` functions still need responses recorded from D4H (#33).
 - **Fixtures must come from D4H**, not be invented, when they stand for D4H's format —
   otherwise the test only proves the code agrees with itself.
