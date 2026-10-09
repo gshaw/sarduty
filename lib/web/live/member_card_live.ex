@@ -41,8 +41,14 @@ defmodule Web.MemberCardLive do
 
   def handle_event("issue", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
-    {:ok, card} = IssueMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, socket |> assign_card(card) |> put_flash(:info, "Issued a new ID card.")}
+
+    case IssueMemberCard.call(team, member, DateTime.utc_now()) do
+      {:ok, card} ->
+        {:noreply, socket |> assign_card(card) |> put_flash(:info, "Issued a new ID card.")}
+
+      {:error, :id_cards_off} ->
+        {:noreply, put_flash(socket, :error, id_cards_off())}
+    end
   end
 
   def handle_event("email", _params, socket) do
@@ -87,6 +93,9 @@ defmodule Web.MemberCardLive do
   # Swoosh's test adapter sends each email to the process that sent it.
   def handle_info(_message, socket), do: {:noreply, socket}
 
+  defp id_cards_off,
+    do: "ID cards are not on for your team. Ask a SAR Duty admin to turn them on."
+
   defp assign_card(socket, card) do
     phones = if card, do: length(PassRegistration.get_all_for_serial(card)), else: 0
     socket |> assign(:card, card) |> assign(:phones, phones)
@@ -106,7 +115,16 @@ defmodule Web.MemberCardLive do
       </aside>
       <main class="content-2/3">
         <.member_tabs member={@member} active_tab={:card} />
+        <.banner
+          :if={!@current_team.id_cards_enabled}
+          id="id-cards-off"
+          kind={:warning}
+          title="ID cards are not on for your team"
+        >
+          A SAR Duty admin turns them on once they have checked your team. Ask one to.
+        </.banner>
         <.card_content
+          :if={@current_team.id_cards_enabled}
           card={@card}
           member={@member}
           qualifications={@qualifications}

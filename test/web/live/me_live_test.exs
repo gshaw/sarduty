@@ -15,26 +15,22 @@ defmodule Web.MeLiveTest do
   end
 
   describe "the member's page" do
-    test "gets a card when the member has none", %{conn: conn, team: team, member: member} do
+    test "shows the member's card, with no way to make one",
+         %{conn: conn, team: team, member: member} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#no-card")
+      assert has_element?(lv, "#no-card", "Ask a team admin")
+      refute has_element?(lv, "#issue")
 
-      lv |> element("#issue") |> render_click()
-
-      card = MemberCard.find_current(team, member)
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
     end
 
-    test "never replaces a card the member has", %{conn: conn, team: team, member: member} do
-      card = member_card_fixture(member)
+    test "has no ID card section when the team has no ID cards",
+         %{conn: conn, team: team} do
+      team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-
-      assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
-      refute has_element?(lv, "#issue")
-      render_click(lv, "issue", %{})
-
-      assert MemberCard.find_current(team, member).id == card.id
-      refute Repo.reload!(card).revoked_at
+      refute has_element?(lv, "#no-card")
     end
 
     test "lists the member's letters, newest first, and no one else's",

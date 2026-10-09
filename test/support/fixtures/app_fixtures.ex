@@ -16,8 +16,11 @@ defmodule App.DataFixtures do
   alias App.Model.Team
   alias App.Repo
 
+  # ID cards are on, as for every team that signed up before the switch; pass
+  # `id_cards_enabled: false` for a team an admin hasn't turned them on for.
   def team_fixture(attrs \\ %{}) do
     unique = System.unique_integer([:positive])
+    {id_cards_enabled, attrs} = Map.pop(attrs, :id_cards_enabled, true)
 
     params =
       Map.merge(
@@ -34,7 +37,10 @@ defmodule App.DataFixtures do
         attrs
       )
 
-    Team.insert!(params)
+    params
+    |> Team.insert!()
+    |> Ecto.Changeset.change(id_cards_enabled: id_cards_enabled)
+    |> Repo.update!()
   end
 
   @doc "An organization with a logo, and these teams as members."
