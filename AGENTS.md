@@ -54,6 +54,9 @@
   pasted report, and group membership adds and removes. See
   [docs/change-sets.md](docs/change-sets.md). How the local copy is kept fresh is in
   [docs/d4h-sync.md](docs/d4h-sync.md).
+- **SAR Duty Records**: teams without D4H keep their records in a separate app,
+  `records.sarduty.com`, that serves D4H's API. The adapter calls it like a D4H region;
+  `D4H.records?/1` says which a team uses. See [docs/records.md](docs/records.md).
 - **Mapbox**: geocoding and driving distances for the mileage report, and the static map
   on the activity page.
 - **Cloudflare Email Sending** through Swoosh, with our own adapter in
@@ -235,6 +238,7 @@ change, read the relevant doc:
 - **How D4H data reaches the database, and what never gets deleted** →
   [docs/d4h-sync.md](docs/d4h-sync.md).
 - **Member and activity history** → [docs/change-history.md](docs/change-history.md).
+- **Teams without D4H** → [docs/records.md](docs/records.md).
 - **Group qualification rules** → [docs/group-rules.md](docs/group-rules.md).
 - **Every external service and its credentials** →
   [docs/external-services.md](docs/external-services.md).

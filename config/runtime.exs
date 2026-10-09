@@ -21,6 +21,12 @@ if System.get_env("PHX_SERVER") do
 end
 
 config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
+
+# SAR Duty Records (docs/records.md) is records.sarduty.com. Dev can call a local copy.
+if config_env() == :dev and System.get_env("RECORDS_HOST") do
+  config :sarduty, :records_host, System.get_env("RECORDS_HOST")
+end
+
 config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
 # Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
 config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")

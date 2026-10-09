@@ -5,6 +5,7 @@ defmodule App.ViewData.TeamAttention do
   list once its count is zero, so the list empties as the work gets done.
   """
 
+  alias App.Adapter.D4H
   alias Service.Format
 
   @max_items 7
@@ -19,16 +20,17 @@ defmodule App.ViewData.TeamAttention do
   @doc """
   The items to show, at most #{@max_items}. Each is a map with `key`, `level`
   (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
-  `action`, the text of its link. The letters item also carries the `year`.
+  `action`, the text of its link. The letters item also carries the `year`. `service`
+  is where the team's records live, `:d4h` or `:records` (D4H.service/1).
   """
   def items(rows, now) do
     [
-      refresh_item(rows.refresh),
+      refresh_item(rows.refresh, rows.service),
       drafts_item(rows.draft_count),
       expiring_item(rows.expiring_count, rows.expiring_days),
       missing_details_item(rows.missing_details_count),
       group_changes_item(rows.group_change_count),
-      proposed_changes_item(rows.proposed_change_count),
+      proposed_changes_item(rows.proposed_change_count, rows.service),
       letters_item(rows.letters, now, rows.timezone)
     ]
     |> Enum.reject(&is_nil/1)
@@ -36,27 +38,27 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.take(@max_items)
   end
 
-  defp refresh_item(%{state: :failed, message: message}) do
+  defp refresh_item(%{state: :failed, message: message}, service) do
     %{
       key: :refresh,
       level: :warning,
-      title: "SAR Duty cannot refresh from D4H",
+      title: "SAR Duty cannot refresh from #{D4H.service_name(service)}",
       detail: message,
       action: "Open team settings"
     }
   end
 
-  defp refresh_item(%{state: :key_rejected}) do
+  defp refresh_item(%{state: :key_rejected}, service) do
     %{
       key: :refresh,
       level: :warning,
-      title: "SAR Duty cannot refresh from D4H",
-      detail: "Your D4H access key no longer works.",
+      title: "SAR Duty cannot refresh from #{D4H.service_name(service)}",
+      detail: "Your #{D4H.key_name(service)} no longer works.",
       action: "Open team settings"
     }
   end
 
-  defp refresh_item(_ok_or_refreshing), do: nil
+  defp refresh_item(_ok_or_refreshing, _service), do: nil
 
   defp drafts_item(0), do: nil
 
@@ -123,19 +125,21 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp proposed_changes_item(0), do: nil
+  defp proposed_changes_item(0, _service), do: nil
 
   # An AI agent's change sets wait for a team admin (#216).
-  defp proposed_changes_item(count) do
+  defp proposed_changes_item(count, service) do
+    name = D4H.service_name(service)
+
     %{
       key: :proposed_changes,
       level: :info,
       title:
         Format.count(count,
-          one: "%d proposed change to D4H",
-          many: "%d proposed changes to D4H"
+          one: "%d proposed change to #{name}",
+          many: "%d proposed changes to #{name}"
         ),
-      detail: "An AI agent proposed them. Nothing changes in D4H until you send them.",
+      detail: "An AI agent proposed them. Nothing changes in #{name} until you send them.",
       action: "Review proposed changes"
     }
   end

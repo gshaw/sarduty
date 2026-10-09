@@ -44,20 +44,24 @@ defmodule App.Operation.UpdateTeamSettings do
       add_error(
         changeset,
         :new_d4h_access_key,
-        "Use a D4H access key for this team. This one is for another team."
+        "Use a #{D4H.key_name(team)} for this team. This one is for another team."
       )
     end
   end
 
-  def check_new_key(changeset, _team, {:error, :unreachable}, _now) do
-    add_error(changeset, :new_d4h_access_key, "D4H did not respond. Try again in a few minutes.")
-  end
-
-  def check_new_key(changeset, _team, {:error, _reason}, _now) do
+  def check_new_key(changeset, team, {:error, :unreachable}, _now) do
     add_error(
       changeset,
       :new_d4h_access_key,
-      "Paste the key again. D4H does not accept this one."
+      "#{D4H.service_name(team)} did not respond. Try again in a few minutes."
+    )
+  end
+
+  def check_new_key(changeset, team, {:error, _reason}, _now) do
+    add_error(
+      changeset,
+      :new_d4h_access_key,
+      "Paste the key again. #{D4H.service_name(team)} does not accept this one."
     )
   end
 

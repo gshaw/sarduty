@@ -5,6 +5,7 @@ defmodule Web.MemberGroupsLive do
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
+  alias App.Adapter.D4H
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Repo
@@ -59,7 +60,7 @@ defmodule Web.MemberGroupsLive do
       </:col>
     </.table>
     <p :if={@member.group_members == []} id="no-groups">
-      {@member.name} is not in any D4H groups.
+      {@member.name} is not in any groups in {D4H.service_name(@member.team)}.
     </p>
     """
   end

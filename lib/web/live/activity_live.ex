@@ -59,7 +59,12 @@ defmodule Web.ActivityLive do
     </.breadcrumbs>
 
     <h1 class="title">{@activity.title}</h1>
-    <.banner :if={@activity.deleted_at} id="deleted-in-d4h" kind={:danger} title="Deleted in D4H">
+    <.banner
+      :if={@activity.deleted_at}
+      id="deleted-in-d4h"
+      kind={:danger}
+      title={"Deleted in #{D4H.service_name(@activity.team)}"}
+    >
       <p>
         SAR Duty saw it was gone on {Service.Format.date_long(
           @activity.deleted_at,
@@ -143,7 +148,7 @@ defmodule Web.ActivityLive do
       <dt :if={!@activity.deleted_at}>Actions</dt>
       <dd :if={!@activity.deleted_at}>
         <ul id="activity-actions" class="action-list">
-          <li>
+          <li :if={!D4H.records?(@activity.team)}>
             <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
               Open D4H activity
             </.a>
@@ -224,7 +229,10 @@ defmodule Web.ActivityLive do
   @doc "Sends a page that calls D4H back to a deleted activity's page."
   def leave_deleted(socket, activity) do
     socket
-    |> put_flash(:error, "This activity is deleted in D4H. Nothing can be sent to it.")
+    |> put_flash(
+      :error,
+      "This activity is deleted in #{D4H.service_name(socket.assigns.current_team)}. Nothing can be sent to it."
+    )
     |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}")
   end
 

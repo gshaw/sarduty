@@ -11,6 +11,14 @@ access tokens ([how to get one](https://help.d4h.com/article/377-obtaining-an-ap
 Reads are everywhere. The writes are the attendance `PATCH` and group membership adds and
 removes from the group review page. See [d4h-sync.md](d4h-sync.md).
 
+## SAR Duty Records
+
+A separate app at `records.sarduty.com` for teams without D4H, serving D4H's v3 API. A
+Records team's API host is Records' host and its key a Records key, both in the database
+like a D4H team's. The same adapter calls it. See [records.md](records.md).
+
+- `RECORDS_HOST` — dev only, optional: points SAR Duty at a local Records.
+
 ## Mapbox
 
 [lib/app/adapter/mapbox.ex](../lib/app/adapter/mapbox.ex). Geocodes member addresses and

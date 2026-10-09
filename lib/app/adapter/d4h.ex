@@ -7,6 +7,54 @@ defmodule App.Adapter.D4H do
 
   def default_region, do: "api.ca.d4h.org"
 
+  # SAR Duty Records (docs/records.md) keeps a team's records when it has no D4H. It
+  # serves D4H's v3 API, with a few writes D4H lacks, so a team on it is called through
+  # this adapter like any other.
+  @records_host "records.sarduty.com"
+
+  @doc "The host of SAR Duty Records. Dev can point it elsewhere with RECORDS_HOST."
+  def records_host, do: Application.get_env(:sarduty, :records_host, @records_host)
+
+  @doc """
+  The services a team's records can live in, as `{label, api_host}` for a select: each
+  D4H region, then SAR Duty Records. SAR Duty only ever calls these hosts.
+  """
+  def services do
+    regions()
+    |> Enum.sort()
+    |> Enum.map(fn {region, host} -> {"D4H #{region}", host} end)
+    |> Enum.concat([{"SAR Duty Records", records_host()}])
+  end
+
+  def service_hosts, do: Enum.map(services(), &elem(&1, 1))
+
+  @doc "Where a team's records live: `:d4h` or `:records`. Takes a team, an api host, or either atom."
+  def service(%Team{d4h_api_host: api_host}), do: service(api_host)
+  def service(api_host) when is_binary(api_host) or is_nil(api_host), do: service_of(api_host)
+  def service(service) when service in [:d4h, :records], do: service
+
+  defp service_of(api_host) do
+    if api_host == records_host(), do: :records, else: :d4h
+  end
+
+  def records?(team_or_host), do: service(team_or_host) == :records
+
+  @doc ~s(The service's name in text people read: "D4H" or "SAR Duty Records".)
+  def service_name(team_or_host) do
+    case service(team_or_host) do
+      :d4h -> "D4H"
+      :records -> "SAR Duty Records"
+    end
+  end
+
+  @doc ~s(The team's key, in text people read: "D4H access key" or "Records access key".)
+  def key_name(team_or_host) do
+    case service(team_or_host) do
+      :d4h -> "D4H access key"
+      :records -> "Records access key"
+    end
+  end
+
   def regions do
     %{
       "America" => "api.d4h.org",
@@ -60,7 +108,7 @@ defmodule App.Adapter.D4H do
       headers: %{"User-Agent" => "sarduty.com"},
       auth: {:bearer, access_key || ""},
       # Req 0.6+ no longer asks for gzip by default. api_host is always one of
-      # D4H.regions(), so decompressing is safe, and 1000-record pages are large.
+      # D4H.services(), so decompressing is safe, and 1000-record pages are large.
       compressed: true
     ]
     |> Keyword.merge(test_options())
@@ -339,7 +387,9 @@ defmodule App.Adapter.D4H do
 
     newest =
       case page.results do
-        [row | _] -> D4H.Parse.optional_datetime(row["updatedAt"])
+        # Not truncated: Records can make two changes within a second, and they must
+        # still look different.
+        [row | _] -> D4H.Parse.precise_datetime(row["updatedAt"])
         [] -> nil
       end
 

@@ -97,6 +97,7 @@ and must not be used for it.
 | ------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | SAR Duty                       | SARDuty, Sar Duty, the app, the system         | This service.                                                                                        |
 | D4H                            | d4h, D4H Decisions, D4H Technologies           | The team's system of record.                                                                         |
+| SAR Duty Records               | the store, hosted D4H, Records app             | Where a team without D4H keeps its records. "Records" alone only after the full name on the page.    |
 | team                           | organization, unit, group, chapter             | A search and rescue team using SAR Duty.                                                             |
 | member                         | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
 | account                        | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
@@ -118,8 +119,9 @@ and must not be used for it.
 | ID card                        | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
 | verify                         | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
 | D4H access key                 | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
+| Records access key             | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
 | MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
-| refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H into SAR Duty.                                                      |
+| refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
 | no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |

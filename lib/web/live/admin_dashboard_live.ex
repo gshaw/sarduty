@@ -4,6 +4,7 @@ defmodule Web.AdminDashboardLive do
   import Web.Components.AdminTabs
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
@@ -205,10 +206,13 @@ defmodule Web.AdminDashboardLive do
   defp key_summary(%Team{d4h_access_key: key}) when key in [nil, ""], do: "No team key"
   defp key_summary(%Team{d4h_access_key_owner: nil}), do: "Team key"
 
+  # Records names the key itself, so whose it is says nothing there.
   defp key_summary(%Team{} = team) do
-    if Team.key_owner_is_sar_duty?(team),
-      do: "Team key: #{team.d4h_access_key_owner}",
-      else: "Person's key: #{team.d4h_access_key_owner}"
+    cond do
+      D4H.records?(team) -> "SAR Duty Records key: #{team.d4h_access_key_owner}"
+      Team.key_owner_is_sar_duty?(team) -> "Team key: #{team.d4h_access_key_owner}"
+      true -> "Person's key: #{team.d4h_access_key_owner}"
+    end
   end
 
   # The most recent visit by anyone on the team.

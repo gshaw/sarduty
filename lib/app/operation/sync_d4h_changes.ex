@@ -69,7 +69,7 @@ defmodule App.Operation.SyncD4HChanges do
   def plan(nil, _heads), do: :seed
 
   def plan(previous, heads) do
-    case Enum.filter(@lists, &(Map.get(previous, &1) != Map.get(heads, &1))) do
+    case Enum.filter(@lists, &moved?(Map.get(previous, &1), Map.get(heads, &1))) do
       [] -> :unchanged
       changed -> plan_changed(previous, changed)
     end
@@ -98,6 +98,18 @@ defmodule App.Operation.SyncD4HChanges do
       attendance_since: if("attendance" in changed, do: since(previous["attendance"]))
     }
   end
+
+  # Heads saved before they kept fractions of a second compare to the second, so the
+  # first sync after that change doesn't refetch every list.
+  defp moved?(
+         %{newest_updated_at: %DateTime{microsecond: {0, 0}} = at} = previous,
+         %{newest_updated_at: %DateTime{} = now} = head
+       ),
+       do:
+         previous.total_size != head.total_size or
+           DateTime.compare(at, DateTime.truncate(now, :second)) != :eq
+
+  defp moved?(previous, head), do: previous != head
 
   defp since(%{newest_updated_at: %DateTime{} = at}), do: DateTime.add(at, -@overlap_seconds)
   defp since(_never_or_empty), do: @start_of_time

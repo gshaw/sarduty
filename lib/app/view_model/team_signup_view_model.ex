@@ -19,7 +19,9 @@ defmodule App.ViewModel.TeamSignupViewModel do
       message: "Enter an email with an @ sign and no spaces."
     )
     |> validate_length(:email, max: 160)
-    |> validate_inclusion(:api_host, Map.values(D4H.regions()))
+    |> validate_inclusion(:api_host, D4H.service_hosts(),
+      message: "Select where your team's records are."
+    )
     |> validate_length(:access_key, min: 5, max: 2000)
   end
 

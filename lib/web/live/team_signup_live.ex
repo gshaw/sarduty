@@ -22,7 +22,7 @@ defmodule Web.TeamSignupLive do
     <div :if={@done} id="signup-done">
       <h1 class="heading">{@done.name} is on SAR Duty</h1>
       <p>
-        Its first D4H refresh has started and takes a few minutes. We've emailed
+        Its first refresh from {D4H.service_name(@done.api_host)} has started and takes a few minutes. We've emailed
         <strong>{@done.email}</strong>
         a code to log in. It works once, for 15 minutes.
       </p>
@@ -34,34 +34,54 @@ defmodule Web.TeamSignupLive do
     </div>
     <div :if={!@done}>
       <h1 class="heading">Sign up a team</h1>
-      <p>
-        SAR Duty works from your team's D4H data. You need a D4H access key from a D4H member
-        with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
-        Duty in D4H. You must also be an Owner or Editor on the team in D4H.
-      </p>
-      <p>
-        <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
-          How to create a D4H access key
-        </.a>
-      </p>
+      <%= if D4H.records?(@api_host) do %>
+        <p id="signup-records">
+          SAR Duty works from your team's records in SAR Duty Records. You need a Records access
+          key from your team's API keys page there. You must also be an Owner or Editor on the
+          team in Records.
+        </p>
+        <p>
+          <.a external={true} href={"https://#{D4H.records_host()}/teams"}>
+            Create a key in SAR Duty Records
+          </.a>
+        </p>
+      <% else %>
+        <p id="signup-d4h">
+          SAR Duty works from your team's D4H data. You need a D4H access key from a D4H member
+          with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
+          Duty in D4H. You must also be an Owner or Editor on the team in D4H.
+        </p>
+        <p>
+          <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
+            How to create a D4H access key
+          </.a>
+        </p>
+      <% end %>
       <.form for={@form} id="signup_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:email]} type="email" label="Email" autocomplete="email">
-          The email D4H has for you. We send your login code here.
+          The email {D4H.service_name(@api_host)} has for you. We send your login code here.
         </.input>
         <.input
           field={@form[:api_host]}
           type="select"
-          label="D4H region"
-          options={D4H.regions()}
-        />
+          label="Where your team's records are"
+          options={D4H.services()}
+        >
+          Select SAR Duty Records if your team does not use D4H.
+        </.input>
         <.input
           field={@form[:access_key]}
           type="password"
-          label="D4H access key"
+          label={D4H.key_name(@api_host)}
           autocomplete="off"
         />
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Checking with D4H…">Sign up</.button>
+          <.button
+            variant={:success}
+            phx-disable-with={"Checking with #{D4H.service_name(@api_host)}…"}
+          >
+            Sign up
+          </.button>
         </.form_actions>
       </.form>
       <p class="text-text-muted">
@@ -83,7 +103,8 @@ defmodule Web.TeamSignupLive do
     case SignUpTeam.call(params) do
       {:ok, team} ->
         SecurityEvent.record(socket.assigns, :team_signed_up, team_id: team.id, data: %{who: who})
-        {:noreply, assign(socket, done: %{name: team.name, email: params["email"]})}
+        done = %{name: team.name, email: params["email"], api_host: team.d4h_api_host}
+        {:noreply, assign(socket, done: done)}
 
       {:error, changeset} ->
         fields = changeset.errors |> Keyword.keys() |> Enum.uniq()
@@ -93,5 +114,10 @@ defmodule Web.TeamSignupLive do
     end
   end
 
-  defp assign_form(socket, changeset), do: assign(socket, form: to_form(changeset, as: "form"))
+  # The page's words follow the chosen service. Anything off the list reads as D4H.
+  defp assign_form(socket, changeset) do
+    api_host = Ecto.Changeset.get_field(changeset, :api_host)
+    api_host = if api_host in D4H.service_hosts(), do: api_host, else: D4H.default_region()
+    assign(socket, form: to_form(changeset, as: "form"), api_host: api_host)
+  end
 end
