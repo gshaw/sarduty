@@ -23,7 +23,7 @@ defmodule App.Adapter.D4H do
     regions()
     |> Enum.sort()
     |> Enum.map(fn {region, host} -> {"D4H #{region}", host} end)
-    |> Enum.concat([{"SAR Duty Records", records_host()}])
+    |> Enum.concat([{"SAR Duty Records (experimental)", records_host()}])
   end
 
   def service_hosts, do: Enum.map(services(), &elem(&1, 1))
