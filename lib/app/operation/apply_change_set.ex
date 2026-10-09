@@ -14,7 +14,15 @@ defmodule App.Operation.ApplyChangeSet do
 
   # Writes for a team on SAR Duty Records (docs/records.md), from App.Operation.ApplyEdit.
   # Each changes the record its row names; nothing is read first.
-  @edits [:create_member, :update_member, :retire_member, :rejoin_member]
+  @edits [
+    :create_member,
+    :update_member,
+    :retire_member,
+    :rejoin_member,
+    :create_activity,
+    :update_activity,
+    :delete_activity
+  ]
 
   @doc """
   Applies the set's proposed and failed rows. `{:ok, rows}` with each row as recorded;
@@ -147,6 +155,25 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :rejoin_member} = row),
     do: d4h |> D4H.rejoin_member(row.d4h_record_id) |> record_result(& &1.d4h_member_id)
+
+  # An activity's kind is in a create's new_value, and in the old_value of a change.
+  defp write(d4h, %ChangeSetRow{action: :create_activity, new_value: new_value}) do
+    d4h
+    |> D4H.create_activity(new_value["kind"], Map.delete(new_value, "kind"))
+    |> record_result(& &1.d4h_activity_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :update_activity} = row) do
+    d4h
+    |> D4H.update_activity(row.old_value["kind"], row.d4h_record_id, row.new_value)
+    |> record_result(& &1.d4h_activity_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_activity} = row) do
+    d4h
+    |> D4H.delete_activity(row.old_value["kind"], row.d4h_record_id)
+    |> record_result(& &1)
+  end
 
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}

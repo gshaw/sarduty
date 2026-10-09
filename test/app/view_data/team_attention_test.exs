@@ -114,7 +114,8 @@ defmodule App.ViewData.TeamAttentionTest do
       service: :records,
       refresh: %{state: :key_rejected},
       proposed_change_count: 2,
-      missing_details_count: 3
+      missing_details_count: 3,
+      draft_count: 2
     }
 
     for item <- items(attrs, @october) do

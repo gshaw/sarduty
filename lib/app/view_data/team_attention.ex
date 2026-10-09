@@ -26,7 +26,7 @@ defmodule App.ViewData.TeamAttention do
   def items(rows, now) do
     [
       refresh_item(rows.refresh, rows.service),
-      drafts_item(rows.draft_count),
+      drafts_item(rows.draft_count, rows.service),
       expiring_item(rows.expiring_count, rows.expiring_days),
       missing_details_item(rows.missing_details_count, rows.service),
       group_changes_item(rows.group_change_count),
@@ -60,9 +60,20 @@ defmodule App.ViewData.TeamAttention do
 
   defp refresh_item(_ok_or_refreshing, _service), do: nil
 
-  defp drafts_item(0), do: nil
+  defp drafts_item(0, _service), do: nil
 
-  defp drafts_item(count) do
+  # A team on SAR Duty Records publishes on the activity's page in SAR Duty.
+  defp drafts_item(count, :records),
+    do: %{
+      drafts_item(count, :d4h)
+      | detail:
+          Format.count(count,
+            one: "Check its attendance, then publish it.",
+            many: "Check their attendance, then publish them."
+          )
+    }
+
+  defp drafts_item(count, :d4h) do
     %{
       key: :drafts,
       level: :warning,

@@ -214,6 +214,13 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :rejoin_member}, _page),
     do: "Marked as rejoined in SAR Duty"
 
+  def describe_row(%ChangeSetRow{action: :create_activity}, _page), do: "Added in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :update_activity}, _page),
+    do: "Details changed in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :delete_activity}, _page), do: "Deleted in SAR Duty"
+
   def describe_row(%ChangeSetRow{action: :add_group_member} = row, _page),
     do: "Added to the #{row_group(row)} group"
 
