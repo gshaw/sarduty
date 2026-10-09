@@ -580,7 +580,19 @@ defmodule App.Adapter.D4H do
   def create_activity(context, kind, attrs) when kind in ["event", "exercise", "incident"] do
     with {:ok, activity} <-
            write(context, :post, "/#{kind}s", activity_json(attrs), &D4H.Activity.build/1) do
-      finish_activity(context, kind, activity.d4h_activity_id, attrs)
+      # The activity exists now, so this answers with it whatever its tags and published
+      # flag do: a failed create would be tried again and make a second one.
+      case finish_activity(context, kind, activity.d4h_activity_id, attrs) do
+        {:ok, finished} ->
+          {:ok, finished}
+
+        {:error, error} ->
+          Logger.warning(
+            "Activity #{activity.d4h_activity_id} added without its tags or published flag: #{Exception.message(error)}"
+          )
+
+          {:ok, activity}
+      end
     end
   end
 
