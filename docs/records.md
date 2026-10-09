@@ -52,6 +52,12 @@ that title.
   only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
   admin cannot stop being one or leave, and saving a retired member's details keeps
   them retired.
+- **Photos**: set or remove on the member's Change details page. `PUT` takes the image
+  itself (JPEG, PNG, or WebP, under 10 MB), and Records shrinks it and strips its
+  metadata. The change set row records only the size: the image passes through
+  `ApplyChangeSet`'s `photo:` option and is never kept in SAR Duty. Reading is D4H's
+  `GET /members/<id>/image`, as for any team, so ID cards and pages need nothing new.
+  After a change, the member's Apple Wallet pass is nudged to fetch the new photo.
 - **Activities**: add, change, delete. `DELETE /<kind>s/<id>` is Records' own; it marks
   the activity deleted as D4H does, and SAR Duty marks its copy at once. The SARVAC
   hours choice sets the Primary Hours or Secondary Hours tag and keeps any others. A
@@ -62,7 +68,8 @@ that title.
   qualifications and awards is Records' own; groups and group members use D4H's own
   endpoints. Deleting a qualification takes its awards with it, and a group its members.
 
-Every Records-only write: `POST /members`, `permission` on a member, `DELETE` on
+Every Records-only write: `POST /members`, `permission` on a member, `PUT` and `DELETE`
+on `/members/<id>/image`, `DELETE` on
 `/events`, `/exercises`, and `/incidents`, `DELETE /member-qualifications/<id>`, and
 `DELETE /member-qualification-awards/<id>`. The guard test in
 `test/app/operation/apply_change_set_test.exs` lists every write function, so only

@@ -19,6 +19,8 @@ defmodule App.Operation.ApplyChangeSet do
     :update_member,
     :retire_member,
     :rejoin_member,
+    :set_member_photo,
+    :remove_member_photo,
     :create_activity,
     :update_activity,
     :delete_activity,
@@ -36,8 +38,13 @@ defmodule App.Operation.ApplyChangeSet do
   Applies the set's proposed and failed rows. `{:ok, rows}` with each row as recorded;
   `{:error, :no_team_key}`, `{:error, :deleted}` or `{:error, :published}` for an
   activity that can't change, or `{:error, %D4H.Error{}}` when D4H can't be read.
+
+  `photo:` in `opts` is the image a `:set_member_photo` row sends. The row never holds
+  it, so a photo is never kept in SAR Duty.
   """
-  def call(%Team{} = team, %ChangeSet{team_id: team_id} = change_set, %User{} = user, now)
+  def call(team, change_set, user, now, opts \\ [])
+
+  def call(%Team{} = team, %ChangeSet{team_id: team_id} = change_set, %User{} = user, now, opts)
       when team_id == team.id do
     change_set = Repo.preload(change_set, [:activity, :rows])
 
@@ -46,7 +53,7 @@ defmodule App.Operation.ApplyChangeSet do
          {:ok, current} <- read_current(d4h, change_set) do
       rows =
         for row <- change_set.rows, row.status in [:proposed, :failed] do
-          ChangeSetRow.record!(row, apply_row(d4h, row, current), now)
+          ChangeSetRow.record!(row, apply_row(d4h, row, current, opts), now)
         end
 
       ChangeSet.mark_applied!(change_set, user, now)
@@ -75,12 +82,24 @@ defmodule App.Operation.ApplyChangeSet do
     end
   end
 
-  defp apply_row(d4h, row, current) do
+  defp apply_row(d4h, row, current, opts) do
     case check(row, current) do
-      :ok -> write(d4h, row)
+      :ok -> write(d4h, row, opts)
       skip -> skip
     end
   end
+
+  defp write(d4h, %ChangeSetRow{action: :set_member_photo} = row, opts) do
+    case opts[:photo] do
+      nil ->
+        {:failed, "Upload the photo again."}
+
+      bytes ->
+        d4h |> D4H.set_member_photo(row.d4h_record_id, bytes) |> record_result(& &1.d4h_member_id)
+    end
+  end
+
+  defp write(d4h, row, _opts), do: write(d4h, row)
 
   @doc """
   Whether a row can still be written, given D4H's attendance rows `current` (nil for a
@@ -163,6 +182,9 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :rejoin_member} = row),
     do: d4h |> D4H.rejoin_member(row.d4h_record_id) |> record_result(& &1.d4h_member_id)
+
+  defp write(d4h, %ChangeSetRow{action: :remove_member_photo} = row),
+    do: d4h |> D4H.remove_member_photo(row.d4h_record_id) |> record_result(& &1.d4h_member_id)
 
   # An activity's kind is in a create's new_value, and in the old_value of a change.
   defp write(d4h, %ChangeSetRow{action: :create_activity, new_value: new_value}) do

@@ -39,7 +39,7 @@ defmodule App.Operation.ApplyEdit do
         [row]
       )
 
-    case ApplyChangeSet.call(team, change_set, user, now) do
+    case ApplyChangeSet.call(team, change_set, user, now, Keyword.take(opts, [:photo])) do
       {:ok, [%ChangeSetRow{status: :applied} = applied]} ->
         sync(team)
         {:ok, applied.d4h_record_id}

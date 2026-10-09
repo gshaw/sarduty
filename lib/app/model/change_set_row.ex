@@ -26,6 +26,8 @@ defmodule App.Model.ChangeSetRow do
         :update_member,
         :retire_member,
         :rejoin_member,
+        :set_member_photo,
+        :remove_member_photo,
         :create_activity,
         :update_activity,
         :delete_activity,

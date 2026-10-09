@@ -733,6 +733,19 @@ defmodule App.Adapter.D4H do
       else: json
   end
 
+  @doc """
+  Sets a member's photo to `bytes`, a JPEG, PNG, or WebP. PUT on the image is Records'
+  own; D4H takes photos only in its web app. Records shrinks it and strips its metadata.
+  """
+  def set_member_photo(context, d4h_member_id, bytes) when is_binary(bytes) do
+    url = "/members/#{d4h_member_id}/image"
+    write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
+  end
+
+  @doc "Removes a member's photo. DELETE on the image is Records' own."
+  def remove_member_photo(context, d4h_member_id),
+    do: write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
+
   defp member_json(attrs) do
     attrs
     |> rename(@member_fields)
@@ -749,14 +762,22 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  defp write(context, method, url, json, build) do
-    options = [method: method, url: url, retry: false] ++ if(json, do: [json: json], else: [])
+  # `payload` is a JSON map, `{:body, bytes}` for a file, or nil for none.
+  defp write(context, method, url, payload, build) do
+    options = [method: method, url: url, retry: false] ++ payload_options(payload)
 
     case Req.request(context, options) do
       {:ok, %{status: status} = response} when status in 200..299 -> {:ok, build.(response.body)}
       result -> {:error, write_error(result)}
     end
   end
+
+  defp payload_options(nil), do: []
+
+  defp payload_options({:body, bytes}),
+    do: [body: bytes, headers: %{"content-type" => "application/octet-stream"}]
+
+  defp payload_options(json), do: [json: json]
 
   defp iso(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)
 end
