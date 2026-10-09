@@ -238,7 +238,9 @@ defmodule Web.Layouts do
           current_path={@current_path}
         />
       <% else %>
-        <.button navigate="/login" size={:sm}>Log in</.button>
+        <.a id="nav-login" kind={:custom} navigate={~p"/login"} class="site-bar-login">
+          <.icon name="hero-arrow-right-end-on-rectangle" /> Log in
+        </.a>
       <% end %>
     </.site_bar>
     """

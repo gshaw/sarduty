@@ -152,7 +152,6 @@ defmodule Web.MemberCardLive do
           <.button
             :if={@phones > 0}
             id="test-update"
-            size={:sm}
             phx-click="test-update"
             phx-disable-with="Sending…"
           >

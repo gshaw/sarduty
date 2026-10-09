@@ -58,6 +58,24 @@
   .site-bar-menu > summary:hover { background: rgb(255 255 255 / 0.1); }
   .site-bar-menu > summary > :first-child { max-width: 160px; }
 
+  /* Log in, when nobody is: white like the Menu button, 44px tall, at every width. */
+  .site-bar-login {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    padding: var(--sp-3) var(--sp-2);
+    margin-right: calc(-1 * var(--sp-2));
+    border-radius: var(--radius);
+    white-space: nowrap;
+  }
+
+  .site-bar-login:hover { color: #fff; background: rgb(255 255 255 / 0.1); }
+
   /* Phones and narrow windows: the links and account menu move behind a menu button. */
   .site-bar-phone { display: none; margin-left: auto; }
 

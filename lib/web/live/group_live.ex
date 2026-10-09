@@ -156,7 +156,7 @@ defmodule Web.GroupLive do
     ~H"""
     <div class="card flex items-center justify-between gap-4">
       <p id="rule-sentence" class="mb-0">{rule_sentence(@clauses, @qualifications)}</p>
-      <.button id="edit-rules" size={:sm} class="shrink-0" phx-click="edit-rules">
+      <.button id="edit-rules" class="shrink-0" phx-click="edit-rules">
         {if @clauses == [], do: "Add rules", else: "Edit rules"}
       </.button>
     </div>

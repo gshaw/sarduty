@@ -85,7 +85,6 @@ defmodule Web.TaxCreditLetterLive do
       <.button
         id="replace-letter"
         variant={:warning}
-        size={:sm}
         phx-click="replace"
         data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It gets a new reference number and is not emailed."}
       >

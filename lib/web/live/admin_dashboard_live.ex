@@ -56,7 +56,7 @@ defmodule Web.AdminDashboardLive do
         <span id="refresh-summary" class="hint">
           {refresh_summary(@teams)}
         </span>
-        <.button type="button" variant={:warning} size={:sm} phx-click="refresh-all">
+        <.button type="button" variant={:warning} phx-click="refresh-all">
           Refresh all teams
         </.button>
       </div>

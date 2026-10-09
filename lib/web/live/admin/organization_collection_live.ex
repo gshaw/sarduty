@@ -17,7 +17,7 @@ defmodule Web.Admin.OrganizationCollectionLive do
     <.admin_tabs current={:organizations} />
     <div class="heading-row">
       <h2 class="heading">Organizations</h2>
-      <.button navigate={~p"/admin/orgs/new"} variant={:success} size={:sm}>
+      <.button navigate={~p"/admin/orgs/new"} variant={:success}>
         New organization
       </.button>
     </div>

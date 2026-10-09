@@ -59,7 +59,7 @@ defmodule Web.Components.Core do
 
       <.button variant={:success}>Save</.button>
       <.button variant={:danger} size={:sm} phx-click="delete">Delete</.button>
-      <.button navigate={~p"/login"} size={:sm}>Log in</.button>
+      <.button navigate={~p"/login"}>Log in</.button>
   """
   attr :type, :string, default: nil
 
