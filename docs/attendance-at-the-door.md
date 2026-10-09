@@ -12,7 +12,8 @@ the D4H test it rests on.
 
 - **The token is the only access.** The door's page has no login. Anyone with the link
   can record scans for that one activity and see the team's current member names, and
-  nothing else: no contact details, no other activity. The token is 32 random bytes; the
+  the mobile numbers of members yet to arrive (decided 2026-10-08, #245), and nothing
+  else: no other contact details, no other activity. The token is 32 random bytes; the
   database keeps its SHA-256 for lookups and the token itself encrypted, so the admin can
   copy the link again.
 - **A link is open until it closes.** It opens when it's made, and anyone holding it can
@@ -45,6 +46,14 @@ the D4H test it rests on.
   start. Leaving within 30 minutes of the end, early or late, counts as the end. Andrew
   confirmed both sides on #139. A missing scan uses the activity's time and says so.
   Leaving before arriving can't be sent.
+
+## Yet to arrive
+
+The door's page and Take attendance list members who signed up, D4H's `ATTENDING`, and
+have no scan yet, with Call and Text buttons, so the door can phone them (#245,
+[BuildYetToArrive](../lib/app/operation/build_yet_to_arrive.ex)). Any scan counts, so a
+member scanned only leaving drops off too. The list reads the copy again on every scan,
+so the sync's changes show on the next update.
 
 ## Short links
 
@@ -108,12 +117,12 @@ still fix times.
   `REQUESTED` only means invited: D4H gives every invited member that row until they
   reply, so a requested row with no scan is left alone.
 - **A published activity is refused.** D4H's published flag is read live, not from the
-  nightly copy, and the page says to unpublish it in D4H first.
+  copy, and the page says to unpublish it in D4H first.
 - **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity
-  or a row was deleted or changed, so the page says so before D4H's own text. #160 is
-  about the refresh keeping activities deleted in D4H.
+  or a row was deleted or changed, so the page says so before D4H's own text. An
+  activity the sync has marked deleted (#160) is refused before D4H is read.
 - D4H works out the duration from the times. The local copy shows the new attendance
-  after the next refresh.
+  after the next sync, within 10 minutes.
 
 ## No-shows
 

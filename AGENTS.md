@@ -34,14 +34,14 @@
   (`use App, :view_model`) that validate filter and form params.
 - **View data**: [lib/app/view_data/](lib/app/view_data) bundle the read-only queries for
   one page.
-- **Workers**: [lib/app/worker/](lib/app/worker) are Oban jobs — today, the daily D4H
-  refresh.
+- **Workers**: [lib/app/worker/](lib/app/worker) are Oban jobs: the D4H sync every 10
+  minutes and the nightly full refresh, pass updates, login codes, and pruning.
 - **Fields and validators**: [lib/app/field/](lib/app/field) (`EncryptedString`,
   `TrimmedString`) and [lib/app/validate/](lib/app/validate).
 - **Service**: [lib/service/](lib/service) are stateless helpers — `Service.Format`,
   `Service.Convert`, `Service.PDFLetter`. No database, no HTTP.
-- **Accounts**: [lib/app/accounts/](lib/app/accounts) is users who log in with an emailed
-  link (no passwords), with `phx.gen.auth`-style sessions (`current_user` and
+- **Accounts**: [lib/app/accounts/](lib/app/accounts) is users who log in with a code,
+  emailed or texted (no passwords), with `phx.gen.auth`-style sessions (`current_user` and
   `current_team`, not `current_scope`) and an admin flag. Access comes from D4H: a user
   reaches a team when their email matches a member D4H makes an Owner or Editor
   (`Team.get_managed_by/2`). Admins reach every team.
@@ -51,14 +51,14 @@
 - **D4H v3 API**: [lib/app/adapter/d4h.ex](lib/app/adapter/d4h.ex). Each team has its own
   API host (region) and bearer token. Almost everything reads. Every write is a change
   set, applied by `App.Operation.ApplyChangeSet`: attendance from the door and from a
-  pasted report, and group membership adds and removes. See
+  pasted report, group membership adds and removes, and a Records team's edits. See
   [docs/change-sets.md](docs/change-sets.md). How the local copy is kept fresh is in
   [docs/d4h-sync.md](docs/d4h-sync.md).
 - **SAR Duty Records**: teams without D4H keep their records in a separate app,
   `records.sarduty.com`, that serves D4H's API. The adapter calls it like a D4H region;
   `D4H.records?/1` says which a team uses. See [docs/records.md](docs/records.md).
-- **Mapbox**: geocoding and driving distances for the mileage report, and the static map
-  on the activity page.
+- **Mapbox**: geocoding and driving distances for the mileage report, and the static maps
+  on the team home and activity pages, served through `/maps/`.
 - **Cloudflare Email Sending** through Swoosh, with our own adapter in
   [lib/app/adapter/cloudflare_email.ex](lib/app/adapter/cloudflare_email.ex): mail in
   production. Dev uses the local mailbox at `/dev/mailbox`.

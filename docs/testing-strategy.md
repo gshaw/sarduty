@@ -76,9 +76,9 @@ data?
 
 ## High-value targets
 
-| Target                                           | Why                                           | Shape                             |
-| ------------------------------------------------ | --------------------------------------------- | --------------------------------- |
-| D4H struct `build/1` and `App.Adapter.D4H.Parse` | A D4H format change corrupts the copy quietly | Pure, against recorded D4H JSON   |
+| Target                                           | Why                                           | Shape                           |
+| ------------------------------------------------ | --------------------------------------------- | ------------------------------- |
+| D4H struct `build/1` and `App.Adapter.D4H.Parse` | A D4H format change corrupts the copy quietly | Pure, against recorded D4H JSON |
 
 ## Known gaps
 

@@ -8,14 +8,16 @@ variables are read in [config/runtime.exs](../config/runtime.exs) unless noted.
 The system of record. Each team has an API host (its region) and a bearer token, both in
 the database; there is no D4H environment variable. Access keys come from D4H personal
 access tokens ([how to get one](https://help.d4h.com/article/377-obtaining-an-api-access-key)).
-Reads are everywhere. The writes are the attendance `PATCH` and group membership adds and
-removes from the group review page. See [d4h-sync.md](d4h-sync.md).
+Reads are everywhere. Every write is a [change set](change-sets.md): attendance from the
+door, a pasted report, or an agent's proposal, and group membership adds and removes. See
+[d4h-sync.md](d4h-sync.md).
 
 ## SAR Duty Records
 
 A separate app at `records.sarduty.com` for teams without D4H, serving D4H's v3 API. A
 Records team's API host is Records' host and its key a Records key, both in the database
-like a D4H team's. The same adapter calls it. See [records.md](records.md).
+like a D4H team's. The same adapter calls it, and a Records team's edits are writes
+D4H doesn't have. See [records.md](records.md).
 
 - `RECORDS_HOST` — dev only, optional: points SAR Duty at a local Records.
 
@@ -44,7 +46,8 @@ a dev database is often a copy of production, so real mail could reach real memb
 use `Swoosh.Adapters.Test`. Mail comes from
 `noreply@sarduty.com`: login codes, and tax credit letters with the PDF attached. Login
 is by emailed code, or texted when [Twilio](#twilio) is set up, so without mail most
-people cannot log in; existing sessions last 60 days.
+people cannot log in. A session lasts until the browser closes, or 60 days with
+"Remember me".
 
 - `CLOUDFLARE_ACCOUNT_ID` — required in production.
 - `CLOUDFLARE_EMAIL_TOKEN` — required in production. An account API token with only the
@@ -56,8 +59,9 @@ needs the Workers Paid plan: 3,000 emails a month are included. The dashboard's
 **Activity log** shows each message and whether it was delivered or bounced. A message
 over 5 MiB, attachments included, is refused.
 
-Creating a tax credit letter emails it from a `Task.start`, so the "Email sent" flash
-appears before delivery is known.
+Emailing a tax credit letter waits for Cloudflare's answer, so the page says when it
+didn't send (#155). Emailing every eligible member's letter at once runs as an Oban job
+(#202).
 
 ## Twilio
 
@@ -143,8 +147,11 @@ encrypts it at rest; reading it takes the bucket token or the Cloudflare account
 
 ## Healthchecks
 
-- `HEALTHCHECKS_URL` — optional. Pinged after each successful team refresh, so a missed
-  ping means the daily sync stopped.
+Both optional. Each is pinged once per run, at its start and when its last team job
+ends: see [d4h-sync.md](d4h-sync.md#monitoring).
+
+- `HEALTHCHECKS_URL` — the nightly full refresh.
+- `HEALTHCHECKS_SYNC_URL` — the sync every 10 minutes.
 
 ## Honeybadger
 
@@ -184,5 +191,6 @@ so there is no environment variable. The old test version's `MCP_ACCESS_KEY` and
 | `DATABASE_PATH`   | SQLite file. Set in `fly.toml`.                                  |
 | `PHX_HOST`        | Public host. Set in `fly.toml`.                                  |
 
-Losing `CLOAK_KEY` makes every D4H access key and Apple pass token unreadable.
+Losing `CLOAK_KEY` makes every D4H and Records access key, Apple pass token, attendance
+link, and short link target unreadable.
 Dev and test use a key committed in `config/config.exs`.

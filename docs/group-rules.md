@@ -1,7 +1,7 @@
 # Group rules
 
-A group's rules say which qualifications a member must hold to belong to it. Today they
-drive a preview on the group page; applying them to D4H is #20.
+A group's rules say which qualifications a member must hold to belong to it. The group
+page previews what they would change, and a team admin reviews and applies them (#20).
 
 ## Storage
 
@@ -56,9 +56,10 @@ reason, all ticked, and how old the data is, with a button to refresh from D4H.
 - It rebuilds the plan, so it only acts on members the plan lists, whatever ids the
   browser sends.
 - It needs the team's own D4H key, and refuses while a rule is broken.
-- Each change is `POST /member-group-memberships` or
-  `DELETE /member-group-memberships/:id`, then the same change to `group_members`. A 404
-  on delete counts as done. Neither is retried.
+- The changes go to D4H as one [change set](change-sets.md): `POST
+/member-group-memberships` or `DELETE /member-group-memberships/:id`, then the same
+  change to `group_members` for each row that applied. A 404 on delete counts as done.
+  Neither is retried.
 - Every change is logged to `group_membership_changes` with its reason, who clicked, and
   D4H's error if it failed. A failed change doesn't stop the rest. The group page shows
   the last ten.
