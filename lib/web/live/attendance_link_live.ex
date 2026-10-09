@@ -328,7 +328,7 @@ defmodule Web.AttendanceLinkLive do
       <ul :if={@matches != []} id="matches" class="-mt-4">
         <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
           <span>{member.name}</span>
-          <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id} size={:sm}>
+          <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id}>
             {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
           </.button>
         </li>
