@@ -118,13 +118,13 @@ defmodule Web.MeLive do
         </.button>
       </.form_actions>
       <p class="hint">
-        Anyone can verify your ID card at <.a id="card-verify-link" href={verify_url(@card)}>
-          {Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}
-        </.a>.
+        Anyone can verify your ID card at <.a id="card-verify-link" href={verify_url(@card)}>{verify_label(@card)}</.a>.
       </p>
     </div>
     """
   end
+
+  defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 
   defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
 end

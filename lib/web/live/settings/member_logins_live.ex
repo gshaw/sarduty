@@ -39,12 +39,11 @@ defmodule Web.Settings.MemberLoginsLive do
       <p class="lead">
         Let your members log in to get their own ID card and tax credit letters.
       </p>
-      <ul class="mb-6">
-        <li>Each member sees only their own ID card and letters.</li>
-        <li>They log in with the email or mobile number D4H has for them.</li>
-        <li>Members who have left or retired cannot log in.</li>
-        <li>Team admins still see everything, as they do now.</li>
-      </ul>
+      <p>
+        Each member sees only their own ID card and letters. They log in with the email or
+        mobile number D4H has for them.
+      </p>
+      <p class="mb-6">Members who have left or retired cannot log in.</p>
       <.form for={@form} id="member-logins-form" phx-submit="save">
         <.input field={@form[:member_logins]} type="checkbox" label="Let members log in" />
         <.form_actions>
