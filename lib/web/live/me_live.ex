@@ -101,6 +101,9 @@ defmodule Web.MeLive do
         </li>
       </ul>
 
+      <h2 class="subheading mt-8">Qualifications</h2>
+      <.qualifications_content qualifications={@qualifications} member={@member} />
+
       <div class="heading-row mt-8">
         <h2 class="subheading">Hours in {@year}</h2>
         <nav :if={length(@years) > 1} id="years" aria-label="Year" class="flex gap-3">
@@ -117,9 +120,6 @@ defmodule Web.MeLive do
       </div>
       <.hours_content hours={@hours} />
       <.attendance_content attendances={@attendances} year={@year} member={@member} />
-
-      <h2 class="subheading mt-8">Qualifications</h2>
-      <.qualifications_content qualifications={@qualifications} member={@member} />
     </div>
     """
   end
@@ -164,7 +164,9 @@ defmodule Web.MeLive do
         <span class="block">{attendance.activity.title}</span>
         <span class="hint block">
           {Service.Format.date_long(attendance.started_at, @member.team.timezone)} ·
-          <.activity_kind activity={attendance.activity} />
+          <span class={["activity-kind", "activity-kind-#{attendance.activity.activity_kind}"]}>
+            {String.capitalize(attendance.activity.activity_kind)}
+          </span>
           · {format_minutes(MemberRecords.minutes(attendance))}
         </span>
       </li>
