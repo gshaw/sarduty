@@ -54,10 +54,10 @@ defmodule App.Operation.SendAttendanceToD4HTest do
              plan([time(lena)], [], [lena])
   end
 
-  test "a member who signed up and didn't arrive is offered as absent, unchecked" do
+  test "a member who signed up and didn't arrive is marked absent, a no-show" do
     [mei, sam] = [member(1, "Mei"), member(3, "Sam")]
 
-    assert %{"Sam" => %{action: :absent, selected: false} = change} =
+    assert %{"Sam" => %{action: :absent, selected: true} = change} =
              plan([time(mei)], [row(sam, "attending")], [mei, sam])
 
     assert change.notes == [:signed_up_without_scan]
