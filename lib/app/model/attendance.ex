@@ -63,11 +63,14 @@ defmodule App.Model.Attendance do
     |> where([r], r.status == "attending")
   end
 
-  @doc "The members D4H shows as signed up (requested) for the activity."
+  @doc """
+  The members D4H shows as signed up (attending) for the activity. Not requested: D4H
+  gives every invited member a requested row until they reply.
+  """
   def signed_up_members(%Activity{} = activity) do
     Member
     |> join(:inner, [m], a in Attendance, on: a.member_id == m.id)
-    |> where([m, a], a.activity_id == ^activity.id and a.status == "requested")
+    |> where([m, a], a.activity_id == ^activity.id and a.status == "attending")
     |> where([m], m.team_id == ^activity.team_id)
     |> distinct(true)
     |> Repo.all()

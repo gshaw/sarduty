@@ -28,12 +28,15 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   - `:update`: mark the member's row attending with the door's times.
   - `:create`: add a row for a member D4H has none for, as a walk-in.
-  - `:absent`: mark a row with no scans absent. Checked for members who signed up
-    (requested), unchecked for members already attending in D4H, since someone may
-    have marked them by hand.
+  - `:absent`: mark a member who signed up (attending) and has no scans absent. It
+    starts unchecked: D4H's attending also means marked there by hand. With no scans at
+    all the door wasn't used, so nobody is offered. A requested row is an invite nobody
+    replied to, so it's left alone.
   - `:unchanged`: D4H already has these times.
   - `:blocked`: the times can't be sent until they're fixed at the door.
   """
+  def plan([], _rows, _members), do: []
+
   def plan(times, rows, members) do
     rows_by_d4h_member_id = rows |> Enum.reverse() |> Map.new(&{&1.d4h_member_id, &1})
 
@@ -55,11 +58,9 @@ defmodule App.Operation.SendAttendanceToD4H do
     members_by_d4h_id = Map.new(members, &{&1.d4h_member_id, &1})
 
     for row <- rows,
-        row.status in ["requested", "attending"],
+        row.status == "attending",
         member <- List.wrap(members_by_d4h_id[row.d4h_member_id]) do
-      attending = row.status == "attending"
-      notes = if attending, do: [:attending_without_scan], else: []
-      change(member, :absent, row, selected: not attending, notes: notes)
+      change(member, :absent, row, selected: false, notes: [:signed_up_without_scan])
     end
   end
 
@@ -108,7 +109,7 @@ defmodule App.Operation.SendAttendanceToD4H do
   defp action_order(:unchanged), do: 4
 
   @doc "Whether a change marks a member who signed up and didn't come."
-  def no_show?(%{action: :absent, status: "requested"}), do: true
+  def no_show?(%{action: :absent, status: "attending"}), do: true
   def no_show?(_change), do: false
 
   @doc "Whether a change writes to D4H when it's kept."
@@ -241,6 +242,5 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   defp reason(%{action: :update}), do: "Scanned at the door"
   defp reason(%{action: :create}), do: "Scanned at the door, not signed up"
-  defp reason(%{action: :absent, status: "requested"}), do: "Signed up, not scanned at the door"
-  defp reason(%{action: :absent}), do: "Attending in D4H, not scanned at the door"
+  defp reason(%{action: :absent}), do: "Signed up, not scanned at the door"
 end

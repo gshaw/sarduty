@@ -54,31 +54,31 @@ defmodule App.Operation.SendAttendanceToD4HTest do
              plan([time(lena)], [], [lena])
   end
 
-  test "a member who signed up and didn't arrive is marked absent" do
+  test "a member who signed up and didn't arrive is offered as absent, unchecked" do
+    [mei, sam] = [member(1, "Mei"), member(3, "Sam")]
+
+    assert %{"Sam" => %{action: :absent, selected: false} = change} =
+             plan([time(mei)], [row(sam, "attending")], [mei, sam])
+
+    assert change.notes == [:signed_up_without_scan]
+    assert SendAttendanceToD4H.no_show?(change)
+  end
+
+  test "with no scans the door wasn't used, so nobody is marked absent" do
     sam = member(3, "Sam")
-
-    assert %{"Sam" => %{action: :absent, selected: true, notes: []}} =
-             plan([], [row(sam, "requested")], [sam])
+    assert plan([], [row(sam, "attending")], [sam]) == %{}
   end
 
-  test "only a member who signed up and didn't come is a no-show" do
-    [sam, jo] = [member(3, "Sam"), member(4, "Jo")]
-    changes = plan([], [row(sam, "requested"), row(jo, "attending")], [sam, jo])
-
-    assert SendAttendanceToD4H.no_show?(changes["Sam"])
-    refute SendAttendanceToD4H.no_show?(changes["Jo"])
-  end
-
-  test "a member attending in D4H with no scan is offered as absent, unchecked" do
-    jo = member(4, "Jo")
-
-    assert %{"Jo" => %{action: :absent, selected: false, notes: [:attending_without_scan]}} =
-             plan([], [row(jo, "attending")], [jo])
+  test "an invite nobody replied to is left alone" do
+    [mei, jo] = [member(1, "Mei"), member(4, "Jo")]
+    changes = plan([time(mei)], [row(jo, "requested")], [mei, jo])
+    assert Map.keys(changes) == ["Mei"]
   end
 
   test "an absent row with no scan is left alone" do
-    alex = member(5, "Alex")
-    assert plan([], [row(alex, "absent")], [alex]) == %{}
+    [mei, alex] = [member(1, "Mei"), member(5, "Alex")]
+    changes = plan([time(mei)], [row(alex, "absent")], [mei, alex])
+    assert Map.keys(changes) == ["Mei"]
   end
 
   test "attending with the same times already is no change" do
@@ -98,8 +98,9 @@ defmodule App.Operation.SendAttendanceToD4HTest do
   end
 
   test "a D4H row for someone not on the team is skipped" do
-    stranger = member(9, "Stranger")
-    assert plan([], [row(stranger, "requested")], []) == %{}
+    [mei, stranger] = [member(1, "Mei"), member(9, "Stranger")]
+    changes = plan([time(mei)], [row(stranger, "attending")], [mei])
+    assert Map.keys(changes) == ["Mei"]
   end
 
   test "a member with two D4H rows gets one change, on the first row" do

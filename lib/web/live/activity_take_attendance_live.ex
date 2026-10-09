@@ -265,7 +265,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     <div id="send-start">
       <p>
         Review the changes before SAR Duty makes them. Members who arrived are marked attending
-        with their times. Members who signed up but did not arrive are marked absent.
+        with their times. Members who signed up but did not arrive can be marked absent.
         When every change goes through, SAR Duty closes the attendance link.
       </p>
       <.button id="review" variant={:primary} phx-click="review" phx-disable-with="Reading D4H…">
@@ -294,7 +294,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <.form for={%{}} id="send-form" phx-change="select" phx-submit="send">
       <p :if={@review.changes == []} id="no-changes">
-        No changes. D4H has no members signed up and nobody has arrived.
+        No changes. Nobody has been scanned at the door.
       </p>
       <.table
         :if={@review.changes != []}
@@ -356,8 +356,8 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp action_class(_action), do: "text-success-text font-semibold"
 
   defp status_text(nil), do: "Not listed"
-  defp status_text("requested"), do: "Signed up"
-  defp status_text("attending"), do: "Attending"
+  defp status_text("requested"), do: "No reply"
+  defp status_text("attending"), do: "Signed up"
   defp status_text("absent"), do: "Absent"
   defp status_text(status), do: status
 
@@ -488,13 +488,13 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   defp note_class(:left_before_arriving), do: "text-danger-text"
-  defp note_class(:attending_without_scan), do: "font-semibold"
+  defp note_class(:signed_up_without_scan), do: "font-semibold"
   defp note_class(_note), do: "text-text-muted"
 
   defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."
   defp note_text(:no_departure), do: "No departure scan. Uses the end time."
   defp note_text(:left_before_arriving), do: "Left before arriving. Fix the times at the door."
 
-  defp note_text(:attending_without_scan),
-    do: "Attending in D4H, but no scan. Check before sending."
+  defp note_text(:signed_up_without_scan),
+    do: "Signed up in D4H, but no scan. Check they didn't come before marking them absent."
 end
