@@ -60,8 +60,13 @@ defmodule Web.MemberQualificationsLive do
     true = socket.assigns.hosted?
     award = Enum.find(member.member_qualification_awards, &(Integer.to_string(&1.id) == id))
 
-    case AwardQualification.remove(team, award, user, DateTime.utc_now()) do
+    # Gone already, say from another tab.
+    result =
+      if award, do: AwardQualification.remove(team, award, user, DateTime.utc_now()), else: :gone
+
+    case result do
       :ok -> {:noreply, reload(socket, "Removed #{award.qualification.title}.")}
+      :gone -> {:noreply, reload(socket, "That qualification was removed already.")}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
     end
   end

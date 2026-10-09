@@ -50,8 +50,15 @@ defmodule Web.MemberGroupsLive do
     true = socket.assigns.hosted?
     group_member = Enum.find(member.group_members, &(Integer.to_string(&1.id) == id))
 
-    case SetGroupMember.remove(team, group_member, user, DateTime.utc_now()) do
+    # Gone already, say from another tab.
+    result =
+      if group_member,
+        do: SetGroupMember.remove(team, group_member, user, DateTime.utc_now()),
+        else: :gone
+
+    case result do
       :ok -> {:noreply, reload(socket, "Removed from #{group_member.group.title}.")}
+      :gone -> {:noreply, reload(socket, "#{member.name} left that group already.")}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
     end
   end
