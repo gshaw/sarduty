@@ -56,9 +56,7 @@ defmodule Web.MeLive do
   def handle_event("issue", _params, socket) do
     %{current_user: user, member: member} = socket.assigns
 
-    case user.email
-         |> Member.get_logins(DateTime.utc_now())
-         |> Enum.find(&(&1.id == member.id)) do
+    case Member.get_login(user.email, member.id, DateTime.utc_now()) do
       nil ->
         {:noreply, redirect(socket, to: ~p"/")}
 
@@ -85,6 +83,19 @@ defmodule Web.MeLive do
 
       <h2 class="subheading mt-8">ID card</h2>
       <.card_content card={@card} member={@member} />
+
+      <ul class="row-links mt-6">
+        <li>
+          <.row_link id="details-link" navigate={~p"/teams/#{@member.team}/me/details"}>
+            <span class="text-link">Your contact details</span>
+            <span class="hint block">
+              {if App.Adapter.D4H.records?(@member.team),
+                do: "Your mailing address",
+                else: "Your mailing address and emergency contacts"}
+            </span>
+          </.row_link>
+        </li>
+      </ul>
 
       <h2 class="subheading mt-8">Tax credit letters</h2>
       <.empty_state :if={@letters == []} id="no-letters" title="No tax credit letters yet">

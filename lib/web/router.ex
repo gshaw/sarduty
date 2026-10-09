@@ -174,6 +174,7 @@ defmodule Web.Router do
         {Web.UserAuth, :ensure_team_member}
       ] do
       live "/teams/:subdomain/me", MeLive
+      live "/teams/:subdomain/me/details", MeDetailsLive
     end
 
     scope "/teams/:subdomain/me" do

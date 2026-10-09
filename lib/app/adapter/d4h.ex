@@ -506,6 +506,14 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc "A member's address and emergency contacts now, as `D4H.MemberDetails` (#156)."
+  def fetch_member_details(context, d4h_member_id) do
+    case Req.request(context, method: :get, url: "/members/#{d4h_member_id}", retry: false) do
+      {:ok, %{status: 200, body: body}} -> {:ok, D4H.MemberDetails.build(body)}
+      result -> {:error, write_error(result)}
+    end
+  end
+
   @doc "Every attendance row on the activity now, as `D4H.AttendanceInfo` structs."
   def fetch_attendance_infos(context, d4h_activity_id) do
     request = [
@@ -756,6 +764,20 @@ defmodule App.Adapter.D4H do
         do: Map.put(json, "phone", %{mobile: attrs["phone"]}),
         else: json
     end)
+    |> put_contact(attrs, "primary_emergency_contact", "primaryEmergencyContact")
+    |> put_contact(attrs, "secondary_emergency_contact", "secondaryEmergencyContact")
+  end
+
+  # D4H merges the contact it gets with the one it has, so a cleared field goes as "".
+  defp put_contact(json, attrs, name, d4h_name) do
+    case attrs[name] do
+      %{} = contact ->
+        fields = D4H.MemberDetails.contact_fields()
+        Map.put(json, d4h_name, Map.new(fields, fn {k, d4h_k} -> {d4h_k, contact[k] || ""} end))
+
+      nil ->
+        json
+    end
   end
 
   defp rename(attrs, fields) do

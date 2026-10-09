@@ -154,6 +154,10 @@ defmodule App.Model.Member do
     |> Enum.sort_by(& &1.team.name)
   end
 
+  @doc "The member `email` logs in as with this id, or nil: get_logins/2 for one member."
+  def get_login(email, member_id, now),
+    do: email |> get_logins(now) |> Enum.find(&(&1.id == member_id))
+
   defp logins_query(email, now) do
     email = email |> String.trim() |> String.downcase()
 

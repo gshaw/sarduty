@@ -21,8 +21,10 @@ defmodule App.Model.ChangeSet do
     belongs_to :proposed_by_user, User
     belongs_to :applied_by_user, User
     # :edit is a team admin changing one record of a team on SAR Duty Records
-    # (docs/records.md).
-    field :source, Ecto.Enum, values: [:door, :group_rule, :attendance_import, :agent, :edit]
+    # (docs/records.md). :member is a member changing their own details (#156).
+    field :source, Ecto.Enum,
+      values: [:door, :group_rule, :attendance_import, :agent, :edit, :member]
+
     field :summary, :string
     field :applied_at, :utc_datetime_usec
     field :discarded_at, :utc_datetime_usec

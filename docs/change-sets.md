@@ -30,6 +30,9 @@ new kind of write is a new row action there, not a new call from a page or an op
   [ApplyEdit](../lib/app/operation/apply_edit.ex) proposes and applies it in one step,
   then runs the sync so the next page shows the change. The row names only the fields
   that changed, with their old values. Edits don't read D4H first.
+- **A member's own edit is a set of one row** (source `member`, #156): a member
+  changing their address or emergency contacts from their page, applied at once. See
+  [members.md](members.md).
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H
