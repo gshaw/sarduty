@@ -3,6 +3,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
 
   alias App.Field
   alias App.Model.Activity
+  alias App.Validate
 
   @kinds [{"Exercise", "exercise"}, {"Incident", "incident"}, {"Event", "event"}]
   @hours [{"Primary", "primary"}, {"Secondary", "secondary"}, {"Neither", "none"}]
@@ -20,6 +21,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
     field :hours, :string, default: "primary"
     field :published, :boolean, default: false
   end
+
+  @fields [:kind, :title, :starts_at, :ends_at, :place, :hours, :tracking_number, :description]
 
   def kinds, do: @kinds
   def hours, do: @hours
@@ -78,6 +81,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
     |> validate_length(:tracking_number, max: 50)
     |> validate_length(:description, max: 10_000)
     |> validate_ends_after_starts()
+    |> Validate.in_field_order(@fields)
   end
 
   defp validate_ends_after_starts(changeset) do
