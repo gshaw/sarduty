@@ -40,6 +40,20 @@ defmodule Web.MemberCardLiveTest do
     assert has_element?(lv, ~s(#card-verify-link[href="#{url}"]))
   end
 
+  test "a team without ID cards sees why, and no way to issue one", %{
+    conn: conn,
+    team: team,
+    member: member
+  } do
+    team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    assert has_element?(lv, "#id-cards-off")
+    refute has_element?(lv, "#issue")
+    render_click(lv, "issue", %{})
+    assert MemberCard.find_current(team, member) == nil
+  end
+
   test "replacing a card cancels the old one", %{conn: conn, team: team, member: member} do
     old = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")

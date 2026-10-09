@@ -1,12 +1,10 @@
 defmodule Web.MeLive do
   use Web, :live_view_narrow_layout
 
-  alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
-  alias App.Operation.IssueMemberCard
   alias App.ViewData.MemberRecords
 
   # A member's own page (#156), /teams/:subdomain/me: their ID card, tax credit letters,
@@ -50,39 +48,16 @@ defmodule Web.MeLive do
     end
   end
 
-  # The member gets a card only when they have none, so a second tap can't cancel the
-  # one just added to Wallet. The login is checked again, in case the team turned member
-  # logins off since the page opened.
-  def handle_event("issue", _params, socket) do
-    %{current_user: user, member: member} = socket.assigns
-
-    case Member.get_login(user.email, member.id, DateTime.utc_now()) do
-      nil ->
-        {:noreply, redirect(socket, to: ~p"/")}
-
-      member ->
-        card =
-          case MemberCard.find_current(member.team, member) do
-            nil ->
-              {:ok, card} = IssueMemberCard.call(member.team, member, DateTime.utc_now())
-              card
-
-            card ->
-              card
-          end
-
-        {:noreply, socket |> assign(:card, card) |> put_flash(:info, "Your ID card is ready.")}
-    end
-  end
-
   def render(assigns) do
     ~H"""
     <div>
       <h1 class="heading">{@member.team.name}</h1>
       <p class="lead">{@member.name}</p>
 
-      <h2 class="subheading mt-8">ID card</h2>
-      <.card_content card={@card} member={@member} />
+      <%= if @card || @member.team.id_cards_enabled do %>
+        <h2 class="subheading mt-8">ID card</h2>
+        <.card_content card={@card} member={@member} />
+      <% end %>
 
       <ul class="row-links mt-6">
         <li>
@@ -239,14 +214,7 @@ defmodule Web.MeLive do
 
   defp card_content(%{card: nil} = assigns) do
     ~H"""
-    <div id="no-card">
-      <p>You do not have an ID card yet. Get one, then add it to your phone's Wallet.</p>
-      <.form_actions>
-        <.button id="issue" variant={:primary} phx-click="issue" phx-disable-with="Making card…">
-          Get ID card
-        </.button>
-      </.form_actions>
-    </div>
+    <p id="no-card">You do not have an ID card yet. Ask a team admin to issue one.</p>
     """
   end
 

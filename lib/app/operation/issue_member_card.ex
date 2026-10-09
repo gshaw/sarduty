@@ -11,7 +11,11 @@ defmodule App.Operation.IssueMemberCard do
   serial number. Any card they had stops working, and phones holding its pass are told
   to fetch the voided one. Adding the new pass replaces the old one in Apple Wallet; in
   Google Wallet the old one expires.
+
+  `{:error, :id_cards_off}` unless a SAR Duty admin turned ID cards on for the team.
   """
+  def call(%Team{id_cards_enabled: false}, %Member{}, _now), do: {:error, :id_cards_off}
+
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
     {:ok, {card, revoked}} =
       Repo.transaction(fn ->

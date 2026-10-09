@@ -3,8 +3,8 @@
 A team admin turns on member logins in **Team settings → Member logins**. Then every
 current member of the team can log in with the email or mobile number D4H has for them,
 and land on their own page, `/teams/:subdomain/me`
-([MeLive](../lib/web/live/me_live.ex)). It shows their ID card, with a button to get one
-when they have none, their tax credit letters as PDFs, their hours and activities for a
+([MeLive](../lib/web/live/me_live.ex)). It shows the ID card a team admin issued them,
+with the Wallet buttons, their tax credit letters as PDFs, their hours and activities for a
 year, and their qualifications. On `/teams/:subdomain/me/details` they change their
 mailing address and emergency contacts in D4H, and on `/teams/:subdomain/me/mobile` their
 mobile number. Members don't change their email: teams keep it consistent, and team
@@ -30,9 +30,9 @@ admins change it in D4H. Issue #156 has the design.
 - **Member pages are outside the team pages' `live_session`.** They never set
   `current_team`, so the top bar shows team sections only to the team's admins. A team
   admin is a member too, and reaches their own page from the account menu.
-- **A member never replaces a card.** "Get ID card" only shows, and only works, when the
-  member has none. Replacing and cancelling stay with team admins, on the member's ID card
-  tab.
+- **Members don't issue cards.** Issuing, replacing, and cancelling stay with team admins,
+  on the member's ID card tab, and only on a team a SAR Duty admin turned ID cards on for
+  ([member-cards.md](member-cards.md)).
 - **Member visits don't count as team use.** `RecordUserSeen` isn't called from member
   pages, so `/admin` still shows which teams' admins use SAR Duty.
 - **Hours match the letter.** The page counts with `CountTaxCreditHours`, as the letter

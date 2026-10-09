@@ -30,11 +30,18 @@ defmodule Web.Settings.TeamLive do
       <.back_link navigate={~p"/teams/#{@current_team}"}>{@current_team.name}</.back_link>
       <h1 class="heading">Team settings</h1>
       <ul class="row-links mb-4">
-        <li>
+        <li :if={@current_team.id_cards_enabled}>
           <.row_link id="settings-cards" navigate={~p"/teams/#{@current_team}/settings/cards"}>
             <span class="text-link">ID cards</span>
             <span class="hint block">Qualifications on the back</span>
           </.row_link>
+        </li>
+        <li :if={!@current_team.id_cards_enabled} id="settings-cards-off" class="py-2">
+          ID cards
+          <span class="hint block">
+            Members carry them in Apple Wallet or Google Wallet. A SAR Duty admin turns them
+            on once they have checked your team.
+          </span>
         </li>
         <li>
           <.row_link id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>

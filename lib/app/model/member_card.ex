@@ -167,6 +167,26 @@ defmodule App.Model.MemberCard do
   @doc "A secret for the pass web service, 32 random bytes as hex."
   def generate_authentication_token, do: Service.Random.hex(32)
 
+  @doc "Revokes every live card on the team and returns them."
+  def revoke_team!(%Team{} = team, now) do
+    {_count, cards} =
+      MemberCard
+      |> where([c], c.team_id == ^team.id and is_nil(c.revoked_at))
+      |> select([c], c)
+      |> Repo.update_all(set: [revoked_at: now, updated_at: now, pass_updated_at: now])
+
+    cards
+  end
+
+  def count_live_by_team do
+    MemberCard
+    |> where([c], is_nil(c.revoked_at))
+    |> group_by([c], c.team_id)
+    |> select([c], {c.team_id, count(c.id)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
   @doc "Revokes the member's live cards and returns them."
   def revoke_all!(%Team{} = team, %Member{} = member, now) do
     {_count, cards} =

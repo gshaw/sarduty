@@ -45,6 +45,10 @@ defmodule App.Model.Team do
     # Lets current members log in for their own ID card and tax credit letters (#156).
     # Set only by App.Operation.SetTeamMemberLogins from the team's settings.
     field :member_logins, :boolean, default: false
+    # Whether the team may issue ID cards. Set only by App.Operation.SetTeamIdCards from
+    # /admin/id-cards: a card verifies on SAR Duty's verify site, and anyone can sign up a
+    # team on SAR Duty Records.
+    field :id_cards_enabled, :boolean, default: false
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
