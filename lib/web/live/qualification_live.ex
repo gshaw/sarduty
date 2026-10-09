@@ -77,10 +77,18 @@ defmodule Web.QualificationLive do
   defp sidebar_content(assigns) do
     ~H"""
     <dl>
-      <dt :if={!D4H.hosted?(@team)}>Actions</dt>
-      <dd :if={!D4H.hosted?(@team)}>
+      <dt>Actions</dt>
+      <dd>
         <ul class="action-list">
-          <li>
+          <li :if={D4H.hosted?(@team)}>
+            <.a
+              id="qualification-edit"
+              navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/edit"}
+            >
+              Change or delete
+            </.a>
+          </li>
+          <li :if={!D4H.hosted?(@team)}>
             <.a external={true} href={D4H.build_url(@team, "/team/qualifications")}>
               Open D4H qualifications
             </.a>

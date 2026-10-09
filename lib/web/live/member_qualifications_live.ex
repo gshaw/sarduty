@@ -5,9 +5,13 @@ defmodule Web.MemberQualificationsLive do
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
+  alias App.Model.Qualification
+  alias App.Operation.AwardQualification
   alias App.Repo
+  alias App.ViewModel.AwardFormViewModel
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -16,13 +20,63 @@ defmodule Web.MemberQualificationsLive do
   def handle_params(params, _uri, socket) do
     member = find_member(socket.assigns.current_team, params["id"])
 
+    team = socket.assigns.current_team
+
     socket =
       socket
       |> assign(:page_title, "#{member.name} · Qualifications")
       |> assign(:member, member)
+      |> assign(:hosted?, D4H.hosted?(team))
+      |> assign(
+        :qualifications,
+        team.id |> Qualification.get_all() |> Enum.map(&{&1.title, &1.id})
+      )
+      |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
 
     {:noreply, socket}
   end
+
+  # Awarding and removing qualifications, for a hosted team (docs/hosted-d4h.md).
+  def handle_event("validate-award", %{"award" => params}, socket) do
+    changeset =
+      %AwardFormViewModel{} |> AwardFormViewModel.changeset(params) |> Map.put(:action, :validate)
+
+    {:noreply, assign_award_form(socket, changeset)}
+  end
+
+  def handle_event("award", %{"award" => params}, socket) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+    true = socket.assigns.hosted?
+
+    case AwardQualification.award(team, member, params, user, DateTime.utc_now()) do
+      :ok -> {:noreply, reload(socket, "Qualification awarded.")}
+      {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_award_form(socket, changeset)}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
+  def handle_event("remove-award", %{"id" => id}, socket) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+    true = socket.assigns.hosted?
+    award = Enum.find(member.member_qualification_awards, &(Integer.to_string(&1.id) == id))
+
+    case AwardQualification.remove(team, award, user, DateTime.utc_now()) do
+      :ok -> {:noreply, reload(socket, "Removed #{award.qualification.title}.")}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
+  defp reload(socket, text) do
+    member = find_member(socket.assigns.current_team, socket.assigns.member.id)
+
+    socket
+    |> put_flash(:info, text)
+    |> assign(:member, member)
+    |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
+  end
+
+  defp assign_award_form(socket, changeset),
+    do: assign(socket, :award_form, to_form(changeset, as: "award"))
 
   def render(assigns) do
     ~H"""
@@ -38,7 +92,8 @@ defmodule Web.MemberQualificationsLive do
       </aside>
       <main class="content-2/3">
         <.member_tabs member={@member} active_tab={:qualifications} />
-        <.qualifications_content member={@member} />
+        <.qualifications_content member={@member} hosted?={@hosted?} />
+        <.award_form :if={@hosted?} form={@award_form} qualifications={@qualifications} />
       </main>
     </div>
     """
@@ -66,10 +121,60 @@ defmodule Web.MemberQualificationsLive do
       <:col :let={award} label="Status" class="w-px whitespace-nowrap">
         {award_status(award)}
       </:col>
+      <:col :let={award} :if={@hosted?} label="" class="w-px whitespace-nowrap">
+        <.button
+          id={"remove-award-#{award.id}"}
+          type="button"
+          variant={:link}
+          size={:sm}
+          phx-click="remove-award"
+          phx-value-id={award.id}
+          data-confirm={"Remove #{award.qualification.title} from #{@member.name}?"}
+        >
+          Remove
+        </.button>
+      </:col>
     </.table>
     <p :if={@member.member_qualification_awards == []} id="no-qualifications">
-      {@member.name} has no qualifications in D4H.
+      {@member.name} has no qualifications{if !@hosted?, do: " in D4H"}.
     </p>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :qualifications, :list, required: true
+
+  defp award_form(assigns) do
+    ~H"""
+    <section id="award-qualification" class="mt-8">
+      <h2 class="heading">Award a qualification</h2>
+      <p :if={@qualifications == []}>
+        Add the qualification on the team's qualifications page first.
+      </p>
+      <.form
+        :if={@qualifications != []}
+        for={@form}
+        id="award-form"
+        phx-change="validate-award"
+        phx-submit="award"
+        class="max-w-xl"
+      >
+        <.input
+          field={@form[:qualification_id]}
+          type="select"
+          label="Qualification"
+          prompt="Select a qualification"
+          options={@qualifications}
+        />
+        <div class="grid grid-cols-2 gap-x-6">
+          <.input field={@form[:starts_on]} type="date" label="Starts" />
+          <.input field={@form[:ends_on]} type="date" label="Expires (optional)" />
+        </div>
+        <.form_actions>
+          <.button variant={:success}>Award qualification</.button>
+        </.form_actions>
+      </.form>
+    </section>
     """
   end
 

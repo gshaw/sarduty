@@ -41,6 +41,7 @@ defmodule App.Model.Qualification do
   end
 
   def get_by(params), do: Repo.get_by(Qualification, params)
+  def find!(team, id), do: Repo.get_by!(Qualification, id: id, team_id: team.id)
 
   def insert!(params) do
     changeset = Qualification.build_new_changeset(params)

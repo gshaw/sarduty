@@ -3,6 +3,7 @@ defmodule Web.GroupCollectionLive do
 
   import Ecto.Query
 
+  alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRuleClause
@@ -27,7 +28,17 @@ defmodule Web.GroupCollectionLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team} />
-    <h1 class="title">{@page_title}</h1>
+    <div class="heading-row">
+      <h1 class="title">{@page_title}</h1>
+      <.button
+        :if={D4H.hosted?(@current_team)}
+        id="group-add"
+        navigate={~p"/teams/#{@current_team}/groups/new"}
+        size={:sm}
+      >
+        Add group
+      </.button>
+    </div>
 
     <div :if={@groups != []} class="table-summary">
       <span class="table-summary-count">

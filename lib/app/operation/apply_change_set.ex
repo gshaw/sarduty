@@ -96,7 +96,15 @@ defmodule App.Operation.ApplyChangeSet do
              :rejoin_member,
              :create_activity,
              :update_activity,
-             :delete_activity
+             :delete_activity,
+             :create_qualification,
+             :update_qualification,
+             :delete_qualification,
+             :award_qualification,
+             :remove_award,
+             :create_group,
+             :update_group,
+             :delete_group
            ],
       do: :ok
 
@@ -172,6 +180,47 @@ defmodule App.Operation.ApplyChangeSet do
     |> D4H.delete_activity(row.old_value["kind"], row.d4h_record_id)
     |> record_result(& &1)
   end
+
+  defp write(d4h, %ChangeSetRow{action: :create_qualification, new_value: new_value}),
+    do:
+      d4h
+      |> D4H.create_qualification(new_value["title"])
+      |> record_result(& &1.d4h_qualification_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_qualification} = row) do
+    d4h
+    |> D4H.update_qualification(row.d4h_record_id, row.new_value["title"])
+    |> record_result(& &1.d4h_qualification_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_qualification} = row),
+    do: d4h |> D4H.delete_qualification(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :award_qualification, new_value: new_value}) do
+    d4h
+    |> D4H.award_qualification(
+      new_value["d4h_qualification_id"],
+      new_value["d4h_member_id"],
+      new_value["starts_at"],
+      new_value["ends_at"]
+    )
+    |> record_result(& &1.d4h_award_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :remove_award} = row),
+    do: d4h |> D4H.remove_award(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :create_group, new_value: new_value}),
+    do: d4h |> D4H.create_group(new_value["title"]) |> record_result(& &1.d4h_group_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_group} = row),
+    do:
+      d4h
+      |> D4H.update_group(row.d4h_record_id, row.new_value["title"])
+      |> record_result(& &1.d4h_group_id)
+
+  defp write(d4h, %ChangeSetRow{action: :delete_group} = row),
+    do: d4h |> D4H.delete_group(row.d4h_record_id) |> record_result(& &1)
 
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, Exception.message(error)}

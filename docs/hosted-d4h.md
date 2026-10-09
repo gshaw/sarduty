@@ -65,6 +65,11 @@ gets a 404 and edits in D4H.
   created. The place is one line, kept as the address's street. A delete also marks the
   copy at once, since the sync never marks the last activity of a kind.
   `/activities/new`, `/activities/:id/edit`.
+- **Qualifications and groups**: add, rename, and delete, at `/qualifications/new` and
+  `/groups/new`, and from each one's page. A deleted qualification takes its awards with
+  it, and a deleted group its members.
+- **Awards and group members**: on a member's Qualifications and Groups tabs. An award
+  has a start day and an optional expiry. To change one, remove it and award it again.
 - **Attendance** needs nothing new: the door, import attendance, and an AI agent's
   proposals write to the store through change sets as they write to D4H.
 

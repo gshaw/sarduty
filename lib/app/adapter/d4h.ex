@@ -639,6 +639,56 @@ defmodule App.Adapter.D4H do
     if Map.has_key?(attrs, key), do: write.(attrs[key]), else: {:ok, previous}
   end
 
+  def create_qualification(context, title),
+    do:
+      write(context, :post, "/member-qualifications", %{title: title}, &D4H.Qualification.build/1)
+
+  def update_qualification(context, d4h_qualification_id, title) do
+    url = "/member-qualifications/#{d4h_qualification_id}"
+    write(context, :patch, url, %{title: title}, &D4H.Qualification.build/1)
+  end
+
+  @doc "Deletes a qualification and its awards. DELETE is SAR Duty's own, not D4H's."
+  def delete_qualification(context, d4h_qualification_id) do
+    url = "/member-qualifications/#{d4h_qualification_id}"
+    write(context, :delete, url, nil, fn _body -> d4h_qualification_id end)
+  end
+
+  @doc "Awards a qualification from `starts_at` to `ends_at`, nil for no expiry."
+  def award_qualification(context, d4h_qualification_id, d4h_member_id, starts_at, ends_at) do
+    json = %{
+      qualificationId: d4h_qualification_id,
+      memberId: d4h_member_id,
+      startsAt: starts_at,
+      endsAt: ends_at
+    }
+
+    write(context, :post, "/member-qualification-awards", json, &D4H.QualificationAward.build/1)
+  end
+
+  @doc "Removes an award. DELETE is SAR Duty's own, not D4H's."
+  def remove_award(context, d4h_award_id) do
+    url = "/member-qualification-awards/#{d4h_award_id}"
+    write(context, :delete, url, nil, fn _body -> d4h_award_id end)
+  end
+
+  def create_group(context, title),
+    do: write(context, :post, "/member-groups", %{title: title}, &D4H.Group.build/1)
+
+  def update_group(context, d4h_group_id, title),
+    do:
+      write(
+        context,
+        :patch,
+        "/member-groups/#{d4h_group_id}",
+        %{title: title},
+        &D4H.Group.build/1
+      )
+
+  def delete_group(context, d4h_group_id),
+    do:
+      write(context, :delete, "/member-groups/#{d4h_group_id}", nil, fn _body -> d4h_group_id end)
+
   defp activity_json(attrs) do
     json = rename(attrs, @activity_fields)
 
