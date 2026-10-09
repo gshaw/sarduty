@@ -3,16 +3,18 @@ defmodule App.RecordsStub do
   Stands in for SAR Duty Records (docs/records.md) in tests, through the D4H adapter's
   `Req.Test` stub. Each write goes to `reply.(method, path, body)`, which returns
   `{status, json}`, and the test receives `{:records, method, path, body}` with the path
-  after `/v3/team/<id>`. Every read gets an empty page, so the sync after an edit finds
-  nothing to copy.
+  after `/v3/team/<id>`. A read of a path in `reads` gets that list as a page; every other
+  read gets an empty one, so the sync after an edit finds nothing to copy.
   """
 
-  def stub(reply) do
+  def stub(reply, reads \\ %{}) do
     test = self()
 
     Req.Test.stub(App.Adapter.D4H, fn
       %{method: "GET"} = conn ->
-        Req.Test.json(conn, %{"results" => [], "totalSize" => 0, "page" => 0})
+        path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+        results = Map.get(reads, path, [])
+        Req.Test.json(conn, %{"results" => results, "totalSize" => length(results), "page" => 0})
 
       conn ->
         write(conn, test, reply)
@@ -43,4 +45,27 @@ defmodule App.RecordsStub do
       attrs
     )
   end
+
+  @doc "An activity as Records answers with one."
+  def activity_json(id, attrs \\ %{}) do
+    Map.merge(
+      %{
+        "id" => id,
+        "resourceType" => "Exercise",
+        "reference" => "00001",
+        "referenceDescription" => "Practice",
+        "published" => false,
+        "address" => %{},
+        "startsAt" => "2026-10-09T01:00:00Z",
+        "endsAt" => "2026-10-09T03:00:00Z",
+        "tags" => [],
+        "owner" => %{"resourceType" => "Team", "id" => 2_000_000_000}
+      },
+      attrs
+    )
+  end
+
+  @doc "Every Records team has these tags; letters count hours by their titles."
+  def tags_json,
+    do: [%{"id" => 1, "title" => "Primary Hours"}, %{"id" => 2, "title" => "Secondary Hours"}]
 end

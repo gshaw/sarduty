@@ -52,6 +52,11 @@ that title.
   only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
   admin cannot stop being one or leave, and saving a retired member's details keeps
   them retired.
+- **Activities**: add, change, delete. `DELETE /<kind>s/<id>` is Records' own; it marks
+  the activity deleted as D4H does, and SAR Duty marks its copy at once. The SARVAC
+  hours choice sets the Primary Hours or Secondary Hours tag and keeps any others. A
+  new activity keeps its id even if its tags or published flag fail, so a retry never
+  makes a second one. Times are on the team's clock, to the minute.
 
 ## Where the code is
 

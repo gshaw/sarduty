@@ -3,6 +3,7 @@ defmodule Web.ActivityCollectionLive do
 
   import Web.Components.ActivityFilterTable
 
+  alias App.Adapter.D4H
   alias App.ViewModel.ActivityFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -34,7 +35,16 @@ defmodule Web.ActivityCollectionLive do
     ~H"""
     <.breadcrumbs team={@current_team} />
 
-    <h1 class="title">Activities</h1>
+    <div class="heading-row">
+      <h1 class="title">Activities</h1>
+      <.button
+        :if={D4H.records?(@current_team)}
+        id="activity-add"
+        navigate={~p"/teams/#{@current_team}/activities/new"}
+      >
+        Add activity
+      </.button>
+    </div>
 
     <.activity_filter_table
       form={@form}
