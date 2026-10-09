@@ -26,6 +26,14 @@ defmodule App.Operation.RecordD4HChanges do
     group_membership: []
   }
 
+  # The change set actions that write each kind, for a team on SAR Duty Records.
+  @edit_actions %{
+    member: ~w(create_member update_member retire_member rejoin_member)a,
+    activity: ~w(create_activity update_activity delete_activity)a,
+    award: ~w(award_qualification remove_award)a,
+    group_membership: ~w(add_group_member remove_group_member)a
+  }
+
   # Named in `fields` when they change, but their values are never kept.
   @contact_fields ~w(email phone address)a
 
@@ -170,6 +178,16 @@ defmodule App.Operation.RecordD4HChanges do
     |> select([r], r.new_value)
     |> Repo.all()
     |> Enum.any?(&same_status?(&1["status"], record.status))
+  end
+
+  # An edit of a team on SAR Duty Records (docs/records.md) is on the page from its row,
+  # so the sync that copies it back doesn't record it again as seen in D4H.
+  defp own_write?(run, kind, _change, record) when is_map_key(@edit_actions, kind) do
+    ChangeSetRow
+    |> where([r], r.team_id == ^run.team_id and r.status == :applied)
+    |> where([r], r.action in ^@edit_actions[kind] and r.d4h_record_id == ^d4h_id(kind, record))
+    |> where([r], r.applied_at >= ^run.seen_after)
+    |> Repo.exists?()
   end
 
   defp own_write?(_run, _kind, _change, _record), do: false

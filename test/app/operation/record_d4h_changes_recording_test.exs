@@ -137,6 +137,44 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     assert Repo.all(D4HChange) == []
   end
 
+  describe "an edit of a team on SAR Duty Records" do
+    defp apply_edit(ctx, applied_at) do
+      change_set =
+        ChangeSet.propose!(%ChangeSet{team_id: ctx.team.id, source: :edit}, [
+          %ChangeSetRow{
+            member_id: ctx.member.id,
+            action: :update_member,
+            d4h_record_id: ctx.member.d4h_member_id,
+            old_value: %{"name" => ctx.member.name},
+            new_value: %{"name" => "Jane Renamed"}
+          }
+        ])
+
+      [row] = change_set.rows
+      ChangeSetRow.record!(row, {:applied, ctx.member.d4h_member_id}, applied_at)
+    end
+
+    defp sync_rename(ctx) do
+      RecordD4HChanges.recording(ctx.team, @now, fn ->
+        RecordD4HChanges.record(:member, ctx.member, %{ctx.member | name: "Jane Renamed"})
+      end)
+    end
+
+    test "is not recorded again by the sync that copies it back", ctx do
+      apply_edit(ctx, ~U[2026-10-09 17:05:00.000000Z])
+      sync_rename(ctx)
+
+      assert Repo.all(D4HChange) == []
+    end
+
+    test "made before the sync's window doesn't hide a later change", ctx do
+      apply_edit(ctx, ~U[2026-10-09 16:00:00.000000Z])
+      sync_rename(ctx)
+
+      assert [%D4HChange{record_kind: :member, fields: ["name"]}] = Repo.all(D4HChange)
+    end
+  end
+
   test "keeps attendance and awards past 2 years, and prunes the rest", ctx do
     old = DateTime.add(@now, -800, :day)
 
