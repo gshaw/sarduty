@@ -5,6 +5,7 @@ defmodule Web.MemberQualificationsLive do
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Repo
@@ -68,7 +69,7 @@ defmodule Web.MemberQualificationsLive do
       </:col>
     </.table>
     <p :if={@member.member_qualification_awards == []} id="no-qualifications">
-      {@member.name} has no qualifications in D4H.
+      {@member.name} has no qualifications in {D4H.service_name(@member.team)}.
     </p>
     """
   end

@@ -12,6 +12,7 @@ defmodule App.ViewData.TeamAttentionTest do
     Map.merge(
       %{
         timezone: "America/Vancouver",
+        service: :d4h,
         refresh: %{state: :ok, message: nil},
         draft_count: 0,
         expiring_days: 60,
@@ -106,5 +107,17 @@ defmodule App.ViewData.TeamAttentionTest do
       }
 
     assert everything |> items(@march) |> length() == 7
+  end
+
+  test "a team on SAR Duty Records hears about Records, not D4H" do
+    attrs = %{service: :records, refresh: %{state: :key_rejected}, proposed_change_count: 2}
+
+    for item <- items(attrs, @october) do
+      refute item.title =~ "D4H", item.title
+      refute item.detail =~ "D4H", item.title
+    end
+
+    assert [%{title: "SAR Duty cannot refresh from SAR Duty Records"} | _] =
+             items(attrs, @october)
   end
 end

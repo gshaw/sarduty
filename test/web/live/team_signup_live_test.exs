@@ -4,6 +4,7 @@ defmodule Web.TeamSignupLiveTest do
   import App.AccountsFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Adapter.D4H
   alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.SignUpTeam
@@ -11,7 +12,11 @@ defmodule Web.TeamSignupLiveTest do
   @d4h_team_id 7700
 
   defp stub_d4h(member_permission) do
+    test = self()
+
     Req.Test.stub(App.Adapter.D4H, fn conn ->
+      send(test, {:req_host, conn.host})
+
       case conn.request_path do
         "/v3/whoami" ->
           Req.Test.json(conn, %{
@@ -96,6 +101,46 @@ defmodule Web.TeamSignupLiveTest do
 
     assert_received {:email,
                      %{subject: "Your SAR Duty login code: " <> _, to: [{_, "pat@example.com"}]}}
+  end
+
+  test "a team on SAR Duty Records signs up with a Records key" do
+    stub_d4h(0)
+
+    params = %{
+      "email" => "pat@example.com",
+      "api_host" => "records.sarduty.com",
+      "access_key" => "sdr_team-key"
+    }
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, %Team{name: "Ridge SAR"}} = SignUpTeam.call(params)
+    end)
+
+    assert_received {:req_host, "records.sarduty.com"}
+    team = Team.get_by(d4h_team_id: @d4h_team_id)
+    assert team.d4h_api_host == "records.sarduty.com"
+    assert D4H.records?(team)
+  end
+
+  test "choosing SAR Duty Records changes the page's words", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/signup")
+    assert has_element?(lv, "#signup-d4h")
+    assert has_element?(lv, "label", "D4H access key")
+
+    lv |> form("#signup_form", form: %{api_host: "records.sarduty.com"}) |> render_change()
+
+    assert has_element?(lv, "#signup-records")
+    assert has_element?(lv, "label", "Records access key")
+  end
+
+  test "a host off the list is refused", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/signup")
+
+    lv
+    |> form("#signup_form", form: %{email: "pat@example.com", access_key: "team-token"})
+    |> render_submit(%{form: %{api_host: "evil.example.com"}})
+
+    assert has_element?(lv, "#signup_form", "Select where your team's records are.")
   end
 
   test "a Member can't sign the team up", %{conn: conn} do

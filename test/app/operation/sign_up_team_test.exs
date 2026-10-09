@@ -50,4 +50,18 @@ defmodule App.Operation.SignUpTeamTest do
 
     assert message =~ "already on SAR Duty"
   end
+
+  test "a team on SAR Duty Records hears Records' name" do
+    assert {:error, {:email, message}} =
+             SignUpTeam.check(
+               "pat@example.com",
+               @d4h_team,
+               [member(%{permission: 2})],
+               nil,
+               @now,
+               :records
+             )
+
+    assert message =~ "in SAR Duty Records"
+  end
 end

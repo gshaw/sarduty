@@ -34,8 +34,9 @@ defmodule Web.Components.MemberSidebar do
         )} ago
       </dd>
 
-      <dt>Actions</dt>
-      <dd>
+      <%!-- A team on SAR Duty Records has no D4H to open. --%>
+      <dt :if={!D4H.records?(@member.team)}>Actions</dt>
+      <dd :if={!D4H.records?(@member.team)}>
         <ul class="action-list">
           <li>
             <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>

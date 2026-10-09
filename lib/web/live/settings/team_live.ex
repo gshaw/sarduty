@@ -114,15 +114,34 @@ defmodule Web.Settings.TeamLive do
         </div>
         <.input
           field={@form[:new_d4h_access_key]}
-          label="D4H access key"
+          label={D4H.key_name(@current_team)}
           type="password"
           autocomplete="off"
         >
-          SAR Duty uses this one key for every D4H request: the nightly refresh, attendance,
-          mileage, photos, and group changes.
+          <%= if D4H.records?(@current_team) do %>
+            SAR Duty uses this one key to read and change your team's records in SAR Duty Records.
+          <% else %>
+            SAR Duty uses this one key for every D4H request: the nightly refresh, attendance,
+            mileage, photos, and group changes.
+          <% end %>
           <span id="team-key-status">{key_status(@current_team)}</span>
         </.input>
-        <div id="team-key-owner" class="mb-4 text-sm">
+        <div :if={D4H.records?(@current_team)} id="team-key-owner" class="mb-4 text-sm">
+          <p :if={@current_team.d4h_access_key_owner}>
+            The key is named <strong>{@current_team.d4h_access_key_owner}</strong>
+            in SAR Duty Records.
+          </p>
+          <p>
+            <.a
+              id="records-keys"
+              external={true}
+              href={"https://#{D4H.records_host()}/teams/#{@current_team.subdomain}/keys"}
+            >
+              Create a key in SAR Duty Records
+            </.a>
+          </p>
+        </div>
+        <div :if={!D4H.records?(@current_team)} id="team-key-owner" class="mb-4 text-sm">
           <p :if={@current_team.d4h_access_key_owner}>
             The key belongs to the D4H member <strong>{@current_team.d4h_access_key_owner}</strong>.
           </p>
@@ -145,7 +164,9 @@ defmodule Web.Settings.TeamLive do
         <.form_actions>
           <.button variant={:success}>Save settings</.button>
           <:trailing>
-            <.button type="button" phx-click="refresh">Refresh from D4H</.button>
+            <.button type="button" phx-click="refresh">
+              Refresh from {D4H.service_name(@current_team)}
+            </.button>
           </:trailing>
         </.form_actions>
       </.form>
@@ -157,8 +178,8 @@ defmodule Web.Settings.TeamLive do
     assign(socket, :form, to_form(source, as: "form"))
   end
 
-  defp key_status(%Team{d4h_access_key: nil}) do
-    "SAR Duty cannot reach D4H for this team. Save a D4H access key."
+  defp key_status(%Team{d4h_access_key: nil} = team) do
+    "SAR Duty cannot reach #{D4H.service_name(team)} for this team. Save a #{D4H.key_name(team)}."
   end
 
   defp key_status(%Team{d4h_access_key_saved_at: nil}) do
@@ -230,7 +251,7 @@ defmodule Web.Settings.TeamLive do
           socket
           |> assign(current_team: team)
           |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Team refreshed from D4H.")
+          |> put_flash(:info, "Team refreshed from #{D4H.service_name(team)}.")
 
         {:noreply, socket}
 

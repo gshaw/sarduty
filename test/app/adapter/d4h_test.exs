@@ -27,6 +27,28 @@ defmodule App.Adapter.D4HTest do
     assert D4H.fetch_team_image(context()) == {:ok, "png bytes", "team.png"}
   end
 
+  describe "services" do
+    test "a team is on Records only at Records' host" do
+      assert D4H.service(%App.Model.Team{d4h_api_host: "records.sarduty.com"}) == :records
+      assert D4H.service(%App.Model.Team{d4h_api_host: "api.ca.d4h.org"}) == :d4h
+      assert D4H.records?("records.sarduty.com")
+      refute D4H.records?("api.d4h.org")
+    end
+
+    test "the approved list is every D4H region, then Records" do
+      hosts = D4H.service_hosts()
+      assert List.last(hosts) == "records.sarduty.com"
+      assert D4H.regions() |> Map.values() |> Enum.all?(&(&1 in hosts))
+      assert length(hosts) == map_size(D4H.regions()) + 1
+    end
+
+    test "the words people read name the service" do
+      assert D4H.service_name(:records) == "SAR Duty Records"
+      assert D4H.key_name("records.sarduty.com") == "Records access key"
+      assert D4H.key_name("api.ca.d4h.org") == "D4H access key"
+    end
+  end
+
   describe "lists" do
     # Tags on `page` of a list of `total`, 1000 to a page, numbered from 0.
     defp tag_page(conn, total, short_by \\ 0) do
@@ -80,7 +102,7 @@ defmodule App.Adapter.D4HTest do
       end)
 
       assert D4H.fetch_list_head(context(), "/members") ==
-               %{total_size: 189, newest_updated_at: ~U[2026-10-05 12:00:00Z]}
+               %{total_size: 189, newest_updated_at: ~U[2026-10-05 12:00:00.123Z]}
     end
 
     test "changed attendance stops at the first row older than the cursor" do

@@ -6,6 +6,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   """
   import Ecto.Query
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.ChangeSet
@@ -41,6 +42,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   defp attention_rows(team, refresh_result, now) do
     %{
       timezone: team.timezone,
+      service: D4H.service(team),
       refresh: refresh_row(team, refresh_result),
       draft_count: count_recent_drafts(team, now),
       expiring_days: BuildGroupRulePreview.expiring_days(),

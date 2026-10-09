@@ -85,6 +85,7 @@ The rules that are easy to break:
 
 - [d4h-sync.md](d4h-sync.md) — how D4H data reaches the database, and what is never deleted.
 - [change-sets.md](change-sets.md) — how every write to D4H goes through one applier, and what it records.
+- [records.md](records.md) — teams without D4H: SAR Duty Records as a second service, and how a team connects.
 - [change-history.md](change-history.md) — each member's and activity's history: SAR Duty's writes and what the refresh saw change in D4H.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.

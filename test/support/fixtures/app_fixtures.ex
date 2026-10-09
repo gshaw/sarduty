@@ -1,5 +1,6 @@
 defmodule App.DataFixtures do
   alias App.AccountsFixtures
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Group
@@ -80,6 +81,12 @@ defmodule App.DataFixtures do
     team = team_fixture(Map.get(attrs, :team, %{}))
     manager_fixture(team, %{email: user.email})
     %{user: user, team: team}
+  end
+
+  @doc "The same, for a team on SAR Duty Records (docs/records.md)."
+  def records_team_with_user_fixture(attrs \\ %{}) do
+    team_attrs = Map.merge(%{d4h_api_host: D4H.records_host()}, attrs)
+    user_with_team_fixture(%{team: team_attrs})
   end
 
   @doc "A member D4H makes an Owner, so a user with their email manages the team."

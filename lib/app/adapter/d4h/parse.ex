@@ -48,6 +48,14 @@ defmodule App.Adapter.D4H.Parse do
     DateTime.truncate(result, :second)
   end
 
+  @doc "A D4H time to the microsecond, or nil, for comparing change times."
+  def precise_datetime(nil), do: nil
+
+  def precise_datetime(value) do
+    {:ok, result, 0} = DateTime.from_iso8601(value)
+    result
+  end
+
   def optional_datetime(nil), do: nil
   def optional_datetime(value), do: datetime(value)
 end

@@ -1,8 +1,9 @@
 defmodule App.Operation.SignUpTeam do
   @moduledoc """
-  Self-service team sign-up (#57 phase 5). A D4H personal access token becomes the team
-  key. The person signing up must be a current Owner or Editor on that team in D4H, at
-  the email they give, and the team must be new to SAR Duty. Then the team goes live, its
+  Self-service team sign-up (#57 phase 5). A D4H personal access token, or a SAR Duty
+  Records key (docs/records.md), becomes the team key. The person signing up must be a
+  current Owner or Editor on that team in D4H or Records, at the email they give, and the
+  team must be new to SAR Duty. Then the team goes live, its
   first refresh starts, the admins get an email, and the signer gets a login code.
   """
 
@@ -33,10 +34,18 @@ defmodule App.Operation.SignUpTeam do
   defp check_with_d4h(view_model) do
     with {:ok, whoami} <- fetch_whoami(view_model),
          d4h = context(view_model, whoami.d4h_team_id),
-         {:ok, d4h_team} <- fetch_team(d4h),
+         {:ok, d4h_team} <- fetch_team(d4h, view_model.api_host),
          members = D4H.fetch_team_members(d4h),
          existing = Team.get_by(d4h_team_id: whoami.d4h_team_id),
-         {:ok, signer} <- check(view_model.email, d4h_team, members, existing, DateTime.utc_now()) do
+         {:ok, signer} <-
+           check(
+             view_model.email,
+             d4h_team,
+             members,
+             existing,
+             DateTime.utc_now(),
+             D4H.service(view_model.api_host)
+           ) do
       {:ok, whoami, d4h_team, signer}
     end
   end
@@ -51,11 +60,12 @@ defmodule App.Operation.SignUpTeam do
 
   @doc """
   Whether this email may sign the team up: it isn't on SAR Duty yet, and the email
-  belongs to one of its current D4H Owners or Editors. Returns that member, or the
-  form field and message to show.
+  belongs to one of its current Owners or Editors in `service`, D4H or Records. Returns
+  that member, or the form field and message to show.
   """
-  def check(email, d4h_team, members, existing_team, now) do
+  def check(email, d4h_team, members, existing_team, now, service \\ :d4h) do
     email = email |> String.trim() |> String.downcase()
+    name = D4H.service_name(service)
     signer = Enum.find(members, &(String.downcase(&1.email || "") == email))
 
     cond do
@@ -66,10 +76,11 @@ defmodule App.Operation.SignUpTeam do
 
       signer == nil ->
         {:error,
-         {:email, "Enter the email D4H has for you. No member of #{d4h_team.name} uses this one."}}
+         {:email,
+          "Enter the email #{name} has for you. No member of #{d4h_team.name} uses this one."}}
 
       not manager?(signer, now) ->
-        {:error, {:email, "Use the email of an Owner or Editor of #{d4h_team.name} in D4H."}}
+        {:error, {:email, "Use the email of an Owner or Editor of #{d4h_team.name} in #{name}."}}
 
       true ->
         {:ok, signer}
@@ -87,17 +98,29 @@ defmodule App.Operation.SignUpTeam do
         {:ok, whoami}
 
       {:error, _reason} ->
-        {:error, {:access_key, "Enter a D4H access key that works in this region."}}
+        {:error, {:access_key, key_refused(view_model.api_host)}}
     end
   rescue
     Req.TransportError ->
-      {:error, {:access_key, "D4H did not respond. Try again in a few minutes."}}
+      name = D4H.service_name(view_model.api_host)
+      {:error, {:access_key, "#{name} did not respond. Try again in a few minutes."}}
   end
 
-  defp fetch_team(d4h) do
+  defp key_refused(api_host) do
+    case D4H.service(api_host) do
+      :d4h -> "Enter a D4H access key that works in this region."
+      :records -> "Enter a Records access key from your team's API keys page."
+    end
+  end
+
+  defp fetch_team(d4h, api_host) do
     case D4H.fetch_team(d4h) do
-      {:ok, d4h_team} -> {:ok, d4h_team}
-      {:error, _response} -> {:error, {:access_key, "Use a key that can read the team in D4H."}}
+      {:ok, d4h_team} ->
+        {:ok, d4h_team}
+
+      {:error, _response} ->
+        name = D4H.service_name(api_host)
+        {:error, {:access_key, "Use a key that can read the team in #{name}."}}
     end
   end
 
