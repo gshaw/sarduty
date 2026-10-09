@@ -68,7 +68,7 @@ The two worker tests are `assert true` placeholders.
 | Target                                           | Why                                           | Shape                             |
 | ------------------------------------------------ | --------------------------------------------- | --------------------------------- |
 | D4H struct `build/1` and `App.Adapter.D4H.Parse` | A D4H format change corrupts the copy quietly | Pure, against recorded D4H JSON   |
-| Mileage round trips (`BuildMilesageReport`)      | Reimbursement numbers                         | Extract the arithmetic, test pure |
+| Mileage round trips (`BuildMileageReport`)      | Reimbursement numbers                         | Extract the arithmetic, test pure |
 
 ## Known gaps
 
