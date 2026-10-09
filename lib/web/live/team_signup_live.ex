@@ -34,29 +34,23 @@ defmodule Web.TeamSignupLive do
     </div>
     <div :if={!@done}>
       <h1 class="heading">Sign up a team</h1>
-      <%= if D4H.records?(@api_host) do %>
-        <p id="signup-records">
-          SAR Duty works from your team's records in SAR Duty Records. You need a Records access
-          key from your team's API keys page there. You must also be an Owner or Editor on the
-          team in Records.
-        </p>
-        <p>
-          <.a external={true} href={"https://#{D4H.records_host()}/teams"}>
-            Create a key in SAR Duty Records
-          </.a>
-        </p>
-      <% else %>
-        <p id="signup-d4h">
-          SAR Duty works from your team's D4H data. You need a D4H access key from a D4H member
-          with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
-          Duty in D4H. You must also be an Owner or Editor on the team in D4H.
-        </p>
-        <p>
-          <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
-            How to create a D4H access key
-          </.a>
-        </p>
-      <% end %>
+      <p id="signup-d4h">
+        SAR Duty works from your team's D4H data. You need a D4H access key from a D4H member
+        with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
+        Duty in D4H. You must also be an Owner or Editor on the team in D4H.
+      </p>
+      <p>
+        <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
+          How to create a D4H access key
+        </.a>
+      </p>
+      <%!-- Almost every team has D4H. Records is a trial, so it gets one line. --%>
+      <p id="signup-records" class="hint">
+        No D4H?
+        <.a external={true} href={"https://#{D4H.records_host()}"}>SAR Duty Records</.a>
+        is an experimental place to keep your team's records. Select it as the region and paste a
+        Records access key.
+      </p>
       <.form for={@form} id="signup_form" phx-submit="save" phx-change="validate">
         <.input field={@form[:email]} type="email" label="Email" autocomplete="email">
           The email {D4H.service_name(@api_host)} has for you. We send your login code here.
@@ -64,11 +58,9 @@ defmodule Web.TeamSignupLive do
         <.input
           field={@form[:api_host]}
           type="select"
-          label="Where your team's records are"
+          label="D4H region"
           options={D4H.services()}
-        >
-          Select SAR Duty Records if your team does not use D4H.
-        </.input>
+        />
         <.input
           field={@form[:access_key]}
           type="password"

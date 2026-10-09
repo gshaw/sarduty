@@ -15,8 +15,9 @@ this.
 
 1. A team admin signs the team up in Records, and a Records admin approves it.
 2. On the team's API keys page in Records, they create a key, such as "SAR Duty".
-3. At SAR Duty's sign-up, they choose **SAR Duty Records** under "Where your team's
-   records are", and paste the key.
+3. At SAR Duty's sign-up, they choose **SAR Duty Records (experimental)** as the D4H
+   region, and paste the key. The page leads with D4H, since almost every team has it,
+   and mentions Records in one line.
 
 Sign-up then runs as for a D4H team: `whoami`, the team, and its members come from
 Records, and the person signing up must be an Owner or Editor there. The team's
