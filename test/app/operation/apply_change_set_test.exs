@@ -2,6 +2,7 @@ defmodule App.Operation.ApplyChangeSetTest do
   use ExUnit.Case, async: true
 
   alias App.Adapter.D4H.AttendanceInfo
+  alias App.Adapter.D4H.EquipmentUsage
   alias App.Model.ChangeSetRow
   alias App.Operation.ApplyChangeSet
 
@@ -49,12 +50,26 @@ defmodule App.Operation.ApplyChangeSetTest do
     assert %ChangeSetRow{action: :remove_group_member} |> ApplyChangeSet.check(nil) == :ok
   end
 
+  test "an equipment add is skipped when D4H has the item on the activity now" do
+    row = %ChangeSetRow{action: :create_equipment_usage, new_value: %{"d4h_equipment_id" => 7}}
+
+    assert ApplyChangeSet.check(row, [%EquipmentUsage{d4h_equipment_id: 8}]) == :ok
+    assert {:skipped, _} = ApplyChangeSet.check(row, [%EquipmentUsage{d4h_equipment_id: 7}])
+  end
+
+  test "an equipment remove is skipped when D4H has dropped the usage already" do
+    row = %ChangeSetRow{action: :delete_equipment_usage, d4h_record_id: 40}
+
+    assert ApplyChangeSet.check(row, [%EquipmentUsage{d4h_equipment_usage_id: 40}]) == :ok
+    assert {:skipped, _} = ApplyChangeSet.check(row, [])
+  end
+
   @writes ~w(add_group_member remove_group_membership set_attendance create_attendance
              create_member update_member retire_member rejoin_member set_member_photo
              remove_member_photo create_activity
              update_activity delete_activity create_qualification update_qualification
              delete_qualification award_qualification remove_award create_group update_group
-             delete_group)
+             delete_group create_equipment_usage delete_equipment_usage)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do

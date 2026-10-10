@@ -11,7 +11,8 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   @newest "2026-10-05T12:00:00Z"
   @lists ~w(members tags exercises events incidents attendance member-qualifications
-            member-qualification-awards member-groups member-group-memberships)
+            member-qualification-awards member-groups member-group-memberships equipment
+            equipment-usages)
 
   defp head(total, newest \\ @newest),
     do: %{"results" => [%{"updatedAt" => newest}], "totalSize" => total}
@@ -28,7 +29,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   defp list_name(conn), do: conn.path_info |> List.last()
 
-  test "when nothing changed, a sync makes only the 10 list checks" do
+  test "when nothing changed, a sync makes only the 12 list checks" do
     team = synced_team()
     test = self()
 
@@ -40,8 +41,8 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 
-    requests = for _ <- 1..10, do: assert_receive({:d4h, path})
-    assert length(requests) == 10
+    requests = for _ <- 1..12, do: assert_receive({:d4h, path})
+    assert length(requests) == 12
     refute_received {:d4h, _}
     refute_received {:team_refreshed, _}
     assert Repo.reload(team).d4h_synced_at

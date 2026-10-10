@@ -190,6 +190,9 @@ defmodule App.ViewData.ChangeHistory do
   defp row_kind(action) when action in [:add_group_member, :remove_group_member],
     do: :group_membership
 
+  defp row_kind(action) when action in [:create_equipment_usage, :delete_equipment_usage],
+    do: :equipment
+
   defp row_kind(_action), do: :record
 
   @doc "One change SAR Duty applied, as a sentence."
@@ -203,6 +206,12 @@ defmodule App.ViewData.ChangeHistory do
 
     "#{subject || "Attendance"} set to #{status(row.new_value["status"])}"
   end
+
+  def describe_row(%ChangeSetRow{action: :create_equipment_usage} = row, _page),
+    do: "#{row.new_value["title"] || "An item"} added to equipment"
+
+  def describe_row(%ChangeSetRow{action: :delete_equipment_usage} = row, _page),
+    do: "#{row.old_value["title"] || "An item"} removed from equipment"
 
   def describe_row(%ChangeSetRow{action: :create_member}, _page), do: "Added in SAR Duty"
 
@@ -260,6 +269,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:agent), do: "AI agent"
   def source_label(:edit), do: "edit"
   def source_label(:member), do: "the member"
+  def source_label(:equipment), do: "equipment"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

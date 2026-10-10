@@ -312,6 +312,22 @@ defmodule App.Adapter.D4H do
     fetch_all(context, "/tags", &D4H.Tag.build/1)
   end
 
+  @doc """
+  Every equipment item, with its kind and location titles (#271). D4H answers 403 for
+  a team without its equipment module, which raises D4H.Error like any failure.
+  """
+  def fetch_equipment_items(context) do
+    kinds = context |> fetch_all("/equipment-kinds", &{&1["id"], &1["title"]}) |> Map.new()
+
+    locations =
+      context |> fetch_all("/equipment-locations", &{&1["id"], &1["title"]}) |> Map.new()
+
+    fetch_all(context, "/equipment", &D4H.EquipmentItem.build(&1, kinds, locations))
+  end
+
+  def fetch_equipment_usages(context),
+    do: fetch_all(context, "/equipment-usages", &D4H.EquipmentUsage.build/1)
+
   defp fetch_all(context, url, build) do
     context
     |> reduce_pages(url, build, [], &[&1 | &2])
@@ -452,7 +468,8 @@ defmodule App.Adapter.D4H do
   end
 
   # Only App.Operation.ApplyChangeSet calls the writes below: add_group_member,
-  # remove_group_membership, set_attendance, and create_attendance (#174).
+  # remove_group_membership, set_attendance, create_attendance, and the equipment
+  # usage writes (#174).
   #
   # The two group writes return D4H.Error instead of raising, so one failed change
   # doesn't stop the rest. Neither is retried: a person is watching and can apply
@@ -530,6 +547,48 @@ defmodule App.Adapter.D4H do
     else
       {:short, response} -> {:error, D4H.Error.exception(response)}
       :error -> {:error, D4H.Error.exception("D4H sent no attendance list.")}
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  @doc "Every equipment usage on the activity now, as `D4H.EquipmentUsage` structs."
+  def fetch_activity_equipment_usages(context, d4h_activity_id) do
+    request = [
+      method: :get,
+      url: "/equipment-usages",
+      params: [activity_id: d4h_activity_id, size: 1000],
+      retry: false
+    ]
+
+    with {:ok, %{status: 200, body: body} = response} <- Req.request(context, request),
+         {:ok, page} <- D4H.Page.build(body),
+         true <- length(page.results) == page.total_size || {:short, response} do
+      {:ok, Enum.map(page.results, &D4H.EquipmentUsage.build/1)}
+    else
+      {:short, response} -> {:error, D4H.Error.exception(response)}
+      :error -> {:error, D4H.Error.exception("D4H sent no equipment usage list.")}
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  @doc """
+  Adds an item to an activity's equipment. `minutes` goes as the usage's duration, which
+  D4H takes only for equipment; nil sends none.
+  """
+  def create_equipment_usage(context, d4h_activity_id, d4h_equipment_id, minutes) do
+    json =
+      %{activityId: d4h_activity_id, equipmentId: d4h_equipment_id}
+      |> then(&if(minutes, do: Map.put(&1, :duration, minutes), else: &1))
+
+    write(context, :post, "/equipment-usages", json, &D4H.EquipmentUsage.build/1)
+  end
+
+  @doc "Removes an item from an activity's equipment. A usage D4H has already deleted counts."
+  def delete_equipment_usage(context, d4h_equipment_usage_id) do
+    request = [method: :delete, url: "/equipment-usages/#{d4h_equipment_usage_id}", retry: false]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status}} when status in 200..299 or status == 404 -> :ok
       result -> {:error, write_error(result)}
     end
   end

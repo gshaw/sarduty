@@ -4,7 +4,8 @@ defmodule App.Operation.SyncD4HChangesTest do
   alias App.Operation.SyncD4HChanges
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
-            member-qualification-awards member-groups member-group-memberships)
+            member-qualification-awards member-groups member-group-memberships equipment
+            equipment-usages)
 
   defp heads(overrides \\ %{}) do
     @lists
@@ -38,6 +39,11 @@ defmodule App.Operation.SyncD4HChangesTest do
     assert plan.lists == ["members", "member-qualification-awards", "member-group-memberships"]
     assert plan.activities == %{}
     assert plan.attendance_since == nil
+  end
+
+  test "changed equipment refetches its usages too" do
+    plan = SyncD4HChanges.plan(heads(), heads(%{"equipment" => moved()}))
+    assert plan.lists == ["equipment", "equipment-usages"]
   end
 
   test "lists are fetched in the order their rows depend on" do
