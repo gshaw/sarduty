@@ -33,10 +33,14 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **A member's own edit is a set of one row** (source `member`, #156): a member
   changing their address or emergency contacts from their page, applied at once. See
   [members.md](members.md).
+- **Equipment on an activity is a set too** (source `equipment`, #271): adding items
+  from the activity's "Add equipment" page, or removing one. It applies at once. See
+  [equipment.md](equipment.md).
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H
-  would count their hours twice. Group rows aren't checked; D4H treats a removed
+  would count their hours twice. An equipment set reads the activity's usages instead,
+  and skips an item D4H has on it now. Group rows aren't checked; D4H treats a removed
   membership as gone already.
 - **Each row records D4H's answer**: `applied` with the D4H record id (a create's new id),
   `failed` with D4H's error, or `skipped` with why. Writes don't retry. Applying the set

@@ -7,6 +7,7 @@ defmodule Web.ActivityLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Coordinate
+  alias App.Model.EquipmentUsage
   alias App.Repo
   alias Web.Components.ActivityMap
 
@@ -24,6 +25,8 @@ defmodule Web.ActivityLive do
         activity: activity,
         attendances: attendances,
         attendance_count: length(attendances),
+        usages:
+          if(D4H.records?(activity.team), do: nil, else: EquipmentUsage.for_activity(activity)),
         map: build_map(activity)
       )
 
@@ -87,6 +90,7 @@ defmodule Web.ActivityLive do
           attendances={@attendances}
           attendance_count={@attendance_count}
         />
+        <.equipment_section :if={@usages} activity={@activity} usages={@usages} />
       </main>
     </div>
     """
@@ -199,6 +203,43 @@ defmodule Web.ActivityLive do
         <.activity_attendance_table activity={@activity} attendances={@attendances} />
       </div>
     </div>
+    """
+  end
+
+  # SAR Duty Records has no equipment, so its activities have no section (#271).
+  def equipment_section(assigns) do
+    ~H"""
+    <section id="activity-equipment" class="mt-8">
+      <div class="heading-row">
+        <h2 class="heading">Equipment · {length(@usages)}</h2>
+        <.button
+          :if={!@activity.deleted_at}
+          id="activity-equipment-add"
+          size={:sm}
+          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
+        >
+          Add equipment
+        </.button>
+      </div>
+      <.table
+        :if={@usages != []}
+        id="activity-equipment-table"
+        rows={@usages}
+        row_id={&"usage-#{&1.id}"}
+        class="table-striped w-fit"
+      >
+        <:col :let={usage} label="Item">
+          <.a navigate={~p"/teams/#{@activity.team}/equipment/#{usage.equipment_item.id}"}>
+            {usage.equipment_item.title}
+          </.a>
+        </:col>
+        <:col :let={usage} label="Type">{usage.equipment_item.kind}</:col>
+        <:col :let={usage} label="Used" align="right" class="whitespace-nowrap">
+          {Web.ActivityEquipmentLive.amount(usage)}
+        </:col>
+      </.table>
+      <p :if={@usages == []} class="hint">No equipment on this activity in D4H.</p>
+    </section>
     """
   end
 

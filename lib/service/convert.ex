@@ -3,6 +3,29 @@ defmodule Service.Convert do
     Useful functions for converting data.
   """
 
+  @doc """
+  Minutes from hours a person typed, such as "1.5" or "2". Blank or not a number is 0,
+  and a negative number is 0.
+  """
+  def hours_to_minutes(hours) when is_binary(hours) do
+    case hours |> String.trim() |> Float.parse() do
+      {hours, ""} -> hours_to_minutes(hours)
+      _not_a_number -> 0
+    end
+  end
+
+  def hours_to_minutes(hours) when is_number(hours), do: max(round(hours * 60), 0)
+  def hours_to_minutes(nil), do: 0
+
+  @doc ~s(Minutes as hours for a form field: 90 is "1.5", 120 is "2".)
+  def minutes_to_hours(nil), do: "0"
+
+  def minutes_to_hours(minutes) when is_integer(minutes) do
+    if rem(minutes, 60) == 0,
+      do: minutes |> div(60) |> Integer.to_string(),
+      else: (minutes / 60) |> Float.round(2) |> Float.to_string()
+  end
+
   def duration_to_minutes(started_at, finished_at) do
     DateTime.diff(finished_at, started_at, :minute)
   end

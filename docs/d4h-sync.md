@@ -20,14 +20,15 @@ refresh once a night as the safety net (#163).
   first 401 or 403 stops the syncs until a new key is saved in team settings or a nightly
   refresh gets past the key.
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
-- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 10 lists for
+- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 12 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
-  change. If none moved since the last look (`teams.d4h_sync_state`), it stops: 10 small
-  requests.
-- A small list that moved (members, qualifications, awards, groups, memberships) is
-  fetched whole through the full refresh's own stage, along with the lists that point at
-  it, so rows skipped for an unknown parent come in. Their stale-row deletes and the
-  member departure rule keep working.
+  change. If none moved since the last look (`teams.d4h_sync_state`), it stops: 12 small
+  requests, or 10 for a team on SAR Duty Records, which has no equipment.
+- A small list that moved (members, qualifications, awards, groups, memberships,
+  equipment items and usages) is fetched whole through the full refresh's own stage, along
+  with the lists that point at it, so rows skipped for an unknown parent come in. Their
+  stale-row deletes and the member departure rule keep working. Equipment usages come
+  after activities, so a new activity's usages aren't skipped.
 - Activities that moved are fetched with `updated_after`. Then every id D4H lists for
   that kind, one or two pages, is compared with this copy to mark deletes (#160), as the
   full refresh does. D4H's `deleted=true` list would be cheaper, but it comes back empty
@@ -132,6 +133,8 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 5. Attendance.
 6. Qualifications, then qualification awards.
 7. Groups, then group memberships.
+8. Equipment items, then equipment usages ([equipment.md](equipment.md)). A team without
+   D4H's equipment module, or on SAR Duty Records, skips both.
 
 Order matters: attendance needs members and activities, awards need qualifications,
 memberships need groups. A row whose parent is unknown locally is skipped.

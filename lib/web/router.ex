@@ -203,6 +203,12 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
       live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive
       live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
+      live "/teams/:subdomain/activities/:id/equipment", ActivityEquipmentLive
+      live "/teams/:subdomain/equipment", EquipmentCollectionLive
+      live "/teams/:subdomain/equipment/kits", KitCollectionLive
+      live "/teams/:subdomain/equipment/kits/new", KitFormLive, :new
+      live "/teams/:subdomain/equipment/kits/:id", KitFormLive, :edit
+      live "/teams/:subdomain/equipment/:id", EquipmentItemLive
       live "/teams/:subdomain/members", MemberCollectionLive
       live "/teams/:subdomain/members/new", MemberFormLive, :new
       live "/teams/:subdomain/members/:id", MemberLive

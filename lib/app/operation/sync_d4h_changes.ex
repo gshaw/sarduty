@@ -23,6 +23,8 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
+  alias App.Operation.RefreshD4HData.UpsertEquipmentItems
+  alias App.Operation.RefreshD4HData.UpsertEquipmentUsages
   alias App.Operation.RefreshD4HData.UpsertGroupMemberships
   alias App.Operation.RefreshD4HData.UpsertGroups
   alias App.Operation.RefreshD4HData.UpsertMembers
@@ -33,20 +35,27 @@ defmodule App.Operation.SyncD4HChanges do
   require Logger
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
-            member-qualification-awards member-groups member-group-memberships)
+            member-qualification-awards member-groups member-group-memberships equipment
+            equipment-usages)
+
+  # SAR Duty Records has no equipment, and a D4H team may not have the module (#271).
+  @equipment_lists ~w(equipment equipment-usages)
 
   @activity_kinds ~w(exercises events incidents)
   @activity_kind %{"exercises" => "exercise", "events" => "event", "incidents" => "incident"}
 
   # Fetched whole when they change, in this order, since later ones point at earlier ones.
+  # Equipment usages come after activities, in apply_plan/5, so a new activity's usages
+  # aren't skipped.
   @small_lists ~w(members member-qualifications member-qualification-awards member-groups
-                  member-group-memberships)
+                  member-group-memberships equipment equipment-usages)
 
   # Rows that were skipped for an unknown parent come in once the parent does.
   @dependents %{
     "members" => ["member-qualification-awards", "member-group-memberships"],
     "member-qualifications" => ["member-qualification-awards"],
-    "member-groups" => ["member-group-memberships"]
+    "member-groups" => ["member-group-memberships"],
+    "equipment" => ["equipment-usages"]
   }
 
   # The cursor is the newest change D4H showed last time, less this overlap, so our
@@ -150,7 +159,7 @@ defmodule App.Operation.SyncD4HChanges do
 
   def call(%Team{} = team, now) do
     d4h = D4H.build_context_from_team(team)
-    heads = fetch_heads(d4h)
+    heads = fetch_heads(d4h, team)
 
     changed =
       case plan(previous_heads(team), heads) do
@@ -173,12 +182,26 @@ defmodule App.Operation.SyncD4HChanges do
         else: reraise(error, __STACKTRACE__)
   end
 
-  @doc "Every list's head, 4 requests at a time."
-  def fetch_heads(d4h) do
-    @lists
-    |> parallel(&{&1, D4H.fetch_list_head(d4h, "/" <> &1)})
+  @doc """
+  Every list's head, 4 requests at a time. A Records team has no equipment lists, and
+  a D4H team without equipment gets empty ones.
+  """
+  def fetch_heads(d4h, team) do
+    lists = if D4H.records?(team), do: @lists -- @equipment_lists, else: @lists
+
+    lists
+    |> parallel(&{&1, fetch_head(d4h, &1)})
     |> Map.new()
   end
+
+  defp fetch_head(d4h, list) when list in @equipment_lists do
+    case UpsertEquipmentItems.no_equipment(fn -> D4H.fetch_list_head(d4h, "/" <> list) end) do
+      {:ok, head} -> head
+      :none -> %{total_size: 0, newest_updated_at: nil}
+    end
+  end
+
+  defp fetch_head(d4h, list), do: D4H.fetch_list_head(d4h, "/" <> list)
 
   @doc """
   Records the heads as what this team's copy now matches, and clears any failure. The
@@ -254,12 +277,15 @@ defmodule App.Operation.SyncD4HChanges do
 
   defp apply_plan(d4h, team, plan, heads, now) do
     progress = Progress.quiet(team.id)
-    Enum.each(plan.lists, &fetch_list(&1, d4h, team, progress))
+    {late, early} = Enum.split_with(plan.lists, &(&1 == "equipment-usages"))
+    Enum.each(early, &fetch_list(&1, d4h, team, progress))
 
     touched =
       d4h
       |> sync_activities(team, plan.activities, now)
       |> MapSet.union(sync_attendance(d4h, team, plan.attendance_since))
+
+    Enum.each(late, &fetch_list(&1, d4h, team, progress))
 
     sync_touched_attendance(d4h, team, touched)
 
@@ -282,6 +308,12 @@ defmodule App.Operation.SyncD4HChanges do
 
   defp fetch_list("member-group-memberships", d4h, team, progress),
     do: UpsertGroupMemberships.call(d4h, team, progress)
+
+  defp fetch_list("equipment", d4h, team, progress),
+    do: UpsertEquipmentItems.call(d4h, team, progress)
+
+  defp fetch_list("equipment-usages", d4h, team, progress),
+    do: UpsertEquipmentUsages.call(d4h, team, progress)
 
   # D4H ids of the activities saved or marked deleted whose attendance is worth checking.
   defp sync_activities(_d4h, _team, activities, _now) when activities == %{}, do: MapSet.new()
