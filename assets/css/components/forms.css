@@ -30,4 +30,30 @@
   }
   input.switch:checked { background: var(--primary); border-color: var(--primary); }
   input.switch:checked::after { left: 24px; background: var(--on-fill); transform: none; }
+
+  /* A file input's own button looks like a secondary button, so the place to tap is
+     clear (#282). The file name stays beside it. See /styles/forms. */
+  input[type="file"] { max-width: 100%; font-size: var(--fs-sm); color: var(--text-muted); }
+  input[type="file"]::file-selector-button {
+    font: inherit;
+    font-weight: 600;
+    font-size: var(--fs-md);
+    line-height: var(--lh-md);
+    padding: 6px var(--sp-4);
+    margin: 0 var(--sp-3) 2px 0;
+    border: 0;
+    border-radius: var(--radius);
+    color: var(--text);
+    background: var(--surface-alt);
+    box-shadow: 0 2px 0 var(--border);
+    cursor: pointer;
+  }
+  @media (pointer: coarse) { input[type="file"]::file-selector-button { min-height: 44px; } }
+  @media (hover: hover) {
+    input[type="file"]:not(:disabled)::file-selector-button:hover {
+      background: color-mix(in srgb, var(--surface-alt) 85%, var(--text));
+    }
+  }
+  input[type="file"]:not(:disabled)::file-selector-button:active { transform: translateY(2px); box-shadow: none; }
+  input[type="file"]:focus-visible::file-selector-button { background: var(--focus); color: #0b0c0c; box-shadow: 0 2px 0 #0b0c0c; }
 }
