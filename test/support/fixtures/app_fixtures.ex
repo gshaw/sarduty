@@ -3,10 +3,14 @@ defmodule App.DataFixtures do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.EquipmentItem
+  alias App.Model.EquipmentUsage
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
+  alias App.Model.Kit
+  alias App.Model.KitItem
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
@@ -306,5 +310,48 @@ defmodule App.DataFixtures do
     params
     |> TaxCreditLetter.build_new_changeset()
     |> Repo.insert!()
+  end
+
+  def equipment_item_fixture(%Team{} = team, attrs \\ %{}) do
+    unique = System.unique_integer([:positive])
+
+    params =
+      Map.merge(
+        %{
+          team_id: team.id,
+          d4h_equipment_id: unique,
+          title: "Item #{unique}",
+          item_type: "equipment",
+          kind: "Radio",
+          status: "operational",
+          location_title: "Yard"
+        },
+        attrs
+      )
+
+    %EquipmentItem{} |> EquipmentItem.build_changeset(params) |> Repo.insert!()
+  end
+
+  def equipment_usage_fixture(%Activity{} = activity, %EquipmentItem{} = item, attrs \\ %{}) do
+    params =
+      Map.merge(
+        %{
+          team_id: activity.team_id,
+          activity_id: activity.id,
+          equipment_item_id: item.id,
+          d4h_equipment_usage_id: System.unique_integer([:positive]),
+          minutes: 120
+        },
+        attrs
+      )
+
+    %EquipmentUsage{} |> EquipmentUsage.build_changeset(params) |> Repo.insert!()
+  end
+
+  def kit_fixture(%Team{} = team, title \\ "Truck 1", items \\ []) do
+    kit_items =
+      for {item, minutes} <- items, do: %KitItem{equipment_item_id: item.id, minutes: minutes}
+
+    Repo.insert!(%Kit{team_id: team.id, title: title, kit_items: kit_items})
   end
 end

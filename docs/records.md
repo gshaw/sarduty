@@ -69,10 +69,16 @@ that title.
   qualifications and awards is Records' own; groups and group members use D4H's own
   endpoints. Deleting a qualification takes its awards with it, and a group its members.
 
+- **Equipment items**: add, change, move, delete (#271, [equipment.md](equipment.md)).
+  `POST`, `PATCH`, and `DELETE` on `/equipment` are D4H's, but `type` and changing
+  anything beyond status and barcode are Records' own. A new place is D4H's
+  `POST /equipment-locations`.
+
 Every Records-only write: `POST /members`, `permission` on a member, `PUT` and `DELETE`
 on `/members/<id>/image`, `DELETE` on
-`/events`, `/exercises`, and `/incidents`, `DELETE /member-qualifications/<id>`, and
-`DELETE /member-qualification-awards/<id>`. The guard test in
+`/events`, `/exercises`, and `/incidents`, `DELETE /member-qualifications/<id>`,
+`DELETE /member-qualification-awards/<id>`, and `type` and every field but status and
+barcode on `/equipment`. The guard test in
 `test/app/operation/apply_change_set_test.exs` lists every write function, so only
 `ApplyChangeSet` calls them.
 

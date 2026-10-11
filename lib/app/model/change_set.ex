@@ -22,8 +22,9 @@ defmodule App.Model.ChangeSet do
     belongs_to :applied_by_user, User
     # :edit is a team admin changing one record of a team on SAR Duty Records
     # (docs/records.md). :member is a member changing their own details (#156).
+    # :equipment adds or removes items on an activity (#271).
     field :source, Ecto.Enum,
-      values: [:door, :group_rule, :attendance_import, :agent, :edit, :member]
+      values: [:door, :group_rule, :attendance_import, :agent, :edit, :member, :equipment]
 
     field :summary, :string
     field :applied_at, :utc_datetime_usec

@@ -299,6 +299,7 @@ defmodule Web.Layouts do
       {"Members", ~p"/teams/#{team}/members"},
       {"Qualifications", ~p"/teams/#{team}/qualifications"},
       {"Groups", ~p"/teams/#{team}/groups"},
+      {"Equipment", ~p"/teams/#{team}/equipment"},
       {"Tax credit letters", ~p"/teams/#{team}/tax-credit-letters"}
     ]
   end

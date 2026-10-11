@@ -312,6 +312,22 @@ defmodule App.Adapter.D4H do
     fetch_all(context, "/tags", &D4H.Tag.build/1)
   end
 
+  @doc """
+  Every equipment item, with its kind and location titles (#271). D4H answers 403 for
+  a team without its equipment module, which raises D4H.Error like any failure.
+  """
+  def fetch_equipment_items(context) do
+    kinds = context |> fetch_all("/equipment-kinds", &{&1["id"], &1["title"]}) |> Map.new()
+
+    locations =
+      context |> fetch_all("/equipment-locations", &{&1["id"], &1["title"]}) |> Map.new()
+
+    fetch_all(context, "/equipment", &D4H.EquipmentItem.build(&1, kinds, locations))
+  end
+
+  def fetch_equipment_usages(context),
+    do: fetch_all(context, "/equipment-usages", &D4H.EquipmentUsage.build/1)
+
   defp fetch_all(context, url, build) do
     context
     |> reduce_pages(url, build, [], &[&1 | &2])
@@ -452,7 +468,8 @@ defmodule App.Adapter.D4H do
   end
 
   # Only App.Operation.ApplyChangeSet calls the writes below: add_group_member,
-  # remove_group_membership, set_attendance, and create_attendance (#174).
+  # remove_group_membership, set_attendance, create_attendance, and the equipment
+  # usage writes (#174).
   #
   # The two group writes return D4H.Error instead of raising, so one failed change
   # doesn't stop the rest. Neither is retried: a person is watching and can apply
@@ -530,6 +547,48 @@ defmodule App.Adapter.D4H do
     else
       {:short, response} -> {:error, D4H.Error.exception(response)}
       :error -> {:error, D4H.Error.exception("D4H sent no attendance list.")}
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  @doc "Every equipment usage on the activity now, as `D4H.EquipmentUsage` structs."
+  def fetch_activity_equipment_usages(context, d4h_activity_id) do
+    request = [
+      method: :get,
+      url: "/equipment-usages",
+      params: [activity_id: d4h_activity_id, size: 1000],
+      retry: false
+    ]
+
+    with {:ok, %{status: 200, body: body} = response} <- Req.request(context, request),
+         {:ok, page} <- D4H.Page.build(body),
+         true <- length(page.results) == page.total_size || {:short, response} do
+      {:ok, Enum.map(page.results, &D4H.EquipmentUsage.build/1)}
+    else
+      {:short, response} -> {:error, D4H.Error.exception(response)}
+      :error -> {:error, D4H.Error.exception("D4H sent no equipment usage list.")}
+      result -> {:error, write_error(result)}
+    end
+  end
+
+  @doc """
+  Adds an item to an activity's equipment. `minutes` goes as the usage's duration, which
+  D4H takes only for equipment; nil sends none.
+  """
+  def create_equipment_usage(context, d4h_activity_id, d4h_equipment_id, minutes) do
+    json =
+      %{activityId: d4h_activity_id, equipmentId: d4h_equipment_id}
+      |> then(&if(minutes, do: Map.put(&1, :duration, minutes), else: &1))
+
+    write(context, :post, "/equipment-usages", json, &D4H.EquipmentUsage.build/1)
+  end
+
+  @doc "Removes an item from an activity's equipment. A usage D4H has already deleted counts."
+  def delete_equipment_usage(context, d4h_equipment_usage_id) do
+    request = [method: :delete, url: "/equipment-usages/#{d4h_equipment_usage_id}", retry: false]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status}} when status in 200..299 or status == 404 -> :ok
       result -> {:error, write_error(result)}
     end
   end
@@ -733,6 +792,95 @@ defmodule App.Adapter.D4H do
   def delete_group(context, d4h_group_id),
     do:
       write(context, :delete, "/member-groups/#{d4h_group_id}", nil, fn _body -> d4h_group_id end)
+
+  @equipment_fields %{
+    "title" => "ref",
+    # Only Records takes this. D4H's item takes its type from its kind.
+    "item_type" => "type",
+    "status" => "status",
+    "barcode" => "barcode",
+    "serial" => "serial",
+    "expires_at" => "dateExpires"
+  }
+
+  @doc """
+  Adds an equipment item (#271). `item_type` and `status` are SAR Duty's lowercase
+  words. `place` is `%{"type" => "EquipmentLocation" | "Equipment" | "Member" | "Team",
+  "id" => id}`, or `%{"title" => title}` for a location found or added by its title.
+  """
+  def create_equipment_item(context, attrs) do
+    with {:ok, json} <- equipment_json(context, attrs),
+         do: write(context, :post, "/equipment", json, &D4H.EquipmentItem.build/1)
+  end
+
+  @doc """
+  Changes an item. Only Records takes every field: D4H's PATCH changes the status and
+  barcode, and moves items in its web app.
+  """
+  def update_equipment_item(context, d4h_equipment_id, attrs) do
+    url = "/equipment/#{d4h_equipment_id}"
+
+    with {:ok, json} <- equipment_json(context, attrs),
+         do: write(context, :patch, url, json, &D4H.EquipmentItem.build/1)
+  end
+
+  @doc "Deletes an item and its usages. Records refuses one with items inside it."
+  def delete_equipment_item(context, d4h_equipment_id),
+    do:
+      write(context, :delete, "/equipment/#{d4h_equipment_id}", nil, fn _body ->
+        d4h_equipment_id
+      end)
+
+  defp equipment_json(context, attrs) do
+    json =
+      attrs
+      |> rename(@equipment_fields)
+      |> Map.new(fn
+        {key, value} when key in ["type", "status"] and is_binary(value) ->
+          {key, String.upcase(value)}
+
+        pair ->
+          pair
+      end)
+
+    case place_json(context, attrs["place"]) do
+      {:ok, nil} -> {:ok, json}
+      {:ok, location} -> {:ok, Map.put(json, "location", location)}
+      error -> error
+    end
+  end
+
+  defp place_json(_context, nil), do: {:ok, nil}
+
+  defp place_json(context, %{"title" => title}) do
+    with {:ok, id} <- find_or_create_equipment_location(context, title),
+         do: {:ok, %{resourceType: "EquipmentLocation", id: id}}
+  end
+
+  defp place_json(context, %{"type" => "Team"}),
+    do: {:ok, %{resourceType: "Team", id: Req.Request.get_private(context, :d4h_team_id)}}
+
+  defp place_json(_context, %{"type" => type, "id" => id}),
+    do: {:ok, %{resourceType: type, id: id}}
+
+  # A location with the title, ignoring case, or a new one. A retry after a failed item
+  # write finds the location the first try added.
+  defp find_or_create_equipment_location(context, title) do
+    found =
+      context
+      |> fetch_all("/equipment-locations", &{&1["id"], &1["title"]})
+      |> Enum.find(fn {_id, t} -> String.downcase(t || "") == String.downcase(title) end)
+
+    case found do
+      {id, _title} ->
+        {:ok, id}
+
+      nil ->
+        write(context, :post, "/equipment-locations", %{title: title}, & &1["id"])
+    end
+  rescue
+    error in D4H.Error -> {:error, error}
+  end
 
   defp activity_json(attrs) do
     json = rename(attrs, @activity_fields)

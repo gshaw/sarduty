@@ -89,6 +89,7 @@ The rules that are easy to break:
 - [change-sets.md](change-sets.md) — how every write to D4H goes through one applier, and what it records.
 - [records.md](records.md) — teams without D4H: SAR Duty Records as a second service, and how a team connects.
 - [change-history.md](change-history.md) — each member's and activity's history: SAR Duty's writes and what the refresh saw change in D4H.
+- [equipment.md](equipment.md) — equipment from D4H, kits, and adding equipment to an activity.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
 - [members.md](members.md) — member logins: members get their own ID card and tax credit letters.

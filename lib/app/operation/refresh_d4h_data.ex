@@ -70,6 +70,7 @@ defmodule App.Operation.RefreshD4HData do
       progress = refresh_all_activities(d4h, team, tag_index, progress)
       progress = refresh_qualifications(d4h, team, progress)
       progress = refresh_groups(d4h, team, progress)
+      progress = refresh_equipment(d4h, team, progress)
       RefreshD4HData.Progress.complete(progress)
     end)
 
@@ -158,6 +159,16 @@ defmodule App.Operation.RefreshD4HData do
 
     progress = RefreshD4HData.Progress.update_stage(progress, "Group memberships")
     {_count, progress} = RefreshD4HData.UpsertGroupMemberships.call(d4h, team, progress)
+    RefreshD4HData.Progress.finish_stage(progress)
+  end
+
+  defp refresh_equipment(d4h, team, progress) do
+    progress = RefreshD4HData.Progress.update_stage(progress, "Equipment")
+    {_count, progress} = RefreshD4HData.UpsertEquipmentItems.call(d4h, team, progress)
+    progress = RefreshD4HData.Progress.finish_stage(progress)
+
+    progress = RefreshD4HData.Progress.update_stage(progress, "Equipment usages")
+    {_count, progress} = RefreshD4HData.UpsertEquipmentUsages.call(d4h, team, progress)
     RefreshD4HData.Progress.finish_stage(progress)
   end
 

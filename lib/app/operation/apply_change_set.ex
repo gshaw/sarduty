@@ -31,7 +31,10 @@ defmodule App.Operation.ApplyChangeSet do
     :remove_award,
     :create_group,
     :update_group,
-    :delete_group
+    :delete_group,
+    :create_equipment_item,
+    :update_equipment_item,
+    :delete_equipment_item
   ]
 
   @doc """
@@ -73,6 +76,11 @@ defmodule App.Operation.ApplyChangeSet do
 
   # An edit changes the record its row names, whatever D4H holds now.
   defp read_current(_d4h, %ChangeSet{source: :edit}), do: {:ok, nil}
+
+  # An equipment set reads the activity's usages now. D4H takes equipment on a published
+  # activity, so the published flag doesn't matter.
+  defp read_current(d4h, %ChangeSet{source: :equipment, activity: activity}),
+    do: D4H.fetch_activity_equipment_usages(d4h, activity.d4h_activity_id)
 
   defp read_current(d4h, %ChangeSet{activity: activity}) do
     case D4H.fetch_activity_published(d4h, activity.d4h_activity_id, activity.activity_kind) do
@@ -127,6 +135,19 @@ defmodule App.Operation.ApplyChangeSet do
       when action in [:add_group_member, :remove_group_member],
       do: :ok
 
+  # D4H would take a second usage of the same item and count it twice.
+  def check(%ChangeSetRow{action: :create_equipment_usage} = row, current) do
+    if Enum.any?(current, &(&1.d4h_equipment_id == row.new_value["d4h_equipment_id"])),
+      do: {:skipped, "D4H has this item on the activity now."},
+      else: :ok
+  end
+
+  def check(%ChangeSetRow{action: :delete_equipment_usage} = row, current) do
+    if Enum.any?(current, &(&1.d4h_equipment_usage_id == row.d4h_record_id)),
+      do: :ok,
+      else: {:skipped, "D4H no longer has this item on the activity."}
+  end
+
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
 
   defp write(d4h, %ChangeSetRow{action: :update_attendance, new_value: new_value} = row) do
@@ -160,6 +181,25 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :remove_group_member} = row) do
     case D4H.remove_group_membership(d4h, row.d4h_record_id) do
+      :ok -> {:applied, row.d4h_record_id}
+      {:error, error} -> {:failed, Exception.message(error)}
+    end
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :create_equipment_usage, new_value: new_value}) do
+    case D4H.create_equipment_usage(
+           d4h,
+           new_value["d4h_activity_id"],
+           new_value["d4h_equipment_id"],
+           new_value["minutes"]
+         ) do
+      {:ok, usage} -> {:applied, usage.d4h_equipment_usage_id}
+      {:error, error} -> {:failed, Exception.message(error)}
+    end
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_equipment_usage} = row) do
+    case D4H.delete_equipment_usage(d4h, row.d4h_record_id) do
       :ok -> {:applied, row.d4h_record_id}
       {:error, error} -> {:failed, Exception.message(error)}
     end
@@ -245,6 +285,21 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :delete_group} = row),
     do: d4h |> D4H.delete_group(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :create_equipment_item, new_value: new_value}),
+    do:
+      d4h
+      |> D4H.create_equipment_item(new_value)
+      |> record_result(& &1.d4h_equipment_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_equipment_item} = row) do
+    d4h
+    |> D4H.update_equipment_item(row.d4h_record_id, row.new_value)
+    |> record_result(& &1.d4h_equipment_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_equipment_item} = row),
+    do: d4h |> D4H.delete_equipment_item(row.d4h_record_id) |> record_result(& &1)
 
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}
