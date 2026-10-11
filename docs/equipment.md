@@ -22,6 +22,11 @@ Read from South Fraser's D4H on 2026-10-10, read-only:
   generator, and thermal cameras. Nobody logs a truck's 58 drawers and contents. So
   adding a truck adds the truck, not everything inside it.
 - Equipment usages carry minutes (60 to 600, most often 120). Vehicles carry no km.
+- **Barcodes** (read 2026-10-11): 648 items have one, all different, and 607 of those
+  are in service. 473 are the team's own tags, `SF` and digits (SF0119). Another 76 are
+  names such as "Manta 01" and "Vertex 10", 20 are like "65#01", and about 45 look like
+  makers' codes. 4 are 12 or 13 digits, so UPC or EAN. Lowercase letters, spaces, and
+  "#" rule out plain Code 39, so printed labels are likely Code 128 or QR.
 
 ## Kits
 
@@ -45,6 +50,7 @@ list to send, from:
 2. **Kits**, with each line's default hours.
 3. **A search** by name, barcode, or serial. A found item starts at the activity's
    length.
+4. **Scanning barcodes** with a phone's camera, which adds each item as it reads it.
 
 Retired and lost items are left out, and so is any item already on the activity. Each
 line's hours can change before sending. Sending is a change set of source `equipment`
@@ -60,6 +66,26 @@ The nightly refresh copies items and usages after groups, and the sync every 10 
 watches `equipment` and `equipment-usages` like the other small lists: see
 [d4h-sync.md](d4h-sync.md). Items and usages D4H stops listing are deleted. A D4H team
 without the equipment module answers 403, so its copy stays empty.
+
+## Scanning barcodes
+
+On a phone (a touch screen, by CSS `pointer: coarse`), "Add equipment" shows "Scan
+barcodes" and the equipment page shows "Scan a barcode". Both use the door's
+[scanner](../lib/web/components/scanner.ex) with `reader={:barcode}`.
+
+- A scan matches an item's barcode exactly, ignoring case and spaces at the ends, and
+  then its serial ([EquipmentItem.find_by_code/2](../lib/app/model/equipment_item.ex)).
+  A part of a barcode matches nothing, unlike the search.
+- On "Add equipment" the camera keeps going. Each read adds the item at the activity's
+  length, or says why not: no item has that barcode, it is already listed or on the
+  activity, or it is retired or lost. A tone says which, as at the door.
+- On the equipment page one read opens the item's page, even a retired one.
+- The reader is [zxing-wasm](https://github.com/Sec-ant/zxing-wasm), vendored as
+  `assets/vendor/zxing_reader.js` and `.wasm`. It reads Code 128, Code 39, Code 93,
+  Codabar, ITF, UPC and EAN, QR, and Data Matrix. A page downloads it, about 1 MB, only
+  where the scanner is, and the `.wasm` comes from our own assets. ID cards keep jsQR.
+- Barcodes come from SAR Duty's copy, so an item added in D4H in the last 10 minutes is
+  not found until the next sync.
 
 ## Teams on SAR Duty Records
 
@@ -85,5 +111,4 @@ page for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_i
 
 - Moving an item, and check-out as a move to a member.
 - Checklists, which live in SAR Duty since D4H's API can't create inspections.
-- Scanning a barcode on a phone. The search takes a typed barcode today.
 - Km for vehicles, perhaps from the mileage report.

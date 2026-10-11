@@ -1,15 +1,20 @@
 defmodule Web.EquipmentCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.ActivityEquipmentLive, only: [scan_message: 1, no_item_text: 1]
+  import Web.Components.Scanner
+
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.ViewData.EquipmentList
 
   # The team's equipment, copied from D4H or SAR Duty Records, grouped by where it is
-  # (#271). A Records team adds items here.
+  # (#271). A Records team adds items here. On a phone, scanning a barcode opens its item.
   def mount(_params, _session, socket) do
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
-    {:ok, assign(socket, page_title: "Equipment", rows: rows)}
+
+    {:ok,
+     assign(socket, page_title: "Equipment", rows: rows, scan_message: nil, scan_failed: false)}
   end
 
   def handle_params(params, _uri, socket) do
@@ -37,6 +42,25 @@ defmodule Web.EquipmentCollectionLive do
     {:noreply,
      push_patch(socket, to: filter_path(socket.assigns.current_team, params), replace: true)}
   end
+
+  # A scan opens the item, even a retired one: this page finds items, it does not add them.
+  def handle_event("scanned", %{"code" => code}, socket) do
+    team = socket.assigns.current_team
+
+    case EquipmentItem.find_by_code(team.id, code) do
+      nil ->
+        {:noreply,
+         socket
+         |> assign(scan_message: {:danger, no_item_text(code)})
+         |> push_event("scan-sound", %{sound: :error})}
+
+      item ->
+        {:noreply, push_navigate(socket, to: ~p"/teams/#{team}/equipment/#{item.id}")}
+    end
+  end
+
+  def handle_event("scan_failed", _params, socket),
+    do: {:noreply, assign(socket, scan_failed: true)}
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
 
@@ -70,6 +94,11 @@ defmodule Web.EquipmentCollectionLive do
       <.input field={@form[:q]} label="Search" placeholder="Name, barcode, or serial" />
       <.input field={@form[:show]} label="Show" type="select" options={EquipmentList.shows()} />
     </.form>
+
+    <div :if={@rows != []} class="hidden pointer-coarse:block measure mb-6">
+      <.qr_scanner id="equipment-scanner" label="Scan a barcode" reader={:barcode} />
+      <.scan_message message={@scan_message} scan_failed={@scan_failed} />
+    </div>
 
     <div class="table-summary">
       <span class="table-summary-count">

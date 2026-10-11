@@ -71,6 +71,43 @@ defmodule App.Model.EquipmentItem do
   def takes_hours?(%EquipmentItem{}), do: false
 
   @doc """
+  The item a scanned barcode names, ignoring case and spaces at the ends, or nil. A
+  barcode match comes before a serial one. Retired and lost items count too, so a page
+  can say why one cannot be added.
+  """
+  def find_by_code(team_id, code) do
+    case String.trim(code || "") do
+      "" ->
+        nil
+
+      code ->
+        codes = code |> String.downcase() |> code_forms()
+
+        EquipmentItem
+        |> where([i], i.team_id == ^team_id)
+        |> where(
+          [i],
+          fragment("lower(trim(?))", i.barcode) in ^codes or
+            fragment("lower(trim(?))", i.serial) in ^codes
+        )
+        |> order_by([i],
+          desc: fragment("lower(trim(?))", i.barcode) in ^codes,
+          asc: i.status in ["retired", "lost"],
+          asc: i.id
+        )
+        |> limit(1)
+        |> Repo.one()
+    end
+  end
+
+  # The reader gives a UPC-A as its 13-digit EAN, with a 0 in front, so a 12-digit
+  # barcode typed from the label still matches.
+  defp code_forms("0" <> upc = code) when byte_size(upc) == 12,
+    do: if(String.match?(code, ~r/^\d+$/), do: [code, upc], else: [code])
+
+  defp code_forms(code), do: [code]
+
+  @doc """
   Up to `limit` in-service items whose title, barcode, or serial contains `text`, by
   title. Blank text finds nothing.
   """

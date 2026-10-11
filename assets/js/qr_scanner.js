@@ -1,5 +1,7 @@
 // Reads a member card's QR code with the phone's camera on /verify and sends the text
 // to the LiveView, which takes the code out of it. It never follows a link from a card.
+// With data-reader="barcode", as on the equipment pages, it reads an item's barcode
+// instead: Code 128, Code 39, UPC and EAN, and QR codes.
 // With data-continuous, as on the door's attendance page, it keeps scanning after a read
 // and skips the same card for a few seconds, so one card held up isn't recorded twice.
 // With data-override-input, each read also sends that input's value, so the time box on
@@ -12,12 +14,26 @@
 const PAUSE_MS = 1500
 const SAME_CARD_MS = 5000
 
+// Each reader is its own chunk, so a page downloads only the one it uses. A reader takes
+// the camera's picture and answers the text it found, or nothing.
+// cspell:ignore jsqr -- the vendored jsQR library file
+const READERS = {
+  qr: () =>
+    import("../vendor/jsqr").then(({default: jsQR}) => ({data, width, height}) => jsQR(data, width, height)?.data),
+  barcode: () => import("./barcode_reader").then(module => module.read),
+}
+
+// A bar code's lines are thin, so the barcode reader asks for a sharper picture.
+const CAMERAS = {
+  qr: {facingMode: "environment"},
+  barcode: {facingMode: "environment", width: {ideal: 1280}, height: {ideal: 720}},
+}
+
 export const QRScanner = {
   mounted() {
-    // jsQR is its own chunk, so only this page downloads it. Start now so a tap
-    // on Scan doesn't wait for it.
-    // cspell:ignore jsqr -- the vendored jsQR library file
-    this.decoder = import("../vendor/jsqr").then(module => module.default)
+    // Start loading the reader now so a tap on Scan doesn't wait for it.
+    this.reader = this.el.dataset.reader in READERS ? this.el.dataset.reader : "qr"
+    this.decoder = READERS[this.reader]()
     this.video = this.el.querySelector("video")
     this.canvas = document.createElement("canvas")
     this.state = this.el.querySelector("[data-scan-state]")
@@ -35,7 +51,7 @@ export const QRScanner = {
   async start() {
     try {
       this.decode = await this.decoder
-      this.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}})
+      this.stream = await navigator.mediaDevices.getUserMedia({video: CAMERAS[this.reader]})
     } catch (_error) {
       this.pushEvent("scan_failed", {})
       return
@@ -59,25 +75,37 @@ export const QRScanner = {
     this.pushEvent("scanned", input ? {code, override: input.value} : {code})
   },
 
-  tick() {
-    if (!this.stream) return
+  // The barcode reader answers later, so a tick checks the camera is still the one it
+  // started with. Otherwise a Stop and Scan during a read would run two loops.
+  async tick() {
+    const stream = this.stream
+    if (!stream) return
     const {videoWidth: width, videoHeight: height} = this.video
     if (width > 0) {
       this.canvas.width = width
       this.canvas.height = height
       const context = this.canvas.getContext("2d", {willReadFrequently: true})
       context.drawImage(this.video, 0, 0, width, height)
-      const found = this.decode(context.getImageData(0, 0, width, height).data, width, height)
-      if (found?.data) {
+      let found
+      try {
+        found = await this.decode(context.getImageData(0, 0, width, height))
+      } catch (_error) {
+        // The barcode reader's .wasm file did not load.
+        this.stop()
+        this.pushEvent("scan_failed", {})
+        return
+      }
+      if (this.stream !== stream) return
+      if (found) {
         if (!("continuous" in this.el.dataset)) {
           this.stop()
-          this.pushScanned(found.data)
+          this.pushScanned(found)
           return
         }
         const now = Date.now()
-        if (found.data !== this.lastRead || now - this.lastReadAt > SAME_CARD_MS) {
-          this.pushScanned(found.data)
-          this.lastRead = found.data
+        if (found !== this.lastRead || now - this.lastReadAt > SAME_CARD_MS) {
+          this.pushScanned(found)
+          this.lastRead = found
           this.lastReadAt = now
           this.frame = setTimeout(() => this.tick(), PAUSE_MS)
           return

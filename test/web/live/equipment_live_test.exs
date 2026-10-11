@@ -32,6 +32,44 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#item-#{ctx.phone.id}")
   end
 
+  test "a scanned barcode opens its item, and an unknown one says so", ctx do
+    item = equipment_item_fixture(ctx.team, %{title: "Thermal camera 2", barcode: "SF0119"})
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
+
+    lv |> element("#equipment-scanner") |> render_hook("scanned", %{"code" => "SF9999"})
+    assert has_element?(lv, "#scan-message", "No item has the barcode SF9999.")
+
+    lv |> element("#equipment-scanner") |> render_hook("scanned", %{"code" => " sf0119 "})
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/equipment/#{item.id}")
+  end
+
+  test "scanning on an activity adds each item once, and refuses retired ones", ctx do
+    activity = activity_fixture(ctx.team, %{title: "Night search"})
+    equipment_usage_fixture(activity, ctx.truck)
+    camera = equipment_item_fixture(ctx.team, %{title: "Thermal camera 2", barcode: "SF0119"})
+    equipment_item_fixture(ctx.team, %{title: "Old rope", barcode: "SF0001", status: "retired"})
+    ctx.truck |> Ecto.Changeset.change(barcode: "TRUCK2") |> Repo.update!()
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
+    scan = &(lv |> element("#equipment-scanner") |> render_hook("scanned", %{"code" => &1}))
+
+    scan.("sf0119")
+    assert has_element?(lv, "#scan-message", "Added Thermal camera 2.")
+    assert has_element?(lv, "#line-#{camera.id}")
+
+    scan.("SF0119")
+    assert has_element?(lv, "#scan-message", "already in the list to add")
+
+    scan.("TRUCK2")
+    assert has_element?(lv, "#scan-message", "SOUTH FRASER 2 is already on this activity.")
+
+    scan.("SF0001")
+    assert has_element?(lv, "#scan-message", "Old rope cannot be added. It is retired.")
+
+    lv |> element("#equipment-scanner") |> render_hook("scan_failed", %{})
+    assert has_element?(lv, "#scan-failed")
+  end
+
   test "an item's page lists what is inside it and its activities", ctx do
     activity = activity_fixture(ctx.team, %{title: "Night search"})
     equipment_usage_fixture(activity, ctx.truck)
