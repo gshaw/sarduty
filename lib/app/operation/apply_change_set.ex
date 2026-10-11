@@ -31,7 +31,10 @@ defmodule App.Operation.ApplyChangeSet do
     :remove_award,
     :create_group,
     :update_group,
-    :delete_group
+    :delete_group,
+    :create_equipment_item,
+    :update_equipment_item,
+    :delete_equipment_item
   ]
 
   @doc """
@@ -282,6 +285,21 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :delete_group} = row),
     do: d4h |> D4H.delete_group(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :create_equipment_item, new_value: new_value}),
+    do:
+      d4h
+      |> D4H.create_equipment_item(new_value)
+      |> record_result(& &1.d4h_equipment_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_equipment_item} = row) do
+    d4h
+    |> D4H.update_equipment_item(row.d4h_record_id, row.new_value)
+    |> record_result(& &1.d4h_equipment_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_equipment_item} = row),
+    do: d4h |> D4H.delete_equipment_item(row.d4h_record_id) |> record_result(& &1)
 
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}

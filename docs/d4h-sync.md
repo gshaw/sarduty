@@ -23,7 +23,7 @@ refresh once a night as the safety net (#163).
 - [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 12 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
   change. If none moved since the last look (`teams.d4h_sync_state`), it stops: 12 small
-  requests, or 10 for a team on SAR Duty Records, which has no equipment.
+  requests.
 - A small list that moved (members, qualifications, awards, groups, memberships,
   equipment items and usages) is fetched whole through the full refresh's own stage, along
   with the lists that point at it, so rows skipped for an unknown parent come in. Their
@@ -134,7 +134,7 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 6. Qualifications, then qualification awards.
 7. Groups, then group memberships.
 8. Equipment items, then equipment usages ([equipment.md](equipment.md)). A team without
-   D4H's equipment module, or on SAR Duty Records, skips both.
+   D4H's equipment module gets a 403 and has none.
 
 Order matters: attendance needs members and activities, awards need qualifications,
 memberships need groups. A row whose parent is unknown locally is skipped.

@@ -102,9 +102,9 @@ defmodule App.Operation.ChangeActivityEquipment do
     end
   end
 
-  defp describe(_team, :no_team_key), do: "Save a D4H access key in team settings first."
-  defp describe(_team, :deleted), do: "This activity is deleted in D4H."
+  defp describe(team, :no_team_key), do: "Save a #{D4H.key_name(team)} in team settings first."
+  defp describe(team, :deleted), do: "This activity is deleted in #{D4H.service_name(team)}."
 
-  defp describe(_team, %D4H.Error{} = error),
-    do: "D4H did not answer. #{Exception.message(error)}"
+  defp describe(team, %D4H.Error{} = error),
+    do: "#{D4H.service_name(team)} did not answer. #{Exception.message(error)}"
 end

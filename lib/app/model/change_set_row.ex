@@ -40,7 +40,10 @@ defmodule App.Model.ChangeSetRow do
         :update_group,
         :delete_group,
         :create_equipment_usage,
-        :delete_equipment_usage
+        :delete_equipment_usage,
+        :create_equipment_item,
+        :update_equipment_item,
+        :delete_equipment_item
       ]
 
     field :d4h_record_id, :integer

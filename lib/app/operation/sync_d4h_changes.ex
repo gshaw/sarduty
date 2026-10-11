@@ -38,7 +38,7 @@ defmodule App.Operation.SyncD4HChanges do
             member-qualification-awards member-groups member-group-memberships equipment
             equipment-usages)
 
-  # SAR Duty Records has no equipment, and a D4H team may not have the module (#271).
+  # A D4H team may not have the equipment module (#271).
   @equipment_lists ~w(equipment equipment-usages)
 
   @activity_kinds ~w(exercises events incidents)
@@ -159,7 +159,7 @@ defmodule App.Operation.SyncD4HChanges do
 
   def call(%Team{} = team, now) do
     d4h = D4H.build_context_from_team(team)
-    heads = fetch_heads(d4h, team)
+    heads = fetch_heads(d4h)
 
     changed =
       case plan(previous_heads(team), heads) do
@@ -183,13 +183,11 @@ defmodule App.Operation.SyncD4HChanges do
   end
 
   @doc """
-  Every list's head, 4 requests at a time. A Records team has no equipment lists, and
-  a D4H team without equipment gets empty ones.
+  Every list's head, 4 requests at a time. A D4H team without equipment gets empty
+  equipment lists.
   """
-  def fetch_heads(d4h, team) do
-    lists = if D4H.records?(team), do: @lists -- @equipment_lists, else: @lists
-
-    lists
+  def fetch_heads(d4h) do
+    @lists
     |> parallel(&{&1, fetch_head(d4h, &1)})
     |> Map.new()
   end

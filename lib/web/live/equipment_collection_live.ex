@@ -1,12 +1,13 @@
 defmodule Web.EquipmentCollectionLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.ViewData.EquipmentList
 
-  # The team's equipment, copied from D4H, grouped by where it is (#271).
+  # The team's equipment, copied from D4H or SAR Duty Records, grouped by where it is
+  # (#271). A Records team adds items here.
   def mount(_params, _session, socket) do
-    Web.EquipmentItemLive.require_equipment!(socket.assigns.current_team)
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
     {:ok, assign(socket, page_title: "Equipment", rows: rows)}
   end
@@ -44,9 +45,19 @@ defmodule Web.EquipmentCollectionLive do
     <.breadcrumbs team={@current_team} />
     <div class="heading-row">
       <h1 class="title">{@page_title}</h1>
-      <.button id="equipment-kits" navigate={~p"/teams/#{@current_team}/equipment/kits"}>
-        Kits
-      </.button>
+      <div class="flex gap-2">
+        <.button id="equipment-kits" navigate={~p"/teams/#{@current_team}/equipment/kits"}>
+          Kits
+        </.button>
+        <.button
+          :if={D4H.records?(@current_team)}
+          id="equipment-add"
+          variant={:success}
+          navigate={~p"/teams/#{@current_team}/equipment/new"}
+        >
+          Add item
+        </.button>
+      </div>
     </div>
 
     <.form
@@ -92,7 +103,9 @@ defmodule Web.EquipmentCollectionLive do
     </section>
 
     <.empty_state :if={@rows == []} id="no-equipment" title="No equipment yet">
-      SAR Duty copies equipment from D4H when it refreshes.
+      {if D4H.records?(@current_team),
+        do: "Add the team's first item.",
+        else: "SAR Duty copies equipment from D4H when it refreshes."}
     </.empty_state>
     <.empty_state
       :if={@rows != [] and @groups == []}

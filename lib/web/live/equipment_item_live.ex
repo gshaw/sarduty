@@ -9,14 +9,8 @@ defmodule Web.EquipmentItemLive do
   alias App.Repo
   alias App.ViewData.EquipmentList
 
-  @doc "SAR Duty Records has no equipment, so its teams have no equipment pages."
-  def require_equipment!(team) do
-    if D4H.records?(team), do: raise(Web.Status.NotFound)
-  end
-
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
-    require_equipment!(team)
     item = team |> EquipmentItem.find!(id) |> Repo.preload(:member)
     items = EquipmentItem.get_all(team.id)
     row = items |> EquipmentList.rows() |> Enum.find(&(&1.item.id == item.id))
@@ -48,7 +42,16 @@ defmodule Web.EquipmentItemLive do
       <:item label="Equipment" path={~p"/teams/#{@current_team}/equipment"} />
       <:item label={@item.title} />
     </.breadcrumbs>
-    <h1 class="title">{@item.title}</h1>
+    <div class="heading-row">
+      <h1 class="title">{@item.title}</h1>
+      <.button
+        :if={D4H.records?(@current_team)}
+        id="item-edit"
+        navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}
+      >
+        Change or delete
+      </.button>
+    </div>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -114,7 +117,7 @@ defmodule Web.EquipmentItemLive do
               {Web.ActivityEquipmentLive.amount(usage)}
             </:col>
           </.table>
-          <p :if={@usages == []} class="hint">D4H has no activities with this item.</p>
+          <p :if={@usages == []} class="hint">No activities have this item.</p>
         </section>
       </main>
     </div>

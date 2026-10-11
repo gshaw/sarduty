@@ -130,12 +130,13 @@ defmodule Web.EquipmentLiveTest do
     assert length(Repo.all(EquipmentUsage)) == 1
   end
 
-  test "a team on SAR Duty Records has no equipment pages", %{conn: conn} do
-    %{user: user, team: team} = records_team_with_user_fixture()
-    conn = log_in_user(conn, user)
+  test "a D4H team cannot add or change items here", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
+    refute has_element?(lv, "#equipment-add")
 
-    assert_error_sent 404, fn -> get(conn, ~p"/teams/#{team}/equipment") end
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity_fixture(team).id}")
-    refute has_element?(lv, "#activity-equipment")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/#{ctx.truck.id}")
+    refute has_element?(lv, "#item-edit")
+
+    assert_error_sent 404, fn -> get(ctx.conn, ~p"/teams/#{ctx.team}/equipment/new") end
   end
 end

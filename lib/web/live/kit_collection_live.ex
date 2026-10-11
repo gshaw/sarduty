@@ -6,7 +6,6 @@ defmodule Web.KitCollectionLive do
   # Kits: named sets of items, with default hours, to add to an activity in one step (#271).
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    Web.EquipmentItemLive.require_equipment!(team)
     {:ok, assign(socket, page_title: "Kits", kits: Kit.get_all(team.id))}
   end
 

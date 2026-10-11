@@ -25,8 +25,7 @@ defmodule Web.ActivityLive do
         activity: activity,
         attendances: attendances,
         attendance_count: length(attendances),
-        usages:
-          if(D4H.records?(activity.team), do: nil, else: EquipmentUsage.for_activity(activity)),
+        usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity)
       )
 
@@ -90,7 +89,7 @@ defmodule Web.ActivityLive do
           attendances={@attendances}
           attendance_count={@attendance_count}
         />
-        <.equipment_section :if={@usages} activity={@activity} usages={@usages} />
+        <.equipment_section activity={@activity} usages={@usages} />
       </main>
     </div>
     """
@@ -206,7 +205,6 @@ defmodule Web.ActivityLive do
     """
   end
 
-  # SAR Duty Records has no equipment, so its activities have no section (#271).
   def equipment_section(assigns) do
     ~H"""
     <section id="activity-equipment" class="mt-8">
@@ -238,7 +236,7 @@ defmodule Web.ActivityLive do
           {Web.ActivityEquipmentLive.amount(usage)}
         </:col>
       </.table>
-      <p :if={@usages == []} class="hint">No equipment on this activity in D4H.</p>
+      <p :if={@usages == []} class="hint">No equipment on this activity.</p>
     </section>
     """
   end

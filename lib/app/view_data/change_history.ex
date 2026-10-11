@@ -249,7 +249,10 @@ defmodule App.ViewData.ChangeHistory do
              :delete_qualification,
              :create_group,
              :update_group,
-             :delete_group
+             :delete_group,
+             :create_equipment_item,
+             :update_equipment_item,
+             :delete_equipment_item
            ],
       do: "Changed in SAR Duty"
 

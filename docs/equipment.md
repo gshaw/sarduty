@@ -59,8 +59,27 @@ the activity's usages are read back from D4H.
 The nightly refresh copies items and usages after groups, and the sync every 10 minutes
 watches `equipment` and `equipment-usages` like the other small lists: see
 [d4h-sync.md](d4h-sync.md). Items and usages D4H stops listing are deleted. A D4H team
-without the equipment module answers 403, and a team on SAR Duty Records has no
-equipment, so neither gets the pages or the stages.
+without the equipment module answers 403, so its copy stays empty.
+
+## Teams on SAR Duty Records
+
+Records serves D4H's equipment endpoints (its `Docs/api.md`), so a Records team gets the
+same pages, kits, and "Add equipment". It also has nowhere else to keep its items, so
+SAR Duty shows "Add item" on the equipment page and "Change or delete" on an item's
+page for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_item_form_live.ex),
+[SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex)). Each change is an
+`:edit` change set row, as for members ([records.md](records.md)).
+
+- The form has a name, type (equipment, vehicle, or supply), status, where it is,
+  barcode, serial, and expiry. Kinds are left out for now; an item's type is set
+  directly, which only Records takes.
+- **Where it is**: the team, one of the places items already sit in, inside another
+  item, with a member, or a new place by name. The adapter finds a location with that
+  title, ignoring case, or adds it, so a retry never makes a second. An item cannot go
+  inside itself or anything inside it; the form leaves those out and Records refuses
+  them too.
+- Deleting an item takes its usages. Records refuses one with items inside it, and the
+  page shows that. Retiring keeps its history.
 
 ## Still to come from #271
 

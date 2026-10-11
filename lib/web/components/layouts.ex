@@ -1,8 +1,6 @@
 defmodule Web.Layouts do
   use Web, :html
 
-  alias App.Adapter.D4H
-
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
@@ -294,7 +292,6 @@ defmodule Web.Layouts do
     """
   end
 
-  # SAR Duty Records has no equipment (#271).
   defp team_sections(team) do
     [
       {"Dashboard", ~p"/teams/#{team}"},
@@ -302,10 +299,9 @@ defmodule Web.Layouts do
       {"Members", ~p"/teams/#{team}/members"},
       {"Qualifications", ~p"/teams/#{team}/qualifications"},
       {"Groups", ~p"/teams/#{team}/groups"},
-      !D4H.records?(team) && {"Equipment", ~p"/teams/#{team}/equipment"},
+      {"Equipment", ~p"/teams/#{team}/equipment"},
       {"Tax credit letters", ~p"/teams/#{team}/tax-credit-letters"}
     ]
-    |> Enum.filter(& &1)
   end
 
   defp nav_id(label), do: label |> String.downcase() |> String.replace(" ", "-")

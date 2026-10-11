@@ -69,7 +69,8 @@ defmodule App.Operation.ApplyChangeSetTest do
              remove_member_photo create_activity
              update_activity delete_activity create_qualification update_qualification
              delete_qualification award_qualification remove_award create_group update_group
-             delete_group create_equipment_usage delete_equipment_usage)
+             delete_group create_equipment_usage delete_equipment_usage create_equipment_item
+             update_equipment_item delete_equipment_item)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do

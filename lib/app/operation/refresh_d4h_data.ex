@@ -62,7 +62,7 @@ defmodule App.Operation.RefreshD4HData do
   defp refresh(d4h, team, progress) do
     started_at = DateTime.utc_now()
     # Seen before any stage, so the next sync fetches whatever changes while this runs.
-    heads = SyncD4HChanges.fetch_heads(d4h, team)
+    heads = SyncD4HChanges.fetch_heads(d4h)
 
     RecordD4HChanges.recording(team, started_at, fn ->
       progress = refresh_team_data(d4h, team, progress)
@@ -162,19 +162,14 @@ defmodule App.Operation.RefreshD4HData do
     RefreshD4HData.Progress.finish_stage(progress)
   end
 
-  # SAR Duty Records has no equipment.
   defp refresh_equipment(d4h, team, progress) do
-    if D4H.records?(team) do
-      progress
-    else
-      progress = RefreshD4HData.Progress.update_stage(progress, "Equipment")
-      {_count, progress} = RefreshD4HData.UpsertEquipmentItems.call(d4h, team, progress)
-      progress = RefreshD4HData.Progress.finish_stage(progress)
+    progress = RefreshD4HData.Progress.update_stage(progress, "Equipment")
+    {_count, progress} = RefreshD4HData.UpsertEquipmentItems.call(d4h, team, progress)
+    progress = RefreshD4HData.Progress.finish_stage(progress)
 
-      progress = RefreshD4HData.Progress.update_stage(progress, "Equipment usages")
-      {_count, progress} = RefreshD4HData.UpsertEquipmentUsages.call(d4h, team, progress)
-      RefreshD4HData.Progress.finish_stage(progress)
-    end
+    progress = RefreshD4HData.Progress.update_stage(progress, "Equipment usages")
+    {_count, progress} = RefreshD4HData.UpsertEquipmentUsages.call(d4h, team, progress)
+    RefreshD4HData.Progress.finish_stage(progress)
   end
 
   defp build_d4h_tag_index(d4h) do

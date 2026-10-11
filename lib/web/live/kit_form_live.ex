@@ -11,7 +11,6 @@ defmodule Web.KitFormLive do
   # Adding and changing a kit: its name, and its items with their usual hours (#271).
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    Web.EquipmentItemLive.require_equipment!(team)
     kit = if id = params["id"], do: Kit.find!(team, id)
 
     lines =
@@ -71,7 +70,7 @@ defmodule Web.KitFormLive do
 
         <section :if={@kit} id="kit-delete" class="mt-8">
           <h2 class="heading">Delete the kit</h2>
-          <p>Its items stay in D4H, and on the activities they went on.</p>
+          <p>Its items stay, and so do the activities they went on.</p>
           <.button
             id="kit-delete-button"
             type="button"

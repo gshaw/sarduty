@@ -208,7 +208,9 @@ defmodule Web.Router do
       live "/teams/:subdomain/equipment/kits", KitCollectionLive
       live "/teams/:subdomain/equipment/kits/new", KitFormLive, :new
       live "/teams/:subdomain/equipment/kits/:id", KitFormLive, :edit
+      live "/teams/:subdomain/equipment/new", EquipmentItemFormLive, :new
       live "/teams/:subdomain/equipment/:id", EquipmentItemLive
+      live "/teams/:subdomain/equipment/:id/edit", EquipmentItemFormLive, :edit
       live "/teams/:subdomain/members", MemberCollectionLive
       live "/teams/:subdomain/members/new", MemberFormLive, :new
       live "/teams/:subdomain/members/:id", MemberLive

@@ -1,6 +1,7 @@
 defmodule Web.ActivityEquipmentLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
@@ -9,10 +10,9 @@ defmodule Web.ActivityEquipmentLive do
 
   # Adding equipment to an activity (#271). Items come from the last activity of the same
   # kind, from kits, or from a search, into a list with hours to check. Sending the list
-  # writes them to D4H as equipment usages.
+  # writes them to D4H, or SAR Duty Records, as equipment usages.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
-    Web.EquipmentItemLive.require_equipment!(team)
     activity = Web.ActivityLive.fetch_activity(team, id)
 
     if activity.deleted_at do
@@ -112,13 +112,21 @@ defmodule Web.ActivityEquipmentLive do
           >
             <.lines_table id="equipment-lines-table" lines={@lines} />
             <.form_actions>
-              <.button id="equipment-send" variant={:success} phx-disable-with="Sending to D4H…">
-                Add {Service.Format.count(length(@lines), one: "%d item", many: "%d items")} to D4H
+              <.button
+                id="equipment-send"
+                variant={:success}
+                phx-disable-with={"Sending to #{D4H.service_name(@current_team)}…"}
+              >
+                Add {Service.Format.count(length(@lines), one: "%d item", many: "%d items")} to {D4H.service_name(
+                  @current_team
+                )}
               </.button>
             </.form_actions>
           </.form>
           <p :if={@lines == []} id="equipment-nothing-to-add" class="hint">
-            Add items from the last {@activity.activity_kind}, a kit, or a search. Check the hours, then send them to D4H.
+            Add items from the last {@activity.activity_kind}, a kit, or a search. Check the hours, then send them to {D4H.service_name(
+              @current_team
+            )}.
           </p>
         </section>
 
@@ -147,13 +155,13 @@ defmodule Web.ActivityEquipmentLive do
                 variant={:danger}
                 phx-click="remove-usage"
                 phx-value-id={usage.id}
-                data-confirm={"Remove #{usage.equipment_item.title} from this activity in D4H?"}
+                data-confirm={"Remove #{usage.equipment_item.title} from this activity?"}
               >
                 Remove
               </.button>
             </:col>
           </.table>
-          <p :if={@usages == []} class="hint">D4H has no equipment on this activity.</p>
+          <p :if={@usages == []} class="hint">No equipment on this activity yet.</p>
         </section>
       </main>
     </div>
@@ -333,7 +341,7 @@ defmodule Web.ActivityEquipmentLive do
       {:ok, rows} ->
         socket =
           socket
-          |> put_flash(flash_kind(rows), result_text(rows, "added to"))
+          |> put_flash(flash_kind(rows), result_text(rows, "added to #{D4H.service_name(team)}"))
           |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}")
 
         {:noreply, socket}
@@ -355,7 +363,10 @@ defmodule Web.ActivityEquipmentLive do
           {:ok, rows} ->
             {:noreply,
              socket
-             |> put_flash(flash_kind(rows), result_text(rows, "removed from"))
+             |> put_flash(
+               flash_kind(rows),
+               result_text(rows, "removed from #{D4H.service_name(team)}")
+             )
              |> load_usages()}
 
           {:error, text} ->
@@ -379,12 +390,12 @@ defmodule Web.ActivityEquipmentLive do
     do: if(Enum.all?(rows, &(&1.status == :applied)), do: :info, else: :error)
 
   @doc """
-  What happened, as one message: "3 items added to D4H." and then each row D4H didn't
-  take, with why.
+  What happened, as one message: "3 items added to D4H." and then each row that didn't
+  go, with why. `verb` is "added to D4H" or the like.
   """
   def result_text(rows, verb) do
     applied = Enum.count(rows, &(&1.status == :applied))
-    done = Service.Format.count(applied, one: "%d item", many: "%d items") <> " #{verb} D4H."
+    done = Service.Format.count(applied, one: "%d item", many: "%d items") <> " #{verb}."
 
     rows
     |> Enum.reject(&(&1.status == :applied))
