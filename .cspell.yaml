@@ -17,6 +17,7 @@ ignorePaths:
 words:
   - UNRETIRE # D4H's retire endpoint's direction, in the adapter and its tests
   - eqrcode # the Hex package that encodes the QR code on tax credit letters
+  - zxing # zxing-wasm, the vendored barcode reader for equipment, in its JS and docs
   - ntoa # Erlang's :inet.ntoa/1, an IP tuple to a string
   - REFERER # the HTTP Referer header, as Plug and Honeybadger spell it
   - onsubmit # an HTML attribute

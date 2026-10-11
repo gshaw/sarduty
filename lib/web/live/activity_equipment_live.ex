@@ -1,6 +1,8 @@
 defmodule Web.ActivityEquipmentLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.Scanner
+
   alias App.Model.ChangeSetRow
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
@@ -8,8 +10,8 @@ defmodule Web.ActivityEquipmentLive do
   alias App.Operation.ChangeActivityEquipment
 
   # Adding equipment to an activity (#271). Items come from the last activity of the same
-  # kind, from kits, or from a search, into a list with hours to check. Sending the list
-  # writes them to D4H as equipment usages.
+  # kind, from kits, from a search, or from a phone's camera scanning barcodes, into a list
+  # with hours to check. Sending the list writes them to D4H as equipment usages.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -23,6 +25,7 @@ defmodule Web.ActivityEquipmentLive do
         socket
         |> assign(page_title: "Add equipment", activity: activity, lines: [], q: "", results: [])
         |> assign(kits: Kit.get_all(team.id), last: last)
+        |> assign(scan_message: nil, scan_failed: false)
         |> assign(last_usages: if(last, do: EquipmentUsage.for_activity(last), else: []))
         |> assign(default_minutes: default_minutes(activity))
         |> load_usages()
@@ -95,6 +98,15 @@ defmodule Web.ActivityEquipmentLive do
 
         <section id="equipment-search">
           <h2 class="heading">Find an item</h2>
+          <div class="hidden pointer-coarse:block mb-4">
+            <.qr_scanner
+              id="equipment-scanner"
+              label="Scan barcodes"
+              reader={:barcode}
+              data-continuous
+            />
+            <.scan_message message={@scan_message} scan_failed={@scan_failed} />
+          </div>
           <.item_search q={@q} results={@results} />
         </section>
       </aside>
@@ -121,7 +133,7 @@ defmodule Web.ActivityEquipmentLive do
             </.form_actions>
           </.form>
           <p :if={@lines == []} id="equipment-nothing-to-add" class="hint">
-            Add items from the last {@activity.activity_kind}, a kit, or a search. Check the hours, then add them.
+            Add items from the last {@activity.activity_kind}, a kit, a search, or a scan. Check the hours, then add them.
           </p>
         </section>
 
@@ -252,6 +264,52 @@ defmodule Web.ActivityEquipmentLive do
     """
   end
 
+  attr :message, :any, required: true, doc: "{band kind, text}, or nil"
+  attr :scan_failed, :boolean, required: true
+
+  @doc "What the last scan did, under the scanner. Shared with the equipment page."
+  def scan_message(assigns) do
+    ~H"""
+    <.band
+      :if={@message}
+      id="scan-message"
+      role="status"
+      kind={elem(@message, 0)}
+      title={elem(@message, 1)}
+      class="mt-4"
+    />
+    <p :if={@scan_failed} id="scan-failed" class="text-danger-text mt-2">
+      The camera did not start. Allow camera access, or type the barcode in the search.
+    </p>
+    """
+  end
+
+  @doc "The answer to a scan that matches no item."
+  def no_item_text(code), do: "No item has the barcode #{String.trim(code)}."
+
+  @doc """
+  What a scan of `item`, nil when no item has the barcode, does to the list: `:add`,
+  `:already` when the item is listed or on the activity, or `:refused`. Each comes with
+  the text to show. `used` holds the ids of the items on the activity.
+  """
+  def scan_result(nil, code, _lines, _used), do: {:refused, no_item_text(code)}
+
+  def scan_result(%EquipmentItem{} = item, _code, lines, used) do
+    cond do
+      not EquipmentItem.in_service?(item) ->
+        {:refused, "#{item.title} cannot be added. It is #{item.status}."}
+
+      MapSet.member?(used, item.id) ->
+        {:already, "#{item.title} is already on this activity."}
+
+      Enum.any?(lines, &(&1.item.id == item.id)) ->
+        {:already, "#{item.title} is already in the list to add."}
+
+      true ->
+        {:add, "Added #{item.title}."}
+    end
+  end
+
   @doc """
   `lines` with `new` added at the end, each `{item, minutes}`. Items already in `lines`,
   or in `skip` (ids of items to leave out), aren't added twice.
@@ -312,6 +370,27 @@ defmodule Web.ActivityEquipmentLive do
     item = EquipmentItem.find!(socket.assigns.current_team, id)
     {:noreply, add(socket, [{item, socket.assigns.default_minutes}])}
   end
+
+  def handle_event("scanned", %{"code" => code}, socket) do
+    item = EquipmentItem.find_by_code(socket.assigns.current_team.id, code)
+
+    socket =
+      case scan_result(item, code, socket.assigns.lines, socket.assigns.used) do
+        {:add, text} ->
+          socket |> add([{item, socket.assigns.default_minutes}]) |> scanned(:success, text)
+
+        {:already, text} ->
+          scanned(socket, :warning, text)
+
+        {:refused, text} ->
+          scanned(socket, :danger, text)
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("scan_failed", _params, socket),
+    do: {:noreply, assign(socket, scan_failed: true)}
 
   def handle_event("remove-line", %{"id" => id}, socket),
     do: {:noreply, assign(socket, lines: remove_line(socket.assigns.lines, id))}
@@ -379,6 +458,12 @@ defmodule Web.ActivityEquipmentLive do
       end)
 
     assign(socket, lines: lines, results: results)
+  end
+
+  defp scanned(socket, kind, text) do
+    socket
+    |> assign(scan_message: {kind, text})
+    |> push_event("scan-sound", %{sound: if(kind == :success, do: :ok, else: :error)})
   end
 
   defp flash_kind(rows),
