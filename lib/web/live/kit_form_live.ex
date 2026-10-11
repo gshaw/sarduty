@@ -92,13 +92,13 @@ defmodule Web.KitFormLive do
       |> Kit.build_changeset(params["kit"] || %{})
       |> Map.put(:action, :validate)
 
-    lines = ActivityEquipmentLive.put_hours(socket.assigns.lines, params["hours"] || %{})
+    lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
     {:noreply, socket |> assign(lines: lines) |> assign_form(changeset)}
   end
 
   def handle_event("save", params, socket) do
     team = socket.assigns.current_team
-    lines = ActivityEquipmentLive.put_hours(socket.assigns.lines, params["hours"] || %{})
+    lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
 
     kit_lines =
       Enum.map(lines, fn line ->
@@ -144,7 +144,10 @@ defmodule Web.KitFormLive do
 
   def handle_event("add-item", %{"id" => id}, socket) do
     item = EquipmentItem.find!(socket.assigns.current_team, id)
-    minutes = if EquipmentItem.takes_hours?(item), do: 60, else: 0
+
+    minutes =
+      if EquipmentItem.takes_hours?(item), do: ActivityEquipmentLive.default_minutes(), else: 0
+
     lines = ActivityEquipmentLive.add_lines(socket.assigns.lines, [{item, minutes}])
     results = Enum.reject(socket.assigns.results, &(&1.id == item.id))
     {:noreply, assign(socket, lines: lines, results: results)}

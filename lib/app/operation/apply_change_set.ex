@@ -191,7 +191,8 @@ defmodule App.Operation.ApplyChangeSet do
            d4h,
            new_value["d4h_activity_id"],
            new_value["d4h_equipment_id"],
-           new_value["minutes"]
+           new_value["minutes"],
+           new_value["km"]
          ) do
       {:ok, usage} -> {:applied, usage.d4h_equipment_usage_id}
       {:error, error} -> {:failed, Exception.message(error)}

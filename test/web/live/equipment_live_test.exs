@@ -20,8 +20,23 @@ defmodule Web.EquipmentLiveTest do
     %{conn: log_in_user(conn, user), team: team, truck: truck, radio: radio, phone: phone}
   end
 
-  test "the equipment page groups items by place, and searches", ctx do
+  test "the equipment page opens on places and categories, then lists a place's items", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
+
+    assert has_element?(lv, "#equipment-places-yard", "2")
+    assert has_element?(lv, "#equipment-places-costing", "1")
+    assert has_element?(lv, "#equipment-categories-radio", "3")
+    refute has_element?(lv, "#item-#{ctx.radio.id}")
+
+    lv |> element("#equipment-places-yard a") |> render_click()
+    assert_patch(lv, ~p"/teams/#{ctx.team}/equipment?place=Yard")
+    assert has_element?(lv, "#place-yard #item-#{ctx.radio.id}", "Radio 7")
+    assert has_element?(lv, "#place-yard #item-#{ctx.radio.id}", "SOUTH FRASER 2")
+    refute has_element?(lv, "#item-#{ctx.phone.id}")
+  end
+
+  test "the equipment page searches every place", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=all")
 
     assert has_element?(lv, "#place-yard #item-#{ctx.radio.id}", "Radio 7")
     assert has_element?(lv, "#place-yard #item-#{ctx.radio.id}", "SOUTH FRASER 2")
@@ -55,7 +70,7 @@ defmodule Web.EquipmentLiveTest do
 
     scan.("sf0119")
     assert has_element?(lv, "#scan-message", "Added Thermal camera 2.")
-    assert has_element?(lv, "#line-#{camera.id}")
+    assert lv |> element("#hours-#{camera.id}") |> render() =~ ~s(value="2")
 
     scan.("SF0119")
     assert has_element?(lv, "#scan-message", "already in the list to add")
@@ -130,11 +145,20 @@ defmodule Web.EquipmentLiveTest do
     lv |> element("#equipment-add-kit-#{kit.id}") |> render_click()
     assert has_element?(lv, "#line-#{ctx.radio.id}")
 
-    lv |> form("#equipment-lines", hours: %{"#{ctx.radio.id}" => "1"}) |> render_submit()
+    assert has_element?(lv, "#km-#{ctx.truck.id}")
+    refute has_element?(lv, "#km-#{ctx.radio.id}")
+
+    lv
+    |> form("#equipment-lines",
+      hours: %{"#{ctx.radio.id}" => "1"},
+      km: %{"#{ctx.truck.id}" => "35"}
+    )
+    |> render_submit()
 
     assert_received {:d4h_write, %{"equipmentId" => truck_id} = truck_json}
     assert truck_id == ctx.truck.d4h_equipment_id
     refute Map.has_key?(truck_json, "duration")
+    assert truck_json["distance"] == 35
     assert_received {:d4h_write, %{"equipmentId" => radio_id, "duration" => 60}}
     assert radio_id == ctx.radio.d4h_equipment_id
 

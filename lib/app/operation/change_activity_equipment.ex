@@ -22,22 +22,23 @@ defmodule App.Operation.ChangeActivityEquipment do
 
   @doc """
   The rows that add `lines` to an activity. A line is `%{item: %EquipmentItem{},
-  minutes: n}`. An item already on the activity (`used_d4h_ids`), or on an earlier line,
-  is left out. Minutes go only with equipment; D4H takes km for a vehicle and a count
-  for a supply.
+  minutes: n}`, with `km: n` for a vehicle. An item already on the activity
+  (`used_d4h_ids`), or on an earlier line, is left out. Minutes go only with equipment
+  and km only with a vehicle, as D4H takes them. A supply's count is left out.
   """
   def plan_adds(%Activity{} = activity, lines, used_d4h_ids \\ []) do
     lines
     |> Enum.uniq_by(& &1.item.d4h_equipment_id)
     |> Enum.reject(&(&1.item.d4h_equipment_id in used_d4h_ids))
-    |> Enum.map(fn %{item: item, minutes: minutes} ->
+    |> Enum.map(fn %{item: item, minutes: minutes} = line ->
       %ChangeSetRow{
         action: :create_equipment_usage,
         new_value: %{
           "d4h_activity_id" => activity.d4h_activity_id,
           "d4h_equipment_id" => item.d4h_equipment_id,
           "title" => item.title,
-          "minutes" => if(EquipmentItem.takes_hours?(item), do: max(minutes || 0, 0))
+          "minutes" => if(EquipmentItem.takes_hours?(item), do: max(minutes || 0, 0)),
+          "km" => if(EquipmentItem.takes_km?(item), do: line[:km])
         }
       }
     end)

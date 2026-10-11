@@ -70,6 +70,10 @@ defmodule App.Model.EquipmentItem do
   def takes_hours?(%EquipmentItem{item_type: "equipment"}), do: true
   def takes_hours?(%EquipmentItem{}), do: false
 
+  @doc "Whether D4H takes km for a usage of the item: only vehicles."
+  def takes_km?(%EquipmentItem{item_type: "vehicle"}), do: true
+  def takes_km?(%EquipmentItem{}), do: false
+
   @doc """
   The item a scanned barcode names, ignoring case and spaces at the ends, or nil. A
   barcode match comes before a serial one. Retired and lost items count too, so a page

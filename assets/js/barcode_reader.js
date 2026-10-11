@@ -8,9 +8,9 @@ prepareZXingModule({
   overrides: {locateFile: (path, prefix) => (path.endsWith(".wasm") ? wasmUrl : prefix + path)},
 })
 
-// South Fraser's barcodes hold lowercase letters, spaces, and "#", so Code 128 or QR is likely,
-// with UPC and EAN on bought items (2026-10-11).
-const FORMATS = ["Code128", "Code39", "Code93", "Codabar", "ITF", "EANUPC", "QRCode", "DataMatrix"]
+// Every format ZXing reads. South Fraser's labels are mostly QR, some Code 128, and
+// Andrew wants any barcode read (2026-10-11).
+const FORMATS = ["AllReadable"]
 
 export async function read(image) {
   const [found] = await readBarcodes(image, {formats: FORMATS, maxNumberOfSymbols: 1})

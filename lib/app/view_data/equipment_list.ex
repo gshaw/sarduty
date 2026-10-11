@@ -12,6 +12,7 @@ defmodule App.ViewData.EquipmentList do
 
   @with_members "With members"
   @no_location "No location"
+  @no_category "No category"
 
   # Deeper than any real nesting. It stops a loop if D4H ever puts two items in each other.
   @max_depth 10
@@ -94,6 +95,40 @@ defmodule App.ViewData.EquipmentList do
     q = String.downcase(q)
     Enum.any?([item.title, item.barcode, item.serial, item.kind], &contains?(&1, q))
   end
+
+  @doc "The rows in `place` with `category`. An empty one keeps every row."
+  def narrow(rows, place, category) do
+    Enum.filter(
+      rows,
+      &((place == "" or &1.place == place) and
+          (category == "" or category(&1.item) == category))
+    )
+  end
+
+  @doc """
+  Whether the page lists items, or only the places and categories to pick from. South
+  Fraser's 1,136 items in one list were too many to read (Andrew, 2026-10-11).
+  """
+  def browsing?(show, q, place, category),
+    do: show == "in-service" and q == "" and place == "" and category == ""
+
+  @doc "The places in `rows`, in group order, as `{place, count}`."
+  def places(rows) do
+    rows
+    |> Enum.frequencies_by(& &1.place)
+    |> Enum.sort_by(fn {place, _count} -> {place_order(place), place} end)
+  end
+
+  @doc "The categories in `rows` by name, then \"No category\", as `{category, count}`."
+  def categories(rows) do
+    rows
+    |> Enum.frequencies_by(&category(&1.item))
+    |> Enum.sort_by(fn {category, _count} -> {category == @no_category, category} end)
+  end
+
+  @doc "An item's category: D4H's kind, or \"No category\"."
+  def category(%EquipmentItem{kind: kind}) when kind in [nil, ""], do: @no_category
+  def category(%EquipmentItem{kind: kind}), do: kind
 
   defp contains?(nil, _q), do: false
   defp contains?(text, q), do: text |> String.downcase() |> String.contains?(q)

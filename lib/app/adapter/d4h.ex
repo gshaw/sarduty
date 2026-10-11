@@ -573,12 +573,14 @@ defmodule App.Adapter.D4H do
 
   @doc """
   Adds an item to an activity's equipment. `minutes` goes as the usage's duration, which
-  D4H takes only for equipment; nil sends none.
+  D4H takes only for equipment, and `km` as its distance, only for a vehicle. Nil sends
+  none.
   """
-  def create_equipment_usage(context, d4h_activity_id, d4h_equipment_id, minutes) do
+  def create_equipment_usage(context, d4h_activity_id, d4h_equipment_id, minutes, km \\ nil) do
     json =
       %{activityId: d4h_activity_id, equipmentId: d4h_equipment_id}
       |> then(&if(minutes, do: Map.put(&1, :duration, minutes), else: &1))
+      |> then(&if(km, do: Map.put(&1, :distance, km), else: &1))
 
     write(context, :post, "/equipment-usages", json, &D4H.EquipmentUsage.build/1)
   end

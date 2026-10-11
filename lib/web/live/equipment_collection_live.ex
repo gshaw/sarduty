@@ -8,13 +8,27 @@ defmodule Web.EquipmentCollectionLive do
   alias App.Model.EquipmentItem
   alias App.ViewData.EquipmentList
 
-  # The team's equipment, copied from D4H or SAR Duty Records, grouped by where it is
-  # (#271). A Records team adds items here. On a phone, scanning a barcode opens its item.
+  # The team's equipment, copied from D4H or SAR Duty Records (#271). It opens on the
+  # places and categories, with counts; picking one, searching, or another filter lists
+  # items, grouped by where they are. A Records team adds items here. On a phone,
+  # scanning a barcode opens its item.
   def mount(_params, _session, socket) do
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
+    in_service = EquipmentList.filter(rows, "in-service", "", DateTime.utc_now())
 
-    {:ok,
-     assign(socket, page_title: "Equipment", rows: rows, scan_message: nil, scan_failed: false)}
+    socket =
+      assign(socket,
+        page_title: "Equipment",
+        rows: rows,
+        places: EquipmentList.places(in_service),
+        categories: EquipmentList.categories(in_service),
+        place_options: options("Any place", EquipmentList.places(rows)),
+        category_options: options("Any category", EquipmentList.categories(rows)),
+        scan_message: nil,
+        scan_failed: false
+      )
+
+    {:ok, socket}
   end
 
   def handle_params(params, _uri, socket) do
@@ -22,22 +36,34 @@ defmodule Web.EquipmentCollectionLive do
       if params["show"] in EquipmentList.show_values(), do: params["show"], else: "in-service"
 
     q = String.trim(params["q"] || "")
-    rows = EquipmentList.filter(socket.assigns.rows, show, q, DateTime.utc_now())
+    place = params["place"] || ""
+    category = params["category"] || ""
+    now = DateTime.utc_now()
+
+    rows =
+      socket.assigns.rows
+      |> EquipmentList.filter(show, q, now)
+      |> EquipmentList.narrow(place, category)
 
     socket =
       assign(socket,
         show: show,
         q: q,
+        browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
         groups: EquipmentList.group(rows),
-        form: to_form(%{"q" => q, "show" => show}, as: "form")
+        form:
+          to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
+            as: "form"
+          )
       )
 
     {:noreply, socket}
   end
 
   def handle_event("change", %{"form" => form}, socket) do
-    params = Map.take(form, ["q", "show"])
+    params =
+      form |> Map.take(["q", "place", "category", "show"]) |> Map.reject(&(elem(&1, 1) == ""))
 
     {:noreply,
      push_patch(socket, to: filter_path(socket.assigns.current_team, params), replace: true)}
@@ -63,6 +89,8 @@ defmodule Web.EquipmentCollectionLive do
     do: {:noreply, assign(socket, scan_failed: true)}
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
+
+  defp options(any, counts), do: [{any, ""} | Enum.map(counts, &elem(&1, 0))]
 
   def render(assigns) do
     ~H"""
@@ -92,6 +120,8 @@ defmodule Web.EquipmentCollectionLive do
       class="filter-form"
     >
       <.input field={@form[:q]} label="Search" placeholder="Name, barcode, or serial" />
+      <.input field={@form[:place]} label="Place" type="select" options={@place_options} />
+      <.input field={@form[:category]} label="Category" type="select" options={@category_options} />
       <.input field={@form[:show]} label="Show" type="select" options={EquipmentList.shows()} />
     </.form>
 
@@ -100,13 +130,36 @@ defmodule Web.EquipmentCollectionLive do
       <.scan_message message={@scan_message} scan_failed={@scan_failed} />
     </div>
 
-    <div class="table-summary">
+    <div
+      :if={@browsing and @rows != []}
+      id="equipment-browse"
+      class="grid items-start gap-8 md:grid-cols-2"
+    >
+      <.count_table
+        id="equipment-places"
+        label="Place"
+        counts={@places}
+        path={&filter_path(@current_team, place: &1)}
+      />
+      <.count_table
+        id="equipment-categories"
+        label="Category"
+        counts={@categories}
+        path={&filter_path(@current_team, category: &1)}
+      />
+    </div>
+
+    <div :if={!@browsing} class="table-summary">
       <span class="table-summary-count">
         {Service.Format.count(@count, one: "%d item", many: "%d items")}
       </span>
     </div>
 
-    <section :for={{place, rows} <- @groups} id={"place-#{slug(place)}"} class="mb-8">
+    <section
+      :for={{place, rows} <- if(@browsing, do: [], else: @groups)}
+      id={"place-#{slug(place)}"}
+      class="mb-8"
+    >
       <h2 class="heading">{place} · {length(rows)}</h2>
       <.table
         id={"equipment-#{slug(place)}"}
@@ -121,7 +174,7 @@ defmodule Web.EquipmentCollectionLive do
         <:col :let={row} label="Where">
           {where(row)}
         </:col>
-        <:col :let={row} label="Type">{row.item.kind}</:col>
+        <:col :let={row} label="Category">{row.item.kind}</:col>
         <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
         <:col :let={row} label="Expires" align="right" class="w-px whitespace-nowrap">
           <span :if={row.item.expires_at}>
@@ -137,12 +190,30 @@ defmodule Web.EquipmentCollectionLive do
         else: "SAR Duty copies equipment from D4H when it refreshes."}
     </.empty_state>
     <.empty_state
-      :if={@rows != [] and @groups == []}
+      :if={!@browsing and @rows != [] and @groups == []}
       id="no-matching-equipment"
       title="No items match"
     >
       Change the search or what to show.
     </.empty_state>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :counts, :list, required: true, doc: "{name, count}"
+  attr :path, :any, required: true, doc: "the link for a name"
+
+  defp count_table(assigns) do
+    ~H"""
+    <.table id={@id} rows={@counts} row_id={&"#{@id}-#{slug(elem(&1, 0))}"} class="table-striped">
+      <:col :let={{name, _count}} label={@label}>
+        <.a patch={@path.(name)}>{name}</.a>
+      </:col>
+      <:col :let={{_name, count}} label="Items" align="right" class="w-px whitespace-nowrap">
+        {count}
+      </:col>
+    </.table>
     """
   end
 

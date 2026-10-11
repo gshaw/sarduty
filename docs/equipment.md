@@ -28,6 +28,34 @@ Read from South Fraser's D4H on 2026-10-10, read-only:
   makers' codes. 4 are 12 or 13 digits, so UPC or EAN. Lowercase letters, spaces, and
   "#" rule out plain Code 39, so printed labels are likely Code 128 or QR.
 
+## What Andrew said
+
+Andrew answered our questions by email on 2026-10-11:
+
+- The team prints its own labels from a template. Most are QR codes, some Code 128.
+  "Manta 01" and the like are printed too. The 488 items without a barcode get no labels
+  for now. A USB or Bluetooth scanner at the hall types into the search, which works.
+- Scanning is mostly for finding an item, and later for checklists.
+- An item from a search or a scan starts at a fixed number of hours, not the activity's
+  length.
+- Km for the trucks, yes. A truck does more on a task than drive from the yard to the
+  site, so km are typed, not taken from the mileage report.
+- The equipment page listed all 1,136 items, which was too many. It now opens on places
+  and categories.
+- Leave alone for now: "Same as last" (wait for feedback), who adds equipment (team
+  admins), and check-out (stays in D4H).
+- Checklists that matter most: truck weekly and truck pre-trip, perhaps filled in by
+  members from their own login.
+- He added a kit to an activity in South Fraser's D4H, which worked, and set up example
+  kits there.
+
+## The equipment page
+
+It opens on two short tables: the places items are in and the categories (D4H's
+"kinds"), each with a count of items in service. Picking one lists its items, grouped by
+place, with the chain of items holding each one. A search, or a filter other than "In
+service", lists items from every place.
+
 ## Kits
 
 A kit is SAR Duty's own: a named set of items, each with default hours (Andrew's comment
@@ -48,12 +76,13 @@ list to send, from:
 1. **Same as last incident** (or exercise, or event): the items on the newest earlier
    activity of the same kind that has any, with their minutes.
 2. **Kits**, with each line's default hours.
-3. **A search** by name, barcode, or serial. A found item starts at the activity's
-   length.
+3. **A search** by name, barcode, or serial. A found item starts at 2 hours, South
+   Fraser's most common.
 4. **Scanning barcodes** with a phone's camera, which adds each item as it reads it.
 
 Retired and lost items are left out, and so is any item already on the activity. Each
-line's hours can change before sending. Sending is a change set of source `equipment`
+line's hours can change before sending. A vehicle's line takes km instead, typed, and
+blank sends none; D4H takes no hours for a vehicle. Sending is a change set of source `equipment`
 ([ChangeActivityEquipment](../lib/app/operation/change_activity_equipment.ex)), one
 `create_equipment_usage` row per item. The applier reads the activity's usages first and
 skips an item D4H has on it now, since D4H would count it twice. A published activity
@@ -76,13 +105,13 @@ barcodes" and the equipment page shows "Scan a barcode". Both use the door's
 - A scan matches an item's barcode exactly, ignoring case and spaces at the ends, and
   then its serial ([EquipmentItem.find_by_code/2](../lib/app/model/equipment_item.ex)).
   A part of a barcode matches nothing, unlike the search.
-- On "Add equipment" the camera keeps going. Each read adds the item at the activity's
-  length, or says why not: no item has that barcode, it is already listed or on the
+- On "Add equipment" the camera keeps going. Each read adds the item at 2 hours, or says
+  why not: no item has that barcode, it is already listed or on the
   activity, or it is retired or lost. A tone says which, as at the door.
 - On the equipment page one read opens the item's page, even a retired one.
 - The reader is [zxing-wasm](https://github.com/Sec-ant/zxing-wasm), vendored as
-  `assets/vendor/zxing_reader.js` and `.wasm`. It reads Code 128, Code 39, Code 93,
-  Codabar, ITF, UPC and EAN, QR, and Data Matrix. A page downloads it, about 1 MB, only
+  `assets/vendor/zxing_reader.js` and `.wasm`. It reads every format ZXing knows,
+  1D and 2D, since Andrew asked for any barcode. A page downloads it, about 1 MB, only
   where the scanner is, and the `.wasm` comes from our own assets. ID cards keep jsQR.
 - Barcodes come from SAR Duty's copy, so an item added in D4H in the last 10 minutes is
   not found until the next sync.
@@ -109,6 +138,6 @@ page for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_i
 
 ## Still to come from #271
 
-- Moving an item, and check-out as a move to a member.
-- Checklists, which live in SAR Duty since D4H's API can't create inspections.
-- Km for vehicles, perhaps from the mileage report.
+- Moving an item. Check-out stays in D4H for now.
+- Checklists, which live in SAR Duty since D4H's API can't create inspections. Truck
+  weekly and truck pre-trip first, perhaps from a member's own login.
