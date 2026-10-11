@@ -27,16 +27,17 @@ defmodule Web.ActivityEquipmentLive do
         |> assign(kits: Kit.get_all(team.id), last: last)
         |> assign(scan_message: nil, scan_failed: false)
         |> assign(last_usages: if(last, do: EquipmentUsage.for_activity(last), else: []))
-        |> assign(default_minutes: default_minutes(activity))
         |> load_usages()
 
       {:ok, socket}
     end
   end
 
-  # An item from a search starts at the activity's length.
-  defp default_minutes(activity),
-    do: max(Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at), 0)
+  @doc """
+  The hours an item from a search or a scan starts at: 2, South Fraser's most common. A fixed
+  number, not the activity's length, as Andrew asked (2026-10-11). Kits set their own.
+  """
+  def default_minutes, do: 120
 
   defp load_usages(socket) do
     usages = EquipmentUsage.for_activity(socket.assigns.activity)
@@ -121,7 +122,7 @@ defmodule Web.ActivityEquipmentLive do
             phx-change="hours"
             phx-submit="send"
           >
-            <.lines_table id="equipment-lines-table" lines={@lines} />
+            <.lines_table id="equipment-lines-table" lines={@lines} km />
             <.form_actions>
               <.button
                 id="equipment-send"
@@ -133,7 +134,7 @@ defmodule Web.ActivityEquipmentLive do
             </.form_actions>
           </.form>
           <p :if={@lines == []} id="equipment-nothing-to-add" class="hint">
-            Add items from the last {@activity.activity_kind}, a kit, a search, or a scan. Check the hours, then add them.
+            Add items from the last {@activity.activity_kind}, a kit, a search, or a scan. Check the hours and a vehicle's km, then add them.
           </p>
         </section>
 
@@ -185,10 +186,12 @@ defmodule Web.ActivityEquipmentLive do
 
   attr :id, :string, required: true
   attr :lines, :list, required: true
+  attr :km, :boolean, default: false, doc: "whether a vehicle takes km"
 
   @doc """
-  The items about to be added, each with an hours field when D4H counts hours for it.
-  Shared with the kit form. Inputs are named `hours[item id]`.
+  The items about to be added, each with an hours field when D4H counts hours for it,
+  and with `km` a km field for a vehicle. Shared with the kit form, which has no km since
+  each trip differs. Inputs are named `hours[item id]` and `km[item id]`.
   """
   def lines_table(assigns) do
     ~H"""
@@ -196,20 +199,41 @@ defmodule Web.ActivityEquipmentLive do
       <:col :let={line} label="Item">
         {line.item.title} <span :if={line.item.kind} class="hint">{line.item.kind}</span>
       </:col>
-      <:col :let={line} label="Hours" class="w-px whitespace-nowrap">
-        <input
-          :if={EquipmentItem.takes_hours?(line.item)}
-          type="number"
-          id={"hours-#{line.item.id}"}
-          name={"hours[#{line.item.id}]"}
-          value={line.hours}
-          min="0"
-          step="0.5"
-          class="w-16"
-          aria-label={"Hours for #{line.item.title}"}
-        />
-        <span :if={!EquipmentItem.takes_hours?(line.item)} class="hint">
-          {if line.item.item_type == "vehicle", do: "Not counted for vehicles", else: "Not counted"}
+      <:col :let={line} label={if @km, do: "Used", else: "Hours"} class="w-px whitespace-nowrap">
+        <span class="flex items-center gap-2">
+          <input
+            :if={EquipmentItem.takes_hours?(line.item)}
+            type="number"
+            id={"hours-#{line.item.id}"}
+            name={"hours[#{line.item.id}]"}
+            value={line.hours}
+            min="0"
+            step="0.5"
+            class="w-16"
+            aria-label={"Hours for #{line.item.title}"}
+          /> <span :if={@km and EquipmentItem.takes_hours?(line.item)} class="hint">hours</span>
+          <input
+            :if={@km and EquipmentItem.takes_km?(line.item)}
+            type="number"
+            id={"km-#{line.item.id}"}
+            name={"km[#{line.item.id}]"}
+            value={line.km}
+            min="0"
+            step="1"
+            class="w-16"
+            aria-label={"Km for #{line.item.title}"}
+          /> <span :if={@km and EquipmentItem.takes_km?(line.item)} class="hint">km</span>
+          <span
+            :if={
+              !EquipmentItem.takes_hours?(line.item) and
+                !(@km and EquipmentItem.takes_km?(line.item))
+            }
+            class="hint"
+          >
+            {if EquipmentItem.takes_km?(line.item),
+              do: "Not counted for vehicles",
+              else: "Not counted"}
+          </span>
         </span>
       </:col>
       <:col :let={line} label="" class="w-px whitespace-nowrap">
@@ -324,20 +348,39 @@ defmodule Web.ActivityEquipmentLive do
         MapSet.member?(have, item.id) or MapSet.member?(skip, item.id)
       end)
       |> Enum.map(fn {item, minutes} ->
-        %{item: item, hours: Service.Convert.minutes_to_hours(minutes)}
+        %{item: item, hours: Service.Convert.minutes_to_hours(minutes), km: ""}
       end)
 
     lines ++ added
   end
 
-  @doc "`lines` with the hours typed in `hours`, a map of item id (as text) to hours."
-  def put_hours(lines, hours) do
+  @doc """
+  `lines` with what was typed in `params`: `hours` and `km`, each a map of item id (as
+  text) to the number typed.
+  """
+  def put_typed(lines, params) do
+    hours = params["hours"] || %{}
+    km = params["km"] || %{}
+
     Enum.map(lines, fn line ->
-      case Map.fetch(hours, Integer.to_string(line.item.id)) do
-        {:ok, text} -> %{line | hours: text}
-        :error -> line
-      end
+      id = Integer.to_string(line.item.id)
+      %{line | hours: Map.get(hours, id, line.hours), km: Map.get(km, id, line.km)}
     end)
+  end
+
+  defp to_add(line),
+    do: %{
+      item: line.item,
+      minutes: Service.Convert.hours_to_minutes(line.hours),
+      km: parse_km(line.km)
+    }
+
+  @doc "Whole km from the text typed, or nil when it is blank or not a number."
+  def parse_km(text) do
+    case text |> to_string() |> String.trim() |> Integer.parse() do
+      {km, ""} when km >= 0 -> km
+      _other -> nil
+    end
   end
 
   def remove_line(lines, id), do: Enum.reject(lines, &(Integer.to_string(&1.item.id) == id))
@@ -349,7 +392,7 @@ defmodule Web.ActivityEquipmentLive do
   def handle_event("add-last", _params, socket) do
     new =
       for usage <- socket.assigns.last_usages, EquipmentItem.in_service?(usage.equipment_item) do
-        {usage.equipment_item, usage.minutes || socket.assigns.default_minutes}
+        {usage.equipment_item, usage.minutes || default_minutes()}
       end
 
     {:noreply, add(socket, new)}
@@ -368,7 +411,7 @@ defmodule Web.ActivityEquipmentLive do
 
   def handle_event("add-item", %{"id" => id}, socket) do
     item = EquipmentItem.find!(socket.assigns.current_team, id)
-    {:noreply, add(socket, [{item, socket.assigns.default_minutes}])}
+    {:noreply, add(socket, [{item, default_minutes()}])}
   end
 
   def handle_event("scanned", %{"code" => code}, socket) do
@@ -377,7 +420,7 @@ defmodule Web.ActivityEquipmentLive do
     socket =
       case scan_result(item, code, socket.assigns.lines, socket.assigns.used) do
         {:add, text} ->
-          socket |> add([{item, socket.assigns.default_minutes}]) |> scanned(:success, text)
+          socket |> add([{item, default_minutes()}]) |> scanned(:success, text)
 
         {:already, text} ->
           scanned(socket, :warning, text)
@@ -402,14 +445,12 @@ defmodule Web.ActivityEquipmentLive do
   end
 
   def handle_event("hours", params, socket),
-    do: {:noreply, assign(socket, lines: put_hours(socket.assigns.lines, params["hours"] || %{}))}
+    do: {:noreply, assign(socket, lines: put_typed(socket.assigns.lines, params))}
 
   def handle_event("send", params, socket) do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
-    lines = put_hours(socket.assigns.lines, params["hours"] || %{})
 
-    lines =
-      Enum.map(lines, &%{item: &1.item, minutes: Service.Convert.hours_to_minutes(&1.hours)})
+    lines = socket.assigns.lines |> put_typed(params) |> Enum.map(&to_add/1)
 
     case ChangeActivityEquipment.add(team, activity, lines, user, DateTime.utc_now()) do
       {:ok, rows} ->

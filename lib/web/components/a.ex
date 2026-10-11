@@ -10,7 +10,7 @@ defmodule Web.Components.A do
   attr :class, :any, default: ""
 
   attr :rest, :global,
-    include: ~w(disabled href method navigate role target),
+    include: ~w(disabled href method navigate patch role target),
     doc: "the arbitrary HTML attributes to add to the link"
 
   slot :inner_block, required: true

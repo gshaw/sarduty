@@ -24,10 +24,10 @@ defmodule App.ViewData.EquipmentListTest do
   # The yard holds a truck, the truck a drawer, the drawer a radio. Sam has a GPS.
   defp items do
     [
-      item(4, "Radio 7", d4h_container_id: 3),
+      item(4, "Radio 7", d4h_container_id: 3, kind: "Radio"),
       item(1, "SOUTH FRASER 2", location_title: "Yard", item_type: "vehicle"),
       item(3, "02 DRAWER #1", d4h_container_id: 1),
-      item(5, "GPS 2", member_id: 9, member: %Member{name: "Sam Ortiz"}),
+      item(5, "GPS 2", member_id: 9, member: %Member{name: "Sam Ortiz"}, kind: "GPS"),
       item(6, "Old saw", status: "retired", location_title: "Yard"),
       item(7, "Loose rope"),
       item(8, "AED", location_title: "Yard", expires_at: ~U[2026-11-01 00:00:00Z])
@@ -71,6 +71,35 @@ defmodule App.ViewData.EquipmentListTest do
     assert ids.("with-members", "") == [5]
     assert ids.("expiring", "") == [8]
     assert ids.("in-service", "drawer") == [3]
+  end
+
+  test "the page opens on places and categories, with counts" do
+    rows = EquipmentList.rows(items())
+
+    assert EquipmentList.places(rows) == [{"Yard", 5}, {"With members", 1}, {"No location", 1}]
+
+    assert EquipmentList.categories(rows) == [
+             {"GPS", 1},
+             {"Radio", 1},
+             {"No category", 5}
+           ]
+
+    assert EquipmentList.browsing?("in-service", "", "", "")
+    refute EquipmentList.browsing?("in-service", "", "Yard", "")
+    refute EquipmentList.browsing?("retired", "", "", "")
+  end
+
+  test "a place or a category narrows the rows" do
+    rows = EquipmentList.rows(items())
+
+    ids = fn place, category ->
+      rows |> EquipmentList.narrow(place, category) |> Enum.map(& &1.item.id)
+    end
+
+    assert "Yard" |> ids.("") |> Enum.sort() == [1, 3, 4, 6, 8]
+    assert ids.("Yard", "Radio") == [4]
+    assert ids.("", "GPS") == [5]
+    assert ids.("No location", "No category") == [7]
   end
 
   test "an item can't nest in itself forever" do

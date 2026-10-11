@@ -63,7 +63,7 @@ defmodule Web.EquipmentItemLive do
           <dt>Where</dt>
           <dd>{where(@row)}</dd>
           <div :if={@item.kind}>
-            <dt>Type</dt>
+            <dt>Category</dt>
             <dd>{@item.kind}</dd>
           </div>
           <div :if={@item.barcode}>
