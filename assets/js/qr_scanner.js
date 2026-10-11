@@ -23,11 +23,9 @@ const READERS = {
   barcode: () => import("./barcode_reader").then(module => module.read),
 }
 
-// A bar code's lines are thin, so the barcode reader asks for a sharper picture.
-const CAMERAS = {
-  qr: {facingMode: "environment"},
-  barcode: {facingMode: "environment", width: {ideal: 1280}, height: {ideal: 720}},
-}
+// Both readers take the camera's default picture. Asking an iPhone for 1280×720 started
+// the camera but left the picture blank (2026-10-11).
+const CAMERA = {facingMode: "environment"}
 
 export const QRScanner = {
   mounted() {
@@ -48,13 +46,19 @@ export const QRScanner = {
     this.stop()
   },
 
+  // A second tap while the reader loads would open the camera twice, and an iPhone
+  // blanks the first camera when a second one opens.
   async start() {
+    if (this.starting || this.stream) return
+    this.starting = true
     try {
       this.decode = await this.decoder
-      this.stream = await navigator.mediaDevices.getUserMedia({video: CAMERAS[this.reader]})
+      this.stream = await navigator.mediaDevices.getUserMedia({video: CAMERA})
     } catch (_error) {
       this.pushEvent("scan_failed", {})
       return
+    } finally {
+      this.starting = false
     }
     this.video.srcObject = this.stream
     await this.video.play()
