@@ -1,7 +1,6 @@
 defmodule Web.ActivityEquipmentLive do
   use Web, :live_view_app_layout
 
-  alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
@@ -10,7 +9,7 @@ defmodule Web.ActivityEquipmentLive do
 
   # Adding equipment to an activity (#271). Items come from the last activity of the same
   # kind, from kits, or from a search, into a list with hours to check. Sending the list
-  # writes them to D4H, or SAR Duty Records, as equipment usages.
+  # writes them to D4H as equipment usages.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -115,18 +114,14 @@ defmodule Web.ActivityEquipmentLive do
               <.button
                 id="equipment-send"
                 variant={:success}
-                phx-disable-with={"Sending to #{D4H.service_name(@current_team)}…"}
+                phx-disable-with="Adding…"
               >
-                Add {Service.Format.count(length(@lines), one: "%d item", many: "%d items")} to {D4H.service_name(
-                  @current_team
-                )}
+                Add {Service.Format.count(length(@lines), one: "%d item", many: "%d items")}
               </.button>
             </.form_actions>
           </.form>
           <p :if={@lines == []} id="equipment-nothing-to-add" class="hint">
-            Add items from the last {@activity.activity_kind}, a kit, or a search. Check the hours, then send them to {D4H.service_name(
-              @current_team
-            )}.
+            Add items from the last {@activity.activity_kind}, a kit, or a search. Check the hours, then add them.
           </p>
         </section>
 
@@ -341,7 +336,7 @@ defmodule Web.ActivityEquipmentLive do
       {:ok, rows} ->
         socket =
           socket
-          |> put_flash(flash_kind(rows), result_text(rows, "added to #{D4H.service_name(team)}"))
+          |> put_flash(flash_kind(rows), result_text(rows, "added"))
           |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}")
 
         {:noreply, socket}
@@ -365,7 +360,7 @@ defmodule Web.ActivityEquipmentLive do
              socket
              |> put_flash(
                flash_kind(rows),
-               result_text(rows, "removed from #{D4H.service_name(team)}")
+               result_text(rows, "removed")
              )
              |> load_usages()}
 
@@ -390,8 +385,8 @@ defmodule Web.ActivityEquipmentLive do
     do: if(Enum.all?(rows, &(&1.status == :applied)), do: :info, else: :error)
 
   @doc """
-  What happened, as one message: "3 items added to D4H." and then each row that didn't
-  go, with why. `verb` is "added to D4H" or the like.
+  What happened, as one message: "3 items added." and then each row that didn't go,
+  with why.
   """
   def result_text(rows, verb) do
     applied = Enum.count(rows, &(&1.status == :applied))
