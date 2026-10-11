@@ -13,6 +13,7 @@
     <li>
       Switch: a setting with no save button, which changes the moment it's tapped. Inside a form with a save button, use a checkbox: a switch says the change already happened.
     </li>
+    <li>File: one photo or image people pick from their device, such as a signature.</li>
   </ul>
 
   <h2>Text input</h2>
@@ -110,6 +111,17 @@
   </div>
 
   <p class="spec">The checkbox list's markup, with radios. One answer, every choice in view.</p>
+
+  <h2 id="file">File</h2>
+  <div class="demo">
+    <.label for="e-photo">New photo</.label>
+    <.hint>A JPEG, PNG, or WebP of the member's face, under 10 MB.</.hint>
+    <input id="e-photo" type="file" class="my-2" />
+  </div>
+
+  <p class="spec">
+    The browser's own control, with its button styled as a secondary button and the file name small and muted beside it. In a LiveView it's <code>&lt;.live_file_input&gt;</code>.
+  </p>
 
   <h2 id="switch">Switch</h2>
   <div class="demo">
