@@ -15,24 +15,24 @@ defmodule Web.KitFormLive do
     team = socket.assigns.current_team
     kit = if id = params["id"], do: Kit.find!(team, id)
 
-    lines =
-      if kit,
-        do:
-          kit.kit_items
-          |> Enum.sort_by(&String.downcase(&1.equipment_item.title))
-          |> Enum.map(&{&1.equipment_item, &1.minutes})
-          |> then(&ActivityEquipmentLive.add_lines([], &1)),
-        else: []
-
     socket =
       socket
-      |> assign(kit: kit, lines: lines, q: "", results: [])
+      |> assign(kit: kit, lines: kit_lines(kit), q: "", results: [])
       |> assign(tags: if(kit, do: Kit.tags(kit), else: []), all_tags: Tag.get_all(team.id))
-      |> assign(tag_q: "")
+      |> assign(tag_q: "", tag_uses: Tag.use_counts(team.id, a_year_ago()))
       |> assign(page_title: if(kit, do: kit.title, else: "Add kit"))
       |> assign_form(Kit.build_changeset(kit || %Kit{}, %{}))
 
     {:ok, socket}
+  end
+
+  defp kit_lines(nil), do: []
+
+  defp kit_lines(kit) do
+    kit.kit_items
+    |> Enum.sort_by(&String.downcase(&1.equipment_item.title))
+    |> Enum.map(&{&1.equipment_item, &1.minutes})
+    |> then(&ActivityEquipmentLive.add_lines([], &1))
   end
 
   defp assign_form(socket, changeset), do: assign(socket, :form, to_form(changeset, as: "kit"))
@@ -55,7 +55,7 @@ defmodule Web.KitFormLive do
 
         <section id="kit-tag-search">
           <h2 class="heading">Find a tag</h2>
-          <.tag_search q={@tag_q} tags={tag_results(@all_tags, @tags, @tag_q)} />
+          <.tag_search q={@tag_q} results={tag_results(@all_tags, @tags, @tag_q, @tag_uses)} />
         </section>
       </aside>
       <main class="content-2/3">
@@ -69,7 +69,7 @@ defmodule Web.KitFormLive do
           </p>
           <.lines_table :if={@lines != []} id="kit-lines" lines={@lines} />
           <p :if={@lines == []} id="kit-no-items" class="hint mb-4">
-            Find items to add on the right.
+            Find items to add.
           </p>
 
           <h2 class="heading mt-8">Tags · {length(@tags)}</h2>
@@ -78,7 +78,7 @@ defmodule Web.KitFormLive do
           </p>
           <.tags_to_add :if={@tags != []} id="kit-tags" tags={@tags} />
           <p :if={@tags == []} id="kit-no-tags" class="hint mb-4">
-            Find tags to add on the right.
+            Find tags to add.
           </p>
 
           <.form_actions>
@@ -193,7 +193,7 @@ defmodule Web.KitFormLive do
        assign(socket, tags: Enum.reject(socket.assigns.tags, &(Integer.to_string(&1.id) == id)))}
 
   attr :q, :string, required: true
-  attr :tags, :list, required: true
+  attr :results, :map, required: true, doc: "from tag_results/4"
 
   defp tag_search(assigns) do
     ~H"""
@@ -208,8 +208,11 @@ defmodule Web.KitFormLive do
         autocomplete="off"
       />
     </.form>
-    <ul :if={@tags != []} id="tag-search-results" class="action-list">
-      <li :for={tag <- @tags}>
+    <p :if={@q == "" and @results.tags != []} id="tag-most-used" class="hint mb-2">
+      Used most in the last year
+    </p>
+    <ul :if={@results.tags != []} id="tag-search-results" class="action-list">
+      <li :for={tag <- @results.tags}>
         <.button
           id={"tag-add-#{tag.id}"}
           type="button"
@@ -223,19 +226,45 @@ defmodule Web.KitFormLive do
         {tag.title}
       </li>
     </ul>
-    <p :if={@q != "" and @tags == []} class="hint">No tags match "{@q}".</p>
+    <p :if={@results.more > 0} id="tag-more" class="hint mt-2">
+      {Service.Format.count(@results.more, one: "%d more tag matches.", many: "%d more tags match.")} Type more of the name.
+    </p>
+    <p :if={@q != "" and @results.tags == []} class="hint">No tags match "{@q}".</p>
     """
   end
 
-  @doc "The team's tags not in the kit yet whose title contains `q`, A to Z."
-  def tag_results(all_tags, chosen, q) do
+  @most_used 8
+  @shown 10
+
+  @doc """
+  The tags to offer, leaving out the kit's. With no search, the #{@most_used} its
+  activities used most in the last year (`uses`, title to count). With one, the first
+  #{@shown} matches A to Z, and how many more there are. `%{tags: tags, more: n}`.
+  """
+  def tag_results(all_tags, chosen, q, uses) do
     q = q |> String.trim() |> String.downcase()
     chosen = MapSet.new(chosen, & &1.id)
+    offered = Enum.reject(all_tags, &MapSet.member?(chosen, &1.id))
 
-    Enum.filter(all_tags, fn tag ->
-      not MapSet.member?(chosen, tag.id) and String.contains?(String.downcase(tag.title), q)
-    end)
+    if q == "", do: most_used(offered, uses), else: matching(offered, q)
   end
+
+  defp most_used(tags, uses) do
+    tags =
+      tags
+      |> Enum.filter(&(Map.get(uses, &1.title, 0) > 0))
+      |> Enum.sort_by(&{-uses[&1.title], tag_sort(&1)})
+      |> Enum.take(@most_used)
+
+    %{tags: tags, more: 0}
+  end
+
+  defp matching(tags, q) do
+    matches = Enum.filter(tags, &String.contains?(String.downcase(&1.title), q))
+    %{tags: Enum.take(matches, @shown), more: max(length(matches) - @shown, 0)}
+  end
+
+  defp a_year_ago, do: DateTime.add(DateTime.utc_now(), -365, :day)
 
   defp tag_sort(tag), do: String.downcase(tag.title)
 end
