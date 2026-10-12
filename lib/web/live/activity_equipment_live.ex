@@ -263,7 +263,7 @@ defmodule Web.ActivityEquipmentLive do
   @doc "Tags about to be added, each with a remove button. Shared with the kit form."
   def tags_to_add(assigns) do
     ~H"""
-    <ul id={@id} class="action-list">
+    <ul id={@id} class="action-list mb-4">
       <li :for={tag <- @tags} id={"tag-#{tag.id}"}>
         <.button
           id={"tag-remove-#{tag.id}"}
