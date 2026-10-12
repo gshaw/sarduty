@@ -2,60 +2,42 @@ defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
   alias App.Model.Team
+  alias Service.Format
   alias Web.Components.ActivityMap
 
   # cspell:ignore Tremblay exsss
   # Made-up rows for the style guide, shaped like the app's pages.
 
   def letters do
-    [
-      %{
-        id: 101,
-        name: "Avery Chen",
-        email: "avery@example.com",
-        primary: "212h 30m",
-        secondary: "18h 00m",
-        total: "230h 30m",
-        letter: "TCL-2025-014"
-      },
-      %{
-        id: 117,
-        name: "Blake Morrison",
-        email: "blake@example.com",
-        primary: "198h 15m",
-        secondary: "4h 45m",
-        total: "203h 00m",
-        letter: nil
-      },
-      %{
-        id: 123,
-        name: "Casey Dhillon",
-        email: "casey@example.com",
-        primary: "156h 00m",
-        secondary: "62h 30m",
-        total: "218h 30m",
-        letter: "TCL-2025-015"
-      },
-      %{
-        id: 131,
-        name: "Devon Okafor",
-        email: "devon@example.com",
-        primary: "88h 45m",
-        secondary: "12h 15m",
-        total: "101h 00m",
-        letter: nil
-      },
-      %{
-        id: 152,
-        name: "Finley Tremblay",
-        email: "finley@example.com",
-        primary: "41h 00m",
-        secondary: "9h 30m",
-        total: "50h 30m",
-        letter: nil
-      }
-    ]
+    Enum.map(
+      [
+        {101, "Avery Chen", "avery@example.com", {212, 30}, {18, 0}, "TCL-2025-014"},
+        {117, "Blake Morrison", "blake@example.com", {198, 15}, {4, 45}, nil},
+        {123, "Casey Dhillon", "casey@example.com", {156, 0}, {62, 30}, "TCL-2025-015"},
+        {131, "Devon Okafor", "devon@example.com", {88, 45}, {12, 15}, nil},
+        {152, "Finley Tremblay", "finley@example.com", {41, 0}, {9, 30}, nil}
+      ],
+      &letter_row/1
+    )
   end
+
+  # Hours as `{hours, minutes}`, shown the way the letters page shows them.
+  defp letter_row({id, name, email, primary, secondary, letter}) do
+    primary = minutes(primary)
+    secondary = minutes(secondary)
+
+    %{
+      id: id,
+      name: name,
+      email: email,
+      primary: Format.duration(primary),
+      secondary: Format.duration(secondary),
+      total: Format.duration(primary + secondary),
+      letter: letter
+    }
+  end
+
+  defp minutes({hours, minutes}), do: hours * 60 + minutes
 
   # Page 2 of a long activity list, for the pagination example.
   def sample_page do

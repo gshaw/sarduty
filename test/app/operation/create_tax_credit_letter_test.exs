@@ -48,9 +48,9 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     assert letter.year == 2025
     assert letter.ref_id == "SRVTC-ABCDE"
     assert {letter.primary_minutes, letter.secondary_minutes} == {210, 60}
-    assert letter.letter_content =~ "Primary Hours: 3 hours\n"
+    assert letter.letter_content =~ "Primary Hours: 3h 30m\n"
     assert letter.letter_content =~ "Secondary Hours: 1 hour\n"
-    assert letter.letter_content =~ "Total Hours: 4 hours\n"
+    assert letter.letter_content =~ "Total Hours: 4h 30m\n"
     assert letter.letter_content =~ "Certified on January 15, 2026."
     assert letter.letter_content =~ "Pat Lee"
 
@@ -72,19 +72,18 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     assert letter.letter_content =~ "Total Hours: 0 hours"
   end
 
-  test "rounds each line down to whole hours, and totals the printed lines" do
+  test "prints hours as the letters table shows them, and reads them back" do
     rows = [
-      row(~U[2025-03-01 17:00:00Z], ~U[2025-03-01 20:50:00Z], ["Primary Hours"]),
-      row(~U[2025-03-02 17:00:00Z], ~U[2025-03-02 18:50:00Z], ["Secondary Hours"])
+      row(~U[2025-03-01 17:00:00Z], ~U[2025-03-01 17:45:00Z], ["Primary Hours"]),
+      row(~U[2025-03-02 17:00:00Z], ~U[2025-03-02 19:00:00Z], ["Secondary Hours"])
     ]
 
     letter = CreateTaxCreditLetter.plan(@team, @member, rows, 2025, "SRVTC-ABCDE", @now)
 
-    assert {letter.primary_minutes, letter.secondary_minutes} == {230, 110}
-    assert letter.letter_content =~ "Primary Hours: 3 hours\n"
-    assert letter.letter_content =~ "Secondary Hours: 1 hour\n"
-    assert letter.letter_content =~ "Total Hours: 4 hours\n"
-    assert TaxCreditLetter.parse_minutes(letter.letter_content) == {180, 60}
+    assert letter.letter_content =~ "Primary Hours: 45 min\n"
+    assert letter.letter_content =~ "Secondary Hours: 2 hours\n"
+    assert letter.letter_content =~ "Total Hours: 2h 45m\n"
+    assert TaxCreditLetter.parse_minutes(letter.letter_content) == {45, 120}
   end
 
   test "names the member, the year, and the Act, and says where the hours come from" do

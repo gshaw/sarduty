@@ -261,7 +261,7 @@ defmodule Web.VerifyLetterLive do
     ~H"""
     <div>
       <span>{@label}</span>
-      <strong>{Format.duration_as_hours_minutes_long(@minutes)}</strong>
+      <strong>{Format.duration(@minutes)}</strong>
     </div>
     """
   end

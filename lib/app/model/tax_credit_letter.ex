@@ -192,8 +192,9 @@ defmodule App.Model.TaxCreditLetter do
 
   @doc """
   `{primary, secondary}` minutes from a letter's "Primary Hours" and "Secondary Hours"
-  lines, as `Service.Format.duration_as_hours_minutes_long/1` writes them. Nil when
-  either is missing, or is a bare number with no unit.
+  lines: "212h 30m", "202 hours", or "45 min" as `Service.Format.duration/1` writes
+  them, or "212 hours, 30 minutes" as letters before #260 did. Nil when either is
+  missing, or is a bare number with no unit.
   """
   def parse_minutes(content) when is_binary(content) do
     with {:ok, primary} <- parse_line(content, "Primary Hours"),
@@ -214,6 +215,17 @@ defmodule App.Model.TaxCreditLetter do
   end
 
   defp parse_duration(value) do
+    # "1,204h 30m": drop thousands separators, not the comma in "212 hours, 30 minutes".
+    value = String.replace(value, ~r/(?<=\d),(?=\d)/, "")
+
+    case Regex.run(~r/^(\d+)h (\d+)m$|^(\d+) min$/, value) do
+      [_all, hours, minutes] -> {:ok, to_minutes(hours, minutes)}
+      [_all, "", "", minutes] -> {:ok, String.to_integer(minutes)}
+      nil -> parse_long_duration(value)
+    end
+  end
+
+  defp parse_long_duration(value) do
     case Regex.run(~r/^(?:(\d+) hours?)?(?:, )?(?:(\d+) minutes?)?$/, value) do
       [_all, hours] -> {:ok, String.to_integer(hours) * 60}
       [_all, hours, minutes] -> {:ok, to_minutes(hours, minutes)}

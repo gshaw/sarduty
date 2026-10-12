@@ -124,7 +124,7 @@ defmodule Web.MemberCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
       >
-        {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
+        {Service.Format.duration(record.total_minutes)}
       </:col>
       <:col
         :let={record}

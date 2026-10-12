@@ -18,7 +18,7 @@ defmodule Web.Components.AttendanceFilterTable do
   def attendance_filter_table(assigns) do
     assigns =
       Phoenix.Component.assign(assigns,
-        total_formatted: Service.Format.duration_as_hours_minutes_medium(assigns.total_minutes)
+        total_formatted: Service.Format.duration(assigns.total_minutes)
       )
 
     ~H"""
@@ -96,7 +96,7 @@ defmodule Web.Components.AttendanceFilterTable do
         class="w-1/12 whitespace-nowrap"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
+        {Service.Format.duration(record.duration_in_minutes)}
       </:col>
     </.table>
 

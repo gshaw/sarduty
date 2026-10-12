@@ -36,8 +36,9 @@ finish a task and leave. Write so a reader understands each sentence the first t
    `Service.Format.count/2` so the noun agrees with the number.
 10. **Format dates, times, and durations with `Service.Format`.** Never build them by hand.
     Dates put the month first: "Sep 28, 2025", or "September 28, 2025" in letters. Times use
-    the 24-hour clock ("14:05"). Durations are hours and minutes ("212h 30m"). Distances are
-    in km.
+    the 24-hour clock ("14:05"). Durations come from `Service.Format.duration/1`, the same
+    in tables, letters, and pages: "212h 30m", "202 hours" with no minutes, "1 hour", and
+    "45 min" under an hour. Never "212:30" or "212.5 hours". Distances are in km.
 11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
     only for SAR Duty the service, and rarely.
 12. **Be plain, not cheerful.** No "please", "sorry", "oops", "simply", "just", "easily",

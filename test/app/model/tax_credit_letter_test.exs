@@ -72,6 +72,13 @@ defmodule App.Model.TaxCreditLetterTest do
     end
 
     test "reads the hours as the letter writes them" do
+      assert parse("143h 30m", "72 hours") == {143 * 60 + 30, 72 * 60}
+      assert parse("45 min", "1 hour") == {45, 60}
+      assert parse("0 hours", "1h 5m") == {0, 65}
+      assert parse("1,204h 30m", "1,000 hours") == {1204 * 60 + 30, 1000 * 60}
+    end
+
+    test "reads the hours as letters before #260 wrote them" do
       assert parse("143 hours, 30 minutes", "72 hours") == {143 * 60 + 30, 72 * 60}
       assert parse("1 hour, 1 minute", "45 minutes") == {61, 45}
       assert parse("0 hours", "1 hour") == {0, 60}

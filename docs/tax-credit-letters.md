@@ -29,10 +29,10 @@ counted is in #191 and #192.
   so it gets the host's isolation (no login cookie), its miss limit
   ([Web.VerifyLimit](../lib/web/verify_limit.ex), shared with cards), and an
   organization's own verify host when that ships. The card pages don't mention letters.
-- **Printed hours round down to whole hours** (#260). The credit needs 200, so rounding
-  up could put a member over it. The total is the sum of the printed lines, so the
-  letter adds up. The saved minutes stay exact, and the verify page shows them, so it
-  can show up to 59 minutes more per line than the letter.
+- **Hours print as the letters table shows them**, from `Service.Format.duration/1`:
+  "212h 30m", or "202 hours" when there are no minutes (#260). Nothing is rounded, so
+  the letter, the verify page, and the saved minutes agree. `TaxCreditLetter.parse_minutes/1`
+  reads this and the older "212 hours, 30 minutes".
 - **The letter cites the Act, not a police force.** "An eligible search and rescue
   organization under subsection 118.07(1) of the Income Tax Act" is true in every
   province. A letter's text is saved when it's made, so changing the wording never

@@ -130,7 +130,7 @@ defmodule Web.Components.HomeMockups do
         rescue organization under subsection 118.07(1) of the Income Tax Act.
       </p>
       <p class="home-letter-hours">
-        Primary hours: 212 hours<br /> Secondary hours: 48 hours<br /> Total hours: 260 hours
+        Primary hours: 212h 30m<br /> Secondary hours: 48h 15m<br /> Total hours: 260h 45m
       </p>
       <div class="home-letter-foot">
         <div>

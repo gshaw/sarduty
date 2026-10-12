@@ -38,8 +38,6 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
   defp build_letter_content(team, member, hours, ref_id, year, now) do
     formatted_certified_on = Format.date_long(now, team.timezone)
-    primary = whole_hours(hours.primary_minutes)
-    secondary = whole_hours(hours.secondary_minutes)
 
     """
     #{team.mailing_address}
@@ -51,9 +49,9 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
     #{member.name} volunteered with #{team.name} in #{year}. #{team.name} is an eligible search and rescue organization under subsection 118.07(1) of the Income Tax Act.
 
-    Primary Hours: #{Format.duration_as_hours_minutes_long(primary)}
-    Secondary Hours: #{Format.duration_as_hours_minutes_long(secondary)}
-    Total Hours: #{Format.duration_as_hours_minutes_long(primary + secondary)}
+    Primary Hours: #{Format.duration(hours.primary_minutes)}
+    Secondary Hours: #{Format.duration(hours.secondary_minutes)}
+    Total Hours: #{Format.duration(hours.total_minutes)}
 
     These hours come from #{team.name}'s attendance records.
 
@@ -70,10 +68,6 @@ defmodule App.Operation.CreateTaxCreditLetter do
     Verify this letter at verify.sarduty.com/letters
     """
   end
-
-  # Rounded down, so a letter never claims an hour the member didn't reach. The total is
-  # the sum of the printed lines, so the letter adds up.
-  defp whole_hours(minutes), do: div(minutes, 60) * 60
 
   defp member_lines(%Member{address: address} = member) when address in [nil, ""],
     do: "Name: #{member.name}"
