@@ -126,12 +126,11 @@ defmodule Web.Components.HomeMockups do
       <p>To whom it may concern:</p>
       <p>Name: Avery Chen<br />Address: 12 Sample Street, Squamish BC</p>
       <p>
-        This letter serves to confirm that the above noted individual has completed eligible
-        volunteer search and rescue hours for {@team} in the 2025 calendar year.
+        Avery Chen volunteered with {@team} in 2025. {@team} is an eligible search and
+        rescue organization under subsection 118.07(1) of the Income Tax Act.
       </p>
       <p class="home-letter-hours">
-        Primary hours: 212 hours 30 minutes<br /> Secondary hours: 48 hours 15 minutes<br />
-        Total hours: 260 hours 45 minutes
+        Primary hours: 212 hours<br /> Secondary hours: 48 hours<br /> Total hours: 260 hours
       </p>
       <div class="home-letter-foot">
         <div>

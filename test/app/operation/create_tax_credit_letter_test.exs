@@ -48,9 +48,9 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     assert letter.year == 2025
     assert letter.ref_id == "SRVTC-ABCDE"
     assert {letter.primary_minutes, letter.secondary_minutes} == {210, 60}
-    assert letter.letter_content =~ "Primary Hours: 3 hours, 30 minutes"
+    assert letter.letter_content =~ "Primary Hours: 3 hours\n"
     assert letter.letter_content =~ "Secondary Hours: 1 hour\n"
-    assert letter.letter_content =~ "Total Hours: 4 hours, 30 minutes"
+    assert letter.letter_content =~ "Total Hours: 4 hours\n"
     assert letter.letter_content =~ "Certified on January 15, 2026."
     assert letter.letter_content =~ "Pat Lee"
 
@@ -70,6 +70,57 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
       )
 
     assert letter.letter_content =~ "Total Hours: 0 hours"
+  end
+
+  test "rounds each line down to whole hours, and totals the printed lines" do
+    rows = [
+      row(~U[2025-03-01 17:00:00Z], ~U[2025-03-01 20:50:00Z], ["Primary Hours"]),
+      row(~U[2025-03-02 17:00:00Z], ~U[2025-03-02 18:50:00Z], ["Secondary Hours"])
+    ]
+
+    letter = CreateTaxCreditLetter.plan(@team, @member, rows, 2025, "SRVTC-ABCDE", @now)
+
+    assert {letter.primary_minutes, letter.secondary_minutes} == {230, 110}
+    assert letter.letter_content =~ "Primary Hours: 3 hours\n"
+    assert letter.letter_content =~ "Secondary Hours: 1 hour\n"
+    assert letter.letter_content =~ "Total Hours: 4 hours\n"
+    assert TaxCreditLetter.parse_minutes(letter.letter_content) == {180, 60}
+  end
+
+  test "names the member, the year, and the Act, and says where the hours come from" do
+    letter = CreateTaxCreditLetter.plan(@team, @member, [], 2025, "SRVTC-ABCDE", @now)
+
+    assert letter.letter_content =~
+             "Sam Doe volunteered with North Shore Rescue in 2025. North Shore Rescue is an eligible search and rescue organization under subsection 118.07(1) of the Income Tax Act."
+
+    assert letter.letter_content =~
+             "These hours come from North Shore Rescue's attendance records."
+  end
+
+  test "prints the member's address, and leaves the line out when D4H has none" do
+    letter = CreateTaxCreditLetter.plan(@team, @member, [], 2025, "SRVTC-ABCDE", @now)
+    assert letter.letter_content =~ "Name: Sam Doe\nAddress: 1 Elm St\n"
+
+    for address <- [nil, ""] do
+      member = %{@member | address: address}
+      letter = CreateTaxCreditLetter.plan(@team, member, [], 2025, "SRVTC-ABCDE", @now)
+      assert letter.letter_content =~ "Name: Sam Doe\n\n"
+      refute letter.letter_content =~ "Address:"
+    end
+  end
+
+  describe "the contact line" do
+    test "points to the signer's details when they have a phone or email" do
+      team = %{@team | authorized_by_email: "president@example.com"}
+      letter = CreateTaxCreditLetter.plan(team, @member, [], 2025, "SRVTC-ABCDE", @now)
+      assert letter.letter_content =~ "If you have questions, contact me using the details below."
+    end
+
+    test "names the team when the signer has neither" do
+      team = %{@team | authorized_by_phone: ""}
+      letter = CreateTaxCreditLetter.plan(team, @member, [], 2025, "SRVTC-ABCDE", @now)
+      assert letter.letter_content =~ "If you have questions, contact North Shore Rescue."
+    end
   end
 
   describe "the signer block" do
