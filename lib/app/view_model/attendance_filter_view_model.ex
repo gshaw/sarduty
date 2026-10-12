@@ -39,9 +39,6 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
-  defp activity_primary_hours_tag, do: Activity.primary_hours_tag()
-  defp activity_secondary_hours_tag, do: Activity.secondary_hours_tag()
-
   defp build_member_year_options(member) do
     current = current_year()
 
@@ -75,7 +72,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     Attendance
     |> Attendance.scope(member_id: member.id)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
-    |> scope(tag: filter_options.tag)
+    |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
     |> scope(sort: filter_options.sort)
     |> preload(:activity)
     |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
@@ -85,7 +82,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     Attendance
     |> Attendance.scope(member_id: member.id)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
-    |> scope(tag: filter_options.tag)
+    |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
     |> select([r], coalesce(sum(r.duration_in_minutes), 0))
     |> Repo.one()
   end
@@ -118,34 +115,31 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   defp scope(q, when: year, timezone: timezone) when is_binary(year),
     do: Attendance.started_in(q, year, timezone)
 
-  defp scope(q, tag: "all"), do: q
+  defp scope(q, tag: "all", hours_tags: _), do: q
 
-  defp scope(q, tag: "both") do
+  defp scope(q, tag: "both", hours_tags: %{primary: primary, secondary: secondary}) do
     q
     |> join(:left, [at], ac in assoc(at, :activity))
-    |> where(
-      [at, ac],
-      ^activity_primary_hours_tag() in ac.tags or ^activity_secondary_hours_tag() in ac.tags
-    )
+    |> where([at, ac], ^primary in ac.tags or ^secondary in ac.tags)
   end
 
-  defp scope(q, tag: "primary") do
+  defp scope(q, tag: "primary", hours_tags: %{primary: primary}) do
     q
     |> join(:left, [at], ac in assoc(at, :activity))
-    |> where([at, ac], ^activity_primary_hours_tag() in ac.tags)
+    |> where([at, ac], ^primary in ac.tags)
   end
 
-  defp scope(q, tag: "secondary") do
+  defp scope(q, tag: "secondary", hours_tags: %{secondary: secondary}) do
     q
     |> join(:left, [at], ac in assoc(at, :activity))
-    |> where([at, ac], ^activity_secondary_hours_tag() in ac.tags)
+    |> where([at, ac], ^secondary in ac.tags)
   end
 
-  defp scope(q, tag: "other") do
+  defp scope(q, tag: "other", hours_tags: %{primary: primary, secondary: secondary}) do
     q
     |> join(:left, [at], ac in assoc(at, :activity))
-    |> where([at, ac], ^activity_primary_hours_tag() not in ac.tags)
-    |> where([at, ac], ^activity_secondary_hours_tag() not in ac.tags)
+    |> where([at, ac], ^primary not in ac.tags)
+    |> where([at, ac], ^secondary not in ac.tags)
   end
 
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)

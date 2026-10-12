@@ -1,3 +1,4 @@
+alias App.Model.Activity
 alias App.Model.Member
 alias App.Model.TaxCreditLetter
 alias App.Operation.CountTaxCreditHours
@@ -19,11 +20,13 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
   @doc """
   The new letter's fields for `member`, from their attendance `rows` as
-  `CountTaxCreditHours.count/3` takes them.
+  `CountTaxCreditHours.count/4` takes them.
   """
   def plan(team, member, rows, year, ref_id, now) do
     hours =
-      rows |> CountTaxCreditHours.count(year, team.timezone) |> CountTaxCreditHours.get(member.id)
+      rows
+      |> CountTaxCreditHours.count(year, team.timezone, Activity.hours_tags(team))
+      |> CountTaxCreditHours.get(member.id)
 
     %{
       member_id: member.id,

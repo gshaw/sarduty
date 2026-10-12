@@ -15,7 +15,7 @@ defmodule Web.ActivityFormLive do
 
     activity = if id = params["id"], do: Activity.find!(team, id)
     if activity && activity.deleted_at, do: raise(Web.Status.NotFound)
-    form = ActivityFormViewModel.from_activity(activity, team.timezone)
+    form = ActivityFormViewModel.from_activity(activity, team)
 
     socket =
       socket

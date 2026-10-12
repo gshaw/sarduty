@@ -2,6 +2,7 @@ defmodule App.Model.Organization do
   use App, :model
 
   alias App.Field.TrimmedString
+  alias App.Model.Activity
   alias App.Model.Organization
   alias App.Model.Team
   alias App.Repo
@@ -18,13 +19,24 @@ defmodule App.Model.Organization do
     field :website, TrimmedString
     # A PNG, already sized by Service.Image.png/2 when it was uploaded.
     field :logo, :binary, redact: true
+    # The D4H tags its teams count as primary and secondary hours (#289). Blank means
+    # "Primary Hours" and "Secondary Hours"; see App.Model.Activity.hours_tags/1.
+    field :primary_hours_tag, TrimmedString
+    field :secondary_hours_tag, TrimmedString
     has_many :teams, Team
     timestamps(type: :utc_datetime_usec)
   end
 
   def build_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:name, :short_name, :slug, :website])
+    |> cast(params, [
+      :name,
+      :short_name,
+      :slug,
+      :website,
+      :primary_hours_tag,
+      :secondary_hours_tag
+    ])
     |> update_change(:slug, &String.downcase/1)
     |> validate_required([:name, :short_name, :slug])
     |> validate_length(:name, max: 100)
@@ -32,8 +44,20 @@ defmodule App.Model.Organization do
     |> validate_format(:slug, ~r/^[a-z0-9-]{2,30}$/,
       message: "Use 2 to 30 lowercase letters, numbers, and dashes."
     )
+    |> validate_length(:primary_hours_tag, max: 100)
+    |> validate_length(:secondary_hours_tag, max: 100)
+    |> validate_different_hours_tags()
     |> validate_format(:website, ~r{^https://\S+$}, message: "Start the address with https://")
     |> unique_constraint(:slug)
+  end
+
+  defp validate_different_hours_tags(changeset) do
+    %{primary: primary, secondary: secondary} =
+      changeset |> apply_changes() |> Activity.hours_tags()
+
+    if String.downcase(primary) == String.downcase(secondary),
+      do: add_error(changeset, :secondary_hours_tag, "Use a different tag from primary hours."),
+      else: changeset
   end
 
   def get_all do

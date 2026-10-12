@@ -196,8 +196,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   next one out of view, and that row is gone until the next refresh.
 - The team's name and time zone are copied when the team is created and when an admin
   clicks refresh in team settings, not on the daily sync.
-- Activity tags are stored as titles. Letter hours depend on the exact titles
-  `Primary Hours` and `Secondary Hours` (`App.Model.Activity`).
+- Activity tags are stored as titles. Letter hours depend on the exact titles of the
+  team's hours tags: `Primary Hours` and `Secondary Hours`, unless its organization
+  names its own (`App.Model.Activity.hours_tags/1`, #289).
 
 ## Pages that skip the copy
 

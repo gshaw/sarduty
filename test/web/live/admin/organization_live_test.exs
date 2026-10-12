@@ -4,6 +4,7 @@ defmodule Web.Admin.OrganizationLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Activity
   alias App.Model.Organization
   alias App.Model.Team
 
@@ -42,6 +43,38 @@ defmodule Web.Admin.OrganizationLiveTest do
     assert Image.width(image) == 480
     assert Team.get!(team.id).organization_id == organization.id
     assert Team.get!(other.id).organization_id == nil
+  end
+
+  test "an admin sets the hours tags its teams count (#289)", %{conn: conn, team: team} do
+    organization = organization_fixture([team])
+    {:ok, lv, _html} = live(conn, ~p"/admin/orgs/#{organization.id}")
+
+    lv
+    |> form("#organization-form",
+      organization: %{
+        primary_hours_tag: " SRVTC Primary Activity ",
+        secondary_hours_tag: "SRVTC Secondary Activity"
+      }
+    )
+    |> render_submit(%{team_ids: ["", "#{team.id}"]})
+
+    assert team.id |> Team.get!() |> Activity.hours_tags() == %{
+             primary: "SRVTC Primary Activity",
+             secondary: "SRVTC Secondary Activity"
+           }
+  end
+
+  test "the hours tags must differ", %{conn: conn, team: team} do
+    organization = organization_fixture([team])
+    {:ok, lv, _html} = live(conn, ~p"/admin/orgs/#{organization.id}")
+
+    html =
+      lv
+      |> form("#organization-form", organization: %{secondary_hours_tag: "primary hours"})
+      |> render_submit(%{team_ids: ["", "#{team.id}"]})
+
+    assert html =~ "Use a different tag from primary hours."
+    assert Organization.get!(organization.id).secondary_hours_tag == nil
   end
 
   test "clearing a team's box takes it out", %{conn: conn, team: team} do

@@ -30,7 +30,9 @@ defmodule App.MCP.Tool.ListActivities do
         "to" => %{"type" => "string", "format" => "date", "description" => "Last day"},
         "tag" => %{
           "type" => "string",
-          "description" => "Only activities with this tag, such as Primary Hours"
+          "description" =>
+            "Only activities with this tag, such as the team's primary_hours_tag " <>
+              "from get_team"
         }
       },
       "required" => ["from", "to"]

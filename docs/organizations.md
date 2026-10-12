@@ -1,5 +1,7 @@
 # Organizations
 
+<!-- cspell:ignore OSARVA SRVTC -->
+
 A team can belong to one parent organization, like BCSARA (bcsara.com). Its cards and
 check pages then carry the organization's name and logo instead of SAR Duty's. An admin
 sets organizations up at `/admin/orgs`; teams can't join or leave one
@@ -16,6 +18,13 @@ themselves. Issue #87 has the design.
   scan page.
 - **The back of the pass** says who issued it: "North Shore Rescue, a member team of BC
   Search and Rescue Association", with no SAR Duty. The front doesn't change.
+
+- **Which D4H tags count as hours** on its teams' tax credit letters (#289). The OSARVA
+  teams tag activities `SRVTC Primary Activity` and `SRVTC Secondary Activity`, and
+  can't change them. Blank keeps `Primary Hours` and `Secondary Hours`. Letters still
+  say "Primary Hours" and "Secondary Hours", SARVAC's terms; only the tags that feed
+  them change. Letters already made keep their hours, and the letter list marks the
+  ones that changed. A lone team with its own tags gets a one-team organization.
 
 Saving an organization queues a pass update for every team it had or now has, so phones
 pick up the new back of the pass in a minute or so.

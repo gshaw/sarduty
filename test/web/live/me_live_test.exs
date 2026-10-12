@@ -84,6 +84,28 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#attendance-#{other_attendance.id}")
     end
 
+    test "counts the organization's hours tags (#289)",
+         %{conn: conn, team: team, member: member, mid_year: mid_year} do
+      organization_fixture([team], %{
+        primary_hours_tag: "SRVTC Primary Activity",
+        secondary_hours_tag: "SRVTC Secondary Activity"
+      })
+
+      finish = DateTime.add(mid_year, 2 * 3600)
+      tags = ["SRVTC Secondary Activity"]
+      counted = activity_fixture(team, %{started_at: mid_year, tags: tags})
+      attendance_fixture(counted, member, %{started_at: mid_year, finished_at: finish})
+      # The default tag counts for nothing in this organization.
+      uncounted = activity_fixture(team, %{started_at: mid_year, tags: ["Primary Hours"]})
+      attendance_fixture(uncounted, member, %{started_at: mid_year, finished_at: finish})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#hours-primary", "0 hours")
+      assert has_element?(lv, "#hours-secondary", "2 hours")
+      assert render(lv) =~ "SRVTC Primary Activity or SRVTC Secondary Activity tag"
+    end
+
     test "switches to an earlier year the member attended in",
          %{conn: conn, team: team, member: member, year: year, mid_year: mid_year} do
       last_year = DateTime.add(mid_year, -365, :day)

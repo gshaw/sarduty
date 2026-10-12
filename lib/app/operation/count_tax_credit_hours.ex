@@ -1,8 +1,8 @@
 defmodule App.Operation.CountTaxCreditHours do
   @moduledoc """
   Primary and secondary hours for tax credit letters, counted from each member's own
-  attendance rows (#191). The letter and the letter list both count with `count/3`, so
-  they always agree.
+  attendance rows (#191). The letter and the letter list both count with `count/4`, so
+  they always agree. Which tags count comes from `Activity.hours_tags/1`.
   """
 
   import Ecto.Query
@@ -20,26 +20,27 @@ defmodule App.Operation.CountTaxCreditHours do
   def call(%Team{} = team, year, member_ids \\ nil) do
     team
     |> load_rows(year, member_ids)
-    |> count(year, team.timezone)
+    |> count(year, team.timezone, Activity.hours_tags(team))
   end
 
   @doc """
   Hours by member id. Each row is a map with `member_id`, `started_at`, `finished_at`,
-  `duration_in_minutes`, and its activity's `tags`.
+  `duration_in_minutes`, and its activity's `tags`. `hours_tags` is the team's
+  `Activity.hours_tags/1`.
 
   - Rows count only when they started in `year` in `timezone`, and their activity has
-    the Primary Hours or Secondary Hours tag. Primary wins when it has both.
+    the primary or secondary hours tag. Primary wins when it has both.
   - A row counts from its own start and finish, not the activity's. D4H's duration is
     the fallback when a time is missing.
   - Overlapping rows for one member count once. Where primary and secondary overlap,
     the overlap is primary.
   """
-  def count(rows, year, timezone) do
+  def count(rows, year, timezone, hours_tags) do
     {start, finish} = Service.YearRange.bounds(year, timezone)
 
     rows
     |> Enum.filter(&started_in?(&1, start, finish))
-    |> Enum.map(&Map.put(&1, :kind, kind(&1.tags)))
+    |> Enum.map(&Map.put(&1, :kind, Activity.counts_as(&1.tags, hours_tags)))
     |> Enum.reject(&is_nil(&1.kind))
     |> Enum.group_by(& &1.member_id)
     |> Map.new(fn {member_id, member_rows} -> {member_id, count_member(member_rows)} end)
@@ -52,16 +53,6 @@ defmodule App.Operation.CountTaxCreditHours do
   defp started_in?(%{started_at: started_at}, start, finish) do
     naive = DateTime.to_naive(started_at)
     NaiveDateTime.compare(naive, start) != :lt and NaiveDateTime.compare(naive, finish) == :lt
-  end
-
-  defp kind(tags) do
-    tags = tags || []
-
-    cond do
-      Activity.primary_hours_tag() in tags -> :primary
-      Activity.secondary_hours_tag() in tags -> :secondary
-      true -> nil
-    end
   end
 
   defp count_member(rows) do
@@ -133,7 +124,7 @@ defmodule App.Operation.CountTaxCreditHours do
     end
   end
 
-  @doc "The rows `count/3` takes: attended, on activities not deleted, started in `year`."
+  @doc "The rows `count/4` takes: attended, on activities not deleted, started in `year`."
   def load_rows(%Team{} = team, year, member_ids \\ nil) do
     Attendance
     |> join(:inner, [at], m in assoc(at, :member))
