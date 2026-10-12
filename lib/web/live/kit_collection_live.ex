@@ -22,7 +22,7 @@ defmodule Web.KitCollectionLive do
       </.button>
     </div>
     <p class="lead">
-      A kit is a set of items you add to an activity in one step, each with its usual hours.
+      A kit is a set of items and tags you add to an activity in one step. Each item has its usual hours.
     </p>
 
     <.table
@@ -37,6 +37,9 @@ defmodule Web.KitCollectionLive do
       </:col>
       <:col :let={kit} label="Items" class="w-px whitespace-nowrap" align="right">
         {length(kit.kit_items)}
+      </:col>
+      <:col :let={kit} label="Tags" class="w-px whitespace-nowrap" align="right">
+        {length(kit.kit_tags)}
       </:col>
     </.table>
 

@@ -128,7 +128,9 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 
 1. Team logo, saved to `$TEAM_LOGO_PATH/<subdomain>.png` (disk, not the database).
 2. Members.
-3. Tags (kept in memory to turn activity tag references into titles).
+3. Tags, copied to `tags` for kits (#162), and kept in memory to turn activity tag
+   references into titles. The sync saves the list each time it fetches it for
+   activities.
 4. Exercises, events, incidents → `activities`.
 5. Attendance.
 6. Qualifications, then qualification awards.
@@ -156,9 +158,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   and back, in D4H's web app) both move the member's `updatedAt`, so losing manager
   access reaches SAR Duty within 10 minutes (tested 2026-10-06).
 
-- **Attendance, qualifications, awards, groups, and group memberships are deleted** when
+- **Attendance, qualifications, awards, groups, group memberships, and tags are deleted** when
   D4H stops returning them, at the end of each one's stage. A deleted qualification takes
-  its awards with it, and a deleted group its memberships.
+  its awards with it, a deleted group its memberships, and a deleted tag leaves its kits.
   [StaleRows](../lib/app/operation/refresh_d4h_data/stale_rows.ex) finds the rows, always
   within one team.
 - **Members and activities are never deleted.** A member deleted in D4H keeps their

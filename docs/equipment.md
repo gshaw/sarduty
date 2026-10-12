@@ -68,6 +68,12 @@ its kits.
 Hours only count for equipment. D4H takes km for a vehicle and a count for a supply, so
 a kit's vehicle lines have no hours and their usages go without a duration.
 
+A kit can carry tags too (#162), such as Flat Water and Primary Hours for boat training,
+with or without items. The picker lists the team's tags from the sync's copy in `tags`,
+A to Z with a search. D4H's API has no tag bundles (`resource-bundles` only groups custom
+fields), so the picker can't group them the way D4H's web app does. A kit points at the
+local tag, so a rename shows up and a tag D4H deletes leaves its kits.
+
 ## Adding equipment to an activity
 
 The activity page has an Equipment section. "Add equipment" opens a page that builds a
@@ -88,6 +94,13 @@ blank sends none; D4H takes no hours for a vehicle. Sending is a change set of s
 skips an item D4H has on it now, since D4H would count it twice. A published activity
 still takes equipment. Removing an item is a `delete_equipment_usage` row. After either,
 the activity's usages are read back from D4H.
+
+A kit's tags join the list as tags to add, leaving out any the activity has by its copied
+titles. Several kits add the union. Sending reads the activity's tag ids from D4H, then
+adds one `set_activity_tags` row with those and the new ones, each id once
+(`ChangeActivityEquipment.plan_tags/3`). D4H's `POST /{kind}s/{id}/tags` replaces the
+whole list, so a list from the last sync could drop a tag someone just added. After it
+applies, the new titles are copied to the activity so its page shows them.
 
 ## The copy
 

@@ -2,8 +2,9 @@ defmodule App.Operation.SaveKit do
   @moduledoc """
   Saves or deletes a kit (#271). A kit is SAR Duty's own, so nothing goes to D4H.
 
-  `lines` are `%{equipment_item_id: id, minutes: n}`. A line whose item isn't the team's
-  is dropped, so a kit never points at another team's equipment.
+  `lines` are `%{equipment_item_id: id, minutes: n}`, and `tag_ids` local tag ids (#162).
+  An item or tag that isn't the team's is dropped, so a kit never points at another
+  team's records.
   """
 
   import Ecto.Query
@@ -11,17 +12,19 @@ defmodule App.Operation.SaveKit do
   alias App.Model.EquipmentItem
   alias App.Model.Kit
   alias App.Model.KitItem
+  alias App.Model.KitTag
+  alias App.Model.Tag
   alias App.Model.Team
   alias App.Repo
 
   @doc "`{:ok, kit}`, or `{:error, changeset}` to show on the form."
-  def save(%Team{} = team, kit, params, lines) do
-    kit = kit || %Kit{team_id: team.id, kit_items: []}
-    kit_items = kit_items(team, lines)
+  def save(%Team{} = team, kit, params, lines, tag_ids \\ []) do
+    kit = kit || %Kit{team_id: team.id, kit_items: [], kit_tags: []}
 
     kit
     |> Kit.build_changeset(params)
-    |> Ecto.Changeset.put_assoc(:kit_items, kit_items)
+    |> Ecto.Changeset.put_assoc(:kit_items, kit_items(team, lines))
+    |> Ecto.Changeset.put_assoc(:kit_tags, kit_tags(team, tag_ids))
     |> Repo.insert_or_update()
   end
 
@@ -44,5 +47,18 @@ defmodule App.Operation.SaveKit do
     for line <- lines, MapSet.member?(team_ids, line.equipment_item_id) do
       %KitItem{equipment_item_id: line.equipment_item_id, minutes: max(line.minutes || 0, 0)}
     end
+  end
+
+  defp kit_tags(team, tag_ids) do
+    tag_ids = Enum.uniq(tag_ids)
+
+    team_ids =
+      Tag
+      |> where([t], t.team_id == ^team.id and t.id in ^tag_ids)
+      |> select([t], t.id)
+      |> Repo.all()
+      |> MapSet.new()
+
+    for id <- tag_ids, MapSet.member?(team_ids, id), do: %KitTag{tag_id: id}
   end
 end

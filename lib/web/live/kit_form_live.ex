@@ -1,14 +1,16 @@
 defmodule Web.KitFormLive do
   use Web, :live_view_app_layout
 
-  import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1]
+  import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1, tags_to_add: 1]
 
   alias App.Model.EquipmentItem
   alias App.Model.Kit
+  alias App.Model.Tag
   alias App.Operation.SaveKit
   alias Web.ActivityEquipmentLive
 
-  # Adding and changing a kit: its name, and its items with their usual hours (#271).
+  # Adding and changing a kit: its name, its items with their usual hours (#271), and its
+  # tags (#162). Tags come from the sync's copy of the team's D4H tags.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     kit = if id = params["id"], do: Kit.find!(team, id)
@@ -25,6 +27,8 @@ defmodule Web.KitFormLive do
     socket =
       socket
       |> assign(kit: kit, lines: lines, q: "", results: [])
+      |> assign(tags: if(kit, do: Kit.tags(kit), else: []), all_tags: Tag.get_all(team.id))
+      |> assign(tag_q: "")
       |> assign(page_title: if(kit, do: kit.title, else: "Add kit"))
       |> assign_form(Kit.build_changeset(kit || %Kit{}, %{}))
 
@@ -44,9 +48,14 @@ defmodule Web.KitFormLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <section id="kit-search">
+        <section id="kit-search" class="mb-8">
           <h2 class="heading">Find an item</h2>
           <.item_search q={@q} results={@results} />
+        </section>
+
+        <section id="kit-tag-search">
+          <h2 class="heading">Find a tag</h2>
+          <.tag_search q={@tag_q} tags={tag_results(@all_tags, @tags, @tag_q)} />
         </section>
       </aside>
       <main class="content-2/3">
@@ -61,6 +70,15 @@ defmodule Web.KitFormLive do
           <.lines_table :if={@lines != []} id="kit-lines" lines={@lines} />
           <p :if={@lines == []} id="kit-no-items" class="hint mb-4">
             Find items to add on the right.
+          </p>
+
+          <h2 class="heading mt-8">Tags · {length(@tags)}</h2>
+          <p class="hint mb-4">
+            Adding the kit adds these tags to the activity and keeps the tags it has.
+          </p>
+          <.tags_to_add :if={@tags != []} id="kit-tags" tags={@tags} />
+          <p :if={@tags == []} id="kit-no-tags" class="hint mb-4">
+            Find tags to add on the right.
           </p>
 
           <.form_actions>
@@ -110,7 +128,9 @@ defmodule Web.KitFormLive do
         %{equipment_item_id: line.item.id, minutes: minutes}
       end)
 
-    case SaveKit.save(team, socket.assigns.kit, params["kit"] || %{}, kit_lines) do
+    tag_ids = Enum.map(socket.assigns.tags, & &1.id)
+
+    case SaveKit.save(team, socket.assigns.kit, params["kit"] || %{}, kit_lines, tag_ids) do
       {:ok, kit} ->
         socket =
           socket
@@ -157,4 +177,65 @@ defmodule Web.KitFormLive do
     do:
       {:noreply,
        assign(socket, lines: ActivityEquipmentLive.remove_line(socket.assigns.lines, id))}
+
+  def handle_event("search-tags", %{"tag_q" => q}, socket),
+    do: {:noreply, assign(socket, tag_q: q)}
+
+  def handle_event("add-tag", %{"id" => id}, socket) do
+    tag = Enum.find(socket.assigns.all_tags, &(Integer.to_string(&1.id) == id))
+    tags = (socket.assigns.tags ++ List.wrap(tag)) |> Enum.uniq() |> Enum.sort_by(&tag_sort/1)
+    {:noreply, assign(socket, tags: tags)}
+  end
+
+  def handle_event("remove-tag", %{"id" => id}, socket),
+    do:
+      {:noreply,
+       assign(socket, tags: Enum.reject(socket.assigns.tags, &(Integer.to_string(&1.id) == id)))}
+
+  attr :q, :string, required: true
+  attr :tags, :list, required: true
+
+  defp tag_search(assigns) do
+    ~H"""
+    <.form for={%{}} id="tag-search-form" phx-change="search-tags" phx-submit="search-tags">
+      <.input
+        id="tag-search"
+        name="tag_q"
+        value={@q}
+        label="Search"
+        placeholder="Part of the tag's name"
+        phx-debounce="200"
+        autocomplete="off"
+      />
+    </.form>
+    <ul :if={@tags != []} id="tag-search-results" class="action-list">
+      <li :for={tag <- @tags}>
+        <.button
+          id={"tag-add-#{tag.id}"}
+          type="button"
+          size={:sm}
+          variant={:secondary}
+          phx-click="add-tag"
+          phx-value-id={tag.id}
+        >
+          Add
+        </.button>
+        {tag.title}
+      </li>
+    </ul>
+    <p :if={@q != "" and @tags == []} class="hint">No tags match "{@q}".</p>
+    """
+  end
+
+  @doc "The team's tags not in the kit yet whose title contains `q`, A to Z."
+  def tag_results(all_tags, chosen, q) do
+    q = q |> String.trim() |> String.downcase()
+    chosen = MapSet.new(chosen, & &1.id)
+
+    Enum.filter(all_tags, fn tag ->
+      not MapSet.member?(chosen, tag.id) and String.contains?(String.downcase(tag.title), q)
+    end)
+  end
+
+  defp tag_sort(tag), do: String.downcase(tag.title)
 end

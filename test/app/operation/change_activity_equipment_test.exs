@@ -3,9 +3,10 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
 
   alias App.Model.Activity
   alias App.Model.EquipmentItem
+  alias App.Model.Tag
   alias App.Operation.ChangeActivityEquipment
 
-  @activity %Activity{d4h_activity_id: 369_989}
+  @activity %Activity{d4h_activity_id: 369_989, activity_kind: "exercise"}
 
   defp item(d4h_id, type \\ "equipment"),
     do: %EquipmentItem{d4h_equipment_id: d4h_id, title: "Item #{d4h_id}", item_type: type}
@@ -43,5 +44,36 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
     rows = ChangeActivityEquipment.plan_adds(@activity, lines, [1])
     assert Enum.map(rows, & &1.new_value["d4h_equipment_id"]) == [2]
     assert hd(rows).new_value["minutes"] == 60
+  end
+
+  defp tag(d4h_id, title), do: %Tag{d4h_tag_id: d4h_id, title: title}
+
+  # D4H replaces the whole list, so the row keeps what the activity has.
+  test "a kit's tags join the activity's current tags in one row" do
+    tags = [tag(30, "Flat Water"), tag(10, "Primary Hours")]
+
+    row = ChangeActivityEquipment.plan_tags(@activity, [20, 10], tags)
+
+    assert row.action == :set_activity_tags
+    assert row.d4h_record_id == 369_989
+    assert row.old_value == %{"kind" => "exercise", "tag_ids" => [10, 20]}
+    assert row.new_value == %{"tag_ids" => [10, 20, 30], "titles" => ["Flat Water"]}
+  end
+
+  # D4H answers a repeated id with a 404.
+  test "two kits with the same tag send it once" do
+    tags = [tag(30, "Flat Water"), tag(40, "Boat"), tag(30, "Flat Water")]
+
+    row = ChangeActivityEquipment.plan_tags(@activity, [10, 10], tags)
+
+    assert row.new_value["tag_ids"] == [10, 30, 40]
+    assert row.new_value["titles"] == ["Flat Water", "Boat"]
+  end
+
+  test "no row when the activity has every tag" do
+    assert ChangeActivityEquipment.plan_tags(@activity, [10, 30], [tag(30, "Flat Water")]) ==
+             nil
+
+    assert ChangeActivityEquipment.plan_tags(@activity, [10], []) == nil
   end
 end

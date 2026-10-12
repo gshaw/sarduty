@@ -11,11 +11,13 @@ defmodule App.DataFixtures do
   alias App.Model.GroupRuleClauseQualification
   alias App.Model.Kit
   alias App.Model.KitItem
+  alias App.Model.KitTag
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
   alias App.Model.Qualification
+  alias App.Model.Tag
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
@@ -348,10 +350,19 @@ defmodule App.DataFixtures do
     %EquipmentUsage{} |> EquipmentUsage.build_changeset(params) |> Repo.insert!()
   end
 
-  def kit_fixture(%Team{} = team, title \\ "Truck 1", items \\ []) do
+  def kit_fixture(%Team{} = team, title \\ "Truck 1", items \\ [], tags \\ []) do
     kit_items =
       for {item, minutes} <- items, do: %KitItem{equipment_item_id: item.id, minutes: minutes}
 
-    Repo.insert!(%Kit{team_id: team.id, title: title, kit_items: kit_items})
+    kit_tags = for tag <- tags, do: %KitTag{tag_id: tag.id}
+    Repo.insert!(%Kit{team_id: team.id, title: title, kit_items: kit_items, kit_tags: kit_tags})
+  end
+
+  def tag_fixture(%Team{} = team, title) do
+    Repo.insert!(%Tag{
+      team_id: team.id,
+      d4h_tag_id: System.unique_integer([:positive]),
+      title: title
+    })
   end
 end
