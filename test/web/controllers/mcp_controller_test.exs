@@ -50,6 +50,7 @@ defmodule Web.MCPControllerTest do
       {result, text} = call_tool(conn, token, team, "get_team")
       refute result["isError"]
       assert Jason.decode!(text)["name"] == team.name
+      assert Jason.decode!(text)["primary_hours_tag"] == "Primary Hours"
     end
 
     test "a token for team A gets nothing from team B", ctx do

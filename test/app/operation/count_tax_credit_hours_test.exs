@@ -6,6 +6,7 @@ defmodule App.Operation.CountTaxCreditHoursTest do
   @primary ["Primary Hours"]
   @secondary ["Secondary Hours"]
   @timezone "America/Vancouver"
+  @hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours"}
 
   defp row(started_at, finished_at, tags, attrs \\ %{}) do
     duration =
@@ -24,7 +25,9 @@ defmodule App.Operation.CountTaxCreditHoursTest do
   end
 
   defp hours(rows, year \\ 2025, member_id \\ 1) do
-    rows |> CountTaxCreditHours.count(year, @timezone) |> CountTaxCreditHours.get(member_id)
+    rows
+    |> CountTaxCreditHours.count(year, @timezone, @hours_tags)
+    |> CountTaxCreditHours.get(member_id)
   end
 
   defp minutes(rows, year \\ 2025) do
@@ -158,6 +161,21 @@ defmodule App.Operation.CountTaxCreditHoursTest do
   test "an activity with both tags counts as primary, once" do
     rows = [row(~U[2025-03-01 17:00:00Z], ~U[2025-03-01 20:00:00Z], @primary ++ @secondary)]
     assert minutes(rows) == {180, 0}
+  end
+
+  test "counts the organization's hours tags, not the default ones" do
+    org_tags = %{primary: "SRVTC Primary Activity", secondary: "SRVTC Secondary Activity"}
+
+    rows = [
+      row(~U[2025-03-01 17:00:00Z], ~U[2025-03-01 18:00:00Z], ["SRVTC Primary Activity"]),
+      row(~U[2025-03-02 17:00:00Z], ~U[2025-03-02 19:00:00Z], ["SRVTC Secondary Activity"]),
+      row(~U[2025-03-03 17:00:00Z], ~U[2025-03-03 20:00:00Z], @primary)
+    ]
+
+    hours =
+      rows |> CountTaxCreditHours.count(2025, @timezone, org_tags) |> CountTaxCreditHours.get(1)
+
+    assert {hours.primary_minutes, hours.secondary_minutes} == {60, 120}
   end
 
   test "8 pm on December 31 in the team's time zone counts toward that year" do

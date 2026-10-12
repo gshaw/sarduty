@@ -64,7 +64,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
     attendance =
       attend(team, member, ~U[2026-01-01 08:00:00Z], 60, %{
-        activity: %{tags: [Activity.secondary_hours_tag()]}
+        activity: %{tags: ["Secondary Hours"]}
       })
 
     # Older rows were written without the Z.

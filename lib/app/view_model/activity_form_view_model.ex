@@ -3,6 +3,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
 
   alias App.Field
   alias App.Model.Activity
+  alias App.Model.Team
   alias App.Validate
 
   @kinds [{"Exercise", "exercise"}, {"Incident", "incident"}, {"Event", "event"}]
@@ -27,9 +28,10 @@ defmodule App.ViewModel.ActivityFormViewModel do
   def kinds, do: @kinds
   def hours, do: @hours
 
-  def from_activity(nil, _timezone), do: %__MODULE__{}
+  @doc "The form for `activity`, or a blank one for nil. Times are on the team's wall clock."
+  def from_activity(nil, _team), do: %__MODULE__{}
 
-  def from_activity(%Activity{} = activity, timezone) do
+  def from_activity(%Activity{} = activity, %Team{timezone: timezone} = team) do
     %__MODULE__{
       kind: activity.activity_kind,
       title: activity.title,
@@ -38,16 +40,16 @@ defmodule App.ViewModel.ActivityFormViewModel do
       tracking_number: activity.tracking_number,
       starts_at: local(activity.started_at, timezone),
       ends_at: local(activity.finished_at, timezone),
-      hours: hours_of(activity.tags || []),
+      hours: hours_of(activity.tags, Activity.hours_tags(team)),
       published: activity.is_published == true
     }
   end
 
-  defp hours_of(tags) do
-    cond do
-      Activity.primary_hours_tag() in tags -> "primary"
-      Activity.secondary_hours_tag() in tags -> "secondary"
-      true -> "none"
+  defp hours_of(tags, hours_tags) do
+    case Activity.counts_as(tags, hours_tags) do
+      :primary -> "primary"
+      :secondary -> "secondary"
+      nil -> "none"
     end
   end
 

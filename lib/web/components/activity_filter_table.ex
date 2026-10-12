@@ -6,6 +6,7 @@ defmodule Web.Components.ActivityFilterTable do
   import Web.Components.Pagination
   import Web.Components.Table
 
+  alias App.Model.Activity
   alias App.ViewModel.ActivityFilterViewModel
 
   attr :form, :map, required: true
@@ -79,6 +80,8 @@ defmodule Web.Components.ActivityFilterTable do
 
   # The activity list's table, without its filters. The style guide shows it with made-up rows.
   def activity_table(assigns) do
+    assigns = assign(assigns, :hours_tags, Activity.hours_tags(assigns.team))
+
     ~H"""
     <.table
       id={@id}
@@ -94,7 +97,7 @@ defmodule Web.Components.ActivityFilterTable do
         <div class="hint">
           {activity_summary(record)}
         </div>
-        <.activity_tags activity={record} />
+        <.activity_tags activity={record} hours_tags={@hours_tags} />
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
         <.activity_kind activity={record} />
@@ -115,7 +118,7 @@ defmodule Web.Components.ActivityFilterTable do
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span :if={hours_type = activity_hours_type(record)} class="text-text-muted">
+        <span :if={hours_type = activity_hours_type(record, @hours_tags)} class="text-text-muted">
           {hours_type}
         </span>
         {Service.Format.duration_as_hours_minutes_short(

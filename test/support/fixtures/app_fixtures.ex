@@ -138,7 +138,7 @@ defmodule App.DataFixtures do
           hours_kind: "primary",
           started_at: started_at,
           finished_at: finished_at,
-          tags: [Activity.primary_hours_tag()]
+          tags: ["Primary Hours"]
         },
         attrs
       )

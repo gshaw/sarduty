@@ -23,6 +23,7 @@ defmodule Web.ActivityLive do
       assign(socket,
         page_title: activity.title,
         activity: activity,
+        hours_tags: Activity.hours_tags(socket.assigns.current_team),
         attendances: attendances,
         attendance_count: length(attendances),
         usages: EquipmentUsage.for_activity(activity),
@@ -78,6 +79,7 @@ defmodule Web.ActivityLive do
       <aside class="content-1/3">
         <.sidebar_content
           activity={@activity}
+          hours_tags={@hours_tags}
           attendances={@attendances}
           attendance_count={@attendance_count}
         />
@@ -85,6 +87,7 @@ defmodule Web.ActivityLive do
       <main class="content-2/3">
         <.main_content
           activity={@activity}
+          hours_tags={@hours_tags}
           map={@map}
           attendances={@attendances}
           attendance_count={@attendance_count}
@@ -121,7 +124,7 @@ defmodule Web.ActivityLive do
       <dt>Duration</dt>
       <dd>{format_activity_duration(@activity)}</dd>
 
-      <div :if={hours_type = activity_hours_type(@activity)}>
+      <div :if={hours_type = activity_hours_type(@activity, @hours_tags)}>
         <dt>SARVAC hours</dt>
         <dd>{hours_type}</dd>
       </div>
@@ -188,7 +191,7 @@ defmodule Web.ActivityLive do
   def main_content(assigns) do
     ~H"""
     <div>
-      <div class="mb-4"><.activity_tags activity={@activity} /></div>
+      <div class="mb-4"><.activity_tags activity={@activity} hours_tags={@hours_tags} /></div>
 
       <div :if={@map} class="measure mb-4">
         <.activity_map id="activity-map" map={@map} label="Map of activity" />

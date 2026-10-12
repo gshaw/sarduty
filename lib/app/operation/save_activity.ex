@@ -4,8 +4,8 @@ defmodule App.Operation.SaveActivity do
   (docs/records.md). plan/4 turns the form into a change set row; call/5 applies it
   through App.Operation.ApplyEdit and returns the activity as the sync copied it.
 
-  The hours choice sets the activity's tags: Primary Hours, Secondary Hours, or neither,
-  keeping any other tags it has.
+  The hours choice sets the activity's tags: the team's primary or secondary hours tag
+  (`Activity.hours_tags/1`), or neither, keeping any other tags it has.
   """
 
   alias App.Accounts.User
@@ -22,7 +22,7 @@ defmodule App.Operation.SaveActivity do
   store refused the change.
   """
   def call(%Team{} = team, activity, params, %User{} = user, now) do
-    form = ActivityFormViewModel.from_activity(activity, team.timezone)
+    form = ActivityFormViewModel.from_activity(activity, team)
 
     with {:ok, values} <- ActivityFormViewModel.validate(form, params) do
       tag_ids =
@@ -31,7 +31,7 @@ defmodule App.Operation.SaveActivity do
         |> D4H.fetch_tags()
         |> Map.new(&{&1.title, &1.d4h_tag_id})
 
-      case plan(activity, values, tag_ids, team.timezone) do
+      case plan(activity, values, tag_ids, team) do
         :unchanged -> {:ok, activity}
         row -> apply_row(team, user, activity, row, now)
       end
@@ -49,8 +49,9 @@ defmodule App.Operation.SaveActivity do
   The change set row for the form's values, or `:unchanged`. `tag_ids` maps the team's
   tag titles to their D4H ids. An update names only the fields that differ.
   """
-  def plan(nil, %ActivityFormViewModel{} = values, tag_ids, timezone) do
-    new = values |> fields(timezone) |> Map.put("tag_ids", tag_ids_for(values.hours, [], tag_ids))
+  def plan(nil, %ActivityFormViewModel{} = values, tag_ids, %Team{} = team) do
+    hours_tag_ids = tag_ids_for(values.hours, [], tag_ids, Activity.hours_tags(team))
+    new = values |> fields(team.timezone) |> Map.put("tag_ids", hours_tag_ids)
 
     %ChangeSetRow{
       action: :create_activity,
@@ -59,14 +60,24 @@ defmodule App.Operation.SaveActivity do
     }
   end
 
-  def plan(%Activity{} = activity, %ActivityFormViewModel{} = values, tag_ids, timezone) do
-    old = activity |> ActivityFormViewModel.from_activity(timezone) |> fields(timezone)
+  def plan(%Activity{} = activity, %ActivityFormViewModel{} = values, tag_ids, %Team{} = team) do
+    timezone = team.timezone
+    form = ActivityFormViewModel.from_activity(activity, team)
+    old = fields(form, timezone)
     new = values |> fields(timezone) |> Map.reject(fn {key, value} -> old[key] == value end)
 
     new =
-      if values.hours == ActivityFormViewModel.from_activity(activity, timezone).hours,
-        do: new,
-        else: Map.put(new, "tag_ids", tag_ids_for(values.hours, activity.tags || [], tag_ids))
+      if values.hours == form.hours do
+        new
+      else
+        hours_tags = Activity.hours_tags(team)
+
+        Map.put(
+          new,
+          "tag_ids",
+          tag_ids_for(values.hours, activity.tags || [], tag_ids, hours_tags)
+        )
+      end
 
     if new == %{} do
       :unchanged
@@ -93,17 +104,15 @@ defmodule App.Operation.SaveActivity do
   end
 
   # The activity's other tags, and the chosen hours tag. A tag the team lacks is left out.
-  defp tag_ids_for(hours, current_titles, tag_ids) do
-    hours_tags = [Activity.primary_hours_tag(), Activity.secondary_hours_tag()]
-
+  defp tag_ids_for(hours, current_titles, tag_ids, hours_tags) do
     chosen =
       case hours do
-        "primary" -> [Activity.primary_hours_tag()]
-        "secondary" -> [Activity.secondary_hours_tag()]
+        "primary" -> [hours_tags.primary]
+        "secondary" -> [hours_tags.secondary]
         "none" -> []
       end
 
-    (current_titles -- hours_tags)
+    (current_titles -- [hours_tags.primary, hours_tags.secondary])
     |> Enum.concat(chosen)
     |> Enum.flat_map(&List.wrap(tag_ids[&1]))
     |> Enum.sort()

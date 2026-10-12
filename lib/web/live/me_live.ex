@@ -1,6 +1,7 @@
 defmodule Web.MeLive do
   use Web, :live_view_narrow_layout
 
+  alias App.Model.Activity
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
@@ -22,6 +23,7 @@ defmodule Web.MeLive do
       |> assign(:letters, TaxCreditLetter.get_all_for_member(member))
       |> assign(:years, MemberRecords.years(member, now))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
+      |> assign(:hours_tags, Activity.hours_tags(member.team))
 
     {:ok, socket}
   end
@@ -110,7 +112,7 @@ defmodule Web.MeLive do
           </.link>
         </nav>
       </div>
-      <.hours_content hours={@hours} />
+      <.hours_content hours={@hours} hours_tags={@hours_tags} />
       <.attendance_content attendances={@attendances} year={@year} member={@member} />
     </div>
     """
@@ -127,8 +129,7 @@ defmodule Web.MeLive do
       <dd id="hours-total">{format_minutes(@hours.total_minutes)}</dd>
     </dl>
     <p class="hint">
-      Counted the same way as your tax credit letter. Only activities with the Primary Hours or
-      Secondary Hours tag count.
+      Counted the same way as your tax credit letter. Only activities with the {@hours_tags.primary} or {@hours_tags.secondary} tag count.
     </p>
     """
   end

@@ -6,11 +6,52 @@ defmodule App.Model.Activity do
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Repo
 
-  def primary_hours_tag, do: "Primary Hours"
-  def secondary_hours_tag, do: "Secondary Hours"
+  @default_hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours"}
+
+  @doc """
+  The D4H tags that make an activity count as primary or secondary hours, as
+  `%{primary: tag, secondary: tag}`. A team's organization may name its own (#289);
+  otherwise "Primary Hours" and "Secondary Hours". Uses the team's organization when it
+  is preloaded, and reads just its tags when it isn't.
+  """
+  def hours_tags(%Organization{} = organization) do
+    %{
+      primary: organization.primary_hours_tag || @default_hours_tags.primary,
+      secondary: organization.secondary_hours_tag || @default_hours_tags.secondary
+    }
+  end
+
+  def hours_tags(%Team{organization: %Organization{} = organization}),
+    do: hours_tags(organization)
+
+  def hours_tags(%Team{organization_id: nil}), do: @default_hours_tags
+
+  def hours_tags(%Team{organization_id: organization_id}) do
+    Organization
+    |> where([o], o.id == ^organization_id)
+    |> select([o], %Organization{
+      primary_hours_tag: o.primary_hours_tag,
+      secondary_hours_tag: o.secondary_hours_tag
+    })
+    |> Repo.one!()
+    |> hours_tags()
+  end
+
+  @doc "Which hours the tags count for: `:primary`, `:secondary`, or nil. Primary wins."
+  def counts_as(tags, %{primary: primary, secondary: secondary}) do
+    tags = tags || []
+
+    cond do
+      primary in tags -> :primary
+      secondary in tags -> :secondary
+      true -> nil
+    end
+  end
+
   def null_island, do: "0.00000,0.00000"
 
   schema "activities" do

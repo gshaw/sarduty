@@ -42,6 +42,18 @@ defmodule Web.Admin.OrganizationLive do
         Its start page on the verify site: {Web.VerifyHost.host()}/orgs/{@form[:slug].value || "slug"}.
       </.input>
       <.input field={@form[:website]} label="Website" placeholder="https://" />
+      <.input field={@form[:primary_hours_tag]} label="Primary hours tag" placeholder="Primary Hours">
+        The D4H tag on activities that count as primary hours on its teams' tax credit letters.
+        Leave it blank for "Primary Hours".
+      </.input>
+      <.input
+        field={@form[:secondary_hours_tag]}
+        label="Secondary hours tag"
+        placeholder="Secondary Hours"
+      >
+        Leave it blank for "Secondary Hours". Letters already made keep their hours when a tag
+        changes. The letter list marks the ones whose hours changed.
+      </.input>
 
       <div class="mb-6">
         <.label for={@uploads.logo.ref}>Logo</.label>

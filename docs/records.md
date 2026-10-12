@@ -61,7 +61,7 @@ that title.
   After a change, the member's Apple Wallet pass is nudged to fetch the new photo.
 - **Activities**: add, change, delete. `DELETE /<kind>s/<id>` is Records' own; it marks
   the activity deleted as D4H does, and SAR Duty marks its copy at once. The SARVAC
-  hours choice sets the Primary Hours or Secondary Hours tag and keeps any others. A
+  hours choice sets the team's primary or secondary hours tag and keeps any others. A
   new activity keeps its id even if its tags or published flag fail, so a retry never
   makes a second one. Times are on the team's clock, to the minute.
 - **Qualifications and groups**: add, rename, delete. A qualification's awards and a

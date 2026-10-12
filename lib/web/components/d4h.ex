@@ -12,12 +12,13 @@ defmodule Web.Components.D4H do
   end
 
   attr :activity, :map, required: true
+  attr :hours_tags, :map, required: true, doc: "the team's App.Model.Activity.hours_tags/1"
   attr :rest, :global, include: ~w(class)
 
   # D4H's own tags on an activity: data, not status, so outlined. The primary and secondary
-  # hours tags aren't shown here; activity_hours_type/1 puts them beside the hours.
+  # hours tags aren't shown here; activity_hours_type/2 puts them beside the hours.
   def activity_tags(assigns) do
-    assigns = assign(assigns, :tags, other_tags(assigns.activity.tags))
+    assigns = assign(assigns, :tags, other_tags(assigns.activity.tags, assigns.hours_tags))
 
     ~H"""
     <div :if={@tags != []} {@rest}>
@@ -28,16 +29,19 @@ defmodule Web.Components.D4H do
     """
   end
 
-  defp other_tags(tags) do
-    (tags -- [Activity.primary_hours_tag(), Activity.secondary_hours_tag()]) |> Enum.sort()
+  defp other_tags(tags, hours_tags) do
+    ((tags || []) -- [hours_tags.primary, hours_tags.secondary]) |> Enum.sort()
   end
 
-  @doc "Which SARVAC hours an activity counts for, from its D4H tags: Primary, Secondary, or nil."
-  def activity_hours_type(activity) do
-    cond do
-      Activity.primary_hours_tag() in activity.tags -> "Primary"
-      Activity.secondary_hours_tag() in activity.tags -> "Secondary"
-      true -> nil
+  @doc """
+  Which SARVAC hours an activity counts for, from its D4H tags and the team's
+  `Activity.hours_tags/1`: Primary, Secondary, or nil.
+  """
+  def activity_hours_type(activity, hours_tags) do
+    case Activity.counts_as(activity.tags, hours_tags) do
+      :primary -> "Primary"
+      :secondary -> "Secondary"
+      nil -> nil
     end
   end
 
