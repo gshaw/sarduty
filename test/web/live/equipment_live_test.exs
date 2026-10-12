@@ -121,7 +121,13 @@ defmodule Web.EquipmentLiveTest do
   test "a kit gets tags from the team's tags", ctx do
     water = tag_fixture(ctx.team, "Flat Water")
     tag_fixture(ctx.team, "Medical")
+    activity_fixture(ctx.team, %{tags: ["Flat Water"]})
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/kits/new")
+
+    # With no search, only tags the team's activities used.
+    assert has_element?(lv, "#tag-most-used")
+    assert has_element?(lv, "#tag-add-#{water.id}")
+    refute has_element?(lv, "#tag-search-results", "Medical")
 
     lv |> form("#tag-search-form", %{tag_q: "flat"}) |> render_change()
     refute has_element?(lv, "#tag-search-results", "Medical")
