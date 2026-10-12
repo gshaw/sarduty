@@ -21,12 +21,15 @@ defmodule App.Operation.RefreshD4HData.UpsertTagsTest do
 
     UpsertTags.save(
       team.id,
-      [%D4H.Tag{d4h_tag_id: 2, title: "Flat Water"}, %D4H.Tag{d4h_tag_id: 1, title: "Boats"}],
+      [
+        %D4H.Tag{d4h_tag_id: 2, title: "Flat Water", owner_type: "Organisation", owner_id: 7},
+        %D4H.Tag{d4h_tag_id: 1, title: "Boats", owner_type: "Team", owner_id: 3}
+      ],
       @now
     )
 
-    assert team.id |> Tag.get_all() |> Enum.map(&{&1.d4h_tag_id, &1.title}) ==
-             [{1, "Boats"}, {2, "Flat Water"}]
+    assert team.id |> Tag.get_all() |> Enum.map(&{&1.d4h_tag_id, &1.title, &1.owner_type}) ==
+             [{1, "Boats", "Team"}, {2, "Flat Water", "Organisation"}]
 
     UpsertTags.save(team.id, [%D4H.Tag{d4h_tag_id: 2, title: "Flat Water"}], @now)
 

@@ -28,6 +28,8 @@ defmodule App.Operation.RefreshD4HData.UpsertTags do
           team_id: team_id,
           d4h_tag_id: tag.d4h_tag_id,
           title: tag.title,
+          owner_type: tag.owner_type,
+          owner_id: tag.owner_id,
           inserted_at: now,
           updated_at: now
         }
@@ -37,7 +39,7 @@ defmodule App.Operation.RefreshD4HData.UpsertTags do
     |> Enum.chunk_every(100)
     |> Enum.each(
       &Repo.insert_all(Tag, &1,
-        on_conflict: {:replace, [:title, :updated_at]},
+        on_conflict: {:replace, [:title, :owner_type, :owner_id, :updated_at]},
         conflict_target: [:team_id, :d4h_tag_id]
       )
     )

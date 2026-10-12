@@ -130,7 +130,9 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 2. Members.
 3. Tags, copied to `tags` for kits (#162), and kept in memory to turn activity tag
    references into titles. The sync saves the list each time it fetches it for
-   activities.
+   activities. Each tag keeps its owner (`owner_type` "Team" or "Organisation", and
+   `owner_id`): an organisation's tags are read-only to its teams (#289). Records sends
+   a team owner; a missing owner stays nil.
 4. Exercises, events, incidents → `activities`.
 5. Attendance.
 6. Qualifications, then qualification awards.

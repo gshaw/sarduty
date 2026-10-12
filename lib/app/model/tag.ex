@@ -12,6 +12,10 @@ defmodule App.Model.Tag do
     belongs_to :team, Team
     field :d4h_tag_id, :integer
     field :title, TrimmedString
+    # "Team" or "Organisation" and its D4H id; an organisation's tags are read-only to
+    # its teams (#289).
+    field :owner_type, :string
+    field :owner_id, :integer
     timestamps(type: :utc_datetime_usec)
   end
 

@@ -8,6 +8,10 @@ defmodule App.Repo.Migrations.CreateTagsAndKitTags do
       add :team_id, references(:teams), null: false
       add :d4h_tag_id, :integer, null: false
       add :title, :string, null: false
+      # "Team" or "Organisation", and its D4H id. An organisation's tags are read-only to
+      # its teams (#289). Nil when the API leaves the owner out.
+      add :owner_type, :string
+      add :owner_id, :integer
 
       timestamps(type: :utc_datetime_usec)
     end
