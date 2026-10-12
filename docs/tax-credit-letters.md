@@ -37,6 +37,10 @@ counted is in #191 and #192.
   organization under subsection 118.07(1) of the Income Tax Act" is true in every
   province. A letter's text is saved when it's made, so changing the wording never
   changes a letter already issued.
+- **The letterhead is the organization's logo, then the team's** (#290), top right. Either
+  is left out when it's missing, and a team without a logo never gets SAR Duty's. Logos
+  are the current ones when the PDF is built: a letter saves its text and signature, not
+  its logos.
 - **The QR code is drawn, not an image.** Vector squares from `eqrcode`'s matrix, beside
   the signer block, so it prints sharp. It holds the URL in lower case, since the
   `/letters` path is case-sensitive. Letters from before #207 get none.

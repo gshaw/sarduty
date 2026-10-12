@@ -17,7 +17,7 @@ defmodule Service.PDFLockTest do
       title: @title,
       author: "Treasurer é",
       creator: "SAR Duty",
-      logo: nil,
+      logos: [],
       content: "Dear René’s (friend) \\ backslash\nThanks for volunteering."
     }
     |> Map.merge(extra)
@@ -26,7 +26,7 @@ defmodule Service.PDFLockTest do
 
   defp letter_with_images do
     letter(%{
-      logo: File.read!("priv/static/images/logo-sarvac.png"),
+      logos: [File.read!("priv/static/images/logo-sarvac.png")],
       signature: File.read!("priv/apple/sarduty_logo.png"),
       body: "Dear René’s (friend)\nThanks for volunteering.",
       signer: "Jane Doe\nTreasurer"

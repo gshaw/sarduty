@@ -30,6 +30,38 @@ defmodule App.Operation.BuildTaxCreditLetterAttachmentTest do
     refute attachment.content =~ "/Subtype /Image"
   end
 
+  describe "the organization's logo" do
+    test "goes beside the team's", %{team: team, letter: letter} do
+      organization_fixture([team])
+      team_logo_fixture(team, png_fixture(300, 150))
+      assert images(build_with_organization(letter)) == 2
+    end
+
+    test "goes alone when the team has no logo", %{team: team, letter: letter} do
+      organization_fixture([team])
+      assert images(build_with_organization(letter)) == 1
+    end
+
+    test "is left out when the organization has none", %{team: team, letter: letter} do
+      organization_fixture([team], %{logo: nil})
+      team_logo_fixture(team, png_fixture(200, 200))
+      assert images(build_with_organization(letter)) == 1
+    end
+  end
+
+  # The letter's team as it is now, in the organization.
+  defp build_with_organization(letter) do
+    letter |> Repo.preload([member: :team], force: true) |> BuildTaxCreditLetterAttachment.call()
+  end
+
+  # Images drawn on the page. A logo padded square has an alpha channel, which the PDF
+  # stores as a second image, its /SMask.
+  defp images(attachment) do
+    count(attachment.content, "/Subtype /Image") - count(attachment.content, "/SMask ")
+  end
+
+  defp count(content, pattern), do: length(String.split(content, pattern)) - 1
+
   describe "the QR code" do
     test "opens the letter's page on the verify site", %{letter: letter} do
       letter = %{letter | ref_id: "SRVTC-K7Q4M2XA"}
@@ -51,11 +83,6 @@ defmodule App.Operation.BuildTaxCreditLetterAttachmentTest do
 
     defp create_letter(team, member) do
       CreateTaxCreditLetter.call(team: Repo.reload!(team), member_id: member.id, year: 2025)
-    end
-
-    defp images(attachment) do
-      parts = String.split(attachment.content, "/Subtype /Image")
-      length(parts) - 1
     end
 
     test "a letter made with a signature draws it", %{team: team, member: member} do
