@@ -7,6 +7,8 @@ defmodule Service.PDFLetter do
   # Space above and below the signature.
   @signature_gap 6
   @qr_size @one_inch
+  # Space between letterhead logos.
+  @logo_gap 0.25 * @one_inch
 
   @doc "The letter's PDF, locked against edits so it can only be printed."
   def build(options), do: options |> render() |> Service.PDFLock.lock()
@@ -32,7 +34,7 @@ defmodule Service.PDFLetter do
       created: Date.utc_today(),
       modified: Date.utc_today()
     )
-    |> add_logo(options)
+    |> add_logos(options)
     |> add_text_content(options)
     |> add_qr_code(options)
     |> Pdf.write_to(temp_path)
@@ -41,20 +43,22 @@ defmodule Service.PDFLetter do
     temp_path
   end
 
-  # The logo is PNG bytes, padded square so one inch wide is one inch tall.
-  defp add_logo(pdf, %{logo: nil}), do: pdf
-
-  defp add_logo(pdf, options) do
-    image_size = @one_inch
+  # Each logo is PNG bytes, padded square so one inch wide is one inch tall. They sit in a
+  # row across the top, in order, the last one in the top right corner.
+  defp add_logos(pdf, %{logos: logos}) do
     %{width: width, height: height} = Pdf.size(pdf)
+    top = height - 2 * @one_inch
 
-    pdf
-    |> Pdf.add_image(
-      {width - @one_inch - image_size, height - @one_inch - image_size},
-      {:binary, options.logo},
-      width: image_size
-    )
+    logos
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.reduce(pdf, fn {logo, index}, pdf ->
+      left = width - 2 * @one_inch - index * (@one_inch + @logo_gap)
+      Pdf.add_image(pdf, {left, top}, {:binary, logo}, width: @one_inch)
+    end)
   end
+
+  defp add_logos(pdf, _options), do: pdf
 
   # Without a signature, the letter is one block of text, as it always was. With one,
   # the body, the signature, and the signer block are drawn in turn, so the image lands

@@ -1,11 +1,13 @@
 defmodule App.Operation.BuildTaxCreditLetterAttachment do
+  alias App.Model.Organization
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.LoadImage
+  alias App.Repo
   alias Service.PDFLetter
 
   def call(tax_credit_letter) do
-    team = tax_credit_letter.member.team
+    team = Repo.preload(tax_credit_letter.member.team, :organization)
     title = "#{tax_credit_letter.year} SRVTC #{team.name}"
 
     content =
@@ -13,7 +15,7 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
         title: title,
         author: team.name,
         creator: "SARDuty.com",
-        logo: logo(team),
+        logos: logos(team),
         content: tax_credit_letter.letter_content,
         qr_url: qr_url(tax_credit_letter)
       }
@@ -49,8 +51,19 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
       do: TaxCreditLetter.verify_url(letter, Web.VerifyHost.url())
   end
 
-  # A team without a logo gets none on its letters, not SAR Duty's.
-  defp logo(team) do
+  # The letterhead: the organization's logo, then the team's, each left out when it's
+  # missing. The current ones, since a letter saves its text but not its logos. A team
+  # without a logo gets none, not SAR Duty's.
+  defp logos(team) do
+    [organization_logo(team.organization), team_logo(team)] |> Enum.reject(&is_nil/1)
+  end
+
+  defp organization_logo(%Organization{logo: logo} = organization) when is_binary(logo),
+    do: LoadImage.organization_logo(organization, :square)
+
+  defp organization_logo(_organization), do: nil
+
+  defp team_logo(team) do
     if Team.logo_file(team.subdomain), do: LoadImage.logo(team, :square)
   end
 end
