@@ -213,6 +213,9 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :delete_equipment_usage} = row, _page),
     do: "#{row.old_value["title"] || "An item"} removed from equipment"
 
+  def describe_row(%ChangeSetRow{action: :set_activity_tags} = row, _page),
+    do: "Tags added: #{Enum.join(row.new_value["titles"] || [], ", ")}"
+
   def describe_row(%ChangeSetRow{action: :create_member}, _page), do: "Added in SAR Duty"
 
   def describe_row(%ChangeSetRow{action: :update_member}, _page),

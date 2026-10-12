@@ -523,6 +523,18 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc "The D4H ids of the activity's tags now, as `{:ok, ids}` (#162)."
+  def fetch_activity_tag_ids(context, d4h_activity_id, kind)
+      when kind in ["event", "exercise", "incident"] do
+    case Req.request(context, method: :get, url: "/#{kind}s/#{d4h_activity_id}", retry: false) do
+      {:ok, %{status: 200, body: %{} = body}} ->
+        {:ok, (body["tags"] || []) |> Enum.map(&D4H.Parse.tag_id/1) |> Enum.reject(&is_nil/1)}
+
+      result ->
+        {:error, write_error(result)}
+    end
+  end
+
   @doc "A member's address and emergency contacts now, as `D4H.MemberDetails` (#156)."
   def fetch_member_details(context, d4h_member_id) do
     case Req.request(context, method: :get, url: "/members/#{d4h_member_id}", retry: false) do
@@ -739,6 +751,17 @@ defmodule App.Adapter.D4H do
            ) do
       {:ok, activity || %D4H.Activity{d4h_activity_id: d4h_activity_id}}
     end
+  end
+
+  @doc """
+  Sets an activity's tags to `tag_ids` (#162), answering `{:ok, d4h_activity_id}`. D4H
+  replaces the whole list, so pass every tag it keeps, and each id once: a repeated id
+  gets a 404.
+  """
+  def set_activity_tags(context, kind, d4h_activity_id, tag_ids)
+      when kind in ["event", "exercise", "incident"] do
+    url = "/#{kind}s/#{d4h_activity_id}/tags"
+    write(context, :post, url, %{tagIds: tag_ids}, fn _body -> d4h_activity_id end)
   end
 
   defp maybe_write(attrs, key, write, previous \\ nil) do

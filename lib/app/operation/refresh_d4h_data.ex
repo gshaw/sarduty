@@ -117,7 +117,7 @@ defmodule App.Operation.RefreshD4HData do
     progress = RefreshD4HData.Progress.finish_stage(progress)
 
     progress = RefreshD4HData.Progress.update_stage(progress, "Tags")
-    tag_index = build_d4h_tag_index(d4h)
+    tag_index = RefreshD4HData.UpsertTags.call(d4h, team)
     progress = RefreshD4HData.Progress.finish_stage(progress)
 
     {tag_index, progress}
@@ -170,13 +170,6 @@ defmodule App.Operation.RefreshD4HData do
     progress = RefreshD4HData.Progress.update_stage(progress, "Equipment usages")
     {_count, progress} = RefreshD4HData.UpsertEquipmentUsages.call(d4h, team, progress)
     RefreshD4HData.Progress.finish_stage(progress)
-  end
-
-  defp build_d4h_tag_index(d4h) do
-    d4h
-    |> D4H.fetch_tags()
-    |> Enum.map(fn r -> {r.d4h_tag_id, r.title} end)
-    |> Map.new()
   end
 
   defp update_team_refreshed_at(team) do

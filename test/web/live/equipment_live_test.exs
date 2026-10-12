@@ -4,6 +4,7 @@ defmodule Web.EquipmentLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Activity
   alias App.Model.ChangeSet
   alias App.Model.EquipmentUsage
   alias App.Model.Kit
@@ -115,6 +116,67 @@ defmodule Web.EquipmentLiveTest do
 
     assert kit.kit_items |> Enum.map(&{&1.equipment_item_id, &1.minutes}) |> Enum.sort() ==
              Enum.sort([{ctx.radio.id, 150}, {ctx.truck.id, 0}])
+  end
+
+  test "a kit gets tags from the team's tags", ctx do
+    water = tag_fixture(ctx.team, "Flat Water")
+    tag_fixture(ctx.team, "Medical")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/kits/new")
+
+    lv |> form("#tag-search-form", %{tag_q: "flat"}) |> render_change()
+    refute has_element?(lv, "#tag-search-results", "Medical")
+    lv |> element("#tag-add-#{water.id}") |> render_click()
+    assert has_element?(lv, "#kit-tags #tag-#{water.id}", "Flat Water")
+    refute has_element?(lv, "#tag-add-#{water.id}")
+
+    lv |> form("#kit-form", kit: %{title: "Boat training"}) |> render_submit()
+
+    kit = Kit |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(kit_tags: :tag)
+    assert Enum.map(kit.kit_tags, & &1.tag.title) == ["Flat Water"]
+  end
+
+  test "a kit's tags join the activity's tags in D4H", ctx do
+    activity = activity_fixture(ctx.team)
+    water = tag_fixture(ctx.team, "Flat Water")
+    hours = tag_fixture(ctx.team, "Primary Hours")
+    kit = kit_fixture(ctx.team, "Boat training", [], [water, hours])
+    path = "/exercises/#{activity.d4h_activity_id}"
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+      case {conn.method, String.ends_with?(conn.request_path, path)} do
+        {"GET", true} ->
+          Req.Test.json(conn, %{
+            "id" => activity.d4h_activity_id,
+            "tags" => [%{"resourceType" => "Tag", "id" => hours.d4h_tag_id}]
+          })
+
+        {"GET", false} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        {"POST", _activity?} ->
+          send(test_pid, {:d4h_write, conn.request_path, Jason.decode!(body)})
+          Req.Test.json(conn, %{"id" => activity.d4h_activity_id})
+      end
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
+    lv |> element("#equipment-add-kit-#{kit.id}") |> render_click()
+
+    # The activity has Primary Hours already.
+    assert has_element?(lv, "#equipment-tags #tag-#{water.id}")
+    refute has_element?(lv, "#equipment-tags #tag-#{hours.id}")
+    assert has_element?(lv, "#equipment-send", "Add 1 tag")
+
+    lv |> form("#equipment-lines") |> render_submit()
+
+    assert_received {:d4h_write, tags_path, %{"tagIds" => tag_ids}}
+    assert String.ends_with?(tags_path, path <> "/tags")
+    assert tag_ids == Enum.sort([hours.d4h_tag_id, water.d4h_tag_id])
+    assert Repo.get!(Activity, activity.id).tags == ["Primary Hours", "Flat Water"]
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
   test "a kit's items go to D4H as usages on the activity", ctx do

@@ -150,6 +150,9 @@ defmodule App.Operation.ApplyChangeSet do
 
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
 
+  # The tag row's list was read from D4H as the set was planned, a moment before.
+  def check(%ChangeSetRow{action: :set_activity_tags}, _current), do: :ok
+
   defp write(d4h, %ChangeSetRow{action: :update_attendance, new_value: new_value} = row) do
     d4h
     |> D4H.set_attendance(
@@ -202,6 +205,15 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :delete_equipment_usage} = row) do
     case D4H.delete_equipment_usage(d4h, row.d4h_record_id) do
       :ok -> {:applied, row.d4h_record_id}
+      {:error, error} -> {:failed, Exception.message(error)}
+    end
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :set_activity_tags} = row) do
+    kind = row.old_value["kind"]
+
+    case D4H.set_activity_tags(d4h, kind, row.d4h_record_id, row.new_value["tag_ids"]) do
+      {:ok, _activity} -> {:applied, row.d4h_record_id}
       {:error, error} -> {:failed, Exception.message(error)}
     end
   end

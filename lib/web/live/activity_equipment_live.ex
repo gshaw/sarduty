@@ -11,7 +11,8 @@ defmodule Web.ActivityEquipmentLive do
 
   # Adding equipment to an activity (#271). Items come from the last activity of the same
   # kind, from kits, from a search, or from a phone's camera scanning barcodes, into a list
-  # with hours to check. Sending the list writes them to D4H as equipment usages.
+  # with hours to check. A kit's tags join the list too (#162). Sending the list writes
+  # them to D4H as equipment usages and the activity's tags.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -23,7 +24,8 @@ defmodule Web.ActivityEquipmentLive do
 
       socket =
         socket
-        |> assign(page_title: "Add equipment", activity: activity, lines: [], q: "", results: [])
+        |> assign(page_title: "Add equipment", activity: activity, lines: [], tags: [])
+        |> assign(q: "", results: [])
         |> assign(kits: Kit.get_all(team.id), last: last)
         |> assign(scan_message: nil, scan_failed: false)
         |> assign(last_usages: if(last, do: EquipmentUsage.for_activity(last), else: []))
@@ -84,16 +86,14 @@ defmodule Web.ActivityEquipmentLive do
               >
                 Add {kit.title}
               </.button>
-              <span class="hint">
-                {Service.Format.count(length(kit.kit_items), one: "%d item", many: "%d items")}
-              </span>
+              <span class="hint">{kit_contents(kit)}</span>
             </li>
           </ul>
           <p class="hint">
             <.a navigate={~p"/teams/#{@current_team}/equipment/kits"}>
               {if @kits == [], do: "Add a kit", else: "Change kits"}
             </.a>
-            for gear that goes out together.
+            for gear and tags that go together.
           </p>
         </section>
 
@@ -116,24 +116,29 @@ defmodule Web.ActivityEquipmentLive do
         <section id="equipment-to-add" class="mb-8">
           <h2 class="heading">To add</h2>
           <.form
-            :if={@lines != []}
+            :if={@lines != [] or @tags != []}
             for={%{}}
             id="equipment-lines"
             phx-change="hours"
             phx-submit="send"
           >
-            <.lines_table id="equipment-lines-table" lines={@lines} km />
+            <.lines_table :if={@lines != []} id="equipment-lines-table" lines={@lines} km />
+            <div :if={@tags != []} id="equipment-tags" class="mt-4">
+              <h3 class="subheading">Tags</h3>
+              <p class="hint mb-2">The activity keeps the tags it has.</p>
+              <.tags_to_add id="equipment-tags-list" tags={@tags} />
+            </div>
             <.form_actions>
               <.button
                 id="equipment-send"
                 variant={:success}
                 phx-disable-with="Adding…"
               >
-                Add {Service.Format.count(length(@lines), one: "%d item", many: "%d items")}
+                Add {to_add_text(length(@lines), length(@tags))}
               </.button>
             </.form_actions>
           </.form>
-          <p :if={@lines == []} id="equipment-nothing-to-add" class="hint">
+          <p :if={@lines == [] and @tags == []} id="equipment-nothing-to-add" class="hint">
             Add items from the last {@activity.activity_kind}, a kit, a search, or a scan. Check the hours and a vehicle's km, then add them.
           </p>
         </section>
@@ -250,6 +255,52 @@ defmodule Web.ActivityEquipmentLive do
       </:col>
     </.table>
     """
+  end
+
+  attr :id, :string, required: true
+  attr :tags, :list, required: true
+
+  @doc "Tags about to be added, each with a remove button. Shared with the kit form."
+  def tags_to_add(assigns) do
+    ~H"""
+    <ul id={@id} class="action-list mb-4">
+      <li :for={tag <- @tags} id={"tag-#{tag.id}"}>
+        <.button
+          id={"tag-remove-#{tag.id}"}
+          type="button"
+          size={:sm}
+          variant={:secondary}
+          phx-click="remove-tag"
+          phx-value-id={tag.id}
+        >
+          Remove
+        </.button>
+        <.badge kind={:outline}>{tag.title}</.badge>
+      </li>
+    </ul>
+    """
+  end
+
+  @doc ~s(What a kit holds, as "3 items, 2 tags".)
+  def kit_contents(kit) do
+    items = kit.kit_items |> length() |> count_items()
+
+    case length(kit.kit_tags) do
+      0 -> items
+      n -> items <> ", " <> count_tags(n)
+    end
+  end
+
+  @doc ~s(What the send button adds: "3 items", "2 tags", or "3 items and 2 tags".)
+  def to_add_text(lines, tags) do
+    items = count_items(lines)
+    tags_text = count_tags(tags)
+
+    cond do
+      tags == 0 -> items
+      lines == 0 -> tags_text
+      true -> "#{items} and #{tags_text}"
+    end
   end
 
   attr :q, :string, required: true
@@ -383,6 +434,18 @@ defmodule Web.ActivityEquipmentLive do
     end
   end
 
+  @doc """
+  `tags` with a kit's `new` tags added, A to Z, leaving out any the activity has by title
+  (`titles`). The send reads D4H again, so a stale title only means a tag goes unlisted.
+  """
+  def add_tags(tags, new, titles) do
+    titles = titles || []
+
+    (tags ++ Enum.reject(new, &(&1.title in titles)))
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(&String.downcase(&1.title))
+  end
+
   def remove_line(lines, id), do: Enum.reject(lines, &(Integer.to_string(&1.item.id) == id))
 
   @doc "Items found for `q`, without the ones whose ids are in `skip`."
@@ -406,8 +469,14 @@ defmodule Web.ActivityEquipmentLive do
         {line.equipment_item, line.minutes}
       end
 
-    {:noreply, add(socket, new)}
+    tags = add_tags(socket.assigns.tags, Kit.tags(kit), socket.assigns.activity.tags)
+    {:noreply, socket |> add(new) |> assign(tags: tags)}
   end
+
+  def handle_event("remove-tag", %{"id" => id}, socket),
+    do:
+      {:noreply,
+       assign(socket, tags: Enum.reject(socket.assigns.tags, &(Integer.to_string(&1.id) == id)))}
 
   def handle_event("add-item", %{"id" => id}, socket) do
     item = EquipmentItem.find!(socket.assigns.current_team, id)
@@ -452,7 +521,9 @@ defmodule Web.ActivityEquipmentLive do
 
     lines = socket.assigns.lines |> put_typed(params) |> Enum.map(&to_add/1)
 
-    case ChangeActivityEquipment.add(team, activity, lines, user, DateTime.utc_now()) do
+    tags = socket.assigns.tags
+
+    case ChangeActivityEquipment.add(team, activity, lines, tags, user, DateTime.utc_now()) do
       {:ok, rows} ->
         socket =
           socket
@@ -511,19 +582,30 @@ defmodule Web.ActivityEquipmentLive do
     do: if(Enum.all?(rows, &(&1.status == :applied)), do: :info, else: :error)
 
   @doc """
-  What happened, as one message: "3 items added." and then each row that didn't go,
-  with why.
+  What happened, as one message: "3 items added.", "2 tags added." when a kit's tags
+  went, and then each row that didn't go, with why.
   """
   def result_text(rows, verb) do
-    applied = Enum.count(rows, &(&1.status == :applied))
-    done = Service.Format.count(applied, one: "%d item", many: "%d items") <> " #{verb}."
+    {tag_rows, item_rows} = Enum.split_with(rows, &(&1.action == :set_activity_tags))
+    applied = Enum.count(item_rows, &(&1.status == :applied))
+
+    items =
+      if item_rows != [] or tag_rows == [], do: ["#{count_items(applied)} #{verb}."], else: []
+
+    tags = for %{status: :applied} = row <- tag_rows, do: tags_added(row)
 
     rows
     |> Enum.reject(&(&1.status == :applied))
     |> Enum.map(&"#{row_title(&1)}: #{&1.error}")
-    |> then(&Enum.join([done | &1], " "))
+    |> then(&Enum.join(items ++ tags ++ &1, " "))
   end
 
+  defp tags_added(row), do: "#{row.new_value["titles"] |> length() |> count_tags()} added."
+
+  defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
+  defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")
+
+  defp row_title(%ChangeSetRow{action: :set_activity_tags}), do: "Tags"
   defp row_title(%ChangeSetRow{new_value: %{"title" => title}}), do: title
   defp row_title(%ChangeSetRow{old_value: %{"title" => title}}), do: title
   defp row_title(%ChangeSetRow{}), do: "An item"

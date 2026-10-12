@@ -4,17 +4,22 @@ defmodule App.Model.Kit do
   alias App.Field.TrimmedString
   alias App.Model.Kit
   alias App.Model.KitItem
+  alias App.Model.KitTag
   alias App.Model.Team
   alias App.Repo
 
-  # A named set of equipment items, each with default hours, that a team admin adds to
-  # an activity in one step (#271). Kits are SAR Duty's own; D4H never sees them.
+  # A named set of equipment items, each with default hours, and tags, that a team admin
+  # adds to an activity in one step (#271, #162). Kits are SAR Duty's own; D4H never sees
+  # them.
   schema "kits" do
     belongs_to :team, Team
     has_many :kit_items, KitItem, on_replace: :delete
+    has_many :kit_tags, KitTag, on_replace: :delete
     field :title, TrimmedString
     timestamps(type: :utc_datetime_usec)
   end
+
+  @preloads [kit_items: :equipment_item, kit_tags: :tag]
 
   def build_changeset(data, params \\ %{}) do
     data
@@ -23,18 +28,22 @@ defmodule App.Model.Kit do
     |> validate_length(:title, max: 100)
   end
 
-  @doc "A team's kits by title, with their items."
+  @doc "A team's kits by title, with their items and tags."
   def get_all(team_id) do
     Kit
     |> where([k], k.team_id == ^team_id)
     |> order_by([k], asc: k.title, asc: k.id)
-    |> preload(kit_items: :equipment_item)
+    |> preload(^@preloads)
     |> Repo.all()
   end
 
   def find!(%Team{} = team, id) do
     Kit
     |> Repo.get_by!(id: id, team_id: team.id)
-    |> Repo.preload(kit_items: :equipment_item)
+    |> Repo.preload(@preloads)
   end
+
+  @doc "The kit's tags by title."
+  def tags(%Kit{kit_tags: kit_tags}),
+    do: kit_tags |> Enum.map(& &1.tag) |> Enum.sort_by(&String.downcase(&1.title))
 end

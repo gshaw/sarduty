@@ -30,6 +30,7 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Operation.RefreshD4HData.UpsertMembers
   alias App.Operation.RefreshD4HData.UpsertQualificationAwards
   alias App.Operation.RefreshD4HData.UpsertQualifications
+  alias App.Operation.RefreshD4HData.UpsertTags
   alias App.Repo
 
   require Logger
@@ -317,7 +318,7 @@ defmodule App.Operation.SyncD4HChanges do
   defp sync_activities(_d4h, _team, activities, _now) when activities == %{}, do: MapSet.new()
 
   defp sync_activities(d4h, team, activities, now) do
-    tag_index = d4h |> D4H.fetch_tags() |> Map.new(&{&1.d4h_tag_id, &1.title})
+    tag_index = UpsertTags.call(d4h, team)
 
     Enum.reduce(activities, MapSet.new(), fn {kind, cursors}, touched ->
       d4h
