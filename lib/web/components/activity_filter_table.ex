@@ -121,7 +121,7 @@ defmodule Web.Components.ActivityFilterTable do
         <span :if={hours_type = activity_hours_type(record, @hours_tags)} class="text-text-muted">
           {hours_type}
         </span>
-        {Service.Format.duration_as_hours_minutes_short(
+        {Service.Format.duration(
           Service.Convert.duration_to_minutes(record.started_at, record.finished_at)
         )}
       </:col>

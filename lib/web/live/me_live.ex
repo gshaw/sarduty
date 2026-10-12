@@ -211,7 +211,7 @@ defmodule Web.MeLive do
   defp expiry(%{ends_at: ends_at}, timezone),
     do: "Expires #{Service.Format.date_long(ends_at, timezone)}"
 
-  defp format_minutes(minutes), do: Service.Format.duration_as_hours_minutes_medium(minutes)
+  defp format_minutes(minutes), do: Service.Format.duration(minutes)
 
   defp card_content(%{card: nil} = assigns) do
     ~H"""

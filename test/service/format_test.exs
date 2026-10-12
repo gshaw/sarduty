@@ -17,6 +17,17 @@ defmodule Service.FormatTest do
     assert Format.month_short(~D[2025-09-01]) == "Sep"
   end
 
+  test "duration: hours and minutes, whole hours spelled out, minutes alone under an hour" do
+    assert Format.duration(212 * 60 + 30) == "212h 30m"
+    assert Format.duration(18 * 60 + 5) == "18h 5m"
+    assert Format.duration(202 * 60) == "202 hours"
+    assert Format.duration(60) == "1 hour"
+    assert Format.duration(45) == "45 min"
+    assert Format.duration(0) == "0 hours"
+    assert Format.duration(1204 * 60 + 30) == "1,204h 30m"
+    assert Format.duration(89.6) == "1h 30m"
+  end
+
   describe "minutes_ago/3" do
     test "counts minutes, then hours, then gives the time" do
       assert @now |> DateTime.add(-30, :second) |> Format.minutes_ago(@now, @zone) == "just now"

@@ -58,9 +58,9 @@ defmodule Web.VerifyLetterLiveTest do
     assert has_element?(lv, "#result-issued", "Issued by the team")
     assert has_element?(lv, "#result-name", "Mercer, Nadia")
     assert has_element?(lv, "#result-team", "North Shore Rescue")
-    assert has_element?(lv, "#result-hours", "212 hours, 30 minutes")
+    assert has_element?(lv, "#result-hours", "212h 30m")
     assert has_element?(lv, "#result-hours", "18 hours")
-    assert has_element?(lv, "#result-hours", "230 hours, 30 minutes")
+    assert has_element?(lv, "#result-hours", "230h 30m")
     assert has_element?(lv, "#result-contact", "604-555-0100")
   end
 
@@ -97,7 +97,7 @@ defmodule Web.VerifyLetterLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/letters/#{letter.ref_id}")
       assert has_element?(lv, "#result-replaced", "This tax credit letter was replaced")
-      assert has_element?(lv, "#result-hours", "230 hours, 30 minutes")
+      assert has_element?(lv, "#result-hours", "230h 30m")
 
       {:ok, lv, _html} = live(conn, ~p"/letters/#{replaced.ref_id}")
       assert has_element?(lv, "#result-issued")

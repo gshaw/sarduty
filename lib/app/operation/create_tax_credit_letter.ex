@@ -48,16 +48,17 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
     To whom it may concern:
 
-    Name: #{member.name}
-    Address: #{member.address}
+    #{member_lines(member)}
 
-    This letter serves to confirm that the above noted individual has completed eligible volunteer search and rescue hours for #{team.name}, an ‘Eligible Search and Rescue Organization recognized by the RCMP’ in the #{year} calendar year.
+    #{member.name} volunteered with #{team.name} in #{year}. #{team.name} is an eligible search and rescue organization under subsection 118.07(1) of the Income Tax Act.
 
-    Primary Hours: #{Format.duration_as_hours_minutes_long(hours.primary_minutes)}
-    Secondary Hours: #{Format.duration_as_hours_minutes_long(hours.secondary_minutes)}
-    Total Hours: #{Format.duration_as_hours_minutes_long(hours.total_minutes)}
+    Primary Hours: #{Format.duration(hours.primary_minutes)}
+    Secondary Hours: #{Format.duration(hours.secondary_minutes)}
+    Total Hours: #{Format.duration(hours.total_minutes)}
 
-    Please contact the writer if you have any questions.
+    These hours come from #{team.name}'s attendance records.
+
+    #{contact_line(team)}
 
     Certified on #{formatted_certified_on}.
 
@@ -69,6 +70,17 @@ defmodule App.Operation.CreateTaxCreditLetter do
     Reference: #{ref_id}
     Verify this letter at verify.sarduty.com/letters
     """
+  end
+
+  defp member_lines(%Member{address: address} = member) when address in [nil, ""],
+    do: "Name: #{member.name}"
+
+  defp member_lines(member), do: "Name: #{member.name}\nAddress: #{member.address}"
+
+  defp contact_line(team) do
+    if Enum.all?([team.authorized_by_phone, team.authorized_by_email], &(&1 in [nil, ""])),
+      do: "If you have questions, contact #{team.name}.",
+      else: "If you have questions, contact me using the details below."
   end
 
   @doc "The signer's name, then their title, phone, and email when the team has them."

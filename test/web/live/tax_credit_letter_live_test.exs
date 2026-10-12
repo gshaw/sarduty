@@ -95,7 +95,7 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert {:current, _ref_id} = TaxCreditLetter.parse_ref_id(replaced.ref_id)
       assert replaced.ref_id != letter.ref_id
       assert replaced.primary_minutes == 90
-      assert replaced.letter_content =~ "Primary Hours: 1 hour, 30 minutes"
+      assert replaced.letter_content =~ "Primary Hours: 1h 30m\n"
       assert replaced.letter_content =~ "Reference: #{replaced.ref_id}"
 
       old = Repo.get_by!(ReplacedTaxCreditLetter, tax_credit_letter_id: letter.id)

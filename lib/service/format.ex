@@ -153,60 +153,21 @@ defmodule Service.Format do
     end
   end
 
-  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
-  def duration_as_hours_minutes_long(minutes) when is_integer(minutes) do
-    hours = div(minutes, 60)
-    mins = rem(minutes, 60)
-
-    hours_str =
-      cond do
-        hours == 0 -> nil
-        hours == 1 -> "1 hour"
-        true -> "#{hours} hours"
-      end
-
-    mins_str =
-      cond do
-        mins == 0 -> nil
-        mins == 1 -> "1 minute"
-        true -> "#{mins} minutes"
-      end
-
-    case {hours_str, mins_str} do
-      {nil, nil} -> "0 hours"
-      {nil, m} -> m
-      {h, nil} -> h
-      {h, m} -> "#{h}, #{m}"
-    end
-  end
-
-  def duration_as_hours_minutes_long(minutes) when is_float(minutes) do
-    duration_as_hours_minutes_long(round(minutes))
-  end
-
-  def duration_as_hours_minutes_medium(minutes) when is_integer(minutes) do
+  @doc """
+  A duration as people read it everywhere: "212h 30m", "1,204 hours", "1 hour", "45 min".
+  Whole hours are spelled out; under an hour is minutes alone.
+  """
+  def duration(minutes) when is_integer(minutes) do
     hours = div(minutes, 60)
     mins = rem(minutes, 60)
 
     cond do
       hours == 1 and mins == 0 -> "1 hour"
-      mins == 0 -> "#{hours} hours"
+      mins == 0 -> "#{number(hours)} hours"
       hours == 0 -> "#{mins} min"
-      true -> "#{hours}h #{mins}m"
+      true -> "#{number(hours)}h #{mins}m"
     end
   end
 
-  def duration_as_hours_minutes_medium(minutes) when is_float(minutes) do
-    duration_as_hours_minutes_medium(round(minutes))
-  end
-
-  def duration_as_hours_minutes_short(minutes) when is_integer(minutes) do
-    hours = div(minutes, 60)
-    mins = rem(minutes, 60)
-    "#{hours}:#{String.pad_leading("#{mins}", 2, "0")}"
-  end
-
-  def duration_as_hours_minutes_short(minutes) when is_float(minutes) do
-    duration_as_hours_minutes_short(round(minutes))
-  end
+  def duration(minutes) when is_float(minutes), do: duration(round(minutes))
 end

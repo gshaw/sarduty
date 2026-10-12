@@ -128,7 +128,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "primary"}]}
       >
-        {Service.Format.duration_as_hours_minutes_medium(record.primary_minutes)}
+        {Service.Format.duration(record.primary_minutes)}
       </:col>
       <:col
         :let={record}
@@ -137,7 +137,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "secondary"}]}
       >
-        {Service.Format.duration_as_hours_minutes_medium(record.secondary_minutes)}
+        {Service.Format.duration(record.secondary_minutes)}
       </:col>
       <:col
         :let={record}
@@ -146,7 +146,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "total"}]}
       >
-        {Service.Format.duration_as_hours_minutes_medium(record.total_minutes)}
+        {Service.Format.duration(record.total_minutes)}
       </:col>
       <:col :let={record} label="Letter" class="whitespace-nowrap">
         <.record_actions record={record} current_team={@current_team} />
@@ -216,7 +216,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         :if={@record.letter_hours_status == :changed}
         id={"hours-changed-#{@record.tax_credit_letter_id}"}
         kind={:warning}
-        title={"The letter says #{Service.Format.duration_as_hours_minutes_medium(@record.letter_minutes)}"}
+        title={"The letter says #{Service.Format.duration(@record.letter_minutes)}"}
       >
         Hours changed
       </.badge>

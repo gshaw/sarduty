@@ -270,7 +270,7 @@ defmodule Web.ActivityLive do
         )}
       </:col>
       <:col :let={record} label="Duration" align="right" class="whitespace-nowrap">
-        {Service.Format.duration_as_hours_minutes_short(record.duration_in_minutes)}
+        {Service.Format.duration(record.duration_in_minutes)}
       </:col>
     </.table>
     """
@@ -305,7 +305,7 @@ defmodule Web.ActivityLive do
   defp format_activity_duration(activity) do
     activity.started_at
     |> Service.Convert.duration_to_minutes(activity.finished_at)
-    |> Service.Format.duration_as_hours_minutes_medium()
+    |> Service.Format.duration()
   end
 
   defp format_total_effort(attendances) do
@@ -317,6 +317,6 @@ defmodule Web.ActivityLive do
     rounded_minutes =
       if total_minutes > 300, do: round(total_minutes / 60) * 60, else: total_minutes
 
-    Service.Format.duration_as_hours_minutes_medium(rounded_minutes)
+    Service.Format.duration(rounded_minutes)
   end
 end

@@ -187,5 +187,5 @@ defmodule Web.TaxCreditLetterLive do
     end
   end
 
-  defp format_minutes(minutes), do: Service.Format.duration_as_hours_minutes_medium(minutes)
+  defp format_minutes(minutes), do: Service.Format.duration(minutes)
 end

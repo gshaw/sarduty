@@ -178,7 +178,7 @@ defmodule Web.ActivityEquipmentLive do
 
   @doc "What a usage counted: hours for equipment, km for a vehicle, a count for a supply."
   def amount(%EquipmentUsage{minutes: minutes}) when is_integer(minutes) and minutes > 0,
-    do: Service.Format.duration_as_hours_minutes_short(minutes)
+    do: Service.Format.duration(minutes)
 
   def amount(%EquipmentUsage{distance: km}) when is_integer(km) and km > 0, do: "#{km} km"
   def amount(%EquipmentUsage{used: used}) when is_integer(used) and used > 0, do: "#{used} used"

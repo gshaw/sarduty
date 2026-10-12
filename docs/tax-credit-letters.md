@@ -29,6 +29,14 @@ counted is in #191 and #192.
   so it gets the host's isolation (no login cookie), its miss limit
   ([Web.VerifyLimit](../lib/web/verify_limit.ex), shared with cards), and an
   organization's own verify host when that ships. The card pages don't mention letters.
+- **Hours print as the letters table shows them**, from `Service.Format.duration/1`:
+  "212h 30m", or "202 hours" when there are no minutes (#260). Nothing is rounded, so
+  the letter, the verify page, and the saved minutes agree. `TaxCreditLetter.parse_minutes/1`
+  reads this and the older "212 hours, 30 minutes".
+- **The letter cites the Act, not a police force.** "An eligible search and rescue
+  organization under subsection 118.07(1) of the Income Tax Act" is true in every
+  province. A letter's text is saved when it's made, so changing the wording never
+  changes a letter already issued.
 - **The QR code is drawn, not an image.** Vector squares from `eqrcode`'s matrix, beside
   the signer block, so it prints sharp. It holds the URL in lower case, since the
   `/letters` path is case-sensitive. Letters from before #207 get none.
