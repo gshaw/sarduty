@@ -11,6 +11,9 @@
 // container itself is wiped by the next render while the camera keeps running.
 // The camera stops when the page goes to the background. Back on the page, the tap on
 // Scan restarts it, and an iPhone needs that tap before a scan can make a sound.
+// Switch camera, shown when the device has more than one, swaps the back and front
+// cameras. The front camera serves an iPad kiosk facing the members (#248). The choice
+// is remembered on the device, and the front camera's picture is mirrored like a mirror.
 const PAUSE_MS = 1500
 const SAME_CARD_MS = 5000
 
@@ -25,7 +28,13 @@ const READERS = {
 
 // Both readers take the camera's default picture. Asking an iPhone for 1280×720 started
 // the camera but left the picture blank (2026-10-11).
-const CAMERA = {facingMode: "environment"}
+const FACING_KEY = "sarduty:scan-facing"
+const FACING = ["environment", "user"]
+
+function savedFacing() {
+  const facing = localStorage.getItem(FACING_KEY)
+  return FACING.includes(facing) ? facing : "environment"
+}
 
 export const QRScanner = {
   mounted() {
@@ -37,6 +46,8 @@ export const QRScanner = {
     this.state = this.el.querySelector("[data-scan-state]")
     this.el.querySelector("[data-scan-start]").addEventListener("click", () => this.start())
     this.el.querySelector("[data-scan-stop]").addEventListener("click", () => this.stop())
+    this.flip = this.el.querySelector("[data-scan-flip]")
+    this.flip.querySelector("button").addEventListener("click", () => this.switchCamera())
     this.onVisibility = () => document.hidden && this.stop()
     document.addEventListener("visibilitychange", this.onVisibility)
   },
@@ -53,7 +64,8 @@ export const QRScanner = {
     this.starting = true
     try {
       this.decode = await this.decoder
-      this.stream = await navigator.mediaDevices.getUserMedia({video: CAMERA})
+      this.facing = savedFacing()
+      this.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: this.facing}})
     } catch (_error) {
       this.pushEvent("scan_failed", {})
       return
@@ -61,9 +73,24 @@ export const QRScanner = {
       this.starting = false
     }
     this.video.srcObject = this.stream
+    this.video.style.transform = this.facing === "user" ? "scaleX(-1)" : ""
     await this.video.play()
     this.state.dataset.scanning = "true"
+    this.showFlip()
     this.tick()
+  },
+
+  // Cameras are listed only once the page may use one, so this runs after the first.
+  async showFlip() {
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => [])
+    this.flip.hidden = devices.filter(device => device.kind === "videoinput").length < 2
+  },
+
+  // The old camera stops first, since an iPhone blanks a camera when a second one opens.
+  switchCamera() {
+    localStorage.setItem(FACING_KEY, this.facing === "user" ? "environment" : "user")
+    this.stop()
+    this.start()
   },
 
   stop() {

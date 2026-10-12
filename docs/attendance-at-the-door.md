@@ -91,6 +91,12 @@ resumes it. The page now drops its audio when hidden and starts fresh on the nex
 so after switching back, the first scan sounds only once someone has tapped the page.
 The camera stops when the page is hidden, so that tap is the one on the scan button.
 
+**Switch camera**, beside Stop scanning on a device with more than one camera, swaps the
+back and front cameras (#248). It is for an iPad set up at the door facing the members,
+who hold their card up to its front camera. The choice is remembered on the device, so a
+kiosk keeps it after a reload, and the front camera's picture is mirrored. The verify
+site and the equipment pages share the switch, since they share the hook.
+
 The hook keeps its scanning flag on the `[data-scan-state]` element inside it, not on the
 `phx-update="ignore"` container. LiveView still patches the container's data attributes,
 so a flag there was wiped by the render after each scan. The page went back to "Scan ID
