@@ -44,6 +44,21 @@
   @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
   @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 
+  /* The data-confirm question (assets/js/confirm_dialog.js), in place of the browser's. */
+  .confirm-dialog {
+    margin: auto;
+    width: min(440px, calc(100vw - 32px));
+    padding: var(--sp-6);
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  }
+  .confirm-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+  .confirm-dialog p { margin: 0 0 var(--sp-6); }
+  .confirm-dialog-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
   .banner { --c: var(--info); border: 4px solid var(--c); margin-bottom: var(--sp-6); }
   .banner-title { display: flex; align-items: center; gap: var(--sp-2); background: var(--c); color: var(--on-fill); font-weight: 600; padding: 2px var(--sp-4) var(--sp-1); }
   .banner-body { padding: var(--sp-4); }

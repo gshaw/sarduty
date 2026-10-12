@@ -1,7 +1,7 @@
 defmodule Web.Components.Messages do
   @moduledoc """
   What a page tells people: banners, warning text, empty states, the error summary, and
-  the result band. Toasts are `Web.Components.Core.flash/1`. Their CSS is
+  the result band, and the confirm dialog. Toasts are `Web.Components.Core.flash/1`. Their CSS is
   assets/css/components/messages.css; the style guide at /styles shows each one.
   """
   use Phoenix.Component
@@ -150,6 +150,29 @@ defmodule Web.Components.Messages do
         <div :if={@inner_block != []} class="band-detail">{render_slot(@inner_block)}</div>
       </div>
     </div>
+    """
+  end
+
+  @doc """
+  Renders the dialog that asks a `data-confirm` question, once per page in the root
+  layout. assets/js/confirm_dialog.js fills in the question and the action button, a copy
+  of the button that asked, and opens it. Without it the browser asks instead.
+  """
+  attr :message, :string, default: nil
+  attr :action, :string, default: nil
+  attr :variant, :string, default: "btn-primary"
+
+  def confirm_dialog(assigns) do
+    ~H"""
+    <dialog id="confirm-dialog" class="confirm-dialog">
+      <form method="dialog">
+        <p>{@message}</p>
+        <div class="confirm-dialog-actions">
+          <button class={["btn", @variant]} value="confirm">{@action}</button>
+          <button class="btn btn-secondary" value="cancel">Cancel</button>
+        </div>
+      </form>
+    </dialog>
     """
   end
 

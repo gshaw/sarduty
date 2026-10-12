@@ -3,12 +3,12 @@
   <p class="lead">A question before a change that can't be undone.</p>
 
   <div class="demo">
-    <.button
-      variant={:danger}
-      data-confirm="Delete the First Aid clause? Its 3 qualifications are removed from the group rule."
-    >
-      Delete clause
-    </.button>
+    <.button id="confirm-dialog-demo" variant={:danger}>Delete clause</.button>
+    <.confirm_dialog
+      message="Delete the First Aid clause? Its 3 qualifications are removed from the group rule."
+      action="Delete clause"
+      variant="btn-danger"
+    />
   </div>
 
   <h2>When to use</h2>
@@ -20,15 +20,25 @@
   <h2>How it works</h2>
   <ul>
     <li>The question names the thing and says what happens.</li>
-    <li>The browser shows its own dialog, with OK and Cancel.</li>
+    <li>
+      The action button repeats the label and colour of the button that asked. The other is Cancel.
+    </li>
+    <li>
+      It is our own dialog, not the browser's: some phone browsers never show <code>window.confirm</code>, so the button did nothing.
+    </li>
   </ul>
 
   <script>
-    document.querySelectorAll("[data-confirm]").forEach(function (button) {
-      button.addEventListener("click", function () { window.confirm(button.dataset.confirm); });
+    document.getElementById("confirm-dialog-demo").addEventListener("click", function () {
+      document.getElementById("confirm-dialog").showModal();
     });
   </script>
 
   <h2>In the app</h2>
-  <p><code>data-confirm="…"</code> on the button.</p>
+  <p>
+    <code>data-confirm="…"</code>
+    on the button. The root layout renders <code>&lt;.confirm_dialog /&gt;</code>
+    once, and <code>assets/js/confirm_dialog.js</code>
+    opens it.
+  </p>
 </.shell>

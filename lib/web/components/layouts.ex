@@ -22,6 +22,7 @@ defmodule Web.Layouts do
       </head>
       <body>
         {@inner_content}
+        <.confirm_dialog />
       </body>
     </html>
     """

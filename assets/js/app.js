@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sarduty"
 import topbar from "../vendor/topbar"
+import {listenForConfirms} from "./confirm_dialog"
 import {QRScanner} from "./qr_scanner"
 import {SoundSwitch, listenForScanSounds} from "./scan_sound"
 import {ShareLink} from "./share_link"
@@ -35,6 +36,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: {...colocatedHooks, QRScanner, ShareLink, SoundSwitch},
 })
 
+listenForConfirms()
 listenForScanSounds()
 
 // Show progress bar on live navigation and form submits
