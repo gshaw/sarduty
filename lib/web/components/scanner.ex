@@ -1,8 +1,9 @@
 defmodule Web.Components.Scanner do
   @moduledoc """
   The phone camera's QR code scanner: a big button that starts it, the camera's picture
-  while it scans, and the Sound switch under it. The QRScanner hook (assets/js/qr_scanner.js)
-  sends each read to the LiveView as a "scanned" event. With `reader={:barcode}` it reads
+  while it scans, with Stop scanning and Switch camera under it, and the Sound switch. The
+  QRScanner hook (assets/js/qr_scanner.js) sends each read to the LiveView as a "scanned"
+  event. With `reader={:barcode}` it reads
   equipment barcodes instead. See /styles/qr-scanner.
   """
   use Phoenix.Component
@@ -36,8 +37,11 @@ defmodule Web.Components.Scanner do
             {@label}
           </.button>
         </div>
-        <div class="hidden group-data-scanning:block mt-2">
-          <.button type="button" class="w-full" data-scan-stop>Stop scanning</.button>
+        <div class="hidden group-data-scanning:flex gap-2 mt-2">
+          <.button type="button" class="flex-1" data-scan-stop>Stop scanning</.button>
+          <div class="flex-1" data-scan-flip hidden>
+            <.button type="button" class="w-full">Switch camera</.button>
+          </div>
         </div>
       </div>
       <.switch
