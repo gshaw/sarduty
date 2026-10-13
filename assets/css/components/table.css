@@ -8,6 +8,12 @@
     border: 1px solid var(--border-subtle);
   }
 
+  /* A w-fit table's border hugs the table, not the column it sits in. */
+  .table-wrap:has(> table.w-fit) { width: fit-content; max-width: 100%; }
+  @media (width >= 40rem) {
+    .table-wrap:has(> table.md\:w-fit) { width: fit-content; max-width: 100%; }
+  }
+
   .table-heading { font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); padding-block: var(--sp-1); }
 
   table.table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); line-height: var(--lh-sm); text-align: left; }
