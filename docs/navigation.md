@@ -46,8 +46,10 @@ the account menu and no area name.
   then, General says how to get them.
 - Breadcrumbs start at the section, never the team, and a section's own page has none.
   A record's tabs sit under its title, above both columns.
+- The bar says Team area or Member area after the team's name, as the account menu does.
 - Below 1024px the side navigation hides. The Menu button holds the area's pages, then
-  the account menu's list, and the bar shows the area under its name.
+  the account menu's list. The bar's label stays beside the logo on one line when it fits;
+  a long name moves the area, kept whole, to a second line.
 
 ## Adding a page
 

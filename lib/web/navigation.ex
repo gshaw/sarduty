@@ -45,13 +45,19 @@ defmodule Web.Navigation do
   end
 
   defp team_area(team),
-    do: %{kind: :team, name: team.name, kind_label: "Team", home: ~p"/teams/#{team}", team: team}
+    do: %{
+      kind: :team,
+      name: team.name,
+      kind_label: "Team area",
+      home: ~p"/teams/#{team}",
+      team: team
+    }
 
   defp member_area(team) do
     %{
       kind: :member,
       name: team.name,
-      kind_label: "Member",
+      kind_label: "Member area",
       home: ~p"/teams/#{team}/me",
       team: team
     }

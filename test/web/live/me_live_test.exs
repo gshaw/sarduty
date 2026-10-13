@@ -54,7 +54,7 @@ defmodule Web.MeLiveTest do
 
     test "is the member's own area, with none of the team's pages", %{conn: conn, team: team} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#nav-area", "Member")
+      assert has_element?(lv, "#nav-area", "Member area")
       assert has_element?(lv, "#side-nav-me[aria-current=page]")
 
       assert has_element?(

@@ -231,8 +231,8 @@ defmodule Web.Layouts do
   attr :size, :atom, default: :wide
 
   # The top bar: the area you're in, then the account menu, which switches areas, or Log
-  # in. On a phone the area sits under its name and the Menu button holds the area's pages
-  # and the account menu. See /styles/top-bar.
+  # in. On a phone the Menu button holds the area's pages and the account menu. See
+  # /styles/top-bar.
   def main_nav_bar(assigns) do
     {area, groups} = navigation(assigns)
     assigns = assign(assigns, area: area, groups: groups)
@@ -247,8 +247,8 @@ defmodule Web.Layouts do
       </:links>
       <%= if @current_user do %>
         <.link :if={@area} navigate={@area.home} id="phone-nav-area" class="site-bar-area-phone">
-          <span class="truncate">{@area.name}</span>
-          <span :if={@area.kind_label} class="site-bar-area-phone-kind">{@area.kind_label}</span>
+          <span class="site-bar-area-name">{@area.name}</span>
+          <span :if={@area.kind_label} class="site-bar-area-kind">{@area.kind_label}</span>
         </.link>
         <.site_bar_menu label={@current_user.email}>
           <.area_links

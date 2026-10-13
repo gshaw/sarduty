@@ -16,7 +16,12 @@ defmodule Web.NavigationTest do
     test "a team's pages are its team area, when the URL's team is the current team" do
       area = Navigation.area("/teams/squamish/activities/7", @team, nil)
 
-      assert %{kind: :team, name: "Squamish SAR", kind_label: "Team", home: "/teams/squamish"} =
+      assert %{
+               kind: :team,
+               name: "Squamish SAR",
+               kind_label: "Team area",
+               home: "/teams/squamish"
+             } =
                area
 
       assert Navigation.area("/teams/pemberton", @team, nil) == nil
@@ -25,7 +30,7 @@ defmodule Web.NavigationTest do
     test "a member's own pages are their member area, from the member, not the current team" do
       member = %Member{team: @team}
 
-      assert %{kind: :member, kind_label: "Member"} =
+      assert %{kind: :member, kind_label: "Member area"} =
                Navigation.area("/teams/squamish/me", nil, member)
 
       assert %{kind: :member} = Navigation.area("/teams/squamish/me/details", @team, member)
