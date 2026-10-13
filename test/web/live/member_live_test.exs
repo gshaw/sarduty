@@ -26,6 +26,8 @@ defmodule Web.MemberLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
 
     assert has_element?(lv, "#member-phone", "604-555-1234")
+    assert has_element?(lv, ~s|#member-copy-phone[value="604-555-1234"]|)
+    assert has_element?(lv, ~s|#member-copy-email[value="#{member.email}"]|)
     assert has_element?(lv, ~s|#member-phone-call[href="tel:+16045551234"]|)
     assert has_element?(lv, ~s|#member-phone-text[href="sms:+16045551234"]|)
   end

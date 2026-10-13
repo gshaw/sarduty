@@ -1,6 +1,8 @@
 defmodule Web.Admin.OrganizationLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.CopyButton
+
   alias App.Model.Organization
   alias App.Model.Team
   alias App.Operation.SaveOrganization
@@ -109,7 +111,11 @@ defmodule Web.Admin.OrganizationLive do
         logo. When they want {own_host(@organization)}, they add this DNS record. Then we add
         the certificate and deploy, as in docs/organizations.md.
       </p>
-      <pre class="code-block">{own_host(@organization)}  CNAME  {Web.VerifyHost.host()}</pre>
+      <.copy_code_block
+        id="organization-cname"
+        value={"#{own_host(@organization)}  CNAME  #{Web.VerifyHost.host()}"}
+        label="Copy DNS record"
+      />
     </section>
     """
   end

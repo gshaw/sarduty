@@ -1,6 +1,8 @@
 defmodule Web.Settings.MCPLive do
   use Web, :live_view_narrow_layout
 
+  import Web.Components.CopyButton
+
   alias App.Model.MCPToken
   alias App.Model.Team
   alias App.Operation.CreateMCPToken
@@ -99,12 +101,16 @@ defmodule Web.Settings.MCPLive do
 
       <div :if={@new_token} id="new-token" class="callout mb-4">
         <p class="font-semibold">Copy your token now. SAR Duty shows it only once.</p>
-        <pre id="new-token-value" class="code-block">{@new_token}</pre>
+        <.copy_code_block id="new-token-value" value={@new_token} label="Copy token" />
         <p>
           To set it up, paste this into your AI agent. It has the token, so treat it like a
           password.
         </p>
-        <pre id="setup-prompt" class="code-block">{setup_prompt(@endpoint_url, @new_token)}</pre>
+        <.copy_code_block
+          id="setup-prompt"
+          value={setup_prompt(@endpoint_url, @new_token)}
+          label="Copy setup prompt"
+        />
       </div>
 
       <.form
@@ -168,13 +174,21 @@ defmodule Web.Settings.MCPLive do
       </p>
       <h3 class="subheading mt-4">Claude Code</h3>
       <p>Run this in a terminal:</p>
-      <pre id="claude-code-command" class="code-block">{claude_code_command(@endpoint_url, @new_token)}</pre>
+      <.copy_code_block
+        id="claude-code-command"
+        value={claude_code_command(@endpoint_url, @new_token)}
+        label="Copy command"
+      />
       <h3 class="subheading mt-4">Claude Desktop</h3>
       <p>
         Add this to <code>claude_desktop_config.json</code>, then restart Claude Desktop. It
         needs Node.js, and uses <code>mcp-remote</code> to send the token.
       </p>
-      <pre id="claude-desktop-config" class="code-block">{claude_desktop_config(@endpoint_url, @new_token)}</pre>
+      <.copy_code_block
+        id="claude-desktop-config"
+        value={claude_desktop_config(@endpoint_url, @new_token)}
+        label="Copy config"
+      />
     </div>
     """
   end
