@@ -2,8 +2,16 @@
 @layer components {
   .field-error { border-left: 5px solid var(--danger-text); padding-left: var(--sp-4); }
 
-  /* A checkbox or radio in a list of choices, beside its label. */
-  .choice { display: flex; align-items: center; gap: var(--sp-2); margin-block: var(--sp-1); cursor: pointer; }
+  /* A checkbox or radio in a list of choices, beside its label. The box sits on the label's
+     first line, and the label's text sets the baseline, so a table row lines up with it. */
+  .choice { display: flex; align-items: baseline; gap: var(--sp-2); margin-block: var(--sp-1); cursor: pointer; }
+  .choice > input { align-self: flex-start; margin-top: calc((1lh - 24px) / 2); }
+  td .choice > input[type="checkbox"] { margin-top: calc((1lh - 16px) / 2); }
+
+  @media (pointer: coarse) {
+    td .choice > input[type="checkbox"] { margin-top: calc((1lh - 24px) / 2); }
+  }
+
   fieldset { margin-bottom: var(--sp-4); }
 
   /* A switch: a checkbox drawn as a track and knob, on the trailing edge of its row. See
