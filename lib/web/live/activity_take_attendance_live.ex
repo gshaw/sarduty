@@ -163,7 +163,7 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
       <:item
         label={"#{@activity.ref_id}"}

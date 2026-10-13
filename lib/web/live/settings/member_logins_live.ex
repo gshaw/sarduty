@@ -1,5 +1,5 @@
 defmodule Web.Settings.MemberLoginsLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   alias App.Operation.SetTeamMemberLogins
 
@@ -33,9 +33,8 @@ defmodule Web.Settings.MemberLoginsLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.back_link navigate={~p"/teams/#{@current_team}/settings"}>Team settings</.back_link>
-      <h1 class="heading">Member logins</h1>
+    <div class="measure">
+      <h1 class="title">Member logins</h1>
       <p class="lead">
         Let your members log in to get their own ID card and tax credit letters.
       </p>

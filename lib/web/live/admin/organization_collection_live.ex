@@ -1,8 +1,6 @@
 defmodule Web.Admin.OrganizationCollectionLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.AdminTabs
-
   alias App.Model.Organization
   alias App.Repo
 
@@ -13,10 +11,8 @@ defmodule Web.Admin.OrganizationCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">Admin</h1>
-    <.admin_tabs current={:organizations} />
     <div class="heading-row">
-      <h2 class="heading">Organizations</h2>
+      <h1 class="title">Organizations</h1>
       <.button navigate={~p"/admin/orgs/new"} variant={:success}>
         New organization
       </.button>

@@ -1,5 +1,5 @@
 defmodule Web.MeLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   alias App.Model.Activity
   alias App.Model.MemberCard
@@ -52,33 +52,14 @@ defmodule Web.MeLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <h1 class="heading">{@member.team.name}</h1>
+    <div class="measure">
+      <h1 class="title">{@member.team.name}</h1>
       <p class="lead">{@member.name}</p>
 
       <%= if @card || @member.team.id_cards_enabled do %>
         <h2 class="subheading mt-8">ID card</h2>
         <.card_content card={@card} member={@member} />
       <% end %>
-
-      <ul class="row-links mt-6">
-        <li>
-          <.row_link id="phone-link" navigate={~p"/teams/#{@member.team}/me/mobile"}>
-            <span class="text-link">Your mobile number</span>
-            <span class="hint block">For login codes by text</span>
-          </.row_link>
-        </li>
-        <li>
-          <.row_link id="details-link" navigate={~p"/teams/#{@member.team}/me/details"}>
-            <span class="text-link">Your contact details</span>
-            <span class="hint block">
-              {if App.Adapter.D4H.records?(@member.team),
-                do: "Your mailing address",
-                else: "Your mailing address and emergency contacts"}
-            </span>
-          </.row_link>
-        </li>
-      </ul>
 
       <h2 class="subheading mt-8">Tax credit letters</h2>
       <.empty_state :if={@letters == []} id="no-letters" title="No tax credit letters yet">

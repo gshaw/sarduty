@@ -51,8 +51,9 @@ The rules that are easy to break:
 ## Where do I put new code?
 
 - **New page** → a LiveView in `lib/web/live/`, with `use Web, :live_view_app_layout` for
-  team pages, `:live_view_narrow_layout` for auth and settings forms, or
-  `:live_view_marketing_layout` for public pages. Add the route in `lib/web/router.ex`
+  team, member, and admin pages, `:live_view_narrow_layout` for logging in and signing
+  up, or `:live_view_marketing_layout` for public pages. A page in the side navigation
+  is a line in `Web.Navigation` ([navigation.md](navigation.md)). Add the route in `lib/web/router.ex`
   inside the `live_session` whose `on_mount` checks what the page needs (signed in, admin,
   or a member of the team in the URL).
 - **New filterable list** → a view model in `lib/app/view_model/` with
@@ -96,6 +97,7 @@ The rules that are easy to break:
 - [members.md](members.md) — member logins: members get their own ID card and tax credit letters.
 - [tax-credit-letters.md](tax-credit-letters.md) — verifying a tax credit letter, its reference numbers, and the locked PDF.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.
+- [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
 - [attendance-at-the-door.md](attendance-at-the-door.md) — attendance links, scanning ID cards at an activity, and the times they record.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.

@@ -1,35 +1,42 @@
 <.shell title="Top bar" current={:top_bar}>
   <h1>Top bar</h1>
   <p class="lead">
-    Navy, with the amber rule and logo. It holds the main sections and the account menu.
+    Navy, with the amber rule and logo. It names the area you're in and holds the account menu, which switches areas.
   </p>
 
   <div class="demo bar-demo" style="padding: 0">
     <Web.Layouts.main_nav_bar
       current_user={sample_user()}
       current_team={sample_team()}
+      managed_teams={sample_managed_teams()}
+      member_logins={sample_member_logins()}
       current_path="/teams/squamish/activities"
     />
   </div>
 
   <h2>How it works</h2>
   <ul>
-    <li>The current section is underlined in amber.</li>
     <li>
-      The account menu is a short list under a button. Keep menus for a few links that don't fit in the bar. Actions on a page are buttons.
+      Every page is in one area: a team's, where its team admins work; a member's, their own pages; Admin; or your settings. The bar names it, such as "Squamish SAR" with "Team" after it, and the name goes to the area's first page.
+    </li>
+    <li>
+      The account menu lists the areas you can switch to. Admin comes first, for SAR Duty admins. Then each of your teams, under its name. Team area shows when you're one of its team admins, and Member area when it lets you log in as a member. Your settings and Log out come last.
+    </li>
+    <li>
+      The area's own pages are in the <a href={page_path(:side_nav)}>side navigation</a>, not the bar, so the bar has room as teams get more pages.
     </li>
   </ul>
 
   <h3>On a phone</h3>
   <p>
-    Below 1024px the sections, Admin, and the account menu move behind a Menu button. The
-    panel opens under the amber rule, the width of the screen, with the current section
-    marked in amber. Going to another page closes it.
+    Below 1024px the area's name sits beside the logo, with the area under it. A Menu button holds the area's pages and the account menu's list. The panel opens under the amber rule, the width of the screen, with the current page marked in amber. Going to another page closes it.
   </p>
   <div class="demo phone-width phone-bar-demo" style="padding: 0">
     <Web.Layouts.main_nav_bar
       current_user={sample_user()}
       current_team={sample_team()}
+      managed_teams={sample_managed_teams()}
+      member_logins={sample_member_logins()}
       current_path="/teams/squamish/activities"
     />
   </div>
@@ -50,6 +57,8 @@
 
   <h2>In the app</h2>
   <p>
-    The layout's <code>main_nav_bar</code>, built from <code>&lt;.site_bar&gt;</code>. The menus are open here so you can see them.
+    The layout's <code>main_nav_bar</code>, built from <code>&lt;.site_bar&gt;</code>.
+    <code>Web.Navigation</code>
+    decides the area and its pages. The menus are open here so you can see them.
   </p>
 </.shell>

@@ -5,18 +5,17 @@ defmodule Web.AccountLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  test "shows the email and links the team's settings", %{conn: conn} do
+  test "is Your settings: the email, and the account menu for the teams", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/account")
 
+    assert has_element?(lv, "h1", "Your settings")
     assert has_element?(lv, "#account-email", user.email)
-
-    assert has_element?(
-             lv,
-             "#account-team-#{team.id}-settings[href='/teams/#{team.subdomain}/settings']"
-           )
-
+    assert has_element?(lv, "#nav-area", "Your settings")
+    assert has_element?(lv, "#nav-your-settings[aria-current=page]")
+    assert has_element?(lv, ~s{#nav-team-#{team.subdomain}[href="/teams/#{team.subdomain}"]})
+    refute has_element?(lv, "#side-nav")
     refute html =~ "Change password"
   end
 

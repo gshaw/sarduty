@@ -84,7 +84,7 @@ defmodule Web.ProposedChangeLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Proposed changes" path={~p"/teams/#{@current_team}/proposed-changes"} />
       <:item label={"#{@change_set.id}"} />
     </.breadcrumbs>

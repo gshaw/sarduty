@@ -41,7 +41,7 @@ defmodule Web.TaxCreditLetterLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item
         label={"#{@letter.year} tax credit letters"}
         path={~p"/teams/#{@current_team}/tax-credit-letters?year=#{@letter.year}"}

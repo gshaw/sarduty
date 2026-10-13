@@ -1,6 +1,6 @@
 # Member logins
 
-A team admin turns on member logins in **Team settings → Member logins**. Then every
+A team admin turns on member logins in **Settings → Member logins**, in the team area. Then every
 current member of the team can log in with the email or mobile number D4H has for them,
 and land on their own page, `/teams/:subdomain/me`
 ([MeLive](../lib/web/live/me_live.ex)). It shows the ID card a team admin issued them,
@@ -27,9 +27,10 @@ admins change it in D4H. Issue #156 has the design.
 - **Every request checks again.** Turning member logins off, or the refresh seeing a
   member leave, ends access on the next page. Getting a card checks the login again, in
   case the page was open when access ended.
-- **Member pages are outside the team pages' `live_session`.** They never set
-  `current_team`, so the top bar shows team sections only to the team's admins. A team
-  admin is a member too, and reaches their own page from the account menu.
+- **Member pages are outside the team pages' `live_session`.** They set `member`, which
+  puts them in the member area ([navigation.md](navigation.md)), and never set
+  `current_team`. A team admin is a member too, and switches to their member area from
+  the account menu.
 - **Members don't issue cards.** Issuing, replacing, and cancelling stay with team admins,
   on the member's ID card tab, and only on a team a SAR Duty admin turned ID cards on for
   ([member-cards.md](member-cards.md)).

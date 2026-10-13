@@ -12,7 +12,7 @@ defmodule Web.TemplateCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Templates" />
     </.breadcrumbs>
     <div class="heading-row">

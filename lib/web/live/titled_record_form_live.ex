@@ -42,7 +42,7 @@ defmodule Web.TitledRecordFormLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label={list_label(@kind)} path={list_path(@current_team, @kind)} />
       <:item :if={@record} label={@record.title} path={record_path(@current_team, @kind, @record)} />
       <:item label={if @record, do: "Change", else: @page_title} />

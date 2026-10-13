@@ -46,6 +46,21 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   def sample_user, do: %App.Accounts.User{id: 0, email: "avery@example.com", is_admin: false}
 
+  # For the account menu: Avery is a team admin and a member on Squamish, and only a member
+  # on Pemberton.
+  def sample_managed_teams, do: [sample_team()]
+
+  def sample_member_logins do
+    pemberton = %App.Model.Team{id: 1, name: "Pemberton SAR", subdomain: "pemberton"}
+    [%App.Model.Member{id: 0, team: sample_team()}, %App.Model.Member{id: 1, team: pemberton}]
+  end
+
+  # Squamish's team area on its activities, with 2 proposed changes waiting.
+  def sample_nav_area, do: Web.Navigation.area("/teams/squamish/activities", sample_team(), nil)
+
+  def sample_nav_groups,
+    do: Web.Navigation.groups(sample_nav_area(), "/teams/squamish/activities", 2)
+
   def sample_team do
     %App.Model.Team{
       id: 0,

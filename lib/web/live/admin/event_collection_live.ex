@@ -1,8 +1,6 @@
 defmodule Web.Admin.EventCollectionLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.AdminTabs
-
   alias App.Model.Event
   alias App.Model.Team
   alias App.ViewModel.EventFilterViewModel
@@ -69,8 +67,7 @@ defmodule Web.Admin.EventCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">Admin</h1>
-    <.admin_tabs current={:events} />
+    <h1 class="title">Events</h1>
     <h2 class="heading">D4H sync</h2>
     <dl id="sync-summary" class="mb-8 max-w-3xl">
       <dt>Last sync round</dt>
@@ -113,7 +110,7 @@ defmodule Web.Admin.EventCollectionLive do
       </:col>
     </.table>
 
-    <h2 class="heading">Events</h2>
+    <h2 class="heading">Latest events</h2>
     <.form for={@form} id="event_filter_form" phx-change="change" class="filter-form">
       <.input label="Kind" field={@form[:kind]} type="select" options={EventFilterViewModel.kinds()} />
       <.input

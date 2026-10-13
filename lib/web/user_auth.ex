@@ -5,6 +5,7 @@ defmodule Web.UserAuth do
   import Phoenix.Controller
 
   alias App.Accounts
+  alias App.Model.ChangeSet
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
@@ -263,14 +264,20 @@ defmodule Web.UserAuth do
 
       team ->
         RecordUserSeen.call(current_user, team.id)
-        {:cont, Phoenix.Component.assign(socket, :current_team, team)}
+
+        # How many AI agent change sets wait for a team admin, for the side navigation.
+        {:cont,
+         Phoenix.Component.assign(socket,
+           current_team: team,
+           proposed_change_count: ChangeSet.count_waiting(team.id)
+         )}
     end
   end
 
   # A member's own pages, /teams/:subdomain/me (#156): the URL's team must have member
   # logins on and list this user as a current member. Otherwise a 404, as for team pages.
-  # Assigns `member`, with its team, and leaves `current_team` alone, so the top bar
-  # shows team sections only to someone who manages the team.
+  # Assigns `member`, with its team, which puts the page in the member's area; see
+  # Web.Navigation. `current_team` stays the team the user last managed.
   def on_mount(:ensure_team_member, params, _session, socket) do
     case member_login(socket.assigns.current_user, params["subdomain"]) do
       nil -> raise Web.Status.NotFound

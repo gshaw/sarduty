@@ -1,5 +1,5 @@
 defmodule Web.Settings.TeamLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
   alias App.Model.Team
@@ -26,47 +26,20 @@ defmodule Web.Settings.TeamLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.back_link navigate={~p"/teams/#{@current_team}"}>{@current_team.name}</.back_link>
-      <h1 class="heading">Team settings</h1>
-      <ul class="row-links mb-4">
-        <li :if={@current_team.id_cards_enabled}>
-          <.row_link id="settings-cards" navigate={~p"/teams/#{@current_team}/settings/cards"}>
-            <span class="text-link">ID cards</span>
-            <span class="hint block">Qualifications on the back</span>
-          </.row_link>
-        </li>
+    <div class="measure">
+      <h1 class="title">General</h1>
+      <%!-- The side navigation lists the other settings. These two show there only once a
+      SAR Duty admin turns them on, so say how. --%>
+      <ul
+        :if={!@current_team.id_cards_enabled or !@current_team.mcp_enabled}
+        class="row-links mb-4"
+      >
         <li :if={!@current_team.id_cards_enabled} id="settings-cards-off" class="py-2">
           ID cards
           <span class="hint block">
             Members carry them in Apple Wallet or Google Wallet. A SAR Duty admin turns them
             on once they have checked your team.
           </span>
-        </li>
-        <li>
-          <.row_link id="settings-managers" navigate={~p"/teams/#{@current_team}/settings/managers"}>
-            <span class="text-link">Team admins</span>
-            <span class="hint block">Who can log in</span>
-          </.row_link>
-        </li>
-        <li>
-          <.row_link
-            id="settings-member-logins"
-            navigate={~p"/teams/#{@current_team}/settings/member-logins"}
-          >
-            <span class="text-link">Member logins</span>
-            <span class="hint block">
-              {if @current_team.member_logins,
-                do: "On: members get their own ID card and tax credit letters",
-                else: "Off: only team admins can log in"}
-            </span>
-          </.row_link>
-        </li>
-        <li :if={@current_team.mcp_enabled}>
-          <.row_link id="settings-mcp" navigate={~p"/teams/#{@current_team}/settings/mcp"}>
-            <span class="text-link">MCP tokens</span>
-            <span class="hint block">Let your AI agent read the team's data</span>
-          </.row_link>
         </li>
         <li :if={!@current_team.mcp_enabled} id="settings-mcp-off" class="py-2">
           MCP tokens

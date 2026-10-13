@@ -27,7 +27,6 @@ defmodule Web.GroupCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team} />
     <div class="heading-row">
       <h1 class="title">{@page_title}</h1>
       <.button

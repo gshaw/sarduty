@@ -1,5 +1,5 @@
 defmodule Web.Settings.MCPLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   import Web.Components.CopyButton
 
@@ -77,9 +77,8 @@ defmodule Web.Settings.MCPLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.back_link navigate={~p"/teams/#{@current_team}/settings"}>Team settings</.back_link>
-      <h1 class="heading">MCP tokens</h1>
+    <div class="measure">
+      <h1 class="title">MCP tokens</h1>
       <p>
         An MCP token lets your AI agent, such as Claude Code, read {@current_team.name}'s data
         in SAR Duty. It can read members, groups, attendance hours, activities,

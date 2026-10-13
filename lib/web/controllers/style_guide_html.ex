@@ -54,7 +54,6 @@ defmodule Web.StyleGuideHTML do
        ]},
       {:components, "Components", "The parts pages are built from, one per page.",
        [
-         {:back_link, "Back link", "A way back for pages outside the main tree."},
          {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
@@ -75,6 +74,7 @@ defmodule Web.StyleGuideHTML do
          {:pagination, "Pagination", "Pages under a long table."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:row_link, "Row link", "A list row that goes to one place."},
+         {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
          {:table, "Table", "Dense rows, sorting, and header groups."},
@@ -343,4 +343,8 @@ defmodule Web.StyleGuideHTML do
   defdelegate activities(), to: SampleData
   defdelegate sample_team(), to: SampleData
   defdelegate sample_user(), to: SampleData
+  defdelegate sample_managed_teams(), to: SampleData
+  defdelegate sample_member_logins(), to: SampleData
+  defdelegate sample_nav_area(), to: SampleData
+  defdelegate sample_nav_groups(), to: SampleData
 end

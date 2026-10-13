@@ -52,10 +52,19 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#no-letters")
     end
 
-    test "shows no team sections in the top bar", %{conn: conn, team: team} do
+    test "is the member's own area, with none of the team's pages", %{conn: conn, team: team} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      refute has_element?(lv, "#nav-members")
-      assert has_element?(lv, "#nav-me-#{team.subdomain}")
+      assert has_element?(lv, "#nav-area", "Member")
+      assert has_element?(lv, "#side-nav-me[aria-current=page]")
+
+      assert has_element?(
+               lv,
+               ~s{#side-nav-me-details[href="/teams/#{team.subdomain}/me/details"]}
+             )
+
+      assert has_element?(lv, "#nav-member-#{team.subdomain}[aria-current=page]")
+      refute has_element?(lv, "#side-nav-members")
+      refute has_element?(lv, "#nav-team-#{team.subdomain}")
     end
   end
 

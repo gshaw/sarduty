@@ -80,7 +80,7 @@ defmodule Web.GroupReviewLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Groups" path={~p"/teams/#{@current_team}/groups"} />
       <:item label={@group.title} path={~p"/teams/#{@current_team}/groups/#{@group.id}"} />
       <:item label="Review changes" />

@@ -1,5 +1,5 @@
 defmodule Web.Settings.CardsLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   alias App.Model.GroupRuleClause
   alias App.Worker.PushPassUpdatesWorker
@@ -39,9 +39,8 @@ defmodule Web.Settings.CardsLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.back_link navigate={~p"/teams/#{@current_team}/settings"}>Team settings</.back_link>
-      <h1 class="heading">ID cards</h1>
+    <div class="measure">
+      <h1 class="title">ID cards</h1>
       <p>
         Select the qualifications to list on the back of members' ID cards and on the verify page.
         They come from named clauses in your groups' rules.

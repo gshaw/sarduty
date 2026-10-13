@@ -53,7 +53,7 @@ defmodule Web.TemplateFormLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Templates" path={~p"/teams/#{@current_team}/templates"} />
       <:item label={@page_title} />
     </.breadcrumbs>

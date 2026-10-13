@@ -18,7 +18,7 @@ defmodule Web.ProposedChangeCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Proposed changes" />
     </.breadcrumbs>
 
