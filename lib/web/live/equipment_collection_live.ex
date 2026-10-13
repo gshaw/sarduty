@@ -98,9 +98,6 @@ defmodule Web.EquipmentCollectionLive do
     <div class="heading-row">
       <h1 class="title">{@page_title}</h1>
       <div class="flex gap-2">
-        <.button id="equipment-kits" navigate={~p"/teams/#{@current_team}/equipment/kits"}>
-          Kits
-        </.button>
         <.button
           :if={D4H.records?(@current_team)}
           id="equipment-add"

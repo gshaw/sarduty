@@ -194,6 +194,14 @@ defmodule Web.ActivityLive do
             </.a>
           </li>
           <li>
+            <.a
+              id="activity-apply-template"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
+            >
+              Apply a template
+            </.a>
+          </li>
+          <li>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>
               Take attendance
             </.a>

@@ -6,7 +6,7 @@ defmodule App.Model.Tag do
   alias App.Model.Team
   alias App.Repo
 
-  # A copy of one of the team's D4H tags (#162), kept by the sync. Kits point at it.
+  # A copy of one of the team's D4H tags (#162), kept by the sync. Templates point at it.
   # Activities still store their tags as titles.
   schema "tags" do
     belongs_to :team, Team

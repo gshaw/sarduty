@@ -6,7 +6,7 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
-  alias App.Model.KitItem
+  alias App.Model.TemplateItem
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.UpsertEquipmentItems
   alias App.Operation.RefreshD4HData.UpsertEquipmentUsages
@@ -37,7 +37,7 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
     member = member_fixture(team)
     activity = activity_fixture(team)
     gone = equipment_item_fixture(team)
-    kit_fixture(team, "Old kit", [{gone, 60}])
+    template_fixture(team, "Old template", [{gone, 60}])
 
     stub(%{
       "equipment-kinds" => [%{"id" => 1, "title" => "Rescue Truck"}],
@@ -89,7 +89,7 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
     assert {usage.activity_id, usage.minutes} == {activity.id, 120}
 
     refute Repo.get(EquipmentItem, gone.id)
-    assert Repo.all(KitItem) == []
+    assert Repo.all(TemplateItem) == []
   end
 
   test "a team without D4H's equipment module has none, and the refresh goes on" do

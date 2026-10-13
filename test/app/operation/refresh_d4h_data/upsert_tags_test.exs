@@ -4,9 +4,9 @@ defmodule App.Operation.RefreshD4HData.UpsertTagsTest do
   import App.DataFixtures
 
   alias App.Adapter.D4H
-  alias App.Model.Kit
-  alias App.Model.KitTag
   alias App.Model.Tag
+  alias App.Model.Template
+  alias App.Model.TemplateTag
   alias App.Operation.RefreshD4HData.UpsertTags
 
   @now ~U[2026-10-12 12:00:00.000000Z]
@@ -17,7 +17,7 @@ defmodule App.Operation.RefreshD4HData.UpsertTagsTest do
 
     UpsertTags.save(team.id, [%D4H.Tag{d4h_tag_id: 1, title: "Boat"}], @now)
     boat = Repo.get_by!(Tag, team_id: team.id, d4h_tag_id: 1)
-    kit = kit_fixture(team, "Boat", [], [boat])
+    template = template_fixture(team, "Boat", [], [boat])
 
     UpsertTags.save(
       team.id,
@@ -34,8 +34,8 @@ defmodule App.Operation.RefreshD4HData.UpsertTagsTest do
     UpsertTags.save(team.id, [%D4H.Tag{d4h_tag_id: 2, title: "Flat Water"}], @now)
 
     refute Repo.get(Tag, boat.id)
-    assert Repo.get(Kit, kit.id)
-    assert Repo.all(KitTag) == []
+    assert Repo.get(Template, template.id)
+    assert Repo.all(TemplateTag) == []
     assert Repo.get(Tag, other.id)
   end
 end

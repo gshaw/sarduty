@@ -22,7 +22,7 @@ defmodule App.Model.ChangeSet do
     belongs_to :applied_by_user, User
     # :edit is a team admin changing one record of a team on SAR Duty Records
     # (docs/records.md). :member is a member changing their own details (#156).
-    # :equipment adds or removes items on an activity (#271). :kit invites a kit's groups
+    # :equipment adds or removes items on an activity (#271). :template invites a template's groups
     # to an activity (#162).
     field :source, Ecto.Enum,
       values: [
@@ -33,7 +33,7 @@ defmodule App.Model.ChangeSet do
         :edit,
         :member,
         :equipment,
-        :kit
+        :template
       ]
 
     field :summary, :string

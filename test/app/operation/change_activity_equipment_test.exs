@@ -49,7 +49,7 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
   defp tag(d4h_id, title), do: %Tag{d4h_tag_id: d4h_id, title: title}
 
   # D4H replaces the whole list, so the row keeps what the activity has.
-  test "a kit's tags join the activity's current tags in one row" do
+  test "a template's tags join the activity's current tags in one row" do
     tags = [tag(30, "Flat Water"), tag(10, "Primary Hours")]
 
     row = ChangeActivityEquipment.plan_tags(@activity, [20, 10], tags)
@@ -61,7 +61,7 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
   end
 
   # D4H answers a repeated id with a 404.
-  test "two kits with the same tag send it once" do
+  test "two templates with the same tag send it once" do
     tags = [tag(30, "Flat Water"), tag(40, "Boat"), tag(30, "Flat Water")]
 
     row = ChangeActivityEquipment.plan_tags(@activity, [10, 10], tags)

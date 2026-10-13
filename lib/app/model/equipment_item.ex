@@ -63,7 +63,7 @@ defmodule App.Model.EquipmentItem do
     |> Repo.all()
   end
 
-  @doc "Items a person can add to an activity or a kit: any but retired and lost ones."
+  @doc "Items a person can add to an activity or a template: any but retired and lost ones."
   def in_service?(%EquipmentItem{status: status}), do: status not in ["retired", "lost"]
 
   @doc "Whether D4H takes hours for a usage of the item. Vehicles take km, supplies a count."

@@ -15,9 +15,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/mileage",
     "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/activities/:id/equipment",
+    "/teams/:subdomain/activities/:id/templates",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/edit",
-    "/teams/:subdomain/equipment/kits/:id",
+    "/teams/:subdomain/templates/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
     "/teams/:subdomain/members/:id/groups",
@@ -50,7 +51,7 @@ defmodule Web.TeamScopingTest do
       group: group_fixture(other_team),
       qualification: qualification_fixture(other_team),
       item: equipment_item_fixture(other_team),
-      kit: kit_fixture(other_team),
+      template: template_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       change_set:
         ChangeSet.propose!(
@@ -110,14 +111,17 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/activities/:id/equipment", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/equipment"
 
+  defp path_for("/teams/:subdomain/activities/:id/templates", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/templates"
+
   defp path_for("/teams/:subdomain/equipment/:id", s, o),
     do: ~p"/teams/#{s}/equipment/#{o.item.id}"
 
   defp path_for("/teams/:subdomain/equipment/:id/edit", s, o),
     do: ~p"/teams/#{s}/equipment/#{o.item.id}/edit"
 
-  defp path_for("/teams/:subdomain/equipment/kits/:id", s, o),
-    do: ~p"/teams/#{s}/equipment/kits/#{o.kit.id}"
+  defp path_for("/teams/:subdomain/templates/:id", s, o),
+    do: ~p"/teams/#{s}/templates/#{o.template.id}"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

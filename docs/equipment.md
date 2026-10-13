@@ -2,8 +2,9 @@
 
 <!-- cspell:ignore SFSAR -->
 
-Equipment in SAR Duty (#271): a copy of a team's D4H items, the items on each activity,
-and kits. This first step adds equipment to activities. Moving items, check-out, and
+Equipment in SAR Duty (#271): a copy of a team's D4H items and the items on each
+activity. Templates, which add items, tags, and invites in one step, are in
+[templates.md](templates.md). This first step adds equipment to activities. Moving items, check-out, and
 checklists come later.
 
 ## What SFSAR's D4H showed
@@ -56,29 +57,6 @@ It opens on two short tables: the places items are in and the categories (D4H's
 place, with the chain of items holding each one. A search, or a filter other than "In
 service", lists items from every place.
 
-## Kits
-
-A kit is SAR Duty's own: a named set of items, each with default hours (Andrew's comment
-on #271). It is how a team adds the gear that goes out together, such as "Command
-response" (the command truck, the command phone, and the command rate), in one step.
-D4H never sees kits; adding one writes one usage per item. Kits live in `kits` and
-`kit_items` and are never touched by the sync, except that an item D4H deletes leaves
-its kits.
-
-Hours only count for equipment. D4H takes km for a vehicle and a count for a supply, so
-a kit's vehicle lines have no hours and their usages go without a duration.
-
-A kit can carry tags too (#162), such as Flat Water and Primary Hours for boat training,
-with or without items. The picker lists the team's tags from the sync's copy in `tags`,
-A to Z with a search. D4H's API has no tag bundles (`resource-bundles` only groups custom
-fields), so the picker can't group them the way D4H's web app does. A kit points at the
-local tag, so a rename shows up and a tag D4H deletes leaves its kits.
-
-A kit can also invite groups (#162), such as the Search Managers group for a managers'
-training. Adding the kit asks each member of the group to come, the way D4H's own
-"Requested" works: it signs nobody up, and each member answers in D4H. The groups live in
-`kit_groups`, and a group D4H deletes leaves its kits.
-
 ## Adding equipment to an activity
 
 The activity page has an Equipment section. "Add equipment" opens a page that builds a
@@ -86,10 +64,9 @@ list to send, from:
 
 1. **Same as last incident** (or exercise, or event): the items on the newest earlier
    activity of the same kind that has any, with their minutes.
-2. **Kits**, with each line's default hours.
-3. **A search** by name, barcode, or serial. A found item starts at 2 hours, South
+2. **A search** by name, barcode, or serial. A found item starts at 2 hours, South
    Fraser's most common.
-4. **Scanning barcodes** with a phone's camera, which adds each item as it reads it.
+3. **Scanning barcodes** with a phone's camera, which adds each item as it reads it.
 
 Retired and lost items are left out, and so is any item already on the activity. Each
 line's hours can change before sending. A vehicle's line takes km instead, typed, and
@@ -99,23 +76,6 @@ blank sends none; D4H takes no hours for a vehicle. Sending is a change set of s
 skips an item D4H has on it now, since D4H would count it twice. A published activity
 still takes equipment. Removing an item is a `delete_equipment_usage` row. After either,
 the activity's usages are read back from D4H.
-
-A kit's tags join the list as tags to add, leaving out any the activity has by its copied
-titles. Several kits add the union. Sending reads the activity's tag ids from D4H, then
-adds one `set_activity_tags` row with those and the new ones, each id once
-(`ChangeActivityEquipment.plan_tags/3`). D4H's `POST /{kind}s/{id}/tags` replaces the
-whole list, so a list from the last sync could drop a tag someone just added. After it
-applies, the new titles are copied to the activity so its page shows them.
-
-A kit's groups join the list as groups to invite. Sending adds the equipment and tags
-first, then invites, as a second change set of source `kit`
-([InviteGroups](../lib/app/operation/invite_groups.ex)): one `create_attendance` row with
-status `REQUESTED` per current member of the groups, for the activity's start and end.
-A member in two groups is invited once. Anyone with attendance on the activity already,
-in any status, is left out, and the applier skips anyone D4H has a row for now, since
-D4H would add a second one. A published activity's attendance is locked, so it refuses
-the invites; the equipment still goes. The invites reach the local copy on the next
-sync.
 
 ## The copy
 
@@ -147,7 +107,7 @@ barcodes" and the equipment page shows "Scan a barcode". Both use the door's
 ## Teams on SAR Duty Records
 
 Records serves D4H's equipment endpoints (its `Docs/api.md`), so a Records team gets the
-same pages, kits, and "Add equipment". It also has nowhere else to keep its items, so
+same pages, templates, and "Add equipment". It also has nowhere else to keep its items, so
 SAR Duty shows "Add item" on the equipment page and "Change or delete" on an item's
 page for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_item_form_live.ex),
 [SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex)). Each change is an

@@ -289,7 +289,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:edit), do: "edit"
   def source_label(:member), do: "the member"
   def source_label(:equipment), do: "equipment"
-  def source_label(:kit), do: "kit"
+  def source_label(:template), do: "template"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

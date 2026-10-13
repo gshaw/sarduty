@@ -11,7 +11,7 @@ defmodule App.Operation.RefreshD4HData.UpsertTags do
   @doc """
   Fetches the team's tags, keeps a copy in `tags` (#162), and returns them as a map of
   D4H id to title, the index activities need. A tag D4H no longer has is deleted, and
-  leaves its kits.
+  leaves its templates.
   """
   def call(d4h, team) do
     d4h_tags = D4H.fetch_tags(d4h)
