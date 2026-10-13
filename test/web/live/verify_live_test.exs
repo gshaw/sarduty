@@ -118,8 +118,8 @@ defmodule Web.VerifyLiveTest do
     member: member
   } do
     qualification = qualification_fixture(team)
-    clause = group_rule_clause_fixture(group_fixture(team), %{name: "First Aid", on_card: true})
-    group_rule_clause_qualification_fixture(clause, qualification)
+    endorsement = endorsement_fixture(team, %{name: "First Aid", on_card: true})
+    endorsement_qualification_fixture(endorsement, qualification)
     qualification_award_fixture(qualification, member)
     card = member_card_fixture(member)
 

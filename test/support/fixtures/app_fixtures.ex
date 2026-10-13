@@ -3,12 +3,13 @@ defmodule App.DataFixtures do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Endorsement
+  alias App.Model.EndorsementQualification
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Group
+  alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
-  alias App.Model.GroupRuleClause
-  alias App.Model.GroupRuleClauseQualification
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
@@ -265,25 +266,21 @@ defmodule App.DataFixtures do
     })
   end
 
-  def group_rule_clause_fixture(%Group{} = group, attrs \\ %{}) do
+  def endorsement_fixture(%Team{} = team, attrs \\ %{}) do
     {on_card, attrs} = Map.pop(attrs, :on_card, false)
-
-    %{team_id: group.team_id, d4h_group_id: group.d4h_group_id}
-    |> Map.merge(attrs)
-    |> GroupRuleClause.insert!()
-    |> Ecto.Changeset.change(on_card: on_card)
-    |> Repo.update!()
+    attrs = Map.put_new(attrs, :name, "Endorsement #{System.unique_integer([:positive])}")
+    {:ok, endorsement} = Endorsement.insert(team, attrs)
+    endorsement |> Ecto.Changeset.change(on_card: on_card) |> Repo.update!()
   end
 
-  def group_rule_clause_qualification_fixture(
-        %GroupRuleClause{} = clause,
+  def endorsement_qualification_fixture(
+        %Endorsement{} = endorsement,
         %Qualification{} = qualification
-      ) do
-    GroupRuleClauseQualification.insert!(%{
-      group_rule_clause_id: clause.id,
-      d4h_qualification_id: qualification.d4h_qualification_id
-    })
-  end
+      ),
+      do: EndorsementQualification.insert!(endorsement, qualification.d4h_qualification_id)
+
+  def group_endorsement_fixture(%Group{} = group, %Endorsement{} = endorsement),
+    do: GroupEndorsement.add!(group, endorsement)
 
   def member_card_fixture(%Member{} = member, attrs \\ %{}) do
     %MemberCard{

@@ -114,35 +114,20 @@ defmodule Web.StyleGuideHTML.SampleData do
     ]
   end
 
-  # The group rule editor's clauses, in the shape Web.Components.GroupRule takes.
-  def clauses do
-    options = [{"Rope Rescue Technician", 11}, {"Swiftwater Rescue", 12}]
-
+  # The group rule editor's rows and menu, in the shape Web.Components.GroupRule takes.
+  def rule_rows do
     [
       %{
         id: 1,
         name: "First Aid",
-        confirm: "Delete the First Aid clause and its 3 qualifications?",
-        qualifications: [
-          %{id: 1, title: "OFA Level 1", known?: true},
-          %{id: 2, title: "Wilderness First Aid", known?: true},
-          %{id: 3, title: "EMR", known?: true}
-        ],
-        options: options
+        path: "#",
+        qualifications: "OFA Level 1, Wilderness First Aid, EMR"
       },
-      %{
-        id: 2,
-        name: "Ground Search",
-        confirm: "Delete the Ground Search clause and its 2 qualifications?",
-        qualifications: [
-          %{id: 4, title: "GSAR Member", known?: true},
-          %{id: 5, title: "Deleted in D4H (4471)", known?: false}
-        ],
-        options: options
-      },
-      %{id: 3, name: nil, confirm: "Delete this clause?", qualifications: [], options: options}
+      %{id: 2, name: "Ground Search", path: "#", qualifications: "GSAR Member"}
     ]
   end
+
+  def rule_options, do: [{"Rope Rescue", 3}, {"Swiftwater", 4}]
 
   # Team settings after a failed save: the app's own changeset, with a blank name and an
   # email that isn't one.

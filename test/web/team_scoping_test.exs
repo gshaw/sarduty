@@ -19,6 +19,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/edit",
     "/teams/:subdomain/templates/:id",
+    "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
     "/teams/:subdomain/members/:id/groups",
@@ -52,6 +53,7 @@ defmodule Web.TeamScopingTest do
       qualification: qualification_fixture(other_team),
       item: equipment_item_fixture(other_team),
       template: template_fixture(other_team),
+      endorsement: endorsement_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       change_set:
         ChangeSet.propose!(
@@ -119,6 +121,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/equipment/:id/edit", s, o),
     do: ~p"/teams/#{s}/equipment/#{o.item.id}/edit"
+
+  defp path_for("/teams/:subdomain/endorsements/:id", s, o),
+    do: ~p"/teams/#{s}/endorsements/#{o.endorsement.id}"
 
   defp path_for("/teams/:subdomain/templates/:id", s, o),
     do: ~p"/teams/#{s}/templates/#{o.template.id}"

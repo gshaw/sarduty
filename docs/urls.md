@@ -9,7 +9,7 @@ enforces the top-level list and the held URLs.
 - **Plural kebab-case nouns**: `/members`, `/tax-credit-letters`.
 - **Local ids, never D4H ids**: `/members/42`. D4H ids stay in `d4h_*_id` columns.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
-  (`/teams/:subdomain/settings`, `/settings/cards`, `/settings/managers`). The URL names
+  (`/teams/:subdomain/settings`, `/settings/managers`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
 - **A member's own page is `/teams/:subdomain/me`**, with its downloads under it (#156).
   It names the team; the member is always the person logged in. See

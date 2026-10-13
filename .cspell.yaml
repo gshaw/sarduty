@@ -15,6 +15,8 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - PSLV # BC's provincial SAR volunteer registration, a real qualification in group rule tests
+  - GSTL # Ground Search Team Leader, a real BC qualification in group rule tests
   - UNRETIRE # D4H's retire endpoint's direction, in the adapter and its tests
   - eqrcode # the Hex package that encodes the QR code on tax credit letters
   - zxing # zxing-wasm, the vendored barcode reader for equipment, in its JS and docs

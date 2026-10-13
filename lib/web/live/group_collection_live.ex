@@ -5,8 +5,8 @@ defmodule Web.GroupCollectionLive do
 
   alias App.Adapter.D4H
   alias App.Model.Group
+  alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
-  alias App.Model.GroupRuleClause
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
 
@@ -90,10 +90,8 @@ defmodule Web.GroupCollectionLive do
 
   defp list_groups_with_counts(team) do
     ruled_group_ids =
-      GroupRuleClause
-      |> where([c], c.team_id == ^team.id)
-      |> distinct(true)
-      |> select([c], c.d4h_group_id)
+      team.id
+      |> GroupEndorsement.ruled_d4h_group_ids_query()
       |> Repo.all()
       |> MapSet.new()
 
