@@ -9,6 +9,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.D4H
   import Web.Components.GroupRule
   import Web.Components.Pagination
+  import Web.Components.Phone, only: [call_and_text: 1]
   import Web.Components.RowLink
   import Web.Components.Scanner
   import Web.Components.Table
@@ -56,6 +57,7 @@ defmodule Web.StyleGuideHTML do
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
          {:button, "Button", "Kinds, sizes, states, and rows of buttons."},
+         {:call_and_text, "Call and text", "Call and Text buttons by a phone number."},
          {:callout, "Callout", "Advice set apart beside a form field."},
          {:card, "Card", "A box for one topic: on a dashboard, or under a result."},
          {:chart, "Chart", "Columns, lines, a calendar, a week grid, and a bar list."},

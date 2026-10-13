@@ -18,6 +18,18 @@ defmodule Web.MemberLiveTest do
     assert html =~ member.name
   end
 
+  test "shows the phone number to read, and Call and Text for touch screens", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{phone: "6045551234"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-phone", "604-555-1234")
+    assert has_element?(lv, ~s|#member-phone-call[href="tel:+16045551234"]|)
+    assert has_element?(lv, ~s|#member-phone-text[href="sms:+16045551234"]|)
+  end
+
   test "suggests marking a bot, and the switch marks it not a person", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     bot = member_fixture(team, %{name: "Roster Bot", phone: nil, email: nil})

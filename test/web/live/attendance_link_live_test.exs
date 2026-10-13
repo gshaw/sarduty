@@ -352,8 +352,8 @@ defmodule Web.AttendanceLinkLiveTest do
 
       lv |> element("#toggle-yet-to-arrive") |> render_click()
       assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}", "604-555-1234")
-      assert has_element?(lv, ~s|#yet-to-arrive-call-#{raj.id}[href="tel:+16045551234"]|)
-      assert has_element?(lv, ~s|#yet-to-arrive-text-#{raj.id}[href="sms:+16045551234"]|)
+      assert has_element?(lv, ~s|#yet-to-arrive-#{raj.id}-call[href="tel:+16045551234"]|)
+      assert has_element?(lv, ~s|#yet-to-arrive-#{raj.id}-text[href="sms:+16045551234"]|)
 
       lv |> form("#door-form", %{search: "Raj"}) |> render_change()
       pick(lv, raj)

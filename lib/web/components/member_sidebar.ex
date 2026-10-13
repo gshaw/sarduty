@@ -3,9 +3,11 @@ defmodule Web.Components.MemberSidebar do
 
   import Web.Components.A
   import Web.Components.D4H
+  import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
   alias Web.Components.NotAPersonSwitch
+  alias Web.Components.Phone
 
   attr :member, :map, required: true
 
@@ -22,8 +24,9 @@ defmodule Web.Components.MemberSidebar do
         <.a href={"mailto:#{@member.email}"}>{@member.email}</.a>
       </dd>
       <dt>Phone</dt>
-      <dd>
-        <.a href={"tel:#{@member.phone}"}>{@member.phone}</.a>
+      <dd id="member-phone">
+        {Phone.format(@member.phone)}
+        <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
       </dd>
       <dt>Address</dt>
       <dd>{@member.address}</dd>
