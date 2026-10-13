@@ -170,7 +170,8 @@ defmodule App.Operation.ApplyChangeSet do
       new_value["d4h_activity_id"],
       new_value["d4h_member_id"],
       time(new_value["starts_at"]),
-      time(new_value["ends_at"])
+      time(new_value["ends_at"]),
+      new_value["status"] || "ATTENDING"
     )
     |> attendance_result()
   end

@@ -1,16 +1,20 @@
 defmodule Web.KitFormLive do
   use Web, :live_view_app_layout
 
-  import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1, tags_to_add: 1]
+  import Web.ActivityEquipmentLive,
+    only: [lines_table: 1, item_search: 1, tags_to_add: 1, groups_to_invite: 1]
 
+  alias App.Adapter.D4H
   alias App.Model.EquipmentItem
+  alias App.Model.Group
   alias App.Model.Kit
   alias App.Model.Tag
   alias App.Operation.SaveKit
   alias Web.ActivityEquipmentLive
 
-  # Adding and changing a kit: its name, its items with their usual hours (#271), and its
-  # tags (#162). Tags come from the sync's copy of the team's D4H tags.
+  # Adding and changing a kit: its name, its items with their usual hours (#271), its
+  # tags, and the groups it invites (#162). Tags and groups come from the sync's copy of
+  # the team's D4H records.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     kit = if id = params["id"], do: Kit.find!(team, id)
@@ -20,7 +24,12 @@ defmodule Web.KitFormLive do
       |> assign(kit: kit, lines: kit_lines(kit), q: "", results: [])
       |> assign(tags: if(kit, do: Kit.tags(kit), else: []), all_tags: Tag.get_all(team.id))
       |> assign(tag_q: "", tag_uses: Tag.use_counts(team.id, a_year_ago()))
+      |> assign(
+        groups: if(kit, do: Kit.groups(kit), else: []),
+        all_groups: Group.get_all(team.id)
+      )
       |> assign(page_title: if(kit, do: kit.title, else: "Add kit"))
+      |> assign(service: D4H.service_name(team))
       |> assign_form(Kit.build_changeset(kit || %Kit{}, %{}))
 
     {:ok, socket}
@@ -57,6 +66,28 @@ defmodule Web.KitFormLive do
           <h2 class="heading">Find a tag</h2>
           <.tag_search q={@tag_q} results={tag_results(@all_tags, @tags, @tag_q, @tag_uses)} />
         </section>
+
+        <section id="kit-group-search" class="mt-8">
+          <h2 class="heading">Groups</h2>
+          <ul :if={group_results(@all_groups, @groups) != []} id="group-results" class="action-list">
+            <li :for={group <- group_results(@all_groups, @groups)}>
+              <.button
+                id={"group-add-#{group.id}"}
+                type="button"
+                size={:sm}
+                variant={:secondary}
+                phx-click="add-group"
+                phx-value-id={group.id}
+              >
+                Add
+              </.button>
+              {group.title}
+            </li>
+          </ul>
+          <p :if={@all_groups == []} class="hint">
+            The team has no groups in {@service}.
+          </p>
+        </section>
       </aside>
       <main class="content-2/3">
         <.form for={@form} id="kit-form" phx-change="validate" phx-submit="save">
@@ -79,6 +110,15 @@ defmodule Web.KitFormLive do
           <.tags_to_add :if={@tags != []} id="kit-tags" tags={@tags} />
           <p :if={@tags == []} id="kit-no-tags" class="hint mb-4">
             Find tags to add.
+          </p>
+
+          <h2 class="heading mt-8">Invite · {length(@groups)}</h2>
+          <p class="hint mb-4">
+            Adding the kit invites each member of these groups to the activity. They answer in {@service}.
+          </p>
+          <.groups_to_invite :if={@groups != []} id="kit-groups" groups={@groups} />
+          <p :if={@groups == []} id="kit-no-groups" class="hint mb-4">
+            Add groups to invite.
           </p>
 
           <.form_actions>
@@ -118,19 +158,7 @@ defmodule Web.KitFormLive do
     team = socket.assigns.current_team
     lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
 
-    kit_lines =
-      Enum.map(lines, fn line ->
-        minutes =
-          if EquipmentItem.takes_hours?(line.item),
-            do: Service.Convert.hours_to_minutes(line.hours),
-            else: 0
-
-        %{equipment_item_id: line.item.id, minutes: minutes}
-      end)
-
-    tag_ids = Enum.map(socket.assigns.tags, & &1.id)
-
-    case SaveKit.save(team, socket.assigns.kit, params["kit"] || %{}, kit_lines, tag_ids) do
+    case save_kit(socket.assigns, params["kit"] || %{}, lines) do
       {:ok, kit} ->
         socket =
           socket
@@ -191,6 +219,25 @@ defmodule Web.KitFormLive do
     do:
       {:noreply,
        assign(socket, tags: Enum.reject(socket.assigns.tags, &(Integer.to_string(&1.id) == id)))}
+
+  def handle_event("add-group", %{"id" => id}, socket) do
+    group = Enum.find(socket.assigns.all_groups, &(Integer.to_string(&1.id) == id))
+    groups = ActivityEquipmentLive.add_groups(socket.assigns.groups, List.wrap(group))
+    {:noreply, assign(socket, groups: groups)}
+  end
+
+  def handle_event("remove-group", %{"id" => id}, socket),
+    do:
+      {:noreply,
+       assign(socket,
+         groups: Enum.reject(socket.assigns.groups, &(Integer.to_string(&1.id) == id))
+       )}
+
+  @doc "The team's groups to offer, leaving out the kit's."
+  def group_results(all_groups, chosen) do
+    chosen = MapSet.new(chosen, & &1.id)
+    Enum.reject(all_groups, &MapSet.member?(chosen, &1.id))
+  end
 
   attr :q, :string, required: true
   attr :results, :map, required: true, doc: "from tag_results/4"
@@ -267,4 +314,18 @@ defmodule Web.KitFormLive do
   defp a_year_ago, do: DateTime.add(DateTime.utc_now(), -365, :day)
 
   defp tag_sort(tag), do: String.downcase(tag.title)
+
+  defp save_kit(%{current_team: team, kit: kit, tags: tags, groups: groups}, params, lines) do
+    lines = Enum.map(lines, &kit_line/1)
+    SaveKit.save(team, kit, params, lines, Enum.map(tags, & &1.id), Enum.map(groups, & &1.id))
+  end
+
+  defp kit_line(line) do
+    minutes =
+      if EquipmentItem.takes_hours?(line.item),
+        do: Service.Convert.hours_to_minutes(line.hours),
+        else: 0
+
+    %{equipment_item_id: line.item.id, minutes: minutes}
+  end
 end
