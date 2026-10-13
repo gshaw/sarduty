@@ -73,21 +73,26 @@ defmodule Web.TemplateFormLive do
 
         <section id="template-group-search" class="mt-8">
           <h2 class="heading">Groups</h2>
-          <ul :if={group_results(@all_groups, @groups) != []} id="group-results" class="action-list">
-            <li :for={group <- group_results(@all_groups, @groups)}>
+          <.table
+            :if={group_results(@all_groups, @groups) != []}
+            id="group-results"
+            rows={group_results(@all_groups, @groups)}
+            row_id={&"group-result-#{&1.id}"}
+            class="table-striped"
+          >
+            <:col :let={group} label="Group">{group.title}</:col>
+            <:col :let={group} label="" class="w-px whitespace-nowrap">
               <.button
                 id={"group-add-#{group.id}"}
                 type="button"
                 size={:sm}
-                variant={:secondary}
                 phx-click="add-group"
                 phx-value-id={group.id}
               >
                 Add
               </.button>
-              {group.title}
-            </li>
-          </ul>
+            </:col>
+          </.table>
           <p :if={@all_groups == []} class="hint">
             The team has no groups in {@service}.
           </p>
@@ -100,7 +105,7 @@ defmodule Web.TemplateFormLive do
 
           <h2 class="heading">Items · {length(@lines)}</h2>
           <p class="hint mb-4">
-            The hours are what each item adds to an activity. You can change them when you add the template.
+            The hours are what each item adds to an activity. You can change them when you apply the template.
           </p>
           <.lines_table :if={@lines != []} id="template-lines" lines={@lines} />
           <p :if={@lines == []} id="template-no-items" class="hint mb-4">
@@ -109,7 +114,7 @@ defmodule Web.TemplateFormLive do
 
           <h2 class="heading mt-8">Tags · {length(@tags)}</h2>
           <p class="hint mb-4">
-            Adding the template adds these tags to the activity and keeps the tags it has.
+            Applying the template adds these tags to the activity and keeps the tags it has.
           </p>
           <.tags_to_add :if={@tags != []} id="template-tags" tags={@tags} />
           <p :if={@tags == []} id="template-no-tags" class="hint mb-4">
@@ -118,7 +123,7 @@ defmodule Web.TemplateFormLive do
 
           <h2 class="heading mt-8">Invite · {length(@groups)}</h2>
           <p class="hint mb-4">
-            Adding the template invites each member of these groups to the activity. They answer in {@service}.
+            Applying the template invites each member of these groups to the activity. They answer in {@service}.
           </p>
           <.groups_to_invite :if={@groups != []} id="template-groups" groups={@groups} />
           <p :if={@groups == []} id="template-no-groups" class="hint mb-4">
@@ -264,21 +269,28 @@ defmodule Web.TemplateFormLive do
     <p :if={@q == "" and @results.tags != []} id="tag-most-used" class="hint mb-2">
       Used most in the last year
     </p>
-    <ul :if={@results.tags != []} id="tag-search-results" class="action-list">
-      <li :for={tag <- @results.tags}>
+    <.table
+      :if={@results.tags != []}
+      id="tag-search-results"
+      rows={@results.tags}
+      row_id={&"tag-result-#{&1.id}"}
+      class="table-striped"
+    >
+      <:col :let={tag} label="Tag">
+        <.badge kind={:outline}>{tag.title}</.badge>
+      </:col>
+      <:col :let={tag} label="" class="w-px whitespace-nowrap">
         <.button
           id={"tag-add-#{tag.id}"}
           type="button"
           size={:sm}
-          variant={:secondary}
           phx-click="add-tag"
           phx-value-id={tag.id}
         >
           Add
         </.button>
-        {tag.title}
-      </li>
-    </ul>
+      </:col>
+    </.table>
     <p :if={@results.more > 0} id="tag-more" class="hint mt-2">
       {Service.Format.count(@results.more, one: "%d more tag matches.", many: "%d more tags match.")} Type more of the name.
     </p>

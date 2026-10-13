@@ -47,7 +47,7 @@ defmodule Web.TemplateCollectionLive do
     </.table>
 
     <.empty_state :if={@templates == []} id="no-templates" title="No templates yet">
-      Add one for what goes together, such as a boat training's gear and tags.
+      Add one for what goes together, such as the items and tags for boat training.
     </.empty_state>
     """
   end

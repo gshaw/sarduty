@@ -118,7 +118,7 @@ and must not be used for it.
 | primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
 | tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
 | category                       | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type.                                          |
-| equipment                      | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, gear, supplies.                                          |
+| equipment                      | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
 | item                           | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
 | template                       | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups to invite, applied to an activity in one step.       |
 | mileage report                 | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |

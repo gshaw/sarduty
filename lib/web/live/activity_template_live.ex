@@ -48,26 +48,34 @@ defmodule Web.ActivityTemplateLive do
       <aside class="content-1/3">
         <section id="templates">
           <h2 class="heading">Templates</h2>
-          <ul :if={@templates != []} class="action-list mb-4">
-            <li :for={template <- @templates}>
+          <.table
+            :if={@templates != []}
+            id="templates-table"
+            rows={@templates}
+            row_id={&"template-#{&1.id}"}
+            class="table-striped mb-4"
+          >
+            <:col :let={template} label="Template">
+              {template.title}
+              <div class="hint">{template_contents(template)}</div>
+            </:col>
+            <:col :let={template} label="" class="w-px whitespace-nowrap">
               <.button
                 id={"add-template-#{template.id}"}
                 type="button"
                 size={:sm}
-                variant={:secondary}
                 phx-click="add-template"
                 phx-value-id={template.id}
               >
-                Add {template.title}
+                Add
               </.button>
-              <span class="hint">{template_contents(template)}</span>
-            </li>
-          </ul>
+            </:col>
+          </.table>
           <p class="hint">
             <.a navigate={~p"/teams/#{@current_team}/templates"}>
               {if @templates == [], do: "Add a template", else: "Change templates"}
             </.a>
-            for gear, tags, and groups that go together.
+            for items, tags, and groups that go together.
           </p>
         </section>
       </aside>
@@ -86,18 +94,18 @@ defmodule Web.ActivityTemplateLive do
             <div :if={@tags != []} id="template-tags" class="mt-4">
               <h3 class="subheading">Tags</h3>
               <p class="hint mb-2">The activity keeps the tags it has.</p>
-              <.tags_to_add id="template-tags-list" tags={@tags} />
+              <.tags_to_add id="template-tags-table" tags={@tags} />
             </div>
             <div :if={@groups != []} id="template-groups" class="mt-4">
               <h3 class="subheading">Invite</h3>
               <p class="hint mb-2">
-                SAR Duty invites each member of these groups who isn't on the activity. They answer in {@service}.
+                SAR Duty invites each member of these groups who is not on the activity. They answer in {@service}.
               </p>
-              <.groups_to_invite id="template-groups-list" groups={@groups} />
+              <.groups_to_invite id="template-groups-table" groups={@groups} />
             </div>
             <.form_actions>
               <.button id="template-send" variant={:success} phx-disable-with="Adding…">
-                {to_add_text(length(@lines), length(@tags), length(@groups))}
+                Add to activity
               </.button>
             </.form_actions>
           </.form>
@@ -106,7 +114,7 @@ defmodule Web.ActivityTemplateLive do
             id="template-nothing-to-add"
             class="hint"
           >
-            Add one or more templates. Check the hours and a vehicle's km, then add them.
+            Add one or more templates. Check the hours and a vehicle's km, then add them to the activity.
           </p>
         </section>
       </main>
@@ -120,21 +128,22 @@ defmodule Web.ActivityTemplateLive do
   @doc "Tags about to be added, each with a remove button. Shared with the template form."
   def tags_to_add(assigns) do
     ~H"""
-    <ul id={@id} class="action-list mb-4">
-      <li :for={tag <- @tags} id={"tag-#{tag.id}"}>
+    <.table id={@id} rows={@tags} row_id={&"tag-#{&1.id}"} class="table-striped mb-4">
+      <:col :let={tag} label="Tag">
+        <.badge kind={:outline}>{tag.title}</.badge>
+      </:col>
+      <:col :let={tag} label="" class="w-px whitespace-nowrap">
         <.button
           id={"tag-remove-#{tag.id}"}
           type="button"
           size={:sm}
-          variant={:secondary}
           phx-click="remove-tag"
           phx-value-id={tag.id}
         >
           Remove
         </.button>
-        <.badge kind={:outline}>{tag.title}</.badge>
-      </li>
-    </ul>
+      </:col>
+    </.table>
     """
   end
 
@@ -144,21 +153,20 @@ defmodule Web.ActivityTemplateLive do
   @doc "Groups about to be invited, each with a remove button. Shared with the template form."
   def groups_to_invite(assigns) do
     ~H"""
-    <ul id={@id} class="action-list mb-4">
-      <li :for={group <- @groups} id={"group-#{group.id}"}>
+    <.table id={@id} rows={@groups} row_id={&"group-#{&1.id}"} class="table-striped mb-4">
+      <:col :let={group} label="Group">{group.title}</:col>
+      <:col :let={group} label="" class="w-px whitespace-nowrap">
         <.button
           id={"group-remove-#{group.id}"}
           type="button"
           size={:sm}
-          variant={:secondary}
           phx-click="remove-group"
           phx-value-id={group.id}
         >
           Remove
         </.button>
-        {group.title}
-      </li>
-    </ul>
+      </:col>
+    </.table>
     """
   end
 
@@ -171,26 +179,6 @@ defmodule Web.ActivityTemplateLive do
     |> Kernel.++(if tags > 0, do: [count_tags(tags)], else: [])
     |> Kernel.++(if groups > 0, do: [count_groups(groups)], else: [])
     |> Enum.join(", ")
-  end
-
-  @doc """
-  What the send button does: "Add 3 items", "Add 3 items and 2 tags", "Invite 1 group",
-  or "Add 3 items and 2 tags, invite 1 group".
-  """
-  def to_add_text(lines, tags, groups) do
-    adds =
-      case {lines, tags} do
-        {0, 0} -> nil
-        {_lines, 0} -> count_items(lines)
-        {0, _tags} -> count_tags(tags)
-        _both -> "#{count_items(lines)} and #{count_tags(tags)}"
-      end
-
-    case {adds, groups} do
-      {adds, 0} -> "Add #{adds}"
-      {nil, groups} -> "Invite #{count_groups(groups)}"
-      {adds, groups} -> "Add #{adds}, invite #{count_groups(groups)}"
-    end
   end
 
   @doc """

@@ -65,7 +65,7 @@ defmodule Web.ActivityEquipmentLive do
           <ul class="mb-4">
             <li :for={usage <- @last_usages}>{usage.equipment_item.title}</li>
           </ul>
-          <.button id="equipment-add-last" type="button" size={:sm} phx-click="add-last">
+          <.button id="equipment-add-last" type="button" phx-click="add-last">
             Add {Service.Format.count(length(@last_usages), one: "%d item", many: "%d items")}
           </.button>
         </section>
@@ -85,7 +85,7 @@ defmodule Web.ActivityEquipmentLive do
         </section>
 
         <p class="hint">
-          To add a template's gear, tags, and groups together, <.a navigate={
+          To add a template's items, tags, and groups in one step, <.a navigate={
             ~p"/teams/#{@current_team}/activities/#{@activity.id}/templates"
           }>
             apply a template</.a>.
@@ -249,21 +249,28 @@ defmodule Web.ActivityEquipmentLive do
         autocomplete="off"
       />
     </.form>
-    <ul :if={@results != []} id="item-search-results" class="action-list">
-      <li :for={item <- @results}>
+    <.table
+      :if={@results != []}
+      id="item-search-results"
+      rows={@results}
+      row_id={&"result-#{&1.id}"}
+      class="table-striped mt-4"
+    >
+      <:col :let={item} label="Item">
+        {item.title} <span :if={item.kind} class="hint">{item.kind}</span>
+      </:col>
+      <:col :let={item} label="" class="w-px whitespace-nowrap">
         <.button
           id={"item-add-#{item.id}"}
           type="button"
           size={:sm}
-          variant={:secondary}
           phx-click="add-item"
           phx-value-id={item.id}
         >
           Add
         </.button>
-        {item.title} <span :if={item.kind} class="hint">{item.kind}</span>
-      </li>
-    </ul>
+      </:col>
+    </.table>
     <p :if={@q != "" and @results == []} class="hint">No items match "{@q}".</p>
     """
   end

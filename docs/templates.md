@@ -5,7 +5,7 @@
 A template is SAR Duty's own: a named set of items with default hours, tags, and groups
 to invite, applied to an activity in one step (#271, #162). D4H never sees templates.
 They started as equipment "kits" (#271) and became templates on 2026-10-13, once they
-held more than gear. Andrew's examples on #162 show where they go next: a location, and
+held more than items. Andrew's examples on #162 show where they go next: a location, and
 incident fields such as the city and primary cause.
 
 Templates have their own menu item, `/teams/:subdomain/templates`. They live in

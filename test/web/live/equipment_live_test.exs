@@ -174,7 +174,7 @@ defmodule Web.EquipmentLiveTest do
     # The activity has Primary Hours already.
     assert has_element?(lv, "#template-tags #tag-#{water.id}")
     refute has_element?(lv, "#template-tags #tag-#{hours.id}")
-    assert has_element?(lv, "#template-send", "Add 1 tag")
+    assert has_element?(lv, "#template-send", "Add to activity")
 
     lv |> form("#template-lines") |> render_submit()
 
@@ -241,7 +241,7 @@ defmodule Web.EquipmentLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
     lv |> element("#add-template-#{template.id}") |> render_click()
     assert has_element?(lv, "#template-groups #group-#{managers.id}", "Search Managers")
-    assert has_element?(lv, "#template-send", "Invite 1 group")
+    assert has_element?(lv, "#template-send", "Add to activity")
 
     lv |> form("#template-lines") |> render_submit()
 
