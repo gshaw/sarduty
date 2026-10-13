@@ -1,8 +1,8 @@
 defmodule Web.Settings.CardsLive do
   use Web, :live_view_app_layout
 
-  alias App.Model.Group
   alias App.Model.GroupRuleClause
+  alias App.ViewData.CardNames
   alias App.Worker.PushPassUpdatesWorker
 
   # The team comes from the URL, /teams/:subdomain/settings/cards (#153).
@@ -27,45 +27,17 @@ defmodule Web.Settings.CardsLive do
     {:noreply, socket}
   end
 
-  # Named clauses from every group's rules, one row per name: ticked when on cards, the
-  # groups that use it, and whether those groups list different qualifications under it.
-  defp assign_names(socket, team) do
-    groups = team.id |> Group.get_all() |> Map.new(&{&1.d4h_group_id, &1})
-
-    names =
-      team.id
-      |> GroupRuleClause.get_all_named()
-      |> Enum.group_by(& &1.name)
-      |> Enum.map(fn {name, clauses} -> name_row(name, clauses, groups) end)
-      |> Enum.sort_by(& &1.name)
-
-    assign(socket, :names, names)
-  end
-
-  defp name_row(name, clauses, groups) do
-    %{
-      name: name,
-      on_card: Enum.any?(clauses, & &1.on_card),
-      groups:
-        clauses
-        |> Enum.map(&groups[&1.d4h_group_id])
-        |> Enum.reject(&is_nil/1)
-        |> Enum.uniq_by(& &1.id)
-        |> Enum.sort_by(& &1.title),
-      mixed: clauses |> Enum.map(&qualification_ids/1) |> Enum.uniq() |> length() > 1
-    }
-  end
-
-  defp qualification_ids(clause),
-    do: MapSet.new(clause.group_rule_clause_qualifications, & &1.d4h_qualification_id)
+  defp assign_names(socket, team),
+    do: assign(socket, :names, CardNames.for_team(team, DateTime.utc_now()))
 
   def render(assigns) do
     ~H"""
     <div class="measure">
       <h1 class="title">ID cards</h1>
       <p>
-        Select the qualifications to list on the back of members' ID cards and on the verify page.
-        They come from named clauses in your groups' rules.
+        Select the names to list on the back of members' ID cards and on the verify page. Each
+        name comes from a clause in a group's rules. A member with any of its qualifications
+        gets the name on their card.
       </p>
 
       <.empty_state :if={@names == []} id="no-names" title="No named clauses yet">
@@ -74,18 +46,30 @@ defmodule Web.Settings.CardsLive do
 
       <form :if={@names != []} id="cards-form" phx-submit="save">
         <input type="hidden" name="names[]" value="" />
-        <div :for={{row, i} <- Enum.with_index(@names)} id={"card-name-#{i}"} class="mb-2">
-          <label class="choice">
-            <input type="checkbox" name="names[]" value={row.name} checked={row.on_card} />
-            {row.name}
-          </label>
-          <div :if={row.groups != []} class="hint ml-8" phx-no-format>
-            Used by <%= for {group, j} <- Enum.with_index(row.groups) do %><%= if j > 0 do %>, <% end %><.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a><% end %>
-          </div>
-          <.warning_text :if={row.mixed} id={"card-name-#{i}-mixed"} class="ml-8 mt-1 mb-0">
-            These groups list different qualifications under this name. Any of them puts it on a card.
-          </.warning_text>
-        </div>
+        <.table id="card-names" rows={@names} row_id={&"card-name-#{&1.index}"}>
+          <:col :let={row} label="On card">
+            <label class="choice">
+              <input type="checkbox" name="names[]" value={row.name} checked={row.on_card} />
+              {row.name}
+            </label>
+          </:col>
+          <:col :let={row} label="Qualifications">
+            {Enum.join(row.qualifications, ", ")}
+            <div :if={row.missing > 0} class="text-danger-text" id={"card-name-#{row.index}-missing"}>
+              {if row.missing == 1,
+                do: "1 is no longer in D4H",
+                else: "#{row.missing} are no longer in D4H"}
+            </div>
+          </:col>
+          <:col :let={row} label="Members" align="right">
+            <span class={row.members == 0 && "text-text-muted"}>{row.members}</span>
+          </:col>
+          <:col :let={row} label="Set in">
+            <div :for={group <- row.groups}>
+              <.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a>
+            </div>
+          </:col>
+        </.table>
         <.form_actions>
           <.button variant={:success}>Save settings</.button>
         </.form_actions>

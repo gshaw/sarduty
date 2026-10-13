@@ -55,27 +55,37 @@ defmodule Web.Settings.CardsLiveTest do
     refute has_element?(lv, ~s|#card-name-1 a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|)
   end
 
-  test "warns when groups list different qualifications under one name",
+  test "shows every qualification under a name and how many members hold one",
        %{conn: conn, team: team} do
     first = group_fixture(team)
     second = group_fixture(team)
-    same = group_fixture(team)
-    [basic, advanced, rope] = for _ <- 1..3, do: qualification_fixture(team)
+    basic = qualification_fixture(team, %{title: "OFA 1"})
+    advanced = qualification_fixture(team, %{title: "OFA 3"})
+    qualification_award_fixture(basic, member_fixture(team))
+    qualification_award_fixture(advanced, member_fixture(team))
+    qualification_award_fixture(advanced, member_fixture(team, %{d4h_status: "RETIRED"}))
 
-    for {group, name, qualification} <- [
-          {first, "First Aid", basic},
-          {second, "First Aid", advanced},
-          {first, "Rope", rope},
-          {same, "Rope", rope}
-        ] do
-      clause = group_rule_clause_fixture(group, %{name: name})
+    for {group, qualification} <- [{first, basic}, {second, advanced}] do
+      clause = group_rule_clause_fixture(group, %{name: "First Aid"})
       group_rule_clause_qualification_fixture(clause, qualification)
     end
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
 
-    assert has_element?(lv, "#card-name-0-mixed")
-    refute has_element?(lv, "#card-name-1-mixed")
+    assert has_element?(lv, "#card-name-0 td", "OFA 1, OFA 3")
+    assert has_element?(lv, "#card-name-0 td", ~r/^\s*2\s*$/)
+  end
+
+  test "flags a qualification no longer in D4H", %{conn: conn, team: team} do
+    clause = group_rule_clause_fixture(group_fixture(team), %{name: "Rope"})
+
+    group_rule_clause_qualification_fixture(clause, %App.Model.Qualification{
+      d4h_qualification_id: 1
+    })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
+
+    assert has_element?(lv, "#card-name-0-missing")
   end
 
   test "never changes another team's clauses", %{conn: conn, team: team} do
