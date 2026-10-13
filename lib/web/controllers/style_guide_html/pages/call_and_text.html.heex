@@ -1,0 +1,38 @@
+<.shell title="Call and text" current={:call_and_text}>
+  <h1>Call and text</h1>
+  <p class="lead">Call and Text buttons by a phone number.</p>
+
+  <div class="demo max-w-sm">
+    <dl>
+      <dt>Phone</dt>
+      <dd>
+        604-555-1234
+        <.call_and_text
+          id="call-and-text-demo"
+          phone="6045551234"
+          touch_only={false}
+          class="mt-2"
+        />
+      </dd>
+    </dl>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    By a member's phone number where someone may want to reach them now: the member's details, yet to arrive, and no-shows.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A number shown to check or match, such as in a pasted attendance report. Show the number alone.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.call_and_text id="…" phone=&#123;member.phone&#125; /&gt;</code>
+    under the number, shown with <code>Phone.format/1</code>. It shows only on a touch screen, because a desktop often has no app for
+    <code>tel:</code>
+    and <code>sms:</code>
+    links. The example above shows it everywhere with <code>touch_only=&#123;false&#125;</code>. With no number it shows nothing.
+  </p>
+</.shell>

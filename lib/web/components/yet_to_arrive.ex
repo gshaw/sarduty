@@ -1,12 +1,14 @@
 defmodule Web.Components.YetToArrive do
   @moduledoc """
   The members who signed up for an activity and have not arrived, with Call and Text
-  buttons, and a line counting arrivals. Used at the door and on the team admin's Take
+  buttons on touch screens, and a line counting arrivals. Used at the door and on the team admin's Take
   attendance page (#245).
   """
   use Phoenix.Component
 
-  import Web.Components.Core, only: [button: 1]
+  import Web.Components.Phone, only: [call_and_text: 1]
+
+  alias Web.Components.Phone
 
   attr :id, :string, default: "yet-to-arrive"
   attr :yet_to_arrive, :map, required: true, doc: "from App.Operation.BuildYetToArrive"
@@ -26,18 +28,12 @@ defmodule Web.Components.YetToArrive do
         >
           <span>
             <span class="font-semibold">{member.name}</span>
-            <span :if={phone(member)} class="block hint">{Service.Phone.format(phone(member))}</span>
-            <span :if={!phone(member)} class="block hint">No mobile number in D4H</span>
+            <span :if={Phone.format(member.phone)} class="block hint">
+              {Phone.format(member.phone)}
+            </span>
+            <span :if={!Phone.format(member.phone)} class="block hint">No mobile number in D4H</span>
           </span>
-          <span :if={phone(member)} class="flex gap-2">
-            <.button id={"#{@id}-call-#{member.id}"} href={"tel:#{phone(member)}"}>
-              Call
-            </.button>
-            <%!-- Phoenix's link allows tel: but not sms:, so the scheme goes as a tuple. --%>
-            <.button id={"#{@id}-text-#{member.id}"} href={{:sms, phone(member)}}>
-              Text
-            </.button>
-          </span>
+          <.call_and_text id={"#{@id}-#{member.id}"} phone={member.phone} />
         </li>
       </ul>
       <p id={"#{@id}-count"} class="mt-2 hint">{arrived_text(@yet_to_arrive)}</p>
@@ -56,10 +52,4 @@ defmodule Web.Components.YetToArrive do
     Service.Format.count(arrived, one: "%d member arrived", many: "%d members arrived") <>
       ", including #{walk_ins} who did not sign up."
   end
-
-  # E.164 when D4H's number reads as one, so tel: and sms: links dial it.
-  defp phone(%{phone: phone}), do: Service.Phone.normalize(phone) || blank_to_nil(phone)
-
-  defp blank_to_nil(nil), do: nil
-  defp blank_to_nil(text), do: if(String.trim(text) == "", do: nil, else: String.trim(text))
 end

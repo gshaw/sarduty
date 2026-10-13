@@ -1,6 +1,7 @@
 defmodule Web.ActivityTakeAttendanceLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.Phone, only: [call_and_text: 1]
   import Web.Components.YetToArrive
 
   alias App.Adapter.D4H
@@ -17,6 +18,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Operation.FollowUpNoShow
   alias App.Operation.SendAttendanceToD4H
   alias App.Repo
+  alias Web.Components.Phone
 
   # The team admin's side of taking attendance at the door: make or close the link, and
   # watch arrivals and departures come in.
@@ -214,9 +216,13 @@ defmodule Web.ActivityTakeAttendanceLive do
     >
       <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
       <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
-        <.a :if={no_show.member.phone} href={"tel:#{no_show.member.phone}"}>
-          {no_show.member.phone}
-        </.a>
+        <span :if={Phone.format(no_show.member.phone)}>{Phone.format(no_show.member.phone)}</span>
+        <span :if={!Phone.format(no_show.member.phone)} class="hint">No mobile number in D4H</span>
+        <.call_and_text
+          id={"no-show-#{no_show.id}"}
+          phone={no_show.member.phone}
+          class="mt-1"
+        />
       </:col>
       <:col :let={no_show} label="Email" class="stack-full stack-optional break-all">
         <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>
