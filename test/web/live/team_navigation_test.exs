@@ -17,7 +17,7 @@ defmodule Web.TeamNavigationTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
     assert has_element?(lv, ~s{#nav-area[href="/teams/#{team.subdomain}"]}, team.name)
-    assert has_element?(lv, "#nav-area", "Team")
+    assert has_element?(lv, "#nav-area", "Team area")
     assert has_element?(lv, ~s{#side-nav-activities[href="/teams/#{team.subdomain}/activities"]})
     assert has_element?(lv, "#side-nav-members[aria-current=page]")
     refute has_element?(lv, "#side-nav-activities[aria-current]")

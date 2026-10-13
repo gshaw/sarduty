@@ -15,7 +15,7 @@
 
   .site-bar-links { display: flex; gap: 2px; flex: 1; overflow-x: auto; min-width: 0; }
 
-  /* The area you're in, after the brand (#312): its name, and Team or Member after it. It
+  /* The area you're in, after the brand (#312): its name, then Team area or Member area. It
      goes to the area's first page. */
   .site-bar-area {
     display: inline-flex;
@@ -33,10 +33,23 @@
   .site-bar-area:hover { text-decoration: underline; }
   .site-bar-area-kind { color: #d5dbe3; font-weight: 400; font-size: var(--fs-sm); line-height: var(--lh-sm); }
 
-  /* Phones: the same name beside the brand, with the area under it. */
-  .site-bar-area-phone { display: none; min-width: 0; flex-direction: column; color: #fff; text-decoration: none; }
-  .site-bar-area-phone > :first-child { font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); }
-  .site-bar-area-phone-kind { color: #d5dbe3; font-size: var(--fs-xs); line-height: var(--lh-xs); }
+  /* Phones: the same label beside the brand, on one line when it fits. A long name pushes
+     the area, kept whole, onto a second line; a name too long for its own line ends in an
+     ellipsis. */
+  .site-bar-area-phone {
+    display: none;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--sp-2);
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    text-decoration: none;
+  }
+  .site-bar-area-phone .site-bar-area-name { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .site-bar-area-phone .site-bar-area-kind { white-space: nowrap; }
 
   .site-bar-menu > summary {
     display: inline-flex;
