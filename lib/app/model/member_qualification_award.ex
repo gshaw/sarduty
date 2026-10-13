@@ -35,6 +35,40 @@ defmodule App.Model.MemberQualificationAward do
 
   # The one definition of a current award, used by group rules and every page that
   # shows awards. Takes any map with starts_at and ends_at; either may be nil.
+  @doc """
+  `{member_id, d4h_qualification_id}` for each award a current member of the team holds
+  at `now`.
+  """
+  def get_all_active_for_team(team_id, now) do
+    MemberQualificationAward
+    |> join(:inner, [a], q in assoc(a, :qualification), as: :qualification)
+    |> join(:inner, [a], m in assoc(a, :member), as: :member)
+    |> where([qualification: q, member: m], q.team_id == ^team_id and m.team_id == ^team_id)
+    |> active_only(now)
+    |> current_members_only(now)
+    |> select([a, qualification: q], {a.member_id, q.d4h_qualification_id})
+    |> Repo.all()
+  end
+
+  # active?/2 as a query.
+  defp active_only(query, now) do
+    where(
+      query,
+      [a],
+      (is_nil(a.starts_at) or a.starts_at <= ^now) and (is_nil(a.ends_at) or a.ends_at > ^now)
+    )
+  end
+
+  # Member.current_query/2 for the joined member.
+  defp current_members_only(query, now) do
+    where(
+      query,
+      [member: m],
+      (is_nil(m.left_at) or m.left_at > ^now) and
+        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
+    )
+  end
+
   def active?(%{starts_at: starts_at, ends_at: ends_at}, now) do
     (is_nil(starts_at) or not DateTime.after?(starts_at, now)) and
       (is_nil(ends_at) or DateTime.after?(ends_at, now))

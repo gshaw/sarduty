@@ -36,6 +36,72 @@ defmodule Web.Settings.CardsLiveTest do
     refute Repo.reload!(first_aid).on_card
   end
 
+  test "links to the groups to fix a name no member holds", %{conn: conn, team: team} do
+    gsar = group_fixture(team, %{title: "GSAR Callout"})
+    members = group_fixture(team, %{title: "Members"})
+    held = qualification_fixture(team)
+    qualification_award_fixture(held, member_fixture(team))
+
+    for group <- [gsar, members] do
+      group_rule_clause_fixture(group, %{name: "Placeholder"})
+    end
+
+    group_rule_clause_qualification_fixture(
+      group_rule_clause_fixture(members, %{name: "Rope"}),
+      held
+    )
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
+
+    assert has_element?(lv, "#card-name-0-no-members")
+
+    assert has_element?(
+             lv,
+             ~s|#card-name-0-fix a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#card-name-0-fix a[href="/teams/#{team.subdomain}/groups/#{members.id}"]|
+           )
+
+    refute has_element?(lv, "#card-name-1-fix")
+  end
+
+  test "shows every qualification under a name and how many members hold one",
+       %{conn: conn, team: team} do
+    first = group_fixture(team)
+    second = group_fixture(team)
+    basic = qualification_fixture(team, %{title: "OFA 1"})
+    advanced = qualification_fixture(team, %{title: "OFA 3"})
+    qualification_award_fixture(basic, member_fixture(team))
+    qualification_award_fixture(advanced, member_fixture(team))
+    qualification_award_fixture(advanced, member_fixture(team, %{d4h_status: "RETIRED"}))
+
+    for {group, qualification} <- [{first, basic}, {second, advanced}] do
+      clause = group_rule_clause_fixture(group, %{name: "First Aid"})
+      group_rule_clause_qualification_fixture(clause, qualification)
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
+
+    assert has_element?(lv, "#card-name-0 td", "OFA 1, OFA 3")
+    assert has_element?(lv, "#card-name-0 td", ~r/^\s*2\s*$/)
+  end
+
+  test "flags a qualification no longer in D4H", %{conn: conn, team: team} do
+    clause = group_rule_clause_fixture(group_fixture(team), %{name: "Rope"})
+
+    group_rule_clause_qualification_fixture(clause, %App.Model.Qualification{
+      d4h_qualification_id: 1
+    })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
+
+    assert has_element?(lv, "#card-name-0-missing")
+    assert has_element?(lv, "#card-name-0-fix a")
+  end
+
   test "never changes another team's clauses", %{conn: conn, team: team} do
     group_rule_clause_fixture(group_fixture(team), %{name: "First Aid"})
 
