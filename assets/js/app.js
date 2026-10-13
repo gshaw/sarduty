@@ -24,7 +24,6 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sarduty"
 import topbar from "../vendor/topbar"
-import {MapPick} from "./map_pick"
 import {QRScanner} from "./qr_scanner"
 import {SoundSwitch, listenForScanSounds} from "./scan_sound"
 import {ShareLink} from "./share_link"
@@ -33,7 +32,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, MapPick, QRScanner, ShareLink, SoundSwitch},
+  hooks: {...colocatedHooks, QRScanner, ShareLink, SoundSwitch},
 })
 
 listenForScanSounds()

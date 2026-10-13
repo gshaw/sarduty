@@ -37,12 +37,9 @@ defmodule Web.MemberLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
 
-    assert has_element?(
-             lv,
-             ~s|#member-maps-apple[href="https://maps.apple.com/?q=12+Elm+St%2C+Surrey+BC"]|
-           )
-
-    refute render(lv) =~ "q=Kim"
+    assert has_element?(lv, ~s|#member-maps[href$="query=12+Elm+St%2C+Surrey+BC"]|)
+    assert has_element?(lv, ~s|#member-copy-address[value="12 Elm St, Surrey BC"]|)
+    refute render(lv) =~ "query=Kim"
   end
 
   test "suggests marking a bot, and the switch marks it not a person", %{conn: conn} do

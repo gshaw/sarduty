@@ -3,6 +3,7 @@ defmodule Web.ActivityLive do
 
   import Ecto.Query
   import Web.Components.ActivityMap
+  import Web.Components.CopyButton
   import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
@@ -80,6 +81,7 @@ defmodule Web.ActivityLive do
       <aside class="content-1/3">
         <.sidebar_content
           activity={@activity}
+          maps_app={@current_user.maps_app}
           hours_tags={@hours_tags}
           attendances={@attendances}
           attendance_count={@attendance_count}
@@ -134,10 +136,15 @@ defmodule Web.ActivityLive do
       <div :if={@activity.address}>
         <dt>Address</dt>
         <dd>
-          {@activity.address}
+          {@activity.address}<.copy_button
+            id="activity-copy-address"
+            value={@activity.address}
+            label="Copy address"
+          />
           <.open_in_maps
             :if={!Activity.pin(@activity)}
             id="activity-maps"
+            app={@maps_app}
             address={@activity.address}
           />
         </dd>
@@ -145,11 +152,15 @@ defmodule Web.ActivityLive do
       <div :if={Activity.pin(@activity)}>
         <dt>Latitude and longitude</dt>
         <dd>
-          {@activity.coordinate}
+          {@activity.coordinate}<.copy_button
+            id="activity-copy-coordinate"
+            value={@activity.coordinate}
+            label="Copy latitude and longitude"
+          />
           <.open_in_maps
             id="activity-maps"
+            app={@maps_app}
             coordinate={Activity.pin(@activity)}
-            address={@activity.address}
             label={@activity.title}
           />
         </dd>

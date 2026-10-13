@@ -14,11 +14,21 @@ defmodule App.Accounts.User do
     field :last_seen_at, :utc_datetime
     # The team they last opened; logging in lands there. See App.Operation.RecordUserSeen.
     field :last_team_id, :integer
+    # The app place links open, set on the Account page (#301).
+    field :maps_app, :string, default: "google"
 
     timestamps(type: :utc_datetime)
   end
 
   def get!(id), do: Repo.get!(User, id)
+
+  def maps_apps, do: ~w(google apple)
+
+  def maps_app_changeset(%User{} = user, attrs) do
+    user
+    |> cast(attrs, [:maps_app])
+    |> validate_inclusion(:maps_app, maps_apps())
+  end
 
   @doc "A new user for an email that may log in. Emails are stored lowercase."
   def new_changeset(attrs) do

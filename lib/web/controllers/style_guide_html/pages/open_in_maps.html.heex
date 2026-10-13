@@ -1,18 +1,27 @@
 <.shell title="Open in maps" current={:open_in_maps}>
   <h1>Open in maps</h1>
-  <p class="lead">A place in Google Maps or Apple Maps, or copied.</p>
+  <p class="lead">A place in the account's maps app.</p>
 
-  <div class="demo max-w-sm pb-16">
+  <div class="demo max-w-sm">
     <dl>
       <dt>Address</dt>
-      <dd>Murrin Provincial Park, Squamish</dd>
+      <dd>
+        Murrin Provincial Park, Squamish<.copy_button
+          id="open-in-maps-demo-copy-address"
+          value="Murrin Provincial Park, Squamish"
+          label="Copy address"
+        />
+      </dd>
       <dt>Latitude and longitude</dt>
       <dd>
-        49.64310,-123.20890
+        49.64310,-123.20890<.copy_button
+          id="open-in-maps-demo-copy-coordinate"
+          value="49.64310,-123.20890"
+          label="Copy latitude and longitude"
+        />
         <.open_in_maps
           id="open-in-maps-demo"
           coordinate="49.64310,-123.20890"
-          address="Murrin Provincial Park, Squamish"
           label="Rope rescue practice"
         />
       </dd>
@@ -26,19 +35,17 @@
 
   <h2>When not to use</h2>
   <p>
-    In a list row that is already a link, such as a <a href={page_path(:row_link)}>row link</a>: a link cannot hold a button.
+    In a list row that is already a link, such as a <a href={page_path(:row_link)}>row link</a>: a link cannot hold another.
   </p>
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.open_in_maps id="…" coordinate=&#123;…&#125; address=&#123;…&#125; label=&#123;…&#125; /&gt;</code>. With a latitude and longitude it pins that spot, and Apple Maps labels the pin with <code>label</code>. Google Maps cannot. Without one it searches for the address. Never label a member's address with their name.
+    <code>&lt;.open_in_maps id="…" app=&#123;@current_user.maps_app&#125; coordinate=&#123;…&#125; address=&#123;…&#125; label=&#123;…&#125; /&gt;</code>. It opens Google Maps, or Apple Maps when the person chose it on the Account page.
   </p>
   <p>
-    It opens Google Maps until someone selects Apple Maps in the menu. The browser remembers that choice for every map button on the device. The menu also copies the latitude and longitude or the address, for a GPS app.
+    With a latitude and longitude it pins that spot, and Apple Maps labels the pin with <code>label</code>. Google Maps cannot. Without one it searches for the address. Never label a member's address with their name.
   </p>
   <p>
-    It is a split button, <code>&lt;span class="btn-split"&gt;</code>
-    around two <code>&lt;.button&gt;</code>s, with a <code>.menu.menu-start</code>
-    under it.
+    Put a <a href={page_path(:copy_button)}>copy button</a> after the value, for a GPS app.
   </p>
 </.shell>

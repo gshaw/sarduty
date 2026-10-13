@@ -7,59 +7,48 @@ defmodule Web.Components.OpenInMapsTest do
 
   alias Web.Components.OpenInMaps
 
-  describe "urls/3" do
+  describe "url/4" do
     test "pins the latitude and longitude, with Apple's label" do
-      assert OpenInMaps.urls("49.6431,-123.2089", "Murrin Park", "Rope practice") == %{
-               google: "https://www.google.com/maps/search/?api=1&query=49.6431%2C-123.2089",
-               apple: "https://maps.apple.com/?ll=49.6431%2C-123.2089&q=Rope+practice"
-             }
+      assert OpenInMaps.url("google", "49.6431,-123.2089", "Murrin Park", "Rope practice") ==
+               "https://www.google.com/maps/search/?api=1&query=49.6431%2C-123.2089"
+
+      assert OpenInMaps.url("apple", "49.6431,-123.2089", "Murrin Park", "Rope practice") ==
+               "https://maps.apple.com/?ll=49.6431%2C-123.2089&q=Rope+practice"
     end
 
     test "labels Apple's pin with the latitude and longitude when there is no label" do
-      assert OpenInMaps.urls("49.6431,-123.2089", nil, nil).apple ==
+      assert OpenInMaps.url("apple", "49.6431,-123.2089", nil, nil) ==
                "https://maps.apple.com/?ll=49.6431%2C-123.2089&q=49.6431%2C-123.2089"
     end
 
     test "searches for an address on one line when there is no latitude and longitude" do
-      assert OpenInMaps.urls(nil, "12 Elm St\n Surrey BC ", nil) == %{
-               google: "https://www.google.com/maps/search/?api=1&query=12+Elm+St%2C+Surrey+BC",
-               apple: "https://maps.apple.com/?q=12+Elm+St%2C+Surrey+BC"
-             }
+      assert OpenInMaps.url("google", nil, "12 Elm St\n Surrey BC ", nil) ==
+               "https://www.google.com/maps/search/?api=1&query=12+Elm+St%2C+Surrey+BC"
+
+      assert OpenInMaps.url("apple", nil, "12 Elm St\n Surrey BC ", nil) ==
+               "https://maps.apple.com/?q=12+Elm+St%2C+Surrey+BC"
     end
 
     test "is nil with nothing to find" do
-      assert OpenInMaps.urls(nil, " ", nil) == nil
-      assert OpenInMaps.urls("", nil, nil) == nil
+      assert OpenInMaps.url("google", nil, " ", nil) == nil
+      assert OpenInMaps.url("google", "", nil, nil) == nil
     end
   end
 
-  test "offers both apps and a copy of each part of the place" do
-    assigns = %{}
-
-    document =
-      ~H"""
-      <.open_in_maps id="maps" coordinate="49.6431,-123.2089" address="Murrin Park" />
-      """
-      |> rendered_to_string()
-      |> LazyHTML.from_fragment()
-
-    assert count(document, ~s(#maps[phx-hook="MapPick"] a[data-map-open][target="_blank"])) == 1
-    assert count(document, ~s(#maps-google[aria-checked="true"])) == 1
-    assert count(document, ~s(#maps-apple[aria-checked="false"])) == 1
-    assert count(document, ~s(#maps-copy-coordinate[value="49.6431,-123.2089"])) == 1
-    assert count(document, ~s(#maps-copy-address[value="Murrin Park"])) == 1
-  end
-
-  test "shows nothing with nothing to find" do
+  test "names the app in the link, and shows nothing with nothing to find" do
     assigns = %{}
 
     html =
       rendered_to_string(~H"""
-      <.open_in_maps id="maps" address={nil} />
+      <.open_in_maps id="maps" app="apple" address="Murrin Park" />
+      <.open_in_maps id="none" address={nil} />
       """)
 
-    assert String.trim(html) == ""
-  end
+    document = LazyHTML.from_fragment(html)
 
-  defp count(document, selector), do: document |> LazyHTML.query(selector) |> Enum.count()
+    assert document |> LazyHTML.query(~s(a#maps[target="_blank"])) |> LazyHTML.text() ==
+             "Open in Apple Maps"
+
+    assert document |> LazyHTML.query("#none") |> Enum.count() == 0
+  end
 end

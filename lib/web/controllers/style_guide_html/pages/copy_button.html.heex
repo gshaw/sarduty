@@ -1,0 +1,34 @@
+<.shell title="Copy button" current={:copy_button}>
+  <h1>Copy button</h1>
+  <p class="lead">Copies the value before it.</p>
+
+  <div class="demo max-w-sm">
+    <dl>
+      <dt>Latitude and longitude</dt>
+      <dd>
+        49.64310,-123.20890<.copy_button
+          id="copy-button-demo"
+          value="49.64310,-123.20890"
+          label="Copy latitude and longitude"
+        />
+      </dd>
+    </dl>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    After a value people paste somewhere else, such as an address or a latitude and longitude.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A link someone sends, such as the attendance link. Use a
+    <a href={page_path(:button)}>button</a>
+    that says Copy link.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.copy_button id="…" value=&#123;…&#125; label="Copy address" /&gt;</code>, straight after the value with no space. It shows Copied beside it for 2 seconds. The label is for screen readers and the tooltip. On a touch screen its tap area is 44px.
+  </p>
+</.shell>
