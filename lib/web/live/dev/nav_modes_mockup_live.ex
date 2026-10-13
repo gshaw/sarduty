@@ -164,6 +164,8 @@ defmodule Web.Dev.NavModesMockupLive do
   # Every mode the person can switch to: admin, then each of their teams under its name,
   # with Team area if they manage it and Member area if it has member logins, then their
   # account. Teams A to Z.
+  attr :email, :string, default: nil, doc: "shown above Account on a phone"
+
   defp mode_links(assigns) do
     assigns =
       assign(assigns,
@@ -193,6 +195,7 @@ defmodule Web.Dev.NavModesMockupLive do
       </a>
       <hr />
     <% end %>
+    <div :if={@email} class="menu-note truncate">{@email}</div>
     <a href="#">Account</a>
     <a href="#">Log out</a>
     """
@@ -248,8 +251,7 @@ defmodule Web.Dev.NavModesMockupLive do
           </a>
         <% end %>
         <hr />
-        <div class="menu-note truncate">{@email}</div>
-        <.mode_links person={@person} mode={@mode} team={@team} />
+        <.mode_links person={@person} mode={@mode} team={@team} email={@email} />
       </nav>
     </details>
     """
@@ -352,7 +354,7 @@ defmodule Web.Dev.NavModesMockupLive do
     """
     .mock-note { position: fixed; bottom: var(--sp-2); right: var(--sp-2); z-index: 50; padding: var(--sp-1) var(--sp-2); background: var(--warning); color: var(--on-warning); font-size: var(--fs-xs); border-radius: var(--radius); }
     .mock-body { padding-top: var(--sp-16); }
-    .menu .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: var(--text); }
+    .menu .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: var(--text); font-size: var(--fs-xs); line-height: var(--lh-xs); }
     .site-bar-phone-panel .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: #fff; font-size: var(--fs-sm); line-height: var(--lh-sm); }
     .mock-mode { display: inline-flex; align-items: baseline; gap: var(--sp-2); color: #fff; font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md); white-space: nowrap; padding: var(--sp-3) var(--sp-2); }
     .mock-mode-kind { color: #d5dbe3; font-weight: 400; font-size: var(--fs-sm); line-height: var(--lh-sm); }
