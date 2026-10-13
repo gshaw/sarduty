@@ -138,7 +138,7 @@ defmodule Web.Dev.NavMockupLive do
     <nav class="mock-sidebar" aria-label="Team">
       <%= for {heading, links} <- @groups do %>
         <div class="mock-sidebar-group">
-          <div :if={heading && length(links) > 1} class="mock-sidebar-heading">{heading}</div>
+          <div :if={heading && length(links) > 1} class="caps mock-sidebar-heading">{heading}</div>
           <a :for={{label, key} <- links} href="#" aria-current={key == @current && "page"}>
             {label}
           </a>
@@ -363,14 +363,14 @@ defmodule Web.Dev.NavMockupLive do
   defp css do
     """
     .mock-note { position: fixed; bottom: var(--sp-2); right: var(--sp-2); z-index: 50; padding: var(--sp-1) var(--sp-2); background: var(--warning); color: var(--on-warning); font-size: var(--fs-xs); border-radius: var(--radius); }
-    .mock-body { padding-top: 64px; }
-    .mock-body-rows { padding-top: 112px; }
+    .mock-body { padding-top: var(--sp-16); }
+    .mock-body-rows { padding-top: calc(var(--sp-16) + var(--sp-12)); }
     .mock-narrow { max-width: 28rem; margin: 0 auto; padding: 0 var(--sp-2); }
 
     .mock-team > summary, .mock-area > summary {
       display: inline-flex; align-items: center; gap: var(--sp-1); list-style: none; cursor: pointer;
       color: #d5dbe3; font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm);
-      padding: 14px 6px 12px; white-space: nowrap;
+      padding: var(--sp-3) var(--sp-2); white-space: nowrap;
     }
     .mock-team > summary::-webkit-details-marker, .mock-area > summary::-webkit-details-marker { display: none; }
     .mock-team > summary { color: #fff; max-width: 240px; padding: var(--sp-1) var(--sp-2); border-radius: var(--radius); }
@@ -380,19 +380,19 @@ defmodule Web.Dev.NavMockupLive do
     .site-bar-links:has(.mock-area, .mock-team) { overflow: visible; }
     .mock-menu-left { left: 0; right: auto; }
 
-    .mock-rows .site-bar-inner { border-bottom: 1px solid rgb(255 255 255 / 0.12); }
+    .mock-rows .site-bar-inner { border-bottom: 1px solid rgb(255 255 255 / 0.15); }
     .mock-tabs-row .site-bar-links { overflow-x: auto; }
 
     .mock-with-sidebar { display: flex; gap: var(--sp-8); }
     .mock-main { flex: 1; min-width: 0; }
-    .mock-sidebar { width: 200px; flex-shrink: 0; position: sticky; top: 72px; align-self: flex-start; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+    .mock-sidebar { width: 200px; flex-shrink: 0; position: sticky; top: calc(var(--sp-16) + var(--sp-2)); align-self: flex-start; font-size: var(--fs-sm); line-height: var(--lh-sm); }
     .mock-sidebar-group { padding: var(--sp-2) 0; border-bottom: 1px solid var(--border-subtle); }
     .mock-sidebar-group:first-child { padding-top: 0; }
     .mock-sidebar-end { border-bottom: 0; }
-    .mock-sidebar-heading { padding: var(--sp-1) var(--sp-3); color: var(--text-muted); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .mock-sidebar-heading { padding: var(--sp-1) var(--sp-3); color: var(--text-muted); }
     .mock-sidebar a { display: block; padding: var(--sp-2) var(--sp-3); color: var(--text); text-decoration: none; border-radius: var(--radius); }
     .mock-sidebar a:hover { background: var(--row-hover); }
-    .mock-sidebar a[aria-current="page"] { font-weight: 700; background: var(--surface-alt); box-shadow: inset 3px 0 var(--accent); }
+    .mock-sidebar a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
     """
   end
 end
