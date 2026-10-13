@@ -1,5 +1,5 @@
 defmodule Web.MeDetailsLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
   alias App.Model.Member
@@ -79,9 +79,8 @@ defmodule Web.MeDetailsLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.back_link navigate={~p"/teams/#{@member.team}/me"}>{@member.team.name}</.back_link>
-      <h1 class="heading">Your contact details</h1>
+    <div class="measure">
+      <h1 class="title">Your contact details</h1>
       <p class="lead">
         Saving changes them in {service(@member)}, where your team admins see them.
       </p>

@@ -103,18 +103,18 @@ defmodule Web.MemberCardLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
-      <:item label="ID card" />
+      <:item label={@member.name} />
     </.breadcrumbs>
 
     <h1 class="title">{@member.name}</h1>
+    <.member_tabs member={@member} active_tab={:card} />
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
       </aside>
       <main class="content-2/3">
-        <.member_tabs member={@member} active_tab={:card} />
         <.banner
           :if={!@current_team.id_cards_enabled}
           id="id-cards-off"

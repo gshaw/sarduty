@@ -101,7 +101,7 @@ defmodule Web.GroupLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Groups" path={~p"/teams/#{@current_team}/groups"} />
       <:item label={@group.title} />
     </.breadcrumbs>

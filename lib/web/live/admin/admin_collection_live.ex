@@ -1,8 +1,6 @@
 defmodule Web.Admin.AdminCollectionLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.AdminTabs
-
   alias App.Accounts
   alias App.Model.Team
 
@@ -19,9 +17,7 @@ defmodule Web.Admin.AdminCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">Admin</h1>
-    <.admin_tabs current={:admins} />
-    <h2 class="heading">Admins</h2>
+    <h1 class="title">Admins</h1>
     <p class="max-w-prose">
       Admins can open every team, refresh any team from D4H, and set up organizations. Add an
       admin from a production console. See <code>docs/deployment.md</code>.

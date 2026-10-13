@@ -1,6 +1,8 @@
 defmodule Web.Layouts do
   use Web, :html
 
+  alias Web.Navigation
+
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
@@ -49,13 +51,28 @@ defmodule Web.Layouts do
     """
   end
 
+  # Team, member, and admin pages put their area's pages down the left. Your settings has
+  # one page, so no side navigation.
   def app(assigns) do
+    {area, groups} = assigns |> nav_assigns() |> navigation()
+    assigns = assign(assigns, nav_area: area, nav_groups: groups)
+
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
-    <main role="main" class="container mx-auto pt-16 px-2 mb-8">
-      <.flash_group flash={@flash} />
-      {@inner_content}
-    </main>
+    <%= if @nav_groups != [] do %>
+      <div class="with-side-nav container mx-auto pt-16 px-2 mb-8">
+        <.area_side_nav area={@nav_area} groups={@nav_groups} />
+        <main role="main" class="side-nav-main">
+          <.flash_group flash={@flash} />
+          {@inner_content}
+        </main>
+      </div>
+    <% else %>
+      <main role="main" class="container mx-auto pt-16 px-2 mb-8">
+        <.flash_group flash={@flash} />
+        {@inner_content}
+      </main>
+    <% end %>
     <.site_footer current_user={@current_user} />
     """
   end
@@ -183,64 +200,79 @@ defmodule Web.Layouts do
     """
   end
 
-  # What the top bar needs from a page's assigns. Pages that don't load a user have none.
+  # What the top bar and the side navigation need from a page's assigns. Pages that don't
+  # load a user have none.
   defp nav_assigns(assigns) do
     %{
       current_user: assigns[:current_user],
       current_team: assigns[:current_team],
+      member: assigns[:member],
       managed_teams: assigns[:managed_teams] || [],
       member_logins: assigns[:member_logins] || [],
-      current_path: assigns[:current_path]
+      current_path: assigns[:current_path],
+      proposed_change_count: assigns[:proposed_change_count] || 0
     }
+  end
+
+  # The page's area and the area's pages, for the bar, the side navigation, and the
+  # phone menu. Web.Navigation decides both.
+  defp navigation(assigns) do
+    area = Navigation.area(assigns.current_path, assigns.current_team, assigns.member)
+    {area, Navigation.groups(area, assigns.current_path, assigns.proposed_change_count)}
   end
 
   attr :current_user, :map, default: nil
   attr :current_team, :map, default: nil
+  attr :member, :map, default: nil
   attr :managed_teams, :list, default: []
   attr :member_logins, :list, default: []
   attr :current_path, :string, default: nil
+  attr :proposed_change_count, :integer, default: 0
   attr :size, :atom, default: :wide
 
-  # The top bar: the team's sections when there's a team, Admin for site admins, and the
-  # account menu, or Log in. The section the page is in is marked.
+  # The top bar: the area you're in, then the account menu, which switches areas, or Log
+  # in. On a phone the area sits under its name and the Menu button holds the area's pages
+  # and the account menu. See /styles/top-bar.
   def main_nav_bar(assigns) do
+    {area, groups} = navigation(assigns)
+    assigns = assign(assigns, area: area, groups: groups)
+
     ~H"""
     <.site_bar size={@size}>
-      <:links :if={@current_user && @current_team}>
-        <.a
-          :for={{label, path} <- team_sections(@current_team)}
-          kind={:custom}
-          navigate={path}
-          id={"nav-" <> nav_id(label)}
-          aria-current={section_current?(@current_path, path, @current_team) && "page"}
-        >
-          {label}
-        </.a>
+      <:links :if={@area}>
+        <.link navigate={@area.home} id="nav-area" class="site-bar-area">
+          {@area.name}
+          <span :if={@area.kind_label} class="site-bar-area-kind">{@area.kind_label}</span>
+        </.link>
       </:links>
-      <.a
-        :if={@current_user && @current_user.is_admin}
-        id="nav-admin"
-        kind={:custom}
-        navigate={~p"/admin"}
-        class="site-bar-link"
-        aria-current={admin_path?(@current_path) && "page"}
-      >
-        Admin
-      </.a>
       <%= if @current_user do %>
-        <.account_menu
-          current_user={@current_user}
-          current_team={@current_team}
-          managed_teams={@managed_teams}
-          member_logins={@member_logins}
-        />
-        <.phone_menu
-          current_user={@current_user}
-          current_team={@current_team}
-          managed_teams={@managed_teams}
-          member_logins={@member_logins}
-          current_path={@current_path}
-        />
+        <.link :if={@area} navigate={@area.home} id="phone-nav-area" class="site-bar-area-phone">
+          <span class="truncate">{@area.name}</span>
+          <span :if={@area.kind_label} class="site-bar-area-phone-kind">{@area.kind_label}</span>
+        </.link>
+        <.site_bar_menu label={@current_user.email}>
+          <.area_links
+            current_user={@current_user}
+            managed_teams={@managed_teams}
+            member_logins={@member_logins}
+            area={@area}
+          />
+        </.site_bar_menu>
+        <.site_bar_phone_menu>
+          <%= for {heading, links} <- @groups do %>
+            <div :if={heading} class="caps menu-heading">{heading}</div>
+            <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
+          <% end %>
+          <.menu_divider :if={@groups != []} />
+          <.area_links
+            current_user={@current_user}
+            managed_teams={@managed_teams}
+            member_logins={@member_logins}
+            area={@area}
+            id_prefix="phone-"
+            email
+          />
+        </.site_bar_phone_menu>
       <% else %>
         <.a id="nav-login" kind={:custom} navigate={~p"/login"} class="site-bar-login">
           <.icon name="hero-arrow-right-end-on-rectangle" /> Log in
@@ -250,140 +282,106 @@ defmodule Web.Layouts do
     """
   end
 
+  attr :area, :map, required: true, doc: "from Web.Navigation.area/3"
+  attr :groups, :list, required: true, doc: "from Web.Navigation.groups/3"
+
+  @doc "The area's pages down the left, as the app layout shows them. See /styles/side-nav."
+  def area_side_nav(assigns) do
+    ~H"""
+    <.side_nav label={@area.kind_label || @area.name}>
+      <:group :for={{heading, links} <- @groups} heading={heading}>
+        <.nav_link :for={link <- links} link={link} id_prefix="side-nav-" />
+      </:group>
+    </.side_nav>
+    """
+  end
+
+  attr :link, :map, required: true
+  attr :id_prefix, :string, required: true
+
+  # One page in the side navigation or the phone menu, with a count when something waits
+  # there.
+  defp nav_link(assigns) do
+    ~H"""
+    <.link
+      navigate={@link.path}
+      id={@id_prefix <> @link.key}
+      aria-current={@link.current && "page"}
+      class="nav-link"
+    >
+      {@link.label}
+      <.badge :if={@link.count} kind={:warning}>{@link.count}</.badge>
+    </.link>
+    """
+  end
+
   attr :current_user, :map, required: true
-  attr :current_team, :map, default: nil
   attr :managed_teams, :list, default: []
   attr :member_logins, :list, default: []
-  attr :current_path, :string, default: nil
+  attr :area, :map, default: nil
+  attr :id_prefix, :string, default: ""
+  attr :email, :boolean, default: false, doc: "show the email, as the phone menu does"
 
-  # The same links as the bar and the account menu, in one list for phones.
-  defp phone_menu(assigns) do
+  # The areas you can switch to: Admin, then each of your teams under its name, with its
+  # team area if you're one of its team admins and its member area if it lets you log in
+  # as a member, then your settings and Log out. The account menu, and the end of the
+  # phone menu.
+  defp area_links(assigns) do
+    assigns =
+      assign(assigns, teams: Navigation.menu_teams(assigns.managed_teams, assigns.member_logins))
+
     ~H"""
-    <.site_bar_phone_menu>
-      <%= if @current_team do %>
-        <.a
-          :for={{label, path} <- team_sections(@current_team)}
-          kind={:custom}
-          navigate={path}
-          id={"phone-nav-" <> nav_id(label)}
-          aria-current={section_current?(@current_path, path, @current_team) && "page"}
-        >
-          {label}
-        </.a>
-      <% end %>
+    <%= if @current_user.is_admin do %>
       <.a
-        :if={@current_user.is_admin}
-        id="phone-nav-admin"
+        id={@id_prefix <> "nav-admin"}
         kind={:custom}
         navigate={~p"/admin"}
-        aria-current={admin_path?(@current_path) && "page"}
+        aria-current={in_area?(@area, :admin, nil) && "page"}
       >
         Admin
       </.a>
-      <.menu_divider :if={@current_team || @current_user.is_admin} />
-      <div class="menu-note truncate">{@current_user.email}</div>
-      <.account_links
-        current_team={@current_team}
-        managed_teams={@managed_teams}
-        member_logins={@member_logins}
-        id_prefix="phone-"
-      />
-    </.site_bar_phone_menu>
-    """
-  end
-
-  defp team_sections(team) do
-    [
-      {"Dashboard", ~p"/teams/#{team}"},
-      {"Activities", ~p"/teams/#{team}/activities"},
-      {"Members", ~p"/teams/#{team}/members"},
-      {"Qualifications", ~p"/teams/#{team}/qualifications"},
-      {"Groups", ~p"/teams/#{team}/groups"},
-      {"Equipment", ~p"/teams/#{team}/equipment"},
-      {"Templates", ~p"/teams/#{team}/templates"},
-      {"Tax credit letters", ~p"/teams/#{team}/tax-credit-letters"}
-    ]
-  end
-
-  defp nav_id(label), do: label |> String.downcase() |> String.replace(" ", "-")
-
-  # The dashboard is current only on its own page; a section is current on any page under it.
-  defp section_current?(nil, _path, _team), do: false
-
-  defp section_current?(current_path, path, team) do
-    if path == ~p"/teams/#{team}",
-      do: current_path == path,
-      else: current_path == path or String.starts_with?(current_path, path <> "/")
-  end
-
-  defp admin_path?(nil), do: false
-  defp admin_path?(path), do: path == "/admin" or String.starts_with?(path, "/admin/")
-
-  attr :current_user, :map, required: true
-  attr :current_team, :map, default: nil
-  attr :managed_teams, :list, default: []
-  attr :member_logins, :list, default: []
-
-  defp account_menu(assigns) do
-    ~H"""
-    <.site_bar_menu label={@current_user.email}>
-      <.account_links
-        current_team={@current_team}
-        managed_teams={@managed_teams}
-        member_logins={@member_logins}
-      />
-    </.site_bar_menu>
-    """
-  end
-
-  attr :current_team, :map, default: nil
-  attr :managed_teams, :list, default: []
-  attr :member_logins, :list, default: []
-  attr :id_prefix, :string, default: ""
-
-  # Switching teams, your own member pages, settings, and logging out: the account menu,
-  # and the end of the phone menu.
-  defp account_links(assigns) do
-    ~H"""
-    <%= for member <- @member_logins do %>
-      <.a
-        id={@id_prefix <> "nav-me-" <> member.team.subdomain}
-        kind={:custom}
-        navigate={~p"/teams/#{member.team}/me"}
-      >
-        {if length(@member_logins) > 1,
-          do: "Your ID card: #{member.team.name}",
-          else: "Your ID card"}
-      </.a>
+      <.menu_divider />
     <% end %>
-    <.menu_divider :if={@member_logins != []} />
-    <%= if length(@managed_teams) > 1 do %>
-      <div class="menu-note">Your teams</div>
+    <%= for %{team: team} = entry <- @teams do %>
+      <div class="caps menu-heading">{team.name}</div>
       <.a
-        :for={team <- @managed_teams}
+        :if={entry.team_area}
+        id={@id_prefix <> "nav-team-" <> team.subdomain}
         kind={:custom}
         navigate={~p"/teams/#{team}"}
-        aria-current={@current_team && @current_team.id == team.id && "page"}
+        aria-current={in_area?(@area, :team, team) && "page"}
       >
-        {team.name}
+        Team area
+      </.a>
+      <.a
+        :if={entry.member_area}
+        id={@id_prefix <> "nav-member-" <> team.subdomain}
+        kind={:custom}
+        navigate={~p"/teams/#{team}/me"}
+        aria-current={in_area?(@area, :member, team) && "page"}
+      >
+        Member area
       </.a>
       <.menu_divider />
     <% end %>
+    <div :if={@email} class="menu-note truncate">{@current_user.email}</div>
     <.a
-      :if={@current_team}
-      id={@id_prefix <> "nav-team-settings"}
+      id={@id_prefix <> "nav-your-settings"}
       kind={:custom}
-      navigate={~p"/teams/#{@current_team}/settings"}
+      navigate={~p"/account"}
+      aria-current={in_area?(@area, :settings, nil) && "page"}
     >
-      Team settings
+      Your settings
     </.a>
-    <.a id={@id_prefix <> "nav-account"} kind={:custom} navigate={~p"/account"}>Account</.a>
-    <.menu_divider />
     <.a id={@id_prefix <> "nav-log-out"} kind={:custom} method="delete" href="/logout">
       Log out
     </.a>
     """
   end
+
+  defp in_area?(%{kind: kind, team: nil}, kind, nil), do: true
+  defp in_area?(%{kind: kind, team: %{id: id}}, kind, %{id: id}), do: true
+  defp in_area?(_area, _kind, _team), do: false
 
   @doc """
   Shows the flash group with standard titles and content.

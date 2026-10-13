@@ -33,8 +33,8 @@ defmodule Web.StyleGuideControllerTest do
   end
 
   test "page paths use dashes", %{conn: conn} do
-    assert html_response(get(conn, ~p"/styles/back-link"), 200) =~ "<h1>Back link</h1>"
-    assert_error_sent 404, fn -> get(conn, "/styles/back_link") end
+    assert html_response(get(conn, ~p"/styles/side-nav"), 200) =~ "<h1>Side navigation</h1>"
+    assert_error_sent 404, fn -> get(conn, "/styles/side_nav") end
   end
 
   test "an unknown page is not found", %{conn: conn} do

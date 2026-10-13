@@ -49,11 +49,12 @@ does in the app. The page-text rules skip anything inside one. --%>
 
   /* The app's bar, menu, and toasts are fixed or floating in the app. Here they sit in place. */
   .demo .site-bar { position: relative; }
-  .bar-demo { padding-bottom: 200px !important; }
+  .bar-demo { padding-bottom: 320px !important; }
   /* The phone bar at any window width: the menu button, not the links. */
-  .phone-bar-demo :is(.site-bar-links, .site-bar-link, .site-bar-menu) { display: none; }
+  .phone-bar-demo :is(.site-bar-links, .site-bar-menu) { display: none; }
   .phone-bar-demo .site-bar-phone { display: block; }
-  .phone-bar-demo { padding-bottom: 560px !important; }
+  .phone-bar-demo .site-bar-area-phone { display: flex; }
+  .phone-bar-demo { padding-bottom: 1000px !important; }
   .demo .toasts { position: static; width: auto; max-width: 400px; }
   .phone-width { max-width: 390px; }
 

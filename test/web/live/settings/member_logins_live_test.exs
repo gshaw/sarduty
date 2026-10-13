@@ -18,10 +18,9 @@ defmodule Web.Settings.MemberLoginsLiveTest do
     member = member_fixture(team, %{d4h_permission: 2})
     refute Accounts.may_log_in?(member.email)
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-    assert has_element?(lv, "#settings-member-logins", "Off")
-
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/member-logins")
+    assert has_element?(lv, "#side-nav-settings-member-logins[aria-current=page]")
+    refute has_element?(lv, "#member-logins-form input[type=checkbox][checked]")
 
     lv
     |> form("#member-logins-form", team: %{member_logins: "true"})

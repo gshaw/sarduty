@@ -21,11 +21,14 @@ defmodule Web.Settings.MCPLiveTest do
     team
   end
 
-  test "doesn't exist, or show in team settings, while MCP is off", %{conn: conn, team: team} do
+  test "doesn't exist, or show in the side navigation, while MCP is off", %{
+    conn: conn,
+    team: team
+  } do
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/settings/mcp") end
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-    refute has_element?(lv, "#settings-mcp")
+    refute has_element?(lv, "#side-nav-settings-mcp")
     assert has_element?(lv, "#settings-mcp-off", "ask a SAR Duty admin")
   end
 
@@ -34,7 +37,11 @@ defmodule Web.Settings.MCPLiveTest do
     team = turn_on(ctx.team, admin)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-    assert has_element?(lv, "#settings-mcp")
+
+    assert has_element?(
+             lv,
+             ~s{#side-nav-settings-mcp[href="/teams/#{team.subdomain}/settings/mcp"]}
+           )
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     assert has_element?(lv, "#no-tokens")

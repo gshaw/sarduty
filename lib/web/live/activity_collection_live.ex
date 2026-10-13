@@ -33,8 +33,6 @@ defmodule Web.ActivityCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team} />
-
     <div class="heading-row">
       <h1 class="title">Activities</h1>
       <.button

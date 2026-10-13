@@ -47,7 +47,7 @@ defmodule Web.QualificationLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Qualifications" path={~p"/teams/#{@current_team}/qualifications"} />
       <:item label={@qualification.title} />
     </.breadcrumbs>

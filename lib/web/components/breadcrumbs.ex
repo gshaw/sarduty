@@ -3,22 +3,20 @@ defmodule Web.Components.Breadcrumbs do
 
   import Web.Components.A
 
-  attr :team, :any, default: nil
-
   slot :item do
     attr :label, :string
     attr :path, :string
   end
 
-  # The team first, then each level; the last item is the current page and isn't a link.
+  # Where a record's page sits under its section: the section first, then each level, the
+  # last being the page you're on. The bar names the team, so the trail leaves it out
+  # (#312). A section's own page has no trail: with nothing to go back to, it renders
+  # nothing.
   def breadcrumbs(assigns) do
     ~H"""
-    <ol class="breadcrumbs">
-      <li :if={@team}>
-        <.a kind={:custom} navigate={~p"/teams/#{@team}"}>{@team.name}</.a>
-      </li>
-      <li :for={item <- @item}>
-        <.icon name="hero-chevron-right-micro" class="breadcrumb-separator" />
+    <ol :if={Enum.any?(@item, &Map.get(&1, :path))} class="breadcrumbs">
+      <li :for={{item, i} <- Enum.with_index(@item)}>
+        <.icon :if={i > 0} name="hero-chevron-right-micro" class="breadcrumb-separator" />
         <%= if Map.get(item, :path) do %>
           <.a kind={:custom} navigate={item.path}>{item.label}</.a>
         <% else %>
@@ -26,19 +24,6 @@ defmodule Web.Components.Breadcrumbs do
         <% end %>
       </li>
     </ol>
-    """
-  end
-
-  attr :navigate, :string, required: true
-  attr :rest, :global
-  slot :inner_block, required: true
-
-  # A way back for a page outside the main tree, such as settings. Name the page it goes to.
-  def back_link(assigns) do
-    ~H"""
-    <.link navigate={@navigate} class="back-link" {@rest}>
-      <.icon name="hero-chevron-left-micro" />{render_slot(@inner_block)}
-    </.link>
     """
   end
 end

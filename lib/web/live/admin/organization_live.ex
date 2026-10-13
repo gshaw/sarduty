@@ -24,7 +24,10 @@ defmodule Web.Admin.OrganizationLive do
 
   def render(assigns) do
     ~H"""
-    <.back_link navigate={~p"/admin/orgs"}>Organizations</.back_link>
+    <.breadcrumbs>
+      <:item label="Organizations" path={~p"/admin/orgs"} />
+      <:item label={@organization.name || "New organization"} />
+    </.breadcrumbs>
     <h1 class="title">{@organization.name || "New organization"}</h1>
 
     <.form

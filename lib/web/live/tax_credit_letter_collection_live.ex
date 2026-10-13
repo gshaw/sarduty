@@ -36,7 +36,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label={@page_title} />
     </.breadcrumbs>
 

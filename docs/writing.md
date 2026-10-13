@@ -102,6 +102,9 @@ and must not be used for it.
 | team                           | organization, unit, group, chapter             | A search and rescue team using SAR Duty.                                                             |
 | member                         | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
 | account                        | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
+| team area                      | team pages, admin area, manage team            | A team's pages for its team admins: activities, members, equipment, letters, and settings.           |
+| member area                    | member page, my page, profile                  | A member's own pages on one team: their ID card, hours, tax credit letters, and details.             |
+| your settings                  | account page, profile, preferences             | The page for your own settings, such as your maps app. "Your settings" is its name in the menu.      |
 | team admin                     | administrator, owner, manager, superuser       | A person who can change the team's settings.                                                         |
 | member logins                  | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
 | activity                       | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |

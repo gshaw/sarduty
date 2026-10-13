@@ -37,7 +37,7 @@ defmodule Web.MemberFormLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Members" path={~p"/teams/#{@current_team}/members"} />
       <:item
         :if={@member}

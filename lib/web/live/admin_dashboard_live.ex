@@ -1,8 +1,6 @@
 defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.AdminTabs
-
   alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Member
@@ -19,7 +17,7 @@ defmodule Web.AdminDashboardLive do
 
     socket =
       socket
-      |> assign(page_title: "Admin", teams: teams, now: now)
+      |> assign(page_title: "Teams", teams: teams, now: now)
       |> assign_access(teams, now)
 
     {:ok, socket}
@@ -49,10 +47,8 @@ defmodule Web.AdminDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">Admin</h1>
-    <.admin_tabs current={:teams} />
     <div class="heading-row">
-      <h2 class="heading">Teams</h2>
+      <h1 class="title">Teams</h1>
       <div class="flex items-center gap-4">
         <span id="refresh-summary" class="hint">
           {refresh_summary(@teams)}

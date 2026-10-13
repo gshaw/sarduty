@@ -1,5 +1,5 @@
 defmodule Web.MePhoneLive do
-  use Web, :live_view_narrow_layout
+  use Web, :live_view_app_layout
 
   alias App.Accounts
   alias App.Adapter.D4H
@@ -91,9 +91,8 @@ defmodule Web.MePhoneLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <.back_link navigate={~p"/teams/#{@member.team}/me"}>{@member.team.name}</.back_link>
-      <h1 class="heading">Your mobile number</h1>
+    <div class="measure">
+      <h1 class="title">Your mobile number</h1>
       <p class="lead">
         Login codes by text go to this number. A change goes to {service(@member)} once you
         enter the code we text to the new one.

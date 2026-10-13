@@ -17,10 +17,14 @@
 
 - **Web**: [lib/web/live/](lib/web/live) LiveViews, [lib/web/controllers/](lib/web/controllers),
   and [lib/web/components/](lib/web/components). A LiveView picks its layout with
-  `use Web, :live_view_app_layout` (team pages), `:live_view_narrow_layout` (auth and
-  settings forms), or `:live_view_marketing_layout` (public pages) — see
-  [lib/web.ex](lib/web.ex). Every layout imports the same shared components; a page
-  imports the ones only it uses.
+  `use Web, :live_view_app_layout` (team, member, and admin pages, and your settings),
+  `:live_view_narrow_layout` (logging in and signing up), or
+  `:live_view_marketing_layout` (public pages) — see [lib/web.ex](lib/web.ex). Every
+  layout imports the same shared components; a page imports the ones only it uses.
+- **Navigation**: every page is in an area — a team's, a member's, admin, or your
+  settings. The top bar names it, a side navigation lists its pages, and the account
+  menu switches areas. A new page in the side navigation is a line in
+  [Web.Navigation](lib/web/navigation.ex); see [docs/navigation.md](docs/navigation.md).
 - **Operations**: [lib/app/operation/](lib/app/operation) hold side effects and
   orchestration, one module per operation with a `call` entry point:
   `App.Operation.CreateTaxCreditLetter.call(…)`.
@@ -192,7 +196,7 @@ fi
   `mt-5`, `mt-10`, or `text-zinc-600`, builds nothing, and
   `test/web/design_system_test.exs` fails on it.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
-  states, the error summary, back links, and the result band are components; `.hint`,
+  states, the error summary, and the result band are components; `.hint`,
   `.lead`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
   classes. Utilities on the scale are for one-off layout only.
 - **The style guide's examples are the app's own components**, styled only by `app.css`.

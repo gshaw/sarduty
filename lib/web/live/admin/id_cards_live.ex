@@ -1,8 +1,6 @@
 defmodule Web.Admin.IdCardsLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.AdminTabs
-
   alias App.Adapter.D4H
   alias App.Model.MemberCard
   alias App.Model.Team
@@ -34,8 +32,7 @@ defmodule Web.Admin.IdCardsLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">Admin</h1>
-    <.admin_tabs current={:id_cards} />
+    <h1 class="title">ID cards</h1>
     <p class="mb-4 max-w-3xl">
       A team issues ID cards only once this is on. Anyone can verify a card on {Web.VerifyHost.host()}, and anyone can sign up a team on SAR Duty Records, so check
       that a team is real before turning it on. Turning it off cancels every card on the

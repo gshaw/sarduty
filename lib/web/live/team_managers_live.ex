@@ -26,10 +26,6 @@ defmodule Web.TeamManagersLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
-      <:item label="Team settings" path={~p"/teams/#{@current_team}/settings"} />
-      <:item label={@page_title} />
-    </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
     <p :if={!D4H.records?(@current_team)} class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}. They are the members D4H

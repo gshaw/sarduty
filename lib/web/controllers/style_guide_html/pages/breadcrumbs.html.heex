@@ -1,9 +1,9 @@
 <.shell title="Breadcrumbs" current={:breadcrumbs}>
   <h1>Breadcrumbs</h1>
-  <p class="lead">Where a page sits under its section.</p>
+  <p class="lead">Where a record's page sits under its section.</p>
 
   <div class="demo">
-    <.breadcrumbs team={sample_team()}>
+    <.breadcrumbs>
       <:item label="Members" path="#" />
       <:item label="Avery Chen" />
     </.breadcrumbs>
@@ -11,23 +11,28 @@
 
   <h2>When to use</h2>
   <p>
-    On every page below a section's list, at the top of the <a href={page_path(:layout)}>page header</a>.
+    On every page below a section's own page, such as a member or an activity, at the top of the <a href={
+      page_path(:layout)
+    }>page header</a>.
   </p>
 
   <h2>When not to use</h2>
   <p>
-    Pages outside the main tree, like settings. Use a <a href={page_path(:back_link)}>back link</a>.
+    A section's own page, such as Members. The <a href={page_path(:side_nav)}>side navigation</a>
+    shows where you are, and with no link to go back to, the trail renders nothing.
   </p>
 
   <h2>How it works</h2>
   <ul>
-    <li>It starts at the team and names each level down.</li>
+    <li>
+      It starts at the section and names each level down. The top bar names the team, so the trail leaves it out.
+    </li>
     <li>The last item is the current page and is not a link.</li>
   </ul>
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.breadcrumbs team=&#123;@current_team&#125;&gt;</code>
+    <code>&lt;.breadcrumbs&gt;</code>
     with an <code>&lt;:item label="…" path=&#123;…&#125; /&gt;</code>
     for each level.
   </p>

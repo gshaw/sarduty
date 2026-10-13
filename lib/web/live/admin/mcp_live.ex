@@ -1,8 +1,6 @@
 defmodule Web.Admin.MCPLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.AdminTabs
-
   alias App.Model.MCPCall
   alias App.Model.MCPToken
   alias App.Model.Team
@@ -39,8 +37,7 @@ defmodule Web.Admin.MCPLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">Admin</h1>
-    <.admin_tabs current={:mcp} />
+    <h1 class="title">MCP</h1>
     <p class="mb-4 max-w-3xl">
       Team admins can create MCP tokens once MCP is on for their team. Agents read
       members, attendance hours, activities, qualifications, and change history. They cannot

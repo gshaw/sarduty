@@ -31,7 +31,7 @@ defmodule Web.EquipmentItemFormLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs team={@current_team}>
+    <.breadcrumbs>
       <:item label="Equipment" path={~p"/teams/#{@current_team}/equipment"} />
       <:item
         :if={@item}
