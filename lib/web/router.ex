@@ -91,6 +91,7 @@ defmodule Web.Router do
 
       live_dashboard "/dashboard", metrics: Web.Telemetry
       live "/nav-mockups", Web.Dev.NavMockupLive
+      live "/nav-mockups/modes", Web.Dev.NavModesMockupLive
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
