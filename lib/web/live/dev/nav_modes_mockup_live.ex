@@ -1,7 +1,7 @@
 defmodule Web.Dev.NavModesMockupLive do
   @moduledoc """
   Development only: one navigation pattern for the three areas, a team's, a member's, and
-  admin, plus the account page. `/dev/nav-mockups/modes?as=…&mode=…&page=…&team=…&open=…`.
+  admin, plus your settings. `/dev/nav-mockups/modes?as=…&mode=…&page=…&team=…&open=…`.
   The bar names the area you're in, the sidebar lists that area's pages, and the account
   menu switches areas. Made-up data, no database, no login. Delete once a design is built.
   """
@@ -14,7 +14,8 @@ defmodule Web.Dev.NavModesMockupLive do
 
   @teams ["Example Valley SAR", "North Shore SAR"]
 
-  # A team an admin opens from Admin → Teams without being on it.
+  # A team an admin opens from Admin → Teams without being on it. Nothing marks it: there
+  # are few admins, and Admin → Teams gets back to any team.
   @visited "Ridge County SAR"
 
   # Who can reach what: the teams they manage, the teams they're a member of, and admin.
@@ -92,7 +93,6 @@ defmodule Web.Dev.NavModesMockupLive do
         team: team,
         page: page,
         current: current,
-        visited: if(mode == "team" and team not in person.manages, do: team),
         open: params["open"],
         groups: groups(mode)
       )
@@ -136,12 +136,7 @@ defmodule Web.Dev.NavModesMockupLive do
   def mode_label("team", team), do: {team, "Team"}
   def mode_label("member", team), do: {team, "Member"}
   def mode_label("admin", _team), do: {"Admin", nil}
-  def mode_label("account", _team), do: {"Account", nil}
-
-  defp bar_label(%{mode: mode, team: team, visited: nil}), do: mode_label(mode, team)
-
-  defp bar_label(%{mode: mode, team: team}),
-    do: {team, "#{elem(mode_label(mode, team), 1)}, as an admin"}
+  def mode_label("account", _team), do: {"Your settings", nil}
 
   def render(assigns) do
     ~H"""
@@ -151,23 +146,21 @@ defmodule Web.Dev.NavModesMockupLive do
     <div class="mock-note">Mockup · {@as} · {@mode} · {@page}</div>
     <.site_bar>
       <:links>
-        <.mode_name mode={@mode} team={@team} visited={@visited} />
+        <.mode_name mode={@mode} team={@team} />
       </:links>
       <.account_menu
         person={@person}
         email={@email}
         mode={@mode}
         team={@team}
-        visited={@visited}
         open={@open == "account"}
       />
-      <.phone_mode_name mode={@mode} team={@team} visited={@visited} />
+      <.phone_mode_name mode={@mode} team={@team} />
       <.phone_menu
         person={@person}
         email={@email}
         mode={@mode}
         team={@team}
-        visited={@visited}
         groups={@groups}
         current={@current}
         open={@open == "phone"}
@@ -190,12 +183,10 @@ defmodule Web.Dev.NavModesMockupLive do
 
   attr :mode, :string, required: true
   attr :team, :string, default: nil
-  attr :visited, :string, default: nil
 
-  # The area's name in the bar. It goes to the area's first page. An admin on a team they
-  # aren't on sees that, since changes there still go to the team's D4H.
+  # The area's name in the bar. It goes to the area's first page.
   defp mode_name(assigns) do
-    assigns = assign(assigns, label: bar_label(assigns))
+    assigns = assign(assigns, label: mode_label(assigns.mode, assigns.team))
 
     ~H"""
     <a href="#" class="mock-mode">
@@ -207,12 +198,11 @@ defmodule Web.Dev.NavModesMockupLive do
 
   attr :mode, :string, required: true
   attr :team, :string, default: nil
-  attr :visited, :string, default: nil
 
   # Phones: the same name beside the brand, the area under it, so you know where you are
   # without opening the menu.
   defp phone_mode_name(assigns) do
-    assigns = assign(assigns, label: bar_label(assigns))
+    assigns = assign(assigns, label: mode_label(assigns.mode, assigns.team))
 
     ~H"""
     <a href="#" class="mock-mode-phone">
@@ -225,14 +215,13 @@ defmodule Web.Dev.NavModesMockupLive do
   attr :person, :map, required: true
   attr :mode, :string, required: true
   attr :team, :string, default: nil
-  attr :visited, :string, default: nil
-  attr :email, :string, default: nil, doc: "shown above Account on a phone"
+  attr :email, :string, default: nil, doc: "shown above Your settings on a phone"
 
   # Every area the person can switch to: admin, then each of their teams under its name,
   # with Team area if they manage it and Member area if it has member logins, then their
-  # account. Teams A to Z. A team an admin is visiting joins the list while they're in it.
+  # settings. Teams A to Z.
   defp mode_links(assigns) do
-    teams = assigns.person.manages ++ assigns.person.member_of ++ List.wrap(assigns.visited)
+    teams = assigns.person.manages ++ assigns.person.member_of
     assigns = assign(assigns, teams: teams |> Enum.uniq() |> Enum.sort())
 
     ~H"""
@@ -241,10 +230,9 @@ defmodule Web.Dev.NavModesMockupLive do
       <hr />
     <% end %>
     <%= for team <- @teams do %>
-      <div class="mock-menu-team">{team}</div>
-      <div :if={team == @visited} class="menu-note mock-menu-visit">As an admin</div>
+      <div class="caps mock-menu-heading">{team}</div>
       <a
-        :if={team in @person.manages or team == @visited}
+        :if={team in @person.manages}
         href="#"
         aria-current={(@mode == "team" and @team == team) && "page"}
       >
@@ -260,7 +248,7 @@ defmodule Web.Dev.NavModesMockupLive do
       <hr />
     <% end %>
     <div :if={@email} class="menu-note truncate">{@email}</div>
-    <a href="#" aria-current={@mode == "account" && "page"}>Account</a>
+    <a href="#" aria-current={@mode == "account" && "page"}>Your settings</a>
     <a href="#">Log out</a>
     """
   end
@@ -269,7 +257,6 @@ defmodule Web.Dev.NavModesMockupLive do
   attr :email, :string, required: true
   attr :mode, :string, required: true
   attr :team, :string, default: nil
-  attr :visited, :string, default: nil
   attr :open, :boolean, default: false
 
   defp account_menu(assigns) do
@@ -280,7 +267,7 @@ defmodule Web.Dev.NavModesMockupLive do
         <.icon name="hero-chevron-down-micro" />
       </summary>
       <div class="menu">
-        <.mode_links person={@person} mode={@mode} team={@team} visited={@visited} />
+        <.mode_links person={@person} mode={@mode} team={@team} />
       </div>
     </details>
     """
@@ -290,7 +277,6 @@ defmodule Web.Dev.NavModesMockupLive do
   attr :email, :string, required: true
   attr :mode, :string, required: true
   attr :team, :string, default: nil
-  attr :visited, :string, default: nil
   attr :groups, :list, required: true
   attr :current, :string, default: nil
   attr :open, :boolean, default: false
@@ -306,7 +292,7 @@ defmodule Web.Dev.NavModesMockupLive do
       </summary>
       <nav class="site-bar-phone-panel" aria-label="Main">
         <%= for {heading, links} <- @groups do %>
-          <div :if={heading && length(links) > 1} class="menu-note">{heading}</div>
+          <div :if={heading && length(links) > 1} class="caps mock-menu-heading">{heading}</div>
           <a :for={link <- links} href="#" aria-current={elem(link, 1) == @current && "page"}>
             <.link_text link={link} />
           </a>
@@ -316,7 +302,6 @@ defmodule Web.Dev.NavModesMockupLive do
           person={@person}
           mode={@mode}
           team={@team}
-          visited={@visited}
           email={@email}
         />
       </nav>
@@ -629,7 +614,7 @@ defmodule Web.Dev.NavModesMockupLive do
 
   defp page(%{page: "account"} = assigns) do
     ~H"""
-    <h1 class="title">Account</h1>
+    <h1 class="title">Your settings</h1>
     <p>Logged in as {@email}. Your email and your teams come from D4H.</p>
     <form id="mock-maps-form" class="mt-8">
       <fieldset>
@@ -648,10 +633,8 @@ defmodule Web.Dev.NavModesMockupLive do
     """
     .mock-note { position: fixed; bottom: var(--sp-2); right: var(--sp-2); z-index: 50; padding: var(--sp-1) var(--sp-2); background: var(--warning); color: var(--on-warning); font-size: var(--fs-xs); border-radius: var(--radius); }
     .mock-body { padding-top: var(--sp-16); }
-    .menu .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: var(--text); font-size: var(--fs-xs); line-height: var(--lh-xs); }
-    .menu .mock-menu-visit { padding-top: 0; padding-bottom: 0; }
-    .site-bar-phone-panel .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: #fff; font-size: var(--fs-sm); line-height: var(--lh-sm); }
-    .site-bar-phone-panel .mock-menu-visit { padding-top: 0; padding-bottom: 0; }
+    .mock-menu-heading { padding: var(--sp-3) var(--sp-4) var(--sp-1); }
+    .site-bar-phone-panel .mock-menu-heading { color: rgb(255 255 255 / 0.6); }
 
     .mock-mode { display: inline-flex; align-items: baseline; gap: var(--sp-2); color: #fff; font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md); white-space: nowrap; padding: var(--sp-3) var(--sp-2); text-decoration: none; }
     .mock-mode:hover { text-decoration: underline; }
@@ -668,7 +651,7 @@ defmodule Web.Dev.NavModesMockupLive do
     .mock-sidebar-group:first-child { padding-top: 0; }
     .mock-sidebar-group:last-child { border-bottom: 0; }
     .mock-sidebar-heading { padding: var(--sp-1) var(--sp-3); }
-    .mock-sidebar a { display: block; padding: var(--sp-2) var(--sp-3); color: var(--text); text-decoration: none; border-radius: var(--radius); }
+    .mock-sidebar a { display: block; padding: var(--sp-2) var(--sp-3); color: var(--text); text-decoration: none; }
     .mock-sidebar a:hover { background: var(--row-hover); }
     .mock-sidebar a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
     .mock-link-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }

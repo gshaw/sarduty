@@ -25,7 +25,8 @@
     color: var(--text);
     border: 1px solid var(--border);
     border-left: 6px solid var(--c);
-    border-radius: var(--radius);
+    /* The coloured edge stays straight: no rounding on its side. */
+    border-radius: 0 var(--radius) var(--radius) 0;
     padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-3);
     box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
     font-size: var(--fs-sm);
