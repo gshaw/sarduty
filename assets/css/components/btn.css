@@ -17,8 +17,7 @@
     line-height: var(--lh-md);
     padding: 6px var(--sp-4);
     border: 0;
-    /* Square at the bottom, so the hard edge stays straight. */
-    border-radius: var(--radius) var(--radius) 0 0;
+    border-radius: var(--radius);
     color: var(--btn-fg);
     background: var(--btn-bg);
     box-shadow: 0 2px 0 var(--btn-edge);
