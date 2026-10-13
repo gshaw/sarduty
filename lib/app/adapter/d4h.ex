@@ -628,12 +628,23 @@ defmodule App.Adapter.D4H do
   def set_attendance(context, d4h_attendance_id, "ABSENT", _starts_at, _ends_at),
     do: write_attendance(context, :patch, "/attendance/#{d4h_attendance_id}", %{status: "ABSENT"})
 
-  @doc "Adds an attending row for a member D4H has no row for: a walk-in."
-  def create_attendance(context, d4h_activity_id, d4h_member_id, starts_at, ends_at) do
+  @doc """
+  Adds a row for a member D4H has no row for: "ATTENDING" for a walk-in, or "REQUESTED"
+  to invite them (#162).
+  """
+  def create_attendance(
+        context,
+        d4h_activity_id,
+        d4h_member_id,
+        starts_at,
+        ends_at,
+        status \\ "ATTENDING"
+      )
+      when status in ["ATTENDING", "REQUESTED"] do
     json = %{
       activityId: d4h_activity_id,
       memberId: d4h_member_id,
-      status: "ATTENDING",
+      status: status,
       startsAt: iso(starts_at),
       endsAt: iso(ends_at)
     }

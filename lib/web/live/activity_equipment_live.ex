@@ -3,16 +3,18 @@ defmodule Web.ActivityEquipmentLive do
 
   import Web.Components.Scanner
 
+  alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Kit
   alias App.Operation.ChangeActivityEquipment
+  alias App.Operation.InviteGroups
 
   # Adding equipment to an activity (#271). Items come from the last activity of the same
   # kind, from kits, from a search, or from a phone's camera scanning barcodes, into a list
-  # with hours to check. A kit's tags join the list too (#162). Sending the list writes
-  # them to D4H as equipment usages and the activity's tags.
+  # with hours to check. A kit's tags and groups join the list too (#162). Sending the
+  # list writes them to D4H as equipment usages, the activity's tags, and invites.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -24,9 +26,15 @@ defmodule Web.ActivityEquipmentLive do
 
       socket =
         socket
-        |> assign(page_title: "Add equipment", activity: activity, lines: [], tags: [])
+        |> assign(
+          page_title: "Add equipment",
+          activity: activity,
+          lines: [],
+          tags: [],
+          groups: []
+        )
         |> assign(q: "", results: [])
-        |> assign(kits: Kit.get_all(team.id), last: last)
+        |> assign(kits: Kit.get_all(team.id), last: last, service: D4H.service_name(team))
         |> assign(scan_message: nil, scan_failed: false)
         |> assign(last_usages: if(last, do: EquipmentUsage.for_activity(last), else: []))
         |> load_usages()
@@ -93,7 +101,7 @@ defmodule Web.ActivityEquipmentLive do
             <.a navigate={~p"/teams/#{@current_team}/equipment/kits"}>
               {if @kits == [], do: "Add a kit", else: "Change kits"}
             </.a>
-            for gear and tags that go together.
+            for gear, tags, and groups that go together.
           </p>
         </section>
 
@@ -116,7 +124,7 @@ defmodule Web.ActivityEquipmentLive do
         <section id="equipment-to-add" class="mb-8">
           <h2 class="heading">To add</h2>
           <.form
-            :if={@lines != [] or @tags != []}
+            :if={@lines != [] or @tags != [] or @groups != []}
             for={%{}}
             id="equipment-lines"
             phx-change="hours"
@@ -128,17 +136,28 @@ defmodule Web.ActivityEquipmentLive do
               <p class="hint mb-2">The activity keeps the tags it has.</p>
               <.tags_to_add id="equipment-tags-list" tags={@tags} />
             </div>
+            <div :if={@groups != []} id="equipment-groups" class="mt-4">
+              <h3 class="subheading">Invite</h3>
+              <p class="hint mb-2">
+                SAR Duty invites each member of these groups who isn't on the activity. They answer in {@service}.
+              </p>
+              <.groups_to_invite id="equipment-groups-list" groups={@groups} />
+            </div>
             <.form_actions>
               <.button
                 id="equipment-send"
                 variant={:success}
                 phx-disable-with="Adding…"
               >
-                Add {to_add_text(length(@lines), length(@tags))}
+                {to_add_text(length(@lines), length(@tags), length(@groups))}
               </.button>
             </.form_actions>
           </.form>
-          <p :if={@lines == [] and @tags == []} id="equipment-nothing-to-add" class="hint">
+          <p
+            :if={@lines == [] and @tags == [] and @groups == []}
+            id="equipment-nothing-to-add"
+            class="hint"
+          >
             Add items from the last {@activity.activity_kind}, a kit, a search, or a scan. Check the hours and a vehicle's km, then add them.
           </p>
         </section>
@@ -281,25 +300,58 @@ defmodule Web.ActivityEquipmentLive do
     """
   end
 
-  @doc ~s(What a kit holds, as "3 items, 2 tags".)
-  def kit_contents(kit) do
-    items = kit.kit_items |> length() |> count_items()
+  attr :id, :string, required: true
+  attr :groups, :list, required: true
 
-    case length(kit.kit_tags) do
-      0 -> items
-      n -> items <> ", " <> count_tags(n)
-    end
+  @doc "Groups about to be invited, each with a remove button. Shared with the kit form."
+  def groups_to_invite(assigns) do
+    ~H"""
+    <ul id={@id} class="action-list mb-4">
+      <li :for={group <- @groups} id={"group-#{group.id}"}>
+        <.button
+          id={"group-remove-#{group.id}"}
+          type="button"
+          size={:sm}
+          variant={:secondary}
+          phx-click="remove-group"
+          phx-value-id={group.id}
+        >
+          Remove
+        </.button>
+        {group.title}
+      </li>
+    </ul>
+    """
   end
 
-  @doc ~s(What the send button adds: "3 items", "2 tags", or "3 items and 2 tags".)
-  def to_add_text(lines, tags) do
-    items = count_items(lines)
-    tags_text = count_tags(tags)
+  @doc ~s(What a kit holds, as "3 items, 2 tags, 1 group".)
+  def kit_contents(kit) do
+    tags = length(kit.kit_tags)
+    groups = length(kit.kit_groups)
 
-    cond do
-      tags == 0 -> items
-      lines == 0 -> tags_text
-      true -> "#{items} and #{tags_text}"
+    [count_items(length(kit.kit_items))]
+    |> Kernel.++(if tags > 0, do: [count_tags(tags)], else: [])
+    |> Kernel.++(if groups > 0, do: [count_groups(groups)], else: [])
+    |> Enum.join(", ")
+  end
+
+  @doc """
+  What the send button does: "Add 3 items", "Add 3 items and 2 tags", "Invite 1 group",
+  or "Add 3 items and invite 1 group".
+  """
+  def to_add_text(lines, tags, groups \\ 0) do
+    adds =
+      case {lines, tags} do
+        {0, 0} -> nil
+        {_lines, 0} -> count_items(lines)
+        {0, _tags} -> count_tags(tags)
+        _both -> "#{count_items(lines)} and #{count_tags(tags)}"
+      end
+
+    case {adds, groups} do
+      {adds, 0} -> "Add #{adds}"
+      {nil, groups} -> "Invite #{count_groups(groups)}"
+      {adds, groups} -> "Add #{adds} and invite #{count_groups(groups)}"
     end
   end
 
@@ -446,6 +498,10 @@ defmodule Web.ActivityEquipmentLive do
     |> Enum.sort_by(&String.downcase(&1.title))
   end
 
+  @doc "`groups` with a kit's `new` groups added, each once, A to Z."
+  def add_groups(groups, new),
+    do: (groups ++ new) |> Enum.uniq_by(& &1.id) |> Enum.sort_by(&String.downcase(&1.title))
+
   def remove_line(lines, id), do: Enum.reject(lines, &(Integer.to_string(&1.item.id) == id))
 
   @doc "Items found for `q`, without the ones whose ids are in `skip`."
@@ -470,8 +526,16 @@ defmodule Web.ActivityEquipmentLive do
       end
 
     tags = add_tags(socket.assigns.tags, Kit.tags(kit), socket.assigns.activity.tags)
-    {:noreply, socket |> add(new) |> assign(tags: tags)}
+    groups = add_groups(socket.assigns.groups, Kit.groups(kit))
+    {:noreply, socket |> add(new) |> assign(tags: tags, groups: groups)}
   end
+
+  def handle_event("remove-group", %{"id" => id}, socket),
+    do:
+      {:noreply,
+       assign(socket,
+         groups: Enum.reject(socket.assigns.groups, &(Integer.to_string(&1.id) == id))
+       )}
 
   def handle_event("remove-tag", %{"id" => id}, socket),
     do:
@@ -518,16 +582,17 @@ defmodule Web.ActivityEquipmentLive do
 
   def handle_event("send", params, socket) do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
-
     lines = socket.assigns.lines |> put_typed(params) |> Enum.map(&to_add/1)
+    now = DateTime.utc_now()
 
-    tags = socket.assigns.tags
-
-    case ChangeActivityEquipment.add(team, activity, lines, tags, user, DateTime.utc_now()) do
+    # Equipment and tags go first; a refusal there leaves the invites unsent too.
+    case add_equipment(team, activity, lines, socket.assigns.tags, user, now) do
       {:ok, rows} ->
+        {kind, text} = invite(team, activity, socket.assigns.groups, user, now, rows)
+
         socket =
           socket
-          |> put_flash(flash_kind(rows), result_text(rows, "added"))
+          |> put_flash(kind, text)
           |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}")
 
         {:noreply, socket}
@@ -559,6 +624,42 @@ defmodule Web.ActivityEquipmentLive do
             {:noreply, put_flash(socket, :error, text)}
         end
     end
+  end
+
+  defp add_equipment(_team, _activity, [], [], _user, _now), do: {:ok, []}
+
+  defp add_equipment(team, activity, lines, tags, user, now),
+    do: ChangeActivityEquipment.add(team, activity, lines, tags, user, now)
+
+  # The flash for the equipment `rows` and the invites, as {kind, text}.
+  defp invite(_team, _activity, [], _user, _now, rows),
+    do: {flash_kind(rows), result_text(rows, "added")}
+
+  defp invite(team, activity, groups, user, now, rows) do
+    {kind, text} =
+      case InviteGroups.call(team, activity, groups, user, now) do
+        {:ok, invites} -> {flash_kind(rows ++ invites), invite_text(invites)}
+        {:error, text} -> {:error, text}
+      end
+
+    if rows == [], do: {kind, text}, else: {kind, "#{result_text(rows, "added")} #{text}"}
+  end
+
+  @doc """
+  What the invites did: "8 members invited.", then how many didn't go and why. No rows
+  means everyone was on the activity already.
+  """
+  def invite_text([]), do: "Everyone in those groups is on the activity already."
+
+  def invite_text(rows) do
+    {applied, other} = Enum.split_with(rows, &(&1.status == :applied))
+
+    not_invited =
+      other
+      |> Enum.group_by(& &1.error)
+      |> Enum.map(fn {error, rows} -> "#{count_members(length(rows))} not invited: #{error}" end)
+
+    Enum.join(["#{count_members(length(applied))} invited." | not_invited], " ")
   end
 
   defp add(socket, new) do
@@ -604,6 +705,8 @@ defmodule Web.ActivityEquipmentLive do
 
   defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
   defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")
+  defp count_groups(n), do: Service.Format.count(n, one: "%d group", many: "%d groups")
+  defp count_members(n), do: Service.Format.count(n, one: "%d member", many: "%d members")
 
   defp row_title(%ChangeSetRow{action: :set_activity_tags}), do: "Tags"
   defp row_title(%ChangeSetRow{new_value: %{"title" => title}}), do: title

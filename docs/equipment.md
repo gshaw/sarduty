@@ -74,6 +74,11 @@ A to Z with a search. D4H's API has no tag bundles (`resource-bundles` only grou
 fields), so the picker can't group them the way D4H's web app does. A kit points at the
 local tag, so a rename shows up and a tag D4H deletes leaves its kits.
 
+A kit can also invite groups (#162), such as the Search Managers group for a managers'
+training. Adding the kit asks each member of the group to come, the way D4H's own
+"Requested" works: it signs nobody up, and each member answers in D4H. The groups live in
+`kit_groups`, and a group D4H deletes leaves its kits.
+
 ## Adding equipment to an activity
 
 The activity page has an Equipment section. "Add equipment" opens a page that builds a
@@ -101,6 +106,16 @@ adds one `set_activity_tags` row with those and the new ones, each id once
 (`ChangeActivityEquipment.plan_tags/3`). D4H's `POST /{kind}s/{id}/tags` replaces the
 whole list, so a list from the last sync could drop a tag someone just added. After it
 applies, the new titles are copied to the activity so its page shows them.
+
+A kit's groups join the list as groups to invite. Sending adds the equipment and tags
+first, then invites, as a second change set of source `kit`
+([InviteGroups](../lib/app/operation/invite_groups.ex)): one `create_attendance` row with
+status `REQUESTED` per current member of the groups, for the activity's start and end.
+A member in two groups is invited once. Anyone with attendance on the activity already,
+in any status, is left out, and the applier skips anyone D4H has a row for now, since
+D4H would add a second one. A published activity's attendance is locked, so it refuses
+the invites; the equipment still goes. The invites reach the local copy on the next
+sync.
 
 ## The copy
 

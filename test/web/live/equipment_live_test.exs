@@ -185,6 +185,73 @@ defmodule Web.EquipmentLiveTest do
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
+  test "a kit gets groups to invite", ctx do
+    managers = group_fixture(ctx.team, %{title: "Search Managers"})
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/kits/new")
+
+    lv |> element("#group-add-#{managers.id}") |> render_click()
+    assert has_element?(lv, "#kit-groups #group-#{managers.id}", "Search Managers")
+    refute has_element?(lv, "#group-add-#{managers.id}")
+
+    lv |> form("#kit-form", kit: %{title: "Managers' training"}) |> render_submit()
+
+    kit = Kit |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(kit_groups: :group)
+    assert Enum.map(kit.kit_groups, & &1.group.title) == ["Search Managers"]
+  end
+
+  test "a kit's groups are invited to the activity in D4H", ctx do
+    activity = activity_fixture(ctx.team)
+    managers = group_fixture(ctx.team, %{title: "Search Managers"})
+    mike = member_fixture(ctx.team, %{name: "Mike"})
+    signed_up = member_fixture(ctx.team, %{name: "Signed up"})
+    retired = member_fixture(ctx.team, %{name: "Retired", d4h_status: "RETIRED"})
+    for member <- [mike, signed_up, retired], do: group_member_fixture(managers, member)
+    attendance_fixture(activity, signed_up, %{status: "requested"})
+    kit = kit_fixture(ctx.team, "Managers' training", [], [], [managers])
+    path = "/exercises/#{activity.d4h_activity_id}"
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+      case {conn.method, String.ends_with?(conn.request_path, path)} do
+        {"GET", true} ->
+          Req.Test.json(conn, %{"id" => activity.d4h_activity_id, "published" => false})
+
+        {"GET", false} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        {"POST", _activity?} ->
+          json = Jason.decode!(body)
+          send(test_pid, {:d4h_write, json})
+
+          Req.Test.json(conn, %{
+            "id" => System.unique_integer([:positive]),
+            "activity" => %{"resourceType" => "Exercise", "id" => json["activityId"]},
+            "member" => %{"id" => json["memberId"]},
+            "status" => json["status"],
+            "startsAt" => json["startsAt"],
+            "endsAt" => json["endsAt"]
+          })
+      end
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
+    lv |> element("#equipment-add-kit-#{kit.id}") |> render_click()
+    assert has_element?(lv, "#equipment-groups #group-#{managers.id}", "Search Managers")
+    assert has_element?(lv, "#equipment-send", "Invite 1 group")
+
+    lv |> form("#equipment-lines") |> render_submit()
+
+    # Only Mike: the signed-up member is on the activity, and the retired one isn't current.
+    assert_received {:d4h_write, %{"memberId" => mike_id, "status" => "REQUESTED"}}
+    assert mike_id == mike.d4h_member_id
+    refute_received {:d4h_write, _json}
+
+    assert %ChangeSet{source: :kit} = Repo.get_by!(ChangeSet, activity_id: activity.id)
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+  end
+
   test "a kit's items go to D4H as usages on the activity", ctx do
     activity = activity_fixture(ctx.team)
     kit = kit_fixture(ctx.team, "Truck 2", [{ctx.truck, 0}, {ctx.radio, 90}])

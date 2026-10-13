@@ -196,6 +196,19 @@ defmodule App.ViewData.ChangeHistory do
   defp row_kind(_action), do: :record
 
   @doc "One change SAR Duty applied, as a sentence."
+  def describe_row(
+        %ChangeSetRow{action: :create_attendance, new_value: %{"status" => "REQUESTED"}} = row,
+        page
+      ) do
+    case page do
+      :member ->
+        "Invited to #{(row.change_set.activity && row.change_set.activity.title) || "an activity"}"
+
+      :activity ->
+        "#{(row.member && row.member.name) || "A member"} invited"
+    end
+  end
+
   def describe_row(%ChangeSetRow{action: action} = row, page)
       when action in [:update_attendance, :create_attendance] do
     subject =
@@ -276,6 +289,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:edit), do: "edit"
   def source_label(:member), do: "the member"
   def source_label(:equipment), do: "equipment"
+  def source_label(:kit), do: "kit"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"
