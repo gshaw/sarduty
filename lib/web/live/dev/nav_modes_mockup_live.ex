@@ -100,9 +100,9 @@ defmodule Web.Dev.NavModesMockupLive do
   defp current("member"), do: "overview"
   defp current("admin"), do: "teams"
 
-  @doc ~s(The mode, as the bar shows it: {"Example Valley SAR", "Team pages"}, or {"Admin", nil}.)
-  def mode_label("team", team), do: {team, "Team pages"}
-  def mode_label("member", team), do: {team, "Your pages"}
+  @doc ~s(The mode, as the bar shows it: {"Example Valley SAR", "Team"}, or {"Admin", nil}.)
+  def mode_label("team", team), do: {team, "Team"}
+  def mode_label("member", team), do: {team, "Member"}
   def mode_label("admin", _team), do: {"Admin", nil}
 
   def render(assigns) do
@@ -162,7 +162,7 @@ defmodule Web.Dev.NavModesMockupLive do
   attr :team, :string, default: nil
 
   # Every mode the person can switch to: admin, then each of their teams under its name,
-  # with Team pages if they manage it and Your pages if it has member logins, then their
+  # with Team area if they manage it and Member area if it has member logins, then their
   # account. Teams A to Z.
   defp mode_links(assigns) do
     assigns =
@@ -182,14 +182,14 @@ defmodule Web.Dev.NavModesMockupLive do
         href="#"
         aria-current={(@mode == "team" and @team == team) && "page"}
       >
-        Team pages
+        Team area
       </a>
       <a
         :if={team in @person.member_of}
         href="#"
         aria-current={(@mode == "member" and @team == team) && "page"}
       >
-        Your pages
+        Member area
       </a>
       <hr />
     <% end %>
