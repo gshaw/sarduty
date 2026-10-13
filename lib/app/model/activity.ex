@@ -54,6 +54,11 @@ defmodule App.Model.Activity do
 
   def null_island, do: "0.00000,0.00000"
 
+  @doc "The activity's latitude and longitude, or nil when D4H has none or 0,0."
+  def pin(%{coordinate: coordinate}) do
+    if coordinate in [nil, "", null_island()], do: nil, else: coordinate
+  end
+
   schema "activities" do
     belongs_to :team, Team
     has_many :attendances, Attendance, where: [status: "attending"]

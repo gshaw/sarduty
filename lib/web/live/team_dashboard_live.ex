@@ -3,8 +3,10 @@ defmodule Web.TeamDashboardLive do
 
   import Web.Components.ActivityMap
   import Web.Components.Chart
+  import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
+  alias App.Model.Activity
   alias App.Model.Team
   alias App.ViewData.TeamDashboardCharts
   alias App.ViewData.TeamDashboardViewData
@@ -153,6 +155,12 @@ defmodule Web.TeamDashboardLive do
           <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
         </h2>
         <p class="hint">{where_and_when(@activity, @now)}</p>
+        <.open_in_maps
+          id="next-up-maps"
+          coordinate={Activity.pin(@activity)}
+          address={@activity.address}
+          label={@activity.title}
+        />
       </div>
       <.button
         id="next-up-take-attendance"

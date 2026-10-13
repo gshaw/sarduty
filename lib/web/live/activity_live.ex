@@ -3,6 +3,7 @@ defmodule Web.ActivityLive do
 
   import Ecto.Query
   import Web.Components.ActivityMap
+  import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -129,14 +130,28 @@ defmodule Web.ActivityLive do
         <dd>{hours_type}</dd>
       </div>
 
+      <%!-- The map link goes on the latitude and longitude, which pin the exact spot. --%>
       <div :if={@activity.address}>
         <dt>Address</dt>
-        <dd>{@activity.address}</dd>
+        <dd>
+          {@activity.address}
+          <.open_in_maps
+            :if={!Activity.pin(@activity)}
+            id="activity-maps"
+            address={@activity.address}
+          />
+        </dd>
       </div>
-      <div :if={@activity.coordinate && @activity.coordinate != Activity.null_island()}>
+      <div :if={Activity.pin(@activity)}>
         <dt>Latitude and longitude</dt>
         <dd>
           {@activity.coordinate}
+          <.open_in_maps
+            id="activity-maps"
+            coordinate={Activity.pin(@activity)}
+            address={@activity.address}
+            label={@activity.title}
+          />
         </dd>
       </div>
 

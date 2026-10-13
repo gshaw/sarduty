@@ -98,6 +98,13 @@
 
   .btn:disabled, .btn[disabled], .btn-disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* Split button: an action and the menu of choices beside it, joined. See
+     /styles/open-in-maps. */
+  .btn-split { display: inline-flex; }
+  .btn-split > .btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .btn-split > .btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; padding-inline: var(--sp-2); border-left: 1px solid var(--border); }
+  .btn-split > .btn[aria-expanded="true"] { background: var(--btn-bg-hover); }
+
   /* Buttons that wrap on a narrow screen keep a gap between rows. */
   .form-actions .btn { margin-bottom: var(--sp-2); }
 }

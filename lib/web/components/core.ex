@@ -71,7 +71,7 @@ defmodule Web.Components.Core do
   attr :navigate, :string, default: nil
   attr :href, :string, default: nil
   attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value method)
+  attr :rest, :global, include: ~w(disabled form name value method target)
 
   slot :inner_block, required: true
 

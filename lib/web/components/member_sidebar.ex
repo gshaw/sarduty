@@ -3,6 +3,7 @@ defmodule Web.Components.MemberSidebar do
 
   import Web.Components.A
   import Web.Components.D4H
+  import Web.Components.OpenInMaps
   import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
@@ -29,7 +30,11 @@ defmodule Web.Components.MemberSidebar do
         <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
       </dd>
       <dt>Address</dt>
-      <dd>{@member.address}</dd>
+      <dd>
+        {@member.address}
+        <%!-- No label: the member's name beside their address would leave SAR Duty. --%>
+        <.open_in_maps id="member-maps" address={@member.address} />
+      </dd>
       <dt>Joined</dt>
       <dd>
         {Service.Format.date_short(@member.joined_at, @member.team.timezone)} · {Service.Format.months_or_years_ago(

@@ -146,10 +146,21 @@
     line-height: var(--lh-sm);
   }
 
-  .menu a { display: block; padding: var(--sp-2) var(--sp-4); color: var(--text); text-decoration: none; }
-  .menu a:hover { background: var(--row-hover); }
+  .menu a, .menu button { display: block; width: 100%; padding: var(--sp-2) var(--sp-4); color: var(--text); text-align: left; text-decoration: none; background: none; border: 0; font: inherit; cursor: pointer; }
+  .menu a:hover, .menu button:hover { background: var(--row-hover); }
+  .menu-start { left: 0; right: auto; top: calc(100% + var(--sp-1)); }
+
+  /* A choice in a menu, ticked when it is the current one. */
+  .menu [role="menuitemradio"] { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+  .menu [aria-checked="true"] { font-weight: 600; }
+  .menu [aria-checked="false"] .menu-check { visibility: hidden; }
+  .menu-check { color: var(--success-text); }
+
+  /* Open in maps: the split button, its menu, and Copied beside it. */
+  .open-in-maps { position: relative; display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); }
+  .open-in-maps-copied { color: var(--success-text); font-size: var(--fs-sm); font-weight: 600; }
   .menu a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
-  .menu .menu-note { padding: var(--sp-2) var(--sp-4); color: var(--text-muted); font-size: var(--fs-xs); line-height: var(--lh-xs); }
+  .menu .menu-note { margin: 0; padding: var(--sp-2) var(--sp-4); color: var(--text-muted); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .menu hr { margin: var(--sp-1) 0; border-color: var(--border-subtle); }
 
   /* Tabs: each tab is its own page. */

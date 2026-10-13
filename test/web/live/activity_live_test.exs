@@ -4,6 +4,8 @@ defmodule Web.ActivityLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Activity
+
   test "renders activity page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity = activity_fixture(team)
@@ -17,6 +19,21 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-actions")
     assert has_element?(lv, "#activity-map circle")
     refute has_element?(lv, "#deleted-in-d4h")
+  end
+
+  test "opens the latitude and longitude in maps, or the address without them", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    conn = log_in_user(conn, user)
+    pinned = activity_fixture(team, %{title: "Rope practice"})
+    unpinned = activity_fixture(team, %{coordinate: Activity.null_island()})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{pinned.id}")
+    assert has_element?(lv, ~s|#activity-maps-apple[href*="ll=49.1%2C-123.1&q=Rope+practice"]|)
+    assert has_element?(lv, "#activity-maps-copy-address")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{unpinned.id}")
+    assert has_element?(lv, ~s|#activity-maps-google[href$="query=123+Main+St"]|)
+    refute has_element?(lv, "#activity-maps-copy-coordinate")
   end
 
   describe "an activity deleted in D4H" do
