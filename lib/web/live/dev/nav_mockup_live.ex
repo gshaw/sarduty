@@ -14,7 +14,7 @@ defmodule Web.Dev.NavMockupLive do
   import Web.Components.Table
 
   @variants ~w(current sidebar rows grouped more)
-  @people ~w(admin manager member)
+  @people ~w(admin manager member members)
 
   # The team's sections, in groups. A group of one shows as a plain link.
   @groups [
@@ -40,13 +40,15 @@ defmodule Web.Dev.NavMockupLive do
         open: params["open"],
         email: "#{as}@example.com",
         admin?: as == "admin",
+        member?: as in ~w(member members),
+        member_teams: if(as == "members", do: Enum.take(@teams, 2), else: Enum.take(@teams, 1)),
         teams:
           if(as == "admin",
             do: @teams,
             else: if(as == "manager", do: Enum.take(@teams, 1), else: [])
           ),
         groups: @groups,
-        current: if(as == "member", do: "me", else: "templates")
+        current: if(as in ~w(member members), do: "me", else: "templates")
       )
 
     {:ok, socket}
@@ -59,15 +61,15 @@ defmodule Web.Dev.NavMockupLive do
     </style>
     <.mock_note variant={@variant} as={@as} />
     {bar(assigns)}
-    <div class={["mock-body", @variant == "rows" && @as != "member" && "mock-body-rows"]}>
-      <%= if @variant == "sidebar" and @as != "member" do %>
+    <div class={["mock-body", @variant == "rows" && !@member? && "mock-body-rows"]}>
+      <%= if @variant == "sidebar" and !@member? do %>
         <div class="mock-with-sidebar container mx-auto px-2">
           <.sidebar groups={@groups} current={@current} member_page={true} />
           <main class="mock-main"><.templates_page /></main>
         </div>
       <% else %>
-        <main class={[if(@as == "member", do: "mock-narrow", else: "container mx-auto px-2")]}>
-          <%= if @as == "member" do %>
+        <main class={[if(@member?, do: "mock-narrow", else: "container mx-auto px-2")]}>
+          <%= if @member? do %>
             <.member_page />
           <% else %>
             <.templates_page />
@@ -78,7 +80,7 @@ defmodule Web.Dev.NavMockupLive do
     """
   end
 
-  defp bar(%{as: "member"} = assigns), do: member_bar(assigns)
+  defp bar(%{member?: true} = assigns), do: member_bar(assigns)
   defp bar(%{variant: "current"} = assigns), do: current_bar(assigns)
   defp bar(%{variant: "sidebar"} = assigns), do: sidebar_bar(assigns)
   defp bar(%{variant: "rows"} = assigns), do: rows_bar(assigns)
@@ -125,9 +127,78 @@ defmodule Web.Dev.NavMockupLive do
       </:links>
       <.a :if={@admin?} kind={:custom} href="#" class="site-bar-link">Admin</.a>
       <.account email={@email} teams={[]} open={@open == "account"} member_page={nil} />
+      <.phone_menu
+        groups={@groups}
+        current={@current}
+        email={@email}
+        teams={@teams}
+        admin?={@admin?}
+        member_teams={@member_teams}
+        open={@open == "phone"}
+      />
     </.site_bar>
     """
   end
+
+  attr :groups, :list, default: []
+  attr :current, :string, required: true
+  attr :email, :string, required: true
+  attr :teams, :list, default: []
+  attr :admin?, :boolean, default: false
+  attr :member_teams, :list, default: []
+  attr :open, :boolean, default: false
+
+  # Phones: the sidebar and the account menu in one panel behind the Menu button, the
+  # sections under the same headings. A member page in the sidebar is the team's own.
+  defp phone_menu(assigns) do
+    ~H"""
+    <details id="phone-menu" class="site-bar-phone group" open={@open}>
+      <summary id="phone-menu-button" aria-label="Menu">
+        <.icon name="hero-bars-3" class="group-open:hidden" />
+        <.icon name="hero-x-mark" class="hidden group-open:inline-block" />
+        <span>Menu</span>
+      </summary>
+      <nav class="site-bar-phone-panel" aria-label="Main">
+        <%= if @groups != [] do %>
+          <div class="menu-note">{hd(@teams)}</div>
+          <%= for {heading, links} <- @groups do %>
+            <div :if={heading && length(links) > 1} class="menu-note">{heading}</div>
+            <a :for={{label, key} <- links} href="#" aria-current={key == @current && "page"}>
+              {label}
+            </a>
+          <% end %>
+          <a href="#">Team settings</a>
+          <a href="#">Your member page</a>
+          <a :if={@admin?} href="#">Admin</a>
+          <hr />
+        <% end %>
+        <div class="menu-note truncate">{@email}</div>
+        <%= if @groups == [] do %>
+          <div :if={length(@member_teams) > 1} class="menu-note">Your member pages</div>
+          <a
+            :for={team <- @member_teams}
+            href="#"
+            aria-current={team == hd(@member_teams) && "page"}
+          >
+            {member_page_label(team, @member_teams)}
+          </a>
+          <hr />
+        <% end %>
+        <%= if length(@teams) > 1 do %>
+          <div class="menu-note">Your teams</div>
+          <a :for={team <- @teams} href="#">{team}</a>
+          <hr />
+        <% end %>
+        <a href="#">Account</a>
+        <a href="#">Log out</a>
+      </nav>
+    </details>
+    """
+  end
+
+  @doc ~s(The link to a member's own page: "Your member page", or the team's name under "Your member pages".)
+  def member_page_label(_team, [_one]), do: "Your member page"
+  def member_page_label(team, _teams), do: team
 
   attr :groups, :list, required: true
   attr :current, :string, required: true
@@ -146,7 +217,7 @@ defmodule Web.Dev.NavMockupLive do
       <% end %>
       <div class="mock-sidebar-group mock-sidebar-end">
         <a href="#">Team settings</a>
-        <a :if={@member_page} href="#">Your page</a>
+        <a :if={@member_page} href="#">Your member page</a>
       </div>
     </nav>
     """
@@ -161,7 +232,7 @@ defmodule Web.Dev.NavMockupLive do
         <.team_switcher teams={@teams} admin?={@admin?} open={@open == "team"} />
         <div class="flex-1"></div>
         <.a :if={@admin?} kind={:custom} href="#" class="site-bar-link">Admin</.a>
-        <.account email={@email} teams={[]} open={@open == "account"} member_page="Your page" />
+        <.account email={@email} teams={[]} open={@open == "account"} member_page="Your member page" />
       </div>
       <nav class="mock-tabs-row" aria-label="Team">
         <div class="container m-auto px-2 site-bar-links">
@@ -209,7 +280,7 @@ defmodule Web.Dev.NavMockupLive do
       </:links>
       <.team_switcher teams={@teams} admin?={@admin?} open={@open == "team"} />
       <.a :if={@admin?} kind={:custom} href="#" class="site-bar-link">Admin</.a>
-      <.account email={@email} teams={[]} open={@open == "account"} member_page="Your page" />
+      <.account email={@email} teams={[]} open={@open == "account"} member_page="Your member page" />
     </.site_bar>
     """
   end
@@ -247,7 +318,7 @@ defmodule Web.Dev.NavMockupLive do
       </:links>
       <.team_switcher teams={@teams} admin?={@admin?} open={@open == "team"} />
       <.a :if={@admin?} kind={:custom} href="#" class="site-bar-link">Admin</.a>
-      <.account email={@email} teams={[]} open={@open == "account"} member_page="Your page" />
+      <.account email={@email} teams={[]} open={@open == "account"} member_page="Your member page" />
     </.site_bar>
     """
   end
@@ -256,7 +327,19 @@ defmodule Web.Dev.NavMockupLive do
   defp member_bar(assigns) do
     ~H"""
     <.site_bar size={:narrow}>
-      <.account email={@email} teams={[]} open={@open == "account"} member_page="Your page" />
+      <.account
+        email={@email}
+        teams={[]}
+        open={@open == "account"}
+        member_page="Your member page"
+        member_teams={@member_teams}
+      />
+      <.phone_menu
+        current={@current}
+        email={@email}
+        member_teams={@member_teams}
+        open={@open == "phone"}
+      />
     </.site_bar>
     """
   end
@@ -287,6 +370,7 @@ defmodule Web.Dev.NavMockupLive do
   attr :teams, :list, default: []
   attr :open, :boolean, default: false
   attr :member_page, :any, default: nil
+  attr :member_teams, :list, default: ["Example Valley SAR"]
 
   defp account(assigns) do
     ~H"""
@@ -296,7 +380,12 @@ defmodule Web.Dev.NavMockupLive do
         <.icon name="hero-chevron-down-micro" />
       </summary>
       <div class="menu">
-        <a :if={@member_page} href="#">{@member_page}</a>
+        <%= if @member_page do %>
+          <div :if={length(@member_teams) > 1} class="menu-note">Your member pages</div>
+          <a :for={team <- @member_teams} href="#">
+            {if length(@member_teams) > 1, do: team, else: @member_page}
+          </a>
+        <% end %>
         <hr :if={@member_page} />
         <%= if length(@teams) > 1 do %>
           <div class="menu-note">Your teams</div>
@@ -392,6 +481,7 @@ defmodule Web.Dev.NavMockupLive do
     .mock-sidebar-heading { padding: var(--sp-1) var(--sp-3); color: var(--text-muted); }
     .mock-sidebar a { display: block; padding: var(--sp-2) var(--sp-3); color: var(--text); text-decoration: none; border-radius: var(--radius); }
     .mock-sidebar a:hover { background: var(--row-hover); }
+    @media (width < 64rem) { .mock-sidebar { display: none; } }
     .mock-sidebar a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
     """
   end
