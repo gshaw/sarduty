@@ -90,6 +90,18 @@ defmodule Web.EquipmentItemLive do
               </ul>
             </dd>
           </div>
+          <div :if={!D4H.records?(@current_team)}>
+            <dt>Actions</dt>
+            <dd>
+              <ul id="item-actions" class="action-list">
+                <li>
+                  <.a external={true} href={D4H.equipment_url(@current_team, @item)}>
+                    Open D4H item
+                  </.a>
+                </li>
+              </ul>
+            </dd>
+          </div>
         </dl>
       </aside>
       <main class="content-2/3">
