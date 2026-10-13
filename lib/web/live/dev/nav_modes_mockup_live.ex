@@ -167,7 +167,7 @@ defmodule Web.Dev.NavModesMockupLive do
   defp mode_links(assigns) do
     assigns =
       assign(assigns,
-        teams: Enum.sort(Enum.uniq(assigns.person.manages ++ assigns.person.member_of))
+        teams: (assigns.person.manages ++ assigns.person.member_of) |> Enum.uniq() |> Enum.sort()
       )
 
     ~H"""
