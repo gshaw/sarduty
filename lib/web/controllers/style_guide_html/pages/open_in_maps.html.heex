@@ -1,0 +1,51 @@
+<.shell title="Open in maps" current={:open_in_maps}>
+  <h1>Open in maps</h1>
+  <p class="lead">A place in the account's maps app.</p>
+
+  <div class="demo max-w-sm">
+    <dl>
+      <dt>Address</dt>
+      <dd>
+        Murrin Provincial Park, Squamish<.copy_button
+          id="open-in-maps-demo-copy-address"
+          value="Murrin Provincial Park, Squamish"
+          label="Copy address"
+        />
+      </dd>
+      <dt>Latitude and longitude</dt>
+      <dd>
+        49.64310,-123.20890<.copy_button
+          id="open-in-maps-demo-copy-coordinate"
+          value="49.64310,-123.20890"
+          label="Copy latitude and longitude"
+        />
+        <.open_in_maps
+          id="open-in-maps-demo"
+          coordinate="49.64310,-123.20890"
+          label="Rope rescue practice"
+        />
+      </dd>
+    </dl>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Under an activity's latitude and longitude, or its address when it has none, and under a member's address.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    In a list row that is already a link, such as a <a href={page_path(:row_link)}>row link</a>: a link cannot hold another.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.open_in_maps id="…" app=&#123;@current_user.maps_app&#125; coordinate=&#123;…&#125; address=&#123;…&#125; label=&#123;…&#125; /&gt;</code>. It opens Google Maps, or Apple Maps when the person chose it on the Account page.
+  </p>
+  <p>
+    With a latitude and longitude it pins that spot, and Apple Maps labels the pin with <code>label</code>. Google Maps cannot. Without one it searches for the address. Never label a member's address with their name.
+  </p>
+  <p>
+    Put a <a href={page_path(:copy_button)}>copy button</a> after the value, for a GPS app.
+  </p>
+</.shell>

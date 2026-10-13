@@ -98,6 +98,15 @@
 
   .btn:disabled, .btn[disabled], .btn-disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* Copy button: a small icon after a value, with Copied beside it after a copy. On a
+     touch screen its tap area grows to 44px without moving the text. See
+     /styles/copy-button. */
+  .copy-button { display: inline-flex; vertical-align: -2px; margin-left: var(--sp-1); padding: 2px; border: 0; border-radius: var(--radius); background: none; color: var(--text-muted); cursor: pointer; }
+  @media (hover: hover) { .copy-button:hover { background: var(--surface-alt); color: var(--text); } }
+  @media (pointer: coarse) { .copy-button { padding: 14px; margin: -12px -12px -12px -8px; } }
+  .copy-button:focus-visible { outline: 3px solid transparent; background: var(--focus); color: #0b0c0c; }
+  .copy-status { margin-left: var(--sp-1); color: var(--success-text); font-size: var(--fs-sm); font-weight: 600; }
+
   /* Buttons that wrap on a narrow screen keep a gap between rows. */
   .form-actions .btn { margin-bottom: var(--sp-2); }
 }

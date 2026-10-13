@@ -3,13 +3,17 @@ defmodule Web.Components.MemberSidebar do
 
   import Web.Components.A
   import Web.Components.D4H
+  import Web.Components.CopyButton
+  import Web.Components.OpenInMaps
   import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
   alias Web.Components.NotAPersonSwitch
+  alias Web.Components.OpenInMaps
   alias Web.Components.Phone
 
   attr :member, :map, required: true
+  attr :maps_app, :string, default: "google", doc: "the account's maps_app"
 
   def sidebar_content(assigns) do
     ~H"""
@@ -29,7 +33,15 @@ defmodule Web.Components.MemberSidebar do
         <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
       </dd>
       <dt>Address</dt>
-      <dd>{@member.address}</dd>
+      <dd>
+        {@member.address}<.copy_button
+          id="member-copy-address"
+          value={OpenInMaps.one_line(@member.address)}
+          label="Copy address"
+        />
+        <%!-- No label: the member's name beside their address would leave SAR Duty. --%>
+        <.open_in_maps id="member-maps" app={@maps_app} address={@member.address} />
+      </dd>
       <dt>Joined</dt>
       <dd>
         {Service.Format.date_short(@member.joined_at, @member.team.timezone)} · {Service.Format.months_or_years_ago(

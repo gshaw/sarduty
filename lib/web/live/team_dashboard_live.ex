@@ -3,8 +3,10 @@ defmodule Web.TeamDashboardLive do
 
   import Web.Components.ActivityMap
   import Web.Components.Chart
+  import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
+  alias App.Model.Activity
   alias App.Model.Team
   alias App.ViewData.TeamDashboardCharts
   alias App.ViewData.TeamDashboardViewData
@@ -73,6 +75,7 @@ defmodule Web.TeamDashboardLive do
       :if={@view_data.next_up}
       team={@current_team}
       activity={@view_data.next_up}
+      maps_app={@current_user.maps_app}
       now={@now}
     />
 
@@ -135,6 +138,7 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :activity, :map, required: true
+  attr :maps_app, :string, required: true
   attr :now, :any, required: true
 
   defp next_up(assigns) do
@@ -153,6 +157,13 @@ defmodule Web.TeamDashboardLive do
           <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
         </h2>
         <p class="hint">{where_and_when(@activity, @now)}</p>
+        <.open_in_maps
+          id="next-up-maps"
+          app={@maps_app}
+          coordinate={Activity.pin(@activity)}
+          address={@activity.address}
+          label={@activity.title}
+        />
       </div>
       <.button
         id="next-up-take-attendance"

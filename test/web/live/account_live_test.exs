@@ -20,6 +20,21 @@ defmodule Web.AccountLiveTest do
     refute html =~ "Change password"
   end
 
+  test "saves the maps app place links open", %{conn: conn} do
+    user = user_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/account")
+
+    assert has_element?(lv, "#maps-app-google[checked]")
+
+    lv |> form("#maps-app-form", %{maps_app: "apple"}) |> render_change()
+
+    assert has_element?(lv, "#maps-app-apple[checked]")
+    assert App.Repo.reload!(user).maps_app == "apple"
+
+    lv |> element("#maps-app-form") |> render_change(%{maps_app: "bing"})
+    assert App.Repo.reload!(user).maps_app == "apple"
+  end
+
   test "a user who manages no team sees no team settings", %{conn: conn} do
     {:ok, _lv, html} = conn |> log_in_user(user_fixture()) |> live(~p"/account")
 

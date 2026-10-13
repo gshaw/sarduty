@@ -6,8 +6,10 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.AttendanceImport
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
+  import Web.Components.CopyButton
   import Web.Components.D4H
   import Web.Components.GroupRule
+  import Web.Components.OpenInMaps
   import Web.Components.Pagination
   import Web.Components.Phone, only: [call_and_text: 1]
   import Web.Components.RowLink
@@ -62,12 +64,14 @@ defmodule Web.StyleGuideHTML do
          {:card, "Card", "A box for one topic: on a dashboard, or under a result."},
          {:chart, "Chart", "Columns, lines, a calendar, a week grid, and a bar list."},
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
+         {:copy_button, "Copy button", "Copies the value before it."},
          {:detail_list, "Detail list", "Key facts about one record."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},
          {:map, "Map", "A dot per activity on a Mapbox map."},
+         {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:row_link, "Row link", "A list row that goes to one place."},
@@ -152,6 +156,8 @@ defmodule Web.StyleGuideHTML do
        "A link that leaves SAR Duty, such as Open in D4H"},
       {"arrow-path", "hero-arrow-path-micro", "hero-arrow-path-mini", "hero-arrow-path",
        "Refresh from D4H"},
+      {"document-duplicate", "hero-document-duplicate-micro", "hero-document-duplicate-mini",
+       "hero-document-duplicate", "Copy the value before it"},
       {"arrow-down-tray", "hero-arrow-down-tray-micro", "hero-arrow-down-tray-mini",
        "hero-arrow-down-tray", "Download a file, such as a letter PDF"},
       {"plus", "hero-plus-micro", "hero-plus-mini", "hero-plus",

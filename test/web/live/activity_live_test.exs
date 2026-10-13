@@ -4,6 +4,9 @@ defmodule Web.ActivityLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Activity
+  alias App.Operation.SetMapsApp
+
   test "renders activity page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity = activity_fixture(team)
@@ -17,6 +20,43 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-actions")
     assert has_element?(lv, "#activity-map circle")
     refute has_element?(lv, "#deleted-in-d4h")
+  end
+
+  test "opens the latitude and longitude in maps, or the address without them", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    conn = log_in_user(conn, user)
+    pinned = activity_fixture(team, %{title: "Rope practice"})
+    unpinned = activity_fixture(team, %{coordinate: Activity.null_island()})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{pinned.id}")
+
+    assert has_element?(
+             lv,
+             ~s|#activity-maps[href$="query=49.1%2C-123.1"]|,
+             "Open in Google Maps"
+           )
+
+    assert has_element?(lv, ~s|#activity-copy-coordinate[value="49.1,-123.1"]|)
+    assert has_element?(lv, ~s|#activity-copy-address[value="123 Main St"]|)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{unpinned.id}")
+    assert has_element?(lv, ~s|#activity-maps[href$="query=123+Main+St"]|)
+    refute has_element?(lv, "#activity-copy-coordinate")
+  end
+
+  test "opens places in Apple Maps for an account that chose it", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    {:ok, user} = SetMapsApp.call(user, "apple")
+    activity = activity_fixture(team, %{title: "Rope practice"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+    assert has_element?(
+             lv,
+             ~s|#activity-maps[href*="ll=49.1%2C-123.1&q=Rope+practice"]|,
+             "Open in Apple Maps"
+           )
   end
 
   describe "an activity deleted in D4H" do

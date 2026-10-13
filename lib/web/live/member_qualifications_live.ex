@@ -93,7 +93,7 @@ defmodule Web.MemberQualificationsLive do
     <h1 class="title">{@member.name}</h1>
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content member={@member} />
+        <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
       </aside>
       <main class="content-2/3">
         <.member_tabs member={@member} active_tab={:qualifications} />

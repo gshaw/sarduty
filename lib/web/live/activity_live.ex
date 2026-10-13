@@ -3,6 +3,8 @@ defmodule Web.ActivityLive do
 
   import Ecto.Query
   import Web.Components.ActivityMap
+  import Web.Components.CopyButton
+  import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -79,6 +81,7 @@ defmodule Web.ActivityLive do
       <aside class="content-1/3">
         <.sidebar_content
           activity={@activity}
+          maps_app={@current_user.maps_app}
           hours_tags={@hours_tags}
           attendances={@attendances}
           attendance_count={@attendance_count}
@@ -129,14 +132,37 @@ defmodule Web.ActivityLive do
         <dd>{hours_type}</dd>
       </div>
 
+      <%!-- The map link goes on the latitude and longitude, which pin the exact spot. --%>
       <div :if={@activity.address}>
         <dt>Address</dt>
-        <dd>{@activity.address}</dd>
+        <dd>
+          {@activity.address}<.copy_button
+            id="activity-copy-address"
+            value={@activity.address}
+            label="Copy address"
+          />
+          <.open_in_maps
+            :if={!Activity.pin(@activity)}
+            id="activity-maps"
+            app={@maps_app}
+            address={@activity.address}
+          />
+        </dd>
       </div>
-      <div :if={@activity.coordinate && @activity.coordinate != Activity.null_island()}>
+      <div :if={Activity.pin(@activity)}>
         <dt>Latitude and longitude</dt>
         <dd>
-          {@activity.coordinate}
+          {@activity.coordinate}<.copy_button
+            id="activity-copy-coordinate"
+            value={@activity.coordinate}
+            label="Copy latitude and longitude"
+          />
+          <.open_in_maps
+            id="activity-maps"
+            app={@maps_app}
+            coordinate={Activity.pin(@activity)}
+            label={@activity.title}
+          />
         </dd>
       </div>
 
