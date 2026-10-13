@@ -254,7 +254,7 @@ defmodule Web.ActivityEquipmentLive do
       id="item-search-results"
       rows={@results}
       row_id={&"result-#{&1.id}"}
-      class="table-striped mt-4"
+      class="table-striped"
     >
       <:col :let={item} label="Item">
         {item.title} <span :if={item.kind} class="hint">{item.kind}</span>

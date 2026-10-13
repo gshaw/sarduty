@@ -53,7 +53,7 @@ defmodule Web.ActivityTemplateLive do
             id="templates-table"
             rows={@templates}
             row_id={&"template-#{&1.id}"}
-            class="table-striped mb-4"
+            class="table-striped"
           >
             <:col :let={template} label="Template">
               {template.title}
@@ -71,7 +71,7 @@ defmodule Web.ActivityTemplateLive do
               </.button>
             </:col>
           </.table>
-          <p class="hint">
+          <p class="hint mt-4">
             <.a navigate={~p"/teams/#{@current_team}/templates"}>
               {if @templates == [], do: "Add a template", else: "Change templates"}
             </.a>
@@ -128,7 +128,7 @@ defmodule Web.ActivityTemplateLive do
   @doc "Tags about to be added, each with a remove button. Shared with the template form."
   def tags_to_add(assigns) do
     ~H"""
-    <.table id={@id} rows={@tags} row_id={&"tag-#{&1.id}"} class="table-striped mb-4">
+    <.table id={@id} rows={@tags} row_id={&"tag-#{&1.id}"} class="table-striped">
       <:col :let={tag} label="Tag">
         <.badge kind={:outline}>{tag.title}</.badge>
       </:col>
@@ -153,7 +153,7 @@ defmodule Web.ActivityTemplateLive do
   @doc "Groups about to be invited, each with a remove button. Shared with the template form."
   def groups_to_invite(assigns) do
     ~H"""
-    <.table id={@id} rows={@groups} row_id={&"group-#{&1.id}"} class="table-striped mb-4">
+    <.table id={@id} rows={@groups} row_id={&"group-#{&1.id}"} class="table-striped">
       <:col :let={group} label="Group">{group.title}</:col>
       <:col :let={group} label="" class="w-px whitespace-nowrap">
         <.button
