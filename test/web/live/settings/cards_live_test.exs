@@ -36,6 +36,48 @@ defmodule Web.Settings.CardsLiveTest do
     refute Repo.reload!(first_aid).on_card
   end
 
+  test "lists the groups that use each name, linked to the group", %{conn: conn, team: team} do
+    gsar = group_fixture(team, %{title: "GSAR Callout"})
+    members = group_fixture(team, %{title: "Members"})
+    group_rule_clause_fixture(gsar, %{name: "GSAR"})
+    group_rule_clause_fixture(members, %{name: "GSAR"})
+    group_rule_clause_fixture(members, %{name: "Rope"})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
+
+    assert has_element?(lv, ~s|#card-name-0 a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|)
+
+    assert has_element?(
+             lv,
+             ~s|#card-name-0 a[href="/teams/#{team.subdomain}/groups/#{members.id}"]|
+           )
+
+    refute has_element?(lv, ~s|#card-name-1 a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|)
+  end
+
+  test "warns when groups list different qualifications under one name",
+       %{conn: conn, team: team} do
+    first = group_fixture(team)
+    second = group_fixture(team)
+    same = group_fixture(team)
+    [basic, advanced, rope] = for _ <- 1..3, do: qualification_fixture(team)
+
+    for {group, name, qualification} <- [
+          {first, "First Aid", basic},
+          {second, "First Aid", advanced},
+          {first, "Rope", rope},
+          {same, "Rope", rope}
+        ] do
+      clause = group_rule_clause_fixture(group, %{name: name})
+      group_rule_clause_qualification_fixture(clause, qualification)
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
+
+    assert has_element?(lv, "#card-name-0-mixed")
+    refute has_element?(lv, "#card-name-1-mixed")
+  end
+
   test "never changes another team's clauses", %{conn: conn, team: team} do
     group_rule_clause_fixture(group_fixture(team), %{name: "First Aid"})
 
