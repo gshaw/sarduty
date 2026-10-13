@@ -17,7 +17,8 @@ defmodule Web.Dev.NavModesMockupLive do
 
   # Who can reach what: the teams they manage, the teams they're a member of, and admin.
   @people %{
-    "admin" => %{admin?: true, manages: @teams, member_of: @teams},
+    # North Shore has member logins off, so the admin manages it but has no pages there.
+    "admin" => %{admin?: true, manages: @teams, member_of: ["Example Valley SAR"]},
     "manager" => %{
       admin?: false,
       manages: ["Example Valley SAR"],
@@ -99,9 +100,9 @@ defmodule Web.Dev.NavModesMockupLive do
   defp current("member"), do: "overview"
   defp current("admin"), do: "teams"
 
-  @doc ~s(The mode, as the bar shows it: {"Example Valley SAR", "Team"}, or {"Admin", nil}.)
-  def mode_label("team", team), do: {team, "Team"}
-  def mode_label("member", team), do: {team, "Member"}
+  @doc ~s(The mode, as the bar shows it: {"Example Valley SAR", "Team pages"}, or {"Admin", nil}.)
+  def mode_label("team", team), do: {team, "Team pages"}
+  def mode_label("member", team), do: {team, "Your pages"}
   def mode_label("admin", _team), do: {"Admin", nil}
 
   def render(assigns) do
@@ -160,36 +161,38 @@ defmodule Web.Dev.NavModesMockupLive do
   attr :mode, :string, required: true
   attr :team, :string, default: nil
 
-  # Every mode the person can switch to, in the same order everywhere: admin, the teams
-  # they manage, their member pages, then their account.
+  # Every mode the person can switch to: admin, then each of their teams under its name,
+  # with Team pages if they manage it and Your pages if it has member logins, then their
+  # account. Teams A to Z.
   defp mode_links(assigns) do
+    assigns =
+      assign(assigns,
+        teams: Enum.sort(Enum.uniq(assigns.person.manages ++ assigns.person.member_of))
+      )
+
     ~H"""
     <%= if @person.admin? do %>
       <a href="#" aria-current={@mode == "admin" && "page"}>Admin</a>
       <hr />
     <% end %>
-    <%= if @person.manages != [] do %>
-      <div class="menu-note">Teams</div>
+    <%= for team <- @teams do %>
+      <div class="mock-menu-team">{team}</div>
       <a
-        :for={team <- @person.manages}
+        :if={team in @person.manages}
         href="#"
         aria-current={(@mode == "team" and @team == team) && "page"}
       >
-        {team}
+        Team pages
+      </a>
+      <a
+        :if={team in @person.member_of}
+        href="#"
+        aria-current={(@mode == "member" and @team == team) && "page"}
+      >
+        Your pages
       </a>
       <hr />
     <% end %>
-    <div class="menu-note">
-      {if length(@person.member_of) > 1, do: "Your member pages", else: "Your member page"}
-    </div>
-    <a
-      :for={team <- @person.member_of}
-      href="#"
-      aria-current={(@mode == "member" and @team == team) && "page"}
-    >
-      {team}
-    </a>
-    <hr />
     <a href="#">Account</a>
     <a href="#">Log out</a>
     """
@@ -349,6 +352,8 @@ defmodule Web.Dev.NavModesMockupLive do
     """
     .mock-note { position: fixed; bottom: var(--sp-2); right: var(--sp-2); z-index: 50; padding: var(--sp-1) var(--sp-2); background: var(--warning); color: var(--on-warning); font-size: var(--fs-xs); border-radius: var(--radius); }
     .mock-body { padding-top: var(--sp-16); }
+    .menu .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: var(--text); }
+    .site-bar-phone-panel .mock-menu-team { padding: var(--sp-2) var(--sp-4) 0; font-weight: 700; color: #fff; font-size: var(--fs-sm); line-height: var(--lh-sm); }
     .mock-mode { display: inline-flex; align-items: baseline; gap: var(--sp-2); color: #fff; font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md); white-space: nowrap; padding: var(--sp-3) var(--sp-2); }
     .mock-mode-kind { color: #d5dbe3; font-weight: 400; font-size: var(--fs-sm); line-height: var(--lh-sm); }
 
