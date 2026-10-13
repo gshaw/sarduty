@@ -175,7 +175,7 @@ defmodule Web.ActivityTemplateLive do
 
   @doc """
   What the send button does: "Add 3 items", "Add 3 items and 2 tags", "Invite 1 group",
-  or "Add 3 items and invite 1 group".
+  or "Add 3 items and 2 tags, invite 1 group".
   """
   def to_add_text(lines, tags, groups) do
     adds =
@@ -189,7 +189,7 @@ defmodule Web.ActivityTemplateLive do
     case {adds, groups} do
       {adds, 0} -> "Add #{adds}"
       {nil, groups} -> "Invite #{count_groups(groups)}"
-      {adds, groups} -> "Add #{adds} and invite #{count_groups(groups)}"
+      {adds, groups} -> "Add #{adds}, invite #{count_groups(groups)}"
     end
   end
 
