@@ -36,23 +36,36 @@ defmodule Web.Settings.CardsLiveTest do
     refute Repo.reload!(first_aid).on_card
   end
 
-  test "lists the groups that use each name, linked to the group", %{conn: conn, team: team} do
+  test "links to the groups to fix a name no member holds", %{conn: conn, team: team} do
     gsar = group_fixture(team, %{title: "GSAR Callout"})
     members = group_fixture(team, %{title: "Members"})
-    group_rule_clause_fixture(gsar, %{name: "GSAR"})
-    group_rule_clause_fixture(members, %{name: "GSAR"})
-    group_rule_clause_fixture(members, %{name: "Rope"})
+    held = qualification_fixture(team)
+    qualification_award_fixture(held, member_fixture(team))
+
+    for group <- [gsar, members] do
+      group_rule_clause_fixture(group, %{name: "Placeholder"})
+    end
+
+    group_rule_clause_qualification_fixture(
+      group_rule_clause_fixture(members, %{name: "Rope"}),
+      held
+    )
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
 
-    assert has_element?(lv, ~s|#card-name-0 a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|)
+    assert has_element?(lv, "#card-name-0-no-members")
 
     assert has_element?(
              lv,
-             ~s|#card-name-0 a[href="/teams/#{team.subdomain}/groups/#{members.id}"]|
+             ~s|#card-name-0-fix a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|
            )
 
-    refute has_element?(lv, ~s|#card-name-1 a[href="/teams/#{team.subdomain}/groups/#{gsar.id}"]|)
+    assert has_element?(
+             lv,
+             ~s|#card-name-0-fix a[href="/teams/#{team.subdomain}/groups/#{members.id}"]|
+           )
+
+    refute has_element?(lv, "#card-name-1-fix")
   end
 
   test "shows every qualification under a name and how many members hold one",
@@ -86,6 +99,7 @@ defmodule Web.Settings.CardsLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/cards")
 
     assert has_element?(lv, "#card-name-0-missing")
+    assert has_element?(lv, "#card-name-0-fix a")
   end
 
   test "never changes another team's clauses", %{conn: conn, team: team} do

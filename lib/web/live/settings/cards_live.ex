@@ -57,17 +57,21 @@ defmodule Web.Settings.CardsLive do
             {Enum.join(row.qualifications, ", ")}
             <div :if={row.missing > 0} class="text-danger-text" id={"card-name-#{row.index}-missing"}>
               {if row.missing == 1,
-                do: "1 is no longer in D4H",
-                else: "#{row.missing} are no longer in D4H"}
+                do: "1 is no longer in D4H.",
+                else: "#{row.missing} are no longer in D4H."}
             </div>
+            <div :if={row.members == 0} class="hint" id={"card-name-#{row.index}-no-members"}>
+              No member holds one.
+            </div>
+            <div
+              :if={row.missing > 0 or row.members == 0}
+              class="hint"
+              id={"card-name-#{row.index}-fix"}
+              phx-no-format
+            >Fix in <%= for {group, j} <- Enum.with_index(row.groups) do %><%= if j > 0 do %>, <% end %><.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a><% end %></div>
           </:col>
           <:col :let={row} label="Members" align="right">
             <span class={row.members == 0 && "text-text-muted"}>{row.members}</span>
-          </:col>
-          <:col :let={row} label="Set in">
-            <div :for={group <- row.groups}>
-              <.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a>
-            </div>
           </:col>
         </.table>
         <.form_actions>
