@@ -4,7 +4,8 @@
   .toasts {
     position: fixed;
     top: 72px;
-    right: var(--sp-6);
+    /* On a wide monitor, line up with the page's right edge (1280px), not the window's. */
+    right: max(var(--sp-6), calc((100vw - 80rem) / 2 + var(--sp-2)));
     z-index: 50;
     width: min(400px, calc(100vw - 32px));
     display: grid;
