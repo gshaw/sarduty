@@ -55,6 +55,8 @@ defmodule Web.Settings.MCPLiveTest do
     assert MCPToken.hash(token) == record.token_hash
     assert has_element?(lv, "#claude-code-command", token)
     assert has_element?(lv, "#setup-prompt", token)
+    assert has_element?(lv, ~s|#new-token-value-copy[value="#{token}"]|)
+    assert has_element?(lv, "#setup-prompt-copy[aria-label='Copy setup prompt']")
     assert has_element?(lv, "#token-#{record.id}", "Laptop")
 
     {:ok, lv, html} = live(conn, ~p"/teams/#{team}/settings/mcp")

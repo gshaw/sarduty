@@ -25,11 +25,19 @@ defmodule Web.Components.MemberSidebar do
       <dd>{@member.position}</dd>
       <dt>Email</dt>
       <dd>
-        <.a href={"mailto:#{@member.email}"}>{@member.email}</.a>
+        <.a href={"mailto:#{@member.email}"}>{@member.email}</.a><.copy_button
+          id="member-copy-email"
+          value={@member.email}
+          label="Copy email"
+        />
       </dd>
       <dt>Phone</dt>
       <dd id="member-phone">
-        {Phone.format(@member.phone)}
+        {Phone.format(@member.phone)}<.copy_button
+          id="member-copy-phone"
+          value={Phone.format(@member.phone)}
+          label="Copy phone number"
+        />
         <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
       </dd>
       <dt>Address</dt>

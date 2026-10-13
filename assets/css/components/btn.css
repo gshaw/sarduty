@@ -107,6 +107,12 @@
   .copy-button:focus-visible { outline: 3px solid transparent; background: var(--focus); color: #0b0c0c; }
   .copy-status { margin-left: var(--sp-1); color: var(--success-text); font-size: var(--fs-sm); font-weight: 600; }
 
+  /* In a code block's top-right corner, with Copied to its left. */
+  .code-block-copy { position: relative; }
+  .code-block-copy > .code-block { padding-right: var(--sp-12); }
+  .code-block-copy > .copy-button { position: absolute; top: var(--sp-2); right: var(--sp-2); margin: 0; }
+  .code-block-copy > .copy-status { position: absolute; top: var(--sp-2); right: var(--sp-8); margin: 0; padding-inline: var(--sp-1); line-height: var(--lh-md); background: var(--surface-alt); }
+
   /* Buttons that wrap on a narrow screen keep a gap between rows. */
   .form-actions .btn { margin-bottom: var(--sp-2); }
 }
