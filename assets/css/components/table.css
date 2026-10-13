@@ -12,6 +12,8 @@
 
   table.table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); line-height: var(--lh-sm); text-align: left; }
   table.table :is(th, td) { padding: 6px var(--sp-3); text-align: left; vertical-align: baseline; }
+  /* A logo first gives the cell no baseline, so the rest of the row would drop to its foot. */
+  table.table td:has(> .media) { vertical-align: top; }
 
   table.table thead th {
     position: sticky;
