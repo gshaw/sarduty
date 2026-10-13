@@ -9,10 +9,6 @@ defmodule App.DataFixtures do
   alias App.Model.GroupMember
   alias App.Model.GroupRuleClause
   alias App.Model.GroupRuleClauseQualification
-  alias App.Model.Kit
-  alias App.Model.KitGroup
-  alias App.Model.KitItem
-  alias App.Model.KitTag
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
@@ -21,6 +17,10 @@ defmodule App.DataFixtures do
   alias App.Model.Tag
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
+  alias App.Model.Template
+  alias App.Model.TemplateGroup
+  alias App.Model.TemplateItem
+  alias App.Model.TemplateTag
   alias App.Repo
 
   # ID cards are on, as for every team that signed up before the switch; pass
@@ -351,19 +351,20 @@ defmodule App.DataFixtures do
     %EquipmentUsage{} |> EquipmentUsage.build_changeset(params) |> Repo.insert!()
   end
 
-  def kit_fixture(%Team{} = team, title \\ "Truck 1", items \\ [], tags \\ [], groups \\ []) do
-    kit_items =
-      for {item, minutes} <- items, do: %KitItem{equipment_item_id: item.id, minutes: minutes}
+  def template_fixture(%Team{} = team, title \\ "Truck 1", items \\ [], tags \\ [], groups \\ []) do
+    template_items =
+      for {item, minutes} <- items,
+          do: %TemplateItem{equipment_item_id: item.id, minutes: minutes}
 
-    kit_tags = for tag <- tags, do: %KitTag{tag_id: tag.id}
-    kit_groups = for group <- groups, do: %KitGroup{group_id: group.id}
+    template_tags = for tag <- tags, do: %TemplateTag{tag_id: tag.id}
+    template_groups = for group <- groups, do: %TemplateGroup{group_id: group.id}
 
-    Repo.insert!(%Kit{
+    Repo.insert!(%Template{
       team_id: team.id,
       title: title,
-      kit_items: kit_items,
-      kit_tags: kit_tags,
-      kit_groups: kit_groups
+      template_items: template_items,
+      template_tags: template_tags,
+      template_groups: template_groups
     })
   end
 

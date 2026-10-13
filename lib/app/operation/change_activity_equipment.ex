@@ -1,6 +1,6 @@
 defmodule App.Operation.ChangeActivityEquipment do
   @moduledoc """
-  Adds equipment and a kit's tags to an activity, or removes one item, in D4H (#271,
+  Adds equipment and a template's tags to an activity, or removes one item, in D4H (#271,
   #162). Each is a change set of source `:equipment`, applied at once, with one row per
   item and one for the tags. Then the activity's usages are read back from D4H, and its
   added tags copied, so its page shows them before the next sync.

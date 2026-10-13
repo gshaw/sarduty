@@ -22,15 +22,15 @@ defmodule Web.EquipmentItemLive do
         row: row,
         contents: Enum.filter(items, &(&1.d4h_container_id == item.d4h_equipment_id)),
         usages: EquipmentUsage.for_item(item),
-        kits: kits_with(item)
+        templates: templates_with(item)
       )
 
     {:ok, socket}
   end
 
-  defp kits_with(item) do
-    App.Model.Kit
-    |> join(:inner, [k], ki in assoc(k, :kit_items))
+  defp templates_with(item) do
+    App.Model.Template
+    |> join(:inner, [k], ki in assoc(k, :template_items))
     |> where([k, ki], k.team_id == ^item.team_id and ki.equipment_item_id == ^item.id)
     |> order_by([k], asc: k.title)
     |> Repo.all()
@@ -78,13 +78,13 @@ defmodule Web.EquipmentItemLive do
             <dt>Expires</dt>
             <dd>{Service.Format.date_long(@item.expires_at, @current_team.timezone)}</dd>
           </div>
-          <div :if={@kits != []}>
-            <dt>Kits</dt>
+          <div :if={@templates != []}>
+            <dt>Templates</dt>
             <dd>
               <ul>
-                <li :for={kit <- @kits}>
-                  <.a navigate={~p"/teams/#{@current_team}/equipment/kits/#{kit.id}"}>
-                    {kit.title}
+                <li :for={template <- @templates}>
+                  <.a navigate={~p"/teams/#{@current_team}/templates/#{template.id}"}>
+                    {template.title}
                   </.a>
                 </li>
               </ul>

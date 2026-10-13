@@ -7,7 +7,7 @@ defmodule Web.EquipmentLiveTest do
   alias App.Model.Activity
   alias App.Model.ChangeSet
   alias App.Model.EquipmentUsage
-  alias App.Model.Kit
+  alias App.Model.Template
   alias App.Repo
 
   setup %{conn: conn} do
@@ -96,8 +96,8 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#item-usages", "Night search")
   end
 
-  test "a kit is added with its items and hours", ctx do
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/kits/new")
+  test "a template is added with its items and hours", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
 
     lv |> form("#item-search-form", %{q: "radio"}) |> render_change()
     lv |> element("#item-add-#{ctx.radio.id}") |> render_click()
@@ -108,21 +108,21 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#hours-#{ctx.truck.id}")
 
     lv
-    |> form("#kit-form", kit: %{title: "Truck 2"}, hours: %{"#{ctx.radio.id}" => "2.5"})
+    |> form("#template-form", template: %{title: "Truck 2"}, hours: %{"#{ctx.radio.id}" => "2.5"})
     |> render_submit()
 
-    kit = Kit |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(:kit_items)
-    assert kit.title == "Truck 2"
+    template = Template |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(:template_items)
+    assert template.title == "Truck 2"
 
-    assert kit.kit_items |> Enum.map(&{&1.equipment_item_id, &1.minutes}) |> Enum.sort() ==
+    assert template.template_items |> Enum.map(&{&1.equipment_item_id, &1.minutes}) |> Enum.sort() ==
              Enum.sort([{ctx.radio.id, 150}, {ctx.truck.id, 0}])
   end
 
-  test "a kit gets tags from the team's tags", ctx do
+  test "a template gets tags from the team's tags", ctx do
     water = tag_fixture(ctx.team, "Flat Water")
     tag_fixture(ctx.team, "Medical")
     activity_fixture(ctx.team, %{tags: ["Flat Water"]})
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/kits/new")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
 
     # With no search, only tags the team's activities used.
     assert has_element?(lv, "#tag-most-used")
@@ -132,20 +132,20 @@ defmodule Web.EquipmentLiveTest do
     lv |> form("#tag-search-form", %{tag_q: "flat"}) |> render_change()
     refute has_element?(lv, "#tag-search-results", "Medical")
     lv |> element("#tag-add-#{water.id}") |> render_click()
-    assert has_element?(lv, "#kit-tags #tag-#{water.id}", "Flat Water")
+    assert has_element?(lv, "#template-tags #tag-#{water.id}", "Flat Water")
     refute has_element?(lv, "#tag-add-#{water.id}")
 
-    lv |> form("#kit-form", kit: %{title: "Boat training"}) |> render_submit()
+    lv |> form("#template-form", template: %{title: "Boat training"}) |> render_submit()
 
-    kit = Kit |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(kit_tags: :tag)
-    assert Enum.map(kit.kit_tags, & &1.tag.title) == ["Flat Water"]
+    template = Template |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(template_tags: :tag)
+    assert Enum.map(template.template_tags, & &1.tag.title) == ["Flat Water"]
   end
 
-  test "a kit's tags join the activity's tags in D4H", ctx do
+  test "a template's tags join the activity's tags in D4H", ctx do
     activity = activity_fixture(ctx.team)
     water = tag_fixture(ctx.team, "Flat Water")
     hours = tag_fixture(ctx.team, "Primary Hours")
-    kit = kit_fixture(ctx.team, "Boat training", [], [water, hours])
+    template = template_fixture(ctx.team, "Boat training", [], [water, hours])
     path = "/exercises/#{activity.d4h_activity_id}"
     test_pid = self()
 
@@ -168,15 +168,15 @@ defmodule Web.EquipmentLiveTest do
       end
     end)
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
-    lv |> element("#equipment-add-kit-#{kit.id}") |> render_click()
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
 
     # The activity has Primary Hours already.
-    assert has_element?(lv, "#equipment-tags #tag-#{water.id}")
-    refute has_element?(lv, "#equipment-tags #tag-#{hours.id}")
-    assert has_element?(lv, "#equipment-send", "Add 1 tag")
+    assert has_element?(lv, "#template-tags #tag-#{water.id}")
+    refute has_element?(lv, "#template-tags #tag-#{hours.id}")
+    assert has_element?(lv, "#template-send", "Add 1 tag")
 
-    lv |> form("#equipment-lines") |> render_submit()
+    lv |> form("#template-lines") |> render_submit()
 
     assert_received {:d4h_write, tags_path, %{"tagIds" => tag_ids}}
     assert String.ends_with?(tags_path, path <> "/tags")
@@ -185,21 +185,23 @@ defmodule Web.EquipmentLiveTest do
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
-  test "a kit gets groups to invite", ctx do
+  test "a template gets groups to invite", ctx do
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/kits/new")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
 
     lv |> element("#group-add-#{managers.id}") |> render_click()
-    assert has_element?(lv, "#kit-groups #group-#{managers.id}", "Search Managers")
+    assert has_element?(lv, "#template-groups #group-#{managers.id}", "Search Managers")
     refute has_element?(lv, "#group-add-#{managers.id}")
 
-    lv |> form("#kit-form", kit: %{title: "Managers' training"}) |> render_submit()
+    lv |> form("#template-form", template: %{title: "Managers' training"}) |> render_submit()
 
-    kit = Kit |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(kit_groups: :group)
-    assert Enum.map(kit.kit_groups, & &1.group.title) == ["Search Managers"]
+    template =
+      Template |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(template_groups: :group)
+
+    assert Enum.map(template.template_groups, & &1.group.title) == ["Search Managers"]
   end
 
-  test "a kit's groups are invited to the activity in D4H", ctx do
+  test "a template's groups are invited to the activity in D4H", ctx do
     activity = activity_fixture(ctx.team)
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
     mike = member_fixture(ctx.team, %{name: "Mike"})
@@ -207,7 +209,7 @@ defmodule Web.EquipmentLiveTest do
     retired = member_fixture(ctx.team, %{name: "Retired", d4h_status: "RETIRED"})
     for member <- [mike, signed_up, retired], do: group_member_fixture(managers, member)
     attendance_fixture(activity, signed_up, %{status: "requested"})
-    kit = kit_fixture(ctx.team, "Managers' training", [], [], [managers])
+    template = template_fixture(ctx.team, "Managers' training", [], [], [managers])
     path = "/exercises/#{activity.d4h_activity_id}"
     test_pid = self()
 
@@ -236,25 +238,25 @@ defmodule Web.EquipmentLiveTest do
       end
     end)
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
-    lv |> element("#equipment-add-kit-#{kit.id}") |> render_click()
-    assert has_element?(lv, "#equipment-groups #group-#{managers.id}", "Search Managers")
-    assert has_element?(lv, "#equipment-send", "Invite 1 group")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    assert has_element?(lv, "#template-groups #group-#{managers.id}", "Search Managers")
+    assert has_element?(lv, "#template-send", "Invite 1 group")
 
-    lv |> form("#equipment-lines") |> render_submit()
+    lv |> form("#template-lines") |> render_submit()
 
     # Only Mike: the signed-up member is on the activity, and the retired one isn't current.
     assert_received {:d4h_write, %{"memberId" => mike_id, "status" => "REQUESTED"}}
     assert mike_id == mike.d4h_member_id
     refute_received {:d4h_write, _json}
 
-    assert %ChangeSet{source: :kit} = Repo.get_by!(ChangeSet, activity_id: activity.id)
+    assert %ChangeSet{source: :template} = Repo.get_by!(ChangeSet, activity_id: activity.id)
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
-  test "a kit's items go to D4H as usages on the activity", ctx do
+  test "a template's items go to D4H as usages on the activity", ctx do
     activity = activity_fixture(ctx.team)
-    kit = kit_fixture(ctx.team, "Truck 2", [{ctx.truck, 0}, {ctx.radio, 90}])
+    template = template_fixture(ctx.team, "Truck 2", [{ctx.truck, 0}, {ctx.radio, 90}])
     test_pid = self()
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -276,15 +278,15 @@ defmodule Web.EquipmentLiveTest do
       end
     end)
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
-    lv |> element("#equipment-add-kit-#{kit.id}") |> render_click()
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
     assert has_element?(lv, "#line-#{ctx.radio.id}")
 
     assert has_element?(lv, "#km-#{ctx.truck.id}")
     refute has_element?(lv, "#km-#{ctx.radio.id}")
 
     lv
-    |> form("#equipment-lines",
+    |> form("#template-lines",
       hours: %{"#{ctx.radio.id}" => "1"},
       km: %{"#{ctx.truck.id}" => "35"}
     )

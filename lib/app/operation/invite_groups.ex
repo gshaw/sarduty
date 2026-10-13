@@ -1,8 +1,8 @@
 defmodule App.Operation.InviteGroups do
   @moduledoc """
-  Invites a kit's groups to an activity (#162): each current member of the groups gets an
+  Invites a template's groups to an activity (#162): each current member of the groups gets an
   attendance row in D4H as "REQUESTED", for the activity's times, and answers it
-  themselves. A change set of source `:kit`, applied at once.
+  themselves. A change set of source `:template`, applied at once.
 
   plan/3 decides who is invited; call/5 reads the groups and writes.
   """
@@ -92,7 +92,7 @@ defmodule App.Operation.InviteGroups do
       ChangeSet.propose!(
         %ChangeSet{
           team_id: team.id,
-          source: :kit,
+          source: :template,
           activity_id: activity.id,
           proposed_by_user_id: user.id
         },

@@ -1,73 +1,77 @@
-defmodule Web.KitFormLive do
+defmodule Web.TemplateFormLive do
   use Web, :live_view_app_layout
 
-  import Web.ActivityEquipmentLive,
-    only: [lines_table: 1, item_search: 1, tags_to_add: 1, groups_to_invite: 1]
+  import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1]
+  import Web.ActivityTemplateLive, only: [tags_to_add: 1, groups_to_invite: 1]
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.Group
-  alias App.Model.Kit
   alias App.Model.Tag
-  alias App.Operation.SaveKit
+  alias App.Model.Template
+  alias App.Operation.SaveTemplate
   alias Web.ActivityEquipmentLive
+  alias Web.ActivityTemplateLive
 
-  # Adding and changing a kit: its name, its items with their usual hours (#271), its
+  # Adding and changing a template: its name, its items with their usual hours (#271), its
   # tags, and the groups it invites (#162). Tags and groups come from the sync's copy of
   # the team's D4H records.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    kit = if id = params["id"], do: Kit.find!(team, id)
+    template = if id = params["id"], do: Template.find!(team, id)
 
     socket =
       socket
-      |> assign(kit: kit, lines: kit_lines(kit), q: "", results: [])
-      |> assign(tags: if(kit, do: Kit.tags(kit), else: []), all_tags: Tag.get_all(team.id))
+      |> assign(template: template, lines: template_lines(template), q: "", results: [])
+      |> assign(
+        tags: if(template, do: Template.tags(template), else: []),
+        all_tags: Tag.get_all(team.id)
+      )
       |> assign(tag_q: "", tag_uses: Tag.use_counts(team.id, a_year_ago()))
       |> assign(
-        groups: if(kit, do: Kit.groups(kit), else: []),
+        groups: if(template, do: Template.groups(template), else: []),
         all_groups: Group.get_all(team.id)
       )
-      |> assign(page_title: if(kit, do: kit.title, else: "Add kit"))
+      |> assign(page_title: if(template, do: template.title, else: "Add template"))
       |> assign(service: D4H.service_name(team))
-      |> assign_form(Kit.build_changeset(kit || %Kit{}, %{}))
+      |> assign_form(Template.build_changeset(template || %Template{}, %{}))
 
     {:ok, socket}
   end
 
-  defp kit_lines(nil), do: []
+  defp template_lines(nil), do: []
 
-  defp kit_lines(kit) do
-    kit.kit_items
+  defp template_lines(template) do
+    template.template_items
     |> Enum.sort_by(&String.downcase(&1.equipment_item.title))
     |> Enum.map(&{&1.equipment_item, &1.minutes})
     |> then(&ActivityEquipmentLive.add_lines([], &1))
   end
 
-  defp assign_form(socket, changeset), do: assign(socket, :form, to_form(changeset, as: "kit"))
+  defp assign_form(socket, changeset),
+    do: assign(socket, :form, to_form(changeset, as: "template"))
 
   def render(assigns) do
     ~H"""
     <.breadcrumbs team={@current_team}>
-      <:item label="Equipment" path={~p"/teams/#{@current_team}/equipment"} />
-      <:item label="Kits" path={~p"/teams/#{@current_team}/equipment/kits"} />
+      <:item label="Templates" path={~p"/teams/#{@current_team}/templates"} />
       <:item label={@page_title} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <section id="kit-search" class="mb-8">
+        <section id="template-search" class="mb-8">
           <h2 class="heading">Find an item</h2>
           <.item_search q={@q} results={@results} />
         </section>
 
-        <section id="kit-tag-search">
+        <section id="template-tag-search">
           <h2 class="heading">Find a tag</h2>
           <.tag_search q={@tag_q} results={tag_results(@all_tags, @tags, @tag_q, @tag_uses)} />
         </section>
 
-        <section id="kit-group-search" class="mt-8">
+        <section id="template-group-search" class="mt-8">
           <h2 class="heading">Groups</h2>
           <ul :if={group_results(@all_groups, @groups) != []} id="group-results" class="action-list">
             <li :for={group <- group_results(@all_groups, @groups)}>
@@ -90,53 +94,55 @@ defmodule Web.KitFormLive do
         </section>
       </aside>
       <main class="content-2/3">
-        <.form for={@form} id="kit-form" phx-change="validate" phx-submit="save">
+        <.form for={@form} id="template-form" phx-change="validate" phx-submit="save">
           <.error_summary form={@form} />
-          <.input field={@form[:title]} label="Name">Such as "Truck 1" or "Night search".</.input>
+          <.input field={@form[:title]} label="Name">Such as "Truck 1" or "Boat training".</.input>
 
           <h2 class="heading">Items · {length(@lines)}</h2>
           <p class="hint mb-4">
-            The hours are what each item adds to an activity. You can change them when you add the kit.
+            The hours are what each item adds to an activity. You can change them when you add the template.
           </p>
-          <.lines_table :if={@lines != []} id="kit-lines" lines={@lines} />
-          <p :if={@lines == []} id="kit-no-items" class="hint mb-4">
+          <.lines_table :if={@lines != []} id="template-lines" lines={@lines} />
+          <p :if={@lines == []} id="template-no-items" class="hint mb-4">
             Find items to add.
           </p>
 
           <h2 class="heading mt-8">Tags · {length(@tags)}</h2>
           <p class="hint mb-4">
-            Adding the kit adds these tags to the activity and keeps the tags it has.
+            Adding the template adds these tags to the activity and keeps the tags it has.
           </p>
-          <.tags_to_add :if={@tags != []} id="kit-tags" tags={@tags} />
-          <p :if={@tags == []} id="kit-no-tags" class="hint mb-4">
+          <.tags_to_add :if={@tags != []} id="template-tags" tags={@tags} />
+          <p :if={@tags == []} id="template-no-tags" class="hint mb-4">
             Find tags to add.
           </p>
 
           <h2 class="heading mt-8">Invite · {length(@groups)}</h2>
           <p class="hint mb-4">
-            Adding the kit invites each member of these groups to the activity. They answer in {@service}.
+            Adding the template invites each member of these groups to the activity. They answer in {@service}.
           </p>
-          <.groups_to_invite :if={@groups != []} id="kit-groups" groups={@groups} />
-          <p :if={@groups == []} id="kit-no-groups" class="hint mb-4">
+          <.groups_to_invite :if={@groups != []} id="template-groups" groups={@groups} />
+          <p :if={@groups == []} id="template-no-groups" class="hint mb-4">
             Add groups to invite.
           </p>
 
           <.form_actions>
-            <.button id="kit-save" variant={:success}>{if @kit, do: "Save kit", else: "Add kit"}</.button>
+            <.button id="template-save" variant={:success}>{if @template,
+              do: "Save template",
+              else: "Add template"}</.button>
           </.form_actions>
         </.form>
 
-        <section :if={@kit} id="kit-delete" class="mt-8">
-          <h2 class="heading">Delete the kit</h2>
+        <section :if={@template} id="template-delete" class="mt-8">
+          <h2 class="heading">Delete the template</h2>
           <p>Its items stay, and so do the activities they went on.</p>
           <.button
-            id="kit-delete-button"
+            id="template-delete-button"
             type="button"
             variant={:danger}
             phx-click="delete"
-            data-confirm={"Delete the #{@kit.title} kit?"}
+            data-confirm={"Delete the #{@template.title} template?"}
           >
-            Delete kit
+            Delete template
           </.button>
         </section>
       </main>
@@ -146,8 +152,8 @@ defmodule Web.KitFormLive do
 
   def handle_event("validate", params, socket) do
     changeset =
-      (socket.assigns.kit || %Kit{})
-      |> Kit.build_changeset(params["kit"] || %{})
+      (socket.assigns.template || %Template{})
+      |> Template.build_changeset(params["template"] || %{})
       |> Map.put(:action, :validate)
 
     lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
@@ -158,12 +164,12 @@ defmodule Web.KitFormLive do
     team = socket.assigns.current_team
     lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
 
-    case save_kit(socket.assigns, params["kit"] || %{}, lines) do
-      {:ok, kit} ->
+    case save_template(socket.assigns, params["template"] || %{}, lines) do
+      {:ok, template} ->
         socket =
           socket
-          |> put_flash(:info, "Saved the #{kit.title} kit.")
-          |> push_navigate(to: ~p"/teams/#{team}/equipment/kits")
+          |> put_flash(:info, "Saved the #{template.title} template.")
+          |> push_navigate(to: ~p"/teams/#{team}/templates")
 
         {:noreply, socket}
 
@@ -173,13 +179,13 @@ defmodule Web.KitFormLive do
   end
 
   def handle_event("delete", _params, socket) do
-    %{current_team: team, kit: kit} = socket.assigns
-    :ok = SaveKit.delete(team, kit)
+    %{current_team: team, template: template} = socket.assigns
+    :ok = SaveTemplate.delete(team, template)
 
     socket =
       socket
-      |> put_flash(:info, "Deleted the #{kit.title} kit.")
-      |> push_navigate(to: ~p"/teams/#{team}/equipment/kits")
+      |> put_flash(:info, "Deleted the #{template.title} template.")
+      |> push_navigate(to: ~p"/teams/#{team}/templates")
 
     {:noreply, socket}
   end
@@ -222,7 +228,7 @@ defmodule Web.KitFormLive do
 
   def handle_event("add-group", %{"id" => id}, socket) do
     group = Enum.find(socket.assigns.all_groups, &(Integer.to_string(&1.id) == id))
-    groups = ActivityEquipmentLive.add_groups(socket.assigns.groups, List.wrap(group))
+    groups = ActivityTemplateLive.add_groups(socket.assigns.groups, List.wrap(group))
     {:noreply, assign(socket, groups: groups)}
   end
 
@@ -233,7 +239,7 @@ defmodule Web.KitFormLive do
          groups: Enum.reject(socket.assigns.groups, &(Integer.to_string(&1.id) == id))
        )}
 
-  @doc "The team's groups to offer, leaving out the kit's."
+  @doc "The team's groups to offer, leaving out the template's."
   def group_results(all_groups, chosen) do
     chosen = MapSet.new(chosen, & &1.id)
     Enum.reject(all_groups, &MapSet.member?(chosen, &1.id))
@@ -284,7 +290,7 @@ defmodule Web.KitFormLive do
   @shown 10
 
   @doc """
-  The tags to offer, leaving out the kit's. With no search, the #{@most_used} its
+  The tags to offer, leaving out the template's. With no search, the #{@most_used} its
   activities used most in the last year (`uses`, title to count). With one, the first
   #{@shown} matches A to Z, and how many more there are. `%{tags: tags, more: n}`.
   """
@@ -315,12 +321,24 @@ defmodule Web.KitFormLive do
 
   defp tag_sort(tag), do: String.downcase(tag.title)
 
-  defp save_kit(%{current_team: team, kit: kit, tags: tags, groups: groups}, params, lines) do
-    lines = Enum.map(lines, &kit_line/1)
-    SaveKit.save(team, kit, params, lines, Enum.map(tags, & &1.id), Enum.map(groups, & &1.id))
+  defp save_template(
+         %{current_team: team, template: template, tags: tags, groups: groups},
+         params,
+         lines
+       ) do
+    lines = Enum.map(lines, &template_line/1)
+
+    SaveTemplate.save(
+      team,
+      template,
+      params,
+      lines,
+      Enum.map(tags, & &1.id),
+      Enum.map(groups, & &1.id)
+    )
   end
 
-  defp kit_line(line) do
+  defp template_line(line) do
     minutes =
       if EquipmentItem.takes_hours?(line.item),
         do: Service.Convert.hours_to_minutes(line.hours),

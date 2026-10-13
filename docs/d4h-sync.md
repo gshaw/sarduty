@@ -128,7 +128,7 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 
 1. Team logo, saved to `$TEAM_LOGO_PATH/<subdomain>.png` (disk, not the database).
 2. Members.
-3. Tags, copied to `tags` for kits (#162), and kept in memory to turn activity tag
+3. Tags, copied to `tags` for templates (#162), and kept in memory to turn activity tag
    references into titles. The sync saves the list each time it fetches it for
    activities. Each tag keeps its owner (`owner_type` "Team" or "Organisation", and
    `owner_id`): an organisation's tags are read-only to its teams (#289). Records sends
@@ -162,7 +162,7 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 - **Attendance, qualifications, awards, groups, group memberships, and tags are deleted** when
   D4H stops returning them, at the end of each one's stage. A deleted qualification takes
-  its awards with it, a deleted group its memberships, and a deleted tag leaves its kits.
+  its awards with it, a deleted group its memberships, and a deleted tag leaves its templates.
   [StaleRows](../lib/app/operation/refresh_d4h_data/stale_rows.ex) finds the rows, always
   within one team.
 - **Members and activities are never deleted.** A member deleted in D4H keeps their

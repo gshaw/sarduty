@@ -39,7 +39,7 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentItems do
 
   defp fetch(d4h), do: no_equipment(fn -> D4H.fetch_equipment_items(d4h) end)
 
-  # An item D4H deleted takes its usages and its place in kits with it.
+  # An item D4H deleted takes its usages and its place in templates with it.
   def delete_stale(team_id, synced_d4h_ids) do
     stale_ids =
       EquipmentItem
