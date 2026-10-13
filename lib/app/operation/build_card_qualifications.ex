@@ -1,18 +1,17 @@
 defmodule App.Operation.BuildCardQualifications do
   import Ecto.Query
 
-  alias App.Model.GroupRuleClause
+  alias App.Model.Endorsement
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Team
   alias App.Repo
 
   @doc """
-  The qualifications the team shows on ID cards that one member holds now: each named
-  clause the team picked that the member meets.
+  The endorsements the team lists on ID cards that one member holds now.
   """
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
-    clauses = team.id |> GroupRuleClause.get_all_named() |> Enum.filter(& &1.on_card)
+    endorsements = team.id |> Endorsement.get_all() |> Enum.filter(& &1.on_card)
 
     awards =
       MemberQualificationAward
@@ -25,32 +24,40 @@ defmodule App.Operation.BuildCardQualifications do
       })
       |> Repo.all()
 
-    summarize(clauses, awards, now)
+    summarize(endorsements, awards, now)
   end
 
   @doc """
-  Pure. Clauses that share a name count as one, meeting it with a qualification from any
-  of them. Returns `%{name, ends_at}` in name order for each one the member meets, where
-  `ends_at` is when the latest current award ends, or nil when it doesn't. A clause the
-  member doesn't meet is left off, so a card lists only what its holder has.
+  Pure. Returns `%{name, ends_at}` in name order for each endorsement the member holds,
+  where `ends_at` is when the latest current award ends, or nil when it doesn't. One the
+  member doesn't hold is left off, so a card lists only what its holder has.
+
+  Only the highest tier shows: when a held endorsement's qualifications are a strict
+  subset of another's, the stricter one stands for both. First Aid (70 hours or higher)
+  hides First Aid (7 hours or higher).
   """
-  def summarize(clauses, awards, now) do
+  def summarize(endorsements, awards, now) do
     active = Enum.filter(awards, &MemberQualificationAward.active?(&1, now))
 
-    clauses
-    |> Enum.group_by(& &1.name)
-    |> Enum.flat_map(fn {name, same_name} ->
-      ids = qualification_ids(same_name)
-      active |> Enum.filter(&MapSet.member?(ids, &1.d4h_qualification_id)) |> summary(name)
-    end)
+    held =
+      for endorsement <- endorsements,
+          ids = endorsement |> Endorsement.qualification_ids() |> MapSet.new(),
+          held = Enum.filter(active, &MapSet.member?(ids, &1.d4h_qualification_id)),
+          held != [],
+          do: {endorsement.name, ids, held}
+
+    held
+    |> Enum.reject(fn {_name, ids, _held} -> covered?(ids, held) end)
+    |> Enum.flat_map(fn {name, _ids, held} -> summary(held, name) end)
     |> Enum.sort_by(& &1.name)
   end
 
-  defp qualification_ids(clauses) do
-    for clause <- clauses,
-        q <- clause.group_rule_clause_qualifications,
-        into: MapSet.new(),
-        do: q.d4h_qualification_id
+  @doc "True when another of `endorsements`' qualification sets is a strict subset of `ids`."
+  def covered?(ids, endorsements) do
+    Enum.any?(endorsements, fn other ->
+      other_ids = elem(other, 1)
+      other_ids != ids and MapSet.subset?(other_ids, ids)
+    end)
   end
 
   defp summary([], _name), do: []

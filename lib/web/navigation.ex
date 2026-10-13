@@ -87,6 +87,7 @@ defmodule Web.Navigation do
        [
          link("members", "Members", ~p"/teams/#{team}/members"),
          link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
+         link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
          link("groups", "Groups", ~p"/teams/#{team}/groups")
        ]},
       {nil, [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")]},
@@ -110,13 +111,12 @@ defmodule Web.Navigation do
     ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
   end
 
-  # ID cards and MCP tokens show once a SAR Duty admin turns them on for the team.
+  # MCP tokens show once a SAR Duty admin turns them on for the team. A team picks what
+  # ID cards list on the endorsements page.
   defp settings_links(team) do
     Enum.filter(
       [
         link("settings", "General", ~p"/teams/#{team}/settings", exact: true),
-        team.id_cards_enabled &&
-          link("settings-cards", "ID cards", ~p"/teams/#{team}/settings/cards"),
         link("settings-managers", "Team admins", ~p"/teams/#{team}/settings/managers"),
         link(
           "settings-member-logins",

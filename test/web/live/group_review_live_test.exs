@@ -13,7 +13,9 @@ defmodule Web.GroupReviewLiveTest do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})
     group = group_fixture(team)
     qualification = qualification_fixture(team)
-    group |> group_rule_clause_fixture() |> group_rule_clause_qualification_fixture(qualification)
+    endorsement = endorsement_fixture(team)
+    endorsement_qualification_fixture(endorsement, qualification)
+    group_endorsement_fixture(group, endorsement)
 
     unqualified = member_fixture(team, %{name: "Jordan Lee"})
     group_member_fixture(group, unqualified)

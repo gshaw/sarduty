@@ -1,0 +1,88 @@
+defmodule App.ViewData.EndorsementRows do
+  alias App.Model.Endorsement
+  alias App.Model.Group
+  alias App.Model.GroupEndorsement
+  alias App.Model.MemberQualificationAward
+  alias App.Model.Qualification
+  alias App.Model.Team
+  alias App.Operation.BuildCardQualifications
+
+  # The endorsements page: one row per endorsement, with what earns it, how many current
+  # members hold it, and the groups whose rules require it. Each row also carries what a
+  # manager should fix: `missing` counts qualifications D4H no longer has, and `same_as`
+  # lists endorsements with exactly the same qualifications. `hidden_by` lists the on-card
+  # endorsements that stand for this one on a card that has both.
+
+  def for_team(%Team{} = team, now) do
+    team.id
+    |> Endorsement.get_all()
+    |> rows(
+      groups_by_endorsement(team.id),
+      team.id |> Qualification.get_all() |> Map.new(&{&1.d4h_qualification_id, &1.title}),
+      MemberQualificationAward.get_all_active_for_team(team.id, now)
+    )
+  end
+
+  @doc "Each endorsement id with the groups whose rules require it. A deleted group drops out."
+  def groups_by_endorsement(team_id) do
+    groups = team_id |> Group.get_all() |> Map.new(&{&1.d4h_group_id, &1})
+
+    team_id
+    |> GroupEndorsement.d4h_group_ids_by_endorsement()
+    |> Map.new(fn {id, d4h_ids} ->
+      {id, d4h_ids |> Enum.map(&groups[&1]) |> Enum.reject(&is_nil/1) |> Enum.sort_by(& &1.title)}
+    end)
+  end
+
+  @doc """
+  Pure. `groups` is each endorsement id's groups, `titles` is keyed by D4H id, and
+  `awards` are `{member_id, d4h_qualification_id}`.
+  """
+  def rows(endorsements, groups, titles, awards) do
+    rows = Enum.map(endorsements, &row(&1, Map.get(groups, &1.id, []), titles, awards))
+    on_card = for r <- rows, r.on_card, do: {r, r.ids, nil}
+
+    Enum.map(rows, fn row ->
+      row
+      |> Map.put(
+        :same_as,
+        for(o <- rows, o.id != row.id, o.ids == row.ids, row.ids != MapSet.new(), do: link(o))
+      )
+      |> Map.put(:hidden_by, hidden_by(row, on_card))
+    end)
+  end
+
+  @doc "True when the row has something for a manager to fix."
+  def problem?(row), do: row.missing > 0 or row.members == 0 or row.same_as != []
+
+  defp row(endorsement, groups, titles, awards) do
+    ids = endorsement |> Endorsement.qualification_ids() |> MapSet.new()
+
+    %{
+      id: endorsement.id,
+      name: endorsement.name,
+      on_card: endorsement.on_card,
+      ids: ids,
+      qualifications: ids |> Enum.map(&titles[&1]) |> Enum.reject(&is_nil/1) |> Enum.sort(),
+      missing: Enum.count(ids, &(not Map.has_key?(titles, &1))),
+      members: count_members(awards, ids),
+      groups: Enum.sort_by(groups, & &1.title)
+    }
+  end
+
+  defp count_members(awards, ids),
+    do:
+      for({member_id, id} <- awards, MapSet.member?(ids, id), uniq: true, do: member_id)
+      |> length()
+
+  defp hidden_by(%{on_card: false}, _on_card), do: []
+
+  defp hidden_by(row, on_card) do
+    for {other, ids, _} <- on_card,
+        other.id != row.id,
+        BuildCardQualifications.covered?(row.ids, [{other.name, ids, nil}]),
+        do: link(other)
+  end
+
+  defp link(row), do: Map.take(row, [:id, :name])
+end

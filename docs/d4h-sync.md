@@ -190,8 +190,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   deletes theirs. Their page says "Deleted in D4H" and offers no actions. Take attendance,
   import attendance, and the mileage report send you back to it, an attendance link on one
   takes no scans, and `SendAttendanceToD4H` refuses it.
-- Group rule clauses are never deleted by the sync. A clause for a deleted group is left
-  unused; a clause naming a deleted qualification shows a warning on the group page.
+- Endorsements and group rules are never deleted by the sync. A rule for a deleted group
+  is left unused; an endorsement naming a deleted qualification shows a warning on the
+  endorsements page and on every group page that uses it.
 - **A short fetch fails the refresh.** Every D4H list response has a `totalSize`. The
   adapter pages until the rows add up to it, and raises `D4H.Error` if a page comes back
   empty first, so the delete never runs on a partial list. Nothing local points at the

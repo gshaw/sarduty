@@ -11,7 +11,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Model.Group
-  alias App.Model.GroupRuleClause
+  alias App.Model.GroupEndorsement
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Team
@@ -154,11 +154,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   # Adds and removes waiting across every group with a rule. A rule naming a deleted
   # qualification plans nothing, and the groups page shows it as broken.
   defp count_group_changes(team, now) do
-    ruled_group_ids =
-      GroupRuleClause
-      |> where([c], c.team_id == ^team.id)
-      |> distinct(true)
-      |> select([c], c.d4h_group_id)
+    ruled_group_ids = GroupEndorsement.ruled_d4h_group_ids_query(team.id)
 
     Group
     |> where([g], g.team_id == ^team.id and g.d4h_group_id in subquery(ruled_group_ids))

@@ -155,7 +155,7 @@ expired once it passes.
 - **It rolls with the refresh.** The date is part of the fingerprint, so each card gets
   one silent update a month from the push after a refresh. No `changeMessage`, no
   Google `notifyPreference`.
-- **It comes from `d4h_refreshed_at`, not now.** Saving Settings > ID cards pushes too,
+- **It comes from `d4h_refreshed_at`, not now.** Saving the endorsements page pushes too,
   and that shouldn't extend a card without a D4H check.
 - **When refreshes stop, the pass expires** within three months: a broken D4H key, a
   team that leaves, a member who turns off updates.
@@ -169,9 +169,12 @@ expired once it passes.
 A card is active while the member hasn't left the team in D4H (`Member.current?/2`).
 Qualifications don't change that. They're listed, not required.
 
-A team picks what to list at **Settings > ID cards**: any named clause from its groups'
-rules. Clauses that share a name count as one. For each, the back of the pass, the verify site,
+A team picks what to list on the **Endorsements** page (#320). For each endorsement the
+member holds, the back of the pass, the verify site,
 and the ID Card tab say when the member's latest current award ends, or that none is
 current ([BuildCardQualifications](../lib/app/operation/build_card_qualifications.ex)).
+Only the highest tier shows: when one held endorsement's qualifications are a strict subset
+of another's, the stricter one stands for both, so First Aid (70 hours or higher) hides First
+Aid (7 hours or higher). Nothing to set up; the lists decide it.
 The pass shows them as of when it was made, and the verify site shows them as of the last
 refresh.

@@ -52,13 +52,13 @@ defmodule Web.NavigationTest do
       keys = area |> Navigation.groups("/teams/squamish") |> keys()
 
       assert "settings-member-logins" in keys
-      refute "settings-cards" in keys
+      assert "endorsements" in keys
       refute "settings-mcp" in keys
       refute "proposed-changes" in keys
 
       team = %{@team | id_cards_enabled: true, mcp_enabled: true}
       keys = "/teams/squamish" |> Navigation.area(team, nil) |> Navigation.groups("/x") |> keys()
-      assert ["settings-cards", "settings-mcp", "proposed-changes"] -- keys == []
+      assert ["settings-mcp", "proposed-changes"] -- keys == []
     end
 
     test "proposed changes show with a count while some wait, even without MCP" do

@@ -55,7 +55,7 @@ finish a task and leave. Write so a reader understands each sentence the first t
 
 **Buttons.** A verb and its object, three words or fewer, saying what happens: "Create
 letter", "Save settings", "Perform 3 changes". Never "Submit", "OK", "Yes", "Go", or
-"Click here". The button that confirms a delete names the thing: "Delete clause".
+"Click here". The button that confirms a delete names the thing: "Delete endorsement".
 
 **Links.** The link text says where it goes and makes sense out of context: "tax credit
 letters for 2025". Never "here", "click here", "more", or "this page".
@@ -75,8 +75,8 @@ same text.
 changes saved to D4H". No "successfully".
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
-"Delete the First Aid clause and its 3 qualifications?" The buttons are the action
-("Delete clause") and "Cancel".
+"Delete First Aid? It comes off 3 group rules and ID cards." The buttons are the action
+("Delete endorsement") and "Cancel".
 
 **Warnings.** The consequence first, then what to do: "Attendance cannot be changed once
 the activity is published. Unpublish it in D4H first."
@@ -116,8 +116,8 @@ and must not be used for it.
 | published                      | locked, closed, finalized                      | An activity whose attendance D4H no longer lets anyone change.                                       |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
-| group rule                     | requirement, policy, criteria                  | The qualifications a member must hold to be in a group.                                              |
-| clause                         | condition, line, requirement                   | One part of a group rule: the member must hold any of its qualifications.                            |
+| group rule                     | requirement, policy, criteria                  | The endorsements a member must hold to be in a group.                                                |
+| endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
 | primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
 | tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
 | category                       | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type.                                          |

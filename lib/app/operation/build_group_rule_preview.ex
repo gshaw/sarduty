@@ -1,9 +1,9 @@
 defmodule App.Operation.BuildGroupRulePreview do
   import Ecto.Query
 
+  alias App.Model.Endorsement
   alias App.Model.Group
   alias App.Model.GroupMember
-  alias App.Model.GroupRuleClause
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
@@ -15,10 +15,11 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   def expiring_days, do: @expiring_days
 
-  # Group rules are CNF: a member qualifies when every clause lists at least one
-  # qualification they hold with an active award. `current_members` are the group's
-  # members now, each with `id` and `left_at`.
-  def call(clauses, current_members, %Team{} = team, now \\ DateTime.utc_now()) do
+  # Group rules are CNF: each endorsement the rule requires is a clause, and a member
+  # qualifies when every one lists at least one qualification they hold with an active
+  # award. `current_members` are the group's members now, each with `id` and `left_at`.
+  def call(endorsements, current_members, %Team{} = team, now \\ DateTime.utc_now()) do
+    clauses = endorsements
     clause_qualification_ids = clause_qualification_ids(clauses)
 
     titles =
@@ -40,7 +41,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   end
 
   def for_group(%Team{} = team, %Group{} = group, now \\ DateTime.utc_now()) do
-    clauses = GroupRuleClause.get_all_for_group(team.id, group.d4h_group_id)
+    clauses = Endorsement.get_all_for_group(team.id, group.d4h_group_id)
 
     current_members =
       Member
@@ -59,8 +60,7 @@ defmodule App.Operation.BuildGroupRulePreview do
     for clause <- clauses, clause.name, into: %{}, do: {qualification_ids(clause), clause.name}
   end
 
-  defp qualification_ids(clause),
-    do: Enum.map(clause.group_rule_clause_qualifications, & &1.d4h_qualification_id)
+  defp qualification_ids(endorsement), do: Endorsement.qualification_ids(endorsement)
 
   # A qualification deleted in D4H, or deleted and recreated with a new id, has no
   # local row. A clause naming only that would match nobody and remove everyone, so

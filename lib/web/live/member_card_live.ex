@@ -159,8 +159,8 @@ defmodule Web.MemberCardLive do
           </div>
           <div :if={@qualifications == []}>
             None held.
-            <.a navigate={~p"/teams/#{@member.team}/settings/cards"}>
-              Select qualifications to show
+            <.a navigate={~p"/teams/#{@member.team}/endorsements"}>
+              Select endorsements to show
             </.a>
           </div>
         </dd>

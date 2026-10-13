@@ -189,7 +189,7 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
   defp clause(name, qualification_ids) do
     %{
       name: name,
-      group_rule_clause_qualifications: Enum.map(qualification_ids, &%{d4h_qualification_id: &1})
+      endorsement_qualifications: Enum.map(qualification_ids, &%{d4h_qualification_id: &1})
     }
   end
 end

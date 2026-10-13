@@ -161,7 +161,7 @@ defmodule Web.StyleGuideHTML do
       {"arrow-down-tray", "hero-arrow-down-tray-micro", "hero-arrow-down-tray-mini",
        "hero-arrow-down-tray", "Download a file, such as a letter PDF"},
       {"plus", "hero-plus-micro", "hero-plus-mini", "hero-plus",
-       "Add a clause or a qualification"},
+       "Add an endorsement or a qualification"},
       {"bars-3", "hero-bars-3-micro", "hero-bars-3-mini", "hero-bars-3",
        "Open the top bar's menu on a phone"},
       {"x-mark", "hero-x-mark-micro", "hero-x-mark-mini", "hero-x-mark",
@@ -326,12 +326,14 @@ defmodule Web.StyleGuideHTML do
   defdelegate letters(), to: SampleData
   defdelegate sample_page(), to: SampleData
   defdelegate recommendations(), to: SampleData
-  defdelegate clauses(), to: SampleData
+  defdelegate rule_rows(), to: SampleData
+  defdelegate rule_options(), to: SampleData
   defdelegate settings_form(), to: SampleData
 
   def rule_preview do
     [
-      {"Avery Chen", "Holds OFA Level 1 and GSAR Member, which meets both clauses of the rule.",
+      {"Avery Chen",
+       "Holds OFA Level 1 and GSAR Member, which meets both endorsements in the rule.",
        "Added to D4H Mar 2, 2024", nil},
       {"Casey Dhillon", "Wilderness First Aid expires Nov 12, 2025.",
        "Renewal course booked for Nov 1, 2025", 12},

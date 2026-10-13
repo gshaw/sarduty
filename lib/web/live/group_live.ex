@@ -5,11 +5,11 @@ defmodule Web.GroupLive do
   import Web.Components.GroupRule
 
   alias App.Adapter.D4H
+  alias App.Model.Endorsement
   alias App.Model.Group
+  alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
-  alias App.Model.GroupRuleClause
-  alias App.Model.GroupRuleClauseQualification
   alias App.Model.Qualification
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
@@ -22,17 +22,18 @@ defmodule Web.GroupLive do
     current_team = socket.assigns.current_team
     group = find_group(params["id"], current_team.id)
     members = list_members_for_group(group)
-    clauses = GroupRuleClause.get_all_for_group(current_team.id, group.d4h_group_id)
+    rule = Endorsement.get_all_for_group(group)
     qualifications = Qualification.get_all(current_team.id)
-    preview = build_preview(clauses, members, current_team)
+    preview = build_preview(rule, members, current_team)
 
     socket =
       socket
       |> assign(:page_title, group.title)
       |> assign(:group, group)
       |> assign(:members, members)
-      |> assign(:clauses, clauses)
+      |> assign(:rule, rule)
       |> assign(:qualifications, qualifications)
+      |> assign(:endorsements, Endorsement.get_all(current_team.id))
       |> assign(:preview, preview)
       |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
 
@@ -47,55 +48,20 @@ defmodule Web.GroupLive do
     {:noreply, assign(socket, :editing, false)}
   end
 
-  def handle_event("add-clause", _params, socket) do
-    group = socket.assigns.group
-    team = socket.assigns.current_team
+  # The ids in these events come from the browser, so each one is looked up through the
+  # current team and group before anything changes.
+  def handle_event("add-endorsement", %{"endorsement-id" => ""}, socket),
+    do: {:noreply, socket}
 
-    GroupRuleClause.insert!(%{team_id: team.id, d4h_group_id: group.d4h_group_id})
-
+  def handle_event("add-endorsement", %{"endorsement-id" => id}, socket) do
+    endorsement = Endorsement.get!(socket.assigns.current_team.id, id)
+    GroupEndorsement.add!(socket.assigns.group, endorsement)
     {:noreply, reload(socket)}
   end
 
-  # The ids in these events come from the browser, so each one is looked up
-  # through the current group before anything changes.
-  def handle_event("delete-clause", %{"clause-id" => clause_id}, socket) do
-    socket.assigns.group
-    |> GroupRuleClause.find!(clause_id)
-    |> GroupRuleClause.delete!()
-
-    {:noreply, reload(socket)}
-  end
-
-  def handle_event("rename-clause", %{"clause-id" => clause_id, "name" => name}, socket) do
-    socket.assigns.group
-    |> GroupRuleClause.find!(clause_id)
-    |> GroupRuleClause.rename(name)
-
-    {:noreply, reload(socket)}
-  end
-
-  def handle_event(
-        "add-qualification",
-        %{"clause-id" => clause_id, "qualification-id" => qual_id},
-        socket
-      ) do
-    clause = GroupRuleClause.find!(socket.assigns.group, clause_id)
-
-    if qual_id != "" do
-      GroupRuleClauseQualification.insert!(%{
-        group_rule_clause_id: clause.id,
-        d4h_qualification_id: find_qualification_d4h_id(socket.assigns.qualifications, qual_id)
-      })
-    end
-
-    {:noreply, reload(socket)}
-  end
-
-  def handle_event("remove-qualification", %{"qualification-id" => qual_id}, socket) do
-    socket.assigns.group
-    |> GroupRuleClauseQualification.find!(qual_id)
-    |> GroupRuleClauseQualification.delete!()
-
+  def handle_event("remove-endorsement", %{"endorsement-id" => id}, socket) do
+    endorsement = Endorsement.get!(socket.assigns.current_team.id, id)
+    GroupEndorsement.remove!(socket.assigns.group, endorsement.id)
     {:noreply, reload(socket)}
   end
 
@@ -116,15 +82,20 @@ defmodule Web.GroupLive do
         <h2 class="subheading">Group rules</h2>
         <.rule_summary
           :if={!@editing}
-          clauses={@clauses}
+          rule={@rule}
           qualifications={@qualifications}
         />
-        <.clause_editor :if={@editing} clauses={editor_clauses(@clauses, @qualifications)} />
+        <.rule_editor
+          :if={@editing}
+          rows={editor_rows(@rule, @qualifications, @current_team)}
+          options={editor_options(@endorsements, @rule)}
+          new_path={~p"/teams/#{@current_team}/endorsements/new?group_id=#{@group.id}"}
+        />
         <.rule_preview
           preview={@preview}
           team={@current_team}
           group={@group}
-          clauses={@clauses}
+          rule={@rule}
         />
         <.recent_changes changes={@recent_changes} team={@current_team} />
         <.main_content members={@members} team={@current_team} />
@@ -160,9 +131,9 @@ defmodule Web.GroupLive do
   defp rule_summary(assigns) do
     ~H"""
     <div class="card flex items-center justify-between gap-4">
-      <p id="rule-sentence" class="mb-0">{rule_sentence(@clauses, @qualifications)}</p>
+      <p id="rule-sentence" class="mb-0">{rule_sentence(@rule, @qualifications)}</p>
       <.button id="edit-rules" class="shrink-0" phx-click="edit-rules">
-        {if @clauses == [], do: "Add rules", else: "Edit rules"}
+        {if @rule == [], do: "Add rules", else: "Edit rules"}
       </.button>
     </div>
     """
@@ -170,7 +141,7 @@ defmodule Web.GroupLive do
 
   defp rule_preview(assigns) do
     ~H"""
-    <div :if={@clauses != []} class="mt-4">
+    <div :if={@rule != []} class="mt-4">
       <h2 class="subheading">Rule preview</h2>
       <p
         :if={@preview.missing_qualification_ids != []}
@@ -301,45 +272,35 @@ defmodule Web.GroupLive do
   defp change_verb(%{action: :add}), do: "Could not add"
   defp change_verb(%{action: :remove}), do: "Could not remove"
 
-  # The editor's clauses as plain maps, so the style guide can render it too.
-  defp editor_clauses(clauses, qualifications) do
-    for clause <- clauses do
+  # The editor's rows as plain maps, so the style guide can render it too.
+  defp editor_rows(endorsements, qualifications, team) do
+    for endorsement <- endorsements do
       %{
-        id: clause.id,
-        name: clause.name,
-        confirm: delete_clause_confirmation(clause),
+        id: endorsement.id,
+        name: endorsement.name,
+        path: ~p"/teams/#{team}/endorsements/#{endorsement.id}",
         qualifications:
-          for cq <- clause.group_rule_clause_qualifications do
-            %{
-              id: cq.id,
-              title: qualification_title(qualifications, cq.d4h_qualification_id),
-              known?: qualification_known?(qualifications, cq.d4h_qualification_id)
-            }
-          end,
-        options: available_qualifications(qualifications, clause.group_rule_clause_qualifications)
+          endorsement
+          |> Endorsement.qualification_ids()
+          |> Enum.map_join(", ", &qualification_title(qualifications, &1))
       }
     end
   end
 
-  defp delete_clause_confirmation(clause) do
-    name = if clause.name, do: "the #{clause.name} clause", else: "this clause"
-    count = length(clause.group_rule_clause_qualifications)
-
-    qualifications =
-      Service.Format.count(count, one: "its %d qualification", many: "its %d qualifications")
-
-    "Delete #{name} and #{qualifications}?"
+  defp editor_options(endorsements, in_rule) do
+    ids = MapSet.new(in_rule, & &1.id)
+    for e <- endorsements, not MapSet.member?(ids, e.id), do: {e.name, e.id}
   end
 
   defp reload(socket) do
     group = socket.assigns.group
     team = socket.assigns.current_team
     members = socket.assigns.members
-    clauses = GroupRuleClause.get_all_for_group(team.id, group.d4h_group_id)
-    preview = build_preview(clauses, members, team)
+    rule = Endorsement.get_all_for_group(group)
+    preview = build_preview(rule, members, team)
 
     socket
-    |> assign(:clauses, clauses)
+    |> assign(:rule, rule)
     |> assign(:preview, preview)
   end
 
@@ -358,28 +319,13 @@ defmodule Web.GroupLive do
     |> Repo.all()
   end
 
-  # "Members must hold A and one of B or C", or "First Aid" for a named clause. Titles
-  # come from D4H and names from users, so each is escaped before it goes inside
-  # <strong>.
+  # "Members must hold GSAR and First Aid." Names come from users, so each is escaped
+  # before it goes inside <strong>.
   defp rule_sentence([], _qualifications), do: "No rules yet."
 
-  defp rule_sentence(clauses, qualifications) do
-    clause_phrases =
-      Enum.map(clauses, fn clause ->
-        titles =
-          Enum.map(clause.group_rule_clause_qualifications, fn cq ->
-            strong(qualification_title(qualifications, cq.d4h_qualification_id))
-          end)
-
-        case {clause.name, titles} do
-          {_name, []} -> "(an empty clause)"
-          {nil, [title]} -> title
-          {nil, titles} -> ["one of ", join_or(titles)]
-          {name, _titles} -> strong(name)
-        end
-      end)
-
-    Phoenix.HTML.raw(["Members must hold ", Enum.intersperse(clause_phrases, " and "), "."])
+  defp rule_sentence(endorsements, _qualifications) do
+    names = Enum.map(endorsements, &strong(&1.name))
+    Phoenix.HTML.raw(["Members must hold ", Enum.intersperse(names, " and "), "."])
   end
 
   defp strong(text),
@@ -389,11 +335,6 @@ defmodule Web.GroupLive do
       "</strong>"
     ]
 
-  defp join_or(titles) do
-    {init, [last]} = Enum.split(titles, -1)
-    [Enum.intersperse(init, ", "), " or ", last]
-  end
-
   defp qualification_title(qualifications, d4h_qualification_id) do
     case Enum.find(qualifications, &(&1.d4h_qualification_id == d4h_qualification_id)) do
       nil -> "Deleted in D4H (#{d4h_qualification_id})"
@@ -401,23 +342,7 @@ defmodule Web.GroupLive do
     end
   end
 
-  defp qualification_known?(qualifications, d4h_qualification_id),
-    do: Enum.any?(qualifications, &(&1.d4h_qualification_id == d4h_qualification_id))
-
-  defp find_qualification_d4h_id(qualifications, id) do
-    qual = Enum.find(qualifications, &(to_string(&1.id) == to_string(id)))
-    qual && qual.d4h_qualification_id
-  end
-
-  defp available_qualifications(qualifications, clause_qualifications) do
-    existing_d4h_ids = MapSet.new(clause_qualifications, & &1.d4h_qualification_id)
-
-    qualifications
-    |> Enum.reject(&MapSet.member?(existing_d4h_ids, &1.d4h_qualification_id))
-    |> Enum.map(&{&1.title, &1.id})
-  end
-
-  defp build_preview(clauses, members, team) do
-    BuildGroupRulePreview.call(clauses, Enum.map(members, & &1.member), team)
+  defp build_preview(rule, members, team) do
+    BuildGroupRulePreview.call(rule, Enum.map(members, & &1.member), team)
   end
 end
