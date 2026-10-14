@@ -10,6 +10,7 @@ defmodule Web.GroupLive do
   alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
+  alias App.Model.GroupParent
   alias App.Model.Qualification
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
@@ -22,20 +23,17 @@ defmodule Web.GroupLive do
     current_team = socket.assigns.current_team
     group = find_group(params["id"], current_team.id)
     members = list_members_for_group(group)
-    rule = Endorsement.get_all_for_group(group)
     qualifications = Qualification.get_all(current_team.id)
-    preview = build_preview(rule, members, current_team)
 
     socket =
       socket
       |> assign(:page_title, group.title)
       |> assign(:group, group)
       |> assign(:members, members)
-      |> assign(:rule, rule)
       |> assign(:qualifications, qualifications)
       |> assign(:endorsements, Endorsement.get_all(current_team.id))
-      |> assign(:preview, preview)
       |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
+      |> reload()
 
     {:noreply, socket}
   end
@@ -56,6 +54,24 @@ defmodule Web.GroupLive do
   def handle_event("add-endorsement", %{"endorsement-id" => id}, socket) do
     endorsement = Endorsement.get!(socket.assigns.current_team.id, id)
     GroupEndorsement.add!(socket.assigns.group, endorsement)
+    {:noreply, reload(socket)}
+  end
+
+  # The parent comes from the browser too, so it is looked up through the team, and one
+  # that would make a loop is refused.
+  def handle_event("set-parent", %{"parent-id" => ""}, socket) do
+    GroupParent.clear!(socket.assigns.group)
+    {:noreply, reload(socket)}
+  end
+
+  def handle_event("set-parent", %{"parent-id" => id}, socket) do
+    group = socket.assigns.group
+    parent = find_group(id, socket.assigns.current_team.id)
+    parents = GroupParent.parents_by_group(group.team_id)
+
+    if GroupParent.can_start_from?(group.d4h_group_id, parent.d4h_group_id, parents),
+      do: GroupParent.set!(group, parent)
+
     {:noreply, reload(socket)}
   end
 
@@ -83,11 +99,19 @@ defmodule Web.GroupLive do
         <.rule_summary
           :if={!@editing}
           rule={@rule}
-          qualifications={@qualifications}
+          own_rule={@own_rule}
+          parent={@parent}
+        />
+        <.parent_editor
+          :if={@editing}
+          group={@group}
+          parent={@parent}
+          options={@parent_options}
+          inherited={@rule -- @own_rule}
         />
         <.rule_editor
           :if={@editing}
-          rows={editor_rows(@rule, @qualifications, @endorsements, @current_team)}
+          rows={editor_rows(@own_rule, @qualifications, @endorsements, @current_team)}
           options={editor_options(@endorsements, @rule)}
           new_path={~p"/teams/#{@current_team}/endorsements/new?group_id=#{@group.id}"}
         />
@@ -131,11 +155,42 @@ defmodule Web.GroupLive do
   defp rule_summary(assigns) do
     ~H"""
     <div class="card flex items-center justify-between gap-4">
-      <p id="rule-sentence" class="mb-0">{rule_sentence(@rule, @qualifications)}</p>
+      <div>
+        <p id="rule-sentence" class="mb-0">{rule_sentence(@own_rule, @parent)}</p>
+        <p :if={@parent && @rule != @own_rule} id="rule-parent-hint" class="hint mb-0">
+          {@parent.title} members are everyone who holds {names(@rule -- @own_rule)}.
+        </p>
+      </div>
       <.button id="edit-rules" class="shrink-0" phx-click="edit-rules">
-        {if @rule == [], do: "Add rules", else: "Edit rules"}
+        {if @rule == [] and !@parent, do: "Add rules", else: "Edit rules"}
       </.button>
     </div>
+    """
+  end
+
+  attr :group, :map, required: true
+  attr :parent, :map
+  attr :options, :list, required: true
+  attr :inherited, :list, required: true
+
+  defp parent_editor(assigns) do
+    ~H"""
+    <form id="parent-form" phx-change="set-parent" class="mb-4">
+      <.input
+        type="select"
+        name="parent-id"
+        id="parent-id"
+        label="Start from another group (optional)"
+        value={@parent && @parent.id}
+        prompt="No other group"
+        options={@options}
+      >
+        Members must also hold everything that group's rules need.
+      </.input>
+    </form>
+    <p :if={@inherited != []} id="parent-endorsements" class="hint">
+      From {@parent.title}: {names(@inherited)}.
+    </p>
     """
   end
 
@@ -301,15 +356,23 @@ defmodule Web.GroupLive do
   end
 
   defp reload(socket) do
-    group = socket.assigns.group
-    team = socket.assigns.current_team
-    members = socket.assigns.members
+    %{group: group, current_team: team, members: members} = socket.assigns
     rule = Endorsement.get_all_for_group(group)
-    preview = build_preview(rule, members, team)
+    parents = GroupParent.parents_by_group(team.id)
+    groups = Group.get_all(team.id)
 
     socket
     |> assign(:rule, rule)
-    |> assign(:preview, preview)
+    |> assign(:own_rule, Endorsement.get_own_for_group(group))
+    |> assign(:parent, Enum.find(groups, &(&1.d4h_group_id == parents[group.d4h_group_id])))
+    |> assign(:parent_options, parent_options(group, groups, parents))
+    |> assign(:preview, build_preview(rule, members, team))
+  end
+
+  defp parent_options(group, groups, parents) do
+    for g <- groups,
+        GroupParent.can_start_from?(group.d4h_group_id, g.d4h_group_id, parents),
+        do: {g.title, g.id}
   end
 
   defp find_group(id, team_id) do
@@ -329,11 +392,34 @@ defmodule Web.GroupLive do
 
   # "Members must hold GSAR and First Aid." Names come from users, so each is escaped
   # before it goes inside <strong>.
-  defp rule_sentence([], _qualifications), do: "No rules yet."
+  defp rule_sentence([], nil), do: "No rules yet."
 
-  defp rule_sentence(endorsements, _qualifications) do
-    names = Enum.map(endorsements, &strong(&1.name))
-    Phoenix.HTML.raw(["Members must hold ", Enum.intersperse(names, " and "), "."])
+  defp rule_sentence(endorsements, nil),
+    do: Phoenix.HTML.raw(["Members must hold ", strong_names(endorsements), "."])
+
+  defp rule_sentence([], parent),
+    do: Phoenix.HTML.raw(["Members of ", strong(parent.title), "."])
+
+  defp rule_sentence(endorsements, parent),
+    do:
+      Phoenix.HTML.raw([
+        "Members of ",
+        strong(parent.title),
+        " who also hold ",
+        strong_names(endorsements),
+        "."
+      ])
+
+  defp strong_names(endorsements),
+    do: endorsements |> Enum.map(&strong(&1.name)) |> Enum.intersperse(" and ")
+
+  # "A, B, and C": every one is needed.
+  defp names(endorsements) do
+    case Enum.map(endorsements, & &1.name) do
+      [one] -> one
+      [a, b] -> "#{a} and #{b}"
+      many -> "#{many |> Enum.drop(-1) |> Enum.join(", ")}, and #{List.last(many)}"
+    end
   end
 
   defp strong(text),

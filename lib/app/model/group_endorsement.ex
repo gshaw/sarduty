@@ -4,6 +4,7 @@ defmodule App.Model.GroupEndorsement do
   alias App.Model.Endorsement
   alias App.Model.Group
   alias App.Model.GroupEndorsement
+  alias App.Model.GroupParent
   alias App.Repo
 
   # One endorsement a group's rule requires. A member must hold every one to be in the
@@ -32,12 +33,15 @@ defmodule App.Model.GroupEndorsement do
     |> Repo.delete_all()
   end
 
-  @doc "A query for the D4H ids of the team's groups that have a rule."
+  @doc """
+  A query for the D4H ids of the team's groups that have a rule: endorsements of their
+  own, or another group they start from.
+  """
   def ruled_d4h_group_ids_query(team_id) do
     GroupEndorsement
     |> where([ge], ge.team_id == ^team_id)
-    |> distinct(true)
     |> select([ge], ge.d4h_group_id)
+    |> union(^GroupParent.child_d4h_group_ids_query(team_id))
   end
 
   @doc "Each endorsement id with the D4H ids of the groups that require it."

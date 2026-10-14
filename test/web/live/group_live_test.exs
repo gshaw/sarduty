@@ -6,6 +6,9 @@ defmodule Web.GroupLiveTest do
 
   alias App.Model.Endorsement
   alias App.Model.EndorsementQualification
+  alias App.Model.GroupEndorsement
+  alias App.Model.GroupParent
+  alias App.Repo
 
   # The crash tests below log the LiveView's exit.
   @moduletag :capture_log
@@ -44,6 +47,48 @@ defmodule Web.GroupLiveTest do
 
     crash(ctx.lv, "add-endorsement", %{"endorsement-id" => ctx.other_endorsement.id})
     assert [] = Endorsement.get_all_for_group(ctx.group)
+  end
+
+  test "a group starts from another: its rule, never its hand-added members", ctx do
+    gsar = group_fixture(ctx.team, %{title: "GSAR team"})
+    group_endorsement_fixture(gsar, ctx.endorsement)
+    sw1 = qualification_fixture(ctx.team)
+    swiftwater = endorsement_fixture(ctx.team, %{name: "Swiftwater 1"})
+    endorsement_qualification_fixture(swiftwater, sw1)
+    group_endorsement_fixture(ctx.group, swiftwater)
+
+    both = member_fixture(ctx.team, %{name: "Both"})
+    qualification_award_fixture(ctx.qualification, both)
+    qualification_award_fixture(sw1, both)
+    by_hand = member_fixture(ctx.team, %{name: "By Hand"})
+    qualification_award_fixture(sw1, by_hand)
+    group_member_fixture(gsar, by_hand)
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+    lv |> element("#edit-rules") |> render_click()
+    lv |> form("#parent-form", %{"parent-id" => gsar.id}) |> render_change()
+
+    assert has_element?(lv, "#parent-endorsements", "First Aid")
+    lv |> element("#done-editing") |> render_click()
+    assert has_element?(lv, "#rule-sentence", "Members of GSAR team who also hold Swiftwater 1")
+    assert has_element?(lv, "#rule-parent-hint", "everyone who holds First Aid")
+    assert has_element?(lv, "#would-add-#{both.id}")
+    refute has_element?(lv, "#would-add-#{by_hand.id}")
+
+    ruled = ctx.team.id |> GroupEndorsement.ruled_d4h_group_ids_query() |> Repo.all()
+    assert ctx.group.d4h_group_id in ruled
+
+    {:ok, gsar_lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/groups/#{gsar.id}")
+    gsar_lv |> element("#edit-rules") |> render_click()
+    refute has_element?(gsar_lv, "#parent-id option[value='#{ctx.group.id}']")
+    render_change(gsar_lv, "set-parent", %{"parent-id" => ctx.group.id})
+
+    assert GroupParent.parents_by_group(ctx.team.id) == %{
+             ctx.group.d4h_group_id => gsar.d4h_group_id
+           }
+
+    render_change(lv, "set-parent", %{"parent-id" => ""})
+    assert GroupParent.parents_by_group(ctx.team.id) == %{}
   end
 
   test "the editor lists the rule and links each endorsement", ctx do

@@ -28,6 +28,19 @@ and group rules, cards, and the endorsements page need nothing else. An include 
 would make a loop is refused, and a loop already in the data stops instead of running
 forever.
 
+- A [GroupParent](../lib/app/model/group_parent.ex) makes a group start from another
+  (#327): "Swiftwater team: GSAR team members who also hold Swiftwater 1." The rule is
+  every endorsement the parent's rule requires, then the group's own, following the
+  parent's parent too. It copies the parent's rule, not its D4H members, so someone added
+  to GSAR by hand without its endorsements doesn't get in, and groups need no order when
+  they're applied. A parent that would make a loop is refused.
+
+People think of a group as a smart list built from a parent list, so the group page says
+it that way: "Members of GSAR team who also hold Swiftwater 1", with a line naming what
+GSAR team needs. It never mentions copied rules. A separate "smart group" apart from D4H
+groups was considered and dropped (2026-10-14): every list a team wants is already a D4H
+group.
+
 Rules reference D4H ids rather than local foreign keys, so they survive a local row being
 recreated by the sync. Changing an endorsement's qualifications changes every group that
 uses it.
