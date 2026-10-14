@@ -10,8 +10,10 @@ defmodule App.ViewData.EndorsementRows do
   # The endorsements page: one row per endorsement, with what earns it, how many current
   # members hold it, and the groups whose rules require it. Each row also carries what a
   # manager should fix: `missing` counts qualifications D4H no longer has, and `same_as`
-  # lists endorsements with exactly the same qualifications, counting what includes add. `hidden_by` lists the on-card
-  # endorsements that stand for this one on a card that has both.
+  # lists endorsements with exactly the same qualifications, counting what includes add.
+  # `hidden_by` lists the on-card endorsements that stand for this one on a card that has
+  # both. Nobody holding an endorsement is not a problem: endorsements will come from the
+  # org, and many teams have members without some of them.
 
   def for_team(%Team{} = team, now) do
     team.id
@@ -54,7 +56,10 @@ defmodule App.ViewData.EndorsementRows do
     do: for(o <- rows, o.id != row.id, o.ids == row.ids, row.ids != MapSet.new(), do: link(o))
 
   @doc "True when the row has something for a manager to fix."
-  def problem?(row), do: row.missing > 0 or row.members == 0 or row.same_as != []
+  def problem?(row), do: row.missing > 0 or empty?(row) or row.same_as != []
+
+  @doc "True when nothing earns the endorsement: no qualifications and no includes."
+  def empty?(row), do: row.ids == MapSet.new()
 
   # `qualifications` and `missing` are the endorsement's own, and `includes` names the
   # endorsements it includes. `ids` and `members` count what the includes add.

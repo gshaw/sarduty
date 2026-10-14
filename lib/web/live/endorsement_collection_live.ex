@@ -112,14 +112,12 @@ defmodule Web.EndorsementCollectionLive do
             <.a navigate={~p"/teams/#{@current_team}/endorsements/#{row.id}"}>Remove it</.a>
           </div>
           <div
-            :if={row.members == 0 and row.missing == 0}
+            :if={EndorsementRows.empty?(row) and row.missing == 0}
             class="text-danger-text"
-            id={"endorsement-#{row.id}-no-members"}
+            id={"endorsement-#{row.id}-empty"}
           >
-            No member holds one.
-            <.a navigate={~p"/teams/#{@current_team}/endorsements/#{row.id}"}>
-              Change its qualifications
-            </.a>
+            No qualifications yet.
+            <.a navigate={~p"/teams/#{@current_team}/endorsements/#{row.id}"}>Add one</.a>
           </div>
         </:col>
         <:col :let={row} label="Group rules">
@@ -150,7 +148,7 @@ defmodule Web.EndorsementCollectionLive do
     cond do
       row.same_as != [] -> "same qualifications as #{names(row.same_as)}"
       row.missing > 0 -> "a qualification is no longer in D4H"
-      true -> "no member holds one"
+      true -> "no qualifications yet"
     end
   end
 

@@ -29,21 +29,29 @@ defmodule App.ViewData.EndorsementRowsTest do
     assert [%{hidden_by: [%{name: "First Aid 70"}]}, %{hidden_by: []}] = rows
   end
 
-  test "same qualifications, a deleted one, and nobody holding one are problems" do
+  test "same qualifications, a deleted one, and no qualifications are problems" do
     rows =
       EndorsementRows.rows(
         [
           endorsement(1, "PSLV", [3]),
           endorsement(2, "PSLV Registration", [3]),
-          endorsement(3, "Rope", [99])
+          endorsement(3, "Rope", [99]),
+          endorsement(4, "Placeholder", [])
         ],
         %{},
         @titles,
         [{10, 3}]
       )
 
-    assert [%{same_as: [%{id: 2}]}, %{same_as: [%{id: 1}]}, %{missing: 1, members: 0}] = rows
+    assert [%{same_as: [%{id: 2}]}, %{same_as: [%{id: 1}]}, %{missing: 1, members: 0}, _] = rows
     assert Enum.all?(rows, &EndorsementRows.problem?/1)
+  end
+
+  test "nobody holding an endorsement is not a problem" do
+    [row] = EndorsementRows.rows([endorsement(1, "OFA 3", [2])], %{}, @titles, [{10, 3}])
+
+    assert row.members == 0
+    refute EndorsementRows.problem?(row)
   end
 
   test "an include lists by name and counts toward members and cards" do
