@@ -7,6 +7,7 @@ defmodule App.Model.Endorsement do
   alias App.Model.EndorsementQualification
   alias App.Model.Group
   alias App.Model.GroupEndorsement
+  alias App.Model.GroupParent
   alias App.Model.Team
   alias App.Repo
 
@@ -84,16 +85,49 @@ defmodule App.Model.Endorsement do
     |> expand(team_id)
   end
 
-  @doc "The endorsements a group's rule requires, in the order they were added."
+  @doc """
+  The endorsements a group's rule requires: those of the groups it starts from (#327),
+  furthest first, then its own, each in the order it was added.
+  """
   def get_all_for_group(team_id, d4h_group_id) do
+    rank = group_rank(team_id, d4h_group_id)
+
+    team_id
+    |> for_groups_query(Map.keys(rank))
+    |> select([e, ge], {ge.d4h_group_id, ge.id, e})
+    |> Repo.all()
+    |> Enum.sort_by(fn {group_id, ge_id, _e} -> {rank[group_id], ge_id} end)
+    |> Enum.map(&elem(&1, 2))
+    |> Enum.uniq_by(& &1.id)
+    |> Repo.preload(endorsement_qualifications: [])
+    |> expand(team_id)
+  end
+
+  # Each D4H group id in the chain with its place: the furthest parent first.
+  defp group_rank(team_id, d4h_group_id) do
+    d4h_group_id
+    |> GroupParent.ancestors(GroupParent.parents_by_group(team_id))
+    |> Enum.reverse()
+    |> Enum.concat([d4h_group_id])
+    |> Enum.with_index()
+    |> Map.new()
+  end
+
+  @doc "The endorsements a group's rule names itself, not through the group it starts from."
+  def get_own_for_group(%Group{} = group) do
+    group.team_id
+    |> for_groups_query([group.d4h_group_id])
+    |> order_by([e, ge], asc: ge.id)
+    |> Repo.all()
+    |> Repo.preload(endorsement_qualifications: [])
+    |> expand(group.team_id)
+  end
+
+  defp for_groups_query(team_id, d4h_group_ids) do
     Endorsement
     |> join(:inner, [e], ge in GroupEndorsement, on: ge.endorsement_id == e.id)
     |> where([e, ge], e.team_id == ^team_id and ge.team_id == ^team_id)
-    |> where([e, ge], ge.d4h_group_id == ^d4h_group_id)
-    |> preload(endorsement_qualifications: [])
-    |> order_by([e, ge], asc: ge.id)
-    |> Repo.all()
-    |> expand(team_id)
+    |> where([e, ge], ge.d4h_group_id in ^d4h_group_ids)
   end
 
   def get_all_for_group(%Group{} = group),
