@@ -9,6 +9,7 @@ defmodule Web.EndorsementFormLive do
   alias App.Model.Qualification
   alias App.Repo
   alias App.ViewData.EndorsementRows
+  alias App.Worker.PushPassUpdatesWorker
 
   # Adding and changing an endorsement (#320): its name, the qualifications that earn it,
   # the endorsements it includes (#326), and the group rules that require it. Opened from
@@ -58,6 +59,8 @@ defmodule Web.EndorsementFormLive do
   def handle_event("save", %{"endorsement" => params}, socket) do
     case Endorsement.rename(socket.assigns.endorsement, params) do
       {:ok, endorsement} ->
+        push_passes(socket)
+
         {:noreply,
          socket
          |> assign(endorsement: endorsement, page_title: endorsement.name)
@@ -115,6 +118,7 @@ defmodule Web.EndorsementFormLive do
   def handle_event("delete", _params, socket) do
     team = socket.assigns.current_team
     Endorsement.delete!(socket.assigns.endorsement)
+    push_passes(socket)
 
     {:noreply,
      socket
@@ -122,7 +126,15 @@ defmodule Web.EndorsementFormLive do
      |> push_navigate(to: ~p"/teams/#{team}/endorsements")}
   end
 
+  # Every change here can change what ID cards list, so passes on phones get pushed. The
+  # job skips passes that look the same.
+  defp push_passes(%{assigns: %{current_team: %{id_cards_enabled: true} = team}}),
+    do: %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
+
+  defp push_passes(_socket), do: :ok
+
   defp reload(socket) do
+    push_passes(socket)
     endorsement = Endorsement.get!(socket.assigns.current_team.id, socket.assigns.endorsement.id)
     socket |> assign(endorsement: endorsement) |> assign_details()
   end
