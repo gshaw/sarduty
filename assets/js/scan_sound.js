@@ -1,8 +1,10 @@
 // Short tones for a scan's result on the door's page and the verify site, made with
 // Web Audio so there are no sound files. The LiveView pushes a "scan-sound" event with
-// one of the names in TONES. Browsers play sound only after a tap, so every tap resumes
-// the audio. On an iPhone the silent switch mutes Web Audio unless the page's audio
-// session is "playback" (Safari 17 and later).
+// one of the names in TONES. Browsers play sound only after a tap, so a tap on a scanner
+// resumes the audio. On an iPhone the silent switch mutes Web Audio unless the page's
+// audio session is "playback" (Safari 17 and later), and a playback session stops the
+// phone's music, so only a tap on a scanner with sound on takes it. Other taps, such as
+// pulling down to reload, leave the music playing.
 // The sound is on unless turned off with a SoundSwitch, remembered on the device.
 const STORAGE_KEY = "sarduty:scan-sound"
 
@@ -32,6 +34,10 @@ function unlock() {
   silence.buffer = context.createBuffer(1, 1, 22050)
   silence.connect(context.destination)
   silence.start()
+}
+
+function unlockFromScanner(event) {
+  if (soundOn() && event.target.closest?.("[phx-hook=QRScanner]")) unlock()
 }
 
 function drop() {
@@ -70,7 +76,7 @@ function playTones(tones) {
 
 export function listenForScanSounds() {
   for (const type of ["pointerdown", "touchend", "click"])
-    document.addEventListener(type, unlock, {capture: true})
+    document.addEventListener(type, unlockFromScanner, {capture: true})
   window.addEventListener("phx:scan-sound", event => play(event.detail.sound))
   // A page that goes to the background, such as switching apps, loses its audio and
   // doesn't always get it back, so start fresh on the next tap.
