@@ -2,6 +2,7 @@ defmodule Web.EndorsementFormLive do
   use Web, :live_view_app_layout
 
   alias App.Model.Endorsement
+  alias App.Model.EndorsementInclude
   alias App.Model.EndorsementQualification
   alias App.Model.Group
   alias App.Model.GroupEndorsement
@@ -10,8 +11,8 @@ defmodule Web.EndorsementFormLive do
   alias App.ViewData.EndorsementRows
 
   # Adding and changing an endorsement (#320): its name, the qualifications that earn it,
-  # and the group rules that require it. Opened from a group's rule editor, a new one
-  # joins that group's rule.
+  # the endorsements it includes (#326), and the group rules that require it. Opened from
+  # a group's rule editor, a new one joins that group's rule.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     endorsement = if id = params["id"], do: Endorsement.get!(team.id, id)
@@ -91,6 +92,26 @@ defmodule Web.EndorsementFormLive do
     {:noreply, reload(socket)}
   end
 
+  def handle_event("add-include", %{"endorsement-id" => ""}, socket), do: {:noreply, socket}
+
+  # Looked up through the team, and refused when it would make a loop.
+  def handle_event("add-include", %{"endorsement-id" => id}, socket) do
+    %{endorsement: endorsement, current_team: team} = socket.assigns
+    other = Endorsement.get!(team.id, id)
+    includes = EndorsementInclude.included_ids_by_endorsement(team.id)
+
+    if Endorsement.can_include?(endorsement.id, other.id, includes),
+      do: EndorsementInclude.insert!(endorsement, other)
+
+    {:noreply, reload(socket)}
+  end
+
+  def handle_event("remove-include", %{"endorsement-id" => id}, socket) do
+    other = Endorsement.get!(socket.assigns.current_team.id, id)
+    EndorsementInclude.delete!(socket.assigns.endorsement, other.id)
+    {:noreply, reload(socket)}
+  end
+
   def handle_event("delete", _params, socket) do
     team = socket.assigns.current_team
     Endorsement.delete!(socket.assigns.endorsement)
@@ -107,17 +128,57 @@ defmodule Web.EndorsementFormLive do
   end
 
   defp assign_details(%{assigns: %{endorsement: nil}} = socket),
-    do: assign(socket, rows: [], options: [], groups: [])
+    do:
+      assign(socket,
+        rows: [],
+        options: [],
+        groups: [],
+        include_rows: [],
+        include_options: [],
+        counts_toward: []
+      )
 
   defp assign_details(socket) do
     %{endorsement: endorsement, qualifications: qualifications, current_team: team} =
       socket.assigns
 
+    others = Endorsement.get_all(team.id)
+
     assign(socket,
       rows: qualification_rows(endorsement, qualifications),
       options: qualification_options(endorsement, qualifications),
-      groups: team.id |> EndorsementRows.groups_by_endorsement() |> Map.get(endorsement.id, [])
+      groups: team.id |> EndorsementRows.groups_by_endorsement() |> Map.get(endorsement.id, []),
+      include_rows: include_rows(endorsement, others, qualifications),
+      include_options: include_options(endorsement, others),
+      counts_toward: Enum.filter(others, &(endorsement.id in &1.included_ids))
     )
+  end
+
+  # Each included endorsement with every qualification that earns it, for the muted line.
+  defp include_rows(endorsement, others, qualifications) do
+    titles = Map.new(qualifications, &{&1.d4h_qualification_id, &1.title})
+
+    for other <- others, other.id in endorsement.included_ids do
+      %{
+        id: other.id,
+        name: other.name,
+        qualifications:
+          other
+          |> Endorsement.qualification_ids()
+          |> Enum.map(&titles[&1])
+          |> Enum.reject(&is_nil/1)
+          |> Enum.sort()
+      }
+    end
+  end
+
+  defp include_options(endorsement, others) do
+    includes = Map.new(others, &{&1.id, &1.included_ids})
+
+    for other <- others,
+        other.id not in endorsement.included_ids,
+        Endorsement.can_include?(endorsement.id, other.id, includes),
+        do: {other.name, other.id}
   end
 
   defp qualification_rows(endorsement, qualifications) do
@@ -131,7 +192,7 @@ defmodule Web.EndorsementFormLive do
   end
 
   defp qualification_options(endorsement, qualifications) do
-    held = endorsement |> Endorsement.qualification_ids() |> MapSet.new()
+    held = endorsement |> Endorsement.own_qualification_ids() |> MapSet.new()
     for q <- qualifications, not MapSet.member?(held, q.d4h_qualification_id), do: {q.title, q.id}
   end
 
@@ -181,7 +242,7 @@ defmodule Web.EndorsementFormLive do
             </.button>
           </:col>
         </.table>
-        <p :if={@rows == []} class="text-danger-text" id="no-qualifications">
+        <p :if={@rows == [] and @include_rows == []} class="text-danger-text" id="no-qualifications">
           No qualifications yet. No member holds it until you add one.
         </p>
 
@@ -197,6 +258,57 @@ defmodule Web.EndorsementFormLive do
           />
           <.button>Add qualification</.button>
         </form>
+      </section>
+
+      <section :if={@endorsement} id="endorsement-includes" class="mt-8">
+        <h2 class="heading">Also earned by</h2>
+        <p class="hint mb-4">
+          A member with any of these endorsements has this one too. Add the next level up, such
+          as 70 hour first aid. Then each course is listed once.
+        </p>
+        <.table
+          :if={@include_rows != []}
+          id="includes"
+          rows={@include_rows}
+          row_id={&"include-#{&1.id}"}
+        >
+          <:col :let={row} label="Endorsement">
+            <.a navigate={~p"/teams/#{@current_team}/endorsements/#{row.id}"}>{row.name}</.a>
+            <div class="hint">{Enum.join(row.qualifications, ", ")}</div>
+          </:col>
+          <:col :let={row} label="" align="right">
+            <.button
+              id={"remove-include-#{row.id}"}
+              size={:sm}
+              phx-click="remove-include"
+              phx-value-endorsement-id={row.id}
+            >
+              Remove
+            </.button>
+          </:col>
+        </.table>
+
+        <form
+          :if={@include_options != []}
+          id="add-include-form"
+          phx-submit="add-include"
+          class="mt-4"
+        >
+          <.input
+            type="select"
+            name="endorsement-id"
+            id="include-endorsement-id"
+            label="Add an endorsement"
+            value=""
+            prompt="Select an endorsement"
+            options={@include_options}
+          />
+          <.button>Add endorsement</.button>
+        </form>
+
+        <p :if={@counts_toward != []} class="hint mt-4" id="endorsement-counts-toward">
+          Counts toward <span phx-no-format><%= for {other, i} <- Enum.with_index(@counts_toward) do %><%= if i > 0 do %>, <% end %><.a navigate={~p"/teams/#{@current_team}/endorsements/#{other.id}"}>{other.name}</.a><% end %></span>.
+        </p>
       </section>
 
       <section :if={@endorsement} id="endorsement-groups" class="mt-8">

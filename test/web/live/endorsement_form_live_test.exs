@@ -60,6 +60,32 @@ defmodule Web.EndorsementFormLiveTest do
              )
   end
 
+  test "includes another endorsement, never one that makes a loop", %{conn: conn, team: team} do
+    seven = endorsement_fixture(team, %{name: "First Aid 7"})
+    seventy = endorsement_fixture(team, %{name: "First Aid 70"})
+    ofa3 = qualification_fixture(team)
+    endorsement_qualification_fixture(seventy, ofa3)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements/#{seven.id}")
+
+    render_submit(lv, "add-include", %{"endorsement-id" => seventy.id})
+
+    assert has_element?(lv, "#include-#{seventy.id}", "First Aid 70")
+    refute has_element?(lv, "#no-qualifications")
+
+    saved = Endorsement.get!(team.id, seven.id)
+    assert Endorsement.qualification_ids(saved) == [ofa3.d4h_qualification_id]
+
+    {:ok, lv70, _html} = live(conn, ~p"/teams/#{team}/endorsements/#{seventy.id}")
+    assert has_element?(lv70, "#endorsement-counts-toward a", "First Aid 7")
+    refute has_element?(lv70, "#add-include-form option[value='#{seven.id}']")
+
+    render_submit(lv70, "add-include", %{"endorsement-id" => seven.id})
+    assert Endorsement.get!(team.id, seventy.id).included_ids == []
+
+    lv |> element("#remove-include-#{seventy.id}") |> render_click()
+    assert Endorsement.get!(team.id, seven.id).included_ids == []
+  end
+
   test "deleting takes it out of every group rule", %{conn: conn, team: team} do
     endorsement = endorsement_fixture(team)
     group = group_fixture(team)

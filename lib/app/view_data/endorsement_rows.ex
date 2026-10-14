@@ -10,7 +10,7 @@ defmodule App.ViewData.EndorsementRows do
   # The endorsements page: one row per endorsement, with what earns it, how many current
   # members hold it, and the groups whose rules require it. Each row also carries what a
   # manager should fix: `missing` counts qualifications D4H no longer has, and `same_as`
-  # lists endorsements with exactly the same qualifications. `hidden_by` lists the on-card
+  # lists endorsements with exactly the same qualifications, counting what includes add. `hidden_by` lists the on-card
   # endorsements that stand for this one on a card that has both.
 
   def for_team(%Team{} = team, now) do
@@ -39,35 +39,47 @@ defmodule App.ViewData.EndorsementRows do
   `awards` are `{member_id, d4h_qualification_id}`.
   """
   def rows(endorsements, groups, titles, awards) do
-    rows = Enum.map(endorsements, &row(&1, Map.get(groups, &1.id, []), titles, awards))
+    names = Map.new(endorsements, &{&1.id, &1.name})
+    rows = Enum.map(endorsements, &row(&1, Map.get(groups, &1.id, []), titles, awards, names))
     on_card = for r <- rows, r.on_card, do: {r, r.ids, nil}
 
     Enum.map(rows, fn row ->
       row
-      |> Map.put(
-        :same_as,
-        for(o <- rows, o.id != row.id, o.ids == row.ids, row.ids != MapSet.new(), do: link(o))
-      )
+      |> Map.put(:same_as, same_as(row, rows))
       |> Map.put(:hidden_by, hidden_by(row, on_card))
     end)
   end
 
+  defp same_as(row, rows),
+    do: for(o <- rows, o.id != row.id, o.ids == row.ids, row.ids != MapSet.new(), do: link(o))
+
   @doc "True when the row has something for a manager to fix."
   def problem?(row), do: row.missing > 0 or row.members == 0 or row.same_as != []
 
-  defp row(endorsement, groups, titles, awards) do
+  # `qualifications` and `missing` are the endorsement's own, and `includes` names the
+  # endorsements it includes. `ids` and `members` count what the includes add.
+  defp row(endorsement, groups, titles, awards, names) do
     ids = endorsement |> Endorsement.qualification_ids() |> MapSet.new()
+    own = Endorsement.own_qualification_ids(endorsement)
 
     %{
       id: endorsement.id,
       name: endorsement.name,
       on_card: endorsement.on_card,
       ids: ids,
-      qualifications: ids |> Enum.map(&titles[&1]) |> Enum.reject(&is_nil/1) |> Enum.sort(),
-      missing: Enum.count(ids, &(not Map.has_key?(titles, &1))),
+      qualifications: own |> Enum.map(&titles[&1]) |> Enum.reject(&is_nil/1) |> Enum.sort(),
+      includes: include_links(endorsement, names),
+      missing: Enum.count(own, &(not Map.has_key?(titles, &1))),
       members: count_members(awards, ids),
       groups: Enum.sort_by(groups, & &1.title)
     }
+  end
+
+  defp include_links(endorsement, names) do
+    for id <- endorsement.included_ids || [], name = names[id] do
+      %{id: id, name: name}
+    end
+    |> Enum.sort_by(& &1.name)
   end
 
   defp count_members(awards, ids),
