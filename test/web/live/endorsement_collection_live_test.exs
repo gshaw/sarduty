@@ -44,7 +44,7 @@ defmodule Web.EndorsementCollectionLiveTest do
     refute has_element?(lv, "#endorsement-problems")
   end
 
-  test "flags two endorsements with the same qualifications, and one nobody holds",
+  test "flags two endorsements with the same qualifications, and one with no qualifications",
        %{conn: conn, team: team} do
     pslv = qualification_fixture(team)
     qualification_award_fixture(pslv, member_fixture(team))
@@ -53,14 +53,16 @@ defmodule Web.EndorsementCollectionLiveTest do
     endorsement_qualification_fixture(short, pslv)
     endorsement_qualification_fixture(long, pslv)
     placeholder = endorsement_fixture(team, %{name: "Placeholder"})
-    endorsement_qualification_fixture(placeholder, qualification_fixture(team))
+    rope = endorsement_fixture(team, %{name: "Rope"})
+    endorsement_qualification_fixture(rope, qualification_fixture(team))
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements")
 
     assert has_element?(lv, "#endorsement-#{short.id}-same-as-#{long.id}", "PSLV Registration")
     assert has_element?(lv, "#endorsement-#{long.id}-same-as-#{short.id}")
-    assert has_element?(lv, "#endorsement-#{placeholder.id}-no-members")
+    assert has_element?(lv, "#endorsement-#{placeholder.id}-empty")
     assert has_element?(lv, "#endorsement-problems a[href='#endorsement-#{placeholder.id}']")
+    refute has_element?(lv, "#endorsement-problems a[href='#endorsement-#{rope.id}']")
   end
 
   test "flags a qualification no longer in D4H", %{conn: conn, team: team} do
