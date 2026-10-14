@@ -87,7 +87,7 @@ defmodule Web.GroupLive do
         />
         <.rule_editor
           :if={@editing}
-          rows={editor_rows(@rule, @qualifications, @current_team)}
+          rows={editor_rows(@rule, @qualifications, @endorsements, @current_team)}
           options={editor_options(@endorsements, @rule)}
           new_path={~p"/teams/#{@current_team}/endorsements/new?group_id=#{@group.id}"}
         />
@@ -273,16 +273,24 @@ defmodule Web.GroupLive do
   defp change_verb(%{action: :remove}), do: "Could not remove"
 
   # The editor's rows as plain maps, so the style guide can render it too.
-  defp editor_rows(endorsements, qualifications, team) do
+  # Each row lists the endorsement's own qualifications, then the ones it includes by name.
+  defp editor_rows(endorsements, qualifications, all_endorsements, team) do
+    names = Map.new(all_endorsements, &{&1.id, &1.name})
+
     for endorsement <- endorsements do
+      own =
+        endorsement
+        |> Endorsement.own_qualification_ids()
+        |> Enum.map(&qualification_title(qualifications, &1))
+
+      included =
+        for id <- endorsement.included_ids, name = names[id], do: "anything that earns #{name}"
+
       %{
         id: endorsement.id,
         name: endorsement.name,
         path: ~p"/teams/#{team}/endorsements/#{endorsement.id}",
-        qualifications:
-          endorsement
-          |> Endorsement.qualification_ids()
-          |> Enum.map_join(", ", &qualification_title(qualifications, &1))
+        qualifications: Enum.join(own ++ included, ", ")
       }
     end
   end

@@ -13,8 +13,20 @@ Rules are in conjunctive normal form: `(A OR B) AND (C OR D)`. Each OR is an
   sentence and the "No … on record" reason use the name.
 - An [EndorsementQualification](../lib/app/model/endorsement_qualification.ex) is one
   qualification in it, by `d4h_qualification_id`.
+- An [EndorsementInclude](../lib/app/model/endorsement_include.ex) makes one
+  endorsement include another (#326): anything that earns the included one earns it too.
+  7h First Aid lists OFA 1 and includes 40h First Aid, which includes 70h First Aid, so
+  each course is listed once, at the lowest level it earns.
 - A [GroupEndorsement](../lib/app/model/group_endorsement.ex) puts an endorsement in a
   group's rule, by `d4h_group_id`. A member must hold every one.
+
+Includes point up the ladder, never "70h is 7h except…". A course added to 70h then
+earns 7h too, which is right, and one added to 7h stays there. The other way, a new low
+course would quietly earn every higher level. The loaders on `Endorsement` follow the
+includes and fill `earned_by_ids`, so `Endorsement.qualification_ids/1` is the full list
+and group rules, cards, and the endorsements page need nothing else. An include that
+would make a loop is refused, and a loop already in the data stops instead of running
+forever.
 
 Rules reference D4H ids rather than local foreign keys, so they survive a local row being
 recreated by the sync. Changing an endorsement's qualifications changes every group that
@@ -30,8 +42,10 @@ lists stayed on the longest. The old `group_rule_clauses` tables stay for one re
 
 `/teams/:subdomain/endorsements` lists each endorsement with what earns it, how many
 current members hold it, and the group rules that use it. It flags, with a link to fix:
-two endorsements with the same qualifications, a qualification deleted in D4H, and one no
-member holds. On a team with ID cards, a tick box per endorsement picks what cards list.
+two endorsements with the same qualifications once includes are followed, a qualification
+deleted in D4H, and one no member holds. Each row lists its own qualifications, then
+"or anything that earns" each one it includes. An endorsement's page adds and removes
+includes and says which endorsements it counts toward. On a team with ID cards, a tick box per endorsement picks what cards list.
 
 ## Evaluation
 

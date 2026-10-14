@@ -93,6 +93,9 @@ defmodule Web.EndorsementCollectionLive do
         </:col>
         <:col :let={row} label="Earned by any of">
           {Enum.join(row.qualifications, ", ")}
+          <div :if={row.includes != []} class="hint" id={"endorsement-#{row.id}-includes"}>
+            Or anything that earns <span phx-no-format><%= for {other, i} <- Enum.with_index(row.includes) do %><%= if i > 0 do %> or <% end %><.a navigate={~p"/teams/#{@current_team}/endorsements/#{other.id}"}>{other.name}</.a><% end %></span>
+          </div>
           <div
             :for={other <- row.same_as}
             class="text-danger-text"

@@ -45,4 +45,16 @@ defmodule App.ViewData.EndorsementRowsTest do
     assert [%{same_as: [%{id: 2}]}, %{same_as: [%{id: 1}]}, %{missing: 1, members: 0}] = rows
     assert Enum.all?(rows, &EndorsementRows.problem?/1)
   end
+
+  test "an include lists by name and counts toward members and cards" do
+    seven = %{endorsement(1, "First Aid 7", [1], true) | included_ids: [2], earned_by_ids: [1, 2]}
+    seventy = endorsement(2, "First Aid 70", [2], true)
+
+    [seven_row, seventy_row] = EndorsementRows.rows([seven, seventy], %{}, @titles, [{10, 2}])
+
+    assert %{qualifications: ["OFA 1"], includes: [%{id: 2, name: "First Aid 70"}]} = seven_row
+    assert seven_row.members == 1
+    assert seven_row.hidden_by == [%{id: 2, name: "First Aid 70"}]
+    assert seventy_row.includes == []
+  end
 end
