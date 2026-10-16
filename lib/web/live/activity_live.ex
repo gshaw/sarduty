@@ -195,6 +195,14 @@ defmodule Web.ActivityLive do
           </li>
           <li>
             <.a
+              id="activity-change-tags"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
+            >
+              Change tags
+            </.a>
+          </li>
+          <li>
+            <.a
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
             >

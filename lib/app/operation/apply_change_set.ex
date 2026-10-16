@@ -82,6 +82,15 @@ defmodule App.Operation.ApplyChangeSet do
   defp read_current(d4h, %ChangeSet{source: :equipment, activity: activity}),
     do: D4H.fetch_activity_equipment_usages(d4h, activity.d4h_activity_id)
 
+  # A tags set reads the activity's tags now, so a change made in D4H since the page
+  # opened isn't overwritten. D4H takes tags on a published activity.
+  defp read_current(d4h, %ChangeSet{source: :tags, activity: activity}) do
+    with {:ok, ids} <-
+           D4H.fetch_activity_tag_ids(d4h, activity.d4h_activity_id, activity.activity_kind) do
+      {:ok, {:tags, ids |> Enum.uniq() |> Enum.sort()}}
+    end
+  end
+
   defp read_current(d4h, %ChangeSet{activity: activity}) do
     case D4H.fetch_activity_published(d4h, activity.d4h_activity_id, activity.activity_kind) do
       {:ok, false} -> D4H.fetch_attendance_infos(d4h, activity.d4h_activity_id)
@@ -150,7 +159,13 @@ defmodule App.Operation.ApplyChangeSet do
 
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
 
-  # The tag row's list was read from D4H as the set was planned, a moment before.
+  def check(%ChangeSetRow{action: :set_activity_tags} = row, {:tags, ids}) do
+    if ids == row.old_value["tag_ids"],
+      do: :ok,
+      else: {:skipped, "The tags changed in D4H since the page opened. Open it again."}
+  end
+
+  # An equipment set's tag row was read from D4H as the set was planned, a moment before.
   def check(%ChangeSetRow{action: :set_activity_tags}, _current), do: :ok
 
   defp write(d4h, %ChangeSetRow{action: :update_attendance, new_value: new_value} = row) do

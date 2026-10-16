@@ -23,7 +23,7 @@ defmodule App.Model.ChangeSet do
     # :edit is a team admin changing one record of a team on SAR Duty Records
     # (docs/records.md). :member is a member changing their own details (#156).
     # :equipment adds or removes items on an activity (#271). :template invites a template's groups
-    # to an activity (#162).
+    # to an activity (#162). :tags sets an activity's tags from its tags page (#323).
     field :source, Ecto.Enum,
       values: [
         :door,
@@ -33,7 +33,8 @@ defmodule App.Model.ChangeSet do
         :edit,
         :member,
         :equipment,
-        :template
+        :template,
+        :tags
       ]
 
     field :summary, :string
