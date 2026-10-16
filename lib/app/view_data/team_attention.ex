@@ -20,20 +20,22 @@ defmodule App.ViewData.TeamAttention do
   @doc """
   The items to show, at most #{@max_items}. Each is a map with `key`, `level`
   (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
-  `action`, the text of its link. The letters and untagged items also carry the `year`. `service`
+  `action`, the text of its link. The letters and untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`. `service`
   is where the team's records live, `:d4h` or `:records` (D4H.service/1).
   """
   def items(rows, now) do
+    this_year = Service.YearRange.year_in(now, rows.timezone)
+
     [
       refresh_item(rows.refresh, rows.service),
       drafts_item(rows.draft_count, rows.service),
       expiring_item(rows.expiring_count, rows.expiring_days, rows.service),
       missing_details_item(rows.missing_details_count, rows.service),
       group_changes_item(rows.group_change_count),
-      proposed_changes_item(rows.proposed_change_count, rows.service),
-      untagged_item(rows.untagged),
-      letters_item(rows.letters, now, rows.timezone)
+      proposed_changes_item(rows.proposed_change_count, rows.service)
     ]
+    |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year)))
+    |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&(&1.level != :warning))
     |> Enum.take(@max_items)
@@ -167,13 +169,13 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp untagged_item(nil), do: nil
-  defp untagged_item(%{count: 0}), do: nil
+  defp untagged_item(%{count: 0}, _this_year), do: nil
 
-  # Letters count no hours for an activity with no hours tag (#323).
-  defp untagged_item(%{count: count, year: year}) do
+  # Letters count no hours for an activity with no hours tag (#323). Last year's shows only
+  # in letter season, and has its own key so both can show.
+  defp untagged_item(%{count: count, year: year}, this_year) do
     %{
-      key: :untagged,
+      key: if(year == this_year, do: :untagged, else: :untagged_last_year),
       level: :info,
       year: year,
       title:

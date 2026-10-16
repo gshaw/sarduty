@@ -255,7 +255,7 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :refresh}), do: ~p"/teams/#{team}/settings"
 
-  defp attention_path(team, %{key: :untagged, year: year}),
+  defp attention_path(team, %{key: key, year: year}) when key in [:untagged, :untagged_last_year],
     do: ~p"/teams/#{team}/activities?hours=untagged&status=published&when=#{year}&sort=date-"
 
   defp attention_path(team, %{key: :drafts}),

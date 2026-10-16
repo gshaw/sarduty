@@ -159,8 +159,7 @@ defmodule Web.TeamDashboardLiveTest do
   test "published activities with no hours tag need attention, and the link lists them",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    today = DateTime.now!(team.timezone)
-    year = if today.month == 1, do: today.year - 1, else: today.year
+    year = DateTime.now!(team.timezone).year
     {:ok, june} = year |> Date.new!(6, 15) |> DateTime.new(~T[18:00:00])
     june = %{started_at: june, finished_at: DateTime.add(june, 2, :hour), is_published: true}
 
