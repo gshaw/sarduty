@@ -22,27 +22,52 @@ defmodule Web.QualificationLiveTest do
       ends_at: DateTime.add(DateTime.utc_now(), -365, :day)
     })
 
-    {:ok, _lv, html} =
+    {:ok, lv, html} =
       conn
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
 
     assert html =~ "Rope Rescue"
-    assert html =~ "Alice Active"
-    assert html =~ "Bob Expired"
+    assert has_element?(lv, "#active_awards", "Alice Active")
+    refute has_element?(lv, "#active_awards", "Bob Expired")
+    assert has_element?(lv, "#awards-expired-link", "1")
+
+    lv |> element("#awards-expired-link") |> render_click()
+    assert has_element?(lv, "#expired_awards", "Bob Expired")
+    refute has_element?(lv, "#expired_awards", "Alice Active")
+  end
+
+  test "search finds members in the view (#350)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    qualification = qualification_fixture(team)
+
+    for name <- ["Fiona MacLeod", "Blake Okafor"] do
+      qualification_award_fixture(qualification, member_fixture(team, %{name: name}))
+    end
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
+
+    lv |> form("#award_filter_form", form: %{q: "FIONA"}) |> render_change()
+
+    assert has_element?(lv, "#active_awards", "Fiona MacLeod")
+    refute has_element?(lv, "#active_awards", "Blake Okafor")
+    assert has_element?(lv, "#award_filter_form-summary", "1 member")
   end
 
   test "renders qualification page with no awards", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     qualification = qualification_fixture(team, %{title: "Empty Qual"})
 
-    {:ok, _lv, html} =
+    {:ok, lv, html} =
       conn
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
 
     assert html =~ "Empty Qual"
     assert html =~ "No active awards"
-    assert html =~ "No expired awards"
+
+    lv |> element("#awards-expired-link") |> render_click()
+    assert render(lv) =~ "No expired awards"
   end
 end

@@ -138,16 +138,16 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, ".filter-bar-chips")
   end
 
-  test "Clear filters shows only while a filter or search is on", %{conn: conn} do
+  test "Clear shows only while a filter or search is on, and says which", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
-    refute has_element?(lv, "#activity_filter_form-summary a", "Clear filters")
+    refute has_element?(lv, "#activity_filter_form-summary a", "Clear")
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?q=rope")
 
-    lv |> element("#activity_filter_form-summary a", "Clear filters") |> render_click()
+    lv |> element("#activity_filter_form-summary a", "Clear search") |> render_click()
     assert_patch(lv, ~p"/teams/#{team}/activities")
   end
 end

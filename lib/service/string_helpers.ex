@@ -7,6 +7,16 @@ defmodule Service.StringHelpers do
 
   def no_break_space, do: " "
 
+  @doc """
+  Whether `text` has `search` in it, ignoring case. A blank search matches everything,
+  for searching a short list held in memory.
+  """
+  def matches?(_text, search) when search in [nil, ""], do: true
+  def matches?(nil, _search), do: false
+
+  def matches?(text, search),
+    do: text |> String.downcase() |> String.contains?(String.downcase(search))
+
   def strip_html(html) do
     html
     |> Floki.parse_fragment!()

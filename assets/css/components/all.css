@@ -11,6 +11,7 @@
 @import "./row_link";
 @import "./table";
 @import "./typography";
+@import "./view_switch";
 @import "./chart";
 @import "./dashboard";
 @import "./home";

@@ -73,6 +73,7 @@ defmodule Web.Components.FilterBar do
         filters: filters,
         on: on,
         clear?: assigns.clear != nil and (on != [] or searching?),
+        clear_label: if(on == [], do: "Clear search", else: "Clear filters"),
         toggle: JS.toggle_class("is-open", to: "##{assigns.id}")
       )
 
@@ -138,7 +139,7 @@ defmodule Web.Components.FilterBar do
       <span>
         <strong class="text-text">{@count}</strong>
         <span :if={@total}>· {@total}</span>
-        <span :if={@clear?}>· <.link patch={@clear} class="link">Clear filters</.link></span>
+        <span :if={@clear?}>· <.link patch={@clear} class="link">{@clear_label}</.link></span>
       </span>
       <span :if={@page && @page.total_pages > 1}>{range(@page)}</span>
     </div>

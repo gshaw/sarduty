@@ -1,6 +1,8 @@
 defmodule Web.MeLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.ViewSwitch
+
   alias App.Model.Activity
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -81,17 +83,16 @@ defmodule Web.MeLive do
 
       <div class="heading-row mt-8">
         <h2 class="subheading">Hours in {@year}</h2>
-        <nav :if={length(@years) > 1} id="years" aria-label="Year" class="flex gap-3">
-          <.link
+        <.view_switch :if={length(@years) > 1} id="years" label="Year">
+          <:view
             :for={year <- @years}
             id={"year-#{year}"}
             patch={~p"/teams/#{@member.team}/me?year=#{year}"}
-            aria-current={year == @year && "page"}
-            class={["link", year == @year && "font-semibold"]}
+            current={year == @year}
           >
             {year}
-          </.link>
-        </nav>
+          </:view>
+        </.view_switch>
       </div>
       <.hours_content hours={@hours} hours_tags={@hours_tags} />
       <.attendance_content attendances={@attendances} year={@year} member={@member} />

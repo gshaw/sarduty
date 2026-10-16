@@ -1,0 +1,59 @@
+<.shell title="View switch" current={:view_switch}>
+  <h1>View switch</h1>
+  <p class="lead">Switches a list between a few views, with counts.</p>
+
+  <div class="demo">
+    <.filter_bar
+      for={sample_filters()}
+      id="view-switch-demo"
+      count="131 members"
+      onsubmit="return false"
+    >
+      <:lead>
+        <.view_switch label="Awards">
+          <:view patch="#" current={true} count={131}>Active</:view>
+          <:view patch="#" count={40}>Expired</:view>
+        </.view_switch>
+      </:lead>
+      <:search field={sample_filters()[:q]} />
+    </.filter_bar>
+  </div>
+
+  <h3>On its own</h3>
+  <div class="demo">
+    <.view_switch label="Year">
+      <:view patch="#" current={true}>2026</:view>
+      <:view patch="#">2025</:view>
+      <:view patch="#">2024</:view>
+    </.view_switch>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A list of a few dozen to a few hundred rows that splits one obvious way, such as a qualification's active and expired awards. Put it first in a
+    <a href={page_path(:filter_bar)}>filter bar</a>
+    with a search box, or on its own for a few years.
+  </p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>More than about 5 views. Use a menu in a filter bar.</li>
+    <li>Pages about one record. Use <a href={page_path(:tabs)}>tabs</a>.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Each view is a link that patches the page, so the URL says which view is showing.</li>
+    <li>
+      The current view is filled. The count says how many rows each view has before the search.
+    </li>
+    <li>A search box beside it searches the view that is showing.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.view_switch label="…"&gt;</code>
+    with a <code>:view</code>
+    slot per view, each with its <code>patch</code>, <code>current</code>, and <code>count</code>.
+  </p>
+</.shell>
