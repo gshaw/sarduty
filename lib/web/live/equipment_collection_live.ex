@@ -2,6 +2,7 @@ defmodule Web.EquipmentCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.ActivityEquipmentLive, only: [scan_message: 1, no_item_text: 1]
+  import Web.Components.FilterBar
   import Web.Components.Scanner
 
   alias App.Adapter.D4H
@@ -22,8 +23,8 @@ defmodule Web.EquipmentCollectionLive do
         rows: rows,
         places: EquipmentList.places(in_service),
         categories: EquipmentList.categories(in_service),
-        place_options: options("Any place", EquipmentList.places(rows)),
-        category_options: options("Any category", EquipmentList.categories(rows)),
+        place_options: options(EquipmentList.places(rows)),
+        category_options: options(EquipmentList.categories(rows)),
         scan_message: nil,
         scan_failed: false
       )
@@ -90,7 +91,19 @@ defmodule Web.EquipmentCollectionLive do
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
 
-  defp options(any, counts), do: [{any, ""} | Enum.map(counts, &elem(&1, 0))]
+  defp options(counts), do: [{"All", ""} | Enum.map(counts, &elem(&1, 0))]
+
+  # The page's path with some filters changed, for the filter bar's chips.
+  defp path_fn(team, form) do
+    fn changes ->
+      params =
+        form.params
+        |> Map.merge(Map.new(changes, fn {key, value} -> {Atom.to_string(key), value} end))
+        |> Map.reject(&(elem(&1, 1) == ""))
+
+      filter_path(team, params)
+    end
+  end
 
   def render(assigns) do
     ~H"""
@@ -108,12 +121,18 @@ defmodule Web.EquipmentCollectionLive do
       </div>
     </div>
 
-    <.filter_form for={@form} id="equipment-filter">
-      <.input field={@form[:q]} label="Search" placeholder="Name, barcode, or serial" />
-      <.input field={@form[:place]} label="Place" type="select" options={@place_options} />
-      <.input field={@form[:category]} label="Category" type="select" options={@category_options} />
-      <.input field={@form[:show]} label="Show" type="select" options={EquipmentList.shows()} />
-    </.filter_form>
+    <.filter_bar
+      for={@form}
+      id="equipment-filter"
+      count={Service.Format.count(@count, one: "%d item", many: "%d items")}
+      clear={filter_path(@current_team, %{})}
+      path_fn={path_fn(@current_team, @form)}
+    >
+      <:search field={@form[:q]} placeholder="Name, barcode, or serial" />
+      <:filter field={@form[:place]} label="Place" options={@place_options} default="" />
+      <:filter field={@form[:category]} label="Category" options={@category_options} default="" />
+      <:filter field={@form[:show]} label="Show" options={EquipmentList.shows()} default="in-service" />
+    </.filter_bar>
 
     <div :if={@rows != []} class="hidden pointer-coarse:block measure mb-6">
       <.qr_scanner id="equipment-scanner" label="Scan a barcode" reader={:barcode} />
@@ -137,12 +156,6 @@ defmodule Web.EquipmentCollectionLive do
         counts={@categories}
         path={&filter_path(@current_team, category: &1)}
       />
-    </div>
-
-    <div :if={!@browsing} class="table-summary">
-      <span class="table-summary-count">
-        {Service.Format.count(@count, one: "%d item", many: "%d items")}
-      </span>
     </div>
 
     <section

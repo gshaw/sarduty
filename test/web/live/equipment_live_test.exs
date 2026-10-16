@@ -48,6 +48,18 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#item-#{ctx.phone.id}")
   end
 
+  test "the Place chip removes the place and keeps the search (#350)", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=Yard&q=radio")
+
+    assert has_element?(lv, "#equipment-filter .filter-menu.is-on", "Place")
+    lv |> element(".filter-bar-chips a", "Yard") |> render_click()
+
+    path = assert_patch(lv)
+    assert path =~ "q=radio"
+    refute path =~ "place="
+    assert has_element?(lv, "#item-#{ctx.radio.id}")
+  end
+
   test "a scanned barcode opens its item, and an unknown one says so", ctx do
     item = equipment_item_fixture(ctx.team, %{title: "Thermal camera 2", barcode: "SF0119"})
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
