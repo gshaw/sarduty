@@ -217,6 +217,24 @@ defmodule App.Model.Activity do
     |> where([r], r.started_at < type(^finish, :naive_datetime))
   end
 
+  @doc """
+  Activities with none of the hours tags (#323): no primary, secondary, or other tag.
+  `hours_tags` is hours_tags/1.
+  """
+  def without_hours_tag(query, hours_tags) do
+    titles = hours_tags |> Map.values() |> Enum.reject(&is_nil/1) |> Jason.encode!()
+
+    where(
+      query,
+      [r],
+      fragment(
+        "NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE j.value IN (SELECT value FROM json_each(?)))",
+        r.tags,
+        ^titles
+      )
+    )
+  end
+
   @doc "Rows that overlap `start` to `finish`, so a weekend course stays in while it runs."
   def overlapping(query, start, finish) do
     query

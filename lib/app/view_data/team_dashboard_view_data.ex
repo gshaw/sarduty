@@ -14,6 +14,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
+  alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.SyncD4HChanges
@@ -50,6 +51,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       missing_details_count: count_missing_details(team, now),
       group_change_count: count_group_changes(team, now),
       proposed_change_count: ChangeSet.count_waiting(team.id),
+      untagged: untagged_row(team, now),
       letters: letters_row(team, now)
     }
   end
@@ -165,6 +167,37 @@ defmodule App.ViewData.TeamDashboardViewData do
       length(preview.to_add) + length(preview.to_remove)
     end)
     |> Enum.sum()
+  end
+
+  # Published activities with no hours tag (#323), for teams that use the hours tags: ones
+  # with their primary or secondary tag in D4H. This year's, or last year's in January, so
+  # December's are caught before letters are made.
+  defp untagged_row(team, now) do
+    hours_tags = Activity.hours_tags(team)
+
+    if uses_hours_tags?(team, hours_tags) do
+      today = DateTime.shift_zone!(now, team.timezone)
+      year = if today.month == 1, do: today.year - 1, else: today.year
+
+      count =
+        Activity
+        |> where([a], a.team_id == ^team.id and a.is_published == true)
+        |> Activity.not_deleted()
+        |> Activity.started_in(year, team.timezone)
+        |> Activity.without_hours_tag(hours_tags)
+        |> Repo.aggregate(:count)
+
+      %{year: year, count: count}
+    end
+  end
+
+  defp uses_hours_tags?(team, hours_tags) do
+    Tag
+    |> where(
+      [t],
+      t.team_id == ^team.id and t.title in ^[hours_tags.primary, hours_tags.secondary]
+    )
+    |> Repo.exists?()
   end
 
   # Only counted from January to April, since the hours count reads a year of attendance.

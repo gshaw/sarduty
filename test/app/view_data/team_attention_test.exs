@@ -20,6 +20,7 @@ defmodule App.ViewData.TeamAttentionTest do
         missing_details_count: 0,
         group_change_count: 0,
         proposed_change_count: 0,
+        untagged: nil,
         letters: nil
       },
       attrs
@@ -33,6 +34,14 @@ defmodule App.ViewData.TeamAttentionTest do
 
   test "nothing to do means no items" do
     assert items(%{}, @october) == []
+    assert items(%{untagged: %{count: 0, year: 2026}}, @october) == []
+  end
+
+  test "activities with no hours tag name the year" do
+    assert [item] = items(%{untagged: %{count: 12, year: 2026}}, @october)
+    assert item.key == :untagged
+    assert item.year == 2026
+    assert item.title == "12 activities in 2026 have no hours tag"
   end
 
   test "each count shows its item, warnings first" do

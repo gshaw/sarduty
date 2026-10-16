@@ -20,7 +20,7 @@ defmodule App.ViewData.TeamAttention do
   @doc """
   The items to show, at most #{@max_items}. Each is a map with `key`, `level`
   (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
-  `action`, the text of its link. The letters item also carries the `year`. `service`
+  `action`, the text of its link. The letters and untagged items also carry the `year`. `service`
   is where the team's records live, `:d4h` or `:records` (D4H.service/1).
   """
   def items(rows, now) do
@@ -31,6 +31,7 @@ defmodule App.ViewData.TeamAttention do
       missing_details_item(rows.missing_details_count, rows.service),
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service),
+      untagged_item(rows.untagged),
       letters_item(rows.letters, now, rows.timezone)
     ]
     |> Enum.reject(&is_nil/1)
@@ -163,6 +164,30 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: "An AI agent proposed them. Nothing changes in #{name} until you send them.",
       action: "Review proposed changes"
+    }
+  end
+
+  defp untagged_item(nil), do: nil
+  defp untagged_item(%{count: 0}), do: nil
+
+  # Letters count no hours for an activity with no hours tag (#323).
+  defp untagged_item(%{count: count, year: year}) do
+    %{
+      key: :untagged,
+      level: :info,
+      year: year,
+      title:
+        Format.count(count,
+          one: "%d activity in #{year} has no hours tag",
+          many: "%d activities in #{year} have no hours tag"
+        ),
+      detail:
+        Format.count(count,
+          one: "Tax credit letters count no hours for it. Set its hours with Change tags.",
+          many:
+            "Tax credit letters count no hours for them. Set each one's hours with Change tags."
+        ),
+      action: "Show activities"
     }
   end
 
