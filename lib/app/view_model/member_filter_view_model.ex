@@ -40,7 +40,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     }
 
   # The team's groups, by name, for the Group filter (#350).
-  def group_kinds(team), do: Enum.map(Group.get_all(team.id), &{&1.title, &1.id})
+  def group_kinds(team), do: team.id |> Group.get_all() |> Enum.map(&{&1.title, &1.id})
 
   def when_kinds(team) do
     years =

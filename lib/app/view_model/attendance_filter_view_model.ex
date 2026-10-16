@@ -68,24 +68,27 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   end
 
   def build_paginated_content(member, filter_options) do
-    Attendance
-    |> Attendance.scope(member_id: member.id)
-    |> scope(q: filter_options.q)
-    |> scope(when: filter_options.when, timezone: member.team.timezone)
-    |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
+    member
+    |> filtered(filter_options)
     |> scope(sort: filter_options.sort)
     |> preload(:activity)
     |> Repo.paginate(page: filter_options.page)
   end
 
   def total_duration(member, filter_options) do
+    member
+    |> filtered(filter_options)
+    |> select([r], coalesce(sum(r.duration_in_minutes), 0))
+    |> Repo.one()
+  end
+
+  # The member's attendance that the search and filters keep.
+  defp filtered(member, filter_options) do
     Attendance
     |> Attendance.scope(member_id: member.id)
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
     |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
-    |> select([r], coalesce(sum(r.duration_in_minutes), 0))
-    |> Repo.one()
   end
 
   defp build_new do
