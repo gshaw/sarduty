@@ -5,6 +5,7 @@ defmodule Web.TeamDashboardLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.Team
+  alias App.Repo
 
   defp open(conn, user, team), do: conn |> log_in_user(user) |> live(~p"/teams/#{team}")
 
@@ -153,6 +154,44 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(list, "#activity_collection", "Counted draft")
     refute has_element?(list, "#activity_collection", "Old draft")
     refute has_element?(list, "#activity_collection", "Running draft")
+  end
+
+  test "published activities with no hours tag need attention, and the link lists them",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    today = DateTime.now!(team.timezone)
+    year = if today.month == 1, do: today.year - 1, else: today.year
+    {:ok, june} = year |> Date.new!(6, 15) |> DateTime.new(~T[18:00:00])
+    june = %{started_at: june, finished_at: DateTime.add(june, 2, :hour), is_published: true}
+
+    tag_fixture(team, "Primary Hours")
+    team |> Ecto.Changeset.change(other_hours_tag: "Social") |> Repo.update!()
+    activity_fixture(team, Map.merge(june, %{title: "Untagged", tags: ["Training"]}))
+    activity_fixture(team, Map.merge(june, %{title: "No tags", tags: nil}))
+    activity_fixture(team, Map.merge(june, %{title: "Primary", tags: ["Primary Hours"]}))
+    activity_fixture(team, Map.merge(june, %{title: "BBQ", tags: ["Social"]}))
+    activity_fixture(team, Map.merge(june, %{title: "Draft", tags: [], is_published: false}))
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+    assert has_element?(lv, "#attention-untagged", "2 activities in #{year} have no hours tag")
+
+    {:ok, list, _html} =
+      lv |> element("#attention-untagged a") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(list, "#activity_collection", "Untagged")
+    assert has_element?(list, "#activity_collection", "No tags")
+    refute has_element?(list, "#activity_collection", "Primary")
+    refute has_element?(list, "#activity_collection", "BBQ")
+    refute has_element?(list, "#activity_collection", "Draft")
+  end
+
+  test "a team that does not use the hours tags is not told about them", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{tags: [], is_published: true})
+
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-untagged")
   end
 
   test "a qualification running out needs attention", %{conn: conn} do

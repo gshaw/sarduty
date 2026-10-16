@@ -38,6 +38,12 @@ defmodule Web.Components.ActivityFilterTable do
         options={ActivityFilterViewModel.status_kinds()}
       />
       <.input
+        label="Hours"
+        field={@form[:hours]}
+        type="select"
+        options={ActivityFilterViewModel.hours_kinds()}
+      />
+      <.input
         label="Sort"
         field={@form[:sort]}
         type="select"
