@@ -1,0 +1,37 @@
+<.shell title="Filter form" current={:filter_form}>
+  <h1>Filter form</h1>
+  <p class="lead">The filters above a list.</p>
+
+  <div class="demo">
+    <.filter_form for={to_form(%{})} id="filter-form-demo" onsubmit="return false">
+      <.input id="filter-form-q" name="q" label="Search" value="" />
+      <.input
+        id="filter-form-status"
+        name="status"
+        type="select"
+        label="Status"
+        options={[{"All", "all"}, {"Draft", "draft"}, {"Published", "published"}]}
+        value="all"
+      />
+    </.filter_form>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Above a table people narrow down: a search box and a few menus. Changing one updates the list straight away, so there is no button.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A form that saves something. Use <a href={page_path(:forms)}>inputs</a> with a Save button.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.filter_form for=&#123;@form&#125; id="…"&gt;</code>
+    around <code>&lt;.input&gt;</code>s. It sends <code>change</code>
+    on every edit and on Enter, so the LiveView handles one event. A plain form with only phx-change posts itself on Enter and gets a 404. The
+    <a href={page_path(:filter_a_list)}>Filter a list</a>
+    pattern shows it with a table.
+  </p>
+</.shell>

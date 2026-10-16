@@ -3,7 +3,7 @@
   <p class="lead">The activity list: filters, a summary line, the table, and pages.</p>
 
   <div class="example">
-    <form class="filter-form" onsubmit="return false">
+    <.filter_form for={to_form(%{})} id="sample-filters" onsubmit="return false">
       <.input id="f-q" name="q" label="Search" value="" />
       <.input
         id="f-kind"
@@ -34,7 +34,7 @@
         options={[{"Date ↓", "date-"}, {"Date ↑", "date"}]}
         value="date-"
       />
-    </form>
+    </.filter_form>
     <div class="table-summary">
       <span class="table-summary-links">
         <.a href="#">Current</.a>
@@ -66,6 +66,8 @@
     <li><a href={page_path(:pagination)}>Pagination</a> goes under the table.</li>
   </ul>
   <p class="spec">
-    In the app: <code>&lt;.activity_filter_table&gt;</code>. Filters are <code>&lt;.input&gt;</code>s in a <code>.filter-form</code>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
+    In the app: <code>&lt;.activity_filter_table&gt;</code>. Filters are <code>&lt;.input&gt;</code>s in a <a href={
+      page_path(:filter_form)
+    }>filter form</a>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
   </p>
 </.shell>

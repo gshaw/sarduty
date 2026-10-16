@@ -43,13 +43,7 @@ defmodule Web.MemberCollectionLive do
         Add member
       </.button>
     </div>
-    <.form
-      for={@form}
-      id="member_filter_form"
-      phx-change="change"
-      phx-submit="change"
-      class="filter-form"
-    >
+    <.filter_form for={@form} id="member_filter_form">
       <.input field={@form[:q]} label="Search" />
       <.input
         label="Year"
@@ -81,7 +75,7 @@ defmodule Web.MemberCollectionLive do
         type="select"
         options={MemberFilterViewModel.limits()}
       />
-    </.form>
+    </.filter_form>
 
     <div class="table-summary">
       <span class="table-summary-links">

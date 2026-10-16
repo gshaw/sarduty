@@ -21,7 +21,7 @@ defmodule Web.AccountLive do
       <p id="account-email">
         Logged in as {@current_user.email}. Your email and your teams come from D4H.
       </p>
-      <form id="maps-app-form" class="mt-8" phx-change="set-maps-app">
+      <form id="maps-app-form" class="mt-8" phx-change="set-maps-app" phx-submit="set-maps-app">
         <fieldset>
           <legend class="subheading">Maps app</legend>
           <p class="hint">Places in SAR Duty open in this app.</p>

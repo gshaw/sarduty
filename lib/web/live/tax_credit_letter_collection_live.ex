@@ -51,13 +51,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         )} for {@sending.year}. This page updates when they are done.
       </p>
     </.banner>
-    <.form
-      for={@form}
-      id="tax_credit_letter_filter_form"
-      phx-change="change"
-      phx-submit="change"
-      class="filter-form"
-    >
+    <.filter_form for={@form} id="tax_credit_letter_filter_form">
       <.input
         label="Year"
         field={@form[:year]}
@@ -77,7 +71,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         type="select"
         options={TaxCreditLetterFilterViewModel.filters()}
       />
-    </.form>
+    </.filter_form>
 
     <.send_all
       :if={!@sending && @to_send != []}

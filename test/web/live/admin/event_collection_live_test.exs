@@ -47,7 +47,8 @@ defmodule Web.Admin.EventCollectionLiveTest do
     assert has_element?(lv, "#top-ip-2", "198.51.100.4")
     assert has_element?(lv, "#event-#{login.id} [title='Safari/18']", "198.51.100.4")
 
-    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events?ip=198.51.100.4")
+    lv |> form("#event_filter_form", form: %{ip: "198.51.100.4"}) |> render_submit()
+    assert_patch(lv, ~p"/admin/events?ip=198.51.100.4")
     assert has_element?(lv, "#event-#{login.id}")
     refute has_element?(lv, "#event-#{miss.id}")
   end

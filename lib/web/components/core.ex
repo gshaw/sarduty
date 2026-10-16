@@ -120,6 +120,23 @@ defmodule Web.Components.Core do
   end
 
   @doc """
+  The filters above a list. Changing one sends `change`, and so does Enter in a
+  text box: without phx-submit the browser posts the form itself and gets a 404 (#333).
+  """
+  attr :for, :any, required: true
+  attr :id, :string, required: true
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def filter_form(assigns) do
+    ~H"""
+    <.form for={@for} id={@id} phx-change="change" phx-submit="change" class="filter-form" {@rest}>
+      {render_slot(@inner_block)}
+    </.form>
+    """
+  end
+
+  @doc """
   Renders a badge.
 
   ## Examples

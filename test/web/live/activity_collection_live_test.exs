@@ -106,4 +106,18 @@ defmodule Web.ActivityCollectionLiveTest do
     assert has_element?(lv, "#activity_collection", "Still a draft")
     refute has_element?(lv, "#activity_collection", "Already published")
   end
+
+  test "Enter in the search box filters the list (#333)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{title: "Rope rescue night"})
+    activity_fixture(team, %{title: "Board meeting"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+
+    lv |> form("#activity_filter_form", form: %{q: "rope"}) |> render_submit()
+
+    assert_patch(lv)
+    assert has_element?(lv, "#activity_collection", "Rope rescue night")
+    refute has_element?(lv, "#activity_collection", "Board meeting")
+  end
 end
