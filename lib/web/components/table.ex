@@ -32,6 +32,9 @@ defmodule Web.Components.Table do
     attr :class, :string
     attr :align, :string, values: ["left", "right"]
     attr :sorts, :list
+
+    attr :select_all, :boolean,
+      doc: "a header checkbox that checks or unchecks every checkbox in the column"
   end
 
   slot :header_row
@@ -58,6 +61,7 @@ defmodule Web.Components.Table do
               sorts={col[:sorts]}
               sort={@sort}
               path_fn={@path_fn}
+              select_all={col[:select_all] && "#{@id}-select-all"}
             />
           </tr>
         </thead>
@@ -90,6 +94,22 @@ defmodule Web.Components.Table do
 
   attr :sort, :string, default: nil, doc: "the sort the table has now"
   attr :path_fn, :any, default: nil
+  attr :select_all, :string, default: nil, doc: "the id of the column's select all checkbox"
+
+  # Starts checked, as review lists start with every row checked, until the hook syncs it.
+  def table_header(%{select_all: id} = assigns) when is_binary(id) do
+    ~H"""
+    <th class={@class}>
+      <input
+        type="checkbox"
+        id={@select_all}
+        phx-hook="SelectAll"
+        aria-label="Select all"
+        checked
+      />
+    </th>
+    """
+  end
 
   def table_header(%{sorts: nil} = assigns) do
     ~H"""

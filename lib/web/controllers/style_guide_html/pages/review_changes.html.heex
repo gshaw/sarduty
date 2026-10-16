@@ -9,10 +9,19 @@
   <h2>How it works</h2>
   <ul>
     <li>Every change starts checked. Uncheck one to leave it out.</li>
+    <li>
+      The checkbox in the header checks or unchecks them all, to send only a few. It shows a
+      dash when only some are checked.
+    </li>
     <li>A row that can't change says why with a tag, and has no checkbox.</li>
     <li>One button sends the checked changes.</li>
-    <li>Below 640px each row stacks.</li>
+    <li>Below 640px each row stacks, and the header with its checkbox goes.</li>
   </ul>
+  <p class="spec">
+    Give the checkbox column <code>select_all</code>:
+    <code>&lt;:col label="" select_all&gt;</code>. Every list with a checkbox on each row and
+    one button that sends the checked rows has one.
+  </p>
   <p class="spec">
     <code>&lt;.recommended_changes rows=&#123;…&#125; /&gt;</code>
     from <code>Web.Components.AttendanceImport</code>, as on an activity's Import attendance page, with made-up members.

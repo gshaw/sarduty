@@ -184,7 +184,7 @@ defmodule Web.GroupReviewLive do
     <div :if={@rows != []} class="mb-4">
       <h2 class={["font-semibold mb-2", @title_class]}>{@title} ({length(@rows)})</h2>
       <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="table-striped">
-        <:col :let={row} label="" class="w-px">
+        <:col :let={row} label="" class="w-px" select_all>
           <input
             type="checkbox"
             id={"select-#{row.member.id}"}
