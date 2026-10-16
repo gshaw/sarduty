@@ -30,18 +30,19 @@ defmodule Web.Components.D4H do
   end
 
   defp other_tags(tags, hours_tags) do
-    ((tags || []) -- [hours_tags.primary, hours_tags.secondary]) |> Enum.sort()
+    ((tags || []) -- [hours_tags.primary, hours_tags.secondary, hours_tags[:other]])
+    |> Enum.sort()
   end
 
   @doc """
   Which SARVAC hours an activity counts for, from its D4H tags and the team's
-  `Activity.hours_tags/1`: Primary, Secondary, or nil.
+  `Activity.hours_tags/1`: Primary, Secondary, None for the other tag (#323), or nil.
   """
   def activity_hours_type(activity, hours_tags) do
     case Activity.counts_as(activity.tags, hours_tags) do
       :primary -> "Primary"
       :secondary -> "Secondary"
-      nil -> nil
+      nil -> if Activity.hours_tagged?(activity.tags, hours_tags), do: "None"
     end
   end
 

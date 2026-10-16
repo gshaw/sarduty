@@ -45,8 +45,8 @@ defmodule Web.ActivityTagsLive do
   end
 
   @doc """
-  Splits the activity's tag ids into its hours choice (`"primary"`, `"secondary"`, or
-  `"none"`), its other tags, and the ids of tags the refresh hasn't copied yet. Primary
+  Splits the activity's tag ids into its hours choice (`"primary"`, `"secondary"`,
+  `"other"`, or `"none"`), its other tags, and the ids of tags the refresh hasn't copied yet. Primary
   wins over secondary, as on letters.
   """
   def split(start_ids, hours_tags, all_tags) do
@@ -68,6 +68,7 @@ defmodule Web.ActivityTagsLive do
     cond do
       has?.(:primary) -> "primary"
       has?.(:secondary) -> "secondary"
+      has?.(:other) -> "other"
       true -> "none"
     end
   end
@@ -80,9 +81,12 @@ defmodule Web.ActivityTagsLive do
     Enum.map(tags, & &1.d4h_tag_id) ++ unknown_ids ++ hours_id
   end
 
-  @doc "The hours choices the team's tags allow, for the select."
+  @doc """
+  The hours choices the team's tags allow, for the select. Other is offered only when the
+  team or its organization names an other tag (#323).
+  """
   def hours_options(hours_tags) do
-    [{"Primary", :primary}, {"Secondary", :secondary}]
+    [{"Primary", :primary}, {"Secondary", :secondary}, {"Other: no hours", :other}]
     |> Enum.filter(fn {_label, kind} -> hours_tags[kind] end)
     |> Enum.map(fn {label, kind} -> {label, Atom.to_string(kind)} end)
     |> Enum.concat([{"None", "none"}])

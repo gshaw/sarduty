@@ -123,6 +123,7 @@ defmodule Web.Navigation do
           "Member logins",
           ~p"/teams/#{team}/settings/member-logins"
         ),
+        link("settings-hours-tags", "Hours tags", ~p"/teams/#{team}/settings/hours-tags"),
         team.mcp_enabled && link("settings-mcp", "MCP tokens", ~p"/teams/#{team}/settings/mcp")
       ],
       & &1

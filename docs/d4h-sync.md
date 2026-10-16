@@ -203,7 +203,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   clicks refresh in team settings, not on the daily sync.
 - Activity tags are stored as titles. Letter hours depend on the exact titles of the
   team's hours tags: `Primary Hours` and `Secondary Hours`, unless its organization
-  names its own (`App.Model.Activity.hours_tags/1`, #289).
+  names its own (#289). A team names any its organization leaves blank in **Settings →
+  Hours tags**, and either can name an other tag for activities that count for no hours
+  (#323). See `App.Model.Activity.hours_tags/1`.
 
 ## Pages that skip the copy
 

@@ -10,35 +10,93 @@ defmodule App.Model.Activity do
   alias App.Model.Team
   alias App.Repo
 
-  @default_hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours"}
+  @default_hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours", other: nil}
+  @hours_kinds [:primary, :secondary, :other]
 
   @doc """
-  The D4H tags that make an activity count as primary or secondary hours, as
-  `%{primary: tag, secondary: tag}`. A team's organization may name its own (#289);
-  otherwise "Primary Hours" and "Secondary Hours". Uses the team's organization when it
-  is preloaded, and reads just its tags when it isn't.
+  The D4H tags that say which hours an activity counts for, as `%{primary: tag,
+  secondary: tag, other: tag}`. Other is for activities that count for no hours, and is
+  nil when nobody names one. A team's organization names each tag (#289); a team names
+  the ones its organization leaves blank (#323); otherwise "Primary Hours" and
+  "Secondary Hours". Uses the team's organization when it is preloaded, and reads just
+  its tags when it isn't.
   """
-  def hours_tags(%Organization{} = organization) do
+  def hours_tags(%Organization{} = organization),
+    do: Map.merge(@default_hours_tags, organization_hours_tags(organization), &pick/3)
+
+  def hours_tags(%Team{} = team) do
+    team_tags = %{
+      primary: team.primary_hours_tag,
+      secondary: team.secondary_hours_tag,
+      other: team.other_hours_tag
+    }
+
+    @default_hours_tags
+    |> Map.merge(team_tags, &pick/3)
+    |> Map.merge(organization_hours_tags(team), &pick/3)
+  end
+
+  defp pick(_kind, default, nil), do: default
+  defp pick(_kind, _default, tag), do: tag
+
+  @doc """
+  The hours tags the team's organization names, as `%{kind => tag or nil}`. A team can
+  name only the ones that are nil.
+  """
+  def organization_hours_tags(%Organization{} = organization) do
     %{
-      primary: organization.primary_hours_tag || @default_hours_tags.primary,
-      secondary: organization.secondary_hours_tag || @default_hours_tags.secondary
+      primary: organization.primary_hours_tag,
+      secondary: organization.secondary_hours_tag,
+      other: organization.other_hours_tag
     }
   end
 
-  def hours_tags(%Team{organization: %Organization{} = organization}),
-    do: hours_tags(organization)
+  def organization_hours_tags(%Team{organization: %Organization{} = organization}),
+    do: organization_hours_tags(organization)
 
-  def hours_tags(%Team{organization_id: nil}), do: @default_hours_tags
+  def organization_hours_tags(%Team{organization_id: nil}), do: Map.new(@hours_kinds, &{&1, nil})
 
-  def hours_tags(%Team{organization_id: organization_id}) do
+  def organization_hours_tags(%Team{organization_id: organization_id}) do
     Organization
     |> where([o], o.id == ^organization_id)
     |> select([o], %Organization{
       primary_hours_tag: o.primary_hours_tag,
-      secondary_hours_tag: o.secondary_hours_tag
+      secondary_hours_tag: o.secondary_hours_tag,
+      other_hours_tag: o.other_hours_tag
     })
     |> Repo.one!()
-    |> hours_tags()
+    |> organization_hours_tags()
+  end
+
+  @doc """
+  The first hours kind whose tag repeats an earlier kind's, ignoring case, with the text
+  to show on it; or nil when all differ.
+  """
+  def repeated_hours_tag(hours_tags) do
+    pairs = [{:secondary, :primary}, {:other, :primary}, {:other, :secondary}]
+
+    Enum.find_value(pairs, fn {kind, earlier} ->
+      if same_tag?(hours_tags[kind], hours_tags[earlier]),
+        do: {kind, "Use a different tag from #{earlier} hours."}
+    end)
+  end
+
+  @doc "The organization's or team's field for an hours kind."
+  def hours_tag_field(:primary), do: :primary_hours_tag
+  def hours_tag_field(:secondary), do: :secondary_hours_tag
+  def hours_tag_field(:other), do: :other_hours_tag
+
+  defp same_tag?(nil, _tag), do: false
+  defp same_tag?(_tag, nil), do: false
+  defp same_tag?(tag, other), do: String.downcase(tag) == String.downcase(other)
+
+  @doc """
+  Whether the tags say which hours the activity counts for: primary, secondary, or the
+  other tag for none.
+  """
+  def hours_tagged?(tags, hours_tags) do
+    tags = tags || []
+    Enum.any?(@hours_kinds, &(hours_tags[&1] && hours_tags[&1] in tags))
   end
 
   @doc "Which hours the tags count for: `:primary`, `:secondary`, or nil. Primary wins."

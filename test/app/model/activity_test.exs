@@ -7,7 +7,7 @@ defmodule App.Model.ActivityTest do
   alias App.Model.Organization
   alias App.Model.Team
 
-  @defaults %{primary: "Primary Hours", secondary: "Secondary Hours"}
+  @defaults %{primary: "Primary Hours", secondary: "Secondary Hours", other: nil}
 
   describe "hours_tags/1" do
     test "a team with no organization keeps the default tags" do
@@ -19,7 +19,8 @@ defmodule App.Model.ActivityTest do
 
       assert Activity.hours_tags(%Team{organization: organization}) == %{
                primary: "SRVTC Primary Activity",
-               secondary: "Secondary Hours"
+               secondary: "Secondary Hours",
+               other: nil
              }
     end
 
@@ -33,9 +34,35 @@ defmodule App.Model.ActivityTest do
 
       assert team.id |> Team.get!() |> Activity.hours_tags() == %{
                primary: "SRVTC Primary Activity",
-               secondary: "SRVTC Secondary Activity"
+               secondary: "SRVTC Secondary Activity",
+               other: nil
              }
     end
+
+    test "a team names the tags its organization leaves blank" do
+      organization = %Organization{primary_hours_tag: "SRVTC Primary Activity"}
+
+      team = %Team{
+        organization: organization,
+        primary_hours_tag: "Team Primary",
+        secondary_hours_tag: "Training Hrs",
+        other_hours_tag: "No Hours"
+      }
+
+      assert Activity.hours_tags(team) == %{
+               primary: "SRVTC Primary Activity",
+               secondary: "Training Hrs",
+               other: "No Hours"
+             }
+    end
+  end
+
+  test "hours_tagged?/2 is true for any hours tag, the other one too" do
+    tags = %{@defaults | other: "Social"}
+    assert Activity.hours_tagged?(["Social"], tags)
+    assert Activity.hours_tagged?(["Secondary Hours"], tags)
+    refute Activity.hours_tagged?(["Training"], tags)
+    refute Activity.hours_tagged?(nil, @defaults)
   end
 
   test "counts_as/2 picks primary over secondary, and nil for neither" do

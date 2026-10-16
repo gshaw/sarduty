@@ -82,6 +82,24 @@ defmodule Web.ActivityTagsLiveTest do
     assert render(lv) =~ "The tags changed in D4H since the page opened."
   end
 
+  test "Other is offered once the team names an other tag", ctx do
+    {:ok, d4h_tags} = Agent.start_link(fn -> [ctx.tags.primary.d4h_tag_id] end)
+    stub_d4h(ctx.activity, d4h_tags)
+    path = ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/tags"
+
+    {:ok, lv, _html} = live(ctx.conn, path)
+    refute has_element?(lv, "#activity-hours option[value=other]")
+
+    social = tag_fixture(ctx.team, "Social")
+    ctx.team |> Ecto.Changeset.change(other_hours_tag: "Social") |> Repo.update!()
+
+    {:ok, lv, _html} = live(ctx.conn, path)
+    lv |> form("#activity-tags-form", %{hours: "other"}) |> render_submit()
+
+    assert_received {:d4h_write, _path, %{"tagIds" => [id]}}
+    assert id == social.d4h_tag_id
+  end
+
   test "the activity page links to its tags", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
     assert has_element?(lv, "#activity-change-tags")

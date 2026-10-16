@@ -241,6 +241,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/managers", TeamManagersLive
       live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
+      live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
     end
 

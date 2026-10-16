@@ -3,6 +3,7 @@ defmodule App.Model.Team do
 
   alias App.Field.EncryptedString
   alias App.Field.TrimmedString
+  alias App.Model.Activity
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.Team
@@ -49,12 +50,51 @@ defmodule App.Model.Team do
     # /admin/id-cards: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
     field :id_cards_enabled, :boolean, default: false
+    # The hours tags the team's organization leaves blank (#323); see
+    # App.Model.Activity.hours_tags/1. Set on the team's hours tags settings page.
+    field :primary_hours_tag, TrimmedString
+    field :secondary_hours_tag, TrimmedString
+    field :other_hours_tag, TrimmedString
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
   end
 
   def build_new_changeset(params \\ %{}), do: build_changeset(%Team{}, params)
+
+  @hours_tag_fields [:primary_hours_tag, :secondary_hours_tag, :other_hours_tag]
+
+  @doc """
+  The team's own hours tags (#323). Only the kinds its organization leaves blank are
+  cast; `organization_tags` is Activity.organization_hours_tags/1.
+  """
+  def build_hours_tags_changeset(data, organization_tags, params \\ %{}) do
+    fields =
+      for kind <- [:primary, :secondary, :other],
+          is_nil(organization_tags[kind]),
+          do: Activity.hours_tag_field(kind)
+
+    changeset =
+      Enum.reduce(
+        @hours_tag_fields,
+        cast(data, params, fields),
+        &validate_length(&2, &1, max: 100)
+      )
+
+    case changeset |> hours_tags(organization_tags) |> Activity.repeated_hours_tag() do
+      nil -> changeset
+      {kind, text} -> add_error(changeset, Activity.hours_tag_field(kind), text)
+    end
+  end
+
+  # The tags the change would give the team: its organization's, then its own.
+  defp hours_tags(changeset, organization_tags) do
+    changeset
+    |> apply_changes()
+    |> Map.merge(%{organization: nil, organization_id: nil})
+    |> Activity.hours_tags()
+    |> Map.merge(organization_tags, fn _kind, tag, org_tag -> org_tag || tag end)
+  end
 
   # Only what a team manager may edit. d4h_team_id and the saved key are not
   # castable here; UpdateTeamSettings sets the key after checking it with D4H.

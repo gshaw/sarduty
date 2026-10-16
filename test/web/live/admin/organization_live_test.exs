@@ -53,14 +53,16 @@ defmodule Web.Admin.OrganizationLiveTest do
     |> form("#organization-form",
       organization: %{
         primary_hours_tag: " SRVTC Primary Activity ",
-        secondary_hours_tag: "SRVTC Secondary Activity"
+        secondary_hours_tag: "SRVTC Secondary Activity",
+        other_hours_tag: "Other - neither Primary nor Secondary eg. social"
       }
     )
     |> render_submit(%{team_ids: ["", "#{team.id}"]})
 
     assert team.id |> Team.get!() |> Activity.hours_tags() == %{
              primary: "SRVTC Primary Activity",
-             secondary: "SRVTC Secondary Activity"
+             secondary: "SRVTC Secondary Activity",
+             other: "Other - neither Primary nor Secondary eg. social"
            }
   end
 
