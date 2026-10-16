@@ -29,7 +29,7 @@ defmodule Web.EndorsementCollectionLiveTest do
     first_aid = endorsement_fixture(team, %{name: "First Aid"})
     endorsement_qualification_fixture(first_aid, basic)
     endorsement_qualification_fixture(first_aid, advanced)
-    group_endorsement_fixture(group, first_aid)
+    group_rule_fixture(group, first_aid)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements")
 

@@ -5,15 +5,15 @@ defmodule Web.EndorsementFormLive do
   alias App.Model.EndorsementInclude
   alias App.Model.EndorsementQualification
   alias App.Model.Group
-  alias App.Model.GroupEndorsement
+  alias App.Model.GroupRule
   alias App.Model.Qualification
   alias App.Repo
   alias App.ViewData.EndorsementRows
   alias App.Worker.PushPassUpdatesWorker
 
   # Adding and changing an endorsement (#320): its name, the qualifications that earn it,
-  # the endorsements it includes (#326), and the group rules that require it. Opened from
-  # a group's rule editor, a new one joins that group's rule.
+  # the endorsements it includes (#326), and the groups whose rules name it. Opened from
+  # a group's rule editor, a new one becomes an In rule on that group.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     endorsement = if id = params["id"], do: Endorsement.get!(team.id, id)
@@ -44,7 +44,7 @@ defmodule Web.EndorsementFormLive do
 
     case Endorsement.insert(team, params) do
       {:ok, endorsement} ->
-        if group = socket.assigns.group, do: GroupEndorsement.add!(group, endorsement)
+        if group = socket.assigns.group, do: GroupRule.add!(group, :in, endorsement)
 
         {:noreply,
          socket
@@ -326,7 +326,7 @@ defmodule Web.EndorsementFormLive do
       <section :if={@endorsement} id="endorsement-groups" class="mt-8">
         <h2 class="heading">Group rules</h2>
         <p :if={@groups == []} class="hint">
-          No group rule requires it. Add it from a group's page.
+          No group rule names it. Add it from a group's page.
         </p>
         <ul :if={@groups != []}>
           <li :for={group <- @groups}>
@@ -354,10 +354,15 @@ defmodule Web.EndorsementFormLive do
     """
   end
 
-  defp delete_confirmation(endorsement, groups) do
-    rules =
-      groups |> length() |> Service.Format.count(one: "%d group rule", many: "%d group rules")
+  # Names the groups whose rules lose it.
+  defp delete_confirmation(endorsement, []),
+    do: "Delete #{endorsement.name}? It comes off ID cards."
 
-    "Delete #{endorsement.name}? It comes off #{rules} and ID cards."
-  end
+  defp delete_confirmation(endorsement, groups),
+    do:
+      "Delete #{endorsement.name}? It comes off ID cards and the rules of #{and_list(Enum.map(groups, & &1.title))}."
+
+  defp and_list([one]), do: one
+  defp and_list([a, b]), do: "#{a} and #{b}"
+  defp and_list(many), do: "#{many |> Enum.drop(-1) |> Enum.join(", ")}, and #{List.last(many)}"
 end

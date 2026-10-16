@@ -31,8 +31,8 @@ defmodule App.Operation.RefreshD4HData.UpsertGroups do
     {total_count, progress}
   end
 
-  # A group deleted in D4H takes its memberships with it. Its rule stays in
-  # group_endorsements, keyed by D4H id, and nothing shows it.
+  # A group deleted in D4H takes its memberships with it. Its rules stay, keyed by D4H
+  # id, and nothing shows them. A rule naming it breaks and plans nothing until fixed.
   def delete_stale(team_id, synced_d4h_ids) do
     stale_ids =
       Group

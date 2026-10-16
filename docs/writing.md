@@ -75,7 +75,7 @@ same text.
 changes saved to D4H". No "successfully".
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
-"Delete First Aid? It comes off 3 group rules and ID cards." The buttons are the action
+"Delete First Aid? It comes off ID cards and the rules of Callout." The buttons are the action
 ("Delete endorsement") and "Cancel".
 
 **Warnings.** The consequence first, then what to do: "Attendance cannot be changed once
@@ -116,7 +116,7 @@ and must not be used for it.
 | published                      | locked, closed, finalized                      | An activity whose attendance D4H no longer lets anyone change.                                       |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
-| group rule                     | requirement, policy, criteria                  | The endorsements a member must hold to be in a group.                                                |
+| group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in, or not in, any of some groups and endorsements.   |
 | endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
 | primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
 | tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |

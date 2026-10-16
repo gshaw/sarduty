@@ -15,7 +15,7 @@ defmodule Web.GroupReviewLiveTest do
     qualification = qualification_fixture(team)
     endorsement = endorsement_fixture(team)
     endorsement_qualification_fixture(endorsement, qualification)
-    group_endorsement_fixture(group, endorsement)
+    group_rule_fixture(group, endorsement)
 
     unqualified = member_fixture(team, %{name: "Jordan Lee"})
     group_member_fixture(group, unqualified)

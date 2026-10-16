@@ -11,7 +11,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Model.Group
-  alias App.Model.GroupEndorsement
+  alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Team
@@ -151,16 +151,17 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> Repo.aggregate(:count)
   end
 
-  # Adds and removes waiting across every group with a rule. A rule naming a deleted
-  # qualification plans nothing, and the groups page shows it as broken.
+  # Adds and removes waiting across every group with rules. Rules with a problem plan
+  # nothing, and the groups page shows them as broken.
   defp count_group_changes(team, now) do
-    ruled_group_ids = GroupEndorsement.ruled_d4h_group_ids_query(team.id)
+    ruled_group_ids = GroupRule.ruled_d4h_group_ids_query(team.id)
+    context = BuildGroupRulePreview.load(team)
 
     Group
     |> where([g], g.team_id == ^team.id and g.d4h_group_id in subquery(ruled_group_ids))
     |> Repo.all()
     |> Enum.map(fn group ->
-      preview = BuildGroupRulePreview.for_group(team, group, now)
+      preview = BuildGroupRulePreview.preview(context, team, group, now)
       length(preview.to_add) + length(preview.to_remove)
     end)
     |> Enum.sum()

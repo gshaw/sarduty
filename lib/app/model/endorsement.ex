@@ -5,14 +5,12 @@ defmodule App.Model.Endorsement do
   alias App.Model.Endorsement
   alias App.Model.EndorsementInclude
   alias App.Model.EndorsementQualification
-  alias App.Model.Group
-  alias App.Model.GroupEndorsement
-  alias App.Model.GroupParent
+  alias App.Model.GroupRule
   alias App.Model.Team
   alias App.Repo
 
   # A name and the qualifications that earn it: a member holding any one of them has the
-  # endorsement. Group rules require endorsements, and ID cards list the ones a team
+  # endorsement. Group rules name endorsements (#334), and ID cards list the ones a team
   # picks (#320). Names are unique within a team.
   #
   # It can include other endorsements, so anything that earns one of those earns it too
@@ -43,12 +41,12 @@ defmodule App.Model.Endorsement do
     do: endorsement |> build_changeset(params) |> Repo.update()
 
   @doc """
-  Deletes the endorsement, its qualifications, its place in every group rule, and its
-  includes either way.
+  Deletes the endorsement, its qualifications, its place in every group rule, a rule it
+  leaves empty, and its includes either way.
   """
   def delete!(%Endorsement{} = endorsement) do
     Repo.transaction(fn ->
-      GroupEndorsement |> where([ge], ge.endorsement_id == ^endorsement.id) |> Repo.delete_all()
+      GroupRule.remove_endorsement!(endorsement)
 
       EndorsementInclude
       |> where(
@@ -84,54 +82,6 @@ defmodule App.Model.Endorsement do
     |> Repo.all()
     |> expand(team_id)
   end
-
-  @doc """
-  The endorsements a group's rule requires: those of the groups it starts from (#327),
-  furthest first, then its own, each in the order it was added.
-  """
-  def get_all_for_group(team_id, d4h_group_id) do
-    rank = group_rank(team_id, d4h_group_id)
-
-    team_id
-    |> for_groups_query(Map.keys(rank))
-    |> select([e, ge], {ge.d4h_group_id, ge.id, e})
-    |> Repo.all()
-    |> Enum.sort_by(fn {group_id, ge_id, _e} -> {rank[group_id], ge_id} end)
-    |> Enum.map(&elem(&1, 2))
-    |> Enum.uniq_by(& &1.id)
-    |> Repo.preload(endorsement_qualifications: [])
-    |> expand(team_id)
-  end
-
-  # Each D4H group id in the chain with its place: the furthest parent first.
-  defp group_rank(team_id, d4h_group_id) do
-    d4h_group_id
-    |> GroupParent.ancestors(GroupParent.parents_by_group(team_id))
-    |> Enum.reverse()
-    |> Enum.concat([d4h_group_id])
-    |> Enum.with_index()
-    |> Map.new()
-  end
-
-  @doc "The endorsements a group's rule names itself, not through the group it starts from."
-  def get_own_for_group(%Group{} = group) do
-    group.team_id
-    |> for_groups_query([group.d4h_group_id])
-    |> order_by([e, ge], asc: ge.id)
-    |> Repo.all()
-    |> Repo.preload(endorsement_qualifications: [])
-    |> expand(group.team_id)
-  end
-
-  defp for_groups_query(team_id, d4h_group_ids) do
-    Endorsement
-    |> join(:inner, [e], ge in GroupEndorsement, on: ge.endorsement_id == e.id)
-    |> where([e, ge], e.team_id == ^team_id and ge.team_id == ^team_id)
-    |> where([e, ge], ge.d4h_group_id in ^d4h_group_ids)
-  end
-
-  def get_all_for_group(%Group{} = group),
-    do: get_all_for_group(group.team_id, group.d4h_group_id)
 
   @doc "Every qualification that earns it, following includes once a loader has."
   def qualification_ids(%{earned_by_ids: ids}) when is_list(ids), do: ids

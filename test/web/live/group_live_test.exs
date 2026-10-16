@@ -4,11 +4,9 @@ defmodule Web.GroupLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Model.Endorsement
   alias App.Model.EndorsementQualification
-  alias App.Model.GroupEndorsement
-  alias App.Model.GroupParent
-  alias App.Repo
+  alias App.Model.GroupRule
+  alias App.Model.GroupRuleReference
 
   # The crash tests below log the LiveView's exit.
   @moduletag :capture_log
@@ -34,79 +32,142 @@ defmodule Web.GroupLiveTest do
       lv: lv,
       qualification: qualification,
       endorsement: endorsement,
+      other_team: other_team,
       other_endorsement: other_endorsement
     }
   end
 
-  test "adds and removes the team's endorsements, never another team's", ctx do
-    render_submit(ctx.lv, "add-endorsement", %{"endorsement-id" => ctx.endorsement.id})
-    assert [%{name: "First Aid"}] = Endorsement.get_all_for_group(ctx.group)
+  test "adds and removes rules, never with another team's endorsement", ctx do
+    lv = ctx.lv
+    lv |> element("#edit-rules") |> render_click()
 
-    render_click(ctx.lv, "remove-endorsement", %{"endorsement-id" => ctx.endorsement.id})
-    assert [] = Endorsement.get_all_for_group(ctx.group)
+    lv
+    |> form("#add-rule-form", %{"kind" => "in", "target" => "endorsement:#{ctx.endorsement.id}"})
+    |> render_submit()
 
-    crash(ctx.lv, "add-endorsement", %{"endorsement-id" => ctx.other_endorsement.id})
-    assert [] = Endorsement.get_all_for_group(ctx.group)
+    assert [%{kind: :in} = rule] = GroupRule.get_all(ctx.team.id)
+    assert GroupRule.targets(rule) == [{:endorsement, ctx.endorsement.id}]
+
+    lv |> element("#rule-#{rule.id} button", "Remove") |> render_click()
+    assert GroupRule.get_all(ctx.team.id) == []
+
+    crash(lv, "add-rule", %{"kind" => "in", "target" => "endorsement:#{ctx.other_endorsement.id}"})
+
+    assert GroupRule.get_all(ctx.team.id) == []
   end
 
-  test "a group starts from another: its rule, never its hand-added members", ctx do
-    gsar = group_fixture(ctx.team, %{title: "GSAR team"})
-    group_endorsement_fixture(gsar, ctx.endorsement)
-    sw1 = qualification_fixture(ctx.team)
-    swiftwater = endorsement_fixture(ctx.team, %{name: "Swiftwater 1"})
-    endorsement_qualification_fixture(swiftwater, sw1)
-    group_endorsement_fixture(ctx.group, swiftwater)
+  test "a group built from groups reads as a sentence and follows their rules", ctx do
+    gsar = group_fixture(ctx.team, %{title: "GSAR Qualified Callout"})
+    group_rule_fixture(gsar, ctx.endorsement)
+    mit = group_fixture(ctx.team, %{title: "MIT Callout"})
+    loa = group_fixture(ctx.team, %{title: "LOA"})
 
-    both = member_fixture(ctx.team, %{name: "Both"})
-    qualification_award_fixture(ctx.qualification, both)
-    qualification_award_fixture(sw1, both)
+    qualified = member_fixture(ctx.team, %{name: "Qualified"})
+    qualification_award_fixture(ctx.qualification, qualified)
     by_hand = member_fixture(ctx.team, %{name: "By Hand"})
-    qualification_award_fixture(sw1, by_hand)
     group_member_fixture(gsar, by_hand)
+    trainee = member_fixture(ctx.team, %{name: "Trainee"})
+    group_member_fixture(mit, trainee)
+    on_leave = member_fixture(ctx.team, %{name: "On Leave"})
+    group_member_fixture(mit, on_leave)
+    group_member_fixture(loa, on_leave)
+
+    rule = group_rule_fixture(ctx.group, gsar)
+    GroupRuleReference.add!(rule, mit)
+    group_rule_fixture(ctx.group, loa, :not_in)
 
     {:ok, lv, _html} = live(ctx.conn, ctx.path)
-    lv |> element("#edit-rules") |> render_click()
-    lv |> form("#parent-form", %{"parent-id" => gsar.id}) |> render_change()
-
-    assert has_element?(lv, "#parent-endorsements", "First Aid")
-    lv |> element("#done-editing") |> render_click()
-    assert has_element?(lv, "#rule-sentence", "Members of GSAR team who also hold Swiftwater 1")
-    assert has_element?(lv, "#rule-parent-hint", "everyone who holds First Aid")
-    assert has_element?(lv, "#would-add-#{both.id}")
-    refute has_element?(lv, "#would-add-#{by_hand.id}")
-
-    ruled = ctx.team.id |> GroupEndorsement.ruled_d4h_group_ids_query() |> Repo.all()
-    assert ctx.group.d4h_group_id in ruled
-
-    {:ok, gsar_lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/groups/#{gsar.id}")
-    gsar_lv |> element("#edit-rules") |> render_click()
-    refute has_element?(gsar_lv, "#parent-id option[value='#{ctx.group.id}']")
-    render_change(gsar_lv, "set-parent", %{"parent-id" => ctx.group.id})
-
-    assert GroupParent.parents_by_group(ctx.team.id) == %{
-             ctx.group.d4h_group_id => gsar.d4h_group_id
-           }
-
-    render_change(lv, "set-parent", %{"parent-id" => ""})
-    assert GroupParent.parents_by_group(ctx.team.id) == %{}
-  end
-
-  test "the editor lists the rule and links each endorsement", ctx do
-    group_endorsement_fixture(ctx.group, ctx.endorsement)
-    {:ok, lv, _html} = live(ctx.conn, ctx.path)
-
-    lv |> element("#edit-rules") |> render_click()
 
     assert has_element?(
              lv,
-             ~s|#rule-#{ctx.endorsement.id} a[href="/teams/#{ctx.team.subdomain}/endorsements/#{ctx.endorsement.id}"]|
+             "#rule-sentence",
+             "Members of GSAR Qualified Callout or MIT Callout who are not in LOA."
            )
 
-    assert has_element?(lv, "#rule-#{ctx.endorsement.id}", ctx.qualification.title)
+    assert has_element?(lv, "#rule-group-#{gsar.id}", "Members must hold First Aid.")
+    assert has_element?(lv, "#rule-group-#{loa.id}", "LOA is a list kept by hand in D4H.")
+    assert has_element?(lv, "#would-add-#{qualified.id}")
+    assert has_element?(lv, "#would-add-#{trainee.id}")
+    refute has_element?(lv, "#would-add-#{by_hand.id}")
+    refute has_element?(lv, "#would-add-#{on_leave.id}")
+  end
+
+  test "the menu leaves out a group that would make a loop, and refuses one sent anyway", ctx do
+    gsar = group_fixture(ctx.team, %{title: "GSAR team"})
+    group_rule_fixture(gsar, ctx.group)
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+    lv |> element("#edit-rules") |> render_click()
+
+    refute has_element?(lv, "#add-rule-form option[value='group:#{gsar.id}']")
+    refute has_element?(lv, "#add-rule-form option[value='group:#{ctx.group.id}']")
+
+    render_submit(lv, "add-rule", %{"kind" => "in", "target" => "group:#{gsar.id}"})
+    assert ctx.team.id |> GroupRule.get_all() |> length() == 1
+  end
+
+  test "warns before the first rule changes what other groups count", ctx do
+    callout = group_fixture(ctx.team, %{title: "Rope Rescue Callout"})
+    group_rule_fixture(callout, ctx.group)
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+    lv |> element("#edit-rules") |> render_click()
+
+    assert lv |> element("#add-rule-form button") |> render() =~
+             "Rope Rescue Callout uses this group&#39;s list. Once it has rules, Rope Rescue Callout uses its rules instead."
+
+    lv
+    |> form("#add-rule-form", %{"kind" => "in", "target" => "endorsement:#{ctx.endorsement.id}"})
+    |> render_submit()
+
+    [rule] =
+      ctx.team.id
+      |> GroupRule.get_all()
+      |> Enum.filter(&(&1.d4h_group_id == ctx.group.d4h_group_id))
+
+    assert lv |> element("#rule-#{rule.id} button") |> render() =~
+             "Without them, Rope Rescue Callout uses its list in D4H instead."
+  end
+
+  test "the editor links each rule to its page, which adds and removes", ctx do
+    rule = group_rule_fixture(ctx.group, ctx.endorsement)
+    loa = group_fixture(ctx.team, %{title: "LOA"})
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+    lv |> element("#edit-rules") |> render_click()
+
+    path = ~p"/teams/#{ctx.team}/groups/#{ctx.group.id}/rules/#{rule.id}"
+    assert has_element?(lv, ~s|#rule-#{rule.id} a[href="#{path}"]|, "First Aid")
+
+    {:ok, rule_lv, _html} = live(ctx.conn, path)
+    rule_lv |> form("#add-reference-form", %{"target" => "group:#{loa.id}"}) |> render_submit()
+    assert has_element?(rule_lv, "#references", "LOA")
+
+    [first | _] = GroupRule.find!(ctx.group, rule.id).references
+    rule_lv |> element("#remove-reference-#{first.id}") |> render_click()
+    assert [%{d4h_group_id: d4h_group_id}] = GroupRule.find!(ctx.group, rule.id).references
+    assert d4h_group_id == loa.d4h_group_id
+
+    [last] = GroupRule.find!(ctx.group, rule.id).references
+
+    {:ok, _lv, html} =
+      rule_lv
+      |> element("#remove-reference-#{last.id}")
+      |> render_click()
+      |> follow_redirect(ctx.conn, ctx.path)
+
+    assert html =~ "Rule removed."
+    assert GroupRule.get_all(ctx.team.id) == []
+  end
+
+  test "another team's rule page is not found", ctx do
+    other_group = group_fixture(ctx.other_team)
+    rule = group_rule_fixture(other_group, ctx.other_endorsement)
+
+    assert_raise Ecto.NoResultsError, fn ->
+      live(ctx.conn, ~p"/teams/#{ctx.team}/groups/#{ctx.group.id}/rules/#{rule.id}")
+    end
   end
 
   test "a rule naming a qualification deleted in D4H shows a warning instead of changes", ctx do
-    group_endorsement_fixture(ctx.group, ctx.endorsement)
+    group_rule_fixture(ctx.group, ctx.endorsement)
 
     EndorsementQualification.insert!(
       ctx.endorsement,
@@ -119,7 +180,7 @@ defmodule Web.GroupLiveTest do
   end
 
   test "the rule reads by endorsement, and each removal says why", ctx do
-    group_endorsement_fixture(ctx.group, ctx.endorsement)
+    group_rule_fixture(ctx.group, ctx.endorsement)
     ended = member_fixture(ctx.team, %{name: "Alex Morgan"})
     qualification_award_fixture(ctx.qualification, ended, %{ends_at: ~U[2026-03-31 19:00:00Z]})
     group_member_fixture(ctx.group, ended)
