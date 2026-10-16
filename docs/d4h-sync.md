@@ -206,8 +206,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   names its own (#289). A team names any its organization leaves blank in **Settings →
   Hours tags**, and either can name an other tag for activities that count for no hours
   (#323). See `App.Model.Activity.hours_tags/1`. The team home's "Needs attention" counts
-  published activities with none of them, this year's or last year's in January, for a
-  team with its primary or secondary tag in D4H.
+  published activities with none of them, one item per year: this year's, and last year's
+  from January to April while letters are made. Only for a team with its primary or
+  secondary tag in D4H.
 
 ## Pages that skip the copy
 
