@@ -41,6 +41,17 @@ defmodule Web.GroupReviewLiveTest do
     assert has_element?(lv, "#apply", "Apply 2 changes")
   end
 
+  test "each list has a select all checkbox, and clearing it leaves nothing to apply", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+    assert has_element?(lv, "#review-add-select-all[phx-hook=SelectAll]")
+    assert has_element?(lv, "#review-remove-select-all[phx-hook=SelectAll]")
+
+    # Unchecking every row sends the form with no member ids.
+    render_change(lv, "select", %{"_target" => [""]})
+    assert has_element?(lv, "#apply[disabled]", "Apply 0 changes")
+  end
+
   test "applying sends only the ticked changes and returns to the group", ctx do
     {:ok, lv, _html} = live(ctx.conn, ctx.path)
     Req.Test.allow(App.Adapter.D4H, self(), lv.pid)

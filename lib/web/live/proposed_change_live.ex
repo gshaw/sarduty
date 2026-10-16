@@ -132,7 +132,7 @@ defmodule Web.ProposedChangeLive do
         row_id={&"row-#{&1.id}"}
         class="table-striped table-stack"
       >
-        <:col :let={row} :if={ChangeSet.waiting?(@change_set)} label="" class="w-px">
+        <:col :let={row} :if={ChangeSet.waiting?(@change_set)} label="" class="w-px" select_all>
           <input
             type="checkbox"
             id={"select-#{row.id}"}

@@ -37,7 +37,7 @@ defmodule Web.Components.AttendanceImport do
     ~H"""
     <form phx-submit="perform-recommendations">
       <.table id="recommendations" rows={@rows} class="table-striped table-stack">
-        <:col :let={{_op, attendance_id, _member}} label="" class="stack-check">
+        <:col :let={{_op, attendance_id, _member}} label="" class="stack-check" select_all>
           <.input :if={attendance_id} type="checkbox" name={attendance_id} checked />
         </:col>
         <:col :let={{op, _, _}} label="" class="stack-full">

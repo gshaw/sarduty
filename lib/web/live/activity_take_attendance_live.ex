@@ -309,7 +309,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         row_id={&"change-#{&1.key}"}
         class="table-striped table-stack"
       >
-        <:col :let={change} label="" class="w-px stack-check">
+        <:col :let={change} label="" class="w-px stack-check" select_all>
           <input
             :if={SendAttendanceToD4H.sendable?(change)}
             type="checkbox"
