@@ -49,15 +49,20 @@ defmodule Web.Admin.OrganizationLive do
       <.input field={@form[:website]} label="Website" placeholder="https://" />
       <.input field={@form[:primary_hours_tag]} label="Primary hours tag" placeholder="Primary Hours">
         The D4H tag on activities that count as primary hours on its teams' tax credit letters.
-        Leave it blank for "Primary Hours".
+        Leave it blank to let each team name its own. A team that does not uses "Primary Hours".
       </.input>
       <.input
         field={@form[:secondary_hours_tag]}
         label="Secondary hours tag"
         placeholder="Secondary Hours"
       >
-        Leave it blank for "Secondary Hours". Letters already made keep their hours when a tag
-        changes. The letter list marks the ones whose hours changed.
+        Leave it blank to let each team name its own. A team that does not uses "Secondary Hours".
+        Letters already made keep their hours when a tag changes. The letter list marks the ones
+        whose hours changed.
+      </.input>
+      <.input field={@form[:other_hours_tag]} label="Other hours tag (optional)">
+        The D4H tag on activities that count for no hours, such as a social. Leave it blank to let
+        each team name its own.
       </.input>
 
       <div class="mb-6">

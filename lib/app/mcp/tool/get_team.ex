@@ -15,7 +15,8 @@ defmodule App.MCP.Tool.GetTeam do
   @impl App.MCP.Tool
   def description do
     "The team this token reads: its name, time zone, today's date there, the D4H tags " <>
-      "that count as primary and secondary hours on a tax credit letter, and when " <>
+      "that count as primary and secondary hours on a tax credit letter, the tag for " <>
+      "activities that count for no hours (null when the team has none), and when " <>
       "SAR Duty last copied its data from D4H. Every time in other tools is in this time zone."
   end
 
@@ -24,7 +25,8 @@ defmodule App.MCP.Tool.GetTeam do
 
   @impl App.MCP.Tool
   def fields,
-    do: ~w(name subdomain time_zone today primary_hours_tag secondary_hours_tag d4h_refreshed_at)
+    do:
+      ~w(name subdomain time_zone today primary_hours_tag secondary_hours_tag other_hours_tag d4h_refreshed_at)
 
   @impl App.MCP.Tool
   def call(%Team{} = team, _args, now),
@@ -39,6 +41,7 @@ defmodule App.MCP.Tool.GetTeam do
         now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date() |> Date.to_iso8601(),
       "primary_hours_tag" => hours_tags.primary,
       "secondary_hours_tag" => hours_tags.secondary,
+      "other_hours_tag" => hours_tags[:other],
       "d4h_refreshed_at" => team |> Team.d4h_updated_at() |> Output.datetime(team.timezone)
     }
   end

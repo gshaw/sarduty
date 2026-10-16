@@ -23,6 +23,9 @@ defmodule App.Model.Organization do
     # "Primary Hours" and "Secondary Hours"; see App.Model.Activity.hours_tags/1.
     field :primary_hours_tag, TrimmedString
     field :secondary_hours_tag, TrimmedString
+    # The tag on activities that count for no hours, such as a social (#323). Blank lets
+    # each team name its own.
+    field :other_hours_tag, TrimmedString
     has_many :teams, Team
     timestamps(type: :utc_datetime_usec)
   end
@@ -35,7 +38,8 @@ defmodule App.Model.Organization do
       :slug,
       :website,
       :primary_hours_tag,
-      :secondary_hours_tag
+      :secondary_hours_tag,
+      :other_hours_tag
     ])
     |> update_change(:slug, &String.downcase/1)
     |> validate_required([:name, :short_name, :slug])
@@ -46,18 +50,17 @@ defmodule App.Model.Organization do
     )
     |> validate_length(:primary_hours_tag, max: 100)
     |> validate_length(:secondary_hours_tag, max: 100)
+    |> validate_length(:other_hours_tag, max: 100)
     |> validate_different_hours_tags()
     |> validate_format(:website, ~r{^https://\S+$}, message: "Start the address with https://")
     |> unique_constraint(:slug)
   end
 
   defp validate_different_hours_tags(changeset) do
-    %{primary: primary, secondary: secondary} =
-      changeset |> apply_changes() |> Activity.hours_tags()
-
-    if String.downcase(primary) == String.downcase(secondary),
-      do: add_error(changeset, :secondary_hours_tag, "Use a different tag from primary hours."),
-      else: changeset
+    case changeset |> apply_changes() |> Activity.hours_tags() |> Activity.repeated_hours_tag() do
+      nil -> changeset
+      {kind, text} -> add_error(changeset, Activity.hours_tag_field(kind), text)
+    end
   end
 
   def get_all do
