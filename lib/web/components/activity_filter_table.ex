@@ -17,7 +17,7 @@ defmodule Web.Components.ActivityFilterTable do
 
   def activity_filter_table(assigns) do
     ~H"""
-    <.form for={@form} id="activity_filter_form" phx-change="change" class="filter-form">
+    <.filter_form for={@form} id="activity_filter_form">
       <.input field={@form[:q]} label="Search" />
       <.input
         label="Kind"
@@ -49,7 +49,7 @@ defmodule Web.Components.ActivityFilterTable do
         type="select"
         options={ActivityFilterViewModel.limits()}
       />
-    </.form>
+    </.filter_form>
 
     <div class="table-summary">
       <span class="table-summary-links">

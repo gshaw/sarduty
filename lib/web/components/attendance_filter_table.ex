@@ -22,7 +22,7 @@ defmodule Web.Components.AttendanceFilterTable do
       )
 
     ~H"""
-    <.form for={@form} id="attendance_filter_form" phx-change="change" class="filter-form">
+    <.filter_form for={@form} id="attendance_filter_form">
       <.input
         label="Year"
         field={@form[:when]}
@@ -47,7 +47,7 @@ defmodule Web.Components.AttendanceFilterTable do
         type="select"
         options={AttendanceFilterViewModel.limits()}
       />
-    </.form>
+    </.filter_form>
 
     <div class="table-summary">
       <span class="table-summary-links">

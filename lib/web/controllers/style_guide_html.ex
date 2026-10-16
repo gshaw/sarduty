@@ -67,6 +67,7 @@ defmodule Web.StyleGuideHTML do
          {:detail_list, "Detail list", "Key facts about one record."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
+         {:filter_form, "Filter form", "The filters above a list."},
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},
          {:map, "Map", "A dot per activity on a Mapbox map."},

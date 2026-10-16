@@ -108,18 +108,12 @@ defmodule Web.EquipmentCollectionLive do
       </div>
     </div>
 
-    <.form
-      for={@form}
-      id="equipment-filter"
-      phx-change="change"
-      phx-submit="change"
-      class="filter-form"
-    >
+    <.filter_form for={@form} id="equipment-filter">
       <.input field={@form[:q]} label="Search" placeholder="Name, barcode, or serial" />
       <.input field={@form[:place]} label="Place" type="select" options={@place_options} />
       <.input field={@form[:category]} label="Category" type="select" options={@category_options} />
       <.input field={@form[:show]} label="Show" type="select" options={EquipmentList.shows()} />
-    </.form>
+    </.filter_form>
 
     <div :if={@rows != []} class="hidden pointer-coarse:block measure mb-6">
       <.qr_scanner id="equipment-scanner" label="Scan a barcode" reader={:barcode} />

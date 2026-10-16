@@ -111,7 +111,7 @@ defmodule Web.Admin.EventCollectionLive do
     </.table>
 
     <h2 class="heading">Latest events</h2>
-    <.form for={@form} id="event_filter_form" phx-change="change" class="filter-form">
+    <.filter_form for={@form} id="event_filter_form">
       <.input label="Kind" field={@form[:kind]} type="select" options={EventFilterViewModel.kinds()} />
       <.input
         label="Team"
@@ -120,7 +120,7 @@ defmodule Web.Admin.EventCollectionLive do
         options={EventFilterViewModel.teams(@teams)}
       />
       <.input label="IP" field={@form[:ip]} phx-debounce="500" />
-    </.form>
+    </.filter_form>
     <.table id="events" rows={@events} row_id={&"event-#{&1.id}"} class="table-striped">
       <:col :let={event} label="When (UTC)" class="whitespace-nowrap">
         {Service.Format.month_day_time_seconds(event.occurred_at, "Etc/UTC")}
