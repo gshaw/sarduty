@@ -125,7 +125,7 @@ defmodule Web.ActivityTemplateLive do
   attr :id, :string, required: true
   attr :tags, :list, required: true
 
-  @doc "Tags about to be added, each with a remove button. Shared with the template form."
+  @doc "Tags about to be added, each with a remove button. Shared with the template form and ActivityTagsLive."
   def tags_to_add(assigns) do
     ~H"""
     <.table id={@id} rows={@tags} row_id={&"tag-#{&1.id}"} class="table-striped">

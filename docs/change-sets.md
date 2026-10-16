@@ -37,6 +37,9 @@ new kind of write is a new row action there, not a new call from a page or an op
   from the activity's "Add equipment" page, or removing one. A template's items and tags
   go the same way, with its tags as one `set_activity_tags` row (#162). It applies at
   once. See [equipment.md](equipment.md) and [templates.md](templates.md).
+- **An activity's tags are a set of one row** (source `tags`, #323): its hours choice
+  and other tags from its "Change tags" page, as one `set_activity_tags` row with the whole
+  list, applied at once.
 - **A template's groups are invited as a set** (source `template`, #162): one
   `create_attendance` row per member, with status `REQUESTED` rather than `ATTENDING`,
   applied at once.
@@ -44,8 +47,9 @@ new kind of write is a new row action there, not a new call from a page or an op
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H
   would count their hours twice. An equipment set reads the activity's usages instead,
-  and skips an item D4H has on it now. A tag row's list is read just before it is
-  planned. Group rows aren't checked; D4H treats a removed
+  and skips an item D4H has on it now. A template's tag row is read just before it
+  is planned. A `tags` set reads the activity's tags again and skips the row when they
+  changed since the page opened. Group rows aren't checked; D4H treats a removed
   membership as gone already.
 - **Each row records D4H's answer**: `applied` with the D4H record id (a create's new id),
   `failed` with D4H's error, or `skipped` with why. Writes don't retry. Applying the set

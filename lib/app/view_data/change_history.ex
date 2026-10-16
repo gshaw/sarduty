@@ -226,8 +226,17 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :delete_equipment_usage} = row, _page),
     do: "#{row.old_value["title"] || "An item"} removed from equipment"
 
-  def describe_row(%ChangeSetRow{action: :set_activity_tags} = row, _page),
-    do: "Tags added: #{Enum.join(row.new_value["titles"] || [], ", ")}"
+  def describe_row(%ChangeSetRow{action: :set_activity_tags} = row, _page) do
+    added = row.new_value["titles"] || []
+    removed = row.new_value["removed_titles"] || []
+
+    [
+      if(added != [], do: "Tags added: #{Enum.join(added, ", ")}"),
+      if(removed != [], do: "Tags removed: #{Enum.join(removed, ", ")}")
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(". ")
+  end
 
   def describe_row(%ChangeSetRow{action: :create_member}, _page), do: "Added in SAR Duty"
 
@@ -290,6 +299,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:member), do: "the member"
   def source_label(:equipment), do: "equipment"
   def source_label(:template), do: "template"
+  def source_label(:tags), do: "tags"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

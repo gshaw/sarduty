@@ -85,4 +85,11 @@ defmodule App.Operation.ApplyChangeSetTest do
 
     assert callers == []
   end
+
+  test "a tags row goes only when D4H has the tags the page opened with" do
+    row = %ChangeSetRow{action: :set_activity_tags, old_value: %{"tag_ids" => [1, 2]}}
+
+    assert ApplyChangeSet.check(row, {:tags, [1, 2]}) == :ok
+    assert {:skipped, _text} = ApplyChangeSet.check(row, {:tags, [1, 2, 3]})
+  end
 end

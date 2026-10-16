@@ -253,7 +253,8 @@ defmodule Web.TemplateFormLive do
   attr :q, :string, required: true
   attr :results, :map, required: true, doc: "from tag_results/4"
 
-  defp tag_search(assigns) do
+  @doc "A search box for the team's tags, with an add button for each. Shared with ActivityTagsLive."
+  def tag_search(assigns) do
     ~H"""
     <.form for={%{}} id="tag-search-form" phx-change="search-tags" phx-submit="search-tags">
       <.input
@@ -331,7 +332,7 @@ defmodule Web.TemplateFormLive do
 
   defp a_year_ago, do: DateTime.add(DateTime.utc_now(), -365, :day)
 
-  defp tag_sort(tag), do: String.downcase(tag.title)
+  def tag_sort(tag), do: String.downcase(tag.title)
 
   defp save_template(
          %{current_team: team, template: template, tags: tags, groups: groups},
