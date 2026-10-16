@@ -12,7 +12,7 @@ defmodule Web.Components.GroupRule do
   use Phoenix.Component
 
   import Web.Components.A, only: [a: 1]
-  import Web.Components.Core, only: [button: 1]
+  import Web.Components.Core, only: [button: 1, combobox: 1]
   import Web.Components.Table, only: [table: 1]
 
   attr :rows, :list, required: true
@@ -48,10 +48,13 @@ defmodule Web.Components.GroupRule do
         <option value="in">In</option>
         <option value="not_in">Not in</option>
       </select>
-      <select name="target" class="input-sm max-w-xs" aria-label="Group or endorsement">
-        <option value="">Select a group or endorsement</option>
-        {Phoenix.HTML.Form.options_for_select(@options, nil)}
-      </select>
+      <.combobox
+        id="rule-target"
+        name="target"
+        size={:sm}
+        options={@options}
+        aria-label="Group or endorsement"
+      />
       <.button size={:sm} data-confirm={@add_confirm}>Add rule</.button>
       <.a navigate={@new_path}>New endorsement</.a>
     </form>

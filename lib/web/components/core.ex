@@ -262,6 +262,9 @@ defmodule Web.Components.Core do
 
     * You may also set `type="select"` to render a `<select>` tag
 
+    * `type="combobox"` is a select you type into, for a list that can run past about 15
+      options. See `combobox/1`
+
     * `type="checkbox"` is used exclusively to render boolean values
 
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
@@ -281,7 +284,7 @@ defmodule Web.Components.Core do
 
   attr :type, :string,
     default: "text",
-    values: ~w(checkbox color date datetime-local email file hidden month number password
+    values: ~w(checkbox color combobox date datetime-local email file hidden month number password
                range radio search select tel text textarea time url week)
 
   attr :field, Phoenix.HTML.FormField,
@@ -359,6 +362,25 @@ defmodule Web.Components.Core do
     """
   end
 
+  def input(%{type: "combobox"} = assigns) do
+    ~H"""
+    <div class={["mb-6", @errors != [] && "field-error"]}>
+      <.label :if={@label != nil} for={@id}>{@label}</.label>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <.combobox
+        id={@id}
+        name={@name}
+        value={@value}
+        options={@options}
+        prompt={@prompt}
+        class={[@errors != [] && "is-invalid", @class]}
+        {@rest}
+      />
+    </div>
+    """
+  end
+
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div class={["mb-6", @errors != [] && "field-error"]}>
@@ -390,6 +412,69 @@ defmodule Web.Components.Core do
         class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       />
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a select you type into (#324): a text box that lists the options containing every
+  word typed. The hidden `<select>` is what the form submits, so the event and its params
+  are the same as for a select. `options` take `options_for_select/2`'s shape, so
+  `{group, [{name, value}]}` lists the options under a heading per group. `<.input
+  type="combobox">` adds the label; use this one where the field has an aria-label
+  instead. `size={:sm}` is for a row of small controls. See /styles/combobox.
+
+  ## Examples
+
+      <.input type="combobox" name="group_id" id="group-id" label="Group" prompt="Select a group"
+        options={@options} value="" />
+
+      <.combobox id="target" name="target" size={:sm} options={@options}
+        aria-label="Group or endorsement" />
+  """
+  attr :id, :string, required: true, doc: "the text box's id, for its label"
+  attr :name, :string, required: true
+  attr :value, :any, default: nil
+  attr :options, :list, required: true
+
+  attr :prompt, :string,
+    default: nil,
+    doc: "the select's empty option, sent when nothing is picked"
+
+  attr :placeholder, :string, default: "Type part of the name"
+  attr :size, :atom, values: [:md, :sm], default: :md
+  attr :class, :any, default: nil, doc: "on the wrapper; is-invalid marks the text box"
+  attr :rest, :global, include: ~w(disabled)
+
+  def combobox(assigns) do
+    ~H"""
+    <div
+      id={"#{@id}-combobox"}
+      class={["combobox", @size == :sm && "input-sm", @class]}
+      phx-hook="Combobox"
+    >
+      <select id={"#{@id}-select"} name={@name} class="hidden" tabindex="-1" aria-hidden="true">
+        <option value="">{@prompt}</option>
+        {Phoenix.HTML.Form.options_for_select(@options, @value)}
+      </select>
+      <div id={"#{@id}-ui"} phx-update="ignore">
+        <div class="combobox-input">
+          <input
+            type="text"
+            id={@id}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls={"#{@id}-listbox"}
+            autocomplete="off"
+            placeholder={@placeholder}
+            class={@size == :sm && "input-sm"}
+            {@rest}
+          />
+          <.icon name="hero-chevron-down-mini" class="combobox-chevron" />
+        </div>
+        <ul id={"#{@id}-listbox"} role="listbox" class="combobox-list" hidden></ul>
+      </div>
     </div>
     """
   end

@@ -62,6 +62,7 @@ defmodule Web.StyleGuideHTML do
          {:callout, "Callout", "Advice set apart beside a form field."},
          {:card, "Card", "A box for one topic: on a dashboard, or under a result."},
          {:chart, "Chart", "Columns, lines, a calendar, a week grid, and a bar list."},
+         {:combobox, "Combobox", "A select you type into, for a long list."},
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
          {:copy_button, "Copy button", "Copies the value before it."},
          {:detail_list, "Detail list", "Key facts about one record."},
@@ -330,6 +331,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate rule_sentence_rules(), to: SampleData
   defdelegate rule_rows(), to: SampleData
   defdelegate rule_options(), to: SampleData
+  defdelegate qualification_options(), to: SampleData
   defdelegate settings_form(), to: SampleData
 
   def rule_preview do

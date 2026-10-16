@@ -1,0 +1,70 @@
+<.shell title="Combobox" current={:combobox}>
+  <h1>Combobox</h1>
+  <p class="lead">A select you type into, for a long list.</p>
+
+  <div class="demo">
+    <form class="measure" onsubmit="return false">
+      <.input
+        type="combobox"
+        id="combobox-demo"
+        name="qualification-id"
+        label="Add a qualification"
+        value=""
+        options={qualification_options()}
+      />
+      <.button type="button">Add qualification</.button>
+    </form>
+  </div>
+
+  <h3>Small, with groups</h3>
+  <div class="demo">
+    <form class="flex flex-wrap items-center gap-2" onsubmit="return false">
+      <select class="input-sm" aria-label="In or Not in">
+        <option>In</option>
+        <option>Not in</option>
+      </select>
+      <.combobox
+        id="combobox-demo-sm"
+        name="target"
+        size={:sm}
+        options={rule_options()}
+        aria-label="Group or endorsement"
+      />
+      <.button type="button" size={:sm}>Add rule</.button>
+    </form>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A list that can run past about 15 options, such as a team's qualifications, groups, or endorsements.
+  </p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>A short, fixed list, such as a year, a status, or a sort. Use a select.</li>
+    <li>
+      A list too big to send with the page, such as equipment or members. Search on the server and show the matches in a
+      <a href={page_path(:table)}>table</a>
+      with an Add button on each row.
+    </li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Typing lists the options with every word typed, in any order, and underlines them.</li>
+    <li>Clicking the box, or the down arrow, lists every option.</li>
+    <li>The arrow keys move through the list. Enter picks one, and Escape closes the list.</li>
+    <li>Text left without a pick is cleared, so the form never sends a guess.</li>
+    <li>Groups of options show under a heading each.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.input type="combobox" options=&#123;…&#125; label="…" /&gt;</code>
+    takes the same options as a select, and the form gets the same params. A hidden select holds the value, so a test fills it in as a select.
+  </p>
+  <p>
+    <code>&lt;.combobox size=&#123;:sm&#125; aria-label="…" /&gt;</code>
+    in a row of small controls with no label.
+  </p>
+</.shell>

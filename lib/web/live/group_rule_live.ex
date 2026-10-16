@@ -131,7 +131,7 @@ defmodule Web.GroupRuleLive do
 
       <form :if={@options != []} id="add-reference-form" phx-submit="add" class="mt-4">
         <.input
-          type="select"
+          type="combobox"
           name="target"
           id="target"
           label="Add a group or endorsement"

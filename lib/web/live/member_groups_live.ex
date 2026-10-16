@@ -102,7 +102,7 @@ defmodule Web.MemberGroupsLive do
           <.input
             name="group_id"
             id="add-group-id"
-            type="select"
+            type="combobox"
             label="Group"
             value=""
             prompt="Select a group"

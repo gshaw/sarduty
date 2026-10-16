@@ -167,7 +167,7 @@ defmodule Web.MemberQualificationsLive do
         <.error_summary form={@form} />
         <.input
           field={@form[:qualification_id]}
-          type="select"
+          type="combobox"
           label="Qualification"
           prompt="Select a qualification"
           options={@qualifications}
