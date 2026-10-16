@@ -49,9 +49,7 @@ too. The confirmation names the groups.
 
 The migration made each endorsement in a group's rule `In: <endorsement>`, and each group
 a group started from `In: <parent>`, first. A parent with no rule anywhere up its chain
-added nothing before but would count its D4H list as an In rule, so it was dropped
-([PlanGroupRules](../lib/app/operation/plan_group_rules.ex)). `group_endorsements` and
-`group_parents` stay one release, then go with that module.
+added nothing before but would count its D4H list as an In rule, so it was dropped.
 
 ## Endorsements
 
