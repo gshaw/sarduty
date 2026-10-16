@@ -136,6 +136,39 @@ defmodule Web.StyleGuideHTML.SampleData do
     ]
   end
 
+  # Enough qualifications that scrolling a select to find one is slow, as on a real team.
+  def qualification_options do
+    Enum.with_index(
+      [
+        "07+ Hour First Aid Training or Equivalent",
+        "16+ Hour First Aid Training or Equivalent",
+        "70+ Hour First Aid Training or Equivalent",
+        "Avalanche Skills Training 1",
+        "Avalanche Skills Training 2",
+        "Chainsaw Bucking Operations",
+        "Criminal Record Check",
+        "Driver Truck",
+        "Driver UTV",
+        "First Aid Instructor",
+        "Ground Search Team Leader (GSTL)",
+        "Ground Search and Rescue (GSAR)",
+        "Ham Radio",
+        "ICS 100",
+        "ICS 200",
+        "Mountain Rescue 1",
+        "Occupational First Aid Level 1",
+        "Occupational First Aid Level 2",
+        "Occupational First Aid Level 3",
+        "Remote First Aid",
+        "Rope Rescue Operations",
+        "Rope Rescue Technician",
+        "Swiftwater Rescue Technician",
+        "Wilderness First Responder"
+      ],
+      1
+    )
+  end
+
   def rule_options,
     do: [
       {"Groups", [{"Rope Rescue", "group:3"}, {"Swiftwater Team", "group:4"}]},

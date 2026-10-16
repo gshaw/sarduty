@@ -1,0 +1,46 @@
+/* A combobox: a select you type into to find an option in a long list (#324). The real
+   select stays in the form, hidden; the Combobox hook draws the text box and the list of
+   matches. See /styles/combobox. */
+@layer components {
+  .combobox { position: relative; }
+  .combobox.input-sm { width: 20rem; max-width: 100%; }
+  .combobox.is-invalid input { border-color: var(--danger-text); }
+  .combobox-input { position: relative; }
+  .combobox-input input { padding-right: var(--sp-8); }
+  .combobox-input input.input-sm { width: 100%; }
+  .combobox-chevron {
+    position: absolute;
+    right: var(--sp-2);
+    top: 50%;
+    translate: 0 -50%;
+    pointer-events: none;
+  }
+
+  .combobox-list {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    top: 100%;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: var(--border-width) solid var(--text);
+    border-top: 0;
+    box-shadow: 0 8px 16px rgb(0 0 0 / 0.15);
+  }
+  .combobox-list > li { padding: var(--sp-2) var(--sp-3); }
+  .combobox-option { cursor: pointer; border-bottom: 1px solid var(--border-subtle); }
+  .combobox-option:last-child { border-bottom: 0; }
+  .combobox-option[aria-selected="true"] { background: var(--primary); color: var(--on-fill); }
+  .combobox-option mark {
+    background: none;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .combobox-list > .combobox-group { padding-block: var(--sp-1); background: var(--surface-alt); }
+  .combobox-empty { color: var(--text-muted); }
+  .combobox.input-sm .combobox-list > li { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+}

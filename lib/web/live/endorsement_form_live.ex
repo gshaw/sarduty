@@ -260,7 +260,7 @@ defmodule Web.EndorsementFormLive do
 
         <form id="add-qualification-form" phx-submit="add-qualification" class="mt-4">
           <.input
-            type="select"
+            type="combobox"
             name="qualification-id"
             id="qualification-id"
             label="Add a qualification"
@@ -307,7 +307,7 @@ defmodule Web.EndorsementFormLive do
           class="mt-4"
         >
           <.input
-            type="select"
+            type="combobox"
             name="endorsement-id"
             id="include-endorsement-id"
             label="Add an endorsement"

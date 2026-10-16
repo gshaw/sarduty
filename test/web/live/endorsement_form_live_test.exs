@@ -65,6 +65,26 @@ defmodule Web.EndorsementFormLiveTest do
              )
   end
 
+  test "a qualification is picked from a combobox, and the form sends it as a select", %{
+    conn: conn,
+    team: team
+  } do
+    endorsement = endorsement_fixture(team)
+    qualification = qualification_fixture(team)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements/#{endorsement.id}")
+
+    assert has_element?(lv, "#qualification-id[role=combobox]")
+    assert has_element?(lv, "#qualification-id-select option[value='#{qualification.id}']")
+
+    lv
+    |> form("#add-qualification-form", %{"qualification-id" => qualification.id})
+    |> render_submit()
+
+    saved = Endorsement.get!(team.id, endorsement.id)
+    assert Endorsement.qualification_ids(saved) == [qualification.d4h_qualification_id]
+    refute has_element?(lv, "#qualification-id-select option[value='#{qualification.id}']")
+  end
+
   test "includes another endorsement, never one that makes a loop", %{conn: conn, team: team} do
     seven = endorsement_fixture(team, %{name: "First Aid 7"})
     seventy = endorsement_fixture(team, %{name: "First Aid 70"})
