@@ -37,4 +37,34 @@ defmodule Web.MemberCollectionLiveTest do
     refute has_element?(lv, "#missing-#{departed.id}")
     refute has_element?(lv, "#missing-#{other_team.id}")
   end
+
+  test "the Group filter lists the group's members only", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    rope = group_fixture(team, %{title: "Rope rescue"})
+    in_rope = member_fixture(team, %{name: "Avery Rope"})
+    member_fixture(team, %{name: "Blake Ground"})
+    group_member_fixture(rope, in_rope)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    lv |> form("#member_filter_form", form: %{group: rope.id}) |> render_change()
+
+    assert has_element?(lv, "#member_collection", "Avery Rope")
+    refute has_element?(lv, "#member_collection", "Blake Ground")
+    assert has_element?(lv, ".filter-bar-chips a", "Rope rescue")
+  end
+
+  test "another team's group finds no one", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    other_team = team_fixture()
+    other_group = group_fixture(other_team)
+    group_member_fixture(other_group, member_fixture(other_team, %{name: "Other Member"}))
+    member_fixture(team, %{name: "Our Member"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?group=#{other_group.id}")
+
+    refute has_element?(lv, "#member_collection", "Our Member")
+    refute has_element?(lv, "#member_collection", "Other Member")
+  end
 end

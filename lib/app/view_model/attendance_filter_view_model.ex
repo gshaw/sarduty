@@ -3,16 +3,17 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   import Ecto.Query
 
+  alias App.Field
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Repo
 
   @primary_key false
   embedded_schema do
+    field :q, Field.TrimmedString
     field :when, :string
     field :tag, :string
     field :page, :integer
-    field :limit, :integer
     field :sort, :string
   end
 
@@ -36,8 +37,6 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
       "ID ↓" => "id-",
       "ID ↑" => "id"
     }
-
-  def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   defp build_member_year_options(member) do
     current = current_year()
@@ -71,16 +70,18 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   def build_paginated_content(member, filter_options) do
     Attendance
     |> Attendance.scope(member_id: member.id)
+    |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
     |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
     |> scope(sort: filter_options.sort)
     |> preload(:activity)
-    |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
+    |> Repo.paginate(page: filter_options.page)
   end
 
   def total_duration(member, filter_options) do
     Attendance
     |> Attendance.scope(member_id: member.id)
+    |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
     |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
     |> select([r], coalesce(sum(r.duration_in_minutes), 0))
@@ -91,8 +92,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     %__MODULE__{
       when: current_year(),
       tag: "all",
-      sort: "date-",
-      limit: 50
+      sort: "date-"
     }
   end
 
@@ -100,14 +100,27 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:when, :tag, :page, :limit, :sort])
+    |> cast(params, [:q, :when, :tag, :page, :sort])
+    |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:tag, Enum.map(tag_kinds(), fn {_, v} -> v end))
     |> validate_format(:when, ~r/\A(all|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
-    |> validate_number(:limit,
-      greater_than_or_equal_to: 1,
-      less_than_or_equal_to: Enum.max(limits())
-    )
+    |> validate_number(:page, greater_than_or_equal_to: 1)
+  end
+
+  defp scope(q, q: nil), do: q
+  defp scope(q, q: ""), do: q
+
+  # The member's activities whose title, number, or tracking number has the text (#350).
+  defp scope(q, q: search) do
+    activities =
+      from a in Activity,
+        where:
+          like(a.title, ^"%#{search}%") or like(a.ref_id, ^"%#{search}%") or
+            like(a.tracking_number, ^"%#{search}%"),
+        select: a.id
+
+    where(q, [at], at.activity_id in subquery(activities))
   end
 
   defp scope(q, when: "all", timezone: _), do: q

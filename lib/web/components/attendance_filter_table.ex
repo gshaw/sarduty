@@ -3,6 +3,7 @@ defmodule Web.Components.AttendanceFilterTable do
 
   import Web.Components.A
   import Web.Components.D4H
+  import Web.Components.FilterBar
   import Web.Components.Pagination
   import Web.Components.Table
 
@@ -22,41 +23,32 @@ defmodule Web.Components.AttendanceFilterTable do
       )
 
     ~H"""
-    <.filter_form for={@form} id="attendance_filter_form">
-      <.input
-        label="Year"
+    <.filter_bar
+      for={@form}
+      id="attendance_filter_form"
+      count={
+        Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")
+      }
+      total={"#{@total_formatted} total"}
+      clear={@path_fn.(:reset)}
+      path_fn={@path_fn}
+      page={@paginated}
+      hidden={[@form[:sort]]}
+    >
+      <:search field={@form[:q]} />
+      <:filter
         field={@form[:when]}
-        type="select"
+        label="Year"
         options={AttendanceFilterViewModel.when_kinds(@member)}
+        default={AttendanceFilterViewModel.current_year()}
       />
-      <.input
-        label="Tagged"
+      <:filter
         field={@form[:tag]}
-        type="select"
+        label="Hours tag"
         options={AttendanceFilterViewModel.tag_kinds()}
+        default="all"
       />
-      <.input
-        label="Sort"
-        field={@form[:sort]}
-        type="select"
-        options={AttendanceFilterViewModel.sort_kinds()}
-      />
-      <.input
-        label="Limit"
-        field={@form[:limit]}
-        type="select"
-        options={AttendanceFilterViewModel.limits()}
-      />
-    </.filter_form>
-
-    <div class="table-summary">
-      <span class="table-summary-links">
-        <.a navigate={@path_fn.(:reset)}>Reset filters</.a>
-      </span>
-      <span class="table-summary-count">
-        {Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")} · {@total_formatted} total
-      </span>
-    </div>
+    </.filter_bar>
 
     <.table
       :if={Enum.any?(@paginated.entries)}
@@ -99,6 +91,14 @@ defmodule Web.Components.AttendanceFilterTable do
         {Service.Format.duration(record.duration_in_minutes)}
       </:col>
     </.table>
+
+    <.empty_state
+      :if={@paginated.entries == []}
+      id="no-attendance"
+      title="No activities match"
+    >
+      Change the search, the year, or the hours tag.
+    </.empty_state>
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """

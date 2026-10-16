@@ -1,6 +1,8 @@
 defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FilterBar
+
   alias App.Operation.CreateTaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.EmailTaxCreditLetter
@@ -51,28 +53,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
         )} for {@sending.year}. This page updates when they are done.
       </p>
     </.banner>
-    <.filter_form for={@form} id="tax_credit_letter_filter_form">
-      <.input
-        label="Year"
-        field={@form[:year]}
-        type="select"
-        options={TaxCreditLetterFilterViewModel.years(@current_team)}
-      />
-      <.input field={@form[:q]} label="Search" />
-      <.input
-        label="Sort"
-        field={@form[:sort]}
-        type="select"
-        options={TaxCreditLetterFilterViewModel.sort_kinds()}
-      />
-      <.input
-        label="Hours"
-        field={@form[:filter]}
-        type="select"
-        options={TaxCreditLetterFilterViewModel.filters()}
-      />
-    </.filter_form>
-
     <.send_all
       :if={!@sending && @to_send != []}
       count={length(@to_send)}
@@ -80,14 +60,28 @@ defmodule Web.TaxCreditLetterCollectionLive do
       team={@current_team}
     />
 
-    <div class="table-summary">
-      <span class="table-summary-links">
-        <.a navigate={@path_fn.(:reset)}>Reset filters</.a>
-      </span>
-      <span class="table-summary-count">
-        {Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
-      </span>
-    </div>
+    <.filter_bar
+      for={@form}
+      id="tax_credit_letter_filter_form"
+      count={Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
+      clear={@path_fn.(:reset)}
+      path_fn={@path_fn}
+      hidden={[@form[:sort]]}
+    >
+      <:search field={@form[:q]} />
+      <:filter
+        field={@form[:year]}
+        label="Year"
+        options={TaxCreditLetterFilterViewModel.years(@current_team)}
+        default={Integer.to_string(TaxCreditLetterFilterViewModel.default_year())}
+      />
+      <:filter
+        field={@form[:filter]}
+        label="Hours"
+        options={TaxCreditLetterFilterViewModel.filters()}
+        default="any"
+      />
+    </.filter_bar>
 
     <.table
       id="member_collection"

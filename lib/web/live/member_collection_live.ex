@@ -1,6 +1,8 @@
 defmodule Web.MemberCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FilterBar
+
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.ViewModel.MemberFilterViewModel
@@ -43,48 +45,42 @@ defmodule Web.MemberCollectionLive do
         Add member
       </.button>
     </div>
-    <.filter_form for={@form} id="member_filter_form">
-      <.input field={@form[:q]} label="Search" />
-      <.input
-        label="Year"
-        field={@form[:when]}
-        type="select"
-        options={MemberFilterViewModel.when_kinds(@current_team)}
-      />
-      <.input
-        label="Status"
+    <.filter_bar
+      for={@form}
+      id="member_filter_form"
+      count={Service.Format.count(@paginated.total_entries, one: "%d member", many: "%d members")}
+      clear={@path_fn.(:reset)}
+      path_fn={@path_fn}
+      page={@paginated}
+      hidden={[@form[:sort]]}
+    >
+      <:search field={@form[:q]} />
+      <:filter
         field={@form[:status]}
-        type="select"
+        label="Status"
         options={MemberFilterViewModel.status_kinds()}
+        default="active"
       />
-      <.input
-        label="Details"
+      <:filter
+        field={@form[:when]}
+        label="Year"
+        options={MemberFilterViewModel.when_kinds(@current_team)}
+        default={MemberFilterViewModel.current_year()}
+      />
+      <:filter
+        field={@form[:group]}
+        label="Group"
+        type="combobox"
+        options={MemberFilterViewModel.group_kinds(@current_team)}
+        default=""
+      />
+      <:filter
         field={@form[:details]}
-        type="select"
+        label="Details"
         options={MemberFilterViewModel.details_kinds()}
+        default="all"
       />
-      <.input
-        label="Sort"
-        field={@form[:sort]}
-        type="select"
-        options={MemberFilterViewModel.sort_kinds()}
-      />
-      <.input
-        label="Limit"
-        field={@form[:limit]}
-        type="select"
-        options={MemberFilterViewModel.limits()}
-      />
-    </.filter_form>
-
-    <div class="table-summary">
-      <span class="table-summary-links">
-        <.a navigate={@path_fn.(:reset)}>Reset filters</.a>
-      </span>
-      <span class="table-summary-count">
-        {Service.Format.count(@paginated.total_entries, one: "%d member", many: "%d members")}
-      </span>
-    </div>
+    </.filter_bar>
 
     <.table
       id="member_collection"
