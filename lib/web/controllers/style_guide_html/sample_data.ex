@@ -114,20 +114,33 @@ defmodule Web.StyleGuideHTML.SampleData do
     ]
   end
 
-  # The group rule editor's rows and menu, in the shape Web.Components.GroupRule takes.
+  # A group's rules, its editor's rows, and its menu, in the shapes
+  # Web.Components.GroupRule takes.
+  def rule_sentence_rules do
+    [
+      %{kind: :in, names: [{:group, "GSAR Qualified Callout"}, {:group, "MIT Callout"}]},
+      %{kind: :not_in, names: [{:group, "LOA"}]}
+    ]
+  end
+
   def rule_rows do
     [
       %{
         id: 1,
-        name: "First Aid",
+        kind: :in,
+        names: "GSAR Qualified Callout or MIT Callout",
         path: "#",
-        qualifications: "OFA Level 1, Wilderness First Aid, EMR"
+        confirm: nil
       },
-      %{id: 2, name: "Ground Search", path: "#", qualifications: "GSAR Member"}
+      %{id: 2, kind: :not_in, names: "LOA", path: "#", confirm: nil}
     ]
   end
 
-  def rule_options, do: [{"Rope Rescue", 3}, {"Swiftwater", 4}]
+  def rule_options,
+    do: [
+      {"Groups", [{"Rope Rescue", "group:3"}, {"Swiftwater Team", "group:4"}]},
+      {"Endorsements", [{"First Aid", "endorsement:1"}, {"Swiftwater 1", "endorsement:2"}]}
+    ]
 
   # Team settings after a failed save: the app's own changeset, with a blank name and an
   # email that isn't one.

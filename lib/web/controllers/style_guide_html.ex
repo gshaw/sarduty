@@ -326,6 +326,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate letters(), to: SampleData
   defdelegate sample_page(), to: SampleData
   defdelegate recommendations(), to: SampleData
+  defdelegate rule_sentence_rules(), to: SampleData
   defdelegate rule_rows(), to: SampleData
   defdelegate rule_options(), to: SampleData
   defdelegate settings_form(), to: SampleData

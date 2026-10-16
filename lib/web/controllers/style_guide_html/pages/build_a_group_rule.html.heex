@@ -5,24 +5,32 @@
   </p>
 
   <div class="example measure">
+    <p class="card">{rule_sentence(rule_sentence_rules())}</p>
     <.rule_editor rows={rule_rows()} options={rule_options()} new_path="#" />
   </div>
 
   <h2>How it works</h2>
   <ul>
     <li>
-      A rule is a <a href={page_path(:table)}>table</a>
-      of endorsements. A member must hold every one to be in the group.
+      The rules are a <a href={page_path(:table)}>table</a>. A member must meet every one to be in the
+      group.
     </li>
     <li>
-      Each endorsement links to its own page, where its qualifications change. A change there
-      changes every group that uses it.
+      An In rule is met by being in any of its groups or holding any of its endorsements. A Not in
+      rule is met by none of them.
     </li>
-    <li>The menu adds an endorsement the team already has. New endorsement makes one.</li>
+    <li>
+      Above the editor, the rules read as one sentence, with every group and endorsement in bold.
+    </li>
+    <li>
+      Each rule links to its own page, where its groups and endorsements change. The menu adds a
+      rule with one. New endorsement makes an endorsement and adds it as an In rule.
+    </li>
     <li>Done closes the editor. Members change only after you review and send the changes.</li>
   </ul>
   <p class="spec">
     <code>&lt;.rule_editor rows=&#123;…&#125; options=&#123;…&#125; new_path=&#123;…&#125; /&gt;</code>
-    from <code>Web.Components.GroupRule</code>, as on a group's page, with made-up endorsements.
+    and <code>rule_sentence/1</code>
+    from <code>Web.Components.GroupRule</code>, as on a group's page, with made-up groups.
   </p>
 </.shell>

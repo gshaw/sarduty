@@ -6,7 +6,7 @@ defmodule Web.EndorsementCollectionLive do
   alias App.Worker.PushPassUpdatesWorker
   alias Service.Format
 
-  # Endorsements: a name and the qualifications that earn it. Group rules require them,
+  # Endorsements: a name and the qualifications that earn it. Group rules name them,
   # and a team with ID cards picks which ones its cards list (#320).
   def mount(_params, _session, socket) do
     {:ok, socket |> assign(page_title: "Endorsements") |> assign_rows()}
@@ -62,9 +62,7 @@ defmodule Web.EndorsementCollectionLive do
 
     <p class="lead">
       An endorsement is a name and the qualifications that earn it. A member with any one of
-      them has the endorsement. Group rules require endorsements<span :if={
-        @current_team.id_cards_enabled
-      }>, and ID cards list the ones you select</span>.
+      them has the endorsement. Group rules use endorsements<span :if={@current_team.id_cards_enabled}>, and ID cards list the ones you select</span>.
     </p>
 
     <.empty_state :if={@rows == []} id="no-endorsements" title="No endorsements yet">

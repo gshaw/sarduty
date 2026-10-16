@@ -32,6 +32,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/groups/:id",
     "/teams/:subdomain/groups/:id/edit",
     "/teams/:subdomain/groups/:id/review",
+    "/teams/:subdomain/groups/:id/rules/:rule_id",
     "/teams/:subdomain/proposed-changes/:id",
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/qualifications/:id/edit",
@@ -45,15 +46,18 @@ defmodule Web.TeamScopingTest do
     %{user: user, team: team} = user_with_team_fixture()
     other_team = team_fixture()
     member = member_fixture(other_team)
+    group = group_fixture(other_team)
+    endorsement = endorsement_fixture(other_team)
 
     other = %{
       activity: activity_fixture(other_team),
       member: member,
-      group: group_fixture(other_team),
+      group: group,
+      rule: group_rule_fixture(group, endorsement),
       qualification: qualification_fixture(other_team),
       item: equipment_item_fixture(other_team),
       template: template_fixture(other_team),
-      endorsement: endorsement_fixture(other_team),
+      endorsement: endorsement,
       letter: tax_credit_letter_fixture(member),
       change_set:
         ChangeSet.propose!(
@@ -85,6 +89,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/members/:id/edit", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/edit"
+
+  defp path_for("/teams/:subdomain/groups/:id/rules/:rule_id", s, o),
+    do: ~p"/teams/#{s}/groups/#{o.group.id}/rules/#{o.rule.id}"
 
   defp path_for("/teams/:subdomain/groups/:id/edit", s, o),
     do: ~p"/teams/#{s}/groups/#{o.group.id}/edit"

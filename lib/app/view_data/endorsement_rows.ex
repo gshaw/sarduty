@@ -1,14 +1,14 @@
 defmodule App.ViewData.EndorsementRows do
   alias App.Model.Endorsement
   alias App.Model.Group
-  alias App.Model.GroupEndorsement
+  alias App.Model.GroupRule
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Operation.BuildCardQualifications
 
   # The endorsements page: one row per endorsement, with what earns it, how many current
-  # members hold it, and the groups whose rules require it. Each row also carries what a
+  # members hold it, and the groups whose rules name it. Each row also carries what a
   # manager should fix: `missing` counts qualifications D4H no longer has, and `same_as`
   # lists endorsements with exactly the same qualifications, counting what includes add.
   # `hidden_by` lists the on-card endorsements that stand for this one on a card that has
@@ -25,16 +25,22 @@ defmodule App.ViewData.EndorsementRows do
     )
   end
 
-  @doc "Each endorsement id with the groups whose rules require it. A deleted group drops out."
+  @doc "Each endorsement id with the groups whose rules name it. A deleted group drops out."
   def groups_by_endorsement(team_id) do
     groups = team_id |> Group.get_all() |> Map.new(&{&1.d4h_group_id, &1})
 
     team_id
-    |> GroupEndorsement.d4h_group_ids_by_endorsement()
-    |> Map.new(fn {id, d4h_ids} ->
-      {id, d4h_ids |> Enum.map(&groups[&1]) |> Enum.reject(&is_nil/1) |> Enum.sort_by(& &1.title)}
-    end)
+    |> GroupRule.get_all()
+    |> Enum.flat_map(&endorsement_groups(&1, groups[&1.d4h_group_id]))
+    |> Enum.uniq()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {id, groups} -> {id, Enum.sort_by(groups, & &1.title)} end)
   end
+
+  defp endorsement_groups(_rule, nil), do: []
+
+  defp endorsement_groups(rule, group),
+    do: for({:endorsement, id} <- GroupRule.targets(rule), do: {id, group})
 
   @doc """
   Pure. `groups` is each endorsement id's groups, `titles` is keyed by D4H id, and

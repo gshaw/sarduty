@@ -23,7 +23,7 @@ defmodule App.Operation.ApplyGroupRuleChanges do
       is_nil(team.d4h_access_key) ->
         {:error, :no_team_key}
 
-      preview.missing_qualification_ids != [] ->
+      preview.problems != [] ->
         {:error, :rules_broken}
 
       true ->

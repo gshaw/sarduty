@@ -5,8 +5,8 @@ defmodule Web.GroupCollectionLive do
 
   alias App.Adapter.D4H
   alias App.Model.Group
-  alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
+  alias App.Model.GroupRule
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
 
@@ -91,9 +91,11 @@ defmodule Web.GroupCollectionLive do
   defp list_groups_with_counts(team) do
     ruled_group_ids =
       team.id
-      |> GroupEndorsement.ruled_d4h_group_ids_query()
+      |> GroupRule.ruled_d4h_group_ids_query()
       |> Repo.all()
       |> MapSet.new()
+
+    context = BuildGroupRulePreview.load(team)
 
     Group
     |> where([g], g.team_id == ^team.id)
@@ -105,17 +107,17 @@ defmodule Web.GroupCollectionLive do
     |> Enum.map(fn row ->
       rules =
         if MapSet.member?(ruled_group_ids, row.group.d4h_group_id),
-          do: pending_changes(team, row.group)
+          do: pending_changes(context, team, row.group)
 
       Map.put(row, :rules, rules)
     end)
   end
 
   # :broken, or how many adds and removes the rules would make now.
-  defp pending_changes(team, group) do
-    preview = BuildGroupRulePreview.for_group(team, group)
+  defp pending_changes(context, team, group) do
+    preview = BuildGroupRulePreview.preview(context, team, group)
 
-    if preview.missing_qualification_ids == [],
+    if preview.problems == [],
       do: length(preview.to_add) + length(preview.to_remove),
       else: :broken
   end

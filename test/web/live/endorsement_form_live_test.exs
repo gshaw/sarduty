@@ -6,6 +6,8 @@ defmodule Web.EndorsementFormLiveTest do
 
   alias App.Model.Endorsement
   alias App.Model.EndorsementQualification
+  alias App.Model.GroupRule
+  alias App.Model.GroupRuleReference
   alias App.Repo
 
   @moduletag :capture_log
@@ -15,7 +17,7 @@ defmodule Web.EndorsementFormLiveTest do
     %{conn: log_in_user(conn, user), team: team}
   end
 
-  test "adds one from a group's rule editor, and it joins the rule", %{conn: conn, team: team} do
+  test "adds one from a group's rule editor, and it becomes an In rule", %{conn: conn, team: team} do
     group = group_fixture(team)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements/new?group_id=#{group.id}")
 
@@ -25,7 +27,10 @@ defmodule Web.EndorsementFormLiveTest do
       |> render_submit()
       |> follow_redirect(conn)
 
-    assert [%{name: "First Aid"}] = Endorsement.get_all_for_group(group)
+    endorsement = Repo.get_by!(Endorsement, team_id: team.id, name: "First Aid")
+    assert [%{kind: :in} = rule] = GroupRule.get_all(team.id)
+    assert {:endorsement, endorsement.id} in GroupRule.targets(rule)
+    assert rule.d4h_group_id == group.d4h_group_id
   end
 
   test "a name already in use is an error", %{conn: conn, team: team} do
@@ -86,18 +91,29 @@ defmodule Web.EndorsementFormLiveTest do
     assert Endorsement.get!(team.id, seven.id).included_ids == []
   end
 
-  test "deleting takes it out of every group rule", %{conn: conn, team: team} do
+  test "deleting takes it out of every rule, and a rule it leaves empty goes", %{
+    conn: conn,
+    team: team
+  } do
     endorsement = endorsement_fixture(team)
     group = group_fixture(team)
-    group_endorsement_fixture(group, endorsement)
+    other = group_fixture(team, %{title: "LOA"})
+    group_rule_fixture(group, endorsement)
+    shared = group_rule_fixture(group, other, :not_in)
+    GroupRuleReference.add!(shared, endorsement)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements/#{endorsement.id}")
 
     assert has_element?(lv, "#endorsement-groups a", group.title)
 
+    assert lv |> element("#endorsement-delete") |> render() =~
+             "It comes off ID cards and the rules of #{group.title}."
+
     {:ok, _lv, _html} =
       lv |> element("#endorsement-delete") |> render_click() |> follow_redirect(conn)
 
-    assert Endorsement.get_all_for_group(group) == []
+    assert [%{id: id} = rule] = GroupRule.get_all(team.id)
+    assert id == shared.id
+    assert GroupRule.targets(rule) == [{:group, other.d4h_group_id}]
     refute Repo.get(Endorsement, endorsement.id)
   end
 end

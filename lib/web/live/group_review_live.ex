@@ -127,11 +127,11 @@ defmodule Web.GroupReviewLive do
     </p>
 
     <p
-      :if={@preview.missing_qualification_ids != []}
+      :if={@preview.problems != []}
       id="rule-broken"
       class="callout mb-4"
     >
-      The group's rules name a qualification that is no longer in D4H. Fix the rules first.
+      The group's rules need fixing first. The group's page says what to fix.
     </p>
 
     <.form for={%{}} id="review-form" phx-change="select" phx-submit="apply">

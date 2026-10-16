@@ -5,15 +5,13 @@ defmodule Web.GroupLive do
   import Web.Components.GroupRule
 
   alias App.Adapter.D4H
-  alias App.Model.Endorsement
   alias App.Model.Group
-  alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
-  alias App.Model.GroupParent
-  alias App.Model.Qualification
+  alias App.Model.GroupRule
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
+  alias App.ViewData.GroupRules
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :editing, false)}
@@ -23,15 +21,12 @@ defmodule Web.GroupLive do
     current_team = socket.assigns.current_team
     group = find_group(params["id"], current_team.id)
     members = list_members_for_group(group)
-    qualifications = Qualification.get_all(current_team.id)
 
     socket =
       socket
       |> assign(:page_title, group.title)
       |> assign(:group, group)
       |> assign(:members, members)
-      |> assign(:qualifications, qualifications)
-      |> assign(:endorsements, Endorsement.get_all(current_team.id))
       |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
       |> reload()
 
@@ -47,37 +42,28 @@ defmodule Web.GroupLive do
   end
 
   # The ids in these events come from the browser, so each one is looked up through the
-  # current team and group before anything changes.
-  def handle_event("add-endorsement", %{"endorsement-id" => ""}, socket),
-    do: {:noreply, socket}
+  # current team and group before anything changes. A group that would make a loop is
+  # refused.
+  def handle_event("add-rule", %{"target" => ""}, socket), do: {:noreply, socket}
 
-  def handle_event("add-endorsement", %{"endorsement-id" => id}, socket) do
-    endorsement = Endorsement.get!(socket.assigns.current_team.id, id)
-    GroupEndorsement.add!(socket.assigns.group, endorsement)
-    {:noreply, reload(socket)}
-  end
+  def handle_event("add-rule", %{"kind" => kind, "target" => value}, socket) do
+    %{group: group, current_team: team, context: context} = socket.assigns
+    kind = Map.fetch!(%{"in" => :in, "not_in" => :not_in}, kind)
 
-  # The parent comes from the browser too, so it is looked up through the team, and one
-  # that would make a loop is refused.
-  def handle_event("set-parent", %{"parent-id" => ""}, socket) do
-    GroupParent.clear!(socket.assigns.group)
-    {:noreply, reload(socket)}
-  end
+    case GroupRules.find_target!(team.id, value) do
+      %Group{d4h_group_id: other} = target ->
+        if GroupRule.can_name?(context.rules, group.d4h_group_id, other),
+          do: GroupRule.add!(group, kind, target)
 
-  def handle_event("set-parent", %{"parent-id" => id}, socket) do
-    group = socket.assigns.group
-    parent = find_group(id, socket.assigns.current_team.id)
-    parents = GroupParent.parents_by_group(group.team_id)
-
-    if GroupParent.can_start_from?(group.d4h_group_id, parent.d4h_group_id, parents),
-      do: GroupParent.set!(group, parent)
+      endorsement ->
+        GroupRule.add!(group, kind, endorsement)
+    end
 
     {:noreply, reload(socket)}
   end
 
-  def handle_event("remove-endorsement", %{"endorsement-id" => id}, socket) do
-    endorsement = Endorsement.get!(socket.assigns.current_team.id, id)
-    GroupEndorsement.remove!(socket.assigns.group, endorsement.id)
+  def handle_event("remove-rule", %{"rule-id" => id}, socket) do
+    socket.assigns.group |> GroupRule.find!(id) |> GroupRule.delete!()
     {:noreply, reload(socket)}
   end
 
@@ -98,28 +84,22 @@ defmodule Web.GroupLive do
         <h2 class="subheading">Group rules</h2>
         <.rule_summary
           :if={!@editing}
-          rule={@rule}
-          own_rule={@own_rule}
-          parent={@parent}
-        />
-        <.parent_editor
-          :if={@editing}
-          group={@group}
-          parent={@parent}
-          options={@parent_options}
-          inherited={@rule -- @own_rule}
+          rules={@named_rules}
+          referenced={@referenced}
+          team={@current_team}
         />
         <.rule_editor
           :if={@editing}
-          rows={editor_rows(@own_rule, @qualifications, @endorsements, @current_team)}
-          options={editor_options(@endorsements, @rule)}
+          rows={@editor_rows}
+          options={@options}
           new_path={~p"/teams/#{@current_team}/endorsements/new?group_id=#{@group.id}"}
+          add_confirm={@rules == [] && @flip_warning[:first_rule]}
         />
         <.rule_preview
+          :if={@rules != []}
           preview={@preview}
           team={@current_team}
           group={@group}
-          rule={@rule}
         />
         <.recent_changes changes={@recent_changes} team={@current_team} />
         <.main_content members={@members} team={@current_team} />
@@ -156,57 +136,64 @@ defmodule Web.GroupLive do
     ~H"""
     <div class="card flex items-center justify-between gap-4">
       <div>
-        <p id="rule-sentence" class="mb-0">{rule_sentence(@own_rule, @parent)}</p>
-        <p :if={@parent && @rule != @own_rule} id="rule-parent-hint" class="hint mb-0">
-          {@parent.title} members are everyone who holds {names(@rule -- @own_rule)}.
+        <p id="rule-sentence" class="mb-0">{rule_sentence(@rules)}</p>
+        <p
+          :for={ref <- @referenced}
+          id={"rule-group-#{ref_id(ref)}"}
+          class="hint mb-0"
+        >
+          <.referenced_group ref={ref} team={@team} />
         </p>
       </div>
       <.button id="edit-rules" class="shrink-0" phx-click="edit-rules">
-        {if @rule == [] and !@parent, do: "Add rules", else: "Edit rules"}
+        {if @rules == [], do: "Add rules", else: "Edit rules"}
       </.button>
     </div>
     """
   end
 
-  attr :group, :map, required: true
-  attr :parent, :map
-  attr :options, :list, required: true
-  attr :inherited, :list, required: true
+  defp referenced_group(%{ref: {:missing, g}} = assigns) do
+    assigns = assign(assigns, :g, g)
 
-  defp parent_editor(assigns) do
     ~H"""
-    <form id="parent-form" phx-change="set-parent" class="mb-4">
-      <.input
-        type="select"
-        name="parent-id"
-        id="parent-id"
-        label="Start from another group (optional)"
-        value={@parent && @parent.id}
-        prompt="No other group"
-        options={@options}
-      >
-        Members must also hold everything that group's rules need.
-      </.input>
-    </form>
-    <p :if={@inherited != []} id="parent-endorsements" class="hint">
-      From {@parent.title}: {names(@inherited)}.
-    </p>
+    <span class="text-danger-text">A group in these rules is no longer in D4H ({@g}).</span>
     """
   end
 
+  defp referenced_group(%{ref: {:list, group}} = assigns) do
+    assigns = assign(assigns, :group, group)
+
+    ~H"""
+    <.a navigate={~p"/teams/#{@team}/groups/#{@group.id}"}>{@group.title}</.a>
+    is a list kept by hand in D4H.
+    """
+  end
+
+  defp referenced_group(%{ref: {:smart, group, rules}} = assigns) do
+    assigns = assign(assigns, group: group, rules: rules)
+
+    ~H"""
+    <.a navigate={~p"/teams/#{@team}/groups/#{@group.id}"}>{@group.title}</.a>: {rule_sentence(@rules)}
+    """
+  end
+
+  defp ref_id({:missing, g}), do: "missing-#{g}"
+  defp ref_id({:list, group}), do: group.id
+  defp ref_id({:smart, group, _rules}), do: group.id
+
   defp rule_preview(assigns) do
     ~H"""
-    <div :if={@rule != []} class="mt-4">
+    <div class="mt-4">
       <h2 class="subheading">Rule preview</h2>
-      <p
-        :if={@preview.missing_qualification_ids != []}
-        id="rule-broken"
-        class="callout text-sm"
-      >
-        These rules name a qualification that is no longer in D4H. Remove or replace it to
-        see the preview.
-      </p>
-      <p :if={@preview.missing_qualification_ids == []} class="hint mb-2">
+      <div :if={@preview.problems != []} id="rule-broken" class="callout text-sm">
+        <p>These rules plan no changes until they're fixed.</p>
+        <ul>
+          <li :for={problem <- @preview.problems}>
+            {BuildGroupRulePreview.describe_problem(problem)}
+          </li>
+        </ul>
+      </div>
+      <p :if={@preview.problems == []} class="hint mb-2">
         What these rules would change in the D4H group.
       </p>
 
@@ -233,10 +220,7 @@ defmodule Web.GroupLive do
       />
 
       <p
-        :if={
-          @preview.missing_qualification_ids == [] && @preview.to_add == [] &&
-            @preview.to_remove == []
-        }
+        :if={@preview.problems == [] && @preview.to_add == [] && @preview.to_remove == []}
         class="hint"
       >
         No changes. The group matches its rules.
@@ -327,52 +311,43 @@ defmodule Web.GroupLive do
   defp change_verb(%{action: :add}), do: "Could not add"
   defp change_verb(%{action: :remove}), do: "Could not remove"
 
-  # The editor's rows as plain maps, so the style guide can render it too.
-  # Each row lists the endorsement's own qualifications, then the ones it includes by name.
-  defp editor_rows(endorsements, qualifications, all_endorsements, team) do
-    names = Map.new(all_endorsements, &{&1.id, &1.name})
-
-    for endorsement <- endorsements do
-      own =
-        endorsement
-        |> Endorsement.own_qualification_ids()
-        |> Enum.map(&qualification_title(qualifications, &1))
-
-      included =
-        for id <- endorsement.included_ids, name = names[id], do: "anything that earns #{name}"
-
-      %{
-        id: endorsement.id,
-        name: endorsement.name,
-        path: ~p"/teams/#{team}/endorsements/#{endorsement.id}",
-        qualifications: Enum.join(own ++ included, ", ")
-      }
-    end
-  end
-
-  defp editor_options(endorsements, in_rule) do
-    ids = MapSet.new(in_rule, & &1.id)
-    for e <- endorsements, not MapSet.member?(ids, e.id), do: {e.name, e.id}
-  end
-
   defp reload(socket) do
-    %{group: group, current_team: team, members: members} = socket.assigns
-    rule = Endorsement.get_all_for_group(group)
-    parents = GroupParent.parents_by_group(team.id)
-    groups = Group.get_all(team.id)
+    %{group: group, current_team: team} = socket.assigns
+    context = BuildGroupRulePreview.load(team)
+    rules = Map.get(context.rules, group.d4h_group_id, [])
+
+    flip_warning = flip_warnings(context, group)
 
     socket
-    |> assign(:rule, rule)
-    |> assign(:own_rule, Endorsement.get_own_for_group(group))
-    |> assign(:parent, Enum.find(groups, &(&1.d4h_group_id == parents[group.d4h_group_id])))
-    |> assign(:parent_options, parent_options(group, groups, parents))
-    |> assign(:preview, build_preview(rule, members, team))
+    |> assign(:context, context)
+    |> assign(:rules, rules)
+    |> assign(:flip_warning, flip_warning)
+    |> assign(:named_rules, Enum.map(rules, &GroupRules.named(&1, context)))
+    |> assign(:referenced, GroupRules.referenced_groups(rules, context))
+    |> assign(:editor_rows, editor_rows(rules, context, team, group, flip_warning))
+    |> assign(:options, GroupRules.options(context, group.d4h_group_id))
+    |> assign(:preview, BuildGroupRulePreview.preview(context, team, group))
   end
 
-  defp parent_options(group, groups, parents) do
-    for g <- groups,
-        GroupParent.can_start_from?(group.d4h_group_id, g.d4h_group_id, parents),
-        do: {g.title, g.id}
+  defp flip_warnings(context, group) do
+    for change <- [:first_rule, :last_rule],
+        warning = GroupRules.flip_warning(context, group.d4h_group_id, change),
+        into: %{},
+        do: {change, warning}
+  end
+
+  # The editor's rows as plain maps, so the style guide can render it too. Removing the
+  # last rule warns when other groups' rules name this one.
+  defp editor_rows(rules, context, team, group, flip_warning) do
+    for rule <- rules do
+      %{
+        id: rule.id,
+        kind: rule.kind,
+        names: Enum.map_join(rule.targets, " or ", &GroupRules.name(&1, context)),
+        path: ~p"/teams/#{team}/groups/#{group.id}/rules/#{rule.id}",
+        confirm: if(length(rules) == 1, do: flip_warning[:last_rule])
+      }
+    end
   end
 
   defp find_group(id, team_id) do
@@ -388,55 +363,5 @@ defmodule Web.GroupLive do
     |> order_by([gm, m], asc: m.name)
     |> preload([gm, m], member: m)
     |> Repo.all()
-  end
-
-  # "Members must hold GSAR and First Aid." Names come from users, so each is escaped
-  # before it goes inside <strong>.
-  defp rule_sentence([], nil), do: "No rules yet."
-
-  defp rule_sentence(endorsements, nil),
-    do: Phoenix.HTML.raw(["Members must hold ", strong_names(endorsements), "."])
-
-  defp rule_sentence([], parent),
-    do: Phoenix.HTML.raw(["Members of ", strong(parent.title), "."])
-
-  defp rule_sentence(endorsements, parent),
-    do:
-      Phoenix.HTML.raw([
-        "Members of ",
-        strong(parent.title),
-        " who also hold ",
-        strong_names(endorsements),
-        "."
-      ])
-
-  defp strong_names(endorsements),
-    do: endorsements |> Enum.map(&strong(&1.name)) |> Enum.intersperse(" and ")
-
-  # "A, B, and C": every one is needed.
-  defp names(endorsements) do
-    case Enum.map(endorsements, & &1.name) do
-      [one] -> one
-      [a, b] -> "#{a} and #{b}"
-      many -> "#{many |> Enum.drop(-1) |> Enum.join(", ")}, and #{List.last(many)}"
-    end
-  end
-
-  defp strong(text),
-    do: [
-      "<strong>",
-      text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(),
-      "</strong>"
-    ]
-
-  defp qualification_title(qualifications, d4h_qualification_id) do
-    case Enum.find(qualifications, &(&1.d4h_qualification_id == d4h_qualification_id)) do
-      nil -> "Deleted in D4H (#{d4h_qualification_id})"
-      q -> q.title
-    end
-  end
-
-  defp build_preview(rule, members, team) do
-    BuildGroupRulePreview.call(rule, Enum.map(members, & &1.member), team)
   end
 end

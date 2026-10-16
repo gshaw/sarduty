@@ -8,8 +8,8 @@ defmodule App.DataFixtures do
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Group
-  alias App.Model.GroupEndorsement
   alias App.Model.GroupMember
+  alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
@@ -279,8 +279,11 @@ defmodule App.DataFixtures do
       ),
       do: EndorsementQualification.insert!(endorsement, qualification.d4h_qualification_id)
 
-  def group_endorsement_fixture(%Group{} = group, %Endorsement{} = endorsement),
-    do: GroupEndorsement.add!(group, endorsement)
+  @doc "A rule on `group` with one group or endorsement: In unless `kind` says Not in."
+  def group_rule_fixture(%Group{} = group, target, kind \\ :in) do
+    {:ok, rule} = GroupRule.add!(group, kind, target)
+    rule
+  end
 
   def member_card_fixture(%Member{} = member, attrs \\ %{}) do
     %MemberCard{

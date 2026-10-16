@@ -1,24 +1,70 @@
 # Group rules
 
-A group's rules say which qualifications a member must hold to belong to it. The group
-page previews what they would change, and a team admin reviews and applies them (#20).
+A group's rules say who belongs in it. The group page previews what they would change,
+and a team admin reviews and applies them (#20).
+
+## Rules
+
+A group's rules are a list, and a member must meet every one (#334). Each rule is:
+
+- **In any of**: the member is in at least one of its groups, or holds at least one of its
+  endorsements.
+- **Not in any of**: the member is in none of its groups and holds none of its
+  endorsements.
+
+No nesting. **A group's members** are whoever meets its rules when it has rules, and its
+D4H members when it has none. So "In GSAR Qualified Callout" follows that group's rules,
+never its D4H list, and no group depends on another being applied first. Someone kept in
+a smart group by hand doesn't flow into the groups that use it: no standing exceptions.
+**An endorsement's members** are whoever holds it. Rules never name a qualification.
+
+```text
+GSAR Qualified Callout   In: GSAR · In: PSLV Registration
+MIT Callout              In: MIT 2026 · In: MIT Callout Approval
+Callout                  In: GSAR Qualified Callout or MIT Callout · Not in: LOA
+```
+
+The Callout page reads "Members of GSAR Qualified Callout or MIT Callout who are not in
+LOA", then a line for each group it names: what a smart group needs, or "LOA is a list
+kept by hand in D4H."
+
+This replaced two features: the endorsements a group's rule required (#320) and the group
+a group started from (#327). A recurring requirement, such as 20 hours of rope practice a
+year, is an expiring D4H qualification awarded each year (#15), and a group requires both
+the course endorsement and the practice one.
 
 ## Storage
 
-Rules are in conjunctive normal form: `(A OR B) AND (C OR D)`. Each OR is an
-**endorsement**, a team-level list that group rules and ID cards share (#320).
+- A [GroupRule](../lib/app/model/group_rule.ex) is `team_id`, `d4h_group_id` (the group it
+  belongs to), and `kind`, `in` or `not_in`.
+- A [GroupRuleReference](../lib/app/model/group_rule_reference.ex) is one group or
+  endorsement in a rule. Exactly one of `endorsement_id`, a foreign key, and
+  `d4h_group_id` is set; a check constraint holds it.
 
-- An [Endorsement](../lib/app/model/endorsement.ex) is a name, unique within the team,
-  and the qualifications that earn it. Holding any one of them earns it. The rule
-  sentence and the "No … on record" reason use the name.
-- An [EndorsementQualification](../lib/app/model/endorsement_qualification.ex) is one
-  qualification in it, by `d4h_qualification_id`.
+A group is by D4H id, not a foreign key to `groups`. The sync deletes a group's row when
+D4H drops it, and a foreign key would either take the rule with it or block the sync. A
+missing group breaks the rule instead, so it plans nothing, and the page says "no longer
+in D4H". Deleting an endorsement takes it out of every rule, and a rule left empty goes
+too. The confirmation names the groups.
+
+The migration made each endorsement in a group's rule `In: <endorsement>`, and each group
+a group started from `In: <parent>`, first. A parent with no rule anywhere up its chain
+added nothing before but would count its D4H list as an In rule, so it was dropped
+([PlanGroupRules](../lib/app/operation/plan_group_rules.ex)). `group_endorsements` and
+`group_parents` stay one release, then go with that module.
+
+## Endorsements
+
+An [Endorsement](../lib/app/model/endorsement.ex) is a team-level list that group rules
+and ID cards share (#320).
+
+- It is a name, unique within the team, and the qualifications that earn it
+  ([EndorsementQualification](../lib/app/model/endorsement_qualification.ex), by
+  `d4h_qualification_id`). Holding any one of them earns it.
 - An [EndorsementInclude](../lib/app/model/endorsement_include.ex) makes one
   endorsement include another (#326): anything that earns the included one earns it too.
   7h First Aid lists OFA 1 and includes 40h First Aid, which includes 70h First Aid, so
   each course is listed once, at the lowest level it earns.
-- A [GroupEndorsement](../lib/app/model/group_endorsement.ex) puts an endorsement in a
-  group's rule, by `d4h_group_id`. A member must hold every one.
 
 Includes point up the ladder, never "70h is 7h except…". A course added to 70h then
 earns 7h too, which is right, and one added to 7h stays there. The other way, a new low
@@ -26,37 +72,18 @@ course would quietly earn every higher level. The loaders on `Endorsement` follo
 includes and fill `earned_by_ids`, so `Endorsement.qualification_ids/1` is the full list
 and group rules, cards, and the endorsements page need nothing else. An include that
 would make a loop is refused, and a loop already in the data stops instead of running
-forever.
+forever. Changing an endorsement's qualifications changes every group that uses it.
 
-- A [GroupParent](../lib/app/model/group_parent.ex) makes a group start from another
-  (#327): "Swiftwater team: GSAR team members who also hold Swiftwater 1." The rule is
-  every endorsement the parent's rule requires, then the group's own, following the
-  parent's parent too. It copies the parent's rule, not its D4H members, so someone added
-  to GSAR by hand without its endorsements doesn't get in, and groups need no order when
-  they're applied. A parent that would make a loop is refused.
-
-People think of a group as a smart list built from a parent list, so the group page says
-it that way: "Members of GSAR team who also hold Swiftwater 1", with a line naming what
-GSAR team needs. It never mentions copied rules. A separate "smart group" apart from D4H
-groups was considered and dropped (2026-10-14): every list a team wants is already a D4H
-group.
-
-Rules reference D4H ids rather than local foreign keys, so they survive a local row being
-recreated by the sync. Changing an endorsement's qualifications changes every group that
-uses it.
-
-Before #320 each group kept its own clauses, and clauses with the same name were merged
-only on cards. Copies drifted: South Fraser had three different "First Aid (7 hours or
-higher)" lists. The migration ([PlanEndorsements](../lib/app/operation/plan_endorsements.ex))
-kept every group's rule exactly: identical lists merged, and a name covering different
-lists stayed on the longest. The old `group_rule_clauses` tables stay for one release.
+Considered and dropped: levels inside endorsements, "next level", creating endorsements
+from a group's rules, rules that name qualifications, rules inside endorsements, and
+automatic "or higher" wording.
 
 ## The endorsements page
 
 `/teams/:subdomain/endorsements` lists each endorsement with what earns it, how many
 current members hold it, and the group rules that use it. It flags, with a link to fix:
 two endorsements with the same qualifications once includes are followed, a qualification
-deleted in D4H, and one no member holds. Each row lists its own qualifications, then
+deleted in D4H, and one nothing earns. Each row lists its own qualifications, then
 "or anything that earns" each one it includes. An endorsement's page adds and removes
 includes and says which endorsements it counts toward. On a team with ID cards, a tick box per endorsement picks what cards list.
 
@@ -64,34 +91,57 @@ includes and says which endorsements it counts toward. On a team with ID cards, 
 
 [BuildGroupRulePreview](../lib/app/operation/build_group_rule_preview.ex):
 
-- `call/4` loads the team's awards for the qualifications the rules mention, runs
-  `plan/4`, and returns the members to add, to remove, and expiring, each with a reason
-  as text.
-- `plan/4` is pure. A member qualifies when every endorsement in the rule lists at least one qualification
-  they hold with an active award, and they haven't left the team (`Member.current?/2`).
-- Each removal carries a reason per unmet endorsement: left the team, no award on record, the
-  latest award expired, or the next award hasn't started. `describe/3` turns one into a
-  sentence in the team's time zone.
-- **Expiring** lists members who qualify now but won't within 60 days (D4H's default
-  reminder). An endorsement stays met until the latest end among its awards that haven't ended,
-  so a renewal already on record, even one that starts later, keeps a member off the list.
+- `load/1` reads the team once: every group's rules, groups and their D4H members,
+  endorsements, qualification titles, awards, and members. The groups list and the
+  dashboard load it once for every group.
+- `plan/3` is pure. An endorsement resolves to its holders (active awards), a smart group
+  to whoever meets its rules, worked out recursively and memoized, and a group without
+  rules to its D4H members. In rules intersect, Not in rules subtract, and only current
+  members (`Member.current?/2`) are added. A member who has left is removed for that
+  alone.
 - An award is active from `starts_at` until `ends_at`, either of which may be missing.
   `MemberQualificationAward.active?/2` is the one definition; the qualification and member
   pages use it too.
-- **No endorsements, or any with no qualifications, plans no changes.** An empty one would
-  otherwise disqualify everyone and empty the group. Keep this guard when rules start
-  writing to D4H.
-- **A rule naming a qualification with no local row plans no changes.** That happens when
-  the qualification is deleted in D4H, or deleted and recreated with a new id. The
-  endorsement would match nobody and remove everyone. `call/4` checks
-  `missing_qualification_ids/2` first, and the group page shows a warning until someone
-  fixes the rule.
+
+**Reasons.** Each removal carries the reason for each unmet rule, and `describe/3` turns
+one into a sentence in the team's time zone:
+
+- One endorsement: "No PSLV Registration on record", "PSLV Registration expired
+  Oct 2, 2026", or when the next award starts.
+- One smart group: that group's own unmet reasons. One hand-kept group: "Not in Rope
+  Rescue".
+- Several: "Not in GSAR Qualified Callout or MIT Callout", or "No First Aid 16 hours or
+  MIT Callout Approval on record".
+- Not in: "In LOA", or "Holds First Aid 16 hours".
+
+**Expiring** lists members who qualify now but won't within 60 days (D4H's default
+reminder). It comes from endorsements, including those reached through smart groups. An
+endorsement stays met until the latest end among its awards that haven't ended, so a
+renewal already on record keeps a member off the list. An In rule lasts as long as the
+last of its groups and endorsements, and a group as its first rule to run out. Hand-kept
+lists and Not in rules don't expire.
+
+**Safety.** `problems/2` lists why the rules can't plan, and any problem plans no
+changes. The group page says why. Each would otherwise add every member or remove them
+all, and a broken LOA reference must stop the plan, not leave nobody out:
+
+- No rules, or only Not in rules. Not in rules alone would add every member.
+- A rule with no groups or endorsements left.
+- An endorsement with no qualifications, or one naming a qualification no longer in D4H.
+- A group no longer in D4H, or one whose own rules have a problem.
+- A loop. The editor refuses one, and one already in the data stops.
 
 ## Applying the rules (#20)
 
 The group page shows the rules as one sentence, with an **Edit rules** button that opens
-the rule editor: the endorsements the rule requires, a menu to add one, and a link to make
-a new one, which joins the rule.
+the editor: the rules, and [In or Not in] [a group or endorsement] [Add rule]. A link
+makes a new endorsement, which becomes an In rule. Each rule has its own page,
+`/groups/:id/rules/:rule_id`, listing its groups and endorsements with Remove and a menu
+to add another. Removing the last one removes the rule.
+
+Adding the first rule to a group that other groups' rules name warns first: "Rope Rescue
+Callout uses this group's list. Once it has rules, Rope Rescue Callout uses its rules
+instead." Removing its last rule warns the other way.
 
 **Review changes** on the group page opens
 [GroupReviewLive](../lib/web/live/group_review_live.ex): every add and remove with its
