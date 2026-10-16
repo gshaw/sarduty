@@ -3,6 +3,7 @@ defmodule Web.Components.ActivityFilterTable do
 
   import Web.Components.A
   import Web.Components.D4H
+  import Web.Components.FilterBar
   import Web.Components.Pagination
   import Web.Components.Table
 
@@ -17,60 +18,43 @@ defmodule Web.Components.ActivityFilterTable do
 
   def activity_filter_table(assigns) do
     ~H"""
-    <.filter_form for={@form} id="activity_filter_form">
-      <.input field={@form[:q]} label="Search" />
-      <.input
-        label="Kind"
+    <.filter_bar
+      for={@form}
+      id="activity_filter_form"
+      count={
+        Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")
+      }
+      clear={@path_fn.(:all)}
+      path_fn={@path_fn}
+      page={@paginated}
+      hidden={[@form[:sort]]}
+    >
+      <:search field={@form[:q]} />
+      <:filter
         field={@form[:activity]}
-        type="select"
+        label="Kind"
         options={ActivityFilterViewModel.activity_kinds()}
+        default="all"
       />
-      <.input
-        label="When"
+      <:filter
         field={@form[:when]}
-        type="select"
+        label="When"
         options={ActivityFilterViewModel.when_kinds(@team)}
+        default="all"
       />
-      <.input
-        label="Status"
+      <:filter
         field={@form[:status]}
-        type="select"
+        label="Status"
         options={ActivityFilterViewModel.status_kinds()}
+        default="all"
       />
-      <.input
-        label="Hours"
+      <:filter
         field={@form[:hours]}
-        type="select"
+        label="Hours tag"
         options={ActivityFilterViewModel.hours_kinds()}
+        default="all"
       />
-      <.input
-        label="Sort"
-        field={@form[:sort]}
-        type="select"
-        options={ActivityFilterViewModel.sort_kinds()}
-      />
-      <.input
-        label="Limit"
-        field={@form[:limit]}
-        type="select"
-        options={ActivityFilterViewModel.limits()}
-      />
-    </.filter_form>
-
-    <div class="table-summary">
-      <span class="table-summary-links">
-        <.a id="activities_current_link" navigate={@path_fn.(:current)}>Current</.a>
-        ·
-        <.a navigate={@path_fn.(:future)}>Future</.a>
-        ·
-        <.a navigate={@path_fn.(:past)}>Past</.a>
-        ·
-        <.a navigate={@path_fn.(:all)}>All</.a>
-      </span>
-      <span class="table-summary-count">
-        {Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")}
-      </span>
-    </div>
+    </.filter_bar>
 
     <.activity_table rows={@paginated.entries} sort={@sort} path_fn={@path_fn} team={@team} />
 

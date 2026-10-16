@@ -1,0 +1,77 @@
+/* The filter bar above a long list (#350): a search box and menus in one row, each menu
+   with its label inside, and a menu that filters something in blue. On a phone the menus
+   fold behind a Filters button and the filters that are on show as chips, so the table
+   starts on the first screen. See /styles/filter-bar. */
+@layer components {
+  .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+
+  .filter-bar-search { position: relative; flex: 1 1 18rem; max-width: 24rem; }
+  .filter-bar-search input { min-height: 36px; padding-left: var(--sp-8); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .filter-bar-search-icon { position: absolute; left: var(--sp-2); top: 50%; translate: 0 -50%; color: var(--text-muted); pointer-events: none; }
+
+  /* Wide screens: the menus sit in the bar's row, with no button to show them. */
+  .filter-bar-menus { display: contents; }
+  .filter-bar-toggle, .filter-bar-done, .filter-bar-chips { display: none; }
+
+  .filter-menu {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-height: 36px;
+    padding-left: var(--sp-2);
+    border: var(--border-width) solid var(--border);
+    background: var(--bg);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+  }
+  .filter-menu-label { color: var(--text-muted); white-space: nowrap; cursor: pointer; }
+  .filter-menu select { width: auto; min-height: 32px; padding: 0 var(--sp-1); border: 0; background: transparent; font-weight: 600; }
+  .filter-menu .combobox { width: 14rem; }
+  .filter-menu .combobox-input input { min-height: 32px; border: 0; padding-block: 0; padding-left: var(--sp-1); font-weight: 600; background: transparent; }
+  .filter-menu .combobox-input input::placeholder { color: var(--text); }
+  .filter-menu.is-on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--bg)); }
+  .filter-menu.is-on .filter-menu-label { color: var(--link); }
+
+  .filter-bar-count { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--primary); color: var(--on-fill); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
+
+  /* Phones: a search box and the Filters button, then a panel of full-width menus. */
+  @media (width < 40rem) {
+    .filter-bar-search { flex: 1 1 0; max-width: none; }
+    .filter-bar-search input { min-height: 44px; font-size: var(--fs-md); line-height: var(--lh-md); }
+    .filter-bar-toggle { display: inline-flex; min-height: 44px; }
+    .filter-bar-toggle[aria-expanded="true"] { --btn-bg: color-mix(in srgb, var(--primary) 12%, var(--bg)); --btn-edge: var(--primary); }
+
+    .filter-bar-menus { display: none; flex-basis: 100%; padding: var(--sp-3); background: var(--surface-alt); border-left: 4px solid var(--primary); }
+    .filter-bar.is-open .filter-bar-menus { display: block; }
+
+    .filter-menu { display: block; margin-bottom: var(--sp-3); padding: 0; border: 0; background: none; font-size: var(--fs-md); line-height: var(--lh-md); }
+    .filter-menu.is-on { background: none; }
+    .filter-menu-label, .filter-menu.is-on .filter-menu-label { display: block; margin-bottom: var(--sp-1); color: var(--text); font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+    .filter-menu select, .filter-menu .combobox-input input { width: 100%; min-height: 44px; padding: var(--sp-1) var(--sp-2); border: var(--border-width) solid var(--text); background: var(--bg); font-weight: 400; }
+    .filter-menu .combobox-input input { padding-right: var(--sp-8); }
+    .filter-menu .combobox { width: 100%; }
+
+    .filter-bar-done { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+    .filter-bar-done .btn { margin-left: auto; }
+
+    .filter-bar-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+    .filter-bar.is-open + .filter-bar-chips { display: none; }
+    .filter-bar-chips .chip { min-height: 36px; padding-right: var(--sp-2); color: var(--text); text-decoration: none; }
+  }
+
+  @media (width < 40rem) and (pointer: coarse) {
+    .filter-bar-chips .chip { min-height: 44px; }
+  }
+
+  /* The line under the bar: the count and Clear filters, and which rows a page shows. */
+  .table-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--sp-2);
+  }
+}

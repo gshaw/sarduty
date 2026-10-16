@@ -8,6 +8,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Chart
   import Web.Components.CopyButton
   import Web.Components.D4H
+  import Web.Components.FilterBar
   import Web.Components.GroupRule
   import Web.Components.OpenInMaps
   import Web.Components.Pagination
@@ -68,7 +69,7 @@ defmodule Web.StyleGuideHTML do
          {:detail_list, "Detail list", "Key facts about one record."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
-         {:filter_form, "Filter form", "The filters above a list."},
+         {:filter_bar, "Filter bar", "Search and filters above a long list."},
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},
          {:map, "Map", "A dot per activity on a Mapbox map."},
@@ -327,6 +328,10 @@ defmodule Web.StyleGuideHTML do
 
   defdelegate letters(), to: SampleData
   defdelegate sample_page(), to: SampleData
+  defdelegate sample_filters(), to: SampleData
+  defdelegate sample_filter_page(), to: SampleData
+  defdelegate sample_kinds(), to: SampleData
+  defdelegate sample_whens(), to: SampleData
   defdelegate recommendations(), to: SampleData
   defdelegate rule_sentence_rules(), to: SampleData
   defdelegate rule_rows(), to: SampleData

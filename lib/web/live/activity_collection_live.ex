@@ -68,8 +68,7 @@ defmodule Web.ActivityCollectionLive do
     end
   end
 
-  # Picking Past or Future from the menu also picks the sort, as the links do,
-  # so Future doesn't open on next year.
+  # Picking Past or Future also picks the sort, so Future doesn't open on next year.
   defp sort_for_new_when(%{"when" => new_when} = form_params, old_when)
        when new_when != old_when do
     case ActivityFilterViewModel.sort_for_when(new_when) do
@@ -85,19 +84,12 @@ defmodule Web.ActivityCollectionLive do
   end
 
   def build_path_fn(team, filter_options) do
-    fn changed_options ->
-      case changed_options do
-        when_link when when_link in [:current, :future, :past] ->
-          when_name = Atom.to_string(when_link)
-          sort = ActivityFilterViewModel.sort_for_when(when_name)
-          build_filter_path(team, %ActivityFilterViewModel{when: when_name, sort: sort})
+    fn
+      :all ->
+        build_filter_path(team, %ActivityFilterViewModel{})
 
-        :all ->
-          build_filter_path(team, %ActivityFilterViewModel{})
-
-        _ ->
-          build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
-      end
+      changed_options ->
+        build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
     end
   end
 

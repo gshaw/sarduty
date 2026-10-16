@@ -19,7 +19,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :status, :string
     field :hours, :string
     field :page, :integer
-    field :limit, :integer
     field :sort, :string
   end
 
@@ -50,8 +49,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def sort_for_when("future"), do: "date"
   def sort_for_when("past"), do: "date-"
   def sort_for_when(_when), do: nil
-
-  def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   defp build_team_year_options(team) do
     Activity
@@ -91,7 +88,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(status: filter_options.status)
     |> scope(hours: filter_options.hours, team: team)
     |> scope(sort: filter_options.sort)
-    |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
+    |> Repo.paginate(page: filter_options.page)
   end
 
   defp build_new do
@@ -100,7 +97,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
       activity: "all",
       status: "all",
       hours: "all",
-      limit: 50,
       sort: "date-"
     }
   end
@@ -109,17 +105,14 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :activity, :when, :status, :hours, :page, :limit, :sort])
+    |> cast(params, [:q, :activity, :when, :status, :hours, :page, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:activity, Enum.map(activity_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:hours, Enum.map(hours_kinds(), fn {_, v} -> v end))
     |> validate_format(:when, ~r/\A(all|current|recent|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
-    |> validate_number(:page,
-      greater_than_or_equal_to: 1,
-      less_than_or_equal_to: Enum.max(limits())
-    )
+    |> validate_number(:page, greater_than_or_equal_to: 1)
   end
 
   defp scope(q, member: nil), do: q

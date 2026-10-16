@@ -7,3 +7,15 @@ document.querySelectorAll("[phx-hook=Combobox]").forEach(el => {
   hook.el = el
   hook.mounted()
 })
+
+// The filter bar's Filters and Show buttons run LiveView JS commands, which need a
+// LiveView, so here they toggle the panel themselves.
+document.querySelectorAll(".filter-bar").forEach(bar => {
+  const toggle = bar.querySelector(".filter-bar-toggle")
+  bar.querySelectorAll(".filter-bar-toggle, .filter-bar-done .btn").forEach(button => {
+    button.addEventListener("click", () => {
+      const open = bar.classList.toggle("is-open")
+      toggle.setAttribute("aria-expanded", open)
+    })
+  })
+})
