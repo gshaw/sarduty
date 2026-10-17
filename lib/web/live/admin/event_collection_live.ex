@@ -1,6 +1,8 @@
 defmodule Web.Admin.EventCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FilterBar
+
   alias App.Model.Event
   alias App.Model.Team
   alias App.ViewModel.EventFilterViewModel
@@ -47,7 +49,9 @@ defmodule Web.Admin.EventCollectionLive do
     case EventFilterViewModel.validate(params) do
       {:ok, filter, changeset} ->
         events = filter |> EventFilterViewModel.to_query() |> Event.get_recent(@limit)
-        {:noreply, assign(socket, events: events, form: to_form(changeset, as: "form"))}
+
+        {:noreply,
+         assign(socket, events: events, filter: filter, form: to_form(changeset, as: "form"))}
 
       {:error, _changeset} ->
         raise Web.Status.NotFound
@@ -111,16 +115,22 @@ defmodule Web.Admin.EventCollectionLive do
     </.table>
 
     <h2 class="heading">Latest events</h2>
-    <.filter_form for={@form} id="event_filter_form">
-      <.input label="Kind" field={@form[:kind]} type="select" options={EventFilterViewModel.kinds()} />
-      <.input
-        label="Team"
+    <.filter_bar
+      for={@form}
+      id="event_filter_form"
+      count={Service.Format.count(length(@events), one: "%d event", many: "%d events")}
+      clear={~p"/admin/events"}
+      path_fn={&events_path(@filter, &1)}
+    >
+      <:search field={@form[:ip]} placeholder="IP address" />
+      <:filter field={@form[:kind]} label="Kind" options={EventFilterViewModel.kinds()} default="all" />
+      <:filter
         field={@form[:team]}
-        type="select"
+        label="Team"
         options={EventFilterViewModel.teams(@teams)}
+        default="all"
       />
-      <.input label="IP" field={@form[:ip]} phx-debounce="500" />
-    </.filter_form>
+    </.filter_bar>
     <.table id="events" rows={@events} row_id={&"event-#{&1.id}"} class="table-striped">
       <:col :let={event} label="When (UTC)" class="whitespace-nowrap">
         {Service.Format.month_day_time_seconds(event.occurred_at, "Etc/UTC")}
@@ -135,10 +145,12 @@ defmodule Web.Admin.EventCollectionLive do
       </:col>
       <:col :let={event} label="Details">{details(event.data)}</:col>
     </.table>
-    <.hint :if={@events == []}>No events.</.hint>
     <.hint :if={length(@events) == @limit}>The newest {@limit}.</.hint>
     """
   end
+
+  defp events_path(filter, changes),
+    do: ~p"/admin/events?#{EventFilterViewModel.to_params(Map.merge(filter, Map.new(changes)))}"
 
   defp run_summary(nil, _now), do: "None yet"
 
