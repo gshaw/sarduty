@@ -57,6 +57,16 @@ defmodule App.Model.ActivityTest do
     end
   end
 
+  test "tags are stored sorted, so another order is no change (#358)" do
+    activity = activity_fixture(team_fixture(), %{tags: ["Rope", "Primary Hours"]})
+    assert activity.tags == ["Primary Hours", "Rope"]
+
+    assert Activity.build_changeset(activity, %{tags: ["Rope", "Primary Hours"]}).changes == %{}
+
+    assert Activity.update!(activity, %{tags: ["Rope", "Primary Hours"]}).updated_at ==
+             activity.updated_at
+  end
+
   test "hours_tagged?/2 is true for any hours tag, the other one too" do
     tags = %{@defaults | other: "Social"}
     assert Activity.hours_tagged?(["Social"], tags)

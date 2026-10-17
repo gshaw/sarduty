@@ -22,8 +22,15 @@ refresh once a night as the safety net (#163).
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
 - [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 12 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
-  change. If none moved since the last look (`teams.d4h_sync_state`), it stops: 12 small
-  requests.
+  change. If none moved since the last look (`teams.d4h_sync_state`), only the open
+  years' read below follows: 12 small requests and 3 pages.
+- Every sync reads the open years' activities whole (#358): this year's, and last
+  year's too from January to April ([Service.Period](../lib/service/period.ex)). D4H
+  doesn't change an activity's `updatedAt` when its tags change, so the heads never see a
+  tag edit, and letters and "Needs attention" read those tags. One page per kind with
+  `starts_after`; only rows that differ are written. Tag titles come from the local copy.
+  SAR Duty Records changes `updatedAt` with tags, so the heads already see its edits, but
+  it takes the same read so both services stay on one path.
 - A small list that moved (members, qualifications, awards, groups, memberships,
   equipment items and usages) is fetched whole through the full refresh's own stage, along
   with the lists that point at it, so rows skipped for an unknown parent come in. Their
@@ -206,8 +213,8 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   names its own (#289). A team names any its organization leaves blank in **Settings →
   Hours tags**, and either can name an other tag for activities that count for no hours
   (#323). See `App.Model.Activity.hours_tags/1`. The team home's "Needs attention" counts
-  published activities with none of them, one item per year: this year's, and last year's
-  from January to April while letters are made. Only for a team with its primary or
+  published activities with none of them, one item per open year
+  ([Service.Period](../lib/service/period.ex)). Only for a team with its primary or
   secondary tag in D4H.
 - D4H refuses tags on a published activity: 409, "Resources cannot be updated once they
   have been published" (#358). Attendance and equipment on one still work. So a published

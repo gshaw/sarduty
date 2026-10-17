@@ -10,6 +10,10 @@ defmodule App.Operation.SyncD4HChanges do
   deletes. When the attendance totals still differ, counts by year and then by month
   find one window to fetch again. plan/2 and windows_to_check/2 decide; call/2 fetches
   and writes.
+
+  Every sync also reads the open years' activities whole (Service.Period), even when no
+  head moved: D4H doesn't change an activity's `updatedAt` when its tags change, and
+  letters and "Needs attention" read those tags.
   """
 
   import Ecto.Query
@@ -18,6 +22,7 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
@@ -164,15 +169,8 @@ defmodule App.Operation.SyncD4HChanges do
 
     changed =
       case plan(previous_heads(team), heads) do
-        plan when is_map(plan) ->
-          RecordD4HChanges.recording(team, now, fn ->
-            apply_plan(d4h, team, plan, heads, now)
-          end)
-
-          plan.changed
-
-        _seed_or_unchanged ->
-          []
+        :seed -> []
+        plan -> RecordD4HChanges.recording(team, now, fn -> sync(d4h, team, plan, heads, now) end)
       end
 
     {:ok, save_heads(team, heads, now), changed}
@@ -292,7 +290,46 @@ defmodule App.Operation.SyncD4HChanges do
       do: check_attendance_counts(d4h, team, heads["attendance"].total_size, now)
 
     Logger.info("Synced #{Enum.join(plan.changed, ", ")} for team #{team.id}")
+    plan.changed
   end
+
+  # The names of the lists that changed.
+  defp sync(d4h, team, plan, heads, now) do
+    planned = if is_map(plan), do: apply_plan(d4h, team, plan, heads, now), else: []
+    Enum.uniq(planned ++ sync_open_years(d4h, team, now))
+  end
+
+  # The open years' activities, compared whole: 1 page per kind for most teams. Tag titles
+  # come from the local copy, which the plan refreshed first if D4H's tags moved.
+  defp sync_open_years(d4h, team, now) do
+    starts_after = Service.Period.open_years_start(now, team.timezone)
+    tag_index = local_tag_index(team)
+
+    changed? =
+      Enum.reduce(@activity_kinds, false, fn kind, changed? ->
+        D4H.reduce_activities_starting_after(
+          d4h,
+          tag_index,
+          kind,
+          starts_after,
+          changed?,
+          &upsert_rows(team, &1, &2)
+        )
+      end)
+
+    if changed?, do: ["open-year activities"], else: []
+  end
+
+  defp local_tag_index(team) do
+    Tag
+    |> where(team_id: ^team.id)
+    |> select([t], {t.d4h_tag_id, t.title})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp upsert_rows(team, rows, changed?),
+    do: Enum.reduce(rows, changed?, &(UpsertActivities.upsert(team.id, &1) == :changed or &2))
 
   defp fetch_list("members", d4h, team, progress), do: UpsertMembers.call(d4h, team, progress)
 

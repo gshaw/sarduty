@@ -171,7 +171,15 @@ defmodule App.Model.Activity do
       :started_at,
       :finished_at
     ])
+    |> update_change(:tags, &sort_tags/1)
   end
+
+  @doc """
+  Tags in the order they're stored: sorted, since D4H's order means nothing and changes
+  when tags are set. Two copies with the same tags then compare equal (#358).
+  """
+  def sort_tags(nil), do: nil
+  def sort_tags(tags), do: Enum.sort(tags)
 
   def get_all(team_id) do
     Activity
@@ -190,17 +198,13 @@ defmodule App.Model.Activity do
 
   def deleted?(%Activity{deleted_at: deleted_at}), do: deleted_at != nil
 
-  @recent_days 30
-
-  def recent_days, do: @recent_days
-
   @doc """
-  Activities that started in the last #{@recent_days} days and have finished by `now`.
+  Activities that started in the last #{Service.Period.recent_days()} days and have finished by `now`.
   The dashboard counts drafts this way, and the activity list's "Last 30 days" shows
   the same rows, so the count and the list agree.
   """
   def finished_recently(query, now) do
-    since = now |> DateTime.add(-@recent_days, :day) |> DateTime.truncate(:second)
+    since = now |> DateTime.add(-Service.Period.recent_days(), :day) |> DateTime.truncate(:second)
     now = DateTime.truncate(now, :second)
 
     query

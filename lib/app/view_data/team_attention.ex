@@ -10,13 +10,6 @@ defmodule App.ViewData.TeamAttention do
 
   @max_items 7
 
-  # Members file their taxes by April 30, so letters are worth a nudge until then.
-  @letter_months 1..4
-
-  @doc "Whether `now` falls in the months the tax credit letters item can show."
-  def letter_season?(now, timezone),
-    do: DateTime.shift_zone!(now, timezone).month in @letter_months
-
   @doc """
   The items to show, at most #{@max_items}. Each is a map with `key`, `level`
   (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
@@ -207,7 +200,7 @@ defmodule App.ViewData.TeamAttention do
   defp letters_item(%{count: 0}, _now, _timezone), do: nil
 
   defp letters_item(%{count: count, year: year}, now, timezone) do
-    if letter_season?(now, timezone) do
+    if Service.Period.letter_season?(now, timezone) do
       %{
         key: :letters,
         level: :info,

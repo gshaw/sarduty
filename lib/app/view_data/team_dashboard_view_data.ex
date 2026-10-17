@@ -170,18 +170,15 @@ defmodule App.ViewData.TeamDashboardViewData do
   end
 
   # Published activities with no hours tag (#323), for teams that use the hours tags: ones
-  # with their primary or secondary tag in D4H. One row per year: this year's, and last
-  # year's too in letter season, when its letters are made. Empty for other teams.
+  # with their primary or secondary tag in D4H. One row per open year. Empty for other
+  # teams.
   defp untagged_rows(team, now) do
     hours_tags = Activity.hours_tags(team)
 
     if uses_hours_tags?(team, hours_tags) do
-      year = Service.YearRange.year_in(now, team.timezone)
-
-      years =
-        if TeamAttention.letter_season?(now, team.timezone), do: [year - 1, year], else: [year]
-
-      Enum.map(years, &%{year: &1, count: count_untagged(team, hours_tags, &1)})
+      now
+      |> Service.Period.open_years(team.timezone)
+      |> Enum.map(&%{year: &1, count: count_untagged(team, hours_tags, &1)})
     else
       []
     end
@@ -207,7 +204,7 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   # Only counted from January to April, since the hours count reads a year of attendance.
   defp letters_row(team, now) do
-    if TeamAttention.letter_season?(now, team.timezone) do
+    if Service.Period.letter_season?(now, team.timezone) do
       year = Service.YearRange.year_in(now, team.timezone) - 1
       filter = %TaxCreditLetterFilterViewModel{year: year, filter: "any", sort: "total"}
 
