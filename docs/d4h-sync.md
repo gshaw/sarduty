@@ -29,7 +29,8 @@ refresh once a night as the safety net (#163).
   doesn't change an activity's `updatedAt` when its tags change, so the heads never see a
   tag edit, and letters and "Needs attention" read those tags. One page per kind with
   `starts_after`; only rows that differ are written. Tag titles come from the local copy.
-  SAR Duty Records is skipped: it changes `updatedAt` with tags.
+  SAR Duty Records changes `updatedAt` with tags, so the heads already see its edits, but
+  it takes the same read so both services stay on one path.
 - A small list that moved (members, qualifications, awards, groups, memberships,
   equipment items and usages) is fetched whole through the full refresh's own stage, along
   with the lists that point at it, so rows skipped for an unknown parent come in. Their

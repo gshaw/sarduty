@@ -3,6 +3,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   import App.DataFixtures
 
+  alias App.Adapter.D4H
   alias App.Model.Attendance
   alias App.Model.Event
   alias App.Model.Team
@@ -18,8 +19,8 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     do: %{"results" => [%{"updatedAt" => newest}], "totalSize" => total}
 
   # A team whose last look saw every list at 10 rows, newest change @newest.
-  defp synced_team do
-    team = team_fixture(%{d4h_access_key: "team-key"})
+  defp synced_team(attrs \\ %{}) do
+    team = team_fixture(Map.merge(%{d4h_access_key: "team-key"}, attrs))
     {:ok, at, 0} = DateTime.from_iso8601(@newest)
     heads = Map.new(@lists, &{&1, %{total_size: 10, newest_updated_at: at}})
     SyncD4HChanges.save_heads(team, heads, DateTime.utc_now())
@@ -30,7 +31,15 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   defp list_name(conn), do: conn.path_info |> List.last()
 
   test "when nothing changed, a sync makes the 12 list checks and reads the open years" do
-    team = synced_team()
+    check_unchanged_sync(synced_team())
+  end
+
+  test "a SAR Duty Records team's sync reads the open years too" do
+    check_unchanged_sync(synced_team(%{d4h_api_host: D4H.records_host()}))
+  end
+
+  # D4H answers every head unchanged and each open year's read empty, telling the test.
+  defp stub_unchanged do
     test = self()
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -41,7 +50,10 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
         do: Req.Test.json(conn, %{"results" => [], "totalSize" => 0}),
         else: Req.Test.json(conn, head(10))
     end)
+  end
 
+  defp check_unchanged_sync(team) do
+    stub_unchanged()
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 

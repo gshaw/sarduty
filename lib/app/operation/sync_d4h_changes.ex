@@ -300,29 +300,24 @@ defmodule App.Operation.SyncD4HChanges do
   end
 
   # The open years' activities, compared whole: 1 page per kind for most teams. Tag titles
-  # come from the local copy, which the plan refreshed first if D4H's tags moved. SAR Duty
-  # Records changes `updatedAt` with tags, and ignores `starts_after`, so it's skipped.
+  # come from the local copy, which the plan refreshed first if D4H's tags moved.
   defp sync_open_years(d4h, team, now) do
-    if D4H.records?(team) do
-      []
-    else
-      starts_after = Service.Period.open_years_start(now, team.timezone)
-      tag_index = local_tag_index(team)
+    starts_after = Service.Period.open_years_start(now, team.timezone)
+    tag_index = local_tag_index(team)
 
-      changed? =
-        Enum.reduce(@activity_kinds, false, fn kind, changed? ->
-          D4H.reduce_activities_starting_after(
-            d4h,
-            tag_index,
-            kind,
-            starts_after,
-            changed?,
-            &upsert_rows(team, &1, &2)
-          )
-        end)
+    changed? =
+      Enum.reduce(@activity_kinds, false, fn kind, changed? ->
+        D4H.reduce_activities_starting_after(
+          d4h,
+          tag_index,
+          kind,
+          starts_after,
+          changed?,
+          &upsert_rows(team, &1, &2)
+        )
+      end)
 
-      if changed?, do: ["open-year activities"], else: []
-    end
+    if changed?, do: ["open-year activities"], else: []
   end
 
   defp local_tag_index(team) do

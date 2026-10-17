@@ -440,8 +440,7 @@ defmodule App.Adapter.D4H do
   end
 
   @doc """
-  Activities of one kind that start at or after `starts_after`, in pages. SAR Duty Records
-  ignores the filter and sends them all.
+  Activities of one kind that start at or after `starts_after`, in pages.
   """
   def reduce_activities_starting_after(context, tag_index, kind, starts_after, acc, fun) do
     build = &D4H.Activity.build(&1, tag_index)
