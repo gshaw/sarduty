@@ -39,6 +39,23 @@ defmodule Web.Settings.TeamLiveTest do
     assert has_element?(lv, "#team-key-status", "Key saved August 1, 2026")
   end
 
+  test "saves the time frame for members who have not attended, or turns it off",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    assert team.not_seen_days == 90
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/settings")
+
+    lv |> form("form", form: %{not_seen_days: "180"}) |> render_submit()
+    assert Team.get!(team.id).not_seen_days == 180
+
+    lv |> form("form", form: %{not_seen_days: "0"}) |> render_submit()
+    assert Team.get!(team.id).not_seen_days == nil
+  end
+
   test "says when no team key is saved", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

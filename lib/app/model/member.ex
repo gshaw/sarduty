@@ -107,6 +107,68 @@ defmodule App.Model.Member do
   def people_query(query), do: where(query, [m], not m.not_a_person)
 
   @doc """
+  Narrows `query` to the current people on `team` not seen at an activity in `days` days
+  as of `now` (#247): no attending row on an activity started since then. Members who
+  joined since then are left out, and so are bots: members marked not a person, the
+  "SAR Duty" member the team's key belongs to, and members who look like one
+  (`looks_like_not_a_person?/2`).
+  """
+  def not_seen_query(query, %Team{} = team, days, now) do
+    # Stored times mix `…Z` and no zone; a bound with no zone compares right against both.
+    since = now |> DateTime.add(-days, :day) |> DateTime.truncate(:second) |> DateTime.to_naive()
+
+    query
+    |> current_query(now)
+    |> people_query()
+    |> where([m], m.team_id == ^team.id and m.joined_at < type(^since, :naive_datetime))
+    |> where([m], m.id not in subquery(seen_since(team, since)))
+    |> not_key_member(team)
+    |> not_bot_like()
+  end
+
+  # Leaves out members looks_like_not_a_person?/2 would flag.
+  defp not_bot_like(query) do
+    where(
+      query,
+      [m],
+      not ((is_nil(m.phone) or m.phone == "") and (is_nil(m.email) or m.email == "")) or
+        m.id in subquery(attended_ids())
+    )
+  end
+
+  defp seen_since(team, since) do
+    from at in Attendance,
+      join: a in assoc(at, :activity),
+      where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
+      where: a.started_at >= type(^since, :naive_datetime),
+      select: at.member_id
+  end
+
+  defp attended_ids,
+    do: from(at in Attendance, where: at.status == "attending", select: at.member_id)
+
+  # The key's own member is SAR Duty's account when it's named that (Team.get_managed_by/2).
+  defp not_key_member(query, %Team{d4h_access_key_member_id: id} = team) when is_integer(id) do
+    if Team.key_owner_is_sar_duty?(team),
+      do: where(query, [m], m.d4h_member_id != ^id),
+      else: query
+  end
+
+  defp not_key_member(query, _team), do: query
+
+  @doc "When each of `member_ids` was last at an activity, as a map of id to start time."
+  def last_seen(member_ids) do
+    Attendance
+    |> join(:inner, [at], a in assoc(at, :activity))
+    |> where([at, a], at.member_id in ^member_ids and at.status == "attending")
+    |> where([_, a], is_nil(a.deleted_at))
+    |> group_by([at], at.member_id)
+    |> select([at, a], {at.member_id, type(max(a.started_at), :utc_datetime)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Whether the member looks like a bot or a shared account: no email, no mobile phone,
   and no attendance. Only a hint; a new member looks the same until their first activity.
   """

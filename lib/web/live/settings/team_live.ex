@@ -106,6 +106,16 @@ defmodule Web.Settings.TeamLive do
           <.error :if={@signature_error} id="signature-error">{@signature_error}</.error>
         </div>
         <.input
+          field={@form[:not_seen_days]}
+          type="select"
+          label="Members who have not attended"
+          options={Team.not_seen_days_kinds()}
+        >
+          Needs attention lists current members who have not attended an activity in this
+          long, so someone can check in with them. Members who joined since and bots are left
+          out.
+        </.input>
+        <.input
           field={@form[:new_d4h_access_key]}
           label={D4H.key_name(@current_team)}
           type="password"

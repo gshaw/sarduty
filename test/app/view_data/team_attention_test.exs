@@ -18,6 +18,7 @@ defmodule App.ViewData.TeamAttentionTest do
         expiring_days: 60,
         expiring_count: 0,
         missing_details_count: 0,
+        not_seen: nil,
         group_change_count: 0,
         proposed_change_count: 0,
         untagged: [],
@@ -35,6 +36,17 @@ defmodule App.ViewData.TeamAttentionTest do
   test "nothing to do means no items" do
     assert items(%{}, @october) == []
     assert items(%{untagged: [%{count: 0, year: 2026}]}, @october) == []
+  end
+
+  test "members not at an activity name the team's time frame" do
+    assert items(%{not_seen: %{days: 90, count: 0}}, @october) == []
+
+    assert [item] = items(%{not_seen: %{days: 90, count: 3}}, @october)
+    assert item.key == :not_seen
+    assert item.title == "3 members have not attended an activity in 90 days"
+
+    assert [item] = items(%{not_seen: %{days: 365, count: 1}}, @october)
+    assert item.title == "1 member has not attended an activity in a year"
   end
 
   test "activities with no hours tag name the year" do

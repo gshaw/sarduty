@@ -9,6 +9,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Repo
+  alias App.ViewData.TeamAttention
 
   @primary_key false
   embedded_schema do
@@ -16,6 +17,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :when, :string
     field :status, :string
     field :details, :string
+    field :attended, :string
     field :group, :integer
     field :page, :integer
     field :sort, :string
@@ -25,6 +27,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   # "missing": current members with no mobile phone or no email (#205).
   def details_kinds, do: [{"All", "all"}, {"Missing", "missing"}]
+
+  # "not-recent": members not at an activity in the team's not_seen_days (#247). Nil when
+  # the team turned that off, so the page leaves the filter out.
+  def attended_kinds(%{not_seen_days: nil}), do: nil
+
+  def attended_kinds(team),
+    do: [
+      {"Any time", "all"},
+      {"Not in #{TeamAttention.period(team.not_seen_days)}", "not-recent"}
+    ]
 
   def sort_kinds,
     do: %{
@@ -72,6 +84,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
     |> scope(details: filter_options.details)
+    |> scope(attended: filter_options.attended, team: team)
     |> scope(group: filter_options.group, team: team)
     |> join_attendance_summary(team, filter_options.when)
     |> scope(sort: filter_options.sort)
@@ -84,6 +97,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       when: current_year(),
       status: "active",
       details: "all",
+      attended: "all",
       sort: "name"
     }
   end
@@ -92,10 +106,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :when, :status, :details, :group, :page, :sort])
+    |> cast(params, [:q, :when, :status, :details, :attended, :group, :page, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:details, Enum.map(details_kinds(), fn {_, v} -> v end))
+    |> validate_inclusion(:attended, ["all", "not-recent"])
     |> validate_format(:when, ~r/\A(all|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
@@ -180,6 +195,12 @@ defmodule App.ViewModel.MemberFilterViewModel do
       |> Member.missing_details_query()
 
   defp scope(q, details: _all), do: q
+
+  defp scope(q, attended: "not-recent", team: %{not_seen_days: days} = team)
+       when is_integer(days),
+       do: Member.not_seen_query(q, team, days, DateTime.utc_now())
+
+  defp scope(q, attended: _all, team: _team), do: q
 
   defp scope(q, group: nil, team: _team), do: q
 

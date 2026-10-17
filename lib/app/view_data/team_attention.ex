@@ -24,6 +24,7 @@ defmodule App.ViewData.TeamAttention do
       drafts_item(rows.draft_count, rows.service),
       expiring_item(rows.expiring_count, rows.expiring_days, rows.service),
       missing_details_item(rows.missing_details_count, rows.service),
+      not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service)
     ]
@@ -121,6 +122,28 @@ defmodule App.ViewData.TeamAttention do
       action: "Show members"
     }
   end
+
+  defp not_seen_item(nil), do: nil
+  defp not_seen_item(%{count: 0}), do: nil
+
+  # Members drifting away, for someone to check in with (#247).
+  defp not_seen_item(%{count: count, days: days}) do
+    %{
+      key: :not_seen,
+      level: :info,
+      title:
+        Format.count(count,
+          one: "%d member has not attended an activity in #{period(days)}",
+          many: "%d members have not attended an activity in #{period(days)}"
+        ),
+      detail: Format.count(count, one: "Check in with them.", many: "Check in with each one."),
+      action: "Show members"
+    }
+  end
+
+  @doc ~s(How `not_seen_days` reads in text: "90 days", or "a year".)
+  def period(365), do: "a year"
+  def period(days), do: "#{days} days"
 
   # A team on SAR Duty Records changes its members in SAR Duty.
   defp missing_details_where(:d4h), do: "Add the missing details in D4H."

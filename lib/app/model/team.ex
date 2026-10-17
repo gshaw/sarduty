@@ -55,6 +55,9 @@ defmodule App.Model.Team do
     field :primary_hours_tag, TrimmedString
     field :secondary_hours_tag, TrimmedString
     field :other_hours_tag, TrimmedString
+    # Needs attention lists current members with no attendance in this many days (#247).
+    # Nil turns it off. Set on the General settings page.
+    field :not_seen_days, :integer, default: 90
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
@@ -96,6 +99,17 @@ defmodule App.Model.Team do
     |> Map.merge(organization_tags, fn _kind, tag, org_tag -> org_tag || tag end)
   end
 
+  @not_seen_days [30, 60, 90, 180, 365]
+
+  @doc "The choices for `not_seen_days`, as select options. 0 is off, saved as nil."
+  def not_seen_days_kinds do
+    [{"Off", 0}] ++
+      Enum.map(@not_seen_days, fn
+        365 -> {"1 year", 365}
+        days -> {"#{days} days", days}
+      end)
+  end
+
   # Only what a team manager may edit. d4h_team_id and the saved key are not
   # castable here; UpdateTeamSettings sets the key after checking it with D4H.
   def build_settings_changeset(data, params \\ %{}) do
@@ -107,9 +121,12 @@ defmodule App.Model.Team do
       :authorized_by_title,
       :authorized_by_phone,
       :authorized_by_email,
+      :not_seen_days,
       :new_d4h_access_key
     ])
     |> validate_required([:name])
+    |> validate_inclusion(:not_seen_days, [0 | @not_seen_days])
+    |> not_seen_off()
     |> Validate.name(:name)
     |> Validate.address(:mailing_address)
     |> validate_length(:authorized_by_name, max: 250)
@@ -117,6 +134,13 @@ defmodule App.Model.Team do
     |> validate_length(:authorized_by_phone, max: 30)
     |> Validate.email(:authorized_by_email)
     |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
+  end
+
+  # A blank would cast to the field's default, so the form sends 0 for off.
+  defp not_seen_off(changeset) do
+    if get_change(changeset, :not_seen_days) == 0,
+      do: put_change(changeset, :not_seen_days, nil),
+      else: changeset
   end
 
   def build_changeset(data, params \\ %{}) do
