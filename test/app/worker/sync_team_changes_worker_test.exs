@@ -29,21 +29,26 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   defp list_name(conn), do: conn.path_info |> List.last()
 
-  test "when nothing changed, a sync makes only the 12 list checks" do
+  test "when nothing changed, a sync makes the 12 list checks and reads the open years" do
     team = synced_team()
     test = self()
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
-      send(test, {:d4h, conn.request_path})
-      Req.Test.json(conn, head(10))
+      conn = Plug.Conn.fetch_query_params(conn)
+      send(test, {:d4h, list_name(conn), conn.query_params})
+
+      if conn.query_params["starts_after"],
+        do: Req.Test.json(conn, %{"results" => [], "totalSize" => 0}),
+        else: Req.Test.json(conn, head(10))
     end)
 
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 
-    requests = for _ <- 1..12, do: assert_receive({:d4h, path})
-    assert length(requests) == 12
-    refute_received {:d4h, _}
+    requests = for _ <- 1..15, do: assert_receive({:d4h, _list, _params})
+    open_years = for {:d4h, list, %{"starts_after" => _}} <- requests, do: list
+    assert Enum.sort(open_years) == ~w(events exercises incidents)
+    refute_received {:d4h, _, _}
     refute_received {:team_refreshed, _}
     assert Repo.reload(team).d4h_synced_at
     refute Event.get_last(:d4h_team_sync)
@@ -72,6 +77,9 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
       params = conn.query_params
 
       cond do
+        params["starts_after"] ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
         list_name(conn) != "attendance" ->
           Req.Test.json(conn, head(10))
 
@@ -104,6 +112,9 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
       params = conn.query_params
 
       cond do
+        params["starts_after"] ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
         list_name(conn) != "events" and params["size"] == "1" ->
           Req.Test.json(conn, head(10))
 
@@ -125,6 +136,41 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
     assert Repo.reload(deleted).deleted_at
     refute Repo.reload(kept).deleted_at
+  end
+
+  test "a tag changed in D4H reaches an open year's activity, though no head moved (#358)" do
+    team = synced_team()
+    primary = tag_fixture(team, "Primary Hours")
+    activity = activity_fixture(team, %{started_at: DateTime.utc_now(), tags: []})
+
+    d4h_activity = %{
+      "id" => activity.d4h_activity_id,
+      "resourceType" => "Exercise",
+      "owner" => %{"resourceType" => "Team", "id" => team.d4h_team_id},
+      "reference" => activity.ref_id,
+      "referenceDescription" => activity.title,
+      "published" => true,
+      "startsAt" => DateTime.to_iso8601(activity.started_at),
+      "endsAt" => DateTime.to_iso8601(activity.finished_at),
+      "address" => %{},
+      "tags" => [%{"resourceType" => "Tag", "id" => primary.d4h_tag_id}]
+    }
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+
+      case {list_name(conn), conn.query_params["starts_after"]} do
+        {_list, nil} -> Req.Test.json(conn, head(10))
+        {"exercises", _} -> Req.Test.json(conn, %{"results" => [d4h_activity], "totalSize" => 1})
+        _other_kind -> Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+      end
+    end)
+
+    Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
+    assert perform(team) == :ok
+
+    assert Repo.reload(activity).tags == ["Primary Hours"]
+    assert_received {:team_refreshed, %Team{}}
   end
 
   test "skips a team whose full refresh is running" do

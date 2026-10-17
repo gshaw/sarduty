@@ -439,6 +439,16 @@ defmodule App.Adapter.D4H do
     reduce_pages(context, "/attendance", &D4H.AttendanceInfo.build/1, acc, fun, params)
   end
 
+  @doc """
+  Activities of one kind that start at or after `starts_after`, in pages. SAR Duty Records
+  ignores the filter and sends them all.
+  """
+  def reduce_activities_starting_after(context, tag_index, kind, starts_after, acc, fun) do
+    build = &D4H.Activity.build(&1, tag_index)
+    params = [starts_after: iso(starts_after)]
+    reduce_pages(context, "/#{kind}", build, acc, fun, params)
+  end
+
   @doc "Activities of one kind changed after `updated_after`, in pages."
   def reduce_activities_updated_after(context, tag_index, kind, updated_after, acc, fun) do
     build = &D4H.Activity.build(&1, tag_index)

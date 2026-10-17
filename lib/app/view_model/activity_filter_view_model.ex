@@ -7,10 +7,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   alias App.Model.Activity
   alias App.Repo
 
-  # Days either side of today that Current shows. A busy team runs about six
-  # activities a week, so this fits on one screen.
-  @current_days 7
-
   @primary_key false
   embedded_schema do
     field :q, Field.TrimmedString
@@ -146,7 +142,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, when: "all", timezone: _), do: q
 
   defp scope(q, when: "current", timezone: timezone) do
-    {start, finish} = Service.DayRange.around(DateTime.utc_now(), timezone, @current_days)
+    {start, finish} = Service.Period.current(DateTime.utc_now(), timezone)
     Activity.overlapping(q, start, finish)
   end
 

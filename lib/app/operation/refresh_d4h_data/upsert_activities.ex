@@ -105,7 +105,7 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
     :ok
   end
 
-  @doc "Saves one D4H activity for the team."
+  @doc "Saves one D4H activity for the team: `:changed` when that wrote anything, else `:unchanged`."
   def upsert(team_id, d4h_activity), do: upsert_activity(team_id, d4h_activity)
 
   defp set_deleted_at(_team_id, [], _deleted_at), do: :ok
@@ -149,5 +149,6 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
     activity = Activity.get_by(team_id: team_id, d4h_activity_id: d4h_activity.d4h_activity_id)
     saved = if activity, do: Activity.update!(activity, params), else: Activity.insert!(params)
     RecordD4HChanges.record(:activity, activity, saved)
+    if activity && saved.updated_at == activity.updated_at, do: :unchanged, else: :changed
   end
 end
