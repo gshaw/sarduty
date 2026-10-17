@@ -267,6 +267,9 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :missing_details}),
     do: ~p"/teams/#{team}/members?details=missing"
 
+  defp attention_path(team, %{key: :not_seen}),
+    do: ~p"/teams/#{team}/members?attended=not-recent"
+
   defp attention_path(team, %{key: :group_changes}), do: ~p"/teams/#{team}/groups"
 
   defp attention_path(team, %{key: :proposed_changes}),

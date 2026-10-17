@@ -49,6 +49,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       expiring_days: BuildGroupRulePreview.expiring_days(),
       expiring_count: count_expiring(team, now),
       missing_details_count: count_missing_details(team, now),
+      not_seen: not_seen_row(team, now),
       group_change_count: count_group_changes(team, now),
       proposed_change_count: ChangeSet.count_waiting(team.id),
       untagged: untagged_rows(team, now),
@@ -151,6 +152,14 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> Member.people_query()
     |> Member.missing_details_query()
     |> Repo.aggregate(:count)
+  end
+
+  # Nil when the team turned the item off in its settings.
+  defp not_seen_row(%Team{not_seen_days: nil}, _now), do: nil
+
+  defp not_seen_row(%Team{not_seen_days: days} = team, now) do
+    count = Member |> Member.not_seen_query(team, days, now) |> Repo.aggregate(:count)
+    %{days: days, count: count}
   end
 
   # Adds and removes waiting across every group with rules. Rules with a problem plan
