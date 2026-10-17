@@ -101,16 +101,16 @@ defmodule Web.ActivityTagsLive do
       hours: hours,
       tags: tags,
       unknown_ids: unknown_ids,
-      approved?: false,
+      published?: false,
       load_error: nil
     )
   end
 
-  # D4H refuses tags on an approved activity (#356), so the page says so in place of the form.
-  defp load_tags(socket, :approved) do
+  # D4H refuses tags on a published activity (#358), so the page says so in place of the form.
+  defp load_tags(socket, :published) do
     socket
     |> assign(start_ids: nil, hours: "none", tags: [], unknown_ids: [], load_error: nil)
-    |> assign(approved?: true, activity: %{socket.assigns.activity | is_approved: true})
+    |> assign(published?: true, activity: %{socket.assigns.activity | is_published: true})
   end
 
   defp load_tags(socket, {:error, text}) do
@@ -119,7 +119,7 @@ defmodule Web.ActivityTagsLive do
       hours: "none",
       tags: [],
       unknown_ids: [],
-      approved?: false,
+      published?: false,
       load_error: text
     )
   end
@@ -146,20 +146,20 @@ defmodule Web.ActivityTagsLive do
     </.banner>
 
     <.banner
-      :if={@approved?}
-      id="tags-approved"
+      :if={@published?}
+      id="tags-published"
       kind={:warning}
-      title="This activity is approved in D4H"
+      title="This activity is published in D4H"
     >
       <p>
-        D4H does not let anyone change an approved activity's tags. Reopen it in D4H, then come back.
+        D4H doesn't let SAR Duty change a published activity's tags. Change them in D4H.
       </p>
       <.button variant={:warning} href={D4H.activity_url(@current_team, @activity)}>
         Open D4H activity
       </.button>
     </.banner>
 
-    <div :if={!@load_error and !@approved?} class="content-wrapper">
+    <div :if={!@load_error and !@published?} class="content-wrapper">
       <aside class="content-1/3">
         <section id="activity-tag-search">
           <h2 class="heading">Find a tag</h2>

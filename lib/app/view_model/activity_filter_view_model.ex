@@ -17,7 +17,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :activity, :string
     field :when, :string
     field :status, :string
-    field :approved, :string
     field :hours, :string
     field :page, :integer
     field :sort, :string
@@ -28,9 +27,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   # "draft": attendance can still change in D4H, so a team admin checks it (#205).
   def status_kinds, do: [{"All", "all"}, {"Draft", "draft"}, {"Published", "published"}]
-
-  # Approved in D4H, which refuses every change until it's reopened there (#356).
-  def approved_kinds, do: [{"All", "all"}, {"Approved", "yes"}, {"Not approved", "no"}]
 
   # "untagged": none of the team's hours tags, so it counts for no hours by mistake (#323).
   def hours_kinds, do: [{"All", "all"}, {"No hours tag", "untagged"}]
@@ -90,7 +86,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(activity: filter_options.activity)
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
-    |> scope(approved: filter_options.approved)
     |> scope(hours: filter_options.hours, team: team)
     |> scope(sort: filter_options.sort)
     |> Repo.paginate(page: filter_options.page)
@@ -101,7 +96,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
       when: "all",
       activity: "all",
       status: "all",
-      approved: "all",
       hours: "all",
       sort: "date-"
     }
@@ -111,11 +105,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :activity, :when, :status, :approved, :hours, :page, :sort])
+    |> cast(params, [:q, :activity, :when, :status, :hours, :page, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_option(:activity, activity_kinds())
     |> validate_option(:status, status_kinds())
-    |> validate_option(:approved, approved_kinds())
     |> validate_option(:hours, hours_kinds())
     |> validate_format(:when, ~r/\A(all|current|recent|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
@@ -174,10 +167,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, status: "draft"), do: where(q, [r], r.is_published == false)
   defp scope(q, status: "published"), do: where(q, [r], r.is_published == true)
   defp scope(q, status: _all), do: q
-
-  defp scope(q, approved: "yes"), do: where(q, [r], r.is_approved == true)
-  defp scope(q, approved: "no"), do: where(q, [r], r.is_approved == false)
-  defp scope(q, approved: _all), do: q
 
   defp scope(q, hours: "untagged", team: team),
     do: Activity.without_hours_tag(q, Activity.hours_tags(team))

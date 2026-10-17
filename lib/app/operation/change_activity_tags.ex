@@ -19,8 +19,8 @@ defmodule App.Operation.ChangeActivityTags do
   alias App.Repo
 
   @doc """
-  The activity's D4H tag ids now. `{:ok, ids}`, `:approved` when D4H has approved it and
-  won't take tags (#356), or `{:error, text}` to show. The local copy takes D4H's approved
+  The activity's D4H tag ids now. `{:ok, ids}`, `:published` when D4H has published it and
+  won't take tags (#358), or `{:error, text}` to show. The local copy takes D4H's published
   flag, so the activity's page agrees before the next refresh.
   """
   def current(%Team{d4h_access_key: nil} = team, _activity),
@@ -30,19 +30,22 @@ defmodule App.Operation.ChangeActivityTags do
     d4h = D4H.build_context_from_team(team)
 
     case D4H.fetch_activity_tags(d4h, activity.d4h_activity_id, activity.activity_kind) do
-      {:ok, %{approved?: approved?} = now} ->
-        copy_approved(activity, approved?)
-        if approved?, do: :approved, else: {:ok, now.tag_ids |> Enum.uniq() |> Enum.sort()}
+      {:ok, %{published?: published?} = now} ->
+        activity = copy_published(activity, published?)
+
+        if D4H.tags_locked?(team, activity),
+          do: :published,
+          else: {:ok, now.tag_ids |> Enum.uniq() |> Enum.sort()}
 
       {:error, error} ->
         {:error, describe(team, error)}
     end
   end
 
-  defp copy_approved(%Activity{is_approved: approved?}, approved?), do: :ok
+  defp copy_published(%Activity{is_published: published?} = activity, published?), do: activity
 
-  defp copy_approved(activity, approved?),
-    do: activity |> Ecto.Changeset.change(is_approved: approved?) |> Repo.update!()
+  defp copy_published(activity, published?),
+    do: activity |> Ecto.Changeset.change(is_published: published?) |> Repo.update!()
 
   @doc """
   The row that changes the activity's tags from `start_ids`, read when the page opened,

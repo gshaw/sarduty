@@ -20,7 +20,7 @@ defmodule App.ViewData.TeamAttention do
   @doc """
   The items to show, at most #{@max_items}. Each is a map with `key`, `level`
   (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
-  `action`, the text of its link. The letters and untagged items also carry the `year`; `untagged` is a list of `%{year:, count:, approved:}`. `service`
+  `action`, the text of its link. The letters and untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`. `service`
   is where the team's records live, `:d4h` or `:records` (D4H.service/1).
   """
   def items(rows, now) do
@@ -34,7 +34,7 @@ defmodule App.ViewData.TeamAttention do
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service)
     ]
-    |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year)))
+    |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&(&1.level != :warning))
@@ -169,11 +169,11 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp untagged_item(%{count: 0}, _this_year), do: nil
+  defp untagged_item(%{count: 0}, _this_year, _service), do: nil
 
   # Letters count no hours for an activity with no hours tag (#323). Last year's shows only
   # in letter season, and has its own key so both can show.
-  defp untagged_item(%{count: count, year: year} = row, this_year) do
+  defp untagged_item(%{count: count, year: year}, this_year, service) do
     %{
       key: if(year == this_year, do: :untagged, else: :untagged_last_year),
       level: :info,
@@ -183,29 +183,24 @@ defmodule App.ViewData.TeamAttention do
           one: "%d activity in #{year} has no hours tag",
           many: "%d activities in #{year} have no hours tag"
         ),
-      detail:
-        [untagged_detail(count), approved_detail(Map.get(row, :approved, 0))]
-        |> Enum.reject(&is_nil/1)
-        |> Enum.join(" "),
+      detail: untagged_detail(count, service),
       action: "Show activities"
     }
   end
 
-  defp untagged_detail(count),
+  defp untagged_detail(count, :records),
     do:
       Format.count(count,
         one: "Tax credit letters count no hours for it. Set its hours with Change tags.",
         many: "Tax credit letters count no hours for them. Set each one's hours with Change tags."
       )
 
-  # D4H refuses tags on an approved activity, so those need reopening in D4H first (#356).
-  defp approved_detail(0), do: nil
-
-  defp approved_detail(approved),
+  # These are all published, and D4H refuses tags on a published activity (#358).
+  defp untagged_detail(count, :d4h),
     do:
-      Format.count(approved,
-        one: "%d is approved in D4H. Reopen it in D4H first.",
-        many: "%d are approved in D4H. Reopen them in D4H first."
+      Format.count(count,
+        one: "Tax credit letters count no hours for it. Set its hours tag in D4H.",
+        many: "Tax credit letters count no hours for them. Set each one's hours tag in D4H."
       )
 
   defp letters_item(nil, _now, _timezone), do: nil

@@ -181,24 +181,19 @@ defmodule App.ViewData.TeamDashboardViewData do
       years =
         if TeamAttention.letter_season?(now, team.timezone), do: [year - 1, year], else: [year]
 
-      Enum.map(years, &Map.put(count_untagged(team, hours_tags, &1), :year, &1))
+      Enum.map(years, &%{year: &1, count: count_untagged(team, hours_tags, &1)})
     else
       []
     end
   end
 
-  # Approved ones still count: their letters miss the hours too. Only D4H can reopen them.
   defp count_untagged(team, hours_tags, year) do
     Activity
     |> where([a], a.team_id == ^team.id and a.is_published == true)
     |> Activity.not_deleted()
     |> Activity.started_in(year, team.timezone)
     |> Activity.without_hours_tag(hours_tags)
-    |> select([a], %{
-      count: count(a.id),
-      approved: coalesce(sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", a.is_approved)), 0)
-    })
-    |> Repo.one()
+    |> Repo.aggregate(:count)
   end
 
   defp uses_hours_tags?(team, hours_tags) do

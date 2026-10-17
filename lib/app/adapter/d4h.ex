@@ -39,6 +39,13 @@ defmodule App.Adapter.D4H do
 
   def records?(team_or_host), do: service(team_or_host) == :records
 
+  @doc """
+  Whether the service refuses changes to the activity's tags. D4H answers 409
+  "Resources cannot be updated once they have been published" (#358); SAR Duty Records
+  takes them.
+  """
+  def tags_locked?(team, %{is_published: published?}), do: published? == true and !records?(team)
+
   @doc ~s(The service's name in text people read: "D4H" or "SAR Duty Records".)
   def service_name(team_or_host) do
     case service(team_or_host) do
@@ -534,16 +541,16 @@ defmodule App.Adapter.D4H do
   end
 
   @doc """
-  The activity's tag ids now and whether D4H has approved it, as
-  `{:ok, %{tag_ids: ids, approved?: boolean}}`. D4H refuses tags on an approved activity
-  (#356).
+  The activity's tag ids now and whether it's published, as
+  `{:ok, %{tag_ids: ids, published?: boolean}}`. D4H refuses tags on a published activity
+  (#358).
   """
   def fetch_activity_tags(context, d4h_activity_id, kind)
       when kind in ["event", "exercise", "incident"] do
     case Req.request(context, method: :get, url: "/#{kind}s/#{d4h_activity_id}", retry: false) do
       {:ok, %{status: 200, body: %{} = body}} ->
         ids = (body["tags"] || []) |> Enum.map(&D4H.Parse.tag_id/1) |> Enum.reject(&is_nil/1)
-        {:ok, %{tag_ids: ids, approved?: body["approved"] == true}}
+        {:ok, %{tag_ids: ids, published?: body["published"] == true}}
 
       result ->
         {:error, write_error(result)}

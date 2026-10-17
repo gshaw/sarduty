@@ -105,37 +105,39 @@ defmodule Web.ActivityTagsLiveTest do
     assert has_element?(lv, "#activity-change-tags")
   end
 
-  test "an activity D4H approved says so in place of the form (#356)", ctx do
+  test "a published D4H activity says so in place of the form (#358)", ctx do
     activity = ctx.activity
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
-      Req.Test.json(conn, %{"id" => activity.d4h_activity_id, "tags" => [], "approved" => true})
+      Req.Test.json(conn, %{"id" => activity.d4h_activity_id, "tags" => [], "published" => true})
     end)
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/tags")
 
-    assert has_element?(lv, "#tags-approved", "This activity is approved in D4H")
-    assert has_element?(lv, "#tags-approved a", "Open D4H activity")
+    assert has_element?(lv, "#tags-published", "This activity is published in D4H")
+    assert has_element?(lv, "#tags-published a", "Open D4H activity")
     refute has_element?(lv, "#activity-tags-form")
-    assert Repo.get!(Activity, activity.id).is_approved
+    assert Repo.get!(Activity, activity.id).is_published
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
-    assert has_element?(lv, "#activity-approved-badge", "Approved")
-    assert has_element?(lv, "#activity-approved", "Reopen it in D4H to change it.")
+    assert has_element?(lv, "#activity-tags-in-d4h", "Change its tags there.")
     refute has_element?(lv, "#activity-change-tags")
-    refute has_element?(lv, "#activity-apply-template")
-    refute has_element?(lv, "#activity-equipment-add")
+    assert has_element?(lv, "#activity-apply-template")
+    assert has_element?(lv, "#activity-equipment-add")
   end
 
-  test "an activity reopened in D4H offers the form again", ctx do
-    {:ok, d4h_tags} = Agent.start_link(fn -> [ctx.tags.primary.d4h_tag_id] end)
-    stub_d4h(ctx.activity, d4h_tags)
-    ctx.activity |> Ecto.Changeset.change(is_approved: true) |> Repo.update!()
+  test "a published activity on SAR Duty Records keeps the form", %{conn: conn} do
+    %{user: user, team: team} = records_team_with_user_fixture(%{d4h_access_key: "team-key"})
+    activity = activity_fixture(team, %{is_published: true})
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/tags")
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      Req.Test.json(conn, %{"id" => activity.d4h_activity_id, "tags" => [], "published" => true})
+    end)
+
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/tags")
 
     assert has_element?(lv, "#activity-tags-form")
-    refute has_element?(lv, "#tags-approved")
-    refute Repo.get!(Activity, ctx.activity.id).is_approved
+    refute has_element?(lv, "#tags-published")
   end
 end

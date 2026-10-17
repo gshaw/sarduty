@@ -50,12 +50,6 @@ defmodule Web.Components.ActivityFilterTable do
         default="all"
       />
       <:filter
-        field={@form[:approved]}
-        label="Approved"
-        options={ActivityFilterViewModel.approved_kinds()}
-        default="all"
-      />
-      <:filter
         field={@form[:hours]}
         label="Hours tag"
         options={ActivityFilterViewModel.hours_kinds()}
@@ -63,7 +57,13 @@ defmodule Web.Components.ActivityFilterTable do
       />
     </.filter_bar>
 
-    <.activity_table rows={@paginated.entries} sort={@sort} path_fn={@path_fn} team={@team} />
+    <.activity_table
+      rows={@paginated.entries}
+      sort={@sort}
+      path_fn={@path_fn}
+      team={@team}
+      untagged?={@form[:hours].value == "untagged"}
+    />
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
@@ -74,6 +74,7 @@ defmodule Web.Components.ActivityFilterTable do
   attr :sort, :string, required: true
   attr :path_fn, :any, required: true
   attr :team, :map, required: true
+  attr :untagged?, :boolean, default: false, doc: "listing activities with no hours tag"
 
   # The activity list's table, without its filters. The style guide shows it with made-up rows.
   def activity_table(assigns) do
@@ -95,13 +96,13 @@ defmodule Web.Components.ActivityFilterTable do
           {activity_summary(record)}
         </div>
         <.activity_tags activity={record} hours_tags={@hours_tags} />
-        <%!-- Needs attention counts these, but only D4H can reopen one to tag it (#356). --%>
+        <%!-- Needs attention links here, and D4H refuses tags on a published activity (#358). --%>
         <div
-          :if={record.is_approved and is_nil(activity_hours_type(record, @hours_tags))}
-          id={"activity-#{record.id}-approved"}
+          :if={@untagged? and D4H.tags_locked?(@team, record)}
+          id={"activity-#{record.id}-tags-in-d4h"}
           class="hint"
         >
-          Approved, so its tags cannot change here.
+          Published, so set its hours tag in D4H.
           <.a external={true} href={D4H.activity_url(@team, record)}>Open D4H activity</.a>
         </div>
       </:col>

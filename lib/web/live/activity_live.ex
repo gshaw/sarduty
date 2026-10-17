@@ -179,10 +179,6 @@ defmodule Web.ActivityLive do
       <%!-- Each action reads or writes the activity in D4H, which no longer has it. --%>
       <dt :if={!@activity.deleted_at}>Actions</dt>
       <dd :if={!@activity.deleted_at}>
-        <%!-- D4H refuses every change to an approved activity (#356). --%>
-        <.warning_text :if={@activity.is_approved} id="activity-approved">
-          Approved in D4H, so it cannot change here. Reopen it in D4H to change it.
-        </.warning_text>
         <ul id="activity-actions" class="action-list">
           <li :if={D4H.records?(@activity.team)}>
             <.a
@@ -196,8 +192,16 @@ defmodule Web.ActivityLive do
             <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
               Open D4H activity
             </.a>
+            <%!-- D4H refuses tags on a published activity (#358). --%>
+            <div
+              :if={D4H.tags_locked?(@activity.team, @activity)}
+              id="activity-tags-in-d4h"
+              class="hint"
+            >
+              Change its tags there. D4H doesn't let SAR Duty change a published activity's tags.
+            </div>
           </li>
-          <li :if={!@activity.is_approved}>
+          <li :if={!D4H.tags_locked?(@activity.team, @activity)}>
             <.a
               id="activity-change-tags"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
@@ -205,7 +209,7 @@ defmodule Web.ActivityLive do
               Change tags
             </.a>
           </li>
-          <li :if={!@activity.is_approved}>
+          <li>
             <.a
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
@@ -213,12 +217,12 @@ defmodule Web.ActivityLive do
               Apply a template
             </.a>
           </li>
-          <li :if={!@activity.is_approved}>
+          <li>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>
               Take attendance
             </.a>
           </li>
-          <li :if={!@activity.is_approved}>
+          <li>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}>
               Import attendance
             </.a>
@@ -260,7 +264,7 @@ defmodule Web.ActivityLive do
       <div class="heading-row">
         <h2 class="heading">Equipment · {length(@usages)}</h2>
         <.button
-          :if={!@activity.deleted_at and !@activity.is_approved}
+          :if={!@activity.deleted_at}
           id="activity-equipment-add"
           size={:sm}
           navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}

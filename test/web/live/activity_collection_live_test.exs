@@ -106,21 +106,6 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection", "Already published")
   end
 
-  test "the Approved filter splits approved activities from the rest (#356)", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    activity_fixture(team, %{title: "Approved in D4H", is_published: true, is_approved: true})
-    activity_fixture(team, %{title: "Open to change", is_published: true})
-    conn = log_in_user(conn, user)
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities?approved=yes")
-    assert has_element?(lv, "#activity_collection", "Approved in D4H")
-    refute has_element?(lv, "#activity_collection", "Open to change")
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities?approved=no")
-    assert has_element?(lv, "#activity_collection", "Open to change")
-    refute has_element?(lv, "#activity_collection", "Approved in D4H")
-  end
-
   test "Enter in the search box filters the list (#333)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, %{title: "Rope rescue night"})
