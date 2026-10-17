@@ -150,11 +150,8 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     refute Repo.reload(kept).deleted_at
   end
 
-  test "a tag changed in D4H reaches an open year's activity, though no head moved (#358)" do
-    team = synced_team()
-    primary = tag_fixture(team, "Primary Hours")
-    activity = activity_fixture(team, %{started_at: DateTime.utc_now(), tags: []})
-
+  # D4H answers with `activity` tagged `tags` in the open years' read, every head unchanged.
+  defp stub_open_year(team, activity, tags) do
     d4h_activity = %{
       "id" => activity.d4h_activity_id,
       "resourceType" => "Exercise",
@@ -165,7 +162,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
       "startsAt" => DateTime.to_iso8601(activity.started_at),
       "endsAt" => DateTime.to_iso8601(activity.finished_at),
       "address" => %{},
-      "tags" => [%{"resourceType" => "Tag", "id" => primary.d4h_tag_id}]
+      "tags" => for(tag <- tags, do: %{"resourceType" => "Tag", "id" => tag.d4h_tag_id})
     }
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -177,6 +174,16 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
         _other_kind -> Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
       end
     end)
+  end
+
+  test "a tag changed in D4H reaches an open year's activity, though no head moved (#358)" do
+    team = synced_team()
+    primary = tag_fixture(team, "Primary Hours")
+
+    activity =
+      activity_fixture(team, %{started_at: DateTime.utc_now(), tags: [], is_published: true})
+
+    stub_open_year(team, activity, [primary])
 
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok

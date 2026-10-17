@@ -160,7 +160,11 @@ defmodule App.Operation.ChangeActivityEquipment do
         :ok
 
       row ->
-        tags = Enum.uniq((activity.tags || []) ++ row.new_value["titles"])
+        tags =
+          ((activity.tags || []) ++ row.new_value["titles"])
+          |> Enum.uniq()
+          |> Activity.sort_tags()
+
         activity |> Ecto.Changeset.change(tags: tags) |> Repo.update!()
     end
   end

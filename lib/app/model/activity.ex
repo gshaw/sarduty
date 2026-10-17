@@ -171,7 +171,15 @@ defmodule App.Model.Activity do
       :started_at,
       :finished_at
     ])
+    |> update_change(:tags, &sort_tags/1)
   end
+
+  @doc """
+  Tags in the order they're stored: sorted, since D4H's order means nothing and changes
+  when tags are set. Two copies with the same tags then compare equal (#358).
+  """
+  def sort_tags(nil), do: nil
+  def sort_tags(tags), do: Enum.sort(tags)
 
   def get_all(team_id) do
     Activity

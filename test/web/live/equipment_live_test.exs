@@ -193,7 +193,7 @@ defmodule Web.EquipmentLiveTest do
     assert_received {:d4h_write, tags_path, %{"tagIds" => tag_ids}}
     assert String.ends_with?(tags_path, path <> "/tags")
     assert tag_ids == Enum.sort([hours.d4h_tag_id, water.d4h_tag_id])
-    assert Repo.get!(Activity, activity.id).tags == ["Primary Hours", "Flat Water"]
+    assert Repo.get!(Activity, activity.id).tags == ["Flat Water", "Primary Hours"]
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
