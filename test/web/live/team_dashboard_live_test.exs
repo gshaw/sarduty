@@ -166,7 +166,8 @@ defmodule Web.TeamDashboardLiveTest do
     tag_fixture(team, "Primary Hours")
     team |> Ecto.Changeset.change(other_hours_tag: "Social") |> Repo.update!()
     activity_fixture(team, Map.merge(june, %{title: "Untagged", tags: ["Training"]}))
-    activity_fixture(team, Map.merge(june, %{title: "No tags", tags: nil}))
+    approved = %{title: "No tags", tags: nil, is_approved: true}
+    approved = activity_fixture(team, Map.merge(june, approved))
     activity_fixture(team, Map.merge(june, %{title: "Primary", tags: ["Primary Hours"]}))
     activity_fixture(team, Map.merge(june, %{title: "BBQ", tags: ["Social"]}))
     activity_fixture(team, Map.merge(june, %{title: "Draft", tags: [], is_published: false}))
@@ -175,11 +176,18 @@ defmodule Web.TeamDashboardLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#attention-untagged", "2 activities in #{year} have no hours tag")
 
+    assert has_element?(
+             lv,
+             "#attention-untagged",
+             "1 is approved in D4H. Reopen it in D4H first."
+           )
+
     {:ok, list, _html} =
       lv |> element("#attention-untagged a") |> render_click() |> follow_redirect(conn)
 
     assert has_element?(list, "#activity_collection", "Untagged")
     assert has_element?(list, "#activity_collection", "No tags")
+    assert has_element?(list, "#activity-#{approved.id}-approved a", "Open D4H activity")
     refute has_element?(list, "#activity_collection", "Primary")
     refute has_element?(list, "#activity_collection", "BBQ")
     refute has_element?(list, "#activity_collection", "Draft")

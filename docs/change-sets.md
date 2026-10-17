@@ -39,7 +39,8 @@ new kind of write is a new row action there, not a new call from a page or an op
   once. See [equipment.md](equipment.md) and [templates.md](templates.md).
 - **An activity's tags are a set of one row** (source `tags`, #323): its hours choice
   and other tags from its "Change tags" page, as one `set_activity_tags` row with the whole
-  list, applied at once.
+  list, applied at once. The page doesn't offer the form for an activity D4H has
+  approved, since D4H refuses every change to one (#356).
 - **A template's groups are invited as a set** (source `template`, #162): one
   `create_attendance` row per member, with status `REQUESTED` rather than `ATTENDING`,
   applied at once.

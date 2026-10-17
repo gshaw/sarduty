@@ -179,6 +179,10 @@ defmodule Web.ActivityLive do
       <%!-- Each action reads or writes the activity in D4H, which no longer has it. --%>
       <dt :if={!@activity.deleted_at}>Actions</dt>
       <dd :if={!@activity.deleted_at}>
+        <%!-- D4H refuses every change to an approved activity (#356). --%>
+        <.warning_text :if={@activity.is_approved} id="activity-approved">
+          Approved in D4H, so it cannot change here. Reopen it in D4H to change it.
+        </.warning_text>
         <ul id="activity-actions" class="action-list">
           <li :if={D4H.records?(@activity.team)}>
             <.a
@@ -193,7 +197,7 @@ defmodule Web.ActivityLive do
               Open D4H activity
             </.a>
           </li>
-          <li>
+          <li :if={!@activity.is_approved}>
             <.a
               id="activity-change-tags"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
@@ -201,7 +205,7 @@ defmodule Web.ActivityLive do
               Change tags
             </.a>
           </li>
-          <li>
+          <li :if={!@activity.is_approved}>
             <.a
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
@@ -209,12 +213,12 @@ defmodule Web.ActivityLive do
               Apply a template
             </.a>
           </li>
-          <li>
+          <li :if={!@activity.is_approved}>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>
               Take attendance
             </.a>
           </li>
-          <li>
+          <li :if={!@activity.is_approved}>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}>
               Import attendance
             </.a>
@@ -256,7 +260,7 @@ defmodule Web.ActivityLive do
       <div class="heading-row">
         <h2 class="heading">Equipment · {length(@usages)}</h2>
         <.button
-          :if={!@activity.deleted_at}
+          :if={!@activity.deleted_at and !@activity.is_approved}
           id="activity-equipment-add"
           size={:sm}
           navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}

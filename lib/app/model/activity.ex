@@ -125,6 +125,8 @@ defmodule App.Model.Activity do
     field :ref_id, :string
     field :tracking_number, :string
     field :is_published, :boolean
+    # D4H has locked it after review, and refuses every change until it's reopened (#356).
+    field :is_approved, :boolean, default: false
     field :title, TrimmedString
     field :description, TrimmedString
     field :address, TrimmedString
@@ -152,6 +154,7 @@ defmodule App.Model.Activity do
       :ref_id,
       :tracking_number,
       :is_published,
+      :is_approved,
       :title,
       :description,
       :address,

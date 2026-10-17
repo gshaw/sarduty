@@ -68,4 +68,22 @@ defmodule App.Adapter.D4H.PageTest do
     assert error.message =~ "D4H API error (401)"
     assert error.message =~ "Legacy Tokens Not Supported"
   end
+
+  test "an error response keeps D4H's detail, which says why" do
+    body = %{
+      "title" => "Conflict",
+      "detail" => "Activity cannot be marked ready for approval or published"
+    }
+
+    error = Error.exception(%Req.Response{status: 409, body: body})
+
+    assert error.message ==
+             "D4H API error (409): Conflict. Activity cannot be marked ready for approval or published"
+  end
+
+  test "an error response without a detail is the title alone" do
+    error = Error.exception(%Req.Response{status: 409, body: %{"title" => "Conflict"}})
+
+    assert error.message == "D4H API error (409): Conflict"
+  end
 end

@@ -6,6 +6,7 @@ defmodule App.Adapter.D4H.Activity do
             ref_id: nil,
             tracking_number: nil,
             is_published: false,
+            is_approved: false,
             title: nil,
             description: nil,
             address: nil,
@@ -26,6 +27,8 @@ defmodule App.Adapter.D4H.Activity do
       ref_id: record["reference"],
       tracking_number: record["trackingNumber"],
       is_published: record["published"],
+      # Set when D4H locks the activity after review; read only in D4H's API (#356).
+      is_approved: record["approved"] == true,
       title: build_title(record["referenceDescription"], record["id"]),
       # Note: description in v3 is HTML
       description: record["description"],

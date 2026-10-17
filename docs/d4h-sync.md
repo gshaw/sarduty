@@ -209,6 +209,12 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   published activities with none of them, one item per year: this year's, and last year's
   from January to April while letters are made. Only for a team with its primary or
   secondary tag in D4H.
+- D4H's `approved` flag is copied to `activities.is_approved` (#356). D4H sets it when
+  someone approves an activity after review, separate from `published`, and its API can
+  only read it. D4H refuses any change to an approved activity with a 409 until someone
+  reopens it in D4H. So an approved activity's page hides the actions that change it,
+  and its "Change tags" page reads the flag fresh as it opens. "Needs attention" still
+  counts approved activities with no hours tag and says how many need reopening.
 
 ## Pages that skip the copy
 
