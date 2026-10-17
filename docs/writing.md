@@ -113,8 +113,7 @@ and must not be used for it.
 | event                          | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
 | attendance                     | participation, roll call, check-in             | Which members attended an activity, and for how long.                                                |
 | attended                       | present, participated                          | A member's state on an activity's attendance.                                                        |
-| published                      | locked, closed, finalized                      | An activity whose attendance D4H no longer lets anyone change.                                       |
-| approved                       | locked, closed, signed off, finalized          | An activity D4H approved after review. It cannot change until someone reopens it in D4H.             |
+| published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H doesn't let SAR Duty change its tags.                           |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
 | group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in, or not in, any of some groups and endorsements.   |

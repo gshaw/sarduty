@@ -135,7 +135,6 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
       ref_id: d4h_activity.ref_id,
       tracking_number: d4h_activity.tracking_number,
       is_published: d4h_activity.is_published,
-      is_approved: d4h_activity.is_approved,
       title: d4h_activity.title,
       description: d4h_activity.description,
       address: d4h_activity.address,

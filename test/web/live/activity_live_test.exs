@@ -21,7 +21,7 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-map circle")
     refute has_element?(lv, "#deleted-in-d4h")
     assert has_element?(lv, "#activity-change-tags")
-    refute has_element?(lv, "#activity-approved")
+    refute has_element?(lv, "#activity-tags-in-d4h")
   end
 
   test "opens the latitude and longitude in maps, or the address without them", %{conn: conn} do
