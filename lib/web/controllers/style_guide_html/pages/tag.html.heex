@@ -28,13 +28,23 @@
       </span>
       <span :if={t.kind == :markers} class="badges">
         <.activity_kind activity={
-          %{activity_kind: "incident", is_published: true, tracking_number: nil}
+          %{
+            activity_kind: "incident",
+            is_published: true,
+            is_approved: false,
+            tracking_number: nil
+          }
         } />
         <.activity_kind activity={
-          %{activity_kind: "exercise", is_published: true, tracking_number: nil}
+          %{
+            activity_kind: "exercise",
+            is_published: true,
+            is_approved: false,
+            tracking_number: nil
+          }
         } />
         <.activity_kind activity={
-          %{activity_kind: "event", is_published: true, tracking_number: nil}
+          %{activity_kind: "event", is_published: true, is_approved: false, tracking_number: nil}
         } />
       </span>
       <.badge :if={t.kind not in [:kinds, :markers]} kind={t.kind}>{t.sample}</.badge>

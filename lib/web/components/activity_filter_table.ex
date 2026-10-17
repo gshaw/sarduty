@@ -7,6 +7,7 @@ defmodule Web.Components.ActivityFilterTable do
   import Web.Components.Pagination
   import Web.Components.Table
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.ViewModel.ActivityFilterViewModel
 
@@ -49,6 +50,12 @@ defmodule Web.Components.ActivityFilterTable do
         default="all"
       />
       <:filter
+        field={@form[:approved]}
+        label="Approved"
+        options={ActivityFilterViewModel.approved_kinds()}
+        default="all"
+      />
+      <:filter
         field={@form[:hours]}
         label="Hours tag"
         options={ActivityFilterViewModel.hours_kinds()}
@@ -88,6 +95,15 @@ defmodule Web.Components.ActivityFilterTable do
           {activity_summary(record)}
         </div>
         <.activity_tags activity={record} hours_tags={@hours_tags} />
+        <%!-- Needs attention counts these, but only D4H can reopen one to tag it (#356). --%>
+        <div
+          :if={record.is_approved and is_nil(activity_hours_type(record, @hours_tags))}
+          id={"activity-#{record.id}-approved"}
+          class="hint"
+        >
+          Approved, so its tags cannot change here.
+          <.a external={true} href={D4H.activity_url(@team, record)}>Open D4H activity</.a>
+        </div>
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
         <.activity_kind activity={record} />

@@ -104,4 +104,38 @@ defmodule Web.ActivityTagsLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
     assert has_element?(lv, "#activity-change-tags")
   end
+
+  test "an activity D4H approved says so in place of the form (#356)", ctx do
+    activity = ctx.activity
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      Req.Test.json(conn, %{"id" => activity.d4h_activity_id, "tags" => [], "approved" => true})
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/tags")
+
+    assert has_element?(lv, "#tags-approved", "This activity is approved in D4H")
+    assert has_element?(lv, "#tags-approved a", "Open D4H activity")
+    refute has_element?(lv, "#activity-tags-form")
+    assert Repo.get!(Activity, activity.id).is_approved
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    assert has_element?(lv, "#activity-approved-badge", "Approved")
+    assert has_element?(lv, "#activity-approved", "Reopen it in D4H to change it.")
+    refute has_element?(lv, "#activity-change-tags")
+    refute has_element?(lv, "#activity-apply-template")
+    refute has_element?(lv, "#activity-equipment-add")
+  end
+
+  test "an activity reopened in D4H offers the form again", ctx do
+    {:ok, d4h_tags} = Agent.start_link(fn -> [ctx.tags.primary.d4h_tag_id] end)
+    stub_d4h(ctx.activity, d4h_tags)
+    ctx.activity |> Ecto.Changeset.change(is_approved: true) |> Repo.update!()
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/tags")
+
+    assert has_element?(lv, "#activity-tags-form")
+    refute has_element?(lv, "#tags-approved")
+    refute Repo.get!(Activity, ctx.activity.id).is_approved
+  end
 end

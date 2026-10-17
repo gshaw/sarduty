@@ -528,11 +528,22 @@ defmodule App.Adapter.D4H do
   end
 
   @doc "The D4H ids of the activity's tags now, as `{:ok, ids}` (#162)."
-  def fetch_activity_tag_ids(context, d4h_activity_id, kind)
+  def fetch_activity_tag_ids(context, d4h_activity_id, kind) do
+    with {:ok, %{tag_ids: ids}} <- fetch_activity_tags(context, d4h_activity_id, kind),
+         do: {:ok, ids}
+  end
+
+  @doc """
+  The activity's tag ids now and whether D4H has approved it, as
+  `{:ok, %{tag_ids: ids, approved?: boolean}}`. D4H refuses tags on an approved activity
+  (#356).
+  """
+  def fetch_activity_tags(context, d4h_activity_id, kind)
       when kind in ["event", "exercise", "incident"] do
     case Req.request(context, method: :get, url: "/#{kind}s/#{d4h_activity_id}", retry: false) do
       {:ok, %{status: 200, body: %{} = body}} ->
-        {:ok, (body["tags"] || []) |> Enum.map(&D4H.Parse.tag_id/1) |> Enum.reject(&is_nil/1)}
+        ids = (body["tags"] || []) |> Enum.map(&D4H.Parse.tag_id/1) |> Enum.reject(&is_nil/1)
+        {:ok, %{tag_ids: ids, approved?: body["approved"] == true}}
 
       result ->
         {:error, write_error(result)}
