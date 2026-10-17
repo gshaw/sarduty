@@ -3,35 +3,77 @@ defmodule Web.QualificationCollectionLive do
 
   import Ecto.Query
 
+  import Web.Components.FilterBar
+  import Web.Components.ViewSwitch
+
   alias App.Adapter.D4H
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
+  alias Service.StringHelpers
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :page_title, "Qualifications")}
   end
 
   # `?view=expiring` lists each current member's qualifications that run out in the next
-  # 60 days, the dashboard's "qualifications expire" link (#205).
+  # 60 days, the dashboard's "qualifications expire" link (#205). `q` searches the view.
   def handle_params(params, _uri, socket) do
     current_team = socket.assigns.current_team
+    view = view(params["view"])
+    q = String.trim(params["q"] || "")
+    now = DateTime.utc_now()
+    until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
+    qualifications = list_qualifications_with_counts(current_team)
+    expiring = MemberQualificationAward.expiring(current_team.id, now, until)
 
-    case params["view"] do
-      nil ->
-        qualifications = list_qualifications_with_counts(current_team)
-        {:noreply, assign(socket, view: :all, qualifications: qualifications)}
+    {:noreply,
+     assign(socket,
+       view: view,
+       q: q,
+       form: to_form(%{"q" => q}, as: "form"),
+       all_count: length(qualifications),
+       expiring_count: length(expiring),
+       qualifications: Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q)),
+       expiring:
+         Enum.filter(
+           expiring,
+           &(StringHelpers.matches?(&1.member_name, q) or
+               StringHelpers.matches?(&1.qualification, q))
+         )
+     )}
+  end
 
-      "expiring" ->
-        now = DateTime.utc_now()
-        until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
-        expiring = MemberQualificationAward.expiring(current_team.id, now, until)
-        {:noreply, assign(socket, view: :expiring, expiring: expiring)}
+  def handle_event("change", %{"form" => %{"q" => q}}, socket) do
+    path = qualifications_path(socket.assigns.current_team, socket.assigns.view, q)
+    {:noreply, push_patch(socket, to: path, replace: true)}
+  end
 
-      _other ->
-        raise Web.Status.NotFound
-    end
+  defp count_text(:all, qualifications, _expiring),
+    do:
+      qualifications
+      |> length()
+      |> Service.Format.count(one: "%d qualification", many: "%d qualifications")
+
+  defp count_text(:expiring, _qualifications, expiring),
+    do:
+      expiring
+      |> length()
+      |> Service.Format.count(
+        one: "%d qualification expiring",
+        many: "%d qualifications expiring"
+      )
+
+  defp view(nil), do: :all
+  defp view("expiring"), do: :expiring
+  defp view(_other), do: raise(Web.Status.NotFound)
+
+  defp qualifications_path(team, view, q) do
+    params =
+      Enum.reject([view: view == :expiring && "expiring", q: q], &(elem(&1, 1) in [false, ""]))
+
+    ~p"/teams/#{team}/qualifications?#{params}"
   end
 
   def render(assigns) do
@@ -47,29 +89,41 @@ defmodule Web.QualificationCollectionLive do
       </.button>
     </div>
 
-    <div class="table-summary">
-      <span class="table-summary-links">
-        <.a navigate={~p"/teams/#{@current_team}/qualifications"}>All</.a>
-        ·
-        <.a navigate={~p"/teams/#{@current_team}/qualifications?view=expiring"}>
-          Expiring in {BuildGroupRulePreview.expiring_days()} days
-        </.a>
-      </span>
-      <span :if={@view == :all} class="table-summary-count">
-        {Service.Format.count(length(@qualifications),
-          one: "%d qualification",
-          many: "%d qualifications"
-        )}
-      </span>
-      <span :if={@view == :expiring} class="table-summary-count">
-        {Service.Format.count(length(@expiring),
-          one: "%d qualification expiring",
-          many: "%d qualifications expiring"
-        )}
-      </span>
-    </div>
+    <.filter_bar
+      for={@form}
+      id="qualification_filter_form"
+      count={count_text(@view, @qualifications, @expiring)}
+      clear={qualifications_path(@current_team, @view, "")}
+    >
+      <:lead>
+        <.view_switch label="Qualifications">
+          <:view
+            id="qualifications-all-link"
+            patch={qualifications_path(@current_team, :all, @q)}
+            current={@view == :all}
+            count={@all_count}
+          >
+            All
+          </:view>
+          <:view
+            id="qualifications-expiring-link"
+            patch={qualifications_path(@current_team, :expiring, @q)}
+            current={@view == :expiring}
+            count={@expiring_count}
+          >
+            Expiring in {BuildGroupRulePreview.expiring_days()} days
+          </:view>
+        </.view_switch>
+      </:lead>
+      <:search field={@form[:q]} />
+    </.filter_bar>
 
-    <.expiring_table :if={@view == :expiring} team={@current_team} expiring={@expiring} />
+    <.expiring_table
+      :if={@view == :expiring}
+      team={@current_team}
+      expiring={@expiring}
+      none={@expiring_count == 0}
+    />
 
     <.table
       :if={@view == :all and @qualifications != []}
@@ -92,17 +146,27 @@ defmodule Web.QualificationCollectionLive do
     </.table>
 
     <.empty_state
-      :if={@view == :all and @qualifications == []}
+      :if={@view == :all and @all_count == 0}
       id="no-qualifications"
       title="No qualifications yet"
     >
       SAR Duty copies them from D4H when it refreshes.
+    </.empty_state>
+    <.empty_state
+      :if={
+        @all_count > 0 and @q != "" and if(@view == :all, do: @qualifications, else: @expiring) == []
+      }
+      id="no-matching-qualifications"
+      title="No qualifications match"
+    >
+      Change the search.
     </.empty_state>
     """
   end
 
   attr :team, :map, required: true
   attr :expiring, :list, required: true
+  attr :none, :boolean, required: true, doc: "nothing expires, before the search"
 
   defp expiring_table(assigns) do
     ~H"""
@@ -127,7 +191,7 @@ defmodule Web.QualificationCollectionLive do
         {Service.Format.date_short(row.ends_at, @team.timezone)}
       </:col>
     </.table>
-    <.empty_state :if={@expiring == []} id="none-expiring" title="Nothing expiring">
+    <.empty_state :if={@none} id="none-expiring" title="Nothing expiring">
       No qualifications expire in the next {BuildGroupRulePreview.expiring_days()} days.
     </.empty_state>
     """

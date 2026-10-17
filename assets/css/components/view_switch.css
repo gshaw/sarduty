@@ -1,0 +1,27 @@
+/* A view switch: joined links that switch a list between a few views, each with its
+   count, the current one filled (#350). It sits at the start of a filter bar. See
+   /styles/view-switch. */
+@layer components {
+  .view-switch { display: inline-flex; max-width: 100%; overflow-x: auto; border: var(--border-width) solid var(--border); }
+
+  .view-switch a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 32px;
+    padding: 0 var(--sp-3);
+    border-right: 1px solid var(--border);
+    color: var(--text);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .view-switch a:last-child { border-right: 0; }
+  .view-switch a:hover { background: var(--row-hover); }
+  .view-switch a[aria-current="page"] { background: var(--primary); color: var(--on-fill); font-weight: 600; }
+  .view-switch-count { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .view-switch a[aria-current="page"] .view-switch-count { color: inherit; opacity: 0.8; }
+
+  @media (pointer: coarse) { .view-switch a { min-height: 44px; } }
+}

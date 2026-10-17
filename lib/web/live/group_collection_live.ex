@@ -3,27 +3,41 @@ defmodule Web.GroupCollectionLive do
 
   import Ecto.Query
 
+  import Web.Components.FilterBar
+
   alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRule
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
+  alias Service.StringHelpers
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :page_title, "Groups")}
   end
 
-  def handle_params(_params, _uri, socket) do
-    current_team = socket.assigns.current_team
-    groups = list_groups_with_counts(current_team)
+  def handle_params(params, _uri, socket) do
+    groups = list_groups_with_counts(socket.assigns.current_team)
+    q = String.trim(params["q"] || "")
 
     socket =
-      socket
-      |> assign(:groups, groups)
+      assign(socket,
+        all_count: length(groups),
+        q: q,
+        form: to_form(%{"q" => q}, as: "form"),
+        groups: Enum.filter(groups, &StringHelpers.matches?(&1.group.title, q))
+      )
 
     {:noreply, socket}
   end
+
+  def handle_event("change", %{"form" => %{"q" => q}}, socket) do
+    {:noreply, push_patch(socket, to: groups_path(socket.assigns.current_team, q), replace: true)}
+  end
+
+  defp groups_path(team, ""), do: ~p"/teams/#{team}/groups"
+  defp groups_path(team, q), do: ~p"/teams/#{team}/groups?#{[q: q]}"
 
   def render(assigns) do
     ~H"""
@@ -38,11 +52,15 @@ defmodule Web.GroupCollectionLive do
       </.button>
     </div>
 
-    <div :if={@groups != []} class="table-summary">
-      <span class="table-summary-count">
-        {Service.Format.count(length(@groups), one: "%d group", many: "%d groups")}
-      </span>
-    </div>
+    <.filter_bar
+      :if={@all_count > 0}
+      for={@form}
+      id="group_filter_form"
+      count={Service.Format.count(length(@groups), one: "%d group", many: "%d groups")}
+      clear={groups_path(@current_team, "")}
+    >
+      <:search field={@form[:q]} />
+    </.filter_bar>
 
     <.table
       :if={@groups != []}
@@ -62,8 +80,15 @@ defmodule Web.GroupCollectionLive do
       </:col>
     </.table>
 
-    <.empty_state :if={@groups == []} id="no-groups" title="No groups yet">
+    <.empty_state :if={@all_count == 0} id="no-groups" title="No groups yet">
       SAR Duty copies groups from D4H when it refreshes.
+    </.empty_state>
+    <.empty_state
+      :if={@all_count > 0 and @groups == []}
+      id="no-matching-groups"
+      title="No groups match"
+    >
+      Change the search.
     </.empty_state>
     """
   end

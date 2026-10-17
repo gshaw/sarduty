@@ -36,7 +36,9 @@
   <h2>When not to use</h2>
   <ul>
     <li>
-      A list of a few dozen rows. Leave it plain, or give it a search box and a view switch.
+      A list of a few dozen rows. Leave it plain, or give it a search box and a <a href={
+        page_path(:view_switch)
+      }>view switch</a>.
     </li>
     <li>
       Sorting. The column headers sort a <a href={page_path(:table)}>table</a>, so there is no sort menu.
@@ -51,7 +53,7 @@
     <li>Each menu shows its label inside. A menu not at its default turns blue.</li>
     <li>Search waits 300 ms after typing stops.</li>
     <li>
-      Under the bar: the count, Clear filters while anything filters the list, and which rows the page shows.
+      Under the bar: the count, then Clear filters while a menu filters the list, or Clear search while only the search does, and which rows the page shows.
     </li>
     <li>
       On a phone, the menus fold behind a Filters button that counts the filters that are on. Those filters show as chips under the search box, and selecting one removes it.
@@ -66,7 +68,8 @@
     <code>&lt;.filter_bar&gt;</code>
     with a <code>:search</code>
     slot and a <code>:filter</code>
-    slot per menu, each with its <code>default</code>. Put a long menu, such as groups, in a
+    slot per menu, each with its <code>default</code>. A <code>:lead</code>
+    slot puts a view switch first. Put a long menu, such as groups, in a
     <code>type="combobox"</code>
     filter. Give the sort to <code>hidden</code>
     so a change keeps it. It is a <code>&lt;.filter_form&gt;</code>, which sends
