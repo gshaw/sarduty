@@ -33,6 +33,9 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
 
+  @doc "The year the list opens on: last year, whose letters members need now."
+  def default_year, do: Date.utc_today().year - 1
+
   defp build_team_year_options(team) do
     current = current_year()
 
@@ -104,7 +107,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   defp build_new do
     %__MODULE__{
-      year: Date.utc_today().year - 1,
+      year: default_year(),
       filter: "any",
       sort: "total"
     }

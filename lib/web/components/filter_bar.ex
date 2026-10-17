@@ -34,6 +34,7 @@ defmodule Web.Components.FilterBar do
   attr :for, :any, required: true, doc: "the filter form, from to_form/2"
   attr :id, :string, required: true, doc: "the form's id"
   attr :count, :string, required: true, doc: "what the list shows, such as \"212 activities\""
+  attr :total, :string, default: nil, doc: "a total after the count, such as \"40 hours total\""
   attr :clear, :string, default: nil, doc: "the list's path with no filters or search"
 
   attr :path_fn, :any,
@@ -56,7 +57,10 @@ defmodule Web.Components.FilterBar do
     attr :label, :string, required: true
     attr :options, :list, required: true
     attr :default, :string, required: true, doc: "the value that filters nothing"
-    attr :type, :string, values: ["select", "combobox"]
+
+    attr :type, :string,
+      values: ["select", "combobox"],
+      doc: "combobox for a long list, with All as its empty option and a default of \"\""
   end
 
   def filter_bar(assigns) do
@@ -133,6 +137,7 @@ defmodule Web.Components.FilterBar do
     <div class="table-summary" id={"#{@id}-summary"}>
       <span>
         <strong class="text-text">{@count}</strong>
+        <span :if={@total}>· {@total}</span>
         <span :if={@clear?}>· <.link patch={@clear} class="link">Clear filters</.link></span>
       </span>
       <span :if={@page && @page.total_pages > 1}>{range(@page)}</span>
@@ -151,8 +156,8 @@ defmodule Web.Components.FilterBar do
         name={@filter.field.name}
         value={@filter.field.value}
         options={@filter.options}
-        prompt={option_label(@filter.options, @filter.default)}
-        placeholder={option_label(@filter.options, @filter.default)}
+        prompt="All"
+        placeholder="All"
       />
     </div>
     """

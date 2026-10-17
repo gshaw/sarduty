@@ -74,4 +74,20 @@ defmodule Web.MemberLiveTest do
 
     refute has_element?(lv, "#not-a-person-suggestion")
   end
+
+  test "search finds the member's activities by title (#350)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    attendance_fixture(activity_fixture(team, %{title: "Rope rescue night"}), member)
+    attendance_fixture(activity_fixture(team, %{title: "Board meeting"}), member)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}?when=all")
+
+    lv |> form("#attendance_filter_form", filter: %{q: "rope"}) |> render_change()
+
+    assert has_element?(lv, "#attendance_collection", "Rope rescue night")
+    refute has_element?(lv, "#attendance_collection", "Board meeting")
+    assert has_element?(lv, "#attendance_filter_form-summary", "1 activity")
+  end
 end

@@ -5,6 +5,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   alias App.Field
   alias App.Model.Attendance
+  alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Repo
 
@@ -14,12 +16,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :when, :string
     field :status, :string
     field :details, :string
+    field :group, :integer
     field :page, :integer
-    field :limit, :integer
     field :sort, :string
   end
-
-  def limits, do: [10, 25, 50, 100, 250, 500, 1000]
 
   def status_kinds, do: [{"All", "all"}, {"Active", "active"}, {"Departed", "departed"}]
 
@@ -38,6 +38,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "Duration ↓" => "duration-",
       "Duration ↑" => "duration"
     }
+
+  # The team's groups, by name, for the Group filter (#350).
+  def group_kinds(team), do: team.id |> Group.get_all() |> Enum.map(&{&1.title, &1.id})
 
   def when_kinds(team) do
     years =
@@ -69,10 +72,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
     |> scope(details: filter_options.details)
+    |> scope(group: filter_options.group, team: team)
     |> join_attendance_summary(team, filter_options.when)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
-    |> Repo.paginate(page: filter_options.page, page_size: filter_options.limit)
+    |> Repo.paginate(page: filter_options.page)
   end
 
   defp build_new do
@@ -80,7 +84,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
       when: current_year(),
       status: "active",
       details: "all",
-      limit: 500,
       sort: "name"
     }
   end
@@ -89,16 +92,13 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :when, :status, :details, :page, :limit, :sort])
+    |> cast(params, [:q, :when, :status, :details, :group, :page, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:details, Enum.map(details_kinds(), fn {_, v} -> v end))
     |> validate_format(:when, ~r/\A(all|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
-    |> validate_number(:page,
-      greater_than_or_equal_to: 1,
-      less_than_or_equal_to: Enum.max(limits())
-    )
+    |> validate_number(:page, greater_than_or_equal_to: 1)
   end
 
   defp join_attendance_summary(query, team, year) do
@@ -180,6 +180,19 @@ defmodule App.ViewModel.MemberFilterViewModel do
       |> Member.missing_details_query()
 
   defp scope(q, details: _all), do: q
+
+  defp scope(q, group: nil, team: _team), do: q
+
+  # The group is looked up through the team, so another team's group id finds no one.
+  defp scope(q, group: group_id, team: team) do
+    members =
+      from gm in GroupMember,
+        join: g in assoc(gm, :group),
+        where: gm.group_id == ^group_id and g.team_id == ^team.id,
+        select: gm.member_id
+
+    where(q, [m], m.id in subquery(members))
+  end
 
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
