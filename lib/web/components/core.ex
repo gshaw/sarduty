@@ -125,12 +125,13 @@ defmodule Web.Components.Core do
   """
   attr :for, :any, required: true
   attr :id, :string, required: true
+  attr :class, :string, default: "filter-form"
   attr :rest, :global
   slot :inner_block, required: true
 
   def filter_form(assigns) do
     ~H"""
-    <.form for={@for} id={@id} phx-change="change" phx-submit="change" class="filter-form" {@rest}>
+    <.form for={@for} id={@id} phx-change="change" phx-submit="change" class={@class} {@rest}>
       {render_slot(@inner_block)}
     </.form>
     """

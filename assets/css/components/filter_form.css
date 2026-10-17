@@ -18,15 +18,4 @@
   /* Small inputs: 32px with sm text, for filter bars and editors inside a page. */
   .filter-form :is(input, select), :is(input, select).input-sm { min-height: 32px; padding: 2px var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); }
   :is(input, select).input-sm { display: inline-block; width: auto; }
-
-  .table-summary {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
-    line-height: var(--lh-sm);
-    color: var(--text-muted);
-    margin-bottom: var(--sp-2);
-  }
 }

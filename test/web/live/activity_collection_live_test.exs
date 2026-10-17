@@ -53,8 +53,7 @@ defmodule Web.ActivityCollectionLiveTest do
     conn = log_in_user(conn, user)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
 
-    {:ok, lv, _html} =
-      lv |> element("#activities_current_link") |> render_click() |> follow_redirect(conn)
+    lv |> form("#activity_filter_form", form: %{when: "current"}) |> render_change()
 
     assert has_element?(lv, "#activity_collection", "Rope rescue night")
     assert has_element?(lv, "#activity_collection", "Board meeting")
@@ -78,7 +77,7 @@ defmodule Web.ActivityCollectionLiveTest do
 
     lv |> form("#activity_filter_form", form: %{when: "future"}) |> render_change()
 
-    assert has_element?(lv, ~s|#activity_filter_form option[value="date"][selected]|)
+    assert has_element?(lv, ~s|#activity_filter_form input[name="form[sort]"][value="date"]|)
     html = lv |> element("#activity_collection") |> render()
     assert :binary.match(html, "Next week") < :binary.match(html, "Next year")
   end
@@ -119,5 +118,36 @@ defmodule Web.ActivityCollectionLiveTest do
     assert_patch(lv)
     assert has_element?(lv, "#activity_collection", "Rope rescue night")
     refute has_element?(lv, "#activity_collection", "Board meeting")
+  end
+
+  test "a filter that is on shows in blue, as a chip, and in the count", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{title: "Still a draft", is_published: false})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?status=draft")
+
+    assert has_element?(lv, "#activity_filter_form .filter-menu.is-on", "Status")
+    refute has_element?(lv, "#activity_filter_form .filter-menu.is-on", "Kind")
+    assert has_element?(lv, "#activity_filter_form .filter-bar-count", "1")
+    assert has_element?(lv, "#activity_filter_form-summary", "1 activity")
+
+    lv |> element(".filter-bar-chips a", "Draft") |> render_click()
+
+    assert assert_patch(lv) =~ "status=all"
+    refute has_element?(lv, ".filter-bar-chips")
+  end
+
+  test "Clear filters shows only while a filter or search is on", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+    refute has_element?(lv, "#activity_filter_form-summary a", "Clear filters")
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?q=rope")
+
+    lv |> element("#activity_filter_form-summary a", "Clear filters") |> render_click()
+    assert_patch(lv, ~p"/teams/#{team}/activities")
   end
 end

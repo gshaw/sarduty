@@ -3,50 +3,29 @@
   <p class="lead">The activity list: filters, a summary line, the table, and pages.</p>
 
   <div class="example">
-    <.filter_form for={to_form(%{})} id="sample-filters" onsubmit="return false">
-      <.input id="f-q" name="q" label="Search" value="" />
-      <.input
-        id="f-kind"
-        name="activity"
-        type="select"
+    <.filter_bar
+      for={sample_filters()}
+      id="sample-filters"
+      count="212 activities"
+      clear="#"
+      path_fn={fn _ -> "#" end}
+      page={sample_filter_page()}
+      onsubmit="return false"
+    >
+      <:search field={sample_filters()[:q]} />
+      <:filter
+        field={sample_filters()[:kind]}
         label="Kind"
-        options={[
-          {"All", "all"},
-          {"Incident", "incident"},
-          {"Exercise", "exercise"},
-          {"Event", "event"}
-        ]}
-        value="all"
+        options={sample_kinds()}
+        default="all"
       />
-      <.input
-        id="f-when"
-        name="when"
-        type="select"
+      <:filter
+        field={sample_filters()[:when]}
         label="When"
-        options={[{"All", "all"}, {"Current", "current"}, {"Past", "past"}, {"2025", "2025"}]}
-        value="2025"
+        options={sample_whens()}
+        default="all"
       />
-      <.input
-        id="f-sort"
-        name="sort"
-        type="select"
-        label="Sort"
-        options={[{"Date ↓", "date-"}, {"Date ↑", "date"}]}
-        value="date-"
-      />
-    </.filter_form>
-    <div class="table-summary">
-      <span class="table-summary-links">
-        <.a href="#">Current</.a>
-        ·
-        <.a href="#">Future</.a>
-        ·
-        <.a href="#">Past</.a>
-        ·
-        <.a href="#">All</.a>
-      </span>
-      <span class="table-summary-count">1,912 activities</span>
-    </div>
+    </.filter_bar>
     <.activity_table
       id="sample-activities"
       rows={activities()}
@@ -60,14 +39,14 @@
   <h2>How it works</h2>
   <ul>
     <li>
-      Filters sit in a row above the table, with small inputs. Changing one updates the list.
+      The <a href={page_path(:filter_bar)}>filter bar</a>
+      sits above the table: a search box and a menu per filter. A menu that filters something turns blue.
     </li>
-    <li>The summary line has quick links on the left and the count on the right.</li>
-    <li><a href={page_path(:pagination)}>Pagination</a> goes under the table.</li>
+    <li>The line under it has the count and Clear filters, and which rows the page shows.</li>
+    <li>The column headers sort the table.</li>
+    <li><a href={page_path(:pagination)}>Pagination</a> goes under the table, 50 rows a page.</li>
   </ul>
   <p class="spec">
-    In the app: <code>&lt;.activity_filter_table&gt;</code>. Filters are <code>&lt;.input&gt;</code>s in a <a href={
-      page_path(:filter_form)
-    }>filter form</a>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
+    In the app: <code>&lt;.activity_filter_table&gt;</code>. The bar is <code>&lt;.filter_bar&gt;</code>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
   </p>
 </.shell>

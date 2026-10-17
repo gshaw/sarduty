@@ -1,0 +1,77 @@
+<.shell title="Filter bar" current={:filter_bar}>
+  <h1>Filter bar</h1>
+  <p class="lead">Search and filters above a long list.</p>
+
+  <div class="demo">
+    <.filter_bar
+      for={sample_filters()}
+      id="filter-bar-demo"
+      count="212 activities"
+      clear="#"
+      path_fn={fn _ -> "#" end}
+      page={sample_filter_page()}
+      onsubmit="return false"
+    >
+      <:search field={sample_filters()[:q]} />
+      <:filter
+        field={sample_filters()[:kind]}
+        label="Kind"
+        options={sample_kinds()}
+        default="all"
+      />
+      <:filter
+        field={sample_filters()[:when]}
+        label="When"
+        options={sample_whens()}
+        default="all"
+      />
+    </.filter_bar>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Above a list long enough to page through, often 200 rows or more: activities, members, a member's attendance. Changing a menu updates the list straight away, so there is no button.
+  </p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>
+      A list of a few dozen rows. Leave it plain, or give it a search box and a view switch.
+    </li>
+    <li>
+      Sorting. The column headers sort a <a href={page_path(:table)}>table</a>, so there is no sort menu.
+    </li>
+    <li>
+      A form that saves something. Use <a href={page_path(:forms)}>inputs</a> with a Save button.
+    </li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Each menu shows its label inside. A menu not at its default turns blue.</li>
+    <li>Search waits 300 ms after typing stops.</li>
+    <li>
+      Under the bar: the count, Clear filters while anything filters the list, and which rows the page shows.
+    </li>
+    <li>
+      On a phone, the menus fold behind a Filters button that counts the filters that are on. Those filters show as chips under the search box, and selecting one removes it.
+    </li>
+    <li>
+      Lists page by 50, with <a href={page_path(:pagination)}>pagination</a> under the table.
+    </li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.filter_bar&gt;</code>
+    with a <code>:search</code>
+    slot and a <code>:filter</code>
+    slot per menu, each with its <code>default</code>. Put a long menu, such as groups, in a
+    <code>type="combobox"</code>
+    filter. Give the sort to <code>hidden</code>
+    so a change keeps it. It is a <code>&lt;.filter_form&gt;</code>, which sends
+    <code>change</code>
+    on every edit and on Enter. The <a href={page_path(:filter_a_list)}>Filter a list</a>
+    pattern shows it with a table.
+  </p>
+</.shell>
