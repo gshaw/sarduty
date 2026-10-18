@@ -254,7 +254,8 @@ defmodule Web.MemberStandingLiveTest do
     {:ok, check_in} =
       RecordCheckIn.call(other_team, other.id, user, %{"checked_in_on" => today(team)})
 
-    assert_raise Ecto.NoResultsError, fn -> DeleteCheckIn.call(team, check_in.id) end
+    assert DeleteCheckIn.call(team, check_in.id) == :gone
+    assert Repo.reload(check_in)
   end
 
   test "suggests marking a bot, and the switch marks it not a person", %{conn: conn} do

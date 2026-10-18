@@ -86,8 +86,13 @@ defmodule Web.MemberStandingLive do
   end
 
   def handle_event("delete-check-in", %{"id" => id}, socket) do
-    {:ok, _check_in} = DeleteCheckIn.call(socket.assigns.current_team, id)
-    {:noreply, socket |> put_flash(:info, "Check-in deleted.") |> load_standing()}
+    message =
+      case DeleteCheckIn.call(socket.assigns.current_team, id) do
+        {:ok, _check_in} -> "Check-in deleted."
+        :gone -> "That check-in was deleted already."
+      end
+
+    {:noreply, socket |> put_flash(:info, message) |> load_standing()}
   end
 
   def handle_event("end-away", %{"id" => id}, socket) do
