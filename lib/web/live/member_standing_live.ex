@@ -249,7 +249,7 @@ defmodule Web.MemberStandingLive do
           <h2 class="heading">Check-ins</h2>
           <p class="hint">
             Record when you reach a member who has not been coming. It restarts their attendance
-            clock, so the next person knows who called and what they heard.
+            clock. The next team admin sees who called and what they heard.
           </p>
           <ul :if={@check_ins != []} id="check-in-list" class="mt-4">
             <li :for={check_in <- @check_ins} id={"check-in-#{check_in.id}"} class="mb-2">
