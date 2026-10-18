@@ -35,7 +35,7 @@ defmodule Web.Components.NotAPersonSwitch do
       >
         For a bot or a shared D4H account. SAR Duty leaves it out of member counts, the missing
         details check, team admins, and attendance at the door. Group rules and the attendance
-        check leave it out when their standing says Active.
+        check leave it out only when set to Active.
       </.switch>
       <p
         :if={Member.looks_like_not_a_person?(@member, @attended?)}
