@@ -5,7 +5,7 @@
 @layer components {
   .filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 
-  .filter-bar-search { position: relative; flex: 1 1 18rem; max-width: 24rem; }
+  .filter-bar-search { position: relative; flex: 1 1 12rem; max-width: 24rem; }
   .filter-bar-search input { min-height: 36px; padding-left: var(--sp-8); font-size: var(--fs-sm); line-height: var(--lh-sm); }
   .filter-bar-search-icon { position: absolute; left: var(--sp-2); top: 50%; translate: 0 -50%; color: var(--text-muted); pointer-events: none; }
 
