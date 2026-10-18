@@ -9,8 +9,9 @@ defmodule Web.GroupRuleLive do
   alias App.Operation.BuildGroupRulePreview
   alias App.ViewData.GroupRules
 
-  # One rule of a group (#334): its groups and endorsements, each with Remove, and a menu
-  # to add another, the way an endorsement's page lists its qualifications.
+  # One rule of a group (#334): its groups and endorsements, or a Standing rule's
+  # standings (#366), each with Remove, and a menu to add another, the way an
+  # endorsement's page lists its qualifications.
   def handle_params(params, _uri, socket) do
     group = Group.find!(socket.assigns.current_team, params["id"])
     rule = GroupRule.find!(group, params["rule_id"])
@@ -24,12 +25,21 @@ defmodule Web.GroupRuleLive do
   def handle_event("add", %{"target" => value}, socket) do
     %{rule: rule, group: group, context: context, current_team: team} = socket.assigns
 
-    case GroupRules.find_target!(team.id, value) do
-      %Group{d4h_group_id: other} = target ->
+    case {rule.kind, GroupRules.find_target!(team.id, value)} do
+      {:standing, {:standing, standing}} ->
+        GroupRuleReference.add!(rule, standing)
+
+      {_kind, {:standing, _standing}} ->
+        nil
+
+      {:standing, _target} ->
+        nil
+
+      {_kind, %Group{d4h_group_id: other} = target} ->
         if GroupRule.can_name?(context.rules, group.d4h_group_id, other),
           do: GroupRuleReference.add!(rule, target)
 
-      endorsement ->
+      {_kind, endorsement} ->
         GroupRuleReference.add!(rule, endorsement)
     end
 
@@ -67,7 +77,11 @@ defmodule Web.GroupRuleLive do
       page_title: "#{kind_label(rule.kind)} rule",
       context: context,
       rows: Enum.map(rule.references, &row(&1, context, team)),
-      options: GroupRules.options(context, group.d4h_group_id, targets),
+      options:
+        if(rule.kind == :standing,
+          do: GroupRules.standing_options(targets),
+          else: GroupRules.options(context, group.d4h_group_id, targets)
+        ),
       last_confirm:
         if(length(rules) == 1,
           do: GroupRules.flip_warning(context, group.d4h_group_id, :last_rule)
@@ -82,15 +96,32 @@ defmodule Web.GroupRuleLive do
       case target do
         {:group, g} -> (group = context.groups[g]) && ~p"/teams/#{team}/groups/#{group.id}"
         {:endorsement, id} -> ~p"/teams/#{team}/endorsements/#{id}"
+        {:standing, _standing} -> nil
       end
 
     %{
       id: reference.id,
       name: GroupRules.name(target, context),
-      kind: if(elem(target, 0) == :group, do: "Group", else: "Endorsement"),
-      path: path
+      kind: target_kind(target),
+      path: path,
+      missing?: match?({:group, _}, target) and is_nil(path)
     }
   end
+
+  defp target_kind({:group, _g}), do: "Group"
+  defp target_kind({:endorsement, _id}), do: "Endorsement"
+  defp target_kind({:standing, _standing}), do: "Standing"
+
+  defp meaning(%{kind: :in}, group),
+    do:
+      "Members of #{group.title} must be in at least one of these groups or hold at least one of these endorsements."
+
+  defp meaning(%{kind: :not_in}, group),
+    do:
+      "Members of #{group.title} must be in none of these groups and hold none of these endorsements."
+
+  defp meaning(%{kind: :standing}, group),
+    do: "Members of #{group.title} must have one of these standings today."
 
   def render(assigns) do
     ~H"""
@@ -103,17 +134,17 @@ defmodule Web.GroupRuleLive do
 
     <div class="measure">
       <p class="lead" id="rule-meaning">
-        {if @rule.kind == :in,
-          do:
-            "Members of #{@group.title} must be in at least one of these groups or hold at least one of these endorsements.",
-          else:
-            "Members of #{@group.title} must be in none of these groups and hold none of these endorsements."}
+        {meaning(@rule, @group)}
       </p>
 
       <.table id="references" rows={@rows} row_id={&"reference-#{&1.id}"}>
-        <:col :let={row} label="Group or endorsement">
+        <:col
+          :let={row}
+          label={if @rule.kind == :standing, do: "Standing", else: "Group or endorsement"}
+        >
           <.a :if={row.path} navigate={row.path}>{row.name}</.a>
-          <span :if={!row.path} class="text-danger-text">{row.name}</span>
+          <span :if={row.missing?} class="text-danger-text">{row.name}</span>
+          <span :if={!row.path and !row.missing?}>{row.name}</span>
         </:col>
         <:col :let={row} label="Kind" class="w-px whitespace-nowrap">{row.kind}</:col>
         <:col :let={row} label="" align="right">
@@ -134,9 +165,13 @@ defmodule Web.GroupRuleLive do
           type="combobox"
           name="target"
           id="target"
-          label="Add a group or endorsement"
+          label={if @rule.kind == :standing, do: "Add a standing", else: "Add a group or endorsement"}
           value=""
-          prompt="Select a group or endorsement"
+          prompt={
+            if @rule.kind == :standing,
+              do: "Select a standing",
+              else: "Select a group or endorsement"
+          }
           options={@options}
         />
         <.button>Add to rule</.button>

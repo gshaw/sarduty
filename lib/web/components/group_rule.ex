@@ -5,7 +5,7 @@ defmodule Web.Components.GroupRule do
   the editor with made-up groups and endorsements.
 
   It takes plain maps, so the guide needs no database. A rule for the sentence is
-  `%{kind, names}`, with `names` as `{:group | :endorsement, name}`. An editor row is
+  `%{kind, names}`, with `names` as `{:group | :endorsement | :standing, name}`. An editor row is
   `%{id, kind, names, path, confirm}`, with `names` as text and `confirm` the warning
   before removing it, or nil. `options` are the menu's groups, `{label, [{name, value}]}`.
   """
@@ -19,6 +19,7 @@ defmodule Web.Components.GroupRule do
   attr :options, :list, required: true
   attr :new_path, :string, required: true
   attr :add_confirm, :string, default: nil
+  attr :suggest_standing, :boolean, default: false, doc: "suggest Standing is Active (#366)"
 
   def rule_editor(assigns) do
     ~H"""
@@ -44,20 +45,36 @@ defmodule Web.Components.GroupRule do
     </.table>
 
     <form id="add-rule-form" phx-submit="add-rule" class="flex flex-wrap items-center gap-2 mt-4">
-      <select name="kind" class="input-sm" aria-label="In or Not in">
+      <select name="kind" class="input-sm" aria-label="Kind of rule">
         <option value="in">In</option>
         <option value="not_in">Not in</option>
+        <option value="standing">Standing is</option>
       </select>
       <.combobox
         id="rule-target"
         name="target"
         size={:sm}
         options={@options}
-        aria-label="Group or endorsement"
+        aria-label="Group, endorsement, or standing"
       />
       <.button size={:sm} data-confirm={@add_confirm}>Add rule</.button>
       <.a navigate={@new_path}>New endorsement</.a>
     </form>
+
+    <div :if={@suggest_standing} id="suggest-standing" class="media mt-4">
+      <p class="hint mb-0">
+        Members who are away or not a person stay in this group. Add Standing is Active to
+        leave them out.
+      </p>
+      <.button
+        id="add-standing-active"
+        size={:sm}
+        class="shrink-0"
+        phx-click="add-standing-active"
+      >
+        Add Standing is Active
+      </.button>
+    </div>
 
     <div class="mt-4">
       <.button id="done-editing" variant={:primary} size={:sm} phx-click="done-editing">
@@ -69,10 +86,11 @@ defmodule Web.Components.GroupRule do
 
   def kind_label(:in), do: "In"
   def kind_label(:not_in), do: "Not in"
+  def kind_label(:standing), do: "Standing is"
 
   @doc """
   The rules as one sentence, with each name in bold: "Members of GSAR or MIT Callout who
-  are not in LOA." or "Members must hold GSAR and First Aid." Names come from users, so
+  are active." or "Members must hold GSAR and First Aid." Names come from users, so
   each is escaped.
   """
   def rule_sentence(rules) do
@@ -119,6 +137,8 @@ defmodule Web.Components.GroupRule do
 
   defp must_phrase(%{kind: :in, names: [{:hold_all, _} | _] = names}), do: ["hold ", held(names)]
 
+  defp must_phrase(%{kind: :standing, names: names}), do: ["be ", standings(names)]
+
   defp must_phrase(%{kind: kind, names: names}) do
     {groups, endorsements} = split(names)
     neg = if kind == :not_in, do: "not ", else: ""
@@ -133,6 +153,8 @@ defmodule Web.Components.GroupRule do
 
   defp who_phrase(%{kind: :in, names: [{:hold_all, _} | _] = names}),
     do: ["also hold ", held(names)]
+
+  defp who_phrase(%{kind: :standing, names: names}), do: ["are ", standings(names)]
 
   defp who_phrase(%{kind: :in, names: names}) do
     case split(names) do
@@ -163,6 +185,13 @@ defmodule Web.Components.GroupRule do
     do:
       {for({:group, n} <- names, do: {:group, n}),
        for({:endorsement, n} <- names, do: {:endorsement, n})}
+
+  # "active or away": a standing reads as a word in the sentence, not a name.
+  defp standings(names),
+    do:
+      names
+      |> Enum.map(fn {:standing, name} -> strong(String.downcase(name)) end)
+      |> Enum.intersperse(" or ")
 
   # "A or B": any one will do.
   defp either(names),

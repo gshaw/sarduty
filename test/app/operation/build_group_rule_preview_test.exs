@@ -152,6 +152,70 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
     end
   end
 
+  describe "Standing rules (#366)" do
+    defp standing(standings), do: rule(:standing, Enum.map(standings, &{:standing, &1}))
+
+    defp away(ends_on),
+      do: {:away, %App.Model.MemberAwayPeriod{ends_on: ends_on, reason: "parental"}}
+
+    test "Standing is Active leaves out away members and bots, and removes them" do
+      standings = %{11 => away(~D[2027-03-01]), 12 => :not_a_person}
+      rules = [in_rule([{:group, @gsar}]), standing([:active])]
+
+      opts = [
+        lists: %{@gsar => [10, 11, 12], @callout => [11, 12]},
+        override: %{standings: standings}
+      ]
+
+      result = plan(context(rules, opts))
+
+      assert result.add == MapSet.new([10])
+
+      assert result.remove == %{
+               11 => [{:standing, away(~D[2027-03-01])}],
+               12 => [{:standing, :not_a_person}]
+             }
+    end
+
+    test "a group without a standing rule takes away members and bots like anyone" do
+      standings = %{11 => away(~D[2027-03-01]), 12 => :not_a_person}
+      opts = [lists: %{@gsar => [10, 11, 12]}, override: %{standings: standings}]
+
+      assert plan(context([in_rule([{:group, @gsar}])], opts)).add == MapSet.new([10, 11, 12])
+    end
+
+    test "any of its standings meets it" do
+      standings = %{11 => away(~D[2027-03-01]), 12 => :not_a_person}
+      rules = [in_rule([{:group, @gsar}]), standing([:active, :away])]
+      opts = [lists: %{@gsar => [10, 11, 12]}, override: %{standings: standings}]
+
+      assert plan(context(rules, opts)).add == MapSet.new([10, 11])
+    end
+
+    test "a smart group's Standing rule carries into groups that use it" do
+      standings = %{11 => away(~D[2027-03-01])}
+      gsar_rules = [in_rule([{:group, @mit}]), standing([:active])]
+
+      opts = [
+        rules: %{@gsar => gsar_rules},
+        lists: %{@mit => [10, 11]},
+        override: %{standings: standings}
+      ]
+
+      assert plan(context([in_rule([{:group, @gsar}])], opts)).add == MapSet.new([10])
+    end
+
+    test "a Standing rule alone would add every active member, so it needs an In rule" do
+      assert problems(context([standing([:active])])) == [:no_in_rule]
+    end
+
+    test "the reason names the standing" do
+      describe = &BuildGroupRulePreview.describe(&1, %{}, "America/Vancouver")
+      assert describe.({:standing, away(~D[2027-03-01])}) == "Away until March 1, 2027 (Parental)"
+      assert describe.({:standing, :not_a_person}) == "Not a person"
+    end
+  end
+
   describe "reasons" do
     test "an expired award does not count, and the reason says when it ended" do
       awards = [

@@ -20,6 +20,25 @@ defmodule App.ViewData.GroupRules do
   end
 
   def name({:endorsement, id}, context), do: context.endorsements[id].name
+  def name({:standing, standing}, _context), do: standing_label(standing)
+
+  @standings [active: "Active", away: "Away", not_a_person: "Not a person"]
+
+  @doc "A standing's name in a rule (#366)."
+  def standing_label(standing), do: Keyword.fetch!(@standings, standing)
+
+  @doc "Pure. The menu's standings for a Standing rule, leaving out `taken`."
+  def standing_options(taken \\ []) do
+    for {standing, label} <- @standings,
+        {:standing, standing} not in taken,
+        do: {label, "standing:#{standing}"}
+  end
+
+  @doc """
+  Pure. Whether the editor suggests "Standing is Active": the group has rules, and none
+  is a Standing rule. It is a suggestion, never added for the team.
+  """
+  def suggest_standing?(rules), do: rules != [] and not Enum.any?(rules, &(&1.kind == :standing))
 
   @doc """
   Pure. Each group the rules name, once, in order: `{:smart, group, rules}` for one with
@@ -64,6 +83,13 @@ defmodule App.ViewData.GroupRules do
 
   def find_target!(team_id, "endorsement:" <> id),
     do: Endorsement.get!(team_id, String.to_integer(id))
+
+  def find_target!(_team_id, "standing:" <> standing) do
+    case Enum.find(@standings, fn {key, _label} -> Atom.to_string(key) == standing end) do
+      {key, _label} -> {:standing, key}
+      nil -> raise Ecto.NoResultsError, queryable: App.Model.GroupRuleReference
+    end
+  end
 
   @doc """
   Pure. The warning before a change flips whether the group counts by its rules or by its

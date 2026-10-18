@@ -11,6 +11,8 @@ A group's rules are a list, and a member must meet every one (#334). Each rule i
   endorsements.
 - **Not in any of**: the member is in none of its groups and holds none of its
   endorsements.
+- **Standing is any of**: the member's [standing](members.md#standing) today is one of
+  Active, Away, or Not a person (#366).
 
 No nesting. **A group's members** are whoever meets its rules when it has rules, and its
 D4H members when it has none. So "In GSAR Qualified Callout" follows that group's rules,
@@ -21,12 +23,21 @@ a smart group by hand doesn't flow into the groups that use it: no standing exce
 ```text
 GSAR Qualified Callout   In: GSAR · In: PSLV Registration
 MIT Callout              In: MIT 2026 · In: MIT Callout Approval
-Callout                  In: GSAR Qualified Callout or MIT Callout · Not in: LOA
+Callout                  In: GSAR Qualified Callout or MIT Callout · Standing is: Active
 ```
 
-The Callout page reads "Members of GSAR Qualified Callout or MIT Callout who are not in
-LOA", then a line for each group it names: what a smart group needs, or "LOA is a list
+The Callout page reads "Members of GSAR Qualified Callout or MIT Callout who are active",
+then a line for each group it names: what a smart group needs, or "Rope Rescue is a list
 kept by hand in D4H."
+
+**Standing is explicit** (#366, decided 2026-10-18). A group without a Standing rule takes
+away members and bots like anyone else. When a group has rules but no Standing rule, the
+editor suggests "Standing is Active" with a button; it is never added for the team. A
+standing added to a group that has a Standing rule joins it, since two would need a
+member to have both. Standing is worked out for today, so the preview proposes removing a
+member the day their leave starts and adding them back the day after it ends. A team
+admin still reviews and sends those changes; D4H never changes on its own. A team that
+keeps an LOA group in D4H can go on using `Not in: LOA`.
 
 This replaced two features: the endorsements a group's rule required (#320) and the group
 a group started from (#327). A recurring requirement, such as 20 hours of rope practice a
@@ -36,10 +47,10 @@ the course endorsement and the practice one.
 ## Storage
 
 - A [GroupRule](../lib/app/model/group_rule.ex) is `team_id`, `d4h_group_id` (the group it
-  belongs to), and `kind`, `in` or `not_in`.
-- A [GroupRuleReference](../lib/app/model/group_rule_reference.ex) is one group or
-  endorsement in a rule. Exactly one of `endorsement_id`, a foreign key, and
-  `d4h_group_id` is set; a check constraint holds it.
+  belongs to), and `kind`, `in`, `not_in`, or `standing`.
+- A [GroupRuleReference](../lib/app/model/group_rule_reference.ex) is one group,
+  endorsement, or standing in a rule. Exactly one of `endorsement_id`, a foreign key,
+  `d4h_group_id`, and `standing` is set; a check constraint holds it.
 
 A group is by D4H id, not a foreign key to `groups`. The sync deletes a group's row when
 D4H drops it, and a foreign key would either take the rule with it or block the sync. A
@@ -89,9 +100,9 @@ includes and says which endorsements it counts toward. On a team with ID cards, 
 
 [BuildGroupRulePreview](../lib/app/operation/build_group_rule_preview.ex):
 
-- `load/1` reads the team once: every group's rules, groups and their D4H members,
-  endorsements, qualification titles, awards, and members. The groups list and the
-  dashboard load it once for every group.
+- `load/2` reads the team once: every group's rules, groups and their D4H members,
+  endorsements, qualification titles, awards, members, and each member's standing today.
+  The groups list and the dashboard load it once for every group.
 - `plan/3` is pure. An endorsement resolves to its holders (active awards), a smart group
   to whoever meets its rules, worked out recursively and memoized, and a group without
   rules to its D4H members. In rules intersect, Not in rules subtract, and only current
@@ -111,6 +122,7 @@ one into a sentence in the team's time zone:
 - Several: "Not in GSAR Qualified Callout or MIT Callout", or "No First Aid 16 hours or
   MIT Callout Approval on record".
 - Not in: "In LOA", or "Holds First Aid 16 hours".
+- Standing: the standing, "Away until March 1, 2027 (Parental)" or "Not a person".
 
 **Expiring** lists members who qualify now but won't within 60 days (D4H's default
 reminder). It comes from endorsements, including those reached through smart groups. An
@@ -126,9 +138,9 @@ needs. The home page's item counts the 60-day view, so its count and the list ma
 
 **Safety.** `problems/2` lists why the rules can't plan, and any problem plans no
 changes. The group page says why. Each would otherwise add every member or remove them
-all, and a broken LOA reference must stop the plan, not leave nobody out:
+all, and a broken reference must stop the plan, not leave nobody out:
 
-- No rules, or only Not in rules. Not in rules alone would add every member.
+- No rules, or no In rule. Not in and Standing rules alone would add every member.
 - A rule with no groups or endorsements left.
 - An endorsement with no qualifications, or one naming a qualification no longer in D4H.
 - A group no longer in D4H, or one whose own rules have a problem.

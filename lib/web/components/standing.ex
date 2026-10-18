@@ -1,10 +1,8 @@
 defmodule Web.Components.Standing do
   @moduledoc "A member's standing (#366) as people read it."
 
-  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental)", or "Not a person".}
-  def text(:active), do: "Active"
-  def text(:not_a_person), do: "Not a person"
+  alias App.Model.MemberAwayPeriod
 
-  def text({:away, period}),
-    do: "Away until #{Service.Format.day_long(period.ends_on)} (#{period.reason})"
+  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental leave)", or "Not a person".}
+  defdelegate text(standing), to: MemberAwayPeriod, as: :describe_standing
 end

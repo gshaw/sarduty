@@ -9,6 +9,7 @@ defmodule Web.GroupLive do
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
   alias App.Model.GroupRule
+  alias App.Model.GroupRuleReference
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
   alias App.ViewData.GroupRules
@@ -47,24 +48,46 @@ defmodule Web.GroupLive do
   def handle_event("add-rule", %{"target" => ""}, socket), do: {:noreply, socket}
 
   def handle_event("add-rule", %{"kind" => kind, "target" => value}, socket) do
-    %{group: group, current_team: team, context: context} = socket.assigns
-    kind = Map.fetch!(%{"in" => :in, "not_in" => :not_in}, kind)
-
-    case GroupRules.find_target!(team.id, value) do
-      %Group{d4h_group_id: other} = target ->
-        if GroupRule.can_name?(context.rules, group.d4h_group_id, other),
-          do: GroupRule.add!(group, kind, target)
-
-      endorsement ->
-        GroupRule.add!(group, kind, endorsement)
-    end
-
-    {:noreply, reload(socket)}
+    %{group: group, current_team: team} = socket.assigns
+    kind = Map.fetch!(%{"in" => :in, "not_in" => :not_in, "standing" => :standing}, kind)
+    {:noreply, add_rule(socket, kind, GroupRules.find_target!(team.id, value), group)}
   end
+
+  def handle_event("add-standing-active", _params, socket),
+    do: {:noreply, add_rule(socket, :standing, {:standing, :active}, socket.assigns.group)}
 
   def handle_event("remove-rule", %{"rule-id" => id}, socket) do
     socket.assigns.group |> GroupRule.find!(id) |> GroupRule.delete!()
     {:noreply, reload(socket)}
+  end
+
+  # A standing joins the group's Standing rule if it has one, since two would need a
+  # member to have both.
+  defp add_rule(socket, :standing, {:standing, standing}, group) do
+    case Enum.find(socket.assigns.rules, &(&1.kind == :standing)) do
+      nil -> GroupRule.add!(group, :standing, standing)
+      rule -> group |> GroupRule.find!(rule.id) |> GroupRuleReference.add!(standing)
+    end
+
+    reload(socket)
+  end
+
+  defp add_rule(socket, :standing, _target, _group),
+    do: put_flash(socket, :error, "Select a standing for a Standing is rule.")
+
+  defp add_rule(socket, _kind, {:standing, _standing}, _group),
+    do: put_flash(socket, :error, "Select a group or endorsement for an In or Not in rule.")
+
+  defp add_rule(socket, kind, %Group{d4h_group_id: other} = target, group) do
+    if GroupRule.can_name?(socket.assigns.context.rules, group.d4h_group_id, other),
+      do: GroupRule.add!(group, kind, target)
+
+    reload(socket)
+  end
+
+  defp add_rule(socket, kind, endorsement, group) do
+    GroupRule.add!(group, kind, endorsement)
+    reload(socket)
   end
 
   def render(assigns) do
@@ -94,6 +117,7 @@ defmodule Web.GroupLive do
           options={@options}
           new_path={~p"/teams/#{@current_team}/endorsements/new?group_id=#{@group.id}"}
           add_confirm={@rules == [] && @flip_warning[:first_rule]}
+          suggest_standing={GroupRules.suggest_standing?(@rules)}
         />
         <.rule_preview
           :if={@rules != []}
@@ -325,7 +349,7 @@ defmodule Web.GroupLive do
     |> assign(:named_rules, Enum.map(rules, &GroupRules.named(&1, context)))
     |> assign(:referenced, GroupRules.referenced_groups(rules, context))
     |> assign(:editor_rows, editor_rows(rules, context, team, group, flip_warning))
-    |> assign(:options, GroupRules.options(context, group.d4h_group_id))
+    |> assign(:options, rule_options(context, group, rules))
     |> assign(:preview, BuildGroupRulePreview.preview(context, team, group))
   end
 
@@ -335,6 +359,19 @@ defmodule Web.GroupLive do
         into: %{},
         do: {change, warning}
   end
+
+  # The add menu: groups and endorsements, then the standings no Standing rule has yet.
+  defp rule_options(context, group, rules) do
+    standings = {"Standing", rules |> standing_taken() |> GroupRules.standing_options()}
+
+    context
+    |> GroupRules.options(group.d4h_group_id)
+    |> Enum.concat([standings])
+    |> Enum.reject(&(elem(&1, 1) == []))
+  end
+
+  defp standing_taken(rules),
+    do: for(%{kind: :standing, targets: targets} <- rules, target <- targets, do: target)
 
   # The editor's rows as plain maps, so the style guide can render it too. Removing the
   # last rule warns when other groups' rules name this one.
