@@ -48,6 +48,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "Departed ↓" => "departed-",
       "Duration ↓" => "duration-",
       "Duration ↑" => "duration",
+      "Activities ↓" => "activities-",
+      "Activities ↑" => "activities",
       "Last attended ↑" => "attended",
       "Last attended ↓" => "attended-"
     }
@@ -55,6 +57,12 @@ defmodule App.ViewModel.MemberFilterViewModel do
   # The team's groups, by name, for the Group filter (#350).
   def group_kinds(team), do: team.id |> Group.get_all() |> Enum.map(&{&1.title, &1.id})
 
+  @rolling_days [30, 60, 90, 180, 365]
+
+  @doc """
+  The Period filter (#367): All, the last 30 to 365 days as `"90d"`, then each year with
+  attendance as `"2026"`, so old `when=2026` links still open the same list.
+  """
   def when_kinds(team) do
     years =
       Attendance
@@ -64,7 +72,24 @@ defmodule App.ViewModel.MemberFilterViewModel do
       |> Attendance.years(team.timezone)
       |> Enum.map(&Integer.to_string/1)
 
-    [{"All", "all"} | Enum.map(years, fn y -> {y, y} end)]
+    [{"All", "all"}] ++
+      Enum.map(@rolling_days, &{"Last #{&1} days", "#{&1}d"}) ++
+      Enum.map(years, fn y -> {y, y} end)
+  end
+
+  @doc """
+  The UTC `{start, finish}` a Period covers, as `Service.YearRange` bounds: start
+  inclusive, finish exclusive. A rolling period ends at `now`.
+  """
+  def period_bounds(period, timezone, now) do
+    case Integer.parse(period) do
+      {days, "d"} ->
+        finish = now |> DateTime.truncate(:second) |> DateTime.to_naive()
+        {NaiveDateTime.add(finish, -days, :day), finish}
+
+      {_year, ""} ->
+        Service.YearRange.bounds(period, timezone)
+    end
   end
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
@@ -78,16 +103,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
     end
   end
 
-  def build_paginated_content(team, filter_options) do
+  def build_paginated_content(team, filter_options, now \\ DateTime.utc_now()) do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
-    |> scope(when: filter_options.when, timezone: team.timezone)
+    |> scope(when: filter_options.when, timezone: team.timezone, now: now)
     |> scope(status: filter_options.status)
     |> scope(details: filter_options.details)
     |> scope(attended: filter_options.attended, team: team)
     |> scope(group: filter_options.group, team: team)
-    |> join_attendance_summary(team, filter_options.when)
+    |> join_attendance_summary(team, filter_options.when, now)
     |> join_last_attended(team)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
@@ -113,20 +138,20 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:details, Enum.map(details_kinds(), fn {_, v} -> v end))
     |> validate_inclusion(:attended, Enum.map(attended_kinds(), &elem(&1, 1)))
-    |> validate_format(:when, ~r/\A(all|\d{4})\z/)
+    |> validate_format(:when, ~r/\A(all|\d{4}|(30|60|90|180|365)d)\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
   end
 
-  defp join_attendance_summary(query, team, year) do
+  defp join_attendance_summary(query, team, period, now) do
     from(
       m in query,
-      left_join: a in subquery(build_attendance_summary(team, year)),
+      left_join: a in subquery(build_attendance_summary(team, period, now)),
       on: m.id == a.member_id
     )
   end
 
-  defp build_attendance_summary(team, year) do
+  defp build_attendance_summary(team, period, now) do
     query =
       from(
         at in Attendance,
@@ -141,11 +166,18 @@ defmodule App.ViewModel.MemberFilterViewModel do
         }
       )
 
-    started_in(query, year, team.timezone)
+    started_in(query, period, team.timezone, now)
   end
 
-  defp started_in(query, year, _timezone) when year in [nil, "all"], do: query
-  defp started_in(query, year, timezone), do: Attendance.started_in(query, year, timezone)
+  defp started_in(query, period, _timezone, _now) when period in [nil, "all"], do: query
+
+  defp started_in(query, period, timezone, now) do
+    {start, finish} = period_bounds(period, timezone, now)
+
+    query
+    |> where([at], at.started_at >= type(^start, :naive_datetime))
+    |> where([at], at.started_at < type(^finish, :naive_datetime))
+  end
 
   defp join_last_attended(query, team) do
     from(
@@ -161,7 +193,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       [m, a, l] in query,
       select: %{
         member: m,
-        activity_count: coalesce(a.activity_count, 0),
+        activity_count: fragment("? as activity_count", coalesce(a.activity_count, 0)),
         total_minutes: fragment("? as total_minutes", coalesce(a.total_minutes, 0)),
         last_attended_at: type(l.last_attended_at, :utc_datetime)
       }
@@ -183,12 +215,12 @@ defmodule App.ViewModel.MemberFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, when: "all", timezone: _), do: q
-  defp scope(q, when: nil, timezone: _), do: q
+  defp scope(q, when: "all", timezone: _, now: _), do: q
+  defp scope(q, when: nil, timezone: _, now: _), do: q
 
-  # Members on the team at any point in the year.
-  defp scope(q, when: year, timezone: timezone) when is_binary(year) do
-    {start, finish} = Service.YearRange.bounds(year, timezone)
+  # Members on the team at any point in the period.
+  defp scope(q, when: period, timezone: timezone, now: now) when is_binary(period) do
+    {start, finish} = period_bounds(period, timezone, now)
 
     q
     |> where([m], m.joined_at < type(^finish, :naive_datetime))
@@ -228,6 +260,12 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "departed"), do: order_by(q, [r], asc_nulls_last: r.left_at)
   defp scope(q, sort: "duration-"), do: order_by(q, [r], desc: fragment("total_minutes"))
   defp scope(q, sort: "duration"), do: order_by(q, [r], asc: fragment("total_minutes"))
+
+  defp scope(q, sort: "activities-"),
+    do: order_by(q, [r], desc: fragment("activity_count"), asc: r.name)
+
+  defp scope(q, sort: "activities"),
+    do: order_by(q, [r], asc: fragment("activity_count"), asc: r.name)
 
   # Never attended comes first going up: the members furthest from their last activity.
   defp scope(q, sort: "attended"),

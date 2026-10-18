@@ -13,6 +13,10 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   (incidents, exercises, events), not deleted. Showing up to anything is the sign it is
   for. It comes from a join on `Member.last_attended_query/1`, so it sorts, and never
   attended sorts first going up. The member's page shows the same date.
+- **Period** sets what Activities and Duration count, and limits the list to members on
+  the team at some point in it: All, the last 30, 60, 90, 180, or 365 days (`when=90d`),
+  or a year (`when=2026`, the default this year). It replaced Year, so old year links
+  open the same list. A team that wants departed members uses Status.
 
 ## Member logins
 
