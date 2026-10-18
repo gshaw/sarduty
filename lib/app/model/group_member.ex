@@ -29,6 +29,23 @@ defmodule App.Model.GroupMember do
     ])
   end
 
+  @doc """
+  The ids of a group's D4H members, as a query. The group is looked up through the team,
+  so another team's group id finds no one.
+  """
+  def member_ids_query(team_id, group_id) do
+    from gm in GroupMember,
+      join: g in assoc(gm, :group),
+      where: gm.group_id == ^group_id and g.team_id == ^team_id,
+      select: gm.member_id
+  end
+
+  @doc "member_ids_query/2 as a set, or nil for no group: no filter."
+  def member_ids(_team_id, nil), do: nil
+
+  def member_ids(team_id, group_id),
+    do: team_id |> member_ids_query(group_id) |> Repo.all() |> MapSet.new()
+
   def get_by(params), do: Repo.get_by(GroupMember, params)
 
   def insert!(params) do

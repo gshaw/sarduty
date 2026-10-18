@@ -203,16 +203,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, group: nil, team: _team), do: q
 
-  # The group is looked up through the team, so another team's group id finds no one.
-  defp scope(q, group: group_id, team: team) do
-    members =
-      from gm in GroupMember,
-        join: g in assoc(gm, :group),
-        where: gm.group_id == ^group_id and g.team_id == ^team.id,
-        select: gm.member_id
-
-    where(q, [m], m.id in subquery(members))
-  end
+  defp scope(q, group: group_id, team: team),
+    do: where(q, [m], m.id in subquery(GroupMember.member_ids_query(team.id, group_id)))
 
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)

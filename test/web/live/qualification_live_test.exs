@@ -70,4 +70,23 @@ defmodule Web.QualificationLiveTest do
     lv |> element("#awards-expired-link") |> render_click()
     assert render(lv) =~ "No expired awards"
   end
+
+  test "the Group filter keeps the group's members only (#367)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    qualification = qualification_fixture(team)
+    callout = group_fixture(team, %{title: "Callout"})
+    in_callout = member_fixture(team, %{name: "Fiona MacLeod"})
+    group_member_fixture(callout, in_callout)
+    qualification_award_fixture(qualification, in_callout)
+    qualification_award_fixture(qualification, member_fixture(team, %{name: "Blake Okafor"}))
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
+
+    lv |> form("#award_filter_form", form: %{group: callout.id}) |> render_change()
+
+    assert_patched(lv, ~p"/teams/#{team}/qualifications/#{qualification.id}?group=#{callout.id}")
+    assert has_element?(lv, "#active_awards", "Fiona MacLeod")
+    refute has_element?(lv, "#active_awards", "Blake Okafor")
+  end
 end

@@ -7,47 +7,76 @@ defmodule Web.QualificationCollectionLive do
   import Web.Components.ViewSwitch
 
   alias App.Adapter.D4H
+  alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
-  alias App.Operation.BuildGroupRulePreview
   alias App.Repo
+  alias App.ViewModel.MemberFilterViewModel
+  alias App.ViewModel.QualificationFilterViewModel
   alias Service.StringHelpers
+
+  @views ["all", "expiring"]
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, :page_title, "Qualifications")}
   end
 
-  # `?view=expiring` lists each current member's qualifications that run out in the next
-  # 60 days, the dashboard's "qualifications expire" link (#205). `q` searches the view.
+  # `?view=expiring` lists each current member's qualifications that run out within the
+  # next `within` days, 60 by default, the dashboard's "qualifications expire" link (#205).
+  # `q` searches either view, and `group` keeps the expiring awards of a group's members.
   def handle_params(params, _uri, socket) do
+    case QualificationFilterViewModel.validate(params, @views) do
+      {:ok, filter_options, changeset} ->
+        {:noreply, assign_lists(socket, filter_options, changeset)}
+
+      {:error, _} ->
+        raise Web.Status.NotFound
+    end
+  end
+
+  defp assign_lists(socket, filter_options, changeset) do
     current_team = socket.assigns.current_team
-    view = view(params["view"])
-    q = String.trim(params["q"] || "")
+    q = filter_options.q || ""
     now = DateTime.utc_now()
-    until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
+    until = DateTime.add(now, filter_options.within, :day)
     qualifications = list_qualifications_with_counts(current_team)
     expiring = MemberQualificationAward.expiring(current_team.id, now, until)
 
-    {:noreply,
-     assign(socket,
-       view: view,
-       q: q,
-       form: to_form(%{"q" => q}, as: "form"),
-       all_count: length(qualifications),
-       expiring_count: length(expiring),
-       qualifications: Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q)),
-       expiring:
-         Enum.filter(
-           expiring,
-           &(StringHelpers.matches?(&1.member_name, q) or
-               StringHelpers.matches?(&1.qualification, q))
-         )
-     )}
+    assign(socket,
+      filter_options: filter_options,
+      view: String.to_existing_atom(filter_options.view),
+      q: q,
+      form: to_form(changeset, as: "form"),
+      all_count: length(qualifications),
+      expiring_count: length(expiring),
+      qualifications: Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q)),
+      expiring: filter_expiring(expiring, current_team, filter_options)
+    )
   end
 
-  def handle_event("change", %{"form" => %{"q" => q}}, socket) do
-    path = qualifications_path(socket.assigns.current_team, socket.assigns.view, q)
-    {:noreply, push_patch(socket, to: path, replace: true)}
+  defp filter_expiring(expiring, team, filter_options) do
+    q = filter_options.q || ""
+    group_member_ids = GroupMember.member_ids(team.id, filter_options.group)
+
+    Enum.filter(
+      expiring,
+      &((StringHelpers.matches?(&1.member_name, q) or
+           StringHelpers.matches?(&1.qualification, q)) and
+          (is_nil(group_member_ids) or MapSet.member?(group_member_ids, &1.member_id)))
+    )
+  end
+
+  def handle_event("change", %{"form" => form_params}, socket) do
+    params = Map.put(form_params, "view", socket.assigns.filter_options.view)
+
+    case QualificationFilterViewModel.validate(params, @views) do
+      {:ok, filter_options, _changeset} ->
+        path = qualifications_path(socket.assigns.current_team, filter_options)
+        {:noreply, push_patch(socket, to: path, replace: true)}
+
+      {:error, _} ->
+        raise Web.Status.NotFound
+    end
   end
 
   defp count_text(:all, qualifications, _expiring),
@@ -65,13 +94,11 @@ defmodule Web.QualificationCollectionLive do
         many: "%d qualifications expiring"
       )
 
-  defp view(nil), do: :all
-  defp view("expiring"), do: :expiring
-  defp view(_other), do: raise(Web.Status.NotFound)
-
-  defp qualifications_path(team, view, q) do
+  defp qualifications_path(team, filter_options, changes \\ []) do
     params =
-      Enum.reject([view: view == :expiring && "expiring", q: q], &(elem(&1, 1) in [false, ""]))
+      filter_options
+      |> struct(changes)
+      |> QualificationFilterViewModel.query_params("all")
 
     ~p"/teams/#{team}/qualifications?#{params}"
   end
@@ -93,13 +120,14 @@ defmodule Web.QualificationCollectionLive do
       for={@form}
       id="qualification_filter_form"
       count={count_text(@view, @qualifications, @expiring)}
-      clear={qualifications_path(@current_team, @view, "")}
+      clear={qualifications_path(@current_team, %QualificationFilterViewModel{view: "#{@view}"})}
+      path_fn={&qualifications_path(@current_team, @filter_options, &1)}
     >
       <:lead>
         <.view_switch label="Qualifications">
           <:view
             id="qualifications-all-link"
-            patch={qualifications_path(@current_team, :all, @q)}
+            patch={qualifications_path(@current_team, @filter_options, view: "all")}
             current={@view == :all}
             count={@all_count}
           >
@@ -107,15 +135,30 @@ defmodule Web.QualificationCollectionLive do
           </:view>
           <:view
             id="qualifications-expiring-link"
-            patch={qualifications_path(@current_team, :expiring, @q)}
+            patch={qualifications_path(@current_team, @filter_options, view: "expiring")}
             current={@view == :expiring}
             count={@expiring_count}
           >
-            Expiring in {BuildGroupRulePreview.expiring_days()} days
+            Expiring in {@filter_options.within} days
           </:view>
         </.view_switch>
       </:lead>
       <:search field={@form[:q]} />
+      <:filter
+        :if={@view == :expiring}
+        field={@form[:group]}
+        label="Group"
+        type="combobox"
+        options={MemberFilterViewModel.group_kinds(@current_team)}
+        default=""
+      />
+      <:filter
+        :if={@view == :expiring}
+        field={@form[:within]}
+        label="Within"
+        options={QualificationFilterViewModel.within_kinds()}
+        default={"#{QualificationFilterViewModel.default_within()}"}
+      />
     </.filter_bar>
 
     <.expiring_table
@@ -123,6 +166,7 @@ defmodule Web.QualificationCollectionLive do
       team={@current_team}
       expiring={@expiring}
       none={@expiring_count == 0}
+      within={@filter_options.within}
     />
 
     <.table
@@ -153,13 +197,18 @@ defmodule Web.QualificationCollectionLive do
       SAR Duty copies them from D4H when it refreshes.
     </.empty_state>
     <.empty_state
-      :if={
-        @all_count > 0 and @q != "" and if(@view == :all, do: @qualifications, else: @expiring) == []
-      }
+      :if={@view == :all and @all_count > 0 and @qualifications == []}
       id="no-matching-qualifications"
       title="No qualifications match"
     >
       Change the search.
+    </.empty_state>
+    <.empty_state
+      :if={@view == :expiring and @expiring_count > 0 and @expiring == []}
+      id="no-matching-qualifications"
+      title="No expiring qualifications match"
+    >
+      Change the search or the group.
     </.empty_state>
     """
   end
@@ -167,6 +216,7 @@ defmodule Web.QualificationCollectionLive do
   attr :team, :map, required: true
   attr :expiring, :list, required: true
   attr :none, :boolean, required: true, doc: "nothing expires, before the search"
+  attr :within, :integer, required: true, doc: "how many days ahead the view looks"
 
   defp expiring_table(assigns) do
     ~H"""
@@ -192,7 +242,7 @@ defmodule Web.QualificationCollectionLive do
       </:col>
     </.table>
     <.empty_state :if={@none} id="none-expiring" title="Nothing expiring">
-      No qualifications expire in the next {BuildGroupRulePreview.expiring_days()} days.
+      No qualifications expire in the next {@within} days.
     </.empty_state>
     """
   end
