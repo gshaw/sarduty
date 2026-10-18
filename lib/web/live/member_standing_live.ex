@@ -195,7 +195,6 @@ defmodule Web.MemberStandingLive do
         </section>
 
         <section id="not-a-person-section" class="mt-8">
-          <h2 class="heading">Not a person</h2>
           <.live_component
             module={NotAPersonSwitch}
             id="not-a-person"
