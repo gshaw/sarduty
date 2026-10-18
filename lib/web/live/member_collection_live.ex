@@ -108,12 +108,12 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
-      <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
+      <:col :let={record} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
         <.a navigate={~p"/teams/#{@current_team}/members/#{record.member.id}"}>
           {record.member.name}
         </.a>
       </:col>
-      <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
+      <:col :let={record} label="Role" sorts={[{"↑", "role"}]}>
         {record.member.position}
       </:col>
       <:col
