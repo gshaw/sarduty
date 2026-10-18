@@ -13,27 +13,25 @@ defmodule Web.MemberCollectionLive do
 
   def handle_params(params, _uri, socket) do
     case MemberFilterViewModel.validate(params) do
-      # credo:disable-for-next-line
       {:ok, filter_options, changeset} ->
-        current_team = socket.assigns.current_team
-        today = Service.Period.today(DateTime.utc_now(), current_team.timezone)
-
-        socket =
-          socket
-          |> assign(:sort, filter_options.sort)
-          |> assign(:status, filter_options.status)
-          |> assign(:details, filter_options.details)
-          |> assign(:today, today)
-          |> assign(:standing?, standing_column?(current_team, filter_options, today))
-          |> assign(:paginated, build_paginated_content(current_team, filter_options))
-          |> assign(:path_fn, build_path_fn(current_team, filter_options))
-          |> assign(:form, to_form(changeset, as: "form"))
-
-        {:noreply, socket}
+        {:noreply, assign_list(socket, filter_options, changeset)}
 
       {:error, _} ->
         raise Web.Status.NotFound
     end
+  end
+
+  defp assign_list(socket, filter_options, changeset) do
+    current_team = socket.assigns.current_team
+    today = Service.Period.today(DateTime.utc_now(), current_team.timezone)
+
+    socket
+    |> assign(Map.take(filter_options, [:sort, :status, :details, :attended]))
+    |> assign(:today, today)
+    |> assign(:standing?, standing_column?(current_team, filter_options, today))
+    |> assign(:paginated, build_paginated_content(current_team, filter_options))
+    |> assign(:path_fn, build_path_fn(current_team, filter_options))
+    |> assign(:form, to_form(changeset, as: "form"))
   end
 
   def render(assigns) do
@@ -81,7 +79,7 @@ defmodule Web.MemberCollectionLive do
         :if={@standing?}
         field={@form[:standing]}
         label="Standing"
-        options={MemberFilterViewModel.standing_kinds()}
+        options={MemberFilterViewModel.standing_kinds(@form[:standing].value)}
         default="any"
       />
       <:filter
@@ -97,6 +95,10 @@ defmodule Web.MemberCollectionLive do
         default="all"
       />
     </.filter_bar>
+    <p :if={@attended != "all"} id="attended-hint" class="hint">
+      Attended counts from the latest of a member's last activity, the day they joined, the
+      end of an away period, and a check-in.
+    </p>
 
     <.table
       id="member_collection"
@@ -127,6 +129,16 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col :let={record} :if={@details == "missing"} label="Missing">
         <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
+      </:col>
+      <:col
+        :let={record}
+        :if={@attended != "all"}
+        label="Clock starts"
+        class="whitespace-nowrap"
+      >
+        <span id={"clock-starts-#{record.member.id}"}>
+          {clock_starts(record, @current_team, @today)}
+        </span>
       </:col>
       <:col
         :let={record}
@@ -194,6 +206,16 @@ defmodule Web.MemberCollectionLive do
 
   defp standing_text(%{away_until: until}, today),
     do: "Away until #{Service.Format.day_in_year(until, today)}"
+
+  defp clock_starts(record, team, today) do
+    {why, date} = Member.clock_start(record, team.timezone)
+    "#{clock_why(why)} #{Service.Format.day_in_year(date, today)}"
+  end
+
+  defp clock_why(:attended), do: "Last attended"
+  defp clock_why(:checked_in), do: "Checked in"
+  defp clock_why(:back), do: "Back from leave"
+  defp clock_why(:joined), do: "Joined"
 
   defp last_attended(nil, _team), do: "Never"
   defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)

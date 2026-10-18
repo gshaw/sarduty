@@ -20,6 +20,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Operation.SyncD4HChanges
   alias App.Repo
   alias App.ViewData.TeamAttention
+  alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   # NextUp shows an activity this close to starting, or this long into one still running.
@@ -154,12 +155,41 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> Repo.aggregate(:count)
   end
 
-  # Nil when the team turned the item off in its settings.
+  # Nil when the team turned the item off in its settings. The count comes from the
+  # Members list's own query, with the params the item links with, so they match (#366).
   defp not_seen_row(%Team{not_seen_days: nil}, _now), do: nil
 
   defp not_seen_row(%Team{not_seen_days: days} = team, now) do
-    count = Member |> Member.not_seen_query(team, days, now) |> Repo.aggregate(:count)
-    %{days: days, count: count}
+    case watched_group(team) do
+      :missing ->
+        %{days: days, missing_group: true}
+
+      group ->
+        params = not_seen_params(team, group)
+
+        %{
+          days: days,
+          group: group && group.title,
+          params: params,
+          count: MemberFilterViewModel.count(team, params, now)
+        }
+    end
+  end
+
+  defp watched_group(%Team{watch_d4h_group_id: nil}), do: nil
+
+  defp watched_group(%Team{watch_d4h_group_id: id} = team),
+    do: Group.get_by(team_id: team.id, d4h_group_id: id) || :missing
+
+  @doc "The Members list's params for the team's attendance check, the home item's link."
+  def not_seen_params(team, group) do
+    [
+      attended: "#{team.not_seen_days}",
+      group: group && "#{group.id}",
+      standing: Enum.join(team.watch_standings, ",")
+    ]
+    |> Enum.reject(&is_nil(elem(&1, 1)))
+    |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
   end
 
   # Adds and removes waiting across every group with rules. Rules with a problem plan

@@ -154,7 +154,59 @@ defmodule Web.TeamDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#attention-not_seen a[href="/teams/#{team.subdomain}/members?attended=180"]}
+             ~s{#attention-not_seen a[href="/teams/#{team.subdomain}/members?attended=180&standing=active"]}
+           )
+  end
+
+  test "the attendance check's count matches the Members list it links to (#366)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    callout = group_fixture(team, %{title: "Callout"})
+    joined = ~U[2024-01-01 00:00:00Z]
+
+    team =
+      team
+      |> Ecto.Changeset.change(watch_d4h_group_id: callout.d4h_group_id)
+      |> App.Repo.update!()
+
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    drifting = member_fixture(team, %{name: "Drifting", joined_at: joined})
+    group_member_fixture(callout, drifting)
+    away = member_fixture(team, %{name: "Away Now", joined_at: joined})
+    group_member_fixture(callout, away)
+    away_period_fixture(away, Date.add(today, -100), Date.add(today, -1))
+    bot = member_fixture(team, %{name: "Bot", joined_at: joined, not_a_person: true})
+    group_member_fixture(callout, bot)
+    _not_in_group = member_fixture(team, %{joined_at: joined})
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(
+             lv,
+             "#attention-not_seen",
+             "1 member of Callout has not attended an activity in 90 days"
+           )
+
+    path = "/teams/#{team.subdomain}/members?attended=90&group=#{callout.id}&standing=active"
+    assert has_element?(lv, ~s{#attention-not_seen a[href="#{path}"]})
+
+    {:ok, list, _html} = live(log_in_user(conn, user), path)
+    assert has_element?(list, "#member_filter_form-summary", "1 member")
+    assert has_element?(list, "#clock-starts-#{drifting.id}", "Joined")
+    refute has_element?(list, "#clock-starts-#{away.id}")
+  end
+
+  test "a watched group gone from D4H warns and links to settings (#366)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    team = team |> Ecto.Changeset.change(watch_d4h_group_id: 424_242) |> App.Repo.update!()
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#attention-watch_missing", "The group you watch is no longer in D4H")
+
+    assert has_element?(
+             lv,
+             ~s{#attention-watch_missing a[href="/teams/#{team.subdomain}/settings"]}
            )
   end
 
