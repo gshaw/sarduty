@@ -93,7 +93,7 @@ defmodule App.Model.MemberAwayPeriod do
     |> Repo.all()
   end
 
-  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental)", or "Not a person".}
+  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental leave)", or "Not a person".}
   def describe_standing(:active), do: "Active"
   def describe_standing(:not_a_person), do: "Not a person"
 

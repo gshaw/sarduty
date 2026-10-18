@@ -122,7 +122,7 @@ one into a sentence in the team's time zone:
 - Several: "Not in GSAR Qualified Callout or MIT Callout", or "No First Aid 16 hours or
   MIT Callout Approval on record".
 - Not in: "In LOA", or "Holds First Aid 16 hours".
-- Standing: the standing, "Away until March 1, 2027 (Parental)" or "Not a person".
+- Standing: the standing, "Away until March 1, 2027 (Parental leave)" or "Not a person".
 
 **Expiring** lists members who qualify now but won't within 60 days (D4H's default
 reminder). It comes from endorsements, including those reached through smart groups. An

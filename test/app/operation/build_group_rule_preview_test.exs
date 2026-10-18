@@ -156,7 +156,7 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
     defp standing(standings), do: rule(:standing, Enum.map(standings, &{:standing, &1}))
 
     defp away(ends_on),
-      do: {:away, %App.Model.MemberAwayPeriod{ends_on: ends_on, reason: "parental"}}
+      do: {:away, %App.Model.MemberAwayPeriod{ends_on: ends_on, reason: "Parental leave"}}
 
     test "Standing is Active leaves out away members and bots, and removes them" do
       standings = %{11 => away(~D[2027-03-01]), 12 => :not_a_person}
@@ -211,7 +211,10 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
 
     test "the reason names the standing" do
       describe = &BuildGroupRulePreview.describe(&1, %{}, "America/Vancouver")
-      assert describe.({:standing, away(~D[2027-03-01])}) == "Away until March 1, 2027 (Parental)"
+
+      assert describe.({:standing, away(~D[2027-03-01])}) ==
+               "Away until March 1, 2027 (Parental leave)"
+
       assert describe.({:standing, :not_a_person}) == "Not a person"
     end
   end
