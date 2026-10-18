@@ -6,6 +6,7 @@ defmodule Web.GroupRuleLive do
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.GroupRuleReference
+  alias App.Operation.AddGroupRule
   alias App.Operation.BuildGroupRulePreview
   alias App.ViewData.GroupRules
 
@@ -23,27 +24,12 @@ defmodule Web.GroupRuleLive do
   def handle_event("add", %{"target" => ""}, socket), do: {:noreply, socket}
 
   def handle_event("add", %{"target" => value}, socket) do
-    %{rule: rule, group: group, context: context, current_team: team} = socket.assigns
+    %{rule: rule, group: group, current_team: team} = socket.assigns
 
-    case {rule.kind, GroupRules.find_target!(team.id, value)} do
-      {:standing, {:standing, standing}} ->
-        GroupRuleReference.add!(rule, standing)
-
-      {_kind, {:standing, _standing}} ->
-        nil
-
-      {:standing, _target} ->
-        nil
-
-      {_kind, %Group{d4h_group_id: other} = target} ->
-        if GroupRule.can_name?(context.rules, group.d4h_group_id, other),
-          do: GroupRuleReference.add!(rule, target)
-
-      {_kind, endorsement} ->
-        GroupRuleReference.add!(rule, endorsement)
+    case AddGroupRule.call(group, rule, GroupRules.find_target!(team.id, value)) do
+      :ok -> {:noreply, reload(socket)}
+      {:error, message} -> {:noreply, put_flash(socket, :error, message)}
     end
-
-    {:noreply, reload(socket)}
   end
 
   # Removing the last one removes the rule, and goes back to the group.

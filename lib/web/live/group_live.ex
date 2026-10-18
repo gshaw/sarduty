@@ -9,7 +9,7 @@ defmodule Web.GroupLive do
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
   alias App.Model.GroupRule
-  alias App.Model.GroupRuleReference
+  alias App.Operation.AddGroupRule
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
   alias App.ViewData.GroupRules
@@ -61,33 +61,11 @@ defmodule Web.GroupLive do
     {:noreply, reload(socket)}
   end
 
-  # A standing joins the group's Standing rule if it has one, since two would need a
-  # member to have both.
-  defp add_rule(socket, :standing, {:standing, standing}, group) do
-    case Enum.find(socket.assigns.rules, &(&1.kind == :standing)) do
-      nil -> GroupRule.add!(group, :standing, standing)
-      rule -> group |> GroupRule.find!(rule.id) |> GroupRuleReference.add!(standing)
+  defp add_rule(socket, kind, target, group) do
+    case AddGroupRule.call(group, kind, target) do
+      :ok -> reload(socket)
+      {:error, message} -> put_flash(socket, :error, message)
     end
-
-    reload(socket)
-  end
-
-  defp add_rule(socket, :standing, _target, _group),
-    do: put_flash(socket, :error, "Select a standing for a Standing is rule.")
-
-  defp add_rule(socket, _kind, {:standing, _standing}, _group),
-    do: put_flash(socket, :error, "Select a group or endorsement for an In or Not in rule.")
-
-  defp add_rule(socket, kind, %Group{d4h_group_id: other} = target, group) do
-    if GroupRule.can_name?(socket.assigns.context.rules, group.d4h_group_id, other),
-      do: GroupRule.add!(group, kind, target)
-
-    reload(socket)
-  end
-
-  defp add_rule(socket, kind, endorsement, group) do
-    GroupRule.add!(group, kind, endorsement)
-    reload(socket)
   end
 
   def render(assigns) do
