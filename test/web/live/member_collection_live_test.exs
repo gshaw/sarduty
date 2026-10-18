@@ -115,6 +115,17 @@ defmodule Web.MemberCollectionLiveTest do
     refute has_element?(lv, "#last-attended-#{drifting.id}")
   end
 
+  test "an empty Attended filter shows no clock, the same as All", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members?attended=")
+
+    assert has_element?(lv, "#last-attended-#{member.id}")
+    refute has_element?(lv, "#attended-hint")
+    refute has_element?(lv, "#clock-starts-#{member.id}")
+  end
+
   test "Last attended shows without a filter and sorts with never attended first (#367)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()

@@ -115,6 +115,26 @@ defmodule App.Model.MemberTest do
       assert not_seen(team) ==
                Enum.sort([old_check_in.id, leaving_soon.id, other_team_check_in.id])
     end
+
+    test "a day back from leave counts the same as a check-in that day" do
+      team = team_fixture()
+      joined = ~U[2025-01-01 00:00:00Z]
+      # 90 days before @now is July 19 on the team's clock.
+      checked_in = member_fixture(team, %{joined_at: joined})
+
+      Repo.insert!(%App.Model.MemberCheckIn{
+        team_id: team.id,
+        member_id: checked_in.id,
+        checked_in_on: ~D[2026-07-19]
+      })
+
+      back_that_day = member_fixture(team, %{joined_at: joined})
+      away_period_fixture(back_that_day, ~D[2026-06-01], ~D[2026-07-18])
+      back_the_day_before = member_fixture(team, %{joined_at: joined})
+      away_period_fixture(back_the_day_before, ~D[2026-06-01], ~D[2026-07-17])
+
+      assert not_seen(team) == [back_the_day_before.id]
+    end
   end
 
   describe "clock_start/2" do

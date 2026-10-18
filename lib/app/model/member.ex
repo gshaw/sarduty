@@ -162,10 +162,13 @@ defmodule App.Model.Member do
       select: at.member_id
   end
 
-  # An away period that has started and ends on or after `since_on`.
+  # An away period that has started and whose day back, the day after it ends, is on or
+  # after `since_on`: the same day clock_start/2 counts from.
   defp back_since(team, since_on, today) do
+    last_day = Date.add(since_on, -1)
+
     from p in MemberAwayPeriod,
-      where: p.team_id == ^team.id and p.starts_on <= ^today and p.ends_on >= ^since_on,
+      where: p.team_id == ^team.id and p.starts_on <= ^today and p.ends_on >= ^last_day,
       select: p.member_id
   end
 

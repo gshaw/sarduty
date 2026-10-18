@@ -145,25 +145,32 @@ defmodule App.ViewModel.MemberFilterViewModel do
   """
   def count(team, params, now \\ DateTime.utc_now()) do
     {:ok, filter_options, _changeset} = validate(params)
-    team |> build_query(filter_options, now) |> Repo.count_entries()
+    team |> filter_query(filter_options, now) |> Repo.count_entries()
   end
 
   defp build_query(team, filter_options, now) do
+    team
+    |> filter_query(filter_options, now)
+    |> join_attendance_summary(team, filter_options.when, now)
+    |> join_last_attended(team)
+    |> join_clock(team, now)
+    |> scope(sort: filter_options.sort)
+    |> select_member_with_attendance()
+  end
+
+  # The members the filters keep, with only the joins a filter reads, so count/3 skips
+  # the summary and clock joins that never change which rows match.
+  defp filter_query(team, filter_options, now) do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: team.timezone, now: now)
     |> scope(status: filter_options.status)
     |> scope(details: filter_options.details)
-    |> scope(attended: filter_options.attended, team: team)
+    |> scope(attended: filter_options.attended, team: team, now: now)
     |> scope(group: filter_options.group, team: team)
-    |> join_attendance_summary(team, filter_options.when, now)
-    |> join_last_attended(team)
     |> join_away(team, now)
-    |> join_clock(team, now)
     |> scope(standing: filter_options.standing)
-    |> scope(sort: filter_options.sort)
-    |> select_member_with_attendance()
   end
 
   defp build_new do
@@ -216,6 +223,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     from(
       m in query,
       left_join: a in subquery(build_attendance_summary(team, period, now)),
+      as: :summary,
       on: m.id == a.member_id
     )
   end
@@ -292,7 +300,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp select_member_with_attendance(query) do
     from(
-      [m, a, l, w, last_away: la, last_check_in: lc] in query,
+      [m, summary: a, last_attended: l, away: w, last_away: la, last_check_in: lc] in query,
       select: %{
         member: m,
         activity_count: fragment("? as activity_count", coalesce(a.activity_count, 0)),
@@ -345,11 +353,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, details: _all), do: q
 
-  defp scope(q, attended: nil, team: _team), do: q
-  defp scope(q, attended: "all", team: _team), do: q
+  defp scope(q, attended: nil, team: _team, now: _now), do: q
+  defp scope(q, attended: "all", team: _team, now: _now), do: q
 
-  defp scope(q, attended: days, team: team),
-    do: Member.not_seen_query(q, team, String.to_integer(days), DateTime.utc_now())
+  defp scope(q, attended: days, team: team, now: now),
+    do: Member.not_seen_query(q, team, String.to_integer(days), now)
 
   defp scope(q, group: nil, team: _team), do: q
 

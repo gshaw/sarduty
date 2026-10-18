@@ -95,7 +95,7 @@ defmodule Web.MemberCollectionLive do
         default="all"
       />
     </.filter_bar>
-    <p :if={@attended != "all"} id="attended-hint" class="hint">
+    <p :if={@attended not in [nil, "all"]} id="attended-hint" class="hint">
       Attended counts from the latest of a member's last activity, the day they joined, the
       end of an away period, and a check-in.
     </p>
@@ -132,7 +132,7 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        :if={@attended != "all"}
+        :if={@attended not in [nil, "all"]}
         label="Clock starts"
         class="whitespace-nowrap"
       >
