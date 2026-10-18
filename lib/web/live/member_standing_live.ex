@@ -147,9 +147,9 @@ defmodule Web.MemberStandingLive do
                 size={:sm}
                 phx-click="end-away"
                 phx-value-id={period.id}
-                data-confirm={"End this away period today? #{@member.name} is active from today."}
+                data-confirm={"End the #{period_name(period)} today? #{@member.name} is active from today."}
               >
-                End today
+                End away period
               </.button>
               <.button
                 id={"delete-away-#{period.id}"}
@@ -157,7 +157,7 @@ defmodule Web.MemberStandingLive do
                 variant={:danger}
                 phx-click="delete-away"
                 phx-value-id={period.id}
-                data-confirm={"Delete this away period? It comes out of #{@member.name}'s standing. The history keeps a record."}
+                data-confirm={"Delete the #{period_name(period)}? It comes out of #{@member.name}'s standing."}
               >
                 Delete
               </.button>
@@ -206,4 +206,9 @@ defmodule Web.MemberStandingLive do
     </div>
     """
   end
+
+  # "Parental away period from Sep 8, 2026", for a confirmation that names the period.
+  defp period_name(period),
+    do:
+      "#{MemberAwayPeriod.reason_label(period.reason)} away period from #{Service.Format.day(period.starts_on)}"
 end
