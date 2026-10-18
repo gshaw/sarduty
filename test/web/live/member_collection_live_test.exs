@@ -83,7 +83,7 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/teams/#{team}/members?attended=not-recent")
+      |> live(~p"/teams/#{team}/members?attended=90")
 
     assert has_element?(lv, "#member_filter_form select[name='form[attended]']")
     assert has_element?(lv, "#last-attended-#{drifting.id}")
@@ -92,15 +92,26 @@ defmodule Web.MemberCollectionLiveTest do
     refute has_element?(lv, "#last-attended-#{seen.id}")
   end
 
-  test "leaves out the Attended filter when the team turned it off", %{conn: conn} do
+  test "the Attended filter offers every time frame, even with the setting off",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     team |> Ecto.Changeset.change(not_seen_days: nil) |> App.Repo.update!()
+    joined = ~U[2025-01-01 00:00:00Z]
+    old = activity_fixture(team, %{started_at: DateTime.add(DateTime.utc_now(), -200, :day)})
+    drifting = member_fixture(team, %{joined_at: joined})
+    attendance_fixture(old, drifting)
 
     {:ok, lv, _html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/teams/#{team}/members")
+      |> live(~p"/teams/#{team}/members?attended=180")
 
-    refute has_element?(lv, "#member_filter_form select[name='form[attended]']")
+    for days <- ~w(30 60 90 180 365),
+        do: assert(has_element?(lv, "select[name='form[attended]'] option[value='#{days}']"))
+
+    assert has_element?(lv, "#last-attended-#{drifting.id}")
+
+    {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members?attended=365")
+    refute has_element?(lv, "#last-attended-#{drifting.id}")
   end
 end
