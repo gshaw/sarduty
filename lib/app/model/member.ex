@@ -4,6 +4,7 @@ defmodule App.Model.Member do
   alias App.Model.Attendance
   alias App.Model.GroupMember
   alias App.Model.Member
+  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberQualificationAward
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -101,6 +102,23 @@ defmodule App.Model.Member do
       (is_nil(m.left_at) or m.left_at > ^now) and
         (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
     )
+  end
+
+  @doc """
+  Whether any current member of the team is not active on `today` (#367): away or not a
+  person. The members list shows its Standing column only then.
+  """
+  def any_not_active?(%Team{} = team, %Date{} = today, now) do
+    away =
+      from(row in subquery(MemberAwayPeriod.away_query(team, today)),
+        select: row.member_id
+      )
+
+    Member
+    |> where([m], m.team_id == ^team.id)
+    |> current_query(now)
+    |> where([m], m.not_a_person or m.id in subquery(away))
+    |> Repo.exists?()
   end
 
   @doc "Narrows `query` to people, leaving out members a team admin marked not a person."

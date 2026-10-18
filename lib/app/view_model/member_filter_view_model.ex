@@ -8,6 +8,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Member
+  alias App.Model.MemberAwayPeriod
   alias App.Model.Team
   alias App.Repo
   alias App.ViewData.TeamAttention
@@ -19,6 +20,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :status, :string
     field :details, :string
     field :attended, :string
+    field :standing, :string
     field :group, :integer
     field :page, :integer
     field :sort, :string
@@ -37,6 +39,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
       | Enum.map(Team.not_seen_days(), &{"Not in #{TeamAttention.period(&1)}", "#{&1}"})
     ]
 
+  # Member standing (#366): Any changes nothing for a team that never uses it.
+  def standing_kinds,
+    do: [
+      {"Any", "any"},
+      {"Active", "active"},
+      {"Away", "away"},
+      {"Not a person", "not_a_person"}
+    ]
+
   def sort_kinds,
     do: %{
       "Name" => "name",
@@ -50,6 +61,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "Duration ↑" => "duration",
       "Activities ↓" => "activities-",
       "Activities ↑" => "activities",
+      "Standing ↑" => "standing",
+      "Standing ↓" => "standing-",
       "Last attended ↑" => "attended",
       "Last attended ↓" => "attended-"
     }
@@ -114,6 +127,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(group: filter_options.group, team: team)
     |> join_attendance_summary(team, filter_options.when, now)
     |> join_last_attended(team)
+    |> join_away(team, now)
+    |> scope(standing: filter_options.standing)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
     |> Repo.paginate(page: filter_options.page)
@@ -125,6 +140,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       status: "active",
       details: "all",
       attended: "all",
+      standing: "any",
       sort: "name"
     }
   end
@@ -133,15 +149,19 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :when, :status, :details, :attended, :group, :page, :sort])
+    |> cast(params, [:q, :when, :status, :details, :attended, :standing, :group, :page, :sort])
     |> Field.truncate(:q, max_length: 100)
-    |> validate_inclusion(:status, Enum.map(status_kinds(), fn {_, v} -> v end))
-    |> validate_inclusion(:details, Enum.map(details_kinds(), fn {_, v} -> v end))
-    |> validate_inclusion(:attended, Enum.map(attended_kinds(), &elem(&1, 1)))
+    |> validate_kind(:status, status_kinds())
+    |> validate_kind(:details, details_kinds())
+    |> validate_kind(:attended, attended_kinds())
+    |> validate_kind(:standing, standing_kinds())
     |> validate_format(:when, ~r/\A(all|\d{4}|(30|60|90|180|365)d)\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
   end
+
+  defp validate_kind(changeset, field, kinds),
+    do: validate_inclusion(changeset, field, Enum.map(kinds, &elem(&1, 1)))
 
   defp join_attendance_summary(query, team, period, now) do
     from(
@@ -188,14 +208,26 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
+  defp join_away(query, team, now) do
+    today = Service.Period.today(now, team.timezone)
+
+    from(
+      m in query,
+      left_join: w in subquery(MemberAwayPeriod.away_query(team, today)),
+      as: :away,
+      on: m.id == w.member_id
+    )
+  end
+
   defp select_member_with_attendance(query) do
     from(
-      [m, a, l] in query,
+      [m, a, l, w] in query,
       select: %{
         member: m,
         activity_count: fragment("? as activity_count", coalesce(a.activity_count, 0)),
         total_minutes: fragment("? as total_minutes", coalesce(a.total_minutes, 0)),
-        last_attended_at: type(l.last_attended_at, :utc_datetime)
+        last_attended_at: type(l.last_attended_at, :utc_datetime),
+        away_until: type(w.away_until, :date)
       }
     )
   end
@@ -251,6 +283,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, group: group_id, team: team),
     do: where(q, [m], m.id in subquery(GroupMember.member_ids_query(team.id, group_id)))
 
+  defp scope(q, standing: nil), do: q
+  defp scope(q, standing: "any"), do: q
+  defp scope(q, standing: "not_a_person"), do: where(q, [m], m.not_a_person)
+
+  defp scope(q, standing: "away"),
+    do: where(q, [m, away: w], not m.not_a_person and not is_nil(w.away_until))
+
+  defp scope(q, standing: "active"),
+    do: where(q, [m, away: w], not m.not_a_person and is_nil(w.away_until))
+
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)
   defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
@@ -266,6 +308,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, sort: "activities"),
     do: order_by(q, [r], asc: fragment("activity_count"), asc: r.name)
+
+  # By the day an away member is back, soonest first going up; everyone else after.
+  defp scope(q, sort: "standing"),
+    do: order_by(q, [r, away: w], asc_nulls_last: w.away_until, desc: r.not_a_person, asc: r.name)
+
+  defp scope(q, sort: "standing-"),
+    do:
+      order_by(q, [r, away: w], desc_nulls_last: w.away_until, desc: r.not_a_person, asc: r.name)
 
   # Never attended comes first going up: the members furthest from their last activity.
   defp scope(q, sort: "attended"),

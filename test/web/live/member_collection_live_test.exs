@@ -202,6 +202,65 @@ defmodule Web.MemberCollectionLiveTest do
            )
   end
 
+  test "the Standing column and filter show only once someone is not active (#367)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    refute has_element?(lv, "#member_filter_form select[name='form[standing]']")
+    refute has_element?(lv, "table th", "Standing")
+
+    member_fixture(team, %{not_a_person: true})
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    assert has_element?(lv, "#member_filter_form select[name='form[standing]']")
+    assert has_element?(lv, "table th", "Standing")
+  end
+
+  test "the Standing filter keeps active, away, or not a person members (#367)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    active = member_fixture(team, %{name: "Aaron Active"})
+    away = member_fixture(team, %{name: "Bea Away"})
+    away_period_fixture(away, Date.add(today, -3), Date.add(today, 30))
+    back = member_fixture(team, %{name: "Cy Back"})
+    away_period_fixture(back, Date.add(today, -60), Date.add(today, -1))
+    bot = member_fixture(team, %{name: "Door Bot", not_a_person: true})
+
+    other_team = team_fixture()
+    other_away = member_fixture(other_team)
+    away_period_fixture(other_away, Date.add(today, -3), Date.add(today, 30))
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    assert has_element?(lv, "#standing-#{active.id}", "Active")
+    assert has_element?(lv, "#standing-#{back.id}", "Active")
+    assert has_element?(lv, "#standing-#{bot.id}", "Not a person")
+    until = today |> Date.add(30) |> Service.Format.day_in_year(today)
+    assert has_element?(lv, "#standing-#{away.id}", "Away until #{until}")
+
+    for {standing, shown} <- [
+          {"active", [active, back]},
+          {"away", [away]},
+          {"not_a_person", [bot]}
+        ] do
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=#{standing}")
+
+      for member <- [active, away, back, bot] do
+        assert has_element?(lv, "#standing-#{member.id}") == member in shown
+      end
+    end
+
+    {:ok, _lv, html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=standing")
+
+    assert names_in_order(html, [away.name, bot.name])
+  end
+
   defp names_in_order(html, names) do
     positions = Enum.map(names, &elem(:binary.match(html, &1), 0))
     positions == Enum.sort(positions)
