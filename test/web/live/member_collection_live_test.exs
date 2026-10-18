@@ -114,4 +114,44 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members?attended=365")
     refute has_element?(lv, "#last-attended-#{drifting.id}")
   end
+
+  test "Last attended shows without a filter and sorts with never attended first (#367)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    old = activity_fixture(team, %{started_at: ~U[2026-01-10 18:00:00Z]})
+    recent = activity_fixture(team, %{started_at: DateTime.add(DateTime.utc_now(), -3, :day)})
+
+    deleted =
+      activity_fixture(team, %{
+        started_at: DateTime.add(DateTime.utc_now(), -1, :day),
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+
+    drifting = member_fixture(team, %{name: "Aaron Drifting"})
+    attendance_fixture(old, drifting)
+    attendance_fixture(deleted, drifting)
+    seen = member_fixture(team, %{name: "Bea Seen"})
+    attendance_fixture(recent, seen)
+    never = member_fixture(team, %{name: "Cy Never"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    assert has_element?(lv, "#last-attended-#{drifting.id}", "Jan 10, 2026")
+    assert has_element?(lv, "#last-attended-#{never.id}", "Never")
+
+    {:ok, _lv, html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=attended")
+
+    assert names_in_order(html, [never.name, drifting.name, seen.name])
+
+    {:ok, _lv, html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=attended-")
+
+    assert names_in_order(html, [seen.name, drifting.name, never.name])
+  end
+
+  defp names_in_order(html, names) do
+    positions = Enum.map(names, &elem(:binary.match(html, &1), 0))
+    positions == Enum.sort(positions)
+  end
 end

@@ -156,16 +156,27 @@ defmodule App.Model.Member do
 
   defp not_key_member(query, _team), do: query
 
-  @doc "When each of `member_ids` was last at an activity, as a map of id to start time."
-  def last_seen(member_ids) do
-    Attendance
-    |> join(:inner, [at], a in assoc(at, :activity))
-    |> where([at, a], at.member_id in ^member_ids and at.status == "attending")
-    |> where([_, a], is_nil(a.deleted_at))
-    |> group_by([at], at.member_id)
-    |> select([at, a], {at.member_id, type(max(a.started_at), :utc_datetime)})
-    |> Repo.all()
-    |> Map.new()
+  @doc """
+  Each of the team's members' last activity (#367), as rows of `member_id` and
+  `last_attended_at`: the latest start of an activity they attended, any kind, not
+  deleted. Members who never attended have no row.
+  """
+  def last_attended_query(%Team{} = team) do
+    from at in Attendance,
+      join: a in assoc(at, :activity),
+      where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
+      group_by: at.member_id,
+      select: %{member_id: at.member_id, last_attended_at: max(a.started_at)}
+  end
+
+  @doc "When the member last attended an activity, or nil: last_attended_query/1 for one."
+  def last_attended_at(%Member{} = member) do
+    query =
+      from row in subquery(last_attended_query(%Team{id: member.team_id})),
+        where: row.member_id == ^member.id,
+        select: type(row.last_attended_at, :utc_datetime)
+
+    Repo.one(query)
   end
 
   @doc """

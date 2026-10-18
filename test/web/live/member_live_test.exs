@@ -90,4 +90,20 @@ defmodule Web.MemberLiveTest do
     refute has_element?(lv, "#attendance_collection", "Board meeting")
     assert has_element?(lv, "#attendance_filter_form-summary", "1 activity")
   end
+
+  test "the summary says when the member last attended (#367)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    never = member_fixture(team)
+    activity = activity_fixture(team, %{started_at: ~U[2026-01-10 18:00:00Z]})
+    attendance_fixture(activity, member)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-last-attended", "Jan 10, 2026")
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{never.id}")
+    assert has_element?(lv, "#member-last-attended", "Never")
+  end
 end

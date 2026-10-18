@@ -8,6 +8,7 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
+  alias App.Model.Member
   alias Web.Components.NotAPersonSwitch
   alias Web.Components.OpenInMaps
   alias Web.Components.Phone
@@ -15,7 +16,13 @@ defmodule Web.Components.MemberSidebar do
   attr :member, :map, required: true
   attr :maps_app, :string, default: "google", doc: "the account's maps_app"
 
+  attr :last_attended_at, :any,
+    doc: "when the member last attended an activity; looked up when not given"
+
   def sidebar_content(assigns) do
+    assigns =
+      assign_new(assigns, :last_attended_at, fn -> Member.last_attended_at(assigns.member) end)
+
     ~H"""
     <dl>
       <p><.member_image member={@member} /></p>
@@ -56,6 +63,10 @@ defmodule Web.Components.MemberSidebar do
           @member.joined_at
         )} ago
       </dd>
+      <dt>Last attended</dt>
+      <dd id="member-last-attended">
+        {last_attended(@last_attended_at, @member.team.timezone)}
+      </dd>
 
       <%!-- A team on SAR Duty Records has no D4H to open, so it changes members here. --%>
       <dt>Actions</dt>
@@ -75,4 +86,10 @@ defmodule Web.Components.MemberSidebar do
     <.live_component module={NotAPersonSwitch} id="not-a-person" member={@member} />
     """
   end
+
+  defp last_attended(nil, _timezone), do: "Never"
+
+  defp last_attended(started_at, timezone),
+    do:
+      "#{Service.Format.date_short(started_at, timezone)} · #{Service.Format.days_ago(started_at, DateTime.utc_now(), timezone)}"
 end

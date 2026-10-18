@@ -22,8 +22,7 @@ defmodule Web.MemberCollectionLive do
           |> assign(:sort, filter_options.sort)
           |> assign(:status, filter_options.status)
           |> assign(:details, filter_options.details)
-          |> assign(:attended, filter_options.attended)
-          |> assign_paginated(build_paginated_content(current_team, filter_options))
+          |> assign(:paginated, build_paginated_content(current_team, filter_options))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
 
@@ -112,13 +111,13 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        :if={@attended not in [nil, "all"]}
         label="Last attended"
         align="right"
         class="w-1/12 whitespace-nowrap"
+        sorts={[{"↑", "attended"}, {"↓", "attended-"}]}
       >
         <span id={"last-attended-#{record.member.id}"}>
-          {last_attended(@last_seen, record.member, @current_team)}
+          {last_attended(record.last_attended_at, @current_team)}
         </span>
       </:col>
       <:col :let={record} label="Activities" align="right" class="w-px whitespace-nowrap">
@@ -158,22 +157,8 @@ defmodule Web.MemberCollectionLive do
     """
   end
 
-  # Last attended dates for the page's members, only when the column shows.
-  defp assign_paginated(socket, paginated) do
-    last_seen =
-      if socket.assigns.attended in [nil, "all"],
-        do: %{},
-        else: paginated.entries |> Enum.map(& &1.member.id) |> Member.last_seen()
-
-    assign(socket, paginated: paginated, last_seen: last_seen)
-  end
-
-  defp last_attended(last_seen, member, team) do
-    case last_seen[member.id] do
-      nil -> "Never"
-      started_at -> Service.Format.date_short(started_at, team.timezone)
-    end
-  end
+  defp last_attended(nil, _team), do: "Never"
+  defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
 
   defp missing_text(member) do
     member

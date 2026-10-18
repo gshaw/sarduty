@@ -47,7 +47,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "Departed ↑" => "departed",
       "Departed ↓" => "departed-",
       "Duration ↓" => "duration-",
-      "Duration ↑" => "duration"
+      "Duration ↑" => "duration",
+      "Last attended ↑" => "attended",
+      "Last attended ↓" => "attended-"
     }
 
   # The team's groups, by name, for the Group filter (#350).
@@ -86,6 +88,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(attended: filter_options.attended, team: team)
     |> scope(group: filter_options.group, team: team)
     |> join_attendance_summary(team, filter_options.when)
+    |> join_last_attended(team)
     |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
     |> Repo.paginate(page: filter_options.page)
@@ -144,13 +147,23 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp started_in(query, year, _timezone) when year in [nil, "all"], do: query
   defp started_in(query, year, timezone), do: Attendance.started_in(query, year, timezone)
 
+  defp join_last_attended(query, team) do
+    from(
+      m in query,
+      left_join: l in subquery(Member.last_attended_query(team)),
+      as: :last_attended,
+      on: m.id == l.member_id
+    )
+  end
+
   defp select_member_with_attendance(query) do
     from(
-      [m, a] in query,
+      [m, a, l] in query,
       select: %{
         member: m,
         activity_count: coalesce(a.activity_count, 0),
-        total_minutes: fragment("? as total_minutes", coalesce(a.total_minutes, 0))
+        total_minutes: fragment("? as total_minutes", coalesce(a.total_minutes, 0)),
+        last_attended_at: type(l.last_attended_at, :utc_datetime)
       }
     )
   end
@@ -215,4 +228,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "departed"), do: order_by(q, [r], asc_nulls_last: r.left_at)
   defp scope(q, sort: "duration-"), do: order_by(q, [r], desc: fragment("total_minutes"))
   defp scope(q, sort: "duration"), do: order_by(q, [r], asc: fragment("total_minutes"))
+
+  # Never attended comes first going up: the members furthest from their last activity.
+  defp scope(q, sort: "attended"),
+    do: order_by(q, [last_attended: l], asc_nulls_first: l.last_attended_at)
+
+  defp scope(q, sort: "attended-"),
+    do: order_by(q, [last_attended: l], desc_nulls_last: l.last_attended_at)
 end
