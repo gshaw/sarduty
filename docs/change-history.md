@@ -3,11 +3,14 @@
 Every member and activity has a history page (#174, step 3):
 `/teams/:subdomain/members/:id/history` and `/teams/:subdomain/activities/:id/history`.
 It answers "why did Jane drop out of the callout group?" with "her First Aid was removed
-from D4H on Oct 3". It merges two sources, newest first
+from D4H on Oct 3". It merges these sources, newest first
 ([ChangeHistory](../lib/app/view_data/change_history.ex)):
 
 - **Changed by SAR Duty**: applied rows from [change sets](change-sets.md), with the source
   and the account that sent them.
+- **Standing**, on a member's page only: away periods added, ended early, or deleted, and
+  Not a person turned on or off, with the team admin who did it (#366). These are SAR
+  Duty's own data, from `member_standing_changes`.
 - **Seen in D4H**: `d4h_changes`, what the refresh saw change in D4H since the run
   before. D4H says neither when nor who, so the page shows the window between the 2 runs
   ("Oct 9, 10:00 to 10:10") and "Someone in D4H". D4H's API has a `createdBy` on some

@@ -18,6 +18,30 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
   open the same list. A team that wants departed members uses Status.
 
+## Standing
+
+A member's **standing** says whether the team expects them to show up now (#366):
+**Active**, **Away** for a dated period such as leave, or **Not a person**. Decided
+2026-10-18; the issue has the reasons.
+
+- **SAR Duty owns it.** It is not D4H data and nothing about it goes to D4H. Teams on D4H
+  and on SAR Duty Records work the same.
+- **Dates, not jobs.** [MemberAwayPeriod](../lib/app/model/member_away_period.ex) stores
+  a first and last day on the team's clock, and `MemberAwayPeriod.standing/3` works out
+  standing when read. No job flips a member back.
+- **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
+  an away period. **Active** is the absence of both and is never stored.
+- The member's **Standing** tab lists away periods, past ones too, with a form to add one
+  and buttons to end one today or delete it. Any team admin can. The sidebar on every
+  member tab shows the standing. Each change goes in the member's history, from
+  `member_standing_changes`, which keeps the reason and dates but never the note.
+- Members do not see their standing, and the note is `redact: true`.
+
+Nothing leaves a group or a list for standing unless a rule written on its page says so.
+These stay as they were, since a bot cannot attend or be invited, and skip members
+marked not a person with no rule: invites (`InviteGroups`), the home page's counts and
+charts, the missing details filter, and the attendance list at the door.
+
 ## Member logins
 
 A team admin turns on member logins in **Settings → Member logins**, in the team area. Then every

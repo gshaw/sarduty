@@ -23,6 +23,9 @@ defmodule Service.Format do
   @doc "A calendar date with no time or zone: \"Sep 28, 2025\"."
   def day(%Date{} = date), do: Calendar.strftime(date, "%b %-d, %Y")
 
+  @doc "The same with the month in full, for a sentence: \"September 28, 2025\"."
+  def day_long(%Date{} = date), do: Calendar.strftime(date, "%B %-d, %Y")
+
   @doc "A month's short name, for chart labels: \"Sep\"."
   def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
 

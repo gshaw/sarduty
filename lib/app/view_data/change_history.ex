@@ -4,12 +4,15 @@ defmodule App.ViewData.ChangeHistory do
   alias App.Model.ChangeSetRow
   alias App.Model.D4HChange
   alias App.Model.Member
+  alias App.Model.MemberAwayPeriod
+  alias App.Model.MemberStandingChange
   alias App.Model.Team
   alias App.Repo
 
   # A member's or an activity's history (#174, step 3): what SAR Duty changed in D4H,
   # from applied change set rows, and what the sync saw change in D4H, from `d4h_changes`.
-  # Each entry is a map: `at`, `by` (`:sar_duty` or `:d4h`), `seen_after` for a D4H
+  # A member's history adds the standing changes team admins made (#366), `by:
+  # :team_admin`. Each entry is a map: `at`, `by` (`:sar_duty` or `:d4h`), `seen_after` for a D4H
   # change (the last refresh before it), `text`, and for SAR Duty's changes `source`,
   # `applied_by`, and `reason`. Newest first.
 
@@ -24,7 +27,16 @@ defmodule App.ViewData.ChangeHistory do
       |> where([r], r.team_id == ^team.id and r.member_id == ^member.id)
       |> applied_rows()
 
-    merge(changes, rows, :member, team.timezone)
+    standing =
+      team.id
+      |> MemberStandingChange.for_member(member.id, @limit)
+      |> Enum.map(&standing_entry/1)
+
+    changes
+    |> merge(rows, :member, team.timezone)
+    |> Enum.concat(standing)
+    |> Enum.sort_by(& &1.at, {:desc, DateTime})
+    |> Enum.take(@limit)
   end
 
   def for_activity(%Team{} = team, %{team_id: team_id} = activity) when team_id == team.id do
@@ -77,6 +89,42 @@ defmodule App.ViewData.ChangeHistory do
       reason: row.reason,
       text: describe_row(row, page)
     }
+  end
+
+  # A change a team admin made to the member's standing in SAR Duty (#366).
+  defp standing_entry(%MemberStandingChange{} = change) do
+    %{
+      id: "standing-#{change.id}",
+      at: change.inserted_at,
+      seen_after: nil,
+      by: :team_admin,
+      kind: :standing,
+      applied_by: change.user && change.user.email,
+      text: describe_standing(change)
+    }
+  end
+
+  @doc "One change to a member's standing, as a sentence."
+  def describe_standing(%MemberStandingChange{action: :away_added, details: d}),
+    do: "Away period added: #{away_period(d)}"
+
+  def describe_standing(%MemberStandingChange{action: :away_ended, details: d}),
+    do: "Away period ended early: #{away_period(d)}"
+
+  def describe_standing(%MemberStandingChange{action: :away_deleted, details: d}),
+    do: "Away period deleted: #{away_period(d)}"
+
+  def describe_standing(%MemberStandingChange{action: :not_a_person}), do: "Marked not a person"
+  def describe_standing(%MemberStandingChange{action: :person}), do: "Marked as a person"
+
+  defp away_period(details) do
+    days =
+      Enum.map(
+        ~w(starts_on ends_on),
+        &(details[&1] |> Date.from_iso8601!() |> Service.Format.day())
+      )
+
+    "#{MemberAwayPeriod.reason_label(details["reason"])}, #{Enum.join(days, " to ")}"
   end
 
   @doc """

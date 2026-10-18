@@ -11,6 +11,7 @@ defmodule App.DataFixtures do
   alias App.Model.GroupMember
   alias App.Model.GroupRule
   alias App.Model.Member
+  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
@@ -264,6 +265,19 @@ defmodule App.DataFixtures do
       member_id: member.id,
       d4h_group_membership_id: System.unique_integer([:positive])
     })
+  end
+
+  @doc "An away period for the member (#366), its days on the team's clock."
+  def away_period_fixture(%Member{} = member, starts_on, ends_on, attrs \\ %{}) do
+    %MemberAwayPeriod{
+      team_id: member.team_id,
+      member_id: member.id,
+      starts_on: starts_on,
+      ends_on: ends_on,
+      reason: "leave"
+    }
+    |> struct(attrs)
+    |> Repo.insert!()
   end
 
   def endorsement_fixture(%Team{} = team, attrs \\ %{}) do

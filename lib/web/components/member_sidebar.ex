@@ -9,7 +9,7 @@ defmodule Web.Components.MemberSidebar do
 
   alias App.Adapter.D4H
   alias App.Model.Member
-  alias Web.Components.NotAPersonSwitch
+  alias App.Model.MemberAwayPeriod
   alias Web.Components.OpenInMaps
   alias Web.Components.Phone
 
@@ -19,9 +19,15 @@ defmodule Web.Components.MemberSidebar do
   attr :last_attended_at, :any,
     doc: "when the member last attended an activity; looked up when not given"
 
+  attr :standing, :any, doc: "the member's standing today; looked up when not given"
+
   def sidebar_content(assigns) do
     assigns =
-      assign_new(assigns, :last_attended_at, fn -> Member.last_attended_at(assigns.member) end)
+      assigns
+      |> assign_new(:last_attended_at, fn -> Member.last_attended_at(assigns.member) end)
+      |> assign_new(:standing, fn ->
+        MemberAwayPeriod.standing_today(assigns.member, assigns.member.team.timezone)
+      end)
 
     ~H"""
     <dl>
@@ -63,6 +69,12 @@ defmodule Web.Components.MemberSidebar do
           @member.joined_at
         )} ago
       </dd>
+      <dt>Standing</dt>
+      <dd id="member-standing">
+        <.link navigate={~p"/teams/#{@member.team}/members/#{@member.id}/standing"} class="link">
+          {Web.Components.Standing.text(@standing)}
+        </.link>
+      </dd>
       <dt>Last attended</dt>
       <dd id="member-last-attended">
         {last_attended(@last_attended_at, @member.team.timezone)}
@@ -83,7 +95,6 @@ defmodule Web.Components.MemberSidebar do
         </ul>
       </dd>
     </dl>
-    <.live_component module={NotAPersonSwitch} id="not-a-person" member={@member} />
     """
   end
 
