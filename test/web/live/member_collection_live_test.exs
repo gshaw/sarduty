@@ -261,6 +261,23 @@ defmodule Web.MemberCollectionLiveTest do
     assert names_in_order(html, [away.name, bot.name])
   end
 
+  test "the Standing sort puts not a person with the others, even with an away period",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    away = member_fixture(team, %{name: "Bea Away"})
+    away_period_fixture(away, Date.add(today, -3), Date.add(today, 30))
+    # Marked after an away period was added: not a person still wins.
+    bot = member_fixture(team, %{name: "Ann Bot", not_a_person: true})
+    away_period_fixture(bot, Date.add(today, -3), Date.add(today, 5))
+    member_fixture(team, %{name: "Cy Active"})
+
+    {:ok, _lv, html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=standing")
+
+    assert names_in_order(html, [away.name, bot.name, "Cy Active"])
+  end
+
   defp names_in_order(html, names) do
     positions = Enum.map(names, &elem(:binary.match(html, &1), 0))
     positions == Enum.sort(positions)

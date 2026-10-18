@@ -309,13 +309,25 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "activities"),
     do: order_by(q, [r], asc: fragment("activity_count"), asc: r.name)
 
-  # By the day an away member is back, soonest first going up; everyone else after.
+  # By the day an away member is back, soonest first going up; everyone else after. Not a
+  # person wins over an away period, as in the Standing column, so it sorts by no date.
   defp scope(q, sort: "standing"),
-    do: order_by(q, [r, away: w], asc_nulls_last: w.away_until, desc: r.not_a_person, asc: r.name)
+    do:
+      order_by(q, [r, away: w],
+        asc_nulls_last:
+          fragment("CASE WHEN ? THEN NULL ELSE ? END", r.not_a_person, w.away_until),
+        desc: r.not_a_person,
+        asc: r.name
+      )
 
   defp scope(q, sort: "standing-"),
     do:
-      order_by(q, [r, away: w], desc_nulls_last: w.away_until, desc: r.not_a_person, asc: r.name)
+      order_by(q, [r, away: w],
+        desc_nulls_last:
+          fragment("CASE WHEN ? THEN NULL ELSE ? END", r.not_a_person, w.away_until),
+        desc: r.not_a_person,
+        asc: r.name
+      )
 
   # Never attended comes first going up: the members furthest from their last activity.
   defp scope(q, sort: "attended"),
