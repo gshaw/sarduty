@@ -111,7 +111,7 @@ and must not be used for it.
 | incident                       | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
 | exercise                       | training, practice, drill                      | An activity for training.                                                                            |
 | event                          | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
-| attendance                     | participation, roll call, check-in             | Which members attended an activity, and for how long.                                                |
+| attendance                     | participation, roll call                       | Which members attended an activity, and for how long.                                                |
 | attended                       | present, participated                          | A member's state on an activity's attendance.                                                        |
 | published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H doesn't let SAR Duty change its tags.                           |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
@@ -133,6 +133,9 @@ and must not be used for it.
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
+| check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan at the door: that is "arrived".       |
+| standing                       | status, availability, state                    | Active, Away, or Not a person. "Status" is D4H's member status.                                      |
+| away period                    | leave, LOA, absence                            | Dated time a member is away. Leave is one of its reasons.                                            |
 | no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
 | invite                         | request, ask, call out                         | Asking a member to come to an activity. D4H shows them as Requested until they answer.               |
 | import attendance              | upload, sync attendance                        | Reading a SAR Assist attendance report to change D4H attendance.                                     |
