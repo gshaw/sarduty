@@ -267,8 +267,9 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :missing_details}),
     do: ~p"/teams/#{team}/members?details=missing"
 
+  # The same time frame as the item, from the team's setting.
   defp attention_path(team, %{key: :not_seen}),
-    do: ~p"/teams/#{team}/members?attended=not-recent"
+    do: ~p"/teams/#{team}/members?attended=#{team.not_seen_days}"
 
   defp attention_path(team, %{key: :group_changes}), do: ~p"/teams/#{team}/groups"
 

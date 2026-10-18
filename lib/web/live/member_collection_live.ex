@@ -82,10 +82,9 @@ defmodule Web.MemberCollectionLive do
         default="all"
       />
       <:filter
-        :if={MemberFilterViewModel.attended_kinds(@current_team)}
         field={@form[:attended]}
         label="Attended"
-        options={MemberFilterViewModel.attended_kinds(@current_team)}
+        options={MemberFilterViewModel.attended_kinds()}
         default="all"
       />
     </.filter_bar>
@@ -113,7 +112,7 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        :if={@attended == "not-recent"}
+        :if={@attended not in [nil, "all"]}
         label="Last attended"
         align="right"
         class="w-1/12 whitespace-nowrap"
@@ -162,9 +161,9 @@ defmodule Web.MemberCollectionLive do
   # Last attended dates for the page's members, only when the column shows.
   defp assign_paginated(socket, paginated) do
     last_seen =
-      if socket.assigns.attended == "not-recent",
-        do: paginated.entries |> Enum.map(& &1.member.id) |> Member.last_seen(),
-        else: %{}
+      if socket.assigns.attended in [nil, "all"],
+        do: %{},
+        else: paginated.entries |> Enum.map(& &1.member.id) |> Member.last_seen()
 
     assign(socket, paginated: paginated, last_seen: last_seen)
   end

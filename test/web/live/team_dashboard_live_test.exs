@@ -138,6 +138,26 @@ defmodule Web.TeamDashboardLiveTest do
            )
   end
 
+  test "members who have not attended link to the members page in the team's time frame",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    team = team |> Ecto.Changeset.change(not_seen_days: 180) |> App.Repo.update!()
+    member_fixture(team, %{joined_at: ~U[2024-01-01 00:00:00Z]})
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(
+             lv,
+             "#attention-not_seen",
+             "1 member has not attended an activity in 180 days"
+           )
+
+    assert has_element?(
+             lv,
+             ~s{#attention-not_seen a[href="/teams/#{team.subdomain}/members?attended=180"]}
+           )
+  end
+
   test "Check activities lists the same drafts the dashboard counts", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{title: "Counted draft", is_published: false}))

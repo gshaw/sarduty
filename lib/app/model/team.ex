@@ -101,6 +101,9 @@ defmodule App.Model.Team do
 
   @not_seen_days [30, 60, 90, 180, 365]
 
+  @doc "The time frames `not_seen_days` takes, in days."
+  def not_seen_days, do: @not_seen_days
+
   @doc "The choices for `not_seen_days`, as select options. 0 is off, saved as nil."
   def not_seen_days_kinds do
     [{"Off", 0}] ++
