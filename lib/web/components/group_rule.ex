@@ -63,8 +63,8 @@ defmodule Web.Components.GroupRule do
 
     <div :if={@suggest_standing} id="suggest-standing" class="media mt-4">
       <p class="hint mb-0">
-        Members who are away or not a person stay in this group. Add Standing is Active to
-        leave them out.
+        Members who are away or not a person stay in this group. The rule Standing is Active
+        leaves them out.
       </p>
       <.button
         id="add-standing-active"
@@ -72,7 +72,7 @@ defmodule Web.Components.GroupRule do
         class="shrink-0"
         phx-click="add-standing-active"
       >
-        Add Standing is Active
+        Add this rule
       </.button>
     </div>
 

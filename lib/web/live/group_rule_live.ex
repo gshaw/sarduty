@@ -74,7 +74,8 @@ defmodule Web.GroupRuleLive do
     rules = Map.get(context.rules, group.d4h_group_id, [])
 
     assign(socket,
-      page_title: "#{kind_label(rule.kind)} rule",
+      page_title:
+        if(rule.kind == :standing, do: "Standing rule", else: "#{kind_label(rule.kind)} rule"),
       context: context,
       rows: Enum.map(rule.references, &row(&1, context, team)),
       options:

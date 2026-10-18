@@ -116,7 +116,7 @@ and must not be used for it.
 | published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H doesn't let SAR Duty change its tags.                           |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
-| group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in, or not in, any of some groups and endorsements.   |
+| group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in or not in groups or endorsements, or a standing.   |
 | endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
 | primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
 | tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
