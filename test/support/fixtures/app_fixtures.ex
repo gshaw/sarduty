@@ -274,7 +274,7 @@ defmodule App.DataFixtures do
       member_id: member.id,
       starts_on: starts_on,
       ends_on: ends_on,
-      reason: "leave"
+      reason: "Leave"
     }
     |> struct(attrs)
     |> Repo.insert!()

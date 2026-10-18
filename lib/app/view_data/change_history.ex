@@ -4,7 +4,6 @@ defmodule App.ViewData.ChangeHistory do
   alias App.Model.ChangeSetRow
   alias App.Model.D4HChange
   alias App.Model.Member
-  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberStandingChange
   alias App.Model.Team
   alias App.Repo
@@ -124,7 +123,7 @@ defmodule App.ViewData.ChangeHistory do
         &(details[&1] |> Date.from_iso8601!() |> Service.Format.day())
       )
 
-    "#{MemberAwayPeriod.reason_label(details["reason"])}, #{Enum.join(days, " to ")}"
+    "#{details["reason"]}, #{Enum.join(days, " to ")}"
   end
 
   @doc """

@@ -27,15 +27,19 @@ A member's **standing** says whether the team expects them to show up now (#366)
 - **SAR Duty owns it.** It is not D4H data and nothing about it goes to D4H. Teams on D4H
   and on SAR Duty Records work the same.
 - **Dates, not jobs.** [MemberAwayPeriod](../lib/app/model/member_away_period.ex) stores
-  a first and last day on the team's clock, and `MemberAwayPeriod.standing/3` works out
-  standing when read. No job flips a member back.
+  a first and last day on the team's clock and a short reason the team admin writes,
+  such as "Parental leave", and `MemberAwayPeriod.standing/3` works out standing when
+  read. No job flips a member back.
+- **The reason is free text, not a list** (decided 2026-10-18). A fixed list of
+  categories guessed at teams' cases and nothing read it. The hint asks for no medical
+  details.
 - **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
   an away period. **Active** is the absence of both and is never stored.
 - The member's **Standing** tab lists away periods, past ones too, with a form to add one
   and buttons to end one today or delete it. Any team admin can. The sidebar on every
   member tab shows the standing. Each change goes in the member's history, from
-  `member_standing_changes`, which keeps the reason and dates but never the note.
-- Members do not see their standing, and the note is `redact: true`.
+  `member_standing_changes`, which keeps the reason and dates.
+- Members do not see their standing, and the reason is `redact: true`.
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
 These stay as they were, since a bot cannot attend or be invited, and skip members

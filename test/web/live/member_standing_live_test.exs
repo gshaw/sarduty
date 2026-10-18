@@ -40,8 +40,7 @@ defmodule Web.MemberStandingLiveTest do
       away: %{
         starts_on: today(team),
         ends_on: ends_on,
-        reason: "parental",
-        note: "Back in the spring"
+        reason: "  Parental leave  "
       }
     )
     |> render_submit()
@@ -49,10 +48,10 @@ defmodule Web.MemberStandingLiveTest do
     assert has_element?(
              lv,
              "#standing-now",
-             "Away until #{Service.Format.day_long(ends_on)} (Parental)"
+             "Away until #{Service.Format.day_long(ends_on)} (Parental leave)"
            )
 
-    assert has_element?(lv, "#away-period-list", "Back in the spring")
+    assert has_element?(lv, "#away-period-list", "Parental leave")
 
     assert [%MemberStandingChange{action: :away_added, user_id: user_id}] =
              Repo.all(MemberStandingChange)
@@ -62,8 +61,28 @@ defmodule Web.MemberStandingLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/history")
 
-    assert has_element?(lv, "#member-history", "Away period added: Parental")
-    refute has_element?(lv, "#member-history", "Back in the spring")
+    assert has_element?(lv, "#member-history", "Away period added: Parental leave")
+  end
+
+  test "an away period needs a short reason", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    away = %{starts_on: today(team), ends_on: day(team, 30)}
+
+    html = lv |> form("#away-form", away: Map.put(away, :reason, "")) |> render_submit()
+    assert html =~ "Enter a reason, such as Parental leave."
+
+    html =
+      lv
+      |> form("#away-form", away: Map.put(away, :reason, String.duplicate("a", 61)))
+      |> render_submit()
+
+    assert html =~ "Keep the reason under 60 characters."
+    assert Repo.all(MemberAwayPeriod) == []
   end
 
   test "an away period needs a last day on or after the first", %{conn: conn} do

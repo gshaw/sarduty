@@ -10,7 +10,6 @@ defmodule App.Repo.Migrations.CreateMemberAwayPeriods do
       add :starts_on, :date, null: false
       add :ends_on, :date, null: false
       add :reason, :string, null: false
-      add :note, :text
       add :created_by_user_id, references(:users, on_delete: :nilify_all)
 
       timestamps(type: :utc_datetime_usec)

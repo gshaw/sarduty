@@ -16,35 +16,20 @@ defmodule App.Model.MemberAwayPeriod do
     belongs_to :created_by_user, User
     field :starts_on, :date
     field :ends_on, :date
-    field :reason, :string
-    field :note, TrimmedString, redact: true
+    # A few words a team admin writes, such as "Parental leave". Personal, so redacted.
+    field :reason, TrimmedString, redact: true
     timestamps(type: :utc_datetime_usec)
   end
 
-  @reasons [
-    {"Leave", "leave"},
-    {"Medical", "medical"},
-    {"Parental", "parental"},
-    {"Moving", "moving"},
-    {"Returning gear", "returning_gear"},
-    {"Other", "other"}
-  ]
-
-  def reasons, do: @reasons
-
-  def reason_label(reason),
-    do: Enum.find_value(@reasons, reason, fn {label, value} -> value == reason && label end)
-
   def build_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:starts_on, :ends_on, :reason, :note])
+    |> cast(params, [:starts_on, :ends_on, :reason])
     |> validate_required([:starts_on], message: "Enter the first day away.")
     |> validate_required([:ends_on], message: "Enter the last day away.")
-    |> validate_required([:reason], message: "Select a reason.")
-    |> validate_inclusion(:reason, Enum.map(@reasons, &elem(&1, 1)), message: "Select a reason.")
-    |> validate_length(:note, max: 500, message: "Keep the note under 500 characters.")
+    |> validate_required([:reason], message: "Enter a reason, such as Parental leave.")
+    |> validate_length(:reason, max: 60, message: "Keep the reason under 60 characters.")
     |> validate_ends_on_or_after_starts()
-    |> App.Validate.in_field_order([:starts_on, :ends_on, :reason, :note])
+    |> App.Validate.in_field_order([:starts_on, :ends_on, :reason])
   end
 
   defp validate_ends_on_or_after_starts(changeset) do

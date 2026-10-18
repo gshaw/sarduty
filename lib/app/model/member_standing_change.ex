@@ -9,7 +9,7 @@ defmodule App.Model.MemberStandingChange do
 
   # What a team admin changed in a member's standing (#366), for the member's history.
   # `details` keeps an away period's reason and dates as strings, since the period can be
-  # deleted. Never its note.
+  # deleted.
   schema "member_standing_changes" do
     belongs_to :team, Team
     belongs_to :member, Member

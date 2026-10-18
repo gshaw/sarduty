@@ -131,8 +131,7 @@ defmodule Web.MemberStandingLive do
             class="table-striped"
           >
             <:col :let={period} label="Reason">
-              {MemberAwayPeriod.reason_label(period.reason)}
-              <div :if={period.note} class="text-text-muted">{period.note}</div>
+              {period.reason}
             </:col>
             <:col :let={period} label="First day" class="w-px whitespace-nowrap">
               {Service.Format.day(period.starts_on)}
@@ -180,14 +179,9 @@ defmodule Web.MemberStandingLive do
               <.input field={@away_form[:starts_on]} type="date" label="First day" />
               <.input field={@away_form[:ends_on]} type="date" label="Last day" />
             </div>
-            <.input
-              field={@away_form[:reason]}
-              type="select"
-              label="Reason"
-              prompt="Select a reason"
-              options={MemberAwayPeriod.reasons()}
-            />
-            <.input field={@away_form[:note]} type="textarea" label="Note (optional)" />
+            <.input field={@away_form[:reason]} label="Reason" maxlength="60">
+              For example, Parental leave or Moving. Leave out medical details.
+            </.input>
             <.form_actions>
               <.button variant={:success}>Add away period</.button>
             </.form_actions>
@@ -207,8 +201,7 @@ defmodule Web.MemberStandingLive do
     """
   end
 
-  # "Parental away period from Sep 8, 2026", for a confirmation that names the period.
+  # "away period from Sep 8, 2026 (Parental leave)", for a confirmation that names it.
   defp period_name(period),
-    do:
-      "#{MemberAwayPeriod.reason_label(period.reason)} away period from #{Service.Format.day(period.starts_on)}"
+    do: "away period from #{Service.Format.day(period.starts_on)} (#{period.reason})"
 end
