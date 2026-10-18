@@ -231,8 +231,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   # Never attended comes first going up: the members furthest from their last activity.
   defp scope(q, sort: "attended"),
-    do: order_by(q, [last_attended: l], asc_nulls_first: l.last_attended_at)
+    do: order_by(q, [r, last_attended: l], asc_nulls_first: l.last_attended_at, asc: r.name)
 
   defp scope(q, sort: "attended-"),
-    do: order_by(q, [last_attended: l], desc_nulls_last: l.last_attended_at)
+    do: order_by(q, [r, last_attended: l], desc_nulls_last: l.last_attended_at, asc: r.name)
 end
