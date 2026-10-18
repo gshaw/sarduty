@@ -9,6 +9,7 @@ defmodule Web.MemberStandingLive do
   alias App.Model.MemberCheckIn
   alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
+  alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
   alias App.Repo
@@ -82,6 +83,11 @@ defmodule Web.MemberStandingLive do
       {:error, changeset} ->
         {:noreply, assign(socket, :check_in_form, to_form(changeset, as: "check_in"))}
     end
+  end
+
+  def handle_event("delete-check-in", %{"id" => id}, socket) do
+    {:ok, _check_in} = DeleteCheckIn.call(socket.assigns.current_team, id)
+    {:noreply, socket |> put_flash(:info, "Check-in deleted.") |> load_standing()}
   end
 
   def handle_event("end-away", %{"id" => id}, socket) do
@@ -251,13 +257,33 @@ defmodule Web.MemberStandingLive do
             Record when you reach a member who has not been coming. It restarts their attendance
             clock. The next team admin sees who called and what they heard.
           </p>
-          <ul :if={@check_ins != []} id="check-in-list" class="mt-4">
-            <li :for={check_in <- @check_ins} id={"check-in-#{check_in.id}"} class="mb-2">
-              <strong>{Service.Format.day(check_in.checked_in_on)}</strong>, {check_in_by(check_in)}<span :if={
-                check_in.note
-              }>: {check_in.note}</span>
-            </li>
-          </ul>
+          <.table
+            :if={@check_ins != []}
+            id="check-in-list"
+            rows={@check_ins}
+            row_id={&"check-in-#{&1.id}"}
+            class="table-striped"
+          >
+            <:col :let={check_in} label="Day" class="w-px whitespace-nowrap">
+              {Service.Format.day(check_in.checked_in_on)}
+            </:col>
+            <:col :let={check_in} label="What they heard">
+              {check_in.note}
+              <div class="text-text-muted">{check_in_by(check_in)}</div>
+            </:col>
+            <:col :let={check_in} label="" class="w-px whitespace-nowrap">
+              <.button
+                id={"delete-check-in-#{check_in.id}"}
+                size={:sm}
+                variant={:danger}
+                phx-click="delete-check-in"
+                phx-value-id={check_in.id}
+                data-confirm={"Delete the check-in from #{Service.Format.day(check_in.checked_in_on)}? It no longer restarts #{@member.name}'s attendance clock."}
+              >
+                Delete
+              </.button>
+            </:col>
+          </.table>
           <p :if={@check_ins == []} id="no-check-ins" class="text-text-muted">No check-ins yet.</p>
 
           <.form
@@ -298,6 +324,6 @@ defmodule Web.MemberStandingLive do
   defp period_name(period),
     do: "away period from #{Service.Format.day(period.starts_on)} (#{period.reason})"
 
-  defp check_in_by(%{user: %{email: email}}), do: email
-  defp check_in_by(_check_in), do: "a team admin"
+  defp check_in_by(%{user: %{email: email}}), do: "Recorded by #{email}"
+  defp check_in_by(_check_in), do: "Recorded by a team admin"
 end

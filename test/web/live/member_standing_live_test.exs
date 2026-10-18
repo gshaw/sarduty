@@ -9,6 +9,7 @@ defmodule Web.MemberStandingLiveTest do
   alias App.Model.MemberStandingChange
   alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
+  alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
   alias App.Repo
@@ -209,11 +210,22 @@ defmodule Web.MemberStandingLiveTest do
     assert check_in.user_id == user.id
     assert check_in.checked_in_on == day(team, -2)
 
-    assert has_element?(
-             lv,
-             "#check-in-#{check_in.id}",
-             "#{user.email}: Busy with school, back in January."
-           )
+    assert has_element?(lv, "#check-in-#{check_in.id}", "Busy with school, back in January.")
+    assert has_element?(lv, "#check-in-#{check_in.id}", "Recorded by #{user.email}")
+  end
+
+  test "a check-in recorded by mistake can be deleted", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    {:ok, check_in} = RecordCheckIn.call(team, member.id, user, %{"checked_in_on" => today(team)})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    lv |> element("#delete-check-in-#{check_in.id}") |> render_click()
+
+    assert Repo.all(MemberCheckIn) == []
+    assert has_element?(lv, "#no-check-ins")
   end
 
   test "a check-in cannot be in the future", %{conn: conn} do
@@ -230,13 +242,19 @@ defmodule Web.MemberStandingLiveTest do
     assert Repo.all(MemberCheckIn) == []
   end
 
-  test "another team's member cannot be checked in" do
+  test "another team's member cannot be checked in, nor its check-in deleted" do
     %{user: user, team: team} = user_with_team_fixture()
-    other = member_fixture(team_fixture())
+    other_team = team_fixture()
+    other = member_fixture(other_team)
 
     assert_raise Ecto.NoResultsError, fn ->
       RecordCheckIn.call(team, other.id, user, %{"checked_in_on" => today(team)})
     end
+
+    {:ok, check_in} =
+      RecordCheckIn.call(other_team, other.id, user, %{"checked_in_on" => today(team)})
+
+    assert_raise Ecto.NoResultsError, fn -> DeleteCheckIn.call(team, check_in.id) end
   end
 
   test "suggests marking a bot, and the switch marks it not a person", %{conn: conn} do

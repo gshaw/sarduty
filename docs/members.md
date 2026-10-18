@@ -50,6 +50,7 @@ A member's **standing** says whether the team expects them to show up now (#366)
   and what they heard ([MemberCheckIn](../lib/app/model/member_check_in.ex)). It
   restarts the member's attendance clock and changes nothing else: not standing, not
   groups, nothing in D4H. If the call turns up leave, the admin adds an away period too.
+  Any team admin can delete one recorded by mistake, and the clock goes back without it.
   Members do not see check-ins, and the note is `redact: true`.
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
