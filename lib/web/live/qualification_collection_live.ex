@@ -208,7 +208,7 @@ defmodule Web.QualificationCollectionLive do
       id="no-matching-qualifications"
       title="No expiring qualifications match"
     >
-      Change the search or the group.
+      Change the search or the filters.
     </.empty_state>
     """
   end
