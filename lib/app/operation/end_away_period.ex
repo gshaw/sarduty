@@ -1,7 +1,8 @@
 defmodule App.Operation.EndAwayPeriod do
   @moduledoc """
   Ends a member's current away period early (#366): yesterday becomes its last day, so
-  the member is active today. Recorded in the member's history.
+  the member is active today. Recorded in the member's history. `:gone` when the team has
+  no such period, and `:error` when it isn't current.
   """
 
   alias App.Accounts.User
@@ -11,9 +12,8 @@ defmodule App.Operation.EndAwayPeriod do
   alias App.Repo
 
   def call(%Team{} = team, period_id, %User{} = user, now \\ DateTime.utc_now()) do
-    period = MemberAwayPeriod.find!(team, period_id)
-
-    with {:ok, ends_on} <-
+    with %MemberAwayPeriod{} = period <- MemberAwayPeriod.find(team, period_id) || :gone,
+         {:ok, ends_on} <-
            MemberAwayPeriod.early_end(period, Service.Period.today(now, team.timezone)) do
       Repo.transact(fn ->
         ended = period |> Ecto.Changeset.change(ends_on: ends_on) |> Repo.update!()

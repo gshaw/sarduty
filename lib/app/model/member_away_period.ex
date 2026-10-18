@@ -87,4 +87,6 @@ defmodule App.Model.MemberAwayPeriod do
     do: standing(member, for_member(member), Service.Period.today(now, timezone))
 
   def find!(%Team{} = team, id), do: Repo.get_by!(MemberAwayPeriod, id: id, team_id: team.id)
+
+  def find(%Team{} = team, id), do: Repo.get_by(MemberAwayPeriod, id: id, team_id: team.id)
 end

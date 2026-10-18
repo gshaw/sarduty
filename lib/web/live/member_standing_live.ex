@@ -26,6 +26,7 @@ defmodule Web.MemberStandingLive do
      socket
      |> assign(:page_title, "#{member.name} · Standing")
      |> assign(:member, member)
+     |> assign(:last_attended_at, Member.last_attended_at(member))
      |> load_standing()
      |> assign_new_form()}
   end
@@ -49,6 +50,9 @@ defmodule Web.MemberStandingLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :away_form, to_form(changeset, as: "away"))}
+
+      :not_a_person ->
+        {:noreply, put_flash(socket, :error, "Turn off Not a person to add an away period.")}
     end
   end
 
@@ -61,13 +65,23 @@ defmodule Web.MemberStandingLive do
 
       :error ->
         {:noreply, put_flash(socket, :error, "Only a current away period can end early.")}
+
+      :gone ->
+        {:noreply,
+         socket |> put_flash(:info, "That away period was deleted already.") |> load_standing()}
     end
   end
 
   def handle_event("delete-away", %{"id" => id}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
-    {:ok, _period} = DeleteAwayPeriod.call(team, id, user)
-    {:noreply, socket |> put_flash(:info, "Away period deleted.") |> load_standing()}
+
+    message =
+      case DeleteAwayPeriod.call(team, id, user) do
+        {:ok, _period} -> "Away period deleted."
+        :gone -> "That away period was deleted already."
+      end
+
+    {:noreply, socket |> put_flash(:info, message) |> load_standing()}
   end
 
   def handle_info({:not_a_person_changed, not_a_person}, socket) do
@@ -108,6 +122,7 @@ defmodule Web.MemberStandingLive do
         <.sidebar_content
           member={@member}
           maps_app={@current_user.maps_app}
+          last_attended_at={@last_attended_at}
           standing={@standing}
         />
       </aside>
@@ -166,7 +181,11 @@ defmodule Web.MemberStandingLive do
             No away periods.
           </p>
 
+          <p :if={@member.not_a_person} id="away-not-a-person" class="hint mt-6">
+            Turn off Not a person to add an away period.
+          </p>
           <.form
+            :if={not @member.not_a_person}
             for={@away_form}
             id="away-form"
             phx-change="validate-away"

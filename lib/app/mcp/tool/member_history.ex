@@ -1,7 +1,8 @@
 defmodule App.MCP.Tool.MemberHistory do
   @moduledoc """
   A member's history (#216): what SAR Duty changed in D4H and what the refresh saw change
-  there, from App.ViewData.ChangeHistory. No contact details, and no account emails.
+  there, from App.ViewData.ChangeHistory. No contact details, no account emails, and no
+  standing changes.
   """
   @behaviour App.MCP.Tool
 

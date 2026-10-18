@@ -1,7 +1,8 @@
 defmodule App.Operation.AddAwayPeriod do
   @moduledoc """
   Adds an away period to a member (#366), found through the team, and records it in the
-  member's history. Nothing goes to D4H.
+  member's history. Nothing goes to D4H. A member marked not a person is never away, so
+  it returns `:not_a_person` for one.
   """
 
   alias App.Accounts.User
@@ -12,8 +13,13 @@ defmodule App.Operation.AddAwayPeriod do
   alias App.Repo
 
   def call(%Team{} = team, member_id, %User{} = user, params) do
-    member = Member.find!(team, member_id)
+    case Member.find!(team, member_id) do
+      %Member{not_a_person: true} -> :not_a_person
+      member -> add(team, member, user, params)
+    end
+  end
 
+  defp add(team, member, user, params) do
     changeset =
       MemberAwayPeriod.build_changeset(
         %MemberAwayPeriod{team_id: team.id, member_id: member.id, created_by_user_id: user.id},

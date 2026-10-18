@@ -146,13 +146,45 @@ defmodule Web.MemberStandingLiveTest do
     assert has_element?(lv, "#standing-now", "Not a person")
   end
 
+  test "a member marked not a person cannot get an away period", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{not_a_person: true})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    refute has_element?(lv, "#away-form")
+    assert has_element?(lv, "#away-not-a-person")
+
+    params = %{"starts_on" => today(team), "ends_on" => day(team, 10), "reason" => "Leave"}
+    assert AddAwayPeriod.call(team, member.id, user, params) == :not_a_person
+    assert Repo.all(MemberAwayPeriod) == []
+  end
+
+  test "deleting an away period someone else deleted first says so", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    period = away_period_fixture(member, today(team), day(team, 10))
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    {:ok, _period} = DeleteAwayPeriod.call(team, period.id, user)
+
+    assert lv |> element("#delete-away-#{period.id}") |> render_click() =~
+             "That away period was deleted already."
+
+    refute has_element?(lv, "#away-period-#{period.id}")
+  end
+
   test "another team's away period cannot be ended or deleted" do
     %{user: user, team: team} = user_with_team_fixture()
     other = member_fixture(team_fixture())
     period = away_period_fixture(other, day(team, -5), day(team, 10))
 
-    assert_raise Ecto.NoResultsError, fn -> DeleteAwayPeriod.call(team, period.id, user) end
-    assert_raise Ecto.NoResultsError, fn -> EndAwayPeriod.call(team, period.id, user) end
+    assert DeleteAwayPeriod.call(team, period.id, user) == :gone
+    assert EndAwayPeriod.call(team, period.id, user) == :gone
+    assert Repo.reload(period)
     assert_raise Ecto.NoResultsError, fn -> AddAwayPeriod.call(team, other.id, user, %{}) end
   end
 

@@ -21,6 +21,7 @@ defmodule Web.MemberHistoryLive do
       socket
       |> assign(:page_title, "#{member.name} · History")
       |> assign(:member, member)
+      |> load_sidebar()
       |> assign(:entries, ChangeHistory.for_member(team, member))
 
     {:noreply, socket}
@@ -37,7 +38,12 @@ defmodule Web.MemberHistoryLive do
     <.member_tabs member={@member} active_tab={:history} />
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
+        <.sidebar_content
+          member={@member}
+          maps_app={@current_user.maps_app}
+          last_attended_at={@last_attended_at}
+          standing={@standing}
+        />
       </aside>
       <main class="content-2/3">
         <.change_history id="member-history" entries={@entries} timezone={@current_team.timezone} />

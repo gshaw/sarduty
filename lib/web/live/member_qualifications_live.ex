@@ -26,6 +26,7 @@ defmodule Web.MemberQualificationsLive do
       socket
       |> assign(:page_title, "#{member.name} · Qualifications")
       |> assign(:member, member)
+      |> load_sidebar()
       |> assign(:records?, D4H.records?(team))
       |> assign(
         :qualifications,
@@ -94,7 +95,12 @@ defmodule Web.MemberQualificationsLive do
     <.member_tabs member={@member} active_tab={:qualifications} />
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
+        <.sidebar_content
+          member={@member}
+          maps_app={@current_user.maps_app}
+          last_attended_at={@last_attended_at}
+          standing={@standing}
+        />
       </aside>
       <main class="content-2/3">
         <.qualifications_content member={@member} records?={@records?} />

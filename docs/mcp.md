@@ -58,7 +58,8 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   [change-sets.md](change-sets.md).
 - **History.** `member_history` and `activity_history` return the same entries as the
   history pages ([change-history.md](change-history.md)), without the account email of
-  whoever sent a change.
+  whoever sent a change, and without standing changes: an away period's reason and dates
+  are personal (#366).
 - **Allowlisted fields.** Each tool builds explicit maps and lists every key it may
   return in `fields/0`; a test fails on any other key. Never email, phone, an address,
   coordinates, an activity's description, letter text, or a key.
