@@ -25,6 +25,20 @@
         options={sample_whens()}
         default="all"
       />
+      <:filter
+        field={sample_filters()[:hours]}
+        label="Hours"
+        options={sample_hours()}
+        default="all"
+        more
+      />
+      <:filter
+        field={sample_filters()[:status]}
+        label="Status"
+        options={sample_statuses()}
+        default="all"
+        more
+      />
     </.filter_bar>
   </div>
 
@@ -51,6 +65,9 @@
   <h2>How it works</h2>
   <ul>
     <li>Each menu shows its label inside. A menu not at its default turns blue.</li>
+    <li>
+      With more than 3 or 4 menus, the row would wrap. Mark the less common ones <code>more</code>: they wait behind a More filters button, and a menu that is on always shows, so the bar never hides what filters the list.
+    </li>
     <li>Search waits 300 ms after typing stops.</li>
     <li>
       Under the bar: the count, then Clear filters while a menu filters the list, or Clear search while only the search does, and which rows the page shows.
@@ -68,7 +85,8 @@
     <code>&lt;.filter_bar&gt;</code>
     with a <code>:search</code>
     slot and a <code>:filter</code>
-    slot per menu, each with its <code>default</code>. A <code>:lead</code>
+    slot per menu, each with its <code>default</code>, and <code>more</code>
+    on the ones that can wait behind More filters. A <code>:lead</code>
     slot puts a view switch first. Put a long menu, such as groups, in a
     <code>type="combobox"</code>
     filter. Give the sort to <code>hidden</code>

@@ -12,7 +12,8 @@ defmodule Web.Components.FilterBar do
   Renders a search box and menus above a list, then a line with the count.
 
   On a wide screen the menus sit in one row, each with its label inside, and a menu not
-  at its default turns blue. On a phone a Filters button shows them, and the filters that
+  at its default turns blue. A page with many menus marks the less common ones `more`:
+  they wait behind a More filters button until one is on, so the row doesn't wrap. On a phone a Filters button shows them, and the filters that
   are on show as chips that remove them. The list's column headers sort it, so the bar has
   no sort menu: put the sort in `hidden` so a change keeps it.
 
@@ -61,10 +62,14 @@ defmodule Web.Components.FilterBar do
     attr :type, :string,
       values: ["select", "combobox"],
       doc: "combobox for a long list, with All as its empty option and a default of \"\""
+
+    attr :more, :boolean,
+      doc: "behind More filters on a wide screen while at its default; on a phone, as any"
   end
 
   def filter_bar(assigns) do
-    filters = Enum.map(assigns.filter, &Map.put(&1, :on?, on?(&1)))
+    filters = Enum.map(assigns.filter, &mark/1)
+
     on = Enum.filter(filters, & &1.on?)
     searching? = Enum.any?(assigns.search, &(blank(&1.field.value) != ""))
 
@@ -74,7 +79,8 @@ defmodule Web.Components.FilterBar do
         on: on,
         clear?: assigns.clear != nil and (on != [] or searching?),
         clear_label: if(on == [], do: "Clear search", else: "Clear filters"),
-        toggle: JS.toggle_class("is-open", to: "##{assigns.id}")
+        toggle: JS.toggle_class("is-open", to: "##{assigns.id}"),
+        more?: Enum.any?(filters, & &1.more?)
       )
 
     ~H"""
@@ -106,6 +112,19 @@ defmodule Web.Components.FilterBar do
       </button>
       <div :if={@filters != []} id={"#{@id}-menus"} class="filter-bar-menus">
         <.filter_menu :for={filter <- @filters} filter={filter} />
+        <button
+          :if={@more?}
+          type="button"
+          id={"#{@id}-more"}
+          class="btn filter-bar-more"
+          aria-expanded="false"
+          phx-click={
+            JS.toggle_class("is-more-open", to: "##{@id}")
+            |> JS.toggle_attribute({"aria-expanded", "true", "false"})
+          }
+        >
+          More filters <.icon name="hero-chevron-down-mini" />
+        </button>
         <div class="filter-bar-done">
           <.link :if={@clear?} patch={@clear} class="link">Clear filters</.link>
           <button
@@ -150,7 +169,11 @@ defmodule Web.Components.FilterBar do
 
   defp filter_menu(%{filter: %{type: "combobox"}} = assigns) do
     ~H"""
-    <div class={["filter-menu filter-menu-combobox", @filter.on? && "is-on"]}>
+    <div class={[
+      "filter-menu filter-menu-combobox",
+      @filter.on? && "is-on",
+      @filter.more? && "is-more"
+    ]}>
       <label for={@filter.field.id} class="filter-menu-label">{@filter.label}</label>
       <.combobox
         id={@filter.field.id}
@@ -166,13 +189,19 @@ defmodule Web.Components.FilterBar do
 
   defp filter_menu(assigns) do
     ~H"""
-    <div class={["filter-menu", @filter.on? && "is-on"]}>
+    <div class={["filter-menu", @filter.on? && "is-on", @filter.more? && "is-more"]}>
       <label for={@filter.field.id} class="filter-menu-label">{@filter.label}</label>
       <select id={@filter.field.id} name={@filter.field.name}>
         {Phoenix.HTML.Form.options_for_select(@filter.options, blank(@filter.field.value))}
       </select>
     </div>
     """
+  end
+
+  # A `more` filter waits behind More filters only while it filters nothing.
+  defp mark(filter) do
+    on? = on?(filter)
+    Map.merge(filter, %{on?: on?, more?: filter[:more] == true and not on?})
   end
 
   defp on?(filter), do: blank(filter.field.value) not in ["", filter.default]

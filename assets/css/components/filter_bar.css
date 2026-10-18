@@ -32,6 +32,12 @@
   .filter-menu.is-on { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--bg)); }
   .filter-menu.is-on .filter-menu-label { color: var(--link); }
 
+  /* Wide screens: less common menus wait behind More filters until one is on (more). */
+  .filter-menu.is-more { display: none; }
+  .filter-bar.is-more-open .filter-menu.is-more { display: inline-flex; }
+  .filter-bar-more { min-height: 36px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .filter-bar-more[aria-expanded="true"] .hero-chevron-down-mini { rotate: 180deg; }
+
   .filter-bar-count { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--primary); color: var(--on-fill); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
 
   /* Phones: a search box and the Filters button, then a panel of full-width menus. */
@@ -44,7 +50,8 @@
     .filter-bar-menus { display: none; flex-basis: 100%; padding: var(--sp-3); background: var(--surface-alt); border-left: 4px solid var(--primary); }
     .filter-bar.is-open .filter-bar-menus { display: block; }
 
-    .filter-menu { display: block; margin-bottom: var(--sp-3); padding: 0; border: 0; background: none; font-size: var(--fs-md); line-height: var(--lh-md); }
+    .filter-bar-more { display: none; }
+    .filter-menu, .filter-menu.is-more { display: block; margin-bottom: var(--sp-3); padding: 0; border: 0; background: none; font-size: var(--fs-md); line-height: var(--lh-md); }
     .filter-menu.is-on { background: none; }
     .filter-menu-label, .filter-menu.is-on .filter-menu-label { display: block; margin-bottom: var(--sp-1); color: var(--text); font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); }
     .filter-menu select, .filter-menu .combobox-input input { width: 100%; min-height: 44px; padding: var(--sp-1) var(--sp-2); border: var(--border-width) solid var(--text); background: var(--bg); font-weight: 400; }

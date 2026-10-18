@@ -27,6 +27,10 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   Sep 2", "Checked in Oct 3", or "Joined Jun 1". The filter guesses at nothing: bots and
   members on leave are left out by the Standing filter, not by the clock.
 
+Status, Period, and Group sit in the filter bar's row. Standing, Details, and Attended
+wait behind **More filters** until one is on, so the row doesn't wrap and a link such as
+the home item's still shows every filter it sets.
+
 No column chooser. A column shows only when it says something: Standing when some
 current member is not active (or the filter is on), Departed when Status includes
 departed members, Missing with Details: Missing. ID hides on narrow screens.

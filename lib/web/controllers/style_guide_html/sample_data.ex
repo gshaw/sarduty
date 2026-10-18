@@ -41,13 +41,22 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   # The activity filters with When set to a year, for the filter bar.
   def sample_filters,
-    do: Phoenix.Component.to_form(%{"q" => "", "kind" => "all", "when" => "2025"}, as: :demo)
+    do:
+      Phoenix.Component.to_form(
+        %{"q" => "", "kind" => "all", "when" => "2025", "hours" => "all", "status" => "all"},
+        as: :demo
+      )
 
   def sample_filter_page,
     do: %App.Page{entries: [], page_number: 1, page_size: 50, total_entries: 212, total_pages: 5}
 
   def sample_kinds,
     do: [{"All", "all"}, {"Incident", "incident"}, {"Exercise", "exercise"}, {"Event", "event"}]
+
+  def sample_hours,
+    do: [{"All", "all"}, {"Primary", "primary"}, {"Secondary", "secondary"}, {"None", "none"}]
+
+  def sample_statuses, do: [{"All", "all"}, {"Draft", "draft"}, {"Published", "published"}]
 
   def sample_whens,
     do: [{"All", "all"}, {"Current", "current"}, {"2025", "2025"}, {"2024", "2024"}]
