@@ -132,7 +132,7 @@ defmodule Web.StyleGuideHTML.SampleData do
   def rule_sentence_rules do
     [
       %{kind: :in, names: [{:group, "GSAR Qualified Callout"}, {:group, "MIT Callout"}]},
-      %{kind: :not_in, names: [{:group, "LOA"}]}
+      %{kind: :standing, names: [{:standing, "Active"}]}
     ]
   end
 
@@ -145,7 +145,7 @@ defmodule Web.StyleGuideHTML.SampleData do
         path: "#",
         confirm: nil
       },
-      %{id: 2, kind: :not_in, names: "LOA", path: "#", confirm: nil}
+      %{id: 2, kind: :standing, names: "Active", path: "#", confirm: nil}
     ]
   end
 
@@ -185,7 +185,8 @@ defmodule Web.StyleGuideHTML.SampleData do
   def rule_options,
     do: [
       {"Groups", [{"Rope Rescue", "group:3"}, {"Swiftwater Team", "group:4"}]},
-      {"Endorsements", [{"First Aid", "endorsement:1"}, {"Swiftwater 1", "endorsement:2"}]}
+      {"Endorsements", [{"First Aid", "endorsement:1"}, {"Swiftwater 1", "endorsement:2"}]},
+      {"Standing", [{"Away", "standing:away"}, {"Not a person", "standing:not_a_person"}]}
     ]
 
   # Team settings after a failed save: the app's own changeset, with a blank name and an

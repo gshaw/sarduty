@@ -7,13 +7,14 @@ defmodule App.Model.GroupRuleReference do
   alias App.Model.GroupRuleReference
   alias App.Repo
 
-  # One group or endorsement in a rule, with exactly one of the two set. The group is by
+  # One group, endorsement, or standing (#366) in a rule, with exactly one set. The group is by
   # D4H id, not a foreign key: when D4H drops a group, the sync deletes its row, and the
   # rule must break rather than vanish.
   schema "group_rule_references" do
     belongs_to :group_rule, GroupRule
     belongs_to :endorsement, Endorsement
     field :d4h_group_id, :integer
+    field :standing, Ecto.Enum, values: [:active, :away, :not_a_person]
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -23,6 +24,10 @@ defmodule App.Model.GroupRuleReference do
 
   def add!(%GroupRule{team_id: team_id} = rule, %Endorsement{team_id: team_id} = endorsement),
     do: insert!(%GroupRuleReference{group_rule_id: rule.id, endorsement_id: endorsement.id})
+
+  def add!(%GroupRule{kind: :standing} = rule, standing)
+      when standing in [:active, :away, :not_a_person],
+      do: insert!(%GroupRuleReference{group_rule_id: rule.id, standing: standing})
 
   defp insert!(reference), do: Repo.insert!(reference, on_conflict: :nothing)
 
@@ -35,6 +40,11 @@ defmodule App.Model.GroupRuleReference do
     GroupRule.delete_empty([rule.id])
   end
 
-  def target(%GroupRuleReference{d4h_group_id: nil, endorsement_id: id}), do: {:endorsement, id}
-  def target(%GroupRuleReference{d4h_group_id: d4h_group_id}), do: {:group, d4h_group_id}
+  def target(%GroupRuleReference{standing: nil, d4h_group_id: nil, endorsement_id: id}),
+    do: {:endorsement, id}
+
+  def target(%GroupRuleReference{standing: nil, d4h_group_id: d4h_group_id}),
+    do: {:group, d4h_group_id}
+
+  def target(%GroupRuleReference{standing: standing}), do: {:standing, standing}
 end

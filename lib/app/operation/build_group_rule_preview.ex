@@ -6,6 +6,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   alias App.Model.GroupMember
   alias App.Model.GroupRule
   alias App.Model.Member
+  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
@@ -28,10 +29,17 @@ defmodule App.Operation.BuildGroupRulePreview do
   # - `titles`: each qualification D4H still has, by D4H id.
   # - `awards_by_member`: each member id with their awards for those qualifications.
   # - `members`: the team's members, each with `id` and `left_at`.
+  # - `standings`: each member id with their standing today (#366), from
+  #   `MemberAwayPeriod.standing/3`. A member missing from it is active.
+  #
+  # A Standing rule is met by having any of its standings, `{:standing, :active}`,
+  # `{:away, _}`, or `{:standing, :not_a_person}`. Standing is worked out for today, so
+  # the preview changes the day leave starts or ends.
 
   @doc "The team's context for `plan/3`."
-  def load(%Team{} = team) do
+  def load(%Team{} = team, now \\ DateTime.utc_now()) do
     endorsements = Endorsement.get_all(team.id)
+    {members, standings} = members_and_standings(team, now)
 
     %{
       rules: team.id |> GroupRule.get_all() |> rules_by_group(),
@@ -39,8 +47,22 @@ defmodule App.Operation.BuildGroupRulePreview do
       endorsements: Map.new(endorsements, &{&1.id, endorsement_entry(&1)}),
       titles: team.id |> Qualification.get_all() |> Map.new(&{&1.d4h_qualification_id, &1.title}),
       awards_by_member: awards_by_member(team.id, endorsements),
-      members: list_team_members(team.id)
+      members: members,
+      standings: standings
     }
+  end
+
+  defp members_and_standings(team, now) do
+    members = list_team_members(team.id)
+    today = Service.Period.today(now, team.timezone)
+    periods = team.id |> MemberAwayPeriod.get_all_for_team() |> Enum.group_by(& &1.member_id)
+
+    standings =
+      Map.new(members, fn m ->
+        {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today)}
+      end)
+
+    {Enum.map(members, &Map.take(&1, [:id, :left_at])), standings}
   end
 
   defp awards_by_member(team_id, endorsements) do
@@ -51,7 +73,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   defp list_team_members(team_id) do
     Member
     |> where([m], m.team_id == ^team_id)
-    |> select([m], map(m, [:id, :left_at]))
+    |> select([m], map(m, [:id, :left_at, :not_a_person]))
     |> Repo.all()
   end
 
@@ -131,6 +153,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   end
 
   defp check_rule(%{targets: []}, _context, _stack), do: [:empty_rule]
+  defp check_rule(%{kind: :standing}, _context, _stack), do: []
 
   defp check_rule(rule, context, stack),
     do: Enum.flat_map(rule.targets, &check_target(&1, context, stack))
@@ -265,6 +288,16 @@ defmodule App.Operation.BuildGroupRulePreview do
       else: group_statuses(g, context, now, memo)
   end
 
+  defp target_statuses({:standing, standing}, context, _now, memo) do
+    statuses =
+      Map.new(context.members, fn m ->
+        actual = standing_of(context, m.id)
+        {m.id, if(standing_kind(actual) == standing, do: {:met, nil}, else: {:unmet, []})}
+      end)
+
+    {statuses, memo}
+  end
+
   defp target_statuses({:endorsement, id}, context, now, memo) do
     endorsement = context.endorsements[id]
 
@@ -304,12 +337,25 @@ defmodule App.Operation.BuildGroupRulePreview do
     end
   end
 
+  # Met by any of its standings. Standing never expires; leave ending is a new day's plan.
+  defp rule_status({:standing, targets}, member_id, context) do
+    if Enum.any?(targets, fn {_t, statuses} -> match?({:met, _}, statuses[member_id]) end),
+      do: {:met, nil},
+      else: {:unmet, [{:standing, standing_of(context, member_id)}]}
+  end
+
   defp rule_status({:not_in, targets}, member_id, context) do
     case for({t, statuses} <- targets, match?({:met, _}, statuses[member_id]), do: t) do
       [] -> {:met, nil}
       held -> {:unmet, Enum.map(held, &held_reason(&1, context))}
     end
   end
+
+  defp standing_of(context, member_id),
+    do: context |> Map.get(:standings, %{}) |> Map.get(member_id, :active)
+
+  defp standing_kind({:away, _period}), do: :away
+  defp standing_kind(standing), do: standing
 
   defp none_of(targets, context) do
     {:none_of, for({:group, g} <- targets, do: context.groups[g].title),
@@ -382,6 +428,10 @@ defmodule App.Operation.BuildGroupRulePreview do
     do: "Not in #{Enum.join(groups, " or ")}, and no #{Enum.join(names, " or ")} on record"
 
   def describe({:in, title}, _titles, _timezone), do: "In #{title}"
+
+  def describe({:standing, standing}, _titles, _timezone),
+    do: MemberAwayPeriod.describe_standing(standing)
+
   def describe({:holds, name}, _titles, _timezone), do: "Holds #{name}"
 
   def describe({:expired, qualification_id, ends_at}, titles, timezone),

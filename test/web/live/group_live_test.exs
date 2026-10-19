@@ -92,6 +92,91 @@ defmodule Web.GroupLiveTest do
     refute has_element?(lv, "#would-add-#{on_leave.id}")
   end
 
+  test "Standing is Active reads as a sentence and leaves out a member on leave (#366)", ctx do
+    callout = group_fixture(ctx.team, %{title: "Qualified Callout"})
+    trainees = group_fixture(ctx.team, %{title: "Trainee Callout"})
+    today = Service.Period.today(DateTime.utc_now(), ctx.team.timezone)
+
+    active = member_fixture(ctx.team, %{name: "Active Member"})
+    group_member_fixture(callout, active)
+    on_leave = member_fixture(ctx.team, %{name: "On Leave"})
+    group_member_fixture(trainees, on_leave)
+    group_member_fixture(ctx.group, on_leave)
+    away_period_fixture(on_leave, Date.add(today, -1), Date.add(today, 30))
+
+    rule = group_rule_fixture(ctx.group, callout)
+    GroupRuleReference.add!(rule, trainees)
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+    refute has_element?(lv, "#would-remove-#{on_leave.id}")
+
+    lv |> element("#edit-rules") |> render_click()
+    assert has_element?(lv, "#suggest-standing")
+    lv |> element("#add-standing-active") |> render_click()
+
+    assert [_in, %{kind: :standing} = standing] = GroupRule.get_all(ctx.team.id)
+    assert GroupRule.targets(standing) == [{:standing, :active}]
+    refute has_element?(lv, "#suggest-standing")
+
+    lv |> element("#done-editing") |> render_click()
+
+    assert has_element?(
+             lv,
+             "#rule-sentence",
+             "Members of Qualified Callout or Trainee Callout who are active."
+           )
+
+    assert has_element?(lv, "#would-add-#{active.id}")
+    assert has_element?(lv, "#would-remove-#{on_leave.id}", "Away until")
+  end
+
+  test "a standing joins the group's Standing rule, and only goes in one", ctx do
+    group_rule_fixture(ctx.group, ctx.endorsement)
+    lv = ctx.lv
+    lv |> element("#edit-rules") |> render_click()
+
+    lv
+    |> form("#add-rule-form", %{"kind" => "standing", "target" => "standing:active"})
+    |> render_submit()
+
+    lv
+    |> form("#add-rule-form", %{"kind" => "standing", "target" => "standing:away"})
+    |> render_submit()
+
+    assert [_in, %{kind: :standing} = standing] = GroupRule.get_all(ctx.team.id)
+    assert GroupRule.targets(standing) == [{:standing, :active}, {:standing, :away}]
+
+    html =
+      lv
+      |> form("#add-rule-form", %{"kind" => "in", "target" => "standing:not_a_person"})
+      |> render_submit()
+
+    assert html =~ "Select a group or endorsement for an In or Not in rule."
+    assert length(GroupRule.get_all(ctx.team.id)) == 2
+  end
+
+  test "a Standing rule's page lists its standings and adds another", ctx do
+    group_rule_fixture(ctx.group, ctx.endorsement)
+    {:ok, rule} = GroupRule.add!(ctx.group, :standing, :active)
+
+    {:ok, rule_lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/groups/#{ctx.group.id}/rules/#{rule.id}")
+
+    assert has_element?(rule_lv, "#rule-meaning", "must have one of these standings today")
+    assert has_element?(rule_lv, "#references", "Active")
+
+    rule_lv |> form("#add-reference-form", %{"target" => "standing:away"}) |> render_submit()
+    assert has_element?(rule_lv, "#references", "Away")
+
+    refute has_element?(rule_lv, "#add-reference-form option", "First Aid")
+    render_submit(rule_lv, "add", %{"target" => "endorsement:#{ctx.endorsement.id}"})
+
+    assert ctx.group |> GroupRule.find!(rule.id) |> GroupRule.targets() == [
+             {:standing, :active},
+             {:standing, :away}
+           ]
+  end
+
   test "the menu leaves out a group that would make a loop, and refuses one sent anyway", ctx do
     gsar = group_fixture(ctx.team, %{title: "GSAR team"})
     group_rule_fixture(gsar, ctx.group)

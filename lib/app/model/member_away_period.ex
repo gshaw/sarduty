@@ -93,6 +93,17 @@ defmodule App.Model.MemberAwayPeriod do
     |> Repo.all()
   end
 
+  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental leave)", or "Not a person".}
+  def describe_standing(:active), do: "Active"
+  def describe_standing(:not_a_person), do: "Not a person"
+
+  def describe_standing({:away, period}),
+    do: "Away until #{Service.Format.day_long(period.ends_on)} (#{period.reason})"
+
+  @doc "Every away period of the team's members."
+  def get_all_for_team(team_id),
+    do: MemberAwayPeriod |> where([p], p.team_id == ^team_id) |> Repo.all()
+
   @doc "The member's standing today in the team's time zone."
   def standing_today(%Member{} = member, timezone, now \\ DateTime.utc_now()),
     do: standing(member, for_member(member), Service.Period.today(now, timezone))
