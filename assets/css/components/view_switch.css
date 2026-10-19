@@ -1,8 +1,9 @@
 /* A view switch: joined links that switch a list between a few views, each with its
    count, the current one filled (#350). It sits at the start of a filter bar. See
-   /styles/view-switch. */
+   /styles/view-switch. Too many views wrap to a second row rather than scroll, a line
+   under each. */
 @layer components {
-  .view-switch { display: inline-flex; max-width: 100%; overflow-x: auto; border: var(--border-width) solid var(--border); }
+  .view-switch { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: var(--border-width) solid var(--border); }
 
   .view-switch a {
     display: inline-flex;
@@ -11,6 +12,7 @@
     min-height: 32px;
     padding: 0 var(--sp-3);
     border-right: 1px solid var(--border);
+    box-shadow: 0 1px var(--border);
     color: var(--text);
     font-size: var(--fs-sm);
     line-height: var(--lh-sm);
