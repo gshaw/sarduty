@@ -21,7 +21,7 @@ from D4H on Oct 3". It merges these sources, newest first
 The upsert stages in `lib/app/operation/refresh_d4h_data/` already compare each D4H row
 with the local copy and write only what differs. They now pass the old and new record to
 [RecordD4HChanges](../lib/app/operation/record_d4h_changes.ex) as they write, and the rows
-they delete or mark as left or deleted. The full refresh and the sync every 10 minutes wrap
+they delete or mark as retired or deleted. The full refresh and the sync every 10 minutes wrap
 their run in `RecordD4HChanges.recording/3`, which holds the team and the window in the
 process dictionary, so the stages don't each carry it. Outside a run nothing is recorded.
 

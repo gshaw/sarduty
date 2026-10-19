@@ -22,7 +22,7 @@ defmodule Web.MemberCollectionLiveTest do
     no_email = member_fixture(team, %{email: ""})
     neither = member_fixture(team, %{phone: "", email: nil})
     complete = member_fixture(team)
-    departed = member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
+    retired = member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
     other_team = member_fixture(team_fixture(), %{phone: nil})
 
     {:ok, lv, _html} =
@@ -34,7 +34,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#missing-#{no_email.id}", "Email")
     assert has_element?(lv, "#missing-#{neither.id}", "Mobile phone, Email")
     refute has_element?(lv, "#missing-#{complete.id}")
-    refute has_element?(lv, "#missing-#{departed.id}")
+    refute has_element?(lv, "#missing-#{retired.id}")
     refute has_element?(lv, "#missing-#{other_team.id}")
   end
 
@@ -177,7 +177,7 @@ defmodule Web.MemberCollectionLiveTest do
 
     left_long_ago =
       member_fixture(team, %{
-        name: "Cy Departed",
+        name: "Cy Retired",
         joined_at: joined,
         left_at: DateTime.add(now, -200, :day)
       })
@@ -230,7 +230,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "table th", "Standing")
   end
 
-  test "Standing: Current leaves out departed members; Departed and All show them",
+  test "Standing: Current leaves out retired members; Retired and All show them",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     current = member_fixture(team, %{name: "Cara Current"})
@@ -242,7 +242,7 @@ defmodule Web.MemberCollectionLiveTest do
 
     for {standing, shown} <- [
           {"current", [current, leaving]},
-          {"departed", [left, retired, gone_bot]},
+          {"retired", [left, retired, gone_bot]},
           {"not_a_person", []},
           {"all", everyone}
         ] do
@@ -255,14 +255,14 @@ defmodule Web.MemberCollectionLiveTest do
         assert has_element?(lv, "#last-attended-#{member.id}") == member in shown
       end
 
-      assert has_element?(lv, "table th", "Departed") == standing in ["departed", "all"]
+      assert has_element?(lv, "table th", "Retired") == standing in ["retired", "all"]
     end
 
     {:ok, lv, _html} =
       live(conn |> log_in_user(user), ~p"/teams/#{team}/members?when=all&standing=all")
 
-    assert has_element?(lv, "#standing-#{left.id}", "Departed")
-    assert has_element?(lv, "#standing-#{gone_bot.id}", "Departed")
+    assert has_element?(lv, "#standing-#{left.id}", "Retired")
+    assert has_element?(lv, "#standing-#{gone_bot.id}", "Retired")
     assert has_element?(lv, "#standing-#{current.id}", "Active")
 
     {:ok, _lv, html} =

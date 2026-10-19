@@ -164,20 +164,20 @@ defmodule Web.MemberStandingLiveTest do
     assert Repo.all(MemberAwayPeriod) == []
   end
 
-  test "a departed member reads Departed and cannot get an away period", %{conn: conn} do
+  test "a retired member reads Retired and cannot get an away period", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team, %{left_at: ~U[2025-06-01 00:00:00Z]})
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
-    assert has_element?(lv, "#standing-now", "Departed")
-    assert has_element?(lv, "#member-standing", "Departed")
+    assert has_element?(lv, "#standing-now", "Retired")
+    assert has_element?(lv, "#member-standing", "Retired")
     refute has_element?(lv, "#away-form")
-    assert has_element?(lv, "#away-departed")
+    assert has_element?(lv, "#away-retired")
 
     params = %{"starts_on" => today(team), "ends_on" => day(team, 10), "reason" => "Leave"}
-    assert AddAwayPeriod.call(team, member.id, user, params) == :departed
+    assert AddAwayPeriod.call(team, member.id, user, params) == :retired
     assert Repo.all(MemberAwayPeriod) == []
   end
 

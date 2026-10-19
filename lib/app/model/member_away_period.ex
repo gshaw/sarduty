@@ -46,14 +46,14 @@ defmodule App.Model.MemberAwayPeriod do
     do: not Date.after?(period.starts_on, today) and not Date.before?(period.ends_on, today)
 
   @doc """
-  The member's standing on `today` (#366): `:departed`, `:not_a_person`, `{:away, period}`
-  for the current away period that ends last, or `:active`. Departed comes from D4H, as
+  The member's standing on `today` (#366): `:retired`, `:not_a_person`, `{:away, period}`
+  for the current away period that ends last, or `:active`. Retired comes from D4H, as
   of `now` (not Member.current?/2), and wins over the rest; not a person wins over an away
   period. Active is never stored: it is the absence of the others.
   """
   def standing(member, periods, %Date{} = today, now) do
     cond do
-      not Member.current?(member, now) -> :departed
+      not Member.current?(member, now) -> :retired
       member.not_a_person -> :not_a_person
       true -> away_or_active(periods, today)
     end
@@ -100,10 +100,10 @@ defmodule App.Model.MemberAwayPeriod do
     |> Repo.all()
   end
 
-  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental leave)", "Not a person", or "Departed".}
+  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental leave)", "Not a person", or "Retired".}
   def describe_standing(:active), do: "Active"
   def describe_standing(:not_a_person), do: "Not a person"
-  def describe_standing(:departed), do: "Departed"
+  def describe_standing(:retired), do: "Retired"
 
   def describe_standing({:away, period}),
     do: "Away until #{Service.Format.day_long(period.ends_on)} (#{period.reason})"

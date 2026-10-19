@@ -75,7 +75,7 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     team = %{ctx.team | d4h_refreshed_at: nil}
 
     RecordD4HChanges.recording(team, @now, fn ->
-      UpsertMembers.mark_departed(team.id, MapSet.new(), @now)
+      UpsertMembers.mark_retired(team.id, MapSet.new(), @now)
     end)
 
     assert Repo.all(D4HChange) == []
@@ -83,7 +83,7 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
 
   test "records a member D4H stopped listing as having left", ctx do
     RecordD4HChanges.recording(ctx.team, @now, fn ->
-      UpsertMembers.mark_departed(ctx.team.id, MapSet.new(), DateTime.truncate(@now, :second))
+      UpsertMembers.mark_retired(ctx.team.id, MapSet.new(), DateTime.truncate(@now, :second))
     end)
 
     assert [change] = Repo.all(D4HChange)

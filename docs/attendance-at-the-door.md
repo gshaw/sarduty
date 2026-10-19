@@ -27,7 +27,7 @@ the D4H test it rests on.
 - **The short link dies with it.** Closing or replacing a link deletes its short link,
   and the short link expires on the same backstop.
 - **Only this team's cards count.** A card from another team, a cancelled card, or a
-  member who has left records nothing. A link to another site is refused, as on the
+  retired member records nothing. A link to another site is refused, as on the
   verify site, and the scanner never follows it.
 - **Scans stay in SAR Duty.** Nothing goes to D4H from the door. Each scan keeps the
   moment it happened and, when the person at the door typed one, the time it stands for.

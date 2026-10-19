@@ -4,8 +4,8 @@ defmodule Web.MemberFormLive do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Operation.SaveMember
-  alias App.Operation.SetMemberLeft
   alias App.Operation.SetMemberPhoto
+  alias App.Operation.SetMemberRetired
   alias App.ViewModel.MemberFormViewModel
 
   # Adding and changing members of a team on SAR Duty Records (docs/records.md). A D4H team
@@ -117,26 +117,26 @@ defmodule Web.MemberFormLive do
       </form>
     </section>
 
-    <section :if={@member} id="member-left" class="mt-8 max-w-xl">
-      <h2 class="heading">Leaving the team</h2>
+    <section :if={@member} id="member-retire" class="mt-8 max-w-xl">
+      <h2 class="heading">Retiring</h2>
       <%= if @member.d4h_status == "RETIRED" do %>
         <p>
-          {@member.name} left on {Service.Format.date_long(@member.left_at, @current_team.timezone)}.
+          {@member.name} retired on {Service.Format.date_long(@member.left_at, @current_team.timezone)}.
         </p>
         <.button id="member-rejoin" type="button" phx-click="rejoin">Mark as rejoined</.button>
       <% else %>
         <p>
-          A member who leaves keeps their attendance and letters. They no longer count as a team
+          A retired member keeps their attendance and letters. They no longer count as a team
           admin or a current member.
         </p>
         <.button
-          id="member-leave"
+          id="member-retire-button"
           type="button"
           variant={:danger}
-          phx-click="leave"
-          data-confirm={"Mark #{@member.name} as left today?"}
+          phx-click="retire"
+          data-confirm={"Mark #{@member.name} as retired today?"}
         >
-          Mark as left
+          Mark as retired
         </.button>
       <% end %>
     </section>
@@ -162,12 +162,12 @@ defmodule Web.MemberFormLive do
     end
   end
 
-  def handle_event(event, _params, socket) when event in ["leave", "rejoin"] do
+  def handle_event(event, _params, socket) when event in ["retire", "rejoin"] do
     %{current_team: team, current_user: user, member: member} = socket.assigns
 
-    case SetMemberLeft.call(team, member, event == "leave", user, DateTime.utc_now()) do
+    case SetMemberRetired.call(team, member, event == "retire", user, DateTime.utc_now()) do
       {:ok, saved} ->
-        text = if event == "leave", do: "Marked as left.", else: "Marked as rejoined."
+        text = if event == "retire", do: "Marked as retired.", else: "Marked as rejoined."
         {:noreply, saved(socket, saved, "#{member.name}: #{text}")}
 
       {:error, text} ->

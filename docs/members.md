@@ -18,9 +18,9 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
   open the same list.
 - **Standing** filters by [standing](#standing): Current (the default: everyone but the
-  departed), Active, Away, Not a person, Departed, or All. It replaced Status, and old
+  retired), Active, Away, Not a person, Retired, or All. It replaced Status, and old
   `status=` links are not kept (decided 2026-10-19). Its column says "Away until Mar 1"
-  and sorts by that day, with departed members last.
+  and sorts by that day, with retired members last.
 
 - **Attended** lists members whose attendance clock is older than a time frame. The
   clock counts from the latest of their last activity, the day they joined, the end of
@@ -34,20 +34,20 @@ behind **More filters** until one is on, so the row doesn't wrap and a link such
 the home item's still shows every filter it sets.
 
 No column chooser. A column shows only when it says something: Standing when some
-current member is not active (or the filter goes past Current), Departed when the
-Standing filter can show departed members, Missing with Details: Missing. ID hides on narrow screens.
+current member is not active (or the filter goes past Current), Retired when the
+Standing filter can show retired members, Missing with Details: Missing. ID hides on narrow screens.
 
 ## Standing
 
 A member's **standing** says whether the team expects them to show up now (#366):
-**Active**, **Away** for a dated period such as leave, **Not a person**, or **Departed**.
-Decided 2026-10-18; the issue has the reasons. Departed was added 2026-10-19.
+**Active**, **Away** for a dated period such as leave, **Not a person**, or **Retired**.
+Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 
 - **SAR Duty owns it.** Nothing about it goes to D4H. Teams on D4H and on SAR Duty
   Records work the same.
-- **Departed comes from D4H**: the member left the team or D4H marks them retired, the
-  same test as `Member.current_query/2`. It is read, never stored or set, and wins over
-  the rest. A departed member gets no away periods. Group rules and the attendance check
+- **Retired comes from D4H**: D4H marks the member Retired, or gives them a leave date
+  that has passed, or stops listing them. The same test as `Member.current_query/2`. It is read, never stored or set, and wins over
+  the rest. A retired member gets no away periods. Group rules and the attendance check
   don't offer it: they only ever add or count current members.
 - **Dates, not jobs.** [MemberAwayPeriod](../lib/app/model/member_away_period.ex) stores
   a first and last day on the team's clock and a short reason the team admin writes,

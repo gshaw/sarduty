@@ -95,8 +95,9 @@ defmodule App.Model.Member do
     )
   end
 
-  # The one test of who is on the team, as a query and as current?/2: not left as of
-  # `now`, and not retired in D4H. Anyone else is departed.
+  # The one test of who is on the team, as a query and as current?/2: no leave date by
+  # `now`, and not Retired in D4H. Anyone else is retired: SAR Duty's word for a member
+  # D4H retired or stopped listing, whichever field says so.
 
   @doc "Narrows `query` to current members."
   def current_query(query, now), do: where(query, ^current_dynamic(now))

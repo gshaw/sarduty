@@ -28,7 +28,7 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
 
     if d4h_members != [] do
       synced_d4h_ids = MapSet.new(d4h_members, & &1.d4h_member_id)
-      mark_departed(team.id, synced_d4h_ids, DateTime.utc_now(:second))
+      mark_retired(team.id, synced_d4h_ids, DateTime.utc_now(:second))
     end
 
     {total_count, progress}
@@ -37,22 +37,22 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
   # D4H leaves deleted members out of `GET /members`. Attendance and letters point at
   # them, so they stay, marked as left. If D4H lists one again, the upsert takes its
   # `endsAt` back. An empty list is never a real team, so `call` skips this for one.
-  def mark_departed(team_id, synced_d4h_ids, now) do
+  def mark_retired(team_id, synced_d4h_ids, now) do
     stale_ids =
       Member
       |> where([m], m.team_id == ^team_id and is_nil(m.left_at))
       |> StaleRows.ids(:d4h_member_id, synced_d4h_ids)
 
-    departed = Member |> where([m], m.id in ^stale_ids) |> Repo.all()
+    retired = Member |> where([m], m.id in ^stale_ids) |> Repo.all()
 
     {count, _} =
       Member
       |> where([m], m.id in ^stale_ids)
       |> Repo.update_all(set: [left_at: now, updated_at: DateTime.utc_now()])
 
-    Enum.each(departed, &RecordD4HChanges.record(:member, &1, %{&1 | left_at: now}))
+    Enum.each(retired, &RecordD4HChanges.record(:member, &1, %{&1 | left_at: now}))
 
-    Logger.info("Marked #{count} members D4H no longer lists as departed for team #{team_id}")
+    Logger.info("Marked #{count} members D4H no longer lists as retired for team #{team_id}")
   end
 
   defp upsert_member(team, d4h_member) do

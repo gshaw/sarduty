@@ -58,8 +58,8 @@ defmodule Web.MemberStandingLive do
       :not_a_person ->
         {:noreply, put_flash(socket, :error, "Turn off Not a person to add an away period.")}
 
-      :departed ->
-        {:noreply, put_flash(socket, :error, "Departed members get no away periods.")}
+      :retired ->
+        {:noreply, put_flash(socket, :error, "Retired members get no away periods.")}
     end
   end
 
@@ -237,11 +237,11 @@ defmodule Web.MemberStandingLive do
           <p :if={@standing == :not_a_person} id="away-not-a-person" class="hint mt-6">
             Turn off Not a person to add an away period.
           </p>
-          <p :if={@standing == :departed} id="away-departed" class="hint mt-6">
-            Departed members get no away periods.
+          <p :if={@standing == :retired} id="away-retired" class="hint mt-6">
+            Retired members get no away periods.
           </p>
           <.form
-            :if={@standing not in [:not_a_person, :departed]}
+            :if={@standing not in [:not_a_person, :retired]}
             for={@away_form}
             id="away-form"
             phx-change="validate-away"

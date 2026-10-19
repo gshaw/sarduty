@@ -187,7 +187,7 @@ defmodule App.ViewData.ChangeHistory do
   defp member_field("left_at", c, tz) do
     case c.new_value["left_at"] do
       nil -> "Back on the team"
-      left_at -> "Left the team on #{day(left_at, tz)}"
+      left_at -> "Retired on #{day(left_at, tz)}"
     end
   end
 
@@ -290,7 +290,8 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :update_member}, _page),
     do: "Details changed in SAR Duty"
 
-  def describe_row(%ChangeSetRow{action: :retire_member}, _page), do: "Marked as left in SAR Duty"
+  def describe_row(%ChangeSetRow{action: :retire_member}, _page),
+    do: "Marked as retired in SAR Duty"
 
   def describe_row(%ChangeSetRow{action: :set_member_photo}, _page),
     do: "Photo changed in SAR Duty"

@@ -41,11 +41,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {"Active", "active"},
     {"Away", "away"},
     {"Not a person", "not_a_person"},
-    {"Departed", "departed"}
+    {"Retired", "retired"}
   ]
 
   @doc """
-  The Standing filter (#366): Current, the default, is every member but the departed,
+  The Standing filter (#366): Current, the default, is every member but the retired,
   and All adds them. The attendance check can watch several standings, as
   `"active,away"`; that value gets an option of its own, "Active or away", when it's the
   one shown.
@@ -60,8 +60,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
     Enum.concat([[{"Current", "current"}], @standings, combined, [{"All", "all"}]])
   end
 
-  @doc "Whether the Standing filter `value` can show departed members."
-  def shows_departed?(value), do: value == "all" or "departed" in standings(value)
+  @doc "Whether the Standing filter `value` can show retired members."
+  def shows_retired?(value), do: value == "all" or "retired" in standings(value)
 
   defp label(standing), do: Enum.find_value(@standings, fn {l, v} -> v == standing && l end)
 
@@ -78,8 +78,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "ID" => "id",
       "Joined ↑" => "date",
       "Joined ↓" => "date-",
-      "Departed ↑" => "departed",
-      "Departed ↓" => "departed-",
+      "Retired ↑" => "retired",
+      "Retired ↓" => "retired-",
       "Duration ↓" => "duration-",
       "Duration ↑" => "duration",
       "Activities ↓" => "activities-",
@@ -211,7 +211,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       else: add_error(changeset, :standing, "is invalid")
   end
 
-  # Departed wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
+  # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
   defp or_standing("active", acc, current),
     do:
       dynamic(
@@ -229,7 +229,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp or_standing("not_a_person", acc, current),
     do: dynamic([m], ^acc or (^current and m.not_a_person))
 
-  defp or_standing("departed", acc, current), do: dynamic(^acc or not (^current))
+  defp or_standing("retired", acc, current), do: dynamic(^acc or not (^current))
 
   defp validate_kind(changeset, field, kinds),
     do: validate_inclusion(changeset, field, Enum.map(kinds, &elem(&1, 1)))
@@ -391,8 +391,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "id"), do: order_by(q, [r], asc_nulls_last: r.ref_id)
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.joined_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.joined_at)
-  defp scope(q, sort: "departed-"), do: order_by(q, [r], desc_nulls_last: r.left_at)
-  defp scope(q, sort: "departed"), do: order_by(q, [r], asc_nulls_last: r.left_at)
+  defp scope(q, sort: "retired-"), do: order_by(q, [r], desc_nulls_last: r.left_at)
+  defp scope(q, sort: "retired"), do: order_by(q, [r], asc_nulls_last: r.left_at)
   defp scope(q, sort: "duration-"), do: order_by(q, [r], desc: fragment("total_minutes"))
   defp scope(q, sort: "duration"), do: order_by(q, [r], asc: fragment("total_minutes"))
 
@@ -403,8 +403,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
     do: order_by(q, [r], asc: fragment("activity_count"), asc: r.name)
 
   # By the day an away member is back, soonest first going up; everyone else after, and
-  # departed members last either way. Departed and not a person win over an away period,
-  # as in the Standing column, so a departed member sorts by no date.
+  # retired members last either way. Retired and not a person win over an away period,
+  # as in the Standing column, so a retired member sorts by no date.
   defp scope(q, sort: "standing"),
     do:
       order_by(q, [r, away: w],

@@ -30,7 +30,7 @@ defmodule Web.MemberCollectionLive do
     |> assign(Map.take(filter_options, [:sort, :details, :attended]))
     |> assign(now: now, today: today)
     |> assign(:standing?, standing_column?(current_team, filter_options, today, now))
-    |> assign(:departed?, MemberFilterViewModel.shows_departed?(filter_options.standing))
+    |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
     |> assign(:paginated, build_paginated_content(current_team, filter_options))
     |> assign(:path_fn, build_path_fn(current_team, filter_options))
     |> assign(:form, to_form(changeset, as: "form"))
@@ -177,11 +177,11 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        :if={@departed?}
-        label="Departed"
+        :if={@retired?}
+        label="Retired"
         align="right"
         class="w-1/12 whitespace-nowrap"
-        sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
+        sorts={[{"↓", "retired-"}, {"↑", "retired"}]}
       >
         {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
       </:col>
@@ -199,10 +199,10 @@ defmodule Web.MemberCollectionLive do
   defp standing_column?(team, _filter_options, today, now),
     do: Member.any_not_active?(team, today, now)
 
-  # Departed wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
+  # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
   defp standing_text(record, today, now) do
     cond do
-      not Member.current?(record.member, now) -> "Departed"
+      not Member.current?(record.member, now) -> "Retired"
       record.member.not_a_person -> "Not a person"
       record.away_until -> "Away until #{Service.Format.day_in_year(record.away_until, today)}"
       true -> "Active"

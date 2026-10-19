@@ -166,7 +166,7 @@ expired once it passes.
 
 ## Active and qualifications
 
-A card is active while the member is current: not left the team or retired in D4H
+A card is active while the member is current, not retired
 (`Member.current?/2`).
 Qualifications don't change that. They're listed, not required.
 

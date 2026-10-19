@@ -37,16 +37,16 @@ defmodule App.Model.MemberAwayPeriodTest do
     assert MemberAwayPeriod.standing(%{not_a_person: true}, [p], @today, @now) == :not_a_person
   end
 
-  test "departed wins over not a person and an away period, from D4H" do
+  test "retired wins over not a person and an away period, from D4H" do
     p = period(~D[2026-10-01], ~D[2026-10-31])
     left = %{not_a_person: true, left_at: ~U[2026-10-10 18:00:00Z]}
     leaving = %{not_a_person: false, left_at: ~U[2026-11-01 18:00:00Z]}
     retired = %{not_a_person: false, d4h_status: "RETIRED"}
 
-    assert MemberAwayPeriod.standing(left, [p], @today, @now) == :departed
+    assert MemberAwayPeriod.standing(left, [p], @today, @now) == :retired
     assert {:away, ^p} = MemberAwayPeriod.standing(leaving, [p], @today, @now)
-    assert MemberAwayPeriod.standing(retired, [], @today, @now) == :departed
-    assert MemberAwayPeriod.describe_standing(:departed) == "Departed"
+    assert MemberAwayPeriod.standing(retired, [], @today, @now) == :retired
+    assert MemberAwayPeriod.describe_standing(:retired) == "Retired"
   end
 
   test "an early end makes yesterday the last day, only for a period already under way" do
