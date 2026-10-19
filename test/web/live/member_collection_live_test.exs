@@ -200,6 +200,20 @@ defmodule Web.MemberCollectionLiveTest do
     assert names_in_order(html, [seen.name, drifting.name, never.name])
   end
 
+  test "a sign-up for a coming activity isn't attended: no last attended, no count (#364)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+    coming = activity_fixture(team, %{started_at: DateTime.add(now, 7, :day)})
+    member = member_fixture(team, %{name: "Aaron Signed Up"})
+    attendance_fixture(coming, member, %{started_at: coming.started_at})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?when=all")
+
+    assert has_element?(lv, "#last-attended-#{member.id}", "Never")
+    refute has_element?(lv, "#member_collection tr", "1 hour")
+  end
+
   test "a rolling Period counts activities in it and lists members on the team in it (#367)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()

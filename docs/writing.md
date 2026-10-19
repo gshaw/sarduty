@@ -138,6 +138,7 @@ and must not be used for it.
 | retired                        | departed, left the team, former, inactive      | A member no longer on the team: D4H retired them or no longer lists them. D4H's own word.            |
 | away period                    | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
+| signed up for                  | registered, going, RSVP                        | Shown as Attending in D4H for an activity that hasn't started. Hours count once it starts.           |
 | invite                         | request, ask, call out                         | Asking a member to come to an activity. D4H shows them as Requested until they answer.               |
 | import attendance              | upload, sync attendance                        | Reading a SAR Assist attendance report to change D4H attendance.                                     |
 | log in, log out                | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |

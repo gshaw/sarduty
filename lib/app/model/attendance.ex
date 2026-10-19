@@ -76,6 +76,15 @@ defmodule App.Model.Attendance do
     |> Repo.all()
   end
 
+  @doc """
+  Rows that started by `now`. D4H keeps a sign-up for a coming activity as
+  attending too, so hours and attended counts need this (#364).
+  """
+  def started_before(query, %DateTime{} = now), do: where(query, [r], r.started_at <= ^now)
+
+  @doc "Rows that start after `now`: sign-ups for coming activities."
+  def starting_after(query, %DateTime{} = now), do: where(query, [r], r.started_at > ^now)
+
   @doc "Rows that started in a year or rolling period in `timezone` (Service.Period.bounds/3)."
   def started_in(query, period, timezone, now \\ DateTime.utc_now()) do
     {start, finish} = Service.Period.bounds(period, timezone, now)

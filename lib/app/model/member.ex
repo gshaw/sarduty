@@ -165,7 +165,7 @@ defmodule App.Model.Member do
     query
     |> current_query(now)
     |> where([m], m.team_id == ^team.id and m.joined_at < ^since)
-    |> not_in(seen_since(team, since))
+    |> not_in(seen_since(team, since, now))
     |> not_in(back_since(team, since_on, today))
     |> not_in(checked_in_since(team, since_on))
   end
@@ -180,11 +180,13 @@ defmodule App.Model.Member do
      Service.Period.today(now, team.timezone)}
   end
 
-  defp seen_since(team, since) do
+  # A sign-up for a coming activity is attending too, so it isn't being seen (#364).
+  defp seen_since(team, since, now) do
     from at in Attendance,
       join: a in assoc(at, :activity),
       where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
       where: a.started_at >= ^since,
+      where: a.started_at <= ^now,
       select: at.member_id
   end
 
@@ -228,18 +230,19 @@ defmodule App.Model.Member do
   `last_attended_at`: the latest start of an activity they attended, any kind, not
   deleted. Members who never attended have no row.
   """
-  def last_attended_query(%Team{} = team) do
+  def last_attended_query(%Team{} = team, now) do
     from at in Attendance,
       join: a in assoc(at, :activity),
       where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
+      where: a.started_at <= ^now,
       group_by: at.member_id,
       select: %{member_id: at.member_id, last_attended_at: max(a.started_at)}
   end
 
   @doc "When the member last attended an activity, or nil: last_attended_query/1 for one."
-  def last_attended_at(%Member{} = member) do
+  def last_attended_at(%Member{} = member, now \\ DateTime.utc_now()) do
     query =
-      from row in subquery(last_attended_query(%Team{id: member.team_id})),
+      from row in subquery(last_attended_query(%Team{id: member.team_id}, now)),
         where: row.member_id == ^member.id,
         select: type(row.last_attended_at, :utc_datetime)
 

@@ -44,6 +44,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
       |> join(:inner, [a], m in assoc(a, :member))
       |> where([a, m], m.team_id == ^team.id)
       |> where([a, m], a.status == "attending")
+      |> Attendance.started_before(DateTime.utc_now())
       |> Attendance.years(team.timezone)
       # Search and Rescue Volunteer Tax Credit (SRVTC) started in 2014
       |> Enum.filter(&(&1 >= 2014))
@@ -78,7 +79,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   (`TaxCreditLetter.hours_status/4`).
   """
   def find_all(team, filter_options, now \\ DateTime.utc_now()) do
-    hours = CountTaxCreditHours.call(team, filter_options.year)
+    hours = CountTaxCreditHours.call(team, filter_options.year, nil, now)
 
     Member
     |> Member.scope(team_id: team.id)

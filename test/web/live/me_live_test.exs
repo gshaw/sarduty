@@ -70,9 +70,15 @@ defmodule Web.MeLiveTest do
 
   describe "the member's records" do
     setup %{team: team} do
-      year = DateTime.utc_now() |> DateTime.shift_zone!(team.timezone) |> Map.get(:year)
-      mid_year = year |> Date.new!(6, 1) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
-      %{year: year, mid_year: mid_year}
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      year = Service.YearRange.year_in(now, team.timezone)
+      {start_of_year, _finish} = Service.YearRange.bounds(year, team.timezone)
+
+      # Earlier this year: an hour ago, or just after it began. Only past rows count.
+      mid_year =
+        Enum.max([DateTime.add(now, -1, :hour), DateTime.add(start_of_year, 60)], DateTime)
+
+      %{year: year, mid_year: mid_year, now: now}
     end
 
     test "shows this year's hours and activities, and no one else's",
@@ -115,9 +121,44 @@ defmodule Web.MeLiveTest do
       assert render(lv) =~ "SRVTC Primary Activity or SRVTC Secondary Activity tag"
     end
 
+    test "lists a sign-up for a coming activity apart, counting no hours for it (#364)",
+         %{conn: conn, team: team, member: member, now: now} do
+      next_week = DateTime.add(now, 7, :day)
+      next_year = DateTime.add(now, 400, :day)
+      coming = activity_fixture(team, %{title: "Rope practice", started_at: next_week})
+
+      soon =
+        attendance_fixture(coming, member, %{
+          started_at: next_week,
+          finished_at: DateTime.add(next_week, 3 * 3600)
+        })
+
+      later_activity =
+        activity_fixture(team, %{title: "Next year's course", started_at: next_year})
+
+      later = attendance_fixture(later_activity, member, %{started_at: next_year})
+
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#signed-up-#{soon.id}", "Rope practice")
+      assert has_element?(lv, "#signed-up-#{later.id}", "Next year's course")
+
+      assert :binary.match(html, "signed-up-#{soon.id}") <
+               :binary.match(html, "signed-up-#{later.id}")
+
+      assert has_element?(lv, "#hours-total", "0 hours")
+      assert has_element?(lv, "#no-attendance")
+      refute has_element?(lv, "#years")
+    end
+
+    test "has no Signed up for section with nothing coming", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      refute has_element?(lv, "#signed-up")
+    end
+
     test "switches to an earlier year the member attended in",
-         %{conn: conn, team: team, member: member, year: year, mid_year: mid_year} do
-      last_year = DateTime.add(mid_year, -365, :day)
+         %{conn: conn, team: team, member: member, year: year} do
+      last_year = (year - 1) |> Date.new!(6, 1) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
       activity = activity_fixture(team, %{title: "Last year's search", started_at: last_year})
       attendance = attendance_fixture(activity, member, %{started_at: last_year})
 

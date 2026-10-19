@@ -109,6 +109,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       |> join(:inner, [a], m in assoc(a, :member))
       |> where([a, m], m.team_id == ^team.id)
       |> where([a], a.status == "attending")
+      |> Attendance.started_before(DateTime.utc_now())
       |> Attendance.years(team.timezone)
       |> Enum.map(&Integer.to_string/1)
 
@@ -147,7 +148,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     team
     |> filter_query(filter_options, now)
     |> join_attendance_summary(team, filter_options, now)
-    |> join_last_attended(team)
+    |> join_last_attended(team, now)
     |> join_clock(team, now)
     |> sort(filter_options.sort, now)
     |> select_member_with_attendance()
@@ -259,6 +260,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       )
 
     query
+    |> Attendance.started_before(now)
     |> started_in(filter_options.when, team.timezone, now)
     |> Attendance.at_tagged(team, filter_options.activity_tag)
   end
@@ -268,10 +270,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp started_in(query, period, timezone, now),
     do: Attendance.started_in(query, period, timezone, now)
 
-  defp join_last_attended(query, team) do
+  defp join_last_attended(query, team, now) do
     from(
       m in query,
-      left_join: l in subquery(Member.last_attended_query(team)),
+      left_join: l in subquery(Member.last_attended_query(team, now)),
       as: :last_attended,
       on: m.id == l.member_id
     )
