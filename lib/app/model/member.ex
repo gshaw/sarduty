@@ -96,13 +96,27 @@ defmodule App.Model.Member do
   end
 
   @doc "Narrows `query` to current members: not left as of `now`, and not retired."
-  def current_query(query, now) do
-    where(
-      query,
+  def current_query(query, now), do: where(query, ^current_dynamic(now))
+
+  @doc "current_query/2's condition, for a query that ORs it with others."
+  def current_dynamic(now) do
+    dynamic(
       [m],
       (is_nil(m.left_at) or m.left_at > ^now) and
         (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
     )
+  end
+
+  @doc """
+  Pure. Whether the member has departed as of `now`: D4H says they left the team, or
+  marks them retired. The opposite of current_query/2. A map without those keys is
+  current.
+  """
+  def departed?(member, now) do
+    left_at = Map.get(member, :left_at)
+
+    (left_at != nil and not DateTime.after?(left_at, now)) or
+      Map.get(member, :d4h_status) == "RETIRED"
   end
 
   @doc """

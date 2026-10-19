@@ -30,7 +30,8 @@ defmodule App.Operation.BuildGroupRulePreview do
   # - `awards_by_member`: each member id with their awards for those qualifications.
   # - `members`: the team's members, each with `id` and `left_at`.
   # - `standings`: each member id with their standing today (#366), from
-  #   `MemberAwayPeriod.standing/3`. A member missing from it is active.
+  #   `MemberAwayPeriod.standing/4`. A member missing from it is active. A departed
+  #   member's is `:departed`, which no Standing rule offers, so it never meets one.
   #
   # A Standing rule is met by having any of its standings, `{:standing, :active}`,
   # `{:away, _}`, or `{:standing, :not_a_person}`. Standing is worked out for today, so
@@ -59,7 +60,7 @@ defmodule App.Operation.BuildGroupRulePreview do
 
     standings =
       Map.new(members, fn m ->
-        {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today)}
+        {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today, now)}
       end)
 
     {Enum.map(members, &Map.take(&1, [:id, :left_at])), standings}
@@ -73,7 +74,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   defp list_team_members(team_id) do
     Member
     |> where([m], m.team_id == ^team_id)
-    |> select([m], map(m, [:id, :left_at, :not_a_person]))
+    |> select([m], map(m, [:id, :left_at, :d4h_status, :not_a_person]))
     |> Repo.all()
   end
 

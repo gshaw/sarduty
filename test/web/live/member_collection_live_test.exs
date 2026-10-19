@@ -185,7 +185,7 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, _lv, html} =
       conn
       |> log_in_user(user)
-      |> live(~p"/teams/#{team}/members?when=90d&status=all&sort=activities")
+      |> live(~p"/teams/#{team}/members?when=90d&standing=all&sort=activities")
 
     assert html =~ busy.name
     assert html =~ quiet.name
@@ -213,21 +213,66 @@ defmodule Web.MemberCollectionLiveTest do
            )
   end
 
-  test "the Standing column and filter show only once someone is not active (#367)",
+  test "the Standing column shows only once a current member is not active (#367)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member_fixture(team)
+    member_fixture(team, %{left_at: ~U[2025-06-01 00:00:00Z]})
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    refute has_element?(lv, "#member_filter_form select[name='form[standing]']")
+    assert has_element?(lv, "#member_filter_form select[name='form[standing]']")
     refute has_element?(lv, "table th", "Standing")
 
     member_fixture(team, %{not_a_person: true})
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#member_filter_form select[name='form[standing]']")
     assert has_element?(lv, "table th", "Standing")
+  end
+
+  test "Standing: Current leaves out departed members; Departed and All show them",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    current = member_fixture(team, %{name: "Cara Current"})
+    left = member_fixture(team, %{name: "Lee Left", left_at: ~U[2025-06-01 00:00:00Z]})
+    retired = member_fixture(team, %{name: "Rae Retired", d4h_status: "RETIRED"})
+    leaving = member_fixture(team, %{left_at: DateTime.add(DateTime.utc_now(), 30, :day)})
+    gone_bot = member_fixture(team, %{not_a_person: true, left_at: ~U[2025-06-01 00:00:00Z]})
+    everyone = [current, left, retired, leaving, gone_bot]
+
+    for {standing, shown} <- [
+          {"current", [current, leaving]},
+          {"departed", [left, retired, gone_bot]},
+          {"not_a_person", []},
+          {"all", everyone}
+        ] do
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/teams/#{team}/members?when=all&standing=#{standing}")
+
+      for member <- everyone do
+        assert has_element?(lv, "#last-attended-#{member.id}") == member in shown
+      end
+
+      assert has_element?(lv, "table th", "Departed") == standing in ["departed", "all"]
+    end
+
+    {:ok, lv, _html} =
+      live(conn |> log_in_user(user), ~p"/teams/#{team}/members?when=all&standing=all")
+
+    assert has_element?(lv, "#standing-#{left.id}", "Departed")
+    assert has_element?(lv, "#standing-#{gone_bot.id}", "Departed")
+    assert has_element?(lv, "#standing-#{current.id}", "Active")
+
+    {:ok, _lv, html} =
+      live(
+        conn |> log_in_user(user),
+        ~p"/teams/#{team}/members?when=all&standing=all&sort=standing"
+      )
+
+    assert names_in_order(html, [current.name, left.name])
+    assert names_in_order(html, [current.name, retired.name])
   end
 
   test "the Standing filter keeps active, away, or not a person members (#367)",

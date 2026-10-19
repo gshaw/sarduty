@@ -134,7 +134,7 @@ and must not be used for it.
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
 | check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan at the door: that is "arrived".       |
-| standing                       | status, availability, state                    | Active, Away, or Not a person. "Status" is D4H's member status.                                      |
+| standing                       | status, availability, state                    | Active, Away, Not a person, or Departed. "Status" is D4H's member status.                            |
 | away period                    | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
 | invite                         | request, ask, call out                         | Asking a member to come to an activity. D4H shows them as Requested until they answer.               |
