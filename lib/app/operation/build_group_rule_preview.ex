@@ -28,7 +28,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   # - `endorsements`: each id with `%{name, qualification_ids}`, includes followed.
   # - `titles`: each qualification D4H still has, by D4H id.
   # - `awards_by_member`: each member id with their awards for those qualifications.
-  # - `members`: the team's members, each with `id` and `left_at`.
+  # - `members`: the team's members, each with `id`, `left_at`, and `d4h_status`.
   # - `standings`: each member id with their standing today (#366), from
   #   `MemberAwayPeriod.standing/4`. A member missing from it is active. A departed
   #   member's is `:departed`, which no Standing rule offers, so it never meets one.
@@ -63,7 +63,7 @@ defmodule App.Operation.BuildGroupRulePreview do
         {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today, now)}
       end)
 
-    {Enum.map(members, &Map.take(&1, [:id, :left_at])), standings}
+    {Enum.map(members, &Map.take(&1, [:id, :left_at, :d4h_status])), standings}
   end
 
   defp awards_by_member(team_id, endorsements) do
@@ -235,7 +235,7 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   defp removal_reasons(member, status, now) do
     cond do
-      member && not Member.current?(member, now) -> [{:left, member.left_at}]
+      member && not Member.current?(member, now) -> [{:departed, member.left_at}]
       match?({:unmet, _}, status) -> elem(status, 1)
       true -> []
     end
@@ -416,8 +416,10 @@ defmodule App.Operation.BuildGroupRulePreview do
     do: not is_nil(starts_at) and DateTime.after?(starts_at, now)
 
   @doc "A reason from `plan/3` as a sentence for the page and the change log."
-  def describe({:left, left_at}, _titles, timezone),
-    do: "Left the team #{Service.Format.date_short(left_at, timezone)}"
+  def describe({:departed, nil}, _titles, _timezone), do: "Departed"
+
+  def describe({:departed, left_at}, _titles, timezone),
+    do: "Departed #{Service.Format.date_short(left_at, timezone)}"
 
   def describe({:none_of, [], names}, _titles, _timezone),
     do: "No #{Enum.join(names, " or ")} on record"

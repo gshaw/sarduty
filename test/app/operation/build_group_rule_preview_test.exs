@@ -283,21 +283,22 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
       assert result.remove == %{}
     end
 
-    test "a member who has left is removed for that reason alone and never added" do
+    test "a departed member is removed for that reason alone and never added" do
       left_at = ~U[2026-08-01 00:00:00Z]
-      awards = [award(10, @rope), award(11, @rope)]
+      retired = %{id: 12, left_at: nil, d4h_status: "RETIRED"}
+      awards = [award(10, @rope), award(11, @rope), award(12, @rope)]
 
       result =
         plan(
           context([in_rule([{:endorsement, @rope_e}])],
             awards: awards,
-            members: [member(10, left_at), member(11, left_at)],
-            lists: %{@callout => [10]}
+            members: [member(10, left_at), member(11, left_at), retired],
+            lists: %{@callout => [10, 12]}
           )
         )
 
       assert result.add == MapSet.new()
-      assert result.remove == %{10 => [{:left, left_at}]}
+      assert result.remove == %{10 => [{:departed, left_at}], 12 => [{:departed, nil}]}
     end
 
     test "every unmet rule gives a reason, and a rule of several names them all" do
@@ -351,7 +352,8 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
       assert describe.({:expired, @rope, ~U[2026-04-01 03:00:00Z]}) ==
                "Rope 1 expired Mar 31, 2026"
 
-      assert describe.({:left, ~U[2026-02-12 20:00:00Z]}) == "Left the team Feb 12, 2026"
+      assert describe.({:departed, ~U[2026-02-12 20:00:00Z]}) == "Departed Feb 12, 2026"
+      assert describe.({:departed, nil}) == "Departed"
     end
   end
 

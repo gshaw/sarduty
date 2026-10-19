@@ -166,7 +166,8 @@ expired once it passes.
 
 ## Active and qualifications
 
-A card is active while the member hasn't left the team in D4H (`Member.current?/2`).
+A card is active while the member is current: not left the team or retired in D4H
+(`Member.current?/2`).
 Qualifications don't change that. They're listed, not required.
 
 A team picks what to list on the **Endorsements** page (#320). For each endorsement the

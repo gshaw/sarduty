@@ -61,7 +61,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   @doc "Whether the Standing filter `value` can show departed members."
-  def departed?(value), do: value == "all" or "departed" in standings(value)
+  def shows_departed?(value), do: value == "all" or "departed" in standings(value)
 
   defp label(standing), do: Enum.find_value(@standings, fn {l, v} -> v == standing && l end)
 

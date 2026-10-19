@@ -48,12 +48,12 @@ defmodule App.Model.MemberAwayPeriod do
   @doc """
   The member's standing on `today` (#366): `:departed`, `:not_a_person`, `{:away, period}`
   for the current away period that ends last, or `:active`. Departed comes from D4H, as
-  of `now` (Member.departed?/2), and wins over the rest; not a person wins over an away
+  of `now` (not Member.current?/2), and wins over the rest; not a person wins over an away
   period. Active is never stored: it is the absence of the others.
   """
   def standing(member, periods, %Date{} = today, now) do
     cond do
-      Member.departed?(member, now) -> :departed
+      not Member.current?(member, now) -> :departed
       member.not_a_person -> :not_a_person
       true -> away_or_active(periods, today)
     end

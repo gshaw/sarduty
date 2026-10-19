@@ -251,12 +251,10 @@ defmodule App.Model.Team do
   defp managers_with_email(email, now) do
     email = email |> String.trim() |> String.downcase()
 
-    from m in Member,
-      where:
-        fragment("lower(?)", m.email) == ^email and m.d4h_permission in [0, 1] and
-          (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
-          (is_nil(m.left_at) or m.left_at > ^now),
-      select: %{team_id: m.team_id, d4h_member_id: m.d4h_member_id}
+    Member
+    |> where([m], fragment("lower(?)", m.email) == ^email and m.d4h_permission in [0, 1])
+    |> Member.current_query(now)
+    |> select([m], %{team_id: m.team_id, d4h_member_id: m.d4h_member_id})
   end
 
   def get(id), do: Repo.get(Team, id)

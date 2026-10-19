@@ -16,7 +16,8 @@ defmodule Web.EquipmentItemFormLive do
 
     item = if id = params["id"], do: team |> EquipmentItem.find!(id) |> Repo.preload(:member)
     form = EquipmentItemFormViewModel.from_item(item, team.timezone)
-    members = team.id |> Member.get_all() |> Enum.reject(&(&1.d4h_status == "RETIRED"))
+    now = DateTime.utc_now()
+    members = team.id |> Member.get_all() |> Enum.filter(&Member.current?(&1, now))
     items = EquipmentItem.get_all(team.id)
     places = EquipmentItemFormViewModel.places(items, members, item)
 

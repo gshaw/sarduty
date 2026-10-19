@@ -16,7 +16,7 @@ defmodule App.Operation.AddAwayPeriod do
     member = Member.find!(team, member_id)
 
     cond do
-      Member.departed?(member, now) -> :departed
+      not Member.current?(member, now) -> :departed
       member.not_a_person -> :not_a_person
       true -> add(team, member, user, params)
     end
