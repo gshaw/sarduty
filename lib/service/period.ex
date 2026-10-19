@@ -15,6 +15,10 @@ defmodule Service.Period do
   @recent_days 30
   @letter_months 1..4
 
+  @doc "Today's date in `timezone`."
+  def today(%DateTime{} = now, timezone),
+    do: now |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+
   @doc "Days either side of today that Current shows."
   def current_days, do: @current_days
 

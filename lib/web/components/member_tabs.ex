@@ -5,7 +5,7 @@ defmodule Web.Components.MemberTabs do
 
   attr :active_tab, :atom,
     required: true,
-    values: [:attendance, :qualifications, :groups, :card, :history]
+    values: [:attendance, :qualifications, :groups, :standing, :card, :history]
 
   def member_tabs(assigns) do
     ~H"""
@@ -27,6 +27,12 @@ defmodule Web.Components.MemberTabs do
         current={@active_tab == :groups}
       >
         Groups
+      </:tab>
+      <:tab
+        navigate={~p"/teams/#{@member.team}/members/#{@member.id}/standing"}
+        current={@active_tab == :standing}
+      >
+        Standing
       </:tab>
       <:tab
         navigate={~p"/teams/#{@member.team}/members/#{@member.id}/card"}

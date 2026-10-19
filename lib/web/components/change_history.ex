@@ -55,6 +55,8 @@ defmodule Web.Components.ChangeHistory do
   defp local_date(datetime, tz), do: datetime |> DateTime.shift_zone!(tz) |> DateTime.to_date()
 
   defp by_text(%{by: :d4h}), do: "Someone in D4H"
+  defp by_text(%{by: :team_admin, applied_by: nil}), do: "A team admin in SAR Duty"
+  defp by_text(%{by: :team_admin, applied_by: email}), do: "#{email} in SAR Duty"
 
   defp by_text(%{by: :sar_duty, source: source, applied_by: applied_by}) do
     from = "SAR Duty (#{ChangeHistory.source_label(source)})"

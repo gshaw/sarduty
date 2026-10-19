@@ -24,6 +24,7 @@ defmodule Web.MemberGroupsLive do
       |> assign(:page_title, "#{member.name} · Groups")
       |> assign(:records?, D4H.records?(socket.assigns.current_team))
       |> assign_member(member)
+      |> load_sidebar()
 
     {:noreply, socket}
   end
@@ -88,7 +89,12 @@ defmodule Web.MemberGroupsLive do
     <.member_tabs member={@member} active_tab={:groups} />
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
+        <.sidebar_content
+          member={@member}
+          maps_app={@current_user.maps_app}
+          last_attended_at={@last_attended_at}
+          standing={@standing}
+        />
       </aside>
       <main class="content-2/3">
         <.groups_content member={@member} records?={@records?} />

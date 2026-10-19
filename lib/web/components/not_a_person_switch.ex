@@ -1,8 +1,8 @@
 defmodule Web.Components.NotAPersonSwitch do
   @moduledoc """
-  The member sidebar's "Not a person" switch. It's a live component so every member tab
-  gets it without its own handle_event. Suggests the switch for a member who looks like
-  a bot.
+  The "Not a person" switch in a member's standing (#366). Suggests the switch for a
+  member who looks like a bot. Pass `user`, the team admin who changes it, for the
+  member's history.
   """
   use Web, :live_component
 
@@ -14,8 +14,12 @@ defmodule Web.Components.NotAPersonSwitch do
   end
 
   def handle_event("toggle", _params, socket) do
-    member = socket.assigns.member
-    updated = SetMemberNotAPerson.call(member.team, member.id, not member.not_a_person)
+    %{member: member, user: user} = socket.assigns
+
+    {:ok, updated} =
+      SetMemberNotAPerson.call(member.team, member.id, user, not member.not_a_person)
+
+    send(self(), {:not_a_person_changed, updated.not_a_person})
     {:noreply, assign(socket, member: %{member | not_a_person: updated.not_a_person})}
   end
 

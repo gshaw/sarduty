@@ -1,7 +1,8 @@
 defmodule App.MCP.Tool.HistoryOutput do
   @moduledoc """
   The output of the history tools. Pure. Leaves out who sent a change, an account's
-  email, which the page shows and agents don't need.
+  email, which the page shows and agents don't need. Leaves out standing changes too
+  (#366): an away period's reason and dates are personal, and members don't see them.
   """
 
   alias App.MCP.Output
@@ -11,7 +12,9 @@ defmodule App.MCP.Tool.HistoryOutput do
 
   @doc "History entries from App.ViewData.ChangeHistory, as tool output."
   def build(entries, timezone) do
-    Enum.map(entries, fn entry ->
+    entries
+    |> Enum.reject(&(&1.kind == :standing))
+    |> Enum.map(fn entry ->
       %{
         "at" => Output.datetime(entry.at, timezone),
         "seen_after" => Output.datetime(entry.seen_after, timezone),

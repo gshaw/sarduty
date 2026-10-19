@@ -9,7 +9,7 @@ defmodule Web.Components.MemberSidebar do
 
   alias App.Adapter.D4H
   alias App.Model.Member
-  alias Web.Components.NotAPersonSwitch
+  alias App.Model.MemberAwayPeriod
   alias Web.Components.OpenInMaps
   alias Web.Components.Phone
 
@@ -17,12 +17,25 @@ defmodule Web.Components.MemberSidebar do
   attr :maps_app, :string, default: "google", doc: "the account's maps_app"
 
   attr :last_attended_at, :any,
-    doc: "when the member last attended an activity; looked up when not given"
+    required: true,
+    doc: "when the member last attended an activity, from load_sidebar/1"
+
+  attr :standing, :any, required: true, doc: "the member's standing today, from load_sidebar/1"
+
+  @doc """
+  Assigns the sidebar's `last_attended_at` and `standing` for the socket's `member`. Call
+  it when the member loads, not on every render: a form's change events re-render.
+  """
+  def load_sidebar(socket) do
+    member = socket.assigns.member
+
+    Phoenix.Component.assign(socket,
+      last_attended_at: Member.last_attended_at(member),
+      standing: MemberAwayPeriod.standing_today(member, member.team.timezone)
+    )
+  end
 
   def sidebar_content(assigns) do
-    assigns =
-      assign_new(assigns, :last_attended_at, fn -> Member.last_attended_at(assigns.member) end)
-
     ~H"""
     <dl>
       <p><.member_image member={@member} /></p>
@@ -63,6 +76,12 @@ defmodule Web.Components.MemberSidebar do
           @member.joined_at
         )} ago
       </dd>
+      <dt>Standing</dt>
+      <dd id="member-standing">
+        <.link navigate={~p"/teams/#{@member.team}/members/#{@member.id}/standing"} class="link">
+          {Web.Components.Standing.text(@standing)}
+        </.link>
+      </dd>
       <dt>Last attended</dt>
       <dd id="member-last-attended">
         {last_attended(@last_attended_at, @member.team.timezone)}
@@ -83,7 +102,6 @@ defmodule Web.Components.MemberSidebar do
         </ul>
       </dd>
     </dl>
-    <.live_component module={NotAPersonSwitch} id="not-a-person" member={@member} />
     """
   end
 

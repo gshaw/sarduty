@@ -33,6 +33,7 @@ defmodule Web.MemberCardLive do
       socket
       |> assign(:page_title, "#{member.name} · ID card")
       |> assign(:member, member)
+      |> load_sidebar()
       |> assign_card(MemberCard.find_current(team, member))
       |> assign(:qualifications, BuildCardQualifications.call(team, member, DateTime.utc_now()))
 
@@ -112,7 +113,12 @@ defmodule Web.MemberCardLive do
     <.member_tabs member={@member} active_tab={:card} />
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
+        <.sidebar_content
+          member={@member}
+          maps_app={@current_user.maps_app}
+          last_attended_at={@last_attended_at}
+          standing={@standing}
+        />
       </aside>
       <main class="content-2/3">
         <.banner

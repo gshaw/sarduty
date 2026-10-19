@@ -29,6 +29,7 @@ defmodule Web.MemberLive do
       socket
       |> assign(:page_title, "#{member.name} · Attendance")
       |> assign(:member, member)
+      |> load_sidebar()
       |> assign(:filter_form, to_form(filter_changeset, as: :filter))
       |> assign(:paginated, paginated)
       |> assign(:total_minutes, total_minutes)
@@ -60,7 +61,12 @@ defmodule Web.MemberLive do
     <.member_tabs member={@member} active_tab={:attendance} />
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content member={@member} maps_app={@current_user.maps_app} />
+        <.sidebar_content
+          member={@member}
+          maps_app={@current_user.maps_app}
+          last_attended_at={@last_attended_at}
+          standing={@standing}
+        />
       </aside>
       <main class="content-2/3">
         <.attendance_filter_table
