@@ -41,12 +41,29 @@ defmodule App.ViewData.TeamAttentionTest do
   test "members not at an activity name the team's time frame" do
     assert items(%{not_seen: %{days: 90, count: 0}}, @october) == []
 
-    assert [item] = items(%{not_seen: %{days: 90, count: 3}}, @october)
+    row = %{days: 90, count: 3, group: nil, params: %{}}
+    assert [item] = items(%{not_seen: row}, @october)
     assert item.key == :not_seen
     assert item.title == "3 members have not attended an activity in 90 days"
 
-    assert [item] = items(%{not_seen: %{days: 365, count: 1}}, @october)
+    assert [item] = items(%{not_seen: %{row | days: 365, count: 1}}, @october)
     assert item.title == "1 member has not attended an activity in a year"
+  end
+
+  test "members not at an activity name the watched group (#366)" do
+    row = %{days: 90, count: 4, group: "Callout", params: %{}}
+    assert [item] = items(%{not_seen: row}, @october)
+    assert item.title == "4 members of Callout have not attended an activity in 90 days"
+
+    assert [item] = items(%{not_seen: %{row | count: 1}}, @october)
+    assert item.title == "1 member of Callout has not attended an activity in 90 days"
+  end
+
+  test "a watched group gone from D4H is a warning, never everyone (#366)" do
+    assert [item] = items(%{not_seen: %{days: 90, missing_group: true}}, @october)
+    assert item.key == :watch_missing
+    assert item.level == :warning
+    assert item.title == "The group you watch is no longer in D4H"
   end
 
   test "activities with no hours tag name the year" do

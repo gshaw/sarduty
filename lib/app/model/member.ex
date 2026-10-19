@@ -5,6 +5,7 @@ defmodule App.Model.Member do
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
+  alias App.Model.MemberCheckIn
   alias App.Model.MemberQualificationAward
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -125,33 +126,32 @@ defmodule App.Model.Member do
   def people_query(query), do: where(query, [m], not m.not_a_person)
 
   @doc """
-  Narrows `query` to the current people on `team` not seen at an activity in `days` days
-  as of `now` (#247): no attending row on an activity started since then. Members who
-  joined since then are left out, and so are bots: members marked not a person, the
-  "SAR Duty" member the team's key belongs to, and members who look like one
-  (`looks_like_not_a_person?/2`).
+  Narrows `query` to the current members of `team` whose attendance clock is older than
+  `days` days as of `now` (#366). The clock counts from the latest of: their last
+  activity (an attending row on an activity not deleted, any kind), the day they joined,
+  the end of an away period that has started, and their latest check-in. Nothing else is
+  left out here: standing and groups are filters of their own.
   """
   def not_seen_query(query, %Team{} = team, days, now) do
-    # Stored times mix `…Z` and no zone; a bound with no zone compares right against both.
-    since = now |> DateTime.add(-days, :day) |> DateTime.truncate(:second) |> DateTime.to_naive()
+    {since, since_on, today} = clock_bounds(team, days, now)
 
     query
     |> current_query(now)
-    |> people_query()
     |> where([m], m.team_id == ^team.id and m.joined_at < type(^since, :naive_datetime))
-    |> where([m], m.id not in subquery(seen_since(team, since)))
-    |> not_key_member(team)
-    |> not_bot_like()
+    |> not_in(seen_since(team, since))
+    |> not_in(back_since(team, since_on, today))
+    |> not_in(checked_in_since(team, since_on))
   end
 
-  # Leaves out members looks_like_not_a_person?/2 would flag.
-  defp not_bot_like(query) do
-    where(
-      query,
-      [m],
-      not ((is_nil(m.phone) or m.phone == "") and (is_nil(m.email) or m.email == "")) or
-        m.id in subquery(attended_ids())
-    )
+  defp not_in(query, member_ids), do: where(query, [m], m.id not in subquery(member_ids))
+
+  # Stored times mix `…Z` and no zone; a bound with no zone compares right against both.
+  # Away periods and check-ins are days on the team's clock.
+  defp clock_bounds(team, days, now) do
+    since = DateTime.add(now, -days, :day)
+
+    {since |> DateTime.truncate(:second) |> DateTime.to_naive(),
+     Service.Period.today(since, team.timezone), Service.Period.today(now, team.timezone)}
   end
 
   defp seen_since(team, since) do
@@ -162,17 +162,40 @@ defmodule App.Model.Member do
       select: at.member_id
   end
 
-  defp attended_ids,
-    do: from(at in Attendance, where: at.status == "attending", select: at.member_id)
+  # An away period that has started and whose day back, the day after it ends, is on or
+  # after `since_on`: the same day clock_start/2 counts from.
+  defp back_since(team, since_on, today) do
+    last_day = Date.add(since_on, -1)
 
-  # The key's own member is SAR Duty's account when it's named that (Team.get_managed_by/2).
-  defp not_key_member(query, %Team{d4h_access_key_member_id: id} = team) when is_integer(id) do
-    if Team.key_owner_is_sar_duty?(team),
-      do: where(query, [m], m.d4h_member_id != ^id),
-      else: query
+    from p in MemberAwayPeriod,
+      where: p.team_id == ^team.id and p.starts_on <= ^today and p.ends_on >= ^last_day,
+      select: p.member_id
   end
 
-  defp not_key_member(query, _team), do: query
+  defp checked_in_since(team, since_on) do
+    from c in MemberCheckIn,
+      where: c.team_id == ^team.id and c.checked_in_on >= ^since_on,
+      select: c.member_id
+  end
+
+  @doc """
+  Pure. Where a member's attendance clock starts, as `{why, date}` with `why` one of
+  `:attended`, `:checked_in`, `:back`, or `:joined`: the latest of their last activity,
+  latest check-in, the day after their latest away period ended, and the day they joined.
+  Takes a row with `last_attended_at`, `checked_in_on`, `away_ends_on`, and `member`.
+  """
+  def clock_start(row, timezone) do
+    local = &(&1 |> DateTime.shift_zone!(timezone) |> DateTime.to_date())
+
+    [
+      {:attended, row.last_attended_at && local.(row.last_attended_at)},
+      {:checked_in, row.checked_in_on},
+      {:back, row.away_ends_on && Date.add(row.away_ends_on, 1)},
+      {:joined, local.(row.member.joined_at)}
+    ]
+    |> Enum.reject(&is_nil(elem(&1, 1)))
+    |> Enum.max_by(&elem(&1, 1), Date)
+  end
 
   @doc """
   Each of the team's members' last activity (#367), as rows of `member_id` and

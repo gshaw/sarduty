@@ -56,6 +56,48 @@ defmodule Web.Settings.TeamLiveTest do
     assert Team.get!(team.id).not_seen_days == nil
   end
 
+  test "saves the watched group and standings for the attendance check (#366)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    callout = group_fixture(team, %{title: "Callout"})
+    assert team.watch_standings == ["active"]
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+    assert has_element?(lv, "#watch-standing-active[checked]")
+
+    lv
+    |> form("#team_settings_form",
+      form: %{watch_d4h_group_id: callout.d4h_group_id, watch_standings: ["", "active", "away"]}
+    )
+    |> render_submit()
+
+    saved = Team.get!(team.id)
+    assert saved.watch_d4h_group_id == callout.d4h_group_id
+    assert saved.watch_standings == ["active", "away"]
+
+    html =
+      lv
+      |> form("#team_settings_form", form: %{watch_d4h_group_id: "", watch_standings: [""]})
+      |> render_submit()
+
+    assert html =~ "Select at least one standing."
+    assert Team.get!(team.id).watch_standings == ["active", "away"]
+  end
+
+  test "keeps a watched group D4H dropped, named as gone", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    team |> Ecto.Changeset.change(watch_d4h_group_id: 424_242) |> App.Repo.update!()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+    assert has_element?(
+             lv,
+             "select[name='form[watch_d4h_group_id]'] option[selected][value='424242']",
+             "A group no longer in D4H"
+           )
+  end
+
   test "says when no team key is saved", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

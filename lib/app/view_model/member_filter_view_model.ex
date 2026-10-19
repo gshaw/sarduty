@@ -9,6 +9,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
+  alias App.Model.MemberCheckIn
   alias App.Model.Team
   alias App.Repo
   alias App.ViewData.TeamAttention
@@ -39,14 +40,30 @@ defmodule App.ViewModel.MemberFilterViewModel do
       | Enum.map(Team.not_seen_days(), &{"Not in #{TeamAttention.period(&1)}", "#{&1}"})
     ]
 
-  # Member standing (#366): Any changes nothing for a team that never uses it.
-  def standing_kinds,
-    do: [
-      {"Any", "any"},
-      {"Active", "active"},
-      {"Away", "away"},
-      {"Not a person", "not_a_person"}
-    ]
+  @standings [{"Active", "active"}, {"Away", "away"}, {"Not a person", "not_a_person"}]
+
+  @doc """
+  The Standing filter (#366): Any changes nothing for a team that never uses it. The
+  attendance check can watch several standings, as `"active,away"`; that value gets an
+  option of its own, "Active or away", when it's the one shown.
+  """
+  def standing_kinds(current \\ nil) do
+    combined =
+      case standings(current) do
+        [_, _ | _] = several -> [{several |> Enum.map(&label/1) |> or_list(), current}]
+        _one_or_none -> []
+      end
+
+    [{"Any", "any"} | @standings] ++ combined
+  end
+
+  defp label(standing), do: Enum.find_value(@standings, fn {l, v} -> v == standing && l end)
+
+  defp or_list([first | rest]),
+    do: Enum.join([first | Enum.map(rest, &String.downcase/1)], " or ")
+
+  defp standings(value) when value in [nil, "", "any"], do: []
+  defp standings(value), do: String.split(value, ",")
 
   def sort_kinds,
     do: %{
@@ -117,21 +134,43 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   def build_paginated_content(team, filter_options, now \\ DateTime.utc_now()) do
+    team
+    |> build_query(filter_options, now)
+    |> Repo.paginate(page: filter_options.page)
+  end
+
+  @doc """
+  How many members the list shows for `params`, from the same query, so a link to the
+  list and its count always match (the home page's attendance check, #366).
+  """
+  def count(team, params, now \\ DateTime.utc_now()) do
+    {:ok, filter_options, _changeset} = validate(params)
+    team |> filter_query(filter_options, now) |> Repo.count_entries()
+  end
+
+  defp build_query(team, filter_options, now) do
+    team
+    |> filter_query(filter_options, now)
+    |> join_attendance_summary(team, filter_options.when, now)
+    |> join_last_attended(team)
+    |> join_clock(team, now)
+    |> scope(sort: filter_options.sort)
+    |> select_member_with_attendance()
+  end
+
+  # The members the filters keep, with only the joins a filter reads, so count/3 skips
+  # the summary and clock joins that never change which rows match.
+  defp filter_query(team, filter_options, now) do
     Member
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: team.timezone, now: now)
     |> scope(status: filter_options.status)
     |> scope(details: filter_options.details)
-    |> scope(attended: filter_options.attended, team: team)
+    |> scope(attended: filter_options.attended, team: team, now: now)
     |> scope(group: filter_options.group, team: team)
-    |> join_attendance_summary(team, filter_options.when, now)
-    |> join_last_attended(team)
     |> join_away(team, now)
     |> scope(standing: filter_options.standing)
-    |> scope(sort: filter_options.sort)
-    |> select_member_with_attendance()
-    |> Repo.paginate(page: filter_options.page)
   end
 
   defp build_new do
@@ -154,11 +193,28 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> validate_kind(:status, status_kinds())
     |> validate_kind(:details, details_kinds())
     |> validate_kind(:attended, attended_kinds())
-    |> validate_kind(:standing, standing_kinds())
+    |> validate_standing()
     |> validate_format(:when, ~r/\A(all|\d{4}|(30|60|90|180|365)d)\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
   end
+
+  defp validate_standing(changeset) do
+    known = Enum.map(@standings, &elem(&1, 1))
+    value = get_field(changeset, :standing)
+
+    if value in [nil, "any"] or value |> standings() |> Enum.all?(&(&1 in known)),
+      do: changeset,
+      else: add_error(changeset, :standing, "is invalid")
+  end
+
+  defp or_standing("active", acc),
+    do: dynamic([m, away: w], ^acc or (not m.not_a_person and is_nil(w.away_until)))
+
+  defp or_standing("away", acc),
+    do: dynamic([m, away: w], ^acc or (not m.not_a_person and not is_nil(w.away_until)))
+
+  defp or_standing("not_a_person", acc), do: dynamic([m], ^acc or m.not_a_person)
 
   defp validate_kind(changeset, field, kinds),
     do: validate_inclusion(changeset, field, Enum.map(kinds, &elem(&1, 1)))
@@ -167,6 +223,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     from(
       m in query,
       left_join: a in subquery(build_attendance_summary(team, period, now)),
+      as: :summary,
       on: m.id == a.member_id
     )
   end
@@ -219,15 +276,39 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
+  # Where each member's attendance clock starts (#366): their latest check-in, and the
+  # end of their latest away period that has started.
+  defp join_clock(query, team, now) do
+    today = Service.Period.today(now, team.timezone)
+
+    last_away =
+      from p in MemberAwayPeriod,
+        where: p.team_id == ^team.id and p.starts_on <= ^today,
+        group_by: p.member_id,
+        select: %{member_id: p.member_id, ends_on: max(p.ends_on)}
+
+    from(
+      m in query,
+      left_join: la in subquery(last_away),
+      as: :last_away,
+      on: m.id == la.member_id,
+      left_join: lc in subquery(MemberCheckIn.latest_query(team)),
+      as: :last_check_in,
+      on: m.id == lc.member_id
+    )
+  end
+
   defp select_member_with_attendance(query) do
     from(
-      [m, a, l, w] in query,
+      [m, summary: a, last_attended: l, away: w, last_away: la, last_check_in: lc] in query,
       select: %{
         member: m,
         activity_count: fragment("? as activity_count", coalesce(a.activity_count, 0)),
         total_minutes: fragment("? as total_minutes", coalesce(a.total_minutes, 0)),
         last_attended_at: type(l.last_attended_at, :utc_datetime),
-        away_until: type(w.away_until, :date)
+        away_until: type(w.away_until, :date),
+        away_ends_on: type(la.ends_on, :date),
+        checked_in_on: type(lc.checked_in_on, :date)
       }
     )
   end
@@ -272,26 +353,23 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, details: _all), do: q
 
-  defp scope(q, attended: nil, team: _team), do: q
-  defp scope(q, attended: "all", team: _team), do: q
+  defp scope(q, attended: nil, team: _team, now: _now), do: q
+  defp scope(q, attended: "all", team: _team, now: _now), do: q
 
-  defp scope(q, attended: days, team: team),
-    do: Member.not_seen_query(q, team, String.to_integer(days), DateTime.utc_now())
+  defp scope(q, attended: days, team: team, now: now),
+    do: Member.not_seen_query(q, team, String.to_integer(days), now)
 
   defp scope(q, group: nil, team: _team), do: q
 
   defp scope(q, group: group_id, team: team),
     do: where(q, [m], m.id in subquery(GroupMember.member_ids_query(team.id, group_id)))
 
-  defp scope(q, standing: nil), do: q
-  defp scope(q, standing: "any"), do: q
-  defp scope(q, standing: "not_a_person"), do: where(q, [m], m.not_a_person)
-
-  defp scope(q, standing: "away"),
-    do: where(q, [m, away: w], not m.not_a_person and not is_nil(w.away_until))
-
-  defp scope(q, standing: "active"),
-    do: where(q, [m, away: w], not m.not_a_person and is_nil(w.away_until))
+  defp scope(q, standing: value) do
+    case standings(value) do
+      [] -> q
+      several -> where(q, ^Enum.reduce(several, false, &or_standing/2))
+    end
+  end
 
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
   defp scope(q, sort: "role"), do: order_by(q, [r], asc_nulls_last: r.position)

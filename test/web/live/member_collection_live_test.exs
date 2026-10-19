@@ -115,6 +115,17 @@ defmodule Web.MemberCollectionLiveTest do
     refute has_element?(lv, "#last-attended-#{drifting.id}")
   end
 
+  test "an empty Attended filter shows no clock, the same as All", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members?attended=")
+
+    assert has_element?(lv, "#last-attended-#{member.id}")
+    refute has_element?(lv, "#attended-hint")
+    refute has_element?(lv, "#clock-starts-#{member.id}")
+  end
+
   test "Last attended shows without a filter and sorts with never attended first (#367)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -276,6 +287,28 @@ defmodule Web.MemberCollectionLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=standing")
 
     assert names_in_order(html, [away.name, bot.name, "Cy Active"])
+  end
+
+  test "the Standing filter takes several standings from the attendance check (#366)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    active = member_fixture(team)
+    away = member_fixture(team)
+    away_period_fixture(away, Date.add(today, -3), Date.add(today, 30))
+    bot = member_fixture(team, %{not_a_person: true})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=active,away")
+
+    assert has_element?(lv, "select[name='form[standing]'] option[selected]", "Active or away")
+    assert has_element?(lv, "#standing-#{active.id}")
+    assert has_element?(lv, "#standing-#{away.id}")
+    refute has_element?(lv, "#standing-#{bot.id}")
+
+    assert_raise Web.Status.NotFound, fn ->
+      live(log_in_user(conn, user), ~p"/teams/#{team}/members?standing=active,gone")
+    end
   end
 
   defp names_in_order(html, names) do

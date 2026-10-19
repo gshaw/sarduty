@@ -20,6 +20,13 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
 - **Standing** filters by [standing](#standing): Any (the default), Active, Away, or Not a
   person. Its column says "Away until Mar 1" and sorts by that day.
 
+- **Attended** lists members whose attendance clock is older than a time frame. The
+  clock counts from the latest of their last activity, the day they joined, the end of
+  an away period that has started, and their latest check-in (`Member.not_seen_query/4`).
+  The **Clock starts** column says which: "Last attended May 14", "Back from leave
+  Sep 2", "Checked in Oct 3", or "Joined Jun 1". The filter guesses at nothing: bots and
+  members on leave are left out by the Standing filter, not by the clock.
+
 No column chooser. A column shows only when it says something: Standing when some
 current member is not active (or the filter is on), Departed when Status includes
 departed members, Missing with Details: Missing. ID hides on narrow screens.
@@ -57,6 +64,31 @@ Nothing leaves a group or a list for standing unless a rule written on its page 
 These stay as they were, since a bot cannot attend or be invited, and skip members
 marked not a person with no rule: invites (`InviteGroups`), the home page's counts and
 charts, the missing details filter, and the attendance list at the door.
+
+## The attendance check
+
+Needs attention lists members who have not attended in a while, so someone can check in
+with them (#247, #366). It is three choices on **Settings → General**, decided
+2026-10-18: no settings page of its own and no live summary.
+
+- **Members who have not attended**: Off, 30, 60, 90, 180 days, or 1 year
+  (`teams.not_seen_days`).
+- **Watch**: all current members, or one group (`teams.watch_d4h_group_id`, a D4H id like
+  group rules). Anything more complex is a group with group rules.
+- **Standing**: which standings to watch (`teams.watch_standings`), Active by default.
+
+The home item is "4 members of Callout have not attended an activity in 90 days", linking
+to `/members?attended=90&group=<id>&standing=active`. Its count is
+`MemberFilterViewModel.count/3` on the same params, so it always matches the list. If D4H
+deletes the watched group, the item is a warning that says so, and settings keep the
+group, named as gone, until a team admin picks another. It never watches everyone
+quietly.
+
+The old hidden rules went with it: members who joined within the time frame (now part of
+the clock), the team key's "SAR Duty" member, and members with no email, mobile phone, or
+attendance. Existing teams watch all members who are Active. A bot nobody marked now shows
+on the list, on purpose: marking it Not a person fixes it everywhere. The "looks like a
+bot" hint stays on the member's Standing tab.
 
 ## Member logins
 

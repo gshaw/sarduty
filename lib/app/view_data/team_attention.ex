@@ -124,20 +124,39 @@ defmodule App.ViewData.TeamAttention do
   end
 
   defp not_seen_item(nil), do: nil
+
+  # The watched group is gone from D4H. Say so rather than watch everyone (#366).
+  defp not_seen_item(%{missing_group: true}) do
+    %{
+      key: :watch_missing,
+      level: :warning,
+      title: "The group you watch is no longer in D4H",
+      detail: "Select another in team settings.",
+      action: "Open team settings"
+    }
+  end
+
   defp not_seen_item(%{count: 0}), do: nil
 
-  # Members drifting away, for someone to check in with (#247).
-  defp not_seen_item(%{count: count, days: days}) do
+  # Members drifting away, for someone to check in with (#247, #366). `params` are the
+  # Members list's filters, so the link shows the members counted.
+  defp not_seen_item(%{count: count, days: days, group: group, params: params}) do
+    who =
+      if group,
+        do:
+          Format.count(count,
+            one: "%d member of #{group} has",
+            many: "%d members of #{group} have"
+          ),
+        else: Format.count(count, one: "%d member has", many: "%d members have")
+
     %{
       key: :not_seen,
       level: :info,
-      title:
-        Format.count(count,
-          one: "%d member has not attended an activity in #{period(days)}",
-          many: "%d members have not attended an activity in #{period(days)}"
-        ),
+      title: "#{who} not attended an activity in #{period(days)}",
       detail: Format.count(count, one: "Check in with them.", many: "Check in with each one."),
-      action: "Show members"
+      action: "Show members",
+      params: params
     }
   end
 

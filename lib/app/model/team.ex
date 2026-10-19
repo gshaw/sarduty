@@ -58,6 +58,9 @@ defmodule App.Model.Team do
     # Needs attention lists current members with no attendance in this many days (#247).
     # Nil turns it off. Set on the General settings page.
     field :not_seen_days, :integer, default: 90
+    # The attendance check watches one group (nil for all members) and these standings (#366).
+    field :watch_d4h_group_id, :integer
+    field :watch_standings, {:array, :string}, default: ["active"]
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
@@ -113,11 +116,17 @@ defmodule App.Model.Team do
       end)
   end
 
+  @watch_standings ~w(active away not_a_person)
+
+  @doc "The standings the attendance check can watch, as choices."
+  def watch_standing_kinds,
+    do: [{"Active", "active"}, {"Away", "away"}, {"Not a person", "not_a_person"}]
+
   # Only what a team manager may edit. d4h_team_id and the saved key are not
   # castable here; UpdateTeamSettings sets the key after checking it with D4H.
   def build_settings_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [
+    |> cast(drop_blank_standings(params), [
       :name,
       :mailing_address,
       :authorized_by_name,
@@ -125,10 +134,14 @@ defmodule App.Model.Team do
       :authorized_by_phone,
       :authorized_by_email,
       :not_seen_days,
+      :watch_d4h_group_id,
+      :watch_standings,
       :new_d4h_access_key
     ])
     |> validate_required([:name])
     |> validate_inclusion(:not_seen_days, [0 | @not_seen_days])
+    |> validate_subset(:watch_standings, @watch_standings)
+    |> validate_length(:watch_standings, min: 1, message: "Select at least one standing.")
     |> not_seen_off()
     |> Validate.name(:name)
     |> Validate.address(:mailing_address)
@@ -138,6 +151,12 @@ defmodule App.Model.Team do
     |> Validate.email(:authorized_by_email)
     |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
   end
+
+  # The form sends a blank first so unticking every box still sends the field.
+  defp drop_blank_standings(%{"watch_standings" => standings} = params) when is_list(standings),
+    do: %{params | "watch_standings" => Enum.reject(standings, &(&1 == ""))}
+
+  defp drop_blank_standings(params), do: params
 
   # A blank would cast to the field's default, so the form sends 0 for off.
   defp not_seen_off(changeset) do

@@ -35,10 +35,12 @@ defmodule App.Repo do
     }
   end
 
-  # Counts the rows of the query as a subquery. Order and preloads don't change the
-  # count, and the select goes because a subquery can't select a whole schema inside a
-  # map, which the member list does.
-  defp count_entries(query) do
+  @doc """
+  Counts the rows of the query as a subquery, the way `paginate/2` counts its total.
+  Order and preloads don't change the count, and the select goes because a subquery
+  can't select a whole schema inside a map, which the member list does.
+  """
+  def count_entries(query) do
     query
     |> exclude(:preload)
     |> exclude(:order_by)

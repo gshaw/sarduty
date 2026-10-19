@@ -2,6 +2,7 @@ defmodule Web.Settings.TeamLive do
   use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
+  alias App.Model.Group
   alias App.Model.Team
   alias App.Operation.SaveTeamSignature
   alias App.Operation.UpdateTeamSettings
@@ -14,6 +15,7 @@ defmodule Web.Settings.TeamLive do
       socket
       |> assign(page_title: "Team settings")
       |> assign_form(Team.build_settings_changeset(team))
+      |> assign(watch_groups: watch_groups(team))
       |> assign(signature_error: nil)
       |> allow_upload(:signature,
         accept: ~w(.png .jpg .jpeg),
@@ -22,6 +24,22 @@ defmodule Web.Settings.TeamLive do
       )
 
     {:ok, socket}
+  end
+
+  # A watched group D4H dropped stays chosen, named as gone, so saving other settings
+  # never switches the check to all members quietly (#366).
+  defp watch_groups(team) do
+    groups = team.id |> Group.get_all() |> Enum.map(&{&1.title, &1.d4h_group_id})
+
+    case team.watch_d4h_group_id do
+      nil ->
+        groups
+
+      id ->
+        if List.keymember?(groups, id, 1),
+          do: groups,
+          else: [{"A group no longer in D4H", id} | groups]
+    end
   end
 
   def render(assigns) do
@@ -111,10 +129,34 @@ defmodule Web.Settings.TeamLive do
           label="Members who have not attended"
           options={Team.not_seen_days_kinds()}
         >
-          Needs attention lists current members who have not attended an activity in this
-          long, so someone can check in with them. Members who joined since and bots are left
-          out.
+          Needs attention lists the members you watch who have not attended an activity in
+          this long, so someone can check in with them.
         </.input>
+        <.input
+          field={@form[:watch_d4h_group_id]}
+          type="select"
+          label="Watch"
+          options={[{"All members", ""} | @watch_groups]}
+        >
+          All current members, or one group. For anything more, such as Callout without a
+          subgroup, make a group with group rules.
+        </.input>
+        <fieldset id="watch-standings">
+          <legend>Standing</legend>
+          <.hint>Watch members with these standings.</.hint>
+          <input type="hidden" name="form[watch_standings][]" value="" />
+          <label :for={{label, value} <- Team.watch_standing_kinds()} class="choice">
+            <input
+              type="checkbox"
+              id={"watch-standing-#{value}"}
+              name="form[watch_standings][]"
+              value={value}
+              checked={value in (@form[:watch_standings].value || [])}
+            />
+            {label}
+          </label>
+          <.error :for={{message, _opts} <- @form[:watch_standings].errors}>{message}</.error>
+        </fieldset>
         <.input
           field={@form[:new_d4h_access_key]}
           label={D4H.key_name(@current_team)}
