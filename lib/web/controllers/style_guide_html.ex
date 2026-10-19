@@ -334,6 +334,8 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_filter_page(), to: SampleData
   defdelegate sample_kinds(), to: SampleData
   defdelegate sample_whens(), to: SampleData
+  defdelegate sample_hours(), to: SampleData
+  defdelegate sample_statuses(), to: SampleData
   defdelegate recommendations(), to: SampleData
   defdelegate rule_sentence_rules(), to: SampleData
   defdelegate rule_rows(), to: SampleData

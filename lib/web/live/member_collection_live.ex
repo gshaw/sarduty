@@ -79,18 +79,21 @@ defmodule Web.MemberCollectionLive do
         :if={@standing?}
         field={@form[:standing]}
         label="Standing"
+        more
         options={MemberFilterViewModel.standing_kinds(@form[:standing].value)}
         default="any"
       />
       <:filter
         field={@form[:details]}
         label="Details"
+        more
         options={MemberFilterViewModel.details_kinds()}
         default="all"
       />
       <:filter
         field={@form[:attended]}
         label="Attended"
+        more
         options={MemberFilterViewModel.attended_kinds()}
         default="all"
       />

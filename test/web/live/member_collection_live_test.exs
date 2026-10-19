@@ -311,6 +311,22 @@ defmodule Web.MemberCollectionLiveTest do
     end
   end
 
+  test "less common filters wait behind More filters until one is on", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    assert has_element?(lv, "#member_filter_form-more", "More filters")
+    assert has_element?(lv, ".filter-menu.is-more select[name='form[attended]']")
+    refute has_element?(lv, ".filter-menu.is-more select[name='form[when]']")
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?attended=90")
+
+    refute has_element?(lv, ".filter-menu.is-more select[name='form[attended]']")
+    assert has_element?(lv, ".filter-menu.is-on select[name='form[attended]']")
+  end
+
   defp names_in_order(html, names) do
     positions = Enum.map(names, &elem(:binary.match(html, &1), 0))
     positions == Enum.sort(positions)
