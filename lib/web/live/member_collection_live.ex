@@ -138,16 +138,6 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        :if={@attended not in [nil, "all"]}
-        label="Clock starts"
-        class="whitespace-nowrap"
-      >
-        <span id={"clock-starts-#{record.member.id}"}>
-          {clock_starts(record, @current_team, @today)}
-        </span>
-      </:col>
-      <:col
-        :let={record}
         label="Last attended"
         align="right"
         class="w-1/12 whitespace-nowrap"
@@ -156,6 +146,13 @@ defmodule Web.MemberCollectionLive do
         <span id={"last-attended-#{record.member.id}"}>
           {last_attended(record.last_attended_at, @current_team)}
         </span>
+        <div
+          :if={@attended not in [nil, "all"] and clock_why(record, @current_team)}
+          id={"clock-starts-#{record.member.id}"}
+          class="text-text-muted"
+        >
+          {clock_starts(record, @current_team, @today)}
+        </div>
       </:col>
       <:col
         :let={record}
@@ -215,6 +212,15 @@ defmodule Web.MemberCollectionLive do
       record.member.not_a_person -> "Not a person"
       record.away_until -> "Away until #{Service.Format.day_in_year(record.away_until, today)}"
       true -> "Active"
+    end
+  end
+
+  # Only when the clock starts somewhere other than the last activity, which the cell
+  # already shows.
+  defp clock_why(record, team) do
+    case Member.clock_start(record, team.timezone) do
+      {:attended, _date} -> nil
+      {why, _date} -> why
     end
   end
 

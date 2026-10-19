@@ -25,9 +25,11 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
 - **Attended** lists members whose attendance clock is older than a time frame. The
   clock counts from the latest of their last activity, the day they joined, the end of
   an away period that has started, and their latest check-in (`Member.not_seen_query/4`).
-  The **Clock starts** column says which: "Last attended May 14", "Back from leave
-  Sep 2", "Checked in Oct 3", or "Joined Jun 1". The filter guesses at nothing: bots and
-  members on leave are left out by the Standing filter, not by the clock.
+  When the clock starts from something other than the last activity, the **Last
+  attended** cell says which under the date: "Back from leave Sep 2", "Checked in
+  Oct 3", or "Joined Jun 1" (decided 2026-10-19; a Clock starts column mostly repeated
+  Last attended). The filter guesses at nothing: bots and members on leave are left out
+  by the Standing filter, not by the clock.
 
 Standing, Period, and Group sit in the filter bar's row. Details and Attended wait
 behind **More filters** until one is on, so the row doesn't wrap and a link such as
