@@ -63,7 +63,7 @@ defmodule Web.MemberCollectionLive do
       />
       <:filter
         field={@form[:when]}
-        label="Year"
+        label="Period"
         options={MemberFilterViewModel.when_kinds(@current_team)}
         default={MemberFilterViewModel.current_year()}
       />
@@ -120,7 +120,13 @@ defmodule Web.MemberCollectionLive do
           {last_attended(record.last_attended_at, @current_team)}
         </span>
       </:col>
-      <:col :let={record} label="Activities" align="right" class="w-px whitespace-nowrap">
+      <:col
+        :let={record}
+        label="Activities"
+        align="right"
+        class="w-px whitespace-nowrap"
+        sorts={[{"↓", "activities-"}, {"↑", "activities"}]}
+      >
         {record.activity_count}
       </:col>
       <:col
