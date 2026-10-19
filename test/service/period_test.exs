@@ -21,4 +21,21 @@ defmodule Service.PeriodTest do
     assert Period.open_years_start(~U[2026-03-15 18:00:00Z], @tz) == ~U[2025-01-01 08:00:00Z]
     assert Period.open_years_start(~U[2026-10-17 18:00:00Z], @tz) == ~U[2026-01-01 08:00:00Z]
   end
+
+  describe "a filter's period" do
+    @filter_now ~U[2026-10-18 20:30:15.123456Z]
+
+    test "a rolling period ends now and reaches back that many days" do
+      assert Service.Period.bounds("90d", "America/Vancouver", @filter_now) ==
+               {~N[2026-07-20 20:30:15], ~N[2026-10-18 20:30:15]}
+    end
+
+    test "a year is the calendar year in the team's time zone" do
+      assert Service.Period.bounds("2026", "America/Vancouver", @filter_now) ==
+               {~N[2026-01-01 08:00:00], ~N[2027-01-01 07:00:00]}
+
+      assert Service.Period.bounds(2026, "America/Vancouver", @filter_now) ==
+               {~N[2026-01-01 08:00:00], ~N[2027-01-01 07:00:00]}
+    end
+  end
 end

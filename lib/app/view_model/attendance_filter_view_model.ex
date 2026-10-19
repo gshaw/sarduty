@@ -6,6 +6,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   alias App.Field
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Tag
   alias App.Repo
 
   @primary_key false
@@ -13,11 +14,15 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     field :q, Field.TrimmedString
     field :when, :string
     field :tag, :string
+    field :activity_tag, :string
     field :page, :integer
     field :sort, :string
   end
 
-  def when_kinds(member), do: build_member_year_options(member)
+  def when_kinds(member), do: build_member_period_options(member)
+
+  # The team's tags, the same Tag filter as the Members page's.
+  def activity_tag_kinds(team), do: team.id |> Tag.titles() |> Enum.map(&{&1, &1})
 
   def tag_kinds,
     do: [
@@ -38,7 +43,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
       "ID ↑" => "id"
     }
 
-  defp build_member_year_options(member) do
+  defp build_member_period_options(member) do
     current = current_year()
 
     attendance_years =
@@ -53,7 +58,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
       |> Enum.uniq()
       |> Enum.sort(:desc)
 
-    [{"All", "all"} | years]
+    [{"All", "all"} | Service.Period.rolling_kinds()] ++ years
   end
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
@@ -89,6 +94,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
     |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))
+    |> Attendance.at_tagged(member.team, filter_options.activity_tag)
   end
 
   defp build_new do
@@ -103,10 +109,11 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :when, :tag, :page, :sort])
+    |> cast(params, [:q, :when, :tag, :activity_tag, :page, :sort])
+    |> Field.truncate(:activity_tag, max_length: 100)
     |> Field.truncate(:q, max_length: 100)
     |> validate_inclusion(:tag, Enum.map(tag_kinds(), fn {_, v} -> v end))
-    |> validate_format(:when, ~r/\A(all|\d{4})\z/)
+    |> App.Validate.Period.call(:when)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
   end
@@ -128,8 +135,8 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   defp scope(q, when: "all", timezone: _), do: q
 
-  defp scope(q, when: year, timezone: timezone) when is_binary(year),
-    do: Attendance.started_in(q, year, timezone)
+  defp scope(q, when: period, timezone: timezone) when is_binary(period),
+    do: Attendance.started_in(q, period, timezone)
 
   defp scope(q, tag: "all", hours_tags: _), do: q
 

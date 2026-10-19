@@ -8,12 +8,15 @@ defmodule Service.Period do
   - **Letter season**: January to April. Members file their taxes by April 30.
   - **Open years**: this year, and last year too in letter season. Letters can still be
     made or changed for these years, so their activities must match D4H.
+  - **A filter's period**: All, a year as `"2026"`, or the last 30 to 365 days as
+    `"90d"`, ending now. The members list and a member's activities offer the same.
   """
 
   # A busy team runs about six activities a week, so this fits on one screen.
   @current_days 7
   @recent_days 30
   @letter_months 1..4
+  @rolling_days [30, 60, 90, 180, 365]
 
   @doc "Today's date in `timezone`."
   def today(%DateTime{} = now, timezone),
@@ -43,5 +46,32 @@ defmodule Service.Period do
   def open_years_start(%DateTime{} = now, timezone) do
     {start, _finish} = now |> open_years(timezone) |> hd() |> Service.YearRange.bounds(timezone)
     DateTime.from_naive!(start, "Etc/UTC")
+  end
+
+  @doc ~s(The rolling periods a filter offers, as `{label, value}`: "Last 90 days" is `"90d"`.)
+  def rolling_kinds, do: Enum.map(@rolling_days, &{"Last #{&1} days", "#{&1}d"})
+
+  @doc ~s(Whether `value` is a period a filter takes: `"all"`, a year, or a rolling period.)
+  def valid?(value) when is_binary(value),
+    do: value == "all" or value =~ ~r/\A\d{4}\z/ or value in Enum.map(@rolling_days, &"#{&1}d")
+
+  def valid?(_value), do: false
+
+  @doc """
+  The UTC `{start, finish}` a year or rolling period covers, as `Service.YearRange`
+  bounds: start inclusive, finish exclusive. A rolling period ends at `now`.
+  """
+  def bounds(year, timezone, _now) when is_integer(year),
+    do: Service.YearRange.bounds(year, timezone)
+
+  def bounds(period, timezone, %DateTime{} = now) when is_binary(period) do
+    case Integer.parse(period) do
+      {days, "d"} ->
+        finish = now |> DateTime.truncate(:second) |> DateTime.to_naive()
+        {NaiveDateTime.add(finish, -days, :day), finish}
+
+      {_year, ""} ->
+        Service.YearRange.bounds(period, timezone)
+    end
   end
 end

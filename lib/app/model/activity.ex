@@ -239,6 +239,15 @@ defmodule App.Model.Activity do
     )
   end
 
+  @doc "Activities that carry the tag titled `title`."
+  def tagged(query, title),
+    do:
+      where(
+        query,
+        [r],
+        fragment("EXISTS (SELECT 1 FROM json_each(?) WHERE value = ?)", r.tags, ^title)
+      )
+
   @doc "Rows that overlap `start` to `finish`, so a weekend course stays in while it runs."
   def overlapping(query, start, finish) do
     query

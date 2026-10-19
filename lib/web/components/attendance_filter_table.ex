@@ -48,6 +48,13 @@ defmodule Web.Components.AttendanceFilterTable do
         options={AttendanceFilterViewModel.tag_kinds()}
         default="all"
       />
+      <:filter
+        field={@form[:activity_tag]}
+        label="Tag"
+        type="combobox"
+        options={AttendanceFilterViewModel.activity_tag_kinds(@member.team)}
+        default=""
+      />
     </.filter_bar>
 
     <.table
@@ -97,7 +104,7 @@ defmodule Web.Components.AttendanceFilterTable do
       id="no-attendance"
       title="No activities match"
     >
-      Change the search, the year, or the hours tag.
+      Change the search, the year, or the tags.
     </.empty_state>
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />

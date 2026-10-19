@@ -54,6 +54,45 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, ".filter-bar-chips a", "Rope rescue")
   end
 
+  test "the Tag filter counts only the activities with the tag, and links to them",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    tag_fixture(team, "Rope Rescue")
+    rope = activity_fixture(team, %{title: "Rope night", tags: ["Rope Rescue"]})
+    other = activity_fixture(team, %{title: "Board meeting", tags: ["Primary Hours"]})
+    avery = member_fixture(team, %{name: "Avery Rope"})
+    blake = member_fixture(team, %{name: "Blake Ground"})
+    attendance_fixture(rope, avery, %{duration_in_minutes: 180})
+    attendance_fixture(other, avery, %{duration_in_minutes: 60})
+    attendance_fixture(other, blake, %{duration_in_minutes: 60})
+
+    # Another team's activity with the same tag counts for nothing here.
+    other_team = team_fixture()
+
+    attendance_fixture(
+      activity_fixture(other_team, %{tags: ["Rope Rescue"]}),
+      member_fixture(other_team)
+    )
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    lv
+    |> form("#member_filter_form", form: %{when: "all", activity_tag: "Rope Rescue"})
+    |> render_change()
+
+    assert has_element?(lv, "#member_collection tr", "Avery Rope")
+    assert has_element?(lv, "#member_collection tr", "3 hours")
+    assert has_element?(lv, ".filter-bar-chips a", "Rope Rescue")
+
+    assert has_element?(
+             lv,
+             ~s|a[href="/teams/#{team.subdomain}/members/#{avery.id}?when=all&activity_tag=Rope+Rescue"]|
+           )
+
+    blake_row = lv |> element("#member_collection tr", "Blake Ground") |> render()
+    assert blake_row =~ ~r/>\s*0\s*</
+  end
+
   test "another team's group finds no one", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     other_team = team_fixture()
