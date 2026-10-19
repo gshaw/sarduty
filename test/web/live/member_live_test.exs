@@ -75,4 +75,39 @@ defmodule Web.MemberLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{never.id}")
     assert has_element?(lv, "#member-last-attended", "Never")
   end
+
+  test "the Tag filter keeps the activities with the tag", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    tag_fixture(team, "Swiftwater")
+    member = member_fixture(team)
+    recent = DateTime.add(DateTime.utc_now(), -10, :day)
+
+    swift =
+      activity_fixture(team, %{
+        title: "River day",
+        tags: ["Swiftwater", "Primary Hours"],
+        started_at: recent
+      })
+
+    attendance_fixture(swift, member, %{duration_in_minutes: 300, started_at: recent})
+    attendance_fixture(activity_fixture(team, %{title: "Board meeting"}), member)
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/members/#{member.id}?when=all&activity_tag=Swiftwater")
+
+    assert has_element?(lv, "#attendance_collection", "River day")
+    refute has_element?(lv, "#attendance_collection", "Board meeting")
+    assert has_element?(lv, "#attendance_filter_form-summary", "1 activity")
+    assert has_element?(lv, "#attendance_filter_form-summary", "5 hours total")
+
+    # The members list's rolling periods open here too.
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/members/#{member.id}?when=365d&activity_tag=Swiftwater")
+
+    assert has_element?(lv, "#attendance_collection", "River day")
+  end
 end

@@ -76,13 +76,29 @@ defmodule App.Model.Attendance do
     |> Repo.all()
   end
 
-  @doc "Rows that started in `year` in `timezone`."
-  def started_in(query, year, timezone) do
-    {start, finish} = Service.YearRange.bounds(year, timezone)
+  @doc "Rows that started in a year or rolling period in `timezone` (Service.Period.bounds/3)."
+  def started_in(query, period, timezone, now \\ DateTime.utc_now()) do
+    {start, finish} = Service.Period.bounds(period, timezone, now)
 
     query
     |> where([r], r.started_at >= type(^start, :naive_datetime))
     |> where([r], r.started_at < type(^finish, :naive_datetime))
+  end
+
+  @doc """
+  Attendance at the team's activities that carry the tag titled `title`, or all of it
+  when `title` is blank.
+  """
+  def at_tagged(query, _team, title) when title in [nil, ""], do: query
+
+  def at_tagged(query, team, title) do
+    activities =
+      Activity
+      |> where([a], a.team_id == ^team.id)
+      |> Activity.tagged(title)
+      |> select([a], a.id)
+
+    where(query, [at], at.activity_id in subquery(activities))
   end
 
   @doc "The years `query`'s rows span, newest first, in `timezone`."

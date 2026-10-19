@@ -10,6 +10,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
+  alias App.Model.Tag
   alias App.Model.Team
   alias App.Repo
   alias App.ViewData.TeamAttention
@@ -22,6 +23,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :attended, :string
     field :standing, :string
     field :group, :integer
+    field :activity_tag, :string
     field :page, :integer
     field :sort, :string
   end
@@ -93,7 +95,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
   # The team's groups, by name, for the Group filter (#350).
   def group_kinds(team), do: team.id |> Group.get_all() |> Enum.map(&{&1.title, &1.id})
 
-  @rolling_days [30, 60, 90, 180, 365]
+  # The team's tags, for the Tag filter: Activities and Duration count only the
+  # activities with the tag, such as 20 hours of rope rescue a year.
+  def activity_tag_kinds(team), do: team.id |> Tag.titles() |> Enum.map(&{&1, &1})
 
   @doc """
   The Period filter (#367): All, the last 30 to 365 days as `"90d"`, then each year with
@@ -109,23 +113,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
       |> Enum.map(&Integer.to_string/1)
 
     [{"All", "all"}] ++
-      Enum.map(@rolling_days, &{"Last #{&1} days", "#{&1}d"}) ++
+      Service.Period.rolling_kinds() ++
       Enum.map(years, fn y -> {y, y} end)
-  end
-
-  @doc """
-  The UTC `{start, finish}` a Period covers, as `Service.YearRange` bounds: start
-  inclusive, finish exclusive. A rolling period ends at `now`.
-  """
-  def period_bounds(period, timezone, now) do
-    case Integer.parse(period) do
-      {days, "d"} ->
-        finish = now |> DateTime.truncate(:second) |> DateTime.to_naive()
-        {NaiveDateTime.add(finish, -days, :day), finish}
-
-      {_year, ""} ->
-        Service.YearRange.bounds(period, timezone)
-    end
   end
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
@@ -157,7 +146,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp build_query(team, filter_options, now) do
     team
     |> filter_query(filter_options, now)
-    |> join_attendance_summary(team, filter_options.when, now)
+    |> join_attendance_summary(team, filter_options, now)
     |> join_last_attended(team)
     |> join_clock(team, now)
     |> sort(filter_options.sort, now)
@@ -192,12 +181,23 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :when, :details, :attended, :standing, :group, :page, :sort])
+    |> cast(params, [
+      :q,
+      :when,
+      :details,
+      :attended,
+      :standing,
+      :group,
+      :activity_tag,
+      :page,
+      :sort
+    ])
     |> Field.truncate(:q, max_length: 100)
+    |> Field.truncate(:activity_tag, max_length: 100)
     |> validate_kind(:details, details_kinds())
     |> validate_kind(:attended, attended_kinds())
     |> validate_standing()
-    |> validate_format(:when, ~r/\A(all|\d{4}|(30|60|90|180|365)d)\z/)
+    |> App.Validate.Period.call(:when)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
   end
@@ -234,16 +234,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp validate_kind(changeset, field, kinds),
     do: validate_inclusion(changeset, field, Enum.map(kinds, &elem(&1, 1)))
 
-  defp join_attendance_summary(query, team, period, now) do
+  defp join_attendance_summary(query, team, filter_options, now) do
     from(
       m in query,
-      left_join: a in subquery(build_attendance_summary(team, period, now)),
+      left_join: a in subquery(build_attendance_summary(team, filter_options, now)),
       as: :summary,
       on: m.id == a.member_id
     )
   end
 
-  defp build_attendance_summary(team, period, now) do
+  defp build_attendance_summary(team, filter_options, now) do
     query =
       from(
         at in Attendance,
@@ -258,18 +258,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
         }
       )
 
-    started_in(query, period, team.timezone, now)
+    query
+    |> started_in(filter_options.when, team.timezone, now)
+    |> Attendance.at_tagged(team, filter_options.activity_tag)
   end
 
   defp started_in(query, period, _timezone, _now) when period in [nil, "all"], do: query
 
-  defp started_in(query, period, timezone, now) do
-    {start, finish} = period_bounds(period, timezone, now)
-
-    query
-    |> where([at], at.started_at >= type(^start, :naive_datetime))
-    |> where([at], at.started_at < type(^finish, :naive_datetime))
-  end
+  defp started_in(query, period, timezone, now),
+    do: Attendance.started_in(query, period, timezone, now)
 
   defp join_last_attended(query, team) do
     from(
@@ -348,7 +345,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   # Members on the team at any point in the period.
   defp scope(q, when: period, timezone: timezone, now: now) when is_binary(period) do
-    {start, finish} = period_bounds(period, timezone, now)
+    {start, finish} = Service.Period.bounds(period, timezone, now)
 
     q
     |> where([m], m.joined_at < type(^finish, :naive_datetime))

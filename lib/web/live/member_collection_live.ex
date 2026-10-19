@@ -28,6 +28,7 @@ defmodule Web.MemberCollectionLive do
 
     socket
     |> assign(Map.take(filter_options, [:sort, :details, :attended]))
+    |> assign(:filter_options, filter_options)
     |> assign(now: now, today: today)
     |> assign(:standing?, standing_column?(current_team, filter_options, today, now))
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
@@ -78,6 +79,14 @@ defmodule Web.MemberCollectionLive do
         default=""
       />
       <:filter
+        field={@form[:activity_tag]}
+        label="Tag"
+        type="combobox"
+        more
+        options={MemberFilterViewModel.activity_tag_kinds(@current_team)}
+        default=""
+      />
+      <:filter
         field={@form[:details]}
         label="Details"
         more
@@ -108,7 +117,7 @@ defmodule Web.MemberCollectionLive do
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
-        <.a navigate={~p"/teams/#{@current_team}/members/#{record.member.id}"}>
+        <.a navigate={member_path(@current_team, record.member, @filter_options)}>
           {record.member.name}
         </.a>
       </:col>
@@ -221,6 +230,14 @@ defmodule Web.MemberCollectionLive do
 
   defp last_attended(nil, _team), do: "Never"
   defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
+
+  # With a tag on, the member's page opens on the activities that were counted.
+  defp member_path(team, member, %{activity_tag: tag} = filter_options)
+       when tag not in [nil, ""],
+       do:
+         ~p"/teams/#{team}/members/#{member.id}?#{[when: filter_options.when || "all", activity_tag: tag]}"
+
+  defp member_path(team, member, _filter_options), do: ~p"/teams/#{team}/members/#{member.id}"
 
   defp missing_text(member) do
     member

@@ -27,6 +27,16 @@ defmodule App.Model.Tag do
     |> Repo.all()
   end
 
+  @doc "A team's tag titles, A to Z, for a filter of activities by tag."
+  def titles(team_id) do
+    Tag
+    |> where([t], t.team_id == ^team_id)
+    |> select([t], t.title)
+    |> distinct(true)
+    |> order_by([t], asc: t.title)
+    |> Repo.all()
+  end
+
   @doc """
   How many of the team's activities since `since` carry each tag, as a map of title to
   count. Activities store tag titles, so this counts titles.
