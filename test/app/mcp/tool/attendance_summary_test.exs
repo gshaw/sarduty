@@ -3,8 +3,8 @@ defmodule App.MCP.Tool.AttendanceSummaryTest do
 
   alias App.MCP.Tool.AttendanceSummary
 
-  @start ~N[2026-01-01 08:00:00]
-  @finish ~N[2026-04-01 07:00:00]
+  @start ~U[2026-01-01 08:00:00Z]
+  @finish ~U[2026-04-01 07:00:00Z]
 
   defp member(id, name, attrs \\ %{}),
     do: Map.merge(%{id: id, name: name, joined_at: ~U[2020-01-01 00:00:00Z], left_at: nil}, attrs)

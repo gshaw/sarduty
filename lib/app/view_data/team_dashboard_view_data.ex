@@ -96,8 +96,8 @@ defmodule App.ViewData.TeamDashboardViewData do
     Activity
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
-    |> where([a], a.started_at >= type(^naive(from), :naive_datetime))
-    |> where([a], a.started_at < type(^naive(until), :naive_datetime))
+    |> where([a], a.started_at >= ^from)
+    |> where([a], a.started_at < ^until)
     |> order_by([a], asc: a.started_at)
     |> Repo.all()
   end
@@ -278,8 +278,8 @@ defmodule App.ViewData.TeamDashboardViewData do
     Activity
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
-    |> where([a], a.started_at >= type(^naive(since), :naive_datetime))
-    |> where([a], a.started_at <= type(^naive(now), :naive_datetime))
+    |> where([a], a.started_at >= ^since)
+    |> where([a], a.started_at <= ^now)
     |> select([a], %{
       id: a.id,
       title: a.title,
@@ -296,9 +296,8 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> join(:inner, [at], m in assoc(at, :member))
     |> where([_, a, m], a.team_id == ^team.id and m.team_id == ^team.id and is_nil(a.deleted_at))
     |> where([at], at.status == "attending")
-    # `since` is already naive: YearRange.bounds/2 gives the year's start that way.
-    |> where([_, a], a.started_at >= type(^since, :naive_datetime))
-    |> where([_, a], a.started_at <= type(^naive(now), :naive_datetime))
+    |> where([_, a], a.started_at >= ^since)
+    |> where([_, a], a.started_at <= ^now)
     |> select([at, a], %{started_at: a.started_at, minutes: coalesce(at.duration_in_minutes, 0)})
     |> Repo.all()
   end
@@ -311,8 +310,4 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> select([m], %{id: m.id, joined_at: m.joined_at})
     |> Repo.all()
   end
-
-  # Stored times mix `…Z` and no zone; a bound with no zone compares right against both.
-  defp naive(%DateTime{} = datetime),
-    do: datetime |> DateTime.truncate(:second) |> DateTime.to_naive()
 end

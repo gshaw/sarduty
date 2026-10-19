@@ -2,10 +2,7 @@ defmodule Service.YearRange do
   @moduledoc """
   Calendar years in a team's time zone, as UTC bounds for queries.
 
-  Bounds are `NaiveDateTime` in UTC, with no `Z`. Stored times are a mix of
-  `2024-10-24T02:00:00Z` and `2024-10-24T02:00:00`, and a bound without the `Z`
-  compares correctly against both as text. Compare with
-  `type(^start, :naive_datetime)`.
+  Bounds are UTC `DateTime`s, compared in queries as `^start`.
   """
 
   @doc """
@@ -39,6 +36,5 @@ defmodule Service.YearRange do
     |> Date.new!(1, 1)
     |> DateTime.new!(~T[00:00:00], timezone)
     |> DateTime.shift_zone!("Etc/UTC")
-    |> DateTime.to_naive()
   end
 end

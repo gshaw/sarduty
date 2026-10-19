@@ -9,13 +9,13 @@ defmodule App.MCP.ArgsTest do
     assert {:ok, ~D[2026-01-01], ~D[2026-03-31], start, finish} =
              Args.date_range(%{"from" => "2026-01-01", "to" => "2026-03-31"}, @zone)
 
-    assert start == ~N[2026-01-01 08:00:00]
+    assert start == ~U[2026-01-01 08:00:00Z]
     # Daylight time by April 1, so 7 hours behind UTC.
-    assert finish == ~N[2026-04-01 07:00:00]
+    assert finish == ~U[2026-04-01 07:00:00Z]
   end
 
   test "a one-day range is that day" do
-    assert {:ok, _from, _to, ~N[2026-07-01 07:00:00], ~N[2026-07-02 07:00:00]} =
+    assert {:ok, _from, _to, ~U[2026-07-01 07:00:00Z], ~U[2026-07-02 07:00:00Z]} =
              Args.date_range(%{"from" => "2026-07-01", "to" => "2026-07-01"}, @zone)
   end
 

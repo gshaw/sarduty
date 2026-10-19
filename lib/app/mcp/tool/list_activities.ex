@@ -83,8 +83,8 @@ defmodule App.MCP.Tool.ListActivities do
     Activity
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
-    |> where([a], a.started_at >= type(^start, :naive_datetime))
-    |> where([a], a.started_at < type(^finish, :naive_datetime))
+    |> where([a], a.started_at >= ^start)
+    |> where([a], a.started_at < ^finish)
     |> select([a], map(a, [:id, :title, :activity_kind, :tags, :started_at, :finished_at]))
     |> Repo.all()
   end

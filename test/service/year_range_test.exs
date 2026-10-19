@@ -5,18 +5,18 @@ defmodule Service.YearRangeTest do
 
   test "bounds are the team's midnights in UTC" do
     assert YearRange.bounds(2025, "America/Vancouver") ==
-             {~N[2025-01-01 08:00:00], ~N[2026-01-01 08:00:00]}
+             {~U[2025-01-01 08:00:00Z], ~U[2026-01-01 08:00:00Z]}
 
     assert YearRange.bounds("2025", "America/Halifax") ==
-             {~N[2025-01-01 04:00:00], ~N[2026-01-01 04:00:00]}
+             {~U[2025-01-01 04:00:00Z], ~U[2026-01-01 04:00:00Z]}
   end
 
   test "8 pm on December 31 in Vancouver is in that year" do
     {start, finish} = YearRange.bounds(2025, "America/Vancouver")
-    eight_pm = ~N[2026-01-01 04:00:00]
+    eight_pm = ~U[2026-01-01 04:00:00Z]
 
-    assert NaiveDateTime.compare(eight_pm, start) == :gt
-    assert NaiveDateTime.compare(eight_pm, finish) == :lt
+    assert DateTime.compare(eight_pm, start) == :gt
+    assert DateTime.compare(eight_pm, finish) == :lt
     assert YearRange.year_in(~U[2026-01-01 04:00:00Z], "America/Vancouver") == 2025
   end
 

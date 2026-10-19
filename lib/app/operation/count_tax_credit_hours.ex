@@ -50,10 +50,8 @@ defmodule App.Operation.CountTaxCreditHours do
 
   defp started_in?(%{started_at: nil}, _start, _finish), do: false
 
-  defp started_in?(%{started_at: started_at}, start, finish) do
-    naive = DateTime.to_naive(started_at)
-    NaiveDateTime.compare(naive, start) != :lt and NaiveDateTime.compare(naive, finish) == :lt
-  end
+  defp started_in?(%{started_at: started_at}, start, finish),
+    do: not DateTime.before?(started_at, start) and DateTime.before?(started_at, finish)
 
   defp count_member(rows) do
     {timed, untimed} = Enum.split_with(rows, &timed?/1)

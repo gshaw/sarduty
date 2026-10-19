@@ -164,7 +164,7 @@ defmodule App.Model.Member do
 
     query
     |> current_query(now)
-    |> where([m], m.team_id == ^team.id and m.joined_at < type(^since, :naive_datetime))
+    |> where([m], m.team_id == ^team.id and m.joined_at < ^since)
     |> not_in(seen_since(team, since))
     |> not_in(back_since(team, since_on, today))
     |> not_in(checked_in_since(team, since_on))
@@ -172,20 +172,19 @@ defmodule App.Model.Member do
 
   defp not_in(query, member_ids), do: where(query, [m], m.id not in subquery(member_ids))
 
-  # Stored times mix `…Z` and no zone; a bound with no zone compares right against both.
   # Away periods and check-ins are days on the team's clock.
   defp clock_bounds(team, days, now) do
     since = DateTime.add(now, -days, :day)
 
-    {since |> DateTime.truncate(:second) |> DateTime.to_naive(),
-     Service.Period.today(since, team.timezone), Service.Period.today(now, team.timezone)}
+    {DateTime.truncate(since, :second), Service.Period.today(since, team.timezone),
+     Service.Period.today(now, team.timezone)}
   end
 
   defp seen_since(team, since) do
     from at in Attendance,
       join: a in assoc(at, :activity),
       where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
-      where: a.started_at >= type(^since, :naive_datetime),
+      where: a.started_at >= ^since,
       select: at.member_id
   end
 

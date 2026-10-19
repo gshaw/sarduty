@@ -348,8 +348,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {start, finish} = Service.Period.bounds(period, timezone, now)
 
     q
-    |> where([m], m.joined_at < type(^finish, :naive_datetime))
-    |> where([m], is_nil(m.left_at) or m.left_at >= type(^start, :naive_datetime))
+    |> where([m], m.joined_at < ^finish)
+    |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
   end
 
   defp scope(q, details: "missing"),

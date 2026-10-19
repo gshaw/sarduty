@@ -27,15 +27,15 @@ defmodule Service.PeriodTest do
 
     test "a rolling period ends now and reaches back that many days" do
       assert Service.Period.bounds("90d", "America/Vancouver", @filter_now) ==
-               {~N[2026-07-20 20:30:15], ~N[2026-10-18 20:30:15]}
+               {~U[2026-07-20 20:30:15Z], ~U[2026-10-18 20:30:15Z]}
     end
 
     test "a year is the calendar year in the team's time zone" do
       assert Service.Period.bounds("2026", "America/Vancouver", @filter_now) ==
-               {~N[2026-01-01 08:00:00], ~N[2027-01-01 07:00:00]}
+               {~U[2026-01-01 08:00:00Z], ~U[2027-01-01 07:00:00Z]}
 
       assert Service.Period.bounds(2026, "America/Vancouver", @filter_now) ==
-               {~N[2026-01-01 08:00:00], ~N[2027-01-01 07:00:00]}
+               {~U[2026-01-01 08:00:00Z], ~U[2027-01-01 07:00:00Z]}
     end
   end
 end

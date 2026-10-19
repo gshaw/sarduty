@@ -120,10 +120,8 @@ defmodule App.Model.MemberQualificationAward do
   defp to_datetime(%NaiveDateTime{} = naive), do: DateTime.from_naive!(naive, "Etc/UTC")
 
   defp to_datetime(text) when is_binary(text) do
-    case DateTime.from_iso8601(text) do
-      {:ok, datetime, _offset} -> datetime
-      _no_zone -> text |> NaiveDateTime.from_iso8601!() |> DateTime.from_naive!("Etc/UTC")
-    end
+    {:ok, datetime, _offset} = DateTime.from_iso8601(text)
+    datetime
   end
 
   def get_by(params), do: Repo.get_by(MemberQualificationAward, params)

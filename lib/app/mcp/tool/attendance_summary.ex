@@ -66,7 +66,7 @@ defmodule App.MCP.Tool.AttendanceSummary do
 
   @doc """
   One entry per member, by name: those on the team at some point from `start` to
-  `finish` (UTC `NaiveDateTime`s), and anyone with a row. `members` have `id`, `name`,
+  `finish` (UTC `DateTime`s), and anyone with a row. `members` have `id`, `name`,
   `joined_at`, and `left_at`. `rows` are attended rows already in the range, each with
   `member_id`, `activity_id`, `started_at`, `finished_at`, `duration_in_minutes`, `tags`,
   and `activity_kind`.
@@ -125,11 +125,8 @@ defmodule App.MCP.Tool.AttendanceSummary do
   defp minutes(row), do: row.duration_in_minutes || 0
 
   defp on_team?(member, start, finish) do
-    joined = member.joined_at && DateTime.to_naive(member.joined_at)
-    left = member.left_at && DateTime.to_naive(member.left_at)
-
-    (is_nil(joined) or NaiveDateTime.before?(joined, finish)) and
-      (is_nil(left) or NaiveDateTime.after?(left, start))
+    (is_nil(member.joined_at) or DateTime.before?(member.joined_at, finish)) and
+      (is_nil(member.left_at) or DateTime.after?(member.left_at, start))
   end
 
   defp load_members(team) do
@@ -149,8 +146,8 @@ defmodule App.MCP.Tool.AttendanceSummary do
     |> where([at, m, ac], at.status == "attending" and is_nil(ac.deleted_at))
     |> where(
       [at, m, ac],
-      fragment("coalesce(?, ?)", at.started_at, ac.started_at) >= type(^start, :naive_datetime) and
-        fragment("coalesce(?, ?)", at.started_at, ac.started_at) < type(^finish, :naive_datetime)
+      fragment("coalesce(?, ?)", at.started_at, ac.started_at) >= type(^start, :utc_datetime) and
+        fragment("coalesce(?, ?)", at.started_at, ac.started_at) < type(^finish, :utc_datetime)
     )
     |> select([at, m, ac], %{
       member_id: at.member_id,

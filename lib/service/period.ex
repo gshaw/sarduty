@@ -45,7 +45,7 @@ defmodule Service.Period do
   @doc "When the oldest open year starts, as a UTC `DateTime`."
   def open_years_start(%DateTime{} = now, timezone) do
     {start, _finish} = now |> open_years(timezone) |> hd() |> Service.YearRange.bounds(timezone)
-    DateTime.from_naive!(start, "Etc/UTC")
+    start
   end
 
   @doc ~s(The rolling periods a filter offers, as `{label, value}`: "Last 90 days" is `"90d"`.)
@@ -67,8 +67,8 @@ defmodule Service.Period do
   def bounds(period, timezone, %DateTime{} = now) when is_binary(period) do
     case Integer.parse(period) do
       {days, "d"} ->
-        finish = now |> DateTime.truncate(:second) |> DateTime.to_naive()
-        {NaiveDateTime.add(finish, -days, :day), finish}
+        finish = DateTime.truncate(now, :second)
+        {DateTime.add(finish, -days, :day), finish}
 
       {_year, ""} ->
         Service.YearRange.bounds(period, timezone)
