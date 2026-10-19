@@ -46,6 +46,12 @@ A member's **standing** says whether the team expects them to show up now (#366)
   member tab shows the standing. Each change goes in the member's history, from
   `member_standing_changes`, which keeps the reason and dates.
 - Members do not see their standing, and the reason is `redact: true`.
+- **Check-ins** are on the same tab: a team admin records the day they reached a member
+  and what they heard ([MemberCheckIn](../lib/app/model/member_check_in.ex)). It
+  restarts the member's attendance clock and changes nothing else: not standing, not
+  groups, nothing in D4H. If the call turns up leave, the admin adds an away period too.
+  Any team admin can delete one recorded by mistake, and the clock goes back without it.
+  Members do not see check-ins, and the note is `redact: true`.
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
 These stay as they were, since a bot cannot attend or be invited, and skip members

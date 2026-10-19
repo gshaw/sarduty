@@ -5,10 +5,13 @@ defmodule Web.MemberStandingLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.MemberAwayPeriod
+  alias App.Model.MemberCheckIn
   alias App.Model.MemberStandingChange
   alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
+  alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
+  alias App.Operation.RecordCheckIn
   alias App.Repo
 
   defp today(team), do: Service.Period.today(DateTime.utc_now(), team.timezone)
@@ -186,6 +189,73 @@ defmodule Web.MemberStandingLiveTest do
     assert EndAwayPeriod.call(team, period.id, user) == :gone
     assert Repo.reload(period)
     assert_raise Ecto.NoResultsError, fn -> AddAwayPeriod.call(team, other.id, user, %{}) end
+  end
+
+  test "a check-in lists the day, who recorded it, and what they heard", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    assert has_element?(lv, "#no-check-ins")
+
+    lv
+    |> form("#check-in-form",
+      check_in: %{checked_in_on: day(team, -2), note: "Busy with school, back in January."}
+    )
+    |> render_submit()
+
+    assert [check_in] = Repo.all(MemberCheckIn)
+    assert check_in.user_id == user.id
+    assert check_in.checked_in_on == day(team, -2)
+
+    assert has_element?(lv, "#check-in-#{check_in.id}", "Busy with school, back in January.")
+    assert has_element?(lv, "#check-in-#{check_in.id}", "Recorded by #{user.email}")
+  end
+
+  test "a check-in recorded by mistake can be deleted", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    {:ok, check_in} = RecordCheckIn.call(team, member.id, user, %{"checked_in_on" => today(team)})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    lv |> element("#delete-check-in-#{check_in.id}") |> render_click()
+
+    assert Repo.all(MemberCheckIn) == []
+    assert has_element?(lv, "#no-check-ins")
+  end
+
+  test "a check-in cannot be in the future", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    html =
+      lv |> form("#check-in-form", check_in: %{checked_in_on: day(team, 1)}) |> render_submit()
+
+    assert html =~ "Enter today or an earlier day."
+    assert Repo.all(MemberCheckIn) == []
+  end
+
+  test "another team's member cannot be checked in, nor its check-in deleted" do
+    %{user: user, team: team} = user_with_team_fixture()
+    other_team = team_fixture()
+    other = member_fixture(other_team)
+
+    assert_raise Ecto.NoResultsError, fn ->
+      RecordCheckIn.call(team, other.id, user, %{"checked_in_on" => today(team)})
+    end
+
+    {:ok, check_in} =
+      RecordCheckIn.call(other_team, other.id, user, %{"checked_in_on" => today(team)})
+
+    assert DeleteCheckIn.call(team, check_in.id) == :gone
+    assert Repo.reload(check_in)
   end
 
   test "suggests marking a bot, and the switch marks it not a person", %{conn: conn} do
