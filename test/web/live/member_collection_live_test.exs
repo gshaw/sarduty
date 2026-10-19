@@ -129,6 +129,9 @@ defmodule Web.MemberCollectionLiveTest do
     refute has_element?(lv, "#last-attended-#{drifting.id}", "Never")
     assert has_element?(lv, "#last-attended-#{never.id}", "Never")
     refute has_element?(lv, "#last-attended-#{seen.id}")
+    # The clock's reason shows only when it isn't the last activity.
+    refute has_element?(lv, "#clock-starts-#{drifting.id}")
+    assert has_element?(lv, "#clock-starts-#{never.id}", "Joined")
   end
 
   test "the Attended filter offers every time frame, even with the setting off",
