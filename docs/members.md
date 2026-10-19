@@ -1,4 +1,20 @@
-# Member logins
+# Members
+
+The members list and a member's page, for team admins, and member logins, for members.
+
+## The members list
+
+`/teams/:subdomain/members` ([MemberCollectionLive](../lib/web/live/member_collection_live.ex),
+[MemberFilterViewModel](../lib/app/view_model/member_filter_view_model.ex)) answers
+questions with general filters and sortable columns rather than one Needs attention item
+each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last attended.
+
+- **Last attended** is the start of the latest activity the member attended, any kind
+  (incidents, exercises, events), not deleted. Showing up to anything is the sign it is
+  for. It comes from a join on `Member.last_attended_query/1`, so it sorts, and never
+  attended sorts first going up. The member's page shows the same date.
+
+## Member logins
 
 A team admin turns on member logins in **Settings → Member logins**, in the team area. Then every
 current member of the team can log in with the email or mobile number D4H has for them,
@@ -10,7 +26,7 @@ mailing address and emergency contacts in D4H, and on `/teams/:subdomain/me/mobi
 mobile number. Members don't change their email: teams keep it consistent, and team
 admins change it in D4H. Issue #156 has the design.
 
-## What must stay true
+### What must stay true
 
 - **A member page shows only the person logged in.** `member` comes from the login, in
   `on_mount(:ensure_team_member, …)` and the `require_team_member` plug
