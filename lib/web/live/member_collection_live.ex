@@ -16,12 +16,15 @@ defmodule Web.MemberCollectionLive do
       # credo:disable-for-next-line
       {:ok, filter_options, changeset} ->
         current_team = socket.assigns.current_team
+        today = Service.Period.today(DateTime.utc_now(), current_team.timezone)
 
         socket =
           socket
           |> assign(:sort, filter_options.sort)
           |> assign(:status, filter_options.status)
           |> assign(:details, filter_options.details)
+          |> assign(:today, today)
+          |> assign(:standing?, standing_column?(current_team, filter_options, today))
           |> assign(:paginated, build_paginated_content(current_team, filter_options))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
@@ -75,6 +78,13 @@ defmodule Web.MemberCollectionLive do
         default=""
       />
       <:filter
+        :if={@standing?}
+        field={@form[:standing]}
+        label="Standing"
+        options={MemberFilterViewModel.standing_kinds()}
+        default="any"
+      />
+      <:filter
         field={@form[:details]}
         label="Details"
         options={MemberFilterViewModel.details_kinds()}
@@ -95,16 +105,25 @@ defmodule Web.MemberCollectionLive do
       path_fn={@path_fn}
       class="table-striped"
     >
-      <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
+      <:col :let={record} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
-      <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
+      <:col :let={record} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
         <.a navigate={~p"/teams/#{@current_team}/members/#{record.member.id}"}>
           {record.member.name}
         </.a>
       </:col>
-      <:col :let={record} label="Role" class="w-1/3" sorts={[{"↑", "role"}]}>
+      <:col :let={record} label="Role" sorts={[{"↑", "role"}]}>
         {record.member.position}
+      </:col>
+      <:col
+        :let={record}
+        :if={@standing?}
+        label="Standing"
+        class="whitespace-nowrap"
+        sorts={[{"↑", "standing"}, {"↓", "standing-"}]}
+      >
+        <span id={"standing-#{record.member.id}"}>{standing_text(record, @today)}</span>
       </:col>
       <:col :let={record} :if={@details == "missing"} label="Missing">
         <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
@@ -162,6 +181,19 @@ defmodule Web.MemberCollectionLive do
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
   end
+
+  # Shown only when someone on the team is not active, or the filter asks for it.
+  defp standing_column?(_team, %{standing: standing}, _today) when standing not in [nil, "any"],
+    do: true
+
+  defp standing_column?(team, _filter_options, today),
+    do: Member.any_not_active?(team, today, DateTime.utc_now())
+
+  defp standing_text(%{member: %{not_a_person: true}}, _today), do: "Not a person"
+  defp standing_text(%{away_until: nil}, _today), do: "Active"
+
+  defp standing_text(%{away_until: until}, today),
+    do: "Away until #{Service.Format.day_in_year(until, today)}"
 
   defp last_attended(nil, _team), do: "Never"
   defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)

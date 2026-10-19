@@ -26,6 +26,10 @@ defmodule Service.Format do
   @doc "The same with the month in full, for a sentence: \"September 28, 2025\"."
   def day_long(%Date{} = date), do: Calendar.strftime(date, "%B %-d, %Y")
 
+  @doc "A date in a table, with the year only when it is not this year: \"Mar 1\"."
+  def day_in_year(%Date{} = date, %Date{} = today),
+    do: Calendar.strftime(date, if(date.year == today.year, do: "%b %-d", else: "%b %-d, %Y"))
+
   @doc "A month's short name, for chart labels: \"Sep\"."
   def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
 

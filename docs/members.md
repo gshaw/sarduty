@@ -17,6 +17,12 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   the team at some point in it: All, the last 30, 60, 90, 180, or 365 days (`when=90d`),
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
   open the same list. A team that wants departed members uses Status.
+- **Standing** filters by [standing](#standing): Any (the default), Active, Away, or Not a
+  person. Its column says "Away until Mar 1" and sorts by that day.
+
+No column chooser. A column shows only when it says something: Standing when some
+current member is not active (or the filter is on), Departed when Status includes
+departed members, Missing with Details: Missing. ID hides on narrow screens.
 
 ## Standing
 

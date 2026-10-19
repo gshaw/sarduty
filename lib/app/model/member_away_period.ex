@@ -74,6 +74,17 @@ defmodule App.Model.MemberAwayPeriod do
       else: :error
   end
 
+  @doc """
+  Each of the team's members away on `today`, as rows of `member_id` and `away_until`,
+  the last day of the current away period that ends last: `standing/3` as a query.
+  """
+  def away_query(%Team{} = team, %Date{} = today) do
+    from p in MemberAwayPeriod,
+      where: p.team_id == ^team.id and p.starts_on <= ^today and p.ends_on >= ^today,
+      group_by: p.member_id,
+      select: %{member_id: p.member_id, away_until: max(p.ends_on)}
+  end
+
   @doc "The member's away periods, latest first."
   def for_member(%Member{} = member) do
     MemberAwayPeriod
