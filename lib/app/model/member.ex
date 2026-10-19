@@ -13,8 +13,6 @@ defmodule App.Model.Member do
 
   schema "members" do
     belongs_to :team, Team
-    has_many :attendances, Attendance, where: [status: "attending"]
-    has_many :activities, through: [:attendances, :activity]
     has_many :group_members, GroupMember
     has_many :groups, through: [:group_members, :group]
     has_many :member_qualification_awards, MemberQualificationAward
@@ -165,7 +163,7 @@ defmodule App.Model.Member do
     query
     |> current_query(now)
     |> where([m], m.team_id == ^team.id and m.joined_at < ^since)
-    |> not_in(seen_since(team, since))
+    |> not_in(seen_since(team, since, now))
     |> not_in(back_since(team, since_on, today))
     |> not_in(checked_in_since(team, since_on))
   end
@@ -180,12 +178,11 @@ defmodule App.Model.Member do
      Service.Period.today(now, team.timezone)}
   end
 
-  defp seen_since(team, since) do
-    from at in Attendance,
-      join: a in assoc(at, :activity),
-      where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
-      where: a.started_at >= ^since,
-      select: at.member_id
+  defp seen_since(team, since, now) do
+    now
+    |> Attendance.attended()
+    |> where([at, activity: a], a.team_id == ^team.id and at.started_at >= ^since)
+    |> select([at], at.member_id)
   end
 
   # An away period that has started and whose day back, the day after it ends, is on or
@@ -225,21 +222,21 @@ defmodule App.Model.Member do
 
   @doc """
   Each of the team's members' last activity (#367), as rows of `member_id` and
-  `last_attended_at`: the latest start of an activity they attended, any kind, not
-  deleted. Members who never attended have no row.
+  `last_attended_at`: the latest start of a row they attended by `now`, any kind.
+  Members who never attended have no row.
   """
-  def last_attended_query(%Team{} = team) do
-    from at in Attendance,
-      join: a in assoc(at, :activity),
-      where: a.team_id == ^team.id and is_nil(a.deleted_at) and at.status == "attending",
-      group_by: at.member_id,
-      select: %{member_id: at.member_id, last_attended_at: max(a.started_at)}
+  def last_attended_query(%Team{} = team, now) do
+    now
+    |> Attendance.attended()
+    |> where([activity: a], a.team_id == ^team.id)
+    |> group_by([at], at.member_id)
+    |> select([at], %{member_id: at.member_id, last_attended_at: max(at.started_at)})
   end
 
-  @doc "When the member last attended an activity, or nil: last_attended_query/1 for one."
-  def last_attended_at(%Member{} = member) do
+  @doc "When the member last attended an activity, or nil: last_attended_query/2 for one."
+  def last_attended_at(%Member{} = member, now \\ DateTime.utc_now()) do
     query =
-      from row in subquery(last_attended_query(%Team{id: member.team_id})),
+      from row in subquery(last_attended_query(%Team{id: member.team_id}, now)),
         where: row.member_id == ^member.id,
         select: type(row.last_attended_at, :utc_datetime)
 
@@ -255,10 +252,11 @@ defmodule App.Model.Member do
   def looks_like_not_a_person?(%Member{} = member, attended?),
     do: missing_details(member) == [:mobile_phone, :email] and not attended?
 
-  @doc "Whether the member attended any activity."
-  def attended?(%Member{id: id}) do
-    Attendance
-    |> where([a], a.member_id == ^id and a.status == "attending")
+  @doc "Whether the member attended any activity by `now`."
+  def attended?(%Member{id: id}, now \\ DateTime.utc_now()) do
+    now
+    |> Attendance.attended()
+    |> where([a], a.member_id == ^id)
     |> Repo.exists?()
   end
 

@@ -116,6 +116,16 @@ defmodule App.Model.MemberTest do
                Enum.sort([old_check_in.id, leaving_soon.id, other_team_check_in.id])
     end
 
+    test "a sign-up for a coming activity isn't being seen (#364)" do
+      team = team_fixture()
+      signed_up = member_fixture(team, %{joined_at: ~U[2025-01-01 00:00:00Z]})
+      coming = activity_fixture(team, %{started_at: DateTime.add(@now, 7, :day)})
+      attendance_fixture(coming, signed_up, %{started_at: coming.started_at})
+
+      assert not_seen(team) == [signed_up.id]
+      assert Member.last_attended_at(signed_up, @now) == nil
+    end
+
     test "a day back from leave counts the same as a check-in that day" do
       team = team_fixture()
       joined = ~U[2025-01-01 00:00:00Z]

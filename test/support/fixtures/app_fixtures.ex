@@ -185,6 +185,7 @@ defmodule App.DataFixtures do
       else: member
   end
 
+  # The row starts and ends with its activity, as D4H's do unless someone edits them.
   def attendance_fixture(%Activity{} = activity, %Member{} = member, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
 
@@ -195,8 +196,8 @@ defmodule App.DataFixtures do
           member_id: member.id,
           d4h_attendance_id: unique,
           duration_in_minutes: 60,
-          started_at: DateTime.utc_now() |> DateTime.truncate(:second),
-          finished_at: DateTime.utc_now() |> DateTime.truncate(:second),
+          started_at: activity.started_at,
+          finished_at: activity.finished_at,
           status: "attending"
         },
         attrs

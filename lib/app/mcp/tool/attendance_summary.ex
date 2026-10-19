@@ -47,10 +47,10 @@ defmodule App.MCP.Tool.AttendanceSummary do
   end
 
   @impl App.MCP.Tool
-  def call(%Team{} = team, args, _now) do
+  def call(%Team{} = team, args, now) do
     with {:ok, from, to, start, finish} <- Args.date_range(args, team.timezone) do
       members = load_members(team)
-      rows = load_rows(team, start, finish)
+      rows = load_rows(team, start, finish, now)
       summary = summarize(members, rows, start, finish)
 
       output = %{
@@ -136,20 +136,15 @@ defmodule App.MCP.Tool.AttendanceSummary do
     |> Repo.all()
   end
 
-  # Attended rows on activities not deleted, by the row's own start, or the activity's
-  # when the row has none.
-  defp load_rows(team, start, finish) do
-    Attendance
+  # Rows attended by `now` that started from `start` to `finish`.
+  defp load_rows(team, start, finish, now) do
+    now
+    |> Attendance.attended()
     |> join(:inner, [at], m in assoc(at, :member))
-    |> join(:inner, [at], ac in assoc(at, :activity))
-    |> where([at, m, ac], m.team_id == ^team.id and ac.team_id == ^team.id)
-    |> where([at, m, ac], at.status == "attending" and is_nil(ac.deleted_at))
-    |> where(
-      [at, m, ac],
-      fragment("coalesce(?, ?)", at.started_at, ac.started_at) >= type(^start, :utc_datetime) and
-        fragment("coalesce(?, ?)", at.started_at, ac.started_at) < type(^finish, :utc_datetime)
-    )
-    |> select([at, m, ac], %{
+    |> where([at, activity: ac], ac.team_id == ^team.id)
+    |> where([at, ..., m], m.team_id == ^team.id)
+    |> where([at], at.started_at >= ^start and at.started_at < ^finish)
+    |> select([at, activity: ac], %{
       member_id: at.member_id,
       activity_id: ac.id,
       started_at: at.started_at,

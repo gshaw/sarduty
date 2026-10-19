@@ -105,10 +105,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
   """
   def when_kinds(team) do
     years =
-      Attendance
-      |> join(:inner, [a], m in assoc(a, :member))
-      |> where([a, m], m.team_id == ^team.id)
-      |> where([a], a.status == "attending")
+      DateTime.utc_now()
+      |> Attendance.attended()
+      |> where([activity: ac], ac.team_id == ^team.id)
       |> Attendance.years(team.timezone)
       |> Enum.map(&Integer.to_string/1)
 
@@ -147,7 +146,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     team
     |> filter_query(filter_options, now)
     |> join_attendance_summary(team, filter_options, now)
-    |> join_last_attended(team)
+    |> join_last_attended(team, now)
     |> join_clock(team, now)
     |> sort(filter_options.sort, now)
     |> select_member_with_attendance()
@@ -244,21 +243,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   defp build_attendance_summary(team, filter_options, now) do
-    query =
-      from(
-        at in Attendance,
-        join: m in assoc(at, :member),
-        where: m.team_id == ^team.id,
-        where: at.status == "attending",
-        group_by: at.member_id,
-        select: %{
-          member_id: at.member_id,
-          activity_count: count(at.id),
-          total_minutes: sum(at.duration_in_minutes)
-        }
-      )
-
-    query
+    now
+    |> Attendance.attended()
+    |> where([activity: ac], ac.team_id == ^team.id)
+    |> group_by([at], at.member_id)
+    |> select([at], %{
+      member_id: at.member_id,
+      activity_count: count(at.id),
+      total_minutes: sum(at.duration_in_minutes)
+    })
     |> started_in(filter_options.when, team.timezone, now)
     |> Attendance.at_tagged(team, filter_options.activity_tag)
   end
@@ -268,10 +261,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp started_in(query, period, timezone, now),
     do: Attendance.started_in(query, period, timezone, now)
 
-  defp join_last_attended(query, team) do
+  defp join_last_attended(query, team, now) do
     from(
       m in query,
-      left_join: l in subquery(Member.last_attended_query(team)),
+      left_join: l in subquery(Member.last_attended_query(team, now)),
       as: :last_attended,
       on: m.id == l.member_id
     )

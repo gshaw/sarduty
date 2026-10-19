@@ -11,7 +11,8 @@ defmodule Web.MeLive do
   alias App.ViewData.MemberRecords
 
   # A member's own page (#156), /teams/:subdomain/me: their ID card, tax credit letters,
-  # hours and activities for a year (`?year=`), and qualifications. `member` comes from
+  # qualifications, the activities they're signed up for, and hours and activities for a
+  # year (`?year=`). `member` comes from
   # the login (Web.UserAuth, :ensure_team_member), never from the URL. Mostly read on a
   # phone.
   def mount(_params, _session, socket) do
@@ -25,6 +26,7 @@ defmodule Web.MeLive do
       |> assign(:letters, TaxCreditLetter.get_all_for_member(member))
       |> assign(:years, MemberRecords.years(member, now))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
+      |> assign(:signed_up, MemberRecords.signed_up(member, now))
       |> assign(:hours_tags, Activity.hours_tags(member.team))
 
     {:ok, socket}
@@ -33,12 +35,13 @@ defmodule Web.MeLive do
   def handle_params(params, _uri, socket) do
     %{member: member, years: years} = socket.assigns
     year = parse_year(params["year"], years)
+    now = DateTime.utc_now()
 
     socket =
       socket
       |> assign(:year, year)
-      |> assign(:hours, MemberRecords.hours(member, year))
-      |> assign(:attendances, MemberRecords.attendances(member, year))
+      |> assign(:hours, MemberRecords.hours(member, year, now))
+      |> assign(:attendances, MemberRecords.attendances(member, year, now))
 
     {:noreply, socket}
   end
@@ -81,6 +84,9 @@ defmodule Web.MeLive do
       <h2 class="subheading mt-8">Qualifications</h2>
       <.qualifications_content qualifications={@qualifications} member={@member} />
 
+      <h2 :if={@signed_up != []} class="subheading mt-8">Signed up for</h2>
+      <.signed_up_content :if={@signed_up != []} signed_up={@signed_up} member={@member} />
+
       <div class="heading-row mt-8">
         <h2 class="subheading">Hours in {@year}</h2>
         <.view_switch :if={length(@years) > 1} id="years" label="Year">
@@ -116,6 +122,20 @@ defmodule Web.MeLive do
     """
   end
 
+  defp signed_up_content(assigns) do
+    ~H"""
+    <ul id="signed-up" class="flex flex-col">
+      <.activity_row
+        :for={attendance <- @signed_up}
+        id={"signed-up-#{attendance.id}"}
+        attendance={attendance}
+        timezone={@member.team.timezone}
+      />
+    </ul>
+    <p class="hint">Hours count once the activity starts.</p>
+    """
+  end
+
   defp attendance_content(%{attendances: []} = assigns) do
     ~H"""
     <.empty_state id="no-attendance" title={"No activities in #{@year}"}>
@@ -131,21 +151,36 @@ defmodule Web.MeLive do
       Missing one? Tell a team admin, who can fix it in D4H.
     </p>
     <ul id="attendance" class="flex flex-col">
-      <li
+      <.activity_row
         :for={attendance <- @attendances}
         id={"attendance-#{attendance.id}"}
-        class="py-2 border-b border-border-subtle"
+        attendance={attendance}
+        timezone={@member.team.timezone}
       >
-        <span class="block">{attendance.activity.title}</span>
-        <span class="hint block">
-          {Service.Format.date_long(attendance.started_at, @member.team.timezone)} ·
-          <span class={["activity-kind", "activity-kind-#{attendance.activity.activity_kind}"]}>
-            {String.capitalize(attendance.activity.activity_kind)}
-          </span>
-          · {format_minutes(MemberRecords.minutes(attendance))}
-        </span>
-      </li>
+        · {format_minutes(MemberRecords.minutes(attendance))}
+      </.activity_row>
     </ul>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :attendance, :any, required: true
+  attr :timezone, :string, required: true
+  slot :inner_block
+
+  # One activity on the member's lists: title, then date and kind, then any extra.
+  defp activity_row(assigns) do
+    ~H"""
+    <li id={@id} class="py-2 border-b border-border-subtle">
+      <span class="block">{@attendance.activity.title}</span>
+      <span class="hint block">
+        {Service.Format.date_long(@attendance.started_at, @timezone)} ·
+        <span class={["activity-kind", "activity-kind-#{@attendance.activity.activity_kind}"]}>
+          {String.capitalize(@attendance.activity.activity_kind)}
+        </span>
+        {render_slot(@inner_block)}
+      </span>
+    </li>
     """
   end
 

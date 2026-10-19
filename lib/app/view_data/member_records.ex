@@ -9,15 +9,16 @@ defmodule App.ViewData.MemberRecords do
   alias App.Repo
 
   # A member's own records, for their page (#156, stage 2): hours and attended activities
-  # for one year, and their qualifications. Every query filters by the member and their
-  # team. Expects the member with its team, as Member.get_logins/2 returns it.
+  # for one year, the activities they're signed up for, and their qualifications. Every
+  # query filters by the member and their team. Expects the member with its team, as
+  # Member.get_logins/2 returns it.
 
   @doc "The years the member attended something in, and this year, newest first."
   def years(%Member{} = member, now) do
     this_year = Service.YearRange.year_in(now, member.team.timezone)
 
     member
-    |> attended_query()
+    |> attended_query(now)
     |> Attendance.years(member.team.timezone)
     |> then(&[this_year | &1])
     |> Enum.uniq()
@@ -25,19 +26,31 @@ defmodule App.ViewData.MemberRecords do
   end
 
   @doc "Primary, secondary, and total minutes in `year`, counted as the letter counts them."
-  def hours(%Member{} = member, year) do
+  def hours(%Member{} = member, year, now) do
     member.team
-    |> CountTaxCreditHours.call(year, [member.id])
+    |> CountTaxCreditHours.call(year, [member.id], now)
     |> CountTaxCreditHours.get(member.id)
   end
 
   @doc "The member's attended rows that started in `year`, newest first, with the activity."
-  def attendances(%Member{} = member, year) do
+  def attendances(%Member{} = member, year, now) do
     member
-    |> attended_query()
+    |> attended_query(now)
     |> Attendance.started_in(year, member.team.timezone)
     |> order_by([at], desc: at.started_at)
-    |> preload([at, ac], activity: ac)
+    |> preload([activity: ac], activity: ac)
+    |> Repo.all()
+  end
+
+  @doc """
+  The member's rows for activities still to start, soonest first, with the activity. D4H
+  marks a sign-up attending before the activity happens (#364).
+  """
+  def signed_up(%Member{} = member, now) do
+    member
+    |> member_query(&Attendance.signed_up(&1, now))
+    |> order_by([at], asc: at.started_at)
+    |> preload([activity: ac], activity: ac)
     |> Repo.all()
   end
 
@@ -89,10 +102,12 @@ defmodule App.ViewData.MemberRecords do
   defp expiring?(%{ends_at: nil}, _soon), do: false
   defp expiring?(%{ends_at: ends_at}, soon), do: not DateTime.after?(ends_at, soon)
 
-  defp attended_query(member) do
+  defp attended_query(member, now), do: member_query(member, &Attendance.attended(&1, now))
+
+  defp member_query(member, scope) do
     Attendance
-    |> join(:inner, [at], ac in assoc(at, :activity))
-    |> where([at, ac], at.member_id == ^member.id and ac.team_id == ^member.team_id)
-    |> where([at, ac], at.status == "attending" and is_nil(ac.deleted_at))
+    |> where([at], at.member_id == ^member.id)
+    |> scope.()
+    |> where([activity: ac], ac.team_id == ^member.team_id)
   end
 end

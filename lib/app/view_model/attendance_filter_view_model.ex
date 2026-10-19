@@ -47,9 +47,9 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     current = current_year()
 
     attendance_years =
-      Attendance
+      DateTime.utc_now()
+      |> Attendance.attended()
       |> where([a], a.member_id == ^member.id)
-      |> where([a], a.status == "attending")
       |> Attendance.years(member.team.timezone)
       |> Enum.map(&Integer.to_string/1)
 
@@ -89,8 +89,9 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
 
   # The member's attendance that the search and filters keep.
   defp filtered(member, filter_options) do
-    Attendance
-    |> Attendance.scope(member_id: member.id)
+    DateTime.utc_now()
+    |> Attendance.attended()
+    |> where([r], r.member_id == ^member.id)
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: member.team.timezone)
     |> scope(tag: filter_options.tag, hours_tags: Activity.hours_tags(member.team))

@@ -16,10 +16,10 @@ defmodule App.Operation.CountTaxCreditHours do
 
   def zero, do: @zero
 
-  @doc "Hours by member id for the team's attended rows that started in `year`."
-  def call(%Team{} = team, year, member_ids \\ nil) do
+  @doc "Hours by member id for the team's attended rows that started in `year`, by `now`."
+  def call(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()) do
     team
-    |> load_rows(year, member_ids)
+    |> load_rows(year, member_ids, now)
     |> count(year, team.timezone, Activity.hours_tags(team))
   end
 
@@ -122,17 +122,19 @@ defmodule App.Operation.CountTaxCreditHours do
     end
   end
 
-  @doc "The rows `count/4` takes: attended, on activities not deleted, started in `year`."
-  def load_rows(%Team{} = team, year, member_ids \\ nil) do
-    Attendance
+  @doc """
+  The rows `count/4` takes: attended by `now` (Attendance.attended/2) and started in
+  `year`.
+  """
+  def load_rows(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()) do
+    now
+    |> Attendance.attended()
     |> join(:inner, [at], m in assoc(at, :member))
-    |> join(:inner, [at], ac in assoc(at, :activity))
-    |> where([at, m, ac], m.team_id == ^team.id and ac.team_id == ^team.id)
-    |> where([at], at.status == "attending")
-    |> where([at, m, ac], is_nil(ac.deleted_at))
+    |> where([at, activity: ac], ac.team_id == ^team.id)
+    |> where([at, ..., m], m.team_id == ^team.id)
     |> scope_members(member_ids)
     |> Attendance.started_in(year, team.timezone)
-    |> select([at, m, ac], %{
+    |> select([at, activity: ac], %{
       member_id: at.member_id,
       started_at: at.started_at,
       finished_at: at.finished_at,
