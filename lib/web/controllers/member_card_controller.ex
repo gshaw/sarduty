@@ -10,7 +10,7 @@ defmodule Web.MemberCardController do
   alias Web.VerifyLimit
 
   # The photo on the verify site. Public, so it answers only for an active member's card:
-  # not for a cancelled card, nor for someone who has left the team (#176). Its 404s count
+  # not for a cancelled card, nor for a retired member (#176). Its 404s count
   # toward the verify site's limit.
   def photo(conn, %{"code" => input}), do: send_limited_photo(conn, input, :square)
 

@@ -23,12 +23,14 @@ defmodule Web.MemberCollectionLive do
 
   defp assign_list(socket, filter_options, changeset) do
     current_team = socket.assigns.current_team
-    today = Service.Period.today(DateTime.utc_now(), current_team.timezone)
+    now = DateTime.utc_now()
+    today = Service.Period.today(now, current_team.timezone)
 
     socket
-    |> assign(Map.take(filter_options, [:sort, :status, :details, :attended]))
-    |> assign(:today, today)
-    |> assign(:standing?, standing_column?(current_team, filter_options, today))
+    |> assign(Map.take(filter_options, [:sort, :details, :attended]))
+    |> assign(now: now, today: today)
+    |> assign(:standing?, standing_column?(current_team, filter_options, today, now))
+    |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
     |> assign(:paginated, build_paginated_content(current_team, filter_options))
     |> assign(:path_fn, build_path_fn(current_team, filter_options))
     |> assign(:form, to_form(changeset, as: "form"))
@@ -57,10 +59,10 @@ defmodule Web.MemberCollectionLive do
     >
       <:search field={@form[:q]} />
       <:filter
-        field={@form[:status]}
-        label="Status"
-        options={MemberFilterViewModel.status_kinds()}
-        default="active"
+        field={@form[:standing]}
+        label="Standing"
+        options={MemberFilterViewModel.standing_kinds(@form[:standing].value)}
+        default="current"
       />
       <:filter
         field={@form[:when]}
@@ -74,14 +76,6 @@ defmodule Web.MemberCollectionLive do
         type="combobox"
         options={MemberFilterViewModel.group_kinds(@current_team)}
         default=""
-      />
-      <:filter
-        :if={@standing?}
-        field={@form[:standing]}
-        label="Standing"
-        more
-        options={MemberFilterViewModel.standing_kinds(@form[:standing].value)}
-        default="any"
       />
       <:filter
         field={@form[:details]}
@@ -128,7 +122,7 @@ defmodule Web.MemberCollectionLive do
         class="whitespace-nowrap"
         sorts={[{"↑", "standing"}, {"↓", "standing-"}]}
       >
-        <span id={"standing-#{record.member.id}"}>{standing_text(record, @today)}</span>
+        <span id={"standing-#{record.member.id}"}>{standing_text(record, @today, @now)}</span>
       </:col>
       <:col :let={record} :if={@details == "missing"} label="Missing">
         <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
@@ -183,11 +177,11 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        :if={@status != "active"}
-        label="Departed"
+        :if={@retired?}
+        label="Retired"
         align="right"
         class="w-1/12 whitespace-nowrap"
-        sorts={[{"↓", "departed-"}, {"↑", "departed"}]}
+        sorts={[{"↓", "retired-"}, {"↑", "retired"}]}
       >
         {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
       </:col>
@@ -197,18 +191,23 @@ defmodule Web.MemberCollectionLive do
     """
   end
 
-  # Shown only when someone on the team is not active, or the filter asks for it.
-  defp standing_column?(_team, %{standing: standing}, _today) when standing not in [nil, "any"],
-    do: true
+  # Shown only when some current member is not active, or the filter goes past Current.
+  defp standing_column?(_team, %{standing: standing}, _today, _now)
+       when standing not in [nil, "current"],
+       do: true
 
-  defp standing_column?(team, _filter_options, today),
-    do: Member.any_not_active?(team, today, DateTime.utc_now())
+  defp standing_column?(team, _filter_options, today, now),
+    do: Member.any_not_active?(team, today, now)
 
-  defp standing_text(%{member: %{not_a_person: true}}, _today), do: "Not a person"
-  defp standing_text(%{away_until: nil}, _today), do: "Active"
-
-  defp standing_text(%{away_until: until}, today),
-    do: "Away until #{Service.Format.day_in_year(until, today)}"
+  # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
+  defp standing_text(record, today, now) do
+    cond do
+      not Member.current?(record.member, now) -> "Retired"
+      record.member.not_a_person -> "Not a person"
+      record.away_until -> "Away until #{Service.Format.day_in_year(record.away_until, today)}"
+      true -> "Active"
+    end
+  end
 
   defp clock_starts(record, team, today) do
     {why, date} = Member.clock_start(record, team.timezone)

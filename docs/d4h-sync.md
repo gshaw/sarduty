@@ -175,7 +175,7 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 - **Members and activities are never deleted.** A member deleted in D4H keeps their
   contact details here. Attendance and tax credit letters point at them, and attendance
   links, scans, and no-shows point at activities.
-- **A member D4H stops listing is marked departed.** D4H's `GET /members` leaves deleted
+- **A member D4H stops listing is marked retired.** D4H's `GET /members` leaves deleted
   members out, so the members stage sets `left_at` to the refresh time on any active
   member it didn't see (#72). It skips this when D4H returns no members at all. If D4H
   lists the member again, the next refresh copies D4H's `endsAt` back.

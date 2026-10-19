@@ -42,7 +42,7 @@ defmodule Web.Settings.MemberLoginsLive do
         Each member sees only their own ID card and letters. They log in with the email or
         mobile number D4H has for them.
       </p>
-      <p class="mb-6">Members who have left or retired cannot log in.</p>
+      <p class="mb-6">Retired members cannot log in.</p>
       <.form for={@form} id="member-logins-form" phx-submit="save">
         <.input field={@form[:member_logins]} type="checkbox" label="Let members log in" />
         <.form_actions>

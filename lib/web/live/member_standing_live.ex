@@ -57,6 +57,9 @@ defmodule Web.MemberStandingLive do
 
       :not_a_person ->
         {:noreply, put_flash(socket, :error, "Turn off Not a person to add an away period.")}
+
+      :retired ->
+        {:noreply, put_flash(socket, :error, "Retired members get no away periods.")}
     end
   end
 
@@ -130,14 +133,15 @@ defmodule Web.MemberStandingLive do
 
   defp load_standing(socket) do
     member = socket.assigns.member
-    today = Service.Period.today(DateTime.utc_now(), member.team.timezone)
+    now = DateTime.utc_now()
+    today = Service.Period.today(now, member.team.timezone)
     periods = MemberAwayPeriod.for_member(member)
 
     assign(socket,
       today: today,
       periods: periods,
       check_ins: MemberCheckIn.for_member(member),
-      standing: MemberAwayPeriod.standing(member, periods, today)
+      standing: MemberAwayPeriod.standing(member, periods, today, now)
     )
   end
 
@@ -230,11 +234,14 @@ defmodule Web.MemberStandingLive do
             No away periods.
           </p>
 
-          <p :if={@member.not_a_person} id="away-not-a-person" class="hint mt-6">
+          <p :if={@standing == :not_a_person} id="away-not-a-person" class="hint mt-6">
             Turn off Not a person to add an away period.
           </p>
+          <p :if={@standing == :retired} id="away-retired" class="hint mt-6">
+            Retired members get no away periods.
+          </p>
           <.form
-            :if={not @member.not_a_person}
+            :if={@standing not in [:not_a_person, :retired]}
             for={@away_form}
             id="away-form"
             phx-change="validate-away"

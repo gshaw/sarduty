@@ -95,14 +95,41 @@ defmodule App.Model.Member do
     )
   end
 
-  @doc "Narrows `query` to current members: not left as of `now`, and not retired."
-  def current_query(query, now) do
-    where(
-      query,
+  # The one test of who is on the team, as a query and as current?/2: no leave date by
+  # `now`, and not Retired in D4H. Anyone else is retired: SAR Duty's word for a member
+  # D4H retired or stopped listing, whichever field says so.
+
+  @doc "Narrows `query` to current members."
+  def current_query(query, now), do: where(query, ^current_dynamic(now))
+
+  @doc """
+  current_query/2's condition, for a query that ORs it with others or joins members:
+  pass the binding name for a joined member.
+  """
+  def current_dynamic(now, binding \\ nil)
+
+  def current_dynamic(now, nil) do
+    dynamic(
       [m],
       (is_nil(m.left_at) or m.left_at > ^now) and
         (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
     )
+  end
+
+  def current_dynamic(now, binding) when is_atom(binding) do
+    dynamic(
+      [{^binding, m}],
+      (is_nil(m.left_at) or m.left_at > ^now) and
+        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
+    )
+  end
+
+  @doc "Pure. current_query/2 for one member. A map without those keys is current."
+  def current?(member, now) do
+    left_at = Map.get(member, :left_at)
+
+    (is_nil(left_at) or DateTime.after?(left_at, now)) and
+      Map.get(member, :d4h_status) != "RETIRED"
   end
 
   @doc """
@@ -236,19 +263,14 @@ defmodule App.Model.Member do
     |> Repo.exists?()
   end
 
-  # D4H sets endsAt when a member retires. Takes any map with left_at.
-  def current?(%{left_at: left_at}, now), do: is_nil(left_at) or DateTime.after?(left_at, now)
-
   @manager_permissions [0, 1]
 
   @doc """
   Whether D4H makes this member one of the team's managers (#57): an OWNER or EDITOR who
-  isn't retired and hasn't left. Operational status doesn't matter.
+  is a current member. Operational status doesn't matter.
   """
-  def manager?(%Member{} = member, now) do
-    member.d4h_permission in @manager_permissions and member.d4h_status != "RETIRED" and
-      current?(member, now)
-  end
+  def manager?(%Member{} = member, now),
+    do: member.d4h_permission in @manager_permissions and current?(member, now)
 
   @doc """
   The members this email logs in as (#156): one per team with member logins on, where a
@@ -291,12 +313,8 @@ defmodule App.Model.Member do
     email = email |> String.trim() |> String.downcase()
 
     Member
-    |> where(
-      [m],
-      fragment("lower(?)", m.email) == ^email and
-        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
-        (is_nil(m.left_at) or m.left_at > ^now)
-    )
+    |> where([m], fragment("lower(?)", m.email) == ^email)
+    |> current_query(now)
     |> Repo.exists?()
   end
 
@@ -314,12 +332,10 @@ defmodule App.Model.Member do
   end
 
   defp current_phones_and_emails(now) do
-    from m in Member,
-      where:
-        not is_nil(m.phone) and not is_nil(m.email) and
-          (is_nil(m.d4h_status) or m.d4h_status != "RETIRED") and
-          (is_nil(m.left_at) or m.left_at > ^now),
-      select: {m.phone, m.email}
+    Member
+    |> where([m], not is_nil(m.phone) and not is_nil(m.email))
+    |> current_query(now)
+    |> select([m], {m.phone, m.email})
   end
 
   def permission_label(0), do: "Owner"

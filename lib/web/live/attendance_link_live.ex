@@ -174,7 +174,7 @@ defmodule Web.AttendanceLinkLive do
   defp error_text(:other_site), do: "This is not a SAR Duty ID card. Find the member by name."
   defp error_text(:other_team), do: "This ID card is for another team."
   defp error_text(:revoked), do: "This ID card is cancelled. Find the member by name instead."
-  defp error_text(:left_team), do: "This member has left the team."
+  defp error_text(:left_team), do: "This member is retired."
   defp error_text(:bad_time), do: "Enter the time as hours and minutes, like 09:30."
   defp error_text(:closed), do: "This attendance link is closed."
 

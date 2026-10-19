@@ -125,7 +125,7 @@ defmodule App.Model.MemberCard do
     end
   end
 
-  @doc "`:active`, `:inactive` when the member has left the team, or `:revoked`."
+  @doc "`:active`, `:inactive` when the member has retired, or `:revoked`."
   def status(%MemberCard{revoked_at: nil, member: member}, now) do
     if Member.current?(member, now), do: :active, else: :inactive
   end

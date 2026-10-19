@@ -59,7 +59,7 @@ defmodule Web.MemberFormLiveTest do
     html = lv |> form("#member-form", form: %{team_admin: "false"}) |> render_submit()
     assert html =~ "Make another member a team admin first."
 
-    assert lv |> element("#member-leave") |> render_click() =~
+    assert lv |> element("#member-retire-button") |> render_click() =~
              "Make another member a team admin first."
 
     refute_received {:records, _method, _path, _body}
@@ -81,7 +81,7 @@ defmodule Web.MemberFormLiveTest do
     assert map_size(body) == 1
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
-    lv |> element("#member-leave") |> render_click()
+    lv |> element("#member-retire-button") |> render_click()
 
     retire = "/members/#{admin.d4h_member_id}/retire"
     assert_received {:records, "PATCH", ^retire, %{"direction" => "RETIRE"}}

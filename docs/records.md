@@ -48,7 +48,7 @@ values, so it shows in the record's history. ApplyEdit refuses a D4H team.
 Records refuses a bad write with a 400 whose `title` says what is wrong; the page shows
 that title.
 
-- **Members**: add, change details, team admin or not, mark as left or rejoined.
+- **Members**: add, change details, team admin or not, mark as retired or rejoined.
   `POST /members` and `permission` are Records' own; D4H adds members and sets access
   only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
   admin cannot stop being one or leave, and saving a retired member's details keeps

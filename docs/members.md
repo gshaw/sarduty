@@ -16,9 +16,11 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
 - **Period** sets what Activities and Duration count, and limits the list to members on
   the team at some point in it: All, the last 30, 60, 90, 180, or 365 days (`when=90d`),
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
-  open the same list. A team that wants departed members uses Status.
-- **Standing** filters by [standing](#standing): Any (the default), Active, Away, or Not a
-  person. Its column says "Away until Mar 1" and sorts by that day.
+  open the same list.
+- **Standing** filters by [standing](#standing): Current (the default: everyone but the
+  retired), Active, Away, Not a person, Retired, or All. It replaced Status, and old
+  `status=` links are not kept (decided 2026-10-19). Its column says "Away until Mar 1"
+  and sorts by that day, with retired members last.
 
 - **Attended** lists members whose attendance clock is older than a time frame. The
   clock counts from the latest of their last activity, the day they joined, the end of
@@ -27,31 +29,35 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   Sep 2", "Checked in Oct 3", or "Joined Jun 1". The filter guesses at nothing: bots and
   members on leave are left out by the Standing filter, not by the clock.
 
-Status, Period, and Group sit in the filter bar's row. Standing, Details, and Attended
-wait behind **More filters** until one is on, so the row doesn't wrap and a link such as
+Standing, Period, and Group sit in the filter bar's row. Details and Attended wait
+behind **More filters** until one is on, so the row doesn't wrap and a link such as
 the home item's still shows every filter it sets.
 
 No column chooser. A column shows only when it says something: Standing when some
-current member is not active (or the filter is on), Departed when Status includes
-departed members, Missing with Details: Missing. ID hides on narrow screens.
+current member is not active (or the filter goes past Current), Retired when the
+Standing filter can show retired members, Missing with Details: Missing. ID hides on narrow screens.
 
 ## Standing
 
 A member's **standing** says whether the team expects them to show up now (#366):
-**Active**, **Away** for a dated period such as leave, or **Not a person**. Decided
-2026-10-18; the issue has the reasons.
+**Active**, **Away** for a dated period such as leave, **Not a person**, or **Retired**.
+Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 
-- **SAR Duty owns it.** It is not D4H data and nothing about it goes to D4H. Teams on D4H
-  and on SAR Duty Records work the same.
+- **SAR Duty owns it.** Nothing about it goes to D4H. Teams on D4H and on SAR Duty
+  Records work the same.
+- **Retired comes from D4H**: D4H marks the member Retired, or gives them a leave date
+  that has passed, or stops listing them. The same test as `Member.current_query/2`. It is read, never stored or set, and wins over
+  the rest. A retired member gets no away periods. Group rules and the attendance check
+  don't offer it: they only ever add or count current members.
 - **Dates, not jobs.** [MemberAwayPeriod](../lib/app/model/member_away_period.ex) stores
   a first and last day on the team's clock and a short reason the team admin writes,
-  such as "Parental leave", and `MemberAwayPeriod.standing/3` works out standing when
+  such as "Parental leave", and `MemberAwayPeriod.standing/4` works out standing when
   read. No job flips a member back.
 - **The reason is free text, not a list** (decided 2026-10-18). A fixed list of
   categories guessed at teams' cases and nothing read it. The hint asks for no medical
   details.
 - **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
-  an away period. **Active** is the absence of both and is never stored.
+  an away period. **Active** is the absence of the others and is never stored.
 - The member's **Standing** tab lists away periods, past ones too, with a form to add one
   and buttons to end one today or delete it. Any team admin can. The sidebar on every
   member tab shows the standing. Each change goes in the member's history, from

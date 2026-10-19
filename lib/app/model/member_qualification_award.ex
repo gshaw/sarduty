@@ -59,15 +59,8 @@ defmodule App.Model.MemberQualificationAward do
     )
   end
 
-  # Member.current_query/2 for the joined member.
-  defp current_members_only(query, now) do
-    where(
-      query,
-      [member: m],
-      (is_nil(m.left_at) or m.left_at > ^now) and
-        (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
-    )
-  end
+  defp current_members_only(query, now),
+    do: where(query, ^Member.current_dynamic(now, :member))
 
   def active?(%{starts_at: starts_at, ends_at: ends_at}, now) do
     (is_nil(starts_at) or not DateTime.after?(starts_at, now)) and
@@ -116,11 +109,10 @@ defmodule App.Model.MemberQualificationAward do
 
   defp current_members_awards(team_id, now) do
     MemberQualificationAward
-    |> join(:inner, [aw], m in assoc(aw, :member))
+    |> join(:inner, [aw], m in assoc(aw, :member), as: :member)
     |> join(:inner, [aw], q in assoc(aw, :qualification))
     |> where([_, m, q], m.team_id == ^team_id and q.team_id == ^team_id)
-    |> where([_, m], is_nil(m.left_at) or m.left_at > ^now)
-    |> where([_, m], is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
+    |> where(^Member.current_dynamic(now, :member))
   end
 
   # SQLite hands back max() of a datetime column as text.

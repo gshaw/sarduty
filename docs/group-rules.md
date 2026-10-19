@@ -106,7 +106,7 @@ includes and says which endorsements it counts toward. On a team with ID cards, 
 - `plan/3` is pure. An endorsement resolves to its holders (active awards), a smart group
   to whoever meets its rules, worked out recursively and memoized, and a group without
   rules to its D4H members. In rules intersect, Not in rules subtract, and only current
-  members (`Member.current?/2`) are added. A member who has left is removed for that
+  members (`Member.current?/2`) are added. A retired member is removed for that
   alone.
 - An award is active from `starts_at` until `ends_at`, either of which may be missing.
   `MemberQualificationAward.active?/2` is the one definition; the qualification and member

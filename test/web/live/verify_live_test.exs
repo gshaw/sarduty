@@ -89,7 +89,7 @@ defmodule Web.VerifyLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/?#{[code: card.code]}")
 
-    assert has_element?(lv, "#result-inactive", "Left the team Dec 2025")
+    assert has_element?(lv, "#result-inactive", "Retired Dec 2025")
     assert has_element?(lv, "#result-facts", "Not active")
     assert has_element?(lv, "#result-name", member.name)
     refute has_element?(lv, "#result-photo")

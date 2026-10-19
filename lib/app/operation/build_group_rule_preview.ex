@@ -28,9 +28,10 @@ defmodule App.Operation.BuildGroupRulePreview do
   # - `endorsements`: each id with `%{name, qualification_ids}`, includes followed.
   # - `titles`: each qualification D4H still has, by D4H id.
   # - `awards_by_member`: each member id with their awards for those qualifications.
-  # - `members`: the team's members, each with `id` and `left_at`.
+  # - `members`: the team's members, each with `id`, `left_at`, and `d4h_status`.
   # - `standings`: each member id with their standing today (#366), from
-  #   `MemberAwayPeriod.standing/3`. A member missing from it is active.
+  #   `MemberAwayPeriod.standing/4`. A member missing from it is active. A retired
+  #   member's is `:retired`, which no Standing rule offers, so it never meets one.
   #
   # A Standing rule is met by having any of its standings, `{:standing, :active}`,
   # `{:away, _}`, or `{:standing, :not_a_person}`. Standing is worked out for today, so
@@ -59,10 +60,10 @@ defmodule App.Operation.BuildGroupRulePreview do
 
     standings =
       Map.new(members, fn m ->
-        {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today)}
+        {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today, now)}
       end)
 
-    {Enum.map(members, &Map.take(&1, [:id, :left_at])), standings}
+    {Enum.map(members, &Map.take(&1, [:id, :left_at, :d4h_status])), standings}
   end
 
   defp awards_by_member(team_id, endorsements) do
@@ -73,7 +74,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   defp list_team_members(team_id) do
     Member
     |> where([m], m.team_id == ^team_id)
-    |> select([m], map(m, [:id, :left_at, :not_a_person]))
+    |> select([m], map(m, [:id, :left_at, :d4h_status, :not_a_person]))
     |> Repo.all()
   end
 
@@ -234,7 +235,7 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   defp removal_reasons(member, status, now) do
     cond do
-      member && not Member.current?(member, now) -> [{:left, member.left_at}]
+      member && not Member.current?(member, now) -> [{:retired, member.left_at}]
       match?({:unmet, _}, status) -> elem(status, 1)
       true -> []
     end
@@ -415,8 +416,10 @@ defmodule App.Operation.BuildGroupRulePreview do
     do: not is_nil(starts_at) and DateTime.after?(starts_at, now)
 
   @doc "A reason from `plan/3` as a sentence for the page and the change log."
-  def describe({:left, left_at}, _titles, timezone),
-    do: "Left the team #{Service.Format.date_short(left_at, timezone)}"
+  def describe({:retired, nil}, _titles, _timezone), do: "Retired"
+
+  def describe({:retired, left_at}, _titles, timezone),
+    do: "Retired #{Service.Format.date_short(left_at, timezone)}"
 
   def describe({:none_of, [], names}, _titles, _timezone),
     do: "No #{Enum.join(names, " or ")} on record"

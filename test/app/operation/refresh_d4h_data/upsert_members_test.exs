@@ -8,14 +8,14 @@ defmodule App.Operation.RefreshD4HData.UpsertMembersTest do
 
   @now ~U[2026-10-01 06:00:00Z]
 
-  test "marks this team's members D4H no longer lists as departed" do
+  test "marks this team's members D4H no longer lists as retired" do
     team = team_fixture()
     listed = member_fixture(team)
     missing = member_fixture(team)
     retired = member_fixture(team, %{left_at: ~U[2025-01-01 00:00:00Z]})
     other = member_fixture(team_fixture())
 
-    UpsertMembers.mark_departed(team.id, MapSet.new([listed.d4h_member_id]), @now)
+    UpsertMembers.mark_retired(team.id, MapSet.new([listed.d4h_member_id]), @now)
 
     assert Repo.get(Member, listed.id).left_at == nil
     assert Repo.get(Member, missing.id).left_at == @now

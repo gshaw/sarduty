@@ -152,7 +152,7 @@ defmodule Web.VerifyLive do
         <h2>How it works</h2>
         <p>
           SAR Duty verifies each card against the team's D4H records. A cancelled card shows
-          here, and so does a member who has left.
+          here, and so does a retired member.
         </p>
         <p>
           A real card's QR code always opens <b class="text-text">{Web.VerifyHost.host()}</b>. Add this page
@@ -240,7 +240,7 @@ defmodule Web.VerifyLive do
       </.band>
 
       <.panel>
-        <%!-- No photo for someone who has left: "not active" needs none (#176). --%>
+        <%!-- No photo for a retired member: "not active" needs none (#176). --%>
         <div class="media">
           <img
             :if={@status == :active}
@@ -312,10 +312,10 @@ defmodule Web.VerifyLive do
   defp expiry_text(%{ends_at: ends_at}, timezone),
     do: "Expires #{Service.Format.month_year(ends_at, timezone)}"
 
-  defp left_text(%{left_at: nil}), do: "Not a current member"
+  defp left_text(%{left_at: nil}), do: "Retired"
 
   defp left_text(member),
-    do: "Left the team #{Service.Format.month_year(member.left_at, member.team.timezone)}"
+    do: "Retired #{Service.Format.month_year(member.left_at, member.team.timezone)}"
 
   defp last_checked(%{d4h_refreshed_at: nil}), do: "never"
 

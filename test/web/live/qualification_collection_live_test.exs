@@ -57,8 +57,8 @@ defmodule Web.QualificationCollectionLiveTest do
     qualification_award_fixture(qualification, renewed, %{ends_at: soon})
     qualification_award_fixture(qualification, renewed, %{ends_at: later})
 
-    departed = member_fixture(team, %{name: "Departed Member", left_at: ~U[2025-01-01 00:00:00Z]})
-    qualification_award_fixture(qualification, departed, %{ends_at: soon})
+    retired = member_fixture(team, %{name: "Retired Member", left_at: ~U[2025-01-01 00:00:00Z]})
+    qualification_award_fixture(qualification, retired, %{ends_at: soon})
 
     {:ok, lv, _html} =
       conn
@@ -67,7 +67,7 @@ defmodule Web.QualificationCollectionLiveTest do
 
     assert has_element?(lv, "#expiring-#{expiring.id}-#{qualification.id}", "First Aid")
     refute has_element?(lv, "#expiring_qualifications", "Renewed Member")
-    refute has_element?(lv, "#expiring_qualifications", "Departed Member")
+    refute has_element?(lv, "#expiring_qualifications", "Retired Member")
   end
 
   test "the expiring view's Group filter keeps the group's members only (#367)",

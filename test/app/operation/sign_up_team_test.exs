@@ -32,7 +32,7 @@ defmodule App.Operation.SignUpTeamTest do
     assert message =~ "Owner or Editor of Ridge SAR"
   end
 
-  test "a retired or departed manager may not" do
+  test "a manager who is retired, or has a leave date, may not" do
     assert {:error, {:email, _}} = check("pat@example.com", [member(%{status: "RETIRED"})])
 
     left = member(%{left_at: ~U[2026-01-01 00:00:00Z]})
