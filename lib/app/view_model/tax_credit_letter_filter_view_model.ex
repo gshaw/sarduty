@@ -40,11 +40,9 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     current = current_year()
 
     attendance_years =
-      Attendance
-      |> join(:inner, [a], m in assoc(a, :member))
-      |> where([a, m], m.team_id == ^team.id)
-      |> where([a, m], a.status == "attending")
-      |> Attendance.started_before(DateTime.utc_now())
+      DateTime.utc_now()
+      |> Attendance.attended()
+      |> where([activity: ac], ac.team_id == ^team.id)
       |> Attendance.years(team.timezone)
       # Search and Rescue Volunteer Tax Credit (SRVTC) started in 2014
       |> Enum.filter(&(&1 >= 2014))

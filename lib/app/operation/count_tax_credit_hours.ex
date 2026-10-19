@@ -123,21 +123,18 @@ defmodule App.Operation.CountTaxCreditHours do
   end
 
   @doc """
-  The rows `count/4` takes: attended, on activities not deleted, started in `year`.
-  Only rows that started by `now`, so a sign-up for a coming activity counts
-  nothing (#364).
+  The rows `count/4` takes: attended by `now` (Attendance.attended/2) and started in
+  `year`.
   """
   def load_rows(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()) do
-    Attendance
+    now
+    |> Attendance.attended()
     |> join(:inner, [at], m in assoc(at, :member))
-    |> join(:inner, [at], ac in assoc(at, :activity))
-    |> where([at, m, ac], m.team_id == ^team.id and ac.team_id == ^team.id)
-    |> where([at], at.status == "attending")
-    |> where([at, m, ac], is_nil(ac.deleted_at))
+    |> where([at, activity: ac], ac.team_id == ^team.id)
+    |> where([at, ..., m], m.team_id == ^team.id)
     |> scope_members(member_ids)
     |> Attendance.started_in(year, team.timezone)
-    |> Attendance.started_before(now)
-    |> select([at, m, ac], %{
+    |> select([at, activity: ac], %{
       member_id: at.member_id,
       started_at: at.started_at,
       finished_at: at.finished_at,

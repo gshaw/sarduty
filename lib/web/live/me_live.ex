@@ -125,19 +125,12 @@ defmodule Web.MeLive do
   defp signed_up_content(assigns) do
     ~H"""
     <ul id="signed-up" class="flex flex-col">
-      <li
+      <.activity_row
         :for={attendance <- @signed_up}
         id={"signed-up-#{attendance.id}"}
-        class="py-2 border-b border-border-subtle"
-      >
-        <span class="block">{attendance.activity.title}</span>
-        <span class="hint block">
-          {Service.Format.date_long(attendance.started_at, @member.team.timezone)} ·
-          <span class={["activity-kind", "activity-kind-#{attendance.activity.activity_kind}"]}>
-            {String.capitalize(attendance.activity.activity_kind)}
-          </span>
-        </span>
-      </li>
+        attendance={attendance}
+        timezone={@member.team.timezone}
+      />
     </ul>
     <p class="hint">Hours count once the activity starts.</p>
     """
@@ -158,21 +151,36 @@ defmodule Web.MeLive do
       Missing one? Tell a team admin, who can fix it in D4H.
     </p>
     <ul id="attendance" class="flex flex-col">
-      <li
+      <.activity_row
         :for={attendance <- @attendances}
         id={"attendance-#{attendance.id}"}
-        class="py-2 border-b border-border-subtle"
+        attendance={attendance}
+        timezone={@member.team.timezone}
       >
-        <span class="block">{attendance.activity.title}</span>
-        <span class="hint block">
-          {Service.Format.date_long(attendance.started_at, @member.team.timezone)} ·
-          <span class={["activity-kind", "activity-kind-#{attendance.activity.activity_kind}"]}>
-            {String.capitalize(attendance.activity.activity_kind)}
-          </span>
-          · {format_minutes(MemberRecords.minutes(attendance))}
-        </span>
-      </li>
+        · {format_minutes(MemberRecords.minutes(attendance))}
+      </.activity_row>
     </ul>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :attendance, :any, required: true
+  attr :timezone, :string, required: true
+  slot :inner_block
+
+  # One activity on the member's lists: title, then date and kind, then any extra.
+  defp activity_row(assigns) do
+    ~H"""
+    <li id={@id} class="py-2 border-b border-border-subtle">
+      <span class="block">{@attendance.activity.title}</span>
+      <span class="hint block">
+        {Service.Format.date_long(@attendance.started_at, @timezone)} ·
+        <span class={["activity-kind", "activity-kind-#{@attendance.activity.activity_kind}"]}>
+          {String.capitalize(@attendance.activity.activity_kind)}
+        </span>
+        {render_slot(@inner_block)}
+      </span>
+    </li>
     """
   end
 

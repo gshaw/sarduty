@@ -105,11 +105,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
   """
   def when_kinds(team) do
     years =
-      Attendance
-      |> join(:inner, [a], m in assoc(a, :member))
-      |> where([a, m], m.team_id == ^team.id)
-      |> where([a], a.status == "attending")
-      |> Attendance.started_before(DateTime.utc_now())
+      DateTime.utc_now()
+      |> Attendance.attended()
+      |> where([activity: ac], ac.team_id == ^team.id)
       |> Attendance.years(team.timezone)
       |> Enum.map(&Integer.to_string/1)
 
@@ -245,22 +243,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   defp build_attendance_summary(team, filter_options, now) do
-    query =
-      from(
-        at in Attendance,
-        join: m in assoc(at, :member),
-        where: m.team_id == ^team.id,
-        where: at.status == "attending",
-        group_by: at.member_id,
-        select: %{
-          member_id: at.member_id,
-          activity_count: count(at.id),
-          total_minutes: sum(at.duration_in_minutes)
-        }
-      )
-
-    query
-    |> Attendance.started_before(now)
+    now
+    |> Attendance.attended()
+    |> where([activity: ac], ac.team_id == ^team.id)
+    |> group_by([at], at.member_id)
+    |> select([at], %{
+      member_id: at.member_id,
+      activity_count: count(at.id),
+      total_minutes: sum(at.duration_in_minutes)
+    })
     |> started_in(filter_options.when, team.timezone, now)
     |> Attendance.at_tagged(team, filter_options.activity_tag)
   end

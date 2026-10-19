@@ -57,12 +57,6 @@ defmodule App.Model.Attendance do
 
   # def delete(%Attendance{} = record), do: Repo.delete(record)
 
-  def scope(q, member_id: member_id) do
-    q
-    |> where([r], r.member_id == ^member_id)
-    |> where([r], r.status == "attending")
-  end
-
   @doc """
   The members D4H shows as signed up (attending) for the activity. Not requested: D4H
   gives every invited member a requested row until they reply.
@@ -77,13 +71,31 @@ defmodule App.Model.Attendance do
   end
 
   @doc """
-  Rows that started by `now`. D4H keeps a sign-up for a coming activity as
-  attending too, so hours and attended counts need this (#364).
+  Attended rows: attending, on an activity not deleted, and started by `now`. This is
+  what attended means everywhere; every count, hours total, year list, and last
+  attended starts here. D4H marks a sign-up for a coming activity attending too, so
+  `status == "attending"` alone is not attended (#364). Joins the activity as
+  `:activity`.
   """
-  def started_before(query, %DateTime{} = now), do: where(query, [r], r.started_at <= ^now)
+  def attended(query \\ Attendance, %DateTime{} = now),
+    do: query |> attending() |> where([r], r.started_at <= ^now)
 
-  @doc "Rows that start after `now`: sign-ups for coming activities."
-  def starting_after(query, %DateTime{} = now), do: where(query, [r], r.started_at > ^now)
+  @doc "Sign-ups for coming activities: attending rows that start after `now`."
+  def signed_up(query \\ Attendance, %DateTime{} = now),
+    do: query |> attending() |> where([r], r.started_at > ^now)
+
+  defp attending(query) do
+    query
+    |> join_activity()
+    |> where([r], r.status == "attending")
+    |> where([activity: a], is_nil(a.deleted_at))
+  end
+
+  defp join_activity(query) do
+    if has_named_binding?(query, :activity),
+      do: query,
+      else: join(query, :inner, [r], a in assoc(r, :activity), as: :activity)
+  end
 
   @doc "Rows that started in a year or rolling period in `timezone` (Service.Period.bounds/3)."
   def started_in(query, period, timezone, now \\ DateTime.utc_now()) do

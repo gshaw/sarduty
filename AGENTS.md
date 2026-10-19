@@ -174,6 +174,11 @@ fi
 - **Only adapters know D4H's JSON.** A new D4H resource is a struct in
   `lib/app/adapter/d4h/` with a `build/1` that maps the response, plus a fetch function in
   `d4h.ex`. Use `Req`; never `:httpoison`, `:tesla`, or `:httpc`.
+- **Attended means `Attendance.attended/2`.** D4H marks a sign-up for a coming activity
+  attending too, so never filter on `status == "attending"` to count attendance, hours,
+  or years; start from `Attendance.attended(now)`, or `signed_up(now)` for what's
+  coming. A test fails if a new file filters on it. When a rule like this is copied
+  into many queries, give it one home and a test before changing it.
 - **D4H ids live in `d4h_*_id` columns.** Foreign keys are local ids. Route params are
   local ids; D4H calls take the `d4h_*_id`.
 - **Scope every team query, including joins and deletes.** Filter the member's or

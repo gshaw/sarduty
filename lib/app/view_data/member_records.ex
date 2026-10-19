@@ -38,7 +38,7 @@ defmodule App.ViewData.MemberRecords do
     |> attended_query(now)
     |> Attendance.started_in(year, member.team.timezone)
     |> order_by([at], desc: at.started_at)
-    |> preload([at, ac], activity: ac)
+    |> preload([activity: ac], activity: ac)
     |> Repo.all()
   end
 
@@ -48,10 +48,9 @@ defmodule App.ViewData.MemberRecords do
   """
   def signed_up(%Member{} = member, now) do
     member
-    |> attending_query()
-    |> Attendance.starting_after(now)
+    |> member_query(&Attendance.signed_up(&1, now))
     |> order_by([at], asc: at.started_at)
-    |> preload([at, ac], activity: ac)
+    |> preload([activity: ac], activity: ac)
     |> Repo.all()
   end
 
@@ -103,13 +102,12 @@ defmodule App.ViewData.MemberRecords do
   defp expiring?(%{ends_at: nil}, _soon), do: false
   defp expiring?(%{ends_at: ends_at}, soon), do: not DateTime.after?(ends_at, soon)
 
-  defp attended_query(member, now),
-    do: member |> attending_query() |> Attendance.started_before(now)
+  defp attended_query(member, now), do: member_query(member, &Attendance.attended(&1, now))
 
-  defp attending_query(member) do
+  defp member_query(member, scope) do
     Attendance
-    |> join(:inner, [at], ac in assoc(at, :activity))
-    |> where([at, ac], at.member_id == ^member.id and ac.team_id == ^member.team_id)
-    |> where([at, ac], at.status == "attending" and is_nil(ac.deleted_at))
+    |> where([at], at.member_id == ^member.id)
+    |> scope.()
+    |> where([activity: ac], ac.team_id == ^member.team_id)
   end
 end

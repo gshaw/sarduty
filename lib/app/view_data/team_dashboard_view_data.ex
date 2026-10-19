@@ -291,14 +291,15 @@ defmodule App.ViewData.TeamDashboardViewData do
   end
 
   defp attendance_rows(team, since, now) do
-    Attendance
-    |> join(:inner, [at], a in assoc(at, :activity))
+    now
+    |> Attendance.attended()
     |> join(:inner, [at], m in assoc(at, :member))
-    |> where([_, a, m], a.team_id == ^team.id and m.team_id == ^team.id and is_nil(a.deleted_at))
-    |> where([at], at.status == "attending")
-    |> where([_, a], a.started_at >= ^since)
-    |> where([_, a], a.started_at <= ^now)
-    |> select([at, a], %{started_at: a.started_at, minutes: coalesce(at.duration_in_minutes, 0)})
+    |> where([activity: a], a.team_id == ^team.id and a.started_at >= ^since)
+    |> where([at, ..., m], m.team_id == ^team.id)
+    |> select([at, activity: a], %{
+      started_at: a.started_at,
+      minutes: coalesce(at.duration_in_minutes, 0)
+    })
     |> Repo.all()
   end
 

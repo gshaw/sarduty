@@ -74,9 +74,9 @@ defmodule Web.MeLiveTest do
       year = Service.YearRange.year_in(now, team.timezone)
       {start_of_year, _finish} = Service.YearRange.bounds(year, team.timezone)
 
-      # Earlier this year: an hour ago, or just after it began. Only past rows count.
-      mid_year =
-        Enum.max([DateTime.add(now, -1, :hour), DateTime.add(start_of_year, 60)], DateTime)
+      # Earlier this year: an hour ago, or the second it began, which is never after now.
+      # Only rows that have started count.
+      mid_year = Enum.max([DateTime.add(now, -1, :hour), start_of_year], DateTime)
 
       %{year: year, mid_year: mid_year, now: now}
     end
