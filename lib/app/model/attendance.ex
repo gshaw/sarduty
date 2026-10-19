@@ -81,8 +81,8 @@ defmodule App.Model.Attendance do
     {start, finish} = Service.Period.bounds(period, timezone, now)
 
     query
-    |> where([r], r.started_at >= type(^start, :naive_datetime))
-    |> where([r], r.started_at < type(^finish, :naive_datetime))
+    |> where([r], r.started_at >= ^start)
+    |> where([r], r.started_at < ^finish)
   end
 
   @doc """

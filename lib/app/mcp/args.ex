@@ -4,7 +4,7 @@ defmodule App.MCP.Args do
   @doc """
   The `from` and `to` dates in `args`, `YYYY-MM-DD` and both included, as UTC bounds in
   the team's time zone: `{:ok, from, to, start, finish}`, where start is inclusive and
-  finish exclusive. The bounds are UTC `NaiveDateTime`s, as Service.YearRange gives.
+  finish exclusive. The bounds are UTC `DateTime`s, as Service.YearRange gives.
   """
   def date_range(args, timezone) do
     with {:ok, from} <- date(args, "from"),
@@ -48,6 +48,6 @@ defmodule App.MCP.Args do
         {:gap, _before, just_after} -> just_after
       end
 
-    datetime |> DateTime.shift_zone!("Etc/UTC") |> DateTime.to_naive()
+    DateTime.shift_zone!(datetime, "Etc/UTC")
   end
 end

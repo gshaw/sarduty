@@ -2,8 +2,7 @@ defmodule Service.DayRange do
   @moduledoc """
   Whole days in a team's time zone, as UTC bounds for queries.
 
-  Bounds are `NaiveDateTime` in UTC, like `Service.YearRange`, so they compare
-  correctly against stored times with and without the `Z`.
+  Bounds are UTC `DateTime`s, like `Service.YearRange`.
   """
 
   @doc """
@@ -22,6 +21,5 @@ defmodule Service.DayRange do
     date
     |> DateTime.new!(~T[00:00:00], timezone)
     |> DateTime.shift_zone!("Etc/UTC")
-    |> DateTime.to_naive()
   end
 end

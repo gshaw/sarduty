@@ -208,8 +208,8 @@ defmodule App.Model.Activity do
     now = DateTime.truncate(now, :second)
 
     query
-    |> where([r], r.started_at >= type(^DateTime.to_naive(since), :naive_datetime))
-    |> where([r], r.finished_at <= type(^DateTime.to_naive(now), :naive_datetime))
+    |> where([r], r.started_at >= ^since)
+    |> where([r], r.finished_at <= ^now)
   end
 
   @doc "Rows that started in `year` in `timezone`."
@@ -217,8 +217,8 @@ defmodule App.Model.Activity do
     {start, finish} = Service.YearRange.bounds(year, timezone)
 
     query
-    |> where([r], r.started_at >= type(^start, :naive_datetime))
-    |> where([r], r.started_at < type(^finish, :naive_datetime))
+    |> where([r], r.started_at >= ^start)
+    |> where([r], r.started_at < ^finish)
   end
 
   @doc """
@@ -251,8 +251,8 @@ defmodule App.Model.Activity do
   @doc "Rows that overlap `start` to `finish`, so a weekend course stays in while it runs."
   def overlapping(query, start, finish) do
     query
-    |> where([r], r.started_at < type(^finish, :naive_datetime))
-    |> where([r], r.finished_at > type(^start, :naive_datetime))
+    |> where([r], r.started_at < ^finish)
+    |> where([r], r.finished_at > ^start)
   end
 
   @doc "The years `query`'s rows span, newest first, in `timezone`."
