@@ -7,42 +7,75 @@ defmodule Web.QualificationLive do
   import Web.Components.ViewSwitch
 
   alias App.Adapter.D4H
+  alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Repo
+  alias App.ViewModel.MemberFilterViewModel
+  alias App.ViewModel.QualificationFilterViewModel
   alias Service.StringHelpers
+
+  @views ["active", "expired"]
 
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
 
+  # `group` keeps the awards of a group's members (#367).
   def handle_params(params, _uri, socket) do
+    case QualificationFilterViewModel.validate(params, @views) do
+      {:ok, filter_options, changeset} ->
+        {:noreply, assign_awards(socket, params["id"], filter_options, changeset)}
+
+      {:error, _} ->
+        raise Web.Status.NotFound
+    end
+  end
+
+  defp assign_awards(socket, id, filter_options, changeset) do
     current_team = socket.assigns.current_team
-    qualification = find_qualification(params["id"], current_team.id)
+    qualification = find_qualification(id, current_team.id)
 
     {active_awards, expired_awards} =
       qualification |> list_awards_for_qualification() |> split_awards(DateTime.utc_now())
 
-    view = view(params["view"])
-    q = String.trim(params["q"] || "")
+    view = String.to_existing_atom(filter_options.view)
+    q = filter_options.q || ""
     awards = if view == :active, do: active_awards, else: expired_awards
+    group_member_ids = GroupMember.member_ids(current_team.id, filter_options.group)
 
-    {:noreply,
-     assign(socket,
-       page_title: qualification.title,
-       qualification: qualification,
-       active_awards: active_awards,
-       expired_awards: expired_awards,
-       view: view,
-       q: q,
-       form: to_form(%{"q" => q}, as: "form"),
-       awards: Enum.filter(awards, &StringHelpers.matches?(&1.member.name, q))
-     )}
+    assign(socket,
+      page_title: qualification.title,
+      qualification: qualification,
+      active_awards: active_awards,
+      expired_awards: expired_awards,
+      filter_options: filter_options,
+      view: view,
+      q: q,
+      form: to_form(changeset, as: "form"),
+      awards:
+        Enum.filter(
+          awards,
+          &(StringHelpers.matches?(&1.member.name, q) and
+              (is_nil(group_member_ids) or MapSet.member?(group_member_ids, &1.member.id)))
+        )
+    )
   end
 
-  def handle_event("change", %{"form" => %{"q" => q}}, socket) do
-    %{current_team: team, qualification: qualification, view: view} = socket.assigns
-    {:noreply, push_patch(socket, to: path(team, qualification, view, q), replace: true)}
+  def handle_event("change", %{"form" => form_params}, socket) do
+    %{current_team: team, qualification: qualification, filter_options: filter_options} =
+      socket.assigns
+
+    params = Map.put(form_params, "view", filter_options.view)
+
+    case QualificationFilterViewModel.validate(params, @views) do
+      {:ok, filter_options, _changeset} ->
+        {:noreply,
+         push_patch(socket, to: awards_path(team, qualification, filter_options), replace: true)}
+
+      {:error, _} ->
+        raise Web.Status.NotFound
+    end
   end
 
   # Split awards into active and expired, keeping the most recent per member. Awards come
@@ -63,13 +96,11 @@ defmodule Web.QualificationLive do
     {active_awards, expired_awards}
   end
 
-  defp view(nil), do: :active
-  defp view("expired"), do: :expired
-  defp view(_other), do: raise(Web.Status.NotFound)
-
-  defp path(team, qualification, view, q) do
+  defp awards_path(team, qualification, filter_options, changes \\ []) do
     params =
-      Enum.reject([view: view == :expired && "expired", q: q], &(elem(&1, 1) in [false, ""]))
+      filter_options
+      |> struct(changes)
+      |> QualificationFilterViewModel.query_params("active")
 
     ~p"/teams/#{team}/qualifications/#{qualification.id}?#{params}"
   end
@@ -100,6 +131,7 @@ defmodule Web.QualificationLive do
           view={@view}
           q={@q}
           form={@form}
+          filter_options={@filter_options}
           qualification={@qualification}
           team={@current_team}
         />
@@ -145,13 +177,14 @@ defmodule Web.QualificationLive do
       for={@form}
       id="award_filter_form"
       count={Service.Format.count(length(@awards), one: "%d member", many: "%d members")}
-      clear={path(@team, @qualification, @view, "")}
+      clear={awards_path(@team, @qualification, %QualificationFilterViewModel{view: "#{@view}"})}
+      path_fn={&awards_path(@team, @qualification, @filter_options, &1)}
     >
       <:lead>
         <.view_switch label="Awards">
           <:view
             id="awards-active-link"
-            patch={path(@team, @qualification, :active, @q)}
+            patch={awards_path(@team, @qualification, @filter_options, view: "active")}
             current={@view == :active}
             count={@active_count}
           >
@@ -159,7 +192,7 @@ defmodule Web.QualificationLive do
           </:view>
           <:view
             id="awards-expired-link"
-            patch={path(@team, @qualification, :expired, @q)}
+            patch={awards_path(@team, @qualification, @filter_options, view: "expired")}
             current={@view == :expired}
             count={@expired_count}
           >
@@ -168,6 +201,13 @@ defmodule Web.QualificationLive do
         </.view_switch>
       </:lead>
       <:search field={@form[:q]} />
+      <:filter
+        field={@form[:group]}
+        label="Group"
+        type="combobox"
+        options={MemberFilterViewModel.group_kinds(@team)}
+        default=""
+      />
     </.filter_bar>
 
     <.table
@@ -188,12 +228,20 @@ defmodule Web.QualificationLive do
         {Service.Format.date_short(award.ends_at, @team.timezone)}
       </:col>
     </.table>
-    <.empty_state :if={@awards == [] and @q != ""} id="no-matching-awards" title="No members match">
-      Change the search.
+    <.empty_state
+      :if={@awards == [] and filtered?(@filter_options)}
+      id="no-matching-awards"
+      title="No members match"
+    >
+      Change the search or the group.
     </.empty_state>
-    <p :if={@awards == [] and @q == ""} class="text-text-muted">No {@view} awards.</p>
+    <p :if={@awards == [] and !filtered?(@filter_options)} class="text-text-muted">
+      No {@view} awards.
+    </p>
     """
   end
+
+  defp filtered?(filter_options), do: filter_options.q not in [nil, ""] or filter_options.group
 
   defp find_qualification(id, team_id) do
     Qualification

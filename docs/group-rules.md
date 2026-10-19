@@ -119,6 +119,11 @@ renewal already on record keeps a member off the list. An In rule lasts as long 
 last of its groups and endorsements, and a group as its first rule to run out. Hand-kept
 lists and Not in rules don't expire.
 
+The qualifications page's **Expiring** view is coarser on purpose (#367): every award
+that ends within 30 to 180 days, 60 by default, with a Group filter on D4H's list. It
+answers "who in Callout has something expiring?" without working out which awards a rule
+needs. The home page's item counts the 60-day view, so its count and the list match.
+
 **Safety.** `problems/2` lists why the rules can't plan, and any problem plans no
 changes. The group page says why. Each would otherwise add every member or remove them
 all, and a broken LOA reference must stop the plan, not leave nobody out:
