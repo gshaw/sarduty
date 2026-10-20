@@ -3,7 +3,7 @@
   <p class="lead">A member's qualifications, grouped by when they expire.</p>
 
   <h3>On a member's own page</h3>
-  <div class="demo max-w-md">
+  <div class="demo">
     <.qualification_list
       id="qualification-list-demo"
       groups={SampleData.qualification_groups()}
@@ -12,7 +12,7 @@
   </div>
 
   <h3>On a team admin's member page</h3>
-  <div class="demo max-w-md">
+  <div class="demo">
     <.qualification_list
       id="qualification-list-admin-demo"
       groups={SampleData.qualification_groups()}
@@ -42,10 +42,10 @@
       Groups come in this order: expiring within 60 days, within 180 days, later, does not expire, and expired. An empty group does not show. 60 days is the same window as the team's expiring qualifications.
     </li>
     <li>
-      Each qualification is one row, from its latest award. A renewed one stays in its current group. Members see when they first held it. Team admins see each earlier award under the row.
+      Each group is a heading over a table, one row per qualification, from its latest award. A renewed one stays in its current group, with the year it was first held. Team admins also see each earlier award in its own column.
     </li>
     <li>
-      Expired ones are history, not a problem: the heading is muted, and each row says when the member held it.
+      Expired ones are history, not a problem: the heading is muted, and the Held column says when the member held it.
     </li>
   </ul>
 

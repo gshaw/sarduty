@@ -110,15 +110,16 @@ admin's member page, from one query and one component each (#308, #339, decided
 
 - **Qualifications** come from `MemberRecords.qualifications/2`, grouped by
   `MemberRecords.group_awards/2` and drawn by
-  [`<.qualification_list>`](../lib/web/components/qualification_list.ex): Expiring within
+  [`<.qualification_list>`](../lib/web/components/qualification_list.ex) as a heading
+  and a table per group, one row each (a list took two lines a row): Expiring within
   60 days, within 180 days, later, Does not expire, and Expired. Empty groups don't show.
   60 days is the app's one expiring window (`BuildGroupRulePreview.expiring_days/0`); 180
   is the longest choice on the team's expiring view. The groups don't collapse.
 - **One row per qualification**, from its latest award. A renewal stays in its current
-  group: members read "First held 2019", and team admins see each earlier award under the
-  row, with Remove on a team on SAR Duty Records. An expired one reads "Held Mar 2019 –
-  Sep 2024" under a muted heading: it's something they did, not a problem. The admin's
-  tab lost its Start column.
+  group, with the year it was first held. Team admins also get an Earlier awards column,
+  with Remove on a team on SAR Duty Records. An expired one's Held column reads "Mar
+  2019 – Sep 2024" under a muted heading: it's something they did, not a problem. The
+  admin's tab lost its Start column.
 - **Activities** use [`<.activity_list>`](../lib/web/components/activity_list.ex): the
   title links to the activity in D4H (`D4H.activity_url/2`), then the day, the kind, and
   the time there. The year's activities group by month, newest first

@@ -205,7 +205,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(
                lv,
                "#qualifications-within-60-days #qualifications-#{first_aid.id}",
-               "First held 2019"
+               "2019"
              )
 
       assert has_element?(lv, "#qualifications-never #qualifications-#{rope.id}")
@@ -213,7 +213,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(
                lv,
                "#qualifications-expired #qualifications-#{avalanche.id}",
-               "Held Jan 2020 – Sep 2024"
+               "Jan 2020 – Sep 2024"
              )
 
       refute has_element?(lv, "#qualifications-#{other_team.id}")
