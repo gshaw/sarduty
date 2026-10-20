@@ -305,4 +305,7 @@ defmodule App.Model.MemberCard do
 
   def mark_in_wallet!(%MemberCard{} = card, now),
     do: card |> change(in_wallet_at: now) |> Repo.update!()
+
+  def mark_out_of_wallet!(%MemberCard{} = card),
+    do: card |> change(in_wallet_at: nil) |> Repo.update!()
 end

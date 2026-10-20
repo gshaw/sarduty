@@ -4,9 +4,13 @@ defmodule App.Adapter.GoogleWallet do
   so a change is sent here and every saved copy updates; there is no phone to push to.
   """
 
+  alias App.Adapter.GoogleWallet
+
   require Logger
 
   @api "https://walletobjects.googleapis.com/walletobjects/v1"
+  # Google's root keys for the save and delete callbacks (GoogleWallet.Callback).
+  @callback_keys_url "https://pay.google.com/gp/m/issuer/keys"
   @token_url "https://oauth2.googleapis.com/token"
   @scope "https://www.googleapis.com/auth/wallet_object.issuer"
 
@@ -80,6 +84,14 @@ defmodule App.Adapter.GoogleWallet do
       )
 
     "https://pay.google.com/gp/v/save/#{jwt}"
+  end
+
+  @doc "Google's root keys for checking a callback, as public keys."
+  def fetch_callback_keys(now) do
+    case request!(url: @callback_keys_url, method: :get) do
+      %{status: 200, body: body} -> {:ok, GoogleWallet.Callback.root_keys(body, now)}
+      %{status: status, body: body} -> log_error("callback keys", status, body)
+    end
   end
 
   @doc "A JWT signed RS256 with the service account's key."

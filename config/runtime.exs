@@ -41,11 +41,13 @@ config :sarduty, :apple_pass,
 
 # Google Wallet passes for member ID cards. Optional, like Apple's. The service account
 # is the key file's JSON. Google refuses a pass whose images it can't load, and it can't
-# reach a dev server, so only production passes have a logo and photo.
+# reach a dev server, so only production passes have a logo and photo, and only
+# production's class asks Google for save and delete callbacks.
 config :sarduty, :google_wallet,
   issuer_id: System.get_env("GOOGLE_WALLET_ISSUER_ID"),
   service_account: System.get_env("GOOGLE_WALLET_SERVICE_ACCOUNT"),
-  images: config_env() == :prod
+  images: config_env() == :prod,
+  callbacks: config_env() == :prod
 
 # Twilio, for texting login codes. Optional: without all four, there is no text login.
 # Dev only logs texts unless DEV_SEND_SMS is set, like DEV_SEND_EMAIL for mail. Tests

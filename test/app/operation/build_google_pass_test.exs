@@ -63,6 +63,16 @@ defmodule App.Operation.BuildGooglePassTest do
     end
   end
 
+  test "only a class with callbacks on asks Google to post saves and deletes" do
+    class = BuildGooglePass.pass_class(@config)
+    refute Map.has_key?(class, :callbackOptions)
+
+    config = Map.put(@config, :callbacks, true)
+    assert %{callbackOptions: %{url: url}} = BuildGooglePass.pass_class(config)
+
+    assert String.ends_with?(url, "/wallet/google")
+  end
+
   test "the QR code opens the card's page on the verify site, with only the code printed under it" do
     barcode = object(card()).barcode
 

@@ -121,8 +121,17 @@ pass again, and every saved copy changes:
 
 **In Wallet** (#389): a member's overview lists "Add your ID card to Wallet" under For
 you to do until SAR Duty knows the card is in one (`MemberCard.in_wallet?/1`). Apple
-Wallet registers the phone, for the serial. Google tells SAR Duty nothing yet, so the
-member closes the item with **Mark as added**, which sets the card's `in_wallet_at`.
+Wallet registers the phone, for the serial. Google posts a signed message to
+`/wallet/google` when the member saves or deletes the pass: the class's
+`callbackOptions`, production only, since Google can't reach a dev server.
+[GoogleWallet.Callback](../lib/app/adapter/google_wallet/callback.ex) checks it with
+Google's `ECv2SigningOnly` protocol: a root key from `pay.google.com/gp/m/issuer/keys`
+signs an intermediate key, which signs the message for SAR Duty's issuer. A save sets the
+card's `in_wallet_at` and a delete clears it
+([RecordGoogleWalletEvent](../lib/app/operation/record_google_wallet_event.ex)). A Google
+replacement is a new pass, so the mark is per card. Google may retry or repeat a message,
+and both are safe to take twice. Another host's class (dev shares the issuer) and unknown
+cards get a 200 and change nothing; a bad signature gets a 400.
 
 Google loads images from URLs and refuses a pass whose images it can't load. It can't
 reach a dev server, so dev passes have none. In production:

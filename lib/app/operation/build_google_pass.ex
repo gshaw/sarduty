@@ -16,7 +16,8 @@ defmodule App.Operation.BuildGooglePass do
 
   @doc """
   The issuer ID, the service account's credentials, the host the ids are made under,
-  and whether passes carry the logo and photo. Dev and production share one issuer, so the host
+  whether passes carry the logo and photo, and whether Google sends save and delete
+  callbacks. Dev and production share one issuer, so the host
   keeps their ids apart.
   """
   def config do
@@ -26,7 +27,8 @@ defmodule App.Operation.BuildGooglePass do
       issuer_id: config.issuer_id,
       credentials: GoogleWallet.credentials(config.service_account),
       host: Web.Endpoint.host(),
-      images: Map.get(config, :images, false)
+      images: Map.get(config, :images, false),
+      callbacks: Map.get(config, :callbacks, false)
     }
   end
 
@@ -57,6 +59,19 @@ defmodule App.Operation.BuildGooglePass do
   in a row on the front; the rest of the text shows under Details.
   """
   def pass_class(config) do
+    config
+    |> class_fields()
+    |> Map.merge(callback_options(config))
+  end
+
+  # Google posts saves and deletes here (RecordGoogleWalletEvent). It can't reach a dev
+  # server, so only production's class has them.
+  defp callback_options(%{callbacks: true}),
+    do: %{callbackOptions: %{url: url(~p"/wallet/google")}}
+
+  defp callback_options(_config), do: %{}
+
+  defp class_fields(config) do
     %{
       id: "#{config.issuer_id}.#{config.host}-member-card",
       # A card is for one person, like Apple's sharingProhibited.
