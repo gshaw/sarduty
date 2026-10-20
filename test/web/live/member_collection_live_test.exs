@@ -52,6 +52,11 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#member_collection", "Avery Rope")
     refute has_element?(lv, "#member_collection", "Blake Ground")
     assert has_element?(lv, ".filter-bar-chips a", "Rope rescue")
+
+    # The combobox lists its empty option, All, so one pick clears the filter.
+    assert has_element?(lv, "#form_group-combobox[data-clearable] option[value='']", "All")
+    lv |> form("#member_filter_form", form: %{group: ""}) |> render_change()
+    assert has_element?(lv, "#member_collection", "Blake Ground")
   end
 
   test "the Tag filter counts only the activities with the tag, and links to them",
@@ -286,7 +291,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "table th", "Standing")
   end
 
-  test "Standing: Current leaves out retired members; Retired and All show them",
+  test "Standing: Not retired leaves out retired members; Retired and All show them",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     current = member_fixture(team, %{name: "Cara Current"})
@@ -313,6 +318,9 @@ defmodule Web.MemberCollectionLiveTest do
 
       assert has_element?(lv, "table th", "Retired") == standing in ["retired", "all"]
     end
+
+    {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members")
+    assert has_element?(lv, "select[name='form[standing]'] option[value=current]", "Not retired")
 
     {:ok, lv, _html} =
       live(conn |> log_in_user(user), ~p"/teams/#{team}/members?when=all&standing=all")

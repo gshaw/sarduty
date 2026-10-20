@@ -182,6 +182,7 @@ defmodule Web.Components.FilterBar do
         options={@filter.options}
         prompt="All"
         placeholder="All"
+        clearable
       />
     </div>
     """

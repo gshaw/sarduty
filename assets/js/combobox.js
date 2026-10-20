@@ -1,14 +1,16 @@
 // A select you type into (#324). The hook's element holds a hidden <select>, which the
 // form submits and the server renders, and a text box with an empty list beside it, under
 // phx-update="ignore". Typing lists the select's options that contain every word typed;
-// picking one sets the select and fires its input event, so phx-change still runs. The
-// ARIA follows the WAI combobox pattern: focus stays in the text box and
-// aria-activedescendant names the highlighted option.
+// picking one sets the select and fires its input event, so phx-change still runs. A
+// clearable one, a filter's, lists the empty option first, as All. The ARIA follows the
+// WAI combobox pattern: focus stays in the text box and aria-activedescendant names the
+// highlighted option.
 export const Combobox = {
   mounted() {
     this.select = this.el.querySelector("select")
     this.input = this.el.querySelector("input[role=combobox]")
     this.list = this.el.querySelector("[role=listbox]")
+    this.clearable = this.el.hasAttribute("data-clearable")
     this.active = -1
     this.syncText()
 
@@ -105,7 +107,7 @@ export const Combobox = {
 
     for (const child of this.select.children) {
       const options = child.tagName === "OPTGROUP" ? [...child.children] : [child]
-      const matches = options.filter(o => o.value !== "" && words.every(w => o.text.toLowerCase().includes(w)))
+      const matches = options.filter(o => (o.value !== "" || this.clearable) && words.every(w => o.text.toLowerCase().includes(w)))
       if (matches.length === 0) continue
       if (child.tagName === "OPTGROUP") items.push(this.groupItem(child.label))
       for (const option of matches) items.push(this.optionItem(option, words, count++))

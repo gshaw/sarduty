@@ -197,7 +197,7 @@ defmodule Web.MemberCollectionLive do
     """
   end
 
-  # Shown only when some current member is not active, or the filter goes past Current.
+  # Shown only when some current member is not active, or the filter goes past Not retired.
   defp standing_column?(_team, %{standing: standing}, _today, _now)
        when standing not in [nil, "current"],
        do: true
