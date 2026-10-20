@@ -13,7 +13,7 @@ defmodule Web.PrivacyLive do
     ~H"""
     <article id="privacy" class="max-w-prose">
       <h1 class="title">Privacy</h1>
-      <p class="hint">Last changed October 7, 2026.</p>
+      <p class="hint">Last changed October 20, 2026.</p>
       <p>
         SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
       </p>
@@ -34,6 +34,9 @@ defmodule Web.PrivacyLive do
       </p>
       <p id="privacy-operator">
         Gerry Shaw, a volunteer member of South Fraser Search and Rescue, runs SAR Duty. SAR Duty is an independent project. South Fraser Search and Rescue and the other teams that use it do not run, own, or endorse it.
+      </p>
+      <p id="privacy-access">
+        SAR Duty's admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
       </p>
       <p>
         To see, fix, or remove your data, ask your team. Most of it comes from D4H, so the change is made there. For anything else, email <.a

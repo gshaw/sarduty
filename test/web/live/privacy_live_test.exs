@@ -8,6 +8,7 @@ defmodule Web.PrivacyLiveTest do
 
     assert has_element?(lv, "#privacy h1", "Privacy")
     assert has_element?(lv, "#privacy-operator", "Gerry Shaw")
+    assert has_element?(lv, "#privacy-access", "Andrew Wallwork")
     assert has_element?(lv, ~s(#privacy-contact[href^="mailto:"]))
   end
 
