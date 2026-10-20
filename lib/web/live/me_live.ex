@@ -1,7 +1,6 @@
 defmodule Web.MeLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.ActivityList
   import Web.Components.ActivityMap
   import Web.Components.Chart
   import Web.Components.OpenInMaps
@@ -125,16 +124,25 @@ defmodule Web.MeLive do
             @member.team
           )}.
         </p>
-        <.activity_list
+        <.table
           :if={@overview.lately != []}
           id="lately-list"
           rows={@overview.lately}
-          timezone={@member.team.timezone}
-          href={activity_href(@member.team)}
-          external={true}
+          row_id={&"lately-list-#{&1.id}"}
         >
-          <:detail :let={attendance}>{Format.duration(MemberRecords.minutes(attendance))}</:detail>
-        </.activity_list>
+          <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+            {Format.date_short(attendance.started_at, @member.team.timezone)}
+          </:col>
+          <:col :let={attendance} label="Activity">
+            <.d4h_activity_link team={@member.team} activity={attendance.activity} />
+          </:col>
+          <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap">
+            <.activity_kind_mark activity={attendance.activity} />
+          </:col>
+          <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
+            {Format.duration(MemberRecords.minutes(attendance))}
+          </:col>
+        </.table>
       </section>
     </div>
     """
@@ -171,10 +179,7 @@ defmodule Web.MeLive do
       <div class="min-w-0">
         <.activity_kind_mark activity={@activity} class="text-sm" />
         <h2 class="next-up-title">
-          <.a :if={activity_href(@team)} href={activity_href(@team).(@activity)} external={true}>
-            {@activity.title}
-          </.a>
-          <span :if={!activity_href(@team)}>{@activity.title}</span>
+          <.d4h_activity_link team={@team} activity={@activity} />
         </h2>
         <p class="hint">{where_and_when(@activity, @now)}</p>
         <.open_in_maps
@@ -241,9 +246,4 @@ defmodule Web.MeLive do
 
   defp next_to_expire(award, timezone),
     do: "#{award.qualification.title} expires #{Format.date_long(award.ends_at, timezone)}"
-
-  # A team on SAR Duty Records has no activity page a member can open (docs/records.md).
-  defp activity_href(team) do
-    if !D4H.records?(team), do: &D4H.activity_url(team, &1)
-  end
 end
