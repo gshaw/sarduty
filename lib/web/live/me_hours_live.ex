@@ -13,7 +13,6 @@ defmodule Web.MeHoursLive do
 
     socket =
       socket
-      |> assign(:page_title, "Hours")
       |> assign(:years, MemberRecords.years(member, DateTime.utc_now()))
       |> assign(:hours_tags, Activity.hours_tags(member.team))
 
@@ -26,6 +25,7 @@ defmodule Web.MeHoursLive do
 
     socket =
       socket
+      |> assign(:page_title, "Hours in #{year}")
       |> assign(:year, year)
       |> assign(:hours, MemberRecords.hours(member, year, DateTime.utc_now()))
 
