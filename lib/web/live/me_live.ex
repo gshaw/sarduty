@@ -1,8 +1,11 @@
 defmodule Web.MeLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.ActivityList
+  import Web.Components.QualificationList
   import Web.Components.ViewSwitch
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -62,11 +65,11 @@ defmodule Web.MeLive do
       <p class="lead">{@member.name}</p>
 
       <%= if @card || @member.team.id_cards_enabled do %>
-        <h2 class="subheading mt-8">ID card</h2>
+        <h2 class="heading mt-8">ID card</h2>
         <.card_content card={@card} member={@member} />
       <% end %>
 
-      <h2 class="subheading mt-8">Tax credit letters</h2>
+      <h2 class="heading mt-8">Tax credit letters</h2>
       <.empty_state :if={@letters == []} id="no-letters" title="No tax credit letters yet">
         Your team admins make them after each year ends.
       </.empty_state>
@@ -81,14 +84,14 @@ defmodule Web.MeLive do
         </li>
       </ul>
 
-      <h2 class="subheading mt-8">Qualifications</h2>
+      <h2 class="heading mt-8">Qualifications</h2>
       <.qualifications_content qualifications={@qualifications} member={@member} />
 
-      <h2 :if={@signed_up != []} class="subheading mt-8">Signed up for</h2>
+      <h2 :if={@signed_up != []} class="heading mt-8">Signed up for</h2>
       <.signed_up_content :if={@signed_up != []} signed_up={@signed_up} member={@member} />
 
       <div class="heading-row mt-8">
-        <h2 class="subheading">Hours in {@year}</h2>
+        <h2 class="heading">Hours in {@year}</h2>
         <.view_switch :if={length(@years) > 1} id="years" label="Year">
           <:view
             :for={year <- @years}
@@ -124,14 +127,13 @@ defmodule Web.MeLive do
 
   defp signed_up_content(assigns) do
     ~H"""
-    <ul id="signed-up" class="flex flex-col">
-      <.activity_row
-        :for={attendance <- @signed_up}
-        id={"signed-up-#{attendance.id}"}
-        attendance={attendance}
-        timezone={@member.team.timezone}
-      />
-    </ul>
+    <.activity_list
+      id="signed-up"
+      rows={@signed_up}
+      timezone={@member.team.timezone}
+      href={activity_href(@member.team)}
+      external={true}
+    />
     <p class="hint">Hours count once the activity starts.</p>
     """
   end
@@ -139,7 +141,7 @@ defmodule Web.MeLive do
   defp attendance_content(%{attendances: []} = assigns) do
     ~H"""
     <.empty_state id="no-attendance" title={"No activities in #{@year}"}>
-      Activities you attended show here after SAR Duty refreshes from D4H.
+      Activities you attended show here after SAR Duty refreshes from {D4H.service_name(@member.team)}.
     </.empty_state>
     """
   end
@@ -148,85 +150,50 @@ defmodule Web.MeLive do
     ~H"""
     <p class="mt-6">
       {Service.Format.count(length(@attendances), one: "1 activity", many: "%d activities")} attended.
-      Missing one? Tell a team admin, who can fix it in D4H.
+      Missing one? Tell a team admin, who can fix it in {D4H.service_name(@member.team)}.
     </p>
-    <ul id="attendance" class="flex flex-col">
-      <.activity_row
-        :for={attendance <- @attendances}
-        id={"attendance-#{attendance.id}"}
-        attendance={attendance}
+    <section
+      :for={{month, rows} <- MemberRecords.by_month(@attendances, @member.team.timezone)}
+      id={"month-#{Date.to_iso8601(month)}"}
+      class="mb-6"
+    >
+      <h3 class="subheading">{Service.Format.month(month)}</h3>
+      <.activity_list
+        id={"attendance-#{Date.to_iso8601(month)}"}
+        row_id="attendance"
+        rows={rows}
         timezone={@member.team.timezone}
+        href={activity_href(@member.team)}
+        external={true}
       >
-        · {format_minutes(MemberRecords.minutes(attendance))}
-      </.activity_row>
-    </ul>
+        <:detail :let={attendance}>{format_minutes(MemberRecords.minutes(attendance))}</:detail>
+      </.activity_list>
+    </section>
     """
   end
 
-  attr :id, :string, required: true
-  attr :attendance, :any, required: true
-  attr :timezone, :string, required: true
-  slot :inner_block
-
-  # One activity on the member's lists: title, then date and kind, then any extra.
-  defp activity_row(assigns) do
-    ~H"""
-    <li id={@id} class="py-2 border-b border-border-subtle">
-      <span class="block">{@attendance.activity.title}</span>
-      <span class="hint block">
-        {Service.Format.date_long(@attendance.started_at, @timezone)} ·
-        <span class={["activity-kind", "activity-kind-#{@attendance.activity.activity_kind}"]}>
-          {String.capitalize(@attendance.activity.activity_kind)}
-        </span>
-        {render_slot(@inner_block)}
-      </span>
-    </li>
-    """
+  # A team on SAR Duty Records has no activity page a member can open (docs/records.md).
+  defp activity_href(team) do
+    if !D4H.records?(team), do: &D4H.activity_url(team, &1)
   end
 
-  defp qualifications_content(%{qualifications: %{current: [], expired: []}} = assigns) do
+  defp qualifications_content(%{qualifications: []} = assigns) do
     ~H"""
     <.empty_state id="no-qualifications" title="No qualifications">
-      Qualifications you hold in {App.Adapter.D4H.service_name(@member.team)} show here.
+      Qualifications you hold in {D4H.service_name(@member.team)} show here.
     </.empty_state>
     """
   end
 
   defp qualifications_content(assigns) do
     ~H"""
-    <ul :if={@qualifications.current != []} id="qualifications" class="flex flex-col">
-      <li
-        :for={%{award: award, expiring?: expiring?} <- @qualifications.current}
-        id={"qualification-#{award.qualification_id}"}
-        class="py-2 border-b border-border-subtle"
-      >
-        <span class="block">
-          {award.qualification.title}
-          <.badge :if={expiring?} kind={:warning}>Expires soon</.badge>
-        </span>
-        <span class="hint block">{expiry(award, @member.team.timezone)}</span>
-      </li>
-    </ul>
-    <h3 :if={@qualifications.expired != []} class="font-semibold mt-6">Expired</h3>
-    <ul :if={@qualifications.expired != []} id="expired-qualifications" class="flex flex-col">
-      <li
-        :for={%{award: award} <- @qualifications.expired}
-        id={"qualification-#{award.qualification_id}"}
-        class="py-2 border-b border-border-subtle"
-      >
-        <span class="block">{award.qualification.title}</span>
-        <span class="hint block">
-          Expired {Service.Format.date_long(award.ends_at, @member.team.timezone)}
-        </span>
-      </li>
-    </ul>
+    <.qualification_list
+      id="qualifications"
+      groups={@qualifications}
+      timezone={@member.team.timezone}
+    />
     """
   end
-
-  defp expiry(%{ends_at: nil}, _timezone), do: "Does not expire"
-
-  defp expiry(%{ends_at: ends_at}, timezone),
-    do: "Expires #{Service.Format.date_long(ends_at, timezone)}"
 
   defp format_minutes(minutes), do: Service.Format.duration(minutes)
 

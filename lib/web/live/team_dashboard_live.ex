@@ -152,7 +152,7 @@ defmodule Web.TeamDashboardLive do
         <span class="next-up-time">{Format.time_short(@activity.started_at, @team.timezone)}</span>
       </div>
       <div class="min-w-0">
-        <.kind activity={@activity} />
+        <.activity_kind_mark activity={@activity} class="text-sm" />
         <h2 class="next-up-title">
           <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
         </h2>
@@ -208,7 +208,7 @@ defmodule Web.TeamDashboardLive do
                 </span>
               </span>
               <span class="dash-row-title">
-                <.kind activity={activity} />
+                <.activity_kind_mark activity={activity} class="text-sm" />
                 <span class="text-link">{activity.title}</span>
               </span>
             </span>
@@ -280,16 +280,6 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :letters, year: year}),
     do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
-
-  attr :activity, :map, required: true
-
-  defp kind(assigns) do
-    ~H"""
-    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}", "text-sm"]}>
-      {String.capitalize(@activity.activity_kind)}
-    </span>
-    """
-  end
 
   attr :team, :map, required: true
   attr :charts, :map, required: true

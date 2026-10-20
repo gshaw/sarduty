@@ -3,6 +3,7 @@ defmodule Web.StyleGuideHTML do
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityFilterTable, only: [activity_table: 1]
+  import Web.Components.ActivityList
   import Web.Components.AttendanceImport
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
@@ -13,6 +14,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.OpenInMaps
   import Web.Components.Pagination
   import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.QualificationList
   import Web.Components.RowLink
   import Web.Components.Scanner
   import Web.Components.Table
@@ -57,6 +59,7 @@ defmodule Web.StyleGuideHTML do
        ]},
       {:components, "Components", "The parts pages are built from, one per page.",
        [
+         {:activity_list, "Activity list", "A member's activities, one row each."},
          {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
@@ -78,6 +81,8 @@ defmodule Web.StyleGuideHTML do
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
+         {:qualification_list, "Qualification list",
+          "A member's qualifications, grouped by when they expire."},
          {:row_link, "Row link", "A list row that goes to one place."},
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
          {:spinner, "Spinner", "Says what slow thing is happening."},

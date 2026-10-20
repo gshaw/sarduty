@@ -1,0 +1,45 @@
+<.shell title="Activity list" current={:activity_list}>
+  <h1>Activity list</h1>
+  <p class="lead">A member's activities, one row each.</p>
+
+  <div class="demo max-w-md">
+    <h3 class="subheading">September</h3>
+    <.activity_list
+      id="activity-list-demo"
+      rows={SampleData.attendances()}
+      timezone="America/Vancouver"
+      href={fn _activity -> "#" end}
+      external={true}
+    >
+      <:detail :let={attendance}>
+        {Service.Format.duration(
+          div(DateTime.diff(attendance.activity.finished_at, attendance.started_at), 60)
+        )}
+      </:detail>
+    </.activity_list>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    One member's activities, on a phone or a narrow column: the year's activities on their own page, by month, and what they signed up for. The title links to the activity in D4H.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A team admin's list to search, sort, or page through. Use a
+    <a href={page_path(:table)}>table</a>
+    with a <a href={page_path(:filter_bar)}>filter bar</a>, as on a member's Attendance tab.
+  </p>
+
+  <h2>How it works</h2>
+  <p>
+    Each row is the title, then the day, the kind, and a detail such as the time there. A team on SAR Duty Records gets no links, since a member cannot open its activities. The rows keep the order they come in. A heading over each month is the page's, from <code>MemberRecords.by_month/2</code>.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.activity_list id rows timezone href external&gt;</code>, with rows of attendances that have their activity, and an optional <code>&lt;:detail :let=&#123;attendance&#125;&gt;</code>.
+    <code>href</code>
+    is a function from the activity to its URL, or nil for no links.
+  </p>
+</.shell>

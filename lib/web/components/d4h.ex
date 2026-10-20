@@ -66,13 +66,23 @@ defmodule Web.Components.D4H do
   end
 
   attr :activity, :map, required: true
+  attr :class, :any, default: nil
 
-  # The kind in a table column, where every row has one: a marker in D4H's colour.
-  def activity_kind(assigns) do
+  # The kind as a marker in D4H's colour, for lists where every row has one.
+  def activity_kind_mark(assigns) do
     ~H"""
-    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}"]}>
+    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}", @class]}>
       {String.capitalize(@activity.activity_kind)}
     </span>
+    """
+  end
+
+  attr :activity, :map, required: true
+
+  # The kind in a table column: the marker, then Draft and the tracking number.
+  def activity_kind(assigns) do
+    ~H"""
+    <.activity_kind_mark activity={@activity} />
     <div :if={!@activity.is_published}>
       <.badge>Draft</.badge>
     </div>

@@ -1,16 +1,16 @@
 defmodule Web.MemberQualificationsLive do
   use Web, :live_view_app_layout
 
-  import Ecto.Query
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
+  import Web.Components.QualificationList
 
   alias App.Adapter.D4H
   alias App.Model.Member
-  alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Operation.AwardQualification
   alias App.Repo
+  alias App.ViewData.MemberRecords
   alias App.ViewModel.AwardFormViewModel
 
   def mount(_params, _session, socket) do
@@ -26,6 +26,7 @@ defmodule Web.MemberQualificationsLive do
       socket
       |> assign(:page_title, "#{member.name} · Qualifications")
       |> assign(:member, member)
+      |> assign_awards()
       |> load_sidebar()
       |> assign(:records?, D4H.records?(team))
       |> assign(
@@ -57,9 +58,9 @@ defmodule Web.MemberQualificationsLive do
   end
 
   def handle_event("remove-award", %{"id" => id}, socket) do
-    %{current_team: team, current_user: user, member: member} = socket.assigns
+    %{current_team: team, current_user: user} = socket.assigns
     true = socket.assigns.records?
-    award = Enum.find(member.member_qualification_awards, &(Integer.to_string(&1.id) == id))
+    award = find_award(socket.assigns.awards, id)
 
     # Gone already, say from another tab.
     result =
@@ -78,7 +79,24 @@ defmodule Web.MemberQualificationsLive do
     socket
     |> put_flash(:info, text)
     |> assign(:member, member)
+    |> assign_awards()
     |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
+  end
+
+  defp assign_awards(socket),
+    do:
+      assign(
+        socket,
+        :awards,
+        MemberRecords.qualifications(socket.assigns.member, DateTime.utc_now())
+      )
+
+  # Among the awards on the page, which are the member's on this team.
+  defp find_award(groups, id) do
+    groups
+    |> Enum.flat_map(fn {_group, rows} -> rows end)
+    |> Enum.flat_map(&[&1.award | &1.earlier])
+    |> Enum.find(&(Integer.to_string(&1.id) == id))
   end
 
   defp assign_award_form(socket, changeset),
@@ -103,7 +121,7 @@ defmodule Web.MemberQualificationsLive do
         />
       </aside>
       <main class="content-2/3">
-        <.qualifications_content member={@member} records?={@records?} />
+        <.qualifications_content member={@member} awards={@awards} records?={@records?} />
         <.award_form :if={@records?} form={@award_form} qualifications={@qualifications} />
       </main>
     </div>
@@ -112,41 +130,28 @@ defmodule Web.MemberQualificationsLive do
 
   defp qualifications_content(assigns) do
     ~H"""
-    <.table
-      :if={@member.member_qualification_awards != []}
-      id="member_qualifications"
-      rows={@member.member_qualification_awards}
-      class="table-striped"
+    <.qualification_list
+      :if={@awards != []}
+      id="member-qualifications"
+      groups={@awards}
+      timezone={@member.team.timezone}
+      href={&~p"/teams/#{@member.team}/qualifications/#{&1.id}"}
+      earlier={true}
     >
-      <:col :let={award} label="Qualification">
-        <.a navigate={~p"/teams/#{@member.team}/qualifications/#{award.qualification.id}"}>
-          {award.qualification.title}
-        </.a>
-      </:col>
-      <:col :let={award} label="Start" class="w-px whitespace-nowrap">
-        {Service.Format.date_short(award.starts_at, @member.team.timezone)}
-      </:col>
-      <:col :let={award} label="End" class="w-px whitespace-nowrap">
-        {Service.Format.date_short(award.ends_at, @member.team.timezone)}
-      </:col>
-      <:col :let={award} label="Status" class="w-px whitespace-nowrap">
-        {award_status(award)}
-      </:col>
-      <:col :let={award} :if={@records?} label="" class="w-px whitespace-nowrap">
+      <:action :let={award} :if={@records?}>
         <.button
           id={"remove-award-#{award.id}"}
           type="button"
           variant={:link}
-          size={:sm}
           phx-click="remove-award"
           phx-value-id={award.id}
           data-confirm={"Remove #{award.qualification.title} from #{@member.name}?"}
         >
           Remove
         </.button>
-      </:col>
-    </.table>
-    <p :if={@member.member_qualification_awards == []} id="no-qualifications">
+      </:action>
+    </.qualification_list>
+    <p :if={@awards == []} id="no-qualifications">
       {@member.name} has no qualifications in {D4H.service_name(@member.team)}.
     </p>
     """
@@ -190,28 +195,6 @@ defmodule Web.MemberQualificationsLive do
     """
   end
 
-  defp find_member(team, member_id) do
-    qualification_awards_query =
-      from(mqa in MemberQualificationAward,
-        join: q in assoc(mqa, :qualification),
-        order_by: [
-          asc: q.title,
-          asc: fragment("? IS NOT NULL", mqa.ends_at),
-          desc: mqa.ends_at,
-          desc: mqa.starts_at
-        ],
-        preload: [qualification: q]
-      )
-
-    team
-    |> Member.find!(member_id)
-    |> Repo.preload([
-      :team,
-      member_qualification_awards: qualification_awards_query
-    ])
-  end
-
-  defp award_status(award) do
-    if MemberQualificationAward.active?(award, DateTime.utc_now()), do: "Active", else: "Expired"
-  end
+  defp find_member(team, member_id),
+    do: team |> Member.find!(member_id) |> Repo.preload(:team)
 end

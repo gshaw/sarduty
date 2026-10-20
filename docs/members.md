@@ -102,6 +102,33 @@ attendance. Existing teams watch all members who are Active. A bot nobody marked
 on the list, on purpose: marking it Not a person fixes it everywhere. The "looks like a
 bot" hint stays on the member's Standing tab.
 
+## Qualifications and activities
+
+A member's qualifications and activities look the same on their own page and on a team
+admin's member page, from one query and one component each (#308, #339, decided
+2026-10-20). Org pages can use them later: each takes rows and a time zone, not a team.
+
+- **Qualifications** come from `MemberRecords.qualifications/2`, grouped by
+  `MemberRecords.group_awards/2` and drawn by
+  [`<.qualification_list>`](../lib/web/components/qualification_list.ex): Expiring within
+  60 days, within 180 days, later, Does not expire, and Expired. Empty groups don't show.
+  60 days is the app's one expiring window (`BuildGroupRulePreview.expiring_days/0`); 180
+  is the longest choice on the team's expiring view. The groups don't collapse.
+- **One row per qualification**, from its latest award. A renewal stays in its current
+  group: members read "First held 2019", and team admins see each earlier award under the
+  row, with Remove on a team on SAR Duty Records. An expired one reads "Held Mar 2019 –
+  Sep 2024" under a muted heading: it's something they did, not a problem. The admin's
+  tab lost its Start column.
+- **Activities** use [`<.activity_list>`](../lib/web/components/activity_list.ex): the
+  title links to the activity in D4H (`D4H.activity_url/2`), then the day, the kind, and
+  the time there. The year's activities group by month, newest first
+  (`MemberRecords.by_month/2`); not by kind, since every row shows its kind and the year
+  reads in order. A team on SAR Duty Records gets no links: a member cannot open its
+  activities.
+- **A team admin's Attendance tab keeps its table.** It searches, sorts, filters by hours
+  and activity tag, and pages by 50, and links to SAR Duty's own activity page. Its years
+  come from `MemberRecords.years/2`, as the member's own page lists them.
+
 ## Member logins
 
 A team admin turns on member logins in **Settings → Member logins**, in the team area. Then every

@@ -5,6 +5,7 @@ defmodule Web.MeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
+  alias App.Adapter.D4H
   alias App.Model.MemberCard
   alias App.Operation.SetTeamMemberLogins
   alias App.Repo
@@ -176,7 +177,7 @@ defmodule Web.MeLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
     end
 
-    test "lists qualifications soonest to expire first, then expired ones",
+    test "groups qualifications by when they expire, with no other team's",
          %{conn: conn, team: team, member: member} do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       first_aid = qualification_fixture(team, %{title: "First Aid"})
@@ -184,17 +185,76 @@ defmodule Web.MeLiveTest do
       avalanche = qualification_fixture(team, %{title: "Avalanche"})
       other_team = qualification_fixture(team_fixture(), %{title: "Other team's"})
 
+      qualification_award_fixture(first_aid, member, %{
+        starts_at: ~U[2019-03-04 19:00:00Z],
+        ends_at: DateTime.add(now, -300, :day)
+      })
+
       qualification_award_fixture(first_aid, member, %{ends_at: DateTime.add(now, 30, :day)})
       qualification_award_fixture(rope, member)
-      qualification_award_fixture(avalanche, member, %{ends_at: DateTime.add(now, -30, :day)})
+
+      qualification_award_fixture(avalanche, member, %{
+        starts_at: ~U[2020-01-15 19:00:00Z],
+        ends_at: ~U[2024-09-15 19:00:00Z]
+      })
+
       qualification_award_fixture(other_team, member)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(lv, "#qualifications #qualification-#{first_aid.id}", "Expires soon")
-      assert has_element?(lv, "#qualifications #qualification-#{rope.id}", "Does not expire")
-      assert has_element?(lv, "#expired-qualifications #qualification-#{avalanche.id}")
-      refute has_element?(lv, "#qualification-#{other_team.id}")
+      assert has_element?(
+               lv,
+               "#qualifications-within-60-days #qualifications-#{first_aid.id}",
+               "First held 2019"
+             )
+
+      assert has_element?(lv, "#qualifications-never #qualifications-#{rope.id}")
+
+      assert has_element?(
+               lv,
+               "#qualifications-expired #qualifications-#{avalanche.id}",
+               "Held Jan 2020 – Sep 2024"
+             )
+
+      refute has_element?(lv, "#qualifications-#{other_team.id}")
+      refute has_element?(lv, "[id^=qualifications-award-]")
+    end
+
+    test "groups the year's activities by month, each linked to D4H",
+         %{conn: conn, team: team, member: member, mid_year: mid_year} do
+      activity = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})
+      attendance = attendance_fixture(activity, member, %{started_at: mid_year})
+
+      month =
+        mid_year
+        |> DateTime.shift_zone!(team.timezone)
+        |> DateTime.to_date()
+        |> Date.beginning_of_month()
+        |> Date.to_iso8601()
+
+      url = D4H.activity_url(team, activity)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(
+               lv,
+               ~s{#month-#{month} #attendance-#{attendance.id} a[href="#{url}"]}
+             )
+    end
+
+    test "a team on SAR Duty Records has no activity links",
+         %{conn: conn, team: team, member: member, mid_year: mid_year} do
+      team
+      |> Ecto.Changeset.change(d4h_api_host: D4H.records_host())
+      |> Repo.update!()
+
+      activity = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})
+      attendance = attendance_fixture(activity, member, %{started_at: mid_year})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#attendance-#{attendance.id}", "Swiftwater exercise")
+      refute has_element?(lv, "#attendance-#{attendance.id} a")
     end
   end
 
