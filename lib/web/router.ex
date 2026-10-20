@@ -186,6 +186,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/me/qualifications", MeQualificationsLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
       live "/teams/:subdomain/me/hours", MeHoursLive
+      live "/teams/:subdomain/me/milestones", MeMilestonesLive
       live "/teams/:subdomain/me/tax-credit-letters", MeTaxCreditLettersLive
       live "/teams/:subdomain/me/details", MeDetailsLive
     end

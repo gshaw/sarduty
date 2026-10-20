@@ -125,6 +125,25 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
+  # One member's milestones, newest first, as Milestones.build/4 makes them.
+  def milestones do
+    [
+      %{
+        kind: :incidents,
+        count: 25,
+        on: ~D[2026-09-28],
+        activity: %{title: "Missing hiker, Stawamus Chief"}
+      },
+      %{
+        kind: :hours,
+        count: 500,
+        on: ~D[2026-09-24],
+        activity: %{title: "Rope rescue, Murrin Park"}
+      },
+      %{kind: :years, count: 5, on: ~D[2026-05-14], activity: nil}
+    ]
+  end
+
   # One member's qualifications, soonest expiry first, for the table's greyed rows.
   def qualification_rows do
     [

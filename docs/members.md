@@ -178,6 +178,15 @@ their last 3 activities. The numbers come from
   Hours page and the tax credit letter count only tagged ones, and the overview says so
   with a link there. The Hours page shows the same bars for its year.
 - With no activities, each chart is one line, not an empty chart.
+- **Milestones** sit beside Lately: the latest 3, with All milestones to
+  `/me/milestones` when there are more. Hours (100, 250, 500, 1,000, then every 1,000),
+  years on the team (1, 5, 10, then every 5), and incidents (the first, 10, 25, 50, 100,
+  then every 100), each dated by the day it was reached:
+  [Milestones](../lib/app/view_data/milestones.ex), pure. They're worked out when the
+  page loads, from `Attendance.attended/2` and `joined_at`, so past ones show on day one
+  and nothing is stored. Hours count every attended activity, not only tagged ones. A
+  plain dated list: no badges, graphics, or levels (decided 2026-10-20). The milestones
+  page is not in the side navigation; Overview leads to it.
 - **For you to do** sits under Next up, from
   [MemberToDo](../lib/app/view_data/member_to_do.ex), pure: add your ID card to Wallet
   (until `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until

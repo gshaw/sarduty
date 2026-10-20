@@ -82,6 +82,51 @@ defmodule Web.MeLiveTest do
     end
   end
 
+  describe "milestones" do
+    test "the latest 3 on the overview, every one on their page",
+         %{conn: conn, team: team, member: member} do
+      member
+      |> Ecto.Changeset.change(
+        joined_at:
+          DateTime.utc_now() |> DateTime.add(-6 * 366, :day) |> DateTime.truncate(:second)
+      )
+      |> Repo.update!()
+
+      starts = DateTime.utc_now() |> DateTime.add(-30, :day) |> DateTime.truncate(:second)
+
+      incident =
+        activity_fixture(team, %{
+          title: "Long search",
+          activity_kind: "incident",
+          started_at: starts
+        })
+
+      attendance_fixture(incident, member, %{
+        started_at: starts,
+        finished_at: DateTime.add(starts, 101 * 3600)
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#milestones-list-years-5", "5 years on the team")
+      assert has_element?(lv, "#milestones-list-hours-100", "Long search")
+      assert has_element?(lv, "#milestones-list-incidents-1", "First incident")
+      refute has_element?(lv, "#milestones-list-years-1")
+      assert has_element?(lv, ~s{#milestones a[href="/teams/#{team.subdomain}/me/milestones"]})
+
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/me/milestones")
+      assert has_element?(page, "#milestones-years-1", "1 year on the team")
+      assert has_element?(page, "#milestones-hours-100")
+    end
+
+    test "with none, says what comes first", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#milestones-empty")
+
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/me/milestones")
+      assert has_element?(page, "#no-milestones")
+    end
+  end
+
   describe "for you to do" do
     test "with nothing to do, says so in one line", %{conn: conn, team: team} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")

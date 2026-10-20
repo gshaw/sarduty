@@ -3,6 +3,7 @@ defmodule Web.MeLive do
 
   import Web.Components.ActivityMap
   import Web.Components.Chart
+  import Web.Components.MilestoneList
   import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
@@ -15,6 +16,7 @@ defmodule Web.MeLive do
   alias App.ViewData.MemberOverview
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
+  alias App.ViewData.Milestones
   alias App.ViewData.TeamDashboardCharts
   alias Service.Format
   alias Web.Components.ActivityMap
@@ -27,12 +29,9 @@ defmodule Web.MeLive do
     team = member.team
     now = DateTime.utc_now()
 
-    qualifications = MemberRecords.qualifications(member, now)
-
-    overview =
-      member
-      |> MemberRecords.attended(now)
-      |> MemberOverview.build(qualifications, now, team.timezone)
+    groups = MemberRecords.qualifications(member, now)
+    attended = MemberRecords.attended(member, now)
+    overview = MemberOverview.build(attended, groups, now, team.timezone)
 
     socket =
       socket
@@ -42,7 +41,8 @@ defmodule Web.MeLive do
       |> assign(:next_up, member |> MemberRecords.signed_up(now) |> List.first())
       |> assign(:overview, overview)
       |> assign(:map, build_map(overview.last_12_months, team, now))
-      |> assign(:qualifications, qualifications)
+      |> assign(:groups, groups)
+      |> assign(:milestones, Milestones.build(attended, member.joined_at, now, team.timezone))
       |> assign_to_do()
 
     {:ok, socket}
@@ -138,7 +138,23 @@ defmodule Web.MeLive do
           No activities with a place in the last 12 months.
         </p>
       </section>
-      <section id="lately" class="card">
+      <section id="milestones" class="card span-5">
+        <header>
+          <h2 class="chart-title">Milestones</h2>
+          <.a :if={length(@milestones) > 3} navigate={~p"/teams/#{@member.team}/me/milestones"}>
+            All milestones
+          </.a>
+        </header>
+        <p :if={@milestones == []} id="milestones-empty" class="chart-caption">
+          Your first comes at 100 hours, your first incident, or a year on the team.
+        </p>
+        <.milestone_list
+          :if={@milestones != []}
+          id="milestones-list"
+          milestones={Enum.take(@milestones, 3)}
+        />
+      </section>
+      <section id="lately" class="card span-7">
         <header>
           <h2 class="chart-title">Lately</h2>
           <.a navigate={~p"/teams/#{@member.team}/me/activities"}>All your activities</.a>
