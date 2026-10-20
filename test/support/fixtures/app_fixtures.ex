@@ -83,6 +83,19 @@ defmodule App.DataFixtures do
     %{team: team, member: member, user: user}
   end
 
+  @doc """
+  Now, this year in the team's time zone, and `mid_year`: earlier this year, an hour ago
+  or the second the year began, which is never after now. Only rows that have started
+  count as attended.
+  """
+  def this_year_fixture(team) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    year = Service.YearRange.year_in(now, team.timezone)
+    {start_of_year, _finish} = Service.YearRange.bounds(year, team.timezone)
+    mid_year = Enum.max([DateTime.add(now, -1, :hour), start_of_year], DateTime)
+    %{year: year, mid_year: mid_year, now: now}
+  end
+
   @doc "PNG bytes of a plain image, as D4H sends a photo or logo."
   def png_fixture(width, height) do
     width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: ".png")

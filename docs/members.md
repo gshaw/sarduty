@@ -140,13 +140,24 @@ admin's member page, from one query and one component each (#308, #339, decided
 
 A team admin turns on member logins in **Settings → Member logins**, in the team area. Then every
 current member of the team can log in with the email or mobile number D4H has for them,
-and land on their own page, `/teams/:subdomain/me`
-([MeLive](../lib/web/live/me_live.ex)). It shows the ID card a team admin issued them,
-with the Wallet buttons, their tax credit letters as PDFs, their hours and activities for a
-year, and their qualifications. On `/teams/:subdomain/me/details` they change their
-mailing address and emergency contacts in D4H, and on `/teams/:subdomain/me/mobile` their
-mobile number. Members don't change their email: teams keep it consistent, and team
-admins change it in D4H. Issue #156 has the design.
+and land on their own pages, the member area (#156, #389). Its side navigation has 7
+pages, each its own LiveView under `/teams/:subdomain/me`:
+
+| Page               | Path                     | What it holds                                          |
+| ------------------ | ------------------------ | ------------------------------------------------------ |
+| Overview           | `/me`                    | The member's year at a glance                          |
+| ID card            | `/me/card`               | The card, the Wallet buttons, and the verify link      |
+| Qualifications     | `/me/qualifications`     | Grouped by when they expire                            |
+| Activities         | `/me/activities?year=`   | Signed up for, then the year's activities by month     |
+| Hours              | `/me/hours?year=`        | Primary and secondary hours for the year               |
+| Tax credit letters | `/me/tax-credit-letters` | Every year's letter as a PDF                           |
+| Contact details    | `/me/details`            | Mobile number, mailing address, and emergency contacts |
+
+ID card shows in the side navigation once a SAR Duty admin turns ID cards on for the
+team. Contact details took in the old Mobile number page (`/me/mobile`, gone with no
+redirect, decided 2026-10-20). Members don't change their email: teams keep it
+consistent, and team admins change it in D4H. Logins are designed in issue #156, and
+the pages in issue #389.
 
 ### What must stay true
 

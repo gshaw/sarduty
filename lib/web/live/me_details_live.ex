@@ -1,24 +1,43 @@
 defmodule Web.MeDetailsLive do
   use Web, :live_view_app_layout
 
+  alias App.Accounts
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Operation.ChangeOwnPhone
   alias App.Operation.SaveOwnDetails
   alias App.ViewModel.MemberDetailsViewModel
+  alias Web.LoginLimit
 
-  # A member changes their own address and emergency contacts (#156),
-  # /teams/:subdomain/me/details. The form shows what D4H holds now, and saving sends the
-  # change straight to D4H. `member` comes from the login, never from the URL.
-  def mount(_params, _session, socket) do
+  # A member's contact details (#156, #389), /teams/:subdomain/me/details: their mobile
+  # number, then their address and emergency contacts. `member` comes from the login,
+  # never from the URL.
+  #
+  # The address form shows what D4H holds now, and saving sends the change straight to
+  # D4H. Text login uses the mobile number, so a change waits for the code texted to the
+  # new number. Codes count against the login limits for that number. A code waiting for
+  # an answer shows its form, even after a reload. Members don't change their email here;
+  # team admins do, in D4H.
+  def mount(_params, session, socket) do
     member = socket.assigns.member
 
     socket =
       socket
-      |> assign(:page_title, "Your contact details")
+      |> assign(:page_title, "Contact details")
       |> assign(:contacts?, "primary_emergency_contact" in SaveOwnDetails.fields(member.team))
+      |> assign(:client_ip, session["client_ip"])
+      |> assign(:text_login?, Accounts.text_login?())
+      |> assign(:phone_form, to_form(%{"phone" => ""}, as: "phone"))
+      |> assign_pending(ChangeOwnPhone.pending(socket.assigns.current_user))
       |> load()
 
     {:ok, socket}
+  end
+
+  defp assign_pending(socket, e164) do
+    socket
+    |> assign(:pending, e164)
+    |> assign(:code_form, to_form(%{"code" => ""}, as: "confirm"))
   end
 
   defp load(socket) do
@@ -46,14 +65,66 @@ defmodule Web.MeDetailsLive do
     {:noreply, assign(socket, form: to_form(changeset, as: "details"))}
   end
 
+  def handle_event("save", %{"details" => params}, socket),
+    do: {:noreply, with_login(socket, &save(socket, &1, params))}
+
+  def handle_event("send", %{"phone" => %{"phone" => input}}, socket) do
+    %{client_ip: ip} = socket.assigns
+    allowed? = fn e164 -> LoginLimit.check({:phone, e164}, ip) == :ok end
+
+    {:noreply,
+     with_login(socket, fn member ->
+       case ChangeOwnPhone.request(member, socket.assigns.current_user, input, allowed?) do
+         {:ok, e164} -> assign_pending(socket, e164)
+         {:error, text} -> put_flash(socket, :error, text)
+       end
+     end)}
+  end
+
+  def handle_event("confirm", %{"confirm" => %{"code" => code}}, socket) do
+    %{client_ip: ip, pending: e164, current_user: user} = socket.assigns
+    who = {:phone, e164}
+
+    {:noreply,
+     with_login(socket, fn member ->
+       result =
+         if LoginLimit.guessing_blocked?(who, ip),
+           do: {:error, :wrong_code},
+           else: ChangeOwnPhone.confirm(member, user, e164, code, DateTime.utc_now())
+
+       confirmed(socket, member, who, ip, result)
+     end)}
+  end
+
+  def handle_event("cancel", _params, socket) do
+    :ok = ChangeOwnPhone.cancel(socket.assigns.current_user)
+    {:noreply, assign_pending(socket, nil)}
+  end
+
+  defp confirmed(socket, member, {:phone, e164}, _ip, {:ok, _member}) do
+    message =
+      if ChangeOwnPhone.shared?(member, e164, DateTime.utc_now()),
+        do: "Your mobile number is changed. Another member has it too, so text login won't work.",
+        else: "Your mobile number is changed. Login codes by text go to it now."
+
+    socket |> put_flash(:info, message) |> push_navigate(to: ~p"/teams/#{member.team}/me/details")
+  end
+
+  defp confirmed(socket, _member, who, ip, {:error, :wrong_code}) do
+    LoginLimit.miss(who, ip)
+    put_flash(socket, :error, "That code is wrong or expired. Check it, or ask for a new one.")
+  end
+
+  defp confirmed(socket, _member, _who, _ip, {:error, text}), do: put_flash(socket, :error, text)
+
   # The login is checked again, in case the team turned member logins off since the page
   # opened.
-  def handle_event("save", %{"details" => params}, socket) do
+  defp with_login(socket, fun) do
     %{current_user: user, member: member} = socket.assigns
 
     case Member.get_login(user.email, member.id, DateTime.utc_now()) do
-      nil -> {:noreply, redirect(socket, to: ~p"/")}
-      member -> {:noreply, save(socket, member, params)}
+      nil -> redirect(socket, to: ~p"/")
+      member -> fun.(member)
     end
   end
 
@@ -65,7 +136,7 @@ defmodule Web.MeDetailsLive do
          {:ok, _result} <- SaveOwnDetails.call(member, user, details, values, DateTime.utc_now()) do
       socket
       |> put_flash(:info, "Your contact details are saved in #{service(member)}.")
-      |> push_navigate(to: ~p"/teams/#{member.team}/me")
+      |> push_navigate(to: ~p"/teams/#{member.team}/me/details")
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         assign(socket, form: to_form(changeset, as: "details"))
@@ -80,10 +151,23 @@ defmodule Web.MeDetailsLive do
   def render(assigns) do
     ~H"""
     <div class="measure">
-      <h1 class="title">Your contact details</h1>
+      <h1 class="title">Contact details</h1>
       <p class="lead">
-        Saving changes them in {service(@member)}, where your team admins see them.
+        Changes go to {service(@member)}, where your team admins see them.
       </p>
+
+      <h2 class="heading">Mobile number</h2>
+      <.phone_content
+        member={@member}
+        pending={@pending}
+        code_form={@code_form}
+        phone_form={@phone_form}
+        text_login?={@text_login?}
+      />
+
+      <h2 class="heading mt-8">
+        {if @contacts?, do: "Mailing address and emergency contacts", else: "Mailing address"}
+      </h2>
 
       <.banner :if={@error} id="details-error" kind={:warning} title="Your details did not load">
         {@error}
@@ -100,7 +184,7 @@ defmodule Web.MeDetailsLive do
         <.input field={@form[:address]} type="textarea" rows="4" label="Mailing address" />
 
         <%= if @contacts? do %>
-          <h2 class="subheading mt-8">Emergency contact</h2>
+          <h3 class="subheading mt-6">Emergency contact</h3>
           <.contact_fields
             form={@form}
             fields={[
@@ -110,7 +194,7 @@ defmodule Web.MeDetailsLive do
               :contact1_secondary_phone
             ]}
           />
-          <h2 class="subheading mt-8">Second emergency contact (optional)</h2>
+          <h3 class="subheading mt-6">Second emergency contact (optional)</h3>
           <.contact_fields
             form={@form}
             fields={[
@@ -126,7 +210,50 @@ defmodule Web.MeDetailsLive do
           <.button variant={:success} phx-disable-with="Saving…">Save details</.button>
         </.form_actions>
       </.form>
+
+      <p id="email-note" class="hint mt-8">
+        Your email is {@member.email || "not set"}. Ask a team admin to change it.
+      </p>
     </div>
+    """
+  end
+
+  defp phone_content(%{pending: nil} = assigns) do
+    ~H"""
+    <p id="current-phone">{@member.phone || "None in #{service(@member)}"}</p>
+    <p class="hint">
+      Login codes by text go to this number. A change goes to {service(@member)} once you enter the code we text to the new one.
+    </p>
+    <.form :if={@text_login?} for={@phone_form} id="phone-form" phx-submit="send">
+      <.input field={@phone_form[:phone]} type="tel" label="New mobile number" required>
+        Include the area code, like 604-555-1234.
+      </.input>
+      <.form_actions>
+        <.button phx-disable-with="Sending…">Send code</.button>
+      </.form_actions>
+    </.form>
+    <p :if={!@text_login?} id="phone-off" class="hint">
+      SAR Duty cannot send texts right now. Ask a team admin to change your mobile number.
+    </p>
+    """
+  end
+
+  defp phone_content(assigns) do
+    ~H"""
+    <.form for={@code_form} id="code-form" phx-submit="confirm">
+      <p id="code-sent">Enter the code we texted to {Service.Phone.format(@pending)}.</p>
+      <.input
+        field={@code_form[:code]}
+        label="Code"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        required
+      />
+      <.form_actions>
+        <.button variant={:success} phx-disable-with="Checking…">Confirm code</.button>
+        <.button id="cancel-code" type="button" phx-click="cancel">Cancel</.button>
+      </.form_actions>
+    </.form>
     """
   end
 

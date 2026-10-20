@@ -176,8 +176,12 @@ defmodule Web.Router do
         {Web.UserAuth, :ensure_team_member}
       ] do
       live "/teams/:subdomain/me", MeLive
+      live "/teams/:subdomain/me/card", MeCardLive
+      live "/teams/:subdomain/me/qualifications", MeQualificationsLive
+      live "/teams/:subdomain/me/activities", MeActivitiesLive
+      live "/teams/:subdomain/me/hours", MeHoursLive
+      live "/teams/:subdomain/me/tax-credit-letters", MeTaxCreditLettersLive
       live "/teams/:subdomain/me/details", MeDetailsLive
-      live "/teams/:subdomain/me/mobile", MePhoneLive
     end
 
     scope "/teams/:subdomain/me" do

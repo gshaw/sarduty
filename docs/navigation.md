@@ -16,7 +16,9 @@ database.
   logins, MCP tokens).
 - **Member area**, `/teams/:subdomain/me/…`, a member's own pages. The team is the
   member's, from `member.team`: on these pages `current_team` is the team the user last
-  managed, not the URL's. The side navigation: Overview, Contact details, Mobile number.
+  managed, not the URL's. The side navigation: Overview, ID card, Qualifications,
+  Activities, Hours, Tax credit letters, and Contact details. ID card shows once the team
+  has ID cards.
 - **Admin**, `/admin/…`, for SAR Duty admins: Teams, Organizations, and ID cards, then
   Admins, Events, and MCP.
 - **Your settings**, `/account`: one page, so no side navigation.
