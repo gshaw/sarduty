@@ -91,7 +91,7 @@ defmodule Web.MeLive do
         <p :if={@overview.hours_by_kind == []} id="hours-by-kind-chart" class="chart-caption">
           No activities in {@overview.year} yet.
         </p>
-        <p class="chart-caption mb-0">
+        <p class="chart-caption mt-4 mb-0">
           Every activity you attended counts here. Your tax credit letter counts only some: <.a navigate={
             ~p"/teams/#{@member.team}/me/hours"
           }>hours for your tax credit letter</.a>.
