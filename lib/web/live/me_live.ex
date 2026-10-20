@@ -8,6 +8,7 @@ defmodule Web.MeLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -42,10 +43,15 @@ defmodule Web.MeLive do
       |> assign(:overview, overview)
       |> assign(:map, build_map(overview.last_12_months, team, now))
       |> assign(:groups, groups)
-      |> assign(:milestones, Milestones.build(attended, member.joined_at, now, team.timezone))
+      |> assign(:milestones, build_milestones(attended, member, now))
       |> assign_to_do()
 
     {:ok, socket}
+  end
+
+  defp build_milestones(attended, member, now) do
+    away_periods = MemberAwayPeriod.for_member(member)
+    Milestones.build(attended, member.joined_at, away_periods, now, member.team.timezone)
   end
 
   defp assign_to_do(socket) do

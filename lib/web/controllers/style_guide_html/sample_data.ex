@@ -125,7 +125,7 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
-  # One member's milestones, newest first, as Milestones.build/4 makes them.
+  # One member's milestones, newest first, as Milestones.build/5 makes them.
   def milestones do
     [
       %{

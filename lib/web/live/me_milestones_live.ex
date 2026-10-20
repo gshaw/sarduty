@@ -4,6 +4,7 @@ defmodule Web.MeMilestonesLive do
   import Web.Components.MilestoneList
 
   alias App.Adapter.D4H
+  alias App.Model.MemberAwayPeriod
   alias App.ViewData.MemberRecords
   alias App.ViewData.Milestones
 
@@ -16,7 +17,12 @@ defmodule Web.MeMilestonesLive do
     milestones =
       member
       |> MemberRecords.attended(now)
-      |> Milestones.build(member.joined_at, now, member.team.timezone)
+      |> Milestones.build(
+        member.joined_at,
+        MemberAwayPeriod.for_member(member),
+        now,
+        member.team.timezone
+      )
 
     socket =
       socket

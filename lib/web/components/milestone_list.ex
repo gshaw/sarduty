@@ -1,6 +1,6 @@
 defmodule Web.Components.MilestoneList do
   @moduledoc """
-  A member's milestones (#389), from `App.ViewData.Milestones.build/4`: what they
+  A member's milestones (#389), from `App.ViewData.Milestones.build/5`: what they
   reached and the day, with the activity that reached it. A plain list, no badges. See
   /styles/milestone-list.
   """
