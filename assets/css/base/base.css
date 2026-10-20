@@ -54,6 +54,10 @@
   }
   ::-webkit-date-and-time-value { text-align: left; min-height: 1lh; }
 
+  /* Chrome on Android and Windows draws the option list in the select's background. A
+     transparent select (the filter bar's) left a white list with dark mode's pale text. */
+  :is(option, optgroup) { color: var(--text); background: var(--bg); }
+
   textarea { min-height: 96px; resize: vertical; }
   input[readonly] { background: var(--surface-alt); border-color: var(--border); }
   :is(input, select, textarea):disabled { opacity: 0.5; cursor: not-allowed; }
