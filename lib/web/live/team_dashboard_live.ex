@@ -380,15 +380,6 @@ defmodule Web.TeamDashboardLive do
   defp refreshing_text(team, "Refreshing"), do: "Refreshing from #{D4H.service_name(team)}…"
   defp refreshing_text(team, stage), do: "Refreshing from #{D4H.service_name(team)}… #{stage}"
 
-  # "Refreshed from D4H 7 min ago", or from SAR Duty Records. Glossary: refresh, never
-  # update or sync.
-  defp refreshed_ago(team, now) do
-    case team |> Team.d4h_updated_at() |> Format.minutes_ago(now, team.timezone) do
-      nil -> "Not refreshed from #{D4H.service_name(team)} yet"
-      ago -> "Refreshed from #{D4H.service_name(team)} #{ago}"
-    end
-  end
-
   # Progress messages arrive at every stage of a full refresh; the page recounts once the
   # refresh or sync is done, not at each stage.
   def handle_info({:team_refreshed, %Team{} = updated_team}, socket) do

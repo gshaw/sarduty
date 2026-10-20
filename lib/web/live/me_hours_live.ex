@@ -1,9 +1,11 @@
 defmodule Web.MeHoursLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.Chart, only: [bar_list: 1]
   import Web.Components.MeYear
 
   alias App.Model.Activity
+  alias App.ViewData.MemberOverview
   alias App.ViewData.MemberRecords
 
   # A member's primary and secondary hours for a year, /teams/:subdomain/me/hours,
@@ -22,12 +24,17 @@ defmodule Web.MeHoursLive do
   def handle_params(params, _uri, socket) do
     %{member: member, years: years} = socket.assigns
     year = year!(params["year"], years)
+    now = DateTime.utc_now()
 
     socket =
       socket
       |> assign(:page_title, "Hours in #{year}")
       |> assign(:year, year)
-      |> assign(:hours, MemberRecords.hours(member, year, DateTime.utc_now()))
+      |> assign(:hours, MemberRecords.hours(member, year, now))
+      |> assign(
+        :hours_by_kind,
+        member |> MemberRecords.attendances(year, now) |> MemberOverview.hours_by_kind()
+      )
 
     {:noreply, socket}
   end
@@ -49,6 +56,17 @@ defmodule Web.MeHoursLive do
       </dl>
       <p class="hint">
         Counted the same way as your tax credit letter. Only activities with the {@hours_tags.primary} or {@hours_tags.secondary} tag count.
+      </p>
+
+      <h2 class="heading mt-8">By activity kind</h2>
+      <p>Every activity you attended in {@year}, tagged or not.</p>
+      <.bar_list
+        :if={@hours_by_kind != []}
+        id="hours-by-kind"
+        rows={MemberOverview.bars(@hours_by_kind)}
+      />
+      <p :if={@hours_by_kind == []} id="hours-by-kind" class="hint">
+        No activities in {@year}.
       </p>
     </div>
     """

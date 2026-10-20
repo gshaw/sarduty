@@ -5,6 +5,18 @@ defmodule Web.Components.D4H do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Team
+
+  @doc """
+  "Refreshed from D4H 7 min ago", or from SAR Duty Records, for the team home and a
+  member's overview. Glossary: refresh, never update or sync.
+  """
+  def refreshed_ago(team, now) do
+    case team |> Team.d4h_updated_at() |> Service.Format.minutes_ago(now, team.timezone) do
+      nil -> "Not refreshed from #{D4H.service_name(team)} yet"
+      ago -> "Refreshed from #{D4H.service_name(team)} #{ago}"
+    end
+  end
 
   attr :team, :map, required: true
   attr :activity, :map, required: true

@@ -62,6 +62,9 @@ data?
   (`test/app/view_data/team_dashboard_view_data_test.exs`), which "Needs attention" items
   show and in what order (`team_attention_test.exs`), and the year's stats and charts
   (`team_dashboard_charts_test.exs`), all pure.
+- A member's own pages (#389): qualification groups and activities by month
+  (`member_records_test.exs`) and the overview's numbers (`member_overview_test.exs`),
+  pure, and the Add to calendar file (`test/service/calendar_test.exs`).
 - Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
   `/teams/:subdomain/…/:id` route and expects a 404. It fails when a new route of that
   shape is not in its list. `test/web/live/group_live_test.exs` does the same for the rule

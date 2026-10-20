@@ -187,6 +187,7 @@ defmodule Web.Router do
     scope "/teams/:subdomain/me" do
       pipe_through :require_team_member
 
+      get "/activities/:id/calendar", MeController, :calendar
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter

@@ -41,7 +41,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/tax-credit-letters/:id",
     "/teams/:subdomain/tax-credit-letters/:id/pdf",
     # A member's own letter (#156). Web.MeLiveTest covers another member on the same team.
-    "/teams/:subdomain/me/tax-credit-letters/:id/pdf"
+    "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
+    # A calendar file for the member's own sign-up (#389). Web.MeLiveTest covers another
+    # member's activity on the same team.
+    "/teams/:subdomain/me/activities/:id/calendar"
   ]
 
   setup %{conn: conn} do
@@ -179,6 +182,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/tax-credit-letters/:id", s, o),
     do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}"
+
+  defp path_for("/teams/:subdomain/me/activities/:id/calendar", s, o),
+    do: ~p"/teams/#{s}/me/activities/#{o.activity.id}/calendar"
 
   defp path_for("/teams/:subdomain/me/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/me/tax-credit-letters/#{o.letter.id}/pdf"
