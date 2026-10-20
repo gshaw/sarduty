@@ -45,7 +45,7 @@ defmodule Web.MeQualificationsLiveTest do
     assert has_element?(
              lv,
              "#qualifications-expired #qualifications-#{avalanche.id}",
-             "Jan 2020 – Sep 2024"
+             "Expired Sep 15, 2024"
            )
 
     refute has_element?(lv, "#qualifications-#{other_team.id}")

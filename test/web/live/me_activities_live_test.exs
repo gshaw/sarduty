@@ -105,7 +105,7 @@ defmodule Web.MeActivitiesLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#month-#{month} #attendance-#{attendance.id} a[href="#{url}"]}
+             ~s{#attendance-#{month} #attendance-#{attendance.id} a[href="#{url}"]}
            )
   end
 

@@ -1,9 +1,6 @@
 defmodule Web.MeLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.ActivityList
-
-  alias App.Adapter.D4H
   alias App.ViewData.MemberRecords
 
   # A member's overview (#389), /teams/:subdomain/me, the first of the member area's
@@ -28,13 +25,17 @@ defmodule Web.MeLive do
 
       <%= if @signed_up != [] do %>
         <h2 class="heading mt-8">Signed up for</h2>
-        <.activity_list
-          id="signed-up"
-          rows={@signed_up}
-          timezone={@member.team.timezone}
-          href={if !D4H.records?(@member.team), do: &D4H.activity_url(@member.team, &1)}
-          external={true}
-        />
+        <.table id="signed-up" rows={@signed_up} row_id={&"signed-up-#{&1.id}"}>
+          <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+            {Service.Format.date_short(attendance.started_at, @member.team.timezone)}
+          </:col>
+          <:col :let={attendance} label="Activity">
+            <.d4h_activity_link team={@member.team} activity={attendance.activity} />
+          </:col>
+          <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap">
+            <.activity_kind_mark activity={attendance.activity} />
+          </:col>
+        </.table>
       <% end %>
     </div>
     """
