@@ -45,6 +45,11 @@ counted is in #191 and #192.
   the signer block, so it prints sharp. It holds the URL in lower case, since the
   `/letters` path is case-sensitive. Letters from before #207 get none.
 
+- **A member's download is recorded** (#389): the first time a member downloads their
+  letter from their own pages sets `downloaded_at`, and the letter leaves their For you
+  to do. Only the newest letter shows there, and only for last year or this year. A team
+  admin's download doesn't count. A replaced letter is a new row, so it shows again.
+
 ## The PDF package's limits
 
 The `pdf` package escapes parentheses but not backslashes, and writes the title and

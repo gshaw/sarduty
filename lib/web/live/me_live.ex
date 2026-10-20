@@ -7,9 +7,14 @@ defmodule Web.MeLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.MemberCard
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
+  alias App.Operation.BuildApplePass
+  alias App.Operation.BuildGooglePass
   alias App.ViewData.MemberOverview
   alias App.ViewData.MemberRecords
+  alias App.ViewData.MemberToDo
   alias App.ViewData.TeamDashboardCharts
   alias Service.Format
   alias Web.Components.ActivityMap
@@ -22,10 +27,12 @@ defmodule Web.MeLive do
     team = member.team
     now = DateTime.utc_now()
 
+    groups = MemberRecords.qualifications(member, now)
+
     overview =
       member
       |> MemberRecords.attended(now)
-      |> MemberOverview.build(MemberRecords.qualifications(member, now), now, team.timezone)
+      |> MemberOverview.build(groups, now, team.timezone)
 
     socket =
       socket
@@ -35,8 +42,34 @@ defmodule Web.MeLive do
       |> assign(:next_up, member |> MemberRecords.signed_up(now) |> List.first())
       |> assign(:overview, overview)
       |> assign(:map, build_map(overview.last_12_months, team, now))
+      |> assign(:groups, groups)
+      |> assign_to_do()
 
     {:ok, socket}
+  end
+
+  defp assign_to_do(socket) do
+    %{member: member, groups: groups, now: now} = socket.assigns
+    card = MemberCard.find_current(member.team, member)
+    in_wallet? = card != nil and MemberCard.in_wallet?(card)
+    letters = TaxCreditLetter.get_all_for_member(member)
+
+    assign(
+      socket,
+      :to_do,
+      MemberToDo.items(card, in_wallet?, letters, groups, now, member.team.timezone)
+    )
+  end
+
+  # Google Wallet doesn't tell SAR Duty when a card is saved, so the member closes the
+  # item themselves. Apple Wallet registers the phone, which closes it.
+  def handle_event("card-in-wallet", _params, socket) do
+    %{member: member} = socket.assigns
+
+    if card = MemberCard.find_current(member.team, member),
+      do: MemberCard.mark_in_wallet!(card, DateTime.utc_now())
+
+    {:noreply, assign_to_do(socket)}
   end
 
   defp build_map(attendances, team, now) do
@@ -73,6 +106,8 @@ defmodule Web.MeLive do
       maps_app={@current_user.maps_app}
       now={@now}
     />
+
+    <.to_do team={@member.team} items={@to_do} />
 
     <.stats team={@member.team} overview={@overview} />
 
@@ -206,6 +241,99 @@ defmodule Web.MeLive do
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(" · ")
   end
+
+  attr :team, :map, required: true
+  attr :items, :list, required: true
+
+  defp to_do(assigns) do
+    ~H"""
+    <section id="to-do" class="card mb-6">
+      <header>
+        <h2 class="chart-title">For you to do</h2>
+      </header>
+      <p :if={@items == []} id="to-do-empty" class="chart-caption">Nothing to do right now.</p>
+      <ul :if={@items != []} id="to-do-list" class="divide-y divide-border-subtle">
+        <.to_do_item :for={item <- @items} team={@team} item={item} />
+      </ul>
+      <p :if={@items != []} class="hint mt-2 mb-0">Each one leaves this list once it's done.</p>
+    </section>
+    """
+  end
+
+  attr :team, :map, required: true
+  attr :item, :map, required: true
+
+  defp to_do_item(%{item: %{key: :card}} = assigns) do
+    ~H"""
+    <li id="to-do-card" class="flex flex-wrap items-center gap-3 py-3">
+      <div class="flex-1 min-w-0">
+        <strong class="block">Add your ID card to Wallet</strong>
+        <span class="hint">Show it at the door. Anyone can verify it.</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <.button
+          :if={BuildApplePass.configured?()}
+          id="to-do-apple-pass"
+          variant={:primary}
+          href={~p"/teams/#{@team}/me/card/apple-wallet"}
+        >
+          Add to Apple Wallet
+        </.button>
+        <.button
+          :if={BuildGooglePass.configured?()}
+          id="to-do-google-pass"
+          variant={:primary}
+          href={~p"/teams/#{@team}/me/card/google-wallet"}
+        >
+          Add to Google Wallet
+        </.button>
+        <.button id="to-do-card-done" type="button" phx-click="card-in-wallet">
+          Mark as added
+        </.button>
+      </div>
+    </li>
+    """
+  end
+
+  defp to_do_item(%{item: %{key: :qualification}} = assigns) do
+    ~H"""
+    <li id={"to-do-qualification-#{@item.award.qualification_id}"} class="py-3">
+      <.a navigate={~p"/teams/#{@team}/me/qualifications"} class="font-semibold">
+        {@item.award.qualification.title} expires in {Format.count(@item.days,
+          one: "1 day",
+          many: "%d days"
+        )}
+      </.a>
+      <span class="hint block">Renewed it? Give the new certificate to a team admin.</span>
+    </li>
+    """
+  end
+
+  defp to_do_item(%{item: %{key: :letter}} = assigns) do
+    ~H"""
+    <li id="to-do-letter" class="flex flex-wrap items-center gap-3 py-3">
+      <div class="flex-1 min-w-0">
+        <strong class="block">Your {@item.letter.year} tax credit letter is ready</strong>
+        <span class="hint">{letter_hours(@item.letter)}</span>
+      </div>
+      <.button
+        id="to-do-letter-download"
+        variant={:primary}
+        href={~p"/teams/#{@team}/me/tax-credit-letters/#{@item.letter.id}/pdf"}
+      >
+        Download letter
+      </.button>
+    </li>
+    """
+  end
+
+  # "52 hours primary, 25 hours secondary", or a plain line for an old letter whose
+  # hours did not parse.
+  defp letter_hours(%{primary_minutes: primary, secondary_minutes: secondary})
+       when is_integer(primary) and is_integer(secondary),
+       do: "#{Format.duration(primary)} primary, #{Format.duration(secondary)} secondary"
+
+  defp letter_hours(_letter), do: "Give it to the CRA with your tax return."
 
   attr :team, :map, required: true
   attr :overview, :map, required: true

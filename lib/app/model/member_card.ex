@@ -30,6 +30,9 @@ defmodule App.Model.MemberCard do
     field :serial_number, :string
     # Google Wallet: the pass as last sent to Google, or nil when it has none.
     field :google_pass_fingerprint, :string
+    # When the member said the card is in Wallet, for "For you to do" (#389). Apple
+    # Wallet tells SAR Duty itself, through pass_registrations.
+    field :in_wallet_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -290,4 +293,16 @@ defmodule App.Model.MemberCard do
     |> preload(member: [team: :organization])
     |> Repo.all()
   end
+
+  @doc """
+  Whether the card is in a Wallet, as far as SAR Duty knows: a phone registered its Apple
+  Wallet pass, or the card was marked in Wallet. An Apple replacement lands on the same
+  pass, so its serial counts; a Google replacement is a new pass, so only the card's own
+  mark does.
+  """
+  def in_wallet?(%MemberCard{in_wallet_at: %DateTime{}}), do: true
+  def in_wallet?(%MemberCard{} = card), do: PassRegistration.get_all_for_serial(card) != []
+
+  def mark_in_wallet!(%MemberCard{} = card, now),
+    do: card |> change(in_wallet_at: now) |> Repo.update!()
 end

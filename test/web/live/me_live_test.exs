@@ -5,6 +5,7 @@ defmodule Web.MeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
+  alias App.Model.PassRegistration
   alias App.Operation.SetTeamMemberLogins
   alias App.Repo
 
@@ -78,6 +79,55 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#hours-by-kind-chart", "Incidents")
       assert has_element?(lv, "#lately-list-#{attended.id}", "Overdue hiker")
       refute render(lv) =~ "Not mine"
+    end
+  end
+
+  describe "for you to do" do
+    test "with nothing to do, says so in one line", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#to-do-empty")
+    end
+
+    test "the ID card leaves once marked in Wallet, or once Apple Wallet registers it",
+         %{conn: conn, team: team, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#to-do-card")
+
+      lv |> element("#to-do-card-done") |> render_click()
+      refute has_element?(lv, "#to-do-card")
+
+      card |> Ecto.Changeset.change(in_wallet_at: nil) |> Repo.update!()
+      PassRegistration.register!(card, "phone-1", "token")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      refute has_element?(lv, "#to-do-card")
+    end
+
+    test "a new letter leaves once the member downloads it",
+         %{conn: conn, team: team, member: member} do
+      %{year: year} = this_year_fixture(team)
+      letter = tax_credit_letter_fixture(member, %{year: year - 1})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#to-do-letter", "Your #{year - 1} tax credit letter is ready")
+
+      conn |> get(~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf") |> response(200)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+      refute has_element?(lv, "#to-do-letter")
+    end
+
+    test "a qualification expiring within 60 days", %{conn: conn, team: team, member: member} do
+      first_aid = qualification_fixture(team, %{title: "First Aid"})
+      ends_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+      qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(
+               lv,
+               "#to-do-qualification-#{first_aid.id}",
+               "First Aid expires in 30 days"
+             )
     end
   end
 

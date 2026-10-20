@@ -23,6 +23,9 @@ defmodule App.Model.TaxCreditLetter do
     # The team's signature PNG when the letter was made. Empty for letters made before
     # #194 or by a team with no signature.
     field :signature, :binary, redact: true
+    # When the member first downloaded it from their own pages. A team admin's download
+    # doesn't count.
+    field :downloaded_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
@@ -67,6 +70,12 @@ defmodule App.Model.TaxCreditLetter do
     |> preload(member: :team)
     |> Repo.one!()
   end
+
+  @doc "Marks the letter downloaded by its member, once; later downloads change nothing."
+  def mark_downloaded(%TaxCreditLetter{downloaded_at: nil} = letter, now),
+    do: letter |> change(downloaded_at: now) |> Repo.update!()
+
+  def mark_downloaded(%TaxCreditLetter{} = letter, _now), do: letter
 
   @doc "The member's letters, newest year first."
   def get_all_for_member(%Member{} = member) do
