@@ -1,8 +1,6 @@
 defmodule Web.MeLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.ActivityList
-  import Web.Components.QualificationList
   import Web.Components.ViewSwitch
 
   alias App.Adapter.D4H
@@ -12,6 +10,7 @@ defmodule Web.MeLive do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.ViewData.MemberRecords
+  alias Web.QualificationText
 
   # A member's own page (#156), /teams/:subdomain/me: their ID card, tax credit letters,
   # qualifications, the activities they're signed up for, and hours and activities for a
@@ -25,6 +24,7 @@ defmodule Web.MeLive do
     socket =
       socket
       |> assign(:page_title, member.team.name)
+      |> assign(:now, now)
       |> assign(:card, MemberCard.find_current(member.team, member))
       |> assign(:letters, TaxCreditLetter.get_all_for_member(member))
       |> assign(:years, MemberRecords.years(member, now))
@@ -85,7 +85,7 @@ defmodule Web.MeLive do
       </ul>
 
       <h2 class="heading mt-8">Qualifications</h2>
-      <.qualifications_content qualifications={@qualifications} member={@member} />
+      <.qualifications_content qualifications={@qualifications} member={@member} now={@now} />
 
       <h2 :if={@signed_up != []} class="heading mt-8">Signed up for</h2>
       <.signed_up_content :if={@signed_up != []} signed_up={@signed_up} member={@member} />
@@ -127,13 +127,17 @@ defmodule Web.MeLive do
 
   defp signed_up_content(assigns) do
     ~H"""
-    <.activity_list
-      id="signed-up"
-      rows={@signed_up}
-      timezone={@member.team.timezone}
-      href={activity_href(@member.team)}
-      external={true}
-    />
+    <.table id="signed-up" rows={@signed_up} row_id={&"signed-up-#{&1.id}"}>
+      <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+        {Service.Format.date_short(attendance.started_at, @member.team.timezone)}
+      </:col>
+      <:col :let={attendance} label="Activity">
+        <.d4h_activity_link team={@member.team} activity={attendance.activity} />
+      </:col>
+      <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap">
+        <.activity_kind_mark activity={attendance.activity} />
+      </:col>
+    </.table>
     <p class="hint">Hours count once the activity starts.</p>
     """
   end
@@ -152,29 +156,31 @@ defmodule Web.MeLive do
       {Service.Format.count(length(@attendances), one: "1 activity", many: "%d activities")} attended.
       Missing one? Tell a team admin, who can fix it in {D4H.service_name(@member.team)}.
     </p>
-    <section
-      :for={{month, rows} <- MemberRecords.by_month(@attendances, @member.team.timezone)}
-      id={"month-#{Date.to_iso8601(month)}"}
-      class="mb-6"
+    <.table
+      id="attendance"
+      groups={month_groups(@attendances, @member.team.timezone)}
+      row_id={&"attendance-#{&1.id}"}
     >
-      <h3 class="subheading">{Service.Format.month(month)}</h3>
-      <.activity_list
-        id={"attendance-#{Date.to_iso8601(month)}"}
-        row_id="attendance"
-        rows={rows}
-        timezone={@member.team.timezone}
-        href={activity_href(@member.team)}
-        external={true}
-      >
-        <:detail :let={attendance}>{format_minutes(MemberRecords.minutes(attendance))}</:detail>
-      </.activity_list>
-    </section>
+      <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+        {Service.Format.date_short(attendance.started_at, @member.team.timezone)}
+      </:col>
+      <:col :let={attendance} label="Activity">
+        <.d4h_activity_link team={@member.team} activity={attendance.activity} />
+      </:col>
+      <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap">
+        <.activity_kind_mark activity={attendance.activity} />
+      </:col>
+      <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
+        {format_minutes(MemberRecords.minutes(attendance))}
+      </:col>
+    </.table>
     """
   end
 
-  # A team on SAR Duty Records has no activity page a member can open (docs/records.md).
-  defp activity_href(team) do
-    if !D4H.records?(team), do: &D4H.activity_url(team, &1)
+  # The year's activities by month, newest first, as table groups titled "October".
+  defp month_groups(attendances, timezone) do
+    for {month, rows} <- MemberRecords.by_month(attendances, timezone),
+        do: %{id: Date.to_iso8601(month), title: Service.Format.month(month), rows: rows}
   end
 
   defp qualifications_content(%{qualifications: []} = assigns) do
@@ -187,11 +193,19 @@ defmodule Web.MeLive do
 
   defp qualifications_content(assigns) do
     ~H"""
-    <.qualification_list
+    <.table
       id="qualifications"
-      groups={@qualifications}
-      timezone={@member.team.timezone}
-    />
+      groups={QualificationText.table_groups(@qualifications)}
+      row_id={&"qualifications-#{&1.award.qualification_id}"}
+    >
+      <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        {QualificationText.expires(row.award, @now, @member.team.timezone)}
+      </:col>
+      <:col :let={row} label="First held" class="w-px whitespace-nowrap">
+        {QualificationText.first_held(row, @member.team.timezone)}
+      </:col>
+    </.table>
     """
   end
 

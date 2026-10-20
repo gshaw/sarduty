@@ -75,12 +75,42 @@
     </:col>
   </.table>
 
+  <h2>Row groups</h2>
+  <p>
+    One table, its rows in groups under a title row each, so every group shares one set of
+    columns. A muted group, such as expired qualifications, greys its rows.
+  </p>
+  <.table
+    id="sample-groups"
+    groups={Web.QualificationText.table_groups(SampleData.qualification_groups())}
+    row_id={&"sample-groups-#{&1.award.qualification_id}"}
+  >
+    <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
+    <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+      {Web.QualificationText.expires(row.award, SampleData.sample_now(), "America/Vancouver")}
+    </:col>
+    <:col :let={row} label="First held" class="w-px whitespace-nowrap">
+      {Web.QualificationText.first_held(row, "America/Vancouver")}
+    </:col>
+  </.table>
+  <ul>
+    <li>
+      Use groups when the order of the groups is the point: a member's qualifications by when
+      they expire, or their activities by month. Use a sortable column when people pick their
+      own order.
+    </li>
+    <li>Leave out an empty group. Give each group a title that says what is in it.</li>
+    <li>Rows in groups are not striped: the title rows already break them up.</li>
+  </ul>
+
   <h2>In the app</h2>
   <p>
     <code>&lt;.table id="…" rows=&#123;…&#125; sort=&#123;@sort&#125; path_fn=&#123;@path_fn&#125;&gt;</code>
     with a <code>&lt;:col label="…" sorts=&#123;[&#123;"↓", "total"&#125;]&#125;&gt;</code>
     for each column. A column that sorts both ways lists 2 sorts, such as <code>[&#123;"↓", "date-"&#125;, &#123;"↑", "date"&#125;]</code>. A
     <code>&lt;:header_row&gt;</code>
-    groups columns under one heading.
+    groups columns under one heading. For row groups, pass
+    <code>groups=&#123;[%&#123;id: "expired", title: "Expired", rows: […], muted: true&#125;]&#125;</code>
+    instead of <code>rows</code>; each group is its own <code>tbody</code>, with the id <code>table-id-group-id</code>.
   </p>
 </.shell>

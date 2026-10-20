@@ -126,14 +126,8 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
-  # One member's attendance at the activities above, for the activity list.
-  def attendances do
-    for activity <- Enum.take(activities(), 4) do
-      %{id: activity.id, started_at: activity.started_at, activity: activity}
-    end
-  end
-
-  # One member's awards, grouped as their page groups them, on Oct 9, 2026.
+  # One member's awards, grouped as their page groups them, on Oct 9, 2026, for the
+  # table's row groups.
   def qualification_groups do
     [
       {1, 1, "First Aid", "2019-03-04", "2022-03-04"},
@@ -152,8 +146,10 @@ defmodule Web.StyleGuideHTML.SampleData do
         ends_at: ends && sample_day(ends)
       }
     end)
-    |> MemberRecords.group_awards(~U[2026-10-09 19:00:00Z])
+    |> MemberRecords.group_awards(sample_now())
   end
+
+  def sample_now, do: ~U[2026-10-09 19:00:00Z]
 
   defp sample_day(day), do: day |> Date.from_iso8601!() |> DateTime.new!(~T[19:00:00], "Etc/UTC")
 

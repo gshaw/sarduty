@@ -1,7 +1,26 @@
 defmodule Web.Components.D4H do
   use Web, :function_component
 
+  import Web.Components.A
+
+  alias App.Adapter.D4H
   alias App.Model.Activity
+
+  attr :team, :map, required: true
+  attr :activity, :map, required: true
+
+  @doc """
+  The activity's title, linked to it in D4H, for a member's tables. A team on SAR Duty
+  Records gets the title alone: a member cannot open its activities (docs/records.md).
+  """
+  def d4h_activity_link(assigns) do
+    ~H"""
+    <span :if={D4H.records?(@team)}>{@activity.title}</span>
+    <.a :if={!D4H.records?(@team)} href={D4H.activity_url(@team, @activity)} external={true}>
+      {@activity.title}
+    </.a>
+    """
+  end
 
   attr :activity, :map, required: true
 

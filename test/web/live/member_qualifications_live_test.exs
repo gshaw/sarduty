@@ -50,7 +50,7 @@ defmodule Web.MemberQualificationsLiveTest do
            )
 
     assert has_element?(lv, row, "2019")
-    assert lv |> element("#member-qualifications") |> render() |> String.contains?("First Aid")
+    assert has_element?(lv, "#member-qualifications-later", "First Aid")
     refute has_element?(lv, "[id^=remove-award-]")
   end
 

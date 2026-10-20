@@ -3,7 +3,6 @@ defmodule Web.MemberQualificationsLive do
 
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
-  import Web.Components.QualificationList
 
   alias App.Adapter.D4H
   alias App.Model.Member
@@ -12,6 +11,7 @@ defmodule Web.MemberQualificationsLive do
   alias App.Repo
   alias App.ViewData.MemberRecords
   alias App.ViewModel.AwardFormViewModel
+  alias Web.QualificationText
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -129,31 +129,62 @@ defmodule Web.MemberQualificationsLive do
   end
 
   defp qualifications_content(assigns) do
+    assigns = assign(assigns, :now, DateTime.utc_now())
+
     ~H"""
-    <.qualification_list
+    <.table
       :if={@awards != []}
       id="member-qualifications"
-      groups={@awards}
-      timezone={@member.team.timezone}
-      href={&~p"/teams/#{@member.team}/qualifications/#{&1.id}"}
-      earlier={true}
+      groups={QualificationText.table_groups(@awards)}
+      row_id={&"member-qualifications-#{&1.award.qualification_id}"}
     >
-      <:action :let={award} :if={@records?}>
-        <.button
-          id={"remove-award-#{award.id}"}
-          type="button"
-          variant={:link}
-          phx-click="remove-award"
-          phx-value-id={award.id}
-          data-confirm={"Remove #{award.qualification.title} from #{@member.name}?"}
+      <:col :let={row} label="Qualification">
+        <.a navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}>
+          {row.award.qualification.title}
+        </.a>
+      </:col>
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        {QualificationText.expires(row.award, @now, @member.team.timezone)}
+      </:col>
+      <:col :let={row} label="First held" class="w-px whitespace-nowrap">
+        {QualificationText.first_held(row, @member.team.timezone)}
+      </:col>
+      <:col :let={row} label="Earlier awards" class="w-px whitespace-nowrap">
+        <span
+          :for={award <- row.earlier}
+          id={"member-qualifications-award-#{award.id}"}
+          class="flex items-center gap-2"
         >
-          Remove
-        </.button>
-      </:action>
-    </.qualification_list>
+          {QualificationText.held(award, @member.team.timezone)}
+          <.remove_button :if={@records?} award={award} member={@member} />
+        </span>
+      </:col>
+      <:col :let={row} :if={@records?} class="w-px whitespace-nowrap">
+        <.remove_button award={row.award} member={@member} />
+      </:col>
+    </.table>
     <p :if={@awards == []} id="no-qualifications">
       {@member.name} has no qualifications in {D4H.service_name(@member.team)}.
     </p>
+    """
+  end
+
+  attr :award, :map, required: true
+  attr :member, :map, required: true
+
+  defp remove_button(assigns) do
+    ~H"""
+    <.button
+      id={"remove-award-#{@award.id}"}
+      type="button"
+      variant={:link}
+      size={:sm}
+      phx-click="remove-award"
+      phx-value-id={@award.id}
+      data-confirm={"Remove #{@award.qualification.title} from #{@member.name}?"}
+    >
+      Remove
+    </.button>
     """
   end
 

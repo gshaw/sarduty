@@ -16,7 +16,15 @@ defmodule Web.Components.Table do
       </.table>
   """
   attr :id, :string, required: true
-  attr :rows, :list, required: true
+  attr :rows, :list, default: [], doc: "the rows, or none with `groups`"
+
+  attr :groups, :list,
+    default: nil,
+    doc: """
+    rows in groups, `[%{id:, title:, rows:}]`, each under a title row in its own tbody
+    (`id-group-id`). `muted: true` greys a group, such as expired ones.
+    """
+
   attr :row_id, :any, default: nil, doc: "the function for generating the row id"
 
   attr :row_item, :any,
@@ -65,22 +73,49 @@ defmodule Web.Components.Table do
             />
           </tr>
         </thead>
-        <tbody id={@id}>
-          <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-            <td
-              :for={col <- @col}
-              data-label={col[:label]}
-              class={[
-                Map.get(col, :class),
-                if(Map.get(col, :align) == "right", do: "text-right", else: nil)
-              ]}
-            >
-              {render_slot(col, @row_item.(row))}
-            </td>
+        <tbody :if={!@groups} id={@id}>
+          <.table_row :for={row <- @rows} row={row} col={@col} row_id={@row_id} row_item={@row_item} />
+        </tbody>
+        <tbody
+          :for={group <- @groups || []}
+          id={"#{@id}-#{group.id}"}
+          class={group[:muted] && "is-muted"}
+        >
+          <tr class="table-group-row">
+            <th colspan={length(@col)} scope="colgroup">{group.title}</th>
           </tr>
+          <.table_row
+            :for={row <- group.rows}
+            row={row}
+            col={@col}
+            row_id={@row_id}
+            row_item={@row_item}
+          />
         </tbody>
       </table>
     </div>
+    """
+  end
+
+  attr :row, :any, required: true
+  attr :col, :list, required: true
+  attr :row_id, :any, required: true
+  attr :row_item, :any, required: true
+
+  defp table_row(assigns) do
+    ~H"""
+    <tr id={@row_id && @row_id.(@row)}>
+      <td
+        :for={col <- @col}
+        data-label={col[:label]}
+        class={[
+          Map.get(col, :class),
+          if(Map.get(col, :align) == "right", do: "text-right", else: nil)
+        ]}
+      >
+        {render_slot(col, @row_item.(@row))}
+      </td>
+    </tr>
     """
   end
 
