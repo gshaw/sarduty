@@ -47,7 +47,7 @@ defmodule Web.MeActivitiesLive do
           <:col :let={attendance} label="Activity">
             <.d4h_activity_link team={@member.team} activity={attendance.activity} />
           </:col>
-          <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-sm:hidden">
+          <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
             <.activity_kind_mark activity={attendance.activity} />
           </:col>
         </.table>
@@ -88,7 +88,7 @@ defmodule Web.MeActivitiesLive do
       <:col :let={attendance} label="Activity">
         <.d4h_activity_link team={@member.team} activity={attendance.activity} />
       </:col>
-      <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-sm:hidden">
+      <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
         <.activity_kind_mark activity={attendance.activity} />
       </:col>
       <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
