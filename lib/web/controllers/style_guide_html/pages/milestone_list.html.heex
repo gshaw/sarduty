@@ -1,0 +1,33 @@
+<.shell title="Milestone list" current={:milestone_list}>
+  <h1>Milestone list</h1>
+  <p class="lead">What a member reached, and the day.</p>
+
+  <div class="demo max-w-md">
+    <.milestone_list id="milestone-list-demo" milestones={SampleData.milestones()} />
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A member's milestones: the latest 3 on their overview, and every one on their Milestones page.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>Anything with a goal still to reach. Milestones are only what a member did.</p>
+
+  <h2>How it works</h2>
+  <ul class="list">
+    <li>
+      Three kinds: hours (100, 250, 500, 1,000, then every 1,000), years on the team (1, 5, 10, then every 5), and incidents (the first, 10, 25, 50, 100, then every 100).
+    </li>
+    <li>
+      Each row is what they reached, then the day and the activity that reached it. Years have no activity.
+    </li>
+    <li>A plain list: no badges, pictures, or levels.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.milestone_list id milestones&gt;</code>
+    with milestones from <code>Milestones.build/5</code>, newest first.
+  </p>
+</.shell>
