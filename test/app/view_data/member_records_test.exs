@@ -14,73 +14,47 @@ defmodule App.ViewData.MemberRecordsTest do
     }
   end
 
-  defp titles(groups),
-    do:
-      Enum.map(groups, fn {group, rows} ->
-        {group, Enum.map(rows, & &1.award.qualification.title)}
-      end)
+  defp titles(rows), do: Enum.map(rows, &{&1.status, &1.award.qualification.title})
 
-  describe "group_awards/2" do
-    test "puts each qualification in one group by when it ends, leaving out empty groups" do
+  describe "qualification_rows/2" do
+    test "current come soonest end first, then by title, no end last; expired most recent first" do
       awards = [
         award(1, "Never", nil),
-        award(2, "Later", ~U[2027-06-01 00:00:00Z]),
-        award(3, "Half a year", ~U[2027-02-01 00:00:00Z]),
+        award(2, "Rope", ~U[2027-09-01 00:00:00Z]),
+        award(3, "Avalanche", ~U[2027-09-01 00:00:00Z]),
         award(4, "Soon", ~U[2026-11-01 00:00:00Z]),
-        award(5, "Gone", ~U[2026-09-01 00:00:00Z])
+        award(5, "Old", ~U[2020-01-01 00:00:00Z]),
+        award(6, "Recent", ~U[2026-09-01 00:00:00Z])
       ]
 
-      assert awards |> MemberRecords.group_awards(@now) |> titles() == [
-               within_60_days: ["Soon"],
-               within_180_days: ["Half a year"],
-               later: ["Later"],
-               never: ["Never"],
-               expired: ["Gone"]
+      assert awards |> MemberRecords.qualification_rows(@now) |> titles() == [
+               expiring: "Soon",
+               current: "Avalanche",
+               current: "Rope",
+               current: "Never",
+               expired: "Recent",
+               expired: "Old"
              ]
 
-      assert [award(1, "Never", nil)] |> MemberRecords.group_awards(@now) |> titles() == [
-               never: ["Never"]
-             ]
-
-      assert MemberRecords.group_awards([], @now) == []
+      assert MemberRecords.qualification_rows([], @now) == []
     end
 
-    test "a window holds an award ending on its last second, and an award ending now is expired" do
+    test "expiring holds an award ending on the window's last second, and one ending now is expired" do
       sixty = DateTime.add(@now, 60, :day)
-      one_eighty = DateTime.add(@now, 180, :day)
 
       awards = [
         award(1, "At 60", sixty),
         award(2, "Past 60", DateTime.add(sixty, 1)),
-        award(3, "At 180", one_eighty),
-        award(4, "Past 180", DateTime.add(one_eighty, 1)),
-        award(5, "Now", @now)
+        award(3, "Now", @now)
       ]
 
-      assert awards |> MemberRecords.group_awards(@now) |> titles() == [
-               within_60_days: ["At 60"],
-               within_180_days: ["Past 60", "At 180"],
-               later: ["Past 180"],
-               expired: ["Now"]
-             ]
+      rows = MemberRecords.qualification_rows(awards, @now)
+
+      assert titles(rows) == [expiring: "At 60", current: "Past 60", expired: "Now"]
+      assert rows |> MemberRecords.expiring() |> titles() == [expiring: "At 60"]
     end
 
-    test "current come soonest end first, then by title; expired most recent first" do
-      awards = [
-        award(1, "Rope", ~U[2027-09-01 00:00:00Z]),
-        award(2, "Avalanche", ~U[2027-09-01 00:00:00Z]),
-        award(3, "First Aid", ~U[2027-07-01 00:00:00Z]),
-        award(4, "Old", ~U[2020-01-01 00:00:00Z]),
-        award(5, "Recent", ~U[2026-09-01 00:00:00Z])
-      ]
-
-      assert awards |> MemberRecords.group_awards(@now) |> titles() == [
-               later: ["First Aid", "Avalanche", "Rope"],
-               expired: ["Recent", "Old"]
-             ]
-    end
-
-    test "a renewal is one row in its current group, carrying the awards it replaced" do
+    test "a renewal is one row, carrying the awards it replaced" do
       awards = [
         award(1, "First Aid", ~U[2022-03-01 00:00:00Z], ~U[2019-03-01 00:00:00Z]),
         award(1, "First Aid", ~U[2028-03-01 00:00:00Z], ~U[2025-03-01 00:00:00Z]),
@@ -89,8 +63,9 @@ defmodule App.ViewData.MemberRecordsTest do
         award(2, "Rope", nil)
       ]
 
-      [later: [first_aid], never: [rope]] = MemberRecords.group_awards(awards, @now)
+      [first_aid, rope] = MemberRecords.qualification_rows(awards, @now)
 
+      assert first_aid.status == :current
       assert first_aid.award.ends_at == ~U[2028-03-01 00:00:00Z]
 
       assert Enum.map(first_aid.earlier, & &1.ends_at) == [
@@ -112,31 +87,10 @@ defmodule App.ViewData.MemberRecordsTest do
         award(1, "Rope", ~U[2021-09-01 00:00:00Z], ~U[2019-03-01 00:00:00Z])
       ]
 
-      [expired: [rope]] = MemberRecords.group_awards(awards, @now)
+      [rope] = MemberRecords.qualification_rows(awards, @now)
+      assert rope.status == :expired
       assert rope.award.ends_at == ~U[2024-09-01 00:00:00Z]
       assert rope.first_started_at == ~U[2019-03-01 00:00:00Z]
-    end
-  end
-
-  describe "by_month/2" do
-    test "groups by the month in the team's time zone, keeping the order" do
-      rows = [
-        %{id: 1, started_at: ~U[2026-10-02 18:00:00Z]},
-        # 23:30 on Sep 30 in Vancouver.
-        %{id: 2, started_at: ~U[2026-10-01 06:30:00Z]},
-        %{id: 3, started_at: ~U[2026-09-01 18:00:00Z]},
-        %{id: 4, started_at: ~U[2026-06-15 18:00:00Z]}
-      ]
-
-      groups = MemberRecords.by_month(rows, "America/Vancouver")
-
-      assert Enum.map(groups, fn {month, rows} -> {month, Enum.map(rows, & &1.id)} end) == [
-               {~D[2026-10-01], [1]},
-               {~D[2026-09-01], [2, 3]},
-               {~D[2026-06-01], [4]}
-             ]
-
-      assert MemberRecords.by_month([], "America/Vancouver") == []
     end
   end
 

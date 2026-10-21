@@ -2,7 +2,6 @@ defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
   alias App.Model.Team
-  alias App.ViewData.MemberRecords
   alias Service.Format
   alias Web.Components.ActivityMap
 
@@ -126,32 +125,28 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
-  # One member's awards, grouped as their page groups them, on Oct 9, 2026, for the
-  # table's row groups.
-  def qualification_groups do
+  # Members by standing, for the table's row groups.
+  def member_groups do
     [
-      {1, 1, "First Aid", "2019-03-04", "2022-03-04"},
-      {2, 1, "First Aid", "2022-03-04", "2025-03-04"},
-      {3, 1, "First Aid", "2025-03-04", "2026-11-20"},
-      {4, 2, "Swiftwater Rescue Technician", "2024-05-01", "2027-04-30"},
-      {5, 3, "Ground Search and Rescue", "2018-06-01", nil},
-      {6, 4, "Rope Rescue Team Member", "2019-03-01", "2024-09-30"}
-    ]
-    |> Enum.map(fn {id, qualification_id, title, starts, ends} ->
       %{
-        id: id,
-        qualification_id: qualification_id,
-        qualification: %{id: qualification_id, title: title},
-        starts_at: sample_day(starts),
-        ends_at: ends && sample_day(ends)
+        id: "active",
+        title: "Active",
+        rows: [
+          %{id: 1, name: "Casey Dhillon", last_attended: "Oct 14"},
+          %{id: 2, name: "Morgan Lee", last_attended: "Oct 2"}
+        ]
+      },
+      %{id: "away", title: "Away", rows: [%{id: 3, name: "Sam Okafor", last_attended: "Jun 21"}]},
+      %{
+        id: "retired",
+        title: "Retired",
+        muted: true,
+        rows: [
+          %{id: 4, name: "Jordan Price", last_attended: "Mar 3, 2024"}
+        ]
       }
-    end)
-    |> MemberRecords.group_awards(sample_now())
+    ]
   end
-
-  def sample_now, do: ~U[2026-10-09 19:00:00Z]
-
-  defp sample_day(day), do: day |> Date.from_iso8601!() |> DateTime.new!(~T[19:00:00], "Etc/UTC")
 
   # The recommended changes on Import attendance, as {op, D4H attendance id, member}.
   def recommendations do

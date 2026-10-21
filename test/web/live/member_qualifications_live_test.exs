@@ -25,7 +25,7 @@ defmodule Web.MemberQualificationsLiveTest do
     %{first_aid: first_aid, old: old, latest: latest}
   end
 
-  test "a team admin sees the member's qualifications grouped, with each earlier award",
+  test "a team admin sees the member's qualifications, with each earlier award",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
@@ -36,7 +36,7 @@ defmodule Web.MemberQualificationsLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/qualifications")
 
-    row = "#member-qualifications-later #member-qualifications-#{first_aid.id}"
+    row = "#member-qualifications-#{first_aid.id}"
 
     assert has_element?(
              lv,
@@ -50,7 +50,7 @@ defmodule Web.MemberQualificationsLiveTest do
            )
 
     assert has_element?(lv, row, "2019")
-    assert has_element?(lv, "#member-qualifications-later", "First Aid")
+    refute has_element?(lv, "#{row} .badge")
     refute has_element?(lv, "[id^=remove-award-]")
   end
 

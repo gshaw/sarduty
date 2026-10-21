@@ -39,9 +39,6 @@ defmodule Service.Format do
   def day_in_year(%Date{} = date, %Date{} = today),
     do: Calendar.strftime(date, if(date.year == today.year, do: "%b %-d", else: "%b %-d, %Y"))
 
-  @doc "A month's name, for a heading over its rows: \"September\"."
-  def month(%Date{} = date), do: Calendar.strftime(date, "%B")
-
   @doc "A month's short name, for chart labels: \"Sep\"."
   def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
 

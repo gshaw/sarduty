@@ -92,9 +92,8 @@ defmodule Web.MemberQualificationsLive do
       )
 
   # Among the awards on the page, which are the member's on this team.
-  defp find_award(groups, id) do
-    groups
-    |> Enum.flat_map(fn {_group, rows} -> rows end)
+  defp find_award(rows, id) do
+    rows
     |> Enum.flat_map(&[&1.award | &1.earlier])
     |> Enum.find(&(Integer.to_string(&1.id) == id))
   end
@@ -135,8 +134,9 @@ defmodule Web.MemberQualificationsLive do
     <.table
       :if={@awards != []}
       id="member-qualifications"
-      groups={QualificationText.table_groups(@awards)}
+      rows={@awards}
       row_id={&"member-qualifications-#{&1.award.qualification_id}"}
+      row_class={&QualificationText.row_class/1}
     >
       <:col :let={row} label="Qualification">
         <.a navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}>
@@ -145,6 +145,7 @@ defmodule Web.MemberQualificationsLive do
       </:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
         {QualificationText.expires(row.award, @now, @member.team.timezone)}
+        <.badge :if={row.status == :expiring} kind={:warning}>Expiring</.badge>
       </:col>
       <:col :let={row} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}

@@ -177,7 +177,7 @@ defmodule Web.MeLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
     end
 
-    test "groups qualifications by when they expire, with no other team's",
+    test "lists qualifications soonest expiry first, tagging and naming the expiring one",
          %{conn: conn, team: team, member: member} do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       first_aid = qualification_fixture(team, %{title: "First Aid"})
@@ -202,44 +202,35 @@ defmodule Web.MeLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(
-               lv,
-               "#qualifications-within-60-days #qualifications-#{first_aid.id}",
-               "2019"
-             )
-
-      assert has_element?(lv, "#qualifications-never #qualifications-#{rope.id}")
+      assert has_element?(lv, "#qualifications-expiring", "First Aid expires")
+      assert has_element?(lv, "#qualifications-#{first_aid.id} .badge", "Expiring")
+      assert has_element?(lv, "#qualifications-#{first_aid.id}", "2019")
+      assert has_element?(lv, "#qualifications-#{rope.id}", "Does not expire")
+      refute has_element?(lv, "#qualifications-#{rope.id} .badge")
 
       assert has_element?(
                lv,
-               "#qualifications-expired #qualifications-#{avalanche.id}",
+               "#qualifications-#{avalanche.id}.is-muted",
                "Expired Sep 15, 2024"
              )
+
+      refute has_element?(lv, ".table-group-row")
 
       refute has_element?(lv, "#qualifications-#{other_team.id}")
       refute has_element?(lv, "[id^=qualifications-award-]")
     end
 
-    test "groups the year's activities by month, each linked to D4H",
+    test "links each of the year's activities to D4H",
          %{conn: conn, team: team, member: member, mid_year: mid_year} do
       activity = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})
       attendance = attendance_fixture(activity, member, %{started_at: mid_year})
-
-      month =
-        mid_year
-        |> DateTime.shift_zone!(team.timezone)
-        |> DateTime.to_date()
-        |> Date.beginning_of_month()
-        |> Date.to_iso8601()
 
       url = D4H.activity_url(team, activity)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(
-               lv,
-               ~s{#attendance-#{month} #attendance-#{attendance.id} a[href="#{url}"]}
-             )
+      assert has_element?(lv, ~s{#attendance-#{attendance.id} a[href="#{url}"]})
+      refute has_element?(lv, ".table-group-row")
     end
 
     test "a team on SAR Duty Records has no activity links",

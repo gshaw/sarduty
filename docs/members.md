@@ -108,24 +108,27 @@ A member's qualifications and activities look the same on their own page and on 
 admin's member page, from one query and one component each (#308, #339, decided
 2026-10-20). Org pages can use them later: each takes rows and a time zone, not a team.
 
-- **Qualifications** come from `MemberRecords.qualifications/2`, grouped by
-  `MemberRecords.group_awards/2`, and each page draws them with `<.table groups={…}>`,
-  one row per qualification: Expiring within 60 days, within 180 days, later, Does not
-  expire, and Expired (muted). Empty groups don't show. 60 days is the app's one expiring
-  window (`BuildGroupRulePreview.expiring_days/0`); 180 is the longest choice on the
-  team's expiring view. The words are [Web.QualificationText](../lib/web/qualification_text.ex),
-  so every page says the same thing.
+- **Qualifications** come from `MemberRecords.qualifications/2`: one table, one row per
+  qualification, soonest expiry first, then Does not expire, then Expired (muted). One
+  that expires within 60 days, the app's one expiring window
+  (`BuildGroupRulePreview.expiring_days/0`), gets an Expiring tag, and the member's own
+  page names it in a warning banner above the table. The words are
+  [Web.QualificationText](../lib/web/qualification_text.ex), so every page says the same
+  thing.
+- **No groups** (decided 2026-10-20). #308 asked for groups by expiry. On South Fraser's
+  data, 11 of 84 members had anything expiring within 60 days, never more than 1, and
+  most groups held 1 or 2 rows under their own heading. A tag finds the one that matters.
+  `<.table groups={…}>` stays for lists where each group holds several rows.
 - **One row per qualification**, from its latest award: when it expires (or expired) and
-  the year it was first held. A renewal stays in its current group. Team admins also get
-  an Earlier awards column, with Remove on a team on SAR Duty Records. The admin's tab
-  lost its Start column.
-- **No component of their own** (decided 2026-10-20). A grouped list is a table with row
-  groups, so pages pick their columns and the table does the rest. A two-line list and a
-  table per group both wasted space.
+  the year it was first held. Team admins also get an Earlier awards column, with Remove
+  on a team on SAR Duty Records. The admin's tab lost its Start column.
+- **No component of their own** (decided 2026-10-20). Pages pick their columns from one
+  set of rows, and the table does the rest. A two-line list wasted space.
 - **Activities** are a table too: day, title linked to the activity in D4H
-  (`<.d4h_activity_link>`), kind, and time there. The year's activities group by month,
-  newest first (`MemberRecords.by_month/2`); not by kind, since every row shows its kind
-  and the year reads in order. A team on SAR Duty Records gets no links: a member cannot
+  (`<.d4h_activity_link>`), kind, and time there, newest first. No groups by month
+  (decided 2026-10-20): a member attends a median of 19 a year, so a month heading sat
+  over about 2 rows, and the date already says the month. Not by kind either, since every
+  row shows its kind. A team on SAR Duty Records gets no links: a member cannot
   open its activities.
 - **A team admin's Attendance tab keeps its table.** It searches, sorts, filters by hours
   and activity tag, and pages by 50, and links to SAR Duty's own activity page. Its years

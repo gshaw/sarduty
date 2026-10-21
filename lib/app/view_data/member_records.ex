@@ -60,87 +60,72 @@ defmodule App.ViewData.MemberRecords do
 
   def minutes(%{duration_in_minutes: minutes}), do: minutes || 0
 
-  @doc "The member's qualifications, grouped by `group_awards/2`."
+  @doc "The member's qualifications, as `qualification_rows/2` rows."
   def qualifications(%Member{} = member, now) do
     MemberQualificationAward
     |> join(:inner, [a], q in assoc(a, :qualification))
     |> where([a, q], a.member_id == ^member.id and q.team_id == ^member.team_id)
     |> preload([a, q], qualification: q)
     |> Repo.all()
-    |> group_awards(now)
+    |> qualification_rows(now)
   end
-
-  @groups [:within_60_days, :within_180_days, :later, :never, :expired]
 
   @doc """
-  The member's awards as `[{group, [row]}]`, one row per qualification, in the order of
-  `#{inspect(@groups)}`, with empty groups left out. 60 days is the app's one expiring
-  window (`BuildGroupRulePreview.expiring_days/0`) and 180 the longest choice on the
-  team's expiring view.
+  The member's awards as one row per qualification, `%{award:, earlier:,
+  first_started_at:, status:}`: the latest award (no end is the latest, else the one that
+  ends last), the ones it replaced, newest first, when the first one started, and
+  `:expiring`, `:current`, or `:expired`. Expiring is within the app's one window,
+  `BuildGroupRulePreview.expiring_days/0`.
 
-  Each row is `%{award:, earlier:, first_started_at:}`: the latest award (no end is the
-  latest, else the one that ends last), the ones it replaced, newest first, and when the
-  first one started. Current groups come soonest end first, the expired most recent first.
+  Current rows come first, soonest end first and no end last, then expired ones, most
+  recent first. No groups (decided 2026-10-20): most members have nothing expiring, and
+  headings over 1 or 2 rows were noise.
   """
-  def group_awards(awards, now) do
-    rows =
+  def qualification_rows(awards, now) do
+    {expired, current} =
       awards
       |> Enum.group_by(& &1.qualification_id)
-      |> Enum.map(fn {_id, awards} -> row(awards) end)
-      |> Enum.group_by(&group(&1.award, now))
+      |> Enum.map(fn {_id, awards} -> row(awards, now) end)
+      |> Enum.split_with(&(&1.status == :expired))
 
-    for group <- @groups, rows = rows[group], do: {group, sort_rows(rows, group)}
+    sort_rows(current, :asc) ++ sort_rows(expired, :desc)
   end
 
-  defp row(awards) do
+  @doc "The rows that expire within the app's expiring window."
+  def expiring(rows), do: Enum.filter(rows, &(&1.status == :expiring))
+
+  defp row(awards, now) do
     [latest | earlier] = Enum.sort_by(awards, &end_key/1, :desc)
     starts = awards |> Enum.map(& &1.starts_at) |> Enum.reject(&is_nil/1)
 
     %{
       award: latest,
       earlier: earlier,
-      first_started_at: if(starts != [], do: Enum.min(starts, DateTime))
+      first_started_at: if(starts != [], do: Enum.min(starts, DateTime)),
+      status: status(latest, now)
     }
   end
 
-  defp group(%{ends_at: nil}, _now), do: :never
+  defp status(%{ends_at: nil}, _now), do: :current
 
-  # Within a window means ending on or before its last moment, as the team's expiring
+  # Within the window means ending on or before its last moment, as the team's expiring
   # view counts it.
-  defp group(%{ends_at: ends_at} = award, now) do
-    within? = &(not DateTime.after?(ends_at, DateTime.add(now, &1, :day)))
+  defp status(%{ends_at: ends_at} = award, now) do
+    until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
 
     cond do
       MemberQualificationAward.expired?(award, now) -> :expired
-      within?.(BuildGroupRulePreview.expiring_days()) -> :within_60_days
-      within?.(180) -> :within_180_days
-      true -> :later
+      DateTime.after?(ends_at, until) -> :current
+      true -> :expiring
     end
   end
 
-  defp sort_rows(rows, group) do
-    order = if group == :expired, do: :desc, else: :asc
-    Enum.sort_by(rows, &{end_key(&1.award), &1.award.qualification.title}, order)
-  end
+  defp sort_rows(rows, order),
+    do: Enum.sort_by(rows, &{end_key(&1.award), &1.award.qualification.title}, order)
 
   # Sorts awards by end, with no end after every date.
   defp end_key(%{ends_at: nil}), do: {1, 0}
   defp end_key(%{ends_at: ends_at}), do: {0, DateTime.to_unix(ends_at)}
-
-  @doc """
-  Attendances by the month they started in the team's time zone, as `[{first_day,
-  [attendance]}]`, keeping the order they came in.
-  """
-  def by_month(attendances, timezone) do
-    attendances
-    |> Enum.chunk_by(&month(&1.started_at, timezone))
-    |> Enum.map(&{month(hd(&1).started_at, timezone), &1})
-  end
-
-  defp month(datetime, timezone) do
-    date = datetime |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
-    Date.beginning_of_month(date)
-  end
 
   defp attended_query(member, now), do: member_query(member, &Attendance.attended(&1, now))
 

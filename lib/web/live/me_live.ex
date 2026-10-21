@@ -158,7 +158,7 @@ defmodule Web.MeLive do
     </p>
     <.table
       id="attendance"
-      groups={month_groups(@attendances, @member.team.timezone)}
+      rows={@attendances}
       row_id={&"attendance-#{&1.id}"}
     >
       <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
@@ -177,12 +177,6 @@ defmodule Web.MeLive do
     """
   end
 
-  # The year's activities by month, newest first, as table groups titled "October".
-  defp month_groups(attendances, timezone) do
-    for {month, rows} <- MemberRecords.by_month(attendances, timezone),
-        do: %{id: Date.to_iso8601(month), title: Service.Format.month(month), rows: rows}
-  end
-
   defp qualifications_content(%{qualifications: []} = assigns) do
     ~H"""
     <.empty_state id="no-qualifications" title="No qualifications">
@@ -192,15 +186,27 @@ defmodule Web.MeLive do
   end
 
   defp qualifications_content(assigns) do
+    assigns = assign(assigns, :expiring, MemberRecords.expiring(assigns.qualifications))
+
     ~H"""
+    <.banner
+      :if={@expiring != []}
+      id="qualifications-expiring"
+      kind={:warning}
+      title={QualificationText.expiring_title(@expiring, @member.team.timezone)}
+    >
+      {QualificationText.expiring_body(@expiring, @member.team.timezone)}
+    </.banner>
     <.table
       id="qualifications"
-      groups={QualificationText.table_groups(@qualifications)}
+      rows={@qualifications}
       row_id={&"qualifications-#{&1.award.qualification_id}"}
+      row_class={&QualificationText.row_class/1}
     >
       <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
         {QualificationText.expires(row.award, @now, @member.team.timezone)}
+        <.badge :if={row.status == :expiring} kind={:warning}>Expiring</.badge>
       </:col>
       <:col :let={row} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}

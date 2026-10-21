@@ -27,6 +27,10 @@ defmodule Web.Components.Table do
 
   attr :row_id, :any, default: nil, doc: "the function for generating the row id"
 
+  attr :row_class, :any,
+    default: nil,
+    doc: ~s(a function from a row to its class, such as "is-muted" to grey it)
+
   attr :row_item, :any,
     default: &Function.identity/1,
     doc: "the function for mapping each row before calling the :col and :action slots"
@@ -74,7 +78,14 @@ defmodule Web.Components.Table do
           </tr>
         </thead>
         <tbody :if={!@groups} id={@id}>
-          <.table_row :for={row <- @rows} row={row} col={@col} row_id={@row_id} row_item={@row_item} />
+          <.table_row
+            :for={row <- @rows}
+            row={row}
+            col={@col}
+            row_id={@row_id}
+            row_class={@row_class}
+            row_item={@row_item}
+          />
         </tbody>
         <tbody
           :for={group <- @groups || []}
@@ -89,6 +100,7 @@ defmodule Web.Components.Table do
             row={row}
             col={@col}
             row_id={@row_id}
+            row_class={@row_class}
             row_item={@row_item}
           />
         </tbody>
@@ -100,11 +112,12 @@ defmodule Web.Components.Table do
   attr :row, :any, required: true
   attr :col, :list, required: true
   attr :row_id, :any, required: true
+  attr :row_class, :any, required: true
   attr :row_item, :any, required: true
 
   defp table_row(assigns) do
     ~H"""
-    <tr id={@row_id && @row_id.(@row)}>
+    <tr id={@row_id && @row_id.(@row)} class={@row_class && @row_class.(@row)}>
       <td
         :for={col <- @col}
         data-label={col[:label]}

@@ -1,30 +1,38 @@
 defmodule Web.QualificationText do
   @moduledoc """
   The words for a member's qualifications (#308), so the member's page, a team admin's
-  member tab, and later org pages say the same thing. The grouping itself is
-  `App.ViewData.MemberRecords.group_awards/2`; pages draw it with `<.table groups={…}>`.
+  member tab, and later org pages say the same thing. The rows are
+  `App.ViewData.MemberRecords.qualification_rows/2`.
   """
 
   alias App.Model.MemberQualificationAward
+  alias App.Operation.BuildGroupRulePreview
   alias Service.Format
 
-  @doc "`group_awards/2`'s groups as `<.table>` groups, titled, with Expired muted."
-  def table_groups(groups) do
-    for {group, rows} <- groups do
-      %{
-        id: group |> Atom.to_string() |> String.replace("_", "-"),
-        title: title(group),
-        rows: rows,
-        muted: group == :expired
-      }
-    end
-  end
+  @doc "Greys an expired row."
+  def row_class(%{status: :expired}), do: "is-muted"
+  def row_class(_row), do: nil
 
-  defp title(:within_60_days), do: "Expiring within 60 days"
-  defp title(:within_180_days), do: "Expiring within 180 days"
-  defp title(:later), do: "Expiring later"
-  defp title(:never), do: "Does not expire"
-  defp title(:expired), do: "Expired"
+  @doc ~s(The reminder's title: "First Aid expires Dec 5, 2026" or "2 qualifications expire within #{BuildGroupRulePreview.expiring_days()} days".)
+  def expiring_title([row], timezone),
+    do:
+      "#{row.award.qualification.title} expires #{Format.date_short(row.award.ends_at, timezone)}"
+
+  def expiring_title(rows, _timezone),
+    do:
+      "#{length(rows)} qualifications expire within #{BuildGroupRulePreview.expiring_days()} days"
+
+  @doc "The reminder's body: what to renew, and by when."
+  def expiring_body([_row], _timezone), do: "Renew it before then."
+
+  def expiring_body(rows, timezone) do
+    names =
+      Enum.map(rows, fn row ->
+        "#{row.award.qualification.title} on #{Format.date_short(row.award.ends_at, timezone)}"
+      end)
+
+    "#{Enum.join(names, ", ")}. Renew them before then."
+  end
 
   @doc ~s(When it ends: "Nov 30, 2026", "Does not expire", or "Expired Sep 30, 2024".)
   def expires(%{ends_at: nil}, _now, _timezone), do: "Does not expire"

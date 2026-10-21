@@ -58,7 +58,7 @@
   table.table td .btn-sm { margin: -3px 0 -1px; }
 
   /* A group's title row (groups={…}): small capitals on the header colour, like a header
-     row, so the groups share one set of columns. A muted group greys its rows. */
+     row, so the groups share one set of columns. A muted group or row (row_class) greys. */
   table.table tbody tr.table-group-row th,
   table.table tbody tr.table-group-row:hover th {
     background: var(--surface-alt);
@@ -70,7 +70,7 @@
     color: var(--text-muted);
     padding-top: var(--sp-2);
   }
-  table.table tbody.is-muted td { color: var(--text-muted); }
+  table.table :is(tbody, tr).is-muted td { color: var(--text-muted); }
   table.table tbody:not(:last-child) tr:last-child :is(td, th) { border-bottom: 1px solid var(--border-subtle); }
 
   /* A sortable header's arrow, faded until the table sorts by that column. */
