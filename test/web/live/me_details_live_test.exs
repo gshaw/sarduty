@@ -72,7 +72,7 @@ defmodule Web.MeDetailsLiveTest do
     )
     |> render_submit()
 
-    assert_redirect(lv, ~p"/teams/#{team}/me")
+    assert_redirect(lv, ~p"/teams/#{team}/me/details")
 
     path = "/v3/team/#{team.d4h_team_id}/members/#{member.d4h_member_id}"
     assert_received {:patch, ^path, body}
@@ -94,7 +94,7 @@ defmodule Web.MeDetailsLiveTest do
 
     lv |> form("#details-form") |> render_submit()
 
-    assert_redirect(lv, ~p"/teams/#{team}/me")
+    assert_redirect(lv, ~p"/teams/#{team}/me/details")
     refute_received {:patch, _path, _body}
     assert Repo.all(ChangeSet) == []
   end

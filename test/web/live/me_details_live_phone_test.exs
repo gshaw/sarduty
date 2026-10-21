@@ -1,4 +1,5 @@
-defmodule Web.MePhoneLiveTest do
+defmodule Web.MeDetailsLivePhoneTest do
+  # The mobile number on the contact details page, in its own file for its texted codes.
   use Web.ConnCase
 
   import App.AccountsFixtures
@@ -14,16 +15,21 @@ defmodule Web.MePhoneLiveTest do
       member_with_login_fixture(%{email: "member@example.com", phone: "604-555-0100"})
 
     team = team |> Ecto.Changeset.change(d4h_access_key: "key") |> Repo.update!()
-    %{conn: log_in_user(conn, user), team: team, member: %{member | team: team}, user: user}
+    member = %{member | team: team}
+    stub_d4h(team, member)
+    %{conn: log_in_user(conn, user), team: team, member: member, user: user}
   end
 
-  # D4H takes any PATCH; each body comes to the test process.
+  # D4H answers the page's GET with the member, and takes any PATCH; each PATCH body
+  # comes to the test process.
   defp stub_d4h(team, member) do
     test = self()
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
-      {:ok, body, conn} = Plug.Conn.read_body(conn)
-      send(test, {:patch, Jason.decode!(body)})
+      if conn.method == "PATCH" do
+        {:ok, body, _conn} = Plug.Conn.read_body(conn)
+        send(test, {:patch, Jason.decode!(body)})
+      end
 
       Req.Test.json(conn, %{
         "id" => member.d4h_member_id,
@@ -50,7 +56,7 @@ defmodule Web.MePhoneLiveTest do
        %{conn: conn, team: team, member: member, user: user} do
     text_login_fixture()
     stub_d4h(team, member)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
 
     code = send_code(lv, "(604) 555-0199")
     assert has_element?(lv, "#code-sent", "604-555-0199")
@@ -58,7 +64,7 @@ defmodule Web.MePhoneLiveTest do
 
     lv |> form("#code-form", confirm: %{code: code}) |> render_submit()
 
-    assert_redirect(lv, ~p"/teams/#{team}/me")
+    assert_redirect(lv, ~p"/teams/#{team}/me/details")
     assert_received {:patch, %{"phone" => %{"mobile" => "604-555-0199"}}}
     assert Repo.reload!(member).phone == "604-555-0199"
 
@@ -73,7 +79,7 @@ defmodule Web.MePhoneLiveTest do
   test "a wrong code changes nothing", %{conn: conn, team: team, member: member} do
     text_login_fixture()
     stub_d4h(team, member)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
     code = send_code(lv, "604-555-0199")
     wrong = if code == "000000", do: "111111", else: "000000"
 
@@ -87,10 +93,10 @@ defmodule Web.MePhoneLiveTest do
   test "a waiting code shows its form after a reload, and cancel drops it",
        %{conn: conn, team: team} do
     text_login_fixture()
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
     send_code(lv, "604-555-0199")
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
     assert has_element?(lv, "#code-form")
 
     lv |> element("#cancel-code") |> render_click()
@@ -99,7 +105,7 @@ defmodule Web.MePhoneLiveTest do
 
   test "the same number is refused", %{conn: conn, team: team} do
     text_login_fixture()
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
 
     html = lv |> form("#phone-form", phone: %{phone: "604-555-0100"}) |> render_submit()
 
@@ -108,13 +114,13 @@ defmodule Web.MePhoneLiveTest do
   end
 
   test "can't be changed while texts are off", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
     refute has_element?(lv, "#phone-form")
     assert has_element?(lv, "#phone-off")
   end
 
   test "the email shows, with no way to change it", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
     assert has_element?(lv, "#email-note", "member@example.com")
     refute has_element?(lv, "input[type=email]")
   end

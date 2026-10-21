@@ -130,14 +130,26 @@ defmodule Web.Navigation do
     )
   end
 
+  # ID card shows once a SAR Duty admin turns ID cards on for the team.
   defp member_groups(team) do
     [
       {nil,
-       [
-         link("me", "Overview", ~p"/teams/#{team}/me", exact: true),
-         link("me-details", "Contact details", ~p"/teams/#{team}/me/details"),
-         link("me-mobile", "Mobile number", ~p"/teams/#{team}/me/mobile")
-       ]}
+       Enum.filter(
+         [
+           link("me", "Overview", ~p"/teams/#{team}/me", exact: true),
+           team.id_cards_enabled && link("me-card", "ID card", ~p"/teams/#{team}/me/card"),
+           link("me-qualifications", "Qualifications", ~p"/teams/#{team}/me/qualifications"),
+           link("me-activities", "Activities", ~p"/teams/#{team}/me/activities"),
+           link("me-hours", "Hours", ~p"/teams/#{team}/me/hours"),
+           link(
+             "me-tax-credit-letters",
+             "Tax credit letters",
+             ~p"/teams/#{team}/me/tax-credit-letters"
+           ),
+           link("me-details", "Contact details", ~p"/teams/#{team}/me/details")
+         ],
+         & &1
+       )}
     ]
   end
 

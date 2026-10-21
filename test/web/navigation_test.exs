@@ -90,6 +90,27 @@ defmodule Web.NavigationTest do
       assert headings == [nil, "Activities", "People", nil, nil, "Settings"]
     end
 
+    test "a member's 7 pages, with ID card only on a team that has ID cards" do
+      member = %Member{team: %{@team | id_cards_enabled: true}}
+      area = Navigation.area("/teams/squamish/me", nil, member)
+
+      assert area |> Navigation.groups("/teams/squamish/me/hours") |> keys() == [
+               "me",
+               "me-card",
+               "me-qualifications",
+               "me-activities",
+               "me-hours",
+               "me-tax-credit-letters",
+               "me-details"
+             ]
+
+      assert current(Navigation.groups(area, "/teams/squamish/me/hours")) == ["me-hours"]
+      assert current(Navigation.groups(area, "/teams/squamish/me")) == ["me"]
+
+      area = Navigation.area("/teams/squamish/me", nil, %Member{team: @team})
+      refute "me-card" in (area |> Navigation.groups("/x") |> keys())
+    end
+
     test "your settings and pages outside an area have none" do
       assert "/account" |> Navigation.area(nil, nil) |> Navigation.groups("/account") == []
       assert Navigation.groups(nil, "/") == []
