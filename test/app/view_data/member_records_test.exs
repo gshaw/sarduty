@@ -5,51 +5,92 @@ defmodule App.ViewData.MemberRecordsTest do
 
   @now ~U[2026-10-09 12:00:00Z]
 
-  defp award(qualification_id, title, ends_at) do
-    %{qualification_id: qualification_id, qualification: %{title: title}, ends_at: ends_at}
+  defp award(qualification_id, title, ends_at, starts_at \\ nil) do
+    %{
+      qualification_id: qualification_id,
+      qualification: %{title: title},
+      starts_at: starts_at,
+      ends_at: ends_at
+    }
   end
 
-  describe "split_awards/3" do
-    test "keeps the latest award of each qualification, a missing end being latest" do
+  defp titles(rows), do: Enum.map(rows, &{&1.status, &1.award.qualification.title})
+
+  describe "qualification_rows/2" do
+    test "current come soonest end first, then by title, no end last; expired most recent first" do
       awards = [
-        award(1, "First Aid", ~U[2025-01-01 00:00:00Z]),
-        award(1, "First Aid", ~U[2028-01-01 00:00:00Z]),
+        award(1, "Never", nil),
+        award(2, "Rope", ~U[2027-09-01 00:00:00Z]),
+        award(3, "Avalanche", ~U[2027-09-01 00:00:00Z]),
+        award(4, "Soon", ~U[2026-11-01 00:00:00Z]),
+        award(5, "Old", ~U[2020-01-01 00:00:00Z]),
+        award(6, "Recent", ~U[2026-09-01 00:00:00Z])
+      ]
+
+      assert awards |> MemberRecords.qualification_rows(@now) |> titles() == [
+               expiring: "Soon",
+               current: "Avalanche",
+               current: "Rope",
+               current: "Never",
+               expired: "Recent",
+               expired: "Old"
+             ]
+
+      assert MemberRecords.qualification_rows([], @now) == []
+    end
+
+    test "expiring holds an award ending on the window's last second, and one ending now is expired" do
+      sixty = DateTime.add(@now, 60, :day)
+
+      awards = [
+        award(1, "At 60", sixty),
+        award(2, "Past 60", DateTime.add(sixty, 1)),
+        award(3, "Now", @now)
+      ]
+
+      rows = MemberRecords.qualification_rows(awards, @now)
+
+      assert titles(rows) == [expiring: "At 60", current: "Past 60", expired: "Now"]
+      assert Enum.map(rows, & &1.days_left) == [60, 61, 0]
+    end
+
+    test "a renewal is one row, carrying the awards it replaced" do
+      awards = [
+        award(1, "First Aid", ~U[2022-03-01 00:00:00Z], ~U[2019-03-01 00:00:00Z]),
+        award(1, "First Aid", ~U[2028-03-01 00:00:00Z], ~U[2025-03-01 00:00:00Z]),
+        award(1, "First Aid", ~U[2025-03-01 00:00:00Z], ~U[2022-03-01 00:00:00Z]),
         award(2, "Rope", ~U[2027-01-01 00:00:00Z]),
         award(2, "Rope", nil)
       ]
 
-      %{current: current, expired: []} = MemberRecords.split_awards(awards, @now, 60)
+      [first_aid, rope] = MemberRecords.qualification_rows(awards, @now)
 
-      assert Enum.map(current, &{&1.award.qualification.title, &1.award.ends_at}) == [
-               {"First Aid", ~U[2028-01-01 00:00:00Z]},
-               {"Rope", nil}
+      assert first_aid.status == :current
+      assert first_aid.award.ends_at == ~U[2028-03-01 00:00:00Z]
+
+      assert Enum.map(first_aid.earlier, & &1.ends_at) == [
+               ~U[2025-03-01 00:00:00Z],
+               ~U[2022-03-01 00:00:00Z]
              ]
+
+      assert first_aid.first_started_at == ~U[2019-03-01 00:00:00Z]
+
+      # No end is the latest, and with no start there is no first start.
+      assert rope.award.ends_at == nil
+      assert Enum.map(rope.earlier, & &1.ends_at) == [~U[2027-01-01 00:00:00Z]]
+      assert rope.first_started_at == nil
     end
 
-    test "current come soonest to expire first and mark the ones within the window" do
+    test "an expired qualification renewed in the past is expired, held from its first start" do
       awards = [
-        award(1, "Never", nil),
-        award(2, "Later", ~U[2027-06-01 00:00:00Z]),
-        award(3, "Soon", ~U[2026-11-01 00:00:00Z])
+        award(1, "Rope", ~U[2024-09-01 00:00:00Z], ~U[2021-09-01 00:00:00Z]),
+        award(1, "Rope", ~U[2021-09-01 00:00:00Z], ~U[2019-03-01 00:00:00Z])
       ]
 
-      %{current: current} = MemberRecords.split_awards(awards, @now, 60)
-
-      assert Enum.map(current, &{&1.award.qualification.title, &1.expiring?}) == [
-               {"Soon", true},
-               {"Later", false},
-               {"Never", false}
-             ]
-    end
-
-    test "expired come most recently expired first" do
-      awards = [
-        award(1, "Old", ~U[2020-01-01 00:00:00Z]),
-        award(2, "Recent", ~U[2026-09-01 00:00:00Z])
-      ]
-
-      %{current: [], expired: expired} = MemberRecords.split_awards(awards, @now, 60)
-      assert Enum.map(expired, & &1.award.qualification.title) == ["Recent", "Old"]
+      [rope] = MemberRecords.qualification_rows(awards, @now)
+      assert rope.status == :expired
+      assert rope.award.ends_at == ~U[2024-09-01 00:00:00Z]
+      assert rope.first_started_at == ~U[2019-03-01 00:00:00Z]
     end
   end
 

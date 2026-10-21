@@ -102,6 +102,40 @@ attendance. Existing teams watch all members who are Active. A bot nobody marked
 on the list, on purpose: marking it Not a person fixes it everywhere. The "looks like a
 bot" hint stays on the member's Standing tab.
 
+## Qualifications and activities
+
+A member's qualifications and activities look the same on their own page and on a team
+admin's member page, from one query and one component each (#308, #339, decided
+2026-10-20). Org pages can use them later: each takes rows and a time zone, not a team.
+
+- **Qualifications** come from `MemberRecords.qualifications/2`: one table, one row per
+  qualification, soonest expiry first, then Does not expire, then Expired (muted). One
+  that expires within 60 days, the app's one expiring window
+  (`BuildGroupRulePreview.expiring_days/0`), gets a warning tag with its days left ("30
+  days"), as a group's expiring members do. No banner says it again (decided
+  2026-10-21): the row is first in the table, and the overview's For you to do already
+  says what to do. The words are
+  [Web.QualificationText](../lib/web/qualification_text.ex), so every page says the same
+  thing.
+- **No groups** (decided 2026-10-20). #308 asked for groups by expiry. On South Fraser's
+  data, 11 of 84 members had anything expiring within 60 days, never more than 1, and
+  most groups held 1 or 2 rows under their own heading. A tag finds the one that matters.
+  `<.table groups={…}>` stays for lists where each group holds several rows.
+- **One row per qualification**, from its latest award: when it expires (or expired) and
+  the year it was first held. Team admins also get an Earlier awards column, with Remove
+  on a team on SAR Duty Records. The admin's tab lost its Start column.
+- **No component of their own** (decided 2026-10-20). Pages pick their columns from one
+  set of rows, and the table does the rest. A two-line list wasted space.
+- **Activities** are a table too: day, title linked to the activity in D4H
+  (`<.d4h_activity_link>`), kind, and time there, newest first. No groups by month
+  (decided 2026-10-20): a member attends a median of 19 a year, so a month heading sat
+  over about 2 rows, and the date already says the month. Not by kind either, since every
+  row shows its kind. A team on SAR Duty Records gets no links: a member cannot
+  open its activities.
+- **A team admin's Attendance tab keeps its table.** It searches, sorts, filters by hours
+  and activity tag, and pages by 50, and links to SAR Duty's own activity page. Its years
+  come from `MemberRecords.years/2`, as the member's own page lists them.
+
 ## Member logins
 
 A team admin turns on member logins in **Settings → Member logins**, in the team area. Then every

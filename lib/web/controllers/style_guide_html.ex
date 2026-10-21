@@ -82,7 +82,7 @@ defmodule Web.StyleGuideHTML do
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
-         {:table, "Table", "Dense rows, sorting, and header groups."},
+         {:table, "Table", "Dense rows, sorting, header groups, and row groups."},
          {:tabs, "Tabs", "Pages about one record, a link each."},
          {:tag, "Tag", "A word or two of status."},
          {:toast, "Toast", "The result of what the person did. It comes and goes."},

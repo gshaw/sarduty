@@ -1,7 +1,26 @@
 defmodule Web.Components.D4H do
   use Web, :function_component
 
+  import Web.Components.A
+
+  alias App.Adapter.D4H
   alias App.Model.Activity
+
+  attr :team, :map, required: true
+  attr :activity, :map, required: true
+
+  @doc """
+  The activity's title, linked to it in D4H, for a member's tables. A team on SAR Duty
+  Records gets the title alone: a member cannot open its activities (docs/records.md).
+  """
+  def d4h_activity_link(assigns) do
+    ~H"""
+    <span :if={D4H.records?(@team)}>{@activity.title}</span>
+    <.a :if={!D4H.records?(@team)} href={D4H.activity_url(@team, @activity)} external={true}>
+      {@activity.title}
+    </.a>
+    """
+  end
 
   attr :activity, :map, required: true
 
@@ -66,13 +85,23 @@ defmodule Web.Components.D4H do
   end
 
   attr :activity, :map, required: true
+  attr :class, :any, default: nil
 
-  # The kind in a table column, where every row has one: a marker in D4H's colour.
-  def activity_kind(assigns) do
+  # The kind as a marker in D4H's colour, for lists where every row has one.
+  def activity_kind_mark(assigns) do
     ~H"""
-    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}"]}>
+    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}", @class]}>
       {String.capitalize(@activity.activity_kind)}
     </span>
+    """
+  end
+
+  attr :activity, :map, required: true
+
+  # The kind in a table column: the marker, then Draft and the tracking number.
+  def activity_kind(assigns) do
+    ~H"""
+    <.activity_kind_mark activity={@activity} />
     <div :if={!@activity.is_published}>
       <.badge>Draft</.badge>
     </div>

@@ -125,6 +125,51 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
+  # One member's qualifications, soonest expiry first, for the table's greyed rows.
+  def qualification_rows do
+    [
+      %{id: 1, title: "Standard First Aid", expires: "Dec 5, 2026", days: 45, expired?: false},
+      %{
+        id: 2,
+        title: "Rope Rescue Operations",
+        expires: "Sep 30, 2027",
+        days: nil,
+        expired?: false
+      },
+      %{id: 3, title: "ICS 100", expires: "Does not expire", days: nil, expired?: false},
+      %{
+        id: 4,
+        title: "Swiftwater Awareness",
+        expires: "Expired Sep 30, 2024",
+        days: nil,
+        expired?: true
+      }
+    ]
+  end
+
+  # Members by standing, for the table's row groups.
+  def member_groups do
+    [
+      %{
+        id: "active",
+        title: "Active",
+        rows: [
+          %{id: 1, name: "Casey Dhillon", last_attended: "Oct 14"},
+          %{id: 2, name: "Morgan Lee", last_attended: "Oct 2"}
+        ]
+      },
+      %{id: "away", title: "Away", rows: [%{id: 3, name: "Sam Okafor", last_attended: "Jun 21"}]},
+      %{
+        id: "retired",
+        title: "Retired",
+        muted: true,
+        rows: [
+          %{id: 4, name: "Jordan Price", last_attended: "Mar 3, 2024"}
+        ]
+      }
+    ]
+  end
+
   # The recommended changes on Import attendance, as {op, D4H attendance id, member}.
   def recommendations do
     [

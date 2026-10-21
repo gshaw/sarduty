@@ -8,6 +8,7 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
   alias App.Model.Attendance
   alias App.Model.Tag
   alias App.Repo
+  alias App.ViewData.MemberRecords
 
   @primary_key false
   embedded_schema do
@@ -19,7 +20,11 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     field :sort, :string
   end
 
-  def when_kinds(member), do: build_member_period_options(member)
+  # The years the member attended in, as the member's own page lists them.
+  def when_kinds(member) do
+    years = member |> MemberRecords.years(DateTime.utc_now()) |> Enum.map(&Integer.to_string/1)
+    [{"All", "all"} | Service.Period.rolling_kinds()] ++ years
+  end
 
   # The team's tags, the same Tag filter as the Members page's.
   def activity_tag_kinds(team), do: team.id |> Tag.titles() |> Enum.map(&{&1, &1})
@@ -42,24 +47,6 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
       "ID ↓" => "id-",
       "ID ↑" => "id"
     }
-
-  defp build_member_period_options(member) do
-    current = current_year()
-
-    attendance_years =
-      DateTime.utc_now()
-      |> Attendance.attended()
-      |> where([a], a.member_id == ^member.id)
-      |> Attendance.years(member.team.timezone)
-      |> Enum.map(&Integer.to_string/1)
-
-    years =
-      [current | attendance_years]
-      |> Enum.uniq()
-      |> Enum.sort(:desc)
-
-    [{"All", "all"} | Service.Period.rolling_kinds()] ++ years
-  end
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
 

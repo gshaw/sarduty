@@ -3,12 +3,14 @@ defmodule Web.MeLive do
 
   import Web.Components.ViewSwitch
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.ViewData.MemberRecords
+  alias Web.QualificationText
 
   # A member's own page (#156), /teams/:subdomain/me: their ID card, tax credit letters,
   # qualifications, the activities they're signed up for, and hours and activities for a
@@ -22,6 +24,7 @@ defmodule Web.MeLive do
     socket =
       socket
       |> assign(:page_title, member.team.name)
+      |> assign(:now, now)
       |> assign(:card, MemberCard.find_current(member.team, member))
       |> assign(:letters, TaxCreditLetter.get_all_for_member(member))
       |> assign(:years, MemberRecords.years(member, now))
@@ -62,11 +65,11 @@ defmodule Web.MeLive do
       <p class="lead">{@member.name}</p>
 
       <%= if @card || @member.team.id_cards_enabled do %>
-        <h2 class="subheading mt-8">ID card</h2>
+        <h2 class="heading mt-8">ID card</h2>
         <.card_content card={@card} member={@member} />
       <% end %>
 
-      <h2 class="subheading mt-8">Tax credit letters</h2>
+      <h2 class="heading mt-8">Tax credit letters</h2>
       <.empty_state :if={@letters == []} id="no-letters" title="No tax credit letters yet">
         Your team admins make them after each year ends.
       </.empty_state>
@@ -81,14 +84,14 @@ defmodule Web.MeLive do
         </li>
       </ul>
 
-      <h2 class="subheading mt-8">Qualifications</h2>
-      <.qualifications_content qualifications={@qualifications} member={@member} />
+      <h2 class="heading mt-8">Qualifications</h2>
+      <.qualifications_content qualifications={@qualifications} member={@member} now={@now} />
 
-      <h2 :if={@signed_up != []} class="subheading mt-8">Signed up for</h2>
+      <h2 :if={@signed_up != []} class="heading mt-8">Signed up for</h2>
       <.signed_up_content :if={@signed_up != []} signed_up={@signed_up} member={@member} />
 
       <div class="heading-row mt-8">
-        <h2 class="subheading">Hours in {@year}</h2>
+        <h2 class="heading">Hours in {@year}</h2>
         <.view_switch :if={length(@years) > 1} id="years" label="Year">
           <:view
             :for={year <- @years}
@@ -124,14 +127,17 @@ defmodule Web.MeLive do
 
   defp signed_up_content(assigns) do
     ~H"""
-    <ul id="signed-up" class="flex flex-col">
-      <.activity_row
-        :for={attendance <- @signed_up}
-        id={"signed-up-#{attendance.id}"}
-        attendance={attendance}
-        timezone={@member.team.timezone}
-      />
-    </ul>
+    <.table id="signed-up" rows={@signed_up} row_id={&"signed-up-#{&1.id}"}>
+      <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+        {Service.Format.date_short(attendance.started_at, @member.team.timezone)}
+      </:col>
+      <:col :let={attendance} label="Activity">
+        <.d4h_activity_link team={@member.team} activity={attendance.activity} />
+      </:col>
+      <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap">
+        <.activity_kind_mark activity={attendance.activity} />
+      </:col>
+    </.table>
     <p class="hint">Hours count once the activity starts.</p>
     """
   end
@@ -139,7 +145,7 @@ defmodule Web.MeLive do
   defp attendance_content(%{attendances: []} = assigns) do
     ~H"""
     <.empty_state id="no-attendance" title={"No activities in #{@year}"}>
-      Activities you attended show here after SAR Duty refreshes from D4H.
+      Activities you attended show here after SAR Duty refreshes from {D4H.service_name(@member.team)}.
     </.empty_state>
     """
   end
@@ -148,85 +154,58 @@ defmodule Web.MeLive do
     ~H"""
     <p class="mt-6">
       {Service.Format.count(length(@attendances), one: "1 activity", many: "%d activities")} attended.
-      Missing one? Tell a team admin, who can fix it in D4H.
+      Missing one? Tell a team admin, who can fix it in {D4H.service_name(@member.team)}.
     </p>
-    <ul id="attendance" class="flex flex-col">
-      <.activity_row
-        :for={attendance <- @attendances}
-        id={"attendance-#{attendance.id}"}
-        attendance={attendance}
-        timezone={@member.team.timezone}
-      >
-        · {format_minutes(MemberRecords.minutes(attendance))}
-      </.activity_row>
-    </ul>
+    <.table
+      id="attendance"
+      rows={@attendances}
+      row_id={&"attendance-#{&1.id}"}
+    >
+      <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+        {Service.Format.date_short(attendance.started_at, @member.team.timezone)}
+      </:col>
+      <:col :let={attendance} label="Activity">
+        <.d4h_activity_link team={@member.team} activity={attendance.activity} />
+      </:col>
+      <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap">
+        <.activity_kind_mark activity={attendance.activity} />
+      </:col>
+      <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
+        {format_minutes(MemberRecords.minutes(attendance))}
+      </:col>
+    </.table>
     """
   end
 
-  attr :id, :string, required: true
-  attr :attendance, :any, required: true
-  attr :timezone, :string, required: true
-  slot :inner_block
-
-  # One activity on the member's lists: title, then date and kind, then any extra.
-  defp activity_row(assigns) do
-    ~H"""
-    <li id={@id} class="py-2 border-b border-border-subtle">
-      <span class="block">{@attendance.activity.title}</span>
-      <span class="hint block">
-        {Service.Format.date_long(@attendance.started_at, @timezone)} ·
-        <span class={["activity-kind", "activity-kind-#{@attendance.activity.activity_kind}"]}>
-          {String.capitalize(@attendance.activity.activity_kind)}
-        </span>
-        {render_slot(@inner_block)}
-      </span>
-    </li>
-    """
-  end
-
-  defp qualifications_content(%{qualifications: %{current: [], expired: []}} = assigns) do
+  defp qualifications_content(%{qualifications: []} = assigns) do
     ~H"""
     <.empty_state id="no-qualifications" title="No qualifications">
-      Qualifications you hold in {App.Adapter.D4H.service_name(@member.team)} show here.
+      Qualifications you hold in {D4H.service_name(@member.team)} show here.
     </.empty_state>
     """
   end
 
   defp qualifications_content(assigns) do
     ~H"""
-    <ul :if={@qualifications.current != []} id="qualifications" class="flex flex-col">
-      <li
-        :for={%{award: award, expiring?: expiring?} <- @qualifications.current}
-        id={"qualification-#{award.qualification_id}"}
-        class="py-2 border-b border-border-subtle"
-      >
-        <span class="block">
-          {award.qualification.title}
-          <.badge :if={expiring?} kind={:warning}>Expires soon</.badge>
-        </span>
-        <span class="hint block">{expiry(award, @member.team.timezone)}</span>
-      </li>
-    </ul>
-    <h3 :if={@qualifications.expired != []} class="font-semibold mt-6">Expired</h3>
-    <ul :if={@qualifications.expired != []} id="expired-qualifications" class="flex flex-col">
-      <li
-        :for={%{award: award} <- @qualifications.expired}
-        id={"qualification-#{award.qualification_id}"}
-        class="py-2 border-b border-border-subtle"
-      >
-        <span class="block">{award.qualification.title}</span>
-        <span class="hint block">
-          Expired {Service.Format.date_long(award.ends_at, @member.team.timezone)}
-        </span>
-      </li>
-    </ul>
+    <.table
+      id="qualifications"
+      rows={@qualifications}
+      row_id={&"qualifications-#{&1.award.qualification_id}"}
+      row_class={&QualificationText.row_class/1}
+    >
+      <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        {QualificationText.expires(row.award, @now, @member.team.timezone)}
+        <.badge :if={row.status == :expiring} kind={:warning}>
+          {QualificationText.days_left(row)}
+        </.badge>
+      </:col>
+      <:col :let={row} label="First held" class="w-px whitespace-nowrap">
+        {QualificationText.first_held(row, @member.team.timezone)}
+      </:col>
+    </.table>
     """
   end
-
-  defp expiry(%{ends_at: nil}, _timezone), do: "Does not expire"
-
-  defp expiry(%{ends_at: ends_at}, timezone),
-    do: "Expires #{Service.Format.date_long(ends_at, timezone)}"
 
   defp format_minutes(minutes), do: Service.Format.duration(minutes)
 
