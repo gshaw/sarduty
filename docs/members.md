@@ -17,8 +17,9 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   the team at some point in it: All, the last 30, 60, 90, 180, or 365 days (`when=90d`),
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
   open the same list.
-- **Standing** filters by [standing](#standing): Current (the default: everyone but the
-  retired), Active, Away, Not a person, Retired, or All. It replaced Status, and old
+- **Standing** filters by [standing](#standing): Not retired (the default, `current`),
+  Active, Away, Not a person, Retired, or All. It was Current until 2026-10-20, which
+  people mixed up with Active. It replaced Status, and old
   `status=` links are not kept (decided 2026-10-19). Its column says "Away until Mar 1"
   and sorts by that day, with retired members last.
 

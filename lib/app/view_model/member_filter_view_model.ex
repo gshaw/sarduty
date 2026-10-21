@@ -47,8 +47,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
   ]
 
   @doc """
-  The Standing filter (#366): Current, the default, is every member but the retired,
-  and All adds them. The attendance check can watch several standings, as
+  The Standing filter (#366): Not retired, the default, is every member but the retired,
+  and All adds them. Its value stays `"current"`. The attendance check can watch several standings, as
   `"active,away"`; that value gets an option of its own, "Active or away", when it's the
   one shown.
   """
@@ -59,7 +59,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
         _one_or_none -> []
       end
 
-    Enum.concat([[{"Current", "current"}], @standings, combined, [{"All", "all"}]])
+    Enum.concat([[{"Not retired", "current"}], @standings, combined, [{"All", "all"}]])
   end
 
   @doc "Whether the Standing filter `value` can show retired members."

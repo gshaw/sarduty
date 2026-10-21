@@ -442,6 +442,10 @@ defmodule Web.Components.Core do
     default: nil,
     doc: "the select's empty option, sent when nothing is picked"
 
+  attr :clearable, :boolean,
+    default: false,
+    doc: "lists the prompt first, so picking it empties the value, as a filter's All"
+
   attr :placeholder, :string, default: "Type part of the name"
   attr :size, :atom, values: [:md, :sm], default: :md
   attr :class, :any, default: nil, doc: "on the wrapper; is-invalid marks the text box"
@@ -453,6 +457,7 @@ defmodule Web.Components.Core do
       id={"#{@id}-combobox"}
       class={["combobox", @size == :sm && "input-sm", @class]}
       phx-hook="Combobox"
+      data-clearable={@clearable}
     >
       <select id={"#{@id}-select"} name={@name} class="hidden" tabindex="-1" aria-hidden="true">
         <option value="">{@prompt}</option>
