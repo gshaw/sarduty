@@ -3,6 +3,7 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
 
   import Web.Components.TeamSettingsTabs
 
+  alias App.Model.Chore
   alias App.Model.ChoreCategory
 
   # The team's chore categories (#341), /teams/:subdomain/settings/chore-categories.
@@ -11,11 +12,15 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
     team = socket.assigns.current_team
     if !team.member_logins, do: raise(Web.Status.NotFound)
 
+    year = DateTime.utc_now() |> Service.Period.today(team.timezone) |> Map.fetch!(:year)
+
     socket =
-      assign(socket,
+      socket
+      |> assign(
         page_title: "Team settings · Chore categories",
         categories: ChoreCategory.get_all(team.id)
       )
+      |> assign(year: year, counts: Chore.count_by_category(team.id, year))
 
     {:ok, socket}
   end
@@ -57,6 +62,9 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
         <span class="badges">
           <.badge :for={tag <- ChoreCategory.tags(category)} kind={:outline}>{tag.title}</.badge>
         </span>
+      </:col>
+      <:col :let={category} label={"Chores in #{@year}"} align="right">
+        {Service.Format.number(Map.get(@counts, category.id, 0))}
       </:col>
       <:col :let={category} label="" class="stack-optional w-px whitespace-nowrap">
         <.badge :if={ChoreCategory.archived?(category)}>Archived</.badge>

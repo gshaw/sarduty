@@ -6,8 +6,6 @@ defmodule Web.TeamScopingTest do
   import App.DataFixtures
 
   alias App.Model.ChangeSet
-  alias App.Model.ChoreCategory
-  alias App.Repo
 
   @templates [
     "/teams/:subdomain/activities/:id",
@@ -21,9 +19,13 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/edit",
     "/teams/:subdomain/templates/:id",
-    # Needs member logins, which this team lacks. Web.Settings.ChoreCategoryLiveTest
-    # covers another team's category with them on.
+    # Chore pages need member logins, which this team lacks. Web.ChoreLiveTest,
+    # Web.MeChoresLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
+    # records with them on.
     "/teams/:subdomain/settings/chore-categories/:id",
+    "/teams/:subdomain/chores/:id",
+    "/teams/:subdomain/chores/:id/edit",
+    "/teams/:subdomain/me/chores/:id/edit",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -69,8 +71,8 @@ defmodule Web.TeamScopingTest do
       qualification: qualification_fixture(other_team),
       item: equipment_item_fixture(other_team),
       template: template_fixture(other_team),
-      chore_category:
-        Repo.insert!(%ChoreCategory{team_id: other_team.id, title: "Other", hours: :primary}),
+      chore_category: chore_category_fixture(other_team),
+      chore: chore_fixture(member, chore_category_fixture(other_team)),
       endorsement: endorsement,
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
@@ -196,6 +198,14 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/settings/chore-categories/:id", s, o),
     do: ~p"/teams/#{s}/settings/chore-categories/#{o.chore_category.id}"
+
+  defp path_for("/teams/:subdomain/chores/:id", s, o), do: ~p"/teams/#{s}/chores/#{o.chore.id}"
+
+  defp path_for("/teams/:subdomain/chores/:id/edit", s, o),
+    do: ~p"/teams/#{s}/chores/#{o.chore.id}/edit"
+
+  defp path_for("/teams/:subdomain/me/chores/:id/edit", s, o),
+    do: ~p"/teams/#{s}/me/chores/#{o.chore.id}/edit"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

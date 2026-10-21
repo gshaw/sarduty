@@ -3,6 +3,8 @@ defmodule App.DataFixtures do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Chore
+  alias App.Model.ChoreCategory
   alias App.Model.Endorsement
   alias App.Model.EndorsementQualification
   alias App.Model.EquipmentItem
@@ -411,5 +413,28 @@ defmodule App.DataFixtures do
       d4h_tag_id: System.unique_integer([:positive]),
       title: title
     })
+  end
+
+  def chore_category_fixture(%Team{} = team, attrs \\ %{}) do
+    %ChoreCategory{team_id: team.id, title: "Equipment maintenance", hours: :primary}
+    |> Map.merge(attrs)
+    |> Repo.insert!()
+  end
+
+  @doc "A waiting chore of `member`'s, done yesterday on the team's clock."
+  def chore_fixture(%Member{} = member, %ChoreCategory{} = category, attrs \\ %{}) do
+    team = Repo.get!(Team, member.team_id)
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+
+    %Chore{
+      team_id: member.team_id,
+      member_id: member.id,
+      chore_category_id: category.id,
+      date: Date.add(today, -1),
+      minutes: 60,
+      description: "Truck 1 wash"
+    }
+    |> Map.merge(attrs)
+    |> Repo.insert!()
   end
 end

@@ -6,6 +6,7 @@ defmodule Web.UserAuth do
 
   alias App.Accounts
   alias App.Model.ChangeSet
+  alias App.Model.Chore
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
@@ -268,11 +269,18 @@ defmodule Web.UserAuth do
 
     if access.team_admin?, do: RecordUserSeen.call(user, access.current_team.id)
 
-    # How many AI agent change sets wait for a team admin, for the side navigation.
-    waiting = if access.team_admin?, do: ChangeSet.count_waiting(access.current_team.id), else: 0
-
-    {:cont, Phoenix.Component.assign(socket, Map.put(access, :proposed_change_count, waiting))}
+    {:cont, Phoenix.Component.assign(socket, Map.merge(access, waiting(access)))}
   end
+
+  # What waits for a team admin, for the side navigation: AI agent change sets, and
+  # members' chores.
+  defp waiting(%{team_admin?: true, current_team: team}),
+    do: %{
+      proposed_change_count: ChangeSet.count_waiting(team.id),
+      chore_count: waiting_chores(team)
+    }
+
+  defp waiting(_access), do: %{proposed_change_count: 0, chore_count: 0}
 
   # Who the user is on the URL's team, as `current_team`, `current_member`, and
   # `team_admin?`, when `access` lets them in; otherwise a 404. The LiveView hook and the
@@ -332,6 +340,9 @@ defmodule Web.UserAuth do
   def delete_view_as(conn) do
     {get_session(conn, @view_as_key), delete_session(conn, @view_as_key)}
   end
+
+  defp waiting_chores(%Team{member_logins: true} = team), do: Chore.count_waiting(team.id)
+  defp waiting_chores(_team), do: 0
 
   @doc "Who may open a team LiveView: `:admin` (the default), `:team`, or `:member`."
   def page_access(nil), do: :admin

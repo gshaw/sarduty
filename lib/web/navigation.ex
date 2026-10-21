@@ -47,7 +47,8 @@ defmodule Web.Navigation do
   `%{key:, label:, path:, current:, count:}`; the one for `path` is current.
 
   On a team: `team_admin?` when you manage it, `member?` when you log in as one of its
-  members, and `proposed_changes`, how many AI agent change sets wait for a team admin.
+  members, and what waits for a team admin: `proposed_changes`, AI agent change sets, and
+  `chores`, members' chores.
   """
   def sections(area, path, opts \\ [])
 
@@ -55,10 +56,11 @@ defmodule Web.Navigation do
     team_admin? = Keyword.get(opts, :team_admin?, false)
     member? = Keyword.get(opts, :member?, false)
     proposed_changes = Keyword.get(opts, :proposed_changes, 0)
+    chores = Keyword.get(opts, :chores, 0)
 
     team_sections =
       cond do
-        team_admin? -> team_admin_sections(team, proposed_changes)
+        team_admin? -> team_admin_sections(team, proposed_changes, chores)
         member? -> [[dashboard_link(team)], [activities_link(team)]]
         true -> []
       end
@@ -66,7 +68,9 @@ defmodule Web.Navigation do
     member_sections =
       if member?, do: [[link("me", "Your membership", ~p"/teams/#{team}/me")]], else: []
 
-    mark_current(team_sections ++ member_sections, path)
+    (team_sections ++ member_sections)
+    |> Enum.reject(&(&1 == []))
+    |> mark_current(path)
   end
 
   def sections(%{kind: :admin}, path, _opts) do
@@ -90,12 +94,13 @@ defmodule Web.Navigation do
 
   def sections(_area, _path, _opts), do: []
 
-  defp team_admin_sections(team, proposed_changes) do
+  defp team_admin_sections(team, proposed_changes, chores) do
     [
       [dashboard_link(team)],
       activity_links(team, proposed_changes),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
+      chore_links(team, chores),
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
@@ -117,6 +122,12 @@ defmodule Web.Navigation do
 
   defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
   defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
+
+  # Members log chores, so the page shows with member logins on.
+  defp chore_links(%Team{member_logins: true} = team, count),
+    do: [link("chores", "Chores", ~p"/teams/#{team}/chores", count: count)]
+
+  defp chore_links(_team, _count), do: []
 
   defp people_links(team) do
     [
