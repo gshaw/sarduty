@@ -47,8 +47,9 @@ defmodule App.Operation.SendChoresTest do
     }
   end
 
-  # D4H, sending each write to the test. `existing` is the attendance on event 900, and
-  # `event_status` what reading the event answers.
+  # D4H, sending each write to the test. `existing` is the attendance on event 900.
+  # `event_status` is 200, 404 for an event deleted in D4H, :approved, or :no_publish for
+  # a team whose events D4H will not publish.
   defp stub_d4h(existing \\ [], event_status \\ 200) do
     test_pid = self()
 
@@ -63,6 +64,24 @@ defmodule App.Operation.SendChoresTest do
 
   defp answer(conn, "GET", "/events/900", _json, _existing, 404),
     do: conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"title" => "Not Found"})
+
+  defp answer(conn, "GET", "/events/900", _json, _existing, :approved),
+    do: Req.Test.json(conn, Map.put(event(900, true), "approved", true))
+
+  defp answer(
+         conn,
+         "POST",
+         "/events/900/publish",
+         %{"published" => true},
+         _existing,
+         :no_publish
+       ),
+       do:
+         conn
+         |> Plug.Conn.put_status(409)
+         |> Req.Test.json(%{
+           "title" => "Activity cannot be marked ready for approval or published"
+         })
 
   defp answer(conn, "GET", "/events/" <> _id, _json, _existing, _status),
     do: Req.Test.json(conn, event(900, true))
@@ -202,5 +221,41 @@ defmodule App.Operation.SendChoresTest do
     stub_d4h([], 404)
     assert SendChores.send_changes(ctx.team, event, ctx.user, DateTime.utc_now()) == :sent
     assert [{"POST", "/events", _create} | _rest] = writes()
+  end
+
+  test "an event D4H will not publish stays a draft and counts as sent, with a note", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h([], :no_publish)
+
+    assert send_chores(ctx, [chore]) == %{chores: 1, events: 1, failed: 0}
+
+    [event] = Repo.all(ChoreEvent)
+
+    assert %{
+             d4h_activity_id: 900,
+             needs_send: false,
+             send_note: "Left as a draft: D4H would not publish it."
+           } = event
+  end
+
+  test "an event D4H has approved is locked: nothing is written, and changes no longer wait",
+       ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    _sent = writes()
+    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
+    [event] = Repo.all(ChoreEvent)
+
+    stub_d4h([], :approved)
+    assert SendChores.send_changes(ctx.team, event, ctx.user, DateTime.utc_now()) == :locked
+    assert writes() == []
+
+    event = Repo.get!(ChoreEvent, event.id)
+    assert %{locked: true, needs_send: false} = event
+    assert event.send_note =~ "Approved in D4H"
+
+    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "50"})
+    refute Repo.get!(ChoreEvent, event.id).needs_send
   end
 end

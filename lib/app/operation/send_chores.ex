@@ -8,7 +8,8 @@ defmodule App.Operation.SendChores do
   Each event is its own change set of source `chores`. D4H is read first only for ids:
   whether the event is still there and published, and each member's attendance row on
   it. An event deleted in D4H is made again. An event whose send did not go through
-  keeps its changes to send.
+  keeps its changes to send. One D4H would not publish stays a draft and counts as
+  sent, with a note. One D4H has approved is locked: SAR Duty cannot change it again.
   """
 
   import Ecto.Query
@@ -24,6 +25,9 @@ defmodule App.Operation.SendChores do
   alias App.Operation.ApplyChangeSet
   alias App.Operation.BuildChoreEvent
   alias App.Repo
+
+  @draft "Left as a draft: D4H would not publish it."
+  @approved "Approved in D4H, so SAR Duty cannot change it. Change it in D4H."
 
   @doc """
   Sends the team's accepted, unsent chores among `ids`. `%{chores: n, events: n,
@@ -61,7 +65,7 @@ defmodule App.Operation.SendChores do
 
   defp send_event_as(event, team, user, now), do: send_event(team, event, user, now)
 
-  @doc "Sends an event again after its chores changed. `:sent` or `:failed`."
+  @doc "Sends an event again after its chores changed. `:sent`, `:failed`, or `:locked`."
   def send_changes(%Team{} = team, %ChoreEvent{team_id: team_id} = event, user, now)
       when team_id == team.id,
       do: send_event(team, ChoreEvent.find!(team, event.id), user, now)
@@ -70,6 +74,7 @@ defmodule App.Operation.SendChores do
     d4h = D4H.build_context_from_team(team)
 
     with {:ok, state} <- read_state(d4h, event),
+         :ok <- check_unlocked(event, state),
          {:ok, current} <- read_attendance(d4h, state) do
       rows =
         BuildChoreEvent.plan(state, ChoreEvent.chores(event), current, %{
@@ -80,20 +85,33 @@ defmodule App.Operation.SendChores do
 
       apply_rows(team, event, state, rows, user, now)
     else
+      :locked ->
+        ChoreEvent.record_send!(event, event.d4h_activity_id, {:locked, @approved}, now)
+        :locked
+
       {:error, error} ->
-        ChoreEvent.record_send!(event, event.d4h_activity_id, error_text(error), now)
+        ChoreEvent.record_send!(event, event.d4h_activity_id, {:failed, error_text(error)}, now)
         :failed
     end
   end
+
+  # D4H refuses changes to an approved activity (#356), so nothing is tried.
+  defp check_unlocked(_event, %{approved?: true}), do: :locked
+  defp check_unlocked(_event, _state), do: :ok
 
   # An event D4H no longer has is made again.
   defp read_state(_d4h, %ChoreEvent{d4h_activity_id: nil}), do: {:ok, nil}
 
   defp read_state(d4h, %ChoreEvent{d4h_activity_id: id}) do
     case D4H.fetch_activity_tags(d4h, id, "event") do
-      {:ok, %{published?: published?}} -> {:ok, %{d4h_activity_id: id, published?: published?}}
-      {:error, %D4H.Error{status: 404}} -> {:ok, nil}
-      error -> error
+      {:ok, %{published?: published?, approved?: approved?}} ->
+        {:ok, %{d4h_activity_id: id, published?: published?, approved?: approved?}}
+
+      {:error, %D4H.Error{status: 404}} ->
+        {:ok, nil}
+
+      error ->
+        error
     end
   end
 
@@ -101,7 +119,7 @@ defmodule App.Operation.SendChores do
   defp read_attendance(d4h, %{d4h_activity_id: id}), do: D4H.fetch_attendance_infos(d4h, id)
 
   defp apply_rows(_team, event, state, [], _user, now) do
-    ChoreEvent.record_send!(event, state && state.d4h_activity_id, nil, now)
+    ChoreEvent.record_send!(event, state && state.d4h_activity_id, :sent, now)
     :sent
   end
 
@@ -121,15 +139,33 @@ defmodule App.Operation.SendChores do
     case ApplyChangeSet.call(team, change_set, user, now) do
       {:ok, rows} ->
         id = (state && state.d4h_activity_id) || created_id(rows)
-        error = rows |> Enum.find(&(&1.status != :applied)) |> then(&(&1 && &1.error))
-        ChoreEvent.record_send!(event, id, error, now)
-        if error, do: :failed, else: :sent
+        outcome = outcome(rows)
+        ChoreEvent.record_send!(event, id, outcome, now)
+        if match?({:failed, _error}, outcome), do: :failed, else: :sent
 
       {:error, reason} ->
-        ChoreEvent.record_send!(event, event.d4h_activity_id, error_text(reason), now)
+        ChoreEvent.record_send!(event, event.d4h_activity_id, {:failed, error_text(reason)}, now)
         :failed
     end
   end
+
+  @doc """
+  How a send went, from its rows: `:sent`; `{:sent, note}` when only publishing failed,
+  so the event stays a draft; or `{:failed, error}` with the first row's error.
+  """
+  def outcome(rows) do
+    case Enum.reject(rows, &(&1.status == :applied)) do
+      [] ->
+        :sent
+
+      not_sent ->
+        if Enum.all?(not_sent, &publish?/1),
+          do: {:sent, @draft},
+          else: {:failed, hd(not_sent).error}
+    end
+  end
+
+  defp publish?(row), do: row.action == :publish_activity and row.new_value["published"] == true
 
   defp created_id(rows) do
     Enum.find_value(rows, fn row ->

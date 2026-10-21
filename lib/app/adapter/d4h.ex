@@ -580,8 +580,8 @@ defmodule App.Adapter.D4H do
   end
 
   @doc """
-  The activity's tag ids now and whether it's published, as
-  `{:ok, %{tag_ids: ids, published?: boolean}}`. D4H refuses tags on a published activity
+  The activity's tag ids now, and whether it's published and approved, as
+  `{:ok, %{tag_ids: ids, published?: boolean, approved?: boolean}}`. D4H refuses tags on a published activity
   (#358).
   """
   def fetch_activity_tags(context, d4h_activity_id, kind)
@@ -589,7 +589,13 @@ defmodule App.Adapter.D4H do
     case Req.request(context, method: :get, url: "/#{kind}s/#{d4h_activity_id}", retry: false) do
       {:ok, %{status: 200, body: %{} = body}} ->
         ids = (body["tags"] || []) |> Enum.map(&D4H.Parse.tag_id/1) |> Enum.reject(&is_nil/1)
-        {:ok, %{tag_ids: ids, published?: body["published"] == true}}
+
+        {:ok,
+         %{
+           tag_ids: ids,
+           published?: body["published"] == true,
+           approved?: body["approved"] == true
+         }}
 
       result ->
         {:error, write_error(result)}

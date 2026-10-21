@@ -153,7 +153,7 @@ defmodule Web.ChoreCollectionLive do
         <span :if={row.event.sent_at} class="whitespace-nowrap">
           {Format.date_short(row.event.sent_at, @current_team.timezone)}
         </span>
-        <span :if={row.event.send_error} class="hint block">{row.event.send_error}</span>
+        <span :if={row.event.send_note} class="hint block">{row.event.send_note}</span>
         <.button
           :if={row.event.needs_send}
           id={"send-changes-#{row.event.id}"}
@@ -257,6 +257,7 @@ defmodule Web.ChoreCollectionLive do
       case SendChores.send_changes(team, event, user, DateTime.utc_now()) do
         :sent -> put_flash(socket, :info, "Changes sent to #{service}.")
         :failed -> put_flash(socket, :error, "Changes not sent. The reason is in the table.")
+        :locked -> put_flash(socket, :error, "Changes not sent. D4H has approved the activity.")
       end
 
     {:noreply, load(socket)}

@@ -12,8 +12,10 @@ defmodule App.Model.ChoreEvent do
   # category and one year. One category, since an event takes one hours tag; one year,
   # since its date decides which tax credit letter counts the hours. SAR Duty owns the
   # event and rebuilds it from its chores: `needs_send` once a sent chore changes, until
-  # a team admin sends the changes. `send_error` is the last send's trouble, if any. The
-  # local copy of the activity arrives with the next refresh, by `d4h_activity_id`.
+  # a team admin sends the changes. `send_note` is what the last send could not do: an
+  # error to fix, or that D4H would not publish it. `locked` once D4H has approved it:
+  # SAR Duty cannot change it again. The local copy of the activity arrives with the
+  # next refresh, by `d4h_activity_id`.
   schema "chore_events" do
     belongs_to :team, Team
     belongs_to :chore_category, ChoreCategory
@@ -22,7 +24,8 @@ defmodule App.Model.ChoreEvent do
     field :d4h_activity_id, :integer
     field :needs_send, :boolean, default: false
     field :sent_at, :utc_datetime_usec
-    field :send_error, :string
+    field :send_note, :string
+    field :locked, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -46,25 +49,30 @@ defmodule App.Model.ChoreEvent do
     ids = ids |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
     ChoreEvent
-    |> where([e], e.id in ^ids)
+    |> where([e], e.id in ^ids and not e.locked)
     |> Repo.update_all(set: [needs_send: true, updated_at: DateTime.utc_now()])
 
     :ok
   end
 
   @doc """
-  Records a send: the D4H event's id, and the trouble if any rows did not go. A clean
-  send clears `needs_send`, unless a chore changed while it ran (`updated_at` moved on).
+  Records a send and the D4H event's id. `outcome` is `:sent`, `{:sent, note}` when it
+  went but D4H would not publish it, `{:failed, error}` to try again, or `{:locked,
+  note}` once D4H has approved it. A send that went clears `needs_send`, unless a chore
+  changed while it ran (`updated_at` moved on).
   """
-  def record_send!(%ChoreEvent{} = event, d4h_activity_id, error, now) do
+  def record_send!(%ChoreEvent{} = event, d4h_activity_id, outcome, now) do
+    {status, note} = if outcome == :sent, do: {:sent, nil}, else: outcome
+
     {count, _rows} =
       ChoreEvent
       |> where([e], e.id == ^event.id and e.updated_at == ^event.updated_at)
       |> Repo.update_all(
         set: [
           d4h_activity_id: d4h_activity_id,
-          needs_send: not is_nil(error),
-          send_error: error,
+          needs_send: status == :failed,
+          locked: status == :locked,
+          send_note: note,
           sent_at: now,
           updated_at: now
         ]

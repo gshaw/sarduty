@@ -11,7 +11,8 @@ defmodule App.Repo.Migrations.CreateChoreEvents do
       add :d4h_activity_id, :integer
       add :needs_send, :boolean, null: false, default: false
       add :sent_at, :utc_datetime_usec
-      add :send_error, :string
+      add :send_note, :string
+      add :locked, :boolean, null: false, default: false
 
       timestamps(type: :utc_datetime_usec)
     end

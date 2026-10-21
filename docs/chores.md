@@ -65,6 +65,11 @@ choice: a week, a month, or a season's worth at a time. Accepting does not write
 - **Tags are set when the event is made, and never changed.** Then it is published, last,
   since D4H locks a published activity's attendance. Sending changes makes it a draft,
   changes it, and publishes it again. An event left with no chores stays a draft.
+- **When D4H will not publish**, as on a team whose activities need approval (South
+  Fraser's #02228 answered 409 on 2026-10-17), the event stays a draft. The send counts as
+  done, with a note beside it, since SAR Duty counts a draft's hours all the same.
+- **Once D4H has approved an event, it is locked.** D4H refuses changes to an approved
+  activity (#356), so SAR Duty stops offering Send changes and says to change it in D4H.
 - **Each event is a change set** of source `chores`, so it shows in the activity's and
   each member's history. An event whose send did not go through keeps Send changes, with
   D4H's error beside it.
