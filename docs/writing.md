@@ -42,7 +42,8 @@ finish a task and leave. Write so a reader understands each sentence the first t
     "September 28, 2025" in letters. Times use the 24-hour clock ("14:05"). Durations come
     from `duration/1`: "212h 30m", "202 hours" with no minutes, "1 hour", and "45 min"
     under an hour. Never "212:30" or "212.5 hours". Days come from `days/1` ("30 days"),
-    distances from `km/1` ("42 km").
+    distances from `km/1` ("42 km"). The style guide's Values page, `/styles/values`, runs
+    every formatter on an example.
 11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
     only for SAR Duty the service, and rarely.
 12. **Be plain, not cheerful.** No "please", "sorry", "oops", "simply", "just", "easily",

@@ -193,7 +193,8 @@ fi
 - **Every value people read has a formatter in `Service.Format`**: dates, durations,
   days (`days/1`), distances (`km/1`), and counts. Work numbers out in `Service.Convert`
   (`days_until/2` rounds up). Never write a number and its unit by hand; a source test,
-  `test/service/format_usage_test.exs`, fails on `{days} days`. No formatter fits? Add one.
+  `test/service/format_usage_test.exs`, fails on `{days} days`. No formatter fits? Add one,
+  and a row on the style guide's Values page (`/styles/values`), which a test keeps complete.
 - **Text people read follows [docs/writing.md](docs/writing.md).** Any page copy, button,
   label, hint, error, flash, email, PDF, or pass text you write or change uses its rules
   and its glossary terms. Run its checklist before you commit.

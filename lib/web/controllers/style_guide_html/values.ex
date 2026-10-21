@@ -1,0 +1,169 @@
+defmodule Web.StyleGuideHTML.Values do
+  @moduledoc """
+  Every value formatter run on fixed samples, for the style guide's Values page, as
+  `[{section, about, [{function, use, [{call, result}]}]}]`. Noon on Oct 20, 2026 in
+  Vancouver is "now". A test fails when a Service.Format function is missing here.
+  """
+
+  alias App.Model.Coordinate
+  alias App.Model.MemberCard
+  alias Service.Format
+
+  @now ~U[2026-10-20 19:00:00Z]
+  @zone "America/Vancouver"
+  @today ~D[2026-10-20]
+
+  def all, do: [dates(), time_from_now(), quantities(), elsewhere()]
+
+  defp dates do
+    {"Dates and times", "In the team's time zone, month first, 24-hour clock.",
+     calendar_dates() ++ date_times()}
+  end
+
+  defp calendar_dates do
+    [
+      {:date_long, "Letters and sentences",
+       [{"date_long(now, zone)", Format.date_long(@now, @zone)}]},
+      {:date_short, "Tables and lists",
+       [{"date_short(now, zone)", Format.date_short(@now, @zone)}]},
+      {:day, "A calendar date with no time",
+       [{"day(~D[2025-09-28])", Format.day(~D[2025-09-28])}]},
+      {:day_long, "The same, in a sentence",
+       [{"day_long(~D[2025-09-28])", Format.day_long(~D[2025-09-28])}]},
+      {:day_in_year, "A table date, with the year only when it is not this year",
+       [
+         {"day_in_year(~D[2026-03-01], today)", Format.day_in_year(~D[2026-03-01], @today)},
+         {"day_in_year(~D[2025-03-01], today)", Format.day_in_year(~D[2025-03-01], @today)}
+       ]},
+      {:month_year, "Award dates", [{"month_year(now, zone)", Format.month_year(@now, @zone)}]},
+      {:month_short, "Chart labels",
+       [{"month_short(~D[2025-09-01])", Format.month_short(~D[2025-09-01])}]}
+    ]
+  end
+
+  defp date_times do
+    [
+      {:datetime_short, "A date and time",
+       [{"datetime_short(now, zone)", Format.datetime_short(@now, @zone)}]},
+      {:datetime_medium, "The same with the weekday",
+       [{"datetime_medium(now, zone)", Format.datetime_medium(@now, @zone)}]},
+      {:time_short, "A time alone", [{"time_short(now, zone)", Format.time_short(@now, @zone)}]},
+      {:month_day_time, "A time this year",
+       [{"month_day_time(now, zone)", Format.month_day_time(@now, @zone)}]},
+      {:month_day_time_seconds, "The same to the second",
+       [{"month_day_time_seconds(now, zone)", Format.month_day_time_seconds(@now, @zone)}]},
+      {:same_day_datetime,
+       "An attendance time, with the date only when it is not the activity's day",
+       [
+         {"same_day_datetime(now + 2 h, now, zone)",
+          Format.same_day_datetime(~U[2026-10-20 21:00:00Z], @now, @zone)},
+         {"same_day_datetime(now + 1 day, now, zone)",
+          Format.same_day_datetime(~U[2026-10-21 19:00:00Z], @now, @zone)}
+       ]}
+    ]
+  end
+
+  defp time_from_now do
+    {"Time from now", "How long ago or how soon, counted from now.", ago() ++ coming_up()}
+  end
+
+  defp ago do
+    ninety_days_ago = DateTime.add(DateTime.utc_now(), -90, :day)
+
+    [
+      {:minutes_ago, "Things that change by the minute",
+       [
+         {"minutes_ago(now - 4 min, now, zone)",
+          Format.minutes_ago(~U[2026-10-20 18:56:00Z], @now, @zone)},
+         {"minutes_ago(now - 3 h, now, zone)",
+          Format.minutes_ago(~U[2026-10-20 16:00:00Z], @now, @zone)},
+         {"minutes_ago(now - 2 days, now, zone)",
+          Format.minutes_ago(~U[2026-10-18 19:00:00Z], @now, @zone)}
+       ]},
+      {:days_ago, "Last seen, in calendar days",
+       [
+         {"days_ago(now - 1 day, now, zone)",
+          Format.days_ago(~U[2026-10-19 19:00:00Z], @now, @zone)},
+         {"days_ago(now - 12 days, now, zone)",
+          Format.days_ago(~U[2026-10-08 19:00:00Z], @now, @zone)},
+         {"days_ago(now - 120 days, now, zone)",
+          Format.days_ago(~U[2026-06-22 19:00:00Z], @now, @zone)}
+       ]},
+      {:months_or_years_distance, "Time between two dates",
+       [
+         {"months_or_years_distance(now - 400 days, now)",
+          Format.months_or_years_distance(~U[2025-09-15 19:00:00Z], @now)},
+         {"months_or_years_distance(now - 5 years, now)",
+          Format.months_or_years_distance(~U[2021-10-20 19:00:00Z], @now)}
+       ]},
+      {:months_or_years_ago, "The same, up to today",
+       [{"months_or_years_ago(today - 90 days)", Format.months_or_years_ago(ninety_days_ago)}]}
+    ]
+  end
+
+  defp coming_up do
+    [
+      {:day_coming_up, "The day of an activity coming up",
+       [
+         {"day_coming_up(now + 1 day, now, zone)",
+          Format.day_coming_up(~U[2026-10-21 19:00:00Z], @now, @zone)},
+         {"day_coming_up(now + 5 days, now, zone)",
+          Format.day_coming_up(~U[2026-10-25 19:00:00Z], @now, @zone)}
+       ]},
+      {:starts_in, "How soon an activity starts",
+       [
+         {"starts_in(now + 25 min, now)", Format.starts_in(~U[2026-10-20 19:25:00Z], @now)},
+         {"starts_in(now - 2 h, now)", Format.starts_in(~U[2026-10-20 17:00:00Z], @now)}
+       ]}
+    ]
+  end
+
+  defp quantities do
+    member = [one: "1 member", many: "%d members"]
+
+    {"Numbers and quantities",
+     "A number and its unit always come from one of these, never written by hand.",
+     [
+       {:number, "A whole number",
+        [{"number(1204)", Format.number(1204)}, {"number(12.6)", Format.number(12.6)}]},
+       {:count, "A count with its noun",
+        [
+          {~s{count(1, one: "1 member", many: "%d members")}, Format.count(1, member)},
+          {~s{count(3, one: "1 member", many: "%d members")}, Format.count(3, member)}
+        ]},
+       {:duration, "Hours and minutes, everywhere",
+        [
+          {"duration(12_750)", Format.duration(12_750)},
+          {"duration(12_120)", Format.duration(12_120)},
+          {"duration(60)", Format.duration(60)},
+          {"duration(45)", Format.duration(45)}
+        ]},
+       {:hours, "Whole hours, for totals on charts", [{"hours(72_299)", Format.hours(72_299)}]},
+       {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
+       {:km, "A distance", [{"km(42)", Format.km(42)}]},
+       {:tenths, "One decimal place, under a header that names the unit",
+        [{"tenths(1.5)", Format.tenths(1.5)}]},
+       {:run_time, "How long a job took, for admins",
+        [
+          {"run_time(850)", Format.run_time(850)},
+          {"run_time(4_200)", Format.run_time(4_200)},
+          {"run_time(210_000)", Format.run_time(210_000)}
+        ]}
+     ]}
+  end
+
+  defp elsewhere do
+    {"Elsewhere", "Formatters that belong to one kind of value, beside its code.",
+     [
+       {:"Service.Phone.format", "A phone number",
+        [{~s{Service.Phone.format("+16045551234")}, Service.Phone.format("+16045551234")}]},
+       {:"Coordinate.to_string", "Latitude and longitude",
+        [
+          {"Coordinate.to_string({49.75533, -123.1311}, 3)",
+           Coordinate.to_string({49.75533, -123.1311}, 3)}
+        ]},
+       {:"MemberCard.format_code", "An ID card's code",
+        [{~s{MemberCard.format_code("K7Q4M2XA")}, MemberCard.format_code("K7Q4M2XA")}]}
+     ]}
+  end
+end

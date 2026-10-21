@@ -1,0 +1,49 @@
+<.shell title="Values" current={:values}>
+  <h1>Values</h1>
+  <p class="lead">
+    Every date, time, number, and quantity people read comes from one of these functions.
+  </p>
+  <p>
+    Each example runs the app's own function, so this page shows what people see. Noon on
+    Oct 20, 2026, in Vancouver is "now". The functions are in <code>Service.Format</code>
+    unless named.
+  </p>
+
+  <section :for={{section, about, rows} <- values()} class="mt-8">
+    <h2>{section}</h2>
+    <p>{about}</p>
+    <.table
+      id={"values-#{section |> String.downcase() |> String.replace(" ", "-")}"}
+      rows={rows}
+      row_id={fn {name, _use, _examples} -> "value-#{name}" end}
+    >
+      <:col :let={{name, _use, _examples}} label="Function" class="w-px mono whitespace-nowrap">
+        {name}
+      </:col>
+      <:col :let={{_name, use, _examples}} label="Use">{use}</:col>
+      <:col :let={{_name, _use, examples}} label="Examples">
+        <span :for={{call, result} <- examples} class="block">
+          <code>{call}</code> → {result}
+        </span>
+      </:col>
+    </.table>
+  </section>
+
+  <h2>Rules</h2>
+  <ul>
+    <li>
+      Never write a number and its unit by hand, such as <code>&#123;days&#125; days</code>. A test fails on it.
+    </li>
+    <li>
+      Work the number out in <code>Service.Convert</code>, such as <code>days_until/2</code>,
+      which rounds up. Format it here.
+    </li>
+    <li>
+      No function fits? Add one to <code>Service.Format</code>, with a test, and a row here.
+    </li>
+    <li>
+      The words follow the <a href={page_path(:writing)}>writing guide</a>: digits, month first, and
+      the 24-hour clock.
+    </li>
+  </ul>
+</.shell>

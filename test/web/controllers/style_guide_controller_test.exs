@@ -32,6 +32,17 @@ defmodule Web.StyleGuideControllerTest do
     end
   end
 
+  test "the Values page shows every Service.Format function", %{conn: conn} do
+    shown =
+      for {_section, _about, rows} <- StyleGuideHTML.values(), {name, _, _} <- rows, do: name
+
+    missing =
+      Service.Format.__info__(:functions) |> Keyword.keys() |> Enum.uniq() |> Kernel.--(shown)
+
+    assert missing == [], "Add these to StyleGuideHTML.values/0: #{inspect(missing)}"
+    assert html_response(get(conn, ~p"/styles/values"), 200) =~ ~s(id="value-days")
+  end
+
   test "page paths use dashes", %{conn: conn} do
     assert html_response(get(conn, ~p"/styles/side-nav"), 200) =~ "<h1>Side navigation</h1>"
     assert_error_sent 404, fn -> get(conn, "/styles/side_nav") end

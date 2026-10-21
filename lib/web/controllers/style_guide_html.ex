@@ -51,6 +51,7 @@ defmodule Web.StyleGuideHTML do
          {:logo, "Logo", "The logo's forms, sizes, and files."},
          {:spacing, "Spacing", "The 8 spaces on a 4px grid, and their classes."},
          {:typography, "Typography", "The type scale, headings, body text, numbers, and links."},
+         {:values, "Values", "Every formatter for dates, times, numbers, and quantities."},
          {:writing, "Writing",
           "The rules and glossary for every word a person reads. Agents follow it."}
        ]},
@@ -269,6 +270,8 @@ defmodule Web.StyleGuideHTML do
       {"xs", 12, 16, "Tags, column group labels, captions"}
     ]
   end
+
+  defdelegate values, to: Web.StyleGuideHTML.Values, as: :all
 
   def spacing do
     [
