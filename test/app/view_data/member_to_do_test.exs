@@ -10,6 +10,9 @@ defmodule App.ViewData.MemberToDoTest do
   defp letter(year, downloaded_at \\ nil),
     do: %{id: year, year: year, downloaded_at: downloaded_at}
 
+  defp row(status, title, days_left),
+    do: %{status: status, award: %{qualification: %{title: title}}, days_left: days_left}
+
   defp keys(items), do: Enum.map(items, & &1.key)
 
   test "the card stays until it's in Wallet, and a member with no card has no item" do
@@ -18,19 +21,15 @@ defmodule App.ViewData.MemberToDoTest do
     assert MemberToDo.items(nil, false, [], [], @now, @tz) == []
   end
 
-  test "each qualification expiring within 60 days, with the days left rounded up" do
-    groups = [
-      within_60_days: [
-        %{award: %{qualification: %{title: "First Aid"}, ends_at: ~U[2026-11-30 12:00:00Z]}},
-        %{award: %{qualification: %{title: "Radio"}, ends_at: ~U[2026-10-21 07:00:00Z]}}
-      ],
-      within_180_days: [
-        %{award: %{qualification: %{title: "Swiftwater"}, ends_at: ~U[2027-03-01 00:00:00Z]}}
-      ],
-      expired: [%{award: %{qualification: %{title: "Rope"}, ends_at: ~U[2024-09-30 00:00:00Z]}}]
+  test "each qualification expiring within 60 days, with its days left" do
+    rows = [
+      row(:expiring, "First Aid", 41),
+      row(:expiring, "Radio", 1),
+      row(:current, "Swiftwater", 132),
+      row(:expired, "Rope", -750)
     ]
 
-    assert [%{days: 41}, %{days: 1}] = MemberToDo.items(nil, false, [], groups, @now, @tz)
+    assert [%{days: 41}, %{days: 1}] = MemberToDo.items(nil, false, [], rows, @now, @tz)
   end
 
   test "the newest letter until downloaded, and only last year's or this year's" do
@@ -42,13 +41,8 @@ defmodule App.ViewData.MemberToDoTest do
   end
 
   test "items come card, qualifications, then the letter" do
-    groups = [
-      within_60_days: [
-        %{award: %{qualification: %{title: "First Aid"}, ends_at: ~U[2026-11-30 12:00:00Z]}}
-      ]
-    ]
-
-    items = MemberToDo.items(@card, false, [letter(2025)], groups, @now, @tz)
+    rows = [row(:expiring, "First Aid", 41)]
+    items = MemberToDo.items(@card, false, [letter(2025)], rows, @now, @tz)
     assert keys(items) == [:card, :qualification, :letter]
   end
 end

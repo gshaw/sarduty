@@ -27,12 +27,12 @@ defmodule Web.MeLive do
     team = member.team
     now = DateTime.utc_now()
 
-    groups = MemberRecords.qualifications(member, now)
+    qualifications = MemberRecords.qualifications(member, now)
 
     overview =
       member
       |> MemberRecords.attended(now)
-      |> MemberOverview.build(groups, now, team.timezone)
+      |> MemberOverview.build(qualifications, now, team.timezone)
 
     socket =
       socket
@@ -42,14 +42,14 @@ defmodule Web.MeLive do
       |> assign(:next_up, member |> MemberRecords.signed_up(now) |> List.first())
       |> assign(:overview, overview)
       |> assign(:map, build_map(overview.last_12_months, team, now))
-      |> assign(:groups, groups)
+      |> assign(:qualifications, qualifications)
       |> assign_to_do()
 
     {:ok, socket}
   end
 
   defp assign_to_do(socket) do
-    %{member: member, groups: groups, now: now} = socket.assigns
+    %{member: member, qualifications: qualifications, now: now} = socket.assigns
     card = MemberCard.find_current(member.team, member)
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
     letters = TaxCreditLetter.get_all_for_member(member)
@@ -57,7 +57,7 @@ defmodule Web.MeLive do
     assign(
       socket,
       :to_do,
-      MemberToDo.items(card, in_wallet?, letters, groups, now, member.team.timezone)
+      MemberToDo.items(card, in_wallet?, letters, qualifications, now, member.team.timezone)
     )
   end
 
@@ -299,10 +299,7 @@ defmodule Web.MeLive do
     ~H"""
     <li id={"to-do-qualification-#{@item.award.qualification_id}"} class="py-3">
       <.a navigate={~p"/teams/#{@team}/me/qualifications"} class="font-semibold">
-        {@item.award.qualification.title} expires in {Format.count(@item.days,
-          one: "1 day",
-          many: "%d days"
-        )}
+        {@item.award.qualification.title} expires in {Format.days(@item.days)}
       </.a>
       <span class="hint block">Renewed it? Give the new certificate to a team admin.</span>
     </li>
