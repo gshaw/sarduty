@@ -5,7 +5,6 @@ defmodule Web.StyleGuideHTML.Values do
   Vancouver is "now". A test fails when a Service.Format function is missing here.
   """
 
-  alias App.Model.Coordinate
   alias App.Model.MemberCard
   alias Service.Format
 
@@ -33,14 +32,16 @@ defmodule Web.StyleGuideHTML.Values do
 
   defp calendar_dates do
     [
-      {:date_long, "Letters and sentences",
-       [{"date_long(now, zone)", Format.date_long(@now, @zone)}]},
-      {:date_short, "Tables and lists",
-       [{"date_short(now, zone)", Format.date_short(@now, @zone)}]},
-      {:day, "A calendar date with no time",
-       [{"day(~D[2025-09-28])", Format.day(~D[2025-09-28])}]},
-      {:day_long, "The same, in a sentence",
-       [{"day_long(~D[2025-09-28])", Format.day_long(~D[2025-09-28])}]},
+      {:date_long, "Letters and sentences, from a time or a date",
+       [
+         {"date_long(now, zone)", Format.date_long(@now, @zone)},
+         {"date_long(~D[2025-09-28])", Format.date_long(~D[2025-09-28])}
+       ]},
+      {:date_short, "Tables and lists, from a time or a date",
+       [
+         {"date_short(now, zone)", Format.date_short(@now, @zone)},
+         {"date_short(~D[2025-09-28])", Format.date_short(~D[2025-09-28])}
+       ]},
       {:day_in_year, "A table date, with the year only when it is not this year",
        [
          {"day_in_year(~D[2026-03-01], today)", Format.day_in_year(~D[2026-03-01], @today)},
@@ -73,8 +74,6 @@ defmodule Web.StyleGuideHTML.Values do
   end
 
   defp ago do
-    ninety_days_ago = DateTime.add(DateTime.utc_now(), -90, :day)
-
     [
       {:minutes_ago, "Things that change by the minute",
        [
@@ -92,17 +91,10 @@ defmodule Web.StyleGuideHTML.Values do
          {"days_ago(now - 12 days, now, zone)",
           Format.days_ago(~U[2026-10-08 19:00:00Z], @now, @zone)},
          {"days_ago(now - 120 days, now, zone)",
-          Format.days_ago(~U[2026-06-22 19:00:00Z], @now, @zone)}
-       ]},
-      {:months_or_years_distance, "Time between two dates",
-       [
-         {"months_or_years_distance(now - 400 days, now)",
-          Format.months_or_years_distance(~U[2025-09-15 19:00:00Z], @now)},
-         {"months_or_years_distance(now - 5 years, now)",
-          Format.months_or_years_distance(~U[2021-10-20 19:00:00Z], @now)}
-       ]},
-      {:months_or_years_ago, "The same, up to today",
-       [{"months_or_years_ago(today - 90 days)", Format.months_or_years_ago(ninety_days_ago)}]}
+          Format.days_ago(~U[2026-06-22 19:00:00Z], @now, @zone)},
+         {"days_ago(now - 5 years, now, zone)",
+          Format.days_ago(~U[2021-10-20 19:00:00Z], @now, @zone)}
+       ]}
     ]
   end
 
@@ -134,7 +126,7 @@ defmodule Web.StyleGuideHTML.Values do
        {:count, "A count with its noun",
         [
           {~s{count(1, one: "1 member", many: "%d members")}, Format.count(1, member)},
-          {~s{count(3, one: "1 member", many: "%d members")}, Format.count(3, member)}
+          {~s{count(1204, one: "1 member", many: "%d members")}, Format.count(1204, member)}
         ]},
        {:duration, "Hours and minutes, everywhere",
         [
@@ -143,11 +135,17 @@ defmodule Web.StyleGuideHTML.Values do
           {"duration(60)", Format.duration(60)},
           {"duration(45)", Format.duration(45)}
         ]},
-       {:hours, "Whole hours, for totals on charts", [{"hours(72_299)", Format.hours(72_299)}]},
+       {:hours, "Minutes as whole hours, under a label that says hours",
+        [{"hours(72_299)", Format.hours(72_299)}]},
+       {:tenths, "One decimal place, under a label that names the unit",
+        [{"tenths(1.5)", Format.tenths(1.5)}]},
        {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
        {:km, "A distance", [{"km(42)", Format.km(42)}]},
-       {:tenths, "One decimal place, under a header that names the unit",
-        [{"tenths(1.5)", Format.tenths(1.5)}]},
+       {:coordinate, "A place",
+        [
+          {"coordinate({49.75533, -123.1311}, 5)", Format.coordinate({49.75533, -123.1311}, 5)},
+          {"coordinate({49.75533, -123.1311}, 3)", Format.coordinate({49.75533, -123.1311}, 3)}
+        ]},
        {:run_time, "How long a job took, for admins",
         [
           {"run_time(850)", Format.run_time(850)},
@@ -160,12 +158,10 @@ defmodule Web.StyleGuideHTML.Values do
   defp elsewhere do
     {"Elsewhere", "Formatters that belong to one kind of value, beside its code.",
      [
-       {:"Service.Phone.format", "A phone number",
-        [{~s{Service.Phone.format("+16045551234")}, Service.Phone.format("+16045551234")}]},
-       {:"Coordinate.to_string", "Latitude and longitude",
+       {:"Service.Phone.format", "A phone number, from D4H or as typed",
         [
-          {"Coordinate.to_string({49.75533, -123.1311}, 3)",
-           Coordinate.to_string({49.75533, -123.1311}, 3)}
+          {~s{Service.Phone.format("(604) 555 1234")}, Service.Phone.format("(604) 555 1234")},
+          {~s{Service.Phone.format("+44 20 7946 0958")}, Service.Phone.format("+44 20 7946 0958")}
         ]},
        {:"MemberCard.format_code", "An ID card's code",
         [{~s{MemberCard.format_code("K7Q4M2XA")}, MemberCard.format_code("K7Q4M2XA")}]}

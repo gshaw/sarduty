@@ -11,7 +11,6 @@ defmodule Web.Components.MemberSidebar do
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias Web.Components.OpenInMaps
-  alias Web.Components.Phone
 
   attr :member, :map, required: true
   attr :maps_app, :string, default: "google", doc: "the account's maps_app"
@@ -53,9 +52,9 @@ defmodule Web.Components.MemberSidebar do
       </dd>
       <dt>Phone</dt>
       <dd id="member-phone">
-        {Phone.format(@member.phone)}<.copy_button
+        {Service.Phone.format(@member.phone)}<.copy_button
           id="member-copy-phone"
-          value={Phone.format(@member.phone)}
+          value={Service.Phone.format(@member.phone)}
           label="Copy phone number"
         />
         <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
@@ -71,11 +70,7 @@ defmodule Web.Components.MemberSidebar do
         <.open_in_maps id="member-maps" app={@maps_app} address={@member.address} />
       </dd>
       <dt>Joined</dt>
-      <dd>
-        {Service.Format.date_short(@member.joined_at, @member.team.timezone)} · {Service.Format.months_or_years_ago(
-          @member.joined_at
-        )} ago
-      </dd>
+      <dd>{date_and_days_ago(@member.joined_at, @member.team.timezone)}</dd>
       <dt>Standing</dt>
       <dd id="member-standing">
         <.link navigate={~p"/teams/#{@member.team}/members/#{@member.id}/standing"} class="link">
@@ -107,7 +102,11 @@ defmodule Web.Components.MemberSidebar do
 
   defp last_attended(nil, _timezone), do: "Never"
 
-  defp last_attended(started_at, timezone),
-    do:
-      "#{Service.Format.date_short(started_at, timezone)} · #{Service.Format.days_ago(started_at, DateTime.utc_now(), timezone)}"
+  defp last_attended(started_at, timezone), do: date_and_days_ago(started_at, timezone)
+
+  # "Oct 8, 2026 · 12 days ago"
+  defp date_and_days_ago(datetime, timezone) do
+    ago = Service.Format.days_ago(datetime, DateTime.utc_now(), timezone)
+    "#{Service.Format.date_short(datetime, timezone)} · #{ago}"
+  end
 end

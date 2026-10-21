@@ -18,7 +18,6 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Operation.FollowUpNoShow
   alias App.Operation.SendAttendanceToD4H
   alias App.Repo
-  alias Web.Components.Phone
 
   # The team admin's side of taking attendance at the door: make or close the link, and
   # watch arrivals and departures come in.
@@ -216,8 +215,10 @@ defmodule Web.ActivityTakeAttendanceLive do
     >
       <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
       <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
-        <span :if={Phone.format(no_show.member.phone)}>{Phone.format(no_show.member.phone)}</span>
-        <span :if={!Phone.format(no_show.member.phone)} class="hint">No mobile number in D4H</span>
+        <span :if={Service.Phone.format(no_show.member.phone)}>{Service.Phone.format(
+          no_show.member.phone
+        )}</span>
+        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number in D4H</span>
         <.call_and_text
           id={"no-show-#{no_show.id}"}
           phone={no_show.member.phone}

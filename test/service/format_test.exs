@@ -12,8 +12,9 @@ defmodule Service.FormatTest do
     assert Format.number(1204) == "1,204"
     assert Format.number(-1_234_567) == "-1,234,567"
     assert Format.number(12.6) == "13"
-    assert Format.hours(72_299) == "1,204h"
-    assert Format.day(~D[2025-09-28]) == "Sep 28, 2025"
+    assert Format.hours(72_299) == "1,204"
+    assert Format.date_short(~D[2025-09-28]) == "Sep 28, 2025"
+    assert Format.date_long(~D[2025-09-28]) == "September 28, 2025"
     assert Format.month_short(~D[2025-09-01]) == "Sep"
     assert Format.month_year_long(~D[2025-09-01]) == "September 2025"
   end
@@ -25,15 +26,19 @@ defmodule Service.FormatTest do
     assert Format.month_day_time_seconds(@now, @zone) == "Sep 14, 09:00:00"
   end
 
-  test "quantities: days, km, tenths, and how long a job took" do
+  test "quantities: days, counts, km, tenths, places, and how long a job took" do
     assert Format.days(1) == "1 day"
     assert Format.days(0) == "0 days"
     assert Format.days(30) == "30 days"
     assert Format.days(1095) == "1,095 days"
+    assert Format.count(1204, one: "1 member", many: "%d members") == "1,204 members"
     assert Format.km(42) == "42 km"
     assert Format.km(1204.4) == "1,204 km"
     assert Format.tenths(1.5) == "1.5"
     assert Format.tenths(2) == "2.0"
+    assert Format.coordinate({49.75533, -123.1311}, 5) == "49.75533, -123.13110"
+    assert Format.coordinate({49.75533, -123.1311}, 3) == "49.755, -123.131"
+    assert Format.coordinate("unknown", 3) == "unknown"
     assert Format.run_time(850) == "850 ms"
     assert Format.run_time(4_200) == "4.2 s"
     assert Format.run_time(210_000) == "3.5 min"
@@ -84,9 +89,11 @@ defmodule Service.FormatTest do
       assert Format.days_ago(~U[2026-09-14 08:00:00Z], @now, @zone) == "Today"
     end
 
-    test "counts days for the first six weeks, then months" do
+    test "counts days for the first six weeks, then months, then years after 18 months" do
       assert Format.days_ago(~U[2026-09-02 16:00:00Z], @now, @zone) == "12 days ago"
+      assert Format.days_ago(~U[2026-07-31 16:00:00Z], @now, @zone) == "1 month ago"
       assert Format.days_ago(~U[2026-05-14 16:00:00Z], @now, @zone) == "4 months ago"
+      assert Format.days_ago(~U[2021-09-14 16:00:00Z], @now, @zone) == "5 years ago"
     end
 
     test "is blank for a user never seen" do

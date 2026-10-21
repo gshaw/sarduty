@@ -106,7 +106,7 @@ defmodule App.Model.MemberAwayPeriod do
   def describe_standing(:retired), do: "Retired"
 
   def describe_standing({:away, period}),
-    do: "Away until #{Service.Format.day_long(period.ends_on)} (#{period.reason})"
+    do: "Away until #{Service.Format.date_long(period.ends_on)} (#{period.reason})"
 
   @doc "Every away period of the team's members."
   def get_all_for_team(team_id),

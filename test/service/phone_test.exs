@@ -30,8 +30,12 @@ defmodule Service.PhoneTest do
     end
   end
 
-  test "formats a North American number to show" do
+  test "formats a number to read, and keeps anything else as written" do
     assert Phone.format("+16045551234") == "604-555-1234"
-    assert Phone.format("+442079460958") == "+442079460958"
+    assert Phone.format("(604) 555 1234") == "604-555-1234"
+    assert Phone.format("+44 20 7946 0958") == "+442079460958"
+    assert Phone.format(" ask the office ") == "ask the office"
+    assert Phone.format("  ") == nil
+    assert Phone.format(nil) == nil
   end
 end

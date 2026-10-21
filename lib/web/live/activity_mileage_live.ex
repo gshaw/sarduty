@@ -49,9 +49,9 @@ defmodule Web.ActivityMileageLive do
     <%= if @activity.coordinate do %>
       <dl>
         <dt>Activity latitude and longitude</dt>
-        <dd>{App.Model.Coordinate.to_string(@activity.coordinate, 5)}</dd>
+        <dd>{Service.Format.coordinate(Coordinate.build(@activity.coordinate), 5)}</dd>
         <dt>Yard latitude and longitude</dt>
-        <dd>{App.Model.Coordinate.to_string(@team.coordinate, 5)}</dd>
+        <dd>{Service.Format.coordinate(@team.coordinate, 5)}</dd>
       </dl>
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
         <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
@@ -98,7 +98,7 @@ defmodule Web.ActivityMileageLive do
           </:col>
           <:col :let={record} label="Home address">{record.address}</:col>
           <:col :let={record} label="Latitude and longitude">
-            {Coordinate.to_string(record.coordinate, 3)}
+            {Service.Format.coordinate(record.coordinate, 3)}
           </:col>
         </.table>
         <p class="mt-4">

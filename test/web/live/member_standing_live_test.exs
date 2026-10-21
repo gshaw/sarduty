@@ -51,7 +51,7 @@ defmodule Web.MemberStandingLiveTest do
     assert has_element?(
              lv,
              "#standing-now",
-             "Away until #{Service.Format.day_long(ends_on)} (Parental leave)"
+             "Away until #{Service.Format.date_long(ends_on)} (Parental leave)"
            )
 
     assert has_element?(lv, "#away-period-list", "Parental leave")

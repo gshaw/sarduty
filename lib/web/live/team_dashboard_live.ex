@@ -321,7 +321,7 @@ defmodule Web.TeamDashboardLive do
           id="stat-hours"
           value={Format.hours(@charts.minutes_ytd)}
           label={"Member hours in #{@charts.year}"}
-          delta={versus(div(@charts.minutes_ytd, 60), div(@charts.minutes_last_ytd, 60), "h")}
+          delta={versus(div(@charts.minutes_ytd, 60), div(@charts.minutes_last_ytd, 60))}
         >
           <.sparkline values={@charts.monthly_hours} />
         </.stat>
@@ -378,10 +378,10 @@ defmodule Web.TeamDashboardLive do
   end
 
   # Against the same days of last year: "12 more than this time last year".
-  defp versus(now, before, unit \\ "") do
+  defp versus(now, before) do
     cond do
-      now > before -> "#{Format.number(now - before)}#{unit} more than this time last year"
-      now < before -> "#{Format.number(before - now)}#{unit} fewer than this time last year"
+      now > before -> "#{Format.number(now - before)} more than this time last year"
+      now < before -> "#{Format.number(before - now)} fewer than this time last year"
       true -> "Same as this time last year"
     end
   end

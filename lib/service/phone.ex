@@ -30,9 +30,20 @@ defmodule Service.Phone do
     end
   end
 
-  @doc "An E.164 number to show: 604-555-1234 for North America, as is otherwise."
-  def format("+1" <> <<area::binary-3, exchange::binary-3, line::binary-4>>),
-    do: "#{area}-#{exchange}-#{line}"
+  @doc """
+  A number to read, from D4H or as someone typed it: 604-555-1234 for North America, E.164
+  for elsewhere, and text that isn't a number as written. Nil for none.
+  """
+  def format(phone) do
+    case normalize(phone) do
+      "+1" <> <<area::binary-3, exchange::binary-3, line::binary-4>> ->
+        "#{area}-#{exchange}-#{line}"
 
-  def format(e164), do: e164
+      nil ->
+        if phone && String.trim(phone) != "", do: String.trim(phone)
+
+      e164 ->
+        e164
+    end
+  end
 end

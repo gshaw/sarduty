@@ -3,13 +3,20 @@ defmodule Service.Format do
     Useful functions for formatting data into strings.
   """
 
+  @doc ~s(A count with its noun: "1 member", "1,204 members". `%d` marks the number.)
   def count(n, one: one, many: many) do
     template = if n == 1, do: one, else: many
-    String.replace(template, "%d", Integer.to_string(n))
+    String.replace(template, "%d", number(n))
   end
 
+  @doc ~s(A date for letters and sentences: "October 20, 2026". Takes a `Date`, or a time and zone.)
+  def date_long(%Date{} = date), do: Calendar.strftime(date, "%B %-d, %Y")
   def date_long(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
+
+  @doc ~s(A date for tables and lists: "Oct 20, 2026". Takes a `Date`, or a time and zone.)
+  def date_short(%Date{} = date), do: Calendar.strftime(date, "%b %-d, %Y")
   def date_short(datetime, timezone), do: datetime(datetime, timezone, "%x")
+
   def month_year(datetime, timezone), do: datetime(datetime, timezone, "%b %Y")
 
   # A time always follows its date after a comma: "Oct 20, 12:00", "Oct 20, 2026, 12:00".
@@ -27,12 +34,6 @@ defmodule Service.Format do
 
   def month_day_time_seconds(datetime, timezone),
     do: datetime(datetime, timezone, "%b %-d, %H:%M:%S")
-
-  @doc "A calendar date with no time or zone: \"Sep 28, 2025\"."
-  def day(%Date{} = date), do: Calendar.strftime(date, "%b %-d, %Y")
-
-  @doc "The same with the month in full, for a sentence: \"September 28, 2025\"."
-  def day_long(%Date{} = date), do: Calendar.strftime(date, "%B %-d, %Y")
 
   @doc "A date in a table, with the year only when it is not this year: \"Mar 1\"."
   def day_in_year(%Date{} = date, %Date{} = today),
@@ -57,22 +58,37 @@ defmodule Service.Format do
     |> String.reverse()
   end
 
-  @doc "Minutes as whole hours, for totals too big for minutes to matter: \"1,204h\"."
-  def hours(minutes), do: number(div(round(minutes), 60)) <> "h"
+  @doc """
+  Minutes as whole hours with no unit, for a stat or column whose label says hours, such
+  as "Hours in 2026": "1,204".
+  """
+  def hours(minutes), do: number(div(round(minutes), 60))
 
   @doc ~s(A count of days: "1 day", "30 days", "1,095 days". Work days out with `Service.Convert`.)
-  def days(n) when is_integer(n), do: count(n, one: "1 day", many: "#{number(n)} days")
+  def days(n) when is_integer(n), do: count(n, one: "1 day", many: "%d days")
 
   @doc ~s(A distance in whole km: "42 km", "1,204 km".)
   def km(n) when is_number(n), do: number(n) <> " km"
 
   @doc ~s(A number to one decimal place, for a column whose header names the unit: "1.5", "2.0".)
-  def tenths(n) when is_number(n), do: :erlang.float_to_binary(n / 1, decimals: 1)
+  def tenths(n) when is_number(n), do: decimals(n, 1)
 
   @doc ~s(How long a job took, for admins: "850 ms", "4.2 s", then "3.5 min" from 2 minutes.)
   def run_time(ms) when ms < 1000, do: "#{round(ms)} ms"
   def run_time(ms) when ms < 120_000, do: "#{tenths(ms / 1000)} s"
   def run_time(ms), do: "#{tenths(ms / 60_000)} min"
+
+  @doc """
+  Latitude and longitude to `precision` decimal places: "49.75533, -123.13110". Anything
+  else, such as why Mapbox found no place, as is. Stored coordinates have no space; see
+  `App.Model.Coordinate.to_string/2`.
+  """
+  def coordinate({lat, lng}, precision),
+    do: "#{decimals(lat, precision)}, #{decimals(lng, precision)}"
+
+  def coordinate(other, _precision), do: other
+
+  defp decimals(n, places), do: :erlang.float_to_binary(n / 1, decimals: places)
 
   defp datetime(nil, _timezone, _format), do: nil
 
@@ -147,28 +163,20 @@ defmodule Service.Format do
       days <= 0 -> "Today"
       days == 1 -> "Yesterday"
       days < 45 -> "#{days} days ago"
-      true -> "#{months_or_years_distance(datetime, now)} ago"
+      true -> "#{months_or_years(datetime, now)} ago"
     end
   end
 
   defp local_date(datetime, timezone),
     do: datetime |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
 
-  def months_or_years_ago(date) do
-    months_or_years_distance(date, DateTime.utc_now())
-  end
-
-  def months_or_years_distance(started_at, finished_at) do
+  # From 45 days back: "1 month", "18 months", then whole years.
+  defp months_or_years(started_at, finished_at) do
     months = Service.Convert.duration_to_months(started_at, finished_at)
-    years = round(months / 12)
 
-    cond do
-      months < 1 -> "less than a month"
-      months == 1 -> "1 month"
-      months <= 18 -> "#{months} months"
-      # years == 1 -> "1 year" (not needed since 18 months is the cutoff)
-      true -> "#{years} years"
-    end
+    if months <= 18,
+      do: count(months, one: "1 month", many: "%d months"),
+      else: "#{round(months / 12)} years"
   end
 
   @doc """

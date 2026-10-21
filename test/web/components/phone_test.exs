@@ -5,16 +5,6 @@ defmodule Web.Components.PhoneTest do
   import Phoenix.LiveViewTest
   import Web.Components.Phone
 
-  alias Web.Components.Phone
-
-  test "format/1 reads a North American number with dashes, and keeps anything else" do
-    assert Phone.format("(604) 555 1234") == "604-555-1234"
-    assert Phone.format("+44 20 7946 0958") == "+442079460958"
-    assert Phone.format(" ask the office ") == "ask the office"
-    assert Phone.format("  ") == nil
-    assert Phone.format(nil) == nil
-  end
-
   test "call_and_text/1 dials E.164 and shows only on touch screens" do
     assigns = %{}
 
