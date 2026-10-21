@@ -6,7 +6,7 @@ defmodule Web.MeActivitiesLive do
   alias App.Adapter.D4H
   alias App.ViewData.MemberRecords
 
-  # The activities a member attended in a year, by month, and what they're signed up for
+  # The activities a member attended in a year, newest first, and what they're signed up for
   # (#339), /teams/:subdomain/me/activities. `member` comes from the login, never the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.member
@@ -79,7 +79,7 @@ defmodule Web.MeActivitiesLive do
     </p>
     <.table
       id="attendance"
-      groups={month_groups(@attendances, @member.team.timezone)}
+      rows={@attendances}
       row_id={&"attendance-#{&1.id}"}
     >
       <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
@@ -96,11 +96,5 @@ defmodule Web.MeActivitiesLive do
       </:col>
     </.table>
     """
-  end
-
-  # The year's activities by month, newest first, as table groups titled "October".
-  defp month_groups(attendances, timezone) do
-    for {month, rows} <- MemberRecords.by_month(attendances, timezone),
-        do: %{id: Date.to_iso8601(month), title: Service.Format.month(month), rows: rows}
   end
 end

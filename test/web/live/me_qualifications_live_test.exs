@@ -9,7 +9,7 @@ defmodule Web.MeQualificationsLiveTest do
     %{conn: log_in_user(conn, user), team: team, member: member, user: user}
   end
 
-  test "groups qualifications by when they expire, with no other team's",
+  test "lists qualifications soonest expiry first, with days left on the expiring one",
        %{conn: conn, team: team, member: member} do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     first_aid = qualification_fixture(team, %{title: "First Aid"})
@@ -34,20 +34,12 @@ defmodule Web.MeQualificationsLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/qualifications")
 
-    assert has_element?(
-             lv,
-             "#qualifications-within-60-days #qualifications-#{first_aid.id}",
-             "2019"
-           )
-
-    assert has_element?(lv, "#qualifications-never #qualifications-#{rope.id}")
-
-    assert has_element?(
-             lv,
-             "#qualifications-expired #qualifications-#{avalanche.id}",
-             "Expired Sep 15, 2024"
-           )
-
+    assert has_element?(lv, "#qualifications-#{first_aid.id} .badge", "30 days")
+    assert has_element?(lv, "#qualifications-#{first_aid.id}", "2019")
+    assert has_element?(lv, "#qualifications-#{rope.id}", "Does not expire")
+    refute has_element?(lv, "#qualifications-#{rope.id} .badge")
+    assert has_element?(lv, "#qualifications-#{avalanche.id}.is-muted", "Expired Sep 15, 2024")
+    refute has_element?(lv, ".table-group-row")
     refute has_element?(lv, "#qualifications-#{other_team.id}")
     refute has_element?(lv, "[id^=qualifications-award-]")
   end

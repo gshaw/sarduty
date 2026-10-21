@@ -5,7 +5,7 @@ defmodule Web.MeQualificationsLive do
   alias App.ViewData.MemberRecords
   alias Web.QualificationText
 
-  # A member's qualifications by when they expire (#308), /teams/:subdomain/me/qualifications.
+  # A member's qualifications, soonest expiry first (#308), /teams/:subdomain/me/qualifications.
   def mount(_params, _session, socket) do
     member = socket.assigns.member
     now = DateTime.utc_now()
@@ -29,12 +29,16 @@ defmodule Web.MeQualificationsLive do
       <.table
         :if={@qualifications != []}
         id="qualifications"
-        groups={QualificationText.table_groups(@qualifications)}
+        rows={@qualifications}
         row_id={&"qualifications-#{&1.award.qualification_id}"}
+        row_class={&QualificationText.row_class/1}
       >
         <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
         <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
           {QualificationText.expires(row.award, @now, @member.team.timezone)}
+          <.badge :if={row.status == :expiring} kind={:warning}>
+            {QualificationText.days_left(row)}
+          </.badge>
         </:col>
         <:col :let={row} label="First held" class="w-px whitespace-nowrap">
           {QualificationText.first_held(row, @member.team.timezone)}

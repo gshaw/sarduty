@@ -147,8 +147,8 @@ pages, each its own LiveView under `/teams/:subdomain/me`:
 | ------------------ | ------------------------ | ------------------------------------------------------ |
 | Overview           | `/me`                    | The member's year at a glance                          |
 | ID card            | `/me/card`               | The card, the Wallet buttons, and the verify link      |
-| Qualifications     | `/me/qualifications`     | Grouped by when they expire                            |
-| Activities         | `/me/activities?year=`   | Signed up for, then the year's activities by month     |
+| Qualifications     | `/me/qualifications`     | Soonest expiry first, with expiring ones tagged        |
+| Activities         | `/me/activities?year=`   | Signed up for, then the year's activities              |
 | Hours              | `/me/hours?year=`        | Primary and secondary hours for the year               |
 | Tax credit letters | `/me/tax-credit-letters` | Every year's letter as a PDF                           |
 | Contact details    | `/me/details`            | Mobile number, mailing address, and emergency contacts |
