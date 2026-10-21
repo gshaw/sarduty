@@ -178,6 +178,12 @@ their last 3 activities. The numbers come from
   Hours page and the tax credit letter count only tagged ones, and the overview says so
   with a link there. The Hours page shows the same bars for its year.
 - With no activities, each chart is one line, not an empty chart.
+- **For you to do** sits under Next up, from
+  [MemberToDo](../lib/app/view_data/member_to_do.ex), pure: add your ID card to Wallet
+  (until `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until
+  it's renewed), and a new tax credit letter (until the member downloads it,
+  `downloaded_at`). Each leaves once done; the layout stays the same. With nothing to do,
+  the card says so in one line.
 
 ### What must stay true
 

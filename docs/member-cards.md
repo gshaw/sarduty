@@ -119,6 +119,11 @@ pass again, and every saved copy changes:
 - **A replacement is a new pass.** Each card has its own Wallet object, because Google
   has no per-phone token to say which card a phone holds. The member adds the new one.
 
+**In Wallet** (#389): a member's overview lists "Add your ID card to Wallet" under For
+you to do until SAR Duty knows the card is in one (`MemberCard.in_wallet?/1`). Apple
+Wallet registers the phone, for the serial. Google tells SAR Duty nothing yet, so the
+member closes the item with **Mark as added**, which sets the card's `in_wallet_at`.
+
 Google loads images from URLs and refuses a pass whose images it can't load. It can't
 reach a dev server, so dev passes have none. In production:
 

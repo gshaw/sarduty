@@ -70,6 +70,8 @@ defmodule Web.MeController do
   def tax_credit_letter(conn, %{"id" => id}) do
     letter = TaxCreditLetter.find_for_member!(conn.assigns.member, id)
     attachment = BuildTaxCreditLetterAttachment.call(letter)
+    # Takes the letter off the member's "For you to do" (#389).
+    TaxCreditLetter.mark_downloaded(letter, DateTime.utc_now())
 
     conn
     |> put_resp_content_type(attachment.content_type)
