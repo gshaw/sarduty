@@ -11,10 +11,18 @@ defmodule Service.Format do
   def date_long(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")
   def date_short(datetime, timezone), do: datetime(datetime, timezone, "%x")
   def month_year(datetime, timezone), do: datetime(datetime, timezone, "%b %Y")
+
+  # A time always follows its date after a comma: "Oct 20, 12:00", "Oct 20, 2026, 12:00".
+
+  @doc ~s(A date and time: "Oct 20, 2026, 12:00".)
   def datetime_short(datetime, timezone), do: datetime(datetime, timezone, "%c")
+
+  @doc ~s(The same with the weekday: "Tue Oct 20, 2026, 12:00".)
   def datetime_medium(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
 
   def time_short(datetime, timezone), do: datetime(datetime, timezone, "%H:%M")
+
+  @doc ~s(A date and time with no year: "Oct 20, 12:00".)
   def month_day_time(datetime, timezone), do: datetime(datetime, timezone, "%b %-d, %H:%M")
 
   def month_day_time_seconds(datetime, timezone),
@@ -32,6 +40,9 @@ defmodule Service.Format do
 
   @doc "A month's short name, for chart labels: \"Sep\"."
   def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
+
+  @doc "A month in full with its year, for a chart's tip: \"September 2025\"."
+  def month_year_long(%Date{} = date), do: Calendar.strftime(date, "%B %Y")
 
   @doc "A whole number with thousands separators: \"1,204\"."
   def number(n) when is_float(n), do: number(round(n))
@@ -67,7 +78,7 @@ defmodule Service.Format do
 
   defp datetime(datetime, timezone, format) do
     user_options = [
-      preferred_datetime: "%b %-d, %Y %H:%M",
+      preferred_datetime: "%b %-d, %Y, %H:%M",
       preferred_date: "%b %-d, %Y"
     ]
 
@@ -157,20 +168,6 @@ defmodule Service.Format do
       months <= 18 -> "#{months} months"
       # years == 1 -> "1 year" (not needed since 18 months is the cutoff)
       true -> "#{years} years"
-    end
-  end
-
-  def same_day_datetime(nil, _activity_started_at, _timezone), do: nil
-
-  def same_day_datetime(datetime, activity_started_at, timezone) do
-    shifted = DateTime.shift_zone!(datetime, timezone)
-    activity_date = activity_started_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
-    attendance_date = DateTime.to_date(shifted)
-
-    if Date.compare(attendance_date, activity_date) == :eq do
-      Calendar.strftime(shifted, "%H:%M")
-    else
-      Calendar.strftime(shifted, "%b %-d %H:%M")
     end
   end
 

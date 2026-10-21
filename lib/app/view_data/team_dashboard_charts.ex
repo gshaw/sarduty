@@ -97,7 +97,7 @@ defmodule App.ViewData.TeamDashboardCharts do
           "#{n} #{String.downcase(label)}"
         end
 
-      tip = Enum.join([Calendar.strftime(month, "%B %Y") | lines], "\n")
+      tip = Enum.join([Format.month_year_long(month) | lines], "\n")
       %{label: Format.month_short(month), values: counts, tip: tip}
     end)
   end

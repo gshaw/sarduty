@@ -37,7 +37,9 @@ defmodule Web.StyleGuideHTML.Values do
        ]},
       {:month_year, "Award dates", [{"month_year(now, zone)", Format.month_year(@now, @zone)}]},
       {:month_short, "Chart labels",
-       [{"month_short(~D[2025-09-01])", Format.month_short(~D[2025-09-01])}]}
+       [{"month_short(~D[2025-09-01])", Format.month_short(~D[2025-09-01])}]},
+      {:month_year_long, "A chart's tip",
+       [{"month_year_long(~D[2025-09-01])", Format.month_year_long(~D[2025-09-01])}]}
     ]
   end
 
@@ -51,15 +53,7 @@ defmodule Web.StyleGuideHTML.Values do
       {:month_day_time, "A time this year",
        [{"month_day_time(now, zone)", Format.month_day_time(@now, @zone)}]},
       {:month_day_time_seconds, "The same to the second",
-       [{"month_day_time_seconds(now, zone)", Format.month_day_time_seconds(@now, @zone)}]},
-      {:same_day_datetime,
-       "An attendance time, with the date only when it is not the activity's day",
-       [
-         {"same_day_datetime(now + 2 h, now, zone)",
-          Format.same_day_datetime(~U[2026-10-20 21:00:00Z], @now, @zone)},
-         {"same_day_datetime(now + 1 day, now, zone)",
-          Format.same_day_datetime(~U[2026-10-21 19:00:00Z], @now, @zone)}
-       ]}
+       [{"month_day_time_seconds(now, zone)", Format.month_day_time_seconds(@now, @zone)}]}
     ]
   end
 

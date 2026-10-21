@@ -15,6 +15,14 @@ defmodule Service.FormatTest do
     assert Format.hours(72_299) == "1,204h"
     assert Format.day(~D[2025-09-28]) == "Sep 28, 2025"
     assert Format.month_short(~D[2025-09-01]) == "Sep"
+    assert Format.month_year_long(~D[2025-09-01]) == "September 2025"
+  end
+
+  test "a time follows its date after a comma, with or without the year" do
+    assert Format.datetime_short(@now, @zone) == "Sep 14, 2026, 09:00"
+    assert Format.datetime_medium(@now, @zone) == "Mon Sep 14, 2026, 09:00"
+    assert Format.month_day_time(@now, @zone) == "Sep 14, 09:00"
+    assert Format.month_day_time_seconds(@now, @zone) == "Sep 14, 09:00:00"
   end
 
   test "quantities: days, km, tenths, and how long a job took" do
