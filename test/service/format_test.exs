@@ -17,6 +17,20 @@ defmodule Service.FormatTest do
     assert Format.month_short(~D[2025-09-01]) == "Sep"
   end
 
+  test "quantities: days, km, tenths, and how long a job took" do
+    assert Format.days(1) == "1 day"
+    assert Format.days(0) == "0 days"
+    assert Format.days(30) == "30 days"
+    assert Format.days(1095) == "1,095 days"
+    assert Format.km(42) == "42 km"
+    assert Format.km(1204.4) == "1,204 km"
+    assert Format.tenths(1.5) == "1.5"
+    assert Format.tenths(2) == "2.0"
+    assert Format.run_time(850) == "850 ms"
+    assert Format.run_time(4_200) == "4.2 s"
+    assert Format.run_time(210_000) == "3.5 min"
+  end
+
   test "duration: hours and minutes, whole hours spelled out, minutes alone under an hour" do
     assert Format.duration(212 * 60 + 30) == "212h 30m"
     assert Format.duration(18 * 60 + 5) == "18h 5m"

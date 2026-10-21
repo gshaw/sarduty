@@ -504,7 +504,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   defp expiring_row(award, describe, now) do
     %{
       reason: describe.({:expires, award.d4h_qualification_id, award.ends_at}),
-      days: DateTime.diff(award.ends_at, now, :day)
+      days: Service.Convert.days_until(award.ends_at, now)
     }
   end
 

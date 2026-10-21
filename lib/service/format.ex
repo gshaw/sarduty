@@ -49,6 +49,20 @@ defmodule Service.Format do
   @doc "Minutes as whole hours, for totals too big for minutes to matter: \"1,204h\"."
   def hours(minutes), do: number(div(round(minutes), 60)) <> "h"
 
+  @doc ~s(A count of days: "1 day", "30 days", "1,095 days". Work days out with `Service.Convert`.)
+  def days(n) when is_integer(n), do: count(n, one: "1 day", many: "#{number(n)} days")
+
+  @doc ~s(A distance in whole km: "42 km", "1,204 km".)
+  def km(n) when is_number(n), do: number(n) <> " km"
+
+  @doc ~s(A number to one decimal place, for a column whose header names the unit: "1.5", "2.0".)
+  def tenths(n) when is_number(n), do: :erlang.float_to_binary(n / 1, decimals: 1)
+
+  @doc ~s(How long a job took, for admins: "850 ms", "4.2 s", then "3.5 min" from 2 minutes.)
+  def run_time(ms) when ms < 1000, do: "#{round(ms)} ms"
+  def run_time(ms) when ms < 120_000, do: "#{tenths(ms / 1000)} s"
+  def run_time(ms), do: "#{tenths(ms / 60_000)} min"
+
   defp datetime(nil, _timezone, _format), do: nil
 
   defp datetime(datetime, timezone, format) do

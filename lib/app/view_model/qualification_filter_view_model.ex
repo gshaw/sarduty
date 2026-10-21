@@ -19,7 +19,7 @@ defmodule App.ViewModel.QualificationFilterViewModel do
   @within_days [30, 60, 90, 180]
 
   @doc "The expiring view's time frames. The home page's item links with the default."
-  def within_kinds, do: Enum.map(@within_days, &{"#{&1} days", "#{&1}"})
+  def within_kinds, do: Enum.map(@within_days, &{Service.Format.days(&1), "#{&1}"})
 
   def default_within, do: BuildGroupRulePreview.expiring_days()
 

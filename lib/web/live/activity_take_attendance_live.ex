@@ -472,8 +472,11 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <p>
       {Service.Format.count(length(@times), one: "%d member", many: "%d members")}. SAR Duty uses
-      the start time for anyone who arrives within {BuildAttendanceTimes.grace_minutes()} minutes
-      of the start, early or late. It uses the end time for anyone who leaves within {BuildAttendanceTimes.grace_minutes()} minutes of the end.
+      the start time for anyone who arrives within {Service.Format.duration(
+        BuildAttendanceTimes.grace_minutes()
+      )} of the start, early or late. It uses the end time for anyone who leaves within {Service.Format.duration(
+        BuildAttendanceTimes.grace_minutes()
+      )} of the end.
     </p>
     <.table id="times" rows={@times} class="table-striped table-stack md:w-fit">
       <:col :let={row} label="Name" class="stack-title">{row.member.name}</:col>

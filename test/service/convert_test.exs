@@ -33,4 +33,14 @@ defmodule Service.ConvertTest do
     assert Convert.minutes_to_hours(90) == "1.5"
     assert Convert.minutes_to_hours(0) == "0"
   end
+
+  test "days until rounds up, so tomorrow afternoon is 1 day and past is 0 or less" do
+    now = ~U[2026-10-20 19:00:00Z]
+
+    assert Service.Convert.days_until(~U[2026-10-21 15:00:00Z], now) == 1
+    assert Service.Convert.days_until(~U[2026-12-19 19:00:00Z], now) == 60
+    assert Service.Convert.days_until(~U[2026-12-19 19:00:01Z], now) == 61
+    assert Service.Convert.days_until(now, now) == 0
+    assert Service.Convert.days_until(~U[2026-10-18 19:00:00Z], now) == -2
+  end
 end

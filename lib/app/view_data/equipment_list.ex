@@ -87,7 +87,7 @@ defmodule App.ViewData.EquipmentList do
   def expiring?(%EquipmentItem{status: "retired"}, _now), do: false
 
   def expiring?(%EquipmentItem{expires_at: expires_at}, now),
-    do: DateTime.diff(expires_at, now, :day) <= 60
+    do: Service.Convert.days_until(expires_at, now) <= 60
 
   defp matches?(_item, q) when q in [nil, ""], do: true
 

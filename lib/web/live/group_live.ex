@@ -215,7 +215,7 @@ defmodule Web.GroupLive do
       />
       <.change_list
         id="expiring"
-        title={"Expiring within #{BuildGroupRulePreview.expiring_days()} days"}
+        title={"Expiring within #{Service.Format.days(BuildGroupRulePreview.expiring_days())}"}
         title_class=""
         rows={@preview.expiring}
         team={@team}
@@ -281,7 +281,7 @@ defmodule Web.GroupLive do
         <:col :let={row} label="Why">
           {row.reason}
           <.badge :if={row[:days]} kind={:warning}>
-            {Service.Format.count(row.days, one: "%d day", many: "%d days")}
+            {Service.Format.days(row.days)}
           </.badge>
         </:col>
       </.table>

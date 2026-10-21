@@ -99,8 +99,8 @@ defmodule App.ViewData.TeamAttention do
       level: :warning,
       title:
         Format.count(count,
-          one: "%d qualification expires within #{days} days",
-          many: "%d qualifications expire within #{days} days"
+          one: "%d qualification expires within #{Format.days(days)}",
+          many: "%d qualifications expire within #{Format.days(days)}"
         ),
       detail: "Record renewals in D4H.",
       action: "Show qualifications"
@@ -162,7 +162,7 @@ defmodule App.ViewData.TeamAttention do
 
   @doc ~s(How `not_seen_days` reads in text: "90 days", or "a year".)
   def period(365), do: "a year"
-  def period(days), do: "#{days} days"
+  def period(days), do: Format.days(days)
 
   # A team on SAR Duty Records changes its members in SAR Duty.
   defp missing_details_where(:d4h), do: "Add the missing details in D4H."

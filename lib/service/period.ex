@@ -49,7 +49,7 @@ defmodule Service.Period do
   end
 
   @doc ~s(The rolling periods a filter offers, as `{label, value}`: "Last 90 days" is `"90d"`.)
-  def rolling_kinds, do: Enum.map(@rolling_days, &{"Last #{&1} days", "#{&1}d"})
+  def rolling_kinds, do: Enum.map(@rolling_days, &{"Last #{Service.Format.days(&1)}", "#{&1}d"})
 
   @doc ~s(Whether `value` is a period a filter takes: `"all"`, a year, or a rolling period.)
   def valid?(value) when is_binary(value),
