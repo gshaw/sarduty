@@ -18,7 +18,7 @@ defmodule App.Model.Chore do
     belongs_to :member, Member
     belongs_to :chore_category, ChoreCategory
     belongs_to :decided_by_user, User
-    # The D4H event it goes on, while accepted (App.Operation.SaveChore).
+    # The D4H event a team admin sent it on (App.Operation.SendChores); nil until then.
     belongs_to :chore_event, ChoreEvent
     field :date, :date
     field :minutes, :integer
@@ -109,6 +109,15 @@ defmodule App.Model.Chore do
   def get_waiting(team_id) do
     Chore
     |> where([c], c.team_id == ^team_id and c.status == :waiting)
+    |> order_by([c], asc: c.date, asc: c.id)
+    |> preload([:member, :chore_category])
+    |> Repo.all()
+  end
+
+  @doc "The team's accepted chores not sent yet, oldest first, with members and categories."
+  def get_ready(team_id) do
+    Chore
+    |> where([c], c.team_id == ^team_id and c.status == :accepted and is_nil(c.chore_event_id))
     |> order_by([c], asc: c.date, asc: c.id)
     |> preload([:member, :chore_category])
     |> Repo.all()

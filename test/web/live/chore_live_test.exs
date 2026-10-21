@@ -36,8 +36,9 @@ defmodule Web.ChoreLiveTest do
 
     lv |> form("#accept-form", %{chore_ids: ids}) |> render_submit()
 
-    assert has_element?(lv, "#chore-#{left.id}")
-    refute has_element?(lv, "#chore-#{one.id}")
+    assert has_element?(lv, "#waiting-chores #chore-#{left.id}")
+    refute has_element?(lv, "#waiting-chores #chore-#{one.id}")
+    assert has_element?(lv, "#ready-chores #chore-#{one.id}")
     assert has_element?(lv, "#side-nav-chores", "1")
     assert %{status: :accepted, decided_at: %DateTime{}} = Repo.get!(Chore, one.id)
     assert Repo.get!(Chore, left.id).status == :waiting
@@ -84,17 +85,48 @@ defmodule Web.ChoreLiveTest do
     assert_raise Ecto.NoResultsError, fn -> live(conn, ~p"/teams/#{team}/chores/#{chore.id}") end
   end
 
-  test "what is in D4H shows each event, and Tonight while it waits for a send", ctx do
+  test "accepted chores wait to be sent, then show in D4H", ctx do
     %{conn: conn, team: team, member: member, category: category} = ctx
+    team = team |> Ecto.Changeset.change(d4h_access_key: "team-key") |> Repo.update!()
     chore = chore_fixture(member, category, %{date: ~D[2026-10-06], minutes: 90})
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+    assert has_element?(lv, "#no-ready-chores")
     assert has_element?(lv, "#no-chore-events")
 
     lv |> form("#accept-form", %{chore_ids: [to_string(chore.id)]}) |> render_submit()
+    assert has_element?(lv, "#ready-chores #chore-#{chore.id}")
+    assert has_element?(lv, "#send", "Send 1 chore")
 
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      event = %{
+        "id" => 900,
+        "resourceType" => "Event",
+        "owner" => %{"resourceType" => "Team", "id" => 1},
+        "startsAt" => "2026-10-06T07:00:00Z",
+        "endsAt" => "2026-10-06T08:30:00Z",
+        "tags" => []
+      }
+
+      if conn.request_path =~ "/attendance",
+        do:
+          Req.Test.json(conn, %{
+            "id" => 701,
+            "activity" => %{"resourceType" => "Event", "id" => 900},
+            "member" => %{"resourceType" => "Member", "id" => member.d4h_member_id},
+            "status" => "ATTENDING",
+            "startsAt" => "2026-10-06T07:00:00Z",
+            "endsAt" => "2026-10-06T08:30:00Z"
+          }),
+        else: Req.Test.json(conn, event)
+    end)
+
+    lv |> form("#send-form", %{send_ids: [to_string(chore.id)]}) |> render_submit()
+
+    assert render(lv) =~ "Sent 1 chore to D4H as 1 activity."
     event_id = Repo.get!(Chore, chore.id).chore_event_id
-    assert has_element?(lv, "#chore-event-#{event_id}", "October 2026")
+    assert has_element?(lv, "#chore-event-#{event_id}", "Oct 6")
     assert has_element?(lv, "#chore-event-#{event_id}", "1h 30m")
-    assert has_element?(lv, "#chore-event-#{event_id}", "Tonight")
+    refute has_element?(lv, "#send-changes-#{event_id}")
+    assert has_element?(lv, "#no-ready-chores")
   end
 end

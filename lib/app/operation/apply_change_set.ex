@@ -42,15 +42,13 @@ defmodule App.Operation.ApplyChangeSet do
   `{:error, :no_team_key}`, `{:error, :deleted}` or `{:error, :published}` for an
   activity that can't change, or `{:error, %D4H.Error{}}` when D4H can't be read.
 
-  `user` is who applies it, or nil for SAR Duty itself, as for the nightly chore send.
-
   `photo:` in `opts` is the image a `:set_member_photo` row sends. The row never holds
   it, so a photo is never kept in SAR Duty.
   """
   def call(team, change_set, user, now, opts \\ [])
 
-  def call(%Team{} = team, %ChangeSet{team_id: team_id} = change_set, user, now, opts)
-      when team_id == team.id and (is_struct(user, User) or is_nil(user)) do
+  def call(%Team{} = team, %ChangeSet{team_id: team_id} = change_set, %User{} = user, now, opts)
+      when team_id == team.id do
     change_set = Repo.preload(change_set, [:activity, :rows])
 
     with :ok <- check_team(team),

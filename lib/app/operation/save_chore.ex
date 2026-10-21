@@ -3,10 +3,10 @@ defmodule App.Operation.SaveChore do
   Logging, changing, and deciding chores (#341). A member logs and changes their own
   chores while they wait; a team admin accepts, declines, or changes any of them.
 
-  Nothing here calls D4H. An accepted chore belongs to its month and category's
-  `ChoreEvent`, and any change to which chores are accepted there marks the event for
-  the nightly send: accepting, declining an accepted chore, or changing one (both
-  events when it moves).
+  Nothing here calls D4H. An accepted chore waits until a team admin sends it
+  (App.Operation.SendChores). Once sent, it belongs to that send's `ChoreEvent`, and
+  changing or declining it marks the event "Changes to send". A sent chore moved to
+  another chore category or year leaves its event and is ready to send again.
   """
 
   import Ecto.Query
@@ -105,19 +105,17 @@ defmodule App.Operation.SaveChore do
 
   defp decide(changeset, before), do: changeset |> Repo.update() |> place(before)
 
-  # An accepted chore goes on its month and category's event; any other leaves it. The
-  # events it left and joined wait for the next send.
-  defp place({:ok, chore}, before) do
-    event_id =
-      if chore.status == :accepted,
-        do: ChoreEvent.find_or_create!(chore.team_id, chore.chore_category_id, chore.date).id
+  # A sent chore stays on its event while it is accepted and still fits it: the same
+  # chore category and year. Either way, the event has changes to send.
+  defp place({:ok, chore}, %Chore{chore_event_id: nil}), do: {:ok, chore}
 
-    {:ok, chore} = chore |> Ecto.Changeset.change(chore_event_id: event_id) |> Repo.update()
+  defp place({:ok, chore}, %Chore{chore_event_id: event_id}) do
+    event = Repo.get!(ChoreEvent, event_id)
+    :ok = ChoreEvent.mark_for_send!([event_id])
 
-    if before.chore_event_id != event_id or chore.status == :accepted,
-      do: ChoreEvent.mark_for_send!([before.chore_event_id, event_id])
-
-    {:ok, chore}
+    if ChoreEvent.fits?(event, chore),
+      do: {:ok, chore},
+      else: chore |> Ecto.Changeset.change(chore_event_id: nil) |> Repo.update()
   end
 
   defp place(error, _before), do: error

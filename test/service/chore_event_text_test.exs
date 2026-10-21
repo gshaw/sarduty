@@ -5,9 +5,12 @@ defmodule Service.ChoreEventTextTest do
   alias App.Model.Member
   alias Service.ChoreEventText
 
-  test "the title names the category and the month" do
-    assert ChoreEventText.title("Equipment maintenance", ~D[2026-10-01]) ==
-             "Chores: Equipment maintenance, October 2026"
+  test "the title names the category and the days its chores span" do
+    assert ChoreEventText.title("Equipment maintenance", ~D[2026-09-29], ~D[2026-10-19]) ==
+             "Chores: Equipment maintenance, Sep 29 to Oct 19, 2026"
+
+    assert ChoreEventText.title("Training", ~D[2026-10-19], ~D[2026-10-19]) ==
+             "Chores: Training, Oct 19, 2026"
   end
 
   test "the description lists members by name and their chores by date, with totals" do

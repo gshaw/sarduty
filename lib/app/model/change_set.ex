@@ -25,7 +25,7 @@ defmodule App.Model.ChangeSet do
     # :equipment adds or removes items on an activity (#271). :template invites a template's groups
     # to an activity (#162). :tags sets an activity's tags from its tags page (#323).
     # :attendance_import is only on old rows: the page that made them is gone (#424).
-    # :chores rebuilds one month and category of accepted chores as a D4H event (#341).
+    # :chores sends a team admin's accepted chores as a D4H event (#341).
     field :source, Ecto.Enum,
       values: [
         :door,
@@ -56,11 +56,8 @@ defmodule App.Model.ChangeSet do
     Repo.insert!(%{change_set | rows: rows})
   end
 
-  @doc "Marks the set applied, by `user`, or by SAR Duty itself with nil (#341)."
-  def mark_applied!(%ChangeSet{} = change_set, user, now) do
-    user_id = if user, do: user.id
-
-    change_set |> change(applied_by_user_id: user_id, applied_at: now) |> Repo.update!()
+  def mark_applied!(%ChangeSet{} = change_set, %User{} = user, now) do
+    change_set |> change(applied_by_user_id: user.id, applied_at: now) |> Repo.update!()
   end
 
   def discard!(%ChangeSet{} = change_set, now),

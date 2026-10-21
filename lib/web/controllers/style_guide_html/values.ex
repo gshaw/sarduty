@@ -47,6 +47,11 @@ defmodule Web.StyleGuideHTML.Values do
          {"day_in_year(~D[2026-03-01], today)", Format.day_in_year(~D[2026-03-01], @today)},
          {"day_in_year(~D[2025-03-01], today)", Format.day_in_year(~D[2025-03-01], @today)}
        ]},
+      {:day_range, "Days in one year, for a title",
+       [
+         {"day_range(~D[2026-09-29], ~D[2026-10-19])",
+          Format.day_range(~D[2026-09-29], ~D[2026-10-19])}
+       ]},
       {:month_day, "A table date under a heading that names the year",
        [{"month_day(now, zone)", Format.month_day(@now, @zone)}]},
       {:month_year, "Award dates", [{"month_year(now, zone)", Format.month_year(@now, @zone)}]},

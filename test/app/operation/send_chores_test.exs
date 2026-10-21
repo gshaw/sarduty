@@ -1,4 +1,4 @@
-defmodule App.Operation.SendChoreEventsTest do
+defmodule App.Operation.SendChoresTest do
   use App.DataCase
 
   import App.DataFixtures
@@ -8,7 +8,7 @@ defmodule App.Operation.SendChoreEventsTest do
   alias App.Model.ChoreCategoryTag
   alias App.Model.ChoreEvent
   alias App.Operation.SaveChore
-  alias App.Operation.SendChoreEvents
+  alias App.Operation.SendChores
 
   setup do
     %{user: user, team: team} =
@@ -91,80 +91,116 @@ defmodule App.Operation.SendChoreEventsTest do
     end
   end
 
-  test "accepting a chore marks its event, and the send makes it in D4H", ctx do
-    chore = chore_fixture(ctx.member, ctx.category, %{date: ~D[2026-10-06], minutes: 90})
-    assert SaveChore.accept(ctx.team, [chore.id], ctx.user, DateTime.utc_now()) == 1
+  defp accept(ctx, attrs) do
+    chore = chore_fixture(ctx.member, ctx.category, attrs)
+    {:ok, chore} = SaveChore.accept_one(ctx.team, chore, ctx.user, DateTime.utc_now())
+    chore
+  end
 
-    [event] = ChoreEvent.get_to_send(ctx.team.id)
-    assert event.month == ~D[2026-10-01]
-    assert Repo.get!(Chore, chore.id).chore_event_id == event.id
+  defp send_chores(ctx, chores),
+    do: SendChores.call(ctx.team, Enum.map(chores, & &1.id), ctx.user, DateTime.utc_now())
+
+  test "accepting waits; the send makes one event per category and year", ctx do
+    one = accept(ctx, %{date: ~D[2026-10-06], minutes: 90})
+    two = accept(ctx, %{date: ~D[2026-10-19], minutes: 30})
+    january = accept(ctx, %{date: ~D[2027-01-04], minutes: 60})
+    assert Repo.all(ChoreEvent) == []
 
     stub_d4h()
-    assert SendChoreEvents.call(ctx.team, DateTime.utc_now()) == %{sent: 1, failed: 0}
+    assert send_chores(ctx, [one, two, january]) == %{chores: 3, events: 2, failed: 0}
+
+    events = Repo.all(ChoreEvent)
+    assert events |> Enum.map(& &1.year) |> Enum.sort() == [2026, 2027]
+    assert Enum.all?(events, &(&1.d4h_activity_id == 900 and not &1.needs_send))
+
+    creates = for {"POST", "/events", json} <- writes(), do: json
+    titles = creates |> Enum.map(& &1["referenceDescription"]) |> Enum.sort()
+
+    assert titles == [
+             "Chores: Equipment maintenance, Jan 4, 2027",
+             "Chores: Equipment maintenance, Oct 6 to Oct 19, 2026"
+           ]
+
+    assert Enum.all?(creates, &(&1["fullTeam"] == false))
+
+    [change_set | _rest] = Repo.all(ChangeSet)
+    assert %{source: :chores, applied_by_user_id: user_id} = change_set
+    assert user_id == ctx.user.id
+  end
+
+  test "the send tags the event and adds each member's total, then publishes", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06], minutes: 90})
+
+    stub_d4h()
+    send_chores(ctx, [chore])
 
     [create, tags, add, publish] = writes()
-
-    assert {"POST", "/events", %{"fullTeam" => false, "startsAt" => "2026-10-31T07:00:00Z"}} =
-             create
-
+    assert {"POST", "/events", %{"startsAt" => "2026-10-06T07:00:00Z"}} = create
     assert {"POST", "/events/900/tags", %{"tagIds" => tag_ids}} = tags
     assert Enum.sort(tag_ids) == ctx.tags |> Enum.map(& &1.d4h_tag_id) |> Enum.sort()
 
-    assert {"POST", "/attendance", %{"activityId" => 900, "endsAt" => "2026-10-31T08:30:00Z"}} =
+    assert {"POST", "/attendance", %{"activityId" => 900, "endsAt" => "2026-10-06T08:30:00Z"}} =
              add
 
     assert {"POST", "/events/900/publish", %{"published" => true}} = publish
-
-    assert %{needs_send: false, d4h_activity_id: 900, send_error: nil} =
-             Repo.get!(ChoreEvent, event.id)
-
-    [change_set] = Repo.all(ChangeSet)
-    assert %{source: :chores, applied_by_user_id: nil} = change_set
   end
 
-  test "declining an accepted chore sends the event again without the member", ctx do
-    chore = chore_fixture(ctx.member, ctx.category, %{date: ~D[2026-10-06]})
-    {:ok, chore} = SaveChore.accept_one(ctx.team, chore, ctx.user, DateTime.utc_now())
-    event = Repo.get!(ChoreEvent, chore.chore_event_id)
-    ChoreEvent.record_send!(event, 900, nil, DateTime.utc_now())
+  test "declining a sent chore marks its event; sending the changes takes the member off",
+       ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    _sent = writes()
+    chore = Repo.get!(Chore, chore.id)
 
-    {:ok, _chore} =
+    {:ok, chore} =
       SaveChore.decline(ctx.team, chore, "Not a chore.", ctx.user, DateTime.utc_now())
 
-    assert Repo.get!(ChoreEvent, event.id).needs_send
+    assert chore.chore_event_id == nil
+    [event] = Repo.all(ChoreEvent)
+    assert event.needs_send
 
     stub_d4h([attendance(701, ctx.member, 60)])
-    assert SendChoreEvents.call(ctx.team, DateTime.utc_now()) == %{sent: 1, failed: 0}
+    assert SendChores.send_changes(ctx.team, event, ctx.user, DateTime.utc_now()) == :sent
 
     assert [
              {"POST", "/events/900/publish", %{"published" => false}},
              {"PATCH", "/events/900", _update},
              {"DELETE", "/attendance/701", nil}
            ] = writes()
+
+    refute Repo.get!(ChoreEvent, event.id).needs_send
+  end
+
+  test "a sent chore changed within its event stays on it; moved to another category, it is ready to send again",
+       ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    chore = Repo.get!(Chore, chore.id)
+    event_id = chore.chore_event_id
+
+    {:ok, longer} = SaveChore.change(ctx.team, chore, %{"minutes" => "120"})
+    assert longer.chore_event_id == event_id
+    assert Repo.get!(ChoreEvent, event_id).needs_send
+
+    training = chore_category_fixture(ctx.team, %{title: "Training"})
+    {:ok, moved} = SaveChore.change(ctx.team, longer, %{"chore_category_id" => training.id})
+    assert moved.chore_event_id == nil
+    assert [%{id: id}] = Chore.get_ready(ctx.team.id)
+    assert id == chore.id
   end
 
   test "an event deleted in D4H is made again", ctx do
-    chore = chore_fixture(ctx.member, ctx.category, %{date: ~D[2026-10-06]})
-    {:ok, chore} = SaveChore.accept_one(ctx.team, chore, ctx.user, DateTime.utc_now())
-    event = Repo.get!(ChoreEvent, chore.chore_event_id)
-    event |> Ecto.Changeset.change(d4h_activity_id: 900) |> Repo.update!()
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    _sent = writes()
+    [event] = Repo.all(ChoreEvent)
+    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
 
     stub_d4h([], 404)
-    assert SendChoreEvents.call(ctx.team, DateTime.utc_now()) == %{sent: 1, failed: 0}
+    assert SendChores.send_changes(ctx.team, event, ctx.user, DateTime.utc_now()) == :sent
     assert [{"POST", "/events", _create} | _rest] = writes()
-  end
-
-  test "moving an accepted chore to another category marks both events", ctx do
-    chore = chore_fixture(ctx.member, ctx.category, %{date: ~D[2026-10-06]})
-    {:ok, chore} = SaveChore.accept_one(ctx.team, chore, ctx.user, DateTime.utc_now())
-    old = Repo.get!(ChoreEvent, chore.chore_event_id)
-    ChoreEvent.record_send!(old, 900, nil, DateTime.utc_now())
-    training = chore_category_fixture(ctx.team, %{title: "Training"})
-
-    {:ok, moved} = SaveChore.change(ctx.team, chore, %{"chore_category_id" => training.id})
-
-    assert moved.chore_event_id != old.id
-    assert Repo.get!(ChoreEvent, old.id).needs_send
-    assert Repo.get!(ChoreEvent, moved.chore_event_id).needs_send
   end
 end

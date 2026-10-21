@@ -4,15 +4,16 @@ defmodule App.Operation.BuildChoreEvent do
   its accepted chores. SAR Duty owns the event, so each send rebuilds it; there are no
   added, changed, or skipped cases, and edits made in D4H are replaced.
 
-  - The event starts at 00:00 on the month's last day in the team's time zone, and lasts
-    as long as the largest member total.
+  - The event is titled for its chore category and the days its chores span. It starts
+    at 00:00 on its last chore's day in the team's time zone, and lasts as long as the
+    largest member total. Its chores are all in one year, so it counts in that year.
   - Each member with accepted chores has one attendance, from the event's start, for
     their total. Anyone else's attendance on it is deleted.
   - A new event gets its tags as it is made, and never again (D4H refuses tags on a
     published activity). It is published last, once its attendance is in, since D4H
     locks a published activity's attendance; a published one goes back to a draft first.
 
-  Pure: `plan/4` takes values and returns rows. `call` in SendChoreEvents reads D4H.
+  Pure: `plan/4` takes values and returns rows. App.Operation.SendChores reads D4H.
   """
 
   alias App.Model.ChangeSetRow
@@ -24,7 +25,7 @@ defmodule App.Operation.BuildChoreEvent do
   The rows for one event. `state` is nil when D4H has no event yet, or
   `%{d4h_activity_id:, published?:}`. `chores` are the accepted chores, with members.
   `current` is D4H's attendance on the event now (`D4H.AttendanceInfo`), read for ids.
-  `event` is `%{title:, month:, timezone:, tag_ids:}`.
+  `event` is `%{category:, timezone:, tag_ids:}`, with the chore category's title.
   """
   def plan(state, chores, current, event)
 
@@ -32,7 +33,7 @@ defmodule App.Operation.BuildChoreEvent do
   def plan(nil, [], _current, _event), do: []
 
   def plan(nil, chores, _current, event) do
-    starts_at = starts_at(event)
+    starts_at = starts_at(chores, event.timezone)
     totals = member_totals(chores)
 
     create = %ChangeSetRow{
@@ -57,8 +58,23 @@ defmodule App.Operation.BuildChoreEvent do
     [create | attendance] ++ [publish]
   end
 
+  # Every chore declined or moved off: the event keeps its title and times, loses its
+  # attendance, and stays a draft.
+  def plan(%{d4h_activity_id: id} = state, [], current, _event) do
+    unpublish = if state.published?, do: [publish_row(id, false)], else: []
+
+    update = %ChangeSetRow{
+      action: :update_activity,
+      d4h_record_id: id,
+      old_value: %{"kind" => @kind},
+      new_value: %{"description" => ChoreEventText.description([])}
+    }
+
+    unpublish ++ [update] ++ delete_rows([], current)
+  end
+
   def plan(%{d4h_activity_id: id} = state, chores, current, event) do
-    starts_at = starts_at(event)
+    starts_at = starts_at(chores, event.timezone)
     totals = member_totals(chores)
 
     update = %ChangeSetRow{
@@ -69,12 +85,14 @@ defmodule App.Operation.BuildChoreEvent do
     }
 
     unpublish = if state.published?, do: [publish_row(id, false)], else: []
-    publish = if totals == [], do: [], else: [publish_row(id, true)]
 
-    unpublish ++
-      [update] ++
-      attendance_rows(id, totals, current, starts_at) ++
-      delete_rows(totals, current) ++ publish
+    Enum.concat([
+      unpublish,
+      [update],
+      attendance_rows(id, totals, current, starts_at),
+      delete_rows(totals, current),
+      [publish_row(id, true)]
+    ])
   end
 
   # Each member's attendance: a new row, a changed one, or none when it is right.
@@ -103,9 +121,19 @@ defmodule App.Operation.BuildChoreEvent do
     end
   end
 
-  @doc "When the event starts: 00:00 on the month's last day, in the team's time zone."
-  def starts_at(%{month: month, timezone: timezone}),
-    do: month |> Date.end_of_month() |> Service.Convert.local_to_utc(~T[00:00:00], timezone)
+  @doc "When the event starts: 00:00 on its last chore's day, in the team's time zone."
+  def starts_at(chores, timezone) do
+    chores
+    |> Enum.map(& &1.date)
+    |> Enum.max(Date)
+    |> Service.Convert.local_to_utc(~T[00:00:00], timezone)
+  end
+
+  @doc ~s(The event's title: "Chores: Equipment maintenance, Sep 29 to Oct 19, 2026".)
+  def title(chores, category) do
+    dates = Enum.map(chores, & &1.date)
+    ChoreEventText.title(category, Enum.min(dates, Date), Enum.max(dates, Date))
+  end
 
   @doc "Each member's total accepted minutes, by name: `[{member, minutes}]`."
   def member_totals(chores) do
@@ -121,7 +149,7 @@ defmodule App.Operation.BuildChoreEvent do
     longest = totals |> Enum.map(&elem(&1, 1)) |> Enum.max(fn -> 0 end)
 
     %{
-      "title" => event.title,
+      "title" => title(chores, event.category),
       "started_at" => iso(starts_at),
       "description" => ChoreEventText.description(chores),
       "finished_at" => starts_at |> DateTime.add(max(longest, 1), :minute) |> iso()

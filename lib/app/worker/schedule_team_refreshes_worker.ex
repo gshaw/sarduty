@@ -10,12 +10,7 @@ defmodule App.Worker.ScheduleTeamRefreshesWorker do
     now = DateTime.utc_now()
 
     teams = Enum.filter(Team.get_all(), & &1.d4h_team_id)
-
-    Enum.each(
-      teams,
-      &(%{team_id: &1.id, nightly: true} |> RefreshTeamDataWorker.new() |> Oban.insert())
-    )
-
+    Enum.each(teams, &(%{team_id: &1.id} |> RefreshTeamDataWorker.new() |> Oban.insert()))
     FinishRunWorker.start("refresh", length(teams), now)
     :ok
   end
