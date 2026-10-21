@@ -42,6 +42,15 @@ defmodule App.ViewData.MemberRecords do
     |> Repo.all()
   end
 
+  @doc "Every row the member attended, newest first, with the activity."
+  def attended(%Member{} = member, now) do
+    member
+    |> attended_query(now)
+    |> order_by([at], desc: at.started_at)
+    |> preload([activity: ac], activity: ac)
+    |> Repo.all()
+  end
+
   @doc """
   The member's rows for activities still to start, soonest first, with the activity. D4H
   marks a sign-up attending before the activity happens (#364).

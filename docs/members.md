@@ -159,6 +159,26 @@ redirect, decided 2026-10-20). Members don't change their email: teams keep it
 consistent, and team admins change it in D4H. Logins are designed in issue #156, and
 the pages in issue #389.
 
+### The overview
+
+The overview shows a member's year at a glance, as the team home does for team admins,
+with the same parts (#389, closing #340): the name with "Member since" and when SAR
+Duty last refreshed; **Next up**, the next activity they signed up for, with Add to
+calendar (an `.ics` file from `/me/activities/:id/calendar`, only for their own sign-ups)
+and a maps link; four stats (hours, activities, and incidents this year, and current
+qualifications with the next to expire); **Where your hours went**, hours by kind this
+year; **Where you went**, the team home's map of their last 12 months; and **Lately**,
+their last 3 activities. The numbers come from
+[MemberOverview](../lib/app/view_data/member_overview.ex), pure.
+
+- **No calendar and no comparisons** (decided 2026-10-20). The median member attends
+  about 10 activities a year, so a year calendar would be mostly empty, and "fewer than
+  last year" discourages.
+- **Hours here count every attended activity**, tagged or not, as hours by kind does. The
+  Hours page and the tax credit letter count only tagged ones, and the overview says so
+  with a link there. The Hours page shows the same bars for its year.
+- With no activities, each chart is one line, not an empty chart.
+
 ### What must stay true
 
 - **A member page shows only the person logged in.** `member` comes from the login, in

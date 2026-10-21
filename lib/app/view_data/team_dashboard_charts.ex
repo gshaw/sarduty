@@ -19,6 +19,9 @@ defmodule App.ViewData.TeamDashboardCharts do
 
   def series, do: @series
 
+  @doc "D4H's activity kind as the charts' series: `:incident`, `:exercise`, or `:event`."
+  def kind(activity_kind), do: @kinds[activity_kind]
+
   def shape(rows, team) do
     tz = team.timezone
     activities = Enum.map(rows.activities, &Map.update!(&1, :kind, fn kind -> @kinds[kind] end))
@@ -122,7 +125,11 @@ defmodule App.ViewData.TeamDashboardCharts do
     now |> TimeBuckets.days(tz, 365) |> Enum.map(&{&1, Map.get(counts, &1, 0)})
   end
 
-  defp map_points(activities, team, now) do
+  @doc """
+  The map's dots for activities with a place near the team's base, each with `:kind` as
+  `kind/1` gives it. Large dots are the last 30 days. The member overview uses it too.
+  """
+  def map_points(activities, team, now) do
     a_month_ago = DateTime.add(now, -30, :day)
 
     for activity <- activities,

@@ -29,9 +29,55 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#nav-team-#{team.subdomain}")
     end
 
-    test "has no Signed up for section with nothing coming", %{conn: conn, team: team} do
+    test "with no activities, says so in one line in place of each chart",
+         %{conn: conn, team: team} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      refute has_element?(lv, "#signed-up")
+      refute has_element?(lv, "#next-up")
+      assert has_element?(lv, "p#hours-by-kind-chart", "No activities")
+      assert has_element?(lv, "p#activity-map", "No activities")
+      assert has_element?(lv, "#lately-empty")
+      assert has_element?(lv, "#stat-activities", "0")
+    end
+
+    test "shows the next sign-up, the year's numbers, and the latest activities",
+         %{conn: conn, team: team, member: member} do
+      %{mid_year: mid_year, now: now, year: year} = this_year_fixture(team)
+
+      coming =
+        activity_fixture(team, %{title: "Rope practice", started_at: DateTime.add(now, 3, :day)})
+
+      attendance_fixture(coming, member)
+
+      incident =
+        activity_fixture(team, %{
+          title: "Overdue hiker",
+          activity_kind: "incident",
+          started_at: mid_year
+        })
+
+      attended =
+        attendance_fixture(incident, member, %{
+          started_at: mid_year,
+          finished_at: DateTime.add(mid_year, 2 * 3600)
+        })
+
+      other = activity_fixture(team, %{title: "Not mine", started_at: mid_year})
+      attendance_fixture(other, member_fixture(team), %{started_at: mid_year})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#next-up", "Rope practice")
+
+      assert has_element?(
+               lv,
+               ~s{#next-up-calendar[href="/teams/#{team.subdomain}/me/activities/#{coming.id}/calendar"]}
+             )
+
+      assert has_element?(lv, "#stat-hours", "2")
+      assert has_element?(lv, "#stat-incidents", "Incidents in #{year}")
+      assert has_element?(lv, "#hours-by-kind-chart", "Incidents")
+      assert has_element?(lv, "#lately-list-#{attended.id}", "Overdue hiker")
+      refute render(lv) =~ "Not mine"
     end
   end
 
@@ -89,6 +135,23 @@ defmodule Web.MeLiveTest do
   end
 
   describe "downloads" do
+    test "a calendar file for an activity the member signed up for, and no other",
+         %{conn: conn, team: team, member: member} do
+      starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+      coming = activity_fixture(team, %{title: "Rope practice", started_at: starts})
+      attendance_fixture(coming, member)
+      not_mine = activity_fixture(team, %{started_at: starts})
+      attendance_fixture(not_mine, member_fixture(team))
+
+      conn = get(conn, ~p"/teams/#{team}/me/activities/#{coming.id}/calendar")
+      assert response(conn, 200) =~ "SUMMARY:Rope practice"
+      assert [content_type] = get_resp_header(conn, "content-type")
+      assert content_type =~ "text/calendar"
+
+      other = get(recycle(conn), ~p"/teams/#{team}/me/activities/#{not_mine.id}/calendar")
+      assert response(other, 404)
+    end
+
     test "the member's own letter", %{conn: conn, team: team, member: member} do
       letter = tax_credit_letter_fixture(member)
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
