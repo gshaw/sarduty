@@ -2,15 +2,15 @@ defmodule App.ViewData.MemberOverview do
   @moduledoc """
   What a member's overview draws (#389): this year's numbers, hours by kind, the
   activities for the map, and the latest few. Pure: the member's attended rows (with
-  their activity, newest first), their qualification groups from
-  `MemberRecords.group_awards/2`, and `now` in.
+  their activity, newest first), their qualification rows from
+  `MemberRecords.qualification_rows/2`, and `now` in.
   """
 
   alias App.ViewData.MemberRecords
 
   @kinds [{"incident", "Incidents"}, {"exercise", "Exercises"}, {"event", "Events"}]
 
-  def build(attendances, qualification_groups, now, timezone) do
+  def build(attendances, qualification_rows, now, timezone) do
     year = Service.YearRange.year_in(now, timezone)
 
     this_year =
@@ -24,7 +24,7 @@ defmodule App.ViewData.MemberOverview do
       activities: length(this_year),
       incidents: Enum.count(this_year, &(&1.activity.activity_kind == "incident")),
       hours_by_kind: hours_by_kind(this_year),
-      qualifications: qualifications(qualification_groups),
+      qualifications: qualifications(qualification_rows),
       last_12_months: Enum.filter(attendances, &DateTime.after?(&1.started_at, a_year_ago)),
       lately: Enum.take(attendances, 3)
     }
@@ -60,8 +60,8 @@ defmodule App.ViewData.MemberOverview do
       )
 
   # How many qualifications the member holds now, and the one that expires next.
-  defp qualifications(groups) do
-    current = for {group, rows} <- groups, group != :expired, row <- rows, do: row.award
+  defp qualifications(rows) do
+    current = for row <- rows, row.status != :expired, do: row.award
 
     %{
       count: length(current),

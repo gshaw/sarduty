@@ -52,18 +52,18 @@ defmodule App.ViewData.MemberOverviewTest do
   end
 
   test "qualifications count what the member holds now, and the next one to expire" do
-    groups = [
-      within_180_days: [%{award: award("Swiftwater", ~U[2027-03-01 00:00:00Z])}],
-      within_60_days: [%{award: award("First Aid", ~U[2026-11-30 00:00:00Z])}],
-      never: [%{award: award("GSAR", nil)}],
-      expired: [%{award: award("Rope", ~U[2024-09-30 00:00:00Z])}]
+    rows = [
+      %{status: :current, award: award("Swiftwater", ~U[2027-03-01 00:00:00Z])},
+      %{status: :expiring, award: award("First Aid", ~U[2026-11-30 00:00:00Z])},
+      %{status: :current, award: award("GSAR", nil)},
+      %{status: :expired, award: award("Rope", ~U[2024-09-30 00:00:00Z])}
     ]
 
-    %{qualifications: qualifications} = MemberOverview.build([], groups, @now, @tz)
+    %{qualifications: qualifications} = MemberOverview.build([], rows, @now, @tz)
     assert qualifications.count == 3
     assert qualifications.next.qualification.title == "First Aid"
 
     assert %{qualifications: %{count: 1, next: nil}} =
-             MemberOverview.build([], [never: [%{award: award("GSAR", nil)}]], @now, @tz)
+             MemberOverview.build([], [%{status: :current, award: award("GSAR", nil)}], @now, @tz)
   end
 end

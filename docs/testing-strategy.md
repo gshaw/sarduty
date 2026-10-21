@@ -62,7 +62,7 @@ data?
   (`test/app/view_data/team_dashboard_view_data_test.exs`), which "Needs attention" items
   show and in what order (`team_attention_test.exs`), and the year's stats and charts
   (`team_dashboard_charts_test.exs`), all pure.
-- A member's own pages (#389): qualification groups and activities by month
+- A member's own pages (#389): qualification rows, sorted and tagged expiring
   (`member_records_test.exs`) and the overview's numbers (`member_overview_test.exs`),
   pure, and the Add to calendar file (`test/service/calendar_test.exs`).
 - Team scoping: `test/web/team_scoping_test.exs` opens another team's record on every
