@@ -4,28 +4,23 @@
     Every date, time, number, and quantity people read comes from one of these functions.
   </p>
   <p>
-    Each example runs the app's own function, so this page shows what people see. Noon on
-    Oct 20, 2026, in Vancouver is "now". The functions are in <code>Service.Format</code>
+    Each example runs the app's own function, so Shows is what people see, in the font they
+    see it in. Noon on Oct 20, 2026, in Vancouver is "now". The functions are in
+    <code>Service.Format</code>
     unless named.
   </p>
 
-  <section :for={{section, about, rows} <- values()} class="mt-8">
+  <section :for={{section, about, functions} <- values()} class="mt-8">
     <h2>{section}</h2>
     <p>{about}</p>
     <.table
       id={"values-#{section |> String.downcase() |> String.replace(" ", "-")}"}
-      rows={rows}
-      row_id={fn {name, _use, _examples} -> "value-#{name}" end}
+      rows={value_rows(functions)}
+      row_id={& &1.id}
     >
-      <:col :let={{name, _use, _examples}} label="Function" class="w-px mono whitespace-nowrap">
-        {name}
-      </:col>
-      <:col :let={{_name, use, _examples}} label="Use">{use}</:col>
-      <:col :let={{_name, _use, examples}} label="Examples">
-        <span :for={{call, result} <- examples} class="block">
-          <code>{call}</code> → {result}
-        </span>
-      </:col>
+      <:col :let={row} label="Use">{row.use}</:col>
+      <:col :let={row} label="Code"><code>{row.code}</code></:col>
+      <:col :let={row} label="Shows" class="whitespace-nowrap">{row.shows}</:col>
     </.table>
   </section>
 

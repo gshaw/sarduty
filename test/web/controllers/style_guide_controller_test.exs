@@ -40,7 +40,7 @@ defmodule Web.StyleGuideControllerTest do
       Service.Format.__info__(:functions) |> Keyword.keys() |> Enum.uniq() |> Kernel.--(shown)
 
     assert missing == [], "Add these to StyleGuideHTML.values/0: #{inspect(missing)}"
-    assert html_response(get(conn, ~p"/styles/values"), 200) =~ ~s(id="value-days")
+    assert html_response(get(conn, ~p"/styles/values"), 200) =~ ~s(id="value-days-1")
   end
 
   test "page paths use dashes", %{conn: conn} do

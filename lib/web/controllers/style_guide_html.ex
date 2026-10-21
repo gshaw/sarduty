@@ -272,6 +272,7 @@ defmodule Web.StyleGuideHTML do
   end
 
   defdelegate values, to: Web.StyleGuideHTML.Values, as: :all
+  defdelegate value_rows(functions), to: Web.StyleGuideHTML.Values, as: :rows
 
   def spacing do
     [

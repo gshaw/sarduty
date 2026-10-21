@@ -15,6 +15,17 @@ defmodule Web.StyleGuideHTML.Values do
 
   def all, do: [dates(), time_from_now(), quantities(), elsewhere()]
 
+  @doc """
+  A section's functions as table rows, one per example: `%{id:, use:, code:, shows:}`, with
+  the use on a function's first example only, so each function reads as one block.
+  """
+  def rows(functions) do
+    for {name, use, examples} <- functions,
+        {{code, shows}, index} <- Enum.with_index(examples, 1) do
+      %{id: "value-#{name}-#{index}", use: if(index == 1, do: use), code: code, shows: shows}
+    end
+  end
+
   defp dates do
     {"Dates and times", "In the team's time zone, month first, 24-hour clock.",
      calendar_dates() ++ date_times()}
