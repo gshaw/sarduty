@@ -114,6 +114,35 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#activities-list", "Last year's training")
     end
 
+    test "the 5 latest chores, a New chore link, and a link to the rest",
+         %{conn: conn, team: team, member: member} do
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#no-chores")
+      assert has_element?(lv, ~s{#chore-log[href="/teams/#{team.subdomain}/me/chores/new"]})
+
+      category = chore_category_fixture(team)
+      today = Service.Period.today(DateTime.utc_now(), team.timezone)
+
+      chores =
+        for days <- 1..5, do: chore_fixture(member, category, %{date: Date.add(today, -days)})
+
+      declined =
+        chore_fixture(member, category, %{
+          status: :declined,
+          date: today,
+          description: "Slept at the hall",
+          decline_reason: "Not a chore.",
+          decided_at: DateTime.utc_now()
+        })
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#chores-list-#{declined.id}", "Slept at the hall")
+      assert has_element?(lv, "#chores-list-#{declined.id} .badge", "Declined")
+      assert has_element?(lv, "#chores-list-#{hd(chores).id}")
+      refute has_element?(lv, "#chores-list-#{List.last(chores).id}")
+      assert has_element?(lv, "#all-chores")
+    end
+
     test "qualifications soonest first, with the days left on one expiring soon and none with no end",
          %{conn: conn, team: team, member: member} do
       first_aid = qualification_fixture(team, %{title: "First Aid"})

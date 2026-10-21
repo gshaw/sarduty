@@ -26,7 +26,8 @@ defmodule App.ViewData.TeamAttention do
       missing_details_item(rows.missing_details_count, rows.service),
       not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
-      proposed_changes_item(rows.proposed_change_count, rows.service)
+      proposed_changes_item(rows.proposed_change_count, rows.service),
+      chores_item(rows.chore_count)
     ]
     |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
@@ -201,6 +202,19 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: "An AI agent proposed them. Nothing changes in #{name} until you send them.",
       action: "Review proposed changes"
+    }
+  end
+
+  defp chores_item(0), do: nil
+
+  # Members' chores wait for a team admin to accept them (#341).
+  defp chores_item(count) do
+    %{
+      key: :chores,
+      level: :info,
+      title: Format.count(count, one: "%d chore to accept", many: "%d chores to accept"),
+      detail: "Members logged them. They count once you accept them.",
+      action: "Review chores"
     }
   end
 

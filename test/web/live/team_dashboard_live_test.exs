@@ -102,6 +102,20 @@ defmodule Web.TeamDashboardLiveTest do
     refute has_element?(lv, "#next-up", "Another team's")
   end
 
+  test "waiting chores need attention, with member logins on", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    category = chore_category_fixture(team)
+    chore_fixture(member_fixture(team), category)
+
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-chores")
+
+    team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-chores", "1 chore to accept")
+    assert has_element?(lv, ~s{#attention-chores a[href="/teams/#{team.subdomain}/chores"]})
+  end
+
   test "this team's drafts and members missing details need attention", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{is_published: false}))
@@ -368,6 +382,22 @@ defmodule Web.TeamDashboardLiveTest do
       conn |> get(~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf") |> response(200)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       refute has_element?(lv, "#to-do-letter")
+    end
+
+    test "For you to do: a declined chore, until the member deletes it",
+         %{conn: conn, team: team, member: member} do
+      category = chore_category_fixture(team)
+
+      chore_fixture(member, category, %{
+        status: :declined,
+        description: "Slept at the hall",
+        decline_reason: "Not a chore.",
+        decided_at: DateTime.utc_now()
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#to-do-declined-chores", "1 chore declined")
+      assert has_element?(lv, "#to-do-declined-chores", "Slept at the hall")
     end
 
     test "For you to do: a qualification expiring within 60 days",

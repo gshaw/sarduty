@@ -21,6 +21,7 @@ defmodule App.ViewData.TeamAttentionTest do
         not_seen: nil,
         group_change_count: 0,
         proposed_change_count: 0,
+        chore_count: 0,
         untagged: [],
         letters: nil
       },
@@ -36,6 +37,11 @@ defmodule App.ViewData.TeamAttentionTest do
   test "nothing to do means no items" do
     assert items(%{}, @october) == []
     assert items(%{untagged: [%{count: 0, year: 2026}]}, @october) == []
+  end
+
+  test "waiting chores ask a team admin to accept them" do
+    assert [item] = items(%{chore_count: 3}, @october)
+    assert %{key: :chores, level: :info, title: "3 chores to accept"} = item
   end
 
   test "members not at an activity name the team's time frame" do

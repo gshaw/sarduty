@@ -52,4 +52,17 @@ defmodule App.ViewData.MemberToDoTest do
     items = MemberToDo.items(@card, false, [letter(2025)], rows, @in_season, @tz)
     assert keys(items) == [:card, :qualification, :letter]
   end
+
+  test "declined chores are one item until the member deletes them" do
+    chores = [
+      %{status: :declined, id: 1},
+      %{status: :accepted, id: 2},
+      %{status: :declined, id: 3}
+    ]
+
+    assert [%{key: :declined_chores, chores: [%{id: 1}, %{id: 3}]}] =
+             MemberToDo.items(nil, false, [], [], @now, @tz, chores)
+
+    assert MemberToDo.items(nil, false, [], [], @now, @tz, [%{status: :waiting, id: 4}]) == []
+  end
 end

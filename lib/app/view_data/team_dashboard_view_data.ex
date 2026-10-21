@@ -10,6 +10,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.ChangeSet
+  alias App.Model.Chore
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.Member
@@ -62,6 +63,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       not_seen: not_seen_row(team, now),
       group_change_count: count_group_changes(team, now),
       proposed_change_count: ChangeSet.count_waiting(team.id),
+      chore_count: if(team.member_logins, do: Chore.count_waiting(team.id), else: 0),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)
     }

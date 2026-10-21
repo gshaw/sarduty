@@ -7,6 +7,7 @@ defmodule Web.TeamDashboardLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Chore
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -71,10 +72,19 @@ defmodule Web.TeamDashboardLive do
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
     letters = TaxCreditLetter.get_all_for_member(member)
     qualifications = MemberRecords.qualifications(member, now)
+    chores = if member.team.member_logins, do: Chore.get_all_for_member(member), else: []
 
     assign(socket,
       to_do:
-        MemberToDo.items(card, in_wallet?, letters, qualifications, now, member.team.timezone)
+        MemberToDo.items(
+          card,
+          in_wallet?,
+          letters,
+          qualifications,
+          now,
+          member.team.timezone,
+          chores
+        )
     )
   end
 
@@ -347,6 +357,8 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :proposed_changes}),
     do: ~p"/teams/#{team}/proposed-changes"
 
+  defp attention_path(team, %{key: :chores}), do: ~p"/teams/#{team}/chores"
+
   defp attention_path(team, %{key: :letters, year: year}),
     do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
 
@@ -409,6 +421,17 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
+  defp to_do_item(%{item: %{key: :declined_chores}} = assigns) do
+    ~H"""
+    <li id="to-do-declined-chores" class="py-3">
+      <.a navigate={~p"/teams/#{@team}/me/chores"} class="font-semibold">
+        {Format.count(length(@item.chores), one: "%d chore declined", many: "%d chores declined")}
+      </.a>
+      <span class="hint block">{declined_hint(@item.chores)}</span>
+    </li>
+    """
+  end
+
   defp to_do_item(%{item: %{key: :letter}} = assigns) do
     ~H"""
     <li id="to-do-letter" class="flex flex-wrap items-center gap-3 py-3">
@@ -425,6 +448,12 @@ defmodule Web.TeamDashboardLive do
     </li>
     """
   end
+
+  defp declined_hint([chore]),
+    do:
+      "#{chore.description}, #{Format.date_short(chore.date)}. Read why, then delete it or log it again."
+
+  defp declined_hint(_chores), do: "Read why, then delete them or log them again."
 
   # "52 hours primary, 25 hours secondary", or a plain line for an old letter whose
   # hours did not parse.

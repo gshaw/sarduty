@@ -5,8 +5,10 @@ defmodule Web.MeLive do
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.PersonHead
+  import Web.ChoreText, only: [status_badge: 1]
 
   alias App.Adapter.D4H
+  alias App.Model.Chore
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -36,8 +38,8 @@ defmodule Web.MeLive do
       |> assign(member: member, team: team, now: now)
       |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
       |> assign(:standing, MemberAwayPeriod.standing_today(member, team.timezone, now))
-      |> assign(:last_attended_at, attended |> List.first() |> then(&(&1 && &1.started_at)))
       |> assign_activities(attended, now)
+      |> assign(:chores, latest_chores(member))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
@@ -46,11 +48,12 @@ defmodule Web.MeLive do
     {:ok, socket}
   end
 
-  # The 10 latest, the year of the latest for the year page's link, and the last 12
-  # months as 3 numbers.
+  # The 10 latest, when the last was for the header, the year of the latest for the year
+  # page's link, and the last 12 months as 3 numbers.
   defp assign_activities(socket, attended, now) do
     assign(socket,
       activities: Enum.take(attended, 10),
+      last_attended_at: attended |> List.first() |> then(&(&1 && &1.started_at)),
       latest_year: latest_year(attended, socket.assigns.team.timezone),
       stats: year_stats(attended, now)
     )
@@ -74,6 +77,12 @@ defmodule Web.MeLive do
     }
   end
 
+  # A member's latest chores (#341), on a team with member logins on. Nil hides the section.
+  defp latest_chores(%{team: %{member_logins: true}} = member),
+    do: member |> Chore.get_all_for_member() |> Enum.take(5)
+
+  defp latest_chores(_member), do: nil
+
   def render(assigns) do
     ~H"""
     <%!-- Away shows as a reminder; a retired member can't log in. --%>
@@ -93,6 +102,7 @@ defmodule Web.MeLive do
           activities={@activities}
           stats={@stats}
         />
+        <.chores :if={@chores} team={@team} chores={@chores} />
         <.qualifications team={@team} now={@now} qualifications={@qualifications} />
       </div>
       <aside class="membership-aside">
@@ -183,6 +193,41 @@ defmodule Web.MeLive do
         >
           All your activities
         </.a>
+      </p>
+    </section>
+    """
+  end
+
+  attr :team, :map, required: true
+  attr :chores, :list, required: true
+
+  defp chores(assigns) do
+    ~H"""
+    <section id="chores" class="mt-8">
+      <div class="heading-row">
+        <h2 class="heading">Chores</h2>
+        <.a id="chore-log" navigate={~p"/teams/#{@team}/me/chores/new"}>New chore</.a>
+      </div>
+      <.empty_state :if={@chores == []} id="no-chores" title="No chores yet">
+        Log a chore after you do one, such as fixing equipment or admin. It counts once a team admin accepts it.
+      </.empty_state>
+      <.table :if={@chores != []} id="chores-list" rows={@chores} row_id={&"chores-list-#{&1.id}"}>
+        <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
+          {Format.date_short(chore.date)}
+        </:col>
+        <:col :let={chore} label="What you did">
+          {chore.description}
+          <span class="hint block">{chore.chore_category.title}</span>
+        </:col>
+        <:col :let={chore} label="" class="w-px whitespace-nowrap">
+          <.status_badge chore={chore} />
+        </:col>
+        <:col :let={chore} label="Time" align="right" class="w-px whitespace-nowrap">
+          {Format.duration(chore.minutes)}
+        </:col>
+      </.table>
+      <p :if={@chores != []} class="mt-2">
+        <.a id="all-chores" navigate={~p"/teams/#{@team}/me/chores"}>All your chores</.a>
       </p>
     </section>
     """
