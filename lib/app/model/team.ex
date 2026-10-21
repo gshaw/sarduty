@@ -112,7 +112,7 @@ defmodule App.Model.Team do
     [{"Off", 0}] ++
       Enum.map(@not_seen_days, fn
         365 -> {"1 year", 365}
-        days -> {"#{days} days", days}
+        days -> {Service.Format.days(days), days}
       end)
   end
 

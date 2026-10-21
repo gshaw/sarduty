@@ -49,9 +49,9 @@ defmodule Web.ActivityMileageLive do
     <%= if @activity.coordinate do %>
       <dl>
         <dt>Activity latitude and longitude</dt>
-        <dd>{App.Model.Coordinate.to_string(@activity.coordinate, 5)}</dd>
+        <dd>{Service.Format.coordinate(Coordinate.build(@activity.coordinate), 5)}</dd>
         <dt>Yard latitude and longitude</dt>
-        <dd>{App.Model.Coordinate.to_string(@team.coordinate, 5)}</dd>
+        <dd>{Service.Format.coordinate(@team.coordinate, 5)}</dd>
       </dl>
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
         <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
@@ -70,7 +70,9 @@ defmodule Web.ActivityMileageLive do
         <:failed :let={_reason}>The mileage report did not load. Generate it again.</:failed>
 
         <p :if={report.yard_to_activity_km}>
-          Yard to activity round trip: {report.yard_to_activity_km} km, {report.yard_to_activity_hours} hours
+          Yard to activity round trip: {Service.Format.km(report.yard_to_activity_km)}, {Service.Format.duration(
+            report.yard_to_activity_hours * 60
+          )}
         </p>
         <p :if={!report.yard_to_activity_km}>Mapbox found no route from the yard to the activity.</p>
 
@@ -82,13 +84,21 @@ defmodule Web.ActivityMileageLive do
             <th colspan="2"></th>
           </:header_row>
           <:col :let={record} label="Name">{record.name}</:col>
-          <:col :let={record} align="right" label="km">{record.activity_km}</:col>
-          <:col :let={record} align="right" label="Hours">{record.activity_hours}</:col>
-          <:col :let={record} align="right" label="km">{record.yard_km}</:col>
-          <:col :let={record} align="right" label="Hours">{record.yard_hours}</:col>
+          <:col :let={record} align="right" label="km">
+            {record.activity_km && Service.Format.number(record.activity_km)}
+          </:col>
+          <:col :let={record} align="right" label="Hours">
+            {record.activity_hours && Service.Format.tenths(record.activity_hours)}
+          </:col>
+          <:col :let={record} align="right" label="km">
+            {record.yard_km && Service.Format.number(record.yard_km)}
+          </:col>
+          <:col :let={record} align="right" label="Hours">
+            {record.yard_hours && Service.Format.tenths(record.yard_hours)}
+          </:col>
           <:col :let={record} label="Home address">{record.address}</:col>
           <:col :let={record} label="Latitude and longitude">
-            {Coordinate.to_string(record.coordinate, 3)}
+            {Service.Format.coordinate(record.coordinate, 3)}
           </:col>
         </.table>
         <p class="mt-4">

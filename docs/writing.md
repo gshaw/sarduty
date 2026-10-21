@@ -34,11 +34,17 @@ finish a task and leave. Write so a reader understands each sentence the first t
    their capitals: D4H, SAR Duty, SARVAC, Apple Wallet.
 9. **Write numbers as digits**, including one to nine: "3 changes", "1 member". Use
    `Service.Format.count/2` so the noun agrees with the number.
-10. **Format dates, times, and durations with `Service.Format`.** Never build them by hand.
-    Dates put the month first: "Sep 28, 2025", or "September 28, 2025" in letters. Times use
-    the 24-hour clock ("14:05"). Durations come from `Service.Format.duration/1`, the same
-    in tables, letters, and pages: "212h 30m", "202 hours" with no minutes, "1 hour", and
-    "45 min" under an hour. Never "212:30" or "212.5 hours". Distances are in km.
+10. **Every value people read comes from a `Service.Format` function.** Never write a
+    number and its unit by hand, such as `{days} days`; a test fails if you do. Add a
+    function to `Service.Format` when none fits, so a value reads the same everywhere and
+    changes in one place. Work the number out with `Service.Convert`, such as
+    `days_until/2`, which rounds up. Dates put the month first: "Sep 28, 2025", or
+    "September 28, 2025" in letters. Times use the 24-hour clock ("14:05"). A time follows
+    its date after a comma: "Oct 21, 14:05", "Oct 21, 2026, 14:05". Durations come from
+    `duration/1`: "212h 30m", "202 hours" with no minutes, "1 hour", and "45 min" under an
+    hour. Never "212:30" or "212.5 hours". Days come from `days/1` ("30 days"), distances
+    from `km/1` ("42 km"). The style guide's Values page, `/styles/values`, runs every
+    formatter on an example.
 11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
     only for SAR Duty the service, and rarely.
 12. **Be plain, not cheerful.** No "please", "sorry", "oops", "simply", "just", "easily",
@@ -115,6 +121,7 @@ and must not be used for it.
 | attended                       | present, participated                          | A member's state on an activity's attendance.                                                        |
 | published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H doesn't let SAR Duty change its tags.                           |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
+| certificate                    | proof, card, qualification                     | The paper or PDF proof of a course, which a team admin records in D4H as a qualification.            |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
 | group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in or not in groups or endorsements, or a standing.   |
 | endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
@@ -183,5 +190,6 @@ Before committing text a person will read, check each line:
 - [ ] Headings, titles, buttons, labels, and tabs are in sentence case.
 - [ ] Buttons are a verb and an object. Links make sense on their own.
 - [ ] Errors say how to fix the problem and match the error summary.
-- [ ] Numbers are digits. Dates, times, and durations come from `Service.Format`.
+- [ ] Numbers are digits. Every date, time, duration, count of days, and distance comes
+      from a `Service.Format` function.
 - [ ] Text people read uses Canadian spelling. Code uses US spelling.

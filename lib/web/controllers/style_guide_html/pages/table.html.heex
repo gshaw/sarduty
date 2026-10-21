@@ -67,7 +67,7 @@
     </:col>
     <:col :let={{_name, why, detail, days}} label="Why">
       {why}
-      <.badge :if={days} kind={:warning}>{days} days</.badge>
+      <.badge :if={days} kind={:warning}>{Service.Format.days(days)}</.badge>
       <span class="hint block">{detail}</span>
     </:col>
     <:col :let={_row} label="" class="w-px">

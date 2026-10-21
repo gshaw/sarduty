@@ -202,10 +202,10 @@ defmodule Web.MemberStandingLive do
               {period.reason}
             </:col>
             <:col :let={period} label="First day" class="w-px whitespace-nowrap">
-              {Service.Format.day(period.starts_on)}
+              {Service.Format.date_short(period.starts_on)}
             </:col>
             <:col :let={period} label="Last day" class="w-px whitespace-nowrap">
-              {Service.Format.day(period.ends_on)}
+              {Service.Format.date_short(period.ends_on)}
             </:col>
             <:col :let={period} label="" class="w-px whitespace-nowrap">
               <.button
@@ -277,7 +277,7 @@ defmodule Web.MemberStandingLive do
             class="table-striped"
           >
             <:col :let={check_in} label="Day" class="w-px whitespace-nowrap">
-              {Service.Format.day(check_in.checked_in_on)}
+              {Service.Format.date_short(check_in.checked_in_on)}
             </:col>
             <:col :let={check_in} label="What they heard">
               {check_in.note}
@@ -290,7 +290,7 @@ defmodule Web.MemberStandingLive do
                 variant={:danger}
                 phx-click="delete-check-in"
                 phx-value-id={check_in.id}
-                data-confirm={"Delete the check-in from #{Service.Format.day(check_in.checked_in_on)}? It no longer restarts #{@member.name}'s attendance clock."}
+                data-confirm={"Delete the check-in from #{Service.Format.date_short(check_in.checked_in_on)}? It no longer restarts #{@member.name}'s attendance clock."}
               >
                 Delete
               </.button>
@@ -334,7 +334,7 @@ defmodule Web.MemberStandingLive do
 
   # "away period from Sep 8, 2026 (Parental leave)", for a confirmation that names it.
   defp period_name(period),
-    do: "away period from #{Service.Format.day(period.starts_on)} (#{period.reason})"
+    do: "away period from #{Service.Format.date_short(period.starts_on)} (#{period.reason})"
 
   defp check_in_by(%{user: %{email: email}}), do: "Recorded by #{email}"
   defp check_in_by(_check_in), do: "Recorded by a team admin"

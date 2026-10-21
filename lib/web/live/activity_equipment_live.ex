@@ -160,8 +160,12 @@ defmodule Web.ActivityEquipmentLive do
   def amount(%EquipmentUsage{minutes: minutes}) when is_integer(minutes) and minutes > 0,
     do: Service.Format.duration(minutes)
 
-  def amount(%EquipmentUsage{distance: km}) when is_integer(km) and km > 0, do: "#{km} km"
-  def amount(%EquipmentUsage{used: used}) when is_integer(used) and used > 0, do: "#{used} used"
+  def amount(%EquipmentUsage{distance: km}) when is_integer(km) and km > 0,
+    do: Service.Format.km(km)
+
+  def amount(%EquipmentUsage{used: used}) when is_integer(used) and used > 0,
+    do: "#{Service.Format.number(used)} used"
+
   def amount(%EquipmentUsage{}), do: ""
 
   attr :id, :string, required: true

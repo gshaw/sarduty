@@ -139,7 +139,9 @@ defmodule Web.Admin.EventCollectionLive do
         {EventFilterViewModel.label(event.kind)}
       </:col>
       <:col :let={event} label="Team">{event.team && event.team.name}</:col>
-      <:col :let={event} label="Took" class="whitespace-nowrap">{took(event.duration_ms)}</:col>
+      <:col :let={event} label="Took" class="whitespace-nowrap">
+        {event.duration_ms && Service.Format.run_time(event.duration_ms)}
+      </:col>
       <:col :let={event} label="From">
         <span :if={event.ip} title={event.user_agent}>{event.ip}</span>
       </:col>
@@ -157,13 +159,9 @@ defmodule Web.Admin.EventCollectionLive do
   defp run_summary(event, now) do
     teams = Service.Format.count(event.data["teams"] || 0, one: "%d team", many: "%d teams")
     ago = Service.Format.minutes_ago(event.occurred_at, now, "Etc/UTC")
-    "#{ago}: #{teams} in #{took(event.duration_ms)}, #{event.data["outcome"]}"
-  end
 
-  defp took(nil), do: nil
-  defp took(ms) when ms < 1000, do: "#{ms} ms"
-  defp took(ms) when ms < 120_000, do: "#{Float.round(ms / 1000, 1)} s"
-  defp took(ms), do: "#{Float.round(ms / 60_000, 1)} min"
+    "#{ago}: #{teams} in #{event.duration_ms && Service.Format.run_time(event.duration_ms)}, #{event.data["outcome"]}"
+  end
 
   defp details(data) do
     data

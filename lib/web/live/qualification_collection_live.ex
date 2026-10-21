@@ -139,7 +139,7 @@ defmodule Web.QualificationCollectionLive do
             current={@view == :expiring}
             count={@expiring_count}
           >
-            Expiring in {@filter_options.within} days
+            Expiring in {Service.Format.days(@filter_options.within)}
           </:view>
         </.view_switch>
       </:lead>
@@ -242,7 +242,7 @@ defmodule Web.QualificationCollectionLive do
       </:col>
     </.table>
     <.empty_state :if={@none} id="none-expiring" title="Nothing expiring">
-      No qualifications expire in the next {@within} days.
+      No qualifications expire in the next {Service.Format.days(@within)}.
     </.empty_state>
     """
   end

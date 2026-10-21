@@ -28,14 +28,6 @@ defmodule Web.Components.Phone do
     """
   end
 
-  @doc "The number to read: 604-555-1234 when it reads as one, otherwise as D4H has it."
-  def format(phone) do
-    case Service.Phone.normalize(phone) do
-      nil -> blank_to_nil(phone)
-      e164 -> Service.Phone.format(e164)
-    end
-  end
-
   @doc "E.164 when D4H's number reads as one, so tel: and sms: links dial it. Nil for none."
   def dial(phone), do: Service.Phone.normalize(phone) || blank_to_nil(phone)
 

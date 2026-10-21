@@ -35,6 +35,14 @@ defmodule Service.Convert do
     Float.round(minutes / 60.0, 1)
   end
 
+  @doc """
+  Whole days from `now` to `datetime`, rounded up, so something ending tomorrow afternoon
+  has 1 day left and something ending exactly 60 days from now has 60. Negative once past.
+  Format the result with `Service.Format.days/1`.
+  """
+  def days_until(%DateTime{} = datetime, %DateTime{} = now),
+    do: ceil(DateTime.diff(datetime, now) / 86_400)
+
   def duration_to_months(started_at, finished_at) do
     days =
       finished_at

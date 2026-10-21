@@ -8,8 +8,6 @@ defmodule Web.Components.YetToArrive do
 
   import Web.Components.Phone, only: [call_and_text: 1]
 
-  alias Web.Components.Phone
-
   attr :id, :string, default: "yet-to-arrive"
   attr :yet_to_arrive, :map, required: true, doc: "from App.Operation.BuildYetToArrive"
   attr :class, :any, default: nil
@@ -28,10 +26,10 @@ defmodule Web.Components.YetToArrive do
         >
           <span>
             <span class="font-semibold">{member.name}</span>
-            <span :if={Phone.format(member.phone)} class="block hint">
-              {Phone.format(member.phone)}
+            <span :if={Service.Phone.format(member.phone)} class="block hint">
+              {Service.Phone.format(member.phone)}
             </span>
-            <span :if={!Phone.format(member.phone)} class="block hint">No mobile number in D4H</span>
+            <span :if={!Service.Phone.format(member.phone)} class="block hint">No mobile number in D4H</span>
           </span>
           <.call_and_text id={"#{@id}-#{member.id}"} phone={member.phone} />
         </li>

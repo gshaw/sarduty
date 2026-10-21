@@ -86,7 +86,7 @@ defmodule Web.Components.Chart do
   attr :labels, :list, required: true
   attr :series, :list, required: true
   attr :height, :integer, default: 200
-  attr :format, :any, default: &Integer.to_string/1
+  attr :format, :any, default: &Service.Format.number/1
   attr :caption, :string, default: nil
 
   def line_chart(assigns) do
@@ -246,14 +246,14 @@ defmodule Web.Components.Chart do
           <i
             :for={{date, count} <- @days}
             class={"shade-#{Service.TimeBuckets.level(count, @max)}"}
-            title={"#{Service.Format.day(date)}: #{Service.Format.count(count, @noun)}"}
+            title={"#{Service.Format.date_short(date)}: #{Service.Format.count(count, @noun)}"}
           ></i>
         </div>
       </div>
       <.scale />
       <table class="chart-table">
         <tr :for={{date, count} <- @days} :if={count > 0}>
-          <th>{Service.Format.day(date)}</th>
+          <th>{Service.Format.date_short(date)}</th>
           <td>{count}</td>
         </tr>
       </table>
@@ -344,7 +344,7 @@ defmodule Web.Components.Chart do
 
   attr :ticks, :list, required: true
   attr :top, :integer, required: true
-  attr :format, :any, default: &Integer.to_string/1
+  attr :format, :any, default: &Service.Format.number/1
 
   defp ticks(assigns) do
     ~H"""

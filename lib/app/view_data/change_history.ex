@@ -120,7 +120,7 @@ defmodule App.ViewData.ChangeHistory do
     days =
       Enum.map(
         ~w(starts_on ends_on),
-        &(details[&1] |> Date.from_iso8601!() |> Service.Format.day())
+        &(details[&1] |> Date.from_iso8601!() |> Service.Format.date_short())
       )
 
     "#{details["reason"]}, #{Enum.join(days, " to ")}"
