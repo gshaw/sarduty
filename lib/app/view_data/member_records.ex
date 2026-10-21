@@ -74,8 +74,8 @@ defmodule App.ViewData.MemberRecords do
   The member's awards as one row per qualification, `%{award:, earlier:,
   first_started_at:, status:, days_left:}`: the latest award (no end is the latest, else
   the one that ends last), the ones it replaced, newest first, when the first one started,
-  `:expiring`, `:current`, or `:expired`, and whole days to its end, rounded up (nil with
-  no end). Expiring is within the app's one window,
+  `:expiring`, `:current`, or `:expired`, and `Service.Convert.days_until/2` its end (nil
+  with no end). Expiring is within the app's one window,
   `BuildGroupRulePreview.expiring_days/0`.
 
   Current rows come first, soonest end first and no end last, then expired ones, most
@@ -92,9 +92,6 @@ defmodule App.ViewData.MemberRecords do
     sort_rows(current, :asc) ++ sort_rows(expired, :desc)
   end
 
-  @doc "The rows that expire within the app's expiring window."
-  def expiring(rows), do: Enum.filter(rows, &(&1.status == :expiring))
-
   defp row(awards, now) do
     [latest | earlier] = Enum.sort_by(awards, &end_key/1, :desc)
     starts = awards |> Enum.map(& &1.starts_at) |> Enum.reject(&is_nil/1)
@@ -104,13 +101,9 @@ defmodule App.ViewData.MemberRecords do
       earlier: earlier,
       first_started_at: if(starts != [], do: Enum.min(starts, DateTime)),
       status: status(latest, now),
-      days_left: days_left(latest.ends_at, now)
+      days_left: latest.ends_at && Service.Convert.days_until(latest.ends_at, now)
     }
   end
-
-  # Rounded up, so an award ending tomorrow afternoon has 1 day left.
-  defp days_left(nil, _now), do: nil
-  defp days_left(ends_at, now), do: ceil(DateTime.diff(ends_at, now) / 86_400)
 
   defp status(%{ends_at: nil}, _now), do: :current
 

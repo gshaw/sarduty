@@ -75,10 +75,28 @@
     </:col>
   </.table>
 
+  <h2>Greyed rows</h2>
+  <p>
+    A row kept for history, such as a qualification that ran out, is grey. It needs no tag:
+    nobody has to act on it. A row someone must act on gets a tag instead.
+  </p>
+  <.table
+    id="sample-greyed"
+    rows={SampleData.qualification_rows()}
+    row_id={&"sample-greyed-#{&1.id}"}
+    row_class={&(&1.expired? && "is-muted")}
+  >
+    <:col :let={row} label="Qualification">{row.title}</:col>
+    <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+      {row.expires}
+      <.badge :if={row.days} kind={:warning}>{Service.Format.days(row.days)}</.badge>
+    </:col>
+  </.table>
+
   <h2>Row groups</h2>
   <p>
     One table, its rows in groups under a title row each, so every group shares one set of
-    columns. A muted group, such as expired qualifications, greys its rows.
+    columns. A muted group, such as retired members, greys its rows.
   </p>
   <.table
     id="sample-groups"

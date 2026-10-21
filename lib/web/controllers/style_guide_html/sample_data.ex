@@ -125,6 +125,28 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
+  # One member's qualifications, soonest expiry first, for the table's greyed rows.
+  def qualification_rows do
+    [
+      %{id: 1, title: "Standard First Aid", expires: "Dec 5, 2026", days: 45, expired?: false},
+      %{
+        id: 2,
+        title: "Rope Rescue Operations",
+        expires: "Sep 30, 2027",
+        days: nil,
+        expired?: false
+      },
+      %{id: 3, title: "ICS 100", expires: "Does not expire", days: nil, expired?: false},
+      %{
+        id: 4,
+        title: "Swiftwater Awareness",
+        expires: "Expired Sep 30, 2024",
+        days: nil,
+        expired?: true
+      }
+    ]
+  end
+
   # Members by standing, for the table's row groups.
   def member_groups do
     [

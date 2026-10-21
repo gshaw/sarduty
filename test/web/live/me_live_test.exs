@@ -202,8 +202,6 @@ defmodule Web.MeLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(lv, "#qualifications-expiring", "1 qualification expiring")
-      assert has_element?(lv, "#qualifications-expiring", "First Aid expires")
       assert has_element?(lv, "#qualifications-#{first_aid.id} .badge", "30 days")
       assert has_element?(lv, "#qualifications-#{first_aid.id}", "2019")
       assert has_element?(lv, "#qualifications-#{rope.id}", "Does not expire")

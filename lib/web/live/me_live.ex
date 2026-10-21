@@ -186,18 +186,7 @@ defmodule Web.MeLive do
   end
 
   defp qualifications_content(assigns) do
-    assigns = assign(assigns, :expiring, MemberRecords.expiring(assigns.qualifications))
-
     ~H"""
-    <.banner
-      :if={@expiring != []}
-      id="qualifications-expiring"
-      kind={:warning}
-      title={QualificationText.expiring_title(@expiring)}
-    >
-      <p :for={row <- @expiring}>{QualificationText.expiring_line(row, @member.team.timezone)}</p>
-      <p>{QualificationText.renew_line(@expiring)}</p>
-    </.banner>
     <.table
       id="qualifications"
       rows={@qualifications}

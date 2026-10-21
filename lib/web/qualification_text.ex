@@ -12,24 +12,8 @@ defmodule Web.QualificationText do
   def row_class(%{status: :expired}), do: "is-muted"
   def row_class(_row), do: nil
 
-  @doc ~s(The expiring banner's title: "1 qualification expiring".)
-  def expiring_title(rows) do
-    rows
-    |> length()
-    |> Format.count(one: "1 qualification expiring", many: "%d qualifications expiring")
-  end
-
-  @doc ~s(One line of the expiring banner: "First Aid expires Dec 5, 2026.")
-  def expiring_line(row, timezone),
-    do:
-      "#{row.award.qualification.title} expires #{Format.date_short(row.award.ends_at, timezone)}."
-
-  @doc "The expiring banner's last line: what to do."
-  def renew_line([_row]), do: "Renew it before then."
-  def renew_line(_rows), do: "Renew them before then."
-
   @doc ~s(The tag on an expiring row: "12 days", as on a group's expiring members.)
-  def days_left(row), do: Format.count(row.days_left, one: "%d day", many: "%d days")
+  def days_left(row), do: Format.days(row.days_left)
 
   @doc ~s(When it ends: "Nov 30, 2026", "Does not expire", or "Expired Sep 30, 2024".)
   def expires(%{ends_at: nil}, _now, _timezone), do: "Does not expire"
