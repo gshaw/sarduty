@@ -193,9 +193,10 @@ defmodule Web.MeLive do
       :if={@expiring != []}
       id="qualifications-expiring"
       kind={:warning}
-      title={QualificationText.expiring_title(@expiring, @member.team.timezone)}
+      title={QualificationText.expiring_title(@expiring)}
     >
-      {QualificationText.expiring_body(@expiring, @member.team.timezone)}
+      <p :for={row <- @expiring}>{QualificationText.expiring_line(row, @member.team.timezone)}</p>
+      <p>{QualificationText.renew_line(@expiring)}</p>
     </.banner>
     <.table
       id="qualifications"
@@ -206,7 +207,9 @@ defmodule Web.MeLive do
       <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
         {QualificationText.expires(row.award, @now, @member.team.timezone)}
-        <.badge :if={row.status == :expiring} kind={:warning}>Expiring</.badge>
+        <.badge :if={row.status == :expiring} kind={:warning}>
+          {QualificationText.days_left(row)}
+        </.badge>
       </:col>
       <:col :let={row} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}

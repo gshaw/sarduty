@@ -111,8 +111,9 @@ admin's member page, from one query and one component each (#308, #339, decided
 - **Qualifications** come from `MemberRecords.qualifications/2`: one table, one row per
   qualification, soonest expiry first, then Does not expire, then Expired (muted). One
   that expires within 60 days, the app's one expiring window
-  (`BuildGroupRulePreview.expiring_days/0`), gets an Expiring tag, and the member's own
-  page names it in a warning banner above the table. The words are
+  (`BuildGroupRulePreview.expiring_days/0`), gets a warning tag with its days left ("30
+  days"), as a group's expiring members do, and the member's own page names it in a
+  warning banner. The words are
   [Web.QualificationText](../lib/web/qualification_text.ex), so every page says the same
   thing.
 - **No groups** (decided 2026-10-20). #308 asked for groups by expiry. On South Fraser's

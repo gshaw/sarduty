@@ -145,7 +145,9 @@ defmodule Web.MemberQualificationsLive do
       </:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
         {QualificationText.expires(row.award, @now, @member.team.timezone)}
-        <.badge :if={row.status == :expiring} kind={:warning}>Expiring</.badge>
+        <.badge :if={row.status == :expiring} kind={:warning}>
+          {QualificationText.days_left(row)}
+        </.badge>
       </:col>
       <:col :let={row} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}

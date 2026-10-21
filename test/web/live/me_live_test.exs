@@ -177,7 +177,7 @@ defmodule Web.MeLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
     end
 
-    test "lists qualifications soonest expiry first, tagging and naming the expiring one",
+    test "lists qualifications soonest expiry first, with days left on the expiring one",
          %{conn: conn, team: team, member: member} do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       first_aid = qualification_fixture(team, %{title: "First Aid"})
@@ -202,8 +202,9 @@ defmodule Web.MeLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
 
+      assert has_element?(lv, "#qualifications-expiring", "1 qualification expiring")
       assert has_element?(lv, "#qualifications-expiring", "First Aid expires")
-      assert has_element?(lv, "#qualifications-#{first_aid.id} .badge", "Expiring")
+      assert has_element?(lv, "#qualifications-#{first_aid.id} .badge", "30 days")
       assert has_element?(lv, "#qualifications-#{first_aid.id}", "2019")
       assert has_element?(lv, "#qualifications-#{rope.id}", "Does not expire")
       refute has_element?(lv, "#qualifications-#{rope.id} .badge")

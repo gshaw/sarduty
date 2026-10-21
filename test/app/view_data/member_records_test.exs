@@ -51,6 +51,7 @@ defmodule App.ViewData.MemberRecordsTest do
       rows = MemberRecords.qualification_rows(awards, @now)
 
       assert titles(rows) == [expiring: "At 60", current: "Past 60", expired: "Now"]
+      assert Enum.map(rows, & &1.days_left) == [60, 61, 0]
       assert rows |> MemberRecords.expiring() |> titles() == [expiring: "At 60"]
     end
 
