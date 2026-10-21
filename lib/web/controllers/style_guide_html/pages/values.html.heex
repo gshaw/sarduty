@@ -13,14 +13,16 @@
   <section :for={{section, about, functions} <- values()} class="mt-8">
     <h2>{section}</h2>
     <p>{about}</p>
+    <%!-- Fixed widths, the same in every section, so each column runs down the page. --%>
     <.table
       id={"values-#{section |> String.downcase() |> String.replace(" ", "-")}"}
       rows={value_rows(functions)}
       row_id={& &1.id}
+      class="table-fixed"
     >
-      <:col :let={row} label="Use">{row.use}</:col>
-      <:col :let={row} label="Code"><code>{row.code}</code></:col>
-      <:col :let={row} label="Shows" class="whitespace-nowrap">{row.shows}</:col>
+      <:col :let={row} label="Use" class="w-1/3">{row.use}</:col>
+      <:col :let={row} label="Code" class="w-5/12"><code>{row.code}</code></:col>
+      <:col :let={row} label="Shows" class="w-1/4 whitespace-nowrap">{row.shows}</:col>
     </.table>
   </section>
 
