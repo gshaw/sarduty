@@ -357,7 +357,8 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :proposed_changes}),
     do: ~p"/teams/#{team}/proposed-changes"
 
-  defp attention_path(team, %{key: :chores}), do: ~p"/teams/#{team}/chores"
+  defp attention_path(team, %{key: key}) when key in [:chores, :chores_to_send],
+    do: ~p"/teams/#{team}/chores"
 
   defp attention_path(team, %{key: :letters, year: year}),
     do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"

@@ -129,6 +129,13 @@ defmodule App.Model.Chore do
     |> Repo.all()
   end
 
+  @doc "How many of the team's accepted chores are not sent yet."
+  def count_ready(team_id) do
+    Chore
+    |> where([c], c.team_id == ^team_id and c.status == :accepted and is_nil(c.chore_event_id))
+    |> Repo.aggregate(:count)
+  end
+
   @doc "How many of the team's chores wait for a team admin."
   def count_waiting(team_id) do
     Chore

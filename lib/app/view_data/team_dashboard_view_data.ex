@@ -11,6 +11,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Model.Chore
+  alias App.Model.ChoreEvent
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.Member
@@ -64,10 +65,16 @@ defmodule App.ViewData.TeamDashboardViewData do
       group_change_count: count_group_changes(team, now),
       proposed_change_count: ChangeSet.count_waiting(team.id),
       chore_count: if(team.member_logins, do: Chore.count_waiting(team.id), else: 0),
+      chores_to_send: chores_to_send(team),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)
     }
   end
+
+  defp chores_to_send(%{member_logins: false}), do: %{ready: 0, changed: 0}
+
+  defp chores_to_send(team),
+    do: %{ready: Chore.count_ready(team.id), changed: ChoreEvent.count_to_send(team.id)}
 
   @doc """
   Splits activities into NextUp and Coming up. NextUp is the first one starting within

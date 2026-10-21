@@ -78,8 +78,8 @@ choice: a week, a month, or a season's worth at a time. Accepting does not write
 
 ## Where else chores show
 
-- **Team home**: "N chores to accept" under Needs attention, and the count beside Chores
-  in the side navigation.
+- **Team home**: "N chores to accept" and "N chores to send to D4H" under Needs
+  attention, and the waiting count beside Chores in the side navigation.
 - **Your membership**: the member's 5 latest chores, with New chore and a link to all of
   them (#406).
 - **A member's dashboard**: a declined chore under For you to do until they delete it.
