@@ -17,6 +17,7 @@ defmodule App.Model.Event do
     d4h_team_sync: 90,
     d4h_team_refresh: 90,
     d4h_rate_limited: 90,
+    chore_events_sent: 90,
     login_code_requested: 90,
     login_code_limited: 90,
     login_code_missed: 90,

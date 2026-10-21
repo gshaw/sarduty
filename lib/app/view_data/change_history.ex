@@ -236,7 +236,9 @@ defmodule App.ViewData.ChangeHistory do
     Enum.join(status ++ times ++ hours, ", ")
   end
 
-  defp row_kind(action) when action in [:update_attendance, :create_attendance], do: :attendance
+  defp row_kind(action)
+       when action in [:update_attendance, :create_attendance, :delete_attendance],
+       do: :attendance
 
   defp row_kind(action) when action in [:add_group_member, :remove_group_member],
     do: :group_membership
@@ -270,6 +272,23 @@ defmodule App.ViewData.ChangeHistory do
 
     "#{subject || "Attendance"} set to #{status(row.new_value["status"])}"
   end
+
+  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, page) do
+    subject =
+      case page do
+        :member -> row.change_set.activity && row.change_set.activity.title
+        :activity -> row.member && row.member.name
+      end
+
+    "#{subject || "Attendance"} removed"
+  end
+
+  def describe_row(%ChangeSetRow{action: :publish_activity} = row, _page),
+    do:
+      if(row.new_value["published"],
+        do: "Published by SAR Duty",
+        else: "Made a draft by SAR Duty"
+      )
 
   def describe_row(%ChangeSetRow{action: :create_equipment_usage} = row, _page),
     do: "#{row.new_value["title"] || "An item"} added to equipment"
@@ -359,6 +378,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:equipment), do: "equipment"
   def source_label(:template), do: "template"
   def source_label(:tags), do: "tags"
+  def source_label(:chores), do: "chores"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

@@ -2,13 +2,18 @@ defmodule App.Operation.SaveChore do
   @moduledoc """
   Logging, changing, and deciding chores (#341). A member logs and changes their own
   chores while they wait; a team admin accepts, declines, or changes any of them.
-  Nothing here calls D4H.
+
+  Nothing here calls D4H. An accepted chore belongs to its month and category's
+  `ChoreEvent`, and any change to which chores are accepted there marks the event for
+  the nightly send: accepting, declining an accepted chore, or changing one (both
+  events when it moves).
   """
 
   import Ecto.Query
 
   alias App.Model.Chore
   alias App.Model.ChoreCategory
+  alias App.Model.ChoreEvent
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
@@ -51,9 +56,8 @@ defmodule App.Operation.SaveChore do
   @doc "A team admin changes any field of a chore, with any date, in any status."
   def change(%Team{} = team, %Chore{team_id: team_id} = chore, params)
       when team_id == team.id do
-    chore
-    |> Chore.build_changeset(params, category_ids(team.id, chore), nil)
-    |> Repo.update()
+    changeset = Chore.build_changeset(chore, params, category_ids(team.id, chore), nil)
+    transaction(fn -> changeset |> Repo.update() |> place(chore) end)
   end
 
   @doc """
@@ -61,18 +65,19 @@ defmodule App.Operation.SaveChore do
   are. Returns how many were accepted.
   """
   def accept(%Team{} = team, ids, user, now) do
-    {count, _rows} =
+    chores =
       Chore
       |> where([c], c.team_id == ^team.id and c.status == :waiting and c.id in ^ids)
-      |> Repo.update_all(
-        set: [
-          status: :accepted,
-          decided_by_user_id: user.id,
-          decided_at: now,
-          decline_reason: nil,
-          updated_at: now
-        ]
-      )
+      |> Repo.all()
+
+    {:ok, count} =
+      Repo.transaction(fn ->
+        Enum.each(chores, fn chore ->
+          {:ok, _chore} = chore |> Chore.decide_changeset(:accepted, user, now) |> decide(chore)
+        end)
+
+        length(chores)
+      end)
 
     count
   end
@@ -80,13 +85,15 @@ defmodule App.Operation.SaveChore do
   @doc "A team admin accepts one chore, in any status."
   def accept_one(%Team{} = team, %Chore{team_id: team_id} = chore, user, now)
       when team_id == team.id do
-    chore |> Chore.decide_changeset(:accepted, user, now) |> Repo.update()
+    changeset = Chore.decide_changeset(chore, :accepted, user, now)
+    transaction(fn -> decide(changeset, chore) end)
   end
 
   @doc "A team admin declines a chore with a reason the member sees."
   def decline(%Team{} = team, %Chore{team_id: team_id} = chore, reason, user, now)
       when team_id == team.id do
-    chore |> Chore.decide_changeset(:declined, user, now, reason) |> Repo.update()
+    changeset = Chore.decide_changeset(chore, :declined, user, now, reason)
+    transaction(fn -> decide(changeset, chore) end)
   end
 
   # The member's chore as it is now, read in the transaction: a team admin may have
@@ -95,6 +102,25 @@ defmodule App.Operation.SaveChore do
     current = Repo.get_by(Chore, id: chore.id, team_id: member.team_id, member_id: member.id)
     if current && allowed?.(current), do: {:ok, current}, else: {:error, :decided}
   end
+
+  defp decide(changeset, before), do: changeset |> Repo.update() |> place(before)
+
+  # An accepted chore goes on its month and category's event; any other leaves it. The
+  # events it left and joined wait for the next send.
+  defp place({:ok, chore}, before) do
+    event_id =
+      if chore.status == :accepted,
+        do: ChoreEvent.find_or_create!(chore.team_id, chore.chore_category_id, chore.date).id
+
+    {:ok, chore} = chore |> Ecto.Changeset.change(chore_event_id: event_id) |> Repo.update()
+
+    if before.chore_event_id != event_id or chore.status == :accepted,
+      do: ChoreEvent.mark_for_send!([before.chore_event_id, event_id])
+
+    {:ok, chore}
+  end
+
+  defp place(error, _before), do: error
 
   defp transaction(fun), do: Repo.transaction(fn -> fun.() |> ok_or_rollback() end)
 

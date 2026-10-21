@@ -19,6 +19,7 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:d4h_team_sync), do: "Team sync"
   def label(:d4h_team_refresh), do: "Team refresh"
   def label(:d4h_rate_limited), do: "D4H rate limit"
+  def label(:chore_events_sent), do: "Chores sent"
   def label(:login_code_requested), do: "Login code asked for"
   def label(:login_code_limited), do: "Login code limit reached"
   def label(:login_code_missed), do: "Wrong login code"

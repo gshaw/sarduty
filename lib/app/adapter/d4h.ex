@@ -701,6 +701,16 @@ defmodule App.Adapter.D4H do
     write_attendance(context, :post, "/attendance", json)
   end
 
+  @doc "Deletes an attendance row (#341). A row D4H has already deleted counts."
+  def delete_attendance(context, d4h_attendance_id) do
+    request = [method: :delete, url: "/attendance/#{d4h_attendance_id}", retry: false]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status}} when status in 200..299 or status == 404 -> :ok
+      result -> {:error, write_error(result)}
+    end
+  end
+
   defp write_attendance(context, method, url, json) do
     case Req.request(context, method: method, url: url, json: json, retry: false) do
       {:ok, %{status: status} = response} when status in 200..299 ->
@@ -752,7 +762,11 @@ defmodule App.Adapter.D4H do
     "description" => "description",
     "tracking_number" => "trackingNumber",
     "started_at" => "startsAt",
-    "finished_at" => "endsAt"
+    "finished_at" => "endsAt",
+    # D4H's own: false keeps D4H from adding every member's attendance, and the
+    # activity to the team alone (#341). Records ignores them.
+    "full_team" => "fullTeam",
+    "shared" => "shared"
   }
 
   @doc """
@@ -826,6 +840,16 @@ defmodule App.Adapter.D4H do
       when kind in ["event", "exercise", "incident"] do
     url = "/#{kind}s/#{d4h_activity_id}/tags"
     write(context, :post, url, %{tagIds: tag_ids}, fn _body -> d4h_activity_id end)
+  end
+
+  @doc """
+  Publishes an activity, or makes it a draft again with `false` (#341). D4H locks a
+  published activity's attendance, so a change to it goes between the two.
+  """
+  def publish_activity(context, kind, d4h_activity_id, published)
+      when kind in ["event", "exercise", "incident"] and is_boolean(published) do
+    url = "/#{kind}s/#{d4h_activity_id}/publish"
+    write(context, :post, url, %{published: published}, fn _body -> d4h_activity_id end)
   end
 
   defp maybe_write(attrs, key, write, previous \\ nil) do

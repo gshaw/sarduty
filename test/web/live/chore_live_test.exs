@@ -83,4 +83,18 @@ defmodule Web.ChoreLiveTest do
 
     assert_raise Ecto.NoResultsError, fn -> live(conn, ~p"/teams/#{team}/chores/#{chore.id}") end
   end
+
+  test "what is in D4H shows each event, and Tonight while it waits for a send", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+    chore = chore_fixture(member, category, %{date: ~D[2026-10-06], minutes: 90})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+    assert has_element?(lv, "#no-chore-events")
+
+    lv |> form("#accept-form", %{chore_ids: [to_string(chore.id)]}) |> render_submit()
+
+    event_id = Repo.get!(Chore, chore.id).chore_event_id
+    assert has_element?(lv, "#chore-event-#{event_id}", "October 2026")
+    assert has_element?(lv, "#chore-event-#{event_id}", "1h 30m")
+    assert has_element?(lv, "#chore-event-#{event_id}", "Tonight")
+  end
 end

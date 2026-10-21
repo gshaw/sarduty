@@ -37,3 +37,30 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
   reason the member sees, in any status.
+
+## The send
+
+SAR Duty sends accepted chores to D4H every night, after the team's full refresh
+([SendChoreEventsWorker](../lib/app/worker/send_chore_events_worker.ex)). There is no
+Send button: accepting a chore is the decision to write to D4H.
+
+- **One event per month and chore category**
+  ([ChoreEvent](../lib/app/model/chore_event.ex)): "Chores: Equipment maintenance,
+  October 2026", from 00:00 on the month's last day in the team's time zone, as long as
+  the largest member total.
+- **One attendance per member**, from the event's start, for their total accepted minutes
+  that month and category. The description lists every chore, grouped by member, as
+  HTML: D4H keeps lists and paragraphs but strips tables.
+- **SAR Duty owns the event and rebuilds it on each send**
+  ([BuildChoreEvent](../lib/app/operation/build_chore_event.ex)). Accepting a chore,
+  changing an accepted one, or declining it marks its event, and both events when it
+  moves. The send makes the description, the end, and each member's attendance match;
+  anyone else's attendance is deleted. D4H is read only for ids, so edits made there are
+  replaced. An event deleted in D4H is made again.
+- **Tags are set when the event is made, and never changed.** Then it is published, last,
+  since D4H locks a published activity's attendance. A later send makes it a draft,
+  changes it, and publishes it again.
+- **Each send is a change set** of source `chores`, applied by SAR Duty itself, so it
+  shows in the activity's and each member's history. A row that does not go through
+  leaves the event marked, and the next night tries again; the team's Chores page shows
+  the error.

@@ -5,6 +5,7 @@ defmodule App.Model.Chore do
   alias App.Field.TrimmedString
   alias App.Model.Chore
   alias App.Model.ChoreCategory
+  alias App.Model.ChoreEvent
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
@@ -17,6 +18,8 @@ defmodule App.Model.Chore do
     belongs_to :member, Member
     belongs_to :chore_category, ChoreCategory
     belongs_to :decided_by_user, User
+    # The D4H event it goes on, while accepted (App.Operation.SaveChore).
+    belongs_to :chore_event, ChoreEvent
     field :date, :date
     field :minutes, :integer
     # What the member did, in their words. A team admin reads it, and so does anyone who
