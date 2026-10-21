@@ -220,16 +220,12 @@ defmodule Web.TemplateFormLive do
   def handle_event("search-tags", %{"tag_q" => q}, socket),
     do: {:noreply, assign(socket, tag_q: q)}
 
-  def handle_event("add-tag", %{"id" => id}, socket) do
-    tag = Enum.find(socket.assigns.all_tags, &(Integer.to_string(&1.id) == id))
-    tags = (socket.assigns.tags ++ List.wrap(tag)) |> Enum.uniq() |> Enum.sort_by(&tag_sort/1)
-    {:noreply, assign(socket, tags: tags)}
-  end
+  def handle_event("add-tag", %{"id" => id}, socket),
+    do:
+      {:noreply, assign(socket, tags: add_tag(socket.assigns.tags, socket.assigns.all_tags, id))}
 
   def handle_event("remove-tag", %{"id" => id}, socket),
-    do:
-      {:noreply,
-       assign(socket, tags: Enum.reject(socket.assigns.tags, &(Integer.to_string(&1.id) == id)))}
+    do: {:noreply, assign(socket, tags: remove_tag(socket.assigns.tags, id))}
 
   def handle_event("add-group", %{"id" => id}, socket) do
     group = Enum.find(socket.assigns.all_groups, &(Integer.to_string(&1.id) == id))
@@ -331,6 +327,15 @@ defmodule Web.TemplateFormLive do
   end
 
   defp a_year_ago, do: DateTime.add(DateTime.utc_now(), -365, :day)
+
+  @doc "The tags with the one whose id is `id` added, by title. Shared with ActivityTagsLive."
+  def add_tag(tags, all_tags, id) do
+    tag = Enum.find(all_tags, &(Integer.to_string(&1.id) == id))
+    (tags ++ List.wrap(tag)) |> Enum.uniq() |> Enum.sort_by(&tag_sort/1)
+  end
+
+  @doc "The tags without the one whose id is `id`."
+  def remove_tag(tags, id), do: Enum.reject(tags, &(Integer.to_string(&1.id) == id))
 
   def tag_sort(tag), do: String.downcase(tag.title)
 

@@ -232,6 +232,13 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/managers", TeamManagersLive
       live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
+      live "/teams/:subdomain/settings/chore-categories", Settings.ChoreCategoryCollectionLive
+      live "/teams/:subdomain/settings/chore-categories/new", Settings.ChoreCategoryFormLive, :new
+
+      live "/teams/:subdomain/settings/chore-categories/:id",
+           Settings.ChoreCategoryFormLive,
+           :edit
+
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive

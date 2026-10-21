@@ -212,20 +212,12 @@ defmodule Web.ActivityTagsLive do
     do: {:noreply, assign(socket, tag_q: q)}
 
   def handle_event("add-tag", %{"id" => id}, socket) do
-    tag = Enum.find(socket.assigns.all_tags, &(Integer.to_string(&1.id) == id))
-
-    tags =
-      (socket.assigns.tags ++ List.wrap(tag))
-      |> Enum.uniq()
-      |> Enum.sort_by(&TemplateFormLive.tag_sort/1)
-
+    tags = TemplateFormLive.add_tag(socket.assigns.tags, socket.assigns.all_tags, id)
     {:noreply, assign(socket, tags: tags)}
   end
 
   def handle_event("remove-tag", %{"id" => id}, socket),
-    do:
-      {:noreply,
-       assign(socket, tags: Enum.reject(socket.assigns.tags, &(Integer.to_string(&1.id) == id)))}
+    do: {:noreply, assign(socket, tags: TemplateFormLive.remove_tag(socket.assigns.tags, id))}
 
   def handle_event("hours", params, socket),
     do: {:noreply, assign(socket, hours: hours_param(params, socket))}

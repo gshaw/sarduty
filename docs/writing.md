@@ -173,7 +173,10 @@ and must not be used for it.
 | endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
 | primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
 | tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
-| category                       | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type.                                          |
+| category                       | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type, and not a chore category.                |
+| chore                          | task, job, duty, volunteer hours               | Time a member gives the team outside activities, such as fixing equipment, logged by them.           |
+| chore category                 | chore type, chore kind                         | What a chore counts as, such as Equipment maintenance. Each is its own D4H event each month.         |
+| accepted, declined             | approved, rejected, counted                    | A team admin's answer on a chore. "Approved" is D4H's word for activities.                           |
 | equipment                      | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
 | item                           | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
 | template                       | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups to invite, applied to an activity in one step.       |
