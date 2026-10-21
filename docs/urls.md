@@ -32,6 +32,7 @@ enforces the top-level list and the held URLs.
 Devices, Google, Apple, and shared links hold these. They don't move.
 
 - `/wallet/v1/…`: Apple's web service path, in every issued pass.
+- `/wallet/google`: Google Wallet's save and delete callbacks, set on the pass class.
 - `/s/:code` and `/attendance/:token`: shared attendance links.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).

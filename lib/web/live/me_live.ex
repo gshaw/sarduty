@@ -61,17 +61,6 @@ defmodule Web.MeLive do
     )
   end
 
-  # Google Wallet doesn't tell SAR Duty when a card is saved, so the member closes the
-  # item themselves. Apple Wallet registers the phone, which closes it.
-  def handle_event("card-in-wallet", _params, socket) do
-    %{member: member} = socket.assigns
-
-    if card = MemberCard.find_current(member.team, member),
-      do: MemberCard.mark_in_wallet!(card, DateTime.utc_now())
-
-    {:noreply, assign_to_do(socket)}
-  end
-
   defp build_map(attendances, team, now) do
     attendances
     |> Enum.map(fn %{activity: activity} ->
@@ -286,9 +275,6 @@ defmodule Web.MeLive do
           href={~p"/teams/#{@team}/me/card/google-wallet"}
         >
           Add to Google Wallet
-        </.button>
-        <.button id="to-do-card-done" type="button" phx-click="card-in-wallet">
-          Mark as added
         </.button>
       </div>
     </li>

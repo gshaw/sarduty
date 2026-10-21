@@ -64,6 +64,12 @@ defmodule Web.Router do
     post "/log", WalletController, :log
   end
 
+  # Google Wallet's save and delete callbacks (#389), set on the pass class. Google signs
+  # the body itself; no session or CSRF token.
+  scope "/wallet/google", Web do
+    post "/", GoogleWalletController, :callback
+  end
+
   # The MCP endpoint (#28): a bearer token only, so no session, CSRF token, or Accept
   # check. The token decides the team. docs/mcp.md.
   scope "/teams/:subdomain", Web do

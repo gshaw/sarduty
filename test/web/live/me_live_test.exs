@@ -88,13 +88,14 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#to-do-empty")
     end
 
-    test "the ID card leaves once marked in Wallet, or once Apple Wallet registers it",
+    test "the ID card leaves once Apple Wallet registers it, or Google says it's saved",
          %{conn: conn, team: team, member: member} do
       card = member_card_fixture(member)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#to-do-card")
 
-      lv |> element("#to-do-card-done") |> render_click()
+      card |> Ecto.Changeset.change(in_wallet_at: DateTime.utc_now()) |> Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
       refute has_element?(lv, "#to-do-card")
 
       card |> Ecto.Changeset.change(in_wallet_at: nil) |> Repo.update!()
