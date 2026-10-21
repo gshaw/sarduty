@@ -30,9 +30,9 @@ defmodule Web.MeLive do
     team = member.team
     now = DateTime.utc_now()
 
-    groups = MemberRecords.qualifications(member, now)
+    qualifications = MemberRecords.qualifications(member, now)
     attended = MemberRecords.attended(member, now)
-    overview = MemberOverview.build(attended, groups, now, team.timezone)
+    overview = MemberOverview.build(attended, qualifications, now, team.timezone)
 
     socket =
       socket
@@ -42,7 +42,7 @@ defmodule Web.MeLive do
       |> assign(:next_up, member |> MemberRecords.signed_up(now) |> List.first())
       |> assign(:overview, overview)
       |> assign(:map, build_map(overview.last_12_months, team, now))
-      |> assign(:groups, groups)
+      |> assign(:qualifications, qualifications)
       |> assign(:milestones, build_milestones(attended, member, now))
       |> assign_to_do()
 

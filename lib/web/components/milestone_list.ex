@@ -27,7 +27,7 @@ defmodule Web.Components.MilestoneList do
     """
   end
 
-  defp title(%{kind: :hours, count: n}), do: "#{Format.number(n)} hours"
+  defp title(%{kind: :hours, count: n}), do: Format.duration(n * 60)
 
   defp title(%{kind: :years, count: n}),
     do: Format.count(n, one: "1 year on the team", many: "%d years on the team")
