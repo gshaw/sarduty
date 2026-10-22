@@ -257,6 +257,8 @@ defmodule Web.Layouts do
 
   # The top bar (#406): the area's name after the logo, with the team switcher on it when
   # you can go somewhere else, and your avatar on the right, which opens the account menu.
+  # Outside every area (home, terms, privacy), a logged-in person gets a way back to their
+  # team beside the avatar instead.
   # On a phone the Menu button holds the switcher, the area's pages, and the account menu.
   # See /styles/top-bar.
   def main_nav_bar(assigns) do
@@ -274,13 +276,14 @@ defmodule Web.Layouts do
         {[], nil}
       end
 
-    home =
-      Navigation.home_path(
-        assigns.current_user,
-        area,
-        assigns.current_team,
-        assigns.member_logins
-      )
+    back =
+      if area == nil,
+        do:
+          Navigation.back_link(
+            assigns.current_user,
+            assigns.current_team,
+            assigns.member_logins
+          )
 
     assigns =
       assign(assigns,
@@ -288,11 +291,11 @@ defmodule Web.Layouts do
         sections: sections,
         switch_rows: switch_rows,
         person: person,
-        home: home
+        back: back
       )
 
     ~H"""
-    <.site_bar size={@size} home={@home}>
+    <.site_bar size={@size}>
       <:links :if={@area}>
         <.team_switcher :if={@switch_rows != []} name={@area.name} rows={@switch_rows} />
         <span :if={@switch_rows == []} id="nav-area" class="site-bar-area">{@area.name}</span>
@@ -301,6 +304,16 @@ defmodule Web.Layouts do
         <span :if={@area} id="phone-nav-area" class="site-bar-area-phone">
           <span class="site-bar-area-name">{@area.name}</span>
         </span>
+        <.a
+          :if={@back}
+          id="nav-back"
+          kind={:custom}
+          navigate={@back.path}
+          class="site-bar-login site-bar-back"
+        >
+          <span class="truncate">{@back.label}</span>
+          <.icon name="hero-arrow-right-mini" />
+        </.a>
         <.account_menu person={@person} />
         <.site_bar_phone_menu waiting?={Enum.any?(List.flatten(@sections), & &1.count)}>
           <%= if @switch_rows != [] do %>

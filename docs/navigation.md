@@ -57,10 +57,11 @@ is left out, and so is its divider.
 
 ## The top bar
 
-- **The logo** goes to the home page when you're logged out. Logged in, it goes to the
-  Dashboard of the team you're on, else the team logging in lands on, else the team you
-  log in to as a member (`Navigation.home_path/4`). The home page sells SAR Duty; once
-  you use it, your team is home.
+- **The logo** always goes to the home page, logged in or not, so the public site is
+  never out of reach. Logged in on a page outside every area (home, terms, privacy), the
+  bar has a way back beside your avatar: "Go to" the team logging in lands on, else your
+  member team, else SAR Duty admin (`Navigation.back_link/3`). On a phone the Menu
+  button lists your teams instead.
 - **After the logo, the area's name**: the team's, SAR Duty admin, or Account settings.
 - **The team switcher** sits on the name when you can go somewhere else. Its menu, headed
   Switch team, lists SAR Duty admin first for SAR Duty admins, then each team where you

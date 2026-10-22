@@ -33,25 +33,21 @@ defmodule Web.NavigationTest do
     end
   end
 
-  describe "home_path/4" do
-    test "logged out, the logo goes to the home page" do
-      assert Navigation.home_path(nil, nil, nil, []) == "/"
+  describe "back_link/3" do
+    test "logged out, there's no way back to show" do
+      assert Navigation.back_link(nil, @team, []) == nil
     end
 
-    test "on a team, the logo goes to its Dashboard" do
-      user = %User{is_admin: true}
-      area = Navigation.area("/teams/squamish/members", @team)
-      assert Navigation.home_path(user, area, @team, []) == "/teams/squamish"
-    end
-
-    test "elsewhere, the team logging in lands on, then a member's team, then admin" do
+    test "the team logging in lands on, then a member's team, then admin" do
       user = %User{is_admin: false}
       member = %Member{team: @pemberton}
 
-      assert Navigation.home_path(user, nil, @team, [member]) == "/teams/squamish"
-      assert Navigation.home_path(user, nil, nil, [member]) == "/teams/pemberton"
-      assert Navigation.home_path(%User{is_admin: true}, %{kind: :admin}, nil, []) == "/admin"
-      assert Navigation.home_path(user, nil, nil, []) == "/"
+      assert Navigation.back_link(user, @team, [member]) ==
+               %{label: "Go to Squamish SAR", path: "/teams/squamish"}
+
+      assert Navigation.back_link(user, nil, [member]).path == "/teams/pemberton"
+      assert Navigation.back_link(%User{is_admin: true}, nil, []).path == "/admin"
+      assert Navigation.back_link(user, nil, []) == nil
     end
   end
 

@@ -156,24 +156,26 @@ defmodule Web.Navigation do
     do: current == path or String.starts_with?(current, path <> "/")
 
   @doc """
-  Where the logo goes. Logged in, it's your team rather than the public home page: the
-  team you're on, else the one logging in lands on (the last you opened, or your first),
-  else the team you log in to as a member, else SAR Duty admin for an admin. Pass the
-  `current_team` the page assigned.
+  The way back from a page outside every area (home, terms, privacy) when logged in, for
+  the bar: `%{label:, path:}` for the team logging in lands on (the last you opened, or
+  your first), else the team you log in to as a member, else SAR Duty admin for an admin;
+  nil otherwise. The logo always goes to the home page. Pass the `current_team` the page
+  assigned.
   """
-  def home_path(user, area, current_team, member_logins)
+  def back_link(user, current_team, member_logins)
 
-  def home_path(nil, _area, _current_team, _member_logins), do: ~p"/"
-  def home_path(_user, %{kind: :team, team: team}, _current_team, _logins), do: ~p"/teams/#{team}"
+  def back_link(nil, _current_team, _member_logins), do: nil
 
-  def home_path(user, _area, current_team, member_logins) do
+  def back_link(user, current_team, member_logins) do
     cond do
-      current_team -> ~p"/teams/#{current_team}"
-      member = List.first(member_logins) -> ~p"/teams/#{member.team}"
-      user.is_admin -> ~p"/admin"
-      true -> ~p"/"
+      current_team -> team_back_link(current_team)
+      member = List.first(member_logins) -> team_back_link(member.team)
+      user.is_admin -> %{label: "Go to SAR Duty admin", path: ~p"/admin"}
+      true -> nil
     end
   end
+
+  defp team_back_link(team), do: %{label: "Go to #{team.name}", path: ~p"/teams/#{team}"}
 
   @doc """
   The team switcher's rows: "SAR Duty admin" first for SAR Duty admins, then each team

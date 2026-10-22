@@ -99,6 +99,10 @@
 
   .site-bar-login:hover { color: #fff; background: rgb(255 255 255 / 0.1); }
 
+  /* Logged in on the home, terms, or privacy page: the way back to your team, beside the
+     avatar. On a phone the Menu button lists your teams instead. */
+  .site-bar-back { margin-left: auto; margin-right: 0; min-width: 0; max-width: 360px; }
+
   /* Phones and narrow windows: the links and account menu move behind a menu button. */
   .site-bar-phone { display: none; margin-left: auto; }
 
@@ -151,7 +155,7 @@
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
   @media (width < 64rem) {
-    .site-bar-links, .site-bar-menu { display: none; }
+    .site-bar-links, .site-bar-menu, .site-bar-back { display: none; }
     .site-bar-phone { display: block; }
     .site-bar-area-phone { display: flex; }
   }
