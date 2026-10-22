@@ -1,5 +1,5 @@
 defmodule Web.MeCardLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   alias App.Model.MemberCard
   alias App.Operation.BuildApplePass
@@ -8,7 +8,8 @@ defmodule Web.MeCardLive do
   # A member's ID card (#156), /teams/:subdomain/me/card: the Wallet buttons and the
   # verify link. Members don't issue cards; team admins do (docs/member-cards.md).
   def mount(_params, _session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
 
     socket =
       socket

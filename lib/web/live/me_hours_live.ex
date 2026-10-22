@@ -1,5 +1,5 @@
 defmodule Web.MeHoursLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   import Web.Components.Chart, only: [bar_list: 1]
   import Web.Components.MeYear
@@ -11,7 +11,8 @@ defmodule Web.MeHoursLive do
   # A member's primary and secondary hours for a year, /teams/:subdomain/me/hours,
   # counted as their tax credit letter counts them (docs/members.md).
   def mount(_params, _session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
 
     socket =
       socket
@@ -22,7 +23,7 @@ defmodule Web.MeHoursLive do
   end
 
   def handle_params(params, _uri, socket) do
-    %{member: member, years: years} = socket.assigns
+    %{current_member: member, years: years} = socket.assigns
     year = year!(params["year"], years)
     now = DateTime.utc_now()
 

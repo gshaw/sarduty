@@ -1,5 +1,5 @@
 defmodule Web.MeTaxCreditLettersLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   alias App.Model.TaxCreditLetter
 
@@ -8,7 +8,8 @@ defmodule Web.MeTaxCreditLettersLive do
     socket =
       socket
       |> assign(:page_title, "Tax credit letters")
-      |> assign(:letters, TaxCreditLetter.get_all_for_member(socket.assigns.member))
+      |> assign(:member, socket.assigns.current_member)
+      |> assign(:letters, TaxCreditLetter.get_all_for_member(socket.assigns.current_member))
 
     {:ok, socket}
   end

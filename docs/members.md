@@ -198,9 +198,9 @@ their last 3 activities. The numbers come from
 
 ### What must stay true
 
-- **A member page shows only the person logged in.** `member` comes from the login, in
-  `on_mount(:ensure_team_member, …)` and the `require_team_member` plug
-  ([Web.UserAuth](../lib/web/user_auth.ex)). No member page or download takes a member id
+- **A member page shows only the person logged in.** `current_member` comes from the
+  login, in `on_mount(:ensure_team_access, …)`, and `member` in the `require_team_member`
+  plug ([Web.UserAuth](../lib/web/user_auth.ex)). No member page or download takes a member id
   from the URL. A letter is found by its id and the member's id together
   ([TaxCreditLetter.find_for_member!/2](../lib/app/model/tax_credit_letter.ex)).
 - **Admins get no pass.** A SAR Duty admin reaches every team page, but not another
@@ -213,10 +213,11 @@ their last 3 activities. The numbers come from
 - **Every request checks again.** Turning member logins off, or the refresh seeing a
   member leave, ends access on the next page. Getting a card checks the login again, in
   case the page was open when access ended.
-- **Member pages are outside the team pages' `live_session`.** They set `member`, which
-  puts them in the member area ([navigation.md](navigation.md)), and never set
-  `current_team`. A team admin is a member too, and switches to their member area from
-  the account menu.
+- **Every team page is in one `live_session`** (#406), with one hook,
+  `:ensure_team_access`. `current_team` is always the URL's team. A page is for team
+  admins unless its LiveView says `access: :team` (members too) or `access: :member`
+  (members only, their own pages); see [Web](../lib/web.ex). The router test lists every
+  route a member reaches, and a sweep checks every other team route 404s for one.
 - **Members don't issue cards.** Issuing, replacing, and cancelling stay with team admins,
   on the member's ID card tab, and only on a team a SAR Duty admin turned ID cards on for
   ([member-cards.md](member-cards.md)).

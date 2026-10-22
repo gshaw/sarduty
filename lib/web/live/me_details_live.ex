@@ -1,5 +1,5 @@
 defmodule Web.MeDetailsLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   alias App.Accounts
   alias App.Adapter.D4H
@@ -19,7 +19,8 @@ defmodule Web.MeDetailsLive do
   # an answer shows its form, even after a reload. Members don't change their email here;
   # team admins do, in D4H.
   def mount(_params, session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
 
     socket =
       socket
@@ -41,7 +42,7 @@ defmodule Web.MeDetailsLive do
   end
 
   defp load(socket) do
-    case SaveOwnDetails.load(socket.assigns.member) do
+    case SaveOwnDetails.load(socket.assigns.current_member) do
       {:ok, details} ->
         form = MemberDetailsViewModel.from_details(details)
         socket |> assign(details: details, error: nil) |> assign_form(form, %{})
@@ -120,7 +121,7 @@ defmodule Web.MeDetailsLive do
   # The login is checked again, in case the team turned member logins off since the page
   # opened.
   defp with_login(socket, fun) do
-    %{current_user: user, member: member} = socket.assigns
+    %{current_user: user, current_member: member} = socket.assigns
 
     case Member.get_login(user.email, member.id, DateTime.utc_now()) do
       nil -> redirect(socket, to: ~p"/")

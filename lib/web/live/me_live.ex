@@ -1,5 +1,5 @@
 defmodule Web.MeLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   import Web.Components.ActivityMap
   import Web.Components.Chart
@@ -24,9 +24,10 @@ defmodule Web.MeLive do
 
   # A member's overview (#389), /teams/:subdomain/me: their year at a glance, as the team
   # home is for team admins, built from the same parts. `member` comes from the login
-  # (Web.UserAuth, :ensure_team_member), never from the URL. Mostly read on a phone.
+  # (Web.UserAuth, :ensure_team_access), never from the URL. Mostly read on a phone.
   def mount(_params, _session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
     team = member.team
     now = DateTime.utc_now()
 
@@ -55,7 +56,7 @@ defmodule Web.MeLive do
   end
 
   defp assign_to_do(socket) do
-    %{member: member, qualifications: qualifications, now: now} = socket.assigns
+    %{current_member: member, qualifications: qualifications, now: now} = socket.assigns
     card = MemberCard.find_current(member.team, member)
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
     letters = TaxCreditLetter.get_all_for_member(member)

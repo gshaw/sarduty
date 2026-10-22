@@ -57,17 +57,28 @@ defmodule Web do
     end
   end
 
-  def live_view_marketing_layout, do: live_view({Web.Layouts, :marketing})
-  def live_view_app_layout, do: live_view({Web.Layouts, :app})
-  def live_view_narrow_layout, do: live_view({Web.Layouts, :narrow})
-  def live_view_verify_layout, do: live_view({Web.Layouts, :verify})
+  def live_view_marketing_layout(opts \\ []), do: live_view({Web.Layouts, :marketing}, opts)
+  def live_view_app_layout(opts \\ []), do: live_view({Web.Layouts, :app}, opts)
+  def live_view_narrow_layout(opts \\ []), do: live_view({Web.Layouts, :narrow}, opts)
+  def live_view_verify_layout(opts \\ []), do: live_view({Web.Layouts, :verify}, opts)
 
   # Every layout gets the same components, so a page can move to another layout
   # without changing its imports. Components only one or two pages use are imported
   # by those pages.
-  defp live_view(layout) do
+  #
+  # `access` says who opens a page under /teams/:subdomain (#406): `:admin`, the default,
+  # for team admins; `:team` for its members too; `:member` for members only, their own
+  # pages. `use Web, {:live_view_app_layout, access: :team}`. Web.UserAuth checks it, so a
+  # page nobody marked stays closed.
+  defp live_view(layout, opts) do
+    access = Keyword.get(opts, :access, :admin)
+    true = access in [:admin, :team, :member]
+
     quote do
       use Phoenix.LiveView, layout: unquote(layout)
+
+      @doc false
+      def __team_access__, do: unquote(access)
 
       import Web.Components.A
       import Web.Components.Breadcrumbs
@@ -136,5 +147,9 @@ defmodule Web do
   """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
+  end
+
+  defmacro __using__({which, opts}) when is_atom(which) and is_list(opts) do
+    apply(__MODULE__, which, [opts])
   end
 end

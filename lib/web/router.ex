@@ -172,39 +172,16 @@ defmodule Web.Router do
       live "/admin/orgs/:id", Admin.OrganizationLive, :edit
     end
 
-    # A member's own page (#156), on a team with member logins on. Separate from the team
-    # pages, which only the team's admins reach.
-    live_session :require_team_member_session,
+    # Every team page, in one live_session so moving between them doesn't reload (#406).
+    # Each page says who opens it: team admins unless it says otherwise (Web), and a
+    # member's own pages, /me, only the member. test/web/router_test.exs lists what
+    # members reach.
+    live_session :team_session,
       session: {Web.VerifyLimit, :session, []},
       on_mount: [
         {Web.UserAuth, :mount_current_path},
         {Web.UserAuth, :ensure_authenticated},
-        {Web.UserAuth, :ensure_team_member}
-      ] do
-      live "/teams/:subdomain/me", MeLive
-      live "/teams/:subdomain/me/card", MeCardLive
-      live "/teams/:subdomain/me/qualifications", MeQualificationsLive
-      live "/teams/:subdomain/me/activities", MeActivitiesLive
-      live "/teams/:subdomain/me/hours", MeHoursLive
-      live "/teams/:subdomain/me/milestones", MeMilestonesLive
-      live "/teams/:subdomain/me/tax-credit-letters", MeTaxCreditLettersLive
-      live "/teams/:subdomain/me/details", MeDetailsLive
-    end
-
-    scope "/teams/:subdomain/me" do
-      pipe_through :require_team_member
-
-      get "/activities/:id/calendar", MeController, :calendar
-      get "/card/apple-wallet", MeController, :apple_pass
-      get "/card/google-wallet", MeController, :google_pass
-      get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
-    end
-
-    live_session :require_current_team_session,
-      on_mount: [
-        {Web.UserAuth, :mount_current_path},
-        {Web.UserAuth, :ensure_authenticated},
-        {Web.UserAuth, :ensure_authorized_team_subdomain}
+        {Web.UserAuth, :ensure_team_access}
       ] do
       live "/teams/:subdomain", TeamDashboardLive
       live "/teams/:subdomain/activities", ActivityCollectionLive
@@ -256,6 +233,24 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
+      live "/teams/:subdomain/me", MeLive
+      live "/teams/:subdomain/me/card", MeCardLive
+      live "/teams/:subdomain/me/qualifications", MeQualificationsLive
+      live "/teams/:subdomain/me/activities", MeActivitiesLive
+      live "/teams/:subdomain/me/hours", MeHoursLive
+      live "/teams/:subdomain/me/milestones", MeMilestonesLive
+      live "/teams/:subdomain/me/tax-credit-letters", MeTaxCreditLettersLive
+      live "/teams/:subdomain/me/details", MeDetailsLive
+    end
+
+    # A member's own downloads (#156). The member is always the person logged in.
+    scope "/teams/:subdomain/me" do
+      pipe_through :require_team_member
+
+      get "/activities/:id/calendar", MeController, :calendar
+      get "/card/apple-wallet", MeController, :apple_pass
+      get "/card/google-wallet", MeController, :google_pass
+      get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
     end
 
     scope "/teams/:subdomain" do

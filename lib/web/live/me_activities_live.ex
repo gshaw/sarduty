@@ -1,5 +1,5 @@
 defmodule Web.MeActivitiesLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   import Web.Components.MeYear
 
@@ -9,7 +9,8 @@ defmodule Web.MeActivitiesLive do
   # The activities a member attended in a year, newest first, and what they're signed up for
   # (#339), /teams/:subdomain/me/activities. `member` comes from the login, never the URL.
   def mount(_params, _session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
     now = DateTime.utc_now()
 
     socket =
@@ -22,7 +23,7 @@ defmodule Web.MeActivitiesLive do
   end
 
   def handle_params(params, _uri, socket) do
-    %{member: member, years: years} = socket.assigns
+    %{current_member: member, years: years} = socket.assigns
     year = year!(params["year"], years)
 
     socket =

@@ -203,7 +203,7 @@ defmodule Web.UserAuthTest do
       params = %{"subdomain" => team.subdomain}
 
       {:cont, _socket} =
-        UserAuth.on_mount(:ensure_authorized_team_subdomain, params, %{}, socket)
+        UserAuth.on_mount(:ensure_team_access, params, %{}, socket)
 
       assert Accounts.get_user!(user.id).last_seen_at
     end
@@ -211,7 +211,7 @@ defmodule Web.UserAuthTest do
     test "opening a team remembers it for the next login", %{user: user, team: team} do
       socket = %LiveView.Socket{assigns: %{__changed__: %{}, current_user: user}}
       params = %{"subdomain" => team.subdomain}
-      {:cont, _socket} = UserAuth.on_mount(:ensure_authorized_team_subdomain, params, %{}, socket)
+      {:cont, _socket} = UserAuth.on_mount(:ensure_team_access, params, %{}, socket)
 
       assert Accounts.get_user!(user.id).last_team_id == team.id
     end
@@ -234,6 +234,72 @@ defmodule Web.UserAuthTest do
       |> UserAuth.require_authorized_team_subdomain([])
 
       refute Accounts.get_user!(admin.id).last_seen_at
+    end
+  end
+
+  describe "on_mount: ensure_team_access" do
+    defp mount_team(user, team, view) do
+      socket = %LiveView.Socket{view: view, assigns: %{__changed__: %{}, current_user: user}}
+      UserAuth.on_mount(:ensure_team_access, %{"subdomain" => team.subdomain}, %{}, socket)
+    end
+
+    test "a member opens a member page, as a member and not a team admin" do
+      %{team: team, user: user, member: member} = App.DataFixtures.member_with_login_fixture()
+
+      {:cont, socket} = mount_team(user, team, Web.MeLive)
+
+      assert socket.assigns.current_team.id == team.id
+      assert socket.assigns.current_member.id == member.id
+      refute socket.assigns.team_admin?
+      assert socket.assigns.proposed_change_count == 0
+      refute Accounts.get_user!(user.id).last_seen_at
+    end
+
+    test "a member gets a 404 from a page for team admins" do
+      %{team: team, user: user} = App.DataFixtures.member_with_login_fixture()
+
+      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.TeamDashboardLive) end
+    end
+
+    test "a team admin who is a member is both, on the URL's team" do
+      %{team: team, user: user, member: member} =
+        App.DataFixtures.member_with_login_fixture(%{d4h_permission: 0})
+
+      other = App.DataFixtures.team_fixture()
+      App.DataFixtures.manager_fixture(other, %{email: user.email})
+      user = %{user | last_team_id: other.id}
+
+      {:cont, socket} = mount_team(user, team, Web.MeLive)
+      assert socket.assigns.current_team.id == team.id
+      assert socket.assigns.current_member.id == member.id
+      assert socket.assigns.team_admin?
+
+      {:cont, socket} = mount_team(user, team, Web.TeamDashboardLive)
+      assert socket.assigns.current_member.id == member.id
+    end
+
+    test "a SAR Duty admin opens a team's pages but not its member pages" do
+      admin = user_fixture(%{is_admin: true})
+      team = App.DataFixtures.team_fixture()
+
+      {:cont, socket} = mount_team(admin, team, Web.TeamDashboardLive)
+      assert socket.assigns.team_admin?
+      assert socket.assigns.current_member == nil
+
+      assert_raise Web.Status.NotFound, fn -> mount_team(admin, team, Web.MeLive) end
+    end
+
+    test "someone who is neither gets a 404", %{user: user} do
+      team = App.DataFixtures.member_logins_team_fixture()
+
+      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.MeLive) end
+      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.TeamDashboardLive) end
+    end
+
+    test "a page is for team admins unless it says otherwise" do
+      assert UserAuth.page_access(Web.TeamDashboardLive) == :admin
+      assert UserAuth.page_access(Web.MeLive) == :member
+      assert UserAuth.page_access(nil) == :admin
     end
   end
 
