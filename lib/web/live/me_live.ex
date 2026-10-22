@@ -32,6 +32,7 @@ defmodule Web.MeLive do
       socket
       |> assign(:page_title, member.name)
       |> assign(member: member, team: team, now: now)
+      |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
       |> assign_activities(attended, now)
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
@@ -141,7 +142,7 @@ defmodule Web.MeLive do
             contacts?={@contacts?}
             emergency_contact={assigns[:emergency_contact]}
           />
-          <.milestones milestones={@milestones} />
+          <.milestones milestones={@milestones} today={@today} />
         </div>
       </aside>
     </div>
@@ -328,6 +329,7 @@ defmodule Web.MeLive do
   end
 
   attr :milestones, :list, required: true
+  attr :today, Date, required: true
 
   defp milestones(assigns) do
     ~H"""
@@ -337,7 +339,12 @@ defmodule Web.MeLive do
         No milestones yet. The first comes with your first incident, 100 hours, or 1 year on
         the team.
       </p>
-      <.milestone_list :if={@milestones != []} id="milestones-list" milestones={@milestones} />
+      <.milestone_list
+        :if={@milestones != []}
+        id="milestones-list"
+        milestones={@milestones}
+        today={@today}
+      />
     </div>
     """
   end

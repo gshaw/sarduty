@@ -1,8 +1,9 @@
 defmodule Web.Components.MilestoneList do
   @moduledoc """
   A member's milestones (#389), from `App.ViewData.Milestones.build/5`: what they
-  reached and the day, with the activity that reached it. A plain list, no badges. See
-  /styles/milestone-list.
+  reached and the day, with the activity that reached it. Each kind has an icon, and one
+  reached in the last 30 days has it in amber: a small celebration, no badges or levels.
+  See /styles/milestone-list.
   """
 
   use Web, :function_component
@@ -11,21 +12,34 @@ defmodule Web.Components.MilestoneList do
 
   attr :id, :string, required: true
   attr :milestones, :list, required: true
+  attr :today, Date, default: nil, doc: "in the team's zone; nil marks none as new"
 
   def milestone_list(assigns) do
     ~H"""
-    <ul id={@id} class="divide-y divide-border-subtle">
+    <ul id={@id} class="milestone-list">
       <li
         :for={milestone <- @milestones}
         id={"#{@id}-#{milestone.kind}-#{milestone.count}"}
-        class="py-2"
+        class={new?(milestone, @today) && "is-new"}
       >
-        <span class="block font-semibold">{title(milestone)}</span>
-        <span class="hint block">{detail(milestone)}</span>
+        <span class="milestone-icon"><.icon name={icon_name(milestone.kind)} /></span>
+        <span class="min-w-0">
+          <span class="block font-semibold">{title(milestone)}</span>
+          <span class="hint block">{detail(milestone)}</span>
+        </span>
       </li>
     </ul>
     """
   end
+
+  @new_days 30
+
+  defp new?(_milestone, nil), do: false
+  defp new?(milestone, today), do: Date.diff(today, milestone.on) <= @new_days
+
+  defp icon_name(:hours), do: "hero-clock-mini"
+  defp icon_name(:years), do: "hero-cake-mini"
+  defp icon_name(:incidents), do: "hero-lifebuoy-mini"
 
   defp title(%{kind: :hours, count: n}), do: Format.duration(n * 60)
 
