@@ -90,7 +90,7 @@ defmodule Web.MeChoresLiveTest do
     {:ok, list, _html} = live(conn, ~p"/teams/#{team}/me/chores")
 
     for chore <- [waiting, declined],
-        do: Repo.update!(Ecto.Changeset.change(chore, status: :accepted))
+        do: chore |> Ecto.Changeset.change(status: :accepted) |> Repo.update!()
 
     {:ok, _lv, html} =
       edit
