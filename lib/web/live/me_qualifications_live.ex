@@ -1,5 +1,5 @@
 defmodule Web.MeQualificationsLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   alias App.Adapter.D4H
   alias App.ViewData.MemberRecords
@@ -7,7 +7,8 @@ defmodule Web.MeQualificationsLive do
 
   # A member's qualifications, soonest expiry first (#308), /teams/:subdomain/me/qualifications.
   def mount(_params, _session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
     now = DateTime.utc_now()
 
     socket =

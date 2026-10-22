@@ -253,37 +253,44 @@ defmodule Web.UserAuth do
     end
   end
 
-  # The URL's team, when the user manages it in D4H or is an admin. Otherwise a 404, so
-  # the page doesn't say whether the team exists.
-  def on_mount(:ensure_authorized_team_subdomain, params, _session, socket) do
-    current_user = socket.assigns.current_user
+  # Every page under /teams/:subdomain (#406). The URL's team is `current_team` for
+  # everyone. `team_admin?` when the user manages it in D4H or is a SAR Duty admin;
+  # `current_member` when they log in as one of its members, else nil. The page's
+  # `access` (see Web) decides who may open it: team admins only unless it says :team or
+  # :member. Anyone else gets a 404, so the page doesn't say whether the team exists.
+  def on_mount(:ensure_team_access, params, _session, socket) do
+    user = socket.assigns.current_user
+    subdomain = params["subdomain"]
+    admin_team = authorized_team(user, subdomain)
+    member = member_login(user, subdomain)
+    access = page_access(socket.view)
 
-    case authorized_team(current_user, params["subdomain"]) do
-      nil ->
-        raise Web.Status.NotFound
+    unless allowed?(access, admin_team, member), do: raise(Web.Status.NotFound)
 
-      team ->
-        RecordUserSeen.call(current_user, team.id)
+    if admin_team, do: RecordUserSeen.call(user, admin_team.id)
 
-        # How many AI agent change sets wait for a team admin, for the side navigation.
-        {:cont,
-         Phoenix.Component.assign(socket,
-           current_team: team,
-           proposed_change_count: ChangeSet.count_waiting(team.id)
-         )}
-    end
+    {:cont,
+     Phoenix.Component.assign(socket,
+       current_team: admin_team || member.team,
+       current_member: member,
+       team_admin?: admin_team != nil,
+       # How many AI agent change sets wait for a team admin, for the side navigation.
+       proposed_change_count: if(admin_team, do: ChangeSet.count_waiting(admin_team.id), else: 0)
+     )}
   end
 
-  # A member's own pages, /teams/:subdomain/me (#156): the URL's team must have member
-  # logins on and list this user as a current member. Otherwise a 404, as for team pages.
-  # Assigns `member`, with its team, which puts the page in the member's area; see
-  # Web.Navigation. `current_team` stays the team the user last managed.
-  def on_mount(:ensure_team_member, params, _session, socket) do
-    case member_login(socket.assigns.current_user, params["subdomain"]) do
-      nil -> raise Web.Status.NotFound
-      member -> {:cont, Phoenix.Component.assign(socket, :member, member)}
-    end
+  @doc "Who may open a team LiveView: `:admin` (the default), `:team`, or `:member`."
+  def page_access(nil), do: :admin
+
+  def page_access(view) do
+    if Code.ensure_loaded?(view) and function_exported?(view, :__team_access__, 0),
+      do: view.__team_access__(),
+      else: :admin
   end
+
+  defp allowed?(:admin, admin_team, _member), do: admin_team != nil
+  defp allowed?(:team, admin_team, member), do: admin_team != nil or member != nil
+  defp allowed?(:member, _admin_team, member), do: member != nil
 
   defp mount_current_user(socket, session) do
     socket
@@ -349,7 +356,7 @@ defmodule Web.UserAuth do
     end
   end
 
-  @doc "The plug for a member's own downloads, like `on_mount(:ensure_team_member, …)`."
+  @doc "The plug for a member's own downloads: `member` is the logged-in member on the URL's team."
   def require_team_member(conn, _opts) do
     case member_login(conn.assigns.current_user, conn.path_params["subdomain"]) do
       nil -> raise Web.Status.NotFound

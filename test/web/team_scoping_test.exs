@@ -92,6 +92,38 @@ defmodule Web.TeamScopingTest do
     end
   end
 
+  describe "a member who is not a team admin" do
+    # Public or bearer-token routes under /teams/:subdomain, outside the team pages.
+    @public ["/teams/:subdomain/logo", "/teams/:subdomain/mcp"]
+
+    setup %{conn: conn} do
+      %{team: team, user: user} = member_with_login_fixture()
+      %{conn: log_in_user(conn, user), member_team: team}
+    end
+
+    test "gets a 404 from every team route not listed in Web.RouterTest", %{
+      conn: conn,
+      member_team: team
+    } do
+      templates =
+        for %{verb: :get, path: "/teams/:subdomain" <> _rest = path} <- Web.Router.__routes__(),
+            path not in @public,
+            path not in Web.RouterTest.member_route_paths(),
+            uniq: true,
+            do: path
+
+      assert length(templates) > 50
+
+      for template <- templates do
+        path = template |> String.replace(":subdomain", team.subdomain) |> fill_ids()
+        assert_error_sent 404, fn -> get(conn, path) end
+      end
+    end
+  end
+
+  # Any id: the team hook refuses before the page reads one.
+  defp fill_ids(path), do: Regex.replace(~r/:[a-z_]+/, path, "1")
+
   defp path_for("/teams/:subdomain/members/:id/edit", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/edit"
 

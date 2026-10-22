@@ -1,5 +1,5 @@
 defmodule Web.MeMilestonesLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :member}
 
   import Web.Components.MilestoneList
 
@@ -11,7 +11,8 @@ defmodule Web.MeMilestonesLive do
   # Every milestone a member reached (#389), /teams/:subdomain/me/milestones, from the
   # overview's Milestones card. Worked out on load; nothing is stored.
   def mount(_params, _session, socket) do
-    member = socket.assigns.member
+    member = socket.assigns.current_member
+    socket = assign(socket, :member, member)
     now = DateTime.utc_now()
 
     milestones =
