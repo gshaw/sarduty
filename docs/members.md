@@ -248,15 +248,38 @@ hidden data makes people suspicious).
   anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
   with no redirect.
 
+### View as member
+
+A team admin opens a member's pages as the member sees them (#425), to check the data
+and find pages that break. **View as member** on the member's page
+(`POST /teams/:subdomain/members/:id/view-as`,
+[ViewAsController](../lib/web/controllers/view_as_controller.ex)) puts the member's id in
+the session and opens Your membership. It shows nothing new: team admins see every value
+on these pages already, on the member's page and its tabs.
+
+- `team_access!` in [Web.UserAuth](../lib/web/user_auth.ex) applies it. On pages members
+  open, the team admin is that member and not a team admin, so the side navigation, the
+  Dashboard, and the activity pages are the member's. Team admin pages stay the team
+  admin's. The member is looked up through the URL's team, so another team ignores it.
+- A banner on every team page names the member, with **Stop viewing**
+  (`DELETE /teams/:subdomain/view-as`), which goes back to the member's page.
+- It's read-only. Contact details turn their buttons off and refuse a save or a phone
+  change, Wallet passes redirect back, and the letter downloads without leaving the
+  member's to-do. Nothing reaches D4H and no code is sent. `viewing_as` is the assign each
+  check reads, and `UserAuth.view_as_refusal/1` the message.
+- The account menu stays the team admin's, and each start is a `member_viewed_as` event in
+  `/admin/events`, kept two years.
+
 ### What must stay true
 
-- **A member page shows only the person logged in.** `current_member` comes from the
-  login, in `on_mount(:ensure_team_access, …)`, and `member` in the `require_team_member`
-  plug ([Web.UserAuth](../lib/web/user_auth.ex)). No member page or download takes a member id
-  from the URL. A letter is found by its id and the member's id together
+- **A member page shows only the person logged in**, or the member a team admin views as.
+  `current_member` comes from the login, in `on_mount(:ensure_team_access, …)`, and
+  `member` in the `require_team_member` plug ([Web.UserAuth](../lib/web/user_auth.ex)). No
+  member page or download takes a member id from the URL. A letter is found by its id and
+  the member's id together
   ([TaxCreditLetter.find_for_member!/2](../lib/app/model/tax_credit_letter.ex)).
-- **Admins get no pass.** A SAR Duty admin reaches every team page, but not another
-  person's member page.
+- **Admins get no pass without asking.** A SAR Duty admin reaches every team page, but
+  another person's member pages only through View as member, which is read-only.
 - **Who logs in as a member is one query**:
   [Member.get_logins/2](../lib/app/model/member.ex). The team has member logins on, and
   the member is current, isn't retired, and isn't marked not a person. Two such members on

@@ -64,17 +64,53 @@ defmodule Web.Layouts do
       <div class="with-side-nav container mx-auto pt-16 px-2 mb-8">
         <.area_side_nav area={@nav_area} sections={@nav_sections} />
         <main role="main" class="side-nav-main">
+          <.view_as_banner
+            :if={assigns[:viewing_as]}
+            member={@viewing_as}
+            team={@current_team}
+            team_admin?={@team_admin?}
+          />
           <.flash_group flash={@flash} />
           {@inner_content}
         </main>
       </div>
     <% else %>
       <main role="main" class="container mx-auto pt-16 px-2 mb-8">
+        <.view_as_banner
+          :if={assigns[:viewing_as]}
+          member={@viewing_as}
+          team={@current_team}
+          team_admin?={@team_admin?}
+        />
         <.flash_group flash={@flash} />
         {@inner_content}
       </main>
     <% end %>
     <.dev_footer />
+    """
+  end
+
+  attr :member, :map, required: true
+  attr :team, :map, required: true
+  attr :team_admin?, :boolean, required: true
+
+  # On every team page while a team admin views as a member (#425), with the way out.
+  # Team admin pages stay the team admin's, and say so.
+  defp view_as_banner(assigns) do
+    ~H"""
+    <.banner kind={:warning} title={"Viewing as #{@member.name}"} id="view-as-banner" class="mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <p :if={!@team_admin?} class="mb-0">
+          This is what {@member.name} sees. Nothing you do here is saved or sent to D4H.
+        </p>
+        <p :if={@team_admin?} class="mb-0">
+          This page is yours as a team admin. Pages members see show what {@member.name} sees.
+        </p>
+        <.button id="view-as-stop" href={~p"/teams/#{@team}/view-as"} method="delete">
+          Stop viewing
+        </.button>
+      </div>
+    </.banner>
     """
   end
 
@@ -222,6 +258,7 @@ defmodule Web.Layouts do
       current_user: assigns[:current_user],
       current_team: assigns[:current_team],
       current_member: assigns[:current_member],
+      viewing_as: assigns[:viewing_as],
       team_admin?: assigns[:team_admin?] || false,
       managed_teams: assigns[:managed_teams] || [],
       member_logins: assigns[:member_logins] || [],
@@ -248,6 +285,7 @@ defmodule Web.Layouts do
   attr :current_user, :map, default: nil
   attr :current_team, :map, default: nil
   attr :current_member, :map, default: nil
+  attr :viewing_as, :map, default: nil
   attr :team_admin?, :boolean, default: false
   attr :managed_teams, :list, default: []
   attr :member_logins, :list, default: []
@@ -271,7 +309,7 @@ defmodule Web.Layouts do
            assigns.managed_teams,
            assigns.member_logins,
            area
-         ), Navigation.person(user, assigns.current_member, assigns.member_logins)}
+         ), Navigation.person(user, own_member(assigns), assigns.member_logins)}
       else
         {[], nil}
       end
@@ -323,6 +361,13 @@ defmodule Web.Layouts do
       <% end %>
     </.site_bar>
     """
+  end
+
+  # Who the account menu shows: the person logged in, never the member they view as.
+  defp own_member(%{viewing_as: nil} = assigns), do: assigns.current_member
+
+  defp own_member(assigns) do
+    Enum.find(assigns.member_logins, &(&1.team_id == assigns.current_team.id))
   end
 
   attr :name, :string, required: true

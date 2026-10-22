@@ -31,6 +31,8 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/card/apple-wallet",
     "/teams/:subdomain/members/:id/card/google-wallet",
     "/teams/:subdomain/members/:id/image",
+    # View as member (#425), a POST.
+    "/teams/:subdomain/members/:id/view-as",
     "/teams/:subdomain/groups/:id",
     "/teams/:subdomain/groups/:id/edit",
     "/teams/:subdomain/groups/:id/review",
@@ -87,9 +89,12 @@ defmodule Web.TeamScopingTest do
     test "#{template} 404s for another team's record", %{conn: conn, team: team, other: other} do
       path = path_for(unquote(template), team.subdomain, other)
 
-      assert_error_sent 404, fn -> get(conn, path) end
+      assert_error_sent 404, fn -> request(conn, unquote(template), path) end
     end
   end
+
+  defp request(conn, "/teams/:subdomain/members/:id/view-as", path), do: post(conn, path)
+  defp request(conn, _template, path), do: get(conn, path)
 
   describe "a member who is not a team admin" do
     # Public or bearer-token routes under /teams/:subdomain, outside the team pages.
@@ -122,6 +127,9 @@ defmodule Web.TeamScopingTest do
 
   # Any id: the team hook refuses before the page reads one.
   defp fill_ids(path), do: Regex.replace(~r/:[a-z_]+/, path, "1")
+
+  defp path_for("/teams/:subdomain/members/:id/view-as", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/view-as"
 
   defp path_for("/teams/:subdomain/members/:id/edit", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/edit"

@@ -262,6 +262,8 @@ defmodule Web.Router do
       get "/members/:id/card/apple-wallet", MemberCardController, :pass
       get "/members/:id/card/google-wallet", MemberCardController, :google_pass
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
+      post "/members/:id/view-as", ViewAsController, :create
+      delete "/view-as", ViewAsController, :delete
     end
   end
 end

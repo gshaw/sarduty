@@ -8,6 +8,7 @@ defmodule Web.MeDetailsLive do
   alias App.Operation.SaveOwnDetails
   alias App.ViewModel.MemberDetailsViewModel
   alias Web.LoginLimit
+  alias Web.UserAuth
 
   # A member's contact details (#156, #389), /teams/:subdomain/me/details: their mobile
   # number, then their address and emergency contacts. `member` comes from the login,
@@ -17,7 +18,8 @@ defmodule Web.MeDetailsLive do
   # D4H. Text login uses the mobile number, so a change waits for the code texted to the
   # new number. Codes count against the login limits for that number. A code waiting for
   # an answer shows its form, even after a reload. Members don't change their email here;
-  # team admins do, in D4H.
+  # team admins do, in D4H. A team admin viewing as the member (#425) sees the page with
+  # saving turned off.
   def mount(_params, session, socket) do
     member = socket.assigns.current_member
     socket = assign(socket, :member, member)
@@ -29,11 +31,16 @@ defmodule Web.MeDetailsLive do
       |> assign(:client_ip, session["client_ip"])
       |> assign(:text_login?, Accounts.text_login?())
       |> assign(:phone_form, to_form(%{"phone" => ""}, as: "phone"))
-      |> assign_pending(ChangeOwnPhone.pending(socket.assigns.current_user))
+      |> assign_pending(pending(socket.assigns))
       |> load()
 
     {:ok, socket}
   end
+
+  # The phone change waiting for a code is the logged-in user's, so a team admin viewing
+  # as a member never sees their own.
+  defp pending(%{viewing_as: nil, current_user: user}), do: ChangeOwnPhone.pending(user)
+  defp pending(_assigns), do: nil
 
   defp assign_pending(socket, e164) do
     socket
@@ -98,8 +105,11 @@ defmodule Web.MeDetailsLive do
   end
 
   def handle_event("cancel", _params, socket) do
-    :ok = ChangeOwnPhone.cancel(socket.assigns.current_user)
-    {:noreply, assign_pending(socket, nil)}
+    {:noreply,
+     with_login(socket, fn _member ->
+       :ok = ChangeOwnPhone.cancel(socket.assigns.current_user)
+       assign_pending(socket, nil)
+     end)}
   end
 
   defp confirmed(socket, member, {:phone, e164}, _ip, {:ok, _member}) do
@@ -119,7 +129,10 @@ defmodule Web.MeDetailsLive do
   defp confirmed(socket, _member, _who, _ip, {:error, text}), do: put_flash(socket, :error, text)
 
   # The login is checked again, in case the team turned member logins off since the page
-  # opened.
+  # opened. A team admin viewing as the member saves nothing.
+  defp with_login(%{assigns: %{viewing_as: %Member{} = member}} = socket, _fun),
+    do: put_flash(socket, :error, UserAuth.view_as_refusal(member))
+
   defp with_login(socket, fun) do
     %{current_user: user, current_member: member} = socket.assigns
 
@@ -164,6 +177,7 @@ defmodule Web.MeDetailsLive do
         code_form={@code_form}
         phone_form={@phone_form}
         text_login?={@text_login?}
+        viewing_as?={@viewing_as != nil}
       />
 
       <h2 class="heading mt-8">
@@ -208,7 +222,9 @@ defmodule Web.MeDetailsLive do
         <% end %>
 
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Saving…">Save details</.button>
+          <.button variant={:success} phx-disable-with="Saving…" disabled={@viewing_as != nil}>
+            Save details
+          </.button>
         </.form_actions>
       </.form>
 
@@ -230,7 +246,7 @@ defmodule Web.MeDetailsLive do
         Include the area code, like 604-555-1234.
       </.input>
       <.form_actions>
-        <.button phx-disable-with="Sending…">Send code</.button>
+        <.button phx-disable-with="Sending…" disabled={@viewing_as?}>Send code</.button>
       </.form_actions>
     </.form>
     <p :if={!@text_login?} id="phone-off" class="hint">

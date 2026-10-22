@@ -17,7 +17,7 @@ enforces the top-level list and the held URLs.
   (`/me/activities?year=`), Contact details (`/me/details`), their photo (`/me/image`),
   and their downloads under it (#156, #406). Add to calendar is the activity's own,
   `/teams/:subdomain/activities/:id/calendar`, for anyone on the team. It names the team; the member is always the
-  person logged in. The old `/me/card`, `/me/qualifications`, `/me/hours`,
+  person logged in, or the member a team admin views as (#425). The old `/me/card`, `/me/qualifications`, `/me/hours`,
   `/me/milestones`, and `/me/tax-credit-letters` pages are gone with no redirects. See
   [members.md](members.md).
 - **Organizations are `/orgs/:slug`** on both sites. Admin pages use the id:
