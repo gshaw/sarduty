@@ -307,7 +307,7 @@ defmodule Web.EquipmentLiveTest do
     assert_received {:d4h_write, %{"equipmentId" => truck_id} = truck_json}
     assert truck_id == ctx.truck.d4h_equipment_id
     refute Map.has_key?(truck_json, "duration")
-    assert truck_json["distance"] == 35
+    assert truck_json["distance"] == 35_000
     assert_received {:d4h_write, %{"equipmentId" => radio_id, "duration" => 60}}
     assert radio_id == ctx.radio.d4h_equipment_id
 

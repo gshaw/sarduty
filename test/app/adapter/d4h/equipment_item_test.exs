@@ -71,4 +71,18 @@ defmodule App.Adapter.D4H.EquipmentItemTest do
     assert usage.d4h_equipment_id == 377_251
     assert usage.minutes == 60
   end
+
+  test "a vehicle's usage comes in meters and keeps whole km" do
+    usage =
+      EquipmentUsage.build(%{
+        "id" => 638_651,
+        "activity" => %{"id" => 369_989, "resourceType" => "Incident"},
+        "equipment" => %{"id" => 377_252, "ref" => "SOUTH FRASER 2"},
+        "duration" => nil,
+        "distance" => 244_000,
+        "used" => 0
+      })
+
+    assert usage.distance == 244
+  end
 end
