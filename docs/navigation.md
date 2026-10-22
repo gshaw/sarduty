@@ -49,9 +49,19 @@ the account menu and no area name.
 - Breadcrumbs start at the section, never the team, and a section's own page has none.
   A record's tabs sit under its title, above both columns.
 - The bar says Team area or Member area after the team's name, as the account menu does.
-- Below 1024px the side navigation hides. The Menu button holds the area's pages, then
-  the account menu's list. The bar's label stays beside the logo on one line when it fits;
-  a long name moves the area, kept whole, to a second line.
+- Below 1024px the side navigation hides. The Menu button holds the area switch, then the
+  area's pages, then your email, Your settings, and Log out. The bar's label stays beside
+  the logo on one line when it fits; a long name moves the area, kept whole, to a second
+  line.
+
+## The area switch
+
+On a phone the account menu's areas move to the top of the Menu panel, so the other area
+is one tap away instead of below the area's pages (`Navigation.switch_rows/4`). Each team
+is a row of buttons, one for each of its areas you have, A to Z, after a row for Admin
+under SAR Duty. A row has the team's name above it only when there are two or more rows,
+since the bar names the team. With one area there is nothing to switch to, so no switch.
+The current area's button is white; a team opened from Admin → Teams marks nothing.
 
 ## Adding a page
 

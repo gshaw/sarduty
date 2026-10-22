@@ -55,8 +55,9 @@ defmodule Web.TeamNavigationTest do
     refute has_element?(lv, "#side-nav-admin-teams[aria-current]")
   end
 
-  test "phones get the area's pages and the account menu behind a Menu button",
+  test "phones get the area switch, the area's pages, and the account menu behind a Menu button",
        %{conn: conn, team: team} do
+    team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
     assert has_element?(lv, "#phone-menu #phone-menu-button", "Menu")
@@ -68,7 +69,14 @@ defmodule Web.TeamNavigationTest do
            )
 
     assert has_element?(lv, "#phone-menu #phone-nav-members[aria-current=page]")
-    assert has_element?(lv, "#phone-menu #phone-nav-team-#{team.subdomain}[aria-current=page]")
+    assert has_element?(lv, "#phone-menu #area-switch-team-#{team.subdomain}[aria-current=page]")
+
+    assert has_element?(
+             lv,
+             ~s{#phone-menu #area-switch-member-#{team.subdomain}[href="/teams/#{team.subdomain}/me"]}
+           )
+
+    refute has_element?(lv, "#phone-nav-team-#{team.subdomain}")
     assert has_element?(lv, ~s{#phone-menu #phone-nav-your-settings[href="/account"]})
     assert has_element?(lv, ~s{#phone-menu #phone-nav-log-out[href="/logout"]})
     refute has_element?(lv, "#phone-nav-admin")

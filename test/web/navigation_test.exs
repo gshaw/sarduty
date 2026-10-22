@@ -131,4 +131,58 @@ defmodule Web.NavigationTest do
                ])
     end
   end
+
+  describe "switch_rows/4" do
+    @pemberton %Team{id: 2, name: "Pemberton SAR", subdomain: "pemberton"}
+
+    defp rows(rows),
+      do:
+        for(
+          row <- rows,
+          do: {row.heading, for(link <- row.links, do: {link.label, link.current})}
+        )
+
+    test "one team with both areas is one row with no heading, the current area marked" do
+      area = Navigation.area("/teams/squamish/me", nil, %Member{team: @team})
+
+      assert [%{links: [%{path: "/teams/squamish"}, %{path: "/teams/squamish/me"}]}] =
+               rows = Navigation.switch_rows(false, [@team], [%Member{team: @team}], area)
+
+      assert rows(rows) == [{nil, [{"Team area", false}, {"Member area", true}]}]
+    end
+
+    test "one area is nothing to switch to" do
+      area = Navigation.area("/teams/squamish/me", nil, %Member{team: @team})
+      assert Navigation.switch_rows(false, [], [%Member{team: @team}], area) == []
+      assert Navigation.switch_rows(true, [], [], Navigation.area("/admin", nil, nil)) == []
+    end
+
+    test "two teams each get a row under their name, A to Z, with the areas each offers" do
+      area = Navigation.area("/teams/squamish", @team, nil)
+
+      assert area
+             |> then(&Navigation.switch_rows(false, [@team], [%Member{team: @pemberton}], &1))
+             |> rows() == [
+               {"Pemberton SAR", [{"Member area", false}]},
+               {"Squamish SAR", [{"Team area", true}]}
+             ]
+    end
+
+    test "a SAR Duty admin gets a row for Admin first" do
+      area = Navigation.area("/admin/orgs", nil, nil)
+
+      assert area
+             |> then(&Navigation.switch_rows(true, [@team], [], &1))
+             |> rows() == [
+               {"SAR Duty", [{"Admin", true}]},
+               {"Squamish SAR", [{"Team area", false}]}
+             ]
+    end
+
+    test "a team that isn't yours marks nothing" do
+      area = Navigation.area("/teams/pemberton", @pemberton, nil)
+      rows = Navigation.switch_rows(true, [@team], [%Member{team: @team}], area)
+      refute Enum.any?(rows, fn row -> Enum.any?(row.links, & &1.current) end)
+    end
+  end
 end
