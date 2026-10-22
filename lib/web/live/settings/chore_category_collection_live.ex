@@ -29,7 +29,7 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
     <.team_settings_tabs team={@current_team} current={:chore_categories} />
     <div class="heading-row">
       <p class="lead measure">
-        Members pick a category when they log a chore. Each month, each category is its own D4H event.
+        Members pick a category when they log a chore. Each send makes one D4H activity for each category and year.
       </p>
       <.button
         id="chore-category-add"

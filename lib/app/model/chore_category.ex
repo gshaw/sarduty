@@ -7,8 +7,8 @@ defmodule App.Model.ChoreCategory do
   alias App.Model.Team
   alias App.Repo
 
-  # What a member picks when they log a chore (#341). Each month, each category is its own
-  # D4H event, tagged with its hours tag and its other tags when the event is made. The
+  # What a member picks when they log a chore (#341). Each send makes one D4H event per
+  # category and year, tagged with its hours tag and its other tags when the event is made. The
   # hours tag is a kind, not a title, so a renamed hours tag still works. Archived, never
   # deleted: old chores keep their category, and members cannot pick it.
   schema "chore_categories" do

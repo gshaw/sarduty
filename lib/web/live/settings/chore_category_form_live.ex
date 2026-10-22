@@ -95,7 +95,7 @@ defmodule Web.Settings.ChoreCategoryFormLive do
           </p>
 
           <.warning_text :if={@category} class="mt-4">
-            Tag changes go on next month's events. Events already in D4H keep their tags.
+            Tag changes go on activities sent from now on. Activities already in D4H keep their tags.
           </.warning_text>
 
           <.form_actions>

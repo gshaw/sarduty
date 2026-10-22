@@ -1,8 +1,8 @@
 defmodule App.Repo.Migrations.CreateChoreCategories do
   use Ecto.Migration
 
-  # Chore categories (#341): what a member picks when they log a chore. Each is its own
-  # D4H event per month, with an hours tag and other tags. Archived, never deleted, so old
+  # Chore categories (#341): what a member picks when they log a chore. A send makes one
+  # D4H event per category and year, with an hours tag and other tags. Archived, never deleted, so old
   # chores keep theirs.
   def change do
     create table(:chore_categories) do
