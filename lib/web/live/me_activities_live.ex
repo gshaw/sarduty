@@ -1,6 +1,7 @@
 defmodule Web.MeActivitiesLive do
   use Web, {:live_view_app_layout, access: :member}
 
+  import Web.Components.ActivityMap
   import Web.Components.Chart, only: [bar_list: 1]
   import Web.Components.MeYear
   import Web.Components.MemberLetter
@@ -9,11 +10,14 @@ defmodule Web.MeActivitiesLive do
   alias App.Model.Activity
   alias App.Model.TaxCreditLetter
   alias App.ViewData.MemberRecords
+  alias App.ViewData.TeamDashboardCharts
   alias Service.Format
+  alias Web.Components.ActivityMap
 
   # The year page (#339, #406), /teams/:subdomain/me/activities?year=2025: every activity
-  # the member attended in a year, that year's tax credit letter, and its primary,
-  # secondary, and other hours. `current_member` comes from the login, never the URL.
+  # the member attended in a year, that year's tax credit letter, its primary, secondary,
+  # and other hours, and where they went. `current_member` comes from the login, never
+  # the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.current_member
     now = DateTime.utc_now()
@@ -42,8 +46,26 @@ defmodule Web.MeActivitiesLive do
       |> assign(:attendances, attendances)
       |> assign(:letter, Enum.find(socket.assigns.letters, &(&1.year == year)))
       |> assign(:bars, bars(hours, MemberRecords.other_minutes(attendances, hours_tags)))
+      |> assign(:map, where_they_went(attendances, member.team, now))
 
     {:noreply, socket}
+  end
+
+  # The Dashboard's map, with only the activities the member attended that year.
+  defp where_they_went(attendances, team, now) do
+    attendances
+    |> Enum.map(& &1.activity)
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.map(fn activity ->
+      %{
+        title: activity.title,
+        kind: TeamDashboardCharts.kind(activity.activity_kind),
+        started_at: activity.started_at,
+        coordinate: activity.coordinate
+      }
+    end)
+    |> TeamDashboardCharts.map_points(team, now)
+    |> ActivityMap.build({520, 380}, padding: 24)
   end
 
   defp bars(hours, other) do
@@ -64,18 +86,31 @@ defmodule Web.MeActivitiesLive do
     <h1 class="title">Your activities in {@year}</h1>
     <.year_switch years={@years} year={@year} path={~p"/teams/#{@team}/me/activities"} />
 
-    <div class="flex flex-col gap-4 mt-6 mb-6">
-      <section :if={@letter || @year == @this_year} class="card side-card">
-        <.member_letter id="letter" team={@team} letter={@letter} year={@year} />
-      </section>
-      <section id="hours" class="card">
-        <header class="heading-row mb-2">
-          <h2 class="chart-title">Hours in {@year}</h2>
-          <span id="activity-count" class="hint">
-            {Format.count(length(@attendances), one: "1 activity", many: "%d activities")}
-          </span>
+    <div class="card-grid mt-6 mb-6">
+      <div class={["card-stack", @map && "span-7"]}>
+        <section :if={@letter || @year == @this_year} class="card side-card">
+          <.member_letter id="letter" team={@team} letter={@letter} year={@year} />
+        </section>
+        <section id="hours" class="card">
+          <header class="heading-row mb-2">
+            <h2 class="chart-title">Hours in {@year}</h2>
+            <span id="activity-count" class="hint">
+              {Format.count(length(@attendances), one: "1 activity", many: "%d activities")}
+            </span>
+          </header>
+          <.bar_list id="hours-bars" rows={@bars} />
+        </section>
+      </div>
+      <section :if={@map} id="where-you-went" class="card span-5">
+        <header>
+          <h2 class="chart-title">Where you went in {@year}</h2>
         </header>
-        <.bar_list id="hours-bars" rows={@bars} />
+        <.activity_map
+          id="year-map"
+          map={@map}
+          label={"Map of your activities in #{@year}"}
+          overlay={false}
+        />
       </section>
     </div>
 

@@ -154,6 +154,31 @@ defmodule Web.MeActivitiesLiveTest do
     end
   end
 
+  test "maps where the member went that year, and has no map without a place",
+       %{conn: conn, team: team, member: member, mid_year: mid_year} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
+    refute has_element?(lv, "#where-you-went")
+
+    activity =
+      activity_fixture(team, %{
+        title: "Rope rescue",
+        coordinate: "49.335,-123.045",
+        started_at: mid_year
+      })
+
+    attendance_fixture(activity, member, %{started_at: mid_year})
+    elsewhere = activity_fixture(team, %{coordinate: "49.36,-123.02", started_at: mid_year})
+    attendance_fixture(elsewhere, member_fixture(team), %{started_at: mid_year})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
+    assert has_element?(lv, "#where-you-went h2", "Where you went in")
+
+    # One dot, for the activity the member attended.
+    map = lv |> element("#year-map") |> render()
+    assert map =~ "Rope rescue"
+    assert map |> String.split("<circle") |> length() == 2
+  end
+
   test "links each of the year's activities to D4H",
        %{conn: conn, team: team, member: member, mid_year: mid_year} do
     activity = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})

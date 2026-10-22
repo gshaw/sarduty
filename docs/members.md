@@ -201,6 +201,8 @@ Activities.
 - **Hours in the year**: the count of activities, then bars for primary, secondary, and
   other hours. Primary and secondary count as the letter does (`CountTaxCreditHours`), so
   they match it. Other is the time on activities with neither hours tag.
+- **Where they went that year**: the Dashboard's map with only the activities they
+  attended, beside the letter and the hours. No map when none of them has a place.
 - **Every attended activity**, newest first, with which hours it counts for. Coming
   sign-ups are not here: Next up and the team's Activities have them.
 
