@@ -11,7 +11,6 @@ defmodule Web.MeLive do
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
-  alias App.Operation.SaveOwnDetails
   alias App.ViewData.MemberRecords
   alias App.ViewData.Milestones
   alias Service.Format
@@ -39,8 +38,6 @@ defmodule Web.MeLive do
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, member |> milestones(attended, now) |> Enum.take(5))
-      |> assign(:contacts?, "primary_emergency_contact" in SaveOwnDetails.fields(team))
-      |> assign_emergency_contact()
 
     {:ok, socket}
   end
@@ -81,21 +78,6 @@ defmodule Web.MeLive do
       now,
       member.team.timezone
     )
-  end
-
-  # Emergency contacts are never copied (docs/members.md), so read from D4H after the
-  # page shows, as Contact details does.
-  defp assign_emergency_contact(%{assigns: %{contacts?: false}} = socket), do: socket
-
-  defp assign_emergency_contact(socket) do
-    member = socket.assigns.member
-
-    assign_async(socket, :emergency_contact, fn ->
-      case SaveOwnDetails.load(member) do
-        {:ok, details} -> {:ok, %{emergency_contact: details.primary_emergency_contact}}
-        {:error, text} -> {:error, text}
-      end
-    end)
   end
 
   def render(assigns) do
@@ -140,8 +122,6 @@ defmodule Web.MeLive do
           <.contact_details
             team={@team}
             member={@member}
-            contacts?={@contacts?}
-            emergency_contact={assigns[:emergency_contact]}
           />
           <.milestones milestones={@milestones} today={@today} />
         </div>
@@ -199,7 +179,7 @@ defmodule Web.MeLive do
           {Format.duration(MemberRecords.minutes(attendance))}
         </:col>
       </.table>
-      <p :if={@activities != []} class="mt-2">
+      <p :if={@activities != []} class="action mt-2">
         <.a
           id="all-activities"
           navigate={~p"/teams/#{@team}/me/activities?year=#{@latest_year}"}
@@ -295,9 +275,8 @@ defmodule Web.MeLive do
 
   attr :team, :map, required: true
   attr :member, :map, required: true
-  attr :contacts?, :boolean, required: true
-  attr :emergency_contact, :any, default: nil
-
+  # No emergency contact: SAR Duty never copies them (docs/members.md), and reading D4H
+  # would hold up the page. Contact details reads and changes them.
   defp contact_details(assigns) do
     ~H"""
     <div id="contact-details">
@@ -307,20 +286,8 @@ defmodule Web.MeLive do
         <dd id="contact-mobile">{@member.phone || "None"}</dd>
         <dt>Address</dt>
         <dd id="contact-address">{@member.address || "None"}</dd>
-        <%= if @contacts? do %>
-          <dt>Emergency contact</dt>
-          <dd id="contact-emergency">
-            <.async_result :let={contact} assign={@emergency_contact}>
-              <:loading><span class="hint">Reading {D4H.service_name(@team)}…</span></:loading>
-              <:failed :let={_failure}>
-                <span class="hint">SAR Duty cannot reach {D4H.service_name(@team)}.</span>
-              </:failed>
-              {contact_line(contact)}
-            </.async_result>
-          </dd>
-        <% end %>
       </dl>
-      <p class="mb-0">
+      <p class="action mb-0">
         <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>
           Change contact details
         </.a>
@@ -349,19 +316,6 @@ defmodule Web.MeLive do
     </div>
     """
   end
-
-  # "Jo Rivera (Partner) · 604-555-0101", or None when D4H has no contact.
-  defp contact_line(%{"name" => name} = contact) when is_binary(name) do
-    name =
-      case contact["relation"] do
-        relation when relation in [nil, ""] -> name
-        relation -> "#{name} (#{relation})"
-      end
-
-    [name, contact["primary_phone"]] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
-  end
-
-  defp contact_line(_contact), do: "None"
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 

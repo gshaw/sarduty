@@ -11,11 +11,18 @@ defmodule Web.MeLiveTest do
 
   setup %{conn: conn} do
     %{team: team, member: member, user: user} = member_with_login_fixture()
-    stub_d4h(nil)
+    test_pid = self()
+
+    # The page reads nothing from D4H; a read would show here.
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      send(test_pid, {:d4h_read, conn.request_path})
+      Req.Test.json(conn, %{})
+    end)
+
     %{conn: log_in_user(conn, user), team: team, member: member, user: user}
   end
 
-  # The page, once the emergency contact read is done, so it can't outlive the test.
+  # The page, once anything it loads after showing is done, so it can't outlive the test.
   defp open(conn, path) do
     {:ok, lv, _html} = live(conn, path)
     render_async(lv)
@@ -41,18 +48,6 @@ defmodule Web.MeLiveTest do
     })
   end
 
-  # D4H answers the emergency contact read with the member.
-  defp stub_d4h(contact) do
-    Req.Test.stub(App.Adapter.D4H, fn conn ->
-      Req.Test.json(conn, %{
-        "id" => 1,
-        "deprecatedAddress" => "1 Main St",
-        "primaryEmergencyContact" => contact,
-        "secondaryEmergencyContact" => nil
-      })
-    end)
-  end
-
   describe "Your membership" do
     test "is the member's own page in the team's space", %{conn: conn, team: team, member: member} do
       lv = open(conn, ~p"/teams/#{team}/me")
@@ -74,8 +69,6 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#all-activities")
       assert has_element?(lv, "#no-card")
       refute has_element?(lv, "#letter")
-      assert has_element?(lv, "#contact-details", "Emergency contact")
-      assert has_element?(lv, "#contact-emergency", "None")
     end
 
     test "the 10 latest activities from any year, and a link to the latest one's year",
@@ -169,23 +162,18 @@ defmodule Web.MeLiveTest do
              )
     end
 
-    test "contact details, with the emergency contact read from D4H",
+    test "contact details, with no emergency contact, so the page never reads D4H",
          %{conn: conn, team: team, member: member} do
       member
       |> Ecto.Changeset.change(phone: "604-555-0188", address: "2140 Fern Street")
       |> Repo.update!()
 
-      stub_d4h(%{
-        "name" => "Jo Rivera",
-        "relation" => "Partner",
-        "primaryPhone" => "604-555-0101"
-      })
-
       lv = open(conn, ~p"/teams/#{team}/me")
 
       assert has_element?(lv, "#contact-mobile", "604-555-0188")
       assert has_element?(lv, "#contact-address", "2140 Fern Street")
-      assert has_element?(lv, "#contact-emergency", "Jo Rivera (Partner) · 604-555-0101")
+      refute has_element?(lv, "#contact-emergency")
+      refute_received {:d4h_read, _path}
       assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
     end
 
