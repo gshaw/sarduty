@@ -9,7 +9,7 @@ The system of record. Each team has an API host (its region) and a bearer token,
 the database; there is no D4H environment variable. Access keys come from D4H personal
 access tokens ([how to get one](https://help.d4h.com/article/377-obtaining-an-api-access-key)).
 Reads are everywhere. Every write is a [change set](change-sets.md): attendance from the
-door, a pasted report, or an agent's proposal, and group membership adds and removes. See
+door or an agent's proposal, and group membership adds and removes. See
 [d4h-sync.md](d4h-sync.md).
 
 ## SAR Duty Records

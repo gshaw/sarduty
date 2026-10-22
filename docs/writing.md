@@ -198,7 +198,6 @@ and must not be used for it.
 | can't make it                  | absent, declined, can't go, not going          | A member's no to an activity that hasn't started: Absent in D4H.                                     |
 | no reply                       | unconfirmed, pending, requested                | Invited, with no answer yet: Requested in D4H.                                                       |
 | absent                         | can't make it, missing                         | D4H's status for a member who did not come to an activity that has started.                          |
-| import attendance              | upload, sync attendance                        | Reading a SAR Assist attendance report to change D4H attendance.                                     |
 | log in, log out                | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
 | sign up                        | register, create account, signup (as a verb)   | Making a new account.                                                                                |
 | email                          | e-mail, mail, email address (as a label)       | The label is "Email".                                                                                |

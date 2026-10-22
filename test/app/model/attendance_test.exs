@@ -39,9 +39,7 @@ defmodule App.Model.AttendanceTest do
     "lib/app/operation/build_mileage_report.ex" => "one activity's attendees",
     "lib/app/view_data/change_history.ex" => "a label",
     "lib/web/live/proposed_change_live.ex" => "a label",
-    "lib/web/live/activity_take_attendance_live.ex" => "a label",
-    "lib/web/live/activity_attendance_live.ex" => "one activity's rows, sign-ups included",
-    "lib/web/components/attendance_table.ex" => "a label"
+    "lib/web/live/activity_take_attendance_live.ex" => "a label"
   }
 
   test "only Attendance says what attended means" do

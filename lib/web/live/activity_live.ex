@@ -266,11 +266,6 @@ defmodule Web.ActivityLive do
             </.a>
           </li>
           <li>
-            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}>
-              Import attendance
-            </.a>
-          </li>
-          <li>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>
               Mileage report
             </.a>

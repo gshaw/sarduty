@@ -204,17 +204,6 @@ defmodule Web.StyleGuideHTML.SampleData do
     ]
   end
 
-  # The recommended changes on Import attendance, as {op, D4H attendance id, member}.
-  def recommendations do
-    [
-      {:add, 1, %{name: "Avery Chen", email: "avery@example.com", phone: "604-555-0101"}},
-      {:add, 2, %{name: "Casey Dhillon", email: "casey@example.com", phone: "604-555-0123"}},
-      {:remove, 3, %{name: "Devon Okafor", email: "devon@example.com", phone: "604-555-0131"}},
-      {:not_invited, nil,
-       %{name: "Jordan Park", email: "jordan@example.com", phone: "604-555-0177"}}
-    ]
-  end
-
   # A group's rules, its editor's rows, and its menu, in the shapes
   # Web.Components.GroupRule takes.
   def rule_sentence_rules do

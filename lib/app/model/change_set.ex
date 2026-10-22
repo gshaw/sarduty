@@ -24,6 +24,7 @@ defmodule App.Model.ChangeSet do
     # (docs/records.md). :member is a member changing their own details (#156).
     # :equipment adds or removes items on an activity (#271). :template invites a template's groups
     # to an activity (#162). :tags sets an activity's tags from its tags page (#323).
+    # :attendance_import is only on old rows: the page that made them is gone (#424).
     field :source, Ecto.Enum,
       values: [
         :door,

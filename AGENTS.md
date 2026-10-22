@@ -60,9 +60,8 @@
 
 - **D4H v3 API**: [lib/app/adapter/d4h.ex](lib/app/adapter/d4h.ex). Each team has its own
   API host (region) and bearer token. Almost everything reads. Every write is a change
-  set, applied by `App.Operation.ApplyChangeSet`: attendance from the door and from a
-  pasted report, group membership adds and removes, equipment on an activity, and a
-  Records team's edits. See
+  set, applied by `App.Operation.ApplyChangeSet`: attendance from the door, group
+  membership adds and removes, equipment on an activity, and a Records team's edits. See
   [docs/change-sets.md](docs/change-sets.md). How the local copy is kept fresh is in
   [docs/d4h-sync.md](docs/d4h-sync.md).
 - **SAR Duty Records**: teams without D4H keep their records in a separate app,
@@ -170,8 +169,8 @@ fi
 - **One module per file**, named after the module in snake_case. Folders are snake_case
   too.
 - **New side effects go in an Operation**, not a LiveView `handle_event`. Some older
-  LiveViews call the D4H adapter directly (`ActivityAttendanceLive`,
-  `ActivityMileageLive`, `Settings.TeamLive`); don't copy that.
+  LiveViews call the D4H adapter directly (`ActivityMileageLive`, `Settings.TeamLive`);
+  don't copy that.
 - **Every D4H write is a change set.** Build rows with `ChangeSet.propose!/2` and apply
   them with `ApplyChangeSet.call/4`. Never call D4H's write functions from anywhere
   else; a test fails if you do.

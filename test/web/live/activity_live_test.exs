@@ -78,7 +78,7 @@ defmodule Web.ActivityLiveTest do
     test "sends its D4H pages back to the activity", %{conn: conn, team: team, activity: activity} do
       activity_path = ~p"/teams/#{team}/activities/#{activity.id}"
 
-      for page <- ["take-attendance", "attendance", "mileage"] do
+      for page <- ["take-attendance", "mileage"] do
         assert {:error, {:live_redirect, %{to: ^activity_path}}} =
                  live(conn, "#{activity_path}/#{page}")
       end

@@ -194,9 +194,9 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   skips a kind D4H returns none of. If D4H lists one again, the mark clears.
 - Deleted activities are left out of the activity list, its years, the dashboard count,
   and letter hours. D4H already returns no attendance for them, so the attendance stage
-  deletes theirs. Their page says "Deleted in D4H" and offers no actions. Take attendance,
-  import attendance, and the mileage report send you back to it, an attendance link on one
-  takes no scans, and `SendAttendanceToD4H` refuses it.
+  deletes theirs. Their page says "Deleted in D4H" and offers no actions. Take attendance
+  and the mileage report send you back to it, an attendance link on one takes no scans,
+  and `SendAttendanceToD4H` refuses it.
 - Endorsements and group rules are never deleted by the sync. A rule for a deleted group
   is left unused; an endorsement naming a deleted qualification shows a warning on the
   endorsements page and on every group page that uses it.

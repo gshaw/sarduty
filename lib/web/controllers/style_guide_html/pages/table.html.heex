@@ -121,6 +121,35 @@
     <li>Rows in groups are not striped: the title rows already break them up.</li>
   </ul>
 
+  <h2>Select all</h2>
+  <p>
+    A list of changes to review, with a checkbox on each row and one button that sends the checked rows.
+  </p>
+  <div class="example" onsubmit="return false">
+    <form>
+      <.table id="sample-select-all" rows={rule_preview()} class="table-striped">
+        <:col :let={{name, _why, _detail, _days}} label="" class="w-px" select_all>
+          <input type="checkbox" name={name} aria-label={name} checked />
+        </:col>
+        <:col :let={{name, _why, _detail, _days}} label="Member">{name}</:col>
+        <:col :let={{_name, why, _detail, _days}} label="Why">{why}</:col>
+      </.table>
+    </form>
+  </div>
+  <ul>
+    <li>Every change starts checked. Uncheck one to leave it out.</li>
+    <li>
+      The checkbox in the header checks or unchecks them all, to send only a few. It shows a
+      dash when only some are checked.
+    </li>
+    <li>A row that can't change says why with a tag, and has no checkbox.</li>
+    <li>One button sends the checked changes.</li>
+  </ul>
+  <p>
+    As on Take attendance, a proposed change set, and a group's review. Give the checkbox
+    column <code>select_all</code>, as in <code>&lt;:col select_all&gt;</code>.
+  </p>
+
   <h2>In the app</h2>
   <p>
     <code>&lt;.table id="…" rows=&#123;…&#125; sort=&#123;@sort&#125; path_fn=&#123;@path_fn&#125;&gt;</code>
