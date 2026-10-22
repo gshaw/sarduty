@@ -52,7 +52,8 @@ defmodule Web.Layouts do
   end
 
   # Team and admin pages put their area's pages down the left. Account settings has one
-  # page, so no side navigation.
+  # page, so no side navigation. No footer: its links are for visitors, and the public
+  # pages have it.
   def app(assigns) do
     {area, sections} = assigns |> nav_assigns() |> navigation()
     assigns = assign(assigns, nav_area: area, nav_sections: sections)
@@ -73,7 +74,7 @@ defmodule Web.Layouts do
         {@inner_content}
       </main>
     <% end %>
-    <.site_footer current_user={@current_user} />
+    <.dev_footer />
     """
   end
 
@@ -138,19 +139,33 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <.dev_footer />
+    <.dev_footer size={:narrow} />
     """
   end
 
-  # Login and settings pages have no footer, but in dev the mailbox is where login codes go.
+  attr :size, :atom, values: ~w(wide narrow)a, default: :wide
+
+  # App and login pages have no footer, but in dev the mailbox is where login codes go.
   defp dev_footer(assigns) do
-    assigns = assign(assigns, mailbox?: dev_mailbox?())
+    assigns =
+      assign(assigns,
+        dev_routes?: Application.get_env(:sarduty, :dev_routes) == true,
+        mailbox?: dev_mailbox?()
+      )
 
     ~H"""
-    <footer :if={@mailbox?} id="dev-footer" class="max-w-md m-auto px-2 mb-8 text-sm">
+    <footer
+      :if={@dev_routes?}
+      id="dev-footer"
+      class={["m-auto px-2 mb-8 text-sm", if(@size == :narrow, do: "max-w-md", else: "container")]}
+    >
       <p class="pt-4 border-t border-border-subtle">
         Development:
-        <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+        <.a href="/dev/dashboard" external={true}>Dashboard</.a>
+        <%= if @mailbox? do %>
+          ·
+          <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+        <% end %>
       </p>
     </footer>
     """
@@ -164,7 +179,7 @@ defmodule Web.Layouts do
 
   attr :current_user, :map, default: nil
 
-  # The main site's footer. The verify site is a separate host, so its link is a full URL.
+  # The public pages' footer. The verify site is a separate host, so its link is a full URL.
   defp site_footer(assigns) do
     assigns =
       assign(assigns,

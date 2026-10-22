@@ -14,7 +14,10 @@ decides all of it from the page's path and assigns. It is pure, and
   `current_team`, with `team_admin?` and `current_member`. There is no separate member
   area.
 - **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams, Organizations, and ID cards,
-  then Admins, Events, and MCP.
+  then Admins, Events, and MCP, then the Style guide.
+- **The footer** (Verify an ID card, Terms, Privacy) is only on the public pages: home,
+  terms, and privacy. In an area its links are noise. In dev, app pages keep a line with
+  the dashboard and the mailbox.
 - **Account settings**, `/account`: one page, so no side navigation. It is about the login,
   the same on every team.
 

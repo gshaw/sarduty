@@ -81,7 +81,8 @@ defmodule Web.Navigation do
           link("admin-admins", "Admins", ~p"/admin/admins"),
           link("admin-events", "Events", ~p"/admin/events"),
           link("admin-mcp", "MCP", ~p"/admin/mcp")
-        ]
+        ],
+        [link("admin-styles", "Style guide", "/styles")]
       ],
       path
     )

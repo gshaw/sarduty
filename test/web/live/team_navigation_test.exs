@@ -27,6 +27,18 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, "#side-nav .side-nav-group", "Team settings")
   end
 
+  test "the logo goes to the team's Dashboard, and the footer is only on public pages",
+       %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
+
+    assert has_element?(lv, ~s{a.brand[href="/teams/#{team.subdomain}"]})
+    refute has_element?(lv, "#site-footer")
+
+    {:ok, lv, _html} = live(conn, ~p"/")
+    assert has_element?(lv, ~s{a.brand[href="/teams/#{team.subdomain}"]})
+    assert has_element?(lv, "#site-footer")
+  end
+
   test "a team admin who is a member gets Your membership last", %{conn: conn, team: team} do
     team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
