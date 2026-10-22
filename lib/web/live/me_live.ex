@@ -70,7 +70,8 @@ defmodule Web.MeLive do
   def render(assigns) do
     ~H"""
     <div class="person-head">
-      <span class="avatar avatar-lg">
+      <%!-- Ignored on update, so the photo a failed load removed stays gone. --%>
+      <span id="member-avatar" class="avatar avatar-lg" phx-update="ignore">
         {Web.Navigation.initials(@member.name)}
         <img id="member-photo" src={~p"/teams/#{@team}/me/image"} alt="" onerror="this.remove()" />
       </span>
