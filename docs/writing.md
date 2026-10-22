@@ -26,9 +26,11 @@ finish a task and leave. Write so a reader understands each sentence the first t
    one meaning for each word. Never switch to a synonym for variety.
 6. **Use common words.** Write "use", "before", "to", and "about", not "utilize", "prior
    to", "in order to", and "regarding". [Words to avoid](#words-to-avoid) lists more.
-7. **Write negatives in full.** "cannot", "do not", "is not". People misread "can't" and
-   "don't" as their opposite when they skim. Positive contractions such as "you'll" and
-   "it's" are fine.
+7. **Write negatives in full in instructions, warnings, and errors**: "cannot", "do not",
+   "is not". People skimming misread "can't" and "don't" as their opposite, and there a
+   misread "not" leads them to do the wrong thing. Elsewhere a negative contraction is fine
+   when its meaning cannot flip, such as a button beside its opposite: "I'll be there" and
+   "Can't make it". Positive contractions such as "you'll" and "it's" are fine anywhere.
 8. **Use sentence case everywhere.** Headings, page titles, buttons, labels, tabs, and
    menu items: "Create letter", "Tax credit letters", "Change password". Proper nouns keep
    their capitals: D4H, SAR Duty, SARVAC, Apple Wallet.
@@ -46,7 +48,8 @@ finish a task and leave. Write so a reader understands each sentence the first t
     from `km/1` ("42 km"). The style guide's Values page, `/styles/values`, runs every
     formatter on an example.
 11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
-    only for SAR Duty the service, and rarely.
+    only for SAR Duty the service, and rarely. The two reply buttons are the exception:
+    they speak for the member.
 12. **Be plain, not cheerful.** No "please", "sorry", "oops", "simply", "just", "easily",
     exclamation marks, or jokes. Say what happened and what to do next.
 13. **Never blame the reader.** "Enter a date", not "You entered an invalid date".
@@ -62,6 +65,7 @@ finish a task and leave. Write so a reader understands each sentence the first t
 **Buttons.** A verb and its object, three words or fewer, saying what happens: "Create
 letter", "Save settings", "Perform 3 changes". Never "Submit", "OK", "Yes", "Go", or
 "Click here". The button that confirms a delete names the thing: "Delete endorsement".
+The two replies to an invitation are the exception: see Replies in [Patterns](#patterns).
 
 **Links.** The link text says where it goes and makes sense out of context: "tax credit
 letters for 2025". Never "here", "click here", "more", or "this page".
@@ -94,6 +98,48 @@ Create one from the member list." Not "No results".
 for 14 members…". Not "Loading…" or "Please wait".
 
 **Page titles.** The same words as the page's `h1`. The browser title adds " · SAR Duty".
+
+**Replies.** A member answers an invitation with two buttons in their own voice: "I'll be
+there", the success button, and "Can't make it". These are the only buttons that speak for
+the reader. Once they answer, the buttons give way to their reply, "Signed up" or "Can't
+make it", and a "Change" link. Show nothing about invitations to a member who is not
+invited: never "Not invited". Replies close when the activity starts.
+
+## Invitations and attendance
+
+D4H keeps an attendance row for each member invited to an activity. Name its status with
+these words, which change when the activity starts:
+
+| D4H status | Before it starts | Once it starts |
+| ---------- | ---------------- | -------------- |
+| Requested  | No reply         | No reply       |
+| Attending  | Signed up        | Attended       |
+| Absent     | Can't make it    | Absent         |
+
+Only `Attendance.attended/2` makes a member attended. "Absent" is only for an activity that
+has started, such as a no-show the door marks. Never call a reply "absent", and never call a
+member who signed up "attending".
+
+Where the words go:
+
+- **A count in a list or a card:** "23 signed up" before it starts, "23 attended" once it
+  starts. `Service.Format.count/2` makes "1 signed up" and "0 signed up".
+- **A heading over names:** the state, a middle dot, and the count. Before it starts:
+  "Signed up · 23", "Can't make it · 4", "No reply · 31". Once it starts: "Attended · 23"
+  and "Absent · 4". Leave out a heading with nobody under it, except the first.
+- **Nobody yet:** "Nobody has signed up yet." and "Nobody attended."
+- **The member's own row:** "You're invited." and the two buttons. After they answer, "Signed
+  up" with a check mark or "Can't make it", then "Change". "Add to calendar" follows "Signed
+  up" where there is room.
+- **Invitations the member has not replied to:** a count in Coming up's header on the
+  Dashboard, such as "2 waiting for your reply". The Activities menu's count stays the team
+  admin's proposed changes.
+- **The door:** "Yet to arrive", with "3 of 9 signed up".
+- **An ask by email or text:** the activity, its day and time, and "Will you be there?",
+  with the same two buttons.
+- **After a reply:** in SAR Duty the row changes in place, with no flash message. From an
+  email, the page says "Signed up for Training night, Thursday Oct 29 at 19:00." with "Add
+  to calendar", or "Your reply: Can't make it."
 
 ## Glossary
 
@@ -146,8 +192,12 @@ and must not be used for it.
 | not retired                    | current (as a filter)                          | The Standing filter's default: Active, Away, and Not a person. All adds the retired.                 |
 | away period                    | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
-| signed up for                  | registered, going, RSVP                        | Shown as Attending in D4H for an activity that hasn't started. Hours count once it starts.           |
-| invite                         | request, ask, call out                         | Asking a member to come to an activity. D4H shows them as Requested until they answer.               |
+| signed up for                  | registered, going, coming, attending, RSVP     | A member's yes to an activity that hasn't started: Attending in D4H. Hours count once it starts.     |
+| invite                         | request, ask, call out                         | Asking a member to come to an activity. They show as "No reply" until they answer.                   |
+| reply                          | RSVP, response, answer                         | A member's answer to an invitation: "I'll be there" or "Can't make it".                              |
+| can't make it                  | absent, declined, can't go, not going          | A member's no to an activity that hasn't started: Absent in D4H.                                     |
+| no reply                       | unconfirmed, pending, requested                | Invited, with no answer yet: Requested in D4H.                                                       |
+| absent                         | can't make it, missing                         | D4H's status for a member who did not come to an activity that has started.                          |
 | import attendance              | upload, sync attendance                        | Reading a SAR Assist attendance report to change D4H attendance.                                     |
 | log in, log out                | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
 | sign up                        | register, create account, signup (as a verb)   | Making a new account.                                                                                |
@@ -187,9 +237,12 @@ Before committing text a person will read, check each line:
 - [ ] Every term matches [the glossary](#glossary), and nothing from its "Not" column is
       used.
 - [ ] Nothing from [words to avoid](#words-to-avoid) is used.
-- [ ] Negatives are in full: "cannot", "do not".
+- [ ] Negatives are in full in instructions, warnings, and errors: "cannot", "do not".
 - [ ] Headings, titles, buttons, labels, and tabs are in sentence case.
-- [ ] Buttons are a verb and an object. Links make sense on their own.
+- [ ] Buttons are a verb and an object, except the two replies. Links make sense on
+      their own.
+- [ ] Invitations and attendance use [their words](#invitations-and-attendance), switching
+      when the activity starts.
 - [ ] Errors say how to fix the problem and match the error summary.
 - [ ] Numbers are digits. Every date, time, duration, count of days, and distance comes
       from a `Service.Format` function.
