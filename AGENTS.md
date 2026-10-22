@@ -162,6 +162,9 @@ fi
   `testing: :inline`, so a test that enqueues a refresh runs it.
 - LiveView tests use `Phoenix.LiveViewTest` and target element IDs (`has_element?/2`),
   not raw HTML.
+- **Changed a member page?** Run `mix sweep.member_pages --db <path to sarduty_dev.db>`.
+  It opens every member page as every member in a copy of the database and lists the
+  pages that crash. A worktree has no dev database, so name the main checkout's.
 - Test files mirror `lib/`: `lib/app/operation/x.ex` → `test/app/operation/x_test.exs`.
   What gets tested and why is in [docs/testing-strategy.md](docs/testing-strategy.md).
 

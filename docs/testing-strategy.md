@@ -80,6 +80,13 @@ data?
 - URLs: `test/web/router_test.exs` checks every top-level path against the list in
   [urls.md](urls.md), and that the URLs devices and shared links hold still route.
 - Most LiveViews have one smoke test that the page renders or redirects.
+- Member pages against real data (#425): `mix sweep.member_pages --db PATH` copies a
+  database, then views as every member and opens the Dashboard, Activities, Your
+  membership, every year page, Contact details, and every letter PDF. It lists each page
+  that crashes, by team subdomain, member id, and path. It's
+  `test/web/member_pages_sweep_test.exs`, excluded from `mix test` by its `:sweep` tag.
+  The sanitized dev database took 2.5 minutes for 12,067 pages on 2026-10-22. Run it
+  after changing a member page, or when a member reports a page that breaks.
 
 ## High-value targets
 

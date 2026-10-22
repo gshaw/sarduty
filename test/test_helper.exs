@@ -1,4 +1,6 @@
-ExUnit.start()
+# The member page sweep runs only from `mix sweep.member_pages`, against a real database's
+# copy (#425).
+ExUnit.start(exclude: [:sweep])
 Ecto.Adapters.SQL.Sandbox.mode(App.Repo, :manual)
 
 # Team logos go to a scratch directory, never the developer's own.
