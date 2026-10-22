@@ -131,6 +131,24 @@ defmodule App.Operation.BuildChoreEventTest do
            ]
   end
 
+  test "a member's second row, added in D4H, comes off so their time counts once" do
+    row = fn id ->
+      %AttendanceInfo{
+        d4h_attendance_id: id,
+        d4h_member_id: 101,
+        status: "attending",
+        started_at: ~U[2026-10-06 07:00:00Z],
+        finished_at: ~U[2026-10-06 07:30:00Z]
+      }
+    end
+
+    state = %{d4h_activity_id: 900, published?: false}
+    rows = BuildChoreEvent.plan(state, [chore(1, @avery, 30)], [row.(501), row.(502)], @event)
+
+    assert actions(rows) == [:update_activity, :delete_attendance, :publish_activity]
+    assert Enum.at(rows, 1).d4h_record_id == 502
+  end
+
   test "nothing sent and no event in D4H plans nothing" do
     assert BuildChoreEvent.plan(nil, [], [], @event) == []
   end

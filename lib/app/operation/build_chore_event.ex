@@ -97,7 +97,7 @@ defmodule App.Operation.BuildChoreEvent do
 
   # Each member's attendance: a new row, a changed one, or none when it is right.
   defp attendance_rows(id, totals, current, starts_at) do
-    by_member = Map.new(current, &{&1.d4h_member_id, &1})
+    by_member = current |> Enum.uniq_by(& &1.d4h_member_id) |> Map.new(&{&1.d4h_member_id, &1})
 
     Enum.flat_map(totals, fn {member, minutes} ->
       case by_member[member.d4h_member_id] do
@@ -107,11 +107,17 @@ defmodule App.Operation.BuildChoreEvent do
     end)
   end
 
-  # Anyone on the event without accepted chores, whoever added them.
+  # Anyone on the event without accepted chores, whoever added them, and any second row
+  # for a member: D4H lets a member attend one activity twice.
   defp delete_rows(totals, current) do
-    keep = MapSet.new(totals, fn {member, _minutes} -> member.d4h_member_id end)
+    members = MapSet.new(totals, fn {member, _minutes} -> member.d4h_member_id end)
 
-    for info <- current, not MapSet.member?(keep, info.d4h_member_id) do
+    keep =
+      current
+      |> Enum.filter(&MapSet.member?(members, &1.d4h_member_id))
+      |> Enum.uniq_by(& &1.d4h_member_id)
+
+    for info <- current, info not in keep do
       %ChangeSetRow{
         action: :delete_attendance,
         d4h_record_id: info.d4h_attendance_id,

@@ -60,14 +60,16 @@ choice: a week, a month, or a season's worth at a time. Accepting does not write
   sent chore marks its event, and the In D4H table offers Send changes. A sent chore moved
   to another category or year leaves its event and is ready to send again. A send makes
   the title, the times, the description, and each member's attendance match; anyone
-  else's attendance is deleted. D4H is read only for ids, so edits made there are
-  replaced. An event deleted in D4H is made again.
+  else's attendance is deleted, and so is a member's second row, since D4H lets a member
+  attend one activity twice (tried on #02228, 2026-10-21). D4H is read only for ids, so
+  edits made there are replaced. An event deleted in D4H is made again.
 - **Tags are set when the event is made, and never changed.** Then it is published, last,
   since D4H locks a published activity's attendance. Sending changes makes it a draft,
   changes it, and publishes it again. An event left with no chores stays a draft.
 - **When D4H will not publish**, as on a team whose activities need approval (South
   Fraser's #02228 answered 409 on 2026-10-17), the event stays a draft. The send counts as
-  done, with a note beside it, since SAR Duty counts a draft's hours all the same.
+  done, with a note beside it, since SAR Duty counts a draft's hours all the same. It
+  still answered 409 on 2026-10-21, when deleting attendance there worked.
 - **Once D4H has approved an event, it is locked.** D4H refuses changes to an approved
   activity (#356), so SAR Duty stops offering Send changes and says to change it in D4H.
 - **Each event is a change set** of source `chores`, so it shows in the activity's and
