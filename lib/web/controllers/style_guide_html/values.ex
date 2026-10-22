@@ -50,8 +50,11 @@ defmodule Web.StyleGuideHTML.Values do
       {:month_year, "Award dates", [{"month_year(now, zone)", Format.month_year(@now, @zone)}]},
       {:month_short, "Chart labels",
        [{"month_short(~D[2025-09-01])", Format.month_short(~D[2025-09-01])}]},
-      {:month_year_long, "A chart's tip",
-       [{"month_year_long(~D[2025-09-01])", Format.month_year_long(~D[2025-09-01])}]}
+      {:month_year_long, "A chart's tip, and Member since",
+       [
+         {"month_year_long(~D[2025-09-01])", Format.month_year_long(~D[2025-09-01])},
+         {"month_year_long(now, zone)", Format.month_year_long(@now, @zone)}
+       ]}
     ]
   end
 

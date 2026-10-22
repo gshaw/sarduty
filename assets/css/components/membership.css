@@ -1,0 +1,25 @@
+/* Your membership (#406): a main column and a sidebar of two cards. On a phone one column:
+   the first card, then the main column, then the second card. */
+@layer components {
+  .membership { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--sp-6); align-items: start; }
+  .membership-aside { display: grid; gap: var(--sp-4); }
+  @media (width < 64rem) {
+    .membership { display: flex; flex-direction: column; align-items: stretch; }
+    .membership-aside { display: contents; }
+    .membership-aside-top { order: -1; }
+    .membership-aside-bottom { order: 1; }
+  }
+
+  /* A card's two sections split by one line, edge to edge. */
+  .side-card hr { margin: var(--sp-4) calc(-1 * var(--sp-4)); border: 0; border-top: 1px solid var(--border-subtle); }
+
+  /* Label and value side by side, such as a letter's hours. */
+  .dl-pairs { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 0 var(--sp-4); margin-bottom: var(--sp-3); }
+  .dl-pairs dt, .dl-pairs dd { margin: 0; padding: var(--sp-1) 0; border: 0; }
+  .dl-pairs dd { font-weight: 600; }
+
+  /* The member's photo, or their initials when D4H has none, beside their name. */
+  .person-head { display: flex; gap: var(--sp-4); align-items: center; }
+  .avatar-lg { position: relative; width: 64px; height: 64px; overflow: hidden; font-size: var(--fs-lg); line-height: var(--lh-lg); }
+  .avatar-lg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+}

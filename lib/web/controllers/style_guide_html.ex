@@ -10,6 +10,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.D4H
   import Web.Components.FilterBar
   import Web.Components.GroupRule
+  import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.OpenInMaps
   import Web.Components.Pagination
@@ -76,6 +77,7 @@ defmodule Web.StyleGuideHTML do
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},
          {:map, "Map", "A dot per activity on a Mapbox map."},
+         {:member_letter, "Member letter", "A member's tax credit letter for a year."},
          {:milestone_list, "Milestone list", "What a member reached, and the day."},
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:pagination, "Pagination", "Pages under a long table."},

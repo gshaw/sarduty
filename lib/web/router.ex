@@ -234,12 +234,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/me", MeLive
-      live "/teams/:subdomain/me/card", MeCardLive
-      live "/teams/:subdomain/me/qualifications", MeQualificationsLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
-      live "/teams/:subdomain/me/hours", MeHoursLive
-      live "/teams/:subdomain/me/milestones", MeMilestonesLive
-      live "/teams/:subdomain/me/tax-credit-letters", MeTaxCreditLettersLive
       live "/teams/:subdomain/me/details", MeDetailsLive
     end
 
@@ -247,6 +242,7 @@ defmodule Web.Router do
     scope "/teams/:subdomain/me" do
       pipe_through :require_team_member
 
+      get "/image", MeController, :image
       get "/activities/:id/calendar", MeController, :calendar
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass

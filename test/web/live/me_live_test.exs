@@ -5,83 +5,153 @@ defmodule Web.MeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
-  alias App.Model.PassRegistration
+  alias App.Model.MemberCard
   alias App.Operation.SetTeamMemberLogins
   alias App.Repo
 
   setup %{conn: conn} do
     %{team: team, member: member, user: user} = member_with_login_fixture()
+    stub_d4h(nil)
     %{conn: log_in_user(conn, user), team: team, member: member, user: user}
   end
 
-  describe "the overview" do
-    test "is in the team's space, with none of the team admins' pages", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
+  # The page, once the emergency contact read is done, so it can't outlive the test.
+  defp open(conn, path) do
+    {:ok, lv, _html} = live(conn, path)
+    render_async(lv)
+    lv
+  end
+
+  # D4H answers the emergency contact read with the member.
+  defp stub_d4h(contact) do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      Req.Test.json(conn, %{
+        "id" => 1,
+        "deprecatedAddress" => "1 Main St",
+        "primaryEmergencyContact" => contact,
+        "secondaryEmergencyContact" => nil
+      })
+    end)
+  end
+
+  describe "Your membership" do
+    test "is the member's own page in the team's space", %{conn: conn, team: team, member: member} do
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "h1", member.name)
       assert has_element?(lv, "#nav-area", team.name)
       assert has_element?(lv, "#side-nav-me[aria-current=page]", "Your membership")
       refute has_element?(lv, "#side-nav-members")
-      refute has_element?(lv, "#team-switcher")
+      assert has_element?(lv, ~s{#member-photo[src="/teams/#{team.subdomain}/me/image"]})
     end
 
-    test "with no activities, says so in one line in place of each chart",
-         %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      refute has_element?(lv, "#next-up")
-      assert has_element?(lv, "p#hours-by-kind-chart", "No activities")
-      assert has_element?(lv, "p#activity-map", "No activities")
-      assert has_element?(lv, "#lately-empty")
-      assert has_element?(lv, "#stat-activities", "0")
+    test "a new member's page explains each part", %{conn: conn, team: team} do
+      %{year: year} = this_year_fixture(team)
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#no-activities", "No activities in #{year} yet")
+      assert has_element?(lv, "#no-qualifications", "No qualifications yet")
+      assert has_element?(lv, "#no-milestones", "No milestones yet")
+      refute has_element?(lv, "#all-activities")
+      assert has_element?(lv, "#no-card")
+      refute has_element?(lv, "#letter")
+      assert has_element?(lv, "#contact-details", "Emergency contact")
+      assert has_element?(lv, "#contact-emergency", "None")
     end
 
-    test "shows the next sign-up, the year's numbers, and the latest activities",
+    test "this year's 10 latest activities, and a link to the rest",
          %{conn: conn, team: team, member: member} do
-      %{mid_year: mid_year, now: now, year: year} = this_year_fixture(team)
+      %{year: year, mid_year: mid_year} = this_year_fixture(team)
 
-      coming =
-        activity_fixture(team, %{title: "Rope practice", started_at: DateTime.add(now, 3, :day)})
+      for n <- 1..11 do
+        started_at = DateTime.add(mid_year, -n, :minute)
+        activity = activity_fixture(team, %{title: "Training #{n}", started_at: started_at})
+        attendance_fixture(activity, member, %{started_at: started_at})
+      end
 
-      attendance_fixture(coming, member)
+      lv = open(conn, ~p"/teams/#{team}/me")
 
-      incident =
-        activity_fixture(team, %{
-          title: "Overdue hiker",
-          activity_kind: "incident",
-          started_at: mid_year
-        })
-
-      attended =
-        attendance_fixture(incident, member, %{
-          started_at: mid_year,
-          finished_at: DateTime.add(mid_year, 2 * 3600)
-        })
-
-      other = activity_fixture(team, %{title: "Not mine", started_at: mid_year})
-      attendance_fixture(other, member_fixture(team), %{started_at: mid_year})
-
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-
-      assert has_element?(lv, "#next-up", "Rope practice")
+      assert has_element?(lv, "h2", "Activities in #{year}")
+      assert has_element?(lv, "#activities-list", "Training 1")
+      refute has_element?(lv, "#activities-list", "Training 11")
 
       assert has_element?(
                lv,
-               ~s{#next-up-calendar[href="/teams/#{team.subdomain}/me/activities/#{coming.id}/calendar"]}
+               ~s{#all-activities[href="/teams/#{team.subdomain}/me/activities?year=#{year}"]},
+               "All your activities in #{year}"
              )
-
-      assert has_element?(lv, "#stat-hours", "2")
-      assert has_element?(lv, "#stat-incidents", "Incidents in #{year}")
-      assert has_element?(lv, "#hours-by-kind-chart", "Incidents")
-      assert has_element?(lv, "#lately-list-#{attended.id}", "Overdue hiker")
-      refute render(lv) =~ "Not mine"
     end
-  end
 
-  describe "milestones" do
-    test "the latest 3 on the overview, every one on their page",
+    test "qualifications soonest first, with the days left on one expiring soon",
          %{conn: conn, team: team, member: member} do
+      first_aid = qualification_fixture(team, %{title: "First Aid"})
+      ends_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+      qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#qualifications-list-#{first_aid.id} .badge", "30 days")
+    end
+
+    test "the ID card, with Wallet buttons and the verify link",
+         %{conn: conn, team: team, member: member} do
+      App.ApplePassCredentials.configure()
+      team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#no-card", "Ask one for yours")
+
+      card = member_card_fixture(member)
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#id-card", "a current member of #{team.name}")
+      assert has_element?(lv, "#card-verify-link", MemberCard.format_code(card.code))
+
+      assert has_element?(
+               lv,
+               ~s{#apple-pass[href="/teams/#{team.subdomain}/me/card/apple-wallet"]}
+             )
+    end
+
+    test "the latest tax credit letter, with its hours", %{conn: conn, team: team, member: member} do
+      tax_credit_letter_fixture(member, %{year: 2024})
+
+      letter =
+        tax_credit_letter_fixture(member, %{
+          year: 2025,
+          primary_minutes: 147 * 60,
+          secondary_minutes: 25 * 60
+        })
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#letter h2", "2025 tax credit letter")
+      assert has_element?(lv, "#letter dd", "147 hours")
+
+      assert has_element?(
+               lv,
+               ~s{#letter-download[href="/teams/#{team.subdomain}/me/tax-credit-letters/#{letter.id}/pdf"]}
+             )
+    end
+
+    test "contact details, with the emergency contact read from D4H",
+         %{conn: conn, team: team, member: member} do
+      member
+      |> Ecto.Changeset.change(phone: "604-555-0188", address: "2140 Fern Street")
+      |> Repo.update!()
+
+      stub_d4h(%{"name" => "Jo Rivera", "primaryPhone" => "604-555-0101"})
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#contact-mobile", "604-555-0188")
+      assert has_element?(lv, "#contact-address", "2140 Fern Street")
+      assert has_element?(lv, "#contact-emergency", "Jo Rivera · 604-555-0101")
+      assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
+    end
+
+    test "the 5 latest milestones", %{conn: conn, team: team, member: member} do
       member
       |> Ecto.Changeset.change(
         joined_at:
-          DateTime.utc_now() |> DateTime.add(-6 * 366, :day) |> DateTime.truncate(:second)
+          DateTime.utc_now() |> DateTime.add(-16 * 366, :day) |> DateTime.truncate(:second)
       )
       |> Repo.update!()
 
@@ -99,74 +169,22 @@ defmodule Web.MeLiveTest do
         finished_at: DateTime.add(starts, 101 * 3600)
       })
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#milestones-list-years-5", "5 years on the team")
+      lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#milestones-list-hours-100", "Long search")
       assert has_element?(lv, "#milestones-list-incidents-1", "First incident")
+      assert has_element?(lv, "#milestones-list-years-15")
       refute has_element?(lv, "#milestones-list-years-1")
-      assert has_element?(lv, ~s{#milestones a[href="/teams/#{team.subdomain}/me/milestones"]})
-
-      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/me/milestones")
-      assert has_element?(page, "#milestones-years-1", "1 year on the team")
-      assert has_element?(page, "#milestones-hours-100")
     end
 
-    test "with none, says what comes first", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#milestones-empty")
+    test "the member's own photo, or a 404 so the page shows initials",
+         %{conn: conn, team: team} do
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
+      conn = get(conn, ~p"/teams/#{team}/me/image")
+      assert [content_type] = get_resp_header(conn, "content-type")
+      assert content_type =~ "image/png"
 
-      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/me/milestones")
-      assert has_element?(page, "#no-milestones")
-    end
-  end
-
-  describe "for you to do" do
-    test "with nothing to do, says so in one line", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#to-do-empty")
-    end
-
-    test "the ID card leaves once Apple Wallet registers it, or Google says it's saved",
-         %{conn: conn, team: team, member: member} do
-      card = member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#to-do-card")
-
-      card |> Ecto.Changeset.change(in_wallet_at: DateTime.utc_now()) |> Repo.update!()
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      refute has_element?(lv, "#to-do-card")
-
-      card |> Ecto.Changeset.change(in_wallet_at: nil) |> Repo.update!()
-      PassRegistration.register!(card, "phone-1", "token")
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      refute has_element?(lv, "#to-do-card")
-    end
-
-    test "a new letter leaves once the member downloads it",
-         %{conn: conn, team: team, member: member} do
-      %{year: year} = this_year_fixture(team)
-      letter = tax_credit_letter_fixture(member, %{year: year - 1})
-
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#to-do-letter", "Your #{year - 1} tax credit letter is ready")
-
-      conn |> get(~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf") |> response(200)
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      refute has_element?(lv, "#to-do-letter")
-    end
-
-    test "a qualification expiring within 60 days", %{conn: conn, team: team, member: member} do
-      first_aid = qualification_fixture(team, %{title: "First Aid"})
-      ends_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
-      qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
-
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-
-      assert has_element?(
-               lv,
-               "#to-do-qualification-#{first_aid.id}",
-               "First Aid expires in 30 days"
-             )
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+      assert conn |> recycle() |> get(~p"/teams/#{team}/me/image") |> response(404)
     end
   end
 
@@ -204,7 +222,7 @@ defmodule Web.MeLiveTest do
       %{user: manager, team: team} = user_with_team_fixture()
       team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
 
-      {:ok, lv, _html} = live(log_in_user(conn, manager), ~p"/teams/#{team}/me")
+      lv = open(log_in_user(conn, manager), ~p"/teams/#{team}/me")
       assert has_element?(lv, "#side-nav-me[aria-current=page]")
       assert has_element?(lv, "#side-nav-members")
     end

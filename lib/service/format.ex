@@ -42,8 +42,9 @@ defmodule Service.Format do
   @doc "A month's short name, for chart labels: \"Sep\"."
   def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
 
-  @doc "A month in full with its year, for a chart's tip: \"September 2025\"."
+  @doc ~s(A month in full with its year, for a chart's tip or "Member since": "September 2025".)
   def month_year_long(%Date{} = date), do: Calendar.strftime(date, "%B %Y")
+  def month_year_long(datetime, timezone), do: datetime(datetime, timezone, "%B %Y")
 
   @doc "A whole number with thousands separators: \"1,204\"."
   def number(n) when is_float(n), do: number(round(n))

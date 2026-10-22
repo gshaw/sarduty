@@ -211,8 +211,9 @@ defmodule Web.Navigation do
 
   defp email_name(email), do: email |> String.split("@") |> List.first("")
 
-  defp initials(text) do
-    words = String.split(text, ~r/[\s._+-]+/, trim: true)
+  @doc ~s(An avatar's letters: "Sam Rivera Jones" is "SJ", "gerry_shaw" is "GS".)
+  def initials(text) do
+    words = String.split(text || "", ~r/[\s._+-]+/, trim: true)
 
     [List.first(words), if(length(words) > 1, do: List.last(words))]
     |> Enum.reject(&is_nil/1)

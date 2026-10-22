@@ -46,14 +46,10 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/me",
     "/teams/:subdomain/me/activities",
     "/teams/:subdomain/me/activities/:id/calendar",
-    "/teams/:subdomain/me/card",
     "/teams/:subdomain/me/card/apple-wallet",
     "/teams/:subdomain/me/card/google-wallet",
     "/teams/:subdomain/me/details",
-    "/teams/:subdomain/me/hours",
-    "/teams/:subdomain/me/milestones",
-    "/teams/:subdomain/me/qualifications",
-    "/teams/:subdomain/me/tax-credit-letters",
+    "/teams/:subdomain/me/image",
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf"
   ]
 
