@@ -42,6 +42,14 @@ defmodule App.Operation.BuildApplePassTest do
     assert json.expirationDate == "2027-01-01T06:59:59Z"
   end
 
+  test "leaves out Member since when D4H has no start date (#421)" do
+    card = card()
+    card = put_in(card.member.joined_at, nil)
+    json = BuildApplePass.pass_json(card, [], @config, @now)
+
+    assert [%{label: "Status"}, %{label: "Valid until"}] = json.generic.secondaryFields
+  end
+
   test "an inactive card doesn't say how long it's good for, but still expires" do
     card = card()
     card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])

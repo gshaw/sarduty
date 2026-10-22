@@ -341,7 +341,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {start, finish} = Service.Period.bounds(period, timezone, now)
 
     q
-    |> where([m], m.joined_at < ^finish)
+    |> where([m], is_nil(m.joined_at) or m.joined_at < ^finish)
     |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
   end
 

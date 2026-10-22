@@ -146,11 +146,12 @@ defmodule App.Operation.BuildApplePass do
         value: status_text(card, now),
         changeMessage: "Your card is now %@."
       },
-      %{
-        key: "member-since",
-        label: "Member since",
-        value: Service.Format.month_year(member.joined_at, member.team.timezone)
-      },
+      member.joined_at &&
+        %{
+          key: "member-since",
+          label: "Member since",
+          value: Service.Format.month_year(member.joined_at, member.team.timezone)
+        },
       valid_until_field(card, now)
     ]
     |> Enum.reject(&is_nil/1)

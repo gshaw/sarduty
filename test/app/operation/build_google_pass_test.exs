@@ -44,6 +44,14 @@ defmodule App.Operation.BuildGooglePassTest do
     assert object.validTimeInterval == %{end: %{date: "2027-01-01T06:59:59Z"}}
   end
 
+  test "leaves out Member since when D4H has no start date (#421)" do
+    card = card()
+    object = object(put_in(card.member.joined_at, nil))
+
+    refute text(object, "member_since")
+    assert text(object, "status").body == "Active"
+  end
+
   test "an inactive card doesn't say how long it's good for, but still expires" do
     card = card()
     object = object(put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z]))

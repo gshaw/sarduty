@@ -125,7 +125,7 @@ defmodule App.Operation.BuildGooglePass do
 
     List.flatten([
       text("status", "Status", status_text(status)),
-      text("member_since", "Member since", member_since(member)),
+      member_since_text(member),
       valid_until_text(team, status),
       text(
         "verify",
@@ -242,7 +242,16 @@ defmodule App.Operation.BuildGooglePass do
   defp status_text(:inactive), do: "Not active"
   defp status_text(:revoked), do: "Cancelled"
 
-  defp member_since(member), do: Service.Format.month_year(member.joined_at, member.team.timezone)
+  # D4H allows a member with no start date (#421).
+  defp member_since_text(%{joined_at: nil}), do: []
+
+  defp member_since_text(member),
+    do:
+      text(
+        "member_since",
+        "Member since",
+        Service.Format.month_year(member.joined_at, member.team.timezone)
+      )
 
   defp last_checked(%{d4h_refreshed_at: nil}), do: "Never"
   defp last_checked(team), do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
