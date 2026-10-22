@@ -291,4 +291,97 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#stat-incidents", "1")
     assert has_element?(lv, "#activity-calendar")
   end
+
+  describe "for a member" do
+    setup %{conn: conn} do
+      %{team: team, member: member, user: user} = member_with_login_fixture()
+      %{conn: log_in_user(conn, user), team: team, member: member, user: user}
+    end
+
+    test "is read only: no Refresh, no Needs attention, no team Next up",
+         %{conn: conn, team: team} do
+      activity_fixture(team, at(2, %{title: "Rope practice"}))
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(lv, "#d4h-updated")
+      refute has_element?(lv, "#refresh-now")
+      refute has_element?(lv, "#needs-attention")
+      refute has_element?(lv, "#next-up-take-attendance")
+      assert has_element?(lv, "#coming-up", "Rope practice")
+      refute has_element?(lv, "#coming-up a")
+      assert has_element?(lv, "#to-do-empty")
+      assert has_element?(lv, "#side-nav-dashboard[aria-current=page]")
+      refute has_element?(lv, "#side-nav-members")
+    end
+
+    test "a refresh event from a member does nothing", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      render_hook(lv, "refresh", %{})
+      refute has_element?(lv, "#refreshing")
+    end
+
+    test "Next up is the member's own next sign-up, with Add to calendar",
+         %{conn: conn, team: team, member: member} do
+      activity = activity_fixture(team, at(72, %{title: "Swiftwater"}))
+      attendance_fixture(activity, member, at(72, %{}))
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(lv, "#next-up", "You're signed up")
+      assert has_element?(lv, "#next-up", "Swiftwater")
+
+      assert has_element?(
+               lv,
+               ~s{#next-up-calendar[href="/teams/#{team.subdomain}/me/activities/#{activity.id}/calendar"]}
+             )
+    end
+
+    test "For you to do: the ID card leaves once it is in Wallet",
+         %{conn: conn, team: team, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#to-do-card")
+
+      card |> Ecto.Changeset.change(in_wallet_at: DateTime.utc_now()) |> Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-card")
+    end
+
+    test "For you to do: a new letter leaves once the member downloads it",
+         %{conn: conn, team: team, member: member} do
+      %{year: year} = this_year_fixture(team)
+      letter = tax_credit_letter_fixture(member, %{year: year - 1})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#to-do-letter", "Your #{year - 1} tax credit letter is ready")
+
+      conn |> get(~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf") |> response(200)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-letter")
+    end
+
+    test "For you to do: a qualification expiring within 60 days",
+         %{conn: conn, team: team, member: member} do
+      first_aid = qualification_fixture(team, %{title: "First Aid"})
+      ends_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+      qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(
+               lv,
+               ~s{#to-do-qualification-#{first_aid.id} a[href="/teams/#{team.subdomain}/me"]},
+               "First Aid expires in 30 days"
+             )
+    end
+  end
+
+  test "a team admin who is a member gets both Needs attention and For you to do",
+       %{conn: conn} do
+    %{team: team, user: user} = member_with_login_fixture(%{d4h_permission: 0})
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#needs-attention")
+    assert has_element?(lv, "#to-do")
+    assert has_element?(lv, "#refresh-now")
+  end
 end

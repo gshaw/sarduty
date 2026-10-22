@@ -119,8 +119,8 @@ pass again, and every saved copy changes:
 - **A replacement is a new pass.** Each card has its own Wallet object, because Google
   has no per-phone token to say which card a phone holds. The member adds the new one.
 
-**In Wallet** (#389): a member's overview lists "Add your ID card to Wallet" under For
-you to do until SAR Duty knows the card is in one (`MemberCard.in_wallet?/1`). Apple
+**In Wallet** (#389): the team's Dashboard lists "Add your ID card to Wallet" under a
+member's For you to do (#406) until SAR Duty knows the card is in one (`MemberCard.in_wallet?/1`). Apple
 Wallet registers the phone, for the serial. Google posts a signed message to
 `/wallet/google` when the member saves or deletes the pass: the class's
 `callbackOptions`, production only, since Google can't reach a dev server.

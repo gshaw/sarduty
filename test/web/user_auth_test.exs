@@ -258,7 +258,7 @@ defmodule Web.UserAuthTest do
     test "a member gets a 404 from a page for team admins" do
       %{team: team, user: user} = App.DataFixtures.member_with_login_fixture()
 
-      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.TeamDashboardLive) end
+      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.MemberCollectionLive) end
     end
 
     test "a team admin who is a member is both, on the URL's team" do
@@ -297,7 +297,8 @@ defmodule Web.UserAuthTest do
     end
 
     test "a page is for team admins unless it says otherwise" do
-      assert UserAuth.page_access(Web.TeamDashboardLive) == :admin
+      assert UserAuth.page_access(Web.MemberCollectionLive) == :admin
+      assert UserAuth.page_access(Web.TeamDashboardLive) == :team
       assert UserAuth.page_access(Web.MeLive) == :member
       assert UserAuth.page_access(nil) == :admin
     end
@@ -316,9 +317,9 @@ defmodule Web.UserAuthTest do
       assert UserAuth.signed_in_path(%{user | last_team_id: south.id}) == ~p"/teams/#{south}"
     end
 
-    test "a member who manages no team lands on their own member page" do
+    test "a member who manages no team lands on their team's Dashboard" do
       %{team: team, user: user} = App.DataFixtures.member_with_login_fixture()
-      assert UserAuth.signed_in_path(user) == ~p"/teams/#{team}/me"
+      assert UserAuth.signed_in_path(user) == ~p"/teams/#{team}"
     end
 
     test "an admin with no team lands on /admin; anyone else on the home page" do

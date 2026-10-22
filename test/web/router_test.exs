@@ -43,6 +43,7 @@ defmodule Web.RouterTest do
   # serves a member's own downloads. Opening a page to members means changing this list on
   # purpose. Web.TeamScopingTest checks every other team route 404s for a member.
   @member_routes [
+    "/teams/:subdomain",
     "/teams/:subdomain/me",
     "/teams/:subdomain/me/activities",
     "/teams/:subdomain/me/activities/:id/calendar",

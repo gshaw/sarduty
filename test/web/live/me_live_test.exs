@@ -227,8 +227,6 @@ defmodule Web.MeLiveTest do
 
   describe "who reaches it" do
     test "a member reaches no team admin page", %{conn: conn, team: team, member: member} do
-      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}") end
-
       assert_raise Web.Status.NotFound, fn ->
         live(conn, ~p"/teams/#{team}/members/#{member.id}")
       end
