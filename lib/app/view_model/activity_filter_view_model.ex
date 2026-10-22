@@ -73,6 +73,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     end
   end
 
+  @doc """
+  A page of the team's activities for the filters. `member` limits it to the activities
+  that member attended.
+  """
   def build_paginated_content(team, member, filter_options) do
     Activity
     |> Activity.scope(team_id: team.id)

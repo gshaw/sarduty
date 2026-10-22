@@ -39,14 +39,17 @@ defmodule Web.RouterTest do
   end
 
   # Every team route a member who is not a team admin reaches (#406). Team pages are for
-  # team admins unless a LiveView says `access: :team` or `:member` (Web), and MeController
-  # serves a member's own downloads. Opening a page to members means changing this list on
-  # purpose. Web.TeamScopingTest checks every other team route 404s for a member.
+  # team admins unless a LiveView says `access: :team` or `:member` (Web). MeController
+  # serves a member's own downloads, and ActivityCalendarController Add to calendar.
+  # Opening a page to members means changing this list on purpose. Web.TeamScopingTest
+  # checks every other team route 404s for a member.
   @member_routes [
     "/teams/:subdomain",
+    "/teams/:subdomain/activities",
+    "/teams/:subdomain/activities/:id",
+    "/teams/:subdomain/activities/:id/calendar",
     "/teams/:subdomain/me",
     "/teams/:subdomain/me/activities",
-    "/teams/:subdomain/me/activities/:id/calendar",
     "/teams/:subdomain/me/card/apple-wallet",
     "/teams/:subdomain/me/card/google-wallet",
     "/teams/:subdomain/me/details",
@@ -71,7 +74,8 @@ defmodule Web.RouterTest do
   defp member_route?(%{metadata: %{phoenix_live_view: {view, _action, _opts, _extra}}}),
     do: Web.UserAuth.page_access(view) in [:team, :member]
 
-  defp member_route?(%{plug: plug}), do: plug == Web.MeController
+  defp member_route?(%{plug: plug}),
+    do: plug in [Web.MeController, Web.ActivityCalendarController]
 
   # URLs held by devices, printed cards, Google and Apple, and shared links. They must
   # keep working, so a refactor can't move them quietly.

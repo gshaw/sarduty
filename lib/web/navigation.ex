@@ -59,7 +59,7 @@ defmodule Web.Navigation do
     team_sections =
       cond do
         team_admin? -> team_admin_sections(team, proposed_changes)
-        member? -> [[dashboard_link(team)]]
+        member? -> [[dashboard_link(team)], [activities_link(team)]]
         true -> []
       end
 
@@ -110,12 +110,13 @@ defmodule Web.Navigation do
       )
 
     [
-      link("activities", "Activities", ~p"/teams/#{team}/activities"),
+      activities_link(team),
       link("templates", "Templates", ~p"/teams/#{team}/templates")
     ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
   end
 
   defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
+  defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
 
   defp people_links(team) do
     [

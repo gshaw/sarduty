@@ -125,8 +125,8 @@ defmodule Web.Components.ActivityFilterTable do
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span :if={hours_type = activity_hours_type(record, @hours_tags)} class="text-text-muted">
-          {hours_type}
+        <span :if={activity_hours_type(record, @hours_tags)} class="text-text-muted">
+          {activity_hours_type(record, @hours_tags)}
         </span>
         {Service.Format.duration(
           Service.Convert.duration_to_minutes(record.started_at, record.finished_at)

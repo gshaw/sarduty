@@ -127,12 +127,10 @@ admin's member page, from one query and one component each (#308, #339, decided
   on a team on SAR Duty Records. The admin's tab lost its Start column.
 - **No component of their own** (decided 2026-10-20). Pages pick their columns from one
   set of rows, and the table does the rest. A two-line list wasted space.
-- **Activities** are a table too: day, title linked to the activity in D4H
-  (`<.d4h_activity_link>`), kind, and time there, newest first. No groups by month
-  (decided 2026-10-20): a member attends a median of 19 a year, so a month heading sat
-  over about 2 rows, and the date already says the month. Not by kind either, since every
-  row shows its kind. A team on SAR Duty Records gets no links: a member cannot
-  open its activities.
+- **Activities** are a table too: day, title linked to the activity's page in SAR Duty
+  (#406), kind, and time there, newest first. No groups by month (decided 2026-10-20): a
+  member attends a median of 19 a year, so a month heading sat over about 2 rows, and the
+  date already says the month. Not by kind either, since every row shows its kind.
 - **A team admin's Attendance tab keeps its table.** It searches, sorts, filters by hours
   and activity tag, and pages by 50, and links to SAR Duty's own activity page. Its years
   come from `MemberRecords.years/2`, as the member's own page lists them.
@@ -227,6 +225,28 @@ The team's Dashboard, `/teams/:subdomain`
 - `"refresh"` checks `team_admin?`, and only a team admin's visit starts the catch-up
   sync.
 - Links to team admin pages, such as Members from the stats, show only to team admins.
+
+### Activities for members
+
+The team's Activities, `/teams/:subdomain/activities`, and an activity's page open to
+members too (#406), read only. Members see the same data as team admins, unless D4H
+hides it from members or there is a real need (decided 2026-10-22: in a volunteer team,
+hidden data makes people suspicious).
+
+- **Which activities**: every activity D4H still has, incidents too, as D4H shows them
+  to members. A team admin also sees one D4H has deleted, under a banner; a member gets
+  a 404. D4H's `published` means locked, not visible, so it plays no part.
+- **The list** is the team admin's: the same filters, columns, tags, hours, Draft, and
+  default. Team admins also get Add activity and the Templates and Proposed changes tabs.
+- **An activity's page** is the team admin's: Kind, the attendance total, Start, Finish,
+  Duration, SARVAC hours, the place with copy and the maps link, Add to calendar and Open
+  D4H activity, the tags, the map, the description, who signed up (coming) or attended
+  (past) with their times, and the equipment. Team admins also get History, which can
+  hold contact details and addresses, the Actions, Add equipment, and links to each
+  member's and item's page. Members never see contact details.
+- **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for
+  anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
+  with no redirect.
 
 ### What must stay true
 

@@ -178,6 +178,9 @@ defmodule Web.MeLive do
       </div>
       <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
         Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
+        <:action>
+          <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>Activities coming up</.a>
+        </:action>
       </.empty_state>
       <.table
         :if={@activities != []}
@@ -189,7 +192,9 @@ defmodule Web.MeLive do
           {Format.date_short(attendance.started_at, @team.timezone)}
         </:col>
         <:col :let={attendance} label="Activity">
-          <.d4h_activity_link team={@team} activity={attendance.activity} />
+          <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>
+            {attendance.activity.title}
+          </.a>
         </:col>
         <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
           <.activity_kind_mark activity={attendance.activity} />

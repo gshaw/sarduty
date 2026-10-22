@@ -127,7 +127,7 @@ defmodule App.ViewData.TeamDashboardCharts do
 
   @doc """
   The map's dots for activities with a place near the team's base, each with `:kind` as
-  `kind/1` gives it. Large dots are the last 30 days. The member overview uses it too.
+  `kind/1` gives it. Large dots are the last 30 days. The year page uses it too.
   """
   def map_points(activities, team, now) do
     a_month_ago = DateTime.add(now, -30, :day)

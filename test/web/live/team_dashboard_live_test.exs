@@ -312,10 +312,19 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#next-up-take-attendance")
       assert has_element?(lv, "#coming-up", "Swiftwater")
       refute has_element?(lv, "#coming-up", "Rope practice")
-      refute has_element?(lv, "#coming-up a")
       assert has_element?(lv, "#to-do-empty")
       assert has_element?(lv, "#side-nav-dashboard[aria-current=page]")
       refute has_element?(lv, "#side-nav-members")
+    end
+
+    test "Coming up links to each activity's page", %{conn: conn, team: team} do
+      activity = activity_fixture(team, at(30, %{title: "Rope practice"}))
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(
+               lv,
+               ~s{#coming-up-#{activity.id} a[href="/teams/#{team.subdomain}/activities/#{activity.id}"]}
+             )
     end
 
     test "a refresh event from a member does nothing", %{conn: conn, team: team} do
