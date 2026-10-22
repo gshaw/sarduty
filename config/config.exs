@@ -72,12 +72,13 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-# SQLite allows one writer at a time. The SQLite driver's default 2 s wait for the lock lost races
-# with syncs, and Oban's job updates failed with "Database busy". A deferred transaction
-# that reads and then writes can't wait at all: if another write landed since its read,
-# SQLite fails it at once, whatever busy_timeout says. Oban's stager does exactly that
-# every second. Immediate transactions take the write lock at BEGIN, so they wait.
-config :sarduty, App.Repo, busy_timeout: 5_000, default_transaction_mode: :immediate
+# SQLite allows one writer at a time, and Litestream is one of them: each checkpoint
+# holds the write lock while it copies the WAL, about once a minute and after every
+# sync, sometimes for more than 5 s (#416). So writes wait up to 30 s, not fail. A
+# deferred transaction that reads and then writes never waits, whatever busy_timeout
+# says, and Oban's stager does that every second. Immediate transactions take the
+# write lock at BEGIN, so they wait like any other write (#385).
+config :sarduty, App.Repo, busy_timeout: 30_000, default_transaction_mode: :immediate
 
 # Configure Oban
 config :sarduty, Oban,

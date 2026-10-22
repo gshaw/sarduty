@@ -27,6 +27,11 @@ type = "connections"
 hard_limit = 1000
 soft_limit = 1000
 
+# Litestream's metrics (addr in litestream.yml), such as litestream_checkpoint_seconds (#416).
+[metrics]
+port = 9090
+path = "/metrics"
+
 [mounts]
 source = "sarduty"
 destination = "/mnt/sarduty"
