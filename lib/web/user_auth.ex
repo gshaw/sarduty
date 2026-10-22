@@ -380,15 +380,16 @@ defmodule Web.UserAuth do
 
   @doc """
   Where logging in lands: the team the user last opened when they still manage it, else
-  their only or first team. Someone who manages none lands on their own member page, an
-  admin on /admin, and anyone else on the home page, which says why they have no team.
+  their only or first team. Someone who manages none lands on their team's Dashboard as a
+  member (#406), an admin on /admin, and anyone else on the home page, which says why
+  they have no team.
   """
   def signed_in_path(user) do
     team = default_team(user)
 
     cond do
       team -> ~p"/teams/#{team}"
-      member = user |> member_logins() |> List.first() -> ~p"/teams/#{member.team}/me"
+      member = user |> member_logins() |> List.first() -> ~p"/teams/#{member.team}"
       user.is_admin -> ~p"/admin"
       true -> ~p"/"
     end

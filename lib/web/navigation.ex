@@ -57,7 +57,11 @@ defmodule Web.Navigation do
     proposed_changes = Keyword.get(opts, :proposed_changes, 0)
 
     team_sections =
-      if team_admin?, do: team_admin_sections(team, proposed_changes), else: []
+      cond do
+        team_admin? -> team_admin_sections(team, proposed_changes)
+        member? -> [[dashboard_link(team)]]
+        true -> []
+      end
 
     member_sections =
       if member?, do: [[link("me", "Your membership", ~p"/teams/#{team}/me")]], else: []
@@ -87,7 +91,7 @@ defmodule Web.Navigation do
 
   defp team_admin_sections(team, proposed_changes) do
     [
-      [link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)],
+      [dashboard_link(team)],
       activity_links(team, proposed_changes),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
@@ -110,6 +114,8 @@ defmodule Web.Navigation do
       link("templates", "Templates", ~p"/teams/#{team}/templates")
     ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
   end
+
+  defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
 
   defp people_links(team) do
     [
@@ -155,8 +161,6 @@ defmodule Web.Navigation do
   `[%{key:, label:, path:, current:}]`.
   """
   def switch_rows(is_admin, managed_teams, member_logins, area) do
-    managed = MapSet.new(managed_teams, & &1.id)
-
     admin =
       if is_admin,
         do: [
@@ -174,7 +178,7 @@ defmodule Web.Navigation do
         %{
           key: "team-" <> team.subdomain,
           label: team.name,
-          path: team_home(team, MapSet.member?(managed, team.id)),
+          path: ~p"/teams/#{team}",
           current: match?(%{kind: :team, team: %{id: id}} when id == team.id, area)
         }
       end
@@ -182,10 +186,6 @@ defmodule Web.Navigation do
     rows = admin ++ teams
     if Enum.all?(rows, & &1.current), do: [], else: rows
   end
-
-  # A team's first page: its dashboard for team admins, the member's own page otherwise.
-  defp team_home(team, true), do: ~p"/teams/#{team}"
-  defp team_home(team, false), do: ~p"/teams/#{team}/me"
 
   # Every team you manage or log in to as a member, once each, A to Z.
   defp teams(managed_teams, member_logins) do

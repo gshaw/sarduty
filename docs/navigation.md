@@ -28,7 +28,7 @@ is left out, and so is its divider.
 
 | Section | Links                                         | Who         |
 | ------- | --------------------------------------------- | ----------- |
-| 1       | Dashboard                                     | team admins |
+| 1       | Dashboard                                     | everyone    |
 | 2       | Activities, Templates, Proposed changes       | team admins |
 | 3       | Members, Groups, Qualifications, Endorsements | team admins |
 | 4       | Equipment                                     | team admins |
@@ -37,7 +37,8 @@ is left out, and so is its divider.
 | 7       | Your membership                               | members     |
 
 - A team admin who is a member sees all seven. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 6. A member sees Your membership.
+  Admin and is not a member there sees 1 to 6. A member sees Dashboard, then Your
+  membership.
 - **Templates and Proposed changes are links of their own**, after Activities, so a team
   admin finds them without opening Activities first. Proposed changes shows only when the
   team has MCP on, or something waits. It counts the AI agent change sets that wait for a
@@ -56,7 +57,7 @@ is left out, and so is its divider.
 - **The team switcher** sits on the name when you can go somewhere else. Its menu, headed
   Switch team, lists SAR Duty admin first for SAR Duty admins, then each team where you
   are a team admin or a member, A to Z, one row per team (`Navigation.switch_rows/4`). The
-  team you're on is marked; a team opened from Admin › Teams that isn't yours marks
+  team you're on is marked, and each row goes to the team's Dashboard; a team opened from Admin › Teams that isn't yours marks
   nothing. With one place to be, the name is plain text.
 - **Your avatar, top right**: your initials in a circle, from the name of the member you
   log in as, or else your email (`Navigation.person/3`). It opens your name and email,

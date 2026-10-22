@@ -5,7 +5,9 @@ defmodule App.ViewData.MemberToDo do
 
   - `:card`: their ID card, until it's in Wallet (`MemberCard.in_wallet?/1`).
   - `:qualification`: each one expiring within 60 days, until it's renewed.
-  - `:letter`: last year's tax credit letter, or this year's, until they download it.
+  - `:letter`: last year's tax credit letter, or this year's, until they download it, and
+    only in letter season, January to April, when people file. The rest of the year it
+    waits on Your membership.
   """
 
   @doc """
@@ -32,7 +34,8 @@ defmodule App.ViewData.MemberToDo do
   defp letter_items(letters, now, timezone) do
     recent = Service.YearRange.year_in(now, timezone) - 1
 
-    case Enum.max_by(letters, & &1.year, fn -> nil end) do
+    case Service.Period.letter_season?(now, timezone) &&
+           Enum.max_by(letters, & &1.year, fn -> nil end) do
       %{year: year, downloaded_at: nil} = letter when year >= recent ->
         [%{key: :letter, letter: letter}]
 

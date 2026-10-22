@@ -34,19 +34,14 @@ defmodule Web.NavigationTest do
   end
 
   describe "sections/3" do
-    test "a member sees only Your membership, for now" do
-      assert team_sections("/teams/squamish/me", member?: true) == [
-               [
-                 %{
-                   key: "me",
-                   label: "Your membership",
-                   path: "/teams/squamish/me",
-                   exact: false,
-                   count: nil,
-                   current: true
-                 }
-               ]
-             ]
+    test "a member sees Dashboard, then Your membership" do
+      sections = team_sections("/teams/squamish/me", member?: true)
+      assert keys(sections) == [["dashboard"], ["me"]]
+
+      assert [
+               _dashboard,
+               [%{label: "Your membership", path: "/teams/squamish/me", current: true}]
+             ] = sections
     end
 
     test "a team admin who is a member sees all seven sections" do
@@ -134,7 +129,7 @@ defmodule Web.NavigationTest do
                {"Squamish SAR", true}
              ]
 
-      assert Enum.map(rows, & &1.path) == ["/admin", "/teams/pemberton/me", "/teams/squamish"]
+      assert Enum.map(rows, & &1.path) == ["/admin", "/teams/pemberton", "/teams/squamish"]
     end
 
     test "one place is nothing to switch to, so the name is plain text" do

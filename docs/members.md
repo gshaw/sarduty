@@ -114,7 +114,7 @@ admin's member page, from one query and one component each (#308, #339, decided
   that expires within 60 days, the app's one expiring window
   (`BuildGroupRulePreview.expiring_days/0`), gets a warning tag with its days left ("30
   days"), as a group's expiring members do. No banner says it again (decided
-  2026-10-21): the row is first in the table, and the overview's For you to do already
+  2026-10-21): the row is first in the table, and the Dashboard's For you to do already
   says what to do. The words are
   [Web.QualificationText](../lib/web/qualification_text.ex), so every page says the same
   thing.
@@ -205,6 +205,28 @@ Activities.
   attended, beside the letter and the hours. No map when none of them has a place.
 - **Every attended activity**, newest first, with which hours it counts for. Coming
   sign-ups are not here: Next up and the team's Activities have them.
+
+### The Dashboard for members
+
+The team's Dashboard, `/teams/:subdomain`
+([TeamDashboardLive](../lib/web/live/team_dashboard_live.ex)), opens to members too
+(#406), read only, and is where a member lands after logging in.
+
+- **Members see the team admin's page without its controls**: Next up, the team's next
+  activity, with a maps link; Coming up, the team's next activities; the team's year; and
+  **For you to do**. The refresh line says when SAR Duty last refreshed, with Open D4H.
+- **Team admins also get** Take attendance on Next up, Needs attention, and Refresh now.
+  A team admin who is a member sees both For you to do and Needs attention, one above
+  the other. A member's page doesn't work out Needs attention at all.
+- **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
+  add your ID card to Wallet (on a team with ID cards on, until
+  `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until it's
+  renewed), and a new tax credit letter (from January to April, until the member
+  downloads it, `downloaded_at`). Each leaves once done. With nothing to do, the card
+  says so in one line.
+- `"refresh"` checks `team_admin?`, and only a team admin's visit starts the catch-up
+  sync.
+- Links to team admin pages, such as Members from the stats, show only to team admins.
 
 ### What must stay true
 

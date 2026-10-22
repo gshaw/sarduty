@@ -28,7 +28,11 @@ defmodule App.ViewData.TeamDashboardViewData do
   @coming_up_days 14
   @coming_up_count 5
 
-  def build(%Team{} = team, now \\ DateTime.utc_now()) do
+  @doc """
+  The top half as of `now`. `attention?: false` leaves out Needs attention, which only
+  team admins see, so a member's Dashboard doesn't count what nobody will read.
+  """
+  def build(%Team{} = team, now \\ DateTime.utc_now(), opts \\ []) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
     {next_up, coming_up} = team |> agenda_activities(now) |> agenda(now)
 
@@ -37,9 +41,14 @@ defmodule App.ViewData.TeamDashboardViewData do
       refresh_result: refresh_result,
       next_up: next_up,
       coming_up: coming_up,
-      attention: team |> attention_rows(refresh_result, now) |> TeamAttention.items(now)
+      attention: attention(team, refresh_result, now, Keyword.get(opts, :attention?, true))
     }
   end
+
+  defp attention(team, refresh_result, now, true),
+    do: team |> attention_rows(refresh_result, now) |> TeamAttention.items(now)
+
+  defp attention(_team, _refresh_result, _now, false), do: []
 
   defp attention_rows(team, refresh_result, now) do
     %{
