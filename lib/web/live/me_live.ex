@@ -20,7 +20,7 @@ defmodule Web.MeLive do
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
   # latest activities, from any year so it is never empty on January 1, and their
   # qualifications in the main column; their ID card, latest tax credit letter, contact
-  # details, and milestones in a sidebar. `current_member` comes from the login
+  # details, and milestones in a sidebar, split by space, not boxes (/styles/card). `current_member` comes from the login
   # (Web.UserAuth, :ensure_team_access), never from the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.current_member
@@ -124,30 +124,24 @@ defmodule Web.MeLive do
       </div>
       <aside class="membership-aside">
         <div :if={@team.id_cards_enabled or @letter} class="membership-aside-top">
-          <section id="card-and-letter" class="card side-card">
-            <.id_card :if={@team.id_cards_enabled} team={@team} card={@card} />
-            <hr :if={@team.id_cards_enabled and @letter} />
-            <.member_letter
-              :if={@letter}
-              id="letter"
-              team={@team}
-              letter={@letter}
-              year={@letter.year}
-              hours={false}
-            />
-          </section>
+          <.id_card :if={@team.id_cards_enabled} team={@team} card={@card} />
+          <.member_letter
+            :if={@letter}
+            id="letter"
+            team={@team}
+            letter={@letter}
+            year={@letter.year}
+            hours={false}
+          />
         </div>
         <div class="membership-aside-bottom">
-          <section id="details-and-milestones" class="card side-card">
-            <.contact_details
-              team={@team}
-              member={@member}
-              contacts?={@contacts?}
-              emergency_contact={assigns[:emergency_contact]}
-            />
-            <hr />
-            <.milestones milestones={@milestones} />
-          </section>
+          <.contact_details
+            team={@team}
+            member={@member}
+            contacts?={@contacts?}
+            emergency_contact={assigns[:emergency_contact]}
+          />
+          <.milestones milestones={@milestones} />
         </div>
       </aside>
     </div>
