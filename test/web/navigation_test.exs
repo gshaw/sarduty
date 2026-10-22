@@ -125,7 +125,7 @@ defmodule Web.NavigationTest do
 
     test "SAR Duty admin has three sections; account settings and pages outside an area none" do
       sections = "/admin/orgs" |> Navigation.area(nil) |> Navigation.sections("/admin/orgs")
-      assert List.last(keys(sections)) == ["admin-styles"]
+      assert sections |> keys() |> List.last() == ["admin-styles"]
       assert length(sections) == 3
       assert current(sections) == ["admin-orgs"]
 
