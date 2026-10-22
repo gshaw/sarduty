@@ -175,12 +175,17 @@ defmodule Web.MeLiveTest do
       |> Ecto.Changeset.change(phone: "604-555-0188", address: "2140 Fern Street")
       |> Repo.update!()
 
-      stub_d4h(%{"name" => "Jo Rivera", "primaryPhone" => "604-555-0101"})
+      stub_d4h(%{
+        "name" => "Jo Rivera",
+        "relation" => "Partner",
+        "primaryPhone" => "604-555-0101"
+      })
+
       lv = open(conn, ~p"/teams/#{team}/me")
 
       assert has_element?(lv, "#contact-mobile", "604-555-0188")
       assert has_element?(lv, "#contact-address", "2140 Fern Street")
-      assert has_element?(lv, "#contact-emergency", "Jo Rivera · 604-555-0101")
+      assert has_element?(lv, "#contact-emergency", "Jo Rivera (Partner) · 604-555-0101")
       assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
     end
 

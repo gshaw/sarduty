@@ -348,9 +348,16 @@ defmodule Web.MeLive do
     """
   end
 
-  # "Jo Rivera · 604-555-0101", or None when D4H has no contact.
-  defp contact_line(%{"name" => name} = contact) when is_binary(name),
-    do: [name, contact["primary_phone"]] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
+  # "Jo Rivera (Partner) · 604-555-0101", or None when D4H has no contact.
+  defp contact_line(%{"name" => name} = contact) when is_binary(name) do
+    name =
+      case contact["relation"] do
+        relation when relation in [nil, ""] -> name
+        relation -> "#{name} (#{relation})"
+      end
+
+    [name, contact["primary_phone"]] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
+  end
 
   defp contact_line(_contact), do: "None"
 
