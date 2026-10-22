@@ -1,6 +1,6 @@
 defmodule App.ViewData.MemberToDo do
   @moduledoc """
-  "For you to do" on a member's overview (#389): each item stays until it's done. Pure:
+  "For you to do" on the Dashboard (#389, #406): each item stays until it's done. Pure:
   what SAR Duty knows about the member in, items out.
 
   - `:card`: their ID card, until it's in Wallet (`MemberCard.in_wallet?/1`).

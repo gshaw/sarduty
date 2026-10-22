@@ -1,7 +1,7 @@
 defmodule Service.Calendar do
   @moduledoc """
-  One event as an iCalendar file (RFC 5545), for Add to calendar on a member's overview
-  (#389). Phones and calendar apps open it and offer to add the event.
+  One event as an iCalendar file (RFC 5545), for Add to calendar on an activity's page
+  (#389, #406). Phones and calendar apps open it and offer to add the event.
   """
 
   @doc """
