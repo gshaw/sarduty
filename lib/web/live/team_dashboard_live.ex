@@ -426,7 +426,10 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <li id="to-do-declined-chores" class="py-3">
       <.a navigate={~p"/teams/#{@team}/me/chores"} class="font-semibold">
-        {Format.count(length(@item.chores), one: "%d chore declined", many: "%d chores declined")}
+        {Format.count(length(@item.chores),
+          one: "Your chore was declined",
+          many: "%d of your chores were declined"
+        )}
       </.a>
       <span class="hint block">{declined_hint(@item.chores)}</span>
     </li>

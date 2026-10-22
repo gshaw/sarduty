@@ -396,7 +396,7 @@ defmodule Web.TeamDashboardLiveTest do
       })
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      assert has_element?(lv, "#to-do-declined-chores", "1 chore declined")
+      assert has_element?(lv, "#to-do-declined-chores", "Your chore was declined")
       assert has_element?(lv, "#to-do-declined-chores", "Slept at the hall")
     end
 
