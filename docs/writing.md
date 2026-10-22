@@ -26,10 +26,11 @@ finish a task and leave. Write so a reader understands each sentence the first t
    one meaning for each word. Never switch to a synonym for variety.
 6. **Use common words.** Write "use", "before", "to", and "about", not "utilize", "prior
    to", "in order to", and "regarding". [Words to avoid](#words-to-avoid) lists more.
-7. **Write negatives in full.** "cannot", "do not", "is not". People misread "can't" and
-   "don't" as their opposite when they skim. Positive contractions such as "you'll" and
-   "it's" are fine. The reply "Can't make it" is the one exception: see Replies
-   in [Patterns](#patterns).
+7. **Write negatives in full in instructions, warnings, and errors**: "cannot", "do not",
+   "is not". People skimming misread "can't" and "don't" as their opposite, and there a
+   misread "not" leads them to do the wrong thing. Elsewhere a negative contraction is fine
+   when its meaning cannot flip, such as a button beside its opposite: "I'll be there" and
+   "Can't make it". Positive contractions such as "you'll" and "it's" are fine anywhere.
 8. **Use sentence case everywhere.** Headings, page titles, buttons, labels, tabs, and
    menu items: "Create letter", "Tax credit letters", "Change password". Proper nouns keep
    their capitals: D4H, SAR Duty, SARVAC, Apple Wallet.
@@ -236,8 +237,7 @@ Before committing text a person will read, check each line:
 - [ ] Every term matches [the glossary](#glossary), and nothing from its "Not" column is
       used.
 - [ ] Nothing from [words to avoid](#words-to-avoid) is used.
-- [ ] Negatives are in full: "cannot", "do not". The reply "Can't make it" is the one
-      exception.
+- [ ] Negatives are in full in instructions, warnings, and errors: "cannot", "do not".
 - [ ] Headings, titles, buttons, labels, and tabs are in sentence case.
 - [ ] Buttons are a verb and an object, except the two replies. Links make sense on
       their own.
