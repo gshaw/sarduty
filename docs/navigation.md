@@ -28,20 +28,21 @@ is left out, and so is its divider.
 
 | Section | Links                                         | Who         |
 | ------- | --------------------------------------------- | ----------- |
-| 1       | Dashboard, Activities                         | team admins |
-| 2       | Members, Groups, Qualifications, Endorsements | team admins |
-| 3       | Equipment                                     | team admins |
-| 4       | Tax credit letters                            | team admins |
-| 5       | Team settings                                 | team admins |
-| 6       | Your membership                               | members     |
+| 1       | Dashboard                                     | team admins |
+| 2       | Activities, Templates, Proposed changes       | team admins |
+| 3       | Members, Groups, Qualifications, Endorsements | team admins |
+| 4       | Equipment                                     | team admins |
+| 5       | Tax credit letters                            | team admins |
+| 6       | Team settings                                 | team admins |
+| 7       | Your membership                               | members     |
 
-- A team admin who is a member sees all six. A SAR Duty admin who opened a team from Admin
-  and is not a member there sees 1 to 5. A member sees Your membership.
-- **Templates and Proposed changes are tabs on Activities**
-  ([ActivitiesTabs](../lib/web/components/activities_tabs.ex)). Activities is current on
-  them, and carries the count of AI agent change sets that wait for a team admin, in an
-  amber tag (`ChangeSet.count_waiting/1`, assigned by the team pages' hook). The Proposed
-  changes tab shows only when the team has MCP on, or something waits.
+- A team admin who is a member sees all seven. A SAR Duty admin who opened a team from
+  Admin and is not a member there sees 1 to 6. A member sees Your membership.
+- **Templates and Proposed changes are links of their own**, after Activities, so a team
+  admin finds them without opening Activities first. Proposed changes shows only when the
+  team has MCP on, or something waits. It counts the AI agent change sets that wait for a
+  team admin in an amber tag (`ChangeSet.count_waiting/1`, assigned by the team pages'
+  hook), and on a phone the Menu button gets an amber dot while any link has a count.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)):
   General, Team admins, Member logins, Hours tags, and MCP tokens once a SAR Duty admin

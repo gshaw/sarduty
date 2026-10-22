@@ -27,17 +27,23 @@ defmodule Web.Components.NavBar do
     """
   end
 
+  attr :waiting?, :boolean, default: false, doc: "a link inside has a count"
   slot :inner_block, required: true
 
   # Below 1024px the bar's links and account menu move behind this button. The panel opens
-  # under the bar, and live navigation renders the page again, which closes it.
+  # under the bar, and live navigation renders the page again, which closes it. An amber
+  # dot says a link inside has something waiting, such as proposed changes.
   def site_bar_phone_menu(assigns) do
     ~H"""
     <details id="phone-menu" class="site-bar-phone group">
-      <summary id="phone-menu-button" aria-label="Menu">
+      <summary
+        id="phone-menu-button"
+        aria-label={if @waiting?, do: "Menu, something waits", else: "Menu"}
+      >
         <.icon name="hero-bars-3" class="group-open:hidden" />
         <.icon name="hero-x-mark" class="hidden group-open:inline-block" />
         <span>Menu</span>
+        <span :if={@waiting?} id="phone-menu-dot" class="menu-dot" aria-hidden="true"></span>
       </summary>
       <nav class="site-bar-phone-panel" aria-label="Main">
         {render_slot(@inner_block)}

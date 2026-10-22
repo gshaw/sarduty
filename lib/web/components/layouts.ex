@@ -273,7 +273,7 @@ defmodule Web.Layouts do
           <span class="site-bar-area-name">{@area.name}</span>
         </span>
         <.account_menu person={@person} />
-        <.site_bar_phone_menu>
+        <.site_bar_phone_menu waiting?={Enum.any?(List.flatten(@sections), & &1.count)}>
           <%= if @switch_rows != [] do %>
             <div class="caps menu-heading">Switch team</div>
             <.switch_link :for={row <- @switch_rows} row={row} id_prefix="phone-switch-" />

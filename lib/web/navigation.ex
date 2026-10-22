@@ -56,17 +56,13 @@ defmodule Web.Navigation do
     member? = Keyword.get(opts, :member?, false)
     proposed_changes = Keyword.get(opts, :proposed_changes, 0)
 
-    [
-      everyone_links(team, team_admin?, proposed_changes),
-      team_admin? && people_links(team),
-      team_admin? && [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
-      team_admin? &&
-        [link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")],
-      team_admin? && [link("settings", "Team settings", ~p"/teams/#{team}/settings")],
-      member? && [link("me", "Your membership", ~p"/teams/#{team}/me")]
-    ]
-    |> Enum.filter(&(is_list(&1) and &1 != []))
-    |> mark_current(path)
+    team_sections =
+      if team_admin?, do: team_admin_sections(team, proposed_changes), else: []
+
+    member_sections =
+      if member?, do: [[link("me", "Your membership", ~p"/teams/#{team}/me")]], else: []
+
+    mark_current(team_sections ++ member_sections, path)
   end
 
   def sections(%{kind: :admin}, path, _opts) do
@@ -89,19 +85,31 @@ defmodule Web.Navigation do
 
   def sections(_area, _path, _opts), do: []
 
-  # Templates and Proposed changes are tabs on the Activities page, so Activities is
-  # current on them, and carries the count of proposed changes waiting.
-  defp everyone_links(team, true, proposed_changes) do
+  defp team_admin_sections(team, proposed_changes) do
     [
-      link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true),
-      link("activities", "Activities", ~p"/teams/#{team}/activities",
-        count: proposed_changes,
-        also: [~p"/teams/#{team}/templates", ~p"/teams/#{team}/proposed-changes"]
-      )
+      [link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)],
+      activity_links(team, proposed_changes),
+      people_links(team),
+      [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
+      [link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")],
+      [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
 
-  defp everyone_links(_team, false, _proposed_changes), do: []
+  # Activities' pages for team admins, each its own link so Templates is easy to find.
+  # Proposed changes come from AI agents through MCP, a trial most teams don't have: the
+  # link shows only when the team has it, or something waits there, with the count.
+  defp activity_links(team, proposed_changes) do
+    proposed =
+      link("proposed-changes", "Proposed changes", ~p"/teams/#{team}/proposed-changes",
+        count: proposed_changes
+      )
+
+    [
+      link("activities", "Activities", ~p"/teams/#{team}/activities"),
+      link("templates", "Templates", ~p"/teams/#{team}/templates")
+    ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
+  end
 
   defp people_links(team) do
     [
@@ -119,7 +127,6 @@ defmodule Web.Navigation do
       key: key,
       label: label,
       path: path,
-      also: Keyword.get(opts, :also, []),
       exact: Keyword.get(opts, :exact, false),
       count: if(count && count > 0, do: count),
       current: false
@@ -127,7 +134,7 @@ defmodule Web.Navigation do
   end
 
   # An area's first page is current only on itself, since every page is under it; other
-  # links are current on any page under them, or under one of their tabs' paths.
+  # links are current on any page under them.
   defp mark_current(sections, path) do
     for links <- sections do
       Enum.map(links, &%{&1 | current: current?(&1, path)})
@@ -137,8 +144,8 @@ defmodule Web.Navigation do
   defp current?(_link, nil), do: false
   defp current?(%{exact: true, path: path}, current), do: current == path
 
-  defp current?(%{path: path, also: also}, current),
-    do: Enum.any?([path | also], &(current == &1 or String.starts_with?(current, &1 <> "/")))
+  defp current?(%{path: path}, current),
+    do: current == path or String.starts_with?(current, path <> "/")
 
   @doc """
   The team switcher's rows: "SAR Duty admin" first for SAR Duty admins, then each team

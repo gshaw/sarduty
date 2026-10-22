@@ -60,16 +60,19 @@ defmodule Web.TeamNavigationTest do
     refute has_element?(lv, "#switch-admin")
   end
 
-  test "Activities counts the proposed changes waiting", %{conn: conn, team: team} do
-    team = team |> Ecto.Changeset.change(mcp_enabled: true) |> Repo.update!()
+  test "Proposed changes is in the menu with its count, and a dot on the phone menu",
+       %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
-    refute has_element?(lv, "#side-nav-activities .badge")
-    assert has_element?(lv, ".tabs a", "Proposed changes")
+    assert has_element?(lv, ~s{#side-nav-templates[href="/teams/#{team.subdomain}/templates"]})
+    refute has_element?(lv, "#side-nav-proposed-changes")
+    refute has_element?(lv, "#phone-menu-dot")
+    refute has_element?(lv, ".tabs")
 
     ChangeSet.propose!(%ChangeSet{team_id: team.id, source: :agent}, [])
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/proposed-changes")
-    assert has_element?(lv, "#side-nav-activities[aria-current=page] .badge", "1")
-    assert has_element?(lv, ".tabs a[aria-current=page] .badge", "1")
+    assert has_element?(lv, "#side-nav-proposed-changes[aria-current=page] .badge", "1")
+    refute has_element?(lv, "#side-nav-activities .badge")
+    assert has_element?(lv, "#phone-menu-dot")
   end
 
   test "Team settings' pages are tabs under one title", %{conn: conn, team: team} do

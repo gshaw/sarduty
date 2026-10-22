@@ -41,7 +41,6 @@ defmodule Web.NavigationTest do
                    key: "me",
                    label: "Your membership",
                    path: "/teams/squamish/me",
-                   also: [],
                    exact: false,
                    count: nil,
                    current: true
@@ -50,10 +49,11 @@ defmodule Web.NavigationTest do
              ]
     end
 
-    test "a team admin who is a member sees all six sections" do
+    test "a team admin who is a member sees all seven sections" do
       assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
                [
-                 ["dashboard", "activities"],
+                 ["dashboard"],
+                 ["activities", "templates"],
                  ["members", "groups", "qualifications", "endorsements"],
                  ["equipment"],
                  ["tax-credit-letters"],
@@ -62,9 +62,9 @@ defmodule Web.NavigationTest do
                ]
     end
 
-    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 5" do
+    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 6" do
       sections = team_sections("/teams/squamish", team_admin?: true)
-      assert length(sections) == 5
+      assert length(sections) == 6
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
@@ -72,23 +72,33 @@ defmodule Web.NavigationTest do
       assert team_sections("/teams/squamish", []) == []
     end
 
-    test "Activities counts proposed changes and is current on its tabs" do
-      [[_dashboard, activities] | _rest] =
-        team_sections("/teams/squamish/templates/3", team_admin?: true, proposed_changes: 2)
+    test "Proposed changes shows with MCP on or when something waits, with the count" do
+      activity_keys = fn sections -> sections |> Enum.at(1) |> Enum.map(& &1.key) end
 
-      assert %{count: 2, current: true} = activities
+      sections = team_sections("/teams/squamish", team_admin?: true)
+      assert activity_keys.(sections) == ["activities", "templates"]
 
-      assert current(team_sections("/teams/squamish/proposed-changes", team_admin?: true)) ==
-               ["activities"]
+      [_dashboard, [_activities, _templates, proposed] | _rest] =
+        team_sections("/teams/squamish/proposed-changes/3",
+          team_admin?: true,
+          proposed_changes: 2
+        )
 
-      [[_dashboard, activities] | _rest] = team_sections("/teams/squamish", team_admin?: true)
-      assert activities.count == nil
+      assert %{key: "proposed-changes", count: 2, current: true} = proposed
+
+      mcp_team = %{@team | mcp_enabled: true}
+
+      [_dashboard, [_activities, _templates, proposed] | _rest] =
+        "/teams/squamish" |> team_sections([team_admin?: true], mcp_team)
+
+      assert proposed.count == nil
     end
 
     test "the first page is current only on itself; others on anything under them" do
       opts = [team_admin?: true, member?: true]
       assert current(team_sections("/teams/squamish", opts)) == ["dashboard"]
       assert current(team_sections("/teams/squamish/activities/7/tags", opts)) == ["activities"]
+      assert current(team_sections("/teams/squamish/templates/3", opts)) == ["templates"]
       assert current(team_sections("/teams/squamish/settings/managers", opts)) == ["settings"]
       assert current(team_sections("/teams/squamish/me/details", opts)) == ["me"]
       assert current(team_sections("/teams/squamish/members-x", opts)) == []
