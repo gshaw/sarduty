@@ -180,6 +180,8 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, ".tabs")
       refute has_element?(lv, "#activity-add")
       refute has_element?(lv, "#activity_collection .tag")
+      refute has_element?(lv, "#activity_collection", "Draft")
+      refute has_element?(lv, "#activity_filter_form-summary", "Clear filters")
       refute has_element?(lv, "select[name='form[status]']")
       refute has_element?(lv, "select[name='form[hours]']")
       assert has_element?(lv, "#side-nav-activities[aria-current=page]")

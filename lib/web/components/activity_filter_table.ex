@@ -42,7 +42,7 @@ defmodule Web.Components.ActivityFilterTable do
         field={@form[:when]}
         label="When"
         options={ActivityFilterViewModel.when_kinds(@team)}
-        default="all"
+        default={if(@team_admin?, do: "all", else: "future")}
       />
       <:filter
         :if={@team_admin?}
@@ -112,7 +112,8 @@ defmodule Web.Components.ActivityFilterTable do
         </div>
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
-        <.activity_kind activity={record} />
+        <.activity_kind :if={@team_admin?} activity={record} />
+        <.activity_kind_mark :if={!@team_admin?} activity={record} />
       </:col>
       <:col
         :let={record}
