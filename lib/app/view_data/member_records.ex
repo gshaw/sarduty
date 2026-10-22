@@ -1,6 +1,7 @@
 defmodule App.ViewData.MemberRecords do
   import Ecto.Query
 
+  alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
@@ -21,6 +22,23 @@ defmodule App.ViewData.MemberRecords do
     |> attended_query(now)
     |> Attendance.years(member.team.timezone)
     |> then(&[this_year | &1])
+    |> Enum.uniq()
+    |> Enum.sort(:desc)
+  end
+
+  @doc """
+  The years for the member's year page (#406): from this year back to the year they
+  joined, and any earlier year they attended in, newest first.
+  """
+  def years_on_team(%Member{} = member, now) do
+    this_year = Service.YearRange.year_in(now, member.team.timezone)
+
+    joined =
+      if member.joined_at,
+        do: Service.YearRange.year_in(member.joined_at, member.team.timezone),
+        else: this_year
+
+    (Enum.to_list(this_year..min(joined, this_year)//-1) ++ years(member, now))
     |> Enum.uniq()
     |> Enum.sort(:desc)
   end
@@ -61,6 +79,21 @@ defmodule App.ViewData.MemberRecords do
     |> order_by([at], asc: at.started_at)
     |> preload([activity: ac], activity: ac)
     |> Repo.all()
+  end
+
+  @doc """
+  Which hours a row's activity counts for, as its tags say: `:primary`, `:secondary`, or
+  `:other` for neither. `hours_tags` is the team's `Activity.hours_tags/1`.
+  """
+  def hours_kind(%{activity: activity}, hours_tags),
+    do: Activity.counts_as(activity.tags, hours_tags) || :other
+
+  @doc "The minutes on rows whose activity has neither hours tag, the year page's Other."
+  def other_minutes(attendances, hours_tags) do
+    attendances
+    |> Enum.filter(&(hours_kind(&1, hours_tags) == :other))
+    |> Enum.map(&minutes/1)
+    |> Enum.sum()
   end
 
   @doc "How long the member was there: their own times, else D4H's duration."

@@ -1,7 +1,7 @@
 defmodule Web.Components.MeYear do
   @moduledoc """
-  The year a member's Activities and Hours pages show (`?year=`), and the switch between
-  the years they attended in, from `MemberRecords.years/2`.
+  The year a member's year page shows (`?year=`), and the switch between the years from
+  `MemberRecords.years_on_team/2`.
   """
 
   use Web, :function_component

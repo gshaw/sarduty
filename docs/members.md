@@ -185,6 +185,25 @@ their D4H photo in a circle, or their initials when D4H has none (`/me/image`), 
 - The `/me/card/…` Wallet downloads, `/me/tax-credit-letters/:id/pdf`, and `/wallet/…`
   stay: passes and files hold them.
 
+### The year page
+
+`/teams/:subdomain/me/activities?year=2025`
+([MeActivitiesLive](../lib/web/live/me_activities_live.ex)), "Your activities in 2025"
+under the breadcrumbs Your membership › Activities (#406). The title says "Your" because
+the browser tab and the breadcrumbs show it alone, where a team admin also has the team's
+Activities.
+
+- **The year switch** runs from this year back to the year the member joined
+  (`MemberRecords.years_on_team/2`).
+- **That year's letter**, as Your membership shows it. For the current year it says the
+  letter comes once a team admin makes it, after the year ends. A past year with no letter
+  shows nothing.
+- **Hours in the year**: the count of activities, then bars for primary, secondary, and
+  other hours. Primary and secondary count as the letter does (`CountTaxCreditHours`), so
+  they match it. Other is the time on activities with neither hours tag.
+- **Every attended activity**, newest first, with which hours it counts for. Coming
+  sign-ups are not here: Next up and the team's Activities have them.
+
 ### What must stay true
 
 - **A member page shows only the person logged in.** `current_member` comes from the
