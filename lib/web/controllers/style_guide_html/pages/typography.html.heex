@@ -113,4 +113,35 @@
   <p class="spec">
     In the app: <code>&lt;.a&gt;</code> for a link, <code>.list</code> for bullets.
   </p>
+
+  <h2>Arrows</h2>
+  <div class="demo">
+    <p class="paragraph">Ten of your latest activities.</p>
+    <p class="action">
+      <.a href="#">All your activities</.a>
+    </p>
+  </div>
+  <p>
+    An arrow starts a link that stands on its own line as the next thing to do: the Actions in a <a href={
+      page_path(:detail_list)
+    }>detail list</a>, or one link after a section, such as All your activities or Change contact details.
+  </p>
+  <ul class="list">
+    <li>Never in a sentence, a table, a menu, or the side navigation.</li>
+    <li>
+      Never on a link that belongs to a value, such as Open in Google Maps under an address. It sits with the value.
+    </li>
+  </ul>
+  <p class="spec">
+    In the app: <code>&lt;ul class="action-list"&gt;</code>
+    for several, <code>&lt;p class="action"&gt;</code>
+    for one.
+  </p>
+
+  <h2>Links to other sites</h2>
+  <p>
+    <code>external=&#123;true&#125;</code>
+    for a link that leaves SAR Duty for another service, such as D4H or its help pages: it opens a new tab and ends in an icon that says so.
+    The verify site is SAR Duty's own, so its links open in the same tab with no icon.
+  </p>
 </.shell>

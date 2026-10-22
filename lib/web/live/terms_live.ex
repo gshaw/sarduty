@@ -32,7 +32,7 @@ defmodule Web.TermsLive do
       <p id="terms-operator">
         Gerry Shaw runs SAR Duty as an independent project. No team that uses SAR Duty runs it or is responsible for it.
       </p>
-      <p>
+      <p class="action">
         <.a id="terms-privacy" navigate={~p"/privacy"}>Privacy</.a>
       </p>
     </article>

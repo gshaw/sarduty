@@ -211,7 +211,7 @@ fi
   `test/web/design_system_test.exs` fails on it.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
   states, the error summary, and the result band are components; `.hint`,
-  `.lead`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
+  `.lead`, `.action`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
   classes. Utilities on the scale are for one-off layout only.
 - **Space groups things, not boxes.** A `.card` is for tiles in a grid, such as a
   dashboard, or a result set apart from its page. Never a sidebar's sections, and never
