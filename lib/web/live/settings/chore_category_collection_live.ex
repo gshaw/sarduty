@@ -6,7 +6,7 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
   alias App.Model.ChoreCategory
 
   # The team's chore categories (#341), /teams/:subdomain/settings/chore-categories.
-  # Members log chores in their member area, so the page exists only with member logins on.
+  # Only members log chores, so the page exists only with member logins on.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     if !team.member_logins, do: raise(Web.Status.NotFound)
