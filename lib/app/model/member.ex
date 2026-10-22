@@ -24,6 +24,10 @@ defmodule App.Model.Member do
     field :email, :string, redact: true
     field :phone, :string, redact: true
     field :address, :string, redact: true
+    # Maps with "name", "relation", "primary_phone", "secondary_phone" (#423). Only team
+    # admins and the member see them.
+    field :primary_emergency_contact, :map, redact: true
+    field :secondary_emergency_contact, :map, redact: true
     field :position, :string
     field :joined_at, :utc_datetime
     field :left_at, :utc_datetime
@@ -51,6 +55,8 @@ defmodule App.Model.Member do
       :email,
       :phone,
       :address,
+      :primary_emergency_contact,
+      :secondary_emergency_contact,
       :position,
       :joined_at,
       :left_at,

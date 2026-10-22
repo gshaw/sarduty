@@ -566,14 +566,6 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  @doc "A member's address and emergency contacts now, as `D4H.MemberDetails` (#156)."
-  def fetch_member_details(context, d4h_member_id) do
-    case Req.request(context, method: :get, url: "/members/#{d4h_member_id}", retry: false) do
-      {:ok, %{status: 200, body: body}} -> {:ok, D4H.MemberDetails.build(body)}
-      result -> {:error, write_error(result)}
-    end
-  end
-
   @doc "Every attendance row on the activity now, as `D4H.AttendanceInfo` structs."
   def fetch_attendance_infos(context, d4h_activity_id) do
     request = [
@@ -987,7 +979,7 @@ defmodule App.Adapter.D4H do
   defp put_contact(json, attrs, name, d4h_name) do
     case attrs[name] do
       %{} = contact ->
-        fields = D4H.MemberDetails.contact_fields()
+        fields = D4H.Member.contact_fields()
         Map.put(json, d4h_name, Map.new(fields, fn {k, d4h_k} -> {d4h_k, contact[k] || ""} end))
 
       nil ->

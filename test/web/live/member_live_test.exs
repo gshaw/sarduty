@@ -32,6 +32,49 @@ defmodule Web.MemberLiveTest do
     assert has_element?(lv, ~s|#member-phone-text[href="sms:+16045551234"]|)
   end
 
+  test "shows a team admin the emergency contacts, with Call and Text", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    member =
+      member_fixture(team, %{
+        primary_emergency_contact: %{
+          "name" => "Sam Rivera",
+          "relation" => "Partner",
+          "primary_phone" => "6045550100",
+          "secondary_phone" => "604-555-0101"
+        },
+        secondary_emergency_contact: %{"name" => nil, "primary_phone" => nil}
+      })
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-emergency", "Sam Rivera (Partner)")
+    assert has_element?(lv, "#member-emergency", "604-555-0101")
+    assert has_element?(lv, ~s|#member-emergency-copy-0[value="604-555-0100"]|)
+    assert has_element?(lv, ~s|#member-emergency-call[href="tel:+16045550100"]|)
+    refute has_element?(lv, "#member-emergency-2")
+  end
+
+  test "a member with no emergency contact shows None", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-emergency", "None")
+  end
+
+  test "a member can't open another member's page, so never sees their contacts", %{conn: conn} do
+    %{team: team, user: user} = member_with_login_fixture()
+    other = member_fixture(team, %{primary_emergency_contact: %{"name" => "Sam Rivera"}})
+
+    assert_raise Web.Status.NotFound, fn ->
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{other.id}")
+    end
+  end
+
   test "opens the member's address in maps without their name", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team, %{name: "Kim Ng", address: "12 Elm St\nSurrey BC"})

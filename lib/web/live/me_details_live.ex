@@ -13,8 +13,8 @@ defmodule Web.MeDetailsLive do
   # number, then their address and emergency contacts. `member` comes from the login,
   # never from the URL.
   #
-  # The address form shows what D4H holds now, and saving sends the change straight to
-  # D4H. Text login uses the mobile number, so a change waits for the code texted to the
+  # The address form shows the member's copy, which the sync keeps (#423), and saving
+  # sends the change straight to D4H. Text login uses the mobile number, so a change waits for the code texted to the
   # new number. Codes count against the login limits for that number. A code waiting for
   # an answer shows its form, even after a reload. Members don't change their email here;
   # team admins do, in D4H.
@@ -25,12 +25,11 @@ defmodule Web.MeDetailsLive do
     socket =
       socket
       |> assign(:page_title, "Contact details")
-      |> assign(:contacts?, "primary_emergency_contact" in SaveOwnDetails.fields(member.team))
       |> assign(:client_ip, session["client_ip"])
       |> assign(:text_login?, Accounts.text_login?())
       |> assign(:phone_form, to_form(%{"phone" => ""}, as: "phone"))
       |> assign_pending(ChangeOwnPhone.pending(socket.assigns.current_user))
-      |> load()
+      |> assign_form(MemberDetailsViewModel.from_member(member), %{})
 
     {:ok, socket}
   end
@@ -39,17 +38,6 @@ defmodule Web.MeDetailsLive do
     socket
     |> assign(:pending, e164)
     |> assign(:code_form, to_form(%{"code" => ""}, as: "confirm"))
-  end
-
-  defp load(socket) do
-    case SaveOwnDetails.load(socket.assigns.current_member) do
-      {:ok, details} ->
-        form = MemberDetailsViewModel.from_details(details)
-        socket |> assign(details: details, error: nil) |> assign_form(form, %{})
-
-      {:error, text} ->
-        assign(socket, details: nil, error: text, form: nil)
-    end
   end
 
   defp assign_form(socket, form, params) do
@@ -130,11 +118,11 @@ defmodule Web.MeDetailsLive do
   end
 
   defp save(socket, member, params) do
-    %{current_user: user, details: details, form_data: form} = socket.assigns
+    %{current_user: user, form_data: form} = socket.assigns
 
     with {:ok, values} <- MemberDetailsViewModel.validate(form, params),
          values = MemberDetailsViewModel.to_values(values),
-         {:ok, _result} <- SaveOwnDetails.call(member, user, details, values, DateTime.utc_now()) do
+         {:ok, _result} <- SaveOwnDetails.call(member, user, values, DateTime.utc_now()) do
       socket
       |> put_flash(:info, "Your contact details are saved in #{service(member)}.")
       |> push_navigate(to: ~p"/teams/#{member.team}/me/details")
@@ -166,16 +154,9 @@ defmodule Web.MeDetailsLive do
         text_login?={@text_login?}
       />
 
-      <h2 class="heading mt-8">
-        {if @contacts?, do: "Mailing address and emergency contacts", else: "Mailing address"}
-      </h2>
-
-      <.banner :if={@error} id="details-error" kind={:warning} title="Your details did not load">
-        {@error}
-      </.banner>
+      <h2 class="heading mt-8">Mailing address and emergency contacts</h2>
 
       <.form
-        :if={@form}
         for={@form}
         id="details-form"
         phx-change="validate"
@@ -184,28 +165,26 @@ defmodule Web.MeDetailsLive do
         <.error_summary form={@form} />
         <.input field={@form[:address]} type="textarea" rows="4" label="Mailing address" />
 
-        <%= if @contacts? do %>
-          <h3 class="subheading mt-6">Emergency contact</h3>
-          <.contact_fields
-            form={@form}
-            fields={[
-              :contact1_name,
-              :contact1_relation,
-              :contact1_primary_phone,
-              :contact1_secondary_phone
-            ]}
-          />
-          <h3 class="subheading mt-6">Second emergency contact (optional)</h3>
-          <.contact_fields
-            form={@form}
-            fields={[
-              :contact2_name,
-              :contact2_relation,
-              :contact2_primary_phone,
-              :contact2_secondary_phone
-            ]}
-          />
-        <% end %>
+        <h3 class="subheading mt-6">Emergency contact</h3>
+        <.contact_fields
+          form={@form}
+          fields={[
+            :contact1_name,
+            :contact1_relation,
+            :contact1_primary_phone,
+            :contact1_secondary_phone
+          ]}
+        />
+        <h3 class="subheading mt-6">Second emergency contact (optional)</h3>
+        <.contact_fields
+          form={@form}
+          fields={[
+            :contact2_name,
+            :contact2_relation,
+            :contact2_primary_phone,
+            :contact2_secondary_phone
+          ]}
+        />
 
         <.form_actions>
           <.button variant={:success} phx-disable-with="Saving…">Save details</.button>

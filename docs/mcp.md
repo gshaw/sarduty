@@ -62,7 +62,7 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   are personal (#366).
 - **Allowlisted fields.** Each tool builds explicit maps and lists every key it may
   return in `fields/0`; a test fails on any other key. Never email, phone, an address,
-  coordinates, an activity's description, letter text, or a key.
+  an emergency contact, coordinates, an activity's description, letter text, or a key.
 - **Scoped.** Every query filters by the token's team, joins included.
 - **Pure core.** `call/3` loads rows and hands them to a pure `build` or `summarize`,
   which the tests call directly.

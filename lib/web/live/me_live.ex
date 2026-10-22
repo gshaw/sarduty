@@ -275,8 +275,7 @@ defmodule Web.MeLive do
 
   attr :team, :map, required: true
   attr :member, :map, required: true
-  # No emergency contact: SAR Duty never copies them (docs/members.md), and reading D4H
-  # would hold up the page. Contact details reads and changes them.
+
   defp contact_details(assigns) do
     ~H"""
     <div id="contact-details">
@@ -286,6 +285,8 @@ defmodule Web.MeLive do
         <dd id="contact-mobile">{@member.phone || "None"}</dd>
         <dt>Address</dt>
         <dd id="contact-address">{@member.address || "None"}</dd>
+        <dt>Emergency contact</dt>
+        <dd id="contact-emergency">{contact_line(@member.primary_emergency_contact)}</dd>
       </dl>
       <p class="action mb-0">
         <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>
@@ -316,6 +317,14 @@ defmodule Web.MeLive do
     </div>
     """
   end
+
+  defp contact_line(%{"name" => name} = contact) when is_binary(name),
+    do:
+      [name, Service.Phone.format(contact["primary_phone"])]
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.join(" · ")
+
+  defp contact_line(_contact), do: "None"
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 

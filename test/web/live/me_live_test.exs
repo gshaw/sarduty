@@ -162,17 +162,21 @@ defmodule Web.MeLiveTest do
              )
     end
 
-    test "contact details, with no emergency contact, so the page never reads D4H",
+    test "contact details, with the emergency contact from the copy, so the page never reads D4H",
          %{conn: conn, team: team, member: member} do
       member
-      |> Ecto.Changeset.change(phone: "604-555-0188", address: "2140 Fern Street")
+      |> Ecto.Changeset.change(
+        phone: "604-555-0188",
+        address: "2140 Fern Street",
+        primary_emergency_contact: %{"name" => "Sam Rivera", "primary_phone" => "6045550100"}
+      )
       |> Repo.update!()
 
       lv = open(conn, ~p"/teams/#{team}/me")
 
       assert has_element?(lv, "#contact-mobile", "604-555-0188")
       assert has_element?(lv, "#contact-address", "2140 Fern Street")
-      refute has_element?(lv, "#contact-emergency")
+      assert has_element?(lv, "#contact-emergency", "Sam Rivera · 604-555-0100")
       refute_received {:d4h_read, _path}
       assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
     end

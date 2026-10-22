@@ -64,6 +64,8 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
       email: d4h_member.email,
       phone: d4h_member.phone,
       address: d4h_member.address,
+      primary_emergency_contact: d4h_member.primary_emergency_contact,
+      secondary_emergency_contact: d4h_member.secondary_emergency_contact,
       position: d4h_member.position,
       joined_at: d4h_member.joined_at,
       left_at: d4h_member.left_at,
