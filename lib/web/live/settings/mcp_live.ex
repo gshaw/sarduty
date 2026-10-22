@@ -1,6 +1,8 @@
 defmodule Web.Settings.MCPLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   import Web.Components.CopyButton
 
   alias App.Model.MCPToken
@@ -18,7 +20,7 @@ defmodule Web.Settings.MCPLive do
 
     socket =
       socket
-      |> assign(page_title: "MCP tokens", can_create: can_create, new_token: nil)
+      |> assign(page_title: "Team settings · MCP tokens", can_create: can_create, new_token: nil)
       |> assign(endpoint_url: url(~p"/teams/#{team}/mcp"))
       |> assign_form(%{})
       |> assign_tokens()
@@ -77,8 +79,8 @@ defmodule Web.Settings.MCPLive do
 
   def render(assigns) do
     ~H"""
+    <.team_settings_tabs team={@current_team} current={:mcp} />
     <div class="measure">
-      <h1 class="title">MCP tokens</h1>
       <p>
         An MCP token lets your AI agent, such as Claude Code, read {@current_team.name}'s data
         in SAR Duty. It can read members, groups, attendance hours, activities,

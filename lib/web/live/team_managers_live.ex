@@ -1,6 +1,8 @@
 defmodule Web.TeamManagersLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   import Web.Components.TeamManagers
 
   alias App.Accounts
@@ -15,7 +17,7 @@ defmodule Web.TeamManagersLive do
 
     socket =
       assign(socket,
-        page_title: "Team admins",
+        page_title: "Team settings · Team admins",
         managers: managers,
         grants: TeamLoginGrant.get_for_team(team),
         login_emails: login_emails
@@ -26,7 +28,7 @@ defmodule Web.TeamManagersLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="title">{@page_title}</h1>
+    <.team_settings_tabs team={@current_team} current={:managers} />
     <p :if={!D4H.records?(@current_team)} class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}. They are the members D4H
       makes an Owner or Editor. Members who are retired or have left cannot log in. To add or

@@ -1,6 +1,6 @@
 defmodule Web.AccountLive do
   @moduledoc """
-  Your settings, at /account: who you're logged in as, and the maps app place links open
+  Account settings, at /account: who you're logged in as, and the maps app place links open
   (#301). Team settings live under each team, so the URL names the team they change
   (#153); the account menu reaches them (#312).
   """
@@ -11,13 +11,13 @@ defmodule Web.AccountLive do
   alias Web.Components.OpenInMaps
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Your settings")}
+    {:ok, assign(socket, page_title: "Account settings")}
   end
 
   def render(assigns) do
     ~H"""
     <div class="measure">
-      <h1 class="title">Your settings</h1>
+      <h1 class="title">Account settings</h1>
       <p id="account-email">
         Logged in as {@current_user.email}. Your email and your teams come from D4H.
       </p>

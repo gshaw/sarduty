@@ -1,188 +1,174 @@
 defmodule Web.NavigationTest do
   use ExUnit.Case, async: true
 
+  alias App.Accounts.User
   alias App.Model.Member
   alias App.Model.Team
   alias Web.Navigation
 
   @team %Team{id: 1, name: "Squamish SAR", subdomain: "squamish"}
+  @pemberton %Team{id: 2, name: "Pemberton SAR", subdomain: "pemberton"}
 
-  defp keys(groups), do: for({_heading, links} <- groups, link <- links, do: link.key)
+  defp keys(sections), do: Enum.map(sections, fn links -> Enum.map(links, & &1.key) end)
+  defp current(sections), do: for(links <- sections, link <- links, link.current, do: link.key)
 
-  defp current(groups),
-    do: for({_heading, links} <- groups, link <- links, link.current, do: link.key)
+  defp team_sections(path, opts, team \\ @team),
+    do: path |> Navigation.area(team) |> Navigation.sections(path, opts)
 
-  describe "area/3" do
-    test "a team's pages are its team area, when the URL's team is the current team" do
-      area = Navigation.area("/teams/squamish/activities/7", @team, nil)
+  describe "area/2" do
+    test "a team's pages are its space, when the URL's team is the current team" do
+      assert %{kind: :team, name: "Squamish SAR", team: @team} =
+               Navigation.area("/teams/squamish/activities/7", @team)
 
-      assert %{
-               kind: :team,
-               name: "Squamish SAR",
-               kind_label: "Team area",
-               home: "/teams/squamish"
-             } =
-               area
-
-      assert Navigation.area("/teams/pemberton", @team, nil) == nil
+      assert %{kind: :team} = Navigation.area("/teams/squamish/me", @team)
+      assert Navigation.area("/teams/pemberton", @team) == nil
     end
 
-    test "a member's own pages are their member area, from the member, not the current team" do
-      member = %Member{team: @team}
-
-      assert %{kind: :member, kind_label: "Member area"} =
-               Navigation.area("/teams/squamish/me", nil, member)
-
-      assert %{kind: :member} = Navigation.area("/teams/squamish/me/details", @team, member)
-      assert Navigation.area("/teams/squamish/me", @team, nil) == nil
-    end
-
-    test "admin, your settings, and nothing elsewhere" do
-      assert %{kind: :admin, name: "Admin"} = Navigation.area("/admin/orgs/3", nil, nil)
-      assert %{kind: :settings, name: "Your settings"} = Navigation.area("/account", @team, nil)
-      assert Navigation.area("/", @team, nil) == nil
-      assert Navigation.area("/administrators", @team, nil) == nil
-      assert Navigation.area(nil, @team, nil) == nil
+    test "SAR Duty admin, account settings, and nothing elsewhere" do
+      assert %{kind: :admin, name: "SAR Duty admin"} = Navigation.area("/admin/orgs/3", nil)
+      assert %{kind: :settings, name: "Account settings"} = Navigation.area("/account", @team)
+      assert Navigation.area("/", @team) == nil
+      assert Navigation.area("/administrators", @team) == nil
+      assert Navigation.area(nil, @team) == nil
     end
   end
 
-  describe "groups/3" do
-    test "a team's pages leave out what the team doesn't have" do
-      area = Navigation.area("/teams/squamish", @team, nil)
-      keys = area |> Navigation.groups("/teams/squamish") |> keys()
-
-      assert "settings-member-logins" in keys
-      assert "endorsements" in keys
-      refute "settings-mcp" in keys
-      refute "proposed-changes" in keys
-
-      team = %{@team | id_cards_enabled: true, mcp_enabled: true}
-      keys = "/teams/squamish" |> Navigation.area(team, nil) |> Navigation.groups("/x") |> keys()
-      assert ["settings-mcp", "proposed-changes"] -- keys == []
+  describe "sections/3" do
+    test "a member sees only Your membership, for now" do
+      assert team_sections("/teams/squamish/me", member?: true) == [
+               [
+                 %{
+                   key: "me",
+                   label: "Your membership",
+                   path: "/teams/squamish/me",
+                   exact: false,
+                   count: nil,
+                   current: true
+                 }
+               ]
+             ]
     end
 
-    test "proposed changes show with a count while some wait, even without MCP" do
-      groups = "/teams/squamish" |> Navigation.area(@team, nil) |> Navigation.groups("/x", 2)
-      link = for {_h, links} <- groups, link <- links, link.key == "proposed-changes", do: link
-      assert [%{count: 2}] = link
+    test "a team admin who is a member sees all seven sections" do
+      assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
+               [
+                 ["dashboard"],
+                 ["activities", "templates"],
+                 ["members", "groups", "qualifications", "endorsements"],
+                 ["equipment"],
+                 ["tax-credit-letters"],
+                 ["settings"],
+                 ["me"]
+               ]
+    end
+
+    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 6" do
+      sections = team_sections("/teams/squamish", team_admin?: true)
+      assert length(sections) == 6
+      refute "me" in (sections |> keys() |> List.flatten())
+    end
+
+    test "someone who is neither sees nothing" do
+      assert team_sections("/teams/squamish", []) == []
+    end
+
+    test "Proposed changes shows with MCP on or when something waits, with the count" do
+      activity_keys = fn sections -> sections |> Enum.at(1) |> Enum.map(& &1.key) end
+
+      sections = team_sections("/teams/squamish", team_admin?: true)
+      assert activity_keys.(sections) == ["activities", "templates"]
+
+      [_dashboard, [_activities, _templates, proposed] | _rest] =
+        team_sections("/teams/squamish/proposed-changes/3",
+          team_admin?: true,
+          proposed_changes: 2
+        )
+
+      assert %{key: "proposed-changes", count: 2, current: true} = proposed
+
+      mcp_team = %{@team | mcp_enabled: true}
+
+      [_dashboard, [_activities, _templates, proposed] | _rest] =
+        "/teams/squamish" |> team_sections([team_admin?: true], mcp_team)
+
+      assert proposed.count == nil
     end
 
     test "the first page is current only on itself; others on anything under them" do
-      area = Navigation.area("/teams/squamish", @team, nil)
-      assert current(Navigation.groups(area, "/teams/squamish")) == ["dashboard"]
-
-      assert current(Navigation.groups(area, "/teams/squamish/activities/7/templates")) == [
-               "activities"
-             ]
-
-      assert current(Navigation.groups(area, "/teams/squamish/settings")) == ["settings"]
-
-      assert current(Navigation.groups(area, "/teams/squamish/settings/managers")) == [
-               "settings-managers"
-             ]
-
-      assert current(Navigation.groups(area, "/teams/squamish/members-x")) == []
+      opts = [team_admin?: true, member?: true]
+      assert current(team_sections("/teams/squamish", opts)) == ["dashboard"]
+      assert current(team_sections("/teams/squamish/activities/7/tags", opts)) == ["activities"]
+      assert current(team_sections("/teams/squamish/templates/3", opts)) == ["templates"]
+      assert current(team_sections("/teams/squamish/settings/managers", opts)) == ["settings"]
+      assert current(team_sections("/teams/squamish/me/details", opts)) == ["me"]
+      assert current(team_sections("/teams/squamish/members-x", opts)) == []
     end
 
-    test "a group of one link has no heading" do
-      groups = "/teams/squamish" |> Navigation.area(@team, nil) |> Navigation.groups("/x")
-      headings = Enum.map(groups, &elem(&1, 0))
-      assert headings == [nil, "Activities", "People", nil, nil, "Settings"]
-    end
+    test "SAR Duty admin has two sections; account settings and pages outside an area none" do
+      sections = "/admin/orgs" |> Navigation.area(nil) |> Navigation.sections("/admin/orgs")
+      assert length(sections) == 2
+      assert current(sections) == ["admin-orgs"]
 
-    test "a member's 7 pages, with ID card only on a team that has ID cards" do
-      member = %Member{team: %{@team | id_cards_enabled: true}}
-      area = Navigation.area("/teams/squamish/me", nil, member)
-
-      assert area |> Navigation.groups("/teams/squamish/me/hours") |> keys() == [
-               "me",
-               "me-card",
-               "me-qualifications",
-               "me-activities",
-               "me-hours",
-               "me-tax-credit-letters",
-               "me-details"
-             ]
-
-      assert current(Navigation.groups(area, "/teams/squamish/me/hours")) == ["me-hours"]
-      assert current(Navigation.groups(area, "/teams/squamish/me")) == ["me"]
-
-      area = Navigation.area("/teams/squamish/me", nil, %Member{team: @team})
-      refute "me-card" in (area |> Navigation.groups("/x") |> keys())
-    end
-
-    test "your settings and pages outside an area have none" do
-      assert "/account" |> Navigation.area(nil, nil) |> Navigation.groups("/account") == []
-      assert Navigation.groups(nil, "/") == []
-    end
-  end
-
-  describe "menu_teams/2" do
-    test "each team once, A to Z, with the areas it offers" do
-      pemberton = %Team{id: 2, name: "pemberton SAR", subdomain: "pemberton"}
-
-      assert [
-               %{team: %{id: 2}, team_area: false, member_area: true},
-               %{team: %{id: 1}, team_area: true, member_area: true}
-             ] =
-               Navigation.menu_teams([@team], [
-                 %Member{team: @team},
-                 %Member{team: pemberton}
-               ])
+      assert "/account" |> Navigation.area(nil) |> Navigation.sections("/account") == []
+      assert Navigation.sections(nil, "/") == []
     end
   end
 
   describe "switch_rows/4" do
-    @pemberton %Team{id: 2, name: "Pemberton SAR", subdomain: "pemberton"}
+    defp rows(rows), do: for(row <- rows, do: {row.label, row.current})
 
-    defp rows(rows),
-      do:
-        for(
-          row <- rows,
-          do: {row.heading, for(link <- row.links, do: {link.label, link.current})}
+    test "SAR Duty admin first, then each team once, A to Z, the current one marked" do
+      area = Navigation.area("/teams/squamish", @team)
+
+      rows =
+        Navigation.switch_rows(
+          true,
+          [@team],
+          [%Member{team: @team}, %Member{team: @pemberton}],
+          area
         )
 
-    test "one team with both areas is one row with no heading, the current area marked" do
-      area = Navigation.area("/teams/squamish/me", nil, %Member{team: @team})
+      assert rows(rows) == [
+               {"SAR Duty admin", false},
+               {"Pemberton SAR", false},
+               {"Squamish SAR", true}
+             ]
 
-      assert [%{links: [%{path: "/teams/squamish"}, %{path: "/teams/squamish/me"}]}] =
-               rows = Navigation.switch_rows(false, [@team], [%Member{team: @team}], area)
-
-      assert rows(rows) == [{nil, [{"Team area", false}, {"Member area", true}]}]
+      assert Enum.map(rows, & &1.path) == ["/admin", "/teams/pemberton/me", "/teams/squamish"]
     end
 
-    test "one area is nothing to switch to" do
-      area = Navigation.area("/teams/squamish/me", nil, %Member{team: @team})
+    test "one place is nothing to switch to, so the name is plain text" do
+      area = Navigation.area("/teams/squamish/me", @team)
       assert Navigation.switch_rows(false, [], [%Member{team: @team}], area) == []
-      assert Navigation.switch_rows(true, [], [], Navigation.area("/admin", nil, nil)) == []
+      assert Navigation.switch_rows(true, [], [], Navigation.area("/admin", nil)) == []
     end
 
-    test "two teams each get a row under their name, A to Z, with the areas each offers" do
-      area = Navigation.area("/teams/squamish", @team, nil)
+    test "a team opened from Admin that isn't yours marks nothing" do
+      area = Navigation.area("/teams/pemberton", @pemberton)
+      rows = Navigation.switch_rows(true, [], [], area)
+      assert rows(rows) == [{"SAR Duty admin", false}]
+    end
+  end
 
-      assert area
-             |> then(&Navigation.switch_rows(false, [@team], [%Member{team: @pemberton}], &1))
-             |> rows() == [
-               {"Pemberton SAR", [{"Member area", false}]},
-               {"Squamish SAR", [{"Team area", true}]}
-             ]
+  describe "person/3" do
+    test "the member's name and its initials" do
+      user = %User{email: "sam@example.com"}
+
+      assert Navigation.person(user, %Member{name: "Sam Rivera Jones"}, []) == %{
+               name: "Sam Rivera Jones",
+               email: "sam@example.com",
+               initials: "SJ"
+             }
+
+      assert %{name: "Sam Rivera"} =
+               Navigation.person(user, nil, [%Member{name: "Sam Rivera", team: @team}])
     end
 
-    test "a SAR Duty admin gets a row for Admin first" do
-      area = Navigation.area("/admin/orgs", nil, nil)
+    test "with no member anywhere, the initials come from the email" do
+      assert %{name: nil, initials: "GS"} =
+               Navigation.person(%User{email: "gerry_shaw@example.com"}, nil, [])
 
-      assert area
-             |> then(&Navigation.switch_rows(true, [@team], [], &1))
-             |> rows() == [
-               {"SAR Duty", [{"Admin", true}]},
-               {"Squamish SAR", [{"Team area", false}]}
-             ]
-    end
-
-    test "a team that isn't yours marks nothing" do
-      area = Navigation.area("/teams/pemberton", @pemberton, nil)
-      rows = Navigation.switch_rows(true, [@team], [%Member{team: @team}], area)
-      refute Enum.any?(rows, fn row -> Enum.any?(row.links, & &1.current) end)
+      assert %{initials: "A"} = Navigation.person(%User{email: "avery@example.com"}, nil, [])
     end
   end
 end

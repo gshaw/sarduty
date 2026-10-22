@@ -27,34 +27,23 @@ defmodule Web.Components.NavBar do
     """
   end
 
-  attr :label, :string, required: true
-  slot :inner_block, required: true
-
-  def site_bar_menu(assigns) do
-    ~H"""
-    <details class="site-bar-menu relative" role="menu">
-      <summary role="button" aria-label="Open account menu">
-        <span class="truncate">{@label}</span>
-        <.icon name="hero-chevron-down-micro" />
-      </summary>
-      <div class="menu" role="menu">
-        {render_slot(@inner_block)}
-      </div>
-    </details>
-    """
-  end
-
+  attr :waiting?, :boolean, default: false, doc: "a link inside has a count"
   slot :inner_block, required: true
 
   # Below 1024px the bar's links and account menu move behind this button. The panel opens
-  # under the bar, and live navigation renders the page again, which closes it.
+  # under the bar, and live navigation renders the page again, which closes it. An amber
+  # dot says a link inside has something waiting, such as proposed changes.
   def site_bar_phone_menu(assigns) do
     ~H"""
     <details id="phone-menu" class="site-bar-phone group">
-      <summary id="phone-menu-button" aria-label="Menu">
+      <summary
+        id="phone-menu-button"
+        aria-label={if @waiting?, do: "Menu, something waits", else: "Menu"}
+      >
         <.icon name="hero-bars-3" class="group-open:hidden" />
         <.icon name="hero-x-mark" class="hidden group-open:inline-block" />
         <span>Menu</span>
+        <span :if={@waiting?} id="phone-menu-dot" class="menu-dot" aria-hidden="true"></span>
       </summary>
       <nav class="site-bar-phone-panel" aria-label="Main">
         {render_slot(@inner_block)}
@@ -65,19 +54,16 @@ defmodule Web.Components.NavBar do
 
   attr :label, :string, required: true, doc: "the area, as the nav's aria-label"
 
-  slot :group, required: true do
-    attr :heading, :string, doc: "nil for a group of one link"
-  end
+  slot :section, required: true
 
-  # An area's pages down the left of each of its pages (#312), in groups with a heading
-  # over each group of two or more. Below 1024px the Menu button holds them instead. See
+  # An area's pages down the left of each of its pages (#312), in sections split by a
+  # divider, with no headings (#406). Below 1024px the Menu button holds them instead. See
   # /styles/side-nav.
   def side_nav(assigns) do
     ~H"""
     <nav id="side-nav" class="side-nav" aria-label={@label}>
-      <div :for={group <- @group} class="side-nav-group">
-        <div :if={group[:heading]} class="caps side-nav-heading">{group.heading}</div>
-        {render_slot(group)}
+      <div :for={section <- @section} class="side-nav-group">
+        {render_slot(section)}
       </div>
     </nav>
     """

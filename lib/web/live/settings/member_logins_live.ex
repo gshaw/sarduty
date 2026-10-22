@@ -1,12 +1,14 @@
 defmodule Web.Settings.MemberLoginsLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   alias App.Operation.SetTeamMemberLogins
 
   # The switch for member logins (#156), /teams/:subdomain/settings/member-logins.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    {:ok, socket |> assign(page_title: "Member logins") |> assign_form(team)}
+    {:ok, socket |> assign(page_title: "Team settings · Member logins") |> assign_form(team)}
   end
 
   def handle_event("save", %{"team" => params}, socket) do
@@ -33,8 +35,8 @@ defmodule Web.Settings.MemberLoginsLive do
 
   def render(assigns) do
     ~H"""
+    <.team_settings_tabs team={@current_team} current={:member_logins} />
     <div class="measure">
-      <h1 class="title">Member logins</h1>
       <p class="lead">
         Let your members log in to get their own ID card and tax credit letters.
       </p>

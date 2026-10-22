@@ -5,16 +5,18 @@ defmodule Web.AccountLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  test "is Your settings: the email, and the account menu for the teams", %{conn: conn} do
+  test "is Account settings: the email, and the account menu", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    other = team_fixture(%{name: "Other SAR"})
+    manager_fixture(other, %{email: user.email})
 
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/account")
 
-    assert has_element?(lv, "h1", "Your settings")
+    assert has_element?(lv, "h1", "Account settings")
     assert has_element?(lv, "#account-email", user.email)
-    assert has_element?(lv, "#nav-area", "Your settings")
-    assert has_element?(lv, "#nav-your-settings[aria-current=page]")
-    assert has_element?(lv, ~s{#nav-team-#{team.subdomain}[href="/teams/#{team.subdomain}"]})
+    assert has_element?(lv, "#nav-area", "Account settings")
+    assert has_element?(lv, ~s{#account-menu #nav-account-settings[href="/account"]})
+    assert has_element?(lv, ~s{#switch-team-#{team.subdomain}[href="/teams/#{team.subdomain}"]})
     refute has_element?(lv, "#side-nav")
     refute html =~ "Change password"
   end

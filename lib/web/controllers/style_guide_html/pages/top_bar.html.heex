@@ -1,13 +1,15 @@
 <.shell title="Top bar" current={:top_bar}>
   <h1>Top bar</h1>
   <p class="lead">
-    Navy, with the amber rule and logo. It names the area you're in and holds the account menu, which switches areas.
+    Navy, with the amber rule and logo. It names the team you're on, switches teams, and holds your account menu.
   </p>
 
   <div class="demo bar-demo" style="padding: 0">
     <Web.Layouts.main_nav_bar
       current_user={sample_user()}
       current_team={sample_team()}
+      current_member={sample_member()}
+      team_admin?={true}
       managed_teams={sample_managed_teams()}
       member_logins={sample_member_logins()}
       current_path="/teams/squamish/activities"
@@ -17,10 +19,13 @@
   <h2>How it works</h2>
   <ul>
     <li>
-      Every page is in one area: a team's, where its team admins work; a member's, their own pages; Admin; or your settings. The bar names it, such as "Squamish SAR" with "Team area" after it, as the account menu says. The name goes to the area's first page.
+      Every page is in one area: a team's space, SAR Duty admin, or Account settings. The bar names it after the logo, such as "Squamish SAR". There is one space per team: your role there decides which pages you see.
     </li>
     <li>
-      The account menu lists the areas you can switch to. Admin comes first, for SAR Duty admins. Then each of your teams, under its name. Team area shows when you're one of its team admins, and Member area when it lets you log in as a member. Your settings and Log out come last.
+      The team switcher sits on the name when you can go somewhere else. It lists SAR Duty admin first, for SAR Duty admins, then each team where you are a team admin or a member, A to Z. The team you're on is marked; a team opened from Admin › Teams that isn't yours marks nothing. With one place to be, the name is plain text.
+    </li>
+    <li>
+      Your initials, top right, open your name and email, Account settings, and Log out. This menu is the same on every team: it is about your login, not the team.
     </li>
     <li>
       The area's own pages are in the <a href={page_path(:side_nav)}>side navigation</a>, not the bar, so the bar has room as teams get more pages.
@@ -29,12 +34,14 @@
 
   <h3>On a phone</h3>
   <p>
-    Below 1024px the same label sits beside the logo, on one line when it fits. A long name moves the area to a second line, kept whole. A Menu button holds the area switch, then the area's pages, then Your settings and Log out. The switch is a row of buttons per team, one for each area you have there, so the other area is one tap away. A team's name sits above its row only when there are two or more rows. The panel opens under the amber rule, the width of the screen, with the current page marked in amber. Going to another page closes it.
+    Below 1024px the name sits beside the logo and ends in an ellipsis when it is too long. A Menu button holds Switch team and its rows, when there is somewhere else to go, then the area's pages in their sections, then your name and email, Account settings, and Log out. The panel opens under the amber rule, the width of the screen, with the current page marked in amber. Going to another page closes it.
   </p>
   <div class="demo phone-width phone-bar-demo" style="padding: 0">
     <Web.Layouts.main_nav_bar
       current_user={sample_user()}
       current_team={sample_team()}
+      current_member={sample_member()}
+      team_admin?={true}
       managed_teams={sample_managed_teams()}
       member_logins={sample_member_logins()}
       current_path="/teams/squamish/activities"
@@ -42,7 +49,7 @@
   </div>
   <script>
     // Open the menus, so the examples show them.
-    document.querySelectorAll(".bar-demo .site-bar-menu, .phone-bar-demo .site-bar-phone")
+    document.querySelectorAll(".bar-demo .team-switcher, .phone-bar-demo .site-bar-phone")
       .forEach(function (menu) { menu.open = true; });
   </script>
 
@@ -59,6 +66,6 @@
   <p>
     The layout's <code>main_nav_bar</code>, built from <code>&lt;.site_bar&gt;</code>.
     <code>Web.Navigation</code>
-    decides the area and its pages. The menus are open here so you can see them.
+    decides the area, its pages, the switcher's rows, and the initials. The menus are open here so you can see them.
   </p>
 </.shell>

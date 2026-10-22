@@ -15,19 +15,12 @@ defmodule Web.MeLiveTest do
   end
 
   describe "the overview" do
-    test "is the member's own area, with none of the team's pages", %{conn: conn, team: team} do
+    test "is in the team's space, with none of the team admins' pages", %{conn: conn, team: team} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#nav-area", "Member area")
-      assert has_element?(lv, "#side-nav-me[aria-current=page]")
-
-      assert has_element?(
-               lv,
-               ~s{#side-nav-me-details[href="/teams/#{team.subdomain}/me/details"]}
-             )
-
-      assert has_element?(lv, "#nav-member-#{team.subdomain}[aria-current=page]")
+      assert has_element?(lv, "#nav-area", team.name)
+      assert has_element?(lv, "#side-nav-me[aria-current=page]", "Your membership")
       refute has_element?(lv, "#side-nav-members")
-      refute has_element?(lv, "#nav-team-#{team.subdomain}")
+      refute has_element?(lv, "#team-switcher")
     end
 
     test "with no activities, says so in one line in place of each chart",
@@ -212,7 +205,8 @@ defmodule Web.MeLiveTest do
       team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
 
       {:ok, lv, _html} = live(log_in_user(conn, manager), ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#nav-area", "Member area")
+      assert has_element?(lv, "#side-nav-me[aria-current=page]")
+      assert has_element?(lv, "#side-nav-members")
     end
 
     test "someone not a member there gets a 404, even an admin", %{conn: conn, team: team} do

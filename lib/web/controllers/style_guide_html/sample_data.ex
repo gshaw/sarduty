@@ -68,20 +68,30 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   def sample_user, do: %App.Accounts.User{id: 0, email: "avery@example.com", is_admin: false}
 
-  # For the account menu: Avery is a team admin and a member on Squamish, and only a member
-  # on Pemberton.
+  # For the team switcher: Avery is a team admin and a member on Squamish, and only a
+  # member on Pemberton.
   def sample_managed_teams, do: [sample_team()]
+
+  def sample_member do
+    %App.Model.Member{id: 0, name: "Avery Lee", team: sample_team()}
+  end
 
   def sample_member_logins do
     pemberton = %App.Model.Team{id: 1, name: "Pemberton SAR", subdomain: "pemberton"}
-    [%App.Model.Member{id: 0, team: sample_team()}, %App.Model.Member{id: 1, team: pemberton}]
+    [sample_member(), %App.Model.Member{id: 1, name: "Avery Lee", team: pemberton}]
   end
 
-  # Squamish's team area on its activities, with 2 proposed changes waiting.
-  def sample_nav_area, do: Web.Navigation.area("/teams/squamish/activities", sample_team(), nil)
+  # Squamish's space on its activities, for a team admin who is a member, with 2 proposed
+  # changes waiting.
+  def sample_nav_area, do: Web.Navigation.area("/teams/squamish/activities", sample_team())
 
-  def sample_nav_groups,
-    do: Web.Navigation.groups(sample_nav_area(), "/teams/squamish/activities", 2)
+  def sample_nav_sections,
+    do:
+      Web.Navigation.sections(sample_nav_area(), "/teams/squamish/activities",
+        team_admin?: true,
+        member?: true,
+        proposed_changes: 2
+      )
 
   def sample_team do
     %App.Model.Team{

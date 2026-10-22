@@ -17,13 +17,15 @@
 
 - **Web**: [lib/web/live/](lib/web/live) LiveViews, [lib/web/controllers/](lib/web/controllers),
   and [lib/web/components/](lib/web/components). A LiveView picks its layout with
-  `use Web, :live_view_app_layout` (team, member, and admin pages, and your settings),
+  `use Web, :live_view_app_layout` (team and admin pages, and account settings),
   `:live_view_narrow_layout` (logging in and signing up), or
   `:live_view_marketing_layout` (public pages) — see [lib/web.ex](lib/web.ex). Every
   layout imports the same shared components; a page imports the ones only it uses.
-- **Navigation**: every page is in an area — a team's, a member's, admin, or your
-  settings. The top bar names it, a side navigation lists its pages, and the account
-  menu switches areas. A new page in the side navigation is a line in
+- **Navigation**: every page is in an area — a team's space, SAR Duty admin, or account
+  settings. One space per team: team admins and members open the same URLs, and a
+  person's role decides which pages they see. The top bar names the area with a team
+  switcher on it, a side navigation lists its pages in sections, and an avatar opens the
+  account menu. A new page in the side navigation is a line in
   [Web.Navigation](lib/web/navigation.ex); see [docs/navigation.md](docs/navigation.md).
 - **Operations**: [lib/app/operation/](lib/app/operation) hold side effects and
   orchestration, one module per operation with a `call` entry point:

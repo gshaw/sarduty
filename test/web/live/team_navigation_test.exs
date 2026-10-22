@@ -16,48 +16,90 @@ defmodule Web.TeamNavigationTest do
        %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
-    assert has_element?(lv, ~s{#nav-area[href="/teams/#{team.subdomain}"]}, team.name)
-    assert has_element?(lv, "#nav-area", "Team area")
+    assert has_element?(lv, "span#nav-area", team.name)
+    refute has_element?(lv, "#team-switcher")
     assert has_element?(lv, ~s{#side-nav-activities[href="/teams/#{team.subdomain}/activities"]})
     assert has_element?(lv, "#side-nav-members[aria-current=page]")
     refute has_element?(lv, "#side-nav-activities[aria-current]")
     refute has_element?(lv, "#side-nav-dashboard[aria-current]")
     assert has_element?(lv, ~s{#side-nav-settings[href="/teams/#{team.subdomain}/settings"]})
+    refute has_element?(lv, "#side-nav-me")
+    assert has_element?(lv, "#side-nav .side-nav-group", "Team settings")
   end
 
-  test "the account menu switches areas", %{conn: conn, team: team} do
+  test "a team admin who is a member gets Your membership last", %{conn: conn, team: team} do
+    team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 
-    assert has_element?(lv, "#side-nav-dashboard[aria-current=page]")
-    assert has_element?(lv, "#nav-team-#{team.subdomain}[aria-current=page]", "Team area")
-    assert has_element?(lv, ~s{#nav-your-settings[href="/account"]})
-    assert has_element?(lv, ~s{#nav-log-out[href="/logout"]})
-    refute has_element?(lv, "#nav-admin")
+    assert has_element?(
+             lv,
+             ~s{#side-nav .side-nav-group:last-child #side-nav-me[href="/teams/#{team.subdomain}/me"]},
+             "Your membership"
+           )
   end
 
-  test "a team with proposed changes waiting counts them", %{conn: conn, team: team} do
-    team = team |> Ecto.Changeset.change(mcp_enabled: true) |> Repo.update!()
+  test "the account menu is the person, Account settings, and Log out",
+       %{conn: conn, user: user, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+    assert has_element?(lv, "#account-menu .avatar")
+    assert has_element?(lv, "#account-menu .menu-note", user.email)
+    assert has_element?(lv, ~s{#account-menu #nav-account-settings[href="/account"]})
+    assert has_element?(lv, ~s{#account-menu #nav-log-out[href="/logout"]})
+    refute has_element?(lv, "#account-menu", team.name)
+  end
+
+  test "the team switcher lists the other places to go", %{conn: conn, user: user, team: team} do
+    other = team_fixture(%{name: "Zulu SAR"})
+    manager_fixture(other, %{email: user.email})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+    assert has_element?(lv, "#team-switcher #nav-area", team.name)
+    assert has_element?(lv, "#switch-team-#{team.subdomain}[aria-current=page]")
+    assert has_element?(lv, ~s{#switch-team-#{other.subdomain}[href="/teams/#{other.subdomain}"]})
+    refute has_element?(lv, "#switch-admin")
+  end
+
+  test "Proposed changes is in the menu with its count, and a dot on the phone menu",
+       %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
-    refute has_element?(lv, "#side-nav-proposed-changes .badge")
+    assert has_element?(lv, ~s{#side-nav-templates[href="/teams/#{team.subdomain}/templates"]})
+    refute has_element?(lv, "#side-nav-proposed-changes")
+    refute has_element?(lv, "#phone-menu-dot")
+    refute has_element?(lv, ".tabs")
 
     ChangeSet.propose!(%ChangeSet{team_id: team.id, source: :agent}, [])
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
-    assert has_element?(lv, "#side-nav-proposed-changes .badge", "1")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/proposed-changes")
+    assert has_element?(lv, "#side-nav-proposed-changes[aria-current=page] .badge", "1")
+    refute has_element?(lv, "#side-nav-activities .badge")
+    assert has_element?(lv, "#phone-menu-dot")
   end
 
-  test "site admins get Admin, and its pages down the left", %{conn: conn, user: user} do
+  test "Team settings' pages are tabs under one title", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/hours-tags")
+
+    assert has_element?(lv, "h1", "Team settings")
+    assert has_element?(lv, ".tabs a[aria-current=page]", "Hours tags")
+    assert has_element?(lv, "#side-nav-settings[aria-current=page]")
+    refute has_element?(lv, ".tabs a", "MCP tokens")
+  end
+
+  test "SAR Duty admins get SAR Duty admin, and its pages down the left",
+       %{conn: conn, user: user, team: team} do
     make_admin(user)
     {:ok, lv, _html} = live(conn, ~p"/admin/orgs")
 
-    assert has_element?(lv, "#nav-area", "Admin")
-    assert has_element?(lv, ~s{#nav-admin[href="/admin"][aria-current=page]})
+    assert has_element?(lv, "#nav-area", "SAR Duty admin")
+    assert has_element?(lv, ~s{#switch-admin[href="/admin"][aria-current=page]})
+    assert has_element?(lv, "#switch-team-#{team.subdomain}")
     assert has_element?(lv, "#side-nav-admin-orgs[aria-current=page]")
     refute has_element?(lv, "#side-nav-admin-teams[aria-current]")
   end
 
-  test "phones get the area switch, the area's pages, and the account menu behind a Menu button",
-       %{conn: conn, team: team} do
+  test "phones get the switcher, the area's pages, and the account menu behind a Menu button",
+       %{conn: conn, user: user, team: team} do
     team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+    make_admin(user)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
     assert has_element?(lv, "#phone-menu #phone-menu-button", "Menu")
@@ -69,17 +111,12 @@ defmodule Web.TeamNavigationTest do
            )
 
     assert has_element?(lv, "#phone-menu #phone-nav-members[aria-current=page]")
-    assert has_element?(lv, "#phone-menu #area-switch-team-#{team.subdomain}[aria-current=page]")
-
-    assert has_element?(
-             lv,
-             ~s{#phone-menu #area-switch-member-#{team.subdomain}[href="/teams/#{team.subdomain}/me"]}
-           )
-
-    refute has_element?(lv, "#phone-nav-team-#{team.subdomain}")
-    assert has_element?(lv, ~s{#phone-menu #phone-nav-your-settings[href="/account"]})
+    assert has_element?(lv, "#phone-menu #phone-nav-me", "Your membership")
+    assert has_element?(lv, "#phone-menu #phone-switch-admin")
+    assert has_element?(lv, "#phone-menu #phone-switch-team-#{team.subdomain}[aria-current=page]")
+    assert has_element?(lv, "#phone-menu .menu-note", user.email)
+    assert has_element?(lv, ~s{#phone-menu #phone-nav-account-settings[href="/account"]})
     assert has_element?(lv, ~s{#phone-menu #phone-nav-log-out[href="/logout"]})
-    refute has_element?(lv, "#phone-nav-admin")
   end
 
   test "a section's own page has no breadcrumbs; a record's starts at its section",

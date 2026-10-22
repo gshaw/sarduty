@@ -1,6 +1,8 @@
 defmodule Web.Settings.TeamLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.Team
@@ -44,10 +46,10 @@ defmodule Web.Settings.TeamLive do
 
   def render(assigns) do
     ~H"""
+    <.team_settings_tabs team={@current_team} current={:general} />
     <div class="measure">
-      <h1 class="title">General</h1>
-      <%!-- The side navigation lists the other settings. These two show there only once a
-      SAR Duty admin turns them on, so say how. --%>
+      <%!-- The tabs list the other settings. MCP tokens shows there only once a SAR Duty
+      admin turns it on, and ID cards are on Endorsements, so say how to get them. --%>
       <ul
         :if={!@current_team.id_cards_enabled or !@current_team.mcp_enabled}
         class="row-links mb-4"

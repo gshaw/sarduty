@@ -28,7 +28,7 @@ defmodule Web.Settings.MCPLiveTest do
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/settings/mcp") end
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-    refute has_element?(lv, "#side-nav-settings-mcp")
+    refute has_element?(lv, ".tabs a", "MCP tokens")
     assert has_element?(lv, "#settings-mcp-off", "ask a SAR Duty admin")
   end
 
@@ -40,7 +40,7 @@ defmodule Web.Settings.MCPLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#side-nav-settings-mcp[href="/teams/#{team.subdomain}/settings/mcp"]}
+             ~s{.tabs a[href="/teams/#{team.subdomain}/settings/mcp"]}
            )
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")

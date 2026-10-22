@@ -1,6 +1,8 @@
 defmodule Web.Settings.HoursTagsLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   alias App.Model.Activity
   alias App.Model.Tag
   alias App.Model.Team
@@ -15,7 +17,7 @@ defmodule Web.Settings.HoursTagsLive do
 
     socket =
       socket
-      |> assign(page_title: "Hours tags", team: team)
+      |> assign(page_title: "Team settings · Hours tags", team: team)
       |> assign(organization_tags: Activity.organization_hours_tags(team))
       |> assign(titles: team.id |> Tag.get_all() |> Enum.map(& &1.title) |> Enum.uniq())
       |> then(
@@ -47,8 +49,8 @@ defmodule Web.Settings.HoursTagsLive do
 
   def render(assigns) do
     ~H"""
+    <.team_settings_tabs team={@current_team} current={:hours_tags} />
     <div class="measure">
-      <h1 class="title">Hours tags</h1>
       <p class="lead">
         The D4H tags that say which hours an activity counts for on tax credit letters.
       </p>
