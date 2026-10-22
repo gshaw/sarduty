@@ -140,60 +140,50 @@ admin's member page, from one query and one component each (#308, #339, decided
 ## Member logins
 
 A team admin turns on member logins in **Team settings → Member logins**. Then every
-current member of the team can log in with the email or mobile number D4H has for them,
-and land on their own pages (#156, #389), under Your membership in the team's side
-navigation. Each is its own LiveView under `/teams/:subdomain/me`:
+current member of the team can log in with the email or mobile number D4H has for them
+(#156). They open the same team space as its team admins, and see the pages marked for
+members ([navigation.md](navigation.md)). Their own pages are under
+`/teams/:subdomain/me`:
 
-| Page               | Path                     | What it holds                                          |
-| ------------------ | ------------------------ | ------------------------------------------------------ |
-| Overview           | `/me`                    | The member's year at a glance                          |
-| ID card            | `/me/card`               | The card, the Wallet buttons, and the verify link      |
-| Qualifications     | `/me/qualifications`     | Soonest expiry first, with expiring ones tagged        |
-| Activities         | `/me/activities?year=`   | Signed up for, then the year's activities              |
-| Hours              | `/me/hours?year=`        | Primary and secondary hours for the year               |
-| Tax credit letters | `/me/tax-credit-letters` | Every year's letter as a PDF                           |
-| Contact details    | `/me/details`            | Mobile number, mailing address, and emergency contacts |
+| Page            | Path                   | What it holds                                                     |
+| --------------- | ---------------------- | ----------------------------------------------------------------- |
+| Your membership | `/me`                  | Latest activities, qualifications, ID card, letter, and more      |
+| The year page   | `/me/activities?year=` | Every activity in a year, that year's letter, and its hours       |
+| Contact details | `/me/details`          | Mobile number, mailing address, and emergency contacts, to change |
 
-ID card shows once a SAR Duty admin turns ID cards on for the team. Contact details took in the old Mobile number page (`/me/mobile`, gone with no
-redirect, decided 2026-10-20). Members don't change their email: teams keep it
-consistent, and team admins change it in D4H. Logins are designed in issue #156, and
-the pages in issue #389.
+Members don't change their email: teams keep it consistent, and team admins change it in
+D4H. Logins are designed in issue #156; the pages in #389, and one page in #406.
 
-### The overview
+### Your membership
 
-The overview shows a member's year at a glance, as the team home does for team admins,
-with the same parts (#389, closing #340): the name with "Member since" and when SAR
-Duty last refreshed; **Next up**, the next activity they signed up for, with Add to
-calendar (an `.ics` file from `/me/activities/:id/calendar`, only for their own sign-ups)
-and a maps link; four stats (hours, activities, and incidents this year, and current
-qualifications with the next to expire); **Where your hours went**, hours by kind this
-year; **Where you went**, the team home's map of their last 12 months; and **Lately**,
-their last 3 activities. The numbers come from
-[MemberOverview](../lib/app/view_data/member_overview.ex), pure.
+`/teams/:subdomain/me` ([MeLive](../lib/web/live/me_live.ex)) is one page (#406),
+replacing the overview of #389 and taking in its pages: ID card, Qualifications, Hours,
+Tax credit letters, and Milestones are gone, with no redirects. Its title is the member's name, under
+their D4H photo in a circle, or their initials when D4H has none (`/me/image`), and
+"Member since March 2019".
 
-- **No calendar and no comparisons** (decided 2026-10-20). The median member attends
-  about 10 activities a year, so a year calendar would be mostly empty, and "fewer than
-  last year" discourages.
-- **Hours here count every attended activity**, tagged or not, as hours by kind does. The
-  Hours page and the tax credit letter count only tagged ones, and the overview says so
-  with a link there. The Hours page shows the same bars for its year.
-- With no activities, each chart is one line, not an empty chart.
-- **Milestones** sit beside Lately: the latest 3, with All milestones to
-  `/me/milestones` when there are more. Hours (100, 250, 500, 1,000, then every 1,000),
-  years on the team (1, 5, 10, then every 5), and incidents (the first, 10, 25, 50, 100,
-  then every 100), each dated by the day it was reached:
-  [Milestones](../lib/app/view_data/milestones.ex), pure. They're worked out when the
-  page loads, from `Attendance.attended/2`, `joined_at`, and away periods, so past ones
-  show on day one and nothing is stored. Years leave out the days away: teams reopen a
-  rejoining member's D4H record, and a team admin adds the gap as an away period. Hours count every attended activity, not only tagged ones. A
-  plain dated list: no badges, graphics, or levels (decided 2026-10-20). The milestones
-  page is not in the side navigation; Overview leads to it.
-- **For you to do** sits under Next up, from
-  [MemberToDo](../lib/app/view_data/member_to_do.ex), pure: add your ID card to Wallet
-  (until `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until
-  it's renewed), and a new tax credit letter (until the member downloads it,
-  `downloaded_at`). Each leaves once done; the layout stays the same. With nothing to do,
-  the card says so in one line.
+- **Main column**: the 10 latest activities they attended, from any year so the page is
+  never empty on January 1, under 3 numbers for the last 12 months: activities, incidents,
+  and hours. A link opens the year page on the latest activity's year. Then their
+  qualifications: Qualification and Expires, from the same rows a team admin sees.
+- **Sidebar**, two cards, each split by one line: the ID card, when the team has ID cards
+  on, then the latest tax credit letter to download, with its hours on the year page so
+  they aren't mistaken for the last 12 months'; then contact details, then the 5
+  latest milestones. On a phone the first card comes first, then the main column, then
+  the second card.
+- **The emergency contact is read from D4H** after the page shows, as Contact details
+  reads it, since it is never copied. A team on SAR Duty Records has none.
+- Each part says why it is empty for a new member.
+- **Milestones**: hours (100, 250, 500, 1,000, then every 1,000), years on the team (1, 5,
+  10, then every 5), and incidents (the first, 10, 25, 50, 100, then every 100), each
+  dated by the day it was reached: [Milestones](../lib/app/view_data/milestones.ex),
+  pure. They're worked out when the page loads, from `Attendance.attended/2`,
+  `joined_at`, and away periods, so past ones show on day one and nothing is stored.
+  Years leave out the days away: teams reopen a rejoining member's D4H record, and a team
+  admin adds the gap as an away period. Hours count every attended activity, not only
+  tagged ones. A plain dated list: no badges, graphics, or levels (decided 2026-10-20).
+- The `/me/card/…` Wallet downloads, `/me/tax-credit-letters/:id/pdf`, and `/wallet/…`
+  stay: passes and files hold them.
 
 ### What must stay true
 

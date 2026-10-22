@@ -1,0 +1,59 @@
+<.shell title="Member letter" current={:member_letter}>
+  <h1>Member letter</h1>
+  <p class="lead">A member's tax credit letter for a year.</p>
+
+  <div class="demo max-w-md">
+    <div class="card side-card">
+      <.member_letter
+        id="member-letter-demo"
+        team={SampleData.sample_team()}
+        letter={SampleData.letter()}
+        year={2025}
+      />
+    </div>
+  </div>
+
+  <p>The download alone, as Your membership shows it beside this year's numbers:</p>
+  <div class="demo max-w-md">
+    <div class="card side-card">
+      <.member_letter
+        id="member-letter-short-demo"
+        team={SampleData.sample_team()}
+        letter={SampleData.letter()}
+        year={2025}
+        hours={false}
+      />
+    </div>
+  </div>
+
+  <p>The current year, before a team admin can make its letter:</p>
+  <div class="demo max-w-md">
+    <div class="card side-card">
+      <.member_letter id="member-letter-coming-demo" team={SampleData.sample_team()} year={2026} />
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A member's own letter: the latest on Your membership, as the download alone, and the
+    year's on the year page with its hours.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>A team admin's list of letters. That is the Tax credit letters table.</p>
+
+  <h2>How it works</h2>
+  <ul class="list">
+    <li>The year, what it is for, then the primary and secondary hours the letter says.</li>
+    <li>Download letter is a plain button: the page has no one main action.</li>
+    <li>An old letter whose hours did not parse shows no hours.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.member_letter id team letter year&gt;</code>
+    from <code>Web.Components.MemberLetter</code>, with the letter or nil, and
+    <code>hours={false}</code>
+    for the download alone.
+  </p>
+</.shell>

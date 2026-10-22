@@ -1,383 +1,357 @@
 defmodule Web.MeLive do
   use Web, {:live_view_app_layout, access: :member}
 
-  import Web.Components.ActivityMap
-  import Web.Components.Chart
+  import Web.Components.Chart, only: [stat: 1]
+  import Web.Components.MemberLetter
   import Web.Components.MilestoneList
-  import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
-  alias App.Model.Activity
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
-  alias App.Model.Team
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
-  alias App.ViewData.MemberOverview
+  alias App.Operation.SaveOwnDetails
   alias App.ViewData.MemberRecords
-  alias App.ViewData.MemberToDo
   alias App.ViewData.Milestones
-  alias App.ViewData.TeamDashboardCharts
   alias Service.Format
-  alias Web.Components.ActivityMap
+  alias Web.QualificationText
 
-  # A member's overview (#389), /teams/:subdomain/me: their year at a glance, as the team
-  # home is for team admins, built from the same parts. `member` comes from the login
-  # (Web.UserAuth, :ensure_team_access), never from the URL. Mostly read on a phone.
+  # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
+  # latest activities, from any year so it is never empty on January 1, and their
+  # qualifications in the main column; their ID card, latest tax credit letter, contact
+  # details, and milestones in a sidebar. `current_member` comes from the login
+  # (Web.UserAuth, :ensure_team_access), never from the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.current_member
-    socket = assign(socket, :member, member)
     team = member.team
     now = DateTime.utc_now()
-
-    qualifications = MemberRecords.qualifications(member, now)
     attended = MemberRecords.attended(member, now)
-    overview = MemberOverview.build(attended, qualifications, now, team.timezone)
 
     socket =
       socket
       |> assign(:page_title, member.name)
-      |> assign(:now, now)
-      |> assign(:has_logo, Team.logo_file(team.subdomain) != nil)
-      |> assign(:next_up, member |> MemberRecords.signed_up(now) |> List.first())
-      |> assign(:overview, overview)
-      |> assign(:map, build_map(overview.last_12_months, team, now))
-      |> assign(:qualifications, qualifications)
-      |> assign(:milestones, build_milestones(attended, member, now))
-      |> assign_to_do()
+      |> assign(member: member, team: team, now: now)
+      |> assign_activities(attended, now)
+      |> assign(:qualifications, MemberRecords.qualifications(member, now))
+      |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
+      |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
+      |> assign(:milestones, member |> milestones(attended, now) |> Enum.take(5))
+      |> assign(:contacts?, "primary_emergency_contact" in SaveOwnDetails.fields(team))
+      |> assign_emergency_contact()
 
     {:ok, socket}
   end
 
-  defp build_milestones(attended, member, now) do
-    away_periods = MemberAwayPeriod.for_member(member)
-    Milestones.build(attended, member.joined_at, away_periods, now, member.team.timezone)
-  end
-
-  defp assign_to_do(socket) do
-    %{current_member: member, qualifications: qualifications, now: now} = socket.assigns
-    card = MemberCard.find_current(member.team, member)
-    in_wallet? = card != nil and MemberCard.in_wallet?(card)
-    letters = TaxCreditLetter.get_all_for_member(member)
-
-    assign(
-      socket,
-      :to_do,
-      MemberToDo.items(card, in_wallet?, letters, qualifications, now, member.team.timezone)
+  # The 10 latest, the year of the latest for the year page's link, and the last 12
+  # months as 3 numbers.
+  defp assign_activities(socket, attended, now) do
+    assign(socket,
+      activities: Enum.take(attended, 10),
+      latest_year: latest_year(attended, socket.assigns.team.timezone),
+      stats: year_stats(attended, now)
     )
   end
 
-  defp build_map(attendances, team, now) do
-    attendances
-    |> Enum.map(fn %{activity: activity} ->
-      activity
-      |> Map.take([:coordinate, :started_at, :title])
-      |> Map.put(:kind, TeamDashboardCharts.kind(activity.activity_kind))
+  defp latest_year([latest | _rest], timezone),
+    do: Service.YearRange.year_in(latest.started_at, timezone)
+
+  defp latest_year([], _timezone), do: nil
+
+  # Each activity counted once, and every attended row's time.
+  defp year_stats(attended, now) do
+    a_year_ago = DateTime.shift(now, year: -1)
+    last_12 = Enum.filter(attended, &DateTime.after?(&1.started_at, a_year_ago))
+    activities = last_12 |> Enum.map(& &1.activity) |> Enum.uniq_by(& &1.id)
+
+    %{
+      activities: length(activities),
+      incidents: Enum.count(activities, &(&1.activity_kind == "incident")),
+      minutes: last_12 |> Enum.map(&MemberRecords.minutes/1) |> Enum.sum()
+    }
+  end
+
+  defp milestones(member, attended, now) do
+    attended
+    |> Milestones.build(
+      member.joined_at,
+      MemberAwayPeriod.for_member(member),
+      now,
+      member.team.timezone
+    )
+  end
+
+  # Emergency contacts are never copied (docs/members.md), so read from D4H after the
+  # page shows, as Contact details does.
+  defp assign_emergency_contact(%{assigns: %{contacts?: false}} = socket), do: socket
+
+  defp assign_emergency_contact(socket) do
+    member = socket.assigns.member
+
+    assign_async(socket, :emergency_contact, fn ->
+      case SaveOwnDetails.load(member) do
+        {:ok, details} -> {:ok, %{emergency_contact: details.primary_emergency_contact}}
+        {:error, text} -> {:error, text}
+      end
     end)
-    |> TeamDashboardCharts.map_points(team, now)
-    |> ActivityMap.build({520, 380}, padding: 24)
   end
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row team-heading">
+    <div class="person-head">
+      <%!-- Ignored on update, so the photo a failed load removed stays gone. --%>
+      <span id="member-avatar" class="avatar avatar-lg" phx-update="ignore">
+        {Web.Navigation.initials(@member.name)}
+        <img id="member-photo" src={~p"/teams/#{@team}/me/image"} alt="" onerror="this.remove()" />
+      </span>
       <div class="min-w-0">
-        <h1 class="title-hero mb-0">{@member.name}</h1>
-        <p id="member-since" class="hint mt-1">{since_line(@member, @now)}</p>
+        <h1 class="title mb-0">{@member.name}</h1>
+        <p :if={@member.joined_at} id="member-since" class="hint mt-1 mb-0">
+          Member since {Format.month_year_long(@member.joined_at, @team.timezone)}
+        </p>
       </div>
-      <img
-        :if={@has_logo}
-        id="team-logo"
-        src={~p"/teams/#{@member.team}/logo?shape=square"}
-        class="logo-lg"
-        alt="Team logo"
-      />
     </div>
 
-    <.next_up
-      :if={@next_up}
-      team={@member.team}
-      attendance={@next_up}
-      maps_app={@current_user.maps_app}
-      now={@now}
-    />
-
-    <.to_do team={@member.team} items={@to_do} />
-
-    <.stats team={@member.team} overview={@overview} />
-
-    <div class="card-grid">
-      <section id="hours-by-kind" class="card span-7">
-        <header>
-          <h2 class="chart-title">Where your hours went</h2>
-          <span class="hint">{@overview.year}</span>
-        </header>
-        <.bar_list
-          :if={@overview.hours_by_kind != []}
-          id="hours-by-kind-chart"
-          rows={MemberOverview.bars(@overview.hours_by_kind)}
+    <div class="membership mt-6">
+      <div class="min-w-0">
+        <.activities
+          team={@team}
+          latest_year={@latest_year}
+          activities={@activities}
+          stats={@stats}
         />
-        <p :if={@overview.hours_by_kind == []} id="hours-by-kind-chart" class="chart-caption">
-          No activities in {@overview.year} yet.
-        </p>
-        <div class="mt-4">
-          <p class="chart-caption mb-0">
-            Every activity you attended counts here. Your tax credit letter counts only some: <.a navigate={
-              ~p"/teams/#{@member.team}/me/hours"
-            }>hours for your tax credit letter</.a>.
-          </p>
+        <.qualifications team={@team} now={@now} qualifications={@qualifications} />
+      </div>
+      <aside class="membership-aside">
+        <div :if={@team.id_cards_enabled or @letter} class="membership-aside-top">
+          <section id="card-and-letter" class="card side-card">
+            <.id_card :if={@team.id_cards_enabled} team={@team} card={@card} />
+            <hr :if={@team.id_cards_enabled and @letter} />
+            <.member_letter
+              :if={@letter}
+              id="letter"
+              team={@team}
+              letter={@letter}
+              year={@letter.year}
+              hours={false}
+            />
+          </section>
         </div>
-      </section>
-      <section id="where-you-went" class="card span-5">
-        <header>
-          <h2 class="chart-title">Where you went</h2>
-          <span class="hint">The last 12 months</span>
-        </header>
-        <.activity_map
-          :if={@map}
-          id="activity-map"
-          map={@map}
-          label="Map of your activities in the last 12 months"
-          overlay={false}
-        />
-        <p :if={!@map} id="activity-map" class="chart-caption">
-          No activities with a place in the last 12 months.
-        </p>
-      </section>
-      <section id="milestones" class="card span-5">
-        <header>
-          <h2 class="chart-title">Milestones</h2>
-          <.a :if={length(@milestones) > 3} navigate={~p"/teams/#{@member.team}/me/milestones"}>
-            All milestones
-          </.a>
-        </header>
-        <p :if={@milestones == []} id="milestones-empty" class="chart-caption">
-          Your first comes at 100 hours, your first incident, or a year on the team.
-        </p>
-        <.milestone_list
-          :if={@milestones != []}
-          id="milestones-list"
-          milestones={Enum.take(@milestones, 3)}
-        />
-      </section>
-      <section id="lately" class="card span-7">
-        <header>
-          <h2 class="chart-title">Lately</h2>
-          <.a navigate={~p"/teams/#{@member.team}/me/activities"}>All your activities</.a>
-        </header>
-        <p :if={@overview.lately == []} id="lately-empty" class="chart-caption">
-          No activities yet. Activities you attend show here after SAR Duty refreshes from {D4H.service_name(
-            @member.team
-          )}.
-        </p>
-        <.table
-          :if={@overview.lately != []}
-          id="lately-list"
-          rows={@overview.lately}
-          row_id={&"lately-list-#{&1.id}"}
-        >
-          <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
-            {Format.date_short(attendance.started_at, @member.team.timezone)}
-          </:col>
-          <:col :let={attendance} label="Activity">
-            <.d4h_activity_link team={@member.team} activity={attendance.activity} />
-          </:col>
-          <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
-            <.activity_kind_mark activity={attendance.activity} />
-          </:col>
-          <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
-            {Format.duration(MemberRecords.minutes(attendance))}
-          </:col>
-        </.table>
-      </section>
+        <div class="membership-aside-bottom">
+          <section id="details-and-milestones" class="card side-card">
+            <.contact_details
+              team={@team}
+              member={@member}
+              contacts?={@contacts?}
+              emergency_contact={assigns[:emergency_contact]}
+            />
+            <hr />
+            <.milestones milestones={@milestones} />
+          </section>
+        </div>
+      </aside>
     </div>
     """
   end
 
-  # "Member since May 2019 · Refreshed from D4H 7 min ago"
-  defp since_line(member, now) do
-    [
-      member.joined_at &&
-        "Member since #{Format.month_year(member.joined_at, member.team.timezone)}",
-      refreshed_ago(member.team, now)
-    ]
-    |> Enum.filter(& &1)
-    |> Enum.join(" · ")
-  end
-
   attr :team, :map, required: true
-  attr :attendance, :map, required: true
-  attr :maps_app, :string, required: true
-  attr :now, :any, required: true
+  attr :latest_year, :integer, default: nil
+  attr :activities, :list, required: true
+  attr :stats, :map, required: true
 
-  defp next_up(assigns) do
-    assigns = assign(assigns, :activity, assigns.attendance.activity)
-
+  defp activities(assigns) do
     ~H"""
-    <section id="next-up" class="card next-up">
-      <div class="next-up-when">
-        <span class="hint">You're signed up</span>
-        <span class="next-up-day">
-          {Format.day_coming_up(@activity.started_at, @now, @team.timezone)}
-        </span>
-        <span class="next-up-time">{Format.time_short(@activity.started_at, @team.timezone)}</span>
+    <section id="activities">
+      <h2 class="heading">Latest activities</h2>
+      <div :if={@stats.activities > 0} id="year-stats">
+        <p class="chart-caption mb-2">The last 12 months</p>
+        <div class="chart-stats">
+          <.stat id="stat-activities" value={Format.number(@stats.activities)} label="Activities" />
+          <.stat
+            id="stat-incidents"
+            series={:incident}
+            value={Format.number(@stats.incidents)}
+            label="Incidents"
+          />
+          <.stat id="stat-hours" value={Format.hours(@stats.minutes)} label="Hours" />
+        </div>
       </div>
-      <div class="min-w-0">
-        <.activity_kind_mark activity={@activity} class="text-sm" />
-        <h2 class="next-up-title">
-          <.d4h_activity_link team={@team} activity={@activity} />
-        </h2>
-        <p class="hint">{where_and_when(@activity, @now)}</p>
-        <.open_in_maps
-          id="next-up-maps"
-          app={@maps_app}
-          coordinate={Activity.pin(@activity)}
-          address={@activity.address}
-          label={@activity.title}
-        />
-      </div>
-      <.button
-        id="next-up-calendar"
-        href={~p"/teams/#{@team}/me/activities/#{@activity.id}/calendar"}
+      <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
+        Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
+      </.empty_state>
+      <.table
+        :if={@activities != []}
+        id="activities-list"
+        rows={@activities}
+        row_id={&"activities-list-#{&1.id}"}
       >
-        Add to calendar
-      </.button>
-    </section>
-    """
-  end
-
-  # "Coast Range SAR hall · in 3 days", or the time alone when D4H has no place.
-  defp where_and_when(activity, now) do
-    [activity.address, Format.starts_in(activity.started_at, now)]
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.join(" · ")
-  end
-
-  attr :team, :map, required: true
-  attr :items, :list, required: true
-
-  defp to_do(assigns) do
-    ~H"""
-    <section id="to-do" class="card mb-6">
-      <header>
-        <h2 class="chart-title">For you to do</h2>
-      </header>
-      <p :if={@items == []} id="to-do-empty" class="chart-caption">Nothing to do right now.</p>
-      <ul :if={@items != []} id="to-do-list" class="divide-y divide-border-subtle">
-        <.to_do_item :for={item <- @items} team={@team} item={item} />
-      </ul>
-      <p :if={@items != []} class="hint mt-2 mb-0">Each one leaves this list once it's done.</p>
+        <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
+          {Format.date_short(attendance.started_at, @team.timezone)}
+        </:col>
+        <:col :let={attendance} label="Activity">
+          <.d4h_activity_link team={@team} activity={attendance.activity} />
+        </:col>
+        <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
+          <.activity_kind_mark activity={attendance.activity} />
+        </:col>
+        <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
+          {Format.duration(MemberRecords.minutes(attendance))}
+        </:col>
+      </.table>
+      <p :if={@activities != []} class="mt-2">
+        <.a
+          id="all-activities"
+          navigate={~p"/teams/#{@team}/me/activities?year=#{@latest_year}"}
+        >
+          All your activities
+        </.a>
+      </p>
     </section>
     """
   end
 
   attr :team, :map, required: true
-  attr :item, :map, required: true
+  attr :now, :any, required: true
+  attr :qualifications, :list, required: true
 
-  defp to_do_item(%{item: %{key: :card}} = assigns) do
+  defp qualifications(assigns) do
     ~H"""
-    <li id="to-do-card" class="flex flex-wrap items-center gap-3 py-3">
-      <div class="flex-1 min-w-0">
-        <strong class="block">Add your ID card to Wallet</strong>
-        <span class="hint">Show it at the door. Anyone can verify it.</span>
-      </div>
-      <div class="flex flex-wrap gap-2">
+    <section id="qualifications" class="mt-8">
+      <h2 class="heading">Qualifications</h2>
+      <.empty_state :if={@qualifications == []} id="no-qualifications" title="No qualifications yet">
+        Qualifications your team records in {D4H.service_name(@team)} show here.
+      </.empty_state>
+      <.table
+        :if={@qualifications != []}
+        id="qualifications-list"
+        rows={@qualifications}
+        row_id={&"qualifications-list-#{&1.award.qualification_id}"}
+        row_class={&QualificationText.row_class/1}
+      >
+        <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
+        <:col :let={row} label="Expires" class="whitespace-nowrap">
+          {QualificationText.expires(row.award, @now, @team.timezone)}
+          <.badge :if={row.status == :expiring} kind={:warning}>
+            {QualificationText.days_left(row)}
+          </.badge>
+        </:col>
+      </.table>
+    </section>
+    """
+  end
+
+  attr :team, :map, required: true
+  attr :card, :map, default: nil
+
+  defp id_card(%{card: nil} = assigns) do
+    ~H"""
+    <div id="id-card">
+      <h2 class="chart-title mb-1">ID card</h2>
+      <p id="no-card" class="hint mb-0">
+        No ID card yet. Your team admins issue them. Ask one for yours.
+      </p>
+    </div>
+    """
+  end
+
+  defp id_card(assigns) do
+    ~H"""
+    <div id="id-card">
+      <h2 class="chart-title mb-1">ID card</h2>
+      <p class="hint mb-2">
+        Your ID card shows you are a current member of {@team.name}, with your endorsements.
+        Show it at the door, or to another agency on a search.
+      </p>
+      <p class="hint">
+        Anyone can verify it at <.a
+          id="card-verify-link"
+          href={verify_url(@card)}
+          class="whitespace-nowrap"
+        >{verify_label(@card)}</.a>.
+      </p>
+      <div
+        :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
+        class="flex flex-wrap gap-2"
+      >
         <.button
           :if={BuildApplePass.configured?()}
-          id="to-do-apple-pass"
-          variant={:primary}
+          id="apple-pass"
           href={~p"/teams/#{@team}/me/card/apple-wallet"}
         >
           Add to Apple Wallet
         </.button>
         <.button
           :if={BuildGooglePass.configured?()}
-          id="to-do-google-pass"
-          variant={:primary}
+          id="google-pass"
           href={~p"/teams/#{@team}/me/card/google-wallet"}
         >
           Add to Google Wallet
         </.button>
       </div>
-    </li>
-    """
-  end
-
-  defp to_do_item(%{item: %{key: :qualification}} = assigns) do
-    ~H"""
-    <li id={"to-do-qualification-#{@item.award.qualification_id}"} class="py-3">
-      <.a navigate={~p"/teams/#{@team}/me/qualifications"} class="font-semibold">
-        {@item.award.qualification.title} expires in {Format.days(@item.days)}
-      </.a>
-      <span class="hint block">Renewed it? Give the new certificate to a team admin.</span>
-    </li>
-    """
-  end
-
-  defp to_do_item(%{item: %{key: :letter}} = assigns) do
-    ~H"""
-    <li id="to-do-letter" class="flex flex-wrap items-center gap-3 py-3">
-      <div class="flex-1 min-w-0">
-        <strong class="block">Your {@item.letter.year} tax credit letter is ready</strong>
-        <span class="hint">{letter_hours(@item.letter)}</span>
-      </div>
-      <.button
-        id="to-do-letter-download"
-        variant={:primary}
-        href={~p"/teams/#{@team}/me/tax-credit-letters/#{@item.letter.id}/pdf"}
-      >
-        Download letter
-      </.button>
-    </li>
-    """
-  end
-
-  # "52 hours primary, 25 hours secondary", or a plain line for an old letter whose
-  # hours did not parse.
-  defp letter_hours(%{primary_minutes: primary, secondary_minutes: secondary})
-       when is_integer(primary) and is_integer(secondary),
-       do: "#{Format.duration(primary)} primary, #{Format.duration(secondary)} secondary"
-
-  defp letter_hours(_letter), do: "Give it to the CRA with your tax return."
-
-  attr :team, :map, required: true
-  attr :overview, :map, required: true
-
-  defp stats(assigns) do
-    ~H"""
-    <div id="overview-stats" class="chart-stats">
-      <.stat
-        id="stat-hours"
-        value={Format.hours(@overview.minutes)}
-        label={"Hours in #{@overview.year}"}
-        href={~p"/teams/#{@team}/me/hours"}
-      />
-      <.stat
-        id="stat-activities"
-        value={Format.number(@overview.activities)}
-        label={"Activities in #{@overview.year}"}
-        href={~p"/teams/#{@team}/me/activities"}
-      />
-      <.stat
-        id="stat-incidents"
-        series={:incident}
-        value={Format.number(@overview.incidents)}
-        label={"Incidents in #{@overview.year}"}
-      />
-      <.stat
-        id="stat-qualifications"
-        value={Format.number(@overview.qualifications.count)}
-        label="Qualifications"
-        href={~p"/teams/#{@team}/me/qualifications"}
-        delta={next_to_expire(@overview.qualifications.next, @team.timezone)}
-      />
     </div>
     """
   end
 
-  defp next_to_expire(nil, _timezone), do: nil
+  attr :team, :map, required: true
+  attr :member, :map, required: true
+  attr :contacts?, :boolean, required: true
+  attr :emergency_contact, :any, default: nil
 
-  defp next_to_expire(award, timezone),
-    do: "#{award.qualification.title} expires #{Format.date_long(award.ends_at, timezone)}"
+  defp contact_details(assigns) do
+    ~H"""
+    <div id="contact-details">
+      <h2 class="chart-title mb-1">Contact details</h2>
+      <dl class="mb-3">
+        <dt>Mobile</dt>
+        <dd id="contact-mobile">{@member.phone || "None"}</dd>
+        <dt>Address</dt>
+        <dd id="contact-address">{@member.address || "None"}</dd>
+        <%= if @contacts? do %>
+          <dt>Emergency contact</dt>
+          <dd id="contact-emergency">
+            <.async_result :let={contact} assign={@emergency_contact}>
+              <:loading><span class="hint">Reading {D4H.service_name(@team)}…</span></:loading>
+              <:failed :let={_failure}>
+                <span class="hint">SAR Duty cannot reach {D4H.service_name(@team)}.</span>
+              </:failed>
+              {contact_line(contact)}
+            </.async_result>
+          </dd>
+        <% end %>
+      </dl>
+      <p class="mb-0">
+        <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>
+          Change contact details
+        </.a>
+      </p>
+    </div>
+    """
+  end
+
+  attr :milestones, :list, required: true
+
+  defp milestones(assigns) do
+    ~H"""
+    <div id="milestones">
+      <h2 class="chart-title mb-1">Milestones</h2>
+      <p :if={@milestones == []} id="no-milestones" class="hint mb-0">
+        No milestones yet. The first comes with your first incident, 100 hours, or 1 year on
+        the team.
+      </p>
+      <.milestone_list :if={@milestones != []} id="milestones-list" milestones={@milestones} />
+    </div>
+    """
+  end
+
+  # "Jo Rivera · 604-555-0101", or None when D4H has no contact.
+  defp contact_line(%{"name" => name} = contact) when is_binary(name),
+    do: [name, contact["primary_phone"]] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
+
+  defp contact_line(_contact), do: "None"
+
+  # "Oct 15": the year is in the heading.
+
+  defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
+
+  defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
 end

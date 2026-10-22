@@ -57,9 +57,6 @@ defmodule Web.MeActivitiesLiveTest do
 
     assert has_element?(lv, "#no-attendance")
     refute has_element?(lv, "#years")
-
-    {:ok, hours, _html} = live(conn, ~p"/teams/#{team}/me/hours")
-    assert has_element?(hours, "#hours-total", "0 hours")
   end
 
   test "switches to an earlier year the member attended in",

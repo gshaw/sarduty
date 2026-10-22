@@ -135,6 +135,11 @@ defmodule Web.StyleGuideHTML.SampleData do
     end)
   end
 
+  # A member's 2025 letter, for the member letter example. Its download goes nowhere.
+  def letter do
+    %App.Model.TaxCreditLetter{id: 0, year: 2025, primary_minutes: 8820, secondary_minutes: 1500}
+  end
+
   # One member's milestones, newest first, as Milestones.build/5 makes them.
   def milestones do
     [

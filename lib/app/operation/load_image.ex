@@ -37,6 +37,21 @@ defmodule App.Operation.LoadImage do
   end
 
   @doc """
+  The member's own photo for Your membership (#406), square, or nil when D4H has none or
+  it won't decode, so the page shows their initials instead of the placeholder.
+  """
+  def own_photo(%Member{} = member) do
+    d4h = D4H.build_context_from_team(member.team)
+
+    with {:ok, bytes, _filename} <- D4H.fetch_member_image(d4h, member.d4h_member_id),
+         {:ok, png} <- shape_photo(bytes, :square) do
+      png
+    else
+      _none -> nil
+    end
+  end
+
+  @doc """
   `:round` for Google's circle, padded so the circle clips nothing; `:square` for the
   tax credit letter, the dashboards, and the verify page; `:icon` for the Apple icon; `:logo` for the Apple
   logo, which Wallet fits in a wide strip.

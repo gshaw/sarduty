@@ -11,8 +11,13 @@ enforces the top-level list and the held URLs.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/managers`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
-- **A member's own page is `/teams/:subdomain/me`**, with its downloads under it (#156).
-  It names the team; the member is always the person logged in. See
+- **One URL per thing, for everyone on the team** (#406). A team admin and a member open
+  the same `/teams/:subdomain/…` page; their role decides what it shows.
+- **A member's own page is `/teams/:subdomain/me`**, Your membership, with the year page
+  (`/me/activities?year=`), Contact details (`/me/details`), their photo (`/me/image`),
+  and their downloads under it (#156, #406). It names the team; the member is always the
+  person logged in. The old `/me/card`, `/me/qualifications`, `/me/hours`,
+  `/me/milestones`, and `/me/tax-credit-letters` pages are gone with no redirects. See
   [members.md](members.md).
 - **Organizations are `/orgs/:slug`** on both sites. Admin pages use the id:
   `/admin/orgs/:id`.
@@ -32,6 +37,9 @@ enforces the top-level list and the held URLs.
 Devices, Google, Apple, and shared links hold these. They don't move.
 
 - `/wallet/v1/…`: Apple's web service path, in every issued pass.
+- `/teams/:subdomain/me/card/apple-wallet`, `/me/card/google-wallet`, and
+  `/me/tax-credit-letters/:id/pdf`: a member's downloads, kept so saved links keep
+  working.
 - `/wallet/google`: Google Wallet's save and delete callbacks, set on the pass class.
 - `/s/:code` and `/attendance/:token`: shared attendance links.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.

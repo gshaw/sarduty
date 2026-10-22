@@ -7,6 +7,7 @@ defmodule Web.MeController do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.Operation.BuildTaxCreditLetterAttachment
+  alias App.Operation.LoadImage
   alias App.Repo
   alias App.ViewData.MemberRecords
 
@@ -64,6 +65,21 @@ defmodule Web.MeController do
           filename: "#{member.team.subdomain}-activity-#{activity.id}.ics",
           content_type: "text/calendar"
         )
+    end
+  end
+
+  # The member's own photo, for Your membership. A 404 when D4H has none, so the page
+  # shows their initials.
+  def image(conn, _params) do
+    case LoadImage.own_photo(conn.assigns.member) do
+      nil ->
+        send_resp(conn, :not_found, "")
+
+      png ->
+        conn
+        |> put_resp_content_type("image/png", nil)
+        |> put_resp_header("cache-control", "private, max-age=3600")
+        |> send_resp(200, png)
     end
   end
 
