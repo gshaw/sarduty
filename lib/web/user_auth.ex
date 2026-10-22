@@ -142,8 +142,9 @@ defmodule Web.UserAuth do
 
   # The URL's team's member who is this user, or nil. Admins get no pass here: a member
   # page only ever shows the person logged in.
-  defp member_login(user, subdomain),
-    do: user |> member_logins() |> Enum.find(&(&1.team.subdomain == subdomain))
+  defp member_login(user, subdomain), do: user |> member_logins() |> find_login(subdomain)
+
+  defp find_login(logins, subdomain), do: Enum.find(logins, &(&1.team.subdomain == subdomain))
 
   defp pick_default_team(_teams, nil), do: nil
 
@@ -262,7 +263,8 @@ defmodule Web.UserAuth do
     user = socket.assigns.current_user
     subdomain = params["subdomain"]
     admin_team = authorized_team(user, subdomain)
-    member = member_login(user, subdomain)
+    # mount_current_user loaded the user's member logins for the menu; reuse them.
+    member = find_login(socket.assigns[:member_logins] || member_logins(user), subdomain)
     access = page_access(socket.view)
 
     unless allowed?(access, admin_team, member), do: raise(Web.Status.NotFound)
