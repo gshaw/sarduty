@@ -1,6 +1,7 @@
 defmodule Web.ChoreFormLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Operation.SaveChore
   alias Web.MeChoreFormLive
@@ -11,9 +12,10 @@ defmodule Web.ChoreFormLive do
     team = socket.assigns.current_team
     if !team.member_logins, do: raise(Web.Status.NotFound)
     chore = Chore.find!(team, id)
+    if Chore.locked?(chore), do: raise(Web.Status.NotFound)
 
     socket
-    |> assign(page_title: "Change chore", chore: chore)
+    |> assign(page_title: "Change chore", chore: chore, service: D4H.service_name(team))
     |> assign(categories: MeChoreFormLive.categories(team.id, chore))
     |> assign_form(Chore.build_changeset(chore, %{}, [], nil))
     |> then(&{:ok, &1})
@@ -70,6 +72,9 @@ defmodule Web.ChoreFormLive do
         |> put_flash(:info, "Saved #{saved.description}.")
         |> push_navigate(to: ~p"/teams/#{team}/chores/#{chore.id}")
         |> then(&{:noreply, &1})
+
+      {:error, :locked} ->
+        {:noreply, Web.ChoreLive.locked(socket)}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}

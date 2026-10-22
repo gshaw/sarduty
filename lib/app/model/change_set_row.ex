@@ -77,7 +77,7 @@ defmodule App.Model.ChangeSetRow do
     new_value = Map.put(row.new_value, "d4h_activity_id", d4h_activity_id)
 
     record_id =
-      if row.action in [:publish_activity, :update_activity],
+      if row.action in [:publish_activity, :update_activity, :set_activity_tags],
         do: d4h_activity_id,
         else: row.d4h_record_id
 

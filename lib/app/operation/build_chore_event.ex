@@ -9,8 +9,8 @@ defmodule App.Operation.BuildChoreEvent do
     largest member total. Its chores are all in one year, so it counts in that year.
   - Each member with accepted chores has one attendance, from the event's start, for
     their total. Anyone else's attendance on it is deleted.
-  - A new event gets its tags as it is made, and never again (D4H refuses tags on a
-    published activity). It is published last, once its attendance is in, since D4H
+  - A new event gets its tags just after it is made, in their own row so a refusal shows,
+    and never again (D4H refuses tags on a published activity). It is published last, once its attendance is in, since D4H
     locks a published activity's attendance; a published one goes back to a draft first.
 
   Pure: `plan/4` takes values and returns rows. App.Operation.SendChores reads D4H.
@@ -25,7 +25,8 @@ defmodule App.Operation.BuildChoreEvent do
   The rows for one event. `state` is nil when D4H has no event yet, or
   `%{d4h_activity_id:, published?:}`. `chores` are the accepted chores, with members.
   `current` is D4H's attendance on the event now (`D4H.AttendanceInfo`), read for ids.
-  `event` is `%{category:, timezone:, tag_ids:}`, with the chore category's title.
+  `event` is `%{category:, timezone:, tags:}`, with the chore category's title and the
+  tags a new event gets (`d4h_tag_id` and `title`).
   """
   def plan(state, chores, current, event)
 
@@ -41,8 +42,7 @@ defmodule App.Operation.BuildChoreEvent do
       new_value:
         chores
         |> activity_fields(totals, event, starts_at)
-        |> Map.merge(%{"kind" => @kind, "tag_ids" => event.tag_ids})
-        |> Map.merge(%{"full_team" => false, "shared" => false})
+        |> Map.merge(%{"kind" => @kind, "full_team" => false, "shared" => false})
     }
 
     attendance =
@@ -55,7 +55,7 @@ defmodule App.Operation.BuildChoreEvent do
       new_value: %{"created_in_set" => true, "published" => true}
     }
 
-    [create | attendance] ++ [publish]
+    Enum.concat([[create], tags_rows(event.tags), attendance, [publish]])
   end
 
   # Every chore declined or moved off: the event keeps its title and times, loses its
@@ -93,6 +93,22 @@ defmodule App.Operation.BuildChoreEvent do
       delete_rows(totals, current),
       [publish_row(id, true)]
     ])
+  end
+
+  defp tags_rows([]), do: []
+
+  defp tags_rows(tags) do
+    [
+      %ChangeSetRow{
+        action: :set_activity_tags,
+        old_value: %{"kind" => @kind},
+        new_value: %{
+          "created_in_set" => true,
+          "tag_ids" => Enum.map(tags, & &1.d4h_tag_id),
+          "titles" => Enum.map(tags, & &1.title)
+        }
+      }
+    ]
   end
 
   # Each member's attendance: a new row, a changed one, or none when it is right.

@@ -5,6 +5,7 @@ defmodule Web.ChoreLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.Chore
+  alias App.Model.ChoreEvent
   alias App.Repo
 
   setup %{conn: conn} do
@@ -88,6 +89,7 @@ defmodule Web.ChoreLiveTest do
   test "accepted chores wait to be sent, then show in D4H", ctx do
     %{conn: conn, team: team, member: member, category: category} = ctx
     team = team |> Ecto.Changeset.change(d4h_access_key: "team-key") |> Repo.update!()
+    tag_fixture(team, "Primary Hours")
     chore = chore_fixture(member, category, %{date: ~D[2026-10-06], minutes: 90})
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
     assert has_element?(lv, "#no-ready-chores")
@@ -128,5 +130,37 @@ defmodule Web.ChoreLiveTest do
     assert has_element?(lv, "#chore-event-#{event_id}", "1h 30m")
     refute has_element?(lv, "#send-changes-#{event_id}")
     assert has_element?(lv, "#no-ready-chores")
+  end
+
+  test "a chore on an activity D4H has approved cannot change here", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+
+    event =
+      Repo.insert!(%ChoreEvent{team_id: team.id, chore_category_id: category.id, year: 2026})
+
+    chore = chore_fixture(member, category, %{status: :accepted, chore_event_id: event.id})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{chore.id}")
+    assert has_element?(lv, "#chore-change")
+
+    event |> Ecto.Changeset.change(locked: true) |> Repo.update!()
+
+    {:ok, _lv, html} =
+      lv
+      |> form("#decline-form", decline: %{reason: "Wrong"})
+      |> render_submit()
+      |> follow_redirect(conn)
+
+    assert html =~ "This chore cannot change. D4H has approved its activity."
+    assert Repo.get!(Chore, chore.id).status == :accepted
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{chore.id}")
+    assert has_element?(lv, "#chore-locked")
+    refute has_element?(lv, "#chore-change")
+    refute has_element?(lv, "#decline-form")
+
+    assert_raise Web.Status.NotFound, fn ->
+      live(conn, ~p"/teams/#{team}/chores/#{chore.id}/edit")
+    end
   end
 end

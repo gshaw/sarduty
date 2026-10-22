@@ -78,11 +78,20 @@ defmodule App.Model.ChoreEvent do
         ]
       )
 
-    # A chore changed during the send: keep the id, and leave its changes to send.
+    # A chore changed during the send: keep what the send learned, and leave its changes
+    # to send, unless D4H has approved the event.
     if count == 0 do
       ChoreEvent
       |> where([e], e.id == ^event.id)
-      |> Repo.update_all(set: [d4h_activity_id: d4h_activity_id, sent_at: now])
+      |> Repo.update_all(
+        set: [
+          d4h_activity_id: d4h_activity_id,
+          needs_send: status != :locked,
+          locked: status == :locked,
+          send_note: note,
+          sent_at: now
+        ]
+      )
     end
 
     :ok

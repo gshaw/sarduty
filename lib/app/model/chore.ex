@@ -93,6 +93,12 @@ defmodule App.Model.Chore do
   @doc "Whether the member can change or delete it: only while it waits."
   def member_can_change?(%Chore{status: status}), do: status == :waiting
 
+  @doc "Whether it is on an event D4H has approved, so SAR Duty cannot change it."
+  def locked?(%Chore{chore_event_id: nil}), do: false
+
+  def locked?(%Chore{chore_event_id: id}),
+    do: ChoreEvent |> where([e], e.id == ^id and e.locked) |> Repo.exists?()
+
   @doc "Whether the member can delete it: while it waits, or once declined."
   def member_can_delete?(%Chore{status: status}), do: status in [:waiting, :declined]
 

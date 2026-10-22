@@ -255,9 +255,14 @@ defmodule Web.ChoreCollectionLive do
 
     socket =
       case SendChores.send_changes(team, event, user, DateTime.utc_now()) do
-        :sent -> put_flash(socket, :info, "Changes sent to #{service}.")
-        :failed -> put_flash(socket, :error, "Changes not sent. The reason is in the table.")
-        :locked -> put_flash(socket, :error, "Changes not sent. D4H has approved the activity.")
+        :sent ->
+          put_flash(socket, :info, "Changes sent to #{service}.")
+
+        :failed ->
+          put_flash(socket, :error, "Changes not sent. The reason is in the table.")
+
+        :locked ->
+          put_flash(socket, :error, "Changes not sent. #{service} has approved the activity.")
       end
 
     {:noreply, load(socket)}

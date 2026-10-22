@@ -8,8 +8,9 @@ defmodule App.Operation.SendChores do
   Each event is its own change set of source `chores`. D4H is read first only for ids:
   whether the event is still there and published, and each member's attendance row on
   it. An event deleted in D4H is made again. An event whose send did not go through
-  keeps its changes to send. One D4H would not publish stays a draft and counts as
-  sent, with a note. One D4H has approved is locked: SAR Duty cannot change it again.
+  keeps its changes to send, and so does a new one D4H would not tag. One D4H would not
+  publish stays a draft and counts as sent, with a note. One D4H has approved is locked:
+  SAR Duty cannot change it again.
   """
 
   import Ecto.Query
@@ -28,6 +29,7 @@ defmodule App.Operation.SendChores do
 
   @draft "Left as a draft: D4H would not publish it."
   @approved "Approved in D4H, so SAR Duty cannot change it. Change it in D4H."
+  @untagged "Added without its tags. Add them in D4H, then send the changes."
 
   @doc """
   Sends the team's accepted, unsent chores among `ids`. `%{chores: n, events: n,
@@ -41,48 +43,70 @@ defmodule App.Operation.SendChores do
       |> where([c], is_nil(c.chore_event_id) and c.id in ^ids)
       |> Repo.all()
 
-    results =
+    tags = team_tags(team)
+
+    sends =
       chores
       |> Enum.group_by(&{&1.chore_category_id, &1.date.year})
-      |> Enum.map(fn {key, group} ->
-        team |> new_event(key, group) |> send_event_as(team, user, now)
-      end)
+      |> Enum.flat_map(fn {key, group} -> new_event(team, key, group) end)
+      |> Enum.map(fn {event, count} -> {send_event(team, event, tags, user, now), count} end)
 
+    summary(sends)
+  end
+
+  defp summary(sends) do
     %{
-      chores: length(chores),
-      events: length(results),
-      failed: Enum.count(results, &(&1 == :failed))
+      chores: sends |> Enum.map(&elem(&1, 1)) |> Enum.sum(),
+      events: length(sends),
+      failed: Enum.count(sends, &(elem(&1, 0) == :failed))
     }
   end
 
-  # An event for one chore category and year, holding its chores.
+  # An event for one chore category and year, holding the chores it claims: those still
+  # unsent, since another send may have taken some since they were read. `[{event,
+  # count}]`, or `[]` when it claims none.
   defp new_event(team, {category_id, year}, chores) do
-    event = ChoreEvent.create!(team.id, category_id, year)
     ids = Enum.map(chores, & &1.id)
-    Chore |> where([c], c.id in ^ids) |> Repo.update_all(set: [chore_event_id: event.id])
-    ChoreEvent.find!(team, event.id)
-  end
 
-  defp send_event_as(event, team, user, now), do: send_event(team, event, user, now)
+    {:ok, claimed} =
+      Repo.transaction(fn ->
+        event = ChoreEvent.create!(team.id, category_id, year)
+
+        {count, _rows} =
+          Chore
+          |> where([c], c.id in ^ids and is_nil(c.chore_event_id))
+          |> Repo.update_all(set: [chore_event_id: event.id])
+
+        if count == 0 do
+          Repo.delete!(event)
+          nil
+        else
+          {event.id, count}
+        end
+      end)
+
+    case claimed do
+      nil -> []
+      {id, count} -> [{ChoreEvent.find!(team, id), count}]
+    end
+  end
 
   @doc "Sends an event again after its chores changed. `:sent`, `:failed`, or `:locked`."
   def send_changes(%Team{} = team, %ChoreEvent{team_id: team_id} = event, user, now)
       when team_id == team.id,
-      do: send_event(team, ChoreEvent.find!(team, event.id), user, now)
+      do: send_event(team, ChoreEvent.find!(team, event.id), team_tags(team), user, now)
 
-  defp send_event(team, event, user, now) do
+  # The team's tags and hours tag titles, read once for a send's events.
+  defp team_tags(team), do: %{all: Tag.get_all(team.id), hours: Activity.hours_tags(team)}
+
+  defp send_event(team, event, tags, user, now) do
     d4h = D4H.build_context_from_team(team)
 
     with {:ok, state} <- read_state(d4h, event),
          :ok <- check_unlocked(event, state),
+         {:ok, new_tags} <- new_event_tags(state, event.chore_category, tags),
          {:ok, current} <- read_attendance(d4h, state) do
-      rows =
-        BuildChoreEvent.plan(state, ChoreEvent.chores(event), current, %{
-          category: event.chore_category.title,
-          timezone: team.timezone,
-          tag_ids: tag_ids(team, event.chore_category, Tag.get_all(team.id))
-        })
-
+      rows = plan(team, event, state, current, new_tags)
       apply_rows(team, event, state, rows, user, now)
     else
       :locked ->
@@ -95,9 +119,27 @@ defmodule App.Operation.SendChores do
     end
   end
 
+  defp plan(team, event, state, current, tags) do
+    BuildChoreEvent.plan(state, ChoreEvent.chores(event), current, %{
+      category: event.chore_category.title,
+      timezone: team.timezone,
+      tags: tags
+    })
+  end
+
   # D4H refuses changes to an approved activity (#356), so nothing is tried.
   defp check_unlocked(_event, %{approved?: true}), do: :locked
   defp check_unlocked(_event, _state), do: :ok
+
+  # Only a new event gets tags, and it needs its hours tag, or its hours count nowhere.
+  defp new_event_tags(nil, category, tags) do
+    case event_tags(category, tags.hours, tags.all) do
+      {:ok, event_tags} -> {:ok, event_tags}
+      {:error, title} -> {:error, "D4H has no tag named #{title}, this category's hours tag."}
+    end
+  end
+
+  defp new_event_tags(_state, _category, _tags), do: {:ok, []}
 
   # An event D4H no longer has is made again.
   defp read_state(_d4h, %ChoreEvent{d4h_activity_id: nil}), do: {:ok, nil}
@@ -159,11 +201,20 @@ defmodule App.Operation.SendChores do
         :sent
 
       not_sent ->
-        if Enum.all?(not_sent, &publish?/1),
-          do: {:sent, @draft},
-          else: {:failed, hd(not_sent).error}
+        cond do
+          Enum.all?(not_sent, &publish?/1) ->
+            {:sent, @draft}
+
+          row = Enum.find(not_sent, &(&1.action == :set_activity_tags)) ->
+            {:failed, untagged(row)}
+
+          true ->
+            {:failed, hd(not_sent).error}
+        end
     end
   end
+
+  defp untagged(row), do: "#{@untagged} #{row.error}"
 
   defp publish?(row), do: row.action == :publish_activity and row.new_value["published"] == true
 
@@ -183,17 +234,25 @@ defmodule App.Operation.SendChores do
   end
 
   @doc """
-  The D4H tag ids a new event gets: the team's hours tag for the chore category's hours,
-  by title now, and the category's other tags. A tag D4H no longer has is left out.
+  The tags a new event gets: the team's hours tag for the chore category's hours, by
+  title now, and the category's other tags. `hours_tags` is `Activity.hours_tags/1`.
+  `{:error, title}` when no tag has the hours tag's title.
   """
-  def tag_ids(team, %ChoreCategory{} = category, tags) do
-    hours_title = Activity.hours_tags(team)[category.hours]
-    hours = for tag <- tags, tag.title == hours_title, do: tag.d4h_tag_id
-    others = for %{tag: tag} <- category.chore_category_tags, do: tag.d4h_tag_id
-    Enum.uniq(Enum.take(hours, 1) ++ others)
+  def event_tags(%ChoreCategory{} = category, hours_tags, tags) do
+    hours_title = hours_tags[category.hours]
+
+    case Enum.find(tags, &(&1.title == hours_title)) do
+      nil ->
+        {:error, hours_title}
+
+      hours ->
+        others = for %{tag: tag} <- category.chore_category_tags, do: tag
+        {:ok, Enum.uniq_by([hours | others], & &1.d4h_tag_id)}
+    end
   end
 
   defp error_text(:no_team_key), do: "The team has no D4H access key."
   defp error_text(%D4H.Error{} = error), do: Exception.message(error)
+  defp error_text(text) when is_binary(text), do: text
   defp error_text(reason), do: inspect(reason)
 end

@@ -48,8 +48,8 @@ defmodule App.Operation.SendChoresTest do
   end
 
   # D4H, sending each write to the test. `existing` is the attendance on event 900.
-  # `event_status` is 200, 404 for an event deleted in D4H, :approved, or :no_publish for
-  # a team whose events D4H will not publish.
+  # `event_status` is 200, 404 for an event deleted in D4H, :approved, :no_publish for
+  # a team whose events D4H will not publish, or :no_tags when D4H refuses the tags.
   defp stub_d4h(existing \\ [], event_status \\ 200) do
     test_pid = self()
 
@@ -82,6 +82,9 @@ defmodule App.Operation.SendChoresTest do
          |> Req.Test.json(%{
            "title" => "Activity cannot be marked ready for approval or published"
          })
+
+  defp answer(conn, "POST", "/events/900/tags", _json, _existing, :no_tags),
+    do: conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"title" => "Tag not found"})
 
   defp answer(conn, "GET", "/events/" <> _id, _json, _existing, _status),
     do: Req.Test.json(conn, event(900, true))
@@ -255,7 +258,62 @@ defmodule App.Operation.SendChoresTest do
     assert %{locked: true, needs_send: false} = event
     assert event.send_note =~ "Approved in D4H"
 
-    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "50"})
-    refute Repo.get!(ChoreEvent, event.id).needs_send
+    chore = Repo.get!(Chore, chore.id)
+    assert SaveChore.change(ctx.team, chore, %{"minutes" => "50"}) == {:error, :locked}
+
+    assert SaveChore.decline(ctx.team, chore, "No", ctx.user, DateTime.utc_now()) ==
+             {:error, :locked}
+
+    assert %{minutes: 45, status: :accepted, chore_event_id: id} = Repo.get!(Chore, chore.id)
+    assert id == event.id
+  end
+
+  test "a send that finds the event approved while a chore changed still locks it", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    [stale] = Repo.all(ChoreEvent)
+    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
+
+    ChoreEvent.record_send!(stale, 900, {:locked, "Approved"}, DateTime.utc_now())
+
+    assert %{locked: true, needs_send: false, send_note: "Approved"} =
+             Repo.get!(ChoreEvent, stale.id)
+  end
+
+  test "a chore sent after the page loaded it still marks its event when declined", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    [event] = Repo.all(ChoreEvent)
+    refute event.needs_send
+
+    {:ok, _chore} =
+      SaveChore.decline(ctx.team, chore, "Not a chore", ctx.user, DateTime.utc_now())
+
+    assert Repo.get!(ChoreEvent, event.id).needs_send
+    assert Repo.get!(Chore, chore.id).chore_event_id == nil
+  end
+
+  test "a new event D4H will not tag is not sent until the changes go again", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h([], :no_tags)
+
+    assert send_chores(ctx, [chore]) == %{chores: 1, events: 1, failed: 1}
+    [event] = Repo.all(ChoreEvent)
+    assert %{d4h_activity_id: 900, needs_send: true} = event
+    assert event.send_note =~ "Added without its tags."
+  end
+
+  test "without the team's hours tag in D4H, no event is made", ctx do
+    ctx.tags |> hd() |> Repo.delete!()
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+
+    assert send_chores(ctx, [chore]) == %{chores: 1, events: 1, failed: 1}
+    assert writes() == []
+    [event] = Repo.all(ChoreEvent)
+    assert %{d4h_activity_id: nil, needs_send: true} = event
+    assert event.send_note == "D4H has no tag named Primary Hours, this category's hours tag."
   end
 end

@@ -6,7 +6,11 @@ defmodule App.Operation.SaveChore do
   Nothing here calls D4H. An accepted chore waits until a team admin sends it
   (App.Operation.SendChores). Once sent, it belongs to that send's `ChoreEvent`, and
   changing or declining it marks the event "Changes to send". A sent chore moved to
-  another chore category or year leaves its event and is ready to send again.
+  another chore category or year leaves its event and is ready to send again. A chore on
+  an event D4H has approved cannot change here: SAR Duty could not send the change.
+
+  A team admin's change reads the chore again in its transaction, since another team
+  admin or a send may have changed it since the page loaded it.
   """
 
   import Ecto.Query
@@ -53,11 +57,13 @@ defmodule App.Operation.SaveChore do
     with {:ok, _chore} <- result, do: :ok
   end
 
-  @doc "A team admin changes any field of a chore, with any date, in any status."
+  @doc """
+  A team admin changes any field of a chore, with any date, in any status.
+  `{:error, :locked}` once D4H has approved its event.
+  """
   def change(%Team{} = team, %Chore{team_id: team_id} = chore, params)
       when team_id == team.id do
-    changeset = Chore.build_changeset(chore, params, category_ids(team.id, chore), nil)
-    transaction(fn -> changeset |> Repo.update() |> place(chore) end)
+    admin_change(team, chore, &Chore.build_changeset(&1, params, category_ids(team.id, &1), nil))
   end
 
   @doc """
@@ -65,13 +71,13 @@ defmodule App.Operation.SaveChore do
   are. Returns how many were accepted.
   """
   def accept(%Team{} = team, ids, user, now) do
-    chores =
-      Chore
-      |> where([c], c.team_id == ^team.id and c.status == :waiting and c.id in ^ids)
-      |> Repo.all()
-
     {:ok, count} =
       Repo.transaction(fn ->
+        chores =
+          Chore
+          |> where([c], c.team_id == ^team.id and c.status == :waiting and c.id in ^ids)
+          |> Repo.all()
+
         Enum.each(chores, fn chore ->
           {:ok, _chore} = chore |> Chore.decide_changeset(:accepted, user, now) |> decide(chore)
         end)
@@ -82,18 +88,24 @@ defmodule App.Operation.SaveChore do
     count
   end
 
-  @doc "A team admin accepts one chore, in any status."
+  @doc "A team admin accepts one chore, in any status. `{:error, :locked}` as `change/3`."
   def accept_one(%Team{} = team, %Chore{team_id: team_id} = chore, user, now)
-      when team_id == team.id do
-    changeset = Chore.decide_changeset(chore, :accepted, user, now)
-    transaction(fn -> decide(changeset, chore) end)
-  end
+      when team_id == team.id,
+      do: admin_change(team, chore, &Chore.decide_changeset(&1, :accepted, user, now))
 
-  @doc "A team admin declines a chore with a reason the member sees."
+  @doc "A team admin declines a chore with a reason the member sees. `{:error, :locked}` as `change/3`."
   def decline(%Team{} = team, %Chore{team_id: team_id} = chore, reason, user, now)
-      when team_id == team.id do
-    changeset = Chore.decide_changeset(chore, :declined, user, now, reason)
-    transaction(fn -> decide(changeset, chore) end)
+      when team_id == team.id,
+      do: admin_change(team, chore, &Chore.decide_changeset(&1, :declined, user, now, reason))
+
+  defp admin_change(team, chore, build) do
+    transaction(fn ->
+      current = Repo.get_by!(Chore, id: chore.id, team_id: team.id)
+
+      if Chore.locked?(current),
+        do: {:error, :locked},
+        else: current |> build.() |> decide(current)
+    end)
   end
 
   # The member's chore as it is now, read in the transaction: a team admin may have

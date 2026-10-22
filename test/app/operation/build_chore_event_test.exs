@@ -8,7 +8,11 @@ defmodule App.Operation.BuildChoreEventTest do
 
   @avery %Member{id: 1, d4h_member_id: 101, name: "Avery Chen"}
   @sam %Member{id: 2, d4h_member_id: 102, name: "Sam Rivera"}
-  @event %{category: "Equipment maintenance", timezone: "America/Vancouver", tag_ids: [7, 8]}
+  @event %{
+    category: "Equipment maintenance",
+    timezone: "America/Vancouver",
+    tags: [%{d4h_tag_id: 7, title: "Primary Hours"}, %{d4h_tag_id: 8, title: "Chores"}]
+  }
   # 00:00 on Oct 28, the last chore's day, in Vancouver.
   @start "2026-10-28T07:00:00Z"
 
@@ -23,7 +27,7 @@ defmodule App.Operation.BuildChoreEventTest do
 
   defp actions(rows), do: Enum.map(rows, & &1.action)
 
-  test "the first send makes the event on the last chore's day, each member's attendance, then publishes it" do
+  test "the first send makes the event on the last chore's day, tags it, adds each member's attendance, then publishes it" do
     chores = [
       chore(1, @sam, 60),
       chore(2, @avery, 180, ~D[2026-09-29]),
@@ -34,21 +38,29 @@ defmodule App.Operation.BuildChoreEventTest do
 
     assert actions(rows) == [
              :create_activity,
+             :set_activity_tags,
              :create_attendance,
              :create_attendance,
              :publish_activity
            ]
 
-    [create, avery, sam, publish] = rows
+    [create, tags, avery, sam, publish] = rows
 
     assert %{
              "kind" => "event",
              "title" => "Chores: Equipment maintenance, Sep 29 to Oct 28, 2026",
              "started_at" => @start,
              "finished_at" => "2026-10-28T11:00:00Z",
-             "tag_ids" => [7, 8],
              "full_team" => false
            } = create.new_value
+
+    refute Map.has_key?(create.new_value, "tag_ids")
+
+    assert %{
+             "created_in_set" => true,
+             "tag_ids" => [7, 8],
+             "titles" => ["Primary Hours", "Chores"]
+           } = tags.new_value
 
     assert %{"d4h_member_id" => 101, "created_in_set" => true, "starts_at" => @start} =
              avery.new_value

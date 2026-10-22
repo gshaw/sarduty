@@ -3,6 +3,7 @@ defmodule Web.ChoreLive do
 
   import Web.ChoreText, only: [status_badge: 1]
 
+  alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Operation.SaveChore
   alias Service.Format
@@ -15,7 +16,8 @@ defmodule Web.ChoreLive do
     chore = Chore.find!(team, id)
 
     socket
-    |> assign(page_title: chore.description, chore: chore)
+    |> assign(page_title: chore.description, chore: chore, locked?: Chore.locked?(chore))
+    |> assign(service: D4H.service_name(team))
     |> assign_decline_form(%{})
     |> then(&{:ok, &1})
   end
@@ -61,7 +63,11 @@ defmodule Web.ChoreLive do
       </div>
     </dl>
 
-    <.form_actions>
+    <.warning_text :if={@locked?} id="chore-locked">
+      {@service} has approved this chore's activity, so it cannot change here. Change it in {@service}.
+    </.warning_text>
+
+    <.form_actions :if={!@locked?}>
       <.button
         :if={@chore.status != :accepted}
         id="chore-accept"
@@ -76,7 +82,7 @@ defmodule Web.ChoreLive do
       </.button>
     </.form_actions>
 
-    <section :if={@chore.status != :declined} id="chore-decline" class="mt-8">
+    <section :if={@chore.status != :declined and !@locked?} id="chore-decline" class="mt-8">
       <h2 class="subheading">Decline</h2>
       <.form for={@decline_form} id="decline-form" class="measure" phx-submit="decline">
         <.input field={@decline_form[:reason]} type="textarea" rows="3" label="Why not">
@@ -94,12 +100,17 @@ defmodule Web.ChoreLive do
 
   def handle_event("accept", _params, socket) do
     %{current_team: team, current_user: user, chore: chore} = socket.assigns
-    {:ok, _chore} = SaveChore.accept_one(team, chore, user, DateTime.utc_now())
 
-    socket
-    |> put_flash(:info, "Accepted #{chore.description}.")
-    |> push_navigate(to: ~p"/teams/#{team}/chores")
-    |> then(&{:noreply, &1})
+    case SaveChore.accept_one(team, chore, user, DateTime.utc_now()) do
+      {:ok, _chore} ->
+        socket
+        |> put_flash(:info, "Accepted #{chore.description}.")
+        |> push_navigate(to: ~p"/teams/#{team}/chores")
+        |> then(&{:noreply, &1})
+
+      {:error, :locked} ->
+        {:noreply, locked(socket)}
+    end
   end
 
   def handle_event("decline", %{"decline" => %{"reason" => reason}}, socket) do
@@ -112,9 +123,21 @@ defmodule Web.ChoreLive do
         |> push_navigate(to: ~p"/teams/#{team}/chores")
         |> then(&{:noreply, &1})
 
+      {:error, :locked} ->
+        {:noreply, locked(socket)}
+
       {:error, changeset} ->
         errors = for {:decline_reason, error} <- changeset.errors, do: {:reason, error}
         {:noreply, assign_decline_form(socket, %{"reason" => reason}, errors)}
     end
+  end
+
+  # D4H approved the chore's activity after this page opened.
+  def locked(socket) do
+    %{current_team: team, chore: chore, service: service} = socket.assigns
+
+    socket
+    |> put_flash(:error, "This chore cannot change. #{service} has approved its activity.")
+    |> push_navigate(to: ~p"/teams/#{team}/chores/#{chore.id}")
   end
 end
