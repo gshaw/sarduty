@@ -1,9 +1,9 @@
 # Chores
 
 Chores are time members give the team outside activities, such as fixing equipment or
-board work (#341, closes #11). A member logs each one in their member area, a team admin
-accepts or declines it, and SAR Duty sends accepted chores to D4H every night as one event
-per month and chore category. They exist only on a team with member logins on.
+board work (#341, closes #11). A member logs each one, a team admin accepts or declines
+it, and a team admin sends accepted chores to D4H when they choose. They exist only on a
+team with member logins on.
 
 ## Chore categories
 
