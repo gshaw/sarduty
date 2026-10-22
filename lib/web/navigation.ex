@@ -198,6 +198,61 @@ defmodule Web.Navigation do
     do: current == path or String.starts_with?(current, path <> "/")
 
   @doc """
+  The area switch at the top of the phone menu: one row per team, A to Z, with a button for
+  each of its areas you have, after a row for Admin if you're a SAR Duty admin. A row has a
+  heading only when there are two or more, since the bar names the team. Empty when you
+  have one area, so there is nothing to switch to.
+  `[%{key:, heading:, links: [%{key:, label:, path:, current:}]}]`.
+  """
+  def switch_rows(is_admin, managed_teams, member_logins, area) do
+    admin = if is_admin, do: [admin_row(area)], else: []
+    teams = for entry <- menu_teams(managed_teams, member_logins), do: team_row(entry, area)
+    rows = admin ++ teams
+
+    cond do
+      rows |> Enum.flat_map(& &1.links) |> length() < 2 -> []
+      length(rows) == 1 -> Enum.map(rows, &%{&1 | heading: nil})
+      true -> rows
+    end
+  end
+
+  defp admin_row(area),
+    do: %{
+      key: "admin",
+      heading: "SAR Duty",
+      links: [switch_link("admin", "Admin", ~p"/admin", area, :admin, nil)]
+    }
+
+  defp team_row(%{team: team} = entry, area) do
+    team_link =
+      switch_link("team-" <> team.subdomain, "Team area", ~p"/teams/#{team}", area, :team, team)
+
+    member_link =
+      switch_link(
+        "member-" <> team.subdomain,
+        "Member area",
+        ~p"/teams/#{team}/me",
+        area,
+        :member,
+        team
+      )
+
+    links =
+      if(entry.team_area, do: [team_link], else: []) ++
+        if(entry.member_area, do: [member_link], else: [])
+
+    %{key: team.subdomain, heading: team.name, links: links}
+  end
+
+  defp switch_link(key, label, path, area, kind, team),
+    do: %{key: key, label: label, path: path, current: in_area?(area, kind, team)}
+
+  @doc "Whether `area` is the area of this kind, for this team when it has one."
+  def in_area?(%{kind: kind, team: nil}, kind, nil), do: true
+  def in_area?(%{kind: kind, team: %{id: id}}, kind, %{id: id}), do: true
+  def in_area?(_area, _kind, _team), do: false
+
+  @doc """
   The teams in the account menu, A to Z, each with the areas it offers you: its team area
   when you're one of its team admins (`managed_teams`), its member area when you can log
   in as one of its members (`member_logins`). `[%{team:, team_area:, member_area:}]`.

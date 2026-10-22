@@ -231,11 +231,21 @@ defmodule Web.Layouts do
   attr :size, :atom, default: :wide
 
   # The top bar: the area you're in, then the account menu, which switches areas, or Log
-  # in. On a phone the Menu button holds the area's pages and the account menu. See
-  # /styles/top-bar.
+  # in. On a phone the Menu button holds the area switch, the area's pages, and the rest of
+  # the account menu. See /styles/top-bar.
   def main_nav_bar(assigns) do
     {area, groups} = navigation(assigns)
-    assigns = assign(assigns, area: area, groups: groups)
+
+    switch_rows =
+      assigns.current_user &&
+        Navigation.switch_rows(
+          assigns.current_user.is_admin,
+          assigns.managed_teams,
+          assigns.member_logins,
+          area
+        )
+
+    assigns = assign(assigns, area: area, groups: groups, switch_rows: switch_rows || [])
 
     ~H"""
     <.site_bar size={@size}>
@@ -259,6 +269,7 @@ defmodule Web.Layouts do
           />
         </.site_bar_menu>
         <.site_bar_phone_menu>
+          <.area_switch :if={@switch_rows != []} rows={@switch_rows} />
           <%= for {heading, links} <- @groups do %>
             <div :if={heading} class="caps menu-heading">{heading}</div>
             <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
@@ -271,6 +282,7 @@ defmodule Web.Layouts do
             area={@area}
             id_prefix="phone-"
             email
+            areas={false}
           />
         </.site_bar_phone_menu>
       <% else %>
@@ -293,6 +305,31 @@ defmodule Web.Layouts do
         <.nav_link :for={link <- links} link={link} id_prefix="side-nav-" />
       </:group>
     </.side_nav>
+    """
+  end
+
+  attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/4"
+
+  # The phone menu's first lines: the areas you can switch to, a row of buttons per team, so
+  # the other area is one tap away, not below the area's pages.
+  defp area_switch(assigns) do
+    ~H"""
+    <div id="area-switch" class="area-switch">
+      <%= for row <- @rows do %>
+        <div :if={row.heading} class="caps menu-heading">{row.heading}</div>
+        <div id={"area-switch-row-" <> row.key} class="area-switch-row">
+          <.link
+            :for={link <- row.links}
+            navigate={link.path}
+            id={"area-switch-" <> link.key}
+            aria-current={link.current && "page"}
+          >
+            {link.label}
+          </.link>
+        </div>
+      <% end %>
+    </div>
+    <.menu_divider />
     """
   end
 
@@ -322,21 +359,29 @@ defmodule Web.Layouts do
   attr :id_prefix, :string, default: ""
   attr :email, :boolean, default: false, doc: "show the email, as the phone menu does"
 
+  attr :areas, :boolean,
+    default: true,
+    doc: "list Admin and the teams; the phone menu has its switch"
+
   # The areas you can switch to: Admin, then each of your teams under its name, with its
   # team area if you're one of its team admins and its member area if it lets you log in
-  # as a member, then your settings and Log out. The account menu, and the end of the
-  # phone menu.
+  # as a member, then your settings and Log out. The account menu. The phone menu ends with
+  # just the last two, under its area switch.
   defp area_links(assigns) do
-    assigns =
-      assign(assigns, teams: Navigation.menu_teams(assigns.managed_teams, assigns.member_logins))
+    teams =
+      if assigns.areas,
+        do: Navigation.menu_teams(assigns.managed_teams, assigns.member_logins),
+        else: []
+
+    assigns = assign(assigns, teams: teams)
 
     ~H"""
-    <%= if @current_user.is_admin do %>
+    <%= if @areas and @current_user.is_admin do %>
       <.a
         id={@id_prefix <> "nav-admin"}
         kind={:custom}
         navigate={~p"/admin"}
-        aria-current={in_area?(@area, :admin, nil) && "page"}
+        aria-current={Navigation.in_area?(@area, :admin, nil) && "page"}
       >
         Admin
       </.a>
@@ -349,7 +394,7 @@ defmodule Web.Layouts do
         id={@id_prefix <> "nav-team-" <> team.subdomain}
         kind={:custom}
         navigate={~p"/teams/#{team}"}
-        aria-current={in_area?(@area, :team, team) && "page"}
+        aria-current={Navigation.in_area?(@area, :team, team) && "page"}
       >
         Team area
       </.a>
@@ -358,7 +403,7 @@ defmodule Web.Layouts do
         id={@id_prefix <> "nav-member-" <> team.subdomain}
         kind={:custom}
         navigate={~p"/teams/#{team}/me"}
-        aria-current={in_area?(@area, :member, team) && "page"}
+        aria-current={Navigation.in_area?(@area, :member, team) && "page"}
       >
         Member area
       </.a>
@@ -369,7 +414,7 @@ defmodule Web.Layouts do
       id={@id_prefix <> "nav-your-settings"}
       kind={:custom}
       navigate={~p"/account"}
-      aria-current={in_area?(@area, :settings, nil) && "page"}
+      aria-current={Navigation.in_area?(@area, :settings, nil) && "page"}
     >
       Your settings
     </.a>
@@ -378,10 +423,6 @@ defmodule Web.Layouts do
     </.a>
     """
   end
-
-  defp in_area?(%{kind: kind, team: nil}, kind, nil), do: true
-  defp in_area?(%{kind: kind, team: %{id: id}}, kind, %{id: id}), do: true
-  defp in_area?(_area, _kind, _team), do: false
 
   @doc """
   Shows the flash group with standard titles and content.

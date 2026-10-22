@@ -135,6 +135,34 @@
   .site-bar-phone-panel .menu-note { padding: var(--sp-2) var(--sp-4) var(--sp-1); color: rgb(255 255 255 / 0.6); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
+  /* The phone menu's area switch: a row of buttons per team, the current area in white. */
+  .area-switch { padding: var(--sp-1) var(--sp-4) var(--sp-2); }
+  .site-bar-phone-panel .area-switch .menu-heading { padding: var(--sp-2) 0; }
+  .area-switch-row {
+    display: grid;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+    margin-top: var(--sp-1);
+    border: var(--border-width) solid rgb(255 255 255 / 0.3);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .area-switch .menu-heading + .area-switch-row { margin-top: 0; }
+
+  .site-bar-phone-panel .area-switch-row a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 var(--sp-2);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+  }
+
+  .site-bar-phone-panel .area-switch-row a + a { border-left: var(--border-width) solid rgb(255 255 255 / 0.3); }
+  .site-bar-phone-panel .area-switch-row a[aria-current="page"] { background: #fff; color: var(--nav); box-shadow: none; }
+
   @media (width < 64rem) {
     .site-bar-links, .site-bar-menu { display: none; }
     .site-bar-phone { display: block; }
