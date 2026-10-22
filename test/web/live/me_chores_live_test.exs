@@ -79,6 +79,34 @@ defmodule Web.MeChoresLiveTest do
     end
   end
 
+  test "a chore a team admin decides while the member's page is open does not change", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+    waiting = chore_fixture(member, category, %{minutes: 60})
+
+    declined =
+      chore_fixture(member, category, %{status: :declined, decided_at: DateTime.utc_now()})
+
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/me/chores/#{waiting.id}/edit")
+    {:ok, list, _html} = live(conn, ~p"/teams/#{team}/me/chores")
+
+    for chore <- [waiting, declined],
+        do: Repo.update!(Ecto.Changeset.change(chore, status: :accepted))
+
+    {:ok, _lv, html} =
+      edit
+      |> form("#chore-form", chore: %{minutes: "45"})
+      |> render_submit()
+      |> follow_redirect(conn)
+
+    assert html =~ "This chore cannot change"
+    assert Repo.get!(Chore, waiting.id).minutes == 60
+
+    assert list |> element("#chore-delete-#{declined.id}") |> render_click() =~
+             "cannot be deleted"
+
+    assert Repo.get(Chore, declined.id)
+  end
+
   test "a member sees why a chore was declined, and deletes it", ctx do
     %{conn: conn, team: team, member: member, category: category} = ctx
 

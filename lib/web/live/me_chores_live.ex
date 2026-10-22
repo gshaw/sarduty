@@ -127,10 +127,14 @@ defmodule Web.MeChoresLive do
   def handle_event("delete", %{"id" => id}, socket) do
     member = socket.assigns.member
     chore = Chore.find_for_member!(member, id)
-    :ok = SaveChore.delete_own(member, chore)
 
-    socket
-    |> put_flash(:info, "Deleted #{chore.description}.")
+    case SaveChore.delete_own(member, chore) do
+      :ok ->
+        put_flash(socket, :info, "Deleted #{chore.description}.")
+
+      {:error, :decided} ->
+        put_flash(socket, :error, "This chore cannot be deleted. A team admin has accepted it.")
+    end
     |> assign_chores()
     |> then(&{:noreply, &1})
   end

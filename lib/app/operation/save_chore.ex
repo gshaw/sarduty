@@ -20,20 +20,32 @@ defmodule App.Operation.SaveChore do
     |> Repo.insert()
   end
 
-  @doc "A member changes their own chore while it waits."
+  @doc """
+  A member changes their own chore while it waits. `{:error, :decided}` once a team admin
+  has decided it, even after the member's page opened.
+  """
   def change_own(%Member{} = member, %Chore{} = chore, params, %Date{} = today) do
-    true = own?(member, chore) and Chore.member_can_change?(chore)
-
-    chore
-    |> Chore.build_changeset(params, category_ids(member.team_id, chore), today)
-    |> Repo.update()
+    transaction(fn ->
+      with {:ok, current} <- own_now(member, chore, &Chore.member_can_change?/1) do
+        current
+        |> Chore.build_changeset(params, category_ids(member.team_id, current), today)
+        |> Repo.update()
+      end
+    end)
   end
 
-  @doc "A member deletes their own chore while it waits, or once declined."
+  @doc """
+  A member deletes their own chore while it waits, or once declined. `:ok`, or
+  `{:error, :decided}` once a team admin has accepted it.
+  """
   def delete_own(%Member{} = member, %Chore{} = chore) do
-    true = own?(member, chore) and Chore.member_can_delete?(chore)
-    {:ok, _chore} = Repo.delete(chore)
-    :ok
+    result =
+      transaction(fn ->
+        with {:ok, current} <- own_now(member, chore, &Chore.member_can_delete?/1),
+             do: Repo.delete(current)
+      end)
+
+    with {:ok, _chore} <- result, do: :ok
   end
 
   @doc "A team admin changes any field of a chore, with any date, in any status."
@@ -77,7 +89,17 @@ defmodule App.Operation.SaveChore do
     chore |> Chore.decide_changeset(:declined, user, now, reason) |> Repo.update()
   end
 
-  defp own?(member, chore), do: chore.member_id == member.id and chore.team_id == member.team_id
+  # The member's chore as it is now, read in the transaction: a team admin may have
+  # decided it since the member's page loaded it.
+  defp own_now(member, chore, allowed?) do
+    current = Repo.get_by(Chore, id: chore.id, team_id: member.team_id, member_id: member.id)
+    if current && allowed?.(current), do: {:ok, current}, else: {:error, :decided}
+  end
+
+  defp transaction(fun), do: Repo.transaction(fn -> fun.() |> ok_or_rollback() end)
+
+  defp ok_or_rollback({:ok, chore}), do: chore
+  defp ok_or_rollback({:error, error}), do: Repo.rollback(error)
 
   # The open categories, and the chore's own even once archived, so saving it again works.
   defp category_ids(team_id, chore) do

@@ -120,6 +120,9 @@ defmodule Web.MeChoreFormLive do
         |> push_navigate(to: ~p"/teams/#{member.team}/me/chores")
         |> then(&{:noreply, &1})
 
+      {:error, :decided} ->
+        {:noreply, decided(socket)}
+
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
@@ -127,11 +130,26 @@ defmodule Web.MeChoreFormLive do
 
   def handle_event("delete", _params, socket) do
     %{member: member, chore: chore} = socket.assigns
-    :ok = SaveChore.delete_own(member, chore)
 
+    case SaveChore.delete_own(member, chore) do
+      :ok ->
+        socket
+        |> put_flash(:info, "Deleted #{chore.description}.")
+        |> push_navigate(to: ~p"/teams/#{member.team}/me/chores")
+        |> then(&{:noreply, &1})
+
+      {:error, :decided} ->
+        {:noreply, decided(socket)}
+    end
+  end
+
+  # A team admin decided the chore after this page opened.
+  defp decided(socket) do
     socket
-    |> put_flash(:info, "Deleted #{chore.description}.")
-    |> push_navigate(to: ~p"/teams/#{member.team}/me/chores")
-    |> then(&{:noreply, &1})
+    |> put_flash(
+      :error,
+      "This chore cannot change. A team admin has decided it since you opened it."
+    )
+    |> push_navigate(to: ~p"/teams/#{socket.assigns.member.team}/me/chores")
   end
 end
