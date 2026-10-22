@@ -64,22 +64,21 @@ defmodule Web.NavigationTest do
              ] = sections
     end
 
-    test "a team admin who is a member sees all seven sections" do
+    test "a team admin who is a member sees all six sections" do
       assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
                [
                  ["dashboard"],
                  ["activities", "templates"],
-                 ["members", "groups", "qualifications", "endorsements"],
+                 ["members", "groups", "qualifications", "endorsements", "tax-credit-letters"],
                  ["equipment"],
-                 ["tax-credit-letters"],
                  ["settings"],
                  ["me"]
                ]
     end
 
-    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 6" do
+    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 5" do
       sections = team_sections("/teams/squamish", team_admin?: true)
-      assert length(sections) == 6
+      assert length(sections) == 5
       refute "me" in (sections |> keys() |> List.flatten())
     end
 

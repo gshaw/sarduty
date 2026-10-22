@@ -96,7 +96,6 @@ defmodule Web.Navigation do
       activity_links(team, proposed_changes),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
-      [link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
@@ -124,7 +123,8 @@ defmodule Web.Navigation do
       link("members", "Members", ~p"/teams/#{team}/members"),
       link("groups", "Groups", ~p"/teams/#{team}/groups"),
       link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
-      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements")
+      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
+      link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
     ]
   end
 
