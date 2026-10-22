@@ -22,6 +22,25 @@ defmodule Web.MeLiveTest do
     lv
   end
 
+  # An activity the member attended, from `started_at` for `minutes`.
+  defp attend(team, member, title, kind, started_at, minutes) do
+    finished_at = DateTime.add(started_at, minutes * 60)
+
+    activity =
+      activity_fixture(team, %{
+        title: title,
+        activity_kind: kind,
+        started_at: started_at,
+        finished_at: finished_at
+      })
+
+    attendance_fixture(activity, member, %{
+      started_at: started_at,
+      finished_at: finished_at,
+      duration_in_minutes: minutes
+    })
+  end
+
   # D4H answers the emergency contact read with the member.
   defp stub_d4h(contact) do
     Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -46,10 +65,10 @@ defmodule Web.MeLiveTest do
     end
 
     test "a new member's page explains each part", %{conn: conn, team: team} do
-      %{year: year} = this_year_fixture(team)
       lv = open(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(lv, "#no-activities", "No activities in #{year} yet")
+      assert has_element?(lv, "#no-activities", "No activities yet")
+      refute has_element?(lv, "#year-stats")
       assert has_element?(lv, "#no-qualifications", "No qualifications yet")
       assert has_element?(lv, "#no-milestones", "No milestones yet")
       refute has_element?(lv, "#all-activities")
@@ -59,27 +78,44 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#contact-emergency", "None")
     end
 
-    test "this year's 10 latest activities, and a link to the rest",
+    test "the 10 latest activities from any year, and a link to the latest one's year",
          %{conn: conn, team: team, member: member} do
-      %{year: year, mid_year: mid_year} = this_year_fixture(team)
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       for n <- 1..11 do
-        started_at = DateTime.add(mid_year, -n, :minute)
-        activity = activity_fixture(team, %{title: "Training #{n}", started_at: started_at})
-        attendance_fixture(activity, member, %{started_at: started_at})
+        started_at = DateTime.add(now, -n * 40, :day)
+        attend(team, member, "Training #{n}", "exercise", started_at, 60)
       end
 
       lv = open(conn, ~p"/teams/#{team}/me")
+      year = now |> DateTime.add(-40, :day) |> Service.YearRange.year_in(team.timezone)
 
-      assert has_element?(lv, "h2", "Activities in #{year}")
+      assert has_element?(lv, "h2", "Latest activities")
       assert has_element?(lv, "#activities-list", "Training 1")
+      assert has_element?(lv, "#activities-list", "Training 10")
       refute has_element?(lv, "#activities-list", "Training 11")
 
       assert has_element?(
                lv,
                ~s{#all-activities[href="/teams/#{team.subdomain}/me/activities?year=#{year}"]},
-               "All your activities in #{year}"
+               "All your activities"
              )
+    end
+
+    test "the last 12 months as activities, incidents, and hours",
+         %{conn: conn, team: team, member: member} do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      attend(team, member, "Missing hiker", "incident", DateTime.add(now, -60, :day), 180)
+      attend(team, member, "Rope night", "exercise", DateTime.add(now, -30, :day), 120)
+      attend(team, member, "Last year's training", "exercise", DateTime.add(now, -400, :day), 60)
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#year-stats", "The last 12 months")
+      assert has_element?(lv, "#stat-activities", "2")
+      assert has_element?(lv, "#stat-incidents", "1")
+      assert has_element?(lv, "#stat-hours", "5")
+      assert has_element?(lv, "#activities-list", "Last year's training")
     end
 
     test "qualifications soonest first, with the days left on one expiring soon",
@@ -111,7 +147,7 @@ defmodule Web.MeLiveTest do
              )
     end
 
-    test "the latest tax credit letter, with its hours", %{conn: conn, team: team, member: member} do
+    test "the latest tax credit letter, to download", %{conn: conn, team: team, member: member} do
       tax_credit_letter_fixture(member, %{year: 2024})
 
       letter =
@@ -124,7 +160,8 @@ defmodule Web.MeLiveTest do
       lv = open(conn, ~p"/teams/#{team}/me")
 
       assert has_element?(lv, "#letter h2", "2025 tax credit letter")
-      assert has_element?(lv, "#letter dd", "147 hours")
+      # Its hours are on the year page, so they aren't read as the last 12 months'.
+      refute has_element?(lv, "#letter dd")
 
       assert has_element?(
                lv,

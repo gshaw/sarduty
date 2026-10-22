@@ -13,6 +13,7 @@ defmodule Web.Components.MemberLetter do
   attr :team, :map, required: true
   attr :letter, :map, default: nil, doc: "nil for a year with no letter yet"
   attr :year, :integer, required: true
+  attr :hours, :boolean, default: true, doc: "false for the download alone"
 
   def member_letter(%{letter: nil} = assigns) do
     ~H"""
@@ -28,7 +29,7 @@ defmodule Web.Components.MemberLetter do
     <div id={@id}>
       <h2 class="chart-title mb-1">{@year} tax credit letter</h2>
       <p class="hint mb-2">For your {@year} tax return.</p>
-      <dl :if={hours?(@letter)} class="dl-pairs">
+      <dl :if={@hours and hours?(@letter)} class="dl-pairs">
         <dt>Primary hours</dt>
         <dd>{Format.duration(@letter.primary_minutes)}</dd>
         <dt>Secondary hours</dt>

@@ -147,7 +147,7 @@ members ([navigation.md](navigation.md)). Their own pages are under
 
 | Page            | Path                   | What it holds                                                     |
 | --------------- | ---------------------- | ----------------------------------------------------------------- |
-| Your membership | `/me`                  | Activities this year, qualifications, ID card, letter, and more   |
+| Your membership | `/me`                  | Latest activities, qualifications, ID card, letter, and more      |
 | The year page   | `/me/activities?year=` | Every activity in a year, that year's letter, and its hours       |
 | Contact details | `/me/details`          | Mobile number, mailing address, and emergency contacts, to change |
 
@@ -162,11 +162,13 @@ Tax credit letters, and Milestones are gone, with no redirects. Its title is the
 their D4H photo in a circle, or their initials when D4H has none (`/me/image`), and
 "Member since March 2019".
 
-- **Main column**: the 10 latest activities they attended this year, with a link to the
-  year page, then their qualifications: Qualification and Expires, from the same rows a
-  team admin sees.
+- **Main column**: the 10 latest activities they attended, from any year so the page is
+  never empty on January 1, under 3 numbers for the last 12 months: activities, incidents,
+  and hours. A link opens the year page on the latest activity's year. Then their
+  qualifications: Qualification and Expires, from the same rows a team admin sees.
 - **Sidebar**, two cards, each split by one line: the ID card, when the team has ID cards
-  on, then the latest tax credit letter with its hours; then contact details, then the 5
+  on, then the latest tax credit letter to download, with its hours on the year page so
+  they aren't mistaken for the last 12 months'; then contact details, then the 5
   latest milestones. On a phone the first card comes first, then the main column, then
   the second card.
 - **The emergency contact is read from D4H** after the page shows, as Contact details

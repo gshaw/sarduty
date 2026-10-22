@@ -1,6 +1,7 @@
 defmodule Web.MeLive do
   use Web, {:live_view_app_layout, access: :member}
 
+  import Web.Components.Chart, only: [stat: 1]
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
 
@@ -17,33 +18,61 @@ defmodule Web.MeLive do
   alias Web.QualificationText
 
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
-  # activities this year and qualifications in the main column; their ID card, latest tax
-  # credit letter, contact details, and milestones in a sidebar. `current_member` comes
-  # from the login (Web.UserAuth, :ensure_team_access), never from the URL.
+  # latest activities, from any year so it is never empty on January 1, and their
+  # qualifications in the main column; their ID card, latest tax credit letter, contact
+  # details, and milestones in a sidebar. `current_member` comes from the login
+  # (Web.UserAuth, :ensure_team_access), never from the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.current_member
     team = member.team
     now = DateTime.utc_now()
-    year = Service.YearRange.year_in(now, team.timezone)
+    attended = MemberRecords.attended(member, now)
 
     socket =
       socket
       |> assign(:page_title, member.name)
-      |> assign(member: member, team: team, now: now, year: year)
-      |> assign(:activities, member |> MemberRecords.attendances(year, now) |> Enum.take(10))
+      |> assign(member: member, team: team, now: now)
+      |> assign_activities(attended, now)
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
-      |> assign(:milestones, member |> milestones(now) |> Enum.take(5))
+      |> assign(:milestones, member |> milestones(attended, now) |> Enum.take(5))
       |> assign(:contacts?, "primary_emergency_contact" in SaveOwnDetails.fields(team))
       |> assign_emergency_contact()
 
     {:ok, socket}
   end
 
-  defp milestones(member, now) do
-    member
-    |> MemberRecords.attended(now)
+  # The 10 latest, the year of the latest for the year page's link, and the last 12
+  # months as 3 numbers.
+  defp assign_activities(socket, attended, now) do
+    assign(socket,
+      activities: Enum.take(attended, 10),
+      latest_year: latest_year(attended, socket.assigns.team.timezone),
+      stats: year_stats(attended, now)
+    )
+  end
+
+  defp latest_year([latest | _rest], timezone),
+    do: Service.YearRange.year_in(latest.started_at, timezone)
+
+  defp latest_year([], _timezone), do: nil
+
+  # Each activity counted once, and every attended row's time.
+  defp year_stats(attended, now) do
+    a_year_ago = DateTime.shift(now, year: -1)
+    last_12 = Enum.filter(attended, &DateTime.after?(&1.started_at, a_year_ago))
+    activities = last_12 |> Enum.map(& &1.activity) |> Enum.uniq_by(& &1.id)
+
+    %{
+      activities: length(activities),
+      incidents: Enum.count(activities, &(&1.activity_kind == "incident")),
+      minutes: last_12 |> Enum.map(&MemberRecords.minutes/1) |> Enum.sum()
+    }
+  end
+
+  defp milestones(member, attended, now) do
+    attended
     |> Milestones.build(
       member.joined_at,
       MemberAwayPeriod.for_member(member),
@@ -85,7 +114,12 @@ defmodule Web.MeLive do
 
     <div class="membership mt-6">
       <div class="min-w-0">
-        <.activities team={@team} year={@year} activities={@activities} />
+        <.activities
+          team={@team}
+          latest_year={@latest_year}
+          activities={@activities}
+          stats={@stats}
+        />
         <.qualifications team={@team} now={@now} qualifications={@qualifications} />
       </div>
       <aside class="membership-aside">
@@ -99,6 +133,7 @@ defmodule Web.MeLive do
               team={@team}
               letter={@letter}
               year={@letter.year}
+              hours={false}
             />
           </section>
         </div>
@@ -120,14 +155,28 @@ defmodule Web.MeLive do
   end
 
   attr :team, :map, required: true
-  attr :year, :integer, required: true
+  attr :latest_year, :integer, default: nil
   attr :activities, :list, required: true
+  attr :stats, :map, required: true
 
   defp activities(assigns) do
     ~H"""
     <section id="activities">
-      <h2 class="heading">Activities in {@year}</h2>
-      <.empty_state :if={@activities == []} id="no-activities" title={"No activities in #{@year} yet"}>
+      <h2 class="heading">Latest activities</h2>
+      <div :if={@stats.activities > 0} id="year-stats">
+        <p class="chart-caption mb-2">The last 12 months</p>
+        <div class="chart-stats">
+          <.stat id="stat-activities" value={Format.number(@stats.activities)} label="Activities" />
+          <.stat
+            id="stat-incidents"
+            series={:incident}
+            value={Format.number(@stats.incidents)}
+            label="Incidents"
+          />
+          <.stat id="stat-hours" value={Format.hours(@stats.minutes)} label="Hours" />
+        </div>
+      </div>
+      <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
         Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
       </.empty_state>
       <.table
@@ -137,7 +186,7 @@ defmodule Web.MeLive do
         row_id={&"activities-list-#{&1.id}"}
       >
         <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
-          {day(attendance.started_at, @team.timezone)}
+          {Format.date_short(attendance.started_at, @team.timezone)}
         </:col>
         <:col :let={attendance} label="Activity">
           <.d4h_activity_link team={@team} activity={attendance.activity} />
@@ -150,8 +199,11 @@ defmodule Web.MeLive do
         </:col>
       </.table>
       <p :if={@activities != []} class="mt-2">
-        <.a id="all-activities" navigate={~p"/teams/#{@team}/me/activities?year=#{@year}"}>
-          All your activities in {@year}
+        <.a
+          id="all-activities"
+          navigate={~p"/teams/#{@team}/me/activities?year=#{@latest_year}"}
+        >
+          All your activities
         </.a>
       </p>
     </section>
@@ -298,10 +350,6 @@ defmodule Web.MeLive do
   defp contact_line(_contact), do: "None"
 
   # "Oct 15": the year is in the heading.
-  defp day(started_at, timezone) do
-    {date, _time} = Service.Convert.utc_to_local(started_at, timezone)
-    Format.day_in_year(date, date)
-  end
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 

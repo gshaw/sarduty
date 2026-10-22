@@ -13,6 +13,19 @@
     </div>
   </div>
 
+  <p>The download alone, as Your membership shows it beside this year's numbers:</p>
+  <div class="demo max-w-md">
+    <div class="card side-card">
+      <.member_letter
+        id="member-letter-short-demo"
+        team={SampleData.sample_team()}
+        letter={SampleData.letter()}
+        year={2025}
+        hours={false}
+      />
+    </div>
+  </div>
+
   <p>The current year, before a team admin can make its letter:</p>
   <div class="demo max-w-md">
     <div class="card side-card">
@@ -22,7 +35,8 @@
 
   <h2>When to use</h2>
   <p>
-    A member's own letter: the latest on Your membership, and the year's on the year page.
+    A member's own letter: the latest on Your membership, as the download alone, and the
+    year's on the year page with its hours.
   </p>
 
   <h2>When not to use</h2>
@@ -38,6 +52,7 @@
   <h2>In the app</h2>
   <p>
     <code>&lt;.member_letter id team letter year&gt;</code>
-    from <code>Web.Components.MemberLetter</code>, with the letter or nil.
+    from <code>Web.Components.MemberLetter</code>, with the letter or nil, and
+    <code>hours={false}</code> for the download alone.
   </p>
 </.shell>
