@@ -259,11 +259,25 @@ defmodule Web.Layouts do
         {[], nil}
       end
 
+    home =
+      Navigation.home_path(
+        assigns.current_user,
+        area,
+        assigns.current_team,
+        assigns.member_logins
+      )
+
     assigns =
-      assign(assigns, area: area, sections: sections, switch_rows: switch_rows, person: person)
+      assign(assigns,
+        area: area,
+        sections: sections,
+        switch_rows: switch_rows,
+        person: person,
+        home: home
+      )
 
     ~H"""
-    <.site_bar size={@size}>
+    <.site_bar size={@size} home={@home}>
       <:links :if={@area}>
         <.team_switcher :if={@switch_rows != []} name={@area.name} rows={@switch_rows} />
         <span :if={@switch_rows == []} id="nav-area" class="site-bar-area">{@area.name}</span>

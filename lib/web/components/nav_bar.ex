@@ -5,6 +5,7 @@ defmodule Web.Components.NavBar do
   # and a menu or a button on the right. See /styles/top-bar.
 
   attr :size, :atom, values: ~w(wide narrow)a, default: :wide
+  attr :home, :string, default: "/", doc: "where the logo goes, from Navigation.home_path/4"
   slot :links
   slot :inner_block
 
@@ -16,7 +17,7 @@ defmodule Web.Components.NavBar do
         @size == :wide && "container",
         @size == :narrow && "max-w-md"
       ]}>
-        <a href="/" class="brand">SAR <span>Duty</span></a>
+        <a href={@home} class="brand">SAR <span>Duty</span></a>
         <nav :if={@links != []} class="site-bar-links" aria-label="Main">
           {render_slot(@links)}
         </nav>

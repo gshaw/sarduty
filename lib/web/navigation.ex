@@ -155,6 +155,26 @@ defmodule Web.Navigation do
     do: current == path or String.starts_with?(current, path <> "/")
 
   @doc """
+  Where the logo goes. Logged in, it's your team rather than the public home page: the
+  team you're on, else the one logging in lands on (the last you opened, or your first),
+  else the team you log in to as a member, else SAR Duty admin for an admin. Pass the
+  `current_team` the page assigned.
+  """
+  def home_path(user, area, current_team, member_logins)
+
+  def home_path(nil, _area, _current_team, _member_logins), do: ~p"/"
+  def home_path(_user, %{kind: :team, team: team}, _current_team, _logins), do: ~p"/teams/#{team}"
+
+  def home_path(user, _area, current_team, member_logins) do
+    cond do
+      current_team -> ~p"/teams/#{current_team}"
+      member = List.first(member_logins) -> ~p"/teams/#{member.team}"
+      user.is_admin -> ~p"/admin"
+      true -> ~p"/"
+    end
+  end
+
+  @doc """
   The team switcher's rows: "SAR Duty admin" first for SAR Duty admins, then each team
   where you're a team admin or a member, A to Z, one row per team. The area you're in is
   current; a team opened from Admin › Teams that isn't yours marks nothing. Empty when

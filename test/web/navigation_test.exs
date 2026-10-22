@@ -33,6 +33,28 @@ defmodule Web.NavigationTest do
     end
   end
 
+  describe "home_path/4" do
+    test "logged out, the logo goes to the home page" do
+      assert Navigation.home_path(nil, nil, nil, []) == "/"
+    end
+
+    test "on a team, the logo goes to its Dashboard" do
+      user = %User{is_admin: true}
+      area = Navigation.area("/teams/squamish/members", @team)
+      assert Navigation.home_path(user, area, @team, []) == "/teams/squamish"
+    end
+
+    test "elsewhere, the team logging in lands on, then a member's team, then admin" do
+      user = %User{is_admin: false}
+      member = %Member{team: @pemberton}
+
+      assert Navigation.home_path(user, nil, @team, [member]) == "/teams/squamish"
+      assert Navigation.home_path(user, nil, nil, [member]) == "/teams/pemberton"
+      assert Navigation.home_path(%User{is_admin: true}, %{kind: :admin}, nil, []) == "/admin"
+      assert Navigation.home_path(user, nil, nil, []) == "/"
+    end
+  end
+
   describe "sections/3" do
     test "a member sees Dashboard, Activities, and Your membership, each its own section" do
       sections = team_sections("/teams/squamish/me", member?: true, proposed_changes: 2)
