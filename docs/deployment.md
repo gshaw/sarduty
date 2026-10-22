@@ -37,7 +37,9 @@ For a PR with a migration:
 
 - **Litestream** replicates the database continuously to Cloudflare R2
   ([litestream.yml](../litestream.yml)). `bin/server` restores from the replica when the
-  database file is missing, then runs `litestream replicate` in the background.
+  database file is missing, then runs `litestream replicate` in the background. Its
+  checkpoints hold SQLite's write lock, sometimes for over 5 s, so `App.Repo` waits up to
+  30 s for the lock (#416).
 - **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
   consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
   `backups/` (gitignored), encrypted with age and stamped to the minute.
