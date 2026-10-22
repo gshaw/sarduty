@@ -27,17 +27,19 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, "#side-nav .side-nav-group", "Team settings")
   end
 
-  test "the logo goes to the home page, which has a way back and the footer",
+  test "the logo goes to the home page, whose bar names your team and switches back",
        %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
     assert has_element?(lv, ~s{a.brand[href="/"]})
-    refute has_element?(lv, "#nav-back")
+    assert has_element?(lv, "span#nav-area", team.name)
     refute has_element?(lv, "#site-footer")
 
     {:ok, lv, _html} = live(conn, ~p"/")
     assert has_element?(lv, ~s{a.brand[href="/"]})
-    assert has_element?(lv, ~s{#nav-back[href="/teams/#{team.subdomain}"]}, "Go to #{team.name}")
+    assert has_element?(lv, "#team-switcher summary", team.name)
+    assert has_element?(lv, ~s{#switch-team-#{team.subdomain}[href="/teams/#{team.subdomain}"]})
+    refute has_element?(lv, "#switch-team-#{team.subdomain}[aria-current]")
     assert has_element?(lv, "#site-footer")
   end
 

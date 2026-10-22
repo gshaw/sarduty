@@ -257,8 +257,8 @@ defmodule Web.Layouts do
 
   # The top bar (#406): the area's name after the logo, with the team switcher on it when
   # you can go somewhere else, and your avatar on the right, which opens the account menu.
-  # Outside every area (home, terms, privacy), a logged-in person gets a way back to their
-  # team beside the avatar instead.
+  # Outside every area (home, terms, privacy), a logged-in person's bar names their team,
+  # with the switcher on it and nothing marked, so the name always opens the way back.
   # On a phone the Menu button holds the switcher, the area's pages, and the account menu.
   # See /styles/top-bar.
   def main_nav_bar(assigns) do
@@ -276,44 +276,32 @@ defmodule Web.Layouts do
         {[], nil}
       end
 
-    back =
-      if area == nil,
-        do:
-          Navigation.back_link(
-            assigns.current_user,
-            assigns.current_team,
-            assigns.member_logins
-          )
+    bar_area =
+      area ||
+        Navigation.outside_area(
+          assigns.current_user,
+          assigns.current_team,
+          assigns.member_logins
+        )
 
     assigns =
       assign(assigns,
-        area: area,
+        bar_area: bar_area,
         sections: sections,
         switch_rows: switch_rows,
-        person: person,
-        back: back
+        person: person
       )
 
     ~H"""
     <.site_bar size={@size}>
-      <:links :if={@area}>
-        <.team_switcher :if={@switch_rows != []} name={@area.name} rows={@switch_rows} />
-        <span :if={@switch_rows == []} id="nav-area" class="site-bar-area">{@area.name}</span>
+      <:links :if={@bar_area}>
+        <.team_switcher :if={@switch_rows != []} name={@bar_area.name} rows={@switch_rows} />
+        <span :if={@switch_rows == []} id="nav-area" class="site-bar-area">{@bar_area.name}</span>
       </:links>
       <%= if @current_user do %>
-        <span :if={@area} id="phone-nav-area" class="site-bar-area-phone">
-          <span class="site-bar-area-name">{@area.name}</span>
+        <span :if={@bar_area} id="phone-nav-area" class="site-bar-area-phone">
+          <span class="site-bar-area-name">{@bar_area.name}</span>
         </span>
-        <.a
-          :if={@back}
-          id="nav-back"
-          kind={:custom}
-          navigate={@back.path}
-          class="site-bar-login site-bar-back"
-        >
-          <span class="truncate">{@back.label}</span>
-          <.icon name="hero-arrow-right-mini" />
-        </.a>
         <.account_menu person={@person} />
         <.site_bar_phone_menu waiting?={Enum.any?(List.flatten(@sections), & &1.count)}>
           <%= if @switch_rows != [] do %>

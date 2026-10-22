@@ -33,21 +33,21 @@ defmodule Web.NavigationTest do
     end
   end
 
-  describe "back_link/3" do
-    test "logged out, there's no way back to show" do
-      assert Navigation.back_link(nil, @team, []) == nil
+  describe "outside_area/3" do
+    test "logged out, the bar names nothing" do
+      assert Navigation.outside_area(nil, @team, []) == nil
     end
 
     test "the team logging in lands on, then a member's team, then admin" do
       user = %User{is_admin: false}
       member = %Member{team: @pemberton}
 
-      assert Navigation.back_link(user, @team, [member]) ==
-               %{label: "Go to Squamish SAR", path: "/teams/squamish"}
+      assert Navigation.outside_area(user, @team, [member]) ==
+               %{kind: :team, name: "Squamish SAR", team: @team}
 
-      assert Navigation.back_link(user, nil, [member]).path == "/teams/pemberton"
-      assert Navigation.back_link(%User{is_admin: true}, nil, []).path == "/admin"
-      assert Navigation.back_link(user, nil, []) == nil
+      assert Navigation.outside_area(user, nil, [member]).team == @pemberton
+      assert %{kind: :admin} = Navigation.outside_area(%User{is_admin: true}, nil, [])
+      assert Navigation.outside_area(user, nil, []) == nil
     end
   end
 
