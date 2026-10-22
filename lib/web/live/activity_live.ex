@@ -8,7 +8,6 @@ defmodule Web.ActivityLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.Attendance
   alias App.Model.Coordinate
   alias App.Model.EquipmentUsage
   alias App.Repo
@@ -18,39 +17,24 @@ defmodule Web.ActivityLive do
     {:ok, socket}
   end
 
-  # Members open it too (#406), read only: an activity they see (Activity.visible_to_member/3)
-  # with the names of who signed up or attended, and none of the team admin's actions.
-  def handle_params(params, _uri, %{assigns: %{team_admin?: false}} = socket) do
-    now = DateTime.utc_now()
-
-    activity =
-      socket.assigns.current_member
-      |> Activity.find_visible!(params["id"], now)
-      |> Repo.preload(:team)
-
-    coming? = DateTime.after?(activity.started_at, now)
-
-    socket =
-      assign(socket,
-        page_title: activity.title,
-        activity: activity,
-        coming?: coming?,
-        names: names(activity, coming?, now),
-        map: build_map(activity)
-      )
-
-    {:noreply, socket}
-  end
-
+  # Members open it too (#406), read only: the same activity, facts, and people a team
+  # admin sees. Team admins also get its history, actions, and the links to member and
+  # equipment pages. A member never gets an activity D4H has deleted; a team admin sees it
+  # under a banner.
   def handle_params(params, _uri, socket) do
-    activity = fetch_activity(socket.assigns.current_team, params["id"])
+    %{current_team: team, team_admin?: team_admin?} = socket.assigns
+    activity = fetch_activity(team, params["id"])
+
+    if activity.deleted_at && !team_admin?, do: raise(Web.Status.NotFound)
+
     attendances = fetch_attendances(activity)
 
     socket =
       assign(socket,
         page_title: activity.title,
         activity: activity,
-        hours_tags: Activity.hours_tags(socket.assigns.current_team),
+        coming?: DateTime.after?(activity.started_at, DateTime.utc_now()),
+        hours_tags: Activity.hours_tags(team),
         attendances: attendances,
         attendance_count: length(attendances),
         usages: EquipmentUsage.for_activity(activity),
@@ -79,55 +63,6 @@ defmodule Web.ActivityLive do
       _none ->
         nil
     end
-  end
-
-  # Who signed up for a coming activity, or attended a past one: names only, A to Z.
-  defp names(activity, coming?, now) do
-    rows = if coming?, do: Attendance.signed_up(now), else: Attendance.attended(now)
-
-    rows
-    |> where([r], r.activity_id == ^activity.id)
-    |> join(:inner, [r], m in assoc(r, :member), as: :member)
-    |> where([member: m], m.team_id == ^activity.team_id)
-    |> select([member: m], m.name)
-    |> distinct(true)
-    |> order_by([member: m], asc: m.name)
-    |> Repo.all()
-  end
-
-  def render(%{team_admin?: false} = assigns) do
-    ~H"""
-    <.breadcrumbs>
-      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
-      <:item label={"#{@activity.ref_id}"} />
-    </.breadcrumbs>
-
-    <h1 class="title">{@activity.title}</h1>
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.member_sidebar activity={@activity} maps_app={@current_user.maps_app} />
-      </aside>
-      <main class="content-2/3">
-        <div :if={@map} class="measure mb-4">
-          <.activity_map id="activity-map" map={@map} label="Map of activity" />
-        </div>
-        <div class="mb-4">
-          <.markdown content={@activity.description} />
-        </div>
-        <section id="activity-people">
-          <h2 class="heading">
-            {if @coming?, do: "Signed up", else: "Attended"} · {length(@names)}
-          </h2>
-          <p :if={@names == []} class="hint">
-            {if @coming?, do: "Nobody has signed up yet.", else: "Nobody attended."}
-          </p>
-          <ul :if={@names != []} id="activity-names" class="row-links">
-            <li :for={name <- @names} class="py-2">{name}</li>
-          </ul>
-        </section>
-      </main>
-    </div>
-    """
   end
 
   def render(assigns) do
@@ -159,6 +94,7 @@ defmodule Web.ActivityLive do
           hours_tags={@hours_tags}
           attendances={@attendances}
           attendance_count={@attendance_count}
+          team_admin?={@team_admin?}
         />
       </aside>
       <main class="content-2/3">
@@ -168,45 +104,12 @@ defmodule Web.ActivityLive do
           map={@map}
           attendances={@attendances}
           attendance_count={@attendance_count}
+          coming?={@coming?}
+          team_admin?={@team_admin?}
         />
-        <.equipment_section activity={@activity} usages={@usages} />
+        <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
       </main>
     </div>
-    """
-  end
-
-  # The facts a member reads: no tags, hours, history, or actions.
-  defp member_sidebar(assigns) do
-    ~H"""
-    <dl>
-      <dt>Kind</dt>
-      <dd><.activity_kind_mark activity={@activity} /></dd>
-      <dt>Start</dt>
-      <dd>{Service.Format.datetime_medium(@activity.started_at, @activity.team.timezone)}</dd>
-      <dt>Finish</dt>
-      <dd>{Service.Format.datetime_medium(@activity.finished_at, @activity.team.timezone)}</dd>
-      <dt>Duration</dt>
-      <dd>{format_activity_duration(@activity)}</dd>
-      <.place activity={@activity} maps_app={@maps_app} />
-      <dt>Links</dt>
-      <dd>
-        <ul id="activity-links" class="action-list">
-          <li>
-            <.a
-              id="activity-calendar"
-              href={~p"/teams/#{@activity.team}/activities/#{@activity.id}/calendar"}
-            >
-              Add to calendar
-            </.a>
-          </li>
-          <li :if={!D4H.records?(@activity.team)}>
-            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
-              Open D4H activity
-            </.a>
-          </li>
-        </ul>
-      </dd>
-    </dl>
     """
   end
 
@@ -252,6 +155,13 @@ defmodule Web.ActivityLive do
     """
   end
 
+  attr :activity, :map, required: true
+  attr :maps_app, :string, required: true
+  attr :hours_tags, :map, required: true
+  attr :attendances, :list, required: true
+  attr :attendance_count, :integer, required: true
+  attr :team_admin?, :boolean, default: true
+
   def sidebar_content(assigns) do
     ~H"""
     <dl>
@@ -285,19 +195,40 @@ defmodule Web.ActivityLive do
 
       <.place activity={@activity} maps_app={@maps_app} />
 
-      <dt>History</dt>
+      <dt>Links</dt>
       <dd>
-        <.a
-          id="activity-history-link"
-          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
-        >
-          Changes to this activity
-        </.a>
+        <ul id="activity-links" class="action-list">
+          <li :if={!@activity.deleted_at}>
+            <.a
+              id="activity-calendar"
+              href={~p"/teams/#{@activity.team}/activities/#{@activity.id}/calendar"}
+            >
+              Add to calendar
+            </.a>
+          </li>
+          <li :if={!D4H.records?(@activity.team)}>
+            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
+              Open D4H activity
+            </.a>
+          </li>
+        </ul>
       </dd>
+      <%!-- Team admins only: the history can hold contact details and addresses. --%>
+      <div :if={@team_admin?}>
+        <dt>History</dt>
+        <dd>
+          <.a
+            id="activity-history-link"
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
+          >
+            Changes to this activity
+          </.a>
+        </dd>
+      </div>
 
       <%!-- Each action reads or writes the activity in D4H, which no longer has it. --%>
-      <dt :if={!@activity.deleted_at}>Actions</dt>
-      <dd :if={!@activity.deleted_at}>
+      <dt :if={@team_admin? and !@activity.deleted_at}>Actions</dt>
+      <dd :if={@team_admin? and !@activity.deleted_at}>
         <ul id="activity-actions" class="action-list">
           <li :if={D4H.records?(@activity.team)}>
             <.a
@@ -307,17 +238,10 @@ defmodule Web.ActivityLive do
               Change or delete
             </.a>
           </li>
-          <li :if={!D4H.records?(@activity.team)}>
-            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
-              Open D4H activity
-            </.a>
-            <%!-- D4H refuses tags on a published activity (#358). --%>
-            <div
-              :if={D4H.tags_locked?(@activity.team, @activity)}
-              id="activity-tags-in-d4h"
-              class="hint"
-            >
-              Change its tags there. D4H doesn't let SAR Duty change a published activity's tags.
+          <%!-- D4H refuses tags on a published activity (#358). --%>
+          <li :if={!D4H.records?(@activity.team) and D4H.tags_locked?(@activity.team, @activity)}>
+            <div id="activity-tags-in-d4h" class="hint">
+              Change its tags in D4H. D4H doesn't let SAR Duty change a published activity's tags.
             </div>
           </li>
           <li :if={!D4H.tags_locked?(@activity.team, @activity)}>
@@ -357,6 +281,14 @@ defmodule Web.ActivityLive do
     """
   end
 
+  attr :activity, :map, required: true
+  attr :hours_tags, :map, required: true
+  attr :map, :map, default: nil
+  attr :attendances, :list, required: true
+  attr :attendance_count, :integer, required: true
+  attr :coming?, :boolean, required: true
+  attr :team_admin?, :boolean, default: true
+
   def main_content(assigns) do
     ~H"""
     <div>
@@ -370,12 +302,27 @@ defmodule Web.ActivityLive do
         <.markdown content={@activity.description} />
       </div>
 
-      <div :if={@attendance_count > 0}>
-        <.activity_attendance_table activity={@activity} attendances={@attendances} />
-      </div>
+      <section id="activity-people">
+        <h2 class="heading">
+          {if @coming?, do: "Signed up", else: "Attended"} · {Service.Format.number(@attendance_count)}
+        </h2>
+        <p :if={@attendances == []} class="hint">
+          {if @coming?, do: "Nobody has signed up yet.", else: "Nobody attended."}
+        </p>
+        <.activity_attendance_table
+          :if={@attendances != []}
+          activity={@activity}
+          attendances={@attendances}
+          team_admin?={@team_admin?}
+        />
+      </section>
     </div>
     """
   end
+
+  attr :activity, :map, required: true
+  attr :usages, :list, required: true
+  attr :team_admin?, :boolean, default: true
 
   def equipment_section(assigns) do
     ~H"""
@@ -383,7 +330,7 @@ defmodule Web.ActivityLive do
       <div class="heading-row">
         <h2 class="heading">Equipment · {length(@usages)}</h2>
         <.button
-          :if={!@activity.deleted_at}
+          :if={@team_admin? and !@activity.deleted_at}
           id="activity-equipment-add"
           size={:sm}
           navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
@@ -399,9 +346,13 @@ defmodule Web.ActivityLive do
         class="table-striped w-fit"
       >
         <:col :let={usage} label="Item">
-          <.a navigate={~p"/teams/#{@activity.team}/equipment/#{usage.equipment_item.id}"}>
+          <.a
+            :if={@team_admin?}
+            navigate={~p"/teams/#{@activity.team}/equipment/#{usage.equipment_item.id}"}
+          >
             {usage.equipment_item.title}
           </.a>
+          <span :if={!@team_admin?}>{usage.equipment_item.title}</span>
         </:col>
         <:col :let={usage} label="Type">{usage.equipment_item.kind}</:col>
         <:col :let={usage} label="Used" align="right" class="whitespace-nowrap">
@@ -413,6 +364,10 @@ defmodule Web.ActivityLive do
     """
   end
 
+  attr :activity, :map, required: true
+  attr :attendances, :list, required: true
+  attr :team_admin?, :boolean, default: true
+
   def activity_attendance_table(assigns) do
     ~H"""
     <.table id="attendance_collection" rows={@attendances} class="table-striped w-fit">
@@ -420,11 +375,15 @@ defmodule Web.ActivityLive do
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name">
-        <.a navigate={
-          ~p"/teams/#{@activity.team}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-        }>
+        <.a
+          :if={@team_admin?}
+          navigate={
+            ~p"/teams/#{@activity.team}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+          }
+        >
           {record.member.name}
         </.a>
+        <span :if={!@team_admin?}>{record.member.name}</span>
       </:col>
       <:col :let={record} label="Start" align="right" class="whitespace-nowrap">
         {Service.Format.datetime_short(

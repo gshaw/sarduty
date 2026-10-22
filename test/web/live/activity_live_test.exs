@@ -94,21 +94,32 @@ defmodule Web.ActivityLiveTest do
     defp hours_from_now(hours),
       do: DateTime.utc_now() |> DateTime.add(hours, :hour) |> DateTime.truncate(:second)
 
-    test "a past activity: its facts and who attended, names only, and no actions",
+    test "a past activity: the facts and people a team admin sees, without the actions",
          %{conn: conn, team: team, member: member} do
       started = hours_from_now(-30)
-      activity = activity_fixture(team, %{title: "Rope practice", started_at: started})
+
+      activity =
+        activity_fixture(team, %{
+          title: "Rope practice",
+          started_at: started,
+          tags: ["Primary Hours", "Rope"]
+        })
+
       attendance_fixture(activity, member, %{started_at: started})
       other = member_fixture(team, %{name: "Casey Dhillon"})
-      attendance_fixture(activity, other, %{started_at: started})
+      attendance_fixture(activity, other, %{started_at: started, duration_in_minutes: 90})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
       assert has_element?(lv, "h1", "Rope practice")
       assert has_element?(lv, "#activity-people h2", "Attended · 2")
-      assert has_element?(lv, "#activity-names", "Casey Dhillon")
-      refute has_element?(lv, "#activity-names a")
+      assert has_element?(lv, "#attendance_collection", "Casey Dhillon")
+      assert has_element?(lv, "#attendance_collection", "1h 30m")
+      refute has_element?(lv, "#attendance_collection a")
       assert has_element?(lv, "#activity-map circle")
+      assert has_element?(lv, ".badge", "Rope")
+      assert has_element?(lv, "dt", "SARVAC hours")
+      assert has_element?(lv, "#activity-equipment")
 
       assert has_element?(
                lv,
@@ -117,8 +128,7 @@ defmodule Web.ActivityLiveTest do
 
       refute has_element?(lv, "#activity-actions")
       refute has_element?(lv, "#activity-history-link")
-      refute has_element?(lv, "#activity-equipment")
-      refute has_element?(lv, ".tag")
+      refute has_element?(lv, "#activity-equipment-add")
     end
 
     test "a coming activity lists who signed up", %{conn: conn, team: team, member: member} do
@@ -128,28 +138,32 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
       assert has_element?(lv, "#activity-people h2", "Signed up · 1")
-      assert has_element?(lv, "#activity-names", member.name)
+      assert has_element?(lv, "#attendance_collection", member.name)
     end
 
-    test "an incident the member did not attend, or a deleted activity, is a 404",
-         %{conn: conn, team: team, member: member} do
+    test "every activity D4H has, incidents too; a deleted one is a 404",
+         %{conn: conn, team: team} do
       started = hours_from_now(-30)
-      incident = activity_fixture(team, %{activity_kind: "incident", started_at: started})
+
+      incident =
+        activity_fixture(team, %{
+          title: "Missing hiker",
+          activity_kind: "incident",
+          started_at: started
+        })
+
+      {:ok, _lv, html} = live(conn, ~p"/teams/#{team}/activities/#{incident.id}")
+      assert html =~ "Missing hiker"
+
       deleted = activity_fixture(team, %{deleted_at: started})
 
-      for activity <- [incident, deleted] do
-        assert_raise Ecto.NoResultsError, fn ->
-          live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
-        end
-
-        assert_error_sent 404, fn ->
-          get(conn, ~p"/teams/#{team}/activities/#{activity.id}/calendar")
-        end
+      assert_raise Web.Status.NotFound, fn ->
+        live(conn, ~p"/teams/#{team}/activities/#{deleted.id}")
       end
 
-      attendance_fixture(incident, member, %{started_at: started})
-      {:ok, _lv, html} = live(conn, ~p"/teams/#{team}/activities/#{incident.id}")
-      assert html =~ incident.title
+      assert_error_sent 404, fn ->
+        get(conn, ~p"/teams/#{team}/activities/#{deleted.id}/calendar")
+      end
     end
 
     test "Add to calendar is an .ics file of the activity", %{conn: conn, team: team} do
@@ -161,7 +175,7 @@ defmodule Web.ActivityLiveTest do
       assert content_type =~ "text/calendar"
     end
 
-    test "the list opens on coming activities, with no tags, hours, or team admin tools",
+    test "the list is the team admin's, without Add activity or the tabs",
          %{conn: conn, team: team} do
       activity_fixture(team, %{title: "Swiftwater course", started_at: hours_from_now(48)})
       activity_fixture(team, %{title: "Last week course", started_at: hours_from_now(-170)})
@@ -169,26 +183,21 @@ defmodule Web.ActivityLiveTest do
       activity_fixture(team, %{
         title: "Missing hiker",
         activity_kind: "incident",
-        started_at: hours_from_now(1)
+        started_at: hours_from_now(-20),
+        tags: ["Primary Hours", "Rope"]
       })
 
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities")
 
-      assert has_element?(lv, "#activity_collection", "Swiftwater course")
-      refute html =~ "Last week course"
-      refute html =~ "Missing hiker"
+      assert html =~ "Swiftwater course"
+      assert html =~ "Last week course"
+      assert html =~ "Missing hiker"
+      assert has_element?(lv, "#activity_collection .badge", "Rope")
+      assert has_element?(lv, "select[name='form[status]']")
+      assert has_element?(lv, "select[name='form[hours]']")
       refute has_element?(lv, ".tabs")
       refute has_element?(lv, "#activity-add")
-      refute has_element?(lv, "#activity_collection .tag")
-      refute has_element?(lv, "#activity_collection", "Draft")
-      refute has_element?(lv, "#activity_filter_form-summary", "Clear filters")
-      refute has_element?(lv, "select[name='form[status]']")
-      refute has_element?(lv, "select[name='form[hours]']")
       assert has_element?(lv, "#side-nav-activities[aria-current=page]")
-
-      {:ok, _lv, html} = live(conn, ~p"/teams/#{team}/activities?when=all")
-      assert html =~ "Last week course"
-      refute html =~ "Missing hiker"
     end
   end
 end

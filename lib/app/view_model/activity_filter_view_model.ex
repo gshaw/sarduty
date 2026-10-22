@@ -75,14 +75,12 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   @doc """
   A page of the team's activities for the filters. `member` limits it to the activities
-  that member attended. `visible_to: member` limits it to what a member who is not a team
-  admin sees (`Activity.visible_to_member/3`).
+  that member attended.
   """
-  def build_paginated_content(team, member, filter_options, opts \\ []) do
+  def build_paginated_content(team, member, filter_options) do
     Activity
     |> Activity.scope(team_id: team.id)
     |> Activity.not_deleted()
-    |> visible_to(opts[:visible_to])
     |> scope(member: member)
     |> scope(q: filter_options.q)
     |> scope(activity: filter_options.activity)
@@ -119,9 +117,6 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp validate_option(changeset, field, options),
     do: validate_inclusion(changeset, field, Enum.map(options, fn {_, v} -> v end))
-
-  defp visible_to(q, nil), do: q
-  defp visible_to(q, member), do: Activity.visible_to_member(q, member, DateTime.utc_now())
 
   defp scope(q, member: nil), do: q
 

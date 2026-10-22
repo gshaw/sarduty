@@ -317,17 +317,6 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#side-nav-members")
     end
 
-    test "an incident the member did not attend shows by no title", %{conn: conn, team: team} do
-      activity_fixture(team, at(1, %{title: "Missing hiker", activity_kind: "incident"}))
-      activity_fixture(team, at(-200, %{title: "Overdue skier", activity_kind: "incident"}))
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-
-      html = render_async(lv)
-      refute html =~ "Missing hiker"
-      refute html =~ "Overdue skier"
-      assert has_element?(lv, "#activity-map title", "Incident")
-    end
-
     test "Coming up links to each activity's page", %{conn: conn, team: team} do
       activity = activity_fixture(team, at(30, %{title: "Rope practice"}))
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")

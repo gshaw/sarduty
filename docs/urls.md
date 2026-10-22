@@ -16,7 +16,7 @@ enforces the top-level list and the held URLs.
 - **A member's own page is `/teams/:subdomain/me`**, Your membership, with the year page
   (`/me/activities?year=`), Contact details (`/me/details`), their photo (`/me/image`),
   and their downloads under it (#156, #406). Add to calendar is the activity's own,
-  `/teams/:subdomain/activities/:id/calendar`, for anyone on the team who sees it. It names the team; the member is always the
+  `/teams/:subdomain/activities/:id/calendar`, for anyone on the team. It names the team; the member is always the
   person logged in. The old `/me/card`, `/me/qualifications`, `/me/hours`,
   `/me/milestones`, and `/me/tax-credit-letters` pages are gone with no redirects. See
   [members.md](members.md).

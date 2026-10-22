@@ -261,24 +261,32 @@ defmodule Web.UserAuth do
   # :member. Anyone else gets a 404, so the page doesn't say whether the team exists.
   def on_mount(:ensure_team_access, params, _session, socket) do
     user = socket.assigns.current_user
-    subdomain = params["subdomain"]
-    admin_team = authorized_team(user, subdomain)
     # mount_current_user loaded the user's member logins for the menu; reuse them.
-    member = find_login(socket.assigns[:member_logins] || member_logins(user), subdomain)
-    access = page_access(socket.view)
+    logins = socket.assigns[:member_logins] || member_logins(user)
+    access = team_access!(user, logins, params["subdomain"], page_access(socket.view))
+
+    if access.team_admin?, do: RecordUserSeen.call(user, access.current_team.id)
+
+    # How many AI agent change sets wait for a team admin, for the side navigation.
+    waiting = if access.team_admin?, do: ChangeSet.count_waiting(access.current_team.id), else: 0
+
+    {:cont, Phoenix.Component.assign(socket, Map.put(access, :proposed_change_count, waiting))}
+  end
+
+  # Who the user is on the URL's team, as `current_team`, `current_member`, and
+  # `team_admin?`, when `access` lets them in; otherwise a 404. The LiveView hook and the
+  # plug both decide here, so they never let in different people.
+  defp team_access!(user, logins, subdomain, access) do
+    admin_team = authorized_team(user, subdomain)
+    member = find_login(logins, subdomain)
 
     unless allowed?(access, admin_team, member), do: raise(Web.Status.NotFound)
 
-    if admin_team, do: RecordUserSeen.call(user, admin_team.id)
-
-    {:cont,
-     Phoenix.Component.assign(socket,
-       current_team: admin_team || member.team,
-       current_member: member,
-       team_admin?: admin_team != nil,
-       # How many AI agent change sets wait for a team admin, for the side navigation.
-       proposed_change_count: if(admin_team, do: ChangeSet.count_waiting(admin_team.id), else: 0)
-     )}
+    %{
+      current_team: admin_team || member.team,
+      current_member: member,
+      team_admin?: admin_team != nil
+    }
   end
 
   @doc "Who may open a team LiveView: `:admin` (the default), `:team`, or `:member`."
@@ -364,17 +372,8 @@ defmodule Web.UserAuth do
   """
   def require_team_access(conn, _opts) do
     user = conn.assigns.current_user
-    subdomain = conn.path_params["subdomain"]
-    admin_team = authorized_team(user, subdomain)
-    member = member_login(user, subdomain)
-
-    unless allowed?(:team, admin_team, member), do: raise(Web.Status.NotFound)
-
-    assign(conn,
-      current_team: admin_team || member.team,
-      current_member: member,
-      team_admin?: admin_team != nil
-    )
+    access = team_access!(user, member_logins(user), conn.path_params["subdomain"], :team)
+    assign(conn, Map.to_list(access))
   end
 
   @doc "The plug for a member's own downloads: `member` is the logged-in member on the URL's team."

@@ -16,7 +16,6 @@ defmodule Web.Components.ActivityFilterTable do
   attr :sort, :map, required: true
   attr :path_fn, :map, required: true
   attr :team, :map, required: true
-  attr :team_admin?, :boolean, default: true, doc: "false hides status, tags, and hours"
 
   def activity_filter_table(assigns) do
     ~H"""
@@ -42,17 +41,15 @@ defmodule Web.Components.ActivityFilterTable do
         field={@form[:when]}
         label="When"
         options={ActivityFilterViewModel.when_kinds(@team)}
-        default={if(@team_admin?, do: "all", else: "future")}
+        default="all"
       />
       <:filter
-        :if={@team_admin?}
         field={@form[:status]}
         label="Status"
         options={ActivityFilterViewModel.status_kinds()}
         default="all"
       />
       <:filter
-        :if={@team_admin?}
         field={@form[:hours]}
         label="Hours tag"
         options={ActivityFilterViewModel.hours_kinds()}
@@ -66,7 +63,6 @@ defmodule Web.Components.ActivityFilterTable do
       path_fn={@path_fn}
       team={@team}
       untagged?={@form[:hours].value == "untagged"}
-      team_admin?={@team_admin?}
     />
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
@@ -79,7 +75,6 @@ defmodule Web.Components.ActivityFilterTable do
   attr :path_fn, :any, required: true
   attr :team, :map, required: true
   attr :untagged?, :boolean, default: false, doc: "listing activities with no hours tag"
-  attr :team_admin?, :boolean, default: true, doc: "false hides tags and hours"
 
   # The activity list's table, without its filters. The style guide shows it with made-up rows.
   def activity_table(assigns) do
@@ -100,7 +95,7 @@ defmodule Web.Components.ActivityFilterTable do
         <div class="hint">
           {activity_summary(record)}
         </div>
-        <.activity_tags :if={@team_admin?} activity={record} hours_tags={@hours_tags} />
+        <.activity_tags activity={record} hours_tags={@hours_tags} />
         <%!-- Needs attention links here, and D4H refuses tags on a published activity (#358). --%>
         <div
           :if={@untagged? and D4H.tags_locked?(@team, record)}
@@ -112,8 +107,7 @@ defmodule Web.Components.ActivityFilterTable do
         </div>
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
-        <.activity_kind :if={@team_admin?} activity={record} />
-        <.activity_kind_mark :if={!@team_admin?} activity={record} />
+        <.activity_kind activity={record} />
       </:col>
       <:col
         :let={record}
@@ -131,7 +125,7 @@ defmodule Web.Components.ActivityFilterTable do
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        <span :if={@team_admin? && activity_hours_type(record, @hours_tags)} class="text-text-muted">
+        <span :if={activity_hours_type(record, @hours_tags)} class="text-text-muted">
           {activity_hours_type(record, @hours_tags)}
         </span>
         {Service.Format.duration(

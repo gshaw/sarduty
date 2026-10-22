@@ -4,20 +4,17 @@ defmodule Web.ActivityCalendarController do
   alias App.Adapter.D4H
   alias App.Model.Activity
 
-  # Add to calendar (#389, #406): an .ics file for an activity, for anyone on the team who
-  # sees it. A member gets only the activities they see (Activity.visible_to_member/3).
+  # Add to calendar (#389, #406): an .ics file for any of the team's activities that D4H
+  # still has, for anyone on the team.
   def show(conn, %{"id" => id}) do
-    %{current_team: team, current_member: member, team_admin?: team_admin?} = conn.assigns
+    team = conn.assigns.current_team
     now = DateTime.utc_now()
 
     activity =
-      if team_admin?,
-        do:
-          Activity
-          |> Activity.not_deleted()
-          |> Activity.scope(team_id: team.id)
-          |> App.Repo.get!(id),
-        else: Activity.find_visible!(member, id, now)
+      Activity
+      |> Activity.not_deleted()
+      |> Activity.scope(team_id: team.id)
+      |> App.Repo.get!(id)
 
     ics =
       Service.Calendar.event(

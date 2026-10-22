@@ -10,14 +10,9 @@ defmodule Web.ActivityCollectionLive do
     {:ok, assign(socket, page_title: "Activities")}
   end
 
-  # Members open it too (#406), read only, on coming activities: the ones they see
-  # (Activity.visible_to_member/3), with no tags, hours, or status.
+  # Members open it too (#406) and get the same list, filters, and default as a team
+  # admin. Team admins also get Add activity and the Templates and Proposed changes tabs.
   def handle_params(params, _uri, socket) do
-    params =
-      if socket.assigns.team_admin?,
-        do: params,
-        else: Map.merge(%{"when" => "future", "sort" => "date"}, params)
-
     case ActivityFilterViewModel.validate(params) do
       # credo:disable-for-next-line
       {:ok, filter_options, changeset} ->
@@ -57,7 +52,6 @@ defmodule Web.ActivityCollectionLive do
       sort={@sort}
       path_fn={@path_fn}
       team={@current_team}
-      team_admin?={@team_admin?}
     />
     """
   end
@@ -87,14 +81,8 @@ defmodule Web.ActivityCollectionLive do
 
   defp sort_for_new_when(form_params, _old_when), do: form_params
 
-  defp build_paginated_content(%{team_admin?: true, current_team: team}, filter_options),
+  defp build_paginated_content(%{current_team: team}, filter_options),
     do: ActivityFilterViewModel.build_paginated_content(team, nil, filter_options)
-
-  defp build_paginated_content(%{current_team: team, current_member: member}, filter_options),
-    do:
-      ActivityFilterViewModel.build_paginated_content(team, nil, filter_options,
-        visible_to: member
-      )
 
   def build_path_fn(team, filter_options) do
     fn
