@@ -19,7 +19,7 @@ defmodule Web.Settings.MemberLoginsLiveTest do
     refute Accounts.may_log_in?(member.email)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/member-logins")
-    assert has_element?(lv, "#side-nav-settings-member-logins[aria-current=page]")
+    assert has_element?(lv, ".tabs a[aria-current=page]", "Member logins")
     refute has_element?(lv, "#member-logins-form input[type=checkbox][checked]")
 
     lv

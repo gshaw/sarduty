@@ -1,6 +1,7 @@
 defmodule Web.ActivityCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.ActivitiesTabs
   import Web.Components.ActivityFilterTable
 
   alias App.Adapter.D4H
@@ -43,6 +44,11 @@ defmodule Web.ActivityCollectionLive do
         Add activity
       </.button>
     </div>
+    <.activities_tabs
+      team={@current_team}
+      current={:activities}
+      proposed_changes={@proposed_change_count}
+    />
 
     <.activity_filter_table
       form={@form}

@@ -15,41 +15,29 @@
 
   .site-bar-links { display: flex; gap: 2px; flex: 1; overflow: hidden; min-width: 0; }
 
-  /* The area you're in, after the brand (#312): its name, then Team area or Member area. It
-     goes to the area's first page. */
+  /* The area you're in, after the brand (#312, #406): the team's name, or SAR Duty admin, or
+     Account settings. Plain text with nowhere else to go; otherwise the team switcher. */
   .site-bar-area {
     display: inline-flex;
     align-items: baseline;
-    gap: var(--sp-2);
     padding: var(--sp-3) var(--sp-2);
     color: #fff;
     font-weight: 600;
     font-size: var(--fs-md);
     line-height: var(--lh-md);
-    text-decoration: none;
     white-space: nowrap;
   }
 
-  .site-bar-area:hover { text-decoration: underline; }
-  .site-bar-area-kind { color: #d5dbe3; font-weight: 400; font-size: var(--fs-sm); line-height: var(--lh-sm); }
-
-  /* Phones: the same label beside the brand, on one line when it fits. A long name pushes
-     the area, kept whole, onto a second line; a name too long for its own line ends in an
-     ellipsis. */
+  /* Phones: the same name beside the brand, ending in an ellipsis when it is too long. */
   .site-bar-area-phone {
     display: none;
     min-width: 0;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: var(--sp-2);
     color: #fff;
     font-weight: 600;
     font-size: var(--fs-sm);
     line-height: var(--lh-sm);
-    text-decoration: none;
   }
   .site-bar-area-phone .site-bar-area-name { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .site-bar-area-phone .site-bar-area-kind { white-space: nowrap; }
 
   .site-bar-menu > summary {
     display: inline-flex;
@@ -65,7 +53,33 @@
   }
 
   .site-bar-menu > summary:hover { background: rgb(255 255 255 / 0.1); }
-  .site-bar-menu > summary > :first-child { max-width: 160px; }
+
+  /* The team switcher: the area's name with a chevron, its menu under the name. */
+  .site-bar-links:has(.team-switcher) { overflow: visible; }
+  .team-switcher > summary { font-weight: 600; font-size: var(--fs-md); line-height: var(--lh-md); padding: var(--sp-2); }
+  .team-switcher > summary > :first-child { max-width: 320px; }
+  .team-switcher .menu { left: 0; right: auto; min-width: 240px; }
+
+  /* The account menu: your initials in a circle, top right. */
+  .account-menu > summary { padding: 2px; border-radius: 999px; }
+  .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--nav);
+    font-weight: 700;
+    font-size: var(--fs-xs);
+    line-height: var(--lh-xs);
+  }
+  .menu-person { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-4); }
+  .menu-person .menu-name { font-weight: 600; }
+  .menu .menu-person .menu-note, .site-bar-phone-panel .menu-person .menu-note { padding: 0; }
+  .site-bar-phone-panel .menu-person .menu-name { color: #fff; }
 
   /* Log in, when nobody is: white like the Menu button, 44px tall, at every width. */
   .site-bar-login {
@@ -135,34 +149,6 @@
   .site-bar-phone-panel .menu-note { padding: var(--sp-2) var(--sp-4) var(--sp-1); color: rgb(255 255 255 / 0.6); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
-  /* The phone menu's area switch: a row of buttons per team, the current area in white. */
-  .area-switch { padding: var(--sp-1) var(--sp-4) var(--sp-2); }
-  .site-bar-phone-panel .area-switch .menu-heading { padding: var(--sp-2) 0; }
-  .area-switch-row {
-    display: grid;
-    grid-auto-columns: 1fr;
-    grid-auto-flow: column;
-    margin-top: var(--sp-1);
-    border: var(--border-width) solid rgb(255 255 255 / 0.3);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-
-  .area-switch .menu-heading + .area-switch-row { margin-top: 0; }
-
-  .site-bar-phone-panel .area-switch-row a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: 0 var(--sp-2);
-    font-size: var(--fs-sm);
-    line-height: var(--lh-sm);
-  }
-
-  .site-bar-phone-panel .area-switch-row a + a { border-left: var(--border-width) solid rgb(255 255 255 / 0.3); }
-  .site-bar-phone-panel .area-switch-row a[aria-current="page"] { background: #fff; color: var(--nav); box-shadow: none; }
-
   @media (width < 64rem) {
     .site-bar-links, .site-bar-menu { display: none; }
     .site-bar-phone { display: block; }
@@ -193,8 +179,9 @@
   .menu .menu-heading { padding: var(--sp-3) var(--sp-4) var(--sp-1); }
   .menu hr { margin: var(--sp-1) 0; border-color: var(--border-subtle); }
 
-  /* Side navigation (#312): an area's pages down the left of each of its pages. Square
-     links, so the current page's bar stays straight. Below 1024px the Menu button holds
+  /* Side navigation (#312): an area's pages down the left of each of its pages, in
+     sections split by a line (#406). Square links, so the current page's bar stays
+     straight. Below 1024px the Menu button holds
      them instead. */
   .with-side-nav { display: flex; gap: var(--sp-8); }
   .side-nav-main { flex: 1; min-width: 0; }
@@ -212,7 +199,6 @@
   .side-nav-group { padding: var(--sp-2) 0; border-bottom: 1px solid var(--border-subtle); }
   .side-nav-group:first-child { padding-top: 0; }
   .side-nav-group:last-child { border-bottom: 0; }
-  .side-nav-heading { padding: var(--sp-1) var(--sp-3); }
   .side-nav a { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); color: var(--text); text-decoration: none; }
   .side-nav a:hover { background: var(--row-hover); }
   .side-nav a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }

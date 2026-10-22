@@ -1,9 +1,9 @@
 defmodule Web.Navigation do
   @moduledoc """
-  Where a page sits, for the top bar and the side navigation (#312). A page is in one
-  area: a team's (its team admins' pages), a member's (their own pages), admin, or your
-  settings. The bar names the area, the side navigation lists the area's pages, and the
-  account menu lists the areas you can switch to.
+  Where a page sits, for the top bar and the side navigation (#312, #406). A page is in one
+  area: a team's space, SAR Duty admin, or Account settings. The bar names the area, with
+  the team switcher on it, and the side navigation lists the area's pages in sections. Who
+  you are on the team decides which sections you see.
 
   Pure: the layout passes in what the page assigned. See docs/navigation.md.
   """
@@ -17,156 +17,98 @@ defmodule Web.Navigation do
 
   @doc """
   The page's area, or nil outside one, from its path. A team's pages need the URL's team
-  as `current_team`, and a member's pages the logged-in `member`, as the page's hooks
-  assign them. `%{kind: :team | :member | :admin | :settings, name:, kind_label:, home:,
-  team:}`.
+  as `current_team`, as the team pages' hook assigns it.
+  `%{kind: :team | :admin | :settings, name:, team:}`.
   """
-  def area(path, current_team, member)
+  def area(path, current_team)
 
-  def area(nil, _current_team, _member), do: nil
+  def area(nil, _current_team), do: nil
 
-  def area(path, current_team, member) do
+  def area(path, current_team) do
     case String.split(path, "/", trim: true) do
       ["admin" | _rest] ->
-        %{kind: :admin, name: "Admin", kind_label: nil, home: ~p"/admin", team: nil}
+        %{kind: :admin, name: "SAR Duty admin", team: nil}
 
       ["account"] ->
-        %{kind: :settings, name: "Your settings", kind_label: nil, home: ~p"/account", team: nil}
-
-      ["teams", subdomain, "me" | _rest] ->
-        if member && member.team.subdomain == subdomain, do: member_area(member.team)
+        %{kind: :settings, name: "Account settings", team: nil}
 
       ["teams", subdomain | _rest] ->
-        if match?(%Team{subdomain: ^subdomain}, current_team), do: team_area(current_team)
+        if match?(%Team{subdomain: ^subdomain}, current_team),
+          do: %{kind: :team, name: current_team.name, team: current_team}
 
       _other ->
         nil
     end
   end
 
-  defp team_area(team),
-    do: %{
-      kind: :team,
-      name: team.name,
-      kind_label: "Team area",
-      home: ~p"/teams/#{team}",
-      team: team
-    }
-
-  defp member_area(team) do
-    %{
-      kind: :member,
-      name: team.name,
-      kind_label: "Member area",
-      home: ~p"/teams/#{team}/me",
-      team: team
-    }
-  end
-
   @doc """
-  The area's pages, as `{heading, links}` groups: a heading shows only over two or more
-  links. Each link is `%{key:, label:, path:, current:, count:}`; the one for `path` is
-  current. `proposed_changes` is how many AI agent change sets wait for a team admin.
+  The area's pages in sections, each a list of links, split by a divider and never
+  headed. A section with nothing you can see is left out. Each link is
+  `%{key:, label:, path:, current:, count:}`; the one for `path` is current.
+
+  On a team: `team_admin?` when you manage it, `member?` when you log in as one of its
+  members, and `proposed_changes`, how many AI agent change sets wait for a team admin.
   """
-  def groups(area, path, proposed_changes \\ 0)
+  def sections(area, path, opts \\ [])
 
-  def groups(%{kind: :team, team: team}, path, proposed_changes),
-    do: team |> team_groups(proposed_changes) |> mark_current(path)
+  def sections(%{kind: :team, team: team}, path, opts) do
+    team_admin? = Keyword.get(opts, :team_admin?, false)
+    member? = Keyword.get(opts, :member?, false)
+    proposed_changes = Keyword.get(opts, :proposed_changes, 0)
 
-  def groups(%{kind: :member, team: team}, path, _proposed_changes),
-    do: team |> member_groups() |> mark_current(path)
-
-  def groups(%{kind: :admin}, path, _proposed_changes), do: mark_current(admin_groups(), path)
-  def groups(_area, _path, _proposed_changes), do: []
-
-  defp team_groups(team, proposed_changes) do
     [
-      {nil, [link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)]},
-      {"Activities", activity_links(team, proposed_changes)},
-      {"People",
-       [
-         link("members", "Members", ~p"/teams/#{team}/members"),
-         link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
-         link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
-         link("groups", "Groups", ~p"/teams/#{team}/groups")
-       ]},
-      {nil, [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")]},
-      {nil,
-       [link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")]},
-      {"Settings", settings_links(team)}
+      everyone_links(team, team_admin?, proposed_changes),
+      team_admin? && people_links(team),
+      team_admin? && [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
+      team_admin? &&
+        [link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")],
+      team_admin? && [link("settings", "Team settings", ~p"/teams/#{team}/settings")],
+      member? && [link("me", "Your membership", ~p"/teams/#{team}/me")]
     ]
+    |> Enum.filter(&(is_list(&1) and &1 != []))
+    |> mark_current(path)
   end
 
-  # Proposed changes come from AI agents through MCP, a trial most teams don't have: the
-  # page shows only when the team has it, or something waits there.
-  defp activity_links(team, proposed_changes) do
-    proposed =
-      link("proposed-changes", "Proposed changes", ~p"/teams/#{team}/proposed-changes",
-        count: proposed_changes
-      )
-
-    [
-      link("activities", "Activities", ~p"/teams/#{team}/activities"),
-      link("templates", "Templates", ~p"/teams/#{team}/templates")
-    ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
-  end
-
-  # MCP tokens show once a SAR Duty admin turns them on for the team. A team picks what
-  # ID cards list on the endorsements page.
-  defp settings_links(team) do
-    Enum.filter(
+  def sections(%{kind: :admin}, path, _opts) do
+    mark_current(
       [
-        link("settings", "General", ~p"/teams/#{team}/settings", exact: true),
-        link("settings-managers", "Team admins", ~p"/teams/#{team}/settings/managers"),
-        link(
-          "settings-member-logins",
-          "Member logins",
-          ~p"/teams/#{team}/settings/member-logins"
-        ),
-        link("settings-hours-tags", "Hours tags", ~p"/teams/#{team}/settings/hours-tags"),
-        team.mcp_enabled && link("settings-mcp", "MCP tokens", ~p"/teams/#{team}/settings/mcp")
+        [
+          link("admin-teams", "Teams", ~p"/admin", exact: true),
+          link("admin-orgs", "Organizations", ~p"/admin/orgs"),
+          link("admin-id-cards", "ID cards", ~p"/admin/id-cards")
+        ],
+        [
+          link("admin-admins", "Admins", ~p"/admin/admins"),
+          link("admin-events", "Events", ~p"/admin/events"),
+          link("admin-mcp", "MCP", ~p"/admin/mcp")
+        ]
       ],
-      & &1
+      path
     )
   end
 
-  # ID card shows once a SAR Duty admin turns ID cards on for the team.
-  defp member_groups(team) do
+  def sections(_area, _path, _opts), do: []
+
+  # Templates and Proposed changes are tabs on the Activities page, so Activities is
+  # current on them, and carries the count of proposed changes waiting.
+  defp everyone_links(team, true, proposed_changes) do
     [
-      {nil,
-       Enum.filter(
-         [
-           link("me", "Overview", ~p"/teams/#{team}/me", exact: true),
-           team.id_cards_enabled && link("me-card", "ID card", ~p"/teams/#{team}/me/card"),
-           link("me-qualifications", "Qualifications", ~p"/teams/#{team}/me/qualifications"),
-           link("me-activities", "Activities", ~p"/teams/#{team}/me/activities"),
-           link("me-hours", "Hours", ~p"/teams/#{team}/me/hours"),
-           link(
-             "me-tax-credit-letters",
-             "Tax credit letters",
-             ~p"/teams/#{team}/me/tax-credit-letters"
-           ),
-           link("me-details", "Contact details", ~p"/teams/#{team}/me/details")
-         ],
-         & &1
-       )}
+      link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true),
+      link("activities", "Activities", ~p"/teams/#{team}/activities",
+        count: proposed_changes,
+        also: [~p"/teams/#{team}/templates", ~p"/teams/#{team}/proposed-changes"]
+      )
     ]
   end
 
-  defp admin_groups do
+  defp everyone_links(_team, false, _proposed_changes), do: []
+
+  defp people_links(team) do
     [
-      {nil,
-       [
-         link("admin-teams", "Teams", ~p"/admin", exact: true),
-         link("admin-orgs", "Organizations", ~p"/admin/orgs"),
-         link("admin-id-cards", "ID cards", ~p"/admin/id-cards")
-       ]},
-      {"SAR Duty",
-       [
-         link("admin-admins", "Admins", ~p"/admin/admins"),
-         link("admin-events", "Events", ~p"/admin/events"),
-         link("admin-mcp", "MCP", ~p"/admin/mcp")
-       ]}
+      link("members", "Members", ~p"/teams/#{team}/members"),
+      link("groups", "Groups", ~p"/teams/#{team}/groups"),
+      link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
+      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements")
     ]
   end
 
@@ -177,6 +119,7 @@ defmodule Web.Navigation do
       key: key,
       label: label,
       path: path,
+      also: Keyword.get(opts, :also, []),
       exact: Keyword.get(opts, :exact, false),
       count: if(count && count > 0, do: count),
       current: false
@@ -184,93 +127,89 @@ defmodule Web.Navigation do
   end
 
   # An area's first page is current only on itself, since every page is under it; other
-  # links are current on any page under them. A group of one link loses its heading.
-  defp mark_current(groups, path) do
-    for {heading, links} <- groups do
-      {if(length(links) > 1, do: heading), Enum.map(links, &%{&1 | current: current?(&1, path)})}
+  # links are current on any page under them, or under one of their tabs' paths.
+  defp mark_current(sections, path) do
+    for links <- sections do
+      Enum.map(links, &%{&1 | current: current?(&1, path)})
     end
   end
 
   defp current?(_link, nil), do: false
   defp current?(%{exact: true, path: path}, current), do: current == path
 
-  defp current?(%{path: path}, current),
-    do: current == path or String.starts_with?(current, path <> "/")
+  defp current?(%{path: path, also: also}, current),
+    do: Enum.any?([path | also], &(current == &1 or String.starts_with?(current, &1 <> "/")))
 
   @doc """
-  The area switch at the top of the phone menu: one row per team, A to Z, with a button for
-  each of its areas you have, after a row for Admin if you're a SAR Duty admin. A row has a
-  heading only when there are two or more, since the bar names the team. Empty when you
-  have one area, so there is nothing to switch to.
-  `[%{key:, heading:, links: [%{key:, label:, path:, current:}]}]`.
+  The team switcher's rows: "SAR Duty admin" first for SAR Duty admins, then each team
+  where you're a team admin or a member, A to Z, one row per team. The area you're in is
+  current; a team opened from Admin › Teams that isn't yours marks nothing. Empty when
+  there is nowhere else to go, so the bar's name is plain text.
+  `[%{key:, label:, path:, current:}]`.
   """
   def switch_rows(is_admin, managed_teams, member_logins, area) do
-    admin = if is_admin, do: [admin_row(area)], else: []
-    teams = for entry <- menu_teams(managed_teams, member_logins), do: team_row(entry, area)
+    managed = MapSet.new(managed_teams, & &1.id)
+
+    admin =
+      if is_admin,
+        do: [
+          %{
+            key: "admin",
+            label: "SAR Duty admin",
+            path: ~p"/admin",
+            current: match?(%{kind: :admin}, area)
+          }
+        ],
+        else: []
+
+    teams =
+      for team <- teams(managed_teams, member_logins) do
+        %{
+          key: "team-" <> team.subdomain,
+          label: team.name,
+          path: team_home(team, MapSet.member?(managed, team.id)),
+          current: match?(%{kind: :team, team: %{id: id}} when id == team.id, area)
+        }
+      end
+
     rows = admin ++ teams
-
-    cond do
-      rows |> Enum.flat_map(& &1.links) |> length() < 2 -> []
-      length(rows) == 1 -> Enum.map(rows, &%{&1 | heading: nil})
-      true -> rows
-    end
+    if Enum.all?(rows, & &1.current), do: [], else: rows
   end
 
-  defp admin_row(area),
-    do: %{
-      key: "admin",
-      heading: "SAR Duty",
-      links: [switch_link("admin", "Admin", ~p"/admin", area, :admin, nil)]
-    }
+  # A team's first page: its dashboard for team admins, the member's own page otherwise.
+  defp team_home(team, true), do: ~p"/teams/#{team}"
+  defp team_home(team, false), do: ~p"/teams/#{team}/me"
 
-  defp team_row(%{team: team} = entry, area) do
-    team_link =
-      switch_link("team-" <> team.subdomain, "Team area", ~p"/teams/#{team}", area, :team, team)
-
-    member_link =
-      switch_link(
-        "member-" <> team.subdomain,
-        "Member area",
-        ~p"/teams/#{team}/me",
-        area,
-        :member,
-        team
-      )
-
-    links =
-      if(entry.team_area, do: [team_link], else: []) ++
-        if(entry.member_area, do: [member_link], else: [])
-
-    %{key: team.subdomain, heading: team.name, links: links}
+  # Every team you manage or log in to as a member, once each, A to Z.
+  defp teams(managed_teams, member_logins) do
+    (managed_teams ++ Enum.map(member_logins, & &1.team))
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(&{String.downcase(&1.name), &1.id})
   end
-
-  defp switch_link(key, label, path, area, kind, team),
-    do: %{key: key, label: label, path: path, current: in_area?(area, kind, team)}
-
-  @doc "Whether `area` is the area of this kind, for this team when it has one."
-  def in_area?(%{kind: kind, team: nil}, kind, nil), do: true
-  def in_area?(%{kind: kind, team: %{id: id}}, kind, %{id: id}), do: true
-  def in_area?(_area, _kind, _team), do: false
 
   @doc """
-  The teams in the account menu, A to Z, each with the areas it offers you: its team area
-  when you're one of its team admins (`managed_teams`), its member area when you can log
-  in as one of its members (`member_logins`). `[%{team:, team_area:, member_area:}]`.
+  The person in the account menu: a name, when they log in as a member anywhere, their
+  email, and initials for the avatar, from the name or else the email.
+  `%{name:, email:, initials:}`.
   """
-  def menu_teams(managed_teams, member_logins) do
-    managed = Map.new(managed_teams, &{&1.id, &1})
-    members = Map.new(member_logins, &{&1.team.id, &1.team})
+  def person(user, current_member, member_logins) do
+    name =
+      case current_member || List.first(member_logins) do
+        %{name: name} when is_binary(name) and name != "" -> name
+        _none -> nil
+      end
 
-    managed
-    |> Map.merge(members)
-    |> Map.values()
-    |> Enum.sort_by(&{String.downcase(&1.name), &1.id})
-    |> Enum.map(fn team ->
-      %{
-        team: team,
-        team_area: Map.has_key?(managed, team.id),
-        member_area: Map.has_key?(members, team.id)
-      }
-    end)
+    %{name: name, email: user.email, initials: initials(name || email_name(user.email))}
+  end
+
+  defp email_name(email), do: email |> String.split("@") |> List.first("")
+
+  defp initials(text) do
+    words = String.split(text, ~r/[\s._+-]+/, trim: true)
+
+    [List.first(words), if(length(words) > 1, do: List.last(words))]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
   end
 end

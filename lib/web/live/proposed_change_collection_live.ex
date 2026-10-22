@@ -1,6 +1,8 @@
 defmodule Web.ProposedChangeCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.ActivitiesTabs
+
   alias App.Model.ChangeSet
 
   def mount(_params, _session, socket) do
@@ -8,7 +10,7 @@ defmodule Web.ProposedChangeCollectionLive do
 
     socket =
       assign(socket,
-        page_title: "Proposed changes",
+        page_title: "Activities · Proposed changes",
         waiting: ChangeSet.get_waiting(team.id),
         decided: ChangeSet.get_recent_decided(team.id, 20)
       )
@@ -18,11 +20,12 @@ defmodule Web.ProposedChangeCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs>
-      <:item label="Proposed changes" />
-    </.breadcrumbs>
-
-    <h1 class="title">Proposed changes</h1>
+    <h1 class="title">Activities</h1>
+    <.activities_tabs
+      team={@current_team}
+      current={:proposed_changes}
+      proposed_changes={@proposed_change_count}
+    />
     <p class="lead">
       An AI agent connected to SAR Duty can propose attendance changes. Nothing changes in D4H
       until a team admin reviews them and sends them.

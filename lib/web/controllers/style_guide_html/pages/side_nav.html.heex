@@ -3,12 +3,12 @@
   <p class="lead">An area's pages, down the left of each page in it.</p>
 
   <div class="demo">
-    <Web.Layouts.area_side_nav area={sample_nav_area()} groups={sample_nav_groups()} />
+    <Web.Layouts.area_side_nav area={sample_nav_area()} sections={sample_nav_sections()} />
   </div>
 
   <h2>When to use</h2>
   <p>
-    On every page in a team's area, a member's area, and Admin. The app layout adds it to each of them.
+    On every page in a team's space and in SAR Duty admin. The app layout adds it to each of them.
   </p>
 
   <h2>When not to use</h2>
@@ -18,23 +18,23 @@
       <a href={page_path(:tabs)}>tabs</a>
       under the record's title.
     </li>
-    <li>Your settings, a single page.</li>
+    <li>Account settings, a single page.</li>
   </ul>
 
   <h2>How it works</h2>
   <ul>
     <li>
-      Pages come in groups. A group of two or more pages has a heading in small capitals; a group of one is a link on its own.
+      Pages come in sections, split by a line, with no headings. Who you are on the team decides which sections you see: a member sees Dashboard, Activities, and Your membership; a team admin sees the team's pages too. A section with nothing you can see is left out.
     </li>
     <li>
       The page you're on, or the section it's under, is marked with a straight bar. An area's first page, such as Dashboard, is marked only on itself.
     </li>
     <li>
       An amber <a href={page_path(:tag)}>tag</a>
-      counts what waits for you on a page, such as proposed changes. Only for things to act on.
+      counts what waits for you on a page, such as proposed changes on Activities. Only for things to act on.
     </li>
     <li>
-      Below 1024px the <a href={page_path(:top_bar)}>top bar</a>'s Menu button holds the same pages, under the same headings.
+      Below 1024px the <a href={page_path(:top_bar)}>top bar</a>'s Menu button holds the same pages, in the same sections.
     </li>
   </ul>
 
