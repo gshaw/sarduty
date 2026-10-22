@@ -27,7 +27,7 @@ defmodule Web.ChoreCollectionLive do
     assign(socket,
       waiting: waiting,
       selected: MapSet.new(waiting, & &1.id),
-      nav_counts: Map.put(socket.assigns[:nav_counts] || %{}, :chores, length(waiting))
+      chore_count: length(waiting)
     )
   end
 
@@ -43,7 +43,7 @@ defmodule Web.ChoreCollectionLive do
     ~H"""
     <h1 class="title">Chores</h1>
     <p class="lead measure">
-      Accept a chore to count it. SAR Duty sends accepted chores to D4H every night.
+      Accept a chore to count it.
     </p>
 
     <h2 class="subheading mt-8">Waiting · {length(@waiting)}</h2>

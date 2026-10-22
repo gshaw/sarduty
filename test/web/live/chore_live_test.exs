@@ -38,6 +38,7 @@ defmodule Web.ChoreLiveTest do
 
     assert has_element?(lv, "#chore-#{left.id}")
     refute has_element?(lv, "#chore-#{one.id}")
+    assert has_element?(lv, "#side-nav-chores", "1")
     assert %{status: :accepted, decided_at: %DateTime{}} = Repo.get!(Chore, one.id)
     assert Repo.get!(Chore, left.id).status == :waiting
   end
