@@ -221,6 +221,7 @@ defmodule Web.MemberCollectionLive do
     case Member.clock_start(record, team.timezone) do
       {:attended, _date} -> nil
       {why, _date} -> why
+      nil -> nil
     end
   end
 

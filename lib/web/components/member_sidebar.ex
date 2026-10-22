@@ -104,7 +104,9 @@ defmodule Web.Components.MemberSidebar do
 
   defp last_attended(started_at, timezone), do: date_and_days_ago(started_at, timezone)
 
-  # "Oct 8, 2026 · 12 days ago"
+  # "Oct 8, 2026 · 12 days ago". D4H allows a member with no start date (#421).
+  defp date_and_days_ago(nil, _timezone), do: "Not set"
+
   defp date_and_days_ago(datetime, timezone) do
     ago = Service.Format.days_ago(datetime, DateTime.utc_now(), timezone)
     "#{Service.Format.date_short(datetime, timezone)} · #{ago}"

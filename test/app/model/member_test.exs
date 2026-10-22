@@ -17,6 +17,13 @@ defmodule App.Model.MemberTest do
     assert String.length(member.address) == 500
   end
 
+  test "takes a member D4H has no start date for (#421)" do
+    team = team_fixture()
+    member = member_fixture(team, %{joined_at: nil})
+
+    assert Repo.reload!(member).joined_at == nil
+  end
+
   test "missing details are a mobile phone and an email, blank or not there" do
     assert Member.missing_details(%{phone: "604-555-0100", email: "a@example.com"}) == []
     assert Member.missing_details(%{phone: nil, email: ""}) == [:mobile_phone, :email]
@@ -145,6 +152,13 @@ defmodule App.Model.MemberTest do
 
       assert not_seen(team) == [back_the_day_before.id]
     end
+
+    test "a member with no joined date who never attended isn't being seen (#421)" do
+      team = team_fixture()
+      no_date = member_fixture(team, %{joined_at: nil})
+
+      assert not_seen(team) == [no_date.id]
+    end
   end
 
   describe "clock_start/2" do
@@ -171,6 +185,14 @@ defmodule App.Model.MemberTest do
 
       assert clock.(%{away_ends_on: ~D[2026-09-01], checked_in_on: ~D[2026-10-03]}) ==
                {:checked_in, ~D[2026-10-03]}
+    end
+
+    test "is nil for a member with no joined date who has never attended (#421)" do
+      tz = "America/Vancouver"
+      clock = &(&1 |> Map.put(:member, %{joined_at: nil}) |> row() |> Member.clock_start(tz))
+
+      assert clock.(%{}) == nil
+      assert clock.(%{last_attended_at: ~U[2026-05-15 02:00:00Z]}) == {:attended, ~D[2026-05-14]}
     end
   end
 end

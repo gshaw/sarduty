@@ -1,6 +1,7 @@
 defmodule Web.HoneybadgerFilterTest do
   use ExUnit.Case, async: true
 
+  alias App.Model.Member
   alias Web.HoneybadgerFilter
 
   test "filters secrets nested in form params" do
@@ -15,6 +16,32 @@ defmodule Web.HoneybadgerFilterTest do
              "team" => %{"access_key" => "[FILTERED]"},
              "token" => "[FILTERED]"
            }
+  end
+
+  test "keeps a changeset error's errors and cuts the member details after them (#421)" do
+    changeset =
+      Member.build_changeset(%Member{}, %{
+        team_id: 3,
+        d4h_member_id: 59_778,
+        email: "alex@example.com",
+        phone: "16045550100",
+        address: "1 Example St"
+      })
+
+    message =
+      Exception.message(%Ecto.InvalidChangesetError{action: :insert, changeset: changeset})
+
+    filtered = HoneybadgerFilter.filter_error_message(message)
+
+    assert filtered =~ "could not perform insert because changeset is invalid."
+    assert filtered =~ "name: [{\"can't be blank\""
+
+    for detail <- ["alex@example.com", "16045550100", "1 Example St"] do
+      assert message =~ detail
+      refute filtered =~ detail
+    end
+
+    assert HoneybadgerFilter.filter_error_message("Database busy") == "Database busy"
   end
 
   test "filters any key containing key, token or code" do

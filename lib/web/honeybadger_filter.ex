@@ -55,7 +55,16 @@ defmodule Web.HoneybadgerFilter do
     |> update_present("HTTP_REFERER", &filter_url/1)
   end
 
+  # Ecto.InvalidChangesetError's message prints the changes, params, and changeset in
+  # full, `redact: true` fields included: a member's email, phone, and address (#421).
+  # Its errors come first, so keep those.
   @impl Honeybadger.Filter
+  def filter_error_message(message) when is_binary(message) do
+    message
+    |> String.split(~r/\n\n(Applied changes|Params|Changeset)\n/, parts: 2)
+    |> hd()
+  end
+
   def filter_error_message(message), do: message
 
   @impl Honeybadger.Filter

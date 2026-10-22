@@ -38,7 +38,8 @@ defmodule App.Model.Member do
   def build_new_changeset(params \\ %{}), do: build_changeset(%Member{}, params)
 
   # Rows are copies of D4H, so they take whatever D4H holds: no length or format
-  # rules. A refresh that rejects one row fails for the whole team.
+  # rules. A refresh that rejects one row fails for the whole team. D4H allows a member
+  # with no start date, so `joined_at` may be empty (#421).
   def build_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
@@ -57,12 +58,7 @@ defmodule App.Model.Member do
       :d4h_status
     ])
     |> unique_constraint([:team_id, :d4h_member_id])
-    |> validate_required([
-      :team_id,
-      :d4h_member_id,
-      :name,
-      :joined_at
-    ])
+    |> validate_required([:team_id, :d4h_member_id, :name])
   end
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
@@ -162,7 +158,7 @@ defmodule App.Model.Member do
 
     query
     |> current_query(now)
-    |> where([m], m.team_id == ^team.id and m.joined_at < ^since)
+    |> where([m], m.team_id == ^team.id and (is_nil(m.joined_at) or m.joined_at < ^since))
     |> not_in(seen_since(team, since, now))
     |> not_in(back_since(team, since_on, today))
     |> not_in(checked_in_since(team, since_on))
@@ -206,6 +202,7 @@ defmodule App.Model.Member do
   `:attended`, `:checked_in`, `:back`, or `:joined`: the latest of their last activity,
   latest check-in, the day after their latest away period ended, and the day they joined.
   Takes a row with `last_attended_at`, `checked_in_on`, `away_ends_on`, and `member`.
+  `nil` when there's none of them: a member with no joined date who has never attended.
   """
   def clock_start(row, timezone) do
     local = &(&1 |> DateTime.shift_zone!(timezone) |> DateTime.to_date())
@@ -214,10 +211,10 @@ defmodule App.Model.Member do
       {:attended, row.last_attended_at && local.(row.last_attended_at)},
       {:checked_in, row.checked_in_on},
       {:back, row.away_ends_on && Date.add(row.away_ends_on, 1)},
-      {:joined, local.(row.member.joined_at)}
+      {:joined, row.member.joined_at && local.(row.member.joined_at)}
     ]
     |> Enum.reject(&is_nil(elem(&1, 1)))
-    |> Enum.max_by(&elem(&1, 1), Date)
+    |> Enum.max_by(&elem(&1, 1), Date, fn -> nil end)
   end
 
   @doc """

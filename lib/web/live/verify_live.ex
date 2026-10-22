@@ -270,7 +270,7 @@ defmodule Web.VerifyLive do
         <div id="result-facts" class="grid grid-cols-3 gap-2 mt-4">
           <%= if @status == :active do %>
             <.fact label="Status">Active</.fact>
-            <.fact label="Member since">
+            <.fact :if={@member.joined_at} label="Member since">
               {Service.Format.month_year(@member.joined_at, @team.timezone)}
             </.fact>
             <.fact :if={@valid_until} label="Valid until" class="text-right">
