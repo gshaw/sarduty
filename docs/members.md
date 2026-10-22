@@ -164,13 +164,13 @@ their D4H photo in a circle, or their initials when D4H has none (`/me/image`), 
   never empty on January 1, under 3 numbers for the last 12 months: activities, incidents,
   and hours. A link opens the year page on the latest activity's year. Then their
   qualifications: Qualification and Expires, from the same rows a team admin sees.
-- **Sidebar**, two cards, each split by one line: the ID card, when the team has ID cards
-  on, then the latest tax credit letter to download, with its hours on the year page so
-  they aren't mistaken for the last 12 months'; then contact details, then the 5
-  latest milestones. On a phone the first card comes first, then the main column, then
-  the second card.
-- **The emergency contact is read from D4H** after the page shows, as Contact details
-  reads it, since it is never copied. A team on SAR Duty Records has none.
+- **Sidebar**, sections split by space, no boxes (`/styles/card`): the ID card, when the
+  team has ID cards on, then the latest tax credit letter to download, with its hours on
+  the year page so they aren't mistaken for the last 12 months'; then contact details,
+  then the 5 latest milestones. On a phone the ID card and letter come first, then the
+  main column, then contact details and milestones.
+- **No emergency contact here.** It is never copied, and reading it from D4H held up the
+  page with "Reading D4H…". Contact details shows and changes it.
 - Each part says why it is empty for a new member.
 - **Milestones**: hours (100, 250, 500, 1,000, then every 1,000), years on the team (1, 5,
   10, then every 5), and incidents (the first, 10, 25, 50, 100, then every 100), each

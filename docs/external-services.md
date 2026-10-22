@@ -41,7 +41,7 @@ mileage report and the map proxy alike.
 Swoosh. Production sends through Cloudflare Email Sending's REST API with
 [App.Adapter.CloudflareEmail](../lib/app/adapter/cloudflare_email.ex), since Swoosh has
 no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox`, linked from the
-footer and the login pages, unless `DEV_SEND_EMAIL=true` and both variables below are set:
+foot of every page, unless `DEV_SEND_EMAIL=true` and both variables below are set:
 a dev database is often a copy of production, so real mail could reach real members. Tests
 use `Swoosh.Adapters.Test`. Mail comes from
 `noreply@sarduty.com`: login codes, and tax credit letters with the PDF attached. Login

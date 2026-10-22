@@ -81,7 +81,8 @@ defmodule Web.Navigation do
           link("admin-admins", "Admins", ~p"/admin/admins"),
           link("admin-events", "Events", ~p"/admin/events"),
           link("admin-mcp", "MCP", ~p"/admin/mcp")
-        ]
+        ],
+        [link("admin-styles", "Style guide", "/styles")]
       ],
       path
     )
@@ -95,7 +96,6 @@ defmodule Web.Navigation do
       activity_links(team, proposed_changes),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
-      [link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
@@ -123,7 +123,8 @@ defmodule Web.Navigation do
       link("members", "Members", ~p"/teams/#{team}/members"),
       link("groups", "Groups", ~p"/teams/#{team}/groups"),
       link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
-      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements")
+      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
+      link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
     ]
   end
 
@@ -153,6 +154,28 @@ defmodule Web.Navigation do
 
   defp current?(%{path: path}, current),
     do: current == path or String.starts_with?(current, path <> "/")
+
+  @doc """
+  The area the bar names on a page outside every area (home, terms, privacy) when logged
+  in, so it looks as it does everywhere else: the team logging in lands on (the last you
+  opened, or your first), else the team you log in to as a member, else SAR Duty admin
+  for an admin; nil otherwise. Only for the bar's name: the page stays outside, so the
+  switcher marks nothing. Pass the `current_team` the page assigned.
+  """
+  def outside_area(user, current_team, member_logins)
+
+  def outside_area(nil, _current_team, _member_logins), do: nil
+
+  def outside_area(user, current_team, member_logins) do
+    cond do
+      current_team -> team_area(current_team)
+      member = List.first(member_logins) -> team_area(member.team)
+      user.is_admin -> %{kind: :admin, name: "SAR Duty admin", team: nil}
+      true -> nil
+    end
+  end
+
+  defp team_area(team), do: %{kind: :team, name: team.name, team: team}
 
   @doc """
   The team switcher's rows: "SAR Duty admin" first for SAR Duty admins, then each team

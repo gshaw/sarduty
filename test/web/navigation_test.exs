@@ -33,6 +33,24 @@ defmodule Web.NavigationTest do
     end
   end
 
+  describe "outside_area/3" do
+    test "logged out, the bar names nothing" do
+      assert Navigation.outside_area(nil, @team, []) == nil
+    end
+
+    test "the team logging in lands on, then a member's team, then admin" do
+      user = %User{is_admin: false}
+      member = %Member{team: @pemberton}
+
+      assert Navigation.outside_area(user, @team, [member]) ==
+               %{kind: :team, name: "Squamish SAR", team: @team}
+
+      assert Navigation.outside_area(user, nil, [member]).team == @pemberton
+      assert %{kind: :admin} = Navigation.outside_area(%User{is_admin: true}, nil, [])
+      assert Navigation.outside_area(user, nil, []) == nil
+    end
+  end
+
   describe "sections/3" do
     test "a member sees Dashboard, Activities, and Your membership, each its own section" do
       sections = team_sections("/teams/squamish/me", member?: true, proposed_changes: 2)
@@ -46,22 +64,21 @@ defmodule Web.NavigationTest do
              ] = sections
     end
 
-    test "a team admin who is a member sees all seven sections" do
+    test "a team admin who is a member sees all six sections" do
       assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
                [
                  ["dashboard"],
                  ["activities", "templates"],
-                 ["members", "groups", "qualifications", "endorsements"],
+                 ["members", "groups", "qualifications", "endorsements", "tax-credit-letters"],
                  ["equipment"],
-                 ["tax-credit-letters"],
                  ["settings"],
                  ["me"]
                ]
     end
 
-    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 6" do
+    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 5" do
       sections = team_sections("/teams/squamish", team_admin?: true)
-      assert length(sections) == 6
+      assert length(sections) == 5
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
@@ -101,9 +118,10 @@ defmodule Web.NavigationTest do
       assert current(team_sections("/teams/squamish/members-x", opts)) == []
     end
 
-    test "SAR Duty admin has two sections; account settings and pages outside an area none" do
+    test "SAR Duty admin has three sections; account settings and pages outside an area none" do
       sections = "/admin/orgs" |> Navigation.area(nil) |> Navigation.sections("/admin/orgs")
-      assert length(sections) == 2
+      assert sections |> keys() |> List.last() == ["admin-styles"]
+      assert length(sections) == 3
       assert current(sections) == ["admin-orgs"]
 
       assert "/account" |> Navigation.area(nil) |> Navigation.sections("/account") == []

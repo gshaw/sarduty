@@ -92,14 +92,15 @@ defmodule Web.Components.D4H do
 
   attr :activity, :map, required: true
 
-  # The kind in a table column: the marker, then Draft and the tracking number.
+  # The kind in a table column: the marker, then Draft and the tracking number, lined up
+  # under the word rather than the square.
   def activity_kind(assigns) do
     ~H"""
     <.activity_kind_mark activity={@activity} />
-    <div :if={!@activity.is_published}>
+    <div :if={!@activity.is_published} class="activity-kind-more">
       <.badge>Draft</.badge>
     </div>
-    <div :if={@activity.tracking_number} class="mono text-text-muted">
+    <div :if={@activity.tracking_number} class="activity-kind-more mono text-text-muted">
       {@activity.tracking_number}
     </div>
     """

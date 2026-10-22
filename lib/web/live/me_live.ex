@@ -11,7 +11,6 @@ defmodule Web.MeLive do
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
-  alias App.Operation.SaveOwnDetails
   alias App.ViewData.MemberRecords
   alias App.ViewData.Milestones
   alias Service.Format
@@ -20,8 +19,9 @@ defmodule Web.MeLive do
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
   # latest activities, from any year so it is never empty on January 1, and their
   # qualifications in the main column; their ID card, latest tax credit letter, contact
-  # details, and milestones in a sidebar. `current_member` comes from the login
-  # (Web.UserAuth, :ensure_team_access), never from the URL.
+  # details, and milestones in a sidebar, split by space, not boxes (/styles/card).
+  # `current_member` comes from the login (Web.UserAuth, :ensure_team_access), never from
+  # the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.current_member
     team = member.team
@@ -32,13 +32,12 @@ defmodule Web.MeLive do
       socket
       |> assign(:page_title, member.name)
       |> assign(member: member, team: team, now: now)
+      |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
       |> assign_activities(attended, now)
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, member |> milestones(attended, now) |> Enum.take(5))
-      |> assign(:contacts?, "primary_emergency_contact" in SaveOwnDetails.fields(team))
-      |> assign_emergency_contact()
 
     {:ok, socket}
   end
@@ -81,21 +80,6 @@ defmodule Web.MeLive do
     )
   end
 
-  # Emergency contacts are never copied (docs/members.md), so read from D4H after the
-  # page shows, as Contact details does.
-  defp assign_emergency_contact(%{assigns: %{contacts?: false}} = socket), do: socket
-
-  defp assign_emergency_contact(socket) do
-    member = socket.assigns.member
-
-    assign_async(socket, :emergency_contact, fn ->
-      case SaveOwnDetails.load(member) do
-        {:ok, details} -> {:ok, %{emergency_contact: details.primary_emergency_contact}}
-        {:error, text} -> {:error, text}
-      end
-    end)
-  end
-
   def render(assigns) do
     ~H"""
     <div class="person-head">
@@ -124,30 +108,22 @@ defmodule Web.MeLive do
       </div>
       <aside class="membership-aside">
         <div :if={@team.id_cards_enabled or @letter} class="membership-aside-top">
-          <section id="card-and-letter" class="card side-card">
-            <.id_card :if={@team.id_cards_enabled} team={@team} card={@card} />
-            <hr :if={@team.id_cards_enabled and @letter} />
-            <.member_letter
-              :if={@letter}
-              id="letter"
-              team={@team}
-              letter={@letter}
-              year={@letter.year}
-              hours={false}
-            />
-          </section>
+          <.id_card :if={@team.id_cards_enabled} team={@team} card={@card} />
+          <.member_letter
+            :if={@letter}
+            id="letter"
+            team={@team}
+            letter={@letter}
+            year={@letter.year}
+            hours={false}
+          />
         </div>
         <div class="membership-aside-bottom">
-          <section id="details-and-milestones" class="card side-card">
-            <.contact_details
-              team={@team}
-              member={@member}
-              contacts?={@contacts?}
-              emergency_contact={assigns[:emergency_contact]}
-            />
-            <hr />
-            <.milestones milestones={@milestones} />
-          </section>
+          <.contact_details
+            team={@team}
+            member={@member}
+          />
+          <.milestones milestones={@milestones} today={@today} />
         </div>
       </aside>
     </div>
@@ -203,7 +179,7 @@ defmodule Web.MeLive do
           {Format.duration(MemberRecords.minutes(attendance))}
         </:col>
       </.table>
-      <p :if={@activities != []} class="mt-2">
+      <p :if={@activities != []} class="action mt-2">
         <.a
           id="all-activities"
           navigate={~p"/teams/#{@team}/me/activities?year=#{@latest_year}"}
@@ -299,9 +275,8 @@ defmodule Web.MeLive do
 
   attr :team, :map, required: true
   attr :member, :map, required: true
-  attr :contacts?, :boolean, required: true
-  attr :emergency_contact, :any, default: nil
-
+  # No emergency contact: SAR Duty never copies them (docs/members.md), and reading D4H
+  # would hold up the page. Contact details reads and changes them.
   defp contact_details(assigns) do
     ~H"""
     <div id="contact-details">
@@ -311,20 +286,8 @@ defmodule Web.MeLive do
         <dd id="contact-mobile">{@member.phone || "None"}</dd>
         <dt>Address</dt>
         <dd id="contact-address">{@member.address || "None"}</dd>
-        <%= if @contacts? do %>
-          <dt>Emergency contact</dt>
-          <dd id="contact-emergency">
-            <.async_result :let={contact} assign={@emergency_contact}>
-              <:loading><span class="hint">Reading {D4H.service_name(@team)}…</span></:loading>
-              <:failed :let={_failure}>
-                <span class="hint">SAR Duty cannot reach {D4H.service_name(@team)}.</span>
-              </:failed>
-              {contact_line(contact)}
-            </.async_result>
-          </dd>
-        <% end %>
       </dl>
-      <p class="mb-0">
+      <p class="action mb-0">
         <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>
           Change contact details
         </.a>
@@ -334,6 +297,7 @@ defmodule Web.MeLive do
   end
 
   attr :milestones, :list, required: true
+  attr :today, Date, required: true
 
   defp milestones(assigns) do
     ~H"""
@@ -343,16 +307,15 @@ defmodule Web.MeLive do
         No milestones yet. The first comes with your first incident, 100 hours, or 1 year on
         the team.
       </p>
-      <.milestone_list :if={@milestones != []} id="milestones-list" milestones={@milestones} />
+      <.milestone_list
+        :if={@milestones != []}
+        id="milestones-list"
+        milestones={@milestones}
+        today={@today}
+      />
     </div>
     """
   end
-
-  # "Jo Rivera · 604-555-0101", or None when D4H has no contact.
-  defp contact_line(%{"name" => name} = contact) when is_binary(name),
-    do: [name, contact["primary_phone"]] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
-
-  defp contact_line(_contact), do: "None"
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 

@@ -87,7 +87,7 @@ defmodule Web.UserLoginCodeLive do
         <p :if={Web.Layouts.dev_mailbox?()} id="login-dev-mailbox">
           In development the email is in the <.a href="/dev/mailbox" external={true}>local mailbox</.a>.
         </p>
-        <p>
+        <p class="action">
           <.a id="login-again" navigate={~p"/login"}>Use a different email</.a>
         </p>
       <% else %>
@@ -99,7 +99,7 @@ defmodule Web.UserLoginCodeLive do
         <p :if={not Twilio.delivers?()} id="login-dev-text">
           In development the text message is in the server log, not sent.
         </p>
-        <p>
+        <p class="action">
           <.a id="login-again" navigate={~p"/login"}>Use a different number or an email</.a>
         </p>
       <% end %>

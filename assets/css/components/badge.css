@@ -44,6 +44,9 @@
     flex: none;
   }
 
+  /* Draft and the tracking number under the marker start where its word does. */
+  .activity-kind-more { margin-top: var(--sp-1); padding-left: calc(10px + 6px); }
+
   .activity-kind-incident { --c: var(--incident); }
   .activity-kind-exercise { --c: var(--exercise); }
   .activity-kind-event { --c: var(--event); }

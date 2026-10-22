@@ -39,7 +39,7 @@ defmodule Web.TeamSignupLive do
         with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
         Duty in D4H. You must also be an Owner or Editor on the team in D4H.
       </p>
-      <p>
+      <p class="action">
         <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
           How to create a D4H access key
         </.a>

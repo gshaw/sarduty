@@ -14,7 +14,10 @@ decides all of it from the page's path and assigns. It is pure, and
   `current_team`, with `team_admin?` and `current_member`. There is no separate member
   area.
 - **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams, Organizations, and ID cards,
-  then Admins, Events, and MCP.
+  then Admins, Events, and MCP, then the Style guide.
+- **The footer** (Verify an ID card, Terms, Privacy) is only on the public pages: home,
+  terms, and privacy. In an area its links are noise. In dev, app pages keep a line with
+  the dashboard and the mailbox.
 - **Account settings**, `/account`: one page, so no side navigation. It is about the login,
   the same on every team.
 
@@ -26,19 +29,18 @@ the account menu and no area name.
 Sections, split by a divider, with no headings. A section with nothing the person can see
 is left out, and so is its divider.
 
-| Section | Links                                         | Who         |
-| ------- | --------------------------------------------- | ----------- |
-| 1       | Dashboard                                     | everyone    |
-| 2       | Activities                                    | everyone    |
-| 2       | Templates, Proposed changes                   | team admins |
-| 3       | Members, Groups, Qualifications, Endorsements | team admins |
-| 4       | Equipment                                     | team admins |
-| 5       | Tax credit letters                            | team admins |
-| 6       | Team settings                                 | team admins |
-| 7       | Your membership                               | members     |
+| Section | Links                                                             | Who         |
+| ------- | ----------------------------------------------------------------- | ----------- |
+| 1       | Dashboard                                                         | everyone    |
+| 2       | Activities                                                        | everyone    |
+| 2       | Templates, Proposed changes                                       | team admins |
+| 3       | Members, Groups, Qualifications, Endorsements, Tax credit letters | team admins |
+| 4       | Equipment                                                         | team admins |
+| 5       | Team settings                                                     | team admins |
+| 6       | Your membership                                                   | members     |
 
-- A team admin who is a member sees all seven. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 6. A member sees Dashboard, Activities, and
+- A team admin who is a member sees all six. A SAR Duty admin who opened a team from
+  Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities, and
   Your membership, each in its own section.
 - **Templates and Proposed changes are links of their own**, after Activities, so a team
   admin finds them without opening Activities first. Proposed changes shows only when the
@@ -49,11 +51,18 @@ is left out, and so is its divider.
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)):
   General, Team admins, Member logins, Hours tags, and MCP tokens once a SAR Duty admin
   turns MCP on. Until then, General says how to get it. The URLs did not change.
-- Later sections already have homes: Checklists after Equipment, and Documents and a
-  team ID cards page with Tax credit letters.
+- **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
+  letter is about members, and a section of one link made the menu look like a table.
+- Later pages already have homes: Checklists in Equipment's section, and Documents and a
+  team ID cards page after Tax credit letters.
 
 ## The top bar
 
+- **The logo** always goes to the home page, logged in or not, so the public site is
+  never out of reach. Logged in on a page outside every area (home, terms, privacy), the
+  bar looks as it does elsewhere: it names the team logging in lands on, else your member
+  team, else SAR Duty admin (`Navigation.outside_area/3`), with the switcher on it. The
+  page is in no area, so the switcher marks nothing and the name always opens it.
 - **After the logo, the area's name**: the team's, SAR Duty admin, or Account settings.
 - **The team switcher** sits on the name when you can go somewhere else. Its menu, headed
   Switch team, lists SAR Duty admin first for SAR Duty admins, then each team where you

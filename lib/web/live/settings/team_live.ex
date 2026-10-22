@@ -178,7 +178,7 @@ defmodule Web.Settings.TeamLive do
             The key is named <strong>{@current_team.d4h_access_key_owner}</strong>
             in SAR Duty Records.
           </p>
-          <p>
+          <p class="action">
             <.a
               id="records-keys"
               external={true}

@@ -3,7 +3,11 @@
   <p class="lead">What a member reached, and the day.</p>
 
   <div class="demo max-w-md">
-    <.milestone_list id="milestone-list-demo" milestones={SampleData.milestones()} />
+    <.milestone_list
+      id="milestone-list-demo"
+      milestones={SampleData.milestones()}
+      today={~D[2026-10-12]}
+    />
   </div>
 
   <h2>When to use</h2>
@@ -22,12 +26,14 @@
     <li>
       Each row is what they reached, then the day and the activity that reached it. Years have no activity.
     </li>
-    <li>A plain list: no badges, pictures, or levels.</li>
+    <li>
+      An icon for each kind: a clock for hours, a cake for years, a lifebuoy for incidents. One reached in the last 30 days has its icon in amber, a small celebration. No badges, levels, or confetti.
+    </li>
   </ul>
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.milestone_list id milestones&gt;</code>
-    with milestones from <code>Milestones.build/5</code>, newest first.
+    <code>&lt;.milestone_list id milestones today&gt;</code>
+    with milestones from <code>Milestones.build/5</code>, newest first, and today in the team's zone.
   </p>
 </.shell>

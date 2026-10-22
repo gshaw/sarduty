@@ -1,16 +1,17 @@
-/* Your membership (#406): a main column and a sidebar of two cards. On a phone one column:
-   the first card, then the main column, then the second card. */
+/* Your membership (#406): a main column and a sidebar of sections split by space, no
+   boxes. On a phone one column: ID card and letter, then the main column, then contact
+   details and milestones. */
 @layer components {
-  .membership { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--sp-6); align-items: start; }
-  .membership-aside { display: grid; gap: var(--sp-4); }
+  .membership { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--sp-8); align-items: start; }
+  .membership-aside, .membership-aside-top, .membership-aside-bottom { display: grid; gap: var(--sp-8); }
   @media (width < 64rem) {
-    .membership { display: flex; flex-direction: column; align-items: stretch; }
+    .membership { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-8); }
     .membership-aside { display: contents; }
     .membership-aside-top { order: -1; }
     .membership-aside-bottom { order: 1; }
   }
 
-  /* A card's two sections split by one line, edge to edge. */
+  /* A card's two sections split by one line, edge to edge, as on the year page. */
   .side-card hr { margin: var(--sp-4) calc(-1 * var(--sp-4)); border: 0; border-top: 1px solid var(--border-subtle); }
 
   /* Label and value side by side, such as a letter's hours. */
@@ -22,4 +23,10 @@
   .person-head { display: flex; gap: var(--sp-4); align-items: center; }
   .avatar-lg { position: relative; width: 64px; height: 64px; overflow: hidden; font-size: var(--fs-lg); line-height: var(--lh-lg); }
   .avatar-lg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+  /* Milestones: an icon per kind, amber for one reached in the last 30 days. */
+  .milestone-list > li { display: flex; gap: var(--sp-3); align-items: flex-start; padding-block: var(--sp-2); border-top: 1px solid var(--border-subtle); }
+  .milestone-list > li:first-child { border-top: 0; }
+  .milestone-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: none; border-radius: 999px; background: var(--surface-alt); color: var(--text-muted); }
+  .milestone-list > li.is-new .milestone-icon { background: var(--accent); color: var(--nav); }
 }
