@@ -109,4 +109,29 @@ defmodule App.ViewData.MemberRecordsTest do
                0
     end
   end
+
+  describe "hours_kind/2 and other_minutes/2" do
+    @hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours", other: nil}
+
+    defp row(tags, minutes),
+      do: %{
+        activity: %{tags: tags},
+        started_at: nil,
+        finished_at: nil,
+        duration_in_minutes: minutes
+      }
+
+    test "an activity counts for the hours its tags say, primary first, else other" do
+      kind = fn tags -> tags |> row(0) |> MemberRecords.hours_kind(@hours_tags) end
+
+      assert kind.(["Primary Hours", "Secondary Hours"]) == :primary
+      assert kind.(["Secondary Hours"]) == :secondary
+      assert kind.(nil) == :other
+    end
+
+    test "other is the time on activities with neither hours tag" do
+      rows = [row(["Primary Hours"], 60), row([], 45), row(["Social"], 30)]
+      assert MemberRecords.other_minutes(rows, @hours_tags) == 75
+    end
+  end
 end

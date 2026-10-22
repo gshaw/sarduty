@@ -349,8 +349,6 @@ defmodule Web.MeLive do
 
   defp contact_line(_contact), do: "None"
 
-  # "Oct 15": the year is in the heading.
-
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 
   defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"

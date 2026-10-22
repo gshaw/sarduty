@@ -29,6 +29,9 @@ defmodule Service.Format do
 
   def time_short(datetime, timezone), do: datetime(datetime, timezone, "%H:%M")
 
+  @doc ~s(A date with no year, in a table under a heading that names the year: "Oct 20".)
+  def month_day(datetime, timezone), do: datetime(datetime, timezone, "%b %-d")
+
   @doc ~s(A date and time with no year: "Oct 20, 12:00".)
   def month_day_time(datetime, timezone), do: datetime(datetime, timezone, "%b %-d, %H:%M")
 
