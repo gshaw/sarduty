@@ -9,7 +9,7 @@ defmodule App.Model.Chore do
   alias App.Model.Team
   alias App.Repo
 
-  # Time a member gives the team outside activities (#341), logged in their member area.
+  # Time a member gives the team outside activities (#341), logged on their Chores page.
   # It waits until a team admin accepts or declines it. The date is a day on the team's
   # clock, and a chore counts in the month it was done, not the month it was logged.
   schema "chores" do
