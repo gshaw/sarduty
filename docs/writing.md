@@ -130,6 +130,9 @@ Where the words go:
 - **The member's own row:** "You're invited." and the two buttons. After they answer, "Signed
   up" with a check mark or "Can't make it", then "Change". "Add to calendar" follows "Signed
   up" where there is room.
+- **Invitations the member has not replied to:** a count in Coming up's header on the
+  Dashboard, such as "2 waiting for your reply". The Activities menu's count stays the team
+  admin's proposed changes.
 - **The door:** "Yet to arrive", with "3 of 9 signed up".
 - **An ask by email or text:** the activity, its day and time, and "Will you be there?",
   with the same two buttons.
