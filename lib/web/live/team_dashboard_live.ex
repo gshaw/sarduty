@@ -211,10 +211,7 @@ defmodule Web.TeamDashboardLive do
       <div class="min-w-0">
         <.activity_kind_mark activity={@activity} class="text-sm" />
         <h2 class="next-up-title">
-          <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>
-            {@activity.title}
-          </.a>
-          <.d4h_activity_link :if={!@team_admin?} team={@team} activity={@activity} />
+          <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
         </h2>
         <p class="hint">{where_and_when(@activity, @now)}</p>
         <.open_in_maps
@@ -261,15 +258,12 @@ defmodule Web.TeamDashboardLive do
       </p>
       <ul :if={@activities != []} id="coming-up-list" class="row-links">
         <li :for={activity <- @activities} id={"coming-up-#{activity.id}"}>
-          <.row_link :if={@team_admin?} navigate={~p"/teams/#{@team}/activities/#{activity.id}"}>
+          <.row_link navigate={~p"/teams/#{@team}/activities/#{activity.id}"}>
             <.coming_up_row team={@team} activity={activity} now={@now} />
           </.row_link>
-          <div :if={!@team_admin?} class="py-2">
-            <.coming_up_row team={@team} activity={activity} now={@now} />
-          </div>
         </li>
       </ul>
-      <footer :if={@team_admin?}>
+      <footer>
         <.a navigate={~p"/teams/#{@team}/activities?when=future&sort=date"}>
           All future activities
         </.a>
@@ -453,7 +447,7 @@ defmodule Web.TeamDashboardLive do
           id="stat-activities"
           value={Format.number(@charts.activities_ytd)}
           label={"Activities in #{@charts.year}"}
-          href={if(@team_admin?, do: ~p"/teams/#{@team}/activities?when=past&sort=date-")}
+          href={~p"/teams/#{@team}/activities?when=past&sort=date-"}
           delta={versus(@charts.activities_ytd, @charts.activities_last_ytd)}
         >
           <.sparkline values={@charts.monthly_activities} />
@@ -487,7 +481,7 @@ defmodule Web.TeamDashboardLive do
         <section class="card span-7">
           <header>
             <h2 class="chart-title">Activities by month</h2>
-            <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>
+            <.a navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>
               All activities
             </.a>
           </header>

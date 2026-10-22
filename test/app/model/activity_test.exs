@@ -81,4 +81,63 @@ defmodule App.Model.ActivityTest do
     assert Activity.counts_as(["Training"], @defaults) == nil
     assert Activity.counts_as(nil, @defaults) == nil
   end
+
+  describe "visible_to_member/3" do
+    defp hours_ago(hours),
+      do: DateTime.utc_now() |> DateTime.add(-hours, :hour) |> DateTime.truncate(:second)
+
+    test "every exercise and event, and only the incidents the member attended, never deleted" do
+      team = team_fixture()
+      member = member_fixture(team)
+      now = DateTime.utc_now()
+
+      exercise = activity_fixture(team, %{activity_kind: "exercise"})
+      event = activity_fixture(team, %{activity_kind: "event"})
+      attended = activity_fixture(team, %{activity_kind: "incident", started_at: hours_ago(5)})
+      attendance_fixture(attended, member, %{started_at: hours_ago(5)})
+
+      not_attended =
+        activity_fixture(team, %{activity_kind: "incident", started_at: hours_ago(5)})
+
+      attendance_fixture(not_attended, member_fixture(team), %{started_at: hours_ago(5)})
+      activity_fixture(team, %{activity_kind: "exercise", deleted_at: hours_ago(1)})
+      activity_fixture(team_fixture(), %{activity_kind: "exercise"})
+
+      ids =
+        Activity
+        |> Activity.visible_to_member(member, now)
+        |> select([a], a.id)
+        |> Repo.all()
+        |> Enum.sort()
+
+      assert ids == Enum.sort([exercise.id, event.id, attended.id])
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Activity.find_visible!(member, not_attended.id, now)
+      end
+    end
+  end
+
+  # What a member sees of the team's activities lives in Activity.visible_to_member/3
+  # (#406). Every page or download members reach that shows the team's activities starts
+  # there, so an incident they did not attend never shows by its title.
+  test "every team page members reach goes through visible_to_member" do
+    pages =
+      for path <- Path.wildcard("lib/web/**/*.ex"),
+          source = File.read!(path),
+          source =~ "access: :team" or source =~ "pipe_through :require_team_access",
+          source =~ ~r/\b(Activity|activities)\b/,
+          not String.ends_with?(path, "router.ex"),
+          do: {path, source}
+
+    assert length(pages) >= 3
+
+    for {path, source} <- pages do
+      assert source =~ ~r/visible_to_member|find_visible!|visible_to:/,
+             "#{path} shows members activities without Activity.visible_to_member/3"
+    end
+
+    calendar = File.read!("lib/web/controllers/activity_calendar_controller.ex")
+    assert calendar =~ "find_visible!"
+  end
 end

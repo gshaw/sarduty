@@ -1,5 +1,5 @@
 defmodule Web.ActivityCollectionLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team}
 
   import Web.Components.ActivityFilterTable
 
@@ -10,7 +10,14 @@ defmodule Web.ActivityCollectionLive do
     {:ok, assign(socket, page_title: "Activities")}
   end
 
+  # Members open it too (#406), read only, on coming activities: the ones they see
+  # (Activity.visible_to_member/3), with no tags, hours, or status.
   def handle_params(params, _uri, socket) do
+    params =
+      if socket.assigns.team_admin?,
+        do: params,
+        else: Map.merge(%{"when" => "future", "sort" => "date"}, params)
+
     case ActivityFilterViewModel.validate(params) do
       # credo:disable-for-next-line
       {:ok, filter_options, changeset} ->
@@ -20,7 +27,7 @@ defmodule Web.ActivityCollectionLive do
           socket
           |> assign(:sort, filter_options.sort)
           |> assign(:when, filter_options.when)
-          |> assign(:paginated, build_paginated_content(current_team, filter_options))
+          |> assign(:paginated, build_paginated_content(socket.assigns, filter_options))
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
 
@@ -36,7 +43,7 @@ defmodule Web.ActivityCollectionLive do
     <div class="heading-row">
       <h1 class="title">Activities</h1>
       <.button
-        :if={D4H.records?(@current_team)}
+        :if={@team_admin? and D4H.records?(@current_team)}
         id="activity-add"
         navigate={~p"/teams/#{@current_team}/activities/new"}
       >
@@ -50,6 +57,7 @@ defmodule Web.ActivityCollectionLive do
       sort={@sort}
       path_fn={@path_fn}
       team={@current_team}
+      team_admin?={@team_admin?}
     />
     """
   end
@@ -79,9 +87,14 @@ defmodule Web.ActivityCollectionLive do
 
   defp sort_for_new_when(form_params, _old_when), do: form_params
 
-  def build_paginated_content(team, filter_options) do
-    ActivityFilterViewModel.build_paginated_content(team, nil, filter_options)
-  end
+  defp build_paginated_content(%{team_admin?: true, current_team: team}, filter_options),
+    do: ActivityFilterViewModel.build_paginated_content(team, nil, filter_options)
+
+  defp build_paginated_content(%{current_team: team, current_member: member}, filter_options),
+    do:
+      ActivityFilterViewModel.build_paginated_content(team, nil, filter_options,
+        visible_to: member
+      )
 
   def build_path_fn(team, filter_options) do
     fn

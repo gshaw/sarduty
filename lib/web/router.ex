@@ -243,10 +243,16 @@ defmodule Web.Router do
       pipe_through :require_team_member
 
       get "/image", MeController, :image
-      get "/activities/:id/calendar", MeController, :calendar
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
+    end
+
+    # Team routes members reach too, like a LiveView with access: :team.
+    scope "/teams/:subdomain" do
+      pipe_through :require_team_access
+
+      get "/activities/:id/calendar", ActivityCalendarController, :show
     end
 
     scope "/teams/:subdomain" do

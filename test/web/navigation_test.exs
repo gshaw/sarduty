@@ -34,12 +34,14 @@ defmodule Web.NavigationTest do
   end
 
   describe "sections/3" do
-    test "a member sees Dashboard, then Your membership" do
-      sections = team_sections("/teams/squamish/me", member?: true)
-      assert keys(sections) == [["dashboard"], ["me"]]
+    test "a member sees Dashboard, Activities, and Your membership, each its own section" do
+      sections = team_sections("/teams/squamish/me", member?: true, proposed_changes: 2)
+      assert keys(sections) == [["dashboard"], ["activities"], ["me"]]
+      assert [_dashboard, [%{count: nil}] | _rest] = sections
 
       assert [
                _dashboard,
+               _activities,
                [%{label: "Your membership", path: "/teams/squamish/me", current: true}]
              ] = sections
     end

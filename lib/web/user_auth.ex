@@ -358,6 +358,25 @@ defmodule Web.UserAuth do
     end
   end
 
+  @doc """
+  The plug for a team route that members reach too (#406), like `access: :team`: assigns
+  `current_team`, `current_member`, and `team_admin?`, or a 404 for anyone who is neither.
+  """
+  def require_team_access(conn, _opts) do
+    user = conn.assigns.current_user
+    subdomain = conn.path_params["subdomain"]
+    admin_team = authorized_team(user, subdomain)
+    member = member_login(user, subdomain)
+
+    unless allowed?(:team, admin_team, member), do: raise(Web.Status.NotFound)
+
+    assign(conn,
+      current_team: admin_team || member.team,
+      current_member: member,
+      team_admin?: admin_team != nil
+    )
+  end
+
   @doc "The plug for a member's own downloads: `member` is the logged-in member on the URL's team."
   def require_team_member(conn, _opts) do
     case member_login(conn.assigns.current_user, conn.path_params["subdomain"]) do

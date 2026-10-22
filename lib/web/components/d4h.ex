@@ -1,37 +1,19 @@
 defmodule Web.Components.D4H do
   use Web, :function_component
 
-  import Web.Components.A
-
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Team
 
   @doc """
   "Refreshed from D4H 7 min ago", or from SAR Duty Records, for the team home and a
-  member's overview. Glossary: refresh, never update or sync.
+  Dashboard. Glossary: refresh, never update or sync.
   """
   def refreshed_ago(team, now) do
     case team |> Team.d4h_updated_at() |> Service.Format.minutes_ago(now, team.timezone) do
       nil -> "Not refreshed from #{D4H.service_name(team)} yet"
       ago -> "Refreshed from #{D4H.service_name(team)} #{ago}"
     end
-  end
-
-  attr :team, :map, required: true
-  attr :activity, :map, required: true
-
-  @doc """
-  The activity's title, linked to it in D4H, for a member's tables. A team on SAR Duty
-  Records gets the title alone: a member cannot open its activities (docs/records.md).
-  """
-  def d4h_activity_link(assigns) do
-    ~H"""
-    <span :if={D4H.records?(@team)}>{@activity.title}</span>
-    <.a :if={!D4H.records?(@team)} href={D4H.activity_url(@team, @activity)} external={true}>
-      {@activity.title}
-    </.a>
-    """
   end
 
   attr :activity, :map, required: true

@@ -29,7 +29,8 @@ is left out, and so is its divider.
 | Section | Links                                         | Who         |
 | ------- | --------------------------------------------- | ----------- |
 | 1       | Dashboard                                     | everyone    |
-| 2       | Activities, Templates, Proposed changes       | team admins |
+| 2       | Activities                                    | everyone    |
+| 2       | Templates, Proposed changes                   | team admins |
 | 3       | Members, Groups, Qualifications, Endorsements | team admins |
 | 4       | Equipment                                     | team admins |
 | 5       | Tax credit letters                            | team admins |
@@ -37,8 +38,8 @@ is left out, and so is its divider.
 | 7       | Your membership                               | members     |
 
 - A team admin who is a member sees all seven. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 6. A member sees Dashboard, then Your
-  membership.
+  Admin and is not a member there sees 1 to 6. A member sees Dashboard, Activities, and
+  Your membership, each in its own section.
 - **Templates and Proposed changes are links of their own**, after Activities, so a team
   admin finds them without opening Activities first. Proposed changes shows only when the
   team has MCP on, or something waits. It counts the AI agent change sets that wait for a

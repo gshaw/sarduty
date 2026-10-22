@@ -1,5 +1,5 @@
 defmodule Web.ActivityLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team}
 
   import Ecto.Query
   import Web.Components.ActivityMap
@@ -8,6 +8,7 @@ defmodule Web.ActivityLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Attendance
   alias App.Model.Coordinate
   alias App.Model.EquipmentUsage
   alias App.Repo
@@ -15,6 +16,30 @@ defmodule Web.ActivityLive do
 
   def mount(_params, _session, socket) do
     {:ok, socket}
+  end
+
+  # Members open it too (#406), read only: an activity they see (Activity.visible_to_member/3)
+  # with the names of who signed up or attended, and none of the team admin's actions.
+  def handle_params(params, _uri, %{assigns: %{team_admin?: false}} = socket) do
+    now = DateTime.utc_now()
+
+    activity =
+      socket.assigns.current_member
+      |> Activity.find_visible!(params["id"], now)
+      |> Repo.preload(:team)
+
+    coming? = DateTime.after?(activity.started_at, now)
+
+    socket =
+      assign(socket,
+        page_title: activity.title,
+        activity: activity,
+        coming?: coming?,
+        names: names(activity, coming?, now),
+        map: build_map(activity)
+      )
+
+    {:noreply, socket}
   end
 
   def handle_params(params, _uri, socket) do
@@ -54,6 +79,55 @@ defmodule Web.ActivityLive do
       _none ->
         nil
     end
+  end
+
+  # Who signed up for a coming activity, or attended a past one: names only, A to Z.
+  defp names(activity, coming?, now) do
+    rows = if coming?, do: Attendance.signed_up(now), else: Attendance.attended(now)
+
+    rows
+    |> where([r], r.activity_id == ^activity.id)
+    |> join(:inner, [r], m in assoc(r, :member), as: :member)
+    |> where([member: m], m.team_id == ^activity.team_id)
+    |> select([member: m], m.name)
+    |> distinct(true)
+    |> order_by([member: m], asc: m.name)
+    |> Repo.all()
+  end
+
+  def render(%{team_admin?: false} = assigns) do
+    ~H"""
+    <.breadcrumbs>
+      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
+      <:item label={"#{@activity.ref_id}"} />
+    </.breadcrumbs>
+
+    <h1 class="title">{@activity.title}</h1>
+    <div class="content-wrapper">
+      <aside class="content-1/3">
+        <.member_sidebar activity={@activity} maps_app={@current_user.maps_app} />
+      </aside>
+      <main class="content-2/3">
+        <div :if={@map} class="measure mb-4">
+          <.activity_map id="activity-map" map={@map} label="Map of activity" />
+        </div>
+        <div class="mb-4">
+          <.markdown content={@activity.description} />
+        </div>
+        <section id="activity-people">
+          <h2 class="heading">
+            {if @coming?, do: "Signed up", else: "Attended"} · {length(@names)}
+          </h2>
+          <p :if={@names == []} class="hint">
+            {if @coming?, do: "Nobody has signed up yet.", else: "Nobody attended."}
+          </p>
+          <ul :if={@names != []} id="activity-names" class="row-links">
+            <li :for={name <- @names} class="py-2">{name}</li>
+          </ul>
+        </section>
+      </main>
+    </div>
+    """
   end
 
   def render(assigns) do
@@ -101,6 +175,83 @@ defmodule Web.ActivityLive do
     """
   end
 
+  # The facts a member reads: no tags, hours, history, or actions.
+  defp member_sidebar(assigns) do
+    ~H"""
+    <dl>
+      <dt>Kind</dt>
+      <dd><.activity_kind_mark activity={@activity} /></dd>
+      <dt>Start</dt>
+      <dd>{Service.Format.datetime_medium(@activity.started_at, @activity.team.timezone)}</dd>
+      <dt>Finish</dt>
+      <dd>{Service.Format.datetime_medium(@activity.finished_at, @activity.team.timezone)}</dd>
+      <dt>Duration</dt>
+      <dd>{format_activity_duration(@activity)}</dd>
+      <.place activity={@activity} maps_app={@maps_app} />
+      <dt>Links</dt>
+      <dd>
+        <ul id="activity-links" class="action-list">
+          <li>
+            <.a
+              id="activity-calendar"
+              href={~p"/teams/#{@activity.team}/activities/#{@activity.id}/calendar"}
+            >
+              Add to calendar
+            </.a>
+          </li>
+          <li :if={!D4H.records?(@activity.team)}>
+            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
+              Open D4H activity
+            </.a>
+          </li>
+        </ul>
+      </dd>
+    </dl>
+    """
+  end
+
+  attr :activity, :map, required: true
+  attr :maps_app, :string, required: true
+
+  # The address and the latitude and longitude, each with a copy button. The map link goes
+  # on the latitude and longitude, which pin the exact spot.
+  defp place(assigns) do
+    ~H"""
+    <div :if={@activity.address}>
+      <dt>Address</dt>
+      <dd>
+        {@activity.address}<.copy_button
+          id="activity-copy-address"
+          value={@activity.address}
+          label="Copy address"
+        />
+        <.open_in_maps
+          :if={!Activity.pin(@activity)}
+          id="activity-maps"
+          app={@maps_app}
+          address={@activity.address}
+        />
+      </dd>
+    </div>
+    <div :if={Activity.pin(@activity)}>
+      <dt>Latitude and longitude</dt>
+      <dd>
+        {@activity.coordinate}<.copy_button
+          id="activity-copy-coordinate"
+          value={@activity.coordinate}
+          label="Copy latitude and longitude"
+        />
+        <.open_in_maps
+          id="activity-maps"
+          app={@maps_app}
+          coordinate={Activity.pin(@activity)}
+          label={@activity.title}
+        />
+      </dd>
+    </div>
+    """
+  end
+
   def sidebar_content(assigns) do
     ~H"""
     <dl>
@@ -132,39 +283,7 @@ defmodule Web.ActivityLive do
         <dd>{hours_type}</dd>
       </div>
 
-      <%!-- The map link goes on the latitude and longitude, which pin the exact spot. --%>
-      <div :if={@activity.address}>
-        <dt>Address</dt>
-        <dd>
-          {@activity.address}<.copy_button
-            id="activity-copy-address"
-            value={@activity.address}
-            label="Copy address"
-          />
-          <.open_in_maps
-            :if={!Activity.pin(@activity)}
-            id="activity-maps"
-            app={@maps_app}
-            address={@activity.address}
-          />
-        </dd>
-      </div>
-      <div :if={Activity.pin(@activity)}>
-        <dt>Latitude and longitude</dt>
-        <dd>
-          {@activity.coordinate}<.copy_button
-            id="activity-copy-coordinate"
-            value={@activity.coordinate}
-            label="Copy latitude and longitude"
-          />
-          <.open_in_maps
-            id="activity-maps"
-            app={@maps_app}
-            coordinate={Activity.pin(@activity)}
-            label={@activity.title}
-          />
-        </dd>
-      </div>
+      <.place activity={@activity} maps_app={@maps_app} />
 
       <dt>History</dt>
       <dd>

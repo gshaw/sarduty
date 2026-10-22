@@ -1,7 +1,6 @@
 defmodule Web.MeController do
   use Web, :controller
 
-  alias App.Adapter.D4H
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
@@ -9,7 +8,6 @@ defmodule Web.MeController do
   alias App.Operation.BuildTaxCreditLetterAttachment
   alias App.Operation.LoadImage
   alias App.Repo
-  alias App.ViewData.MemberRecords
 
   # A member's own downloads (#156). Web.UserAuth.require_team_member sets `member` from
   # the login, so nothing here takes a member id from the URL.
@@ -32,39 +30,6 @@ defmodule Web.MeController do
       redirect(conn, external: url)
     else
       _ -> send_resp(conn, :not_found, "")
-    end
-  end
-
-  # A calendar file for an activity the member signed up for, found among their own
-  # sign-ups, so no other activity is reachable by id.
-  def calendar(conn, %{"id" => id}) do
-    member = conn.assigns.member
-    now = DateTime.utc_now()
-
-    signed_up = MemberRecords.signed_up(member, now)
-
-    case Enum.find(signed_up, &(Integer.to_string(&1.activity.id) == id)) do
-      nil ->
-        send_resp(conn, :not_found, "")
-
-      %{activity: activity} ->
-        ics =
-          Service.Calendar.event(
-            %{
-              uid: "activity-#{activity.id}@sarduty.com",
-              title: activity.title,
-              starts_at: activity.started_at,
-              ends_at: activity.finished_at,
-              location: activity.address,
-              url: if(!D4H.records?(member.team), do: D4H.activity_url(member.team, activity))
-            },
-            now
-          )
-
-        send_download(conn, {:binary, ics},
-          filename: "#{member.team.subdomain}-activity-#{activity.id}.ics",
-          content_type: "text/calendar"
-        )
     end
   end
 

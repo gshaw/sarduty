@@ -4,7 +4,6 @@ defmodule Web.MeActivitiesLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Adapter.D4H
   alias App.Repo
 
   setup %{conn: conn} do
@@ -179,31 +178,16 @@ defmodule Web.MeActivitiesLiveTest do
     assert map |> String.split("<circle") |> length() == 2
   end
 
-  test "links each of the year's activities to D4H",
+  test "links each of the year's activities to its page in SAR Duty",
        %{conn: conn, team: team, member: member, mid_year: mid_year} do
-    activity = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})
-    attendance = attendance_fixture(activity, member, %{started_at: mid_year})
-
-    url = D4H.activity_url(team, activity)
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
-
-    assert has_element?(lv, ~s{#attendance-#{attendance.id} a[href="#{url}"]})
-    refute has_element?(lv, ".table-group-row")
-  end
-
-  test "a team on SAR Duty Records has no activity links",
-       %{conn: conn, team: team, member: member, mid_year: mid_year} do
-    team
-    |> Ecto.Changeset.change(d4h_api_host: D4H.records_host())
-    |> Repo.update!()
-
     activity = activity_fixture(team, %{title: "Swiftwater exercise", started_at: mid_year})
     attendance = attendance_fixture(activity, member, %{started_at: mid_year})
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
 
-    assert has_element?(lv, "#attendance-#{attendance.id}", "Swiftwater exercise")
-    refute has_element?(lv, "#attendance-#{attendance.id} a")
+    assert has_element?(
+             lv,
+             ~s{#attendance-#{attendance.id} a[href="/teams/#{team.subdomain}/activities/#{activity.id}"]}
+           )
   end
 end

@@ -278,23 +278,6 @@ defmodule Web.MeLiveTest do
   end
 
   describe "downloads" do
-    test "a calendar file for an activity the member signed up for, and no other",
-         %{conn: conn, team: team, member: member} do
-      starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
-      coming = activity_fixture(team, %{title: "Rope practice", started_at: starts})
-      attendance_fixture(coming, member)
-      not_mine = activity_fixture(team, %{started_at: starts})
-      attendance_fixture(not_mine, member_fixture(team))
-
-      conn = get(conn, ~p"/teams/#{team}/me/activities/#{coming.id}/calendar")
-      assert response(conn, 200) =~ "SUMMARY:Rope practice"
-      assert [content_type] = get_resp_header(conn, "content-type")
-      assert content_type =~ "text/calendar"
-
-      other = get(recycle(conn), ~p"/teams/#{team}/me/activities/#{not_mine.id}/calendar")
-      assert response(other, 404)
-    end
-
     test "the member's own letter", %{conn: conn, team: team, member: member} do
       letter = tax_credit_letter_fixture(member)
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")

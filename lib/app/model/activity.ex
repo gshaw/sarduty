@@ -6,6 +6,7 @@ defmodule App.Model.Activity do
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.Team
   alias App.Repo
@@ -197,6 +198,30 @@ defmodule App.Model.Activity do
   def not_deleted(query), do: where(query, [r], is_nil(r.deleted_at))
 
   def deleted?(%Activity{deleted_at: deleted_at}), do: deleted_at != nil
+
+  @doc """
+  The activities a member who is not a team admin sees (#406): every exercise and event,
+  and the incidents they attended, since an incident's title or description can name
+  the person searched for. Never a deleted one. D4H's `published` means locked, not
+  visible, so it plays no part. Every page that shows a member the team's activities
+  starts here; a source test checks.
+  """
+  def visible_to_member(query \\ Activity, %Member{} = member, %DateTime{} = now) do
+    attended =
+      Attendance
+      |> Attendance.attended(now)
+      |> where([r], r.member_id == ^member.id)
+      |> select([r], r.activity_id)
+
+    query
+    |> where([r], r.team_id == ^member.team_id)
+    |> not_deleted()
+    |> where([r], r.activity_kind != "incident" or r.id in subquery(attended))
+  end
+
+  @doc "The activity with this id when the member sees it (`visible_to_member/3`), or a 404."
+  def find_visible!(%Member{} = member, id, now),
+    do: Activity |> visible_to_member(member, now) |> Repo.get!(id)
 
   @doc """
   Activities that started in the last #{Service.Period.recent_days()} days and have finished by `now`.
