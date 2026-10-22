@@ -24,9 +24,10 @@ defmodule Web.TeamDashboardLive do
   # The top half is what needs doing: what's next, and what needs a team admin. The lower
   # half is the team's year, loaded after it so the work never waits on the charts (#205).
   #
-  # Members open it too (#406), read only: their own next sign-up, For you to do, Coming
-  # up, and the team's year. Team admins also get the team's Next up with Take attendance,
-  # Needs attention, and Refresh. A team admin who is a member gets both lists.
+  # Members open it too (#406), read only, and see what a team admin sees: Next up,
+  # Coming up, and the team's year, plus For you to do. Team admins also get Take
+  # attendance, Needs attention, and Refresh now. A team admin who is a member gets both
+  # lists.
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -53,23 +54,25 @@ defmodule Web.TeamDashboardLive do
 
     socket
     |> assign(now: now)
-    |> assign(view_data: TeamDashboardViewData.build(team, now))
+    |> assign(
+      view_data: TeamDashboardViewData.build(team, now, attention?: socket.assigns.team_admin?)
+    )
     |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
     |> assign_member(now)
   end
 
-  # A member's own next sign-up and what they have to do, from Your membership's records.
+  # What a member has to do, from Your membership's records.
   defp assign_member(%{assigns: %{current_member: nil}} = socket, _now),
-    do: assign(socket, signed_up: nil, to_do: [])
+    do: assign(socket, to_do: [])
 
   defp assign_member(%{assigns: %{current_member: member}} = socket, now) do
-    card = MemberCard.find_current(member.team, member)
+    # Only a team with ID cards on offers one, as Your membership does.
+    card = if member.team.id_cards_enabled, do: MemberCard.find_current(member.team, member)
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
     letters = TaxCreditLetter.get_all_for_member(member)
     qualifications = MemberRecords.qualifications(member, now)
 
     assign(socket,
-      signed_up: member |> MemberRecords.signed_up(now) |> List.first(),
       to_do:
         MemberToDo.items(card, in_wallet?, letters, qualifications, now, member.team.timezone)
     )
@@ -106,24 +109,18 @@ defmodule Web.TeamDashboardLive do
     </div>
 
     <.next_up
-      :if={@team_admin? and @view_data.next_up}
+      :if={@view_data.next_up}
       team={@current_team}
       activity={@view_data.next_up}
       maps_app={@current_user.maps_app}
       now={@now}
-    />
-    <.signed_up_next
-      :if={!@team_admin? and @signed_up}
-      team={@current_team}
-      attendance={@signed_up}
-      maps_app={@current_user.maps_app}
-      now={@now}
+      team_admin?={@team_admin?}
     />
 
     <div class="card-grid">
       <.coming_up
         team={@current_team}
-        activities={coming_activities(@view_data, @team_admin?)}
+        activities={@view_data.coming_up}
         now={@now}
         team_admin?={@team_admin?}
       />
@@ -159,7 +156,8 @@ defmodule Web.TeamDashboardLive do
 
   # Two lines that keep their size while a refresh runs, so nothing under them moves: what
   # SAR Duty last did, cut to one line, then the links, which stay put. Refresh now is
-  # disabled while a refresh runs rather than hidden. Members get the first line only.
+  # disabled while a refresh runs rather than hidden. Only team admins refresh; everyone
+  # gets Open D4H.
   defp refresh_line(assigns) do
     assigns = assign(assigns, :refreshing?, refreshing?(assigns.view_data))
 
@@ -171,8 +169,9 @@ defmodule Web.TeamDashboardLive do
         </.spinner>
         <span :if={!@refreshing?} id="d4h-updated">{refreshed_ago(@team, @now)}</span>
       </p>
-      <p :if={@team_admin?} class="mb-0 flex items-center gap-3">
+      <p :if={@team_admin? or !D4H.records?(@team)} class="mb-0 flex items-center gap-3">
         <.button
+          :if={@team_admin?}
           id="refresh-now"
           type="button"
           variant={:link}
@@ -182,7 +181,7 @@ defmodule Web.TeamDashboardLive do
         >
           Refresh now
         </.button>
-        <span :if={!D4H.records?(@team)} aria-hidden="true">·</span>
+        <span :if={@team_admin? and !D4H.records?(@team)} aria-hidden="true">·</span>
         <.a :if={!D4H.records?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>
           Open D4H
         </.a>
@@ -195,7 +194,10 @@ defmodule Web.TeamDashboardLive do
   attr :activity, :map, required: true
   attr :maps_app, :string, required: true
   attr :now, :any, required: true
+  attr :team_admin?, :boolean, required: true
 
+  # The team's next activity, the same card for everyone. Team admins also take
+  # attendance from it.
   defp next_up(assigns) do
     ~H"""
     <section id="next-up" class="card next-up">
@@ -209,7 +211,10 @@ defmodule Web.TeamDashboardLive do
       <div class="min-w-0">
         <.activity_kind_mark activity={@activity} class="text-sm" />
         <h2 class="next-up-title">
-          <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
+          <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>
+            {@activity.title}
+          </.a>
+          <.d4h_activity_link :if={!@team_admin?} team={@team} activity={@activity} />
         </h2>
         <p class="hint">{where_and_when(@activity, @now)}</p>
         <.open_in_maps
@@ -221,6 +226,7 @@ defmodule Web.TeamDashboardLive do
         />
       </div>
       <.button
+        :if={@team_admin?}
         id="next-up-take-attendance"
         variant={:primary}
         navigate={~p"/teams/#{@team}/activities/#{@activity.id}/take-attendance"}
@@ -231,58 +237,11 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
-  # A member sees no team Next up, so its activity leads their Coming up.
-  defp coming_activities(%{next_up: nil, coming_up: coming_up}, _team_admin?), do: coming_up
-  defp coming_activities(view_data, true), do: view_data.coming_up
-  defp coming_activities(view_data, false), do: [view_data.next_up | view_data.coming_up]
-
   # "Murrin Park · in 3 hours", or the time alone when D4H has no place.
   defp where_and_when(activity, now) do
     [activity.address, Format.starts_in(activity.started_at, now)]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(" · ")
-  end
-
-  attr :team, :map, required: true
-  attr :attendance, :map, required: true
-  attr :maps_app, :string, required: true
-  attr :now, :any, required: true
-
-  # A member's own Next up: the next activity they signed up for, at any distance.
-  defp signed_up_next(assigns) do
-    assigns = assign(assigns, :activity, assigns.attendance.activity)
-
-    ~H"""
-    <section id="next-up" class="card next-up">
-      <div class="next-up-when">
-        <span class="hint">You're signed up</span>
-        <span class="next-up-day">
-          {Format.day_coming_up(@activity.started_at, @now, @team.timezone)}
-        </span>
-        <span class="next-up-time">{Format.time_short(@activity.started_at, @team.timezone)}</span>
-      </div>
-      <div class="min-w-0">
-        <.activity_kind_mark activity={@activity} class="text-sm" />
-        <h2 class="next-up-title">
-          <.d4h_activity_link team={@team} activity={@activity} />
-        </h2>
-        <p class="hint">{where_and_when(@activity, @now)}</p>
-        <.open_in_maps
-          id="next-up-maps"
-          app={@maps_app}
-          coordinate={Activity.pin(@activity)}
-          address={@activity.address}
-          label={@activity.title}
-        />
-      </div>
-      <.button
-        id="next-up-calendar"
-        href={~p"/teams/#{@team}/me/activities/#{@activity.id}/calendar"}
-      >
-        Add to calendar
-      </.button>
-    </section>
-    """
   end
 
   attr :team, :map, required: true
@@ -421,12 +380,11 @@ defmodule Web.TeamDashboardLive do
 
   defp to_do_item(%{item: %{key: :card}} = assigns) do
     ~H"""
-    <li id="to-do-card" class="flex flex-wrap items-center gap-3 py-3">
-      <div class="flex-1 min-w-0">
-        <strong class="block">Add your ID card to Wallet</strong>
-        <span class="hint">Show it at the door. Anyone can verify it.</span>
-      </div>
-      <div class="flex flex-wrap gap-2">
+    <li id="to-do-card" class="py-3">
+      <strong class="block">Add your ID card to Wallet</strong>
+      <span class="hint block">Show it at the door. Anyone can verify it.</span>
+      <%!-- Under the text: two Wallet buttons beside it squeeze it to a narrow column. --%>
+      <div class="flex flex-wrap gap-2 mt-2">
         <.button
           :if={BuildApplePass.configured?()}
           id="to-do-apple-pass"
@@ -450,7 +408,7 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <li id={"to-do-qualification-#{@item.award.qualification_id}"} class="py-3">
       <.a navigate={~p"/teams/#{@team}/me"} class="font-semibold">
-        {@item.award.qualification.title} expires in {Format.days(@item.days)}
+        Your {@item.award.qualification.title} expires in {Format.days(@item.days)}
       </.a>
       <span class="hint block">Renewed it? Give the new certificate to a team admin.</span>
     </li>

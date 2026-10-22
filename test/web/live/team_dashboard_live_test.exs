@@ -298,16 +298,20 @@ defmodule Web.TeamDashboardLiveTest do
       %{conn: log_in_user(conn, user), team: team, member: member, user: user}
     end
 
-    test "is read only: no Refresh, no Needs attention, no team Next up",
+    test "is the team admin's page without the controls: no Refresh now, Needs attention, or Take attendance",
          %{conn: conn, team: team} do
       activity_fixture(team, at(2, %{title: "Rope practice"}))
+      activity_fixture(team, at(72, %{title: "Swiftwater"}))
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 
       assert has_element?(lv, "#d4h-updated")
+      assert has_element?(lv, "#refresh-status + p a", "Open D4H")
       refute has_element?(lv, "#refresh-now")
       refute has_element?(lv, "#needs-attention")
+      assert has_element?(lv, "#next-up", "Rope practice")
       refute has_element?(lv, "#next-up-take-attendance")
-      assert has_element?(lv, "#coming-up", "Rope practice")
+      assert has_element?(lv, "#coming-up", "Swiftwater")
+      refute has_element?(lv, "#coming-up", "Rope practice")
       refute has_element?(lv, "#coming-up a")
       assert has_element?(lv, "#to-do-empty")
       assert has_element?(lv, "#side-nav-dashboard[aria-current=page]")
@@ -318,21 +322,6 @@ defmodule Web.TeamDashboardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       render_hook(lv, "refresh", %{})
       refute has_element?(lv, "#refreshing")
-    end
-
-    test "Next up is the member's own next sign-up, with Add to calendar",
-         %{conn: conn, team: team, member: member} do
-      activity = activity_fixture(team, at(72, %{title: "Swiftwater"}))
-      attendance_fixture(activity, member, at(72, %{}))
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-
-      assert has_element?(lv, "#next-up", "You're signed up")
-      assert has_element?(lv, "#next-up", "Swiftwater")
-
-      assert has_element?(
-               lv,
-               ~s{#next-up-calendar[href="/teams/#{team.subdomain}/me/activities/#{activity.id}/calendar"]}
-             )
     end
 
     test "For you to do: the ID card leaves once it is in Wallet",
@@ -346,13 +335,26 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#to-do-card")
     end
 
-    test "For you to do: a new letter leaves once the member downloads it",
+    test "For you to do: no ID card while the team has ID cards off",
+         %{conn: conn, team: team, member: member} do
+      team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
+      member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-card")
+    end
+
+    # MemberToDo's tests cover the season with a fixed date; this checks the page reads
+    # today's.
+    test "For you to do: a new letter in letter season, until the member downloads it",
          %{conn: conn, team: team, member: member} do
       %{year: year} = this_year_fixture(team)
       letter = tax_credit_letter_fixture(member, %{year: year - 1})
+      in_season? = Service.Period.letter_season?(DateTime.utc_now(), team.timezone)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      assert has_element?(lv, "#to-do-letter", "Your #{year - 1} tax credit letter is ready")
+
+      assert has_element?(lv, "#to-do-letter", "Your #{year - 1} tax credit letter is ready") ==
+               in_season?
 
       conn |> get(~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf") |> response(200)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
@@ -370,7 +372,7 @@ defmodule Web.TeamDashboardLiveTest do
       assert has_element?(
                lv,
                ~s{#to-do-qualification-#{first_aid.id} a[href="/teams/#{team.subdomain}/me"]},
-               "First Aid expires in 30 days"
+               "Your First Aid expires in 30 days"
              )
     end
   end

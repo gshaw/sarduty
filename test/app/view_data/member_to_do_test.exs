@@ -4,6 +4,8 @@ defmodule App.ViewData.MemberToDoTest do
   alias App.ViewData.MemberToDo
 
   @now ~U[2026-10-20 19:00:00Z]
+  # Letter season, January to April.
+  @in_season ~U[2026-03-10 19:00:00Z]
   @tz "America/Vancouver"
   @card %{id: 1}
 
@@ -34,15 +36,20 @@ defmodule App.ViewData.MemberToDoTest do
 
   test "the newest letter until downloaded, and only last year's or this year's" do
     assert [%{key: :letter, letter: %{year: 2025}}] =
-             MemberToDo.items(nil, false, [letter(2024), letter(2025)], [], @now, @tz)
+             MemberToDo.items(nil, false, [letter(2024), letter(2025)], [], @in_season, @tz)
 
-    assert MemberToDo.items(nil, false, [letter(2025, @now), letter(2024)], [], @now, @tz) == []
-    assert MemberToDo.items(nil, false, [letter(2023)], [], @now, @tz) == []
+    downloaded = [letter(2025, @in_season), letter(2024)]
+    assert MemberToDo.items(nil, false, downloaded, [], @in_season, @tz) == []
+    assert MemberToDo.items(nil, false, [letter(2023)], [], @in_season, @tz) == []
+  end
+
+  test "the letter only in letter season, January to April" do
+    assert MemberToDo.items(nil, false, [letter(2025)], [], @now, @tz) == []
   end
 
   test "items come card, qualifications, then the letter" do
     rows = [row(:expiring, "First Aid", 41)]
-    items = MemberToDo.items(@card, false, [letter(2025)], rows, @now, @tz)
+    items = MemberToDo.items(@card, false, [letter(2025)], rows, @in_season, @tz)
     assert keys(items) == [:card, :qualification, :letter]
   end
 end
