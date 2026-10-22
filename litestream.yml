@@ -1,4 +1,8 @@
 # Litestream expands ${VAR} from the environment; all three are Fly secrets.
+# Metrics on :9090 for Fly to scrape ([metrics] in fly.toml), so checkpoint times show in
+# Fly's Grafana and its metrics API (#416).
+addr: ":9090"
+
 dbs:
   - path: /mnt/sarduty/sarduty.db
     replica:
