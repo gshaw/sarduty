@@ -9,7 +9,6 @@ defmodule Web.TeamScopingTest do
 
   @templates [
     "/teams/:subdomain/activities/:id",
-    "/teams/:subdomain/activities/:id/attendance",
     "/teams/:subdomain/activities/:id/edit",
     "/teams/:subdomain/activities/:id/history",
     "/teams/:subdomain/activities/:id/mileage",
@@ -111,7 +110,7 @@ defmodule Web.TeamScopingTest do
             uniq: true,
             do: path
 
-      assert length(templates) > 50
+      assert length(templates) > 40
 
       for template <- templates do
         path = template |> String.replace(":subdomain", team.subdomain) |> fill_ids()
@@ -140,9 +139,6 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id/edit", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/edit"
-
-  defp path_for("/teams/:subdomain/activities/:id/attendance", s, o),
-    do: ~p"/teams/#{s}/activities/#{o.activity.id}/attendance"
 
   defp path_for("/teams/:subdomain/activities/:id/history", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/history"

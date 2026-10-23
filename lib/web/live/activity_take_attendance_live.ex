@@ -61,7 +61,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     {:noreply, socket |> load_link() |> put_flash(:info, "Attendance link closed.")}
   end
 
-  # Reads D4H live, like the import attendance page, so the plan matches D4H now.
+  # Reads D4H live, so the plan matches D4H now.
   def handle_event("review", _params, socket) do
     %{current_team: team, activity: activity} = socket.assigns
 

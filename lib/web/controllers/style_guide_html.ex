@@ -3,7 +3,6 @@ defmodule Web.StyleGuideHTML do
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityFilterTable, only: [activity_table: 1]
-  import Web.Components.AttendanceImport
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
   import Web.Components.CopyButton
@@ -98,9 +97,7 @@ defmodule Web.StyleGuideHTML do
        [
          {:build_a_group_rule, "Build a group rule", "An editor inside a page."},
          {:filter_a_list, "Filter a list", "Filters, a summary line, a table, and pages."},
-         {:fix_form_errors, "Fix form errors", "A settings form after a failed save."},
-         {:paste_a_report, "Paste a report", "Turn a pasted attendance report into changes."},
-         {:review_changes, "Review changes", "Check the changes to make, then send them."}
+         {:fix_form_errors, "Fix form errors", "A settings form after a failed save."}
        ]}
     ]
   end
@@ -344,7 +341,6 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_whens(), to: SampleData
   defdelegate sample_hours(), to: SampleData
   defdelegate sample_statuses(), to: SampleData
-  defdelegate recommendations(), to: SampleData
   defdelegate rule_sentence_rules(), to: SampleData
   defdelegate rule_rows(), to: SampleData
   defdelegate rule_options(), to: SampleData

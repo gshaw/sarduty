@@ -1,8 +1,8 @@
 # Change sets
 
 Every write SAR Duty makes to D4H is a change set (#174, step 1). A change set is a list
-of D4H edits with what proposed them (`source`: the door, a group rule, or a pasted
-attendance report), one row per D4H record, and D4H's answer for each row. They live in
+of D4H edits with what proposed them (`source`: the door, a group rule, or an AI agent,
+among others), one row per D4H record, and D4H's answer for each row. They live in
 `change_sets` and `change_set_rows`
 ([ChangeSet](../lib/app/model/change_set.ex),
 [ChangeSetRow](../lib/app/model/change_set_row.ex)).
@@ -13,8 +13,9 @@ D4H's write functions, and
 new kind of write is a new row action there, not a new call from a page or an operation.
 
 - **Propose, then apply.** A caller builds the rows with `ChangeSet.propose!/2` and hands
-  the set to `ApplyChangeSet.call/4`. The door, group rules, and import attendance
-  propose and apply in one click, since each has its own review page first.
+  the set to `ApplyChangeSet.call/4`. The door and group rules propose and apply in one
+  click, since each has its own review page first. Old sets from the removed Import
+  attendance page keep their source, `attendance_import` (#424).
 - **An AI agent's set waits** (#216). An agent connected through MCP proposes attendance
   changes for one activity
   ([ProposeAttendanceChanges](../lib/app/operation/propose_attendance_changes.ex)), as
