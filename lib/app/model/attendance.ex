@@ -6,6 +6,7 @@ defmodule App.Model.Attendance do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.Team
   alias App.Repo
 
   schema "attendances" do
@@ -75,6 +76,45 @@ defmodule App.Model.Attendance do
     |> limit(1)
     |> Repo.one()
   end
+
+  @doc """
+  The member's invitations to these activities, as `%{activity_id => attendance}`: the
+  first row of each, as `invitation/2` picks.
+  """
+  def invitations(%Member{} = member, activity_ids) do
+    Attendance
+    |> join(:inner, [r], m in assoc(r, :member))
+    |> where([r, m], r.activity_id in ^activity_ids and r.member_id == ^member.id)
+    |> where([r, m], m.team_id == ^member.team_id)
+    |> order_by([r], desc: r.id)
+    |> Repo.all()
+    |> Map.new(&{&1.activity_id, &1})
+  end
+
+  @doc """
+  How each activity's invited members stand, by D4H status, as `%{activity_id =>
+  %{attending: n, absent: n, requested: n}}`. On an activity's own panel, attending
+  reads "signed up" before the start and "attended" from it. Only the team's members'
+  rows count; every id gets a map, zeros included.
+  """
+  def reply_counts(%Team{} = team, activity_ids) do
+    zero = %{attending: 0, absent: 0, requested: 0}
+
+    Attendance
+    |> join(:inner, [r], m in assoc(r, :member))
+    |> where([r, m], r.activity_id in ^activity_ids and m.team_id == ^team.id)
+    |> where([r], r.status in ["attending", "absent", "requested"])
+    |> group_by([r], [r.activity_id, r.status])
+    |> select([r], {r.activity_id, r.status, count(r.id)})
+    |> Repo.all()
+    |> Enum.reduce(Map.new(activity_ids, &{&1, zero}), fn {id, status, n}, counts ->
+      Map.update!(counts, id, &Map.put(&1, status_key(status), n))
+    end)
+  end
+
+  defp status_key("attending"), do: :attending
+  defp status_key("absent"), do: :absent
+  defp status_key("requested"), do: :requested
 
   @doc """
   When the member replied, for a row the refresh saves over `old` with D4H's `status`,

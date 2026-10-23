@@ -361,6 +361,27 @@ defmodule App.Model.Member do
     |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != key_account))
   end
 
+  @doc """
+  The team's current member with this email, or nil when there is none or two share it.
+  A team admin replies to invitations as this member (#444), on a team with member
+  logins off too.
+  """
+  def find_by_email(%Team{} = team, email, now) when is_binary(email) do
+    email = email |> String.trim() |> String.downcase()
+
+    members =
+      Member
+      |> where([m], m.team_id == ^team.id and fragment("lower(?)", m.email) == ^email)
+      |> current_query(now)
+      |> people_query()
+      |> Repo.all()
+
+    case members do
+      [member] -> member
+      _none_or_shared -> nil
+    end
+  end
+
   def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
 
   @doc "The team's member with this id, or nil."

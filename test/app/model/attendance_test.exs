@@ -97,7 +97,8 @@ defmodule App.Model.AttendanceTest do
     "lib/app/view_data/change_history.ex" => "a label",
     "lib/web/live/proposed_change_live.ex" => "a label",
     "lib/web/live/activity_take_attendance_live.ex" => "a label",
-    "lib/app/operation/build_chore_event.ex" => "a D4H row's own status, to leave a row alone"
+    "lib/app/operation/build_chore_event.ex" => "a D4H row's own status, to leave a row alone",
+    "lib/web/components/reply.ex" => "a member's own reply, before the start"
   }
 
   test "only Attendance says what attended means" do

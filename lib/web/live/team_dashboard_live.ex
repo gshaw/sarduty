@@ -3,10 +3,12 @@ defmodule Web.TeamDashboardLive do
 
   import Web.Components.ActivityMap
   import Web.Components.Chart
+  import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Attendance
   alias App.Model.Chore
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -21,14 +23,17 @@ defmodule Web.TeamDashboardLive do
   alias App.Worker.SyncTeamChangesWorker
   alias Service.Format
   alias Web.Components.ActivityMap
+  alias Web.Components.ActivityPanel
+  alias Web.Components.Reply
+  alias Web.Components.ReplyControl
 
   # The top half is what needs doing: what's next, and what needs a team admin. The lower
   # half is the team's year, loaded after it so the work never waits on the charts (#205).
   #
-  # Members open it too (#406), read only, and see what a team admin sees: Next up,
-  # Coming up, and the team's year, plus For you to do. Team admins also get Take
-  # attendance, Needs attention, and Refresh now. A team admin who is a member gets both
-  # lists.
+  # Members open it too (#406) and see what a team admin sees: Next up, Coming up, and
+  # the team's year, plus For you to do. A member replies to the activities they're
+  # invited to from Next up and Coming up (#444). Team admins also get Take attendance,
+  # Needs attention, and Refresh now. A team admin who is a member gets both lists.
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -59,7 +64,21 @@ defmodule Web.TeamDashboardLive do
       view_data: TeamDashboardViewData.build(team, now, attention?: socket.assigns.team_admin?)
     )
     |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
+    |> assign(replier: Reply.replier(socket.assigns, now))
+    |> assign_replies()
     |> assign_member(now)
+  end
+
+  # Next up's count, and the replier's invitations to Next up and Coming up, again after
+  # a reply.
+  defp assign_replies(socket) do
+    %{current_team: team, view_data: view_data, replier: replier} = socket.assigns
+    ids = Enum.map(List.wrap(view_data.next_up) ++ view_data.coming_up, & &1.id)
+
+    assign(socket,
+      counts: Attendance.reply_counts(team, ids),
+      invitations: if(replier, do: Attendance.invitations(replier, ids), else: %{})
+    )
   end
 
   # What a member has to do, from Your membership's records.
@@ -122,10 +141,12 @@ defmodule Web.TeamDashboardLive do
       />
     </div>
 
-    <.next_up
+    <.next_up_card
       :if={@view_data.next_up}
       team={@current_team}
       activity={@view_data.next_up}
+      counts={@counts[@view_data.next_up.id]}
+      reply={reply_assigns(assigns, @view_data.next_up)}
       maps_app={@current_user.maps_app}
       now={@now}
       team_admin?={@team_admin?}
@@ -135,8 +156,8 @@ defmodule Web.TeamDashboardLive do
       <.coming_up
         team={@current_team}
         activities={@view_data.coming_up}
+        replies={Enum.map(@view_data.coming_up, &reply_assigns(assigns, &1))}
         now={@now}
-        team_admin?={@team_admin?}
       />
       <div class="card-stack span-6">
         <.needs_attention :if={@team_admin?} team={@current_team} items={@view_data.attention} />
@@ -202,62 +223,81 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
+  # The reply control's assigns for an activity, or nil when the replier can't reply to
+  # it: not invited, or it has started.
+  defp reply_assigns(assigns, activity) do
+    invitation = assigns.invitations[activity.id]
+
+    if Reply.open?(invitation, activity, assigns.now) do
+      %{
+        team: assigns.current_team,
+        activity: activity,
+        member: assigns.replier,
+        invitation: invitation,
+        user: assigns.current_user,
+        viewing_as: assigns.viewing_as
+      }
+    end
+  end
+
   attr :team, :map, required: true
   attr :activity, :map, required: true
+  attr :counts, :map, required: true
+  attr :reply, :map, default: nil, doc: "the reply control's assigns, nil for none"
   attr :maps_app, :string, required: true
   attr :now, :any, required: true
   attr :team_admin?, :boolean, required: true
 
-  # The team's next activity, the same card for everyone. Team admins also take
-  # attendance from it.
-  defp next_up(assigns) do
+  # The team's next activity, the same panel as the activity's page, with its title and
+  # place. Its count goes in the place's line rather than a line of its own.
+  defp next_up_card(assigns) do
     ~H"""
-    <section id="next-up" class="card next-up">
-      <div class="next-up-when">
-        <span class="hint">Next up</span>
-        <span class="next-up-day">
-          {Format.day_coming_up(@activity.started_at, @now, @team.timezone)}
-        </span>
-        <span class="next-up-time">{Format.time_short(@activity.started_at, @team.timezone)}</span>
-      </div>
-      <div class="min-w-0">
-        <.activity_kind_mark activity={@activity} class="text-sm" />
-        <h2 class="next-up-title">
-          <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
-        </h2>
-        <p class="hint">{where_and_when(@activity, @now)}</p>
-        <.open_in_maps
-          id="next-up-maps"
-          app={@maps_app}
-          coordinate={Activity.pin(@activity)}
-          address={@activity.address}
-          label={@activity.title}
-        />
-      </div>
-      <.button
-        :if={@team_admin?}
-        id="next-up-take-attendance"
-        variant={:primary}
-        navigate={~p"/teams/#{@team}/activities/#{@activity.id}/take-attendance"}
-      >
-        Take attendance
-      </.button>
-    </section>
+    <.activity_panel
+      id="next-up"
+      label="Next up"
+      activity={@activity}
+      team={@team}
+      now={@now}
+      team_admin?={@team_admin?}
+    >
+      <.activity_kind_mark activity={@activity} class="text-sm" />
+      <h2 class="activity-panel-title">
+        <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
+      </h2>
+      <p id="next-up-hint" class="hint">{where_and_when(@activity, @counts, @now)}</p>
+      <.open_in_maps
+        id="next-up-maps"
+        app={@maps_app}
+        coordinate={Activity.pin(@activity)}
+        address={@activity.address}
+        label={@activity.title}
+      />
+      <:reply :if={@reply}>
+        <.live_component module={ReplyControl} id="next-up-reply" {@reply} />
+      </:reply>
+    </.activity_panel>
     """
   end
 
-  # "Murrin Park · in 3 hours", or the time alone when D4H has no place.
-  defp where_and_when(activity, now) do
-    [activity.address, Format.starts_in(activity.started_at, now)]
+  # "Murrin Park · in 3 hours · 6 signed up", without the place when D4H has none.
+  defp where_and_when(activity, counts, now) do
+    started? = ActivityPanel.started?(activity, now)
+
+    [
+      activity.address,
+      Format.starts_in(activity.started_at, now),
+      Reply.yes_text(counts, started?)
+    ]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(" · ")
   end
 
   attr :team, :map, required: true
   attr :activities, :list, required: true
+  attr :replies, :list, required: true, doc: "each activity's reply assigns, or nil"
   attr :now, :any, required: true
-  attr :team_admin?, :boolean, required: true
 
+  # The title is each row's link, so a row can hold the reply's buttons.
   defp coming_up(assigns) do
     ~H"""
     <section id="coming-up" class="card span-6">
@@ -268,11 +308,12 @@ defmodule Web.TeamDashboardLive do
       <p :if={@activities == []} id="coming-up-empty" class="chart-caption">
         No activities planned in {D4H.service_name(@team)}.
       </p>
-      <ul :if={@activities != []} id="coming-up-list" class="row-links">
-        <li :for={activity <- @activities} id={"coming-up-#{activity.id}"}>
-          <.row_link navigate={~p"/teams/#{@team}/activities/#{activity.id}"}>
-            <.coming_up_row team={@team} activity={activity} now={@now} />
-          </.row_link>
+      <ul :if={@activities != []} id="coming-up-list" class="dash-list">
+        <li
+          :for={{activity, reply} <- Enum.zip(@activities, @replies)}
+          id={"coming-up-#{activity.id}"}
+        >
+          <.coming_up_row team={@team} activity={activity} reply={reply} now={@now} />
         </li>
       </ul>
       <footer class="action">
@@ -284,22 +325,30 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :activity, :map, required: true
+  attr :reply, :map, default: nil
   attr :now, :any, required: true
 
   defp coming_up_row(assigns) do
     ~H"""
-    <span class="dash-row">
-      <span class="dash-row-when">
+    <div class="dash-row">
+      <div class="dash-row-when">
         <strong>{Format.day_coming_up(@activity.started_at, @now, @team.timezone)}</strong>
         <span class="text-text-muted">
           {Format.time_short(@activity.started_at, @team.timezone)}
         </span>
-      </span>
-      <span class="dash-row-title">
+      </div>
+      <div class="dash-row-title">
         <.activity_kind_mark activity={@activity} class="text-sm" />
-        <span class="text-link">{@activity.title}</span>
-      </span>
-    </span>
+        <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
+        <.live_component
+          :if={@reply}
+          module={ReplyControl}
+          id={"coming-up-reply-#{@activity.id}"}
+          size={:sm}
+          {@reply}
+        />
+      </div>
+    </div>
     """
   end
 
@@ -585,6 +634,10 @@ defmodule Web.TeamDashboardLive do
       {:noreply, socket}
     end
   end
+
+  def handle_info({:replied, _attendance}, socket), do: {:noreply, assign_replies(socket)}
+
+  def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
   # A second refresh while one runs does nothing; the button is disabled, but a page open
   # in 2 tabs can still send one.

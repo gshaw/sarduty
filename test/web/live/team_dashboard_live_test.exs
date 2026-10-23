@@ -4,6 +4,7 @@ defmodule Web.TeamDashboardLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.AttendanceStub
   alias App.Model.Team
   alias App.Repo
 
@@ -331,14 +332,70 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#side-nav-members")
     end
 
-    test "Coming up links to each activity's page", %{conn: conn, team: team} do
+    test "Coming up links to each activity's page from its title", %{conn: conn, team: team} do
       activity = activity_fixture(team, at(30, %{title: "Rope practice"}))
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 
       assert has_element?(
                lv,
-               ~s{#coming-up-#{activity.id} a[href="/teams/#{team.subdomain}/activities/#{activity.id}"]}
+               ~s{#coming-up-#{activity.id} a[href="/teams/#{team.subdomain}/activities/#{activity.id}"]},
+               "Rope practice"
              )
+
+      refute has_element?(lv, "#coming-up-list .row-link")
+    end
+
+    test "Next up counts who signed up, and the member replies from it",
+         %{conn: conn, team: team, member: member} do
+      team = team |> Ecto.Changeset.change(d4h_access_key: "team-key") |> Repo.update!()
+      activity = activity_fixture(team, at(3, %{title: "Rope practice"}))
+      row = attendance_fixture(activity, member, %{status: "requested"})
+      attendance_fixture(activity, member_fixture(team), %{status: "attending"})
+      AttendanceStub.stub([row])
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#next-up-hint", "123 Main St · in ")
+      assert has_element?(lv, "#next-up-hint", " · 1 signed up")
+
+      lv |> element("#next-up-reply-yes") |> render_click()
+
+      assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
+      assert has_element?(lv, "#next-up-reply-state", "Signed up")
+      assert has_element?(lv, "#next-up-hint", " · 2 signed up")
+    end
+
+    test "Coming up holds the small reply buttons, or the reply and Change",
+         %{conn: conn, team: team, member: member} do
+      asked = activity_fixture(team, at(30, %{title: "Rope practice"}))
+      answered = activity_fixture(team, at(50, %{title: "Swiftwater"}))
+      not_invited = activity_fixture(team, at(70, %{title: "Annual general meeting"}))
+      attendance_fixture(asked, member, %{status: "requested"})
+      attendance_fixture(answered, member, %{status: "absent"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(lv, "#coming-up-reply-#{asked.id}-yes.btn-sm", "I'll be there")
+      assert has_element?(lv, "#coming-up-reply-#{asked.id}-no.btn-sm", "Can't make it")
+      assert has_element?(lv, "#coming-up-reply-#{answered.id}-state", "Can't make it")
+      assert has_element?(lv, "#coming-up-reply-#{answered.id}-change", "Change")
+      refute has_element?(lv, "#coming-up-#{not_invited.id} .reply")
+      refute has_element?(lv, "#coming-up header", "reply")
+    end
+
+    test "a team admin viewing as the member replies to nothing", %{team: team, member: member} do
+      admin = App.AccountsFixtures.user_fixture()
+      manager_fixture(team, %{email: admin.email})
+      activity = activity_fixture(team, at(30, %{title: "Rope practice"}))
+      attendance_fixture(activity, member, %{status: "requested"})
+
+      conn = build_conn() |> log_in_user(admin)
+      conn = post(conn, ~p"/teams/#{team}/members/#{member}/view-as")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      lv |> element("#coming-up-reply-#{activity.id}-yes") |> render_click()
+
+      assert has_element?(lv, "#flash-error", "so nothing is saved")
+      assert has_element?(lv, "#coming-up-reply-#{activity.id}-yes")
     end
 
     test "a refresh event from a member does nothing", %{conn: conn, team: team} do

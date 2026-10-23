@@ -250,6 +250,22 @@ defmodule Web.StyleGuideHTML.SampleData do
     }
   end
 
+  # An exercise 3 hours after panel_now/0, for the activity panel and reply examples.
+  def panel_activity do
+    %App.Model.Activity{
+      id: 2,
+      title: "Rope rescue, Murrin Park",
+      activity_kind: "exercise",
+      address: "Murrin Park",
+      started_at: ~U[2025-09-30 02:00:00Z],
+      finished_at: ~U[2025-09-30 05:00:00Z]
+    }
+  end
+
+  def panel_now, do: ~U[2025-09-29 23:00:00Z]
+
+  def panel_counts, do: %{attending: 6, absent: 2, requested: 5}
+
   # Activities as App.Model.Activity, so the guide renders them with the app's own table.
   # Times are UTC; the table shows them in Vancouver time.
   def activities do

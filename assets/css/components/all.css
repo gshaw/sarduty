@@ -14,6 +14,8 @@
 @import "./typography";
 @import "./stat_switch";
 @import "./chart";
+@import "./activity_panel";
+@import "./reply";
 @import "./dashboard";
 @import "./home";
 @import "./membership";
