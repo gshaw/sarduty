@@ -8,7 +8,7 @@ defmodule Web.ActivityMileageLive do
   alias App.Operation.BuildMileageReport
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Mileage report")}
+    {:ok, socket}
   end
 
   def handle_params(params, _uri, socket) do
@@ -26,6 +26,7 @@ defmodule Web.ActivityMileageLive do
     socket =
       assign(
         socket,
+        page_title: "#{activity.title} · Mileage report",
         mileage_report: nil,
         team: team,
         activity: activity

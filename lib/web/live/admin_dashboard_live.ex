@@ -142,7 +142,7 @@ defmodule Web.AdminDashboardLive do
       </dd>
       <dt>Team key</dt>
       <dd>
-        The team's D4H access key, saved in Team settings, and the D4H member it belongs to. SAR Duty
+        The team's D4H access key, saved in team settings, and the D4H member it belongs to. SAR Duty
         uses it for every D4H request. "Person's key" means the member is not a SAR Duty
         account, so the key stops working if that person leaves.
       </dd>

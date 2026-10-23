@@ -39,7 +39,7 @@ defmodule Web.EndorsementFormLiveTest do
 
     html = lv |> form("#endorsement-form", endorsement: %{name: "GSAR"}) |> render_submit()
 
-    assert html =~ "is already an endorsement"
+    assert html =~ "Use a name no other endorsement has."
   end
 
   test "adds and removes qualifications, only the team's own", %{conn: conn, team: team} do

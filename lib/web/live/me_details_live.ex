@@ -103,7 +103,8 @@ defmodule Web.MeDetailsLive do
   defp confirmed(socket, member, {:phone, e164}, _ip, {:ok, _member}) do
     message =
       if ChangeOwnPhone.shared?(member, e164, DateTime.utc_now()),
-        do: "Your mobile number is changed. Another member has it too, so text login won't work.",
+        do:
+          "Your mobile number is changed. Another member has it too, so login codes cannot go to it by text.",
         else: "Your mobile number is changed. Login codes by text go to it now."
 
     socket |> put_flash(:info, message) |> push_navigate(to: ~p"/teams/#{member.team}/me/details")

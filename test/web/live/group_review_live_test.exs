@@ -38,7 +38,7 @@ defmodule Web.GroupReviewLiveTest do
     assert has_element?(lv, "#review-remove-#{ctx.unqualified.id}", "on record")
     assert has_element?(lv, "#select-#{ctx.unqualified.id}[checked]")
     assert has_element?(lv, "#review-add-#{ctx.qualified.id}", "Meets all rules")
-    assert has_element?(lv, "#apply", "Apply 2 changes")
+    assert has_element?(lv, "#apply", "Send 2 changes")
   end
 
   test "each list has a select all checkbox, and clearing it leaves nothing to apply", ctx do
@@ -49,7 +49,7 @@ defmodule Web.GroupReviewLiveTest do
 
     # Unchecking every row sends the form with no member ids.
     render_change(lv, "select", %{"_target" => [""]})
-    assert has_element?(lv, "#apply[disabled]", "Apply 0 changes")
+    assert has_element?(lv, "#apply[disabled]", "Send 0 changes")
   end
 
   test "applying sends only the ticked changes and returns to the group", ctx do
@@ -65,7 +65,7 @@ defmodule Web.GroupReviewLiveTest do
     end)
 
     lv |> form("#review-form", %{"member_ids" => ["#{ctx.qualified.id}"]}) |> render_change()
-    assert has_element?(lv, "#apply", "Apply 1 change")
+    assert has_element?(lv, "#apply", "Send 1 change")
 
     lv
     |> form("#review-form", %{"member_ids" => ["#{ctx.qualified.id}"]})

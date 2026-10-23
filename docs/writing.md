@@ -4,6 +4,14 @@ The rules for every word a person reads in SAR Duty: pages, buttons, labels, hin
 flash messages, emails, PDFs, and wallet passes. Agents follow them when they write or
 change any of that text. They do not cover code comments, commit messages, or docs.
 
+The guide is about words, not layout. Where something sits on a page belongs with the
+design: the feature's issue, then the component's page in `/styles`. If a line here would
+change when the layout changes, it does not belong here.
+
+SAR Duty admin pages follow these rules too, but they are for the people who run SAR Duty
+and can use the docs' words for its internals, such as the 10-minute sync. MCP tool text is
+for AI agents: it uses the glossary, and names fields and formats where an agent needs them.
+
 Check new or changed text against [the checklist](#checklist) before you commit.
 
 ## Who reads it
@@ -11,6 +19,16 @@ Check new or changed text against [the checklist](#checklist) before you commit.
 Search and rescue team managers and members. They are volunteers, often tired, sometimes
 reading on a phone at a trailhead, and not all of them read English first. They want to
 finish a task and leave. Write so a reader understands each sentence the first time.
+
+## Voice
+
+SAR Duty sounds like a calm team-mate who knows the system: it says what happened and what
+to do next, then gets out of the way. It does not sell, apologize, or celebrate.
+
+- Say what is true now, in the reader's words: "Tags saved to D4H", not "Your request was
+  processed".
+- Name the way forward: "This attendance link is closed. Ask a team admin for a new link."
+- Give a reason only when it changes what the reader does: "Members file by April 30."
 
 ## Rules
 
@@ -35,40 +53,42 @@ finish a task and leave. Write so a reader understands each sentence the first t
    menu items: "Create letter", "Tax credit letters", "Change password". Proper nouns keep
    their capitals: D4H, SAR Duty, SARVAC, Apple Wallet.
 9. **Write numbers as digits**, including one to nine: "3 changes", "1 member". Use
-   `Service.Format.count/2` so the noun agrees with the number.
+   `Service.Format.count/2` so the noun agrees with the number. A heading puts its count
+   after a middle dot: "Equipment · 4", not "Equipment (4)".
 10. **Every value people read comes from a `Service.Format` function.** Never write a
-    number and its unit by hand, such as `{days} days`; a test fails if you do. Add a
-    function to `Service.Format` when none fits, so a value reads the same everywhere and
-    changes in one place. Work the number out with `Service.Convert`, such as
-    `days_until/2`, which rounds up. Dates put the month first: "Sep 28, 2025", or
-    "September 28, 2025" in letters. Times use the 24-hour clock ("14:05"). A time follows
-    its date after a comma: "Oct 21, 14:05", "Oct 21, 2026, 14:05". Durations come from
-    `duration/1`: "212h 30m", "202 hours" with no minutes, "1 hour", and "45 min" under an
-    hour. Never "212:30" or "212.5 hours". Days come from `days/1` ("30 days"), distances
-    from `km/1` ("42 km"). The style guide's Values page, `/styles/values`, runs every
-    formatter on an example.
+    number and its unit by hand, such as `{days} days`; a test fails if you do. Dates put
+    the month first ("Sep 28, 2025", or "September 28, 2025" in letters), times use the
+    24-hour clock ("14:05"), and durations read "212h 30m", never "212:30" or "212.5
+    hours". No formatter fits? Add one. The style guide's Values page, `/styles/values`,
+    runs every formatter on an example.
 11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
-    only for SAR Duty the service, and rarely. The two reply buttons are the exception:
-    they speak for the member.
+    only for SAR Duty the service, and rarely. Words the reader says are in their own
+    voice: the reply buttons ("I'll be there") and a box they check to agree ("I'll use
+    this token only with…").
 12. **Be plain, not cheerful.** No "please", "sorry", "oops", "simply", "just", "easily",
     exclamation marks, or jokes. Say what happened and what to do next.
 13. **Never blame the reader.** "Enter a date", not "You entered an invalid date".
 14. **No Latin abbreviations or symbols for words.** Write "for example", not "e.g.", and
     "and", not "&". Do not end a list with "etc."; list everything or say "such as".
 15. **Use Canadian spelling in text people read**: colour, centre, kilometre, licence (the
-    noun), cheque, defence, catalogue, travelled. Keep "-ize" endings: organize, authorize.
-    Code stays in US spelling: identifiers, CSS classes and tokens, routes, comments, and
-    commit messages say `color`, not `colour`.
+    noun), cheque, defence, catalogue, travelled, cancelled. Keep "-ize" endings: organize,
+    authorize. Code stays in US spelling: identifiers, CSS classes and tokens, routes,
+    comments, and commit messages say `color`, not `colour`.
 
 ## Patterns
 
 **Buttons.** A verb and its object, three words or fewer, saying what happens: "Create
-letter", "Save settings", "Perform 3 changes". Never "Submit", "OK", "Yes", "Go", or
-"Click here". The button that confirms a delete names the thing: "Delete endorsement".
-The two replies to an invitation are the exception: see Replies in [Patterns](#patterns).
+letter", "Save settings", "Send 3 changes". Never "Submit", "OK", "Yes", "Go", or "Click
+here". The button that confirms a delete names the thing: "Delete endorsement". The reply
+buttons are the exception: see [Invitations and attendance](#invitations-and-attendance).
 
 **Links.** The link text says where it goes and makes sense out of context: "tax credit
 letters for 2025". Never "here", "click here", "more", or "this page".
+
+**Naming the interface.** Name a button, tab, filter, or option as it reads, capitals and
+all: "Set its hours with Change tags", "select All under Period". Name a page with the
+glossary's words, in lowercase mid-sentence: "Save it in team settings". Never say where a
+thing is on the page, such as "the button on the right".
 
 **Labels.** A short noun phrase with no colon: "Mailing address". Mark optional fields with
 "(optional)" after the label. Do not mark required fields.
@@ -79,10 +99,12 @@ letters for 2025". Never "here", "click here", "more", or "this page".
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
 letters", "Select a year", "Phone must be 10 digits". Never "invalid", "error", "failed",
 or "something went wrong" alone. The message in the error summary and on the field is the
-same text.
+same text. When D4H does not answer, say so and what to try: "D4H did not answer. Try
+again."
 
 **Success messages.** What changed, in the past tense, with the count: "4 attendance
-changes saved to D4H". No "successfully".
+changes saved to D4H". No "successfully". When the page already shows the change, such as
+a reply or a ticked box, skip the message.
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
 "Delete First Aid? It comes off ID cards and the rules of Callout." The buttons are the action
@@ -97,13 +119,9 @@ Create one from the member list." Not "No results".
 **Slow work.** Name the slow thing: "Refreshing from D4H…", "Calculating driving distances
 for 14 members…". Not "Loading…" or "Please wait".
 
-**Page titles.** The same words as the page's `h1`. The browser title adds " · SAR Duty".
-
-**Replies.** A member answers an invitation with two buttons in their own voice: "I'll be
-there", the success button, and "Can't make it". These are the only buttons that speak for
-the reader. Once they answer, the buttons give way to their reply, "Signed up" or "Can't
-make it", and a "Change" link. Show nothing about invitations to a member who is not
-invited: never "Not invited". Replies close when the activity starts.
+**Page titles.** The page's `h1`. A tab or step under a record adds its name after a middle
+dot: "Avery Chen · Standing", "Training night · Take attendance". The browser title adds
+" · SAR Duty".
 
 ## Invitations and attendance
 
@@ -120,26 +138,16 @@ Only `Attendance.attended/2` makes a member attended. "Absent" is only for an ac
 has started, such as a no-show the door marks. Never call a reply "absent", and never call a
 member who signed up "attending".
 
-Where the words go:
-
-- **A count in a list or a card:** "23 signed up" before it starts, "23 attended" once it
-  starts. `Service.Format.count/2` makes "1 signed up" and "0 signed up".
-- **A heading over names:** the state, a middle dot, and the count. Before it starts:
-  "Signed up · 23", "Can't make it · 4", "No reply · 31". Once it starts: "Attended · 23"
-  and "Absent · 4". Leave out a heading with nobody under it, except the first.
-- **Nobody yet:** "Nobody has signed up yet." and "Nobody attended."
-- **The member's own row:** "You're invited." and the two buttons. After they answer, "Signed
-  up" with a check mark or "Can't make it", then "Change". "Add to calendar" follows "Signed
-  up" where there is room.
-- **Invitations the member has not replied to:** a count in Coming up's header on the
-  Dashboard, such as "2 waiting for your reply". The Activities menu's count stays the team
-  admin's proposed changes.
-- **The door:** "Yet to arrive", with "3 of 9 signed up".
-- **An ask by email or text:** the activity, its day and time, and "Will you be there?",
-  with the same two buttons.
-- **After a reply:** in SAR Duty the row changes in place, with no flash message. From an
-  email, the page says "Signed up for Training night, Thursday Oct 29 at 19:00." with "Add
-  to calendar", or "Your reply: Can't make it."
+- **Counts** use the same words: "23 signed up" before it starts and "23 attended" once it
+  starts, or "Signed up · 23" over a list of names. With nobody: "Nobody has signed up yet."
+  and "Nobody attended."
+- **Replies.** An invitation asks "Will you be there?". The member answers with two buttons
+  in their own voice: "I'll be there" and "Can't make it". Once they
+  answer, the buttons give way to their reply, "Signed up" or "Can't make it", and
+  "Change". That is the confirmation, in the app and after replying from an email: no flash
+  message and no thank-you line. Replies close when the activity starts.
+- **Members who are not invited** see nothing about invitations. Never "Not invited".
+- **At the door**, members who signed up and have not arrived are "Yet to arrive".
 
 ## Glossary
 
@@ -157,7 +165,9 @@ and must not be used for it.
 | your membership                | member area, your details, profile, my page    | A member's own page on one team: their activities, qualifications, ID card, letters, and details.    |
 | account settings               | your settings, profile, preferences            | The page for your own login and settings, the same on every team, such as your maps app.             |
 | team settings                  | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Member logins, and more.               |
-| team admin                     | administrator, owner, manager, superuser       | A person who can change the team's settings.                                                         |
+| team admin                     | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
+| Owner, Editor                  | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |
+| SAR Duty admin                 | superuser, staff, admin (alone, on team pages) | A person who runs SAR Duty and can open every team.                                                  |
 | member logins                  | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
 | activity                       | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
 | incident                       | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
@@ -165,7 +175,7 @@ and must not be used for it.
 | event                          | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
 | attendance                     | participation, roll call                       | Which members attended an activity, and for how long.                                                |
 | attended                       | present, participated                          | A member's state on an activity's attendance.                                                        |
-| published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H doesn't let SAR Duty change its tags.                           |
+| published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H does not let SAR Duty change its tags.                          |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | certificate                    | proof, card, qualification                     | The paper or PDF proof of a course, which a team admin records in D4H as a qualification.            |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
@@ -187,6 +197,7 @@ and must not be used for it.
 | Records access key             | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
 | MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
+| send                           | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
 | attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
 | check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan at the door: that is "arrived".       |
@@ -241,8 +252,9 @@ Before committing text a person will read, check each line:
 - [ ] Nothing from [words to avoid](#words-to-avoid) is used.
 - [ ] Negatives are in full in instructions, warnings, and errors: "cannot", "do not".
 - [ ] Headings, titles, buttons, labels, and tabs are in sentence case.
-- [ ] Buttons are a verb and an object, except the two replies. Links make sense on
+- [ ] Buttons are a verb and an object, except words the reader says. Links make sense on
       their own.
+- [ ] Nothing says where a thing sits on the page.
 - [ ] Invitations and attendance use [their words](#invitations-and-attendance), switching
       when the activity starts.
 - [ ] Errors say how to fix the problem and match the error summary.

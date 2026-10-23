@@ -59,19 +59,19 @@ defmodule Web.GroupReviewLive do
       {:ok, %{applied: applied, failed: 0}} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Made #{count_changes(applied)} in D4H.")
+         |> put_flash(:info, "Sent #{count_changes(applied)} to D4H.")
          |> push_navigate(to: group_path)}
 
       {:ok, %{applied: applied, failed: failed}} ->
         message =
-          "Made #{count_changes(applied)} in D4H. #{count_changes(failed)} did not go " <>
+          "Sent #{count_changes(applied)} to D4H. #{count_changes(failed)} did not go " <>
             "through. See Recent changes for why."
 
         {:noreply, socket |> put_flash(:error, message) |> push_navigate(to: group_path)}
 
       {:error, :no_team_key} ->
         {:noreply,
-         put_flash(socket, :error, "Save the team's D4H access key in Team settings first.")}
+         put_flash(socket, :error, "Save the team's D4H access key in team settings first.")}
 
       {:error, :rules_broken} ->
         {:noreply, put_flash(socket, :error, "Fix the group's rules first.")}
@@ -122,8 +122,8 @@ defmodule Web.GroupReviewLive do
       id="no-team-key"
       class="callout mb-4"
     >
-      Applying changes needs the team's D4H access key.
-      <.a navigate={~p"/teams/#{@current_team}/settings"}>Save it in Team settings.</.a>
+      Sending changes needs the team's D4H access key.
+      <.a navigate={~p"/teams/#{@current_team}/settings"}>Save it in team settings.</.a>
     </p>
 
     <p
@@ -163,9 +163,9 @@ defmodule Web.GroupReviewLive do
           id="apply"
           variant={:primary}
           disabled={MapSet.size(@selected) == 0 || is_nil(@current_team.d4h_access_key)}
-          phx-disable-with="Applying…"
+          phx-disable-with="Sending…"
         >
-          Apply {count_changes(MapSet.size(@selected))}
+          Send {count_changes(MapSet.size(@selected))}
         </.button>
         <.button navigate={~p"/teams/#{@current_team}/groups/#{@group.id}"}>Cancel</.button>
       </.form_actions>

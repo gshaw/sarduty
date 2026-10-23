@@ -245,7 +245,7 @@ defmodule Web.ActivityLive do
           <%!-- D4H refuses tags on a published activity (#358). --%>
           <li :if={!D4H.records?(@activity.team) and D4H.tags_locked?(@activity.team, @activity)}>
             <div id="activity-tags-in-d4h" class="hint">
-              Change its tags in D4H. D4H doesn't let SAR Duty change a published activity's tags.
+              Change its tags in D4H. D4H does not let SAR Duty change a published activity's tags.
             </div>
           </li>
           <li :if={!D4H.tags_locked?(@activity.team, @activity)}>

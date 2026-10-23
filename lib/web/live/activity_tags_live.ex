@@ -152,7 +152,7 @@ defmodule Web.ActivityTagsLive do
       title="This activity is published in D4H"
     >
       <p>
-        D4H doesn't let SAR Duty change a published activity's tags. Change them in D4H.
+        D4H does not let SAR Duty change a published activity's tags. Change them in D4H.
       </p>
       <.button variant={:warning} href={D4H.activity_url(@current_team, @activity)}>
         Open D4H activity
