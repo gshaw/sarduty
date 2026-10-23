@@ -151,14 +151,16 @@ defmodule Web.Components.MemberSidebar do
     ~H"""
     <dd id="member-milestones">
       {MilestoneList.title(@latest)} · {Format.date_long(@latest.on)}
-      <.a
-        :if={length(@milestones) > 1}
-        id="member-milestones-all"
-        class="block"
-        navigate={~p"/teams/#{@member.team}/milestones?member=#{@member.id}&when=all"}
-      >
-        {Format.count(length(@milestones), one: "%d milestone", many: "All %d milestones")}
-      </.a>
+      <ul :if={length(@milestones) > 1} class="action-list">
+        <li>
+          <.a
+            id="member-milestones-all"
+            navigate={~p"/teams/#{@member.team}/milestones?member=#{@member.id}&when=all"}
+          >
+            {Format.count(length(@milestones), one: "%d milestone", many: "All %d milestones")}
+          </.a>
+        </li>
+      </ul>
     </dd>
     """
   end

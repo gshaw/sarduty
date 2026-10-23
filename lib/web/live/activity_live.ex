@@ -217,12 +217,16 @@ defmodule Web.ActivityLive do
       <div :if={@team_admin?}>
         <dt>History</dt>
         <dd>
-          <.a
-            id="activity-history-link"
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
-          >
-            Changes to this activity
-          </.a>
+          <ul class="action-list">
+            <li>
+              <.a
+                id="activity-history-link"
+                navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
+              >
+                Changes to this activity
+              </.a>
+            </li>
+          </ul>
         </dd>
       </div>
 

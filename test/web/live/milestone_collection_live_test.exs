@@ -73,7 +73,7 @@ defmodule Web.MilestoneCollectionLiveTest do
 
     assert has_element?(
              lv,
-             ~s|#member-milestones-all[href="/teams/#{team.subdomain}/milestones?member=#{sam.id}&when=all"]|,
+             ~s|.action-list #member-milestones-all[href="/teams/#{team.subdomain}/milestones?member=#{sam.id}&when=all"]|,
              "All 2 milestones"
            )
 
