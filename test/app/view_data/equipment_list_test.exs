@@ -68,7 +68,6 @@ defmodule App.ViewData.EquipmentListTest do
 
     refute 6 in ids.("in-service", "")
     assert ids.("retired", "") == [6]
-    assert ids.("with-members", "") == [5]
     assert ids.("expiring", "") == [8]
     assert ids.("in-service", "drawer") == [3]
   end

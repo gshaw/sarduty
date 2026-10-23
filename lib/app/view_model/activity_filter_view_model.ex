@@ -18,8 +18,14 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :sort, :string
   end
 
+  # The page's stat switch, in the order D4H lists them.
   def activity_kinds,
-    do: [{"All", "all"}, {"Exercise", "exercise"}, {"Event", "event"}, {"Incident", "incident"}]
+    do: [
+      {"All", "all"},
+      {"Incidents", "incident"},
+      {"Exercises", "exercise"},
+      {"Events", "event"}
+    ]
 
   # "draft": attendance can still change in D4H, so a team admin checks it (#205).
   def status_kinds, do: [{"All", "all"}, {"Draft", "draft"}, {"Published", "published"}]
@@ -78,17 +84,39 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   that member attended.
   """
   def build_paginated_content(team, member, filter_options) do
+    team
+    |> filtered(member, filter_options)
+    |> scope(q: filter_options.q)
+    |> scope(activity: filter_options.activity)
+    |> scope(sort: filter_options.sort)
+    |> Repo.paginate(page: filter_options.page)
+  end
+
+  @doc """
+  The stat switch's counts: how many activities of each kind the other filters keep,
+  before the search, with All's under "all".
+  """
+  def kind_counts(team, member, filter_options) do
+    counts =
+      team
+      |> filtered(member, filter_options)
+      |> group_by([r], r.activity_kind)
+      |> select([r], {r.activity_kind, count(r.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    Map.put(counts, "all", counts |> Map.values() |> Enum.sum())
+  end
+
+  # Every filter but the kind and the search.
+  defp filtered(team, member, filter_options) do
     Activity
     |> Activity.scope(team_id: team.id)
     |> Activity.not_deleted()
     |> scope(member: member)
-    |> scope(q: filter_options.q)
-    |> scope(activity: filter_options.activity)
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
     |> scope(hours: filter_options.hours, team: team)
-    |> scope(sort: filter_options.sort)
-    |> Repo.paginate(page: filter_options.page)
   end
 
   defp build_new do

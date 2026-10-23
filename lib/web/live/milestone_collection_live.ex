@@ -9,6 +9,7 @@ defmodule Web.MilestoneCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FilterBar
+  import Web.Components.StatSwitch
 
   alias App.ViewData.MemberMilestones
   alias App.ViewModel.MilestoneFilterViewModel
@@ -35,11 +36,21 @@ defmodule Web.MilestoneCollectionLive do
     case MilestoneFilterViewModel.validate(params) do
       {:ok, filter_options, changeset} ->
         %{current_team: team, milestones: milestones, now: now} = socket.assigns
-        shown = MilestoneFilterViewModel.filter(milestones, filter_options, team.timezone, now)
+
+        any_kind =
+          MilestoneFilterViewModel.filter(
+            milestones,
+            %{filter_options | kind: nil},
+            team.timezone,
+            now
+          )
+
+        shown = MilestoneFilterViewModel.filter(any_kind, filter_options, team.timezone, now)
 
         {:noreply,
          assign(socket,
            filter_options: filter_options,
+           kind_counts: kind_counts(any_kind),
            form: to_form(changeset, as: "form"),
            paginated: MilestoneFilterViewModel.page(shown, filter_options.page),
            path_fn: build_path_fn(team, filter_options)
@@ -54,6 +65,18 @@ defmodule Web.MilestoneCollectionLive do
     ~H"""
     <h1 class="title">{@page_title}</h1>
 
+    <.stat_switch :if={@loaded?} id="milestone-switch" label="Kind">
+      <:view
+        :for={{label, kind} <- MilestoneFilterViewModel.kinds()}
+        id={"milestone-view-#{if kind == "", do: "all", else: kind}"}
+        patch={@path_fn.(kind: if(kind == "", do: nil, else: kind), page: nil)}
+        current={(@filter_options.kind || "") == kind}
+        count={Map.get(@kind_counts, kind, 0)}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
+
     <.filter_bar
       for={@form}
       id="milestone_filter_form"
@@ -61,18 +84,13 @@ defmodule Web.MilestoneCollectionLive do
       clear={@path_fn.(:reset)}
       path_fn={@path_fn}
       page={@paginated}
+      hidden={[@form[:kind]]}
     >
       <:filter
         field={@form[:member]}
         label="Member"
         type="combobox"
         options={MilestoneFilterViewModel.member_kinds(@milestones)}
-        default=""
-      />
-      <:filter
-        field={@form[:kind]}
-        label="Kind"
-        options={MilestoneFilterViewModel.kinds()}
         default=""
       />
       <:filter
@@ -116,6 +134,13 @@ defmodule Web.MilestoneCollectionLive do
       Change the filters, or select All under Period.
     </.empty_state>
     """
+  end
+
+  # Each kind's milestones, and All's, keyed by the kind filter's values.
+  defp kind_counts(milestones) do
+    milestones
+    |> Enum.frequencies_by(&Atom.to_string(&1.kind))
+    |> Map.put("", length(milestones))
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do

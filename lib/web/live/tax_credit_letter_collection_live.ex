@@ -2,6 +2,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FilterBar
+  import Web.Components.StatSwitch
 
   alias App.Operation.CreateTaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
@@ -60,13 +61,25 @@ defmodule Web.TaxCreditLetterCollectionLive do
       team={@current_team}
     />
 
+    <.stat_switch id="letter-switch" label="Letters">
+      <:view
+        :for={{label, letter} <- TaxCreditLetterFilterViewModel.letter_kinds()}
+        id={"letter-view-#{letter || "all"}"}
+        patch={@path_fn.(letter: letter)}
+        current={@filter_options.letter == letter}
+        count={Map.get(@letter_counts, letter, 0)}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
+
     <.filter_bar
       for={@form}
       id="tax_credit_letter_filter_form"
       count={Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
       clear={@path_fn.(:reset)}
       path_fn={@path_fn}
-      hidden={[@form[:sort]]}
+      hidden={[@form[:sort], @form[:letter]]}
     >
       <:search field={@form[:q]} />
       <:filter
@@ -260,13 +273,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   defp assign_records(socket) do
-    records =
-      TaxCreditLetterFilterViewModel.find_all(
-        socket.assigns.current_team,
-        socket.assigns.filter_options
-      )
+    filter_options = socket.assigns.filter_options
+    all = TaxCreditLetterFilterViewModel.find_all(socket.assigns.current_team, filter_options)
+    records = TaxCreditLetterFilterViewModel.shown(all, filter_options)
 
     socket
+    |> assign(:letter_counts, TaxCreditLetterFilterViewModel.letter_counts(all))
     |> assign(:records, records)
     |> assign(
       :to_send,

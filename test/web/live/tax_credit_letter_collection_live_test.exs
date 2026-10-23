@@ -72,6 +72,33 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert Event.get_last(:tax_credit_letters_sent).data["created"] == 2
     end
 
+    test "the letter switch counts members before the search and lists one part",
+         %{conn: conn, team: team} do
+      avery = member_fixture(team, %{name: "Avery"})
+      blake = member_fixture(team, %{name: "Blake"})
+      casey = member_fixture(team, %{name: "Casey"})
+      for member <- [avery, blake, casey], do: attend(team, member)
+      tax_credit_letter_fixture(casey, %{year: 2025})
+
+      {:ok, lv, _html} =
+        live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any&q=ver")
+
+      assert has_element?(lv, "#letter-view-all[aria-current]", "3")
+      assert has_element?(lv, "#letter-view-none", "2")
+      assert has_element?(lv, "#letter-view-made", "1")
+      assert has_element?(lv, "#letter-view-changed", "0")
+
+      lv |> element("#letter-view-none") |> render_click()
+      assert has_element?(lv, "#letter-view-none[aria-current]")
+      assert has_element?(lv, "#member_collection", "Avery")
+
+      {:ok, lv, _html} =
+        live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any&letter=none")
+
+      assert has_element?(lv, "#member_collection", "Blake")
+      refute has_element?(lv, "#member_collection", "Casey")
+    end
+
     test "warns that letters go out unsigned until the team has a signature",
          %{conn: conn, team: team} do
       team |> member_fixture() |> then(&attend(team, &1))

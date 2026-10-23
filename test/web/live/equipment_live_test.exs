@@ -43,9 +43,22 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#place-yard #item-#{ctx.radio.id}", "SOUTH FRASER 2")
     assert has_element?(lv, "#place-costing #item-#{ctx.phone.id}")
 
-    lv |> form("#equipment-filter", form: %{q: "radio 7", show: "in-service"}) |> render_change()
+    lv |> form("#equipment-filter", form: %{q: "radio 7"}) |> render_change()
     assert has_element?(lv, "#item-#{ctx.radio.id}")
     refute has_element?(lv, "#item-#{ctx.phone.id}")
+  end
+
+  test "the stat switch counts each part of the place and keeps the search", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=Yard&q=radio")
+
+    assert has_element?(lv, "#equipment-view-in-service[aria-current]", "2")
+    assert has_element?(lv, "#equipment-view-retired", "0")
+
+    lv |> element("#equipment-view-all") |> render_click()
+    path = assert_patch(lv)
+    assert path =~ "show=all"
+    assert path =~ "q=radio"
+    assert has_element?(lv, "#equipment-view-all[aria-current]")
   end
 
   test "the Place chip removes the place and keeps the search (#350)", ctx do

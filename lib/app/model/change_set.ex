@@ -86,13 +86,11 @@ defmodule App.Model.ChangeSet do
 
   def count_waiting(team_id), do: ChangeSet |> waiting_query(team_id) |> Repo.aggregate(:count)
 
-  @doc "An agent's change sets a team admin applied or discarded, newest first."
-  def get_recent_decided(team_id, limit) do
+  @doc "An agent's change sets, newest first."
+  def get_proposed(team_id) do
     ChangeSet
     |> where([s], s.team_id == ^team_id and s.source == :agent)
-    |> where([s], not is_nil(s.applied_at) or not is_nil(s.discarded_at))
-    |> order_by([s], desc: s.updated_at, desc: s.id)
-    |> limit(^limit)
+    |> order_by([s], desc: s.inserted_at, desc: s.id)
     |> preload([:activity, :proposed_by_user, :applied_by_user, :rows])
     |> Repo.all()
   end

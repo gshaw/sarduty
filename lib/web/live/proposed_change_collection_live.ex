@@ -1,19 +1,33 @@
 defmodule Web.ProposedChangeCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.StatSwitch
+
   alias App.Model.ChangeSet
 
+  # Opens on the sets waiting for review; `?view=` picks another part.
+  @views ~w(all waiting sent discarded)
+
   def mount(_params, _session, socket) do
-    team = socket.assigns.current_team
+    {:ok,
+     assign(socket,
+       page_title: "Proposed changes",
+       change_sets: ChangeSet.get_proposed(socket.assigns.current_team.id)
+     )}
+  end
 
-    socket =
-      assign(socket,
-        page_title: "Proposed changes",
-        waiting: ChangeSet.get_waiting(team.id),
-        decided: ChangeSet.get_recent_decided(team.id, 20)
-      )
+  def handle_params(params, _uri, socket) do
+    view = params["view"] || "waiting"
+    if view not in @views, do: raise(Web.Status.NotFound)
 
-    {:ok, socket}
+    counts = Enum.frequencies_by(socket.assigns.change_sets, &part/1)
+
+    {:noreply,
+     assign(socket,
+       view: view,
+       counts: Map.put(counts, "all", length(socket.assigns.change_sets)),
+       shown: Enum.filter(socket.assigns.change_sets, &(view == "all" or part(&1) == view))
+     )}
   end
 
   def render(assigns) do
@@ -28,35 +42,30 @@ defmodule Web.ProposedChangeCollectionLive do
       until a team admin reviews them and sends them.
     </p>
 
-    <.change_set_table
-      :if={@waiting != []}
-      id="waiting"
-      change_sets={@waiting}
-      team={@current_team}
-    />
-    <.empty_state :if={@waiting == []} id="none-waiting" title="No proposed changes to review">
-      Changes an AI agent proposes show here for a team admin to send.
-    </.empty_state>
+    <.stat_switch :if={@change_sets != []} id="proposed-switch" label="Proposed changes">
+      <:view
+        :for={{view, label} <- views()}
+        id={"proposed-view-#{view}"}
+        patch={view_path(@current_team, view)}
+        current={@view == view}
+        count={Map.get(@counts, view, 0)}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
 
-    <div :if={@decided != []} class="mt-4">
-      <h2 class="subheading">Reviewed</h2>
-      <.change_set_table id="decided" change_sets={@decided} team={@current_team} />
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :change_sets, :list, required: true
-  attr :team, :map, required: true
-
-  defp change_set_table(assigns) do
-    ~H"""
-    <.table id={@id} rows={@change_sets} row_id={&"#{@id}-#{&1.id}"} class="table-striped">
+    <.table
+      :if={@shown != []}
+      id="proposed"
+      rows={@shown}
+      row_id={&"proposed-#{&1.id}"}
+      class="table-striped"
+    >
       <:col :let={set} label="Proposed" class="w-px whitespace-nowrap">
-        {Service.Format.month_day_time(set.inserted_at, @team.timezone)}
+        {Service.Format.month_day_time(set.inserted_at, @current_team.timezone)}
       </:col>
       <:col :let={set} label="Changes">
-        <.a navigate={~p"/teams/#{@team}/proposed-changes/#{set.id}"}>
+        <.a navigate={~p"/teams/#{@current_team}/proposed-changes/#{set.id}"}>
           {set.summary || "Attendance changes"}
         </.a>
         <div class="hint">
@@ -66,14 +75,37 @@ defmodule Web.ProposedChangeCollectionLive do
           )}
         </div>
       </:col>
-      <:col :let={set} label="Status" class="w-px whitespace-nowrap">
+      <:col :let={set} :if={@view == "all"} label="Status" class="w-px whitespace-nowrap">
         {status(set)}
       </:col>
     </.table>
+    <.empty_state :if={@change_sets == []} id="none-proposed" title="No proposed changes yet">
+      Changes an AI agent proposes show here for a team admin to send.
+    </.empty_state>
+    <p :if={@change_sets != [] and @shown == []} id="none-in-view" class="hint">
+      {empty_text(@view)}
+    </p>
     """
   end
 
-  defp status(%ChangeSet{applied_at: %DateTime{}}), do: "Sent to D4H"
-  defp status(%ChangeSet{discarded_at: %DateTime{}}), do: "Discarded"
-  defp status(%ChangeSet{}), do: "Waiting for review"
+  defp views,
+    do: [
+      {"all", "All"},
+      {"waiting", "Waiting for review"},
+      {"sent", "Sent to D4H"},
+      {"discarded", "Discarded"}
+    ]
+
+  defp view_path(team, "waiting"), do: ~p"/teams/#{team}/proposed-changes"
+  defp view_path(team, view), do: ~p"/teams/#{team}/proposed-changes?view=#{view}"
+
+  defp part(%ChangeSet{applied_at: %DateTime{}}), do: "sent"
+  defp part(%ChangeSet{discarded_at: %DateTime{}}), do: "discarded"
+  defp part(%ChangeSet{}), do: "waiting"
+
+  defp status(set), do: views() |> List.keyfind(part(set), 0) |> elem(1)
+
+  defp empty_text("waiting"), do: "Nothing to review."
+  defp empty_text("sent"), do: "None sent yet."
+  defp empty_text("discarded"), do: "None discarded."
 end

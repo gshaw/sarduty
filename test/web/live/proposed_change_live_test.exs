@@ -26,7 +26,22 @@ defmodule Web.ProposedChangeLiveTest do
 
   test "lists sets waiting for review", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/proposed-changes")
-    assert has_element?(lv, "#waiting-#{ctx.change_set.id}", "Sign-in sheet for Rope rescue")
+    assert has_element?(lv, "#proposed-view-waiting[aria-current]", "1")
+    assert has_element?(lv, "#proposed-#{ctx.change_set.id}", "Sign-in sheet for Rope rescue")
+  end
+
+  test "a discarded set leaves Waiting for review and shows under Discarded", ctx do
+    ChangeSet.discard!(ctx.change_set, DateTime.utc_now())
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/proposed-changes")
+    refute has_element?(lv, "#proposed-#{ctx.change_set.id}")
+    assert has_element?(lv, "#none-in-view")
+
+    lv |> element("#proposed-view-discarded") |> render_click()
+    assert has_element?(lv, "#proposed-#{ctx.change_set.id}")
+
+    lv |> element("#proposed-view-all") |> render_click()
+    assert has_element?(lv, "#proposed-#{ctx.change_set.id}", "Discarded")
   end
 
   test "shows each change with its reason, ticked", ctx do
