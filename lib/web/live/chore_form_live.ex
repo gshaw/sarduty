@@ -3,6 +3,7 @@ defmodule Web.ChoreFormLive do
 
   alias App.Adapter.D4H
   alias App.Model.Chore
+  alias App.Model.Team
   alias App.Operation.SaveChore
   alias Web.MeChoreFormLive
 
@@ -10,7 +11,7 @@ defmodule Web.ChoreFormLive do
   # date, waiting or decided. Its status stays.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
-    if !App.Model.Team.chores?(team), do: raise(Web.Status.NotFound)
+    if !Team.chores?(team), do: raise(Web.Status.NotFound)
     chore = Chore.find!(team, id)
     if Chore.locked?(chore), do: raise(Web.Status.NotFound)
 
