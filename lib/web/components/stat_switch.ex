@@ -5,8 +5,8 @@ defmodule Web.Components.StatSwitch do
   use Phoenix.Component
 
   @doc """
-  Renders a row of counts over a list, each with what it counts, the current one
-  underlined. All comes first. A view's `marker` puts a coloured square before its label,
+  Renders a row of counts over a list, each on a grey tile with what it counts, the current one
+  light blue with a primary bar. All comes first. A view's `marker` puts a coloured square before its label,
   as the rows show it: `marker="incident"` is `.marker-incident`.
 
   ## Examples
