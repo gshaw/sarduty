@@ -1,0 +1,56 @@
+<.shell title="Reply" current={:reply}>
+  <h1>Reply</h1>
+  <p class="lead">A member's answer to an invitation: I'll be there or Can't make it.</p>
+
+  <div class="demo">
+    <.reply id="reply-demo-ask" state={:ask} />
+  </div>
+
+  <h3>After a reply</h3>
+  <div class="demo">
+    <.reply id="reply-demo-yes" state={:yes} />
+    <div class="mt-4"><.reply id="reply-demo-no" state={:no} /></div>
+  </div>
+
+  <h3>In a list row</h3>
+  <div class="demo max-w-md">
+    <a href="#" class="link">Training night: packaging and patient transport</a>
+    <.reply id="reply-demo-row-ask" state={:ask} size={:sm} />
+    <div class="mt-4">
+      <a href="#" class="link">Annual general meeting</a>
+      <.reply id="reply-demo-row-no" state={:no} size={:sm} />
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Under an activity a member is invited to, until it starts: in its <a href={
+      page_path(:activity_panel)
+    }>activity panel</a>, and small under its title in a
+    list such as Coming up.
+  </p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>A member who is not invited. Show the counts alone, and nothing about invitations.</li>
+    <li>An activity that has started. Late arrivals and no-shows are the door's job.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      The two buttons speak for the member, the only buttons that do. No label goes with them.
+    </li>
+    <li>
+      A reply replaces the buttons with "Signed up" or "Can't make it", and Change brings the
+      buttons back. That is the confirmation: no flash message.
+    </li>
+    <li>In a list row the buttons are small. On a touch screen they are still 44px.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.live_component module=&#123;ReplyControl&#125; id="…" … /&gt;</code>
+    sends the reply as the member's change set and shows <code>&lt;.reply state=&#123;:ask&#125;&gt;</code>. Show it only when <code>Reply.open?/3</code>.
+  </p>
+</.shell>

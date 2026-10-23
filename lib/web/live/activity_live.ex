@@ -4,45 +4,69 @@ defmodule Web.ActivityLive do
   import Ecto.Query
   import Web.Components.ActivityMap
   import Web.Components.CopyButton
+  import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Attendance
   alias App.Model.Coordinate
   alias App.Model.EquipmentUsage
   alias App.Repo
   alias Web.Components.ActivityMap
+  alias Web.Components.Reply
+  alias Web.Components.ReplyControl
 
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
 
-  # Members open it too (#406), read only: the same activity, facts, and people a team
-  # admin sees. Team admins also get its history, actions, and the links to member and
-  # equipment pages. A member never gets an activity D4H has deleted; a team admin sees it
-  # under a banner.
+  # Members open it too (#406): the same activity, facts, and people a team admin sees.
+  # Under the title, everyone gets the counts, and a member it invites gets their reply
+  # until the start (#444). Team admins also get Take attendance, its history, actions,
+  # and the links to member and equipment pages. A member never gets an activity D4H has
+  # deleted; a team admin sees it under a banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
 
     if activity.deleted_at && !team_admin?, do: raise(Web.Status.NotFound)
 
-    attendances = fetch_attendances(activity)
+    now = DateTime.utc_now()
 
     socket =
-      assign(socket,
+      socket
+      |> assign(
         page_title: activity.title,
         activity: activity,
-        coming?: DateTime.after?(activity.started_at, DateTime.utc_now()),
+        now: now,
+        coming?: DateTime.after?(activity.started_at, now),
         hours_tags: Activity.hours_tags(team),
-        attendances: attendances,
-        attendance_count: length(attendances),
         usages: EquipmentUsage.for_activity(activity),
-        map: build_map(activity)
+        map: build_map(activity),
+        replier: Reply.replier(socket.assigns, now)
       )
+      |> assign_people()
 
     {:noreply, socket}
   end
+
+  # Who is invited and how they replied, again after a reply.
+  defp assign_people(socket) do
+    %{current_team: team, activity: activity, replier: replier} = socket.assigns
+    attendances = fetch_attendances(activity)
+
+    assign(socket,
+      attendances: attendances,
+      attendance_count: length(attendances),
+      counts: team |> Attendance.reply_counts([activity.id]) |> Map.fetch!(activity.id),
+      invitation: replier && Attendance.invitation(activity, replier)
+    )
+  end
+
+  def handle_info({:replied, _attendance}, socket), do: {:noreply, assign_people(socket)}
+
+  def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
   @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
 
@@ -86,6 +110,27 @@ defmodule Web.ActivityLive do
         )}.
       </p>
     </.banner>
+    <.activity_panel
+      id="activity-panel"
+      activity={@activity}
+      team={@activity.team}
+      now={@now}
+      counts={@counts}
+      team_admin?={@team_admin?}
+    >
+      <:reply :if={Reply.open?(@invitation, @activity, @now)}>
+        <.live_component
+          module={ReplyControl}
+          id="activity-reply"
+          team={@current_team}
+          activity={@activity}
+          member={@replier}
+          invitation={@invitation}
+          user={@current_user}
+          viewing_as={@viewing_as}
+        />
+      </:reply>
+    </.activity_panel>
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content
@@ -251,9 +296,6 @@ defmodule Web.ActivityLive do
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
             >Apply a template</.a>
-          </li>
-          <li>
-            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>Take attendance</.a>
           </li>
           <li>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>Mileage report</.a>

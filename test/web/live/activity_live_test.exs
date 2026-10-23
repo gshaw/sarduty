@@ -4,8 +4,10 @@ defmodule Web.ActivityLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.AttendanceStub
   alias App.Model.Activity
   alias App.Operation.SetMapsApp
+  alias App.Repo
 
   test "renders activity page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -61,6 +63,37 @@ defmodule Web.ActivityLiveTest do
            )
   end
 
+  test "Take attendance is under the title for a team admin, not in Actions", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity = activity_fixture(team)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+    assert has_element?(
+             lv,
+             ~s{#activity-panel-take-attendance[href="/teams/#{team.subdomain}/activities/#{activity.id}/take-attendance"]}
+           )
+
+    refute has_element?(lv, "#activity-actions", "Take attendance")
+  end
+
+  test "a team admin who is a member replies too, with member logins off", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    activity = activity_fixture(team, %{started_at: hours_from_now(48)})
+    attendance_fixture(activity, member, %{status: "requested"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+    assert has_element?(lv, "#activity-reply-yes", "I'll be there")
+    assert has_element?(lv, "#activity-panel-take-attendance")
+  end
+
+  defp hours_from_now(hours),
+    do: DateTime.utc_now() |> DateTime.add(hours, :hour) |> DateTime.truncate(:second)
+
   describe "an activity deleted in D4H" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
@@ -90,9 +123,6 @@ defmodule Web.ActivityLiveTest do
       %{team: team, member: member, user: user} = member_with_login_fixture()
       %{conn: log_in_user(conn, user), team: team, member: member}
     end
-
-    defp hours_from_now(hours),
-      do: DateTime.utc_now() |> DateTime.add(hours, :hour) |> DateTime.truncate(:second)
 
     test "a past activity: the facts and people a team admin sees, without the actions",
          %{conn: conn, team: team, member: member} do
@@ -139,6 +169,67 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
       assert has_element?(lv, "#activity-people h2", "Signed up · 1")
       assert has_element?(lv, "#attendance_collection", member.name)
+    end
+
+    test "an invited member replies under the title; Change brings the buttons back",
+         %{conn: conn, team: team, member: member} do
+      team = team |> Ecto.Changeset.change(d4h_access_key: "team-key") |> Repo.update!()
+      starts = hours_from_now(48)
+
+      activity =
+        activity_fixture(team, %{started_at: starts, finished_at: DateTime.add(starts, 3, :hour)})
+
+      row = attendance_fixture(activity, member, %{status: "requested"})
+      attendance_fixture(activity, member_fixture(team), %{status: "absent"})
+      AttendanceStub.stub([row])
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(
+               lv,
+               "#activity-panel-counts",
+               "0 signed up · 1 can't make it · 1 no reply"
+             )
+
+      refute has_element?(lv, "#activity-panel-take-attendance")
+
+      lv |> element("#activity-reply-yes") |> render_click()
+
+      assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
+      assert has_element?(lv, "#activity-reply-state", "Signed up")
+      assert has_element?(lv, "#activity-panel-counts", "1 signed up · 1 can't make it")
+      assert has_element?(lv, "#activity-people h2", "Signed up · 1")
+      refute has_element?(lv, "#activity-reply-yes")
+
+      lv |> element("#activity-reply-change") |> render_click()
+      lv |> element("#activity-reply-no") |> render_click()
+
+      assert_received {:d4h_write, _id, %{"status" => "ABSENT"}}
+      assert has_element?(lv, "#activity-reply-state", "Can't make it")
+      assert has_element?(lv, "#activity-panel-counts", "0 signed up · 2 can't make it")
+    end
+
+    test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(48)})
+      attendance_fixture(activity, member_fixture(team), %{status: "requested"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#activity-panel-counts", "0 signed up · 1 no reply")
+      refute has_element?(lv, "#activity-reply")
+    end
+
+    test "replies close at the start, and the counts use D4H's words",
+         %{conn: conn, team: team, member: member} do
+      started = hours_from_now(-1)
+      activity = activity_fixture(team, %{started_at: started})
+      attendance_fixture(activity, member, %{status: "requested", started_at: started})
+      attendance_fixture(activity, member_fixture(team), %{started_at: started})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#activity-panel-counts", "1 attended · 1 no reply")
+      refute has_element?(lv, "#activity-reply")
     end
 
     test "every activity D4H has, incidents too; a deleted one is a 404",

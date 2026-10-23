@@ -238,8 +238,12 @@ The team's Dashboard, `/teams/:subdomain`
 (#406), read only, and is where a member lands after logging in.
 
 - **Members see the team admin's page without its controls**: Next up, the team's next
-  activity, with a maps link; Coming up, the team's next activities; the team's year; and
-  **For you to do**. The refresh line says when SAR Duty last refreshed, with Open D4H.
+  activity, with a maps link and how many signed up; Coming up, the team's next
+  activities, each linked from its title; the team's year; and **For you to do**. The
+  refresh line says when SAR Duty last refreshed, with Open D4H.
+- **Replies** (#444): a member replies to an activity they're invited to from Next up and
+  Coming up, until it starts. A team admin replies as their own member row, found by
+  email, on a team with member logins off too. See [Replies](#replies).
 - **Team admins also get** Take attendance on Next up, Needs attention, and Refresh now.
   A team admin who is a member sees both For you to do and Needs attention, one above
   the other. A member's page doesn't work out Needs attention at all.
@@ -265,12 +269,32 @@ hidden data makes people suspicious).
   a 404. D4H's `published` means locked, not visible, so it plays no part.
 - **The list** is the team admin's: the same filters, columns, tags, hours, Draft, and
   default. Team admins also get Add activity and the Templates and Proposed changes tabs.
-- **An activity's page** is the team admin's: Kind, the attendance total, Start, Finish,
-  Duration, SARVAC hours, the place with copy and the maps link, Add to calendar and Open
-  D4H activity, the tags, the map, the description, who signed up (coming) or attended
-  (past) with their times, and the equipment. Team admins also get History, which can
-  hold contact details and addresses, the Actions, Add equipment, and links to each
-  member's and item's page. Members never see contact details.
+- **An activity's page** is the team admin's: under the title, the day and time and the
+  counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
+  reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,
+  SARVAC hours, the place with copy and the maps link, Add to calendar and Open D4H
+  activity, the tags, the map, the description, who signed up (coming) or attended
+  (past) with their times, and the equipment. Team admins also get Take attendance under
+  the title, History, which can hold contact details and addresses, the Actions, Add
+  equipment, and links to each member's and item's page. Members never see contact
+  details.
+
+### Replies
+
+A member replies to an activity they're invited to (#444): D4H has an attendance row for
+them. The two buttons, I'll be there and Can't make it, sit under the counts on the
+activity's page and in Next up, and small under the title in Coming up. After a reply
+the member sees it, "Signed up" or "Can't make it", with Change to bring the buttons
+back. Replies close when the activity starts.
+
+- **The reply** is a member change set ([change-sets.md](change-sets.md)) made by
+  [ReplyToActivity](../lib/app/operation/reply_to_activity.ex), sent at once, and the
+  copy updates with it. The control is
+  [ReplyControl](../lib/web/components/reply_control.ex); the counts and the replier are
+  in [Reply](../lib/web/components/reply.ex).
+- **Who replies**: the member the user logs in as, or a team admin's own member row. A
+  team admin viewing as a member sees that member's reply, and a tap saves nothing.
+- **Not invited**: the counts alone, and nothing about invitations.
 - **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for
   anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
   with no redirect.

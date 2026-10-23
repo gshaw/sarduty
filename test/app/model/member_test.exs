@@ -195,4 +195,27 @@ defmodule App.Model.MemberTest do
       assert clock.(%{last_attended_at: ~U[2026-05-15 02:00:00Z]}) == {:attended, ~D[2026-05-14]}
     end
   end
+
+  describe "find_by_email/3, who a team admin replies as (#444)" do
+    test "is the team's one current member with the email, in any case" do
+      team = team_fixture()
+      now = DateTime.utc_now()
+      alex = member_fixture(team, %{email: "Alex@Example.com"})
+      member_fixture(team_fixture(), %{email: "alex@example.com"})
+
+      assert Member.find_by_email(team, " alex@example.com ", now).id == alex.id
+    end
+
+    test "is nil when two members share the email, or the member has left" do
+      team = team_fixture()
+      now = DateTime.utc_now()
+      member_fixture(team, %{email: "shared@example.com"})
+      member_fixture(team, %{email: "shared@example.com"})
+      member_fixture(team, %{email: "gone@example.com", left_at: DateTime.add(now, -1, :day)})
+
+      assert Member.find_by_email(team, "shared@example.com", now) == nil
+      assert Member.find_by_email(team, "gone@example.com", now) == nil
+      assert Member.find_by_email(team, "nobody@example.com", now) == nil
+    end
+  end
 end

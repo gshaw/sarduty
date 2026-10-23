@@ -21,12 +21,14 @@
 
   <h2>When to use</h2>
   <p>
-    A list where each row goes somewhere, such as Coming up and Needs attention on the team home page. The whole row takes a tap, so it works on a phone.
+    A list where each row goes somewhere, such as Needs attention on the team home page. The whole row takes a tap, so it works on a phone.
   </p>
 
   <h2>When not to use</h2>
   <p>
-    A row that starts something or changes something. Use a <a href={page_path(:button)}>button</a>. Links to other places from a record's details go in an action list, in a <a href={
+    A row that starts something or changes something. Use a <a href={page_path(:button)}>button</a>. A row that holds buttons, such as Coming up's <a href={
+      page_path(:reply)
+    }>reply</a>, links from its title instead. Links to other places from a record's details go in an action list, in a <a href={
       page_path(:detail_list)
     }>detail list</a>.
   </p>

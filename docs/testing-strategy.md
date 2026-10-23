@@ -57,7 +57,9 @@ data?
 - Replies (#444): what a reply sends, that it never adds a row and closes at the start
   (`reply_to_activity_test.exs`), that the member's latest tap wins over D4H's status
   (`apply_change_set_test.exs`), and when the refresh sets `replied_at`
-  (`test/app/model/attendance_test.exs`).
+  (`test/app/model/attendance_test.exs`). The counts line (`reply_test.exs`), and
+  replying from an activity's page and the Dashboard against a stubbed D4H
+  (`App.AttendanceStub`).
 - Records edits: `SaveMember.plan/3` and `SaveActivity.plan/4` name only what changed,
   pure, and the form LiveView tests run each edit against a stubbed Records.
 - Mileage round trips: `test/app/operation/build_mileage_report_test.exs`, pure, with

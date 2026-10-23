@@ -2,6 +2,7 @@ defmodule Web.StyleGuideHTML do
   use Web, :html
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
+  import Web.Components.ActivityPanel
   import Web.Components.ActivityFilterTable, only: [activity_table: 1]
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
@@ -15,6 +16,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Pagination
   import Web.Components.PersonHead
   import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Reply, only: [reply: 1]
   import Web.Components.RowLink
   import Web.Components.Search, only: [search_box: 1]
   import Web.Components.Scanner
@@ -60,6 +62,7 @@ defmodule Web.StyleGuideHTML do
        ]},
       {:components, "Components", "The parts pages are built from, one per page.",
        [
+         {:activity_panel, "Activity panel", "An activity's day and time, counts, and reply."},
          {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
@@ -84,6 +87,7 @@ defmodule Web.StyleGuideHTML do
          {:pagination, "Pagination", "Pages under a long table."},
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
+         {:reply, "Reply", "A member's answer to an invitation."},
          {:row_link, "Row link", "A list row that goes to one place."},
          {:search, "Search", "Find a team's records and pages from the top bar."},
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
@@ -338,6 +342,9 @@ defmodule Web.StyleGuideHTML do
   defdelegate chart_map(), to: SampleData
 
   defdelegate letters(), to: SampleData
+  defdelegate panel_activity(), to: SampleData
+  defdelegate panel_now(), to: SampleData
+  defdelegate panel_counts(), to: SampleData
   defdelegate sample_page(), to: SampleData
   defdelegate sample_filters(), to: SampleData
   defdelegate sample_filter_page(), to: SampleData

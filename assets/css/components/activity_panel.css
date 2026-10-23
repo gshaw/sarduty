@@ -1,0 +1,20 @@
+/* An activity at a glance (activity_panel.ex): its day and time in large type beside the
+   counts and the member's reply, with Take attendance at the end. It heads an activity's
+   page and is the Dashboard's Next up (#444). Outside a layer, like chart.css's .card it
+   sits on. See /styles/activity-panel. */
+.activity-panel { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-6); align-items: center; border-left: 4px solid var(--primary); margin-bottom: var(--sp-6); }
+.activity-panel-when { display: flex; flex-direction: column; min-width: 110px; }
+.activity-panel-day { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; color: var(--text); }
+.activity-panel-time { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); }
+.activity-panel-title { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin: var(--sp-1) 0; }
+.activity-panel-counts { margin: 0; }
+.activity-panel-reply { margin-top: var(--sp-3); }
+
+/* Phones: it stacks, the day and time on one line, with a full-width button. */
+@media (width < 40rem) {
+  .activity-panel { grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+  .activity-panel-when { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 var(--sp-2); min-width: 0; }
+  .activity-panel-label { flex-basis: 100%; }
+  .activity-panel-time { font-size: var(--fs-lg); line-height: var(--lh-lg); }
+  .activity-panel > .btn { width: 100%; }
+}
