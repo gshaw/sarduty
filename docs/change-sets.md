@@ -38,7 +38,8 @@ new kind of write is a new row action there, not a new call from a page or an op
   their existing attendance row attending with the activity's times, and Can't make it
   marks it absent ([ReplyToActivity](../lib/app/operation/reply_to_activity.ex)). It
   never adds a row, since being invited means D4H has one, and it refuses once the
-  activity starts. It applies at once and updates the copy, with `replied_at`.
+  activity starts. It applies at once and updates the copy, with `replied_at`. A reply
+  from a reminder's link needs no login, so its set has no user.
 - **Equipment on an activity is a set too** (source `equipment`, #271): adding items
   from the activity's "Add equipment" page, or removing one. A template's items and tags
   go the same way, with its tags as one `set_activity_tags` row (#162). It applies at

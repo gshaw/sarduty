@@ -297,6 +297,18 @@ back. Replies close when the activity starts.
 - **Who replies**: the member the user logs in as, or a team admin's own member row. A
   team admin viewing as a member sees that member's reply, and a tap saves nothing.
 - **Not invited**: the counts alone, and nothing about invitations.
+- **From a reminder's link** (`/replies/:token`,
+  [ReplyLinkLive](../lib/web/live/reply_link_live.ex)): no login. The signed link
+  ([Web.ReplyLinks](../lib/web/reply_links.ex)) is for one member and one activity and
+  only replies, so its change set has no user. Opening it changes nothing, since some
+  mail apps open every link; the member selects a button. It closes at the start, and
+  always has "Open activity (log in)".
+- **Invitation reminders** are the member's setting, not the login's: many members get
+  email without ever logging in. On by default, a switch in Contact details, and a
+  reminder's "Turn off invitation reminders" link opens `/reminders/:token`
+  ([InvitationRemindersLive](../lib/web/live/invitation_reminders_live.ex)), a page with
+  one button that turns them back on too. A mail app's one-click unsubscribe posts to
+  the same URL ([InvitationRemindersController](../lib/web/controllers/invitation_reminders_controller.ex)).
 - **Members**, under the map, lists everyone the activity invites
   ([ActivityMembers](../lib/app/view_data/activity_members.ex)): a stat switch of All,
   Signed up, Can't make it, and No reply (Attended, Absent, and No reply once it starts),

@@ -36,6 +36,9 @@ defmodule App.Model.Member do
     field :d4h_status, :string
     # Set by a team admin in SAR Duty, never from D4H, so build_changeset/2 leaves it out.
     field :not_a_person, :boolean, default: false
+    # Whether team admins can email reminders to reply (#444). Set by the member in SAR
+    # Duty, never from D4H, so build_changeset/2 leaves it out too.
+    field :invitation_reminders, :boolean, default: true
     timestamps(type: :utc_datetime_usec)
   end
 
