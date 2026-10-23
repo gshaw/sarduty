@@ -1,63 +1,46 @@
 defmodule App.Operation.SaveOwnDetails do
   @moduledoc """
   A member changes their own address and emergency contacts from their page (#156).
-  load/1 reads what D4H holds now; SAR Duty keeps no copy of emergency contacts. plan/2
-  makes one `:update_member` row naming only what changed, with D4H's old values. call/5
-  sends it straight to D4H as a change set of source `:member`, then updates the copy's
-  address, so the next refresh sees nothing new.
+  plan/2 compares the form with the member's copy, which the sync keeps (#423), and
+  makes one `:update_member` row naming only what changed, with the old values. call/4
+  sends it straight to D4H as a change set of source `:member`, then updates the copy,
+  so the next refresh sees nothing new.
   """
 
   alias App.Accounts.User
   alias App.Adapter.D4H
-  alias App.Adapter.D4H.MemberDetails
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
   alias App.Model.Member
   alias App.Operation.ApplyChangeSet
   alias App.Repo
 
-  @doc "`{:ok, %MemberDetails{}}`, or `{:error, text}` when D4H can't be read."
-  def load(%Member{team: team} = member) do
-    case team
-         |> D4H.build_context_from_team()
-         |> D4H.fetch_member_details(member.d4h_member_id) do
-      {:ok, details} ->
-        {:ok, details}
-
-      {:error, _error} ->
-        {:error, "SAR Duty cannot reach #{D4H.service_name(team)}. Try again later."}
-    end
-  end
+  @fields %{
+    "address" => :address,
+    "primary_emergency_contact" => :primary_emergency_contact,
+    "secondary_emergency_contact" => :secondary_emergency_contact
+  }
 
   @doc "`{:ok, :unchanged}`, `{:ok, member}` after D4H took the change, or `{:error, text}`."
-  def call(%Member{} = member, %User{} = user, %MemberDetails{} = details, values, now) do
-    case plan(details, Map.take(values, fields(member.team))) do
+  def call(%Member{} = member, %User{} = user, values, now) do
+    case plan(member, Map.take(values, Map.keys(@fields))) do
       :unchanged -> {:ok, :unchanged}
       fields -> apply_row(member, user, row(member, fields), now)
     end
   end
 
   @doc """
-  The fields a member changes on their team. SAR Duty Records has no emergency contacts.
-  """
-  def fields(team) do
-    if D4H.records?(team),
-      do: ["address"],
-      else: ["address", "primary_emergency_contact", "secondary_emergency_contact"]
-  end
-
-  @doc """
-  What changed between D4H's `details` and the form's `values`, as
+  What changed between the member's copy and the form's `values`, as
   `%{old_value: …, new_value: …}`, or `:unchanged`. A contact goes whole when any of
   its fields changed. Blank values are nil.
   """
-  def plan(%MemberDetails{} = details, values) do
+  def plan(%Member{} = member, values) do
     old = %{
-      "address" => details.address,
+      "address" => member.address,
       "primary_emergency_contact" =>
-        details.primary_emergency_contact || MemberDetails.empty_contact(),
+        member.primary_emergency_contact || D4H.Member.empty_contact(),
       "secondary_emergency_contact" =>
-        details.secondary_emergency_contact || MemberDetails.empty_contact()
+        member.secondary_emergency_contact || D4H.Member.empty_contact()
     }
 
     new = values |> blank_to_nil() |> Map.reject(fn {key, value} -> old[key] == value end)
@@ -102,8 +85,8 @@ defmodule App.Operation.SaveOwnDetails do
     end
   end
 
-  defp update_copy(member, %{"address" => address}),
-    do: member |> Ecto.Changeset.change(address: address) |> Repo.update!()
-
-  defp update_copy(member, _new_value), do: member
+  defp update_copy(member, new_value) do
+    changes = Map.new(new_value, fn {key, value} -> {Map.fetch!(@fields, key), value} end)
+    member |> Ecto.Changeset.change(changes) |> Repo.update!()
+  end
 end

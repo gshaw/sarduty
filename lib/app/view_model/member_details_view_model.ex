@@ -1,8 +1,9 @@
 defmodule App.ViewModel.MemberDetailsViewModel do
   use App, :view_model
 
-  alias App.Adapter.D4H.MemberDetails
+  alias App.Adapter.D4H
   alias App.Field
+  alias App.Model.Member
   alias App.Validate
 
   # A member's own address and emergency contacts (#156). Lengths are D4H's.
@@ -31,18 +32,18 @@ defmodule App.ViewModel.MemberDetailsViewModel do
     :contact2_secondary_phone
   ]
 
-  @doc "The form for what D4H holds now."
-  def from_details(%MemberDetails{} = details) do
+  @doc "The form for the member's copy."
+  def from_member(%Member{} = member) do
     struct(
       __MODULE__,
-      [address: details.address] ++
-        contact(:contact1, details.primary_emergency_contact) ++
-        contact(:contact2, details.secondary_emergency_contact)
+      [address: member.address] ++
+        contact(:contact1, member.primary_emergency_contact) ++
+        contact(:contact2, member.secondary_emergency_contact)
     )
   end
 
   defp contact(prefix, contact) do
-    for {key, value} <- contact || MemberDetails.empty_contact(),
+    for {key, value} <- contact || D4H.Member.empty_contact(),
         do: {String.to_existing_atom("#{prefix}_#{key}"), value}
   end
 
@@ -56,7 +57,7 @@ defmodule App.ViewModel.MemberDetailsViewModel do
   end
 
   defp values(form, prefix) do
-    Map.new(MemberDetails.empty_contact(), fn {key, _nil} ->
+    Map.new(D4H.Member.empty_contact(), fn {key, _nil} ->
       {key, Map.fetch!(form, String.to_existing_atom("#{prefix}_#{key}"))}
     end)
   end

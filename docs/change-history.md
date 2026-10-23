@@ -31,7 +31,9 @@ process dictionary, so the stages don't each carry it. Outside a run nothing is 
   removed. Anything else D4H changes, such as `updatedAt` or an activity's description, is
   noise.
 - **Contact details** (email, phone, address) are logged as "Contact details changed",
-  with the field names and never the values.
+  and emergency contacts as "Emergency contact changed" (#423), with the field names and
+  never the values. A member's own save says the same, "… changed in SAR Duty". An
+  emergency contact's first copy, from nil, is the baseline and records nothing.
 - **The baseline.** A team's first full refresh copies the whole team and records nothing.
   Recording starts once `teams.d4h_refreshed_at` is set. Teams already on SAR Duty start
   from their current copy, so day 1 logs only real changes.

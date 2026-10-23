@@ -1,6 +1,7 @@
 defmodule App.ViewData.ChangeHistoryTest do
   use ExUnit.Case, async: true
 
+  alias App.Model.ChangeSetRow
   alias App.Model.D4HChange
   alias App.ViewData.ChangeHistory
 
@@ -43,6 +44,33 @@ defmodule App.ViewData.ChangeHistoryTest do
              old_value: %{},
              new_value: %{}
            }) == "Contact details changed"
+  end
+
+  test "an emergency contact is named once, without values" do
+    assert describe_change(%{
+             record_kind: :member,
+             action: :changed,
+             fields: ["primary_emergency_contact", "secondary_emergency_contact"],
+             old_value: %{},
+             new_value: %{}
+           }) == "Emergency contact changed"
+  end
+
+  test "a member's own save says what changed, without values" do
+    row = fn new_value ->
+      ChangeHistory.describe_row(
+        %ChangeSetRow{action: :update_member, new_value: new_value},
+        :member
+      )
+    end
+
+    assert row.(%{"primary_emergency_contact" => %{"name" => "Sam"}}) ==
+             "Emergency contact changed in SAR Duty"
+
+    assert row.(%{"address" => "2 Oak Ave", "secondary_emergency_contact" => %{}}) ==
+             "Contact details changed in SAR Duty. Emergency contact changed in SAR Duty"
+
+    assert row.(%{"name" => "Jane"}) == "Details changed in SAR Duty"
   end
 
   test "D4H access changes use D4H's names" do

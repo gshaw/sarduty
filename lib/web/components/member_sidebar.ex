@@ -69,6 +69,13 @@ defmodule Web.Components.MemberSidebar do
         <%!-- No label: the member's name beside their address would leave SAR Duty. --%>
         <.open_in_maps id="member-maps" app={@maps_app} address={@member.address} />
       </dd>
+      <%!-- Member pages are for team admins only, so no member sees another's (#423). --%>
+      <dt>Emergency contact</dt>
+      <.emergency_contact id="member-emergency" contact={@member.primary_emergency_contact} />
+      <%= if named?(@member.secondary_emergency_contact) do %>
+        <dt>Second emergency contact</dt>
+        <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
+      <% end %>
       <dt>Joined</dt>
       <dd>{date_and_days_ago(@member.joined_at, @member.team.timezone)}</dd>
       <dt>Standing</dt>
@@ -99,6 +106,50 @@ defmodule Web.Components.MemberSidebar do
     </dl>
     """
   end
+
+  attr :id, :string, required: true
+  attr :contact, :map, default: nil, doc: "a member's emergency contact, maybe nil"
+
+  defp emergency_contact(assigns) do
+    ~H"""
+    <dd id={@id}>
+      <%= if named?(@contact) or present?(@contact["primary_phone"]) do %>
+        {contact_name(@contact)}
+        <span :for={{phone, i} <- Enum.with_index(phones(@contact))} class="block">
+          {Service.Phone.format(phone)}<.copy_button
+            id={"#{@id}-copy-#{i}"}
+            value={Service.Phone.format(phone)}
+            label="Copy phone number"
+          />
+        </span>
+        <.call_and_text
+          :if={present?(@contact["primary_phone"])}
+          id={@id}
+          phone={@contact["primary_phone"]}
+          class="mt-2"
+        />
+      <% else %>
+        None
+      <% end %>
+    </dd>
+    """
+  end
+
+  defp named?(contact), do: is_map(contact) and present?(contact["name"])
+
+  defp present?(value), do: value not in [nil, ""]
+
+  # "Sam Lee (Partner)", or just the name or the relation when that is all D4H has.
+  defp contact_name(%{"name" => name, "relation" => relation}) do
+    cond do
+      present?(name) and present?(relation) -> "#{name} (#{relation})"
+      present?(name) -> name
+      true -> relation
+    end
+  end
+
+  defp phones(contact),
+    do: Enum.filter([contact["primary_phone"], contact["secondary_phone"]], &present?/1)
 
   defp last_attended(nil, _timezone), do: "Never"
 

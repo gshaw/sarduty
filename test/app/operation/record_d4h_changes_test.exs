@@ -38,6 +38,24 @@ defmodule App.Operation.RecordD4HChangesTest do
       assert new_value == %{}
     end
 
+    test "names an emergency contact change but never keeps the contact" do
+      old = %{name: "Jane", primary_emergency_contact: %{"name" => "Sam"}}
+      new = %{old | primary_emergency_contact: %{"name" => "Lee"}}
+
+      assert RecordD4HChanges.diff(:member, old, new) == %{
+               action: :changed,
+               fields: ["primary_emergency_contact"],
+               old_value: %{},
+               new_value: %{}
+             }
+    end
+
+    test "the first copy of an emergency contact is the baseline, not a change" do
+      old = %{name: "Jane", primary_emergency_contact: nil}
+      new = %{old | primary_emergency_contact: %{"name" => "Sam"}}
+      assert RecordD4HChanges.diff(:member, old, new) == nil
+    end
+
     test "ignores fields it doesn't track" do
       old = %{title: "Training", description: "Old", tags: ["A"], updated_at: 1}
       new = %{old | description: "New", updated_at: 2}

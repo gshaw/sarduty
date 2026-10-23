@@ -172,6 +172,10 @@ defmodule App.ViewData.ChangeHistory do
   defp member_field(field, _c, _tz) when field in ~w(email phone address),
     do: "Contact details changed"
 
+  defp member_field(field, _c, _tz)
+       when field in ~w(primary_emergency_contact secondary_emergency_contact),
+       do: "Emergency contact changed"
+
   defp member_field("name", c, _tz), do: "Name changed from #{from_to(c, "name")}"
   defp member_field("position", c, _tz), do: "Position changed from #{from_to(c, "position")}"
 
@@ -287,8 +291,15 @@ defmodule App.ViewData.ChangeHistory do
 
   def describe_row(%ChangeSetRow{action: :create_member}, _page), do: "Added in SAR Duty"
 
-  def describe_row(%ChangeSetRow{action: :update_member}, _page),
-    do: "Details changed in SAR Duty"
+  # Says what changed, never the values (#423).
+  def describe_row(%ChangeSetRow{action: :update_member, new_value: %{} = new}, _page) do
+    new
+    |> Map.keys()
+    |> Enum.map(&updated_part/1)
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.map_join(". ", &"#{&1} changed in SAR Duty")
+  end
 
   def describe_row(%ChangeSetRow{action: :retire_member}, _page),
     do: "Marked as retired in SAR Duty"
@@ -394,4 +405,10 @@ defmodule App.ViewData.ChangeHistory do
   end
 
   defp sentences(parts), do: Enum.join(parts, ". ")
+
+  defp updated_part(key) when key in ~w(primary_emergency_contact secondary_emergency_contact),
+    do: "Emergency contact"
+
+  defp updated_part(key) when key in ~w(email phone address), do: "Contact details"
+  defp updated_part(_key), do: "Details"
 end

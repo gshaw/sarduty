@@ -169,8 +169,8 @@ their D4H photo in a circle, or their initials when D4H has none (`/me/image`), 
   the year page so they aren't mistaken for the last 12 months'; then contact details,
   then the 5 latest milestones. On a phone the ID card and letter come first, then the
   main column, then contact details and milestones.
-- **No emergency contact here.** It is never copied, and reading it from D4H held up the
-  page with "Reading D4H…". Contact details shows and changes it.
+- **Contact details** are the mobile number, address, and emergency contact, from the
+  copy, so the page never reads D4H (#423).
 - Each part says why it is empty for a new member.
 - **Milestones**: hours (100, 250, 500, 1,000, then every 1,000), years on the team (1, 5,
   10, then every 5), and incidents (the first, 10, 25, 50, 100, then every 100), each
@@ -284,10 +284,12 @@ hidden data makes people suspicious).
   [SaveOwnDetails](../lib/app/operation/save_own_details.ex), with the member's user on
   it. D4H records SAR Duty's key as the editor, so the change set is the record of who
   asked. Only the fields that changed go, with D4H's old values.
-- **Emergency contacts are never copied.** The details page reads them from D4H each time
-  it opens. The change set row keeps the old and new contact, as every row keeps what it
-  changed. SAR Duty Records has no emergency contacts, so its members change only their
-  address.
+- **Emergency contacts are copied** from D4H's member list, like the phone and address
+  (#423). The details page shows the copy, and saving updates it. A member sees only
+  their own; team admins see every member's on the member's page, with Call and Text. The
+  change set row keeps the old and new contact, as every row keeps what it changed, but
+  history says only "Emergency contact changed". SAR Duty Records serves them as D4H
+  does. A change made in D4H in the 10 minutes before a member saves is overwritten.
 - **A new mobile number needs a code first.** Text login uses it, so
   [ChangeOwnPhone](../lib/app/operation/change_own_phone.ex) texts a code to the new
   number, a `"confirm"` user token that lives and dies like a login code, with the login

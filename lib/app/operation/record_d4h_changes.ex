@@ -35,7 +35,10 @@ defmodule App.Operation.RecordD4HChanges do
   }
 
   # Named in `fields` when they change, but their values are never kept.
-  @contact_fields ~w(email phone address)a
+  @contact_fields ~w(email phone address primary_emergency_contact secondary_emergency_contact)a
+
+  # Nil until the first sync copies them (#423). That fill is the baseline, not a change.
+  @filled_later ~w(primary_emergency_contact secondary_emergency_contact)a
 
   @doc """
   Runs `fun` with recording on for `team`. A team's first full refresh records nothing:
@@ -68,7 +71,7 @@ defmodule App.Operation.RecordD4HChanges do
   def diff(kind, old, nil), do: whole(kind, :removed, :old_value, old)
 
   def diff(kind, old, new) do
-    changed = for f <- tracked(kind), Map.get(old, f) != Map.get(new, f), do: f
+    changed = for f <- tracked(kind), changed?(f, Map.get(old, f), Map.get(new, f)), do: f
 
     if changed == [] do
       nil
@@ -83,6 +86,9 @@ defmodule App.Operation.RecordD4HChanges do
       }
     end
   end
+
+  defp changed?(field, nil, _new) when field in @filled_later, do: false
+  defp changed?(_field, old, new), do: old != new
 
   defp whole(kind, action, side, record) do
     values = values(record, Map.fetch!(@tracked, kind))
