@@ -204,7 +204,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#contact-emergency-2", "Lee Chan (Sister)")
     end
 
-    test "the 5 latest milestones", %{conn: conn, team: team, member: member} do
+    test "every milestone, newest first", %{conn: conn, team: team, member: member} do
       member
       |> Ecto.Changeset.change(
         joined_at:
@@ -230,7 +230,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#milestones-list-hours-100", "Long search")
       assert has_element?(lv, "#milestones-list-incidents-1", "First incident")
       assert has_element?(lv, "#milestones-list-years-15")
-      refute has_element?(lv, "#milestones-list-years-1")
+      assert has_element?(lv, "#milestones-list-years-1")
 
       # The last 30 days' are new; the 15 years came about a year ago.
       assert has_element?(lv, "#milestones-list-hours-100.is-new")

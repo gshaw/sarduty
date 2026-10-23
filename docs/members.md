@@ -167,8 +167,8 @@ their D4H photo in a circle, or their initials when D4H has none (`/me/image`), 
 - **Sidebar**, sections split by space, no boxes (`/styles/card`): the ID card, when the
   team has ID cards on, then the latest tax credit letter to download, with its hours on
   the year page so they aren't mistaken for the last 12 months'; then contact details,
-  then the 5 latest milestones. On a phone the ID card and letter come first, then the
-  main column, then contact details and milestones.
+  then every milestone, newest first. On a phone the ID card and letter come first, then
+  the main column, then contact details and milestones.
 - **Contact details** are the mobile number, address, and emergency contact, from the
   copy, so the page never reads D4H (#423).
 - Each part says why it is empty for a new member.
