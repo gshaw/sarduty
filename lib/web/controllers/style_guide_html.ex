@@ -16,6 +16,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.PersonHead
   import Web.Components.Phone, only: [call_and_text: 1]
   import Web.Components.RowLink
+  import Web.Components.Search, only: [search_box: 1]
   import Web.Components.Scanner
   import Web.Components.StatSwitch
   import Web.Components.Table
@@ -84,6 +85,7 @@ defmodule Web.StyleGuideHTML do
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:row_link, "Row link", "A list row that goes to one place."},
+         {:search, "Search", "Find a team's records and pages from the top bar."},
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
@@ -370,4 +372,5 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_nav_area(), to: SampleData
   defdelegate sample_nav_sections(), to: SampleData
   defdelegate sample_member(), to: SampleData
+  defdelegate sample_search_groups(), to: SampleData
 end

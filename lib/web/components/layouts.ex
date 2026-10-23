@@ -59,7 +59,18 @@ defmodule Web.Layouts do
     assigns = assign(assigns, nav_area: area, nav_sections: sections)
 
     ~H"""
-    <.main_nav_bar {nav_assigns(assigns)} />
+    <.main_nav_bar {nav_assigns(assigns)}>
+      <:search :if={match?(%{kind: :team}, @nav_area)}>
+        <.live_component
+          module={Web.Components.SearchBox}
+          id="search"
+          team={@nav_area.team}
+          team_admin?={assigns[:team_admin?] || false}
+          member?={assigns[:current_member] != nil}
+          sections={@nav_sections}
+        />
+      </:search>
+    </.main_nav_bar>
     <%= if @nav_sections != [] do %>
       <div class="with-side-nav container mx-auto pt-16 px-2 mb-8">
         <.area_side_nav area={@nav_area} sections={@nav_sections} />
@@ -281,6 +292,9 @@ defmodule Web.Layouts do
   attr :chore_count, :integer, default: 0
   attr :size, :atom, default: :wide
 
+  slot :search,
+    doc: "the search, before the avatar (#473): a field on a desktop, an icon below 1024px"
+
   # The top bar (#406): the area's name after the logo, with the team switcher on it when
   # you can go somewhere else, and your avatar on the right, which opens the account menu.
   # Outside every area (home, terms, privacy), a logged-in person's bar names their team,
@@ -345,18 +359,10 @@ defmodule Web.Layouts do
           </details>
           <span :if={@switch_rows == []} class="site-bar-area-name">{@bar_area.name}</span>
         </div>
-        <%!-- Search (#471): a field on a desktop, an icon below 1024px, both before the avatar.
-          Uncomment and point both at the search page when it exists.
-        <.link navigate={@search_path} id="nav-search-field" class="site-bar-search-field">
-          <.icon name="hero-magnifying-glass-mini" />
-          <span class="truncate">Search members, activities…</span>
-          <kbd>/</kbd>
-        </.link>
-        <.link navigate={@search_path} id="nav-search" class="site-bar-search" aria-label="Search">
-          <.icon name="hero-magnifying-glass-mini" />
-        </.link>
-        --%>
-        <.account_menu person={@person} />
+        <div class="site-bar-end">
+          {render_slot(@search)}
+          <.account_menu person={@person} />
+        </div>
         <.site_bar_phone_menu
           :if={@sections != []}
           waiting?={Enum.any?(List.flatten(@sections), & &1.count)}

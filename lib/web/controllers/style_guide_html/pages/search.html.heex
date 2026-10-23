@@ -1,0 +1,72 @@
+<.shell title="Search" current={:search}>
+  <h1>Search</h1>
+  <p class="lead">
+    Find a team's members, activities, equipment, qualifications, groups, endorsements, templates, and pages from the top bar.
+  </p>
+
+  <h2>Results</h2>
+  <p>
+    What a team admin sees after typing "rope". The first result is highlighted: Enter opens it.
+  </p>
+  <div class="demo search-demo">
+    <.search_box
+      id="search-demo-results"
+      query="rope"
+      groups={sample_search_groups()}
+      kinds={Web.Search.kinds(true, false)}
+      team={sample_team()}
+      open={true}
+    />
+  </div>
+
+  <h3>Before typing</h3>
+  <p>Says what this person can find. A member who logs in finds activities and pages only.</p>
+  <div class="demo search-demo">
+    <.search_box
+      id="search-demo-empty"
+      kinds={Web.Search.kinds(true, false)}
+      team={sample_team()}
+      open={true}
+    />
+  </div>
+
+  <h3>Nothing found</h3>
+  <div class="demo search-demo">
+    <.search_box
+      id="search-demo-none"
+      query="cheakamus bridge"
+      kinds={Web.Search.kinds(true, false)}
+      team={sample_team()}
+      open={true}
+    />
+  </div>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      On a desktop the field sits in the <a href={page_path(:top_bar)}>top bar</a>
+      before your initials. Select it, or press <kbd>/</kbd>
+      anywhere, and the results open under it while the page dims. Arrow keys move, Enter opens, Esc closes.
+    </li>
+    <li>
+      Below 1024px the bar has a magnifying glass instead. It opens a sheet over the whole page with the keyboard up, and Cancel closes it.
+    </li>
+    <li>
+      Every word typed must match, in any order: a name or title, a D4H number, or an item's barcode or serial. Results come in groups of up to 5, the best group first.
+    </li>
+    <li>
+      A result shows only when you can open its page. A member who logs in finds activities and their own pages.
+    </li>
+    <li>
+      With more than 5 matches for one word, the group links to its list, filtered the same way.
+    </li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>Web.Components.SearchBox</code>
+    puts <code>&lt;.search_box&gt;</code>
+    in the top bar on a team's pages and runs <code>Web.Search.run/3</code>
+    as you type. What it matches is in <code>docs/search.md</code>.
+  </p>
+</.shell>

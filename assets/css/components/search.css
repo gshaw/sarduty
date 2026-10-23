@@ -1,0 +1,139 @@
+/* The top bar's search (#473): a field on a desktop that opens a panel under it, and a
+   magnifying glass below 1024px that opens a sheet over the page. See /styles/search. */
+@layer components {
+  .site-search { position: relative; }
+
+  /* The field, dark on the bar until it opens. */
+  .site-bar-search-field {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 320px;
+    min-height: 36px;
+    padding: 0 var(--sp-3);
+    color: rgb(255 255 255 / 0.7);
+    background: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.25);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    cursor: text;
+  }
+  .site-bar-search-field:hover { border-color: rgb(255 255 255 / 0.5); }
+  .site-bar-search-field input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--sp-1) 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    outline: none;
+    font: inherit;
+  }
+  .site-bar-search-field input::placeholder { color: rgb(255 255 255 / 0.7); opacity: 1; }
+  .site-bar-search-field input::-webkit-search-cancel-button { display: none; }
+  .site-search-key { padding: 0 var(--sp-1); border: 1px solid rgb(255 255 255 / 0.3); border-radius: 4px; font: inherit; font-size: var(--fs-xs); }
+
+  .site-search.is-open .site-bar-search-field {
+    width: 480px;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-color: var(--focus);
+    box-shadow: 0 0 0 2px var(--focus);
+  }
+  .site-search.is-open .site-bar-search-field input { color: var(--text); }
+  .site-search.is-open .site-bar-search-field input::placeholder { color: var(--text-muted); }
+  .site-search.is-open .site-search-key { display: none; }
+
+  /* The magnifying glass, below 1024px only. */
+  .site-bar-search { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; color: #fff; border-radius: var(--radius); cursor: pointer; }
+  .site-bar-search:hover { background: rgb(255 255 255 / 0.1); }
+  .site-bar-search .hero-magnifying-glass-mini { width: 24px; height: 24px; }
+
+  .site-search-cancel { display: none; }
+  .site-search-dim, .site-search-panel { display: none; }
+
+  /* Desktop: the panel drops under the field and the page dims. */
+  .site-search.is-open .site-search-dim { display: block; position: fixed; inset: 56px 0 0; background: rgb(11 12 12 / 0.35); }
+  .site-search.is-open .site-search-panel {
+    display: block;
+    position: absolute;
+    top: calc(100% + var(--sp-2));
+    right: 0;
+    width: 560px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    padding-top: var(--sp-2);
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+  }
+
+  /* The results, the same in the panel and the sheet. */
+  .site-search-group + .site-search-group { margin-top: var(--sp-2); }
+  .site-search-group h2 {
+    padding: var(--sp-2) var(--sp-4) var(--sp-1);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    font-weight: 600;
+  }
+  .site-search-hit {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    min-height: 44px;
+    padding: var(--sp-2) var(--sp-4);
+    color: var(--text);
+    text-decoration: none;
+  }
+  .site-search-hit:hover, .site-search-hit[aria-selected="true"] { background: var(--row-hover); }
+  .site-search-hit[aria-selected="true"] { box-shadow: inset 4px 0 var(--primary); }
+  .site-search-hit .avatar { background: var(--shade-1); color: var(--primary); }
+  .site-search-text { flex: 1; min-width: 0; }
+  .site-search-title { display: block; color: var(--link); text-decoration: underline; text-underline-offset: 2px; font-size: var(--fs-md); line-height: var(--lh-md); }
+  .site-search-title b { font-weight: 700; }
+  .site-search-line { display: block; color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .site-search-more { display: block; padding: var(--sp-1) var(--sp-4) var(--sp-2); color: var(--link); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .site-search-hint { padding: var(--sp-2) var(--sp-4) var(--sp-3); color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .site-search-none { padding: var(--sp-4); }
+  .site-search-none h2 { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; }
+  .site-search-none p { margin-top: var(--sp-2); color: var(--text-muted); }
+  .site-search-keys {
+    display: flex;
+    gap: var(--sp-4);
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    line-height: var(--lh-xs);
+  }
+  .site-search-keys kbd { padding: 0 var(--sp-1); border: 1px solid var(--border); border-radius: 3px; font: inherit; }
+
+  /* Below 1024px: the glass in the bar, and a sheet over the whole page. */
+  @media (width < 64rem) {
+    .site-bar-search { display: inline-flex; }
+    .site-search-box { display: none; }
+    .site-search.is-open .site-search-box {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .site-search-form { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--nav); }
+    .site-search.is-open .site-bar-search-field { flex: 1; width: auto; min-height: 44px; font-size: var(--fs-md); }
+    .site-search-cancel { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sp-2); color: #fff; font-weight: 600; cursor: pointer; }
+    .site-search.is-open .site-search-dim { display: none; }
+    .site-search.is-open .site-search-panel { position: static; flex: 1; width: auto; max-height: none; border: 0; border-radius: 0; box-shadow: none; }
+    .site-search-keys { display: none; }
+    html:has(.site-search.is-open) { overflow: hidden; }
+  }
+
+  @media print { .site-search { display: none; } }
+}

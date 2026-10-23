@@ -66,6 +66,15 @@ does in the app. The page-text rules skip anything inside one. --%>
   .switcher-demo { padding-bottom: 240px !important; }
   .switcher-demo:not(:has([open])) { padding-bottom: 0 !important; }
   .demo .toasts { position: static; width: auto; max-width: 400px; }
+  /* Search's panel in place, on a navy strip like the bar, with the page's dimming left out. */
+  .search-demo { background: var(--nav); }
+  .search-demo .site-search.is-open .site-search-dim { display: none; }
+  .search-demo .site-search.is-open .site-search-panel { position: static; margin-top: var(--sp-2); width: auto; max-width: 560px; }
+  /* The phone bar shows search's magnifying glass, not the field. */
+  .phone-bar-demo .site-bar-search { display: inline-flex; }
+  .phone-bar-demo .site-search-box { display: none; }
+  .phone-bar-demo .site-search { margin-left: auto; }
+  .phone-bar-demo .site-bar-inner:has(.site-search) > .account-menu { margin-left: 0; }
   .phone-width { max-width: 390px; }
 
   /* Frozen states, so every state of a button or switch can be seen at once. */
