@@ -262,6 +262,24 @@ defmodule App.ViewData.ChangeHistory do
     end
   end
 
+  # A member's reply (#444) is sent before the start, so it reads in the reply words.
+  def describe_row(
+        %ChangeSetRow{action: :update_attendance, change_set: %{source: :member}} = row,
+        page
+      ) do
+    yes? = row.new_value["status"] == "ATTENDING"
+
+    case page do
+      :member ->
+        title = (row.change_set.activity && row.change_set.activity.title) || "an activity"
+        if yes?, do: "Signed up for #{title}", else: "Can't make it to #{title}"
+
+      :activity ->
+        name = (row.member && row.member.name) || "A member"
+        if yes?, do: "#{name} signed up", else: "#{name} can't make it"
+    end
+  end
+
   def describe_row(%ChangeSetRow{action: action} = row, page)
       when action in [:update_attendance, :create_attendance] do
     subject =

@@ -34,6 +34,11 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **A member's own edit is a set of one row** (source `member`, #156): a member
   changing their address or emergency contacts from their page, applied at once. See
   [members.md](members.md).
+- **A member's reply is a set of one row** (source `member`, #444): I'll be there marks
+  their existing attendance row attending with the activity's times, and Can't make it
+  marks it absent ([ReplyToActivity](../lib/app/operation/reply_to_activity.ex)). It
+  never adds a row, since being invited means D4H has one, and it refuses once the
+  activity starts. It applies at once and updates the copy, with `replied_at`.
 - **Equipment on an activity is a set too** (source `equipment`, #271): adding items
   from the activity's "Add equipment" page, or removing one. A template's items and tags
   go the same way, with its tags as one `set_activity_tags` row (#162). It applies at
@@ -54,7 +59,8 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H
-  would count their hours twice. An equipment set reads the activity's usages instead,
+  would count their hours twice. A member's reply is the exception: their latest tap
+  wins over the status D4H has now, and only a row gone from D4H stops it. An equipment set reads the activity's usages instead,
   and skips an item D4H has on it now. A template's tag row is read just before it
   is planned. A `tags` set reads the activity's tags again and skips the row when they
   changed since the page opened. Group rows aren't checked; D4H treats a removed

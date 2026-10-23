@@ -73,6 +73,29 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert row.(%{"name" => "Jane"}) == "Details changed in SAR Duty"
   end
 
+  # Sent before the start, so never "attended" (#444).
+  test "a member's reply reads in the reply words" do
+    reply = fn status, page ->
+      ChangeHistory.describe_row(
+        %ChangeSetRow{
+          action: :update_attendance,
+          new_value: %{"status" => status},
+          member: %App.Model.Member{name: "Sam Rivera"},
+          change_set: %App.Model.ChangeSet{
+            source: :member,
+            activity: %App.Model.Activity{title: "Training night"}
+          }
+        },
+        page
+      )
+    end
+
+    assert reply.("ATTENDING", :activity) == "Sam Rivera signed up"
+    assert reply.("ABSENT", :activity) == "Sam Rivera can't make it"
+    assert reply.("ATTENDING", :member) == "Signed up for Training night"
+    assert reply.("ABSENT", :member) == "Can't make it to Training night"
+  end
+
   test "D4H access changes use D4H's names" do
     assert describe_change(%{
              record_kind: :member,

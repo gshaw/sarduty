@@ -21,8 +21,10 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     %{team: team, member: member, activity: activity}
   end
 
+  # The row as the sync gets it from D4H.
   defp d4h_row(attendance, attrs) do
-    Map.merge(
+    struct!(
+      App.Adapter.D4H.AttendanceInfo,
       %{
         d4h_attendance_id: attendance.d4h_attendance_id,
         d4h_member_id: attendance.member.d4h_member_id,
@@ -31,8 +33,8 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
         started_at: attendance.started_at,
         finished_at: attendance.finished_at,
         status: attendance.status
-      },
-      attrs
+      }
+      |> Map.merge(attrs)
     )
   end
 

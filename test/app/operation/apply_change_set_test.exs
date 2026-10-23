@@ -38,6 +38,23 @@ defmodule App.Operation.ApplyChangeSetTest do
              update("requested") |> ApplyChangeSet.check([info(502, 7, "requested")])
   end
 
+  # The exception to skip-if-changed (#444): a member who said Can't make it in D4H a
+  # moment ago, before the copy caught up, then taps I'll be there here, is signed up.
+  test "a member's reply wins over the status D4H has now" do
+    row = update("requested")
+
+    assert ApplyChangeSet.check(row, [info(501, 7, "absent")], :member) == :ok
+    assert ApplyChangeSet.check(row, [info(501, 7, "attending")], :member) == :ok
+
+    assert {:skipped, _} = ApplyChangeSet.check(row, [info(501, 7, "absent")], :door)
+    assert {:skipped, _} = ApplyChangeSet.check(row, [info(501, 7, "absent")], :agent)
+  end
+
+  test "a member's reply is skipped when their row is gone from D4H" do
+    assert {:skipped, "The attendance row is gone from D4H."} =
+             update("requested") |> ApplyChangeSet.check([info(502, 7, "requested")], :member)
+  end
+
   # D4H would accept a second row and count the member's hours twice.
   test "a create is skipped when D4H has a row for the member now" do
     row = create(7)
