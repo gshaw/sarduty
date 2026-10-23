@@ -53,8 +53,7 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
    menu items: "Create letter", "Tax credit letters", "Change password". Proper nouns keep
    their capitals: D4H, SAR Duty, SARVAC, Apple Wallet.
 9. **Write numbers as digits**, including one to nine: "3 changes", "1 member". Use
-   `Service.Format.count/2` so the noun agrees with the number. A heading puts its count
-   after a middle dot: "Equipment · 4", not "Equipment (4)".
+   `Service.Format.count/2` so the noun agrees with the number.
 10. **Every value people read comes from a `Service.Format` function.** Never write a
     number and its unit by hand, such as `{days} days`; a test fails if you do. Dates put
     the month first ("Sep 28, 2025", or "September 28, 2025" in letters), times use the
@@ -139,8 +138,7 @@ has started, such as a no-show the door marks. Never call a reply "absent", and 
 member who signed up "attending".
 
 - **Counts** use the same words: "23 signed up" before it starts and "23 attended" once it
-  starts, or "Signed up · 23" over a list of names. With nobody: "Nobody has signed up yet."
-  and "Nobody attended."
+  starts. With nobody: "Nobody has signed up yet." and "Nobody attended."
 - **Replies.** An invitation asks "Will you be there?". The member answers with two buttons
   in their own voice: "I'll be there" and "Can't make it". Once they
   answer, the buttons give way to their reply, "Signed up" or "Can't make it", and

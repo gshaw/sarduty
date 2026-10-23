@@ -291,7 +291,7 @@ defmodule Web.GroupLive do
 
   defp main_content(assigns) do
     ~H"""
-    <h2 class="subheading mt-4">Members · {length(@members)}</h2>
+    <h2 class="subheading mt-4">Members ({length(@members)})</h2>
     <.table
       :if={@members != []}
       id="group_members"
