@@ -8,6 +8,7 @@ defmodule Web.ReplyLinks do
   """
   alias App.Model.Activity
   alias App.Model.Member
+  alias App.Repo
 
   @reply_salt "activity reply"
   @reminders_salt "invitation reminders"
@@ -17,8 +18,18 @@ defmodule Web.ReplyLinks do
   # A mail app's unsubscribe keeps working for as long as people keep their email.
   @reminders_max_age 5 * 365 * 24 * 60 * 60
 
-  def reply_path(%Member{} = member, %Activity{} = activity),
-    do: "/replies/" <> Phoenix.Token.sign(Web.Endpoint, @reply_salt, [member.id, activity.id])
+  @doc """
+  A reply link. `answer`, `:yes` or `:no`, is the email button it sits behind: the page
+  opens with it selected. It isn't signed, since the token is what allows a reply.
+  """
+  def reply_path(%Member{} = member, %Activity{} = activity, answer \\ nil) do
+    path = "/replies/" <> Phoenix.Token.sign(Web.Endpoint, @reply_salt, [member.id, activity.id])
+
+    case answer do
+      nil -> path
+      answer when answer in [:yes, :no] -> path <> "?reply=#{answer}"
+    end
+  end
 
   def reminders_path(%Member{} = member),
     do: "/reminders/" <> Phoenix.Token.sign(Web.Endpoint, @reminders_salt, member.id)
@@ -28,6 +39,20 @@ defmodule Web.ReplyLinks do
     case Phoenix.Token.verify(Web.Endpoint, @reply_salt, token, max_age: @reply_max_age) do
       {:ok, [member_id, activity_id]} -> {:ok, {member_id, activity_id}}
       _error -> :error
+    end
+  end
+
+  @doc """
+  The member and the activity a reply token names, both on the same team, with the
+  activity's team loaded. Nil for a token that is bad or too old.
+  """
+  def find_reply(token) do
+    with {:ok, {member_id, activity_id}} <- verify_reply(token),
+         %Member{} = member <- Repo.get(Member, member_id),
+         %Activity{} = activity <- Activity.get_by(id: activity_id, team_id: member.team_id) do
+      {member, Repo.preload(activity, :team)}
+    else
+      _missing -> nil
     end
   end
 

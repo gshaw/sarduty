@@ -301,8 +301,11 @@ back. Replies close when the activity starts.
   [ReplyLinkLive](../lib/web/live/reply_link_live.ex)): no login. The signed link
   ([Web.ReplyLinks](../lib/web/reply_links.ex)) is for one member and one activity and
   only replies, so its change set has no user. Opening it changes nothing, since some
-  mail apps open every link; the member selects a button. It closes at the start, and
-  always has "Open activity (log in)".
+  mail apps open every link. Each email button adds its answer (`?reply=yes` or `no`),
+  and the page is a form with that answer selected and one Send reply (#488), a plain
+  post to [ReplyLinkController](../lib/web/controllers/reply_link_controller.ex) so it
+  works before the page connects. An answer that matches their reply shows the reply
+  and Change instead. It closes at the start, and always has "Open activity (log in)".
 - **Invitation reminders** are the member's setting, not the login's: many members get
   email without ever logging in. On by default, a switch in Contact details, and a
   reminder's "Turn off invitation reminders" link opens `/reminders/:token`

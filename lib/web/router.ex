@@ -128,6 +128,9 @@ defmodule Web.Router do
       live "/reminders/:token", InvitationRemindersLive
     end
 
+    # Send reply on a reminder's reply page (#488).
+    post "/replies/:token", ReplyLinkController, :create
+
     # Short links, such as an attendance link. Lowercase codes, unlike an ID card's.
     get "/s/:code", ShortLinkController, :show
 

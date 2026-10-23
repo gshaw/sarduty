@@ -1,33 +1,31 @@
 defmodule Web.ReplyLinkLive do
   use Web, :live_view_narrow_layout
 
+  import Web.Components.Reply, only: [reply: 1]
+
   alias App.Adapter.D4H
-  alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.Member
-  alias App.Repo
   alias Service.Format
   alias Web.Components.Reply
-  alias Web.Components.ReplyControl
   alias Web.ReplyLinks
 
   # The page a reminder's buttons open (#444): no login, only the link's token, for one
   # member and one activity. Opening it changes nothing, since some mail apps open every
-  # link; the member selects a button. It takes replies until the activity starts, and
-  # always offers the activity's own page, which needs a login.
+  # link. It's a form with the email's answer selected (#488), posted to
+  # Web.ReplyLinkController, so Send reply works before the page connects. It takes
+  # replies until the activity starts, and always offers the activity's own page, which
+  # needs a login.
   def mount(%{"token" => token}, _session, socket) do
-    now = DateTime.utc_now()
-
     socket =
-      case find(token) do
+      case ReplyLinks.find_reply(token) do
         {member, activity} ->
           assign(socket,
             page_title: activity.title,
-            member: member,
+            token: token,
             activity: activity,
             team: activity.team,
             invitation: Attendance.invitation(activity, member),
-            now: now
+            now: DateTime.utc_now()
           )
 
         nil ->
@@ -37,24 +35,42 @@ defmodule Web.ReplyLinkLive do
     {:ok, socket}
   end
 
-  # The member and the activity, both on the same team, or nil.
-  defp find(token) do
-    with {:ok, {member_id, activity_id}} <- ReplyLinks.verify_reply(token),
-         %Member{} = member <- Repo.get(Member, member_id),
-         %Activity{} = activity <-
-           Activity.get_by(id: activity_id, team_id: member.team_id) do
-      {member, Repo.preload(activity, :team)}
-    else
-      _missing -> nil
+  # `reply` is the email button the member came from; `change` is Change after sending.
+  def handle_params(params, _uri, %{assigns: %{activity: nil}} = socket),
+    do: {:noreply, assign(socket, params: params)}
+
+  def handle_params(params, _uri, socket) do
+    current = current_answer(socket.assigns.invitation)
+    asked = answer(params["reply"])
+    changing? = params["change"] == "1"
+    form? = current == nil or changing? or (asked != nil and asked != current)
+
+    {:noreply,
+     assign(socket,
+       current: current,
+       form?: form?,
+       form: to_form(%{"reply" => answer_param(asked || current)}),
+       # Their reply now, when the email asks to change it.
+       was: if(form? and current != nil and not changing?, do: current)
+     )}
+  end
+
+  # Their reply now, `:yes` or `:no`, or nil before they reply.
+  defp current_answer(invitation) do
+    case Reply.state(invitation, false) do
+      :ask -> nil
+      answer -> answer
     end
   end
 
+  defp answer("yes"), do: :yes
+  defp answer("no"), do: :no
+  defp answer(_other), do: nil
+
+  defp answer_param(nil), do: nil
+  defp answer_param(answer), do: Atom.to_string(answer)
+
   defp activity_path(team, activity), do: ~p"/teams/#{team}/activities/#{activity.id}"
-
-  def handle_info({:replied, attendance}, socket),
-    do: {:noreply, assign(socket, invitation: attendance)}
-
-  def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
   def render(%{activity: nil} = assigns) do
     ~H"""
@@ -75,27 +91,58 @@ defmodule Web.ReplyLinkLive do
     </p>
     <p :if={@activity.address} class="mb-0">{@activity.address}</p>
 
-    <div class="mt-6">
-      <.live_component
-        :if={Reply.open?(@invitation, @activity, @now)}
-        module={ReplyControl}
-        id="reply-link"
-        team={@team}
-        activity={@activity}
-        member={@member}
-        invitation={@invitation}
-        user={nil}
-      />
-      <p :if={@activity.deleted_at} id="reply-link-deleted">
-        This activity is deleted in {D4H.service_name(@team)}.
-      </p>
-      <p
-        :if={@invitation && !@activity.deleted_at && !Reply.open?(@invitation, @activity, @now)}
-        id="reply-link-closed"
+    <div :if={Reply.open?(@invitation, @activity, @now)} class="mt-6">
+      <.form
+        :if={@form?}
+        for={@form}
+        id="reply-link-form"
+        class="reply-form"
+        action={~p"/replies/#{@token}"}
+        method="post"
       >
-        Replies closed when it started.
-      </p>
+        <fieldset>
+          <legend>Will you be there?</legend>
+          <p :if={@was} id="reply-link-was" class="hint mb-2">
+            Your reply: {Reply.status_text(@invitation.status, false)}
+          </p>
+          <label class="choice">
+            <input
+              type="radio"
+              id="reply-link-yes"
+              name={@form[:reply].name}
+              value="yes"
+              checked={@form[:reply].value == "yes"}
+            /> I'll be there
+          </label>
+          <label class="choice">
+            <input
+              type="radio"
+              id="reply-link-no"
+              name={@form[:reply].name}
+              value="no"
+              checked={@form[:reply].value == "no"}
+            /> Can't make it
+          </label>
+        </fieldset>
+        <.button id="reply-link-send" type="submit" variant={:primary}>Send reply</.button>
+      </.form>
+      <.reply
+        :if={!@form?}
+        id="reply-link"
+        state={@current}
+        change_href={~p"/replies/#{@token}?change=1"}
+      />
     </div>
+    <p :if={@activity.deleted_at} id="reply-link-deleted" class="mt-6">
+      This activity is deleted in {D4H.service_name(@team)}.
+    </p>
+    <p
+      :if={@invitation && !@activity.deleted_at && !Reply.open?(@invitation, @activity, @now)}
+      id="reply-link-closed"
+      class="mt-6"
+    >
+      Replies closed when it started.
+    </p>
 
     <p :if={!@activity.deleted_at} class="mt-6 mb-0">
       <.a id="reply-link-open" href={activity_path(@team, @activity)}>Open activity</.a>
