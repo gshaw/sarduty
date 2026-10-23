@@ -27,6 +27,10 @@
   switcher on it, a side navigation lists its pages in sections, and an avatar opens the
   account menu. A new page in the side navigation is a line in
   [Web.Navigation](lib/web/navigation.ex); see [docs/navigation.md](docs/navigation.md).
+- **Search**: the top bar's search reads the live tables, so new data needs nothing. A new
+  team page for one record (`/teams/:subdomain/…/:id`) needs a kind in
+  [Web.Search](lib/web/search.ex) or a reason in its `not_searched/0`; a test fails until
+  it has one. See [docs/search.md](docs/search.md).
 - **Operations**: [lib/app/operation/](lib/app/operation) hold side effects and
   orchestration, one module per operation with a `call` entry point:
   `App.Operation.CreateTaxCreditLetter.call(…)`.

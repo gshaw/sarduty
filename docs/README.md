@@ -99,6 +99,7 @@ The rules that are easy to break:
 - [tax-credit-letters.md](tax-credit-letters.md) — verifying a tax credit letter, its reference numbers, and the locked PDF.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
+- [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
 - [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
 - [attendance-at-the-door.md](attendance-at-the-door.md) — attendance links, scanning ID cards at an activity, and the times they record.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
