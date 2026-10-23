@@ -15,16 +15,19 @@ defmodule Web.MilestoneCollectionLive do
   alias Service.Format
   alias Web.Components.MilestoneList
 
-  # Worked out once for the page; the filters only pick from them.
+  # Worked out once, when the page connects, rather than for the first render too; the
+  # filters only pick from them. Until then the page shows its filters and nothing else.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     now = DateTime.utc_now()
+    loaded? = connected?(socket)
 
     {:ok,
      assign(socket,
        page_title: "Milestones",
        now: now,
-       milestones: MemberMilestones.for_team(team, now)
+       loaded?: loaded?,
+       milestones: if(loaded?, do: MemberMilestones.for_team(team, now), else: [])
      )}
   end
 
@@ -106,7 +109,7 @@ defmodule Web.MilestoneCollectionLive do
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
 
     <.empty_state
-      :if={@paginated.entries == []}
+      :if={@loaded? and @paginated.entries == []}
       id="no-milestones"
       title="No milestones match"
     >
