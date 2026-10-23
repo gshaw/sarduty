@@ -41,3 +41,5 @@ the door ([attendance-at-the-door.md](attendance-at-the-door.md)) is for trainin
   Open.
 - **Group membership** (above): SAR Duty writes it to D4H, so SCA reading D4H groups is
   the clean way to get it there.
+
+<!-- cspell:ignore sarassist EMCR SARM — SCA's domain, BC's emergency management ID, a SAR manager -->
