@@ -39,7 +39,7 @@ defmodule Web.ActivityFormLive do
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
-    <.form for={@form} id="activity-form" phx-change="validate" phx-submit="save" class="max-w-xl">
+    <.form for={@form} id="activity-form" phx-change="validate" phx-submit="save" class="measure">
       <.error_summary form={@form} />
       <.input
         :if={!@activity}
@@ -75,7 +75,7 @@ defmodule Web.ActivityFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@activity} id="activity-delete" class="mt-8 max-w-xl">
+    <section :if={@activity} id="activity-delete" class="mt-8 measure">
       <h2 class="heading">Delete the activity</h2>
       <p>
         It leaves every list and letter. Its attendance links stop taking scans.

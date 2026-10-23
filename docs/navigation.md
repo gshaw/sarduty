@@ -6,6 +6,9 @@ area's pages, and the account menu holds your login. [Web.Navigation](../lib/web
 decides all of it from the page's path and assigns. It is pure, and
 [its test](../test/web/navigation_test.exs) runs without a database.
 
+Narrow pages (`/styles/layout`) keep the top bar and drop the side navigation; their Menu
+still lists the area's pages.
+
 ## Areas
 
 - **A team's space**, `/teams/:subdomain/…`. One per team, for everyone on it: team
@@ -101,7 +104,8 @@ is left out, and so is its divider.
 
 ## Adding a page
 
-A new page is a route and a LiveView with `use Web, :live_view_app_layout`. A team page is
+A new page is a route and a LiveView with `use Web, :live_view_app_layout`, or the narrow
+layout for a task done with a phone or iPad in hand; see `/styles/layout`. A team page is
 for team admins unless it says `access: :team` or `access: :member`
 ([members.md](members.md)). If it belongs in the side navigation, add a line to
 `Web.Navigation`. A page under an existing link needs nothing: the link is current on it.

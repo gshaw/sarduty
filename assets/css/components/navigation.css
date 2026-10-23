@@ -176,22 +176,23 @@
   :is(.menu, .site-bar-phone-panel) a.switch-admin { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); }
   .menu a.switch-admin .hero-shield-check-micro { color: var(--text-muted); }
 
-  /* Three columns, the outer two the same width, keep the name centred whether or not
-     there is a Menu. The panels open under the bar, so nothing here is positioned. */
-  @media (width < 64rem) {
-    .site-bar-links, .team-switcher { display: none; }
-    .site-bar-inner:has(> .site-bar-area-phone) {
+  /* The compact bar, below 1024px and on narrow pages at every width (compact-bar, in
+     app.css). Three columns, the outer two the same width, keep the name centred whether
+     or not there is a Menu. The panels open under the bar, so nothing here is positioned. */
+  .site-bar-links, .team-switcher { @variant compact-bar { display: none; } }
+  .site-bar-inner:has(> .site-bar-area-phone) {
+    @variant compact-bar {
       display: grid;
       grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
     }
-    .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
-    .site-bar-inner > .site-bar-phone { grid-area: 1 / 1; justify-self: start; }
-    .site-bar-inner > .site-bar-area-phone { grid-area: 1 / 2; }
-    .site-bar-inner > .site-bar-end { grid-area: 1 / 3; justify-self: end; }
-    .site-bar-phone { display: block; }
-    .site-bar-area-phone { display: flex; }
-    .site-bar-end { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
   }
+  .site-bar-inner:has(> .site-bar-area-phone) > .brand { @variant compact-bar { display: none; } }
+  .site-bar-inner > .site-bar-phone { @variant compact-bar { grid-area: 1 / 1; justify-self: start; } }
+  .site-bar-inner > .site-bar-area-phone { @variant compact-bar { grid-area: 1 / 2; } }
+  .site-bar-inner > .site-bar-end { @variant compact-bar { grid-area: 1 / 3; justify-self: end; } }
+  .site-bar-phone { @variant compact-bar { display: block; } }
+  .site-bar-area-phone { @variant compact-bar { display: flex; } }
+  .site-bar-end { @variant compact-bar { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; } }
 
   /* Menu: a short list under a button. */
   .menu {

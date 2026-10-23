@@ -205,7 +205,7 @@ defmodule Web.MemberQualificationsLive do
         id="award-form"
         phx-change="validate-award"
         phx-submit="award"
-        class="max-w-xl"
+        class="measure"
       >
         <.error_summary form={@form} />
         <.input

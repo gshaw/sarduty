@@ -49,7 +49,7 @@ defmodule Web.TitledRecordFormLive do
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
-    <.form for={@form} id="titled-record-form" phx-submit="save" class="max-w-xl">
+    <.form for={@form} id="titled-record-form" phx-submit="save" class="measure">
       <.error_summary form={@form} />
       <.input field={@form[:title]} label="Title" />
       <.form_actions>
@@ -57,7 +57,7 @@ defmodule Web.TitledRecordFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@record} id="record-delete" class="mt-8 max-w-xl">
+    <section :if={@record} id="record-delete" class="mt-8 measure">
       <h2 class="heading">Delete the {@kind}</h2>
       <p>{delete_text(@kind)}</p>
       <.button

@@ -48,7 +48,7 @@ defmodule Web.MemberFormLive do
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
-    <.form for={@form} id="member-form" phx-change="validate" phx-submit="save" class="max-w-xl">
+    <.form for={@form} id="member-form" phx-change="validate" phx-submit="save" class="measure">
       <.error_summary form={@form} />
       <.input field={@form[:name]} label="Name" />
       <div class="grid grid-cols-2 gap-x-6">
@@ -80,7 +80,7 @@ defmodule Web.MemberFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@member} id="member-photo" class="mt-8 max-w-xl">
+    <section :if={@member} id="member-photo" class="mt-8 measure">
       <h2 class="heading">Photo</h2>
       <%!-- The version changes after a save, so the browser loads the new photo. --%>
       <p>
@@ -118,7 +118,7 @@ defmodule Web.MemberFormLive do
       </form>
     </section>
 
-    <section :if={@member} id="member-retire" class="mt-8 max-w-xl">
+    <section :if={@member} id="member-retire" class="mt-8 measure">
       <h2 class="heading">Retiring</h2>
       <%= if @member.d4h_status == "RETIRED" do %>
         <p>

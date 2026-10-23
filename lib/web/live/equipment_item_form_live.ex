@@ -48,7 +48,7 @@ defmodule Web.EquipmentItemFormLive do
       id="equipment-item-form"
       phx-change="validate"
       phx-submit="save"
-      class="max-w-xl"
+      class="measure"
     >
       <.error_summary form={@form} />
       <.input field={@form[:title]} label="Name" />
@@ -82,7 +82,7 @@ defmodule Web.EquipmentItemFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@item} id="item-delete" class="mt-8 max-w-xl">
+    <section :if={@item} id="item-delete" class="mt-8 measure">
       <h2 class="heading">Delete the item</h2>
       <p>Its activities lose it too. To keep its history, set its status to Retired instead.</p>
       <.button

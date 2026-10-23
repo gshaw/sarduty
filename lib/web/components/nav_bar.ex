@@ -2,20 +2,17 @@ defmodule Web.Components.NavBar do
   use Web, :function_component
 
   # The top bar: navy with the amber rule. The brand on the left, the area's name after it,
-  # and a menu or a button on the right. See /styles/top-bar.
+  # and a menu or a button on the right. A narrow page's bar (:form or :tool) lines up with
+  # its column and is the compact phone bar at every width. See /styles/top-bar.
 
-  attr :size, :atom, values: ~w(wide narrow)a, default: :wide
+  attr :size, :atom, values: ~w(wide form tool)a, default: :wide
   slot :links
   slot :inner_block
 
   def site_bar(assigns) do
     ~H"""
-    <header class="site-bar print:hidden">
-      <div class={[
-        "site-bar-inner px-2 m-auto",
-        @size == :wide && "container",
-        @size == :narrow && "max-w-md"
-      ]}>
+    <header class={["site-bar print:hidden", @size != :wide && "site-bar-compact"]}>
+      <div class={["site-bar-inner px-2 m-auto", Web.Layouts.column_width(@size)]}>
         <a href="/" class="brand">SAR <span>Duty</span></a>
         <nav :if={@links != []} class="site-bar-links" aria-label="Main">
           {render_slot(@links)}

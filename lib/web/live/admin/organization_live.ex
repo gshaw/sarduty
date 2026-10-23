@@ -35,7 +35,7 @@ defmodule Web.Admin.OrganizationLive do
       id="organization-form"
       phx-change="validate"
       phx-submit="save"
-      class="max-w-xl"
+      class="measure"
     >
       <.input field={@form[:name]} label="Name">
         In full, as on the back of the ID card: "BC Search and Rescue Association".
@@ -112,7 +112,7 @@ defmodule Web.Admin.OrganizationLive do
       </.form_actions>
     </.form>
 
-    <section :if={@organization.id} id="organization-host" class="mt-8 max-w-xl">
+    <section :if={@organization.id} id="organization-host" class="mt-8 measure">
       <h2 class="heading">Their own verify address</h2>
       <p>
         Until then, cards link to {Web.VerifyHost.host()} and show the organization's name and

@@ -172,19 +172,29 @@ defmodule Web.Layouts do
     """
   end
 
-  # Login and settings forms: one task on the page, so no footer links to wander off to.
-  def narrow(assigns) do
+  # One task done with a phone or iPad in hand, such as logging in: one centred column at
+  # every width under the compact bar, and no footer links to wander off to. narrow_tool is
+  # the wider column, for a tool with a list. See /styles/layout.
+  def narrow(assigns), do: narrow_page(assign(assigns, :size, :form))
+  def narrow_tool(assigns), do: narrow_page(assign(assigns, :size, :tool))
+
+  defp narrow_page(assigns) do
     ~H"""
-    <.main_nav_bar {nav_assigns(assigns)} size={:narrow} />
-    <main role="main" class="max-w-md m-auto px-2 pt-16 mb-8">
+    <.main_nav_bar {nav_assigns(assigns)} size={@size} />
+    <main role="main" class={["m-auto px-2 pt-16 mb-8", column_width(@size)]}>
       <.flash_group flash={@flash} />
       {@inner_content}
     </main>
-    <.dev_footer size={:narrow} />
+    <.dev_footer size={@size} />
     """
   end
 
-  attr :size, :atom, values: ~w(wide narrow)a, default: :wide
+  @doc "The column a size of page stops at: the narrow layout's two, or the app's container."
+  def column_width(:form), do: "max-w-md"
+  def column_width(:tool), do: "max-w-3xl"
+  def column_width(:wide), do: "container"
+
+  attr :size, :atom, values: ~w(wide form tool)a, default: :wide
 
   # App and login pages have no footer, but in dev the mailbox is where login codes go.
   defp dev_footer(assigns) do
@@ -198,7 +208,7 @@ defmodule Web.Layouts do
     <footer
       :if={@dev_routes?}
       id="dev-footer"
-      class={["m-auto px-2 mb-8 text-sm", if(@size == :narrow, do: "max-w-md", else: "container")]}
+      class={["m-auto px-2 mb-8 text-sm", column_width(@size)]}
     >
       <p class="pt-4 border-t border-border-subtle">
         Development: <.a href="/dev/dashboard" external={true}>Dashboard</.a>
@@ -375,6 +385,7 @@ defmodule Web.Layouts do
         </.site_bar_phone_menu>
       <% else %>
         <.a
+          :if={!login_page?(@current_path)}
           id="nav-login"
           kind={:custom}
           navigate={~p"/login"}
@@ -384,6 +395,9 @@ defmodule Web.Layouts do
     </.site_bar>
     """
   end
+
+  # On the login pages the page's own button is Log in, so the bar doesn't repeat it.
+  defp login_page?(path), do: path in ["/login", "/login/code"]
 
   # Who the account menu shows: the person logged in, never the member they view as.
   defp own_member(%{viewing_as: nil} = assigns), do: assigns.current_member

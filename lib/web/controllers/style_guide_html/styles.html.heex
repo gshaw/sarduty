@@ -50,18 +50,6 @@ does in the app. The page-text rules skip anything inside one. --%>
   /* The app's bar, menu, and toasts are fixed or floating in the app. Here they sit in place. */
   .demo .site-bar { position: relative; }
   .bar-demo { padding-bottom: 320px !important; }
-  /* The phone bar at any window width: Menu, the logo over the name, the avatar. */
-  .phone-bar-demo :is(.site-bar-links, .team-switcher) { display: none; }
-  .phone-bar-demo .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
-  .phone-bar-demo .site-bar-inner:has(> .site-bar-area-phone) {
-    display: grid;
-    grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
-  }
-  .phone-bar-demo .site-bar-inner > .site-bar-phone { grid-area: 1 / 1; justify-self: start; }
-  .phone-bar-demo .site-bar-inner > .site-bar-area-phone { grid-area: 1 / 2; }
-  .phone-bar-demo .site-bar-inner > .account-menu { grid-area: 1 / 3; justify-self: end; }
-  .phone-bar-demo .site-bar-phone { display: block; }
-  .phone-bar-demo .site-bar-area-phone { display: flex; }
   .phone-bar-demo { padding-bottom: 1000px !important; }
   .switcher-demo { padding-bottom: 240px !important; }
   .switcher-demo:not(:has([open])) { padding-bottom: 0 !important; }
@@ -70,11 +58,6 @@ does in the app. The page-text rules skip anything inside one. --%>
   .search-demo { background: var(--nav); }
   .search-demo .site-search.is-open .site-search-dim { display: none; }
   .search-demo .site-search.is-open .site-search-panel { position: static; margin-top: var(--sp-2); width: auto; max-width: 560px; }
-  /* The phone bar shows search's magnifying glass, not the field. */
-  .phone-bar-demo .site-bar-search { display: inline-flex; }
-  .phone-bar-demo .site-search-box { display: none; }
-  .phone-bar-demo .site-search { margin-left: auto; }
-  .phone-bar-demo .site-bar-inner:has(.site-search) > .account-menu { margin-left: 0; }
   .phone-width { max-width: 390px; }
 
   /* Frozen states, so every state of a button or switch can be seen at once. */
