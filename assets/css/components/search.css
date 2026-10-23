@@ -47,6 +47,13 @@
   .site-search.is-open .site-bar-search-field input::placeholder { color: var(--text-muted); }
   .site-search.is-open .site-search-key { display: none; }
 
+  /* The x at the field's end clears it, once there is something to clear. */
+  .site-search-clear { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-right: calc(-1 * var(--sp-2)); color: inherit; border-radius: var(--radius); cursor: pointer; }
+  .site-search-clear:hover { color: var(--text); }
+  .site-bar-search-field:has(input:placeholder-shown) .site-search-clear { display: none; }
+  .site-bar-search-field:has(input:not(:placeholder-shown)) .site-search-key { display: none; }
+  .site-search.is-open .site-search-clear { @variant compact-bar { width: 44px; height: 44px; margin-right: calc(-1 * var(--sp-3)); } }
+
   /* The magnifying glass, below 1024px only. */
   .site-bar-search { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; color: #fff; border-radius: var(--radius); cursor: pointer; }
   .site-bar-search:hover { background: rgb(255 255 255 / 0.1); }
@@ -65,6 +72,7 @@
     width: 560px;
     max-height: calc(100dvh - 80px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding-top: var(--sp-2);
     color: var(--text);
     background: var(--bg);
