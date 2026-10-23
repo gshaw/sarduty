@@ -53,7 +53,7 @@ defmodule Web.ErrorHTML do
         </script>
       </head>
       <body>
-        <.site_bar size={:narrow} />
+        <.site_bar size={:form} />
 
         <main role="main" class="max-w-md m-auto px-2 pt-16 mb-8">
           <h1 class="my-8">

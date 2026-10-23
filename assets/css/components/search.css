@@ -118,11 +118,12 @@
   }
   .site-search-keys kbd { padding: 0 var(--sp-1); border: 1px solid var(--border); border-radius: 3px; font: inherit; }
 
-  /* Below 1024px: the glass in the bar, and a sheet over the whole page. */
-  @media (width < 64rem) {
-    .site-bar-search { display: inline-flex; }
-    .site-search-box { display: none; }
-    .site-search.is-open .site-search-box {
+  /* The compact bar (below 1024px, and narrow pages): the glass in the bar, and a sheet
+     over the whole page. */
+  .site-bar-search { @variant compact-bar { display: inline-flex; } }
+  .site-search-box { @variant compact-bar { display: none; } }
+  .site-search.is-open .site-search-box {
+    @variant compact-bar {
       position: fixed;
       inset: 0;
       z-index: 60;
@@ -131,14 +132,15 @@
       color: var(--text);
       background: var(--bg);
     }
-    .site-search-form { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--nav); }
-    .site-search.is-open .site-bar-search-field { flex: 1; width: auto; min-height: 44px; font-size: var(--fs-md); }
-    .site-search-cancel { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sp-2); color: #fff; font-weight: 600; cursor: pointer; }
-    .site-search.is-open .site-search-dim { display: none; }
-    .site-search.is-open .site-search-panel { position: static; flex: 1; width: auto; max-height: none; border: 0; border-radius: 0; box-shadow: none; }
-    .site-search-keys { display: none; }
-    html:has(.site-search.is-open) { overflow: hidden; }
   }
+  .site-search-form { @variant compact-bar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--nav); } }
+  .site-search.is-open .site-bar-search-field { @variant compact-bar { flex: 1; width: auto; min-height: 44px; font-size: var(--fs-md); } }
+  .site-search-cancel { @variant compact-bar { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--sp-2); color: #fff; font-weight: 600; cursor: pointer; } }
+  .site-search.is-open .site-search-dim { @variant compact-bar { display: none; } }
+  .site-search.is-open .site-search-panel { @variant compact-bar { position: static; flex: 1; width: auto; max-height: none; border: 0; border-radius: 0; box-shadow: none; } }
+  .site-search-keys { @variant compact-bar { display: none; } }
+  @media (width < 64rem) { html:has(.site-search.is-open) { overflow: hidden; } }
+  html:has(.site-bar-compact .site-search.is-open) { overflow: hidden; }
 
   @media print { .site-search { display: none; } }
 }

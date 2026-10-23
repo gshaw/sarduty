@@ -96,7 +96,7 @@ defmodule Web.MemberGroupsLive do
           :if={@records? and @other_groups != []}
           id="add-group-form"
           phx-submit="add-group"
-          class="mt-8 max-w-xl"
+          class="mt-8 measure"
         >
           <h2 class="heading">Add to a group</h2>
           <.input

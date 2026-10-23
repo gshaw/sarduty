@@ -1,7 +1,7 @@
 <.shell title="Layout" current={:layout}>
   <h1>Layout</h1>
   <p class="lead">
-    Every page in an area has the area's pages down the left, starts with the same header, and stops content at a readable width.
+    Every page in an area has the area's pages down the left, starts with the same header, and stops content at a readable width. A page for one task in hand is a narrow page.
   </p>
 
   <h2>Page header</h2>
@@ -63,6 +63,62 @@
       and <code>.content-2/3</code>. Its <a href={page_path(:tabs)}>tabs</a>
       sit under the title, above both columns.
     </li>
-    <li>Desktop first. On a phone, layouts stack and wide tables scroll sideways.</li>
+    <li>
+      Desktop first. On a phone, layouts stack and wide tables scroll sideways. A page for one task done with a phone in hand is a
+      <a href="#narrow-pages">narrow page</a>
+      instead.
+    </li>
   </ul>
+
+  <h2 id="narrow-pages">Narrow pages</h2>
+  <p>
+    A page for one task done with a phone or iPad in hand, such as logging in, taking attendance, or scanning kit, is one column, centred, at every width. A big screen adds margin, not width. There is no side navigation, and the
+    <a href={page_path(:top_bar)}>top bar</a>
+    is the compact one at every width, with its ends lined up with the column.
+  </p>
+  <ul>
+    <li>
+      <strong>Form, 28rem (448px):</strong>
+      one short form, such as Log in, the login code, or Sign up.
+    </li>
+    <li>
+      <strong>Tool, 48rem (768px):</strong>
+      a hand-held tool with a list, such as Take attendance or a scanner.
+    </li>
+    <li>
+      The team's name is in the bar, never in the page. Logged out, the bar has nothing on the left or right. Logged in, Menu holds the area's pages, so the page is never a dead end.
+    </li>
+    <li>
+      A page people move between stays in its area with side navigation, even when they mostly open it on a phone, such as Your membership.
+    </li>
+  </ul>
+  <div class="demo" style="padding: 0">
+    <Web.Layouts.main_nav_bar size={:form} current_path="/login" />
+    <div class={["m-auto px-2 py-6", Web.Layouts.column_width(:form)]}>
+      <h1 class="title">Log in</h1>
+      <.button variant={:success}>Send me a code</.button>
+    </div>
+  </div>
+  <div class="demo" style="padding: 0">
+    <Web.Layouts.main_nav_bar
+      size={:tool}
+      current_user={sample_user()}
+      current_team={sample_team()}
+      current_member={sample_member()}
+      team_admin?={true}
+      managed_teams={sample_managed_teams()}
+      member_logins={sample_member_logins()}
+      current_path="/teams/squamish/activities"
+    />
+    <div class={["m-auto px-2 py-6", Web.Layouts.column_width(:tool)]}>
+      <h1 class="title">Take attendance</h1>
+      <p class="mb-0">Scan each member's ID card as they arrive.</p>
+    </div>
+  </div>
+  <p class="spec">
+    In the app: <code>use Web, :live_view_narrow_layout</code>
+    for a form, or <code>use Web, {"{:live_view_narrow_layout, size: :tool}"}</code>
+    for a tool. The bar's <code>site-bar-compact</code>
+    class shows it as on a phone. The ID card and letter checks use their own verify layout, so they don't look like the app.
+  </p>
 </.shell>

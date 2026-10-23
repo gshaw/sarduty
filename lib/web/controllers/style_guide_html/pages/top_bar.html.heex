@@ -51,7 +51,13 @@
   <p>
     Below 1024px the Menu button moves to the left, the logo sits over the area's name in the middle, and your initials stay on the right, so a phone or a shared iPad always shows who is logged in. The name ends in an ellipsis when it is too long. The switcher stays on the name, with a chevron, as on a desktop. Menu holds the area's pages in their sections; with none, there is no Menu. Your initials open the same account menu as on a desktop. Each panel opens under the amber rule, the width of the screen, with the current page marked in amber. Opening one closes the other, and going to another page closes both.
   </p>
-  <div class="demo phone-width phone-bar-demo" style="padding: 0">
+  <p>
+    <a href={page_path(:layout) <> "#narrow-pages"}>Narrow pages</a>
+    use this bar at every width, lined up with their column. In the app:
+    <code>site-bar-compact</code>
+    on the bar or around it.
+  </p>
+  <div class="demo phone-width phone-bar-demo site-bar-compact" style="padding: 0">
     <Web.Layouts.main_nav_bar
       current_user={sample_user()}
       current_team={sample_team()}
@@ -82,7 +88,7 @@
     </div>
     <div
       id={"phone-switcher-#{id}"}
-      class="demo phone-width phone-bar-demo switcher-demo"
+      class="demo phone-width phone-bar-demo site-bar-compact switcher-demo"
       style="padding: 0"
     >
       <Web.Layouts.main_nav_bar {bar} />

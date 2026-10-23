@@ -11,6 +11,18 @@ defmodule Web.UserLoginLiveTest do
     refute has_element?(lv, "#login_form input[type=password]")
   end
 
+  test "the bar doesn't repeat Log in on the login pages, and has it elsewhere", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/login")
+    refute has_element?(lv, "#nav-login")
+
+    conn = Phoenix.ConnTest.init_test_session(conn, %{login_email: "pat@example.com"})
+    {:ok, lv, _html} = live(conn, ~p"/login/code")
+    refute has_element?(lv, "#nav-login")
+
+    {:ok, lv, _html} = live(build_conn(), ~p"/signup")
+    assert has_element?(lv, "#nav-login")
+  end
+
   test "submitting hands the form to the controller", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/login")
 

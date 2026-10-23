@@ -59,8 +59,19 @@ defmodule Web do
 
   def live_view_marketing_layout(opts \\ []), do: live_view({Web.Layouts, :marketing}, opts)
   def live_view_app_layout(opts \\ []), do: live_view({Web.Layouts, :app}, opts)
-  def live_view_narrow_layout(opts \\ []), do: live_view({Web.Layouts, :narrow}, opts)
   def live_view_verify_layout(opts \\ []), do: live_view({Web.Layouts, :verify}, opts)
+
+  # One task done with a phone or iPad in hand: one centred column at every width, no side
+  # navigation, and the compact top bar. `size: :tool`, 48rem, is for a tool with a list,
+  # such as a scanner; the default, 28rem, for one short form. See /styles/layout.
+  def live_view_narrow_layout(opts \\ []) do
+    {size, opts} = Keyword.pop(opts, :size, :form)
+
+    case size do
+      :form -> live_view({Web.Layouts, :narrow}, opts)
+      :tool -> live_view({Web.Layouts, :narrow_tool}, opts)
+    end
+  end
 
   # Every layout gets the same components, so a page can move to another layout
   # without changing its imports. Components only one or two pages use are imported

@@ -16,6 +16,12 @@
 /* Use the data attribute for dark mode  */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* The compact top bar: on phones and iPads, and on narrow pages at every width. */
+@custom-variant compact-bar {
+  @media (width < 64rem) { @slot; }
+  .site-bar-compact & { @slot; }
+}
+
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 

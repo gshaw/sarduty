@@ -244,7 +244,7 @@ defmodule Web.MemberStandingLive do
             id="away-form"
             phx-change="validate-away"
             phx-submit="add-away"
-            class="max-w-xl mt-6"
+            class="measure mt-6"
           >
             <h3 class="subheading">Add an away period</h3>
             <.error_summary form={@away_form} />
@@ -301,7 +301,7 @@ defmodule Web.MemberStandingLive do
             id="check-in-form"
             phx-change="validate-check-in"
             phx-submit="check-in"
-            class="max-w-xl mt-6"
+            class="measure mt-6"
           >
             <h3 class="subheading">Record a check-in</h3>
             <.error_summary form={@check_in_form} />

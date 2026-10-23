@@ -18,7 +18,8 @@
 - **Web**: [lib/web/live/](lib/web/live) LiveViews, [lib/web/controllers/](lib/web/controllers),
   and [lib/web/components/](lib/web/components). A LiveView picks its layout with
   `use Web, :live_view_app_layout` (team and admin pages, and account settings),
-  `:live_view_narrow_layout` (logging in and signing up), or
+  `:live_view_narrow_layout` (one task done with a phone or iPad in hand: logging in,
+  taking attendance, scanning; see `/styles/layout`), or
   `:live_view_marketing_layout` (public pages) — see [lib/web.ex](lib/web.ex). Every
   layout imports the same shared components; a page imports the ones only it uses.
 - **Navigation**: every page is in an area — a team's space, SAR Duty admin, or account
