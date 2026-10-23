@@ -102,14 +102,25 @@ defmodule App.Model.Chore do
   @doc "Whether the member can delete it: while it waits, or once declined."
   def member_can_delete?(%Chore{status: status}), do: status in [:waiting, :declined]
 
-  @doc "A member's chores, newest first, with their categories."
-  def get_all_for_member(%Member{} = member) do
+  @doc """
+  A member's chores, newest first, with their categories. `status:` keeps one status,
+  and `limit:` the latest few.
+  """
+  def get_all_for_member(%Member{} = member, opts \\ []) do
     Chore
     |> where([c], c.team_id == ^member.team_id and c.member_id == ^member.id)
+    |> filter_status(opts[:status])
     |> order_by([c], desc: c.date, desc: c.id)
+    |> take(opts[:limit])
     |> preload([:chore_category, :decided_by_user])
     |> Repo.all()
   end
+
+  defp filter_status(query, nil), do: query
+  defp filter_status(query, status), do: where(query, [c], c.status == ^status)
+
+  defp take(query, nil), do: query
+  defp take(query, count), do: limit(query, ^count)
 
   @doc "The team's waiting chores, oldest first, with their members and categories."
   def get_waiting(team_id) do

@@ -79,7 +79,7 @@ defmodule Web.MeLive do
 
   # A member's latest chores (#341), on a team with member logins on. Nil hides the section.
   defp latest_chores(%{team: %{member_logins: true}} = member),
-    do: member |> Chore.get_all_for_member() |> Enum.take(5)
+    do: Chore.get_all_for_member(member, limit: 5)
 
   defp latest_chores(_member), do: nil
 

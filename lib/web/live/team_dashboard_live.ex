@@ -72,7 +72,11 @@ defmodule Web.TeamDashboardLive do
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
     letters = TaxCreditLetter.get_all_for_member(member)
     qualifications = MemberRecords.qualifications(member, now)
-    chores = if member.team.member_logins, do: Chore.get_all_for_member(member), else: []
+
+    chores =
+      if member.team.member_logins,
+        do: Chore.get_all_for_member(member, status: :declined),
+        else: []
 
     assign(socket,
       to_do:
