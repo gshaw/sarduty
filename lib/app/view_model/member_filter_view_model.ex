@@ -143,7 +143,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   @doc """
-  The Standing switch's parts (#468): Not retired first, as the list opens, then each
+  The Standing switch's parts (#469): Not retired first, as the list opens, then each
   standing. No All: Not retired and Retired add up to it.
   """
   def standing_switch, do: [{"Not retired", "current"} | @standings]

@@ -339,7 +339,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert names_in_order(html, [current.name, retired.name])
   end
 
-  test "the Standing switch counts each standing and has no All (#468)", %{conn: conn} do
+  test "the Standing switch counts each standing and has no All (#469)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member_fixture(team, %{name: "Cara Current"})
     member_fixture(team, %{name: "Nico Bot", not_a_person: true})
@@ -358,7 +358,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#member_filter_form-summary strong", "1 member")
   end
 
-  test "a search that finds no one offers all members, and All shows as a menu (#468)",
+  test "a search that finds no one offers all members, and All shows as a menu (#469)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member_fixture(team, %{name: "Rae Retired", left_at: ~U[2025-06-01 00:00:00Z]})
