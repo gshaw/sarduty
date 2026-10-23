@@ -8,6 +8,7 @@ defmodule Web.AttendanceLinkLive do
   alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
+  alias App.Model.MemberCard
   alias App.Operation.BuildYetToArrive
   alias App.Operation.RecordAttendanceScan
 
@@ -77,7 +78,7 @@ defmodule Web.AttendanceLinkLive do
      assign(socket,
        override: params["override"] || "",
        search: search,
-       matches: matches(socket.assigns.members, search)
+       matches: if(card_text?(search), do: [], else: matches(socket.assigns.members, search))
      )}
   end
 
@@ -100,7 +101,9 @@ defmodule Web.AttendanceLinkLive do
   end
 
   # A member's button submits the whole form, so the pick carries the time box as it
-  # shows (#168). Enter in the search box submits with no member and only searches.
+  # shows (#168). Enter in the search box submits with no member: a card's link or code
+  # records that card, as a plug-in barcode scanner types it (#484); anything else only
+  # searches.
   def handle_event("pick", %{"pick" => member_id} = params, socket) do
     kind = socket.assigns.kind
     override = params["override"] || ""
@@ -114,7 +117,25 @@ defmodule Web.AttendanceLinkLive do
     {:noreply, socket}
   end
 
-  def handle_event("pick", params, socket), do: handle_event("change", params, socket)
+  def handle_event("pick", params, socket) do
+    input = String.trim(params["search"] || "")
+
+    if card_entry?(input) do
+      kind = socket.assigns.kind
+      override = params["override"] || ""
+      hosts = Web.VerifyHost.trusted_hosts()
+
+      socket =
+        socket
+        |> assign(override: override, search: "", matches: [])
+        |> record(&RecordAttendanceScan.from_card(&1, input, hosts, kind, override, &2))
+        |> push_event("clear-search", %{})
+
+      {:noreply, socket}
+    else
+      handle_event("change", params, socket)
+    end
+  end
 
   def handle_event("undo", %{"id" => scan_id}, socket) do
     socket =
@@ -202,6 +223,22 @@ defmodule Web.AttendanceLinkLive do
     |> Enum.take(@max_name_matches)
   end
 
+  @doc """
+  Whether text in the name box is a card's link or code rather than a name. A printed
+  code has a dash and almost every code has a digit; names have neither.
+  """
+  def card_entry?(text) do
+    String.contains?(text, "://") or
+      (MemberCard.normalize_code(text) != nil and String.match?(text, ~r/[\d-]/))
+  end
+
+  # As card_entry?/1, but also true while a scanner is still typing a link, so the name
+  # search doesn't say "no member" at each character.
+  defp card_text?(text) do
+    text = text |> String.trim() |> String.downcase()
+    String.starts_with?(text, "ht") or card_entry?(text)
+  end
+
   attr :message, :any, required: true
 
   # Big and coloured, so the person at the door sees each scan land at a glance.
@@ -283,6 +320,7 @@ defmodule Web.AttendanceLinkLive do
         aria-pressed={to_string(@kind == kind)}
         phx-click="set_kind"
         phx-value-kind={kind}
+        data-return-focus
       >
         {label}
       </.button>
@@ -321,8 +359,9 @@ defmodule Web.AttendanceLinkLive do
           label="Find a member by name"
           autocomplete="off"
           phx-debounce="150"
+          phx-hook="ScannerInput"
         >
-          For a member without their ID card.
+          Or scan an ID card with a plug-in barcode scanner.
         </.input>
       </div>
       <ul :if={@matches != []} id="matches" class="-mt-4">
@@ -333,7 +372,11 @@ defmodule Web.AttendanceLinkLive do
           </.button>
         </li>
       </ul>
-      <p :if={@matches == [] and String.length(@search) >= 2} id="no-matches" class="-mt-4">
+      <p
+        :if={@matches == [] and String.length(@search) >= 2 and not card_text?(@search)}
+        id="no-matches"
+        class="-mt-4"
+      >
         No current member has that name.
       </p>
     </form>

@@ -102,6 +102,25 @@ The hook keeps its scanning flag on the `[data-scan-state]` element inside it, n
 so a flag there was wiped by the render after each scan. The page went back to "Scan ID
 cards" while the camera kept running.
 
+## A plug-in barcode scanner
+
+A USB or Bluetooth barcode scanner works on a laptop or an iPad (#484). It acts as a
+keyboard: it types what the QR code holds, the card's verify link, and presses Enter.
+It types into **Find a member by name**. On Enter, the box records a card when its text
+is a link or a card's code with a dash or a digit (`card_entry?/1`), and searches names
+otherwise. While a link is still being typed the box shows no "no member" line.
+
+The `ScannerInput` hook ([scanner_input.js](../assets/js/scanner_input.js)) handles the
+cursor. On a laptop (`pointer: fine`) the box takes it when the page opens and after
+Arriving or Leaving. After a card it empties the box itself, since LiveView leaves a
+focused input's value alone. On an iPad someone taps the box once: iOS ignores focus a
+page sets without a tap, and the cursor would open the on-screen keyboard. A paired
+Bluetooth scanner counts as a keyboard, so iOS hides the on-screen one; typing a name
+then needs the keyboard button at the bottom of the screen.
+
+A team needs a 2D imager that reads phone screens. A 1D laser scanner can't read QR
+codes. Wallet turns the brightness up when it shows a pass.
+
 ## Sending to D4H
 
 The **Send to D4H** part of the Take attendance page
