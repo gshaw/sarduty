@@ -4,6 +4,7 @@ defmodule Web.MeLive do
   import Web.Components.Chart, only: [stat: 1]
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
+  import Web.Components.PersonHead
 
   alias App.Adapter.D4H
   alias App.Model.MemberCard
@@ -33,6 +34,8 @@ defmodule Web.MeLive do
       |> assign(:page_title, member.name)
       |> assign(member: member, team: team, now: now)
       |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
+      |> assign(:standing, MemberAwayPeriod.standing_today(member, team.timezone, now))
+      |> assign(:last_attended_at, attended |> List.first() |> then(&(&1 && &1.started_at)))
       |> assign_activities(attended, now)
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
@@ -72,19 +75,14 @@ defmodule Web.MeLive do
 
   def render(assigns) do
     ~H"""
-    <div class="person-head">
-      <%!-- Ignored on update, so the photo a failed load removed stays gone. --%>
-      <span id="member-avatar" class="avatar avatar-lg" phx-update="ignore">
-        {Web.Navigation.initials(@member.name)}
-        <img id="member-photo" src={~p"/teams/#{@team}/me/image"} alt="" onerror="this.remove()" />
-      </span>
-      <div class="min-w-0">
-        <h1 class="title mb-0">{@member.name}</h1>
-        <p :if={@member.joined_at} id="member-since" class="hint mt-1 mb-0">
-          Member since {Format.month_year_long(@member.joined_at, @team.timezone)}
-        </p>
-      </div>
-    </div>
+    <%!-- Away shows as a reminder; a retired member can't log in. --%>
+    <.person_head
+      id="member-head"
+      name={@member.name}
+      photo={~p"/teams/#{@team}/me/image"}
+      standing={@standing}
+      facts={facts(@member, @last_attended_at, @team.timezone)}
+    />
 
     <div class="membership mt-6">
       <div class="min-w-0">
@@ -132,14 +130,22 @@ defmodule Web.MeLive do
       <div :if={@stats.activities > 0} id="year-stats">
         <p class="chart-caption mb-2">The last 12 months</p>
         <div class="chart-stats">
-          <.stat id="stat-activities" value={Format.number(@stats.activities)} label="Activities" />
+          <.stat
+            id="stat-activities"
+            value={Format.number(@stats.activities)}
+            label={Format.count(@stats.activities, one: "Activity", many: "Activities")}
+          />
           <.stat
             id="stat-incidents"
             series={:incident}
             value={Format.number(@stats.incidents)}
-            label="Incidents"
+            label={Format.count(@stats.incidents, one: "Incident", many: "Incidents")}
           />
-          <.stat id="stat-hours" value={Format.hours(@stats.minutes)} label="Hours" />
+          <.stat
+            id="stat-hours"
+            value={Format.hours(@stats.minutes)}
+            label={Format.count(div(round(@stats.minutes), 60), one: "Hour", many: "Hours")}
+          />
         </div>
       </div>
       <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
@@ -282,7 +288,7 @@ defmodule Web.MeLive do
       <h2 class="chart-title mb-1">Contact details</h2>
       <dl>
         <dt>Mobile</dt>
-        <dd id="contact-mobile">{@member.phone || "None"}</dd>
+        <dd id="contact-mobile">{Service.Phone.format(@member.phone) || "None"}</dd>
         <dt>Address</dt>
         <dd id="contact-address">{@member.address || "None"}</dd>
         <.emergency_contact

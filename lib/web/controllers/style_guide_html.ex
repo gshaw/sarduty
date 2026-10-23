@@ -13,6 +13,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.MilestoneList
   import Web.Components.OpenInMaps
   import Web.Components.Pagination
+  import Web.Components.PersonHead
   import Web.Components.Phone, only: [call_and_text: 1]
   import Web.Components.RowLink
   import Web.Components.Scanner
@@ -80,6 +81,7 @@ defmodule Web.StyleGuideHTML do
          {:milestone_list, "Milestone list", "What a member reached, and the day."},
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:pagination, "Pagination", "Pages under a long table."},
+         {:person_head, "Person head", "A member's photo, name, standing, and facts."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:row_link, "Row link", "A list row that goes to one place."},
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},

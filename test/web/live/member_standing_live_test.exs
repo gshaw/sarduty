@@ -17,7 +17,7 @@ defmodule Web.MemberStandingLiveTest do
   defp today(team), do: Service.Period.today(DateTime.utc_now(), team.timezone)
   defp day(team, days_from_today), do: team |> today() |> Date.add(days_from_today)
 
-  test "a member with no away period is active, and the sidebar says so", %{conn: conn} do
+  test "a member with no away period is active, and the header shows no badge", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
 
@@ -25,7 +25,7 @@ defmodule Web.MemberStandingLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
     assert has_element?(lv, "#standing-now", "Active")
-    assert has_element?(lv, "#member-standing", "Active")
+    refute has_element?(lv, "#member-head-standing")
     assert has_element?(lv, "#no-away-periods")
   end
 
@@ -55,6 +55,12 @@ defmodule Web.MemberStandingLiveTest do
            )
 
     assert has_element?(lv, "#away-period-list", "Parental leave")
+
+    assert has_element?(
+             lv,
+             "#member-head-standing.badge-warning",
+             "Away until #{Service.Format.date_short(ends_on)}"
+           )
 
     assert [%MemberStandingChange{action: :away_added, user_id: user_id}] =
              Repo.all(MemberStandingChange)
@@ -172,7 +178,7 @@ defmodule Web.MemberStandingLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
     assert has_element?(lv, "#standing-now", "Retired")
-    assert has_element?(lv, "#member-standing", "Retired")
+    assert has_element?(lv, "#member-head-standing", "Retired")
     refute has_element?(lv, "#away-form")
     assert has_element?(lv, "#away-retired")
 

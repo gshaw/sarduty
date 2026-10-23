@@ -1,0 +1,58 @@
+<.shell title="Person head" current={:person_head}>
+  <h1>Person head</h1>
+  <p class="lead">A member's photo, name, standing, and facts.</p>
+
+  <div class="demo">
+    <.person_head
+      id="person-head-demo"
+      name="Sam Rivera"
+      photo={~p"/images/member.png"}
+      facts={["Ground searcher", "Joined October 2016", "Last attended Sep 30, 2026"]}
+    >
+      <:actions>
+        <.button>View as member</.button>
+      </:actions>
+    </.person_head>
+  </div>
+
+  <div class="demo">
+    <.person_head
+      id="person-head-away-demo"
+      name="Alex Chen"
+      photo="/styles/no-photo.png"
+      standing={{:away, %{ends_on: ~D[2026-11-30]}}}
+      facts={["Joined March 2019", "Last attended Aug 2, 2026"]}
+    />
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    The top of a member's own page: the team member page, on every tab, and Your membership.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    Any other page's title, which is a plain <code>h1</code>. A member in a list or table is a row.
+  </p>
+
+  <h2>How it works</h2>
+  <ul class="list">
+    <li>
+      The photo comes from D4H. When there is none, the page path answers 404 and the circle shows the member's initials.
+    </li>
+    <li>
+      A badge beside the name when the member isn't active: amber for Away until a date, grey for Retired and Not a person. The reason stays on the Standing tab.
+    </li>
+    <li>
+      One line of facts: role, when they joined, and when they last attended. A fact D4H doesn't have is left out. No member ID: teams number members in very different ways.
+    </li>
+    <li>Buttons sit on the right and wrap under the name on a narrow screen.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.person_head id name photo standing facts&gt;</code>
+    with standing from <code>MemberAwayPeriod.standing_today/3</code>
+    and facts from <code>PersonHead.facts/3</code>. Buttons go in <code>:actions</code>.
+  </p>
+</.shell>

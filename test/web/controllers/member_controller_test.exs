@@ -43,4 +43,11 @@ defmodule Web.MemberControllerTest do
       get(conn, ~p"/teams/#{team}/members/#{member.id}/certificates/#{award.id}")
     end
   end
+
+  test "answers 404 when D4H has no photo, so the header shows initials",
+       %{conn: conn, team: team, member: member} do
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+
+    assert conn |> get(~p"/teams/#{team}/members/#{member.id}/image") |> response(404)
+  end
 end

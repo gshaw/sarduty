@@ -2,9 +2,10 @@ defmodule Web.Components.MemberSidebar do
   use Web, :function_component
 
   import Web.Components.A
-  import Web.Components.D4H
+  import Web.Components.Breadcrumbs
   import Web.Components.CopyButton
   import Web.Components.OpenInMaps
+  import Web.Components.PersonHead
   import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
@@ -15,22 +16,9 @@ defmodule Web.Components.MemberSidebar do
   alias Web.Components.MilestoneList
   alias Web.Components.OpenInMaps
 
-  attr :member, :map, required: true
-  attr :maps_app, :string, default: "google", doc: "the account's maps_app"
-
-  attr :last_attended_at, :any,
-    required: true,
-    doc: "when the member last attended an activity, from load_sidebar/1"
-
-  attr :standing, :any, required: true, doc: "the member's standing today, from load_sidebar/1"
-
-  attr :milestones, :list,
-    required: true,
-    doc: "the member's milestones, newest first, from load_sidebar/1"
-
   @doc """
-  Assigns the sidebar's `last_attended_at`, `standing`, and `milestones` for the socket's
-  `member`. Call
+  Assigns the header's `last_attended_at` and `standing`, and the sidebar's
+  `milestones`, for the socket's `member`. Call
   it when the member loads, not on every render: a form's change events re-render.
   """
   def load_sidebar(socket) do
@@ -43,14 +31,55 @@ defmodule Web.Components.MemberSidebar do
     )
   end
 
+  attr :member, :map, required: true
+  attr :last_attended_at, :any, required: true, doc: "from load_sidebar/1"
+  attr :standing, :any, required: true, doc: "from load_sidebar/1"
+
+  @doc """
+  The breadcrumbs and the member's name over every tab, with View as member: the same
+  header Your membership opens with.
+  """
+  def member_head(assigns) do
+    ~H"""
+    <.breadcrumbs>
+      <:item label="Members" path={~p"/teams/#{@member.team}/members/"} />
+      <:item label={@member.name} />
+    </.breadcrumbs>
+    <.person_head
+      id="member-head"
+      class="mb-6"
+      name={@member.name}
+      photo={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
+      standing={@standing}
+      facts={facts(@member, @last_attended_at, @member.team.timezone)}
+    >
+      <:actions>
+        <.button
+          id="view-as"
+          href={~p"/teams/#{@member.team}/members/#{@member.id}/view-as"}
+          method="post"
+        >
+          View as member
+        </.button>
+      </:actions>
+    </.person_head>
+    """
+  end
+
+  attr :member, :map, required: true
+  attr :maps_app, :string, default: "google", doc: "the account's maps_app"
+
+  attr :milestones, :list,
+    required: true,
+    doc: "the member's milestones, newest first, from load_sidebar/1"
+
+  # The header has the photo, role, joined, standing, and last attended, so the
+  # sidebar is the member's ID, how to reach them, and D4H.
   def sidebar_content(assigns) do
     ~H"""
     <dl>
-      <p><.member_image member={@member} /></p>
       <dt>ID</dt>
       <dd>{@member.ref_id}</dd>
-      <dt>Role</dt>
-      <dd>{@member.position}</dd>
       <dt>Email</dt>
       <dd>
         <.a href={"mailto:#{@member.email}"}>{@member.email}</.a><.copy_button
@@ -85,18 +114,6 @@ defmodule Web.Components.MemberSidebar do
         <dt>Second emergency contact</dt>
         <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
       <% end %>
-      <dt>Joined</dt>
-      <dd>{date_and_days_ago(@member.joined_at, @member.team.timezone)}</dd>
-      <dt>Standing</dt>
-      <dd id="member-standing">
-        <.link navigate={~p"/teams/#{@member.team}/members/#{@member.id}/standing"} class="link">
-          {Web.Components.Standing.text(@standing)}
-        </.link>
-      </dd>
-      <dt>Last attended</dt>
-      <dd id="member-last-attended">
-        {last_attended(@last_attended_at, @member.team.timezone)}
-      </dd>
       <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />
@@ -194,16 +211,4 @@ defmodule Web.Components.MemberSidebar do
   @doc "An emergency contact's phone numbers, as D4H has them."
   def phones(contact),
     do: Enum.filter([contact["primary_phone"], contact["secondary_phone"]], &present?/1)
-
-  defp last_attended(nil, _timezone), do: "Never"
-
-  defp last_attended(started_at, timezone), do: date_and_days_ago(started_at, timezone)
-
-  # "Oct 8, 2026 · 12 days ago". D4H allows a member with no start date (#421).
-  defp date_and_days_ago(nil, _timezone), do: "Not set"
-
-  defp date_and_days_ago(datetime, timezone) do
-    ago = Service.Format.days_ago(datetime, DateTime.utc_now(), timezone)
-    "#{Service.Format.date_short(datetime, timezone)} · #{ago}"
-  end
 end

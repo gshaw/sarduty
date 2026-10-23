@@ -126,9 +126,13 @@ defmodule Web.MemberLiveTest do
     assert has_element?(lv, "#attendance_filter_form-summary", "1 activity")
   end
 
-  test "the summary says when the member last attended (#367)", %{conn: conn} do
+  test "the header says the role, when they joined, and when they last attended (#367)",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    member = member_fixture(team)
+
+    member =
+      member_fixture(team, %{position: "Ground searcher", joined_at: ~U[2016-10-03 16:00:00Z]})
+
     never = member_fixture(team)
     activity = activity_fixture(team, %{started_at: ~U[2026-01-10 18:00:00Z]})
     attendance_fixture(activity, member)
@@ -136,10 +140,27 @@ defmodule Web.MemberLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
 
-    assert has_element?(lv, "#member-last-attended", "Jan 10, 2026")
+    assert has_element?(
+             lv,
+             "#member-head-facts",
+             "Ground searcher · Joined October 2016 · Last attended Jan 10, 2026"
+           )
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{never.id}")
-    assert has_element?(lv, "#member-last-attended", "Never")
+    assert has_element?(lv, "#member-head-facts", "Not attended yet")
+  end
+
+  test "every tab opens with the same header and View as member", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    conn = log_in_user(conn, user)
+
+    for tab <- ["", "/qualifications", "/groups", "/standing", "/card", "/history"] do
+      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{tab}")
+
+      assert has_element?(lv, "#member-head h1", member.name)
+      assert has_element?(lv, "#view-as", "View as member")
+    end
   end
 
   test "the Tag filter keeps the activities with the tag", %{conn: conn} do
