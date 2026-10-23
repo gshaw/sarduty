@@ -15,7 +15,8 @@ export const Search = {
 
     // The glass opens the sheet here rather than with JS commands, which add the class a
     // frame later: the field must be showing and focused within the tap, or iOS won't
-    // raise the keyboard. open() keeps the class through the server's renders.
+    // raise the keyboard. The class survives the server's renders because the component
+    // ignores server changes to it (phx-mounted).
     this.el.querySelector(`#${this.el.id}-open`).addEventListener("click", () => {
       this.el.classList.add("is-open")
       this.input.focus()

@@ -49,6 +49,7 @@ defmodule Web.Components.Search do
       id={@id}
       class={["site-search", @open && "is-open"]}
       phx-hook="Search"
+      phx-mounted={JS.ignore_attributes("class")}
       phx-target={@target}
       data-recent-key={@recent_key}
     >
