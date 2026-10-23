@@ -135,12 +135,15 @@ defmodule Web.Components.MemberSidebar do
     """
   end
 
-  defp named?(contact), do: is_map(contact) and present?(contact["name"])
+  @doc "Whether an emergency contact has a name."
+  def named?(contact), do: is_map(contact) and present?(contact["name"])
 
   defp present?(value), do: value not in [nil, ""]
 
-  # "Sam Lee (Partner)", or just the name or the relation when that is all D4H has.
-  defp contact_name(%{"name" => name, "relation" => relation}) do
+  @doc ~S|"Sam Lee (Partner)", or just the name or the relation when that is all D4H has.|
+  def contact_name(contact) do
+    {name, relation} = {contact["name"], contact["relation"]}
+
     cond do
       present?(name) and present?(relation) -> "#{name} (#{relation})"
       present?(name) -> name
@@ -148,7 +151,8 @@ defmodule Web.Components.MemberSidebar do
     end
   end
 
-  defp phones(contact),
+  @doc "An emergency contact's phone numbers, as D4H has them."
+  def phones(contact),
     do: Enum.filter([contact["primary_phone"], contact["secondary_phone"]], &present?/1)
 
   defp last_attended(nil, _timezone), do: "Never"

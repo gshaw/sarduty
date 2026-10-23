@@ -168,7 +168,12 @@ defmodule Web.MeLiveTest do
       |> Ecto.Changeset.change(
         phone: "604-555-0188",
         address: "2140 Fern Street",
-        primary_emergency_contact: %{"name" => "Sam Rivera", "primary_phone" => "6045550100"}
+        primary_emergency_contact: %{
+          "name" => "Sam Rivera",
+          "relation" => "Partner",
+          "primary_phone" => "6045550100",
+          "secondary_phone" => "604-555-0101"
+        }
       )
       |> Repo.update!()
 
@@ -176,7 +181,10 @@ defmodule Web.MeLiveTest do
 
       assert has_element?(lv, "#contact-mobile", "604-555-0188")
       assert has_element?(lv, "#contact-address", "2140 Fern Street")
-      assert has_element?(lv, "#contact-emergency", "Sam Rivera · 604-555-0100")
+      assert has_element?(lv, "#contact-emergency", "Sam Rivera (Partner)")
+      assert has_element?(lv, "#contact-emergency span", "604-555-0100")
+      assert has_element?(lv, "#contact-emergency span", "604-555-0101")
+      refute has_element?(lv, "#contact-emergency-2")
       refute_received {:d4h_read, _path}
       assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
     end

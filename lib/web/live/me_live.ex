@@ -14,6 +14,7 @@ defmodule Web.MeLive do
   alias App.ViewData.MemberRecords
   alias App.ViewData.Milestones
   alias Service.Format
+  alias Web.Components.MemberSidebar
   alias Web.QualificationText
 
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
@@ -285,8 +286,17 @@ defmodule Web.MeLive do
         <dd id="contact-mobile">{@member.phone || "None"}</dd>
         <dt>Address</dt>
         <dd id="contact-address">{@member.address || "None"}</dd>
-        <dt>Emergency contact</dt>
-        <dd id="contact-emergency">{contact_line(@member.primary_emergency_contact)}</dd>
+        <.emergency_contact
+          id="contact-emergency"
+          label="Emergency contact"
+          contact={@member.primary_emergency_contact}
+        />
+        <.emergency_contact
+          :if={MemberSidebar.named?(@member.secondary_emergency_contact)}
+          id="contact-emergency-2"
+          label="Second emergency contact"
+          contact={@member.secondary_emergency_contact}
+        />
       </dl>
       <p class="action mb-0">
         <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>
@@ -318,13 +328,27 @@ defmodule Web.MeLive do
     """
   end
 
-  defp contact_line(%{"name" => name} = contact) when is_binary(name),
-    do:
-      [name, Service.Phone.format(contact["primary_phone"])]
-      |> Enum.reject(&(&1 in [nil, ""]))
-      |> Enum.join(" · ")
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :contact, :map, default: nil
 
-  defp contact_line(_contact), do: "None"
+  # As a team admin sees it on the member's page: the name, then each phone on its own
+  # line.
+  defp emergency_contact(assigns) do
+    ~H"""
+    <dt>{@label}</dt>
+    <dd id={@id}>
+      <%= if MemberSidebar.named?(@contact) do %>
+        {MemberSidebar.contact_name(@contact)}
+        <span :for={phone <- MemberSidebar.phones(@contact)} class="block">
+          {Service.Phone.format(phone)}
+        </span>
+      <% else %>
+        None
+      <% end %>
+    </dd>
+    """
+  end
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
 
