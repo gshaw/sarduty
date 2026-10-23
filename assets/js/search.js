@@ -16,7 +16,10 @@ export const Search = {
       if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return
       if (event.target.closest("input, textarea, select, [contenteditable]")) return
       event.preventDefault()
-      this.input.focus()
+      // Below 1024px the field is in the closed sheet, and a hidden field can't take focus.
+      // open() adds the class in the next frame, so focus in a frame after it.
+      this.open()
+      window.requestAnimationFrame(() => this.input.focus())
     }
     this.onDocumentClick = event => {
       if (this.isOpen() && !this.el.querySelector(".site-search-box").contains(event.target)) {
