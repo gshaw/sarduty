@@ -137,6 +137,72 @@ defmodule Web.StyleGuideHTML.SampleData do
         proposed_changes: 2
       )
 
+  # Search results for "rope" on Squamish, as Web.Search.run/3 returns them, best first.
+  def sample_search_groups do
+    team = "/teams/squamish"
+
+    [
+      %{
+        kind: :activity,
+        more?: true,
+        hits: [
+          %{
+            id: 2,
+            title: "Rope rescue, Murrin Park",
+            activity_kind: "exercise",
+            ref_id: "25-0409",
+            started_at: ~U[2025-09-24 16:00:00Z],
+            path: "#{team}/activities/2"
+          },
+          %{
+            id: 7,
+            title: "Technical rope rescue, Cheakamus Canyon",
+            activity_kind: "incident",
+            ref_id: "25-0388",
+            started_at: ~U[2025-09-08 19:00:00Z],
+            path: "#{team}/activities/7"
+          }
+        ]
+      },
+      %{
+        kind: :qualification,
+        more?: false,
+        hits: [
+          %{id: 1, title: "Rope Rescue Team Member", path: "#{team}/qualifications/1"},
+          %{id: 2, title: "Rope Rescue Team Leader", path: "#{team}/qualifications/2"}
+        ]
+      },
+      %{
+        kind: :member,
+        more?: false,
+        hits: [
+          %{
+            id: 3,
+            title: "Robin Ropes",
+            position: "Rope team lead",
+            standing: {:away, ~D[2025-11-03]},
+            path: "#{team}/members/3"
+          }
+        ]
+      },
+      %{
+        kind: :equipment,
+        more?: false,
+        hits: [
+          %{
+            id: 4,
+            title: "Rope rescue kit 2",
+            barcode: "SQ-0142",
+            location_title: "Hall",
+            in_service?: true,
+            status: "operational",
+            path: "#{team}/equipment/4"
+          }
+        ]
+      }
+    ]
+  end
+
   def sample_team do
     %App.Model.Team{
       id: 0,

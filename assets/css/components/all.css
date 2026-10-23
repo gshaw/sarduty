@@ -9,6 +9,7 @@
 @import "./messages";
 @import "./navigation";
 @import "./row_link";
+@import "./search";
 @import "./table";
 @import "./typography";
 @import "./stat_switch";

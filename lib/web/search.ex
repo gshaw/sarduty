@@ -58,8 +58,8 @@ defmodule Web.Search do
     end)
   end
 
-  # The kinds whose page this person opens. Pages are already the ones they see.
-  defp kinds(team_admin?, member?) do
+  @doc "The kinds whose page this person opens. Pages are always in: they are the ones they see."
+  def kinds(team_admin?, member?) do
     Enum.filter(Search.kinds(), fn kind ->
       kind == :page or kind |> page_access() |> UserAuth.opens?(team_admin?, member?)
     end)

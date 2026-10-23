@@ -117,27 +117,8 @@
 
   .site-bar-login:hover { color: #fff; background: rgb(255 255 255 / 0.1); }
 
-  /* Search (#471), off until it has a page: a field on a desktop, an icon below 1024px. */
-  .site-bar-search-field {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-2);
-    width: 320px;
-    min-height: 36px;
-    padding: 0 var(--sp-3);
-    color: rgb(255 255 255 / 0.7);
-    background: rgb(255 255 255 / 0.08);
-    border: 1px solid rgb(255 255 255 / 0.25);
-    border-radius: var(--radius);
-    font-size: var(--fs-sm);
-    line-height: var(--lh-sm);
-    text-decoration: none;
-  }
-  .site-bar-search-field:hover { color: #fff; border-color: rgb(255 255 255 / 0.5); }
-  .site-bar-search-field kbd { margin-left: auto; padding: 0 var(--sp-1); border: 1px solid rgb(255 255 255 / 0.3); border-radius: 4px; font: inherit; font-size: var(--fs-xs); }
-  .site-bar-search { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; color: #fff; border-radius: var(--radius); }
-  .site-bar-search:hover { background: rgb(255 255 255 / 0.1); }
-  .site-bar-search .hero-magnifying-glass-mini { width: 24px; height: 24px; }
+  /* Search and the avatar: one box on a phone, so they share the bar's right column. */
+  .site-bar-end { display: contents; }
 
   /* Phones and narrow windows: the area's pages move behind a Menu button on the left of
      the bar. */
@@ -198,7 +179,7 @@
   /* Three columns, the outer two the same width, keep the name centred whether or not
      there is a Menu. The panels open under the bar, so nothing here is positioned. */
   @media (width < 64rem) {
-    .site-bar-links, .team-switcher, .site-bar-search-field { display: none; }
+    .site-bar-links, .team-switcher { display: none; }
     .site-bar-inner:has(> .site-bar-area-phone) {
       display: grid;
       grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
@@ -206,12 +187,10 @@
     .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
     .site-bar-inner > .site-bar-phone { grid-area: 1 / 1; justify-self: start; }
     .site-bar-inner > .site-bar-area-phone { grid-area: 1 / 2; }
-    .site-bar-inner > .account-menu { grid-area: 1 / 3; justify-self: end; }
+    .site-bar-inner > .site-bar-end { grid-area: 1 / 3; justify-self: end; }
     .site-bar-phone { display: block; }
     .site-bar-area-phone { display: flex; }
-    .site-bar-search { display: inline-flex; }
-    .site-bar-search, .account-menu { margin-left: auto; }
-    .site-bar-search + .account-menu { margin-left: 0; }
+    .site-bar-end { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
   }
 
   /* Menu: a short list under a button. */

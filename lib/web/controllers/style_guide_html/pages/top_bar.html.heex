@@ -13,7 +13,15 @@
       managed_teams={sample_managed_teams()}
       member_logins={sample_member_logins()}
       current_path="/teams/squamish/activities"
-    />
+    >
+      <:search>
+        <.search_box
+          kinds={Web.Search.kinds(true, false)}
+          team={sample_team()}
+          id="search-demo-bar"
+        />
+      </:search>
+    </Web.Layouts.main_nav_bar>
   </div>
 
   <h2>How it works</h2>
@@ -26,6 +34,10 @@
     </li>
     <li>
       The logo always goes to the home page. Logged in on the home, terms, or privacy page, the bar still names your team with the switcher on it, marking nothing, so the public site never strands you.
+    </li>
+    <li>
+      On a team's pages, <a href={page_path(:search)}>search</a>
+      sits before your initials: a field on a desktop, a magnifying glass below 1024px.
     </li>
     <li>
       Your initials, top right, open your name and email, Account settings, and Log out. This menu is the same on every team: it is about your login, not the team.
@@ -48,7 +60,15 @@
       managed_teams={sample_managed_teams()}
       member_logins={sample_member_logins()}
       current_path="/teams/squamish/activities"
-    />
+    >
+      <:search>
+        <.search_box
+          kinds={Web.Search.kinds(true, false)}
+          team={sample_team()}
+          id="search-demo-phone"
+        />
+      </:search>
+    </Web.Layouts.main_nav_bar>
   </div>
 
   <h3>Who sees which switcher</h3>

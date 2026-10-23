@@ -49,10 +49,10 @@ defmodule Web.Settings.TeamLiveTest do
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/settings")
 
-    lv |> form("form", form: %{not_seen_days: "180"}) |> render_submit()
+    lv |> form("#team_settings_form", form: %{not_seen_days: "180"}) |> render_submit()
     assert Team.get!(team.id).not_seen_days == 180
 
-    lv |> form("form", form: %{not_seen_days: "0"}) |> render_submit()
+    lv |> form("#team_settings_form", form: %{not_seen_days: "0"}) |> render_submit()
     assert Team.get!(team.id).not_seen_days == nil
   end
 
@@ -119,7 +119,7 @@ defmodule Web.Settings.TeamLiveTest do
 
     html =
       lv
-      |> form("form", form: %{name: "Renamed SAR", new_d4h_access_key: ""})
+      |> form("#team_settings_form", form: %{name: "Renamed SAR", new_d4h_access_key: ""})
       |> render_submit()
 
     assert html =~ "Team settings saved."
@@ -146,7 +146,7 @@ defmodule Web.Settings.TeamLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
     assert lv
-           |> form("form", form: %{new_d4h_access_key: "new-key"})
+           |> form("#team_settings_form", form: %{new_d4h_access_key: "new-key"})
            |> render_submit() =~ "Team settings saved."
 
     assert Team.get!(team.id).d4h_access_key == "new-key"
@@ -189,7 +189,7 @@ defmodule Web.Settings.TeamLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{second}/settings")
 
-    lv |> form("form", form: %{name: "Renamed Second"}) |> render_submit()
+    lv |> form("#team_settings_form", form: %{name: "Renamed Second"}) |> render_submit()
 
     assert Team.get!(second.id).name == "Renamed Second"
     assert Team.get!(first.id).name == first.name
