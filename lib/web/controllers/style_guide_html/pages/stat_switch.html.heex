@@ -12,6 +12,7 @@
       for={sample_filters()}
       id="stat-switch-demo"
       count="131 members"
+      repeats={true}
       onsubmit="return false"
     >
       <:search field={sample_filters()[:q]} />
@@ -66,7 +67,12 @@
       With one part showing, drop a column that would say the same thing on every row. In
       All, grey a part kept for history, such as expired awards.
     </li>
-    <li>A filter bar goes under it, and searches within the part showing.</li>
+    <li>
+      A filter bar goes under it, and searches within the part showing. Its count shows only
+      while the search or a filter leaves fewer rows than the current tile: set
+      <code>repeats</code>
+      when the two match.
+    </li>
   </ul>
 
   <h2>In the app</h2>

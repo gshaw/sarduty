@@ -37,20 +37,29 @@ defmodule Web.QualificationCollectionLive do
   defp assign_lists(socket, filter_options, changeset) do
     current_team = socket.assigns.current_team
     q = filter_options.q || ""
+    view = String.to_existing_atom(filter_options.view)
     now = DateTime.utc_now()
     until = DateTime.add(now, filter_options.within, :day)
     qualifications = list_qualifications_with_counts(current_team)
     expiring = MemberQualificationAward.expiring(current_team.id, now, until)
+    matching = Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q))
+    expiring_matching = filter_expiring(expiring, current_team, filter_options)
 
     assign(socket,
       filter_options: filter_options,
-      view: String.to_existing_atom(filter_options.view),
+      view: view,
       q: q,
       form: to_form(changeset, as: "form"),
       all_count: length(qualifications),
       expiring_count: length(expiring),
-      qualifications: Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q)),
-      expiring: filter_expiring(expiring, current_team, filter_options)
+      qualifications: matching,
+      expiring: expiring_matching,
+      repeats:
+        if(view == :expiring,
+          do: length(expiring_matching) == length(expiring),
+          else: length(matching) == length(qualifications)
+        ),
+      shown_count: length(if view == :expiring, do: expiring_matching, else: matching)
     )
   end
 
@@ -78,21 +87,6 @@ defmodule Web.QualificationCollectionLive do
         raise Web.Status.NotFound
     end
   end
-
-  defp count_text(:all, qualifications, _expiring),
-    do:
-      qualifications
-      |> length()
-      |> Service.Format.count(one: "%d qualification", many: "%d qualifications")
-
-  defp count_text(:expiring, _qualifications, expiring),
-    do:
-      expiring
-      |> length()
-      |> Service.Format.count(
-        one: "%d qualification expiring",
-        many: "%d qualifications expiring"
-      )
 
   defp qualifications_path(team, filter_options, changes \\ []) do
     params =
@@ -138,7 +132,8 @@ defmodule Web.QualificationCollectionLive do
     <.filter_bar
       for={@form}
       id="qualification_filter_form"
-      count={count_text(@view, @qualifications, @expiring)}
+      count={Service.Format.count(@shown_count, one: "%d qualification", many: "%d qualifications")}
+      repeats={@repeats}
       clear={qualifications_path(@current_team, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&qualifications_path(@current_team, @filter_options, &1)}
     >

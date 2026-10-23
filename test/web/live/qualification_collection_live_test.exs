@@ -28,7 +28,8 @@ defmodule Web.QualificationCollectionLiveTest do
       |> live(~p"/teams/#{team}/qualifications")
 
     assert html =~ "Qualifications"
-    assert html =~ "0 qualifications"
+    assert html =~ "No qualifications yet"
+    refute html =~ "0 qualifications"
   end
 
   test "links to qualification detail page", %{conn: conn} do

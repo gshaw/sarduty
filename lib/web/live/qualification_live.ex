@@ -129,8 +129,6 @@ defmodule Web.QualificationLive do
       <aside class="content-1/3">
         <.sidebar_content
           qualification={@qualification}
-          active_awards={@active_awards}
-          expired_awards={@expired_awards}
           team={@current_team}
         />
       </aside>
@@ -173,15 +171,13 @@ defmodule Web.QualificationLive do
           </li>
         </ul>
       </dd>
-      <dt>Active members</dt>
-      <dd>{length(@active_awards)}</dd>
-      <dt>Expired awards</dt>
-      <dd>{length(@expired_awards)}</dd>
-      <dt>Total awards</dt>
-      <dd>{length(@active_awards) + length(@expired_awards)}</dd>
     </dl>
     """
   end
+
+  defp view_count(:active, active, _expired), do: active
+  defp view_count(:expired, _active, expired), do: expired
+  defp view_count(:all, active, expired), do: active + expired
 
   defp main_content(assigns) do
     ~H"""
@@ -216,6 +212,7 @@ defmodule Web.QualificationLive do
       for={@form}
       id="award_filter_form"
       count={Service.Format.count(length(@awards), one: "%d member", many: "%d members")}
+      repeats={length(@awards) == view_count(@view, @active_count, @expired_count)}
       clear={awards_path(@team, @qualification, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&awards_path(@team, @qualification, @filter_options, &1)}
     >

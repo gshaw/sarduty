@@ -40,6 +40,7 @@ defmodule Web.Components.ActivityFilterTable do
       count={
         Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")
       }
+      repeats={@paginated.total_entries == Map.get(@kind_counts, @form[:activity].value, 0)}
       clear={@path_fn.(:all)}
       path_fn={@path_fn}
       page={@paginated}

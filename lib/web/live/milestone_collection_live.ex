@@ -81,6 +81,7 @@ defmodule Web.MilestoneCollectionLive do
       for={@form}
       id="milestone_filter_form"
       count={Format.count(@paginated.total_entries, one: "%d milestone", many: "%d milestones")}
+      repeats={@paginated.total_entries == Map.get(@kind_counts, @filter_options.kind || "", 0)}
       clear={@path_fn.(:reset)}
       path_fn={@path_fn}
       page={@paginated}

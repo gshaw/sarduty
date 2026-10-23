@@ -17,6 +17,9 @@ defmodule Web.Components.FilterBar do
   are on show as chips that remove them. The list's column headers sort it, so the bar has
   no sort menu: put the sort in `hidden` so a change keeps it.
 
+  Under a stat switch, set `repeats` while the count matches the switch's current one: the
+  line leaves out a number the tile already shows, and keeps any total, Clear, and page range.
+
   ## Examples
 
       <.filter_bar
@@ -36,6 +39,11 @@ defmodule Web.Components.FilterBar do
   attr :id, :string, required: true, doc: "the form's id"
   attr :count, :string, required: true, doc: "what the list shows, such as \"212 activities\""
   attr :total, :string, default: nil, doc: "a total after the count, such as \"40 hours total\""
+
+  attr :repeats, :boolean,
+    default: false,
+    doc: "the count is the stat switch's current one, so the line under the bar leaves it out"
+
   attr :clear, :string, default: nil, doc: "the list's path with no filters or search"
 
   attr :path_fn, :any,
@@ -151,16 +159,24 @@ defmodule Web.Components.FilterBar do
       </.link>
     </div>
 
-    <div class="table-summary" id={"#{@id}-summary"}>
+    <div
+      :if={!@repeats || @total || @clear? || paged?(@page)}
+      class="table-summary"
+      id={"#{@id}-summary"}
+    >
       <span>
-        <strong class="text-text">{@count}</strong>
-        <span :if={@total}>· {@total}</span>
-        <span :if={@clear?}>· <.link patch={@clear} class="link">{@clear_label}</.link></span>
+        <strong :if={!@repeats} class="text-text">{@count}</strong>
+        <span :if={@total}>{!@repeats && "· "}{@total}</span>
+        <span :if={@clear?}>
+          {(!@repeats || @total) && "· "}<.link patch={@clear} class="link">{@clear_label}</.link>
+        </span>
       </span>
-      <span :if={@page && @page.total_pages > 1}>{range(@page)}</span>
+      <span :if={paged?(@page)}>{range(@page)}</span>
     </div>
     """
   end
+
+  defp paged?(page), do: page != nil and page.total_pages > 1
 
   attr :filter, :map, required: true
 
