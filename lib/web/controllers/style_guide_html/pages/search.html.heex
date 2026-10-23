@@ -20,10 +20,13 @@
   </div>
 
   <h3>Before typing</h3>
-  <p>Says what this person can find. A member who logs in finds activities and pages only.</p>
+  <p>
+    The last 5 results you opened on this team, newest first, then what you can find. A member who logs in finds activities and pages only.
+  </p>
   <div class="demo search-demo">
     <.search_box
       id="search-demo-empty"
+      recent={sample_search_recent()}
       kinds={Web.Search.kinds(true, false)}
       team={sample_team()}
       open={true}
@@ -56,6 +59,9 @@
     </li>
     <li>
       A result shows only when you can open its page. A member who logs in finds activities and their own pages.
+    </li>
+    <li>
+      The browser keeps the last 5 results you opened, for you and this team only, so a shared iPad doesn't show the last person's. Ones you can no longer open drop out.
     </li>
     <li>
       With more than 5 matches for one word, the group links to its list, filtered the same way.

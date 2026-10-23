@@ -141,12 +141,88 @@ defmodule Web.StyleGuideHTML.SampleData do
   def sample_search_groups do
     team = "/teams/squamish"
 
+    for group <- [
+          %{
+            kind: :activity,
+            more?: true,
+            hits: [
+              %{
+                id: 2,
+                title: "Rope rescue, Murrin Park",
+                activity_kind: "exercise",
+                ref_id: "25-0409",
+                started_at: ~U[2025-09-24 16:00:00Z],
+                path: "#{team}/activities/2"
+              },
+              %{
+                id: 7,
+                title: "Technical rope rescue, Cheakamus Canyon",
+                activity_kind: "incident",
+                ref_id: "25-0388",
+                started_at: ~U[2025-09-08 19:00:00Z],
+                path: "#{team}/activities/7"
+              }
+            ]
+          },
+          %{
+            kind: :qualification,
+            more?: false,
+            hits: [
+              %{id: 1, title: "Rope Rescue Team Member", path: "#{team}/qualifications/1"},
+              %{id: 2, title: "Rope Rescue Team Leader", path: "#{team}/qualifications/2"}
+            ]
+          },
+          %{
+            kind: :member,
+            more?: false,
+            hits: [
+              %{
+                id: 3,
+                title: "Robin Ropes",
+                position: "Rope team lead",
+                standing: {:away, ~D[2025-11-03]},
+                path: "#{team}/members/3"
+              }
+            ]
+          },
+          %{
+            kind: :equipment,
+            more?: false,
+            hits: [
+              %{
+                id: 4,
+                title: "Rope rescue kit 2",
+                barcode: "SQ-0142",
+                location_title: "Hall",
+                in_service?: true,
+                status: "operational",
+                path: "#{team}/equipment/4"
+              }
+            ]
+          }
+        ],
+        do: %{group | hits: Enum.map(group.hits, &Map.put(&1, :kind, group.kind))}
+  end
+
+  # Recent picks on Squamish, newest first, as Web.Search.recent/3 returns them.
+  def sample_search_recent do
+    team = "/teams/squamish"
+
     [
       %{
-        kind: :activity,
-        more?: true,
+        kind: :recent,
+        more?: false,
         hits: [
           %{
+            kind: :member,
+            id: 3,
+            title: "Robin Ropes",
+            position: "Rope team lead",
+            standing: :active,
+            path: "#{team}/members/3"
+          },
+          %{
+            kind: :activity,
             id: 2,
             title: "Rope rescue, Murrin Park",
             activity_kind: "exercise",
@@ -155,48 +231,10 @@ defmodule Web.StyleGuideHTML.SampleData do
             path: "#{team}/activities/2"
           },
           %{
-            id: 7,
-            title: "Technical rope rescue, Cheakamus Canyon",
-            activity_kind: "incident",
-            ref_id: "25-0388",
-            started_at: ~U[2025-09-08 19:00:00Z],
-            path: "#{team}/activities/7"
-          }
-        ]
-      },
-      %{
-        kind: :qualification,
-        more?: false,
-        hits: [
-          %{id: 1, title: "Rope Rescue Team Member", path: "#{team}/qualifications/1"},
-          %{id: 2, title: "Rope Rescue Team Leader", path: "#{team}/qualifications/2"}
-        ]
-      },
-      %{
-        kind: :member,
-        more?: false,
-        hits: [
-          %{
-            id: 3,
-            title: "Robin Ropes",
-            position: "Rope team lead",
-            standing: {:away, ~D[2025-11-03]},
-            path: "#{team}/members/3"
-          }
-        ]
-      },
-      %{
-        kind: :equipment,
-        more?: false,
-        hits: [
-          %{
-            id: 4,
-            title: "Rope rescue kit 2",
-            barcode: "SQ-0142",
-            location_title: "Hall",
-            in_service?: true,
-            status: "operational",
-            path: "#{team}/equipment/4"
+            kind: :page,
+            id: "tax-credit-letters",
+            title: "Tax credit letters",
+            path: "#{team}/tax-credit-letters"
           }
         ]
       }

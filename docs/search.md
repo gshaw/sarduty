@@ -42,6 +42,14 @@ Pages come from the side navigation the person sees, from `Web.Navigation.sectio
 a page added there is found with no change here. A page matches only where a word of its
 name starts, so "ali" finds Alice but not Qualifications.
 
+## Recent picks
+
+Before you type, search lists the last 5 results you opened on the team. The browser keeps
+them in local storage as `"kind:id"` keys, under a name with your user id and the team's
+subdomain, so a shared iPad doesn't show the last person's picks. On each page the hook
+sends them to the server, and `Web.Search.recent/3` shows only the ones you can still
+open. Nothing is stored on the server.
+
 ## A new kind of record
 
 Every team page for one record, `/teams/:subdomain/…/:id`, must be a kind in

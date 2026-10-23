@@ -53,6 +53,24 @@ defmodule Web.Components.SearchBoxTest do
       refute has_element?(lv, "#search-hint")
     end
 
+    test "before typing, shows the recent picks the browser sends", %{conn: conn, team: team} do
+      member = member_fixture(team, %{name: "Alice Wong"})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(lv, "#search[data-recent-key$=\":#{team.subdomain}\"]")
+
+      render_hook(element(lv, "#search"), "recent", %{
+        "keys" => ["member:#{member.id}", "member:999999"]
+      })
+
+      assert has_element?(lv, "#search-group-recent h2", "Recent")
+      assert has_element?(lv, ~s{#search-hit-member-#{member.id}[data-key="member:#{member.id}"]})
+      assert has_element?(lv, "#search-hint")
+
+      lv |> form("#search-form", %{q: "zzz"}) |> render_change()
+      refute has_element?(lv, "#search-group-recent")
+    end
+
     test "says when nothing matches", %{conn: conn, team: team} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 

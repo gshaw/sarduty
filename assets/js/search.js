@@ -3,6 +3,10 @@
 // stays in the field and aria-activedescendant names the highlighted result, as in the
 // WAI combobox pattern. Classes and attributes go through this.js(), so the server's
 // renders keep them. "/" anywhere outside a field jumps to the search.
+//
+// The browser keeps the last 5 results opened, per person and team, under data-recent-key,
+// and sends them to the server on mount, which shows the ones this person can still open.
+const RECENT = 5
 export const Search = {
   mounted() {
     this.input = this.el.querySelector("input[role=combobox]")
@@ -11,6 +15,13 @@ export const Search = {
     this.input.addEventListener("focus", () => this.open())
     this.input.addEventListener("keydown", event => this.keydown(event))
     this.el.addEventListener("sarduty:search-closed", () => this.closed())
+    // Remember a result as it opens, by a click or by Enter, which clicks it.
+    this.el.addEventListener("click", event => {
+      const option = event.target.closest("[role=option][data-key]")
+      if (option) this.remember(option.dataset.key)
+    })
+    const keys = this.recentKeys()
+    if (keys.length) this.pushEventTo(this.el, "recent", {keys})
 
     this.onDocumentKey = event => {
       if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return
@@ -38,6 +49,25 @@ export const Search = {
   destroyed() {
     document.removeEventListener("keydown", this.onDocumentKey)
     document.removeEventListener("click", this.onDocumentClick)
+  },
+
+  recentKeys() {
+    try {
+      const keys = JSON.parse(localStorage.getItem(this.el.dataset.recentKey) || "[]")
+      return Array.isArray(keys) ? keys.filter(key => typeof key === "string").slice(0, RECENT) : []
+    } catch {
+      return []
+    }
+  },
+
+  remember(key) {
+    if (!this.el.dataset.recentKey) return
+    const keys = [key, ...this.recentKeys().filter(k => k !== key)].slice(0, RECENT)
+    try {
+      localStorage.setItem(this.el.dataset.recentKey, JSON.stringify(keys))
+    } catch {
+      // Private browsing can refuse storage; search works without recent picks.
+    }
   },
 
   isOpen() {

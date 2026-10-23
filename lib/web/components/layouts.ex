@@ -68,6 +68,7 @@ defmodule Web.Layouts do
           team_admin?={assigns[:team_admin?] || false}
           member?={assigns[:current_member] != nil}
           sections={@nav_sections}
+          user_id={@current_user.id}
         />
       </:search>
     </.main_nav_bar>

@@ -47,11 +47,34 @@ defmodule App.ViewData.Search do
       terms ->
         kinds
         |> Enum.map(fn kind ->
-          hits = candidates(kind, team, terms, opts)
+          hits = candidates(kind, team, {:terms, terms}, opts)
           {kind, describe(kind, hits, team, now)}
         end)
         |> rank(terms, now)
     end
+  end
+
+  @doc """
+  The records `keys` name, `[{kind, id}]`, in that order, as hits like run/3's, each with
+  its `kind`: the recent picks (#473). Keys of kinds not in `kinds`, or of records not on
+  `team` or gone, are left out. Page ids are their keys in `pages`.
+  """
+  def find(%Team{} = team, keys, opts) do
+    kinds = Keyword.fetch!(opts, :kinds)
+    keys = Enum.filter(keys, fn {kind, _id} -> kind in kinds end)
+    found = keys |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> found(team, opts)
+
+    for key <- keys, hit = found[key], do: hit
+  end
+
+  # Each kind's records by id, keyed {kind, id}.
+  defp found(ids_by_kind, team, opts) do
+    now = Keyword.get(opts, :now, DateTime.utc_now())
+
+    for {kind, ids} <- ids_by_kind,
+        hit <- describe(kind, candidates(kind, team, {:ids, ids}, opts), team, now),
+        into: %{},
+        do: {{kind, hit.id}, Map.put(hit, :kind, kind)}
   end
 
   @doc """
@@ -131,7 +154,11 @@ defmodule App.ViewData.Search do
       |> Enum.map(&Map.put(&1, :score, score(&1.title, Map.get(&1, :keys, []), terms)))
       |> Enum.sort_by(&{-&1.score, tiebreak(kind, &1, now), String.downcase(&1.title)})
 
-    %{kind: kind, hits: Enum.take(sorted, @per_kind), more?: length(sorted) > @per_kind}
+    %{
+      kind: kind,
+      hits: sorted |> Enum.take(@per_kind) |> Enum.map(&Map.put(&1, :kind, kind)),
+      more?: length(sorted) > @per_kind
+    }
   end
 
   defp kind_order(kind), do: Enum.find_index(@kinds, &(&1 == kind))
@@ -146,49 +173,49 @@ defmodule App.ViewData.Search do
 
   # Each kind's rows where every word is in one of its fields.
 
-  defp candidates(:member, team, terms, _opts) do
+  defp candidates(:member, team, filter, _opts) do
     Member
     |> where([m], m.team_id == ^team.id)
-    |> matching(terms, [:name, :ref_id])
+    |> matching(filter, [:name, :ref_id])
     |> select([m], map(m, [:id, :name, :ref_id, :position, :left_at, :d4h_status, :not_a_person]))
     |> fetch()
     |> Enum.map(&Map.merge(&1, %{title: &1.name, keys: [&1.ref_id]}))
   end
 
-  defp candidates(:activity, team, terms, _opts) do
+  defp candidates(:activity, team, filter, _opts) do
     Activity
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
-    |> matching(terms, [:title, :ref_id, :tracking_number])
+    |> matching(filter, [:title, :ref_id, :tracking_number])
     |> order_by([a], desc: a.started_at)
     |> select([a], map(a, [:id, :title, :ref_id, :tracking_number, :activity_kind, :started_at]))
     |> fetch()
     |> Enum.map(&Map.put(&1, :keys, [&1.ref_id, &1.tracking_number]))
   end
 
-  defp candidates(:equipment, team, terms, _opts) do
+  defp candidates(:equipment, team, filter, _opts) do
     EquipmentItem
     |> where([i], i.team_id == ^team.id)
-    |> matching(terms, [:title, :barcode, :serial])
+    |> matching(filter, [:title, :barcode, :serial])
     |> select([i], map(i, [:id, :title, :barcode, :serial, :status, :location_title]))
     |> fetch()
     |> Enum.map(&Map.put(&1, :keys, [&1.barcode, &1.serial]))
   end
 
-  defp candidates(:qualification, team, terms, _opts), do: titled(Qualification, team, terms)
-  defp candidates(:group, team, terms, _opts), do: titled(Group, team, terms)
-  defp candidates(:template, team, terms, _opts), do: titled(Template, team, terms)
+  defp candidates(:qualification, team, filter, _opts), do: titled(Qualification, team, filter)
+  defp candidates(:group, team, filter, _opts), do: titled(Group, team, filter)
+  defp candidates(:template, team, filter, _opts), do: titled(Template, team, filter)
 
-  defp candidates(:endorsement, team, terms, _opts) do
+  defp candidates(:endorsement, team, filter, _opts) do
     Endorsement
     |> where([e], e.team_id == ^team.id)
-    |> matching(terms, [:name])
+    |> matching(filter, [:name])
     |> select([e], %{id: e.id, title: e.name})
     |> fetch()
   end
 
   # Pages match at the start of a word, so "ali" doesn't find Qualifications.
-  defp candidates(:page, _team, terms, opts) do
+  defp candidates(:page, _team, {:terms, terms}, opts) do
     opts
     |> Keyword.get(:pages, [])
     |> Enum.filter(fn page ->
@@ -197,10 +224,13 @@ defmodule App.ViewData.Search do
     end)
   end
 
-  defp titled(schema, team, terms) do
+  defp candidates(:page, _team, {:ids, ids}, opts),
+    do: opts |> Keyword.get(:pages, []) |> Enum.filter(&(&1.id in ids))
+
+  defp titled(schema, team, filter) do
     schema
     |> where([r], r.team_id == ^team.id)
-    |> matching(terms, [:title])
+    |> matching(filter, [:title])
     |> select([r], %{id: r.id, title: r.title})
     |> fetch()
   end
@@ -208,8 +238,10 @@ defmodule App.ViewData.Search do
   defp fetch(query), do: query |> limit(@candidates) |> Repo.all()
 
   # Every word in at least one field. LIKE ignores case for ASCII; % and _ typed in are
-  # matched as themselves.
-  defp matching(query, terms, fields) do
+  # matched as themselves. Or the rows with these ids, for find/3.
+  defp matching(query, {:ids, ids}, _fields), do: where(query, [r], r.id in ^ids)
+
+  defp matching(query, {:terms, terms}, fields) do
     Enum.reduce(terms, query, fn term, query ->
       pattern = "%" <> escape_like(term) <> "%"
 

@@ -177,6 +177,42 @@ defmodule App.ViewData.SearchTest do
     end
   end
 
+  describe "find/3" do
+    test "the records named, in the order given, on the team only" do
+      team = team_fixture()
+      other = team_fixture()
+      member = member_fixture(team, %{name: "Ali Here"})
+      activity = activity_fixture(team, %{title: "Rope night"})
+      elsewhere = member_fixture(other, %{name: "Ali Elsewhere"})
+      pages = [%{id: "members", title: "Members", path: "/m"}]
+
+      keys = [
+        {:activity, activity.id},
+        {:page, "members"},
+        {:member, elsewhere.id},
+        {:member, member.id},
+        {:member, -1}
+      ]
+
+      hits = Search.find(team, keys, kinds: [:member, :activity, :page], pages: pages, now: @now)
+
+      assert Enum.map(hits, &{&1.kind, &1.title}) == [
+               {:activity, "Rope night"},
+               {:page, "Members"},
+               {:member, "Ali Here"}
+             ]
+
+      assert [%{standing: :active}] =
+               Search.find(team, [{:member, member.id}], kinds: [:member], now: @now)
+    end
+
+    test "leaves out kinds not asked for" do
+      team = team_fixture()
+      member = member_fixture(team)
+      assert Search.find(team, [{:member, member.id}], kinds: [:activity], now: @now) == []
+    end
+  end
+
   defp member_hit(id, name, standing \\ :active),
     do: %{id: id, title: name, keys: [], standing: standing}
 
