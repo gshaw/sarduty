@@ -18,7 +18,7 @@ defmodule Web.Components.SearchBox do
      socket
      |> assign(assigns)
      |> assign(
-       kinds: Web.Search.kinds(assigns.team_admin?, assigns.member?),
+       kinds: Web.Search.kinds(assigns.team, assigns.team_admin?, assigns.member?),
        service: if(D4H.records?(assigns.team), do: "SAR Duty Records", else: "D4H"),
        # Per person and team, so a shared iPad doesn't show the last person's picks.
        recent_key: "sarduty:search-recent:#{assigns.user_id}:#{assigns.team.subdomain}"

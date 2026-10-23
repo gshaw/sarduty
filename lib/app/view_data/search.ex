@@ -1,14 +1,16 @@
 defmodule App.ViewData.Search do
   @moduledoc """
-  Global search (#473): a team's records and pages whose name, D4H number, or barcode
-  matches every word typed, in any order. It reads the live tables on each search, with
-  no index, so nothing can go stale; the largest team's activities take a few ms.
+  Global search (#473): a team's records and pages whose name, D4H number, or barcode, or
+  a chore's words, match every word typed, in any order. It reads the live tables on each
+  search, with no index, so nothing can go stale; the largest team's activities take a
+  few ms.
 
   `run/3` queries; `terms/1`, `score/3`, and `rank/3` are pure. See docs/search.md.
   """
   import Ecto.Query
 
   alias App.Model.Activity
+  alias App.Model.Chore
   alias App.Model.Endorsement
   alias App.Model.EquipmentItem
   alias App.Model.Group
@@ -19,7 +21,17 @@ defmodule App.ViewData.Search do
   alias App.Model.Template
   alias App.Repo
 
-  @kinds [:member, :activity, :equipment, :qualification, :group, :endorsement, :template, :page]
+  @kinds [
+    :member,
+    :activity,
+    :equipment,
+    :qualification,
+    :group,
+    :endorsement,
+    :template,
+    :chore,
+    :page
+  ]
 
   # Enough candidates that an exact name isn't cut before ranking, few enough to stay fast.
   @candidates 100
@@ -138,8 +150,8 @@ defmodule App.ViewData.Search do
   @doc """
   Pure. Scores each kind's hits, keeps the best #{@per_kind}, and orders the groups by
   their best hit, ties in `kinds/0` order. Within a kind, equal scores put current
-  members before retired ones, the activities nearest `now` first, and equipment in
-  service first.
+  members before retired ones, the activities nearest `now` first, equipment in service
+  first, and the newest chores first.
   """
   def rank(kind_hits, terms, now) do
     kind_hits
@@ -169,6 +181,7 @@ defmodule App.ViewData.Search do
 
   defp tiebreak(:activity, hit, now), do: abs(DateTime.diff(hit.started_at, now))
   defp tiebreak(:equipment, hit, _now), do: if(hit.in_service?, do: 0, else: 1)
+  defp tiebreak(:chore, hit, _now), do: -Date.to_gregorian_days(hit.date)
   defp tiebreak(_kind, _hit, _now), do: 0
 
   # Each kind's rows where every word is in one of its fields.
@@ -211,6 +224,23 @@ defmodule App.ViewData.Search do
     |> where([e], e.team_id == ^team.id)
     |> matching(filter, [:name])
     |> select([e], %{id: e.id, title: e.name})
+    |> fetch()
+  end
+
+  # What the member did, in their words.
+  defp candidates(:chore, team, filter, _opts) do
+    Chore
+    |> where([c], c.team_id == ^team.id)
+    |> matching(filter, [:description])
+    |> join(:inner, [c], m in assoc(c, :member))
+    |> order_by([c], desc: c.date, desc: c.id)
+    |> select([c, m], %{
+      id: c.id,
+      title: c.description,
+      date: c.date,
+      status: c.status,
+      member_name: m.name
+    })
     |> fetch()
   end
 

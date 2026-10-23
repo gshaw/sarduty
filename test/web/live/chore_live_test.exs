@@ -75,8 +75,8 @@ defmodule Web.ChoreLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
     assert has_element?(lv, "#side-nav-chores", "3")
+    assert has_element?(lv, "#chores-view-waiting[aria-current=page]", "3")
     assert has_element?(lv, "#accept", "Accept 3 chores")
-    assert has_element?(lv, "#no-chore-events")
 
     ids = [to_string(one.id), to_string(two.id)]
     lv |> form("#accept-form", %{chore_ids: ids}) |> render_change()
@@ -94,9 +94,18 @@ defmodule Web.ChoreLiveTest do
 
     [event] = Repo.all(ChoreEvent)
     assert %{month: ~D[2026-10-01], d4h_activity_id: 900, needs_send: false} = event
+    refute has_element?(lv, "#chores-to-send")
+
+    lv |> element("#chores-view-accepted", "2") |> render_click()
+    assert_patch(lv, ~p"/teams/#{team}/chores?view=accepted")
     assert has_element?(lv, "#chore-event-#{event.id}", "October 2026")
     assert has_element?(lv, "#chore-event-#{event.id}", "2 hours")
-    refute has_element?(lv, "#chores-to-send")
+
+    assert has_element?(
+             lv,
+             ~s(#chore-event-#{event.id} #chore-#{two.id} a[href="/teams/#{team.subdomain}/chores/#{two.id}"]),
+             "Truck 2 wash"
+           )
   end
 
   test "a send that does not go through offers Send changes, which sends again", ctx do
@@ -134,6 +143,8 @@ defmodule Web.ChoreLiveTest do
       |> follow_redirect(conn)
 
     assert html =~ "Declined Truck 1 wash."
+    assert html =~ "The rental group cleans the hall."
+    assert html =~ ~s(id="chore-#{chore.id}")
 
     assert %{status: :declined, decline_reason: "The rental group cleans the hall."} =
              Repo.get!(Chore, chore.id)
@@ -166,13 +177,14 @@ defmodule Web.ChoreLiveTest do
 
     stub_d4h(member)
 
-    {:ok, _lv, html} =
+    {:ok, lv, html} =
       lv
       |> form("#chore-form", chore: %{date: "2025-01-15", minutes: "120"})
       |> render_submit()
-      |> follow_redirect(conn)
+      |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=accepted")
 
     assert html =~ "Saved Truck 1 wash. D4H is up to date."
+    assert has_element?(lv, "#chore-#{chore.id}", "2 hours")
     assert %{status: :accepted, date: ~D[2025-01-15], minutes: 120} = Repo.get!(Chore, chore.id)
     assert [%{month: ~D[2025-01-01]}] = Repo.all(ChoreEvent)
   end
@@ -195,6 +207,27 @@ defmodule Web.ChoreLiveTest do
     assert has_element?(lv, "#chore-activity a", "Chores: Equipment maintenance, October 2026")
     assert has_element?(lv, "#chore-change")
     assert has_element?(lv, "#decline-form")
+  end
+
+  test "an unknown view is not found", %{conn: conn, team: team} do
+    assert_raise Web.Status.NotFound, fn ->
+      live(conn, ~p"/teams/#{team}/chores?view=everything")
+    end
+  end
+
+  test "declined chores list with why", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+
+    chore =
+      chore_fixture(member, category, %{
+        status: :declined,
+        decided_at: ~U[2026-10-20 18:00:00.000000Z],
+        decline_reason: "Standby is an activity."
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores?view=declined")
+    assert has_element?(lv, "#chores-view-declined[aria-current=page]", "1")
+    assert has_element?(lv, "#declined-chores #chore-#{chore.id}", "Standby is an activity.")
   end
 
   test "another team's chore is not found", %{conn: conn, team: team} do

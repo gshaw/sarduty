@@ -124,13 +124,32 @@ defmodule App.Model.Chore do
   defp take(query, nil), do: query
   defp take(query, count), do: limit(query, ^count)
 
-  @doc "The team's waiting chores, oldest first, with their members and categories."
-  def get_waiting(team_id) do
+  @doc """
+  The team's chores in `status`, with their members and categories: waiting ones oldest
+  first, to accept in turn, and the rest newest first.
+  """
+  def get_all_for_team(team_id, status) do
     Chore
-    |> where([c], c.team_id == ^team_id and c.status == :waiting)
-    |> order_by([c], asc: c.date, asc: c.id)
+    |> where([c], c.team_id == ^team_id and c.status == ^status)
+    |> order_by_status(status)
     |> preload([:member, :chore_category])
     |> Repo.all()
+  end
+
+  defp order_by_status(query, :waiting), do: order_by(query, [c], asc: c.date, asc: c.id)
+  defp order_by_status(query, _status), do: order_by(query, [c], desc: c.date, desc: c.id)
+
+  @doc "How many of the team's chores are in each status, with every status there."
+  def count_by_status(team_id) do
+    counts =
+      Chore
+      |> where([c], c.team_id == ^team_id)
+      |> group_by([c], c.status)
+      |> select([c], {c.status, count(c.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    Map.merge(%{waiting: 0, accepted: 0, declined: 0}, counts)
   end
 
   @doc "How many of the team's chores wait for a team admin."
