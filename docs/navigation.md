@@ -29,15 +29,15 @@ the account menu and no area name.
 Sections, split by a divider, with no headings. A section with nothing the person can see
 is left out, and so is its divider.
 
-| Section | Links                                                             | Who         |
-| ------- | ----------------------------------------------------------------- | ----------- |
-| 1       | Dashboard                                                         | everyone    |
-| 2       | Activities                                                        | everyone    |
-| 2       | Templates, Proposed changes                                       | team admins |
-| 3       | Members, Groups, Qualifications, Endorsements, Tax credit letters | team admins |
-| 4       | Equipment                                                         | team admins |
-| 5       | Team settings                                                     | team admins |
-| 6       | Your membership                                                   | members     |
+| Section | Links                                                                         | Who         |
+| ------- | ----------------------------------------------------------------------------- | ----------- |
+| 1       | Dashboard                                                                     | everyone    |
+| 2       | Activities                                                                    | everyone    |
+| 2       | Templates, Proposed changes                                                   | team admins |
+| 3       | Members, Groups, Qualifications, Endorsements, Tax credit letters, Milestones | team admins |
+| 4       | Equipment                                                                     | team admins |
+| 5       | Team settings                                                                 | team admins |
+| 6       | Your membership                                                               | members     |
 
 - A team admin who is a member sees all six. A SAR Duty admin who opened a team from
   Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities, and
@@ -53,6 +53,9 @@ is left out, and so is its divider.
   turns MCP on. Until then, General says how to get it. The URLs did not change.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
+- **Milestones is last with the people pages** (2026-10-23): every current member's
+  milestones, for team admins. Members see only their own, on Your membership, until
+  we decide how members see other members' pages.
 - Later pages already have homes: Checklists in Equipment's section, and Documents and a
   team ID cards page after Tax credit letters.
 

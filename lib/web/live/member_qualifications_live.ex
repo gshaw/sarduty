@@ -117,6 +117,7 @@ defmodule Web.MemberQualificationsLive do
           maps_app={@current_user.maps_app}
           last_attended_at={@last_attended_at}
           standing={@standing}
+          milestones={@milestones}
         />
       </aside>
       <main class="content-2/3">

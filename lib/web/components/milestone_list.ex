@@ -41,13 +41,14 @@ defmodule Web.Components.MilestoneList do
   defp icon_name(:years), do: "hero-cake-mini"
   defp icon_name(:incidents), do: "hero-lifebuoy-mini"
 
-  defp title(%{kind: :hours, count: n}), do: Format.duration(n * 60)
+  @doc ~s(What was reached: "2,000 hours", "10 years on the team", "First incident".)
+  def title(%{kind: :hours, count: n}), do: Format.duration(n * 60)
 
-  defp title(%{kind: :years, count: n}),
+  def title(%{kind: :years, count: n}),
     do: Format.count(n, one: "1 year on the team", many: "%d years on the team")
 
-  defp title(%{kind: :incidents, count: 1}), do: "First incident"
-  defp title(%{kind: :incidents, count: n}), do: "#{Format.number(n)} incidents"
+  def title(%{kind: :incidents, count: 1}), do: "First incident"
+  def title(%{kind: :incidents, count: n}), do: "#{Format.number(n)} incidents"
 
   defp detail(%{on: on, activity: nil}), do: Format.date_long(on)
   defp detail(%{on: on, activity: activity}), do: "#{Format.date_long(on)} · #{activity.title}"

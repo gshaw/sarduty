@@ -193,6 +193,15 @@ their D4H photo in a circle, or their initials when D4H has none (`/me/image`), 
   Years leave out the days away: teams reopen a rejoining member's D4H record, and a team
   admin adds the gap as an away period. Hours count every attended activity, not only
   tagged ones. A plain dated list: no badges, graphics, or levels (decided 2026-10-20).
+- **Team admins see milestones too** (2026-10-23). The member sidebar on every member
+  tab shows the latest and links to the team's Milestones page,
+  `/teams/:subdomain/milestones`, filtered to the member over all time. That page lists
+  every current member's, newest first, filtered by member, kind, and period, and opens
+  on the last 90 days, for thanking people at a meeting or in a newsletter. Members
+  don't see it: only their own, until we decide how members see other members.
+  [MemberMilestones](../lib/app/view_data/member_milestones.ex) loads them. Still not
+  stored: a whole team takes about 130 ms (22,000 attended rows, dev copy), and a stored
+  copy would go stale whenever attendance, `joined_at`, or an away period changed.
 - The `/me/card/…` Wallet downloads, `/me/tax-credit-letters/:id/pdf`, and `/wallet/…`
   stay: passes and files hold them.
 

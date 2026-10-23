@@ -6,13 +6,12 @@ defmodule Web.MeLive do
   import Web.Components.MilestoneList
 
   alias App.Adapter.D4H
-  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
+  alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
-  alias App.ViewData.Milestones
   alias Service.Format
   alias Web.Components.MemberSidebar
   alias Web.QualificationText
@@ -38,7 +37,7 @@ defmodule Web.MeLive do
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
-      |> assign(:milestones, milestones(member, attended, now))
+      |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
 
     {:ok, socket}
   end
@@ -69,16 +68,6 @@ defmodule Web.MeLive do
       incidents: Enum.count(activities, &(&1.activity_kind == "incident")),
       minutes: last_12 |> Enum.map(&MemberRecords.minutes/1) |> Enum.sum()
     }
-  end
-
-  defp milestones(member, attended, now) do
-    attended
-    |> Milestones.build(
-      member.joined_at,
-      MemberAwayPeriod.for_member(member),
-      now,
-      member.team.timezone
-    )
   end
 
   def render(assigns) do

@@ -124,7 +124,8 @@ defmodule Web.Navigation do
       link("groups", "Groups", ~p"/teams/#{team}/groups"),
       link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
       link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
-      link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
+      link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters"),
+      link("milestones", "Milestones", ~p"/teams/#{team}/milestones")
     ]
   end
 

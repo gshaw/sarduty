@@ -10,6 +10,9 @@ defmodule Web.Components.MemberSidebar do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
+  alias App.ViewData.MemberMilestones
+  alias Service.Format
+  alias Web.Components.MilestoneList
   alias Web.Components.OpenInMaps
 
   attr :member, :map, required: true
@@ -21,8 +24,13 @@ defmodule Web.Components.MemberSidebar do
 
   attr :standing, :any, required: true, doc: "the member's standing today, from load_sidebar/1"
 
+  attr :milestones, :list,
+    required: true,
+    doc: "the member's milestones, newest first, from load_sidebar/1"
+
   @doc """
-  Assigns the sidebar's `last_attended_at` and `standing` for the socket's `member`. Call
+  Assigns the sidebar's `last_attended_at`, `standing`, and `milestones` for the socket's
+  `member`. Call
   it when the member loads, not on every render: a form's change events re-render.
   """
   def load_sidebar(socket) do
@@ -30,7 +38,8 @@ defmodule Web.Components.MemberSidebar do
 
     Phoenix.Component.assign(socket,
       last_attended_at: Member.last_attended_at(member),
-      standing: MemberAwayPeriod.standing_today(member, member.team.timezone)
+      standing: MemberAwayPeriod.standing_today(member, member.team.timezone),
+      milestones: MemberMilestones.for_member(member, DateTime.utc_now())
     )
   end
 
@@ -88,6 +97,9 @@ defmodule Web.Components.MemberSidebar do
       <dd id="member-last-attended">
         {last_attended(@last_attended_at, @member.team.timezone)}
       </dd>
+      <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
+      <dt>Milestones</dt>
+      <.milestones_summary member={@member} milestones={@milestones} />
 
       <%!-- A team on SAR Duty Records has no D4H to open, so it changes members here. --%>
       <dt>Actions</dt>
@@ -104,6 +116,33 @@ defmodule Web.Components.MemberSidebar do
         </ul>
       </dd>
     </dl>
+    """
+  end
+
+  attr :member, :map, required: true
+  attr :milestones, :list, required: true
+
+  defp milestones_summary(%{milestones: []} = assigns) do
+    ~H"""
+    <dd id="member-milestones">None</dd>
+    """
+  end
+
+  defp milestones_summary(assigns) do
+    assigns = assign(assigns, :latest, hd(assigns.milestones))
+
+    ~H"""
+    <dd id="member-milestones">
+      {MilestoneList.title(@latest)} · {Format.date_long(@latest.on)}
+      <.a
+        :if={length(@milestones) > 1}
+        id="member-milestones-all"
+        class="block"
+        navigate={~p"/teams/#{@member.team}/milestones?member=#{@member.id}&when=all"}
+      >
+        {Format.count(length(@milestones), one: "%d milestone", many: "All %d milestones")}
+      </.a>
+    </dd>
     """
   end
 
