@@ -81,6 +81,10 @@ defmodule Web.Components.Reply do
   attr :size, :atom, default: :md, values: [:md, :sm]
   attr :target, :any, default: nil, doc: "the control that takes the clicks"
 
+  attr :change_href, :string,
+    default: nil,
+    doc: "makes Change a link, for a page that replies with a form (#488)"
+
   @doc "The two buttons, or the member's reply and Change."
   def reply(assigns) do
     ~H"""
@@ -112,11 +116,21 @@ defmodule Web.Components.Reply do
         </span>
         <span :if={@state == :no} id={"#{@id}-state"} class="reply-state">Can't make it</span>
         <.button
+          :if={!@change_href}
           id={"#{@id}-change"}
           variant={:link}
           size={@size}
           phx-click="change"
           phx-target={@target}
+        >
+          Change
+        </.button>
+        <.button
+          :if={@change_href}
+          id={"#{@id}-change"}
+          variant={:link}
+          size={@size}
+          href={@change_href}
         >
           Change
         </.button>

@@ -10,3 +10,10 @@
 .reply-sm .reply-row { gap: var(--sp-2); }
 .reply-sm .reply-state { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 600; }
 .reply-sm .reply-state:not(.is-yes) { color: var(--text-muted); font-weight: 400; }
+
+/* The reply page's form, from a reminder email (#488). Touch screens get 44px choice
+   rows, the box centred in each. */
+@media (pointer: coarse) {
+  .reply-form .choice { min-height: 44px; align-items: center; margin-block: 0; }
+  .reply-form .choice > input { align-self: center; margin-top: 0; }
+}

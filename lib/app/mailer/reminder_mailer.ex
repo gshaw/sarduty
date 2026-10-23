@@ -17,12 +17,13 @@ defmodule App.Mailer.ReminderMailer do
   @doc """
   Emails a member a reminder to reply to an activity (#444), from the team, with
   replies going to the team admin who sent it: Cloudflare takes Reply-To as its API's
-  `reply_to` field, not a header. Both buttons open the reply page, which changes
-  nothing until the member selects one there. It carries a one-click unsubscribe, which
-  turns off the member's invitation reminders. `sender` is `%{name:, email:}`.
+  `reply_to` field, not a header. Each button opens the reply page with its answer
+  selected, which changes nothing until the member sends it (#488). It carries a
+  one-click unsubscribe, which turns off the member's invitation reminders. `sender` is
+  `%{name:, email:}`.
   """
   def deliver(%Member{} = member, %Activity{} = activity, %Team{} = team, sender) do
-    reply_url = url(ReplyLinks.reply_path(member, activity))
+    reply_urls = reply_urls(member, activity)
     reminders_url = url(ReplyLinks.reminders_path(member))
     activity_url = url("/teams/#{team.subdomain}/activities/#{activity.id}")
     from_name = sender.name || sender.email
@@ -34,12 +35,16 @@ defmodule App.Mailer.ReminderMailer do
     |> subject("Will you be there? #{activity.title}")
     |> header("List-Unsubscribe", "<#{reminders_url}>")
     |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
-    |> text_body(text(activity, team, from_name, reply_url, activity_url, reminders_url))
-    |> html_body(html(activity, team, from_name, reply_url, activity_url, reminders_url))
+    |> text_body(text(activity, team, from_name, reply_urls, activity_url, reminders_url))
+    |> html_body(html(activity, team, from_name, reply_urls, activity_url, reminders_url))
     |> Mailer.deliver()
   end
 
   defp url(path), do: Web.Endpoint.url() <> path
+
+  # A link per button, each opening the reply page with its answer selected.
+  defp reply_urls(member, activity),
+    do: Map.new([:yes, :no], &{&1, url(ReplyLinks.reply_path(member, activity, &1))})
 
   defp facts(activity, team) do
     Enum.reject(
@@ -51,7 +56,7 @@ defmodule App.Mailer.ReminderMailer do
   defp footer(from_name),
     do: "#{from_name}, a team admin, sent this reminder. Reply to this email to reach them."
 
-  defp text(activity, team, from_name, reply_url, activity_url, reminders_url) do
+  defp text(activity, team, from_name, reply_urls, activity_url, reminders_url) do
     """
     #{team.name}
 
@@ -60,8 +65,11 @@ defmodule App.Mailer.ReminderMailer do
 
     Will you be there?
 
-    I'll be there, or Can't make it:
-    #{reply_url}
+    I'll be there:
+    #{reply_urls.yes}
+
+    Can't make it:
+    #{reply_urls.no}
 
     Open activity (log in):
     #{activity_url}
@@ -73,13 +81,13 @@ defmodule App.Mailer.ReminderMailer do
     """
   end
 
-  defp html(activity, team, from_name, reply_url, activity_url, reminders_url) do
+  defp html(activity, team, from_name, reply_urls, activity_url, reminders_url) do
     """
     <p style="color:#505a5f;margin:0 0 4px">#{escape(team.name)}</p>
     <h1 style="font-size:24px;margin:0 0 8px">#{escape(activity.title)}</h1>
     #{Enum.map_join(facts(activity, team), "\n", &"<p style=\"margin:0\">#{escape(&1)}</p>")}
     <p style="margin:24px 0 12px"><strong>Will you be there?</strong></p>
-    <p style="margin:0"><a href="#{escape(reply_url)}" style="#{@yes}">I'll be there</a><a href="#{escape(reply_url)}" style="#{@no}">Can't make it</a></p>
+    <p style="margin:0"><a href="#{escape(reply_urls.yes)}" style="#{@yes}">I'll be there</a><a href="#{escape(reply_urls.no)}" style="#{@no}">Can't make it</a></p>
     <p style="margin:16px 0 0"><a href="#{escape(activity_url)}">Open activity</a> <span style="color:#505a5f">(log in)</span></p>
     <hr style="border:0;border-top:1px solid #b1b4b6;margin:32px 0 16px">
     <p style="color:#505a5f;font-size:14px;margin:0 0 8px">#{escape(footer(from_name))}</p>

@@ -14,6 +14,14 @@ defmodule Web.ReplyLinksTest do
     assert path |> token() |> ReplyLinks.verify_reply() == {:ok, {3, 7}}
   end
 
+  test "a reply link can carry the email button's answer" do
+    assert ReplyLinks.reply_path(%Member{id: 3}, %Activity{id: 7}, :yes) =~
+             ~r{^/replies/[^?]+\?reply=yes$}
+
+    assert ReplyLinks.reply_path(%Member{id: 3}, %Activity{id: 7}, :no) =~
+             ~r{^/replies/[^?]+\?reply=no$}
+  end
+
   test "a reminders link names one member" do
     path = ReplyLinks.reminders_path(%Member{id: 3})
 

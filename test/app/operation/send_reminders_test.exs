@@ -97,7 +97,10 @@ defmodule App.Operation.SendRemindersTest do
         assert email.subject == "Will you be there? Training night"
         assert email.headers["List-Unsubscribe"] =~ ~r{^<http.*/reminders/.+>$}
         assert email.headers["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
-        assert email.text_body =~ "/replies/"
+        assert email.text_body =~ ~r{/replies/\S+\?reply=yes}
+        assert email.text_body =~ ~r{/replies/\S+\?reply=no}
+        assert email.html_body =~ "?reply=yes"
+        assert email.html_body =~ "?reply=no"
         assert email.text_body =~ "Alex Chen, a team admin, sent this reminder."
         assert email.html_body =~ "I'll be there"
       end)
