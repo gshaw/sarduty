@@ -46,7 +46,8 @@ defmodule App.Model.ChoreEvent do
   month it was done, made when there is none, and takes every other chore off its event.
   Both events of a chore that moves have changes to send. Where a category has two
   events for a month, as after the move to monthly events, the older keeps the chores.
-  Run it in a transaction.
+  No unique index stops two: the emptied one stays until a send takes its attendance off
+  D4H, or its hours count twice. Run it in a transaction.
   """
   def place!(team_id) do
     moves = moves(team_id, month_events(team_id), placed_chores(team_id))
@@ -183,7 +184,8 @@ defmodule App.Model.ChoreEvent do
   @doc """
   The team's events with chores, or with changes to send, newest month first. Each comes
   with its last chore's date, members, minutes, and local activity once refreshed:
-  `%{event:, date:, members:, minutes:, activity:}`.
+  `%{event:, date:, members:, minutes:, activity:}`. One left with no chores drops off
+  once sent: D4H can't delete it, and an empty draft counts no hours.
   """
   def get_all_with_totals(team_id) do
     totals = chore_totals(team_id)

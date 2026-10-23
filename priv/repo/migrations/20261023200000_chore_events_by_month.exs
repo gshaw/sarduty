@@ -6,6 +6,8 @@ defmodule App.Repo.Migrations.ChoreEventsByMonth do
   # none. Every event has changes to send: the next send moves chores done in another
   # month to that month's event, merges two events of one month, and retitles each for
   # its month. Nothing locks an event: D4H's `approved` only mirrors `published` (#358).
+  # v1's accepted chores that were never sent get no event here: the next send's
+  # `ChoreEvent.place!/1` puts them on their month's event.
   def up do
     alter table(:chore_events) do
       add :month, :date

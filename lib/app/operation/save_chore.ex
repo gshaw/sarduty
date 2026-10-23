@@ -6,7 +6,7 @@ defmodule App.Operation.SaveChore do
   Nothing here calls D4H. A team admin's decision or change marks the chore's event as
   having changes to send, then puts the team's accepted chores on the events for their
   chore categories and months (`ChoreEvent.place!/1`). The page then sends them
-  (App.Operation.SendChores).
+  (App.Operation.SendChores), once for however many chores it decided.
 
   A team admin's change reads the chore again in its transaction, since another team
   admin or a send may have changed it since the page loaded it.

@@ -14,7 +14,8 @@ defmodule App.Operation.SendChores do
   here reads it.
 
   A team's sends run one at a time, so two team admins accepting at once cannot make a
-  month's event twice.
+  month's event twice. The send runs in the team admin's page, not a job: a team has a
+  few events a month, and a lock per node is enough on one machine.
   """
 
   alias App.Adapter.D4H
@@ -35,7 +36,8 @@ defmodule App.Operation.SendChores do
   @doc """
   Puts the team's accepted chores on their events (`ChoreEvent.place!/1`), then sends
   every event with changes. `%{events: n, failed: n}`: how many events it sent, and how
-  many of those did not go through.
+  many of those did not go through. Every event, not just the ones a decision touched,
+  so one that failed tries again on each decision and says so until it is fixed.
   """
   def call(%Team{} = team, user, now) do
     :global.trans({{__MODULE__, team.id}, self()}, fn ->
