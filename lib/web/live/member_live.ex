@@ -52,29 +52,13 @@ defmodule Web.MemberLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs>
-      <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
-      <:item label={@member.name} />
-    </.breadcrumbs>
-
-    <div class="heading-row">
-      <h1 class="title">{@member.name}</h1>
-      <.button
-        id="view-as"
-        href={~p"/teams/#{@current_team}/members/#{@member}/view-as"}
-        method="post"
-      >
-        View as member
-      </.button>
-    </div>
+    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
     <.member_tabs member={@member} active_tab={:attendance} />
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content
           member={@member}
           maps_app={@current_user.maps_app}
-          last_attended_at={@last_attended_at}
-          standing={@standing}
           milestones={@milestones}
         />
       </aside>

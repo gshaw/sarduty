@@ -1,19 +1,26 @@
 defmodule Web.MemberController do
   use Web, :controller
 
-  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Operation.LoadImage
 
-  # The square photo on the member page, fetched with the team's D4H key.
+  # The square photo in the member page's header, fetched with the team's D4H key, or a
+  # 404 when D4H has none, so the header shows the member's initials.
   def image(conn, params) do
-    member = Member.find!(conn.assigns.current_team, params["id"])
-    d4h = D4H.build_context_from_team(conn.assigns.current_team)
+    team = conn.assigns.current_team
+    member = %{Member.find!(team, params["id"]) | team: team}
 
-    conn
-    |> put_resp_content_type("image/png", nil)
-    |> send_resp(200, LoadImage.photo(member, :square, d4h))
+    case LoadImage.page_photo(member) do
+      nil ->
+        send_resp(conn, :not_found, "")
+
+      png ->
+        conn
+        |> put_resp_content_type("image/png", nil)
+        |> put_resp_header("cache-control", "private, max-age=3600")
+        |> send_resp(200, png)
+    end
   end
 
   # A member's certificate (#314), looked up through the team and then the member.

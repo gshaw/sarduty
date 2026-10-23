@@ -62,10 +62,12 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 - **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
   an away period. **Active** is the absence of the others and is never stored.
 - The member's **Standing** tab lists away periods, past ones too, with a form to add one
-  and buttons to end one today or delete it. Any team admin can. The sidebar on every
-  member tab shows the standing. Each change goes in the member's history, from
+  and buttons to end one today or delete it. Any team admin can. The header on every
+  member tab badges a standing other than Active: amber for Away until a date, grey for
+  Retired and Not a person. Each change goes in the member's history, from
   `member_standing_changes`, which keeps the reason and dates.
-- Members do not see their standing, and the reason is `redact: true`.
+- A member away sees the same Away badge on Your membership, as a reminder. Members never
+  see the reason, which is `redact: true`.
 - **Check-ins** are on the same tab: a team admin records the day they reached a member
   and what they heard ([MemberCheckIn](../lib/app/model/member_check_in.ex)). It
   restarts the member's attendance clock and changes nothing else: not standing, not
@@ -169,9 +171,11 @@ D4H. Logins are designed in issue #156; the pages in #389, and one page in #406.
 
 `/teams/:subdomain/me` ([MeLive](../lib/web/live/me_live.ex)) is one page (#406),
 replacing the overview of #389 and taking in its pages: ID card, Qualifications, Hours,
-Tax credit letters, and Milestones are gone, with no redirects. Its title is the member's name, under
-their D4H photo in a circle, or their initials when D4H has none (`/me/image`), and
-"Member since March 2019".
+Tax credit letters, and Milestones are gone, with no redirects. It opens with the same
+header as the team member page (`<.person_head>`, `/styles/person-head`): their D4H photo
+in a circle, or their initials when D4H has none (`/me/image`), their name, an Away badge
+while they're away, and "Ground searcher · Joined March 2019 · Last attended Sep 30,
+2026". Neither page shows the member ID: teams number members in very different ways.
 
 - **Main column**: the 10 latest activities they attended, from any year so the page is
   never empty on January 1, under 3 numbers for the last 12 months: activities, incidents,

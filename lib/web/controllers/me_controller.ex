@@ -41,7 +41,7 @@ defmodule Web.MeController do
   # The member's own photo, for Your membership. A 404 when D4H has none, so the page
   # shows their initials.
   def image(conn, _params) do
-    case LoadImage.own_photo(conn.assigns.member) do
+    case LoadImage.page_photo(conn.assigns.member) do
       nil ->
         send_resp(conn, :not_found, "")
 

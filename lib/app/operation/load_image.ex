@@ -37,10 +37,10 @@ defmodule App.Operation.LoadImage do
   end
 
   @doc """
-  The member's own photo for Your membership (#406), square, or nil when D4H has none or
-  it won't decode, so the page shows their initials instead of the placeholder.
+  The member's photo for a page header, square, or nil when D4H has none or it won't
+  decode, so the page shows their initials instead of the placeholder.
   """
-  def own_photo(%Member{} = member) do
+  def page_photo(%Member{} = member) do
     d4h = D4H.build_context_from_team(member.team)
 
     with {:ok, bytes, _filename} <- D4H.fetch_member_image(d4h, member.d4h_member_id),

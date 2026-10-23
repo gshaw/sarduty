@@ -111,15 +111,4 @@ defmodule Web.Components.D4H do
   defp activity_kind_badge("exercise"), do: :exercise
   defp activity_kind_badge("event"), do: :event
   defp activity_kind_badge(_kind), do: :default
-
-  attr :member, :map, required: true
-
-  def member_image(assigns) do
-    ~H"""
-    <img
-      class="photo"
-      src={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
-    />
-    """
-  end
 end

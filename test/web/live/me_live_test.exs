@@ -56,7 +56,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#nav-area", team.name)
       assert has_element?(lv, "#side-nav-me[aria-current=page]", "Your membership")
       refute has_element?(lv, "#side-nav-members")
-      assert has_element?(lv, ~s{#member-photo[src="/teams/#{team.subdomain}/me/image"]})
+      assert has_element?(lv, ~s{#member-head-photo[src="/teams/#{team.subdomain}/me/image"]})
     end
 
     test "a new member's page explains each part", %{conn: conn, team: team} do
@@ -107,6 +107,9 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#year-stats", "The last 12 months")
       assert has_element?(lv, "#stat-activities", "2")
       assert has_element?(lv, "#stat-incidents", "1")
+      assert has_element?(lv, "#stat-incidents .label", "Incident")
+      refute has_element?(lv, "#stat-incidents .label", "Incidents")
+      assert has_element?(lv, "#stat-activities .label", "Activities")
       assert has_element?(lv, "#stat-hours", "5")
       assert has_element?(lv, "#activities-list", "Last year's training")
     end
@@ -172,7 +175,7 @@ defmodule Web.MeLiveTest do
          %{conn: conn, team: team, member: member} do
       member
       |> Ecto.Changeset.change(
-        phone: "604-555-0188",
+        phone: "6045550188",
         address: "2140 Fern Street",
         primary_emergency_contact: %{
           "name" => "Sam Rivera",

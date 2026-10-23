@@ -166,20 +166,13 @@ defmodule Web.MemberStandingLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs>
-      <:item label="Members" path={~p"/teams/#{@current_team}/members/"} />
-      <:item label={@member.name} />
-    </.breadcrumbs>
-
-    <h1 class="title">{@member.name}</h1>
+    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
     <.member_tabs member={@member} active_tab={:standing} />
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content
           member={@member}
           maps_app={@current_user.maps_app}
-          last_attended_at={@last_attended_at}
-          standing={@standing}
           milestones={@milestones}
         />
       </aside>
@@ -189,7 +182,8 @@ defmodule Web.MemberStandingLive do
           <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
           <p class="hint">
             Active unless the member is away or not a person. SAR Duty keeps it, and
-            nothing here goes to D4H. Members do not see it.
+            nothing here goes to D4H. A member away sees when they're back on Your
+            membership, never the reason.
           </p>
         </section>
 
