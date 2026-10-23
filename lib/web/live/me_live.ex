@@ -38,7 +38,7 @@ defmodule Web.MeLive do
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
-      |> assign(:milestones, member |> milestones(attended, now) |> Enum.take(5))
+      |> assign(:milestones, milestones(member, attended, now))
 
     {:ok, socket}
   end
