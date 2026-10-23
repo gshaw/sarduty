@@ -37,7 +37,9 @@ defmodule Web.QualificationLive do
     qualification = find_qualification(id, current_team.id)
 
     {active_awards, expired_awards} =
-      qualification |> list_awards_for_qualification() |> split_awards(DateTime.utc_now())
+      qualification
+      |> list_awards_for_qualification()
+      |> MemberQualificationAward.split_by_member(DateTime.utc_now())
 
     view = String.to_existing_atom(filter_options.view)
     q = filter_options.q || ""
@@ -87,24 +89,6 @@ defmodule Web.QualificationLive do
       {:error, _} ->
         raise Web.Status.NotFound
     end
-  end
-
-  # Split awards into active and expired, keeping the most recent per member. Awards come
-  # ordered by member name, then newest first. A member in the active list is left out of
-  # the expired one.
-  defp split_awards(awards, now) do
-    {active_awards, expired_awards} =
-      Enum.split_with(awards, &MemberQualificationAward.active?(&1, now))
-
-    active_awards = dedup_by_member(active_awards)
-    active_member_ids = MapSet.new(active_awards, & &1.member.id)
-
-    expired_awards =
-      expired_awards
-      |> Enum.reject(fn award -> MapSet.member?(active_member_ids, award.member.id) end)
-      |> dedup_by_member()
-
-    {active_awards, expired_awards}
   end
 
   defp awards_path(team, qualification, filter_options, changes \\ []) do
@@ -277,10 +261,5 @@ defmodule Web.QualificationLive do
     |> order_by([mqa, m], asc: m.name, desc: mqa.starts_at)
     |> preload([mqa, m], member: m)
     |> Repo.all()
-  end
-
-  defp dedup_by_member(awards) do
-    awards
-    |> Enum.uniq_by(& &1.member.id)
   end
 end

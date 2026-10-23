@@ -32,6 +32,38 @@ defmodule Web.QualificationCollectionLiveTest do
     refute html =~ "0 qualifications"
   end
 
+  test "a qualification's row counts its members as its own page does", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    qualification = qualification_fixture(team, %{title: "First Aid"})
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    ago = &DateTime.add(now, -&1, :day)
+
+    renewed = member_fixture(team, %{name: "Renewed Member"})
+
+    qualification_award_fixture(qualification, renewed, %{starts_at: ago.(800), ends_at: ago.(30)})
+
+    qualification_award_fixture(qualification, renewed, %{starts_at: ago.(30), ends_at: nil})
+
+    lapsed = member_fixture(team, %{name: "Lapsed Member"})
+
+    qualification_award_fixture(qualification, lapsed, %{starts_at: ago.(900), ends_at: ago.(500)})
+
+    qualification_award_fixture(qualification, lapsed, %{starts_at: ago.(500), ends_at: ago.(10)})
+
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/qualifications")
+    row = "#qualification-#{qualification.id}"
+
+    assert has_element?(lv, "#{row} td:nth-child(2)", "1")
+    assert has_element?(lv, "#{row} td:nth-child(3)", "1")
+    assert has_element?(lv, "#{row} td:nth-child(4)", "2")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}")
+    assert has_element?(lv, "#awards-all-link", "2")
+    assert has_element?(lv, "#awards-active-link", "1")
+    assert has_element?(lv, "#awards-expired-link", "1")
+  end
+
   test "links to qualification detail page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     qualification_fixture(team, %{title: "Swift Water Rescue"})

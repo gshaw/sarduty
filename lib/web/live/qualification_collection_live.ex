@@ -173,6 +173,7 @@ defmodule Web.QualificationCollectionLive do
       :if={@view == :all and @qualifications != []}
       id="qualification_collection"
       rows={@qualifications}
+      row_id={&"qualification-#{&1.id}"}
       class="table-striped"
     >
       <:col :let={q} label="Qualification">
@@ -184,8 +185,8 @@ defmodule Web.QualificationCollectionLive do
       <:col :let={q} label="Expired" class="w-px whitespace-nowrap" align="right">
         {q.expired_count}
       </:col>
-      <:col :let={q} label="Total awards" class="w-px whitespace-nowrap" align="right">
-        {q.total_count}
+      <:col :let={q} label="All" class="w-px whitespace-nowrap" align="right">
+        {q.active_count + q.expired_count}
       </:col>
     </.table>
 
@@ -254,8 +255,10 @@ defmodule Web.QualificationCollectionLive do
       MemberQualificationAward
       |> join(:inner, [a], q in assoc(a, :qualification))
       |> where([a, q], q.team_id == ^team.id)
+      |> order_by([a], desc: a.starts_at)
       |> select([a], %{
         qualification_id: a.qualification_id,
+        member_id: a.member_id,
         starts_at: a.starts_at,
         ends_at: a.ends_at
       })
@@ -265,15 +268,12 @@ defmodule Web.QualificationCollectionLive do
     team.id
     |> Qualification.get_all()
     |> Enum.map(fn q ->
-      awards = Map.get(awards_by_qualification, q.id, [])
+      {active, expired} =
+        awards_by_qualification
+        |> Map.get(q.id, [])
+        |> MemberQualificationAward.split_by_member(now)
 
-      %{
-        id: q.id,
-        title: q.title,
-        total_count: length(awards),
-        active_count: Enum.count(awards, &MemberQualificationAward.active?(&1, now)),
-        expired_count: Enum.count(awards, &MemberQualificationAward.expired?(&1, now))
-      }
+      %{id: q.id, title: q.title, active_count: length(active), expired_count: length(expired)}
     end)
   end
 end
