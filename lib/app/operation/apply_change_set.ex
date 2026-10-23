@@ -8,9 +8,9 @@ defmodule App.Operation.ApplyChangeSet do
 
   # The one place SAR Duty writes to D4H (#174). A test fails if any other module calls
   # D4H's write functions. Before writing it reads D4H fresh, and a row whose D4H record
-  # changed since it was proposed is skipped rather than overwritten. Each row records
-  # D4H's answer. Writes don't retry; a failed row stays failed and applying the set
-  # again tries it once more.
+  # changed since it was proposed is skipped rather than overwritten, except a member's
+  # reply (#444). Each row records D4H's answer. Writes don't retry; a failed row stays
+  # failed and applying the set again tries it once more.
 
   # Writes for a team on SAR Duty Records (docs/records.md), from App.Operation.ApplyEdit.
   # Each changes the record its row names; nothing is read first.
@@ -54,19 +54,25 @@ defmodule App.Operation.ApplyChangeSet do
     with :ok <- check_team(team),
          d4h = D4H.build_context_from_team(team),
          {:ok, current} <- read_current(d4h, change_set) do
-      # Rows go in order, so one can use the activity an earlier row created (#341).
-      {rows, _created} =
-        change_set.rows
-        |> Enum.filter(&(&1.status in [:proposed, :failed]))
-        |> Enum.map_reduce(created_activity(change_set.rows), fn row, created ->
-          row = with_created(row, created)
-          recorded = ChangeSetRow.record!(row, apply_row(d4h, row, current, opts), now)
-          {recorded, created_now(recorded) || created}
-        end)
-
+      rows = apply_rows(d4h, change_set, current, now, opts)
       ChangeSet.mark_applied!(change_set, user, now)
       {:ok, rows}
     end
+  end
+
+  # Rows go in order, so one can use the activity an earlier row created (#341).
+  defp apply_rows(d4h, change_set, current, now, opts) do
+    {rows, _created} =
+      change_set.rows
+      |> Enum.filter(&(&1.status in [:proposed, :failed]))
+      |> Enum.map_reduce(created_activity(change_set.rows), fn row, created ->
+        row = with_created(row, created)
+        result = apply_row(d4h, row, change_set.source, current, opts)
+        recorded = ChangeSetRow.record!(row, result, now)
+        {recorded, created_now(recorded) || created}
+      end)
+
+    rows
   end
 
   # An activity the set created on an earlier apply, for its rows that failed then.
@@ -122,8 +128,8 @@ defmodule App.Operation.ApplyChangeSet do
     end
   end
 
-  defp apply_row(d4h, row, current, opts) do
-    case check(row, current) do
+  defp apply_row(d4h, row, source, current, opts) do
+    case check(row, current, source) do
       :ok -> write(d4h, row, opts)
       skip -> skip
     end
@@ -140,6 +146,19 @@ defmodule App.Operation.ApplyChangeSet do
   end
 
   defp write(d4h, row, _opts), do: write(d4h, row)
+
+  @doc """
+  Whether a row of a set from `source` can still be written. A member's reply (#444) is
+  their latest tap, so it wins over whatever D4H holds now: only a row gone from D4H
+  stops it. Every other row goes through `check/2`.
+  """
+  def check(%ChangeSetRow{action: :update_attendance} = row, current, :member) do
+    if Enum.any?(current, &(&1.d4h_attendance_id == row.d4h_record_id)),
+      do: :ok,
+      else: {:skipped, "The attendance row is gone from D4H."}
+  end
+
+  def check(row, current, _source), do: check(row, current)
 
   @doc """
   Whether a row can still be written, given D4H's attendance rows `current` (nil for a

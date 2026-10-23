@@ -84,6 +84,11 @@ Both runs record what they change in the copy as `d4h_changes`, the history on m
 activity pages. A team's first refresh records nothing. See
 [change-history.md](change-history.md).
 
+When an attendance row's status moves to attending or absent before its activity starts,
+both runs set `attendances.replied_at` to D4H's `updatedAt`: the member replied then
+(#444). A move back to requested clears it. A new row, or a change after the start, the
+door's, leaves it as it was (`Attendance.replied_at/4`).
+
 ## Monitoring
 
 - **Healthchecks, once per run.** Each scheduler pings its check's `/start` and queues

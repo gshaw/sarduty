@@ -109,7 +109,10 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 
-    assert Repo.get(Attendance, kept.id).status == "absent"
+    kept = Repo.get(Attendance, kept.id)
+    assert kept.status == "absent"
+    # Changed in D4H before the activity starts, so that's when the member replied (#444).
+    assert kept.replied_at == ~U[2026-10-06 09:00:00Z]
     refute Repo.get(Attendance, deleted.id)
     assert_received {:team_refreshed, %Team{}}
   end

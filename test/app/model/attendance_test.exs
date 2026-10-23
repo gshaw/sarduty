@@ -27,6 +27,63 @@ defmodule App.Model.AttendanceTest do
     defp ids(query), do: query |> select([r], r.id) |> Repo.all() |> Enum.sort()
   end
 
+  describe "replied_at/4, as the refresh sees a row change (#444)" do
+    @starts ~U[2026-10-29 02:00:00Z]
+    @changed ~U[2026-10-26 16:12:30.123456Z]
+    @earlier ~U[2026-10-20 10:02:00Z]
+
+    # The row was `old` (status, replied_at); D4H now has `status`, changed at `changed_at`.
+    defp replied({old_status, old_replied_at}, status, changed_at \\ @changed) do
+      %Attendance{status: old_status, replied_at: old_replied_at}
+      |> Attendance.replied_at(status, changed_at, @starts)
+    end
+
+    test "a status D4H changed before the start is a reply then" do
+      assert replied({"requested", nil}, "attending") == ~U[2026-10-26 16:12:30Z]
+      assert replied({"requested", nil}, "absent") == ~U[2026-10-26 16:12:30Z]
+      assert replied({"attending", @earlier}, "absent") == ~U[2026-10-26 16:12:30Z]
+    end
+
+    test "the same status keeps the time the member replied" do
+      assert replied({"attending", @earlier}, "attending") == @earlier
+      assert replied({"requested", nil}, "requested") == nil
+    end
+
+    test "back to requested is no reply" do
+      assert replied({"attending", @earlier}, "requested") == nil
+    end
+
+    # The door marks walk-ins and no-shows once it starts; they never replied.
+    test "a change after the start keeps what was there" do
+      after_start = DateTime.add(@starts, 600)
+      assert replied({"requested", nil}, "attending", after_start) == nil
+      assert replied({"attending", @earlier}, "absent", after_start) == @earlier
+    end
+
+    # A team's first refresh copies every row; none of that is a reply.
+    test "a new row has no reply time" do
+      assert Attendance.replied_at(nil, "attending", @changed, @starts) == nil
+    end
+  end
+
+  describe "invitation/2" do
+    test "is the member's row on the activity, only on their team" do
+      team = team_fixture()
+      other_team = team_fixture()
+      member = member_fixture(team)
+      outsider = member_fixture(other_team)
+      activity = activity_fixture(team)
+      row = attendance_fixture(activity, member, %{status: "requested"})
+      # A row that crosses teams is never someone's invitation.
+      attendance_fixture(activity, outsider, %{status: "requested"})
+
+      assert Attendance.invitation(activity, member).id == row.id
+      assert Attendance.invitation(activity, outsider) == nil
+      not_invited = activity_fixture(team)
+      assert Attendance.invitation(not_invited, member) == nil
+    end
+  end
+
   # What attended means lives in Attendance.attended/2. A query that filters on
   # "attending" itself counts sign-ups for coming activities as attended (#364), and the
   # review of #381 found four such copies the fix had missed. These files use the

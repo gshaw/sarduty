@@ -16,6 +16,9 @@ defmodule App.Model.Attendance do
     field :started_at, :utc_datetime
     field :finished_at, :utc_datetime
     field :status, :string
+    # When the member replied to the invitation (#444), for the Replied column and New.
+    # Nil until they reply, and on rows from before replies.
+    field :replied_at, :utc_datetime
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -30,7 +33,8 @@ defmodule App.Model.Attendance do
       :duration_in_minutes,
       :started_at,
       :finished_at,
-      :status
+      :status,
+      :replied_at
     ])
     |> validate_required([
       :member_id,
@@ -56,6 +60,41 @@ defmodule App.Model.Attendance do
   end
 
   # def delete(%Attendance{} = record), do: Repo.delete(record)
+
+  @doc """
+  The member's row on the activity, their invitation (#444), or nil when they aren't
+  invited. Both must be the activity's team's. D4H allows two rows for one member; the
+  first is the one replies change.
+  """
+  def invitation(%Activity{} = activity, %Member{} = member) do
+    Attendance
+    |> join(:inner, [r], m in assoc(r, :member))
+    |> where([r, m], r.activity_id == ^activity.id and r.member_id == ^member.id)
+    |> where([r, m], m.team_id == ^activity.team_id and m.team_id == ^member.team_id)
+    |> order_by([r], asc: r.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc """
+  When the member replied, for a row the refresh saves over `old` with D4H's `status`,
+  changed in D4H at `changed_at`. A move to attending or absent before the activity's
+  start `starts_at` is a reply then. A move back to requested clears it. Anything else
+  keeps the old time: a change after the start is the door's, not a reply. A new row has
+  none, since the refresh never saw it change.
+  """
+  def replied_at(nil, _status, _changed_at, _starts_at), do: nil
+
+  def replied_at(%Attendance{status: status} = old, status, _changed_at, _starts_at),
+    do: old.replied_at
+
+  def replied_at(%Attendance{}, "requested", _changed_at, _starts_at), do: nil
+
+  def replied_at(%Attendance{} = old, _status, %DateTime{} = changed_at, starts_at) do
+    if DateTime.before?(changed_at, starts_at),
+      do: DateTime.truncate(changed_at, :second),
+      else: old.replied_at
+  end
 
   @doc """
   The members D4H shows as signed up (attending) for the activity. Not requested: D4H

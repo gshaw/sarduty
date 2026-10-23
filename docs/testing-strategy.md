@@ -54,6 +54,10 @@ data?
   (`send_attendance_to_d4h_test.exs`), never a second row for a member.
 - Change history: what the refresh and the sync record, and SAR Duty's own writes not
   recorded twice (`test/app/operation/record_d4h_changes*_test.exs`).
+- Replies (#444): what a reply sends, that it never adds a row and closes at the start
+  (`reply_to_activity_test.exs`), that the member's latest tap wins over D4H's status
+  (`apply_change_set_test.exs`), and when the refresh sets `replied_at`
+  (`test/app/model/attendance_test.exs`).
 - Records edits: `SaveMember.plan/3` and `SaveActivity.plan/4` name only what changed,
   pure, and the form LiveView tests run each edit against a stubbed Records.
 - Mileage round trips: `test/app/operation/build_mileage_report_test.exs`, pure, with

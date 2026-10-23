@@ -31,11 +31,11 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
     }
   end
 
+  # The start goes with the id: a status change before it is a reply (#444).
   defp build_d4h_activity_index(team_id) do
     team_id
     |> Activity.get_all()
-    |> Enum.map(fn r -> {r.d4h_activity_id, r.id} end)
-    |> Map.new()
+    |> Map.new(fn r -> {r.d4h_activity_id, %{id: r.id, started_at: r.started_at}} end)
   end
 
   defp build_d4h_member_index(team_id) do
@@ -65,30 +65,35 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
 
   defp upsert_attendance(context, d4h_attendance) do
     member_id = context.d4h_member_index[d4h_attendance.d4h_member_id]
-    activity_id = context.d4h_activity_index[d4h_attendance.d4h_activity_id]
-    upsert_attendance(member_id, activity_id, d4h_attendance)
+    activity = context.d4h_activity_index[d4h_attendance.d4h_activity_id]
+    upsert_attendance(member_id, activity, d4h_attendance)
   end
 
-  defp upsert_attendance(nil, _activity_id, _d4h_attendance), do: :skip
+  defp upsert_attendance(nil, _activity, _d4h_attendance), do: :skip
   defp upsert_attendance(_member_id, nil, _d4h_attendance), do: :skip
 
-  defp upsert_attendance(member_id, activity_id, d4h_attendance) do
+  defp upsert_attendance(member_id, activity, d4h_attendance) do
+    attendance =
+      Attendance.get_by(
+        member_id: member_id,
+        activity_id: activity.id,
+        d4h_attendance_id: d4h_attendance.d4h_attendance_id
+      )
+
+    # D4H's updatedAt is when the status changed, closer than this refresh's clock.
+    changed_at = d4h_attendance.updated_at || DateTime.utc_now()
+
     params = %{
       member_id: member_id,
-      activity_id: activity_id,
+      activity_id: activity.id,
       d4h_attendance_id: d4h_attendance.d4h_attendance_id,
       duration_in_minutes: d4h_attendance.duration_in_minutes,
       started_at: d4h_attendance.started_at,
       finished_at: d4h_attendance.finished_at,
-      status: d4h_attendance.status
+      status: d4h_attendance.status,
+      replied_at:
+        Attendance.replied_at(attendance, d4h_attendance.status, changed_at, activity.started_at)
     }
-
-    attendance =
-      Attendance.get_by(
-        member_id: member_id,
-        activity_id: activity_id,
-        d4h_attendance_id: d4h_attendance.d4h_attendance_id
-      )
 
     saved =
       if attendance,
