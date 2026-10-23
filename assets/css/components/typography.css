@@ -20,7 +20,10 @@
   .action-list { --action-pad: var(--sp-1); margin-block: calc(-1 * var(--action-pad)); }
   @media (pointer: coarse) { .action-list { --action-pad: calc((44px - var(--lh-md)) / 2); } }
   .action-list a { display: block; padding-block: var(--action-pad); }
-  .action-list a::before, .action > a::before { content: var(--list-style-type-arrow); display: inline-block; white-space: pre; color: var(--text); }
+  /* The arrow floats, so a space before the link text in a template starts the line and
+     drops, rather than showing underlined after the arrow. A float is never underlined. */
+  .action > a { display: inline-block; }
+  .action-list a::before, .action > a::before { content: var(--list-style-type-arrow); float: left; white-space: pre; color: var(--text); }
 
   .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
   .link:hover { color: var(--link-hover); text-decoration-thickness: 3px; }
