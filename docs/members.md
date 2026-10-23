@@ -200,8 +200,9 @@ their D4H photo in a circle, or their initials when D4H has none (`/me/image`), 
   on the last 90 days, for thanking people at a meeting or in a newsletter. Members
   don't see it: only their own, until we decide how members see other members.
   [MemberMilestones](../lib/app/view_data/member_milestones.ex) loads them. Still not
-  stored: a whole team takes about 130 ms (22,000 attended rows, dev copy), and a stored
-  copy would go stale whenever attendance, `joined_at`, or an away period changed.
+  stored: South Fraser takes about 0.3 s on Fly (15,000 attended rows, 2026-10-23), once
+  the page connects, and a stored copy would go stale whenever attendance, `joined_at`,
+  or an away period changed.
 - The `/me/card/…` Wallet downloads, `/me/tax-credit-letters/:id/pdf`, and `/wallet/…`
   stay: passes and files hold them.
 

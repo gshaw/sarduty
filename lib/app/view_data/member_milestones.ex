@@ -3,7 +3,7 @@ defmodule App.ViewData.MemberMilestones do
   Milestones (#389) loaded for a page: one member's, for Your membership and a team
   admin's member sidebar, or every current member's, for the team's Milestones page.
   Worked out from `App.ViewData.Milestones.build/5` on each load, nothing stored:
-  about 130 ms for a team with 22,000 attended rows (dev copy, 2026-10-23), and a stored
+  about 0.3 s on Fly for South Fraser's 15,000 attended rows (2026-10-23), and a stored
   copy would go stale whenever attendance, `joined_at`, or an away period changes.
   """
 
@@ -52,11 +52,19 @@ defmodule App.ViewData.MemberMilestones do
     |> Enum.sort_by(&Date.to_gregorian_days(&1.on), :desc)
   end
 
+  # Only what Milestones.build/5 and the page read. Preloading whole activities took
+  # 0.9 s of the 1 s on Fly; this takes 0.1 s.
   defp attended_by_member(team, now) do
     Attendance
     |> Attendance.attended(now)
     |> where([activity: a], a.team_id == ^team.id)
-    |> preload([activity: a], activity: a)
+    |> select([at, activity: a], %{
+      member_id: at.member_id,
+      started_at: at.started_at,
+      finished_at: at.finished_at,
+      duration_in_minutes: at.duration_in_minutes,
+      activity: %{id: a.id, title: a.title, activity_kind: a.activity_kind}
+    })
     |> Repo.all()
     |> Enum.group_by(& &1.member_id)
   end
