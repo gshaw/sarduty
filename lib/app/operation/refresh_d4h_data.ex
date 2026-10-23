@@ -149,6 +149,7 @@ defmodule App.Operation.RefreshD4HData do
 
     progress = RefreshD4HData.Progress.update_stage(progress, "Qualification awards")
     {_count, progress} = RefreshD4HData.UpsertQualificationAwards.call(d4h, team, progress)
+    RefreshD4HData.UpsertAwardDocuments.call(d4h, team)
     RefreshD4HData.Progress.finish_stage(progress)
   end
 

@@ -257,6 +257,15 @@ defmodule App.DataFixtures do
     MemberQualificationAward.insert!(params)
   end
 
+  @doc "An award with a certificate in D4H (#314), document 77 unless given another."
+  def certificate_award_fixture(%Team{} = team, %Member{} = member, attrs \\ %{}) do
+    qualification = qualification_fixture(team, %{title: "Standard First Aid"})
+    award = qualification_award_fixture(qualification, member, attrs)
+    document_id = Map.get(attrs, :d4h_document_id, 77)
+    MemberQualificationAward.set_documents([{award.id, document_id}])
+    %{award | d4h_document_id: document_id}
+  end
+
   def group_fixture(%Team{} = team, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
 

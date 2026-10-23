@@ -2,6 +2,7 @@ defmodule Web.MeController do
   use Web, :controller
 
   alias App.Model.MemberCard
+  alias App.Model.MemberQualificationAward
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
@@ -50,6 +51,13 @@ defmodule Web.MeController do
         |> put_resp_header("cache-control", "private, max-age=3600")
         |> send_resp(200, png)
     end
+  end
+
+  # An award's certificate (#314), looked up through the member.
+  def certificate(conn, %{"id" => id}) do
+    member = conn.assigns.member
+    award = MemberQualificationAward.find_certificate!(member, id)
+    Web.CertificateResponse.send_certificate(conn, member.team, award)
   end
 
   def tax_credit_letter(conn, %{"id" => id}) do

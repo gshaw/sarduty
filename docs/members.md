@@ -123,6 +123,14 @@ admin's member page, from one query and one component each (#308, #339, decided
 - **Every row, on both pages** (decided 2026-10-22). No shorter list on Your membership
   with the rest a click away. On South Fraser's data a member has about 8, so a split
   would cost most members a click to save a few rows; only 15 of 91 have more than 20.
+- **Certificates** (#314, decided 2026-10-22). An award with a document in D4H gets a
+  Certificate link under its title, on Your membership and on the admin's tab. Each has
+  its own route, `/me/qualifications/:id/certificate` and
+  `/members/:id/certificates/:award_id`, which finds the award through the member and
+  team, then fetches the file from D4H with the team's key: nothing is stored, and the
+  team key reads RESTRICTED documents too. PDFs and images open in the browser; any
+  other file downloads, and every file is sent sandboxed so it can't run as a page. Only
+  the latest award's certificate is linked. Records serves none until uploads come.
 - **No groups** (decided 2026-10-20). #308 asked for groups by expiry. On South Fraser's
   data, 11 of 84 members had anything expiring within 60 days, never more than 1, and
   most groups held 1 or 2 rows under their own heading. A tag finds the one that matters.

@@ -20,10 +20,10 @@ refresh once a night as the safety net (#163).
   first 401 or 403 stops the syncs until a new key is saved in team settings or a nightly
   refresh gets past the key.
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
-- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 12 lists for
+- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 13 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
   change. If none moved since the last look (`teams.d4h_sync_state`), only the open
-  years' read below follows: 12 small requests and 3 pages.
+  years' read below follows: 13 small requests and 3 pages.
 - Every sync reads the open years' activities whole (#358): this year's, and last
   year's too from January to April ([Service.Period](../lib/service/period.ex)). D4H
   doesn't change an activity's `updatedAt` when its tags change, so the heads never see a
@@ -31,8 +31,8 @@ refresh once a night as the safety net (#163).
   `starts_after`; only rows that differ are written. Tag titles come from the local copy.
   SAR Duty Records changes `updatedAt` with tags, so the heads already see its edits, but
   it takes the same read so both services stay on one path.
-- A small list that moved (members, qualifications, awards, groups, memberships,
-  equipment items and usages) is fetched whole through the full refresh's own stage, along
+- A small list that moved (members, qualifications, awards, award certificates, groups,
+  memberships, equipment items and usages) is fetched whole through the full refresh's own stage, along
   with the lists that point at it, so rows skipped for an unknown parent come in. Their
   stale-row deletes and the member departure rule keep working. Equipment usages come
   after activities, so a new activity's usages aren't skipped.
@@ -142,7 +142,9 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
    a team owner; a missing owner stays nil.
 4. Exercises, events, incidents → `activities`.
 5. Attendance.
-6. Qualifications, then qualification awards.
+6. Qualifications, then qualification awards, then which awards have a certificate: the
+   documents D4H attaches to an award, by id only (#314). The file stays in D4H, and
+   SAR Duty fetches it when someone opens it. Records serves none yet.
 7. Groups, then group memberships.
 8. Equipment items, then equipment usages ([equipment.md](equipment.md)). A team without
    D4H's equipment module gets a 403 and has none.

@@ -210,7 +210,17 @@ defmodule Web.MeLive do
         row_id={&"qualifications-list-#{&1.award.qualification_id}"}
         row_class={&QualificationText.row_class/1}
       >
-        <:col :let={row} label="Qualification">{row.award.qualification.title}</:col>
+        <:col :let={row} label="Qualification">
+          {row.award.qualification.title}
+          <span :if={row.award.d4h_document_id} class="hint block">
+            <.a
+              id={"certificate-#{row.award.id}"}
+              href={~p"/teams/#{@team}/me/qualifications/#{row.award.id}/certificate"}
+            >
+              Certificate
+            </.a>
+          </span>
+        </:col>
         <:col :let={row} label="Expires" class="whitespace-nowrap">
           {QualificationText.expires(row.award, @now, @team.timezone)}
           <.badge :if={row.status == :expiring} kind={:warning}>

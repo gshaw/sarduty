@@ -142,6 +142,14 @@ defmodule Web.MemberQualificationsLive do
         <.a navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}>
           {row.award.qualification.title}
         </.a>
+        <span :if={row.award.d4h_document_id} class="hint block">
+          <.a
+            id={"certificate-#{row.award.id}"}
+            href={~p"/teams/#{@member.team}/members/#{@member}/certificates/#{row.award.id}"}
+          >
+            Certificate
+          </.a>
+        </span>
       </:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
         {QualificationText.expires(row.award, @now, @member.team.timezone)}

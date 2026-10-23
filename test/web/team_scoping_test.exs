@@ -30,6 +30,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/card/apple-wallet",
     "/teams/:subdomain/members/:id/card/google-wallet",
     "/teams/:subdomain/members/:id/image",
+    "/teams/:subdomain/members/:id/certificates/:award_id",
     # View as member (#425), a POST.
     "/teams/:subdomain/members/:id/view-as",
     "/teams/:subdomain/groups/:id",
@@ -43,6 +44,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/tax-credit-letters/:id/pdf",
     # A member's own letter (#156). Web.MeLiveTest covers another member on the same team.
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
+    "/teams/:subdomain/me/qualifications/:id/certificate",
     # Add to calendar (#406). Web.ActivityLiveTest covers an incident a member can't see.
     "/teams/:subdomain/activities/:id/calendar"
   ]
@@ -64,6 +66,7 @@ defmodule Web.TeamScopingTest do
       template: template_fixture(other_team),
       endorsement: endorsement,
       letter: tax_credit_letter_fixture(member),
+      award: certificate_award_fixture(other_team, member),
       change_set:
         ChangeSet.propose!(
           %ChangeSet{team_id: other_team.id, source: :agent},
@@ -126,6 +129,12 @@ defmodule Web.TeamScopingTest do
 
   # Any id: the team hook refuses before the page reads one.
   defp fill_ids(path), do: Regex.replace(~r/:[a-z_]+/, path, "1")
+
+  defp path_for("/teams/:subdomain/members/:id/certificates/:award_id", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/certificates/#{o.award.id}"
+
+  defp path_for("/teams/:subdomain/me/qualifications/:id/certificate", s, o),
+    do: ~p"/teams/#{s}/me/qualifications/#{o.award.id}/certificate"
 
   defp path_for("/teams/:subdomain/members/:id/view-as", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/view-as"
