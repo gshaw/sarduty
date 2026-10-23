@@ -316,6 +316,81 @@ defmodule Web.AttendanceLinkLiveTest do
     assert scans(activity) == []
   end
 
+  describe "a plug-in barcode scanner in the name box" do
+    test "enter with a card's link records the card and empties the box", %{
+      conn: conn,
+      link: link,
+      activity: activity,
+      member: member
+    } do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+      url = MemberCard.qr_url(card.code, Web.VerifyHost.url())
+      lv |> form("#door-form", search: url) |> render_submit()
+
+      assert has_element?(lv, "#message", "Mei Chen arrived at")
+      assert [%{kind: "arrived", method: "card"}] = scans(activity)
+      assert_push_event(lv, "clear-search", %{})
+      assert_push_event(lv, "scan-sound", %{sound: :arrived})
+    end
+
+    test "enter with a printed code records the card, with the typed time", %{
+      conn: conn,
+      link: link,
+      activity: activity,
+      member: member
+    } do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+      code = MemberCard.format_code(card.code)
+      lv |> form("#door-form", search: code, override: "09:15") |> render_submit()
+
+      assert has_element?(lv, "#message", "arrived at 09:15")
+      assert [%{method: "card", override_at: %DateTime{}}] = scans(activity)
+    end
+
+    test "a cancelled card's code records nothing", %{
+      conn: conn,
+      link: link,
+      activity: activity,
+      member: member
+    } do
+      card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+      lv |> form("#door-form", search: MemberCard.format_code(card.code)) |> render_submit()
+
+      assert has_element?(lv, "#message", "cancelled")
+      assert scans(activity) == []
+    end
+
+    test "a link being typed shows no \"no member\" line", %{conn: conn, link: link} do
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+
+      lv |> form("#door-form", search: "HTTPS://VERIF") |> render_change()
+      refute has_element?(lv, "#no-matches")
+
+      lv |> form("#door-form", search: "zz") |> render_change()
+      assert has_element?(lv, "#no-matches")
+    end
+
+    test "the box carries the scanner hook", %{conn: conn, link: link} do
+      {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")
+      assert has_element?(lv, ~s(#search[phx-hook="ScannerInput"]))
+      assert has_element?(lv, "#kind-left[data-return-focus]")
+    end
+  end
+
+  test "card_entry? tells a card from a name" do
+    assert Web.AttendanceLinkLive.card_entry?("HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA")
+    assert Web.AttendanceLinkLive.card_entry?("K7Q4-M2XA")
+    assert Web.AttendanceLinkLive.card_entry?("k7q4m2xa")
+    refute Web.AttendanceLinkLive.card_entry?("Matthews")
+    refute Web.AttendanceLinkLive.card_entry?("mei")
+  end
+
   test "each scan plays a sound for its result", %{conn: conn, link: link, member: member} do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/attendance/#{link.token}")

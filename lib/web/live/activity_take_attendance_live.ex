@@ -375,6 +375,8 @@ defmodule Web.ActivityTakeAttendanceLive do
       <p>
         Make a link for the person taking attendance at the door. They open it on a phone and
         scan each member's ID card as they arrive and leave. They do not need an account.
+        A plug-in barcode scanner works too, on a laptop or an iPad, if it reads QR codes on
+        phone screens.
       </p>
       <p>
         The link works until you close it or send to D4H. Anyone with it sees your members'
