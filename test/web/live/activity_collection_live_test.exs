@@ -106,6 +106,35 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection", "Already published")
   end
 
+  test "the kind switch counts each kind under the other filters and drops the Kind column",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    activity_fixture(team, %{
+      title: "Missing hiker",
+      activity_kind: "incident",
+      is_published: true
+    })
+
+    activity_fixture(team, %{title: "Rope night", activity_kind: "exercise", is_published: true})
+    activity_fixture(team, %{title: "Old drill", activity_kind: "exercise", is_published: false})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?status=published")
+
+    assert has_element?(lv, "#activity-view-all[aria-current]", "2")
+    assert has_element?(lv, "#activity-view-incident", "1")
+    assert has_element?(lv, "#activity-view-exercise", "1")
+    assert has_element?(lv, "#activity-view-event", "0")
+    assert has_element?(lv, "thead th", "Kind")
+
+    lv |> element("#activity-view-exercise") |> render_click()
+    assert has_element?(lv, "#activity_collection", "Rope night")
+    refute has_element?(lv, "#activity_collection", "Missing hiker")
+    refute has_element?(lv, "#activity_collection", "Old drill")
+    refute has_element?(lv, "thead th", "Kind")
+  end
+
   test "Enter in the search box filters the list (#333)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, %{title: "Rope rescue night"})

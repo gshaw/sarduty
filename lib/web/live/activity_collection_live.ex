@@ -23,6 +23,10 @@ defmodule Web.ActivityCollectionLive do
           |> assign(:sort, filter_options.sort)
           |> assign(:when, filter_options.when)
           |> assign(:paginated, build_paginated_content(socket.assigns, filter_options))
+          |> assign(
+            :kind_counts,
+            ActivityFilterViewModel.kind_counts(current_team, nil, filter_options)
+          )
           |> assign(:path_fn, build_path_fn(current_team, filter_options))
           |> assign(:form, to_form(changeset, as: "form"))
 
@@ -52,6 +56,7 @@ defmodule Web.ActivityCollectionLive do
       sort={@sort}
       path_fn={@path_fn}
       team={@current_team}
+      kind_counts={@kind_counts}
     />
     """
   end

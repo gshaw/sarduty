@@ -4,6 +4,7 @@ defmodule Web.EquipmentCollectionLive do
   import Web.ActivityEquipmentLive, only: [scan_message: 1, no_item_text: 1]
   import Web.Components.FilterBar
   import Web.Components.Scanner
+  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
@@ -41,14 +42,16 @@ defmodule Web.EquipmentCollectionLive do
     category = params["category"] || ""
     now = DateTime.utc_now()
 
-    rows =
-      socket.assigns.rows
-      |> EquipmentList.filter(show, q, now)
-      |> EquipmentList.narrow(place, category)
+    narrowed = EquipmentList.narrow(socket.assigns.rows, place, category)
+    rows = EquipmentList.filter(narrowed, show, q, now)
 
     socket =
       assign(socket,
         show: show,
+        show_counts:
+          Map.new(EquipmentList.show_values(), fn value ->
+            {value, length(EquipmentList.filter(narrowed, value, "", now))}
+          end),
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
@@ -121,17 +124,29 @@ defmodule Web.EquipmentCollectionLive do
       </div>
     </div>
 
+    <.stat_switch :if={@rows != []} id="equipment-switch" label="Show">
+      <:view
+        :for={{label, value} <- EquipmentList.shows()}
+        id={"equipment-view-#{value}"}
+        patch={path_fn(@current_team, @form).(show: if(value == "in-service", do: "", else: value))}
+        current={@show == value}
+        count={@show_counts[value]}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
+
     <.filter_bar
       for={@form}
       id="equipment-filter"
       count={Service.Format.count(@count, one: "%d item", many: "%d items")}
       clear={filter_path(@current_team, %{})}
       path_fn={path_fn(@current_team, @form)}
+      hidden={[@form[:show]]}
     >
       <:search field={@form[:q]} placeholder="Name, barcode, or serial" />
       <:filter field={@form[:place]} label="Place" options={@place_options} default="" />
       <:filter field={@form[:category]} label="Category" options={@category_options} default="" />
-      <:filter field={@form[:show]} label="Show" options={EquipmentList.shows()} default="in-service" />
     </.filter_bar>
 
     <div :if={@rows != []} class="hidden pointer-coarse:block measure mb-6">
@@ -197,7 +212,7 @@ defmodule Web.EquipmentCollectionLive do
       id="no-matching-equipment"
       title="No items match"
     >
-      Change the search or what to show.
+      Change the search or the filters.
     </.empty_state>
     """
   end

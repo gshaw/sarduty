@@ -17,14 +17,14 @@ defmodule App.ViewData.EquipmentList do
   # Deeper than any real nesting. It stops a loop if D4H ever puts two items in each other.
   @max_depth 10
 
+  # The page's stat switch. Who holds an item is the Place filter's "With members".
   def shows,
     do: [
+      {"All", "all"},
       {"In service", "in-service"},
-      {"With members", "with-members"},
       {"Expiring in 60 days", "expiring"},
       {"Unserviceable or lost", "problems"},
-      {"Retired", "retired"},
-      {"All", "all"}
+      {"Retired", "retired"}
     ]
 
   def show_values, do: Enum.map(shows(), &elem(&1, 1))
@@ -74,9 +74,6 @@ defmodule App.ViewData.EquipmentList do
   defp shown?(%{item: item}, "in-service", _now), do: item.status != "retired"
   defp shown?(%{item: item}, "retired", _now), do: item.status == "retired"
   defp shown?(%{item: item}, "problems", _now), do: item.status in ["unserviceable", "lost"]
-
-  defp shown?(%{place: place, item: item}, "with-members", _now),
-    do: place == @with_members and item.status != "retired"
 
   defp shown?(%{item: item}, "expiring", now), do: expiring?(item, now)
   defp shown?(_row, _all, _now), do: true

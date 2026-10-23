@@ -39,6 +39,21 @@ defmodule Web.MilestoneCollectionLiveTest do
     refute has_element?(lv, "#milestones-#{sam.id}-incidents-1")
   end
 
+  test "the kind switch counts each kind and keeps the member and period",
+       %{conn: conn, team: team} do
+    sam = member_fixture(team, %{joined_at: ~U[2024-01-01 20:00:00Z]})
+    attend_incident(team, sam, "Missing hiker", 10)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/milestones?member=#{sam.id}&when=all")
+    assert has_element?(lv, "#milestone-view-incidents", "1")
+    assert has_element?(lv, "#milestone-view-all[aria-current]")
+
+    lv |> element("#milestone-view-incidents") |> render_click()
+    assert_patch(lv, ~p"/teams/#{team}/milestones?member=#{sam.id}&when=all&kind=incidents")
+    assert has_element?(lv, "#milestones-#{sam.id}-incidents-1")
+    refute has_element?(lv, "#milestones-#{sam.id}-years-1")
+  end
+
   test "leaves out members who left, and other teams'", %{conn: conn, team: team} do
     gone = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
     attend_incident(team, gone, "Missing hiker", 400)
