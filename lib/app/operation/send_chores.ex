@@ -8,9 +8,9 @@ defmodule App.Operation.SendChores do
   Each event is its own change set of source `chores`. D4H is read first only for ids:
   whether the event is still there and published, and each member's attendance row on
   it. An event deleted in D4H is made again. An event whose send did not go through
-  keeps its changes to send, and so does a new one D4H would not tag. One D4H would not
-  publish stays a draft and counts as sent, with a note. One D4H has approved is locked:
-  SAR Duty cannot change it again.
+  keeps its changes to send, and so does one D4H would not tag; the next send tags an
+  event that lacks its hours tag. One D4H would not publish stays a draft and counts as
+  sent, with a note. One D4H has approved is locked: SAR Duty cannot change it again.
   """
 
   import Ecto.Query
@@ -29,7 +29,7 @@ defmodule App.Operation.SendChores do
 
   @draft "Left as a draft: D4H would not publish it."
   @approved "Approved in D4H, so SAR Duty cannot change it. Change it in D4H."
-  @untagged "Added without its tags. Add them in D4H, then send the changes."
+  @untagged "Sent without its tags. Send the changes to try again."
 
   @doc """
   Sends the team's accepted, unsent chores among `ids`. `%{chores: n, events: n,
@@ -104,9 +104,9 @@ defmodule App.Operation.SendChores do
 
     with {:ok, state} <- read_state(d4h, event),
          :ok <- check_unlocked(event, state),
-         {:ok, new_tags} <- new_event_tags(state, event.chore_category, tags),
+         {:ok, send_tags} <- send_tags(state, event.chore_category, tags),
          {:ok, current} <- read_attendance(d4h, state) do
-      rows = plan(team, event, state, current, new_tags)
+      rows = plan(team, event, state, current, send_tags)
       apply_rows(team, event, state, rows, user, now)
     else
       :locked ->
@@ -131,23 +131,33 @@ defmodule App.Operation.SendChores do
   defp check_unlocked(_event, %{approved?: true}), do: :locked
   defp check_unlocked(_event, _state), do: :ok
 
-  # Only a new event gets tags, and it needs its hours tag, or its hours count nowhere.
-  defp new_event_tags(nil, category, tags) do
+  # A new event needs its hours tag, or its hours count nowhere. A sent one gets its tags
+  # again only when it lacks the hours tag: a send whose tags D4H refused.
+  defp send_tags(nil, category, tags) do
     case event_tags(category, tags.hours, tags.all) do
       {:ok, event_tags} -> {:ok, event_tags}
       {:error, title} -> {:error, "D4H has no tag named #{title}, this category's hours tag."}
     end
   end
 
-  defp new_event_tags(_state, _category, _tags), do: {:ok, []}
+  defp send_tags(state, category, tags) do
+    case event_tags(category, tags.hours, tags.all) do
+      {:ok, [hours | _others] = event_tags} ->
+        if hours.d4h_tag_id in state.tag_ids, do: {:ok, []}, else: {:ok, event_tags}
+
+      {:error, _title} ->
+        {:ok, []}
+    end
+  end
 
   # An event D4H no longer has is made again.
   defp read_state(_d4h, %ChoreEvent{d4h_activity_id: nil}), do: {:ok, nil}
 
   defp read_state(d4h, %ChoreEvent{d4h_activity_id: id}) do
     case D4H.fetch_activity_tags(d4h, id, "event") do
-      {:ok, %{published?: published?, approved?: approved?}} ->
-        {:ok, %{d4h_activity_id: id, published?: published?, approved?: approved?}}
+      {:ok, %{tag_ids: tag_ids, published?: published?, approved?: approved?}} ->
+        {:ok,
+         %{d4h_activity_id: id, tag_ids: tag_ids, published?: published?, approved?: approved?}}
 
       {:error, %D4H.Error{status: 404}} ->
         {:ok, nil}

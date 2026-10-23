@@ -9,9 +9,11 @@ defmodule App.Operation.BuildChoreEvent do
     largest member total. Its chores are all in one year, so it counts in that year.
   - Each member with accepted chores has one attendance, from the event's start, for
     their total. Anyone else's attendance on it is deleted.
-  - A new event gets its tags just after it is made, in their own row so a refusal shows,
-    and never again (D4H refuses tags on a published activity). It is published last, once its attendance is in, since D4H
-    locks a published activity's attendance; a published one goes back to a draft first.
+  - An event gets its tags in their own row, so a refusal shows: a new one just after it
+    is made, and a sent one only when it lacks its hours tag, once it is back to a draft
+    (D4H refuses tags on a published activity). It is published last, once its
+    attendance is in, since D4H locks a published activity's attendance; a published one
+    goes back to a draft first.
 
   Pure: `plan/4` takes values and returns rows. App.Operation.SendChores reads D4H.
   """
@@ -26,7 +28,7 @@ defmodule App.Operation.BuildChoreEvent do
   `%{d4h_activity_id:, published?:}`. `chores` are the accepted chores, with members.
   `current` is D4H's attendance on the event now (`D4H.AttendanceInfo`), read for ids.
   `event` is `%{category:, timezone:, tags:}`, with the chore category's title and the
-  tags a new event gets (`d4h_tag_id` and `title`).
+  tags to set (`d4h_tag_id` and `title`), or `[]` to leave them.
   """
   def plan(state, chores, current, event)
 
@@ -55,7 +57,7 @@ defmodule App.Operation.BuildChoreEvent do
       new_value: %{"created_in_set" => true, "published" => true}
     }
 
-    Enum.concat([[create], tags_rows(event.tags), attendance, [publish]])
+    Enum.concat([[create], tags_rows(event.tags, nil), attendance, [publish]])
   end
 
   # Every chore declined or moved off: the event keeps its title and times, loses its
@@ -89,24 +91,28 @@ defmodule App.Operation.BuildChoreEvent do
     Enum.concat([
       unpublish,
       [update],
+      tags_rows(event.tags, id),
       attendance_rows(id, totals, current, starts_at),
       delete_rows(totals, current),
       [publish_row(id, true)]
     ])
   end
 
-  defp tags_rows([]), do: []
+  # Tags for the event `id`, or for the one the set makes when `id` is nil.
+  defp tags_rows([], _id), do: []
 
-  defp tags_rows(tags) do
+  defp tags_rows(tags, id) do
+    new_value = %{
+      "tag_ids" => Enum.map(tags, & &1.d4h_tag_id),
+      "titles" => Enum.map(tags, & &1.title)
+    }
+
     [
       %ChangeSetRow{
         action: :set_activity_tags,
+        d4h_record_id: id,
         old_value: %{"kind" => @kind},
-        new_value: %{
-          "created_in_set" => true,
-          "tag_ids" => Enum.map(tags, & &1.d4h_tag_id),
-          "titles" => Enum.map(tags, & &1.title)
-        }
+        new_value: if(id, do: new_value, else: Map.put(new_value, "created_in_set", true))
       }
     ]
   end

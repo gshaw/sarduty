@@ -13,6 +13,8 @@ defmodule App.Operation.BuildChoreEventTest do
     timezone: "America/Vancouver",
     tags: [%{d4h_tag_id: 7, title: "Primary Hours"}, %{d4h_tag_id: 8, title: "Chores"}]
   }
+  # A sent event that has its tags: nothing to set.
+  @sent %{@event | tags: []}
   # 00:00 on Oct 28, the last chore's day, in Vancouver.
   @start "2026-10-28T07:00:00Z"
 
@@ -91,7 +93,7 @@ defmodule App.Operation.BuildChoreEventTest do
     chores = [chore(1, @avery, 180), chore(2, @sam, 60), chore(3, @sam, 60, ~D[2026-10-28])]
     state = %{d4h_activity_id: 900, published?: true}
 
-    rows = BuildChoreEvent.plan(state, chores, current, @event)
+    rows = BuildChoreEvent.plan(state, chores, current, @sent)
 
     assert actions(rows) == [
              :publish_activity,
@@ -133,7 +135,7 @@ defmodule App.Operation.BuildChoreEventTest do
     current = [%AttendanceInfo{d4h_attendance_id: 503, d4h_member_id: 999, status: "attending"}]
     state = %{d4h_activity_id: 900, published?: false}
 
-    rows = BuildChoreEvent.plan(state, [chore(1, @avery, 30)], current, @event)
+    rows = BuildChoreEvent.plan(state, [chore(1, @avery, 30)], current, @sent)
 
     assert actions(rows) == [
              :update_activity,
@@ -155,10 +157,27 @@ defmodule App.Operation.BuildChoreEventTest do
     end
 
     state = %{d4h_activity_id: 900, published?: false}
-    rows = BuildChoreEvent.plan(state, [chore(1, @avery, 30)], [row.(501), row.(502)], @event)
+    rows = BuildChoreEvent.plan(state, [chore(1, @avery, 30)], [row.(501), row.(502)], @sent)
 
     assert actions(rows) == [:update_activity, :delete_attendance, :publish_activity]
     assert Enum.at(rows, 1).d4h_record_id == 502
+  end
+
+  test "a sent event without its tags gets them once it is back to a draft" do
+    state = %{d4h_activity_id: 900, published?: true}
+    rows = BuildChoreEvent.plan(state, [chore(1, @avery, 30)], [], @event)
+
+    assert actions(rows) == [
+             :publish_activity,
+             :update_activity,
+             :set_activity_tags,
+             :create_attendance,
+             :publish_activity
+           ]
+
+    tags = Enum.at(rows, 2)
+    assert tags.d4h_record_id == 900
+    assert tags.new_value == %{"tag_ids" => [7, 8], "titles" => ["Primary Hours", "Chores"]}
   end
 
   test "nothing sent and no event in D4H plans nothing" do

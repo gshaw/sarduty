@@ -29,13 +29,17 @@ defmodule App.Model.ChoreEvent do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @doc "A new event for the team's chore category and year."
+  @doc """
+  A new event for the team's chore category and year. It has changes to send until a
+  send records how it went, so a send cut short leaves a Send changes button.
+  """
   def create!(team_id, chore_category_id, year),
     do:
       Repo.insert!(%ChoreEvent{
         team_id: team_id,
         chore_category_id: chore_category_id,
-        year: year
+        year: year,
+        needs_send: true
       })
 
   @doc "Whether a chore still belongs on the event: accepted, same category, same year."

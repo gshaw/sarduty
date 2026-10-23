@@ -49,7 +49,8 @@ defmodule App.Operation.SendChoresTest do
 
   # D4H, sending each write to the test. `existing` is the attendance on event 900.
   # `event_status` is 200, 404 for an event deleted in D4H, :approved, :no_publish for
-  # a team whose events D4H will not publish, or :no_tags when D4H refuses the tags.
+  # a team whose events D4H will not publish, :no_tags when D4H refuses the tags, or
+  # `{:tagged, id}` for an event that has the tag.
   defp stub_d4h(existing \\ [], event_status \\ 200) do
     test_pid = self()
 
@@ -64,6 +65,13 @@ defmodule App.Operation.SendChoresTest do
 
   defp answer(conn, "GET", "/events/900", _json, _existing, 404),
     do: conn |> Plug.Conn.put_status(404) |> Req.Test.json(%{"title" => "Not Found"})
+
+  defp answer(conn, "GET", "/events/900", _json, _existing, {:tagged, tag_id}),
+    do:
+      Req.Test.json(
+        conn,
+        Map.put(event(900, true), "tags", [%{"resourceType" => "Tag", "id" => tag_id}])
+      )
 
   defp answer(conn, "GET", "/events/900", _json, _existing, :approved),
     do: Req.Test.json(conn, Map.put(event(900, true), "approved", true))
@@ -295,14 +303,41 @@ defmodule App.Operation.SendChoresTest do
     assert Repo.get!(Chore, chore.id).chore_event_id == nil
   end
 
-  test "a new event D4H will not tag is not sent until the changes go again", ctx do
+  test "a new event D4H will not tag waits to be sent again, and that send tags it", ctx do
     chore = accept(ctx, %{date: ~D[2026-10-06]})
     stub_d4h([], :no_tags)
 
     assert send_chores(ctx, [chore]) == %{chores: 1, events: 1, failed: 1}
     [event] = Repo.all(ChoreEvent)
     assert %{d4h_activity_id: 900, needs_send: true} = event
-    assert event.send_note =~ "Added without its tags."
+    assert event.send_note =~ "Sent without its tags. Send the changes to try again."
+    _sent = writes()
+
+    stub_d4h()
+    assert SendChores.send_changes(ctx.team, event, ctx.user, DateTime.utc_now()) == :sent
+    assert Enum.any?(writes(), &match?({"POST", "/events/900/tags", _json}, &1))
+    assert %{needs_send: false, send_note: nil} = Repo.get!(ChoreEvent, event.id)
+  end
+
+  test "a sent event that has its hours tag is not tagged again", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    stub_d4h()
+    send_chores(ctx, [chore])
+    _sent = writes()
+    [event] = Repo.all(ChoreEvent)
+    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
+
+    stub_d4h([], {:tagged, hd(ctx.tags).d4h_tag_id})
+    assert SendChores.send_changes(ctx.team, event, ctx.user, DateTime.utc_now()) == :sent
+    refute Enum.any?(writes(), &match?({_method, "/events/900/tags", _json}, &1))
+  end
+
+  test "a send cut short leaves its event with changes to send", ctx do
+    chore = accept(ctx, %{date: ~D[2026-10-06]})
+    Req.Test.stub(App.Adapter.D4H, fn _conn -> raise "connection lost" end)
+
+    assert_raise RuntimeError, fn -> send_chores(ctx, [chore]) end
+    assert [%{needs_send: true, d4h_activity_id: nil}] = Repo.all(ChoreEvent)
   end
 
   test "without the team's hours tag in D4H, no event is made", ctx do
