@@ -161,6 +161,8 @@ defmodule App.ViewData.SearchTest do
       assert [%{kind: :page, hits: [%{path: "/x"}]}] =
                Search.run(team, "tax letters", kinds: [:group, :page], pages: pages, now: @now)
 
+      assert Search.run(team, "redit", kinds: [:page], pages: pages, now: @now) == []
+
       kinds =
         team
         |> Search.run("tax", kinds: [:template, :endorsement], now: @now)

@@ -39,7 +39,8 @@ decides who finds it, by the same rule as the team pages' hook (`UserAuth.opens?
 member who logs in finds activities; a team admin finds every kind.
 
 Pages come from the side navigation the person sees, from `Web.Navigation.sections/3`, so
-a page added there is found with no change here.
+a page added there is found with no change here. A page matches only where a word of its
+name starts, so "ali" finds Alice but not Qualifications.
 
 ## A new kind of record
 

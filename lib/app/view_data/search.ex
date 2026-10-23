@@ -187,12 +187,13 @@ defmodule App.ViewData.Search do
     |> fetch()
   end
 
+  # Pages match at the start of a word, so "ali" doesn't find Qualifications.
   defp candidates(:page, _team, terms, opts) do
     opts
     |> Keyword.get(:pages, [])
     |> Enum.filter(fn page ->
       title = String.downcase(page.title)
-      Enum.all?(terms, &String.contains?(title, &1))
+      Enum.all?(terms, &word_start?(title, &1))
     end)
   end
 
