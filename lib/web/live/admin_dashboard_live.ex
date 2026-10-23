@@ -84,12 +84,13 @@ defmodule Web.AdminDashboardLive do
         <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
       </:col>
       <:col :let={team} label="Contacts">
-        <.a id={"team-#{team.id}-managers"} navigate={~p"/teams/#{team}/settings/managers"}>
-          {Service.Format.count(length(@managers[team.id]),
-            one: "%d team admin",
-            many: "%d team admins"
-          )}
-        </.a>
+        <.a
+          id={"team-#{team.id}-managers"}
+          navigate={~p"/teams/#{team}/settings/managers"}
+        >{Service.Format.count(length(@managers[team.id]),
+          one: "%d team admin",
+          many: "%d team admins"
+        )}</.a>
         <span :if={@logins[team.id] == []} class="block text-danger-text">No accounts</span>
         <ul :if={@logins[team.id] != []}>
           <li

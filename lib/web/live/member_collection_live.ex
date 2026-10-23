@@ -117,9 +117,7 @@ defmodule Web.MemberCollectionLive do
         {record.member.ref_id}
       </:col>
       <:col :let={record} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
-        <.a navigate={member_path(@current_team, record.member, @filter_options)}>
-          {record.member.name}
-        </.a>
+        <.a navigate={member_path(@current_team, record.member, @filter_options)}>{record.member.name}</.a>
       </:col>
       <:col :let={record} label="Role" sorts={[{"↑", "role"}]}>
         {record.member.position}

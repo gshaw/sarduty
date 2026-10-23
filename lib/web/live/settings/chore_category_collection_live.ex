@@ -54,9 +54,7 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
       class="table-striped table-stack"
     >
       <:col :let={category} label="Category" class="stack-title">
-        <.a navigate={~p"/teams/#{@current_team}/settings/chore-categories/#{category.id}"}>
-          {category.title}
-        </.a>
+        <.a navigate={~p"/teams/#{@current_team}/settings/chore-categories/#{category.id}"}>{category.title}</.a>
       </:col>
       <:col :let={category} label="SARVAC hours">{hours_label(category.hours)}</:col>
       <:col :let={category} label="Other tags">

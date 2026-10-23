@@ -162,9 +162,7 @@ defmodule Web.MeLive do
         Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
         <:action>
           <p class="action">
-            <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>
-              Activities coming up
-            </.a>
+            <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>Activities coming up</.a>
           </p>
         </:action>
       </.empty_state>
@@ -178,9 +176,7 @@ defmodule Web.MeLive do
           {Format.date_short(attendance.started_at, @team.timezone)}
         </:col>
         <:col :let={attendance} label="Activity">
-          <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>
-            {attendance.activity.title}
-          </.a>
+          <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>{attendance.activity.title}</.a>
         </:col>
         <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
           <.activity_kind_mark activity={attendance.activity} />
@@ -193,9 +189,7 @@ defmodule Web.MeLive do
         <.a
           id="all-activities"
           navigate={~p"/teams/#{@team}/me/activities?year=#{@latest_year}"}
-        >
-          All your activities
-        </.a>
+        >All your activities</.a>
       </p>
     </section>
     """
@@ -260,9 +254,7 @@ defmodule Web.MeLive do
             <.a
               id={"certificate-#{row.award.id}"}
               href={~p"/teams/#{@team}/me/qualifications/#{row.award.id}/certificate"}
-            >
-              Certificate
-            </.a>
+            >Certificate</.a>
           </span>
         </:col>
         <:col :let={row} label="Expires" class="whitespace-nowrap">
@@ -353,9 +345,7 @@ defmodule Web.MeLive do
         />
       </dl>
       <p class="action mb-0">
-        <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>
-          Change contact details
-        </.a>
+        <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>Change contact details</.a>
       </p>
     </div>
     """

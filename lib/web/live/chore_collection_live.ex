@@ -143,9 +143,7 @@ defmodule Web.ChoreCollectionLive do
         {Format.duration(row.minutes)}
       </:col>
       <:col :let={row} label="Activity">
-        <.a :if={row.activity} navigate={~p"/teams/#{@current_team}/activities/#{row.activity.id}"}>
-          {row.activity.ref_id}
-        </.a>
+        <.a :if={row.activity} navigate={~p"/teams/#{@current_team}/activities/#{row.activity.id}"}>{row.activity.ref_id}</.a>
         <span :if={!row.activity and row.event.d4h_activity_id} class="hint">
           Refreshing from {@service}
         </span>

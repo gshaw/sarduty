@@ -144,14 +144,10 @@ defmodule Web.QualificationLive do
             <.a
               id="qualification-edit"
               navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/edit"}
-            >
-              Rename or delete
-            </.a>
+            >Rename or delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
-            <.a external={true} href={D4H.build_url(@team, "/team/qualifications")}>
-              Open D4H qualifications
-            </.a>
+            <.a external={true} href={D4H.build_url(@team, "/team/qualifications")}>Open D4H qualifications</.a>
           </li>
         </ul>
       </dd>
@@ -218,9 +214,7 @@ defmodule Web.QualificationLive do
       row_class={&(@view == :all and MapSet.member?(@expired_ids, &1.id) and "is-muted")}
     >
       <:col :let={award} label="Member">
-        <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
-          {award.member.name}
-        </.a>
+        <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>{award.member.name}</.a>
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap">
         {Service.Format.date_short(award.starts_at, @team.timezone)}

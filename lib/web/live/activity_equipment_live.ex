@@ -87,8 +87,7 @@ defmodule Web.ActivityEquipmentLive do
         <p class="hint">
           To add a template's items, tags, and groups in one step, <.a navigate={
             ~p"/teams/#{@current_team}/activities/#{@activity.id}/templates"
-          }>
-            apply a template</.a>.
+          }>apply a template</.a>.
         </p>
       </aside>
 
@@ -128,9 +127,7 @@ defmodule Web.ActivityEquipmentLive do
             class="table-striped"
           >
             <:col :let={usage} label="Item">
-              <.a navigate={~p"/teams/#{@current_team}/equipment/#{usage.equipment_item.id}"}>
-                {usage.equipment_item.title}
-              </.a>
+              <.a navigate={~p"/teams/#{@current_team}/equipment/#{usage.equipment_item.id}"}>{usage.equipment_item.title}</.a>
             </:col>
             <:col :let={usage} label="Used" align="right" class="w-px whitespace-nowrap">
               {amount(usage)}

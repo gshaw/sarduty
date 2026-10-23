@@ -37,9 +37,7 @@ defmodule Web.ChoreLive do
     <dl id="chore-details" class="mb-4">
       <dt>Member</dt>
       <dd>
-        <.a navigate={~p"/teams/#{@current_team}/members/#{@chore.member_id}"}>
-          {@chore.member.name}
-        </.a>
+        <.a navigate={~p"/teams/#{@current_team}/members/#{@chore.member_id}"}>{@chore.member.name}</.a>
       </dd>
       <dt>Date</dt>
       <dd>{Format.date_short(@chore.date)}</dd>

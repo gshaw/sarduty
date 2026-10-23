@@ -61,8 +61,7 @@ defmodule Web.UserLoginLive do
         </.form_actions>
       </.form>
       <p class="text-text-muted">
-        Team not on SAR Duty yet?
-        <.a navigate={~p"/signup"}>Sign up your team</.a>
+        Team not on SAR Duty yet? <.a navigate={~p"/signup"}>Sign up your team</.a>
       </p>
     </div>
     """

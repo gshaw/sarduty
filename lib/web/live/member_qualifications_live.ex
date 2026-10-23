@@ -133,16 +133,12 @@ defmodule Web.MemberQualificationsLive do
       row_class={&QualificationText.row_class/1}
     >
       <:col :let={row} label="Qualification">
-        <.a navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}>
-          {row.award.qualification.title}
-        </.a>
+        <.a navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}>{row.award.qualification.title}</.a>
         <span :if={row.award.d4h_document_id} class="hint block">
           <.a
             id={"certificate-#{row.award.id}"}
             href={~p"/teams/#{@member.team}/members/#{@member}/certificates/#{row.award.id}"}
-          >
-            Certificate
-          </.a>
+          >Certificate</.a>
         </span>
       </:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">

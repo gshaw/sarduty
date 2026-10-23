@@ -126,9 +126,7 @@ defmodule Web.MemberGroupsLive do
       class="table-striped"
     >
       <:col :let={gm} label="Group">
-        <.a navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>
-          {gm.group.title}
-        </.a>
+        <.a navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>{gm.group.title}</.a>
       </:col>
       <:col :let={gm} :if={@records?} label="" class="w-px whitespace-nowrap">
         <.button

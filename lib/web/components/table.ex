@@ -175,9 +175,7 @@ defmodule Web.Components.Table do
         kind={:custom}
         class="w-full inline-block"
         navigate={@path_fn.(page: 1, sort: @header.next_sort)}
-      >
-        <.sort_header_content label={@label} header={@header} align={@align} />
-      </.a>
+      ><.sort_header_content label={@label} header={@header} align={@align} /></.a>
       <.sort_header_content :if={!@header.link?} label={@label} header={@header} align={@align} />
     </th>
     """
