@@ -99,8 +99,7 @@ defmodule Web.Navigation do
       [dashboard_link(team)],
       activity_links(team, proposed_changes),
       people_links(team),
-      [link("equipment", "Equipment", ~p"/teams/#{team}/equipment")],
-      chore_links(team, chores),
+      [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team, chores)],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
@@ -123,7 +122,8 @@ defmodule Web.Navigation do
   defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
   defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
 
-  # Members log chores, so the page shows with member logins on.
+  # Members log chores, so the page shows with member logins on. It shares Equipment's
+  # section: chores are mostly equipment upkeep, and a section of one link looked lost.
   defp chore_links(%Team{member_logins: true} = team, count),
     do: [link("chores", "Chores", ~p"/teams/#{team}/chores", count: count)]
 

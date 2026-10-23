@@ -98,6 +98,7 @@ defmodule Web.NavigationTest do
       team = %{@team | member_logins: true}
       sections = team_sections("/teams/squamish", [team_admin?: true, chores: 3], team)
       assert [%{count: 3}] = for(links <- sections, link <- links, link.key == "chores", do: link)
+      assert ["equipment", "chores"] in keys(sections)
 
       refute "chores" in ("/teams/squamish"
                           |> team_sections([member?: true], team)
