@@ -127,7 +127,7 @@ defmodule App.ViewData.TeamAttentionTest do
              "9 members have no email or mobile phone"
            ]
 
-    assert [%{title: "6 qualifications expire within 60 days"}] =
+    assert [%{title: "6 awards expire within 60 days"}] =
              items(%{expiring_count: 6}, @october)
   end
 

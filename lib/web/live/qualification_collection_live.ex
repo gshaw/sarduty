@@ -22,7 +22,7 @@ defmodule Web.QualificationCollectionLive do
   end
 
   # `?view=expiring` lists each current member's qualifications that run out within the
-  # next `within` days, 60 by default, the dashboard's "qualifications expire" link (#205).
+  # next `within` days, 60 by default, the dashboard's "awards expire" link (#205).
   # `q` searches either view, and `group` keeps the expiring awards of a group's members.
   def handle_params(params, _uri, socket) do
     case QualificationFilterViewModel.validate(params, @views) do
@@ -88,6 +88,12 @@ defmodule Web.QualificationCollectionLive do
     end
   end
 
+  defp count_text(:all, count),
+    do: Service.Format.count(count, one: "%d qualification", many: "%d qualifications")
+
+  defp count_text(:expiring, count),
+    do: Service.Format.count(count, one: "%d award expiring", many: "%d awards expiring")
+
   defp qualifications_path(team, filter_options, changes \\ []) do
     params =
       filter_options
@@ -117,7 +123,7 @@ defmodule Web.QualificationCollectionLive do
         current={@view == :all}
         count={@all_count}
       >
-        All
+        Qualifications
       </:view>
       <:view
         id="qualifications-expiring-link"
@@ -125,14 +131,14 @@ defmodule Web.QualificationCollectionLive do
         current={@view == :expiring}
         count={@expiring_count}
       >
-        Expiring in {Service.Format.days(@filter_options.within)}
+        Awards expiring in {Service.Format.days(@filter_options.within)}
       </:view>
     </.stat_switch>
 
     <.filter_bar
       for={@form}
       id="qualification_filter_form"
-      count={Service.Format.count(@shown_count, one: "%d qualification", many: "%d qualifications")}
+      count={count_text(@view, @shown_count)}
       repeats={@repeats}
       clear={qualifications_path(@current_team, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&qualifications_path(@current_team, @filter_options, &1)}
@@ -200,7 +206,7 @@ defmodule Web.QualificationCollectionLive do
     <.empty_state
       :if={@view == :expiring and @expiring_count > 0 and @expiring == []}
       id="no-matching-qualifications"
-      title="No expiring qualifications match"
+      title="No expiring awards match"
     >
       Change the search or the filters.
     </.empty_state>
@@ -236,7 +242,7 @@ defmodule Web.QualificationCollectionLive do
       </:col>
     </.table>
     <.empty_state :if={@none} id="none-expiring" title="Nothing expiring">
-      No qualifications expire in the next {Service.Format.days(@within)}.
+      No awards expire in the next {Service.Format.days(@within)}.
     </.empty_state>
     """
   end

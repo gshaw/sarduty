@@ -181,7 +181,7 @@ defmodule Web.QualificationLive do
 
   defp main_content(assigns) do
     ~H"""
-    <.stat_switch label="Awards">
+    <.stat_switch label="Members">
       <:view
         id="awards-all-link"
         patch={awards_path(@team, @qualification, @filter_options, view: "all")}
@@ -253,10 +253,14 @@ defmodule Web.QualificationLive do
       Change the search or the group.
     </.empty_state>
     <p :if={@awards == [] and !filtered?(@filter_options)} class="text-text-muted">
-      {if @view == :all, do: "No awards.", else: "No #{@view} awards."}
+      {empty_text(@view)}
     </p>
     """
   end
+
+  defp empty_text(:all), do: "No members hold it."
+  defp empty_text(:active), do: "No members hold it now."
+  defp empty_text(:expired), do: "No members have let it expire."
 
   defp filtered?(filter_options), do: filter_options.q not in [nil, ""] or filter_options.group
 

@@ -11,7 +11,7 @@ defmodule Web.Components.StatSwitch do
 
   ## Examples
 
-      <.stat_switch label="Awards">
+      <.stat_switch label="Members">
         <:view patch={~p"/…?view=all"} current={@view == :all} count={171}>All</:view>
         <:view patch={~p"/…"} current={@view == :active} count={131}>Active</:view>
         <:view patch={~p"/…?view=expired"} current={@view == :expired} count={40}>Expired</:view>

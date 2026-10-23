@@ -101,11 +101,11 @@ defmodule App.ViewData.TeamAttention do
       level: :warning,
       title:
         Format.count(count,
-          one: "%d qualification expires within #{Format.days(days)}",
-          many: "%d qualifications expire within #{Format.days(days)}"
+          one: "%d award expires within #{Format.days(days)}",
+          many: "%d awards expire within #{Format.days(days)}"
         ),
       detail: "Record renewals in D4H.",
-      action: "Show qualifications"
+      action: "Show expiring awards"
     }
   end
 

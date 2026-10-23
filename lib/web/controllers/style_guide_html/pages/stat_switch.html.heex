@@ -3,7 +3,7 @@
   <p class="lead">A list's split as counts, each one a filter.</p>
 
   <div class="demo">
-    <.stat_switch label="Awards">
+    <.stat_switch label="Members">
       <:view patch="#" count={171}>All</:view>
       <:view patch="#" current={true} count={131}>Active</:view>
       <:view patch="#" count={40}>Expired</:view>
@@ -54,7 +54,9 @@
       Each is a grey tile, all of it the link. The current one is light blue with a primary
       bar at its foot. There is no rule under the counts: the tiles show their own edges.
     </li>
-    <li>All comes first. A page can open on another part, as awards open on Active.</li>
+    <li>
+      All comes first. A page can open on another part, as a qualification's members open on Active.
+    </li>
     <li>
       A count is the rows in its part before the search, and after any other filter. A part
       with none shows a grey 0 and stays selectable.

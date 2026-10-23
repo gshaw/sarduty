@@ -292,7 +292,7 @@ defmodule Web.TeamDashboardLiveTest do
 
     {:ok, lv, _html} = open(conn, user, team)
 
-    assert has_element?(lv, "#attention-expiring", "1 qualification expires within 60 days")
+    assert has_element?(lv, "#attention-expiring", "1 award expires within 60 days")
   end
 
   test "the team's year loads after the rest of the page", %{conn: conn} do

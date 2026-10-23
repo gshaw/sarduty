@@ -70,10 +70,10 @@ defmodule Web.QualificationLiveTest do
       |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
 
     assert html =~ "Empty Qual"
-    assert html =~ "No active awards"
+    assert html =~ "No members hold it now."
 
     lv |> element("#awards-expired-link") |> render_click()
-    assert render(lv) =~ "No expired awards"
+    assert render(lv) =~ "No members have let it expire."
   end
 
   test "the Group filter keeps the group's members only (#367)", %{conn: conn} do
