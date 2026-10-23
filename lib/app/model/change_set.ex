@@ -56,8 +56,10 @@ defmodule App.Model.ChangeSet do
     Repo.insert!(%{change_set | rows: rows})
   end
 
-  def mark_applied!(%ChangeSet{} = change_set, %User{} = user, now) do
-    change_set |> change(applied_by_user_id: user.id, applied_at: now) |> Repo.update!()
+  @doc "Marks the set applied by `user`, or by nobody logged in: a reply from an email."
+  def mark_applied!(%ChangeSet{} = change_set, user, now)
+      when is_nil(user) or is_struct(user, User) do
+    change_set |> change(applied_by_user_id: user && user.id, applied_at: now) |> Repo.update!()
   end
 
   def discard!(%ChangeSet{} = change_set, now),

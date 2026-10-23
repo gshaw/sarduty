@@ -21,16 +21,17 @@ defmodule App.Operation.ReplyToActivity do
 
   @doc """
   `{:ok, attendance}` with the copy updated once D4H took the reply, or `{:error, text}`.
+  `user` is nil for a reply from a reminder's link, which needs no login.
   """
   def call(
         %Team{} = team,
         %Activity{team_id: team_id} = activity,
         %Member{team_id: team_id} = member,
         reply,
-        %User{} = user,
+        user,
         now
       )
-      when team_id == team.id do
+      when team_id == team.id and (is_nil(user) or is_struct(user, User)) do
     attendance = Attendance.invitation(activity, member)
 
     with {:ok, row} <- plan(activity, attendance, reply, now),
@@ -88,7 +89,7 @@ defmodule App.Operation.ReplyToActivity do
           team_id: team.id,
           source: :member,
           activity_id: activity.id,
-          proposed_by_user_id: user.id
+          proposed_by_user_id: user && user.id
         },
         [row]
       )

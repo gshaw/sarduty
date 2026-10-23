@@ -78,6 +78,12 @@ defmodule Web.Router do
     delete "/mcp", MCPController, :delete
   end
 
+  # A mail app's one-click unsubscribe from a reminder (RFC 8058, #444): it posts with no
+  # session or CSRF token. The signed token is the only access. Its page is the GET below.
+  scope "/reminders", Web do
+    post "/:token", InvitationRemindersController, :unsubscribe
+  end
+
   # Map images (Web.MapImage). Signed keys, no session: the style guide shows one too.
   scope "/maps", Web do
     get "/:key", MapImageController, :show
@@ -117,6 +123,9 @@ defmodule Web.Router do
       live "/signup", TeamSignupLive
       # Taking attendance at the door. The token is the only access: no login.
       live "/attendance/:token", AttendanceLinkLive
+      # A reminder email's links (#444): replying, and turning reminders off. No login.
+      live "/replies/:token", ReplyLinkLive
+      live "/reminders/:token", InvitationRemindersLive
     end
 
     # Short links, such as an attendance link. Lowercase codes, unlike an ID card's.
