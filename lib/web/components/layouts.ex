@@ -263,7 +263,8 @@ defmodule Web.Layouts do
       managed_teams: assigns[:managed_teams] || [],
       member_logins: assigns[:member_logins] || [],
       current_path: assigns[:current_path],
-      proposed_change_count: assigns[:proposed_change_count] || 0
+      proposed_change_count: assigns[:proposed_change_count] || 0,
+      chore_count: assigns[:chore_count] || 0
     }
   end
 
@@ -276,7 +277,8 @@ defmodule Web.Layouts do
       Navigation.sections(area, assigns.current_path,
         team_admin?: assigns.team_admin?,
         member?: assigns.current_member != nil,
-        proposed_changes: assigns.proposed_change_count
+        proposed_changes: assigns.proposed_change_count,
+        chores: assigns.chore_count
       )
 
     {area, sections}
@@ -291,6 +293,7 @@ defmodule Web.Layouts do
   attr :member_logins, :list, default: []
   attr :current_path, :string, default: nil
   attr :proposed_change_count, :integer, default: 0
+  attr :chore_count, :integer, default: 0
   attr :size, :atom, default: :wide
 
   # The top bar (#406): the area's name after the logo, with the team switcher on it when

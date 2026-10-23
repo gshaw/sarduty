@@ -226,6 +226,9 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/:id", QualificationLive
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
+      live "/teams/:subdomain/chores", ChoreCollectionLive
+      live "/teams/:subdomain/chores/:id", ChoreLive
+      live "/teams/:subdomain/chores/:id/edit", ChoreFormLive
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive
@@ -242,6 +245,9 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
+      live "/teams/:subdomain/me/chores", MeChoresLive
+      live "/teams/:subdomain/me/chores/new", MeChoreFormLive, :new
+      live "/teams/:subdomain/me/chores/:id/edit", MeChoreFormLive, :edit
       live "/teams/:subdomain/me/details", MeDetailsLive
     end
 

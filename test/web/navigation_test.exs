@@ -89,6 +89,22 @@ defmodule Web.NavigationTest do
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
+    test "chores show a team admin with member logins on, with a count while some wait" do
+      refute "chores" in ("/teams/squamish"
+                          |> team_sections(team_admin?: true, chores: 3)
+                          |> keys()
+                          |> List.flatten())
+
+      team = %{@team | member_logins: true}
+      sections = team_sections("/teams/squamish", [team_admin?: true, chores: 3], team)
+      assert [%{count: 3}] = for(links <- sections, link <- links, link.key == "chores", do: link)
+
+      refute "chores" in ("/teams/squamish"
+                          |> team_sections([member?: true], team)
+                          |> keys()
+                          |> List.flatten())
+    end
+
     test "someone who is neither sees nothing" do
       assert team_sections("/teams/squamish", []) == []
     end
