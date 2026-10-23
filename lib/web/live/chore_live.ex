@@ -68,9 +68,7 @@ defmodule Web.ChoreLive do
       <div :if={@chore.chore_event}>
         <dt>Activity</dt>
         <dd id="chore-activity">
-          <.a :if={@activity} navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>
-            {@activity.title}
-          </.a>
+          <.a :if={@activity} navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>{@activity.title}</.a>
           <span :if={!@activity and @chore.chore_event.d4h_activity_id} class="hint">
             Sent to {@service}. Linked after the next refresh.
           </span>
