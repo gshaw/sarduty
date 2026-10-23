@@ -225,6 +225,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/new", TitledRecordFormLive, :new_qualification
       live "/teams/:subdomain/qualifications/:id", QualificationLive
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
+      live "/teams/:subdomain/milestones", MilestoneCollectionLive
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive

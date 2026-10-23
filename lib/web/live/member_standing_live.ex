@@ -13,6 +13,7 @@ defmodule Web.MemberStandingLive do
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
   alias App.Repo
+  alias App.ViewData.MemberMilestones
   alias Web.Components.NotAPersonSwitch
   alias Web.Components.Standing
 
@@ -141,7 +142,9 @@ defmodule Web.MemberStandingLive do
       today: today,
       periods: periods,
       check_ins: MemberCheckIn.for_member(member),
-      standing: MemberAwayPeriod.standing(member, periods, today, now)
+      standing: MemberAwayPeriod.standing(member, periods, today, now),
+      # An away period moves the years on the team, so they load with it.
+      milestones: MemberMilestones.for_member(member, now)
     )
   end
 
@@ -177,6 +180,7 @@ defmodule Web.MemberStandingLive do
           maps_app={@current_user.maps_app}
           last_attended_at={@last_attended_at}
           standing={@standing}
+          milestones={@milestones}
         />
       </aside>
       <main class="content-2/3">

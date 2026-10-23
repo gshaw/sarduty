@@ -69,7 +69,14 @@ defmodule Web.NavigationTest do
                [
                  ["dashboard"],
                  ["activities", "templates"],
-                 ["members", "groups", "qualifications", "endorsements", "tax-credit-letters"],
+                 [
+                   "members",
+                   "milestones",
+                   "groups",
+                   "qualifications",
+                   "endorsements",
+                   "tax-credit-letters"
+                 ],
                  ["equipment"],
                  ["settings"],
                  ["me"]

@@ -121,6 +121,7 @@ defmodule Web.Navigation do
   defp people_links(team) do
     [
       link("members", "Members", ~p"/teams/#{team}/members"),
+      link("milestones", "Milestones", ~p"/teams/#{team}/milestones"),
       link("groups", "Groups", ~p"/teams/#{team}/groups"),
       link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
       link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),

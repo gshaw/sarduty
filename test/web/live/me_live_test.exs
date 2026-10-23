@@ -239,8 +239,8 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#milestones-list-years-1")
 
       # The last 30 days' are new; the 15 years came about a year ago.
-      assert has_element?(lv, "#milestones-list-hours-100.is-new")
-      refute has_element?(lv, "#milestones-list-years-15.is-new")
+      assert has_element?(lv, "#milestones-list-hours-100 .badge", "New")
+      refute has_element?(lv, "#milestones-list-years-15 .badge")
     end
 
     test "the member's own photo, or a 404 so the page shows initials",

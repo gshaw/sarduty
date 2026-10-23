@@ -12,28 +12,66 @@
 
   <h2>When to use</h2>
   <p>
-    A member's milestones, all of them, on Your membership.
+    A member's milestones, all of them, on Your membership. The member sidebar a team admin sees shows only the latest, as text, and the team's Milestones page is a table.
   </p>
 
   <h2>When not to use</h2>
   <p>Anything with a goal still to reach. Milestones are only what a member did.</p>
 
+  <h2>Every milestone</h2>
+  <p>
+    Three kinds, each with its own icon. The lines below are the app's own, up to a little past what a long-serving member reaches; after that, hours go every 1,000, years every 5, and incidents every 100.
+  </p>
+  <div class="grid gap-8 md:grid-cols-3">
+    <div :for={
+      {kind, heading} <- [
+        {:hours, "Hours: a clock"},
+        {:years, "Years on the team: a cake"},
+        {:incidents, "Incidents: a lifebuoy"}
+      ]
+    }>
+      <h3>{heading}</h3>
+      <div class="demo">
+        <.milestone_list
+          id={"milestone-list-every-#{kind}"}
+          milestones={SampleData.every_milestone(kind)}
+        />
+      </div>
+    </div>
+  </div>
+
+  <h2>New and earlier</h2>
+  <p>
+    One reached in the last 30 days gets a green New tag, <code>&lt;.badge kind=&#123;:success&#125;&gt;</code>. Every icon stays grey: a
+    <code>--text-muted</code>
+    icon in a <code>--surface-alt</code>
+    circle. The word says why the row stands out; colour alone read as "special", and amber already means expiring on Your membership (decided 2026-10-23). No levels or confetti.
+  </p>
+  <div class="demo max-w-md">
+    <.milestone_list
+      id="milestone-list-new"
+      milestones={SampleData.milestones()}
+      today={~D[2026-10-26]}
+    />
+  </div>
+  <p class="hint">
+    Today is October 26, 2026 here: 25 incidents came 28 days ago, so it's new; 500 hours came 32 days ago, so it isn't.
+  </p>
+
   <h2>How it works</h2>
   <ul class="list">
-    <li>
-      Three kinds: hours (100, 250, 500, 1,000, then every 1,000), years on the team (1, 5, 10, then every 5), and incidents (the first, 10, 25, 50, 100, then every 100).
-    </li>
     <li>
       Each row is what they reached, then the day and the activity that reached it. Years have no activity.
     </li>
     <li>
-      An icon for each kind: a clock for hours, a cake for years, a lifebuoy for incidents. One reached in the last 30 days has its icon in amber, a small celebration. No badges, levels, or confetti.
+      The activity is plain text, not a link (decided 2026-10-23). Which activity tipped a total over a line is chance, and a link on every row would make the list look like something to open. The member's activities are a click away on their year page.
     </li>
+    <li>Hours count every attended activity. Years leave out days in away periods.</li>
   </ul>
 
   <h2>In the app</h2>
   <p>
     <code>&lt;.milestone_list id milestones today&gt;</code>
-    with milestones from <code>Milestones.build/5</code>, newest first, and today in the team's zone.
+    with milestones from <code>MemberMilestones.for_member/3</code>, newest first, and today in the team's zone.
   </p>
 </.shell>
