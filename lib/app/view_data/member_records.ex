@@ -115,9 +115,9 @@ defmodule App.ViewData.MemberRecords do
   @doc """
   The member's awards as one row per qualification, `%{award:, earlier:,
   first_started_at:, status:, days_left:}`: the latest award (no end is the latest, else
-  the one that ends last), the ones it replaced, newest first, when the first one started,
-  `:expiring`, `:current`, or `:expired`, and `Service.Convert.days_until/2` its end (nil
-  with no end). Expiring is within the app's one window,
+  the one that ends last; a tie goes to the one that started last), the ones it replaced,
+  newest first, when the first one started, `:expiring`, `:current`, or `:expired`, and
+  `Service.Convert.days_until/2` its end (nil with no end). Expiring is within the app's one window,
   `BuildGroupRulePreview.expiring_days/0`.
 
   Current rows come first, soonest end first and no end last, then expired ones, most
@@ -135,7 +135,7 @@ defmodule App.ViewData.MemberRecords do
   end
 
   defp row(awards, now) do
-    [latest | earlier] = Enum.sort_by(awards, &end_key/1, :desc)
+    [latest | earlier] = Enum.sort_by(awards, &latest_key/1, :desc)
     starts = awards |> Enum.map(& &1.starts_at) |> Enum.reject(&is_nil/1)
 
     %{
@@ -167,6 +167,13 @@ defmodule App.ViewData.MemberRecords do
   # Sorts awards by end, with no end after every date.
   defp end_key(%{ends_at: nil}), do: {1, 0}
   defp end_key(%{ends_at: ends_at}), do: {0, DateTime.to_unix(ends_at)}
+
+  # The latest award ends last; among ones with no end, D4H often holds the same
+  # qualification twice, so the one that started last wins.
+  defp latest_key(award), do: {end_key(award), unix(award.starts_at)}
+
+  defp unix(nil), do: 0
+  defp unix(datetime), do: DateTime.to_unix(datetime)
 
   defp attended_query(member, now), do: member_query(member, &Attendance.attended(&1, now))
 
