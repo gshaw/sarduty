@@ -27,7 +27,11 @@
 
   .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
   .link:hover { color: var(--link-hover); text-decoration-thickness: 3px; }
-  /* The arrow after a link that leaves SAR Duty. */
+  /* The arrow after a link that leaves SAR Duty. Its text is an inline-block, so a space
+     after the text in a template ends the box's line and drops, rather than showing
+     underlined before the arrow. An inline-block takes no underline from its link, so it
+     draws its own. */
+  .link-text { display: inline-block; text-decoration: inherit; }
   .link-icon { margin-left: 2px; vertical-align: -3px; }
 
   p { margin-bottom: var(--sp-4); }
