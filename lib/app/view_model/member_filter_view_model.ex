@@ -142,6 +142,29 @@ defmodule App.ViewModel.MemberFilterViewModel do
     team |> filter_query(filter_options, now) |> Repo.count_entries()
   end
 
+  @doc """
+  The Standing switch's parts (#468): Not retired first, as the list opens, then each
+  standing. No All: Not retired and Retired add up to it.
+  """
+  def standing_switch, do: [{"Not retired", "current"} | @standings]
+
+  @doc """
+  Whether the switch has a part for `value`. All, and the attendance check's
+  `"active,away"`, don't, so the list shows them as the Standing menu.
+  """
+  def switch_standing?(value), do: List.keymember?(standing_switch(), value, 1)
+
+  @doc """
+  How many members each standing in `standing_switch/0` has, before the search and after
+  every other filter, keyed by value.
+  """
+  def standing_counts(team, filter_options, now \\ DateTime.utc_now()) do
+    Map.new(standing_switch(), fn {_label, standing} ->
+      options = %{filter_options | q: nil, standing: standing}
+      {standing, team |> filter_query(options, now) |> Repo.count_entries()}
+    end)
+  end
+
   defp build_query(team, filter_options, now) do
     team
     |> filter_query(filter_options, now)

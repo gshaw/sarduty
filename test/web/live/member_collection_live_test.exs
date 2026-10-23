@@ -282,7 +282,7 @@ defmodule Web.MemberCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#member_filter_form select[name='form[standing]']")
+    assert has_element?(lv, "#member-view-current[aria-current=page]")
     refute has_element?(lv, "table th", "Standing")
 
     member_fixture(team, %{not_a_person: true})
@@ -320,7 +320,7 @@ defmodule Web.MemberCollectionLiveTest do
     end
 
     {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members")
-    assert has_element?(lv, "select[name='form[standing]'] option[value=current]", "Not retired")
+    assert has_element?(lv, "#member-view-current[aria-current=page]", "Not retired")
 
     {:ok, lv, _html} =
       live(conn |> log_in_user(user), ~p"/teams/#{team}/members?when=all&standing=all")
@@ -337,6 +337,40 @@ defmodule Web.MemberCollectionLiveTest do
 
     assert names_in_order(html, [current.name, left.name])
     assert names_in_order(html, [current.name, retired.name])
+  end
+
+  test "the Standing switch counts each standing and has no All (#468)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{name: "Cara Current"})
+    member_fixture(team, %{name: "Nico Bot", not_a_person: true})
+    member_fixture(team, %{name: "Rae Retired", left_at: ~U[2025-06-01 00:00:00Z]})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?when=all&q=cara")
+
+    # The logged-in user is an active member too.
+    assert has_element?(lv, "#member-view-current", "3")
+    assert has_element?(lv, "#member-view-active", "2")
+    assert has_element?(lv, "#member-view-not_a_person", "1")
+    assert has_element?(lv, "#member-view-retired", "1")
+    refute has_element?(lv, "#member-view-all")
+    refute has_element?(lv, "select[name='form[standing]']")
+    assert has_element?(lv, "#member_filter_form-summary strong", "1 member")
+  end
+
+  test "a search that finds no one offers all members, and All shows as a menu (#468)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{name: "Rae Retired", left_at: ~U[2025-06-01 00:00:00Z]})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?when=all&q=rae")
+
+    lv |> element("#no-matching-members a", "Search all members") |> render_click()
+    assert assert_patch(lv) =~ "standing=all"
+    assert has_element?(lv, "td", "Rae Retired")
+    refute has_element?(lv, "#member-switch [aria-current]")
+    assert has_element?(lv, "select[name='form[standing]'] option[selected]", "All")
   end
 
   test "the Standing filter keeps active, away, or not a person members (#367)",

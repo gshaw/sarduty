@@ -23,9 +23,9 @@ defmodule App.ViewModel.MilestoneFilterViewModel do
   def kinds,
     do: [
       {"All", ""},
-      {"Hours", "hours"},
-      {"Years on the team", "years"},
-      {"Incidents", "incidents"}
+      {"Hour milestones", "hours"},
+      {"Anniversaries", "years"},
+      {"Incident milestones", "incidents"}
     ]
 
   @doc "All, the rolling periods, then each year with a milestone, newest first."
