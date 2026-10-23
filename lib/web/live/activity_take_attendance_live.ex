@@ -38,7 +38,7 @@ defmodule Web.ActivityTakeAttendanceLive do
 
     socket =
       socket
-      |> assign(page_title: "Take attendance", activity: activity)
+      |> assign(page_title: "#{activity.title} · Take attendance", activity: activity)
       |> assign(review: nil, selected: MapSet.new(), failures: [])
       |> load_link()
       |> load_times()
@@ -132,7 +132,7 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   defp error_text(:deleted), do: "This activity is deleted in D4H. Nothing can be sent to it."
 
-  defp error_text(:no_team_key), do: "Save the team's D4H access key in Team settings first."
+  defp error_text(:no_team_key), do: "Save the team's D4H access key in team settings first."
 
   defp error_text(%D4H.Error{status: status} = error) when status in [400, 404],
     do:
@@ -271,7 +271,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     ~H"""
     <div id="send-start">
       <p>
-        Review the changes before SAR Duty makes them. Members who arrived are marked attending
+        Review the changes before SAR Duty makes them. Members who arrived are marked attended
         with their times. Members who signed up but did not arrive are marked absent.
         When every change goes through, SAR Duty closes the attendance link.
       </p>

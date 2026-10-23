@@ -61,7 +61,7 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   test "says so when D4H doesn't respond" do
     changeset = check({:error, :unreachable})
 
-    assert {"D4H did not respond. Try again in a few minutes.", _} =
+    assert {"D4H did not answer. Try again in a few minutes.", _} =
              changeset.errors[:new_d4h_access_key]
   end
 

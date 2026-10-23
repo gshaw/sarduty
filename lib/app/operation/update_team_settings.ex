@@ -53,7 +53,7 @@ defmodule App.Operation.UpdateTeamSettings do
     add_error(
       changeset,
       :new_d4h_access_key,
-      "#{D4H.service_name(team)} did not respond. Try again in a few minutes."
+      "#{D4H.service_name(team)} did not answer. Try again in a few minutes."
     )
   end
 

@@ -103,7 +103,7 @@ defmodule App.Operation.SignUpTeam do
   rescue
     Req.TransportError ->
       name = D4H.service_name(view_model.api_host)
-      {:error, {:access_key, "#{name} did not respond. Try again in a few minutes."}}
+      {:error, {:access_key, "#{name} did not answer. Try again in a few minutes."}}
   end
 
   defp key_refused(api_host) do

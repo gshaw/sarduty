@@ -172,10 +172,10 @@ defmodule Web.Components.GroupRule do
         ["are not in ", either(groups)]
 
       {[], endorsements} ->
-        ["don't hold ", either(endorsements)]
+        ["do not hold ", either(endorsements)]
 
       {groups, endorsements} ->
-        ["are not in ", either(groups), " and don't hold ", either(endorsements)]
+        ["are not in ", either(groups), " and do not hold ", either(endorsements)]
     end
   end
 

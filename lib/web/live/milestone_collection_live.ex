@@ -113,7 +113,7 @@ defmodule Web.MilestoneCollectionLive do
       id="no-milestones"
       title="No milestones match"
     >
-      Change the filters, or pick All under Period.
+      Change the filters, or select All under Period.
     </.empty_state>
     """
   end

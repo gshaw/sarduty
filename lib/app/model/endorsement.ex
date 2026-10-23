@@ -31,7 +31,7 @@ defmodule App.Model.Endorsement do
     |> cast(params, [:name])
     |> validate_required([:name])
     |> validate_length(:name, max: 60)
-    |> unique_constraint([:team_id, :name], message: "is already an endorsement")
+    |> unique_constraint([:team_id, :name], message: "Use a name no other endorsement has.")
   end
 
   def insert(%Team{} = team, params),

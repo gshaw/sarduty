@@ -81,8 +81,8 @@ defmodule Web.UserLoginCodeLive do
       </.form>
       <%= if @field == "email" do %>
         <p class="text-text-muted">
-          No email after a few minutes? Check your spam folder. Only Owners and Editors on a
-          team in D4H get a code, at the email D4H has for them.
+          No email after a few minutes? Check your spam folder. Codes go only to team admins,
+          and to members when their team turns on member logins, at the email D4H has for them.
         </p>
         <p :if={Web.Layouts.dev_mailbox?()} id="login-dev-mailbox">
           In development the email is in the <.a href="/dev/mailbox" external={true}>local mailbox</.a>.
@@ -92,9 +92,9 @@ defmodule Web.UserLoginCodeLive do
         </p>
       <% else %>
         <p class="text-text-muted">
-          No text after a few minutes? Only Owners and Editors on a team in D4H get a code,
-          at the mobile number D4H has for them. Two people with the same number get a code
-          by email instead.
+          No text after a few minutes? Codes go only to team admins, and to members when their
+          team turns on member logins, at the mobile number D4H has for them. Two people with
+          the same number get a code by email instead.
         </p>
         <p :if={not Twilio.delivers?()} id="login-dev-text">
           In development the text message is in the server log, not sent.
