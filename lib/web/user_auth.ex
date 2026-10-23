@@ -352,6 +352,14 @@ defmodule Web.UserAuth do
       else: :admin
   end
 
+  @doc """
+  Whether someone opens a page with `access`, as a team admin or as a member who logs in.
+  The same rule as the team pages' hook; global search (#473) uses it to show only results
+  that open.
+  """
+  def opens?(access, team_admin?, member?),
+    do: allowed?(access, if(team_admin?, do: :team), if(member?, do: :member))
+
   defp allowed?(:admin, admin_team, _member), do: admin_team != nil
   defp allowed?(:team, admin_team, member), do: admin_team != nil or member != nil
   defp allowed?(:member, _admin_team, member), do: member != nil
