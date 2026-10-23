@@ -28,7 +28,8 @@ defmodule Web.QualificationCollectionLiveTest do
       |> live(~p"/teams/#{team}/qualifications")
 
     assert html =~ "Qualifications"
-    assert html =~ "0 qualifications"
+    assert html =~ "No qualifications yet"
+    refute html =~ "0 qualifications"
   end
 
   test "links to qualification detail page", %{conn: conn} do
@@ -125,13 +126,13 @@ defmodule Web.QualificationCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications?view=expiring")
 
-    assert has_element?(lv, "#qualifications-expiring-link", "Expiring in 60 days")
+    assert has_element?(lv, "#qualifications-expiring-link", "Awards expiring in 60 days")
     refute has_element?(lv, "#expiring-#{member.id}-#{qualification.id}")
 
     lv |> form("#qualification_filter_form", form: %{within: "90"}) |> render_change()
 
     assert_patched(lv, ~p"/teams/#{team}/qualifications?view=expiring&within=90")
-    assert has_element?(lv, "#qualifications-expiring-link", "Expiring in 90 days")
+    assert has_element?(lv, "#qualifications-expiring-link", "Awards expiring in 90 days")
     assert has_element?(lv, "#expiring-#{member.id}-#{qualification.id}")
   end
 

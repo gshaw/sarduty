@@ -48,7 +48,7 @@ defmodule Web.Components.HomeMockups do
         ],
         attention: [
           {:warning, "2 activities to check", "Still drafts in D4H, so attendance can change."},
-          {:warning, "7 qualifications expire in 60 days", "Rope rescue, first aid, and 2 more."},
+          {:warning, "7 awards expire in 60 days", "Rope rescue, first aid, and 2 more."},
           {:info, "11 tax credit letters to create", "41 of 52 done."}
         ]
       )

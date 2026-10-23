@@ -77,6 +77,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       for={@form}
       id="tax_credit_letter_filter_form"
       count={Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
+      repeats={Enum.count(@records) == Map.get(@letter_counts, @filter_options.letter, 0)}
       clear={@path_fn.(:reset)}
       path_fn={@path_fn}
       hidden={[@form[:sort], @form[:letter]]}

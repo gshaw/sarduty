@@ -149,7 +149,7 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection", "Board meeting")
   end
 
-  test "a filter that is on shows in blue, as a chip, and in the count", %{conn: conn} do
+  test "a filter that is on shows in blue, as a chip, and in the Filters count", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, %{title: "Still a draft", is_published: false})
 
@@ -159,12 +159,27 @@ defmodule Web.ActivityCollectionLiveTest do
     assert has_element?(lv, "#activity_filter_form .filter-menu.is-on", "Status")
     refute has_element?(lv, "#activity_filter_form .filter-menu.is-on", "Kind")
     assert has_element?(lv, "#activity_filter_form .filter-bar-count", "1")
-    assert has_element?(lv, "#activity_filter_form-summary", "1 activity")
+    assert has_element?(lv, "#activity_filter_form-summary a", "Clear filters")
 
     lv |> element(".filter-bar-chips a", "Draft") |> render_click()
 
     assert assert_patch(lv) =~ "status=all"
     refute has_element?(lv, ".filter-bar-chips")
+  end
+
+  test "the count under the bar shows only while the search narrows the kind's tile",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{title: "Rope practice"})
+    activity_fixture(team, %{title: "Navigation night"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+    refute has_element?(lv, "#activity_filter_form-summary")
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?q=rope")
+
+    assert has_element?(lv, "#activity_filter_form-summary strong", "1 activity")
   end
 
   test "Clear shows only while a filter or search is on, and says which", %{conn: conn} do

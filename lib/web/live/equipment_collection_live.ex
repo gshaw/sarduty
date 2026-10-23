@@ -140,6 +140,7 @@ defmodule Web.EquipmentCollectionLive do
       for={@form}
       id="equipment-filter"
       count={Service.Format.count(@count, one: "%d item", many: "%d items")}
+      repeats={@count == @show_counts[@show]}
       clear={filter_path(@current_team, %{})}
       path_fn={path_fn(@current_team, @form)}
       hidden={[@form[:show]]}
