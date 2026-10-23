@@ -49,6 +49,21 @@ defmodule Web.MilestoneCollectionLiveTest do
     assert has_element?(lv, "#no-milestones")
   end
 
+  test "years on the team leave out away periods, on the team page and in the sidebar",
+       %{conn: conn, team: team} do
+    sam = member_fixture(team, %{joined_at: ~U[2024-01-01 20:00:00Z]})
+    # 214 days away moves 1 year from Jan 1, 2025 to Aug 3, 2025.
+    away_period_fixture(sam, ~D[2024-06-01], ~D[2024-12-31])
+    other = member_fixture(team, %{joined_at: ~U[2024-01-01 20:00:00Z]})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/milestones?when=all")
+    assert has_element?(lv, "#milestones-#{sam.id}-years-1", "Aug 3, 2025")
+    assert has_element?(lv, "#milestones-#{other.id}-years-1", "Jan 1, 2025")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{sam.id}")
+    assert has_element?(lv, "#member-milestones", "August 3, 2025")
+  end
+
   test "the member sidebar shows the latest and links to the rest", %{conn: conn, team: team} do
     sam = member_fixture(team, %{joined_at: ~U[2024-01-01 00:00:00Z]})
     attend_incident(team, sam, "Missing hiker", 10)
