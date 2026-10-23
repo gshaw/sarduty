@@ -7,6 +7,7 @@ defmodule Web.MeLive do
   import Web.Components.PersonHead
 
   alias App.Adapter.D4H
+  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
