@@ -71,11 +71,11 @@ defmodule Web.NavigationTest do
                  ["activities", "templates"],
                  [
                    "members",
+                   "milestones",
                    "groups",
                    "qualifications",
                    "endorsements",
-                   "tax-credit-letters",
-                   "milestones"
+                   "tax-credit-letters"
                  ],
                  ["equipment"],
                  ["settings"],

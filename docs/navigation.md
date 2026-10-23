@@ -34,7 +34,7 @@ is left out, and so is its divider.
 | 1       | Dashboard                                                                     | everyone    |
 | 2       | Activities                                                                    | everyone    |
 | 2       | Templates, Proposed changes                                                   | team admins |
-| 3       | Members, Groups, Qualifications, Endorsements, Tax credit letters, Milestones | team admins |
+| 3       | Members, Milestones, Groups, Qualifications, Endorsements, Tax credit letters | team admins |
 | 4       | Equipment                                                                     | team admins |
 | 5       | Team settings                                                                 | team admins |
 | 6       | Your membership                                                               | members     |
@@ -53,8 +53,9 @@ is left out, and so is its divider.
   turns MCP on. Until then, General says how to get it. The URLs did not change.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
-- **Milestones is last with the people pages** (2026-10-23): every current member's
-  milestones, for team admins. Members see only their own, on Your membership, until
+- **Milestones sits right after Members** (2026-10-23): every current member's
+  milestones, for team admins. It's about members themselves, as Members is; Groups,
+  Qualifications, and Endorsements set up what members hold. Members see only their own, on Your membership, until
   we decide how members see other members' pages.
 - Later pages already have homes: Checklists in Equipment's section, and Documents and a
   team ID cards page after Tax credit letters.

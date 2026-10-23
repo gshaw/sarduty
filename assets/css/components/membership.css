@@ -24,9 +24,8 @@
   .avatar-lg { position: relative; width: 64px; height: 64px; overflow: hidden; font-size: var(--fs-lg); line-height: var(--lh-lg); }
   .avatar-lg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
-  /* Milestones: an icon per kind, amber for one reached in the last 30 days. */
+  /* Milestones: a grey icon per kind. A New tag marks one from the last 30 days. */
   .milestone-list > li { display: flex; gap: var(--sp-3); align-items: flex-start; padding-block: var(--sp-2); border-top: 1px solid var(--border-subtle); }
   .milestone-list > li:first-child { border-top: 0; }
   .milestone-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: none; border-radius: 999px; background: var(--surface-alt); color: var(--text-muted); }
-  .milestone-list > li.is-new .milestone-icon { background: var(--accent); color: var(--nav); }
 }
