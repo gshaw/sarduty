@@ -159,7 +159,7 @@ defmodule Web.NavigationTest do
   describe "switch_rows/4" do
     defp rows(rows), do: for(row <- rows, do: {row.label, row.current})
 
-    test "SAR Duty admin first, then each team once, A to Z, the current one marked" do
+    test "each team once, A to Z, then SAR Duty admin, the current one marked" do
       area = Navigation.area("/teams/squamish", @team)
 
       rows =
@@ -171,12 +171,13 @@ defmodule Web.NavigationTest do
         )
 
       assert rows(rows) == [
-               {"SAR Duty admin", false},
                {"Pemberton SAR", false},
-               {"Squamish SAR", true}
+               {"Squamish SAR", true},
+               {"SAR Duty admin", false}
              ]
 
-      assert Enum.map(rows, & &1.path) == ["/admin", "/teams/pemberton", "/teams/squamish"]
+      assert Enum.map(rows, & &1.path) == ["/teams/pemberton", "/teams/squamish", "/admin"]
+      assert Enum.map(rows, & &1.kind) == [:team, :team, :admin]
     end
 
     test "one place is nothing to switch to, so the name is plain text" do

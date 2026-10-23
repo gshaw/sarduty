@@ -366,6 +366,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_user(), to: SampleData
   defdelegate sample_managed_teams(), to: SampleData
   defdelegate sample_member_logins(), to: SampleData
+  defdelegate sample_switchers(), to: SampleData
   defdelegate sample_nav_area(), to: SampleData
   defdelegate sample_nav_sections(), to: SampleData
   defdelegate sample_member(), to: SampleData

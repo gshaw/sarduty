@@ -112,7 +112,7 @@ defmodule Web.TeamNavigationTest do
     refute has_element?(lv, "#side-nav-admin-teams[aria-current]")
   end
 
-  test "phones get the switcher and the area's pages behind a Menu button, and keep the avatar",
+  test "phones get the area's pages behind a Menu button, the switcher on the name, and the avatar",
        %{conn: conn, user: user, team: team} do
     team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
     make_admin(user)
@@ -128,13 +128,46 @@ defmodule Web.TeamNavigationTest do
 
     assert has_element?(lv, "#phone-menu #phone-nav-members[aria-current=page]")
     assert has_element?(lv, "#phone-menu #phone-nav-me", "Your membership")
-    assert has_element?(lv, "#phone-menu #phone-switch-admin")
-    assert has_element?(lv, "#phone-menu #phone-switch-team-#{team.subdomain}[aria-current=page]")
+    refute has_element?(lv, "#phone-menu #phone-switch-admin")
+    assert has_element?(lv, "#phone-team-switcher summary", team.name)
+    assert has_element?(lv, "#phone-team-switcher #phone-switch-admin.switch-admin")
+
+    assert has_element?(
+             lv,
+             "#phone-team-switcher #phone-switch-team-#{team.subdomain}[aria-current=page]"
+           )
+
     assert has_element?(lv, "#phone-nav-area .brand")
     refute has_element?(lv, "#phone-menu .menu-person")
     refute has_element?(lv, "#phone-menu a[href='/logout']")
     assert has_element?(lv, "#account-menu .menu-note", user.email)
     assert has_element?(lv, ~s{#account-menu #nav-log-out[href="/logout"]})
+  end
+
+  test "a member on two teams gets the switcher at every width, and no SAR Duty admin" do
+    [first, second] =
+      for name <- ["Alpha SAR", "Bravo SAR"] do
+        %{name: name}
+        |> team_fixture()
+        |> Ecto.Changeset.change(member_logins: true)
+        |> Repo.update!()
+      end
+
+    user = App.AccountsFixtures.user_fixture()
+    member_fixture(first, %{email: user.email})
+    member_fixture(second, %{email: user.email})
+    {:ok, lv, _html} = live(log_in_user(build_conn(), user), ~p"/teams/#{first}/me")
+
+    assert has_element?(lv, "#team-switcher #nav-area", "Alpha SAR")
+    assert has_element?(lv, "#switch-team-#{first.subdomain}[aria-current=page]")
+
+    assert has_element?(
+             lv,
+             ~s{#switch-team-#{second.subdomain}[href="/teams/#{second.subdomain}"]}
+           )
+
+    assert has_element?(lv, "#phone-team-switcher #phone-switch-team-#{second.subdomain}")
+    refute has_element?(lv, "#switch-admin")
   end
 
   test "with no pages and nowhere to switch to, there is no Menu button, only the avatar" do

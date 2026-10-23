@@ -71,11 +71,13 @@ is left out, and so is its divider.
   team, else SAR Duty admin (`Navigation.outside_area/3`), with the switcher on it. The
   page is in no area, so the switcher marks nothing and the name always opens it.
 - **After the logo, the area's name**: the team's, SAR Duty admin, or Account settings.
-- **The team switcher** sits on the name when you can go somewhere else. Its menu, headed
-  Switch team, lists SAR Duty admin first for SAR Duty admins, then each team where you
-  are a team admin or a member, A to Z, one row per team (`Navigation.switch_rows/4`). The
-  team you're on is marked, and each row goes to the team's Dashboard; a team opened from Admin › Teams that isn't yours marks
-  nothing. With one place to be, the name is plain text.
+- **The team switcher** sits on the name when you can go somewhere else, at every width.
+  Its menu lists Your teams, each team where you are a team admin or a member, A to Z,
+  one row per team (`Navigation.switch_rows/4`). For SAR Duty admins, SAR Duty admin
+  comes last, below a divider and with a shield, so it never reads as one more team
+  (2026-10-23). The team you're on is marked, and each row goes to the team's Dashboard; a
+  team opened from Admin › Teams that isn't yours marks nothing. With one place to be,
+  the name is plain text.
 - **Your avatar, top right** at every width: your initials in a circle, from the name of
   the member you log in as, or else your email (`Navigation.person/3`). It opens your name
   and email, Account settings, and Log out. It is the same on every team, and Your
@@ -87,11 +89,13 @@ is left out, and so is its divider.
   first page (Dashboard, Teams) is current only on itself.
 - Breadcrumbs start at the section, never the team, and a section's own page has none.
   A record's tabs sit under its title, above both columns.
-- Below 1024px the side navigation and the team switcher hide (#471). The Menu button
-  moves to the left of the bar, the logo sits over the area's name in the middle, and
-  your avatar stays on the right with the same account menu. Menu holds Switch team and
-  its rows (only with somewhere else to go), a divider, then the side navigation's
-  sections with their dividers. With neither, there is no Menu button.
+- Below 1024px the side navigation hides (#471). The Menu button moves to the left of the
+  bar, the logo sits over the area's name in the middle, and your avatar stays on the
+  right with the same account menu. The switcher stays on the name, with a chevron, and
+  opens its own panel under the bar (2026-10-23: #472 had moved it into Menu, where
+  people on two teams didn't find it). Menu holds the side navigation's sections with
+  their dividers; with none, there is no Menu button. The bar's menus share one
+  `details` name, so opening one closes the others.
 - Search (#471) is in the bar but commented out until it has a page: a field before the
   avatar on a desktop, an icon below 1024px.
 
