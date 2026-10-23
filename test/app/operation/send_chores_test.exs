@@ -10,6 +10,8 @@ defmodule App.Operation.SendChoresTest do
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
 
+  @today ~D[2026-10-31]
+
   setup do
     %{user: user, team: team} =
       user_with_team_fixture(%{
@@ -239,11 +241,13 @@ defmodule App.Operation.SendChoresTest do
     send_chores(ctx)
     october = event_of(chore)
 
-    {:ok, longer} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "120"})
+    {:ok, longer} =
+      SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "120"}, @today)
+
     assert longer.chore_event_id == october.id
     assert Repo.get!(ChoreEvent, october.id).needs_send
 
-    {:ok, moved} = SaveChore.change(ctx.team, longer, %{"date" => "2026-09-28"})
+    {:ok, moved} = SaveChore.change(ctx.team, longer, %{"date" => "2026-09-28"}, @today)
     september = Repo.get!(ChoreEvent, moved.chore_event_id)
     assert %{month: ~D[2026-09-01], needs_send: true} = september
     assert Repo.get!(ChoreEvent, october.id).needs_send
@@ -284,7 +288,9 @@ defmodule App.Operation.SendChoresTest do
     stub_d4h()
     send_chores(ctx)
     _sent = writes()
-    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
+
+    {:ok, _chore} =
+      SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"}, @today)
 
     stub_d4h([], 404)
     assert send_chores(ctx) == %{events: 1, failed: 0}
@@ -312,7 +318,9 @@ defmodule App.Operation.SendChoresTest do
     stub_d4h()
     send_chores(ctx)
     _sent = writes()
-    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
+
+    {:ok, _chore} =
+      SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"}, @today)
 
     stub_d4h([attendance(701, ctx.member, 60)], :approved)
     assert send_chores(ctx) == %{events: 1, failed: 0}
@@ -356,7 +364,9 @@ defmodule App.Operation.SendChoresTest do
     stub_d4h()
     send_chores(ctx)
     _sent = writes()
-    {:ok, _chore} = SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"})
+
+    {:ok, _chore} =
+      SaveChore.change(ctx.team, Repo.get!(Chore, chore.id), %{"minutes" => "45"}, @today)
 
     stub_d4h([], {:tagged, hd(ctx.tags).d4h_tag_id})
     assert send_chores(ctx) == %{events: 1, failed: 0}

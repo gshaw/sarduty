@@ -58,15 +58,14 @@ defmodule Web.ChoreCollectionLive do
     <.banner :if={@to_send > 0} kind={:warning} title="Changes not sent" id="chores-to-send">
       <p>
         {Format.count(@to_send,
-          one: "1 activity in #{@service} is out of date. The reason is in the table.",
-          many: "%d activities in #{@service} are out of date. The reasons are in the table."
+          one: "1 activity in #{@service} is out of date.",
+          many: "%d activities in #{@service} are out of date."
         )}
       </p>
       <.button
         id="send-changes"
         type="button"
         variant={:warning}
-        size={:sm}
         phx-click="send-changes"
         phx-disable-with={"Sending to #{@service}…"}
       >
@@ -133,7 +132,7 @@ defmodule Web.ChoreCollectionLive do
           {row.activity.ref_id}
         </.a>
         <span :if={!row.activity and row.event.d4h_activity_id} class="hint">
-          Refreshing from {@service}
+          Linked after the next refresh
         </span>
       </:col>
       <:col :let={row} label="Sent" class="stack-full">

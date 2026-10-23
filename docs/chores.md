@@ -32,7 +32,8 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
 - **Each chore is its own row.** D4H gets one attendance per member per event, but SAR
   Duty keeps every chore with its date and minutes. No start time.
 - **A member's date is within the last 60 days and not in the future.** A team admin can
-  set any date.
+  set any date that has passed. Never the future, where D4H counts the hours as signed
+  up, not attended.
 - **A chore counts on the day it was done**, not the day it was logged, so its month
   and year are the ones it was done in.
 - **Waiting, Accepted, Declined.** A member changes or deletes a chore only while it

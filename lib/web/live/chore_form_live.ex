@@ -8,7 +8,7 @@ defmodule Web.ChoreFormLive do
   alias Web.MeChoreFormLive
 
   # A team admin changes a chore (#341), /teams/:subdomain/chores/:id/edit: any field, any
-  # date, waiting or decided. Its status stays. Saving sends its activity to D4H.
+  # date that has passed, waiting or decided. Its status stays. Saving sends its activity to D4H.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
@@ -16,6 +16,7 @@ defmodule Web.ChoreFormLive do
 
     socket
     |> assign(page_title: "Change chore", chore: chore, service: D4H.service_name(team))
+    |> assign(today: Service.Period.today(DateTime.utc_now(), team.timezone))
     |> assign(categories: MeChoreFormLive.categories(team.id, chore))
     |> assign_form(Chore.build_changeset(chore, %{}, [], nil))
     |> then(&{:ok, &1})
@@ -35,7 +36,7 @@ defmodule Web.ChoreFormLive do
 
     <.form for={@form} id="chore-form" class="measure" phx-change="validate" phx-submit="save">
       <.error_summary form={@form} />
-      <.input field={@form[:date]} type="date" label="Date" />
+      <.input field={@form[:date]} type="date" label="Date" max={Date.to_iso8601(@today)} />
       <.input field={@form[:minutes]} type="number" label="Minutes" min="1" step="1" />
       <.input
         field={@form[:chore_category_id]}
@@ -55,20 +56,20 @@ defmodule Web.ChoreFormLive do
   end
 
   def handle_event("validate", %{"chore" => params}, socket) do
-    %{chore: chore, categories: categories} = socket.assigns
+    %{chore: chore, categories: categories, today: today} = socket.assigns
 
     changeset =
       chore
-      |> Chore.build_changeset(params, Enum.map(categories, & &1.id), nil)
+      |> Chore.build_changeset(params, Enum.map(categories, & &1.id), today, :team_admin)
       |> Map.put(:action, :validate)
 
     {:noreply, assign_form(socket, changeset)}
   end
 
   def handle_event("save", %{"chore" => params}, socket) do
-    %{current_team: team, chore: chore} = socket.assigns
+    %{current_team: team, chore: chore, today: today} = socket.assigns
 
-    case SaveChore.change(team, chore, params) do
+    case SaveChore.change(team, chore, params, today) do
       {:ok, saved} ->
         {:noreply, Web.ChoreLive.send_and_return(socket, "Saved #{saved.description}")}
 

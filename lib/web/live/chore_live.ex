@@ -74,7 +74,7 @@ defmodule Web.ChoreLive do
             {@activity.title}
           </.a>
           <span :if={!@activity and @chore.chore_event.d4h_activity_id} class="hint">
-            Refreshing from {@service}
+            Sent to {@service}. Linked after the next refresh.
           </span>
           <span :if={!@chore.chore_event.d4h_activity_id} class="hint">
             Not sent to {@service} yet
@@ -145,7 +145,7 @@ defmodule Web.ChoreLive do
 
   @doc """
   Sends the team's chore events after a team admin's change, and goes back to the Chores
-  page, whose table shows why a send did not go through. `done` says what changed.
+  page, which shows why a send did not go through. `done` says what changed.
   """
   def send_and_return(socket, done) do
     %{current_team: team, current_user: user, service: service} = socket.assigns

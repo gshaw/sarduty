@@ -39,10 +39,11 @@ defmodule App.Model.Chore do
 
   @doc """
   A chore's date, minutes, chore category, and description. `category_ids` are the ones
-  it may have. With `today`, the date must be within the last #{@window_days} days and
-  not in the future, as for a member; a team admin passes nil for any date.
+  it may have. With `today`, the date must not be in the future, where D4H counts the
+  hours as signed up, not attended; a member's must also be within the last
+  #{@window_days} days. A team admin passes `:team_admin` for any date that has passed.
   """
-  def build_changeset(data, params, category_ids, today) do
+  def build_changeset(data, params, category_ids, today, who \\ :member) do
     data
     |> cast(params, [:date, :minutes, :chore_category_id, :description])
     |> validate_required([:date], message: "Enter the date you did it")
@@ -56,20 +57,27 @@ defmodule App.Model.Chore do
     )
     |> validate_inclusion(:chore_category_id, category_ids, message: "Select a category")
     |> validate_length(:description, max: 200, message: "Keep it under 200 characters")
-    |> validate_window(today)
+    |> validate_date(today, who)
     |> App.Validate.in_field_order([:date, :minutes, :chore_category_id, :description])
   end
 
-  defp validate_window(changeset, nil), do: changeset
+  defp validate_date(changeset, nil, _who), do: changeset
 
-  defp validate_window(changeset, today) do
+  defp validate_date(changeset, today, who) do
     date = get_field(changeset, :date)
 
     cond do
-      is_nil(date) -> changeset
-      Date.after?(date, today) -> add_error(changeset, :date, "Enter a date that has passed")
-      Date.diff(today, date) > @window_days -> add_error(changeset, :date, window_message())
-      true -> changeset
+      is_nil(date) ->
+        changeset
+
+      Date.after?(date, today) ->
+        add_error(changeset, :date, "Enter a date that has passed")
+
+      who == :member and Date.diff(today, date) > @window_days ->
+        add_error(changeset, :date, window_message())
+
+      true ->
+        changeset
     end
   end
 

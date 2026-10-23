@@ -43,8 +43,8 @@ defmodule Web.ChoreText do
         failed > 0 ->
           {:error,
            Format.count(failed,
-             one: "1 activity did not go through to #{service}. The reason is in the table.",
-             many: "%d activities did not go through to #{service}. The reasons are in the table."
+             one: "1 activity did not go through to #{service}.",
+             many: "%d activities did not go through to #{service}."
            )}
 
         events > 0 or is_nil(done) ->

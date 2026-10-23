@@ -56,10 +56,14 @@ defmodule App.Operation.SaveChore do
     with {:ok, _chore} <- result, do: :ok
   end
 
-  @doc "A team admin changes any field of a chore, with any date, in any status."
-  def change(%Team{} = team, %Chore{team_id: team_id} = chore, params)
+  @doc "A team admin changes any field of a chore, with any date that has passed, in any status."
+  def change(%Team{} = team, %Chore{team_id: team_id} = chore, params, %Date{} = today)
       when team_id == team.id do
-    admin_change(team, chore, &Chore.build_changeset(&1, params, category_ids(team.id, &1), nil))
+    admin_change(
+      team,
+      chore,
+      &Chore.build_changeset(&1, params, category_ids(team.id, &1), today, :team_admin)
+    )
   end
 
   @doc """
