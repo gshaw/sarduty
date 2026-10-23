@@ -42,6 +42,12 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
   reason the member sees, in any status, and links its D4H activity.
+- **The Chores page splits chores by status**, Waiting, Accepted, and Declined, opening
+  on Waiting. Accepted lists each D4H activity, newest month first, with its chores
+  under it, so every chore stays one click from its page. Before this, an accepted chore
+  showed only in its activity's totals and had no way back to its page (2026-10-23).
+  After a change, the page opens on the view the chore is in now. Search finds a chore
+  by its words.
 
 ## The send
 

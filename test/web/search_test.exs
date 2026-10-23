@@ -67,6 +67,35 @@ defmodule Web.SearchTest do
     end
   end
 
+  describe "chores" do
+    setup do
+      team = team_fixture()
+      member = member_fixture(team, %{name: "Sam Rivera"})
+      chore = chore_fixture(member, chore_category_fixture(team), %{description: "Truck wash"})
+      %{team: team, chore: chore}
+    end
+
+    test "a team admin finds a chore by its words on a team with chores on", ctx do
+      team =
+        ctx.team
+        |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
+        |> Repo.update!()
+
+      assert [%{kind: :chore, hits: [hit]}] =
+               search(team, "wash", team_admin?: true, member?: false)
+
+      assert hit.path == "/teams/#{team.subdomain}/chores/#{ctx.chore.id}"
+      assert hit.member_name == "Sam Rivera"
+
+      assert search(team, "wash", team_admin?: false, member?: true) == []
+    end
+
+    test "chores aren't found on a team with chores off", %{team: team} do
+      assert search(team, "wash", team_admin?: true, member?: false) == []
+      refute :chore in Web.Search.kinds(team, true, false)
+    end
+  end
+
   describe "recent/3" do
     test "the picks this person can still open, newest first, from untrusted keys" do
       team = team_fixture()

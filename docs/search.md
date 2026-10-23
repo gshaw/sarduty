@@ -4,7 +4,7 @@
 
 The search in the top bar (#473) finds a team's members, activities, equipment,
 qualifications, groups, endorsements, templates, and pages by name, D4H number, or
-barcode. [App.ViewData.Search](../lib/app/view_data/search.ex) matches and ranks;
+barcode, and chores by what the member wrote. [App.ViewData.Search](../lib/app/view_data/search.ex) matches and ranks;
 [Web.Search](../lib/web/search.ex) decides what the person searching may find and where
 each result opens.
 
@@ -24,19 +24,20 @@ callbacks, so every write path updates it, including the refresh's bulk writes.
 - **Every word must match, in any order**, each in one of the kind's fields: a name or
   title, a D4H number, a tracking number, a barcode, or a serial. A leading `#` is dropped,
   and `%` and `_` match themselves.
-- **Not searched:** email, phone, address, emergency contacts, positions, letter text, chore
-  words, and activity descriptions.
+- **Not searched:** email, phone, address, emergency contacts, positions, letter text, and
+  activity descriptions.
 - **Ranking**, in `score/3`: a D4H number or barcode that is the whole search first (#02193
   finds 2193), then the title is the search, starts with it, has a word starting with each
   word, or holds each word. Ties put current members before retired ones, the activities
-  nearest today first, and equipment in service first.
+  nearest today first, equipment in service first, and the newest chores first.
 - Each kind shows its best 5. Groups are ordered by their best result.
 
 ## Who finds what
 
 Each kind opens one page, listed in `Web.Search.live_views/0`, and that page's `access`
 decides who finds it, by the same rule as the team pages' hook (`UserAuth.opens?/3`). A
-member who logs in finds activities; a team admin finds every kind.
+member who logs in finds activities; a team admin finds every kind. Chores are found only
+on a team with chores on (`Team.chores?/1`), as their pages open only there.
 
 Pages come from the side navigation the person sees, from `Web.Navigation.sections/3`, so
 a page added there is found with no change here. A page matches only where a word of its

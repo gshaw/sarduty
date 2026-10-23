@@ -13,7 +13,7 @@
       id="search-demo-results"
       query="rope"
       groups={sample_search_groups()}
-      kinds={Web.Search.kinds(true, false)}
+      kinds={Web.Search.kinds(sample_team(), true, false)}
       team={sample_team()}
       open={true}
     />
@@ -27,7 +27,7 @@
     <.search_box
       id="search-demo-empty"
       recent={sample_search_recent()}
-      kinds={Web.Search.kinds(true, false)}
+      kinds={Web.Search.kinds(sample_team(), true, false)}
       team={sample_team()}
       open={true}
     />
@@ -38,7 +38,7 @@
     <.search_box
       id="search-demo-none"
       query="cheakamus bridge"
-      kinds={Web.Search.kinds(true, false)}
+      kinds={Web.Search.kinds(sample_team(), true, false)}
       team={sample_team()}
       open={true}
     />

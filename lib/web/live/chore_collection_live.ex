@@ -1,6 +1,8 @@
 defmodule Web.ChoreCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.StatSwitch
+
   alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Model.ChoreEvent
@@ -10,9 +12,13 @@ defmodule Web.ChoreCollectionLive do
   alias Service.Format
   alias Web.ChoreText
 
-  # The team's chores (#341), /teams/:subdomain/chores. Waiting chores to accept, with the
-  # Review changes pattern: every row starts selected, and a cleared row stays. Accepting
-  # sends them to D4H, onto each chore category's activity for the month, listed below.
+  # The team's chores (#341), /teams/:subdomain/chores, by status. Waiting chores to accept,
+  # with the Review changes pattern: every row starts selected, and a cleared row stays.
+  # Accepting sends them to D4H, onto each chore category's activity for the month, and
+  # Accepted lists them under those activities. Every chore opens its own page, to change
+  # or decline it.
+  @views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
+
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
@@ -23,22 +29,54 @@ defmodule Web.ChoreCollectionLive do
       page_title: "Chores",
       today: Service.Period.today(DateTime.utc_now(), team.timezone)
     )
-    |> load()
     |> then(&{:ok, &1})
   end
 
+  def handle_params(params, _uri, socket) do
+    wanted = params["view"] || "waiting"
+    view = @views |> Keyword.keys() |> Enum.find(&(Atom.to_string(&1) == wanted))
+    if !view, do: raise(Web.Status.NotFound)
+
+    socket
+    |> assign(view: view)
+    |> load()
+    |> then(&{:noreply, &1})
+  end
+
+  @doc "The Chores page showing chores in `status`."
+  def view_path(team, :waiting), do: ~p"/teams/#{team}/chores"
+  def view_path(team, status), do: ~p"/teams/#{team}/chores?#{[view: status]}"
+
   defp load(socket) do
     team_id = socket.assigns.current_team.id
-    waiting = Chore.get_waiting(team_id)
+    counts = Chore.count_by_status(team_id)
 
-    assign(socket,
-      waiting: waiting,
-      events: ChoreEvent.get_all_with_totals(team_id),
+    socket
+    |> assign(
+      counts: counts,
       to_send: ChoreEvent.count_to_send(team_id),
-      selected: MapSet.new(waiting, & &1.id),
-      chore_count: length(waiting)
+      chore_count: counts.waiting
     )
+    |> load_view(socket.assigns.view, team_id)
   end
+
+  defp load_view(socket, :waiting, team_id) do
+    waiting = Chore.get_all_for_team(team_id, :waiting)
+    assign(socket, chores: waiting, selected: MapSet.new(waiting, & &1.id))
+  end
+
+  defp load_view(socket, :accepted, team_id) do
+    by_event = team_id |> Chore.get_all_for_team(:accepted) |> Enum.group_by(& &1.chore_event_id)
+
+    events =
+      for row <- ChoreEvent.get_all_with_totals(team_id),
+          do: Map.put(row, :chores, Map.get(by_event, row.event.id, []))
+
+    assign(socket, events: events)
+  end
+
+  defp load_view(socket, :declined, team_id),
+    do: assign(socket, chores: Chore.get_all_for_team(team_id, :declined))
 
   @doc "When it was logged, under its date, only when that was a later month."
   def logged_note(chore, timezone) do
@@ -49,6 +87,8 @@ defmodule Web.ChoreCollectionLive do
   end
 
   def render(assigns) do
+    assigns = assign(assigns, views: @views)
+
     ~H"""
     <h1 class="title">Chores</h1>
     <p class="lead measure">
@@ -73,90 +113,120 @@ defmodule Web.ChoreCollectionLive do
       </.button>
     </.banner>
 
-    <h2 class="subheading mt-8">Waiting · {length(@waiting)}</h2>
-    <.empty_state :if={@waiting == []} id="no-waiting-chores" title="No chores waiting">
-      Chores members log show here for you to accept.
-    </.empty_state>
+    <.stat_switch id="chores-switch" label="Chores">
+      <:view
+        :for={{view, label} <- @views}
+        id={"chores-view-#{view}"}
+        patch={view_path(@current_team, view)}
+        current={@view == view}
+        count={Map.fetch!(@counts, view)}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
 
-    <div :if={@waiting != []}>
-      <p class="hint mb-4">
-        Clear the box next to a chore to leave it waiting. Open a chore to change or decline it.
-      </p>
-      <.form for={%{}} id="accept-form" phx-change="select" phx-submit="accept">
+    <%= case @view do %>
+      <% :waiting -> %>
+        <.empty_state :if={@chores == []} id="no-waiting-chores" title="No chores waiting">
+          Chores members log show here for you to accept.
+        </.empty_state>
+
+        <div :if={@chores != []}>
+          <p class="hint mb-4">
+            Clear the box next to a chore to leave it waiting. Open a chore to change or decline it.
+          </p>
+          <.form for={%{}} id="accept-form" phx-change="select" phx-submit="accept">
+            <.chore_table
+              id="waiting-chores"
+              chores={@chores}
+              selected={@selected}
+              today={@today}
+              current_team={@current_team}
+            />
+            <.form_actions>
+              <.button
+                id="accept"
+                variant={:success}
+                disabled={MapSet.size(@selected) == 0}
+                phx-disable-with={"Sending to #{@service}…"}
+              >
+                Accept {count_chores(MapSet.size(@selected))}
+              </.button>
+            </.form_actions>
+          </.form>
+        </div>
+      <% :accepted -> %>
+        <.empty_state :if={@events == []} id="no-chore-events" title={"Nothing in #{@service} yet"}>
+          Chores you accept show here, under their {@service} activity.
+        </.empty_state>
+        <p :if={@events != []} class="hint">
+          Open a chore to change or decline it, which changes its activity. Edits made in {@service} are replaced.
+        </p>
+
+        <section :for={row <- @events} id={"chore-event-#{row.event.id}"} class="mt-8">
+          <div class="heading-row">
+            <h2 class="subheading">
+              {Format.month_year_long(row.event.month)} · {row.event.chore_category.title}
+            </h2>
+            <span class="hint">
+              {Format.count(row.members, one: "1 member", many: "%d members")} · {Format.duration(
+                row.minutes
+              )}
+            </span>
+          </div>
+          <p class="hint mb-4">
+            <span :if={row.activity}>
+              {@service} activity
+              <.a navigate={~p"/teams/#{@current_team}/activities/#{row.activity.id}"}>{row.activity.ref_id}</.a>
+            </span>
+            <span :if={!row.activity and row.event.d4h_activity_id}>
+              {@service} activity linked after the next refresh
+            </span>
+            <span :if={row.event.sent_at}>
+              {if row.event.d4h_activity_id, do: "· "}Sent {Format.date_short(
+                row.event.sent_at,
+                @current_team.timezone
+              )}
+            </span>
+            <span :if={row.event.send_note} class="block">{row.event.send_note}</span>
+            <span :if={row.event.needs_send and !row.event.send_note} class="block">Not sent yet</span>
+          </p>
+          <.chore_table
+            :if={row.chores != []}
+            id={"chore-event-#{row.event.id}-chores"}
+            chores={row.chores}
+            today={@today}
+            current_team={@current_team}
+            category={false}
+          />
+        </section>
+      <% :declined -> %>
+        <.empty_state :if={@chores == []} id="no-declined-chores" title="No chores declined">
+          Chores you decline show here, with the reason.
+        </.empty_state>
         <.chore_table
-          id="waiting-chores"
-          chores={@waiting}
-          selected={@selected}
+          :if={@chores != []}
+          id="declined-chores"
+          chores={@chores}
           today={@today}
           current_team={@current_team}
         />
-        <.form_actions>
-          <.button
-            id="accept"
-            variant={:success}
-            disabled={MapSet.size(@selected) == 0}
-            phx-disable-with={"Sending to #{@service}…"}
-          >
-            Accept {count_chores(MapSet.size(@selected))}
-          </.button>
-        </.form_actions>
-      </.form>
-    </div>
-
-    <h2 class="subheading mt-8">In {@service}</h2>
-    <p :if={@events != []} class="hint mb-4">
-      Changing or declining a chore changes its activity. Edits made in {@service} are replaced.
-    </p>
-    <.empty_state :if={@events == []} id="no-chore-events" title={"Nothing in #{@service} yet"}>
-      Chores you accept show here, with a link to each {@service} activity.
-    </.empty_state>
-    <.table
-      :if={@events != []}
-      id="chore-events"
-      rows={@events}
-      row_id={&"chore-event-#{&1.event.id}"}
-      class="table-striped table-stack"
-    >
-      <:col :let={row} label="Month" class="whitespace-nowrap">
-        {Format.month_year_long(row.event.month)}
-      </:col>
-      <:col :let={row} label="Category" class="stack-title">
-        {row.event.chore_category.title}
-      </:col>
-      <:col :let={row} label="Members" align="right">{Format.number(row.members)}</:col>
-      <:col :let={row} label="Hours" class="whitespace-nowrap" align="right">
-        {Format.duration(row.minutes)}
-      </:col>
-      <:col :let={row} label="Activity">
-        <.a :if={row.activity} navigate={~p"/teams/#{@current_team}/activities/#{row.activity.id}"}>{row.activity.ref_id}</.a>
-        <span :if={!row.activity and row.event.d4h_activity_id} class="hint">
-          Linked after the next refresh
-        </span>
-      </:col>
-      <:col :let={row} label="Sent" class="stack-full">
-        <span :if={row.event.sent_at} class="whitespace-nowrap">
-          {Format.date_short(row.event.sent_at, @current_team.timezone)}
-        </span>
-        <span :if={row.event.send_note} class="hint block">{row.event.send_note}</span>
-        <span :if={row.event.needs_send and !row.event.send_note} class="hint block">
-          Not sent yet
-        </span>
-      </:col>
-    </.table>
+    <% end %>
     """
   end
 
   attr :id, :string, required: true
   attr :chores, :list, required: true
-  attr :selected, :any, required: true
+  attr :selected, :any, default: nil, doc: "the ids checked, or nil for no boxes"
   attr :today, :any, required: true
   attr :current_team, :map, required: true
+  attr :category, :boolean, default: true
 
-  # Chores with a box each, for accepting.
+  # Chores, each linking its page. With `selected`, a box each, for accepting.
   defp chore_table(assigns) do
     ~H"""
     <.table id={@id} rows={@chores} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
-      <:col :let={chore} label="" class="w-px stack-check" select_all>
+      <:col :let={chore} :if={@selected} label="" class="w-px stack-check" select_all>
         <input
           type="checkbox"
           id={"#{@id}-select-#{chore.id}"}
@@ -175,8 +245,11 @@ defmodule Web.ChoreCollectionLive do
       </:col>
       <:col :let={chore} label="What they did" class="stack-full">
         <.a navigate={~p"/teams/#{@current_team}/chores/#{chore.id}"}>{chore.description}</.a>
+        <span :if={chore.status == :declined} class="hint block">
+          {ChoreText.declined(chore, @current_team.timezone)}
+        </span>
       </:col>
-      <:col :let={chore} label="Category">{chore.chore_category.title}</:col>
+      <:col :let={chore} :if={@category} label="Category">{chore.chore_category.title}</:col>
       <:col :let={chore} label="Time" class="whitespace-nowrap" align="right">
         {Format.duration(chore.minutes)}
       </:col>

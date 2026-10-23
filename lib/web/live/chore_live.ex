@@ -122,16 +122,16 @@ defmodule Web.ChoreLive do
 
   def handle_event("accept", _params, socket) do
     %{current_team: team, current_user: user, chore: chore} = socket.assigns
-    {:ok, _chore} = SaveChore.accept_one(team, chore, user, DateTime.utc_now())
-    {:noreply, send_and_return(socket, "Accepted #{chore.description}")}
+    {:ok, accepted} = SaveChore.accept_one(team, chore, user, DateTime.utc_now())
+    {:noreply, send_and_return(socket, accepted, "Accepted #{chore.description}")}
   end
 
   def handle_event("decline", %{"decline" => %{"reason" => reason}}, socket) do
     %{current_team: team, current_user: user, chore: chore} = socket.assigns
 
     case SaveChore.decline(team, chore, reason, user, DateTime.utc_now()) do
-      {:ok, _chore} ->
-        {:noreply, send_and_return(socket, "Declined #{chore.description}")}
+      {:ok, declined} ->
+        {:noreply, send_and_return(socket, declined, "Declined #{chore.description}")}
 
       {:error, changeset} ->
         errors = for {:decline_reason, error} <- changeset.errors, do: {:reason, error}
@@ -141,15 +141,16 @@ defmodule Web.ChoreLive do
 
   @doc """
   Sends the team's chore events after a team admin's change, and goes back to the Chores
-  page, which shows why a send did not go through. `done` says what changed.
+  page, which shows why a send did not go through, on the view `chore` is in now. `done`
+  says what changed.
   """
-  def send_and_return(socket, done) do
+  def send_and_return(socket, chore, done) do
     %{current_team: team, current_user: user, service: service} = socket.assigns
     result = SendChores.call(team, user, DateTime.utc_now())
     {kind, text} = ChoreText.send_flash(done, result, service)
 
     socket
     |> put_flash(kind, text)
-    |> push_navigate(to: ~p"/teams/#{team}/chores")
+    |> push_navigate(to: Web.ChoreCollectionLive.view_path(team, chore.status))
   end
 end

@@ -21,6 +21,7 @@ defmodule Web.Components.Search do
     group: "Groups",
     endorsement: "Endorsements",
     template: "Templates",
+    chore: "Chores",
     page: "Pages",
     recent: "Recent"
   }
@@ -257,6 +258,14 @@ defmodule Web.Components.Search do
         hit.barcode,
         hit.location_title,
         if(!hit.in_service?, do: String.capitalize(hit.status))
+      ])
+
+  defp line(:chore, hit),
+    do:
+      join([
+        hit.member_name,
+        Format.date_short(hit.date),
+        if(hit.status != :accepted, do: hit.status |> Atom.to_string() |> String.capitalize())
       ])
 
   defp line(_kind, _hit), do: ""

@@ -71,7 +71,7 @@ defmodule Web.ChoreFormLive do
 
     case SaveChore.change(team, chore, params, today) do
       {:ok, saved} ->
-        {:noreply, Web.ChoreLive.send_and_return(socket, "Saved #{saved.description}")}
+        {:noreply, Web.ChoreLive.send_and_return(socket, saved, "Saved #{saved.description}")}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
