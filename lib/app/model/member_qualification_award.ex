@@ -73,6 +73,24 @@ defmodule App.Model.MemberQualificationAward do
     do: not is_nil(ends_at) and not DateTime.after?(ends_at, now)
 
   @doc """
+  A qualification's awards as its members, `{active, expired}`, one award each: a member
+  with a current award is active, else one whose award ended is expired. A member whose
+  only award hasn't started is in neither. Give each member's awards newest first; the
+  first one kept is the one returned, in the order given.
+  """
+  def split_by_member(awards, now) do
+    active = awards |> Enum.filter(&active?(&1, now)) |> Enum.uniq_by(& &1.member_id)
+    active_ids = MapSet.new(active, & &1.member_id)
+
+    expired =
+      awards
+      |> Enum.filter(&(expired?(&1, now) and not MapSet.member?(active_ids, &1.member_id)))
+      |> Enum.uniq_by(& &1.member_id)
+
+    {active, expired}
+  end
+
+  @doc """
   Each current member's latest award of a qualification, when it ends between `now` and
   `until`, soonest first. A renewal pushes the latest end past `until`, and an award with
   no end never expires, so either takes the member off the list.
