@@ -1,30 +1,31 @@
 /* A stat switch: a list's split as counts, each a link that filters the list, All first.
-   The current count is underlined in primary, as a sorted column is. Counts that don't
-   fit wrap to a second row. See /styles/stat-switch. */
+   Each count is a grey tile, so the whole tile reads as the target. The current one is
+   light blue with a primary bar at its foot. Square corners and one label weight, so
+   nothing moves when the current count changes. Counts that don't fit wrap to a second
+   row. See /styles/stat-switch. */
 @layer components {
   .stat-switch {
     display: flex;
     flex-wrap: wrap;
-    column-gap: var(--sp-8);
+    gap: var(--sp-2);
     margin-bottom: var(--sp-4);
-    border-bottom: 1px solid var(--border);
   }
 
   .stat-switch a {
     display: flex;
     flex-direction: column;
-    padding-bottom: var(--sp-2);
-    margin-bottom: -1px;
-    border-bottom: 3px solid transparent;
+    min-width: 7rem;
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--surface-alt);
     color: var(--text);
     text-decoration: none;
   }
 
   .stat-switch-value { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .stat-switch-label { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); white-space: nowrap; }
-  .stat-switch a:hover .stat-switch-label { color: var(--link-hover); text-decoration: underline; }
-  .stat-switch a[aria-current="page"] { border-bottom-color: var(--primary); }
-  .stat-switch a[aria-current="page"] .stat-switch-label { color: var(--text); font-weight: 600; }
+  .stat-switch-label { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .stat-switch a:hover { background: var(--border-subtle); }
+  .stat-switch a[aria-current="page"] { background: var(--shade-1); box-shadow: inset 0 -3px var(--primary); }
+  .stat-switch a[aria-current="page"] .stat-switch-label { color: var(--text); }
   .stat-switch a.is-zero .stat-switch-value { color: var(--text-muted); }
 
   @media (pointer: coarse) { .stat-switch a { min-height: 44px; } }
