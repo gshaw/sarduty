@@ -202,14 +202,10 @@ defmodule Web.ActivityLive do
             <.a
               id="activity-calendar"
               href={~p"/teams/#{@activity.team}/activities/#{@activity.id}/calendar"}
-            >
-              Add to calendar
-            </.a>
+            >Add to calendar</.a>
           </li>
           <li :if={!D4H.records?(@activity.team)}>
-            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>
-              Open D4H activity
-            </.a>
+            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>Open D4H activity</.a>
           </li>
         </ul>
       </dd>
@@ -222,9 +218,7 @@ defmodule Web.ActivityLive do
               <.a
                 id="activity-history-link"
                 navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
-              >
-                Changes to this activity
-              </.a>
+              >Changes to this activity</.a>
             </li>
           </ul>
         </dd>
@@ -238,9 +232,7 @@ defmodule Web.ActivityLive do
             <.a
               id="activity-edit"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
-            >
-              Change or delete
-            </.a>
+            >Change or delete</.a>
           </li>
           <%!-- D4H refuses tags on a published activity (#358). --%>
           <li :if={!D4H.records?(@activity.team) and D4H.tags_locked?(@activity.team, @activity)}>
@@ -252,27 +244,19 @@ defmodule Web.ActivityLive do
             <.a
               id="activity-change-tags"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
-            >
-              Change tags
-            </.a>
+            >Change tags</.a>
           </li>
           <li>
             <.a
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
-            >
-              Apply a template
-            </.a>
+            >Apply a template</.a>
           </li>
           <li>
-            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>
-              Take attendance
-            </.a>
+            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/take-attendance"}>Take attendance</.a>
           </li>
           <li>
-            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>
-              Mileage report
-            </.a>
+            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>Mileage report</.a>
           </li>
         </ul>
       </dd>
@@ -348,9 +332,7 @@ defmodule Web.ActivityLive do
           <.a
             :if={@team_admin?}
             navigate={~p"/teams/#{@activity.team}/equipment/#{usage.equipment_item.id}"}
-          >
-            {usage.equipment_item.title}
-          </.a>
+          >{usage.equipment_item.title}</.a>
           <span :if={!@team_admin?}>{usage.equipment_item.title}</span>
         </:col>
         <:col :let={usage} label="Type">{usage.equipment_item.kind}</:col>
@@ -379,9 +361,7 @@ defmodule Web.ActivityLive do
           navigate={
             ~p"/teams/#{@activity.team}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
           }
-        >
-          {record.member.name}
-        </.a>
+        >{record.member.name}</.a>
         <span :if={!@team_admin?}>{record.member.name}</span>
       </:col>
       <:col :let={record} label="Start" align="right" class="whitespace-nowrap">

@@ -65,9 +65,8 @@ defmodule Web.ProposedChangeCollectionLive do
         {Service.Format.month_day_time(set.inserted_at, @current_team.timezone)}
       </:col>
       <:col :let={set} label="Changes">
-        <.a navigate={~p"/teams/#{@current_team}/proposed-changes/#{set.id}"}>
-          {set.summary || "Attendance changes"}
-        </.a>
+        <.a navigate={~p"/teams/#{@current_team}/proposed-changes/#{set.id}"}>{set.summary ||
+          "Attendance changes"}</.a>
         <div class="hint">
           {set.activity && set.activity.title} · {Service.Format.count(length(set.rows),
             one: "%d change",

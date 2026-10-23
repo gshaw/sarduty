@@ -226,9 +226,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         />
       </:col>
       <:col :let={no_show} label="Email" class="stack-full stack-optional break-all">
-        <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>
-          {no_show.member.email}
-        </.a>
+        <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>{no_show.member.email}</.a>
       </:col>
       <:col :let={no_show} label="Followed up" class="stack-full">
         <label class="flex items-center gap-2 whitespace-nowrap min-h-6">
@@ -402,9 +400,7 @@ defmodule Web.ActivityTakeAttendanceLive do
           href={link_url(@link)}
           external={true}
           class="font-mono break-all"
-        >
-          {link_url(@link)}
-        </.a>
+        >{link_url(@link)}</.a>
         <.button
           id="copy-link"
           type="button"
@@ -436,9 +432,7 @@ defmodule Web.ActivityTakeAttendanceLive do
           href="#"
           phx-click="create-link"
           data-confirm="Make a new link? This link stops working."
-        >
-          Make new link
-        </.a>
+        >Make new link</.a>
         <.button
           id="close-link"
           variant={:danger}

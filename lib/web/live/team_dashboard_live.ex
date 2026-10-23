@@ -196,9 +196,7 @@ defmodule Web.TeamDashboardLive do
           Refresh now
         </.button>
         <span :if={@team_admin? and !D4H.records?(@team)} aria-hidden="true">·</span>
-        <.a :if={!D4H.records?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>
-          Open D4H
-        </.a>
+        <.a :if={!D4H.records?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H</.a>
       </p>
     </div>
     """
@@ -278,9 +276,7 @@ defmodule Web.TeamDashboardLive do
         </li>
       </ul>
       <footer class="action">
-        <.a navigate={~p"/teams/#{@team}/activities?when=future&sort=date"}>
-          All future activities
-        </.a>
+        <.a navigate={~p"/teams/#{@team}/activities?when=future&sort=date"}>All future activities</.a>
       </footer>
     </section>
     """
@@ -418,9 +414,10 @@ defmodule Web.TeamDashboardLive do
   defp to_do_item(%{item: %{key: :qualification}} = assigns) do
     ~H"""
     <li id={"to-do-qualification-#{@item.award.qualification_id}"} class="py-3">
-      <.a navigate={~p"/teams/#{@team}/me"} class="font-semibold">
-        Your {@item.award.qualification.title} expires in {Format.days(@item.days)}
-      </.a>
+      <.a
+        navigate={~p"/teams/#{@team}/me"}
+        class="font-semibold"
+      >Your {@item.award.qualification.title} expires in {Format.days(@item.days)}</.a>
       <span class="hint block">Renewed it? Give the new certificate to a team admin.</span>
     </li>
     """
@@ -429,12 +426,13 @@ defmodule Web.TeamDashboardLive do
   defp to_do_item(%{item: %{key: :declined_chores}} = assigns) do
     ~H"""
     <li id="to-do-declined-chores" class="py-3">
-      <.a navigate={~p"/teams/#{@team}/me/chores"} class="font-semibold">
-        {Format.count(length(@item.chores),
-          one: "Your chore was declined",
-          many: "%d of your chores were declined"
-        )}
-      </.a>
+      <.a
+        navigate={~p"/teams/#{@team}/me/chores"}
+        class="font-semibold"
+      >{Format.count(length(@item.chores),
+        one: "Your chore was declined",
+        many: "%d of your chores were declined"
+      )}</.a>
       <span class="hint block">{declined_hint(@item.chores)}</span>
     </li>
     """
@@ -518,9 +516,7 @@ defmodule Web.TeamDashboardLive do
         <section class="card span-7">
           <header>
             <h2 class="chart-title">Activities by month</h2>
-            <.a navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>
-              All activities
-            </.a>
+            <.a navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>All activities</.a>
           </header>
           <p class="chart-caption">The last 12 months</p>
           <.column_chart

@@ -229,14 +229,10 @@ defmodule Web.QualificationCollectionLive do
       class="table-striped"
     >
       <:col :let={row} label="Member">
-        <.a navigate={~p"/teams/#{@team}/members/#{row.member_id}/qualifications"}>
-          {row.member_name}
-        </.a>
+        <.a navigate={~p"/teams/#{@team}/members/#{row.member_id}/qualifications"}>{row.member_name}</.a>
       </:col>
       <:col :let={row} label="Qualification">
-        <.a navigate={~p"/teams/#{@team}/qualifications/#{row.qualification_id}"}>
-          {row.qualification}
-        </.a>
+        <.a navigate={~p"/teams/#{@team}/qualifications/#{row.qualification_id}"}>{row.qualification}</.a>
       </:col>
       <:col :let={row} label="Expires" align="right" class="w-1/12 whitespace-nowrap">
         {Service.Format.date_short(row.ends_at, @team.timezone)}

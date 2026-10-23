@@ -40,14 +40,11 @@ defmodule Web.TeamSignupLive do
         Duty in D4H. You must also be an Owner or Editor on the team in D4H.
       </p>
       <p class="action">
-        <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">
-          How to create a D4H access key
-        </.a>
+        <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">How to create a D4H access key</.a>
       </p>
       <%!-- Almost every team has D4H. Records is a trial, so it gets one line. --%>
       <p id="signup-records" class="hint">
-        No D4H?
-        <.a external={true} href={"https://#{D4H.records_host()}"}>SAR Duty Records</.a>
+        No D4H? <.a external={true} href={"https://#{D4H.records_host()}"}>SAR Duty Records</.a>
         is an experimental place to keep your team's records. Select it as the region and paste a
         Records access key.
       </p>
@@ -77,8 +74,7 @@ defmodule Web.TeamSignupLive do
         </.form_actions>
       </.form>
       <p class="text-text-muted">
-        Already on SAR Duty?
-        <.a navigate={~p"/login"}>Log in</.a>
+        Already on SAR Duty? <.a navigate={~p"/login"}>Log in</.a>
       </p>
     </div>
     """

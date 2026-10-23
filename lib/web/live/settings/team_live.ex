@@ -183,9 +183,7 @@ defmodule Web.Settings.TeamLive do
               id="records-keys"
               external={true}
               href={"https://#{D4H.records_host()}/teams/#{@current_team.subdomain}/keys"}
-            >
-              Create a key in SAR Duty Records
-            </.a>
+            >Create a key in SAR Duty Records</.a>
           </p>
         </div>
         <div :if={!D4H.records?(@current_team)} id="team-key-owner" class="mb-4 text-sm">
@@ -203,9 +201,7 @@ defmodule Web.Settings.TeamLive do
             in as that member and <.a
               external={true}
               href="https://help.d4h.com/article/377-obtaining-an-api-access-key"
-            >
-              create a D4H access key
-            </.a>.
+            >create a D4H access key</.a>.
           </p>
         </div>
         <.form_actions>

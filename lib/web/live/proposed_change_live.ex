@@ -94,9 +94,7 @@ defmodule Web.ProposedChangeLive do
       <div :if={@change_set.activity}>
         <dt>Activity</dt>
         <dd>
-          <.a navigate={~p"/teams/#{@current_team}/activities/#{@change_set.activity.id}"}>
-            {@change_set.activity.title}
-          </.a>
+          <.a navigate={~p"/teams/#{@current_team}/activities/#{@change_set.activity.id}"}>{@change_set.activity.title}</.a>
         </dd>
       </div>
       <div>

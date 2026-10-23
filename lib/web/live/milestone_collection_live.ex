@@ -113,9 +113,7 @@ defmodule Web.MilestoneCollectionLive do
         {Format.date_short(milestone.on)}
       </:col>
       <:col :let={milestone} label="Member" class="whitespace-nowrap">
-        <.a navigate={~p"/teams/#{@current_team}/members/#{milestone.member.id}"}>
-          {milestone.member.name}
-        </.a>
+        <.a navigate={~p"/teams/#{@current_team}/members/#{milestone.member.id}"}>{milestone.member.name}</.a>
       </:col>
       <:col :let={milestone} label="Milestone" class="whitespace-nowrap">
         {MilestoneList.title(milestone)}

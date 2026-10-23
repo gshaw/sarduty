@@ -148,21 +148,14 @@ defmodule Web.Layouts do
     </main>
     <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-text-muted">
       <span :if={@organization} id="verify-footer-organization">
-        <a :if={@organization.website} href={@organization.website} class="hover:underline">
-          {@organization.name}
-        </a>
-        <span :if={!@organization.website}>{@organization.name}</span>
-        ·
+        <a :if={@organization.website} href={@organization.website} class="hover:underline">{@organization.name}</a>
+        <span :if={!@organization.website}>{@organization.name}</span> ·
       </span>
       Powered by <a href={Web.Endpoint.url()} class="hover:underline">{Web.Endpoint.host()}</a>
       ·
-      <a id="verify-footer-privacy" href={Web.Endpoint.url() <> "/privacy"} class="hover:underline">
-        Privacy
-      </a>
+      <a id="verify-footer-privacy" href={Web.Endpoint.url() <> "/privacy"} class="hover:underline">Privacy</a>
       ·
-      <a id="verify-footer-terms" href={Web.Endpoint.url() <> "/terms"} class="hover:underline">
-        Terms
-      </a>
+      <a id="verify-footer-terms" href={Web.Endpoint.url() <> "/terms"} class="hover:underline">Terms</a>
     </footer>
     """
   end
@@ -196,11 +189,9 @@ defmodule Web.Layouts do
       class={["m-auto px-2 mb-8 text-sm", if(@size == :narrow, do: "max-w-md", else: "container")]}
     >
       <p class="pt-4 border-t border-border-subtle">
-        Development:
-        <.a href="/dev/dashboard" external={true}>Dashboard</.a>
+        Development: <.a href="/dev/dashboard" external={true}>Dashboard</.a>
         <%= if @mailbox? do %>
-          ·
-          <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+          · <.a href="/dev/mailbox" external={true}>Mailbox</.a>
         <% end %>
       </p>
     </footer>
@@ -228,22 +219,16 @@ defmodule Web.Layouts do
     <footer id="site-footer" class="container mx-auto px-2 mb-8">
       <p class="pt-4 border-t border-border-subtle">
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
-        ·
-        <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
-        ·
-        <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
+        · <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
+        · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         <%= if @admin? do %>
-          ·
-          <.a id="footer-styles" href="/styles">Style guide</.a>
-          ·
-          <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
+          · <.a id="footer-styles" href="/styles">Style guide</.a>
+          · <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
         <% end %>
         <%= if @dev_routes? do %>
-          ·
-          <.a href="/dev/dashboard" external={true}>Dashboard</.a>
+          · <.a href="/dev/dashboard" external={true}>Dashboard</.a>
           <%= if @mailbox? do %>
-            ·
-            <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+            · <.a href="/dev/mailbox" external={true}>Mailbox</.a>
           <% end %>
         <% end %>
       </p>
@@ -358,9 +343,12 @@ defmodule Web.Layouts do
           <.account_links person={@person} id_prefix="phone-" />
         </.site_bar_phone_menu>
       <% else %>
-        <.a id="nav-login" kind={:custom} navigate={~p"/login"} class="site-bar-login">
-          <.icon name="hero-arrow-right-end-on-rectangle" /> Log in
-        </.a>
+        <.a
+          id="nav-login"
+          kind={:custom}
+          navigate={~p"/login"}
+          class="site-bar-login"
+        ><.icon name="hero-arrow-right-end-on-rectangle" /> Log in</.a>
       <% end %>
     </.site_bar>
     """
@@ -438,13 +426,9 @@ defmodule Web.Layouts do
       </div>
     </div>
     <.menu_divider :if={@id_prefix == ""} />
-    <.a id={@id_prefix <> "nav-account-settings"} kind={:custom} navigate={~p"/account"}>
-      Account settings
-    </.a>
+    <.a id={@id_prefix <> "nav-account-settings"} kind={:custom} navigate={~p"/account"}>Account settings</.a>
     <.menu_divider :if={@id_prefix == ""} />
-    <.a id={@id_prefix <> "nav-log-out"} kind={:custom} method="delete" href="/logout">
-      Log out
-    </.a>
+    <.a id={@id_prefix <> "nav-log-out"} kind={:custom} method="delete" href="/logout">Log out</.a>
     """
   end
 

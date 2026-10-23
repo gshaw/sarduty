@@ -123,9 +123,7 @@ defmodule Web.Components.MemberSidebar do
       <dd>
         <ul id="member-actions" class="action-list">
           <li :if={D4H.records?(@member.team)}>
-            <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>
-              Change details
-            </.a>
+            <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
           </li>
           <li :if={!D4H.records?(@member.team)}>
             <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>
@@ -156,9 +154,7 @@ defmodule Web.Components.MemberSidebar do
           <.a
             id="member-milestones-all"
             navigate={~p"/teams/#{@member.team}/milestones?member=#{@member.id}&when=all"}
-          >
-            {Format.count(length(@milestones), one: "%d milestone", many: "All %d milestones")}
-          </.a>
+          >{Format.count(length(@milestones), one: "%d milestone", many: "All %d milestones")}</.a>
         </li>
       </ul>
     </dd>

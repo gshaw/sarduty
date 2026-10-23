@@ -83,9 +83,7 @@ defmodule Web.EquipmentItemLive do
             <dd>
               <ul>
                 <li :for={template <- @templates}>
-                  <.a navigate={~p"/teams/#{@current_team}/templates/#{template.id}"}>
-                    {template.title}
-                  </.a>
+                  <.a navigate={~p"/teams/#{@current_team}/templates/#{template.id}"}>{template.title}</.a>
                 </li>
               </ul>
             </dd>
@@ -95,9 +93,7 @@ defmodule Web.EquipmentItemLive do
             <dd>
               <ul id="item-actions" class="action-list">
                 <li>
-                  <.a external={true} href={D4H.equipment_url(@current_team, @item)}>
-                    Open D4H item
-                  </.a>
+                  <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open D4H item</.a>
                 </li>
               </ul>
             </dd>
@@ -118,9 +114,7 @@ defmodule Web.EquipmentItemLive do
           <h2 class="heading">Activities · {length(@usages)}</h2>
           <.table :if={@usages != []} id="item-usages" rows={@usages} class="table-striped">
             <:col :let={usage} label="Activity">
-              <.a navigate={~p"/teams/#{@current_team}/activities/#{usage.activity.id}"}>
-                {usage.activity.title}
-              </.a>
+              <.a navigate={~p"/teams/#{@current_team}/activities/#{usage.activity.id}"}>{usage.activity.title}</.a>
             </:col>
             <:col :let={usage} label="Date" align="right" class="w-px whitespace-nowrap">
               {Service.Format.date_short(usage.activity.started_at, @current_team.timezone)}

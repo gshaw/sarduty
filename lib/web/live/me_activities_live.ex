@@ -132,9 +132,7 @@ defmodule Web.MeActivitiesLive do
         {Format.month_day(attendance.started_at, @team.timezone)}
       </:col>
       <:col :let={attendance} label="Activity">
-        <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>
-          {attendance.activity.title}
-        </.a>
+        <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>{attendance.activity.title}</.a>
       </:col>
       <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
         <.activity_kind_mark activity={attendance.activity} />

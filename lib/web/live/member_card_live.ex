@@ -159,9 +159,7 @@ defmodule Web.MemberCardLive do
           </div>
           <div :if={@qualifications == []}>
             None held.
-            <.a navigate={~p"/teams/#{@member.team}/endorsements"}>
-              Select endorsements to show
-            </.a>
+            <.a navigate={~p"/teams/#{@member.team}/endorsements"}>Select endorsements to show</.a>
           </div>
         </dd>
         <dt :if={BuildApplePass.configured?()}>Apple Wallet</dt>
@@ -178,9 +176,7 @@ defmodule Web.MemberCardLive do
         </dd>
       </dl>
       <p>
-        Anyone can verify this ID card at <.a id="card-verify-link" href={verify_url(@card)}>
-          {Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}
-        </.a>.
+        Anyone can verify this ID card at <.a id="card-verify-link" href={verify_url(@card)}>{Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}</.a>.
       </p>
       <.form_actions
         :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}

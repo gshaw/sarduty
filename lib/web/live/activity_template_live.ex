@@ -72,9 +72,9 @@ defmodule Web.ActivityTemplateLive do
             </:col>
           </.table>
           <p class="hint mt-4">
-            <.a navigate={~p"/teams/#{@current_team}/templates"}>
-              {if @templates == [], do: "Add a template", else: "Change templates"}
-            </.a>
+            <.a navigate={~p"/teams/#{@current_team}/templates"}>{if @templates == [],
+              do: "Add a template",
+              else: "Change templates"}</.a>
             for items, tags, and groups that go together.
           </p>
         </section>

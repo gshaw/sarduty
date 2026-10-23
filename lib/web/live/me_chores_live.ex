@@ -103,9 +103,7 @@ defmodule Web.MeChoresLive do
             :if={Chore.member_can_change?(chore)}
             id={"chore-change-#{chore.id}"}
             navigate={~p"/teams/#{@member.team}/me/chores/#{chore.id}/edit"}
-          >
-            Change
-          </.a>
+          >Change</.a>
           <.a
             :if={chore.status == :declined}
             id={"chore-delete-#{chore.id}"}
@@ -113,9 +111,7 @@ defmodule Web.MeChoresLive do
             phx-click="delete"
             phx-value-id={chore.id}
             data-confirm={"Delete #{chore.description}?"}
-          >
-            Delete
-          </.a>
+          >Delete</.a>
         </:col>
       </.table>
     </section>

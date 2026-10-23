@@ -99,9 +99,7 @@ defmodule Web.TaxCreditLetterLive do
           <dd>
             <.a navigate={
               ~p"/teams/#{@current_team}/members/#{@letter.member.id}?when=#{@letter.year}"
-            }>
-              {@letter.member.name}
-            </.a>
+            }>{@letter.member.name}</.a>
             <br />{@letter.member.email}
           </dd>
           <dt>Created</dt>

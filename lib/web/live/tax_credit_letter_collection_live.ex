@@ -115,9 +115,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
         <.a navigate={
           ~p"/teams/#{@current_team}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
-        }>
-          {record.member.name}
-        </.a>
+        }>{record.member.name}</.a>
       </:col>
       <:col :let={record} label="Email">
         {record.member.email}
@@ -211,9 +209,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp record_actions(assigns) do
     ~H"""
     <%= if @record.tax_credit_letter_id do %>
-      <.a navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}>
-        <span class="mono">{@record.tax_credit_letter_ref_id}</span>
-      </.a>
+      <.a
+        class="mono"
+        navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}
+      >{@record.tax_credit_letter_ref_id}</.a>
       <.badge
         :if={@record.letter_hours_status == :changed}
         id={"hours-changed-#{@record.tax_credit_letter_id}"}

@@ -117,14 +117,10 @@ defmodule Web.GroupLive do
       <dd>
         <ul id="group-actions" class="action-list">
           <li :if={D4H.records?(@team)}>
-            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>
-              Rename or delete
-            </.a>
+            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
-            <.a external={true} href={D4H.build_url(@team, "/team/members")}>
-              Open D4H members
-            </.a>
+            <.a external={true} href={D4H.build_url(@team, "/team/members")}>Open D4H members</.a>
           </li>
         </ul>
       </dd>
@@ -250,9 +246,7 @@ defmodule Web.GroupLive do
         </:col>
         <:col :let={change} label="Change">
           <span class={change.error && "text-danger-text"}>{change_verb(change)}</span>
-          <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}/qualifications"}>
-            {change.member.name}
-          </.a>
+          <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}/qualifications"}>{change.member.name}</.a>
           · {change.reason}
           <span :if={change.user}>· by {change.user.email}</span>
           <div :if={change.error} class="text-sm text-danger-text">{change.error}</div>
@@ -274,9 +268,7 @@ defmodule Web.GroupLive do
       <h3 class={["font-semibold mb-2", @title_class]}>{@title} ({length(@rows)})</h3>
       <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="table-striped">
         <:col :let={row} label="Member" class="md:w-1/3">
-          <.a navigate={~p"/teams/#{@team}/members/#{row.member.id}/qualifications"}>
-            {row.member.name}
-          </.a>
+          <.a navigate={~p"/teams/#{@team}/members/#{row.member.id}/qualifications"}>{row.member.name}</.a>
         </:col>
         <:col :let={row} label="Why">
           {row.reason}
@@ -299,9 +291,7 @@ defmodule Web.GroupLive do
       class="table-striped"
     >
       <:col :let={gm} label="Member">
-        <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>
-          {gm.member.name}
-        </.a>
+        <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>{gm.member.name}</.a>
       </:col>
     </.table>
     <p :if={@members == []} class="text-text-muted">No members in this group.</p>
