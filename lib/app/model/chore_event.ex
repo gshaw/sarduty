@@ -117,6 +117,13 @@ defmodule App.Model.ChoreEvent do
     |> Repo.all()
   end
 
+  @doc "How many of the team's events have changes to send."
+  def count_to_send(team_id) do
+    ChoreEvent
+    |> where([e], e.team_id == ^team_id and e.needs_send)
+    |> Repo.aggregate(:count)
+  end
+
   @doc "The D4H ids of the team's chore events."
   def d4h_activity_ids(team_id) do
     ChoreEvent

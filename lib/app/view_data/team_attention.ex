@@ -26,7 +26,9 @@ defmodule App.ViewData.TeamAttention do
       missing_details_item(rows.missing_details_count, rows.service),
       not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
-      proposed_changes_item(rows.proposed_change_count, rows.service)
+      proposed_changes_item(rows.proposed_change_count, rows.service),
+      chores_item(rows.chore_count),
+      chores_to_send_item(rows.chores_to_send, rows.service)
     ]
     |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
@@ -201,6 +203,47 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: "An AI agent proposed them. Nothing changes in #{name} until you send them.",
       action: "Review proposed changes"
+    }
+  end
+
+  defp chores_item(0), do: nil
+
+  # Members' chores wait for a team admin to accept them (#341).
+  defp chores_item(count) do
+    %{
+      key: :chores,
+      level: :info,
+      title: Format.count(count, one: "%d chore to accept", many: "%d chores to accept"),
+      detail: "Members logged them. They count once you accept them.",
+      action: "Review chores"
+    }
+  end
+
+  defp chores_to_send_item(%{ready: 0, changed: 0}, _service), do: nil
+
+  # Accepted chores, and changes to sent ones, wait for a team admin to send them (#341).
+  defp chores_to_send_item(%{ready: ready, changed: changed}, service) do
+    name = D4H.service_name(service)
+
+    title =
+      if ready > 0,
+        do:
+          Format.count(ready,
+            one: "%d chore to send to #{name}",
+            many: "%d chores to send to #{name}"
+          ),
+        else:
+          Format.count(changed,
+            one: "Changes to send for %d chore activity",
+            many: "Changes to send for %d chore activities"
+          )
+
+    %{
+      key: :chores_to_send,
+      level: :info,
+      title: title,
+      detail: "Send them when you are ready. Nothing goes to #{name} until you do.",
+      action: "Send chores"
     }
   end
 

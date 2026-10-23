@@ -8,15 +8,25 @@ defmodule App.ViewData.MemberToDo do
   - `:letter`: last year's tax credit letter, or this year's, until they download it, and
     only in letter season, January to April, when people file. The rest of the year it
     waits on Your membership.
+  - `:declined_chores`: their declined chores (#341), until they delete them.
   """
 
   @doc """
   Items in that order. `card` is the member's current card or nil, `letters` their tax
-  credit letters, and `rows` their qualifications from `MemberRecords.qualification_rows/2`.
+  credit letters, `rows` their qualifications from `MemberRecords.qualification_rows/2`,
+  and `chores` their chores.
   """
-  def items(card, in_wallet?, letters, rows, now, timezone) do
+  def items(card, in_wallet?, letters, rows, now, timezone, chores \\ []) do
     card_items(card, in_wallet?) ++
-      qualification_items(rows) ++ letter_items(letters, now, timezone)
+      qualification_items(rows) ++
+      declined_items(chores) ++ letter_items(letters, now, timezone)
+  end
+
+  defp declined_items(chores) do
+    case Enum.filter(chores, &(&1.status == :declined)) do
+      [] -> []
+      declined -> [%{key: :declined_chores, chores: declined}]
+    end
   end
 
   defp card_items(nil, _in_wallet?), do: []
