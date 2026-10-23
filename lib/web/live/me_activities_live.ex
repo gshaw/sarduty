@@ -97,7 +97,7 @@ defmodule Web.MeActivitiesLive do
           <.member_letter id="letter" team={@team} letter={@letter} year={@year} />
         </section>
         <section id="hours" class="card">
-          <header class="heading-row mb-2">
+          <header>
             <h2 class="chart-title">Hours in {@year}</h2>
             <span id="activity-count" class="hint">
               {Format.count(length(@attendances), one: "1 activity", many: "%d activities")}

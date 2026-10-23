@@ -53,6 +53,21 @@ defmodule Web.Components.Reply do
   end
 
   @doc """
+  A D4H status in the reply words, or in D4H's once the activity starts: "Signed up",
+  then "Attended".
+  """
+  def status_text("attending", false = _started?), do: "Signed up"
+  def status_text("attending", true), do: "Attended"
+  def status_text("absent", false), do: "Can't make it"
+  def status_text("absent", true), do: "Absent"
+  def status_text("requested", _started?), do: "No reply"
+
+  @doc ~s(A status's marker, the square before its words: "signed-up" for `.marker-signed-up`.)
+  def marker("attending"), do: "signed-up"
+  def marker("absent"), do: "cant-make-it"
+  def marker("requested"), do: "no-reply"
+
+  @doc """
   The signed up or attended count alone, for a line that has no room for the rest:
   "6 signed up", "6 attended".
   """

@@ -33,18 +33,20 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
   def render(assigns) do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:chore_categories} />
-    <div class="heading-row">
+    <.heading_row>
       <p class="lead measure">
         Members pick a category when they log a chore. Each send makes one D4H activity for each category and year.
       </p>
-      <.button
-        id="chore-category-add"
-        variant={:success}
-        navigate={~p"/teams/#{@current_team}/settings/chore-categories/new"}
-      >
-        Add category
-      </.button>
-    </div>
+      <:action>
+        <.button
+          id="chore-category-add"
+          variant={:success}
+          navigate={~p"/teams/#{@current_team}/settings/chore-categories/new"}
+        >
+          Add category
+        </.button>
+      </:action>
+    </.heading_row>
 
     <.table
       :if={@categories != []}

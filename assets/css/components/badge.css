@@ -56,6 +56,12 @@
   .marker-exercise { --c: var(--exercise); }
   .marker-event { --c: var(--event); }
 
+  /* A reply, and once the activity starts its attendance (#444): signed up or attended,
+     can't make it or absent, and a hollow square for no reply. */
+  .marker-signed-up { --c: var(--success-text); }
+  .marker-cant-make-it { --c: var(--compare); }
+  .marker-no-reply::before { background: none; box-shadow: inset 0 0 0 2px var(--border); }
+
   /* A chip: a choice in an editor, with a button that removes it. Red when it names
      something that no longer exists. */
   .chip { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-2); border-radius: var(--radius); background: var(--surface-alt); font-size: var(--fs-sm); line-height: var(--lh-sm); }

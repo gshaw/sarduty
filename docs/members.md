@@ -273,11 +273,13 @@ hidden data makes people suspicious).
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
   reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,
   SARVAC hours, the place with copy and the maps link, Add to calendar and Open D4H
-  activity, the tags, the map, the description, who signed up (coming) or attended
-  (past) with their times, and the equipment. Team admins also get Take attendance under
-  the title, History, which can hold contact details and addresses, the Actions, Add
-  equipment, and links to each member's and item's page. Members never see contact
-  details.
+  activity, the tags, the map, the description, Members, and the equipment. Team admins
+  also get Take attendance under the title, History, which can hold contact details and
+  addresses, the Actions, Add equipment, and links to each member's and item's page.
+  Members never see contact details.
+- **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for
+  anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
+  with no redirect.
 
 ### Replies
 
@@ -295,9 +297,14 @@ back. Replies close when the activity starts.
 - **Who replies**: the member the user logs in as, or a team admin's own member row. A
   team admin viewing as a member sees that member's reply, and a tap saves nothing.
 - **Not invited**: the counts alone, and nothing about invitations.
-- **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for
-  anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
-  with no redirect.
+- **Members**, under the map, lists everyone the activity invites
+  ([ActivityMembers](../lib/app/view_data/activity_members.ex)): a stat switch of All,
+  Signed up, Can't make it, and No reply (Attended, Absent, and No reply once it starts),
+  each count a filter, `?view=signed-up` and so on. Then one table, by reply and then
+  name: Name, Reply with its marker, Replied with New for the last 24 hours, and ID.
+  Once it starts, Attendance, Start, Finish, and Duration replace Reply and Replied.
+  Start shows a date only when it isn't the activity's day. A column every row would
+  repeat goes when one part is showing.
 
 ### View as member
 

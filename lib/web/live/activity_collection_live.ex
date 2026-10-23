@@ -39,16 +39,18 @@ defmodule Web.ActivityCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">Activities</h1>
-      <.button
-        :if={@team_admin? and D4H.records?(@current_team)}
-        id="activity-add"
-        navigate={~p"/teams/#{@current_team}/activities/new"}
-      >
-        Add activity
-      </.button>
-    </div>
+      <:action>
+        <.button
+          :if={@team_admin? and D4H.records?(@current_team)}
+          id="activity-add"
+          navigate={~p"/teams/#{@current_team}/activities/new"}
+        >
+          Add activity
+        </.button>
+      </:action>
+    </.heading_row>
 
     <.activity_filter_table
       form={@form}

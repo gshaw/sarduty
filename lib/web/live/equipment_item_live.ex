@@ -42,16 +42,18 @@ defmodule Web.EquipmentItemLive do
       <:item label="Equipment" path={~p"/teams/#{@current_team}/equipment"} />
       <:item label={@item.title} />
     </.breadcrumbs>
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">{@item.title}</h1>
-      <.button
-        :if={D4H.records?(@current_team)}
-        id="item-edit"
-        navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}
-      >
-        Change or delete
-      </.button>
-    </div>
+      <:action>
+        <.button
+          :if={D4H.records?(@current_team)}
+          id="item-edit"
+          navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}
+        >
+          Change or delete
+        </.button>
+      </:action>
+    </.heading_row>
 
     <div class="content-wrapper">
       <aside class="content-1/3">

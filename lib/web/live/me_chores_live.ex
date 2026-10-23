@@ -37,16 +37,18 @@ defmodule Web.MeChoresLive do
       <:item label="Your membership" path={~p"/teams/#{@member.team}/me"} />
       <:item label="Chores" />
     </.breadcrumbs>
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">Chores</h1>
-      <.button
-        id="chore-log"
-        variant={:success}
-        navigate={~p"/teams/#{@member.team}/me/chores/new"}
-      >
-        Log a chore
-      </.button>
-    </div>
+      <:action>
+        <.button
+          id="chore-log"
+          variant={:success}
+          navigate={~p"/teams/#{@member.team}/me/chores/new"}
+        >
+          Log a chore
+        </.button>
+      </:action>
+    </.heading_row>
     <p class="lead measure">
       Time you give the team outside activities, such as fixing equipment or admin. A team admin accepts each chore before it counts.
     </p>
@@ -74,10 +76,10 @@ defmodule Web.MeChoresLive do
     </div>
 
     <section :for={month <- @months} id={"chores-#{Date.to_iso8601(month.month)}"} class="mt-8">
-      <div class="heading-row">
+      <.heading_row>
         <h2 class="subheading">{Format.month_year_long(month.month)}</h2>
-        <span class="hint">{ChoreText.summary(month)}</span>
-      </div>
+        <:note>{ChoreText.summary(month)}</:note>
+      </.heading_row>
       <.table
         id={"chores-table-#{Date.to_iso8601(month.month)}"}
         rows={month.chores}

@@ -38,12 +38,14 @@ defmodule Web.EndorsementCollectionLive do
     <.breadcrumbs>
       <:item label="Endorsements" />
     </.breadcrumbs>
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">{@page_title}</h1>
-      <.button id="endorsement-add" navigate={~p"/teams/#{@current_team}/endorsements/new"}>
-        Add endorsement
-      </.button>
-    </div>
+      <:action>
+        <.button id="endorsement-add" navigate={~p"/teams/#{@current_team}/endorsements/new"}>
+          Add endorsement
+        </.button>
+      </:action>
+    </.heading_row>
 
     <.banner
       :if={@problems != []}

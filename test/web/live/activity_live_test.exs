@@ -94,6 +94,13 @@ defmodule Web.ActivityLiveTest do
   defp hours_from_now(hours),
     do: DateTime.utc_now() |> DateTime.add(hours, :hour) |> DateTime.truncate(:second)
 
+  defp row_ids(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find("#members-table tr")
+    |> Enum.flat_map(&Floki.attribute(&1, "id"))
+  end
+
   describe "an activity deleted in D4H" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
@@ -142,10 +149,10 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
       assert has_element?(lv, "h1", "Rope practice")
-      assert has_element?(lv, "#activity-people h2", "Attended · 2")
-      assert has_element?(lv, "#attendance_collection", "Casey Dhillon")
-      assert has_element?(lv, "#attendance_collection", "1h 30m")
-      refute has_element?(lv, "#attendance_collection a")
+      assert has_element?(lv, "#members-view-attended", "2")
+      assert has_element?(lv, "#members-table", "Casey Dhillon")
+      assert has_element?(lv, "#members-table", "1h 30m")
+      refute has_element?(lv, "#members-table a")
       assert has_element?(lv, "#activity-map circle")
       assert has_element?(lv, ".badge", "Rope")
       assert has_element?(lv, "dt", "SARVAC hours")
@@ -167,8 +174,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, member, %{started_at: starts})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
-      assert has_element?(lv, "#activity-people h2", "Signed up · 1")
-      assert has_element?(lv, "#attendance_collection", member.name)
+      assert has_element?(lv, "#member-row-#{member.id}", "Signed up")
     end
 
     test "an invited member replies under the title; Change brings the buttons back",
@@ -198,7 +204,7 @@ defmodule Web.ActivityLiveTest do
       assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
       assert has_element?(lv, "#activity-reply-state", "Signed up")
       assert has_element?(lv, "#activity-panel-counts", "1 signed up · 1 can't make it")
-      assert has_element?(lv, "#activity-people h2", "Signed up · 1")
+      assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Signed up")
       refute has_element?(lv, "#activity-reply-yes")
 
       lv |> element("#activity-reply-change") |> render_click()
@@ -230,6 +236,94 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(lv, "#activity-panel-counts", "1 attended · 1 no reply")
       refute has_element?(lv, "#activity-reply")
+    end
+
+    test "Members: counts that filter one table, by reply then name",
+         %{conn: conn, team: team, member: member} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(48)})
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      quinn = member_fixture(team, %{name: "Quinn Laval"})
+      avery = member_fixture(team, %{name: "Avery Chen"})
+      wren = member_fixture(team, %{name: "Wren Adams"})
+
+      attendance_fixture(activity, quinn, %{
+        status: "absent",
+        replied_at: DateTime.add(now, -3, :day)
+      })
+
+      attendance_fixture(activity, avery, %{
+        status: "attending",
+        replied_at: DateTime.add(now, -2, :hour)
+      })
+
+      attendance_fixture(activity, member, %{
+        status: "attending",
+        replied_at: DateTime.add(now, -2, :day)
+      })
+
+      attendance_fixture(activity, wren, %{status: "requested"})
+
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert row_ids(html) == Enum.map([avery, member, quinn, wren], &"member-row-#{&1.id}")
+      assert has_element?(lv, "#members-view-all", "4")
+      assert has_element?(lv, "#members-view-signed-up", "2")
+      assert has_element?(lv, "#members-view-cant-make-it .marker-cant-make-it", "Can't make it")
+      assert has_element?(lv, "#member-row-#{wren.id} .marker-no-reply", "No reply")
+      assert has_element?(lv, "#activity-members th", "Reply")
+      assert has_element?(lv, "#member-row-#{avery.id} .badge-primary", "New")
+      refute has_element?(lv, "#member-row-#{member.id} .badge", "New")
+      refute has_element?(lv, "#members-heading", "·")
+
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=signed-up")
+      assert row_ids(html) == Enum.map([avery, member], &"member-row-#{&1.id}")
+      assert has_element?(lv, "#members-view-signed-up[aria-current=page]")
+      refute has_element?(lv, "#activity-members th", "Reply")
+      assert has_element?(lv, "#activity-members th", "Replied")
+
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
+      assert row_ids(html) == ["member-row-#{wren.id}"]
+      refute has_element?(lv, "#activity-members th", "Replied")
+    end
+
+    test "Members once it starts: D4H's words and each member's times",
+         %{conn: conn, team: team, member: member} do
+      started = hours_from_now(-3)
+
+      activity =
+        activity_fixture(team, %{
+          started_at: started,
+          finished_at: DateTime.add(started, 3, :hour)
+        })
+
+      late = member_fixture(team, %{name: "Morgan Singh"})
+      away = member_fixture(team, %{name: "Quinn Laval"})
+      attendance_fixture(activity, member, %{started_at: started})
+      attendance_fixture(activity, late, %{started_at: DateTime.add(started, 1, :day)})
+      attendance_fixture(activity, away, %{status: "absent"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#members-view-attended", "2")
+      assert has_element?(lv, "#members-view-absent", "Absent")
+      assert has_element?(lv, "#activity-members th", "Attendance")
+      refute has_element?(lv, "#activity-members th", "Replied")
+      assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Attended")
+
+      start = Service.Format.time_short(started, team.timezone)
+      assert has_element?(lv, "#member-row-#{member.id} td", start)
+
+      next_day = DateTime.add(started, 1, :day)
+
+      assert has_element?(
+               lv,
+               "#member-row-#{late.id} td",
+               Service.Format.month_day_time(next_day, team.timezone)
+             )
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=absent")
+      refute has_element?(lv, "#activity-members th", "Start")
+      assert has_element?(lv, "#member-row-#{away.id}")
     end
 
     test "every activity D4H has, incidents too; a deleted one is a 404",

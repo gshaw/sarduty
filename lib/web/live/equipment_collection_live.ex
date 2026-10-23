@@ -110,9 +110,9 @@ defmodule Web.EquipmentCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">{@page_title}</h1>
-      <div class="flex gap-2">
+      <:action>
         <.button
           :if={D4H.records?(@current_team)}
           id="equipment-add"
@@ -121,8 +121,8 @@ defmodule Web.EquipmentCollectionLive do
         >
           Add item
         </.button>
-      </div>
-    </div>
+      </:action>
+    </.heading_row>
 
     <.stat_switch :if={@rows != []} id="equipment-switch" label="Show">
       <:view

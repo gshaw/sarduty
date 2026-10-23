@@ -47,17 +47,15 @@ defmodule Web.AdminDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">Teams</h1>
-      <div class="flex items-center gap-4">
-        <span id="refresh-summary" class="hint">
-          {refresh_summary(@teams)}
-        </span>
+      <:note><span id="refresh-summary">{refresh_summary(@teams)}</span></:note>
+      <:action>
         <.button type="button" variant={:warning} phx-click="refresh-all">
           Refresh all teams
         </.button>
-      </div>
-    </div>
+      </:action>
+    </.heading_row>
     <.table id="teams" rows={@teams} row_id={&"team-#{&1.id}"} class="table-striped">
       <:col :let={team} label="Team">
         <div class="media items-start">
