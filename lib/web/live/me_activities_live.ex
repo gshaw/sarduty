@@ -51,6 +51,11 @@ defmodule Web.MeActivitiesLive do
     {:noreply, socket}
   end
 
+  def handle_event("year", %{"year" => year}, socket),
+    do:
+      {:noreply,
+       push_patch(socket, to: ~p"/teams/#{socket.assigns.team}/me/activities?year=#{year}")}
+
   # The Dashboard's map, with only the activities the member attended that year.
   defp where_they_went(attendances, team, now) do
     attendances
@@ -84,7 +89,7 @@ defmodule Web.MeActivitiesLive do
       <:item label="Activities" />
     </.breadcrumbs>
     <h1 class="title">Your activities in {@year}</h1>
-    <.year_switch years={@years} year={@year} path={~p"/teams/#{@team}/me/activities"} />
+    <.year_menu years={@years} year={@year} />
 
     <div class="card-grid mt-6 mb-6">
       <div class={["card-stack", @map && "span-7"]}>

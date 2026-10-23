@@ -4,7 +4,7 @@ defmodule Web.QualificationLive do
   import Ecto.Query
 
   import Web.Components.FilterBar
-  import Web.Components.ViewSwitch
+  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.GroupMember
@@ -15,7 +15,7 @@ defmodule Web.QualificationLive do
   alias App.ViewModel.QualificationFilterViewModel
   alias Service.StringHelpers
 
-  @views ["active", "expired"]
+  @views ["active", "expired", "all"]
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -41,7 +41,7 @@ defmodule Web.QualificationLive do
 
     view = String.to_existing_atom(filter_options.view)
     q = filter_options.q || ""
-    awards = if view == :active, do: active_awards, else: expired_awards
+
     group_member_ids = GroupMember.member_ids(current_team.id, filter_options.group)
 
     assign(socket,
@@ -49,17 +49,28 @@ defmodule Web.QualificationLive do
       qualification: qualification,
       active_awards: active_awards,
       expired_awards: expired_awards,
+      expired_ids: MapSet.new(expired_awards, & &1.id),
       filter_options: filter_options,
       view: view,
       q: q,
       form: to_form(changeset, as: "form"),
       awards:
-        Enum.filter(
-          awards,
-          &(StringHelpers.matches?(&1.member.name, q) and
-              (is_nil(group_member_ids) or MapSet.member?(group_member_ids, &1.member.id)))
-        )
+        view
+        |> view_awards(active_awards, expired_awards)
+        |> Enum.filter(&shown?(&1, q, group_member_ids))
     )
+  end
+
+  # All is each member's latest award, so a member is in it once, by name.
+  defp view_awards(:active, active_awards, _expired_awards), do: active_awards
+  defp view_awards(:expired, _active_awards, expired_awards), do: expired_awards
+
+  defp view_awards(:all, active_awards, expired_awards),
+    do: Enum.sort_by(active_awards ++ expired_awards, & &1.member.name)
+
+  defp shown?(award, q, group_member_ids) do
+    StringHelpers.matches?(award.member.name, q) and
+      (is_nil(group_member_ids) or MapSet.member?(group_member_ids, award.member.id))
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do
@@ -128,6 +139,7 @@ defmodule Web.QualificationLive do
           active_count={length(@active_awards)}
           expired_count={length(@expired_awards)}
           awards={@awards}
+          expired_ids={@expired_ids}
           view={@view}
           q={@q}
           form={@form}
@@ -173,6 +185,33 @@ defmodule Web.QualificationLive do
 
   defp main_content(assigns) do
     ~H"""
+    <.stat_switch label="Awards">
+      <:view
+        id="awards-all-link"
+        patch={awards_path(@team, @qualification, @filter_options, view: "all")}
+        current={@view == :all}
+        count={@active_count + @expired_count}
+      >
+        All
+      </:view>
+      <:view
+        id="awards-active-link"
+        patch={awards_path(@team, @qualification, @filter_options, view: "active")}
+        current={@view == :active}
+        count={@active_count}
+      >
+        Active
+      </:view>
+      <:view
+        id="awards-expired-link"
+        patch={awards_path(@team, @qualification, @filter_options, view: "expired")}
+        current={@view == :expired}
+        count={@expired_count}
+      >
+        Expired
+      </:view>
+    </.stat_switch>
+
     <.filter_bar
       for={@form}
       id="award_filter_form"
@@ -180,26 +219,6 @@ defmodule Web.QualificationLive do
       clear={awards_path(@team, @qualification, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&awards_path(@team, @qualification, @filter_options, &1)}
     >
-      <:lead>
-        <.view_switch label="Awards">
-          <:view
-            id="awards-active-link"
-            patch={awards_path(@team, @qualification, @filter_options, view: "active")}
-            current={@view == :active}
-            count={@active_count}
-          >
-            Active
-          </:view>
-          <:view
-            id="awards-expired-link"
-            patch={awards_path(@team, @qualification, @filter_options, view: "expired")}
-            current={@view == :expired}
-            count={@expired_count}
-          >
-            Expired
-          </:view>
-        </.view_switch>
-      </:lead>
       <:search field={@form[:q]} />
       <:filter
         field={@form[:group]}
@@ -215,6 +234,7 @@ defmodule Web.QualificationLive do
       id={"#{@view}_awards"}
       rows={@awards}
       class="table-striped"
+      row_class={&(@view == :all and MapSet.member?(@expired_ids, &1.id) and "is-muted")}
     >
       <:col :let={award} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>
@@ -236,7 +256,7 @@ defmodule Web.QualificationLive do
       Change the search or the group.
     </.empty_state>
     <p :if={@awards == [] and !filtered?(@filter_options)} class="text-text-muted">
-      No {@view} awards.
+      {if @view == :all, do: "No awards.", else: "No #{@view} awards."}
     </p>
     """
   end

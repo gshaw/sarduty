@@ -35,6 +35,11 @@ defmodule Web.QualificationLiveTest do
     lv |> element("#awards-expired-link") |> render_click()
     assert has_element?(lv, "#expired_awards", "Bob Expired")
     refute has_element?(lv, "#expired_awards", "Alice Active")
+
+    assert has_element?(lv, "#awards-all-link", "2")
+    lv |> element("#awards-all-link") |> render_click()
+    assert has_element?(lv, "#all_awards tr:not(.is-muted)", "Alice Active")
+    assert has_element?(lv, "#all_awards tr.is-muted", "Bob Expired")
   end
 
   test "search finds members in the view (#350)", %{conn: conn} do

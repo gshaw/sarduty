@@ -17,8 +17,8 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Phone, only: [call_and_text: 1]
   import Web.Components.RowLink
   import Web.Components.Scanner
+  import Web.Components.StatSwitch
   import Web.Components.Table
-  import Web.Components.ViewSwitch
 
   alias Web.StyleGuideHTML.SampleData
 
@@ -87,12 +87,12 @@ defmodule Web.StyleGuideHTML do
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
+         {:stat_switch, "Stat switch", "A list's split as counts, each one a filter."},
          {:table, "Table", "Dense rows, sorting, header groups, and row groups."},
          {:tabs, "Tabs", "Pages about one record, a link each."},
          {:tag, "Tag", "A word or two of status."},
          {:toast, "Toast", "The result of what the person did. It comes and goes."},
          {:top_bar, "Top bar", "The main sections and the account menu."},
-         {:view_switch, "View switch", "Switches a list between a few views, with counts."},
          {:warning_text, "Warning text", "A consequence people must know before they act."}
        ]},
       {:patterns, "Patterns", "Whole screens from the app, built from the components.",

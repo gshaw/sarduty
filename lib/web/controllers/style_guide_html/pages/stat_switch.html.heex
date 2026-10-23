@@ -1,0 +1,83 @@
+<.shell title="Stat switch" current={:stat_switch}>
+  <h1>Stat switch</h1>
+  <p class="lead">A list's split as counts, each one a filter.</p>
+
+  <div class="demo">
+    <.stat_switch label="Awards">
+      <:view patch="#" count={171}>All</:view>
+      <:view patch="#" current={true} count={131}>Active</:view>
+      <:view patch="#" count={40}>Expired</:view>
+    </.stat_switch>
+    <.filter_bar
+      for={sample_filters()}
+      id="stat-switch-demo"
+      count="131 members"
+      onsubmit="return false"
+    >
+      <:search field={sample_filters()[:q]} />
+    </.filter_bar>
+  </div>
+
+  <h3>With markers</h3>
+  <div class="demo">
+    <.stat_switch label="Kind">
+      <:view patch="#" current={true} count={212}>All</:view>
+      <:view patch="#" count={70} marker="incident">Incidents</:view>
+      <:view patch="#" count={98} marker="exercise">Exercises</:view>
+      <:view patch="#" count={44} marker="event">Events</:view>
+    </.stat_switch>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A list that splits one obvious way into 2 to 5 parts, where how many are in each part is
+    worth knowing: a qualification's active and expired awards, or who signed up for an
+    activity. Each part shows the same columns.
+  </p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>More than 5 parts. Use a menu in a <a href={page_path(:filter_bar)}>filter bar</a>.</li>
+    <li>
+      Parts that need their own columns or their own button, such as the door's arrivals and
+      no-shows. Give each its own section.
+    </li>
+    <li>Pages about one record. Use <a href={page_path(:tabs)}>tabs</a>.</li>
+    <li>Numbers that don't filter anything. Use a <a href={page_path(:stat)}>stat</a>.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      Each count is a link that patches the page, so the URL says which part is showing.
+      The current one is underlined in primary, as a sorted column is.
+    </li>
+    <li>All comes first. A page can open on another part, as awards open on Active.</li>
+    <li>
+      A count is the rows in its part before the search, and after any other filter. A part
+      with none shows a grey 0 and stays selectable.
+    </li>
+    <li>
+      When the rows show their part with a marker, the count's label has the same one. The
+      list's headings carry no counts.
+    </li>
+    <li>
+      With one part showing, drop a column that would say the same thing on every row. In
+      All, grey a part kept for history, such as expired awards.
+    </li>
+    <li>A filter bar goes under it, and searches within the part showing.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.stat_switch label="…"&gt;</code>
+    with a <code>:view</code>
+    slot per part, each with its <code>patch</code>, <code>current</code>, and <code>count</code>, and a
+    <code>marker</code>
+    for a coloured square, such as <code>marker="incident"</code>. The square is
+    <code>.marker</code>
+    and a <code>.marker-…</code>
+    class that sets <code>--c</code>, in <code>badge.css</code>
+    beside the <a href={page_path(:tag)}>tags</a>.
+  </p>
+</.shell>

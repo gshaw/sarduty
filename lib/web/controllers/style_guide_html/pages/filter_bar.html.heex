@@ -50,9 +50,7 @@
   <h2>When not to use</h2>
   <ul>
     <li>
-      A list of a few dozen rows. Leave it plain, or give it a search box and a <a href={
-        page_path(:view_switch)
-      }>view switch</a>.
+      A list of a few dozen rows. Leave it plain, or give it a search box.
     </li>
     <li>
       Sorting. The column headers sort a <a href={page_path(:table)}>table</a>, so there is no sort menu.
@@ -86,9 +84,9 @@
     with a <code>:search</code>
     slot and a <code>:filter</code>
     slot per menu, each with its <code>default</code>, and <code>more</code>
-    on the ones that can wait behind More filters. A <code>:lead</code>
-    slot puts a view switch first. Put a long menu, such as groups, in a
-    <code>type="combobox"</code>
+    on the ones that can wait behind More filters. A
+    <a href={page_path(:stat_switch)}>stat switch</a>
+    goes above it. Put a long menu, such as groups, in a <code>type="combobox"</code>
     filter. Give the sort to <code>hidden</code>
     so a change keeps it. It is a <code>&lt;.filter_form&gt;</code>, which sends
     <code>change</code>
