@@ -281,7 +281,7 @@ defmodule Web.MeLive do
     ~H"""
     <div id="contact-details">
       <h2 class="chart-title mb-1">Contact details</h2>
-      <dl class="mb-3">
+      <dl>
         <dt>Mobile</dt>
         <dd id="contact-mobile">{@member.phone || "None"}</dd>
         <dt>Address</dt>

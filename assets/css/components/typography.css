@@ -33,7 +33,9 @@
   dl { margin-bottom: var(--sp-4); }
   dt { font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
   dd { margin-bottom: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border-subtle); }
-  dl > dd:last-child { border-bottom: 0; }
+  /* The last row has no line under it, so none of the line's space either: the list's
+     own margin sets the gap to what follows, such as an action link. */
+  dl > dd:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: 0; }
 
   /* Groups related definition list items. */
   .dl-section { margin-bottom: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border-subtle); }
