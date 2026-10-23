@@ -4,7 +4,7 @@ defmodule Web.QualificationCollectionLive do
   import Ecto.Query
 
   import Web.Components.FilterBar
-  import Web.Components.ViewSwitch
+  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.GroupMember
@@ -116,6 +116,25 @@ defmodule Web.QualificationCollectionLive do
       </.button>
     </div>
 
+    <.stat_switch label="Qualifications">
+      <:view
+        id="qualifications-all-link"
+        patch={qualifications_path(@current_team, @filter_options, view: "all")}
+        current={@view == :all}
+        count={@all_count}
+      >
+        All
+      </:view>
+      <:view
+        id="qualifications-expiring-link"
+        patch={qualifications_path(@current_team, @filter_options, view: "expiring")}
+        current={@view == :expiring}
+        count={@expiring_count}
+      >
+        Expiring in {Service.Format.days(@filter_options.within)}
+      </:view>
+    </.stat_switch>
+
     <.filter_bar
       for={@form}
       id="qualification_filter_form"
@@ -123,26 +142,6 @@ defmodule Web.QualificationCollectionLive do
       clear={qualifications_path(@current_team, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&qualifications_path(@current_team, @filter_options, &1)}
     >
-      <:lead>
-        <.view_switch label="Qualifications">
-          <:view
-            id="qualifications-all-link"
-            patch={qualifications_path(@current_team, @filter_options, view: "all")}
-            current={@view == :all}
-            count={@all_count}
-          >
-            All
-          </:view>
-          <:view
-            id="qualifications-expiring-link"
-            patch={qualifications_path(@current_team, @filter_options, view: "expiring")}
-            current={@view == :expiring}
-            count={@expiring_count}
-          >
-            Expiring in {Service.Format.days(@filter_options.within)}
-          </:view>
-        </.view_switch>
-      </:lead>
       <:search field={@form[:q]} />
       <:filter
         :if={@view == :expiring}

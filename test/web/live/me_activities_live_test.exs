@@ -124,8 +124,8 @@ defmodule Web.MeActivitiesLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
 
-    for y <- year..(year - 3)//-1, do: assert(has_element?(lv, "#year-#{y}"))
-    refute has_element?(lv, "#year-#{year - 4}")
+    for y <- year..(year - 3)//-1, do: assert(has_element?(lv, ~s|#year option[value="#{y}"]|))
+    refute has_element?(lv, ~s|#year option[value="#{year - 4}"]|)
   end
 
   test "switches to an earlier year the member attended in",
@@ -137,7 +137,7 @@ defmodule Web.MeActivitiesLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
     assert has_element?(lv, "#no-attendance")
 
-    lv |> element("#year-#{year - 1}") |> render_click()
+    lv |> form("#years", %{year: year - 1}) |> render_change()
 
     assert_patch(lv, ~p"/teams/#{team}/me/activities?year=#{year - 1}")
     assert has_element?(lv, "#attendance-#{attendance.id}", "Last year's search")

@@ -77,8 +77,10 @@
       A tag that counts, such as days left, takes its words from <code>Service.Format</code>.
     </li>
     <li>
-      A column where every row has a tag is too loud. Show the D4H kind there as a marker, and
-      fold D4H's primary and secondary hours tags into the Hours column as a word.
+      A column where every row has a tag is too loud. Use a marker there, a coloured square
+      and the word, as the D4H kind does, and fold D4H's primary and secondary hours tags
+      into the Hours column as a word. A <a href={page_path(:stat_switch)}>stat switch</a>
+      over the list shows the same marker beside each count.
     </li>
     <li>
       Several tags together sit in a <code>.badges</code>
@@ -90,6 +92,10 @@
   <p>
     <code>&lt;.badge kind=&#123;:warning&#125;&gt;</code>, and
     <code>&lt;.activity_kind activity=&#123;…&#125; /&gt;</code>
-    for the marker. The kind is checked when the app compiles.
+    for the kind's marker. The kind is checked when the app compiles. Any other marker is <code>&lt;span class="marker marker-…"&gt;</code>, with a
+    <code>.marker-…</code>
+    class in <code>badge.css</code>
+    that sets <code>--c</code>
+    to a colour token.
   </p>
 </.shell>

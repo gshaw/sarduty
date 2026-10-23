@@ -46,8 +46,6 @@ defmodule Web.Components.FilterBar do
   attr :hidden, :list, default: [], doc: "fields the form keeps but doesn't show, such as sort"
   attr :rest, :global, doc: "more attributes for the form"
 
-  slot :lead, doc: "something before the search box, such as a view switch"
-
   slot :search do
     attr :field, Phoenix.HTML.FormField, required: true
     attr :placeholder, :string
@@ -86,7 +84,6 @@ defmodule Web.Components.FilterBar do
     ~H"""
     <.filter_form for={@for} id={@id} class="filter-bar" {@rest}>
       <input :for={field <- @hidden} type="hidden" name={field.name} value={field.value} />
-      {render_slot(@lead)}
       <div :for={search <- @search} class="filter-bar-search">
         <.icon name="hero-magnifying-glass-mini" class="filter-bar-search-icon" />
         <input

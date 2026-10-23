@@ -31,10 +31,11 @@
     font-weight: 400;
   }
 
-  /* The D4H kind in a table column: a small square in D4H's colour and the word. */
-  .activity-kind { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+  /* A marker: a small square in a colour, then the word. A column where every row has a
+     tag uses it, as the D4H kind does, and so does a stat switch's label for those rows. */
+  .marker { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 
-  .activity-kind::before {
+  .marker::before {
     content: "";
     width: 10px;
     height: 10px;
@@ -45,11 +46,11 @@
   }
 
   /* Draft and the tracking number under the marker start where its word does. */
-  .activity-kind-more { margin-top: var(--sp-1); padding-left: calc(10px + 6px); }
+  .marker-more { margin-top: var(--sp-1); padding-left: calc(10px + 6px); }
 
-  .activity-kind-incident { --c: var(--incident); }
-  .activity-kind-exercise { --c: var(--exercise); }
-  .activity-kind-event { --c: var(--event); }
+  .marker-incident { --c: var(--incident); }
+  .marker-exercise { --c: var(--exercise); }
+  .marker-event { --c: var(--event); }
 
   /* A chip: a choice in an editor, with a button that removes it. Red when it names
      something that no longer exists. */

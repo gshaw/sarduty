@@ -84,7 +84,7 @@ defmodule Web.Components.D4H do
   # The kind as a marker in D4H's colour, for lists where every row has one.
   def activity_kind_mark(assigns) do
     ~H"""
-    <span class={["activity-kind", "activity-kind-#{@activity.activity_kind}", @class]}>
+    <span class={["marker", "marker-#{@activity.activity_kind}", @class]}>
       {String.capitalize(@activity.activity_kind)}
     </span>
     """
@@ -97,10 +97,10 @@ defmodule Web.Components.D4H do
   def activity_kind(assigns) do
     ~H"""
     <.activity_kind_mark activity={@activity} />
-    <div :if={!@activity.is_published} class="activity-kind-more">
+    <div :if={!@activity.is_published} class="marker-more">
       <.badge>Draft</.badge>
     </div>
-    <div :if={@activity.tracking_number} class="activity-kind-more mono text-text-muted">
+    <div :if={@activity.tracking_number} class="marker-more mono text-text-muted">
       {@activity.tracking_number}
     </div>
     """
