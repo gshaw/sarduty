@@ -50,10 +50,12 @@ does in the app. The page-text rules skip anything inside one. --%>
   /* The app's bar, menu, and toasts are fixed or floating in the app. Here they sit in place. */
   .demo .site-bar { position: relative; }
   .bar-demo { padding-bottom: 320px !important; }
-  /* The phone bar at any window width: the menu button, not the links. */
-  .phone-bar-demo :is(.site-bar-links, .site-bar-menu) { display: none; }
+  /* The phone bar at any window width: Menu, the logo over the name, the avatar. */
+  .phone-bar-demo :is(.site-bar-links, .team-switcher) { display: none; }
+  .phone-bar-demo .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
   .phone-bar-demo .site-bar-phone { display: block; }
   .phone-bar-demo .site-bar-area-phone { display: flex; }
+  .phone-bar-demo .account-menu { margin-left: auto; }
   .phone-bar-demo { padding-bottom: 1000px !important; }
   .demo .toasts { position: static; width: auto; max-width: 400px; }
   .phone-width { max-width: 390px; }

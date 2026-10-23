@@ -76,10 +76,10 @@ is left out, and so is its divider.
   are a team admin or a member, A to Z, one row per team (`Navigation.switch_rows/4`). The
   team you're on is marked, and each row goes to the team's Dashboard; a team opened from Admin › Teams that isn't yours marks
   nothing. With one place to be, the name is plain text.
-- **Your avatar, top right**: your initials in a circle, from the name of the member you
-  log in as, or else your email (`Navigation.person/3`). It opens your name and email,
-  Account settings, and Log out. It is the same on every team, and Your membership is not
-  in it.
+- **Your avatar, top right** at every width: your initials in a circle, from the name of
+  the member you log in as, or else your email (`Navigation.person/3`). It opens your name
+  and email, Account settings, and Log out. It is the same on every team, and Your
+  membership is not in it.
 
 ## Rules
 
@@ -87,10 +87,13 @@ is left out, and so is its divider.
   first page (Dashboard, Teams) is current only on itself.
 - Breadcrumbs start at the section, never the team, and a section's own page has none.
   A record's tabs sit under its title, above both columns.
-- Below 1024px the side navigation and the account menu hide. The Menu button holds
-  Switch team and its rows (only with somewhere else to go), a divider, the side
-  navigation's sections with their dividers, a divider, then your avatar with your name
-  and email, Account settings, and Log out.
+- Below 1024px the side navigation and the team switcher hide (#471). The Menu button
+  moves to the left of the bar, the logo sits over the area's name in the middle, and
+  your avatar stays on the right with the same account menu. Menu holds Switch team and
+  its rows (only with somewhere else to go), a divider, then the side navigation's
+  sections with their dividers. With neither, there is no Menu button.
+- Search (#471) is in the bar but commented out until it has a page: a field before the
+  avatar on a desktop, an icon below 1024px.
 
 ## Adding a page
 

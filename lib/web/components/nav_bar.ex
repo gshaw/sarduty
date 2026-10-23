@@ -30,9 +30,10 @@ defmodule Web.Components.NavBar do
   attr :waiting?, :boolean, default: false, doc: "a link inside has a count"
   slot :inner_block, required: true
 
-  # Below 1024px the bar's links and account menu move behind this button. The panel opens
-  # under the bar, and live navigation renders the page again, which closes it. An amber
-  # dot says a link inside has something waiting, such as proposed changes.
+  # Below 1024px the bar's switcher and the area's pages move behind this button, on the
+  # left of the bar. The panel opens under the bar, and live navigation renders the page
+  # again, which closes it. An amber dot says a link inside has something waiting, such as
+  # proposed changes.
   def site_bar_phone_menu(assigns) do
     ~H"""
     <details id="phone-menu" class="site-bar-phone group">

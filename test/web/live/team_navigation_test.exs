@@ -112,7 +112,7 @@ defmodule Web.TeamNavigationTest do
     refute has_element?(lv, "#side-nav-admin-teams[aria-current]")
   end
 
-  test "phones get the switcher, the area's pages, and the account menu behind a Menu button",
+  test "phones get the switcher and the area's pages behind a Menu button, and keep the avatar",
        %{conn: conn, user: user, team: team} do
     team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
     make_admin(user)
@@ -130,9 +130,19 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, "#phone-menu #phone-nav-me", "Your membership")
     assert has_element?(lv, "#phone-menu #phone-switch-admin")
     assert has_element?(lv, "#phone-menu #phone-switch-team-#{team.subdomain}[aria-current=page]")
-    assert has_element?(lv, "#phone-menu .menu-note", user.email)
-    assert has_element?(lv, ~s{#phone-menu #phone-nav-account-settings[href="/account"]})
-    assert has_element?(lv, ~s{#phone-menu #phone-nav-log-out[href="/logout"]})
+    assert has_element?(lv, "#phone-nav-area .brand")
+    refute has_element?(lv, "#phone-menu .menu-person")
+    refute has_element?(lv, "#phone-menu a[href='/logout']")
+    assert has_element?(lv, "#account-menu .menu-note", user.email)
+    assert has_element?(lv, ~s{#account-menu #nav-log-out[href="/logout"]})
+  end
+
+  test "with no pages and nowhere to switch to, there is no Menu button, only the avatar" do
+    user = App.AccountsFixtures.user_fixture()
+    {:ok, lv, _html} = live(log_in_user(build_conn(), user), ~p"/account")
+
+    assert has_element?(lv, "#account-menu .menu-note", user.email)
+    refute has_element?(lv, "#phone-menu")
   end
 
   test "a section's own page has no breadcrumbs; a record's starts at its section",
