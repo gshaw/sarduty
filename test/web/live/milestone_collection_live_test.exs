@@ -45,8 +45,10 @@ defmodule Web.MilestoneCollectionLiveTest do
     attend_incident(team, sam, "Missing hiker", 10)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/milestones?member=#{sam.id}&when=all")
-    assert has_element?(lv, "#milestone-view-incidents", "Incident milestones")
-    assert has_element?(lv, "#milestone-view-years", "Anniversaries")
+    assert has_element?(lv, "#milestone-view-all", "Milestones")
+    assert has_element?(lv, "#milestone-view-incidents .hero-lifebuoy-micro")
+    assert has_element?(lv, "#milestone-view-years .hero-cake-micro")
+    assert has_element?(lv, "#milestones-#{sam.id}-incidents-1 .hero-lifebuoy-micro")
     assert has_element?(lv, "#milestone-view-incidents", "1")
     assert has_element?(lv, "#milestone-view-all[aria-current]")
 

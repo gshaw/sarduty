@@ -72,6 +72,7 @@ defmodule Web.MilestoneCollectionLive do
         patch={@path_fn.(kind: if(kind == "", do: nil, else: kind), page: nil)}
         current={(@filter_options.kind || "") == kind}
         count={Map.get(@kind_counts, kind, 0)}
+        icon={kind != "" && MilestoneList.icon_name(String.to_existing_atom(kind), :micro)}
       >
         {label}
       </:view>
@@ -117,8 +118,15 @@ defmodule Web.MilestoneCollectionLive do
           {milestone.member.name}
         </.a>
       </:col>
+      <%!-- The kind's icon, as on its count; not on a phone, where the column would overflow. --%>
       <:col :let={milestone} label="Milestone" class="whitespace-nowrap">
-        {MilestoneList.title(milestone)}
+        <span class="icon-label">
+          <.icon
+            name={MilestoneList.icon_name(milestone.kind, :micro)}
+            class="text-text-muted max-md:hidden"
+          />
+          {MilestoneList.title(milestone)}
+        </span>
       </:col>
       <%!-- Plain text: which activity tipped a total over a line is chance (/styles). --%>
       <:col :let={milestone} label="Activity" class="max-md:hidden">

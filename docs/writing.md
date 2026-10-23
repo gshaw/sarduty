@@ -176,7 +176,6 @@ and must not be used for it.
 | published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H does not let SAR Duty change its tags.                          |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | award                          | held qualification, grant, cert                | One member's hold on a qualification, from its start to its expiry if any. A renewal is a new award. |
-| anniversary                    | years milestone, service award                 | A member's years on the team reaching a milestone, such as 10 years.                                 |
 | certificate                    | proof, card, qualification                     | The paper or PDF proof of a course, which a team admin records in D4H as a qualification.            |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
 | group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in or not in groups or endorsements, or a standing.   |

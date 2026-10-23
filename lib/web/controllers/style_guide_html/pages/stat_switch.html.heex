@@ -29,6 +29,16 @@
     </.stat_switch>
   </div>
 
+  <h3>With icons</h3>
+  <div class="demo">
+    <.stat_switch label="Kind">
+      <:view patch="#" current={true} count={52}>Milestones</:view>
+      <:view patch="#" count={9} icon="hero-clock-micro">Hours</:view>
+      <:view patch="#" count={27} icon="hero-cake-micro">Years</:view>
+      <:view patch="#" count={16} icon="hero-lifebuoy-micro">Incidents</:view>
+    </.stat_switch>
+  </div>
+
   <h2>When to use</h2>
   <p>
     A list that splits one obvious way into 2 to 5 parts, where how many are in each part is
@@ -67,8 +77,9 @@
       with none shows a grey 0 and stays selectable.
     </li>
     <li>
-      When the rows show their part with a marker, the count's label has the same one. The
-      list's headings carry no counts.
+      When the rows show their part with a marker or an icon, the count's label has the same
+      one. Milestones name what all the counts count in the first tile, and each kind has its
+      icon, so "9 Hours" reads as nine milestones. The list's headings carry no counts.
     </li>
     <li>
       With one part showing, drop a column that would say the same thing on every row. In
@@ -92,6 +103,8 @@
     <code>.marker</code>
     and a <code>.marker-…</code>
     class that sets <code>--c</code>, in <code>badge.css</code>
-    beside the <a href={page_path(:tag)}>tags</a>.
+    beside the <a href={page_path(:tag)}>tags</a>. An <code>icon</code>
+    such as <code>icon="hero-clock-micro"</code>
+    puts an icon there instead; the rows show the same one in an <code>.icon-label</code>.
   </p>
 </.shell>

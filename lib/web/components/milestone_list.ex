@@ -19,7 +19,7 @@ defmodule Web.Components.MilestoneList do
     ~H"""
     <ul id={@id} class="milestone-list">
       <li :for={milestone <- @milestones} id={"#{@id}-#{milestone.kind}-#{milestone.count}"}>
-        <span class="milestone-icon"><.icon name={icon_name(milestone.kind)} /></span>
+        <span class="milestone-icon"><.icon name={icon_name(milestone.kind, :mini)} /></span>
         <span class="min-w-0">
           <span class="block font-semibold">
             {title(milestone)}
@@ -37,9 +37,16 @@ defmodule Web.Components.MilestoneList do
   defp new?(_milestone, nil), do: false
   defp new?(milestone, today), do: Date.diff(today, milestone.on) <= @new_days
 
-  defp icon_name(:hours), do: "hero-clock-mini"
-  defp icon_name(:years), do: "hero-cake-mini"
-  defp icon_name(:incidents), do: "hero-lifebuoy-mini"
+  @doc """
+  The kind's icon: `:mini` in the list, `:micro` beside a word. Written out in full, as
+  Tailwind builds only the icon classes it finds in the source.
+  """
+  def icon_name(:hours, :mini), do: "hero-clock-mini"
+  def icon_name(:years, :mini), do: "hero-cake-mini"
+  def icon_name(:incidents, :mini), do: "hero-lifebuoy-mini"
+  def icon_name(:hours, :micro), do: "hero-clock-micro"
+  def icon_name(:years, :micro), do: "hero-cake-micro"
+  def icon_name(:incidents, :micro), do: "hero-lifebuoy-micro"
 
   @doc ~s(What was reached: "2,000 hours", "10 years on the team", "First incident".)
   def title(%{kind: :hours, count: n}), do: Format.duration(n * 60)

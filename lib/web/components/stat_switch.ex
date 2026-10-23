@@ -7,7 +7,8 @@ defmodule Web.Components.StatSwitch do
   @doc """
   Renders a row of counts over a list, each on a grey tile with what it counts, the current one
   light blue with a primary bar. All comes first. A view's `marker` puts a coloured square before its label,
-  as the rows show it: `marker="incident"` is `.marker-incident`.
+  as the rows show it: `marker="incident"` is `.marker-incident`. An `icon` puts an icon
+  there instead, such as `icon="hero-clock-micro"`.
 
   ## Examples
 
@@ -25,6 +26,7 @@ defmodule Web.Components.StatSwitch do
     attr :current, :boolean
     attr :count, :integer, required: true
     attr :marker, :string
+    attr :icon, :string, doc: "an icon before the label, as the rows show it"
     attr :id, :string
   end
 
@@ -43,7 +45,10 @@ defmodule Web.Components.StatSwitch do
           <span :if={view[:marker]} class={["marker", "marker-#{view.marker}"]}>
             {render_slot(view)}
           </span>
-          <span :if={!view[:marker]}>{render_slot(view)}</span>
+          <span :if={view[:icon]} class="icon-label">
+            <span class={view.icon} aria-hidden="true" />{render_slot(view)}
+          </span>
+          <span :if={!view[:marker] && !view[:icon]}>{render_slot(view)}</span>
         </span>
       </.link>
     </nav>
