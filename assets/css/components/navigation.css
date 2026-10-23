@@ -149,6 +149,7 @@
     inset: calc(100% + 4px) 0 auto;
     max-height: calc(100dvh - 56px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: var(--sp-2) 0;
     background: var(--nav);
     border-bottom: 4px solid var(--accent);

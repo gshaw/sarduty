@@ -21,6 +21,13 @@ export const Search = {
       this.el.classList.add("is-open")
       this.input.focus()
     })
+    // Scrolling the results lowers the keyboard, as iOS's own search does. With it up, iOS
+    // pans the whole sheet and the page behind it moves too.
+    this.el.querySelector(".site-search-panel").addEventListener(
+      "touchmove",
+      () => document.activeElement === this.input && this.input.blur(),
+      {passive: true},
+    )
     // The x clears the field and keeps the keyboard up; the input event runs the search.
     const clear = this.el.querySelector(`#${this.el.id}-clear`)
     clear.addEventListener("pointerdown", event => event.preventDefault())

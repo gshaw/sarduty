@@ -72,6 +72,7 @@
     width: 560px;
     max-height: calc(100dvh - 80px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding-top: var(--sp-2);
     color: var(--text);
     background: var(--bg);
