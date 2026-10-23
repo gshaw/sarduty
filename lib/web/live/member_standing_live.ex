@@ -182,7 +182,8 @@ defmodule Web.MemberStandingLive do
           <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
           <p class="hint">
             Active unless the member is away or not a person. SAR Duty keeps it, and
-            nothing here goes to D4H. Members do not see it.
+            nothing here goes to D4H. A member away sees when they're back on Your
+            membership, never the reason.
           </p>
         </section>
 
