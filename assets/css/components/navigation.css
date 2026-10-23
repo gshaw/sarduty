@@ -28,16 +28,25 @@
     white-space: nowrap;
   }
 
-  /* Phones: the same name beside the brand, ending in an ellipsis when it is too long. */
+  /* Phones (#471): the logo over the area's name, centred on the bar. Equal room on both
+     sides keeps it centred, for Menu on the left and search and the avatar on the right; a
+     name too long ends in an ellipsis. */
   .site-bar-area-phone {
     display: none;
-    min-width: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 216px);
+    flex-direction: column;
+    align-items: center;
     color: #fff;
     font-weight: 600;
-    font-size: var(--fs-sm);
+    font-size: var(--fs-md);
     line-height: var(--lh-sm);
   }
-  .site-bar-area-phone .site-bar-area-name { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .site-bar-area-phone .brand { font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .site-bar-area-phone .site-bar-area-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .site-bar-menu > summary {
     display: inline-flex;
@@ -62,6 +71,7 @@
 
   /* The account menu: your initials in a circle, top right. */
   .account-menu > summary { padding: 2px; border-radius: 999px; }
+  @media (pointer: coarse) { .account-menu > summary { padding: 6px; } }
   .avatar {
     display: inline-flex;
     align-items: center;
@@ -78,8 +88,7 @@
   }
   .menu-person { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-4); }
   .menu-person .menu-name { font-weight: 600; }
-  .menu .menu-person .menu-note, .site-bar-phone-panel .menu-person .menu-note { padding: 0; }
-  .site-bar-phone-panel .menu-person .menu-name { color: #fff; }
+  .menu .menu-person .menu-note { padding: 0; }
 
   /* Log in, when nobody is: white like the Menu button, 44px tall, at every width. */
   .site-bar-login {
@@ -99,8 +108,31 @@
 
   .site-bar-login:hover { color: #fff; background: rgb(255 255 255 / 0.1); }
 
-  /* Phones and narrow windows: the links and account menu move behind a menu button. */
-  .site-bar-phone { display: none; margin-left: auto; }
+  /* Search (#471), off until it has a page: a field on a desktop, an icon below 1024px. */
+  .site-bar-search-field {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    width: 320px;
+    min-height: 36px;
+    padding: 0 var(--sp-3);
+    color: rgb(255 255 255 / 0.7);
+    background: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.25);
+    border-radius: var(--radius);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    text-decoration: none;
+  }
+  .site-bar-search-field:hover { color: #fff; border-color: rgb(255 255 255 / 0.5); }
+  .site-bar-search-field kbd { margin-left: auto; padding: 0 var(--sp-1); border: 1px solid rgb(255 255 255 / 0.3); border-radius: 4px; font: inherit; font-size: var(--fs-xs); }
+  .site-bar-search { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; color: #fff; border-radius: var(--radius); }
+  .site-bar-search:hover { background: rgb(255 255 255 / 0.1); }
+  .site-bar-search .hero-magnifying-glass-mini { width: 24px; height: 24px; }
+
+  /* Phones and narrow windows: the switcher and the area's pages move behind a Menu button
+     on the left of the bar. */
+  .site-bar-phone { display: none; order: -1; }
 
   .site-bar-phone > summary {
     display: inline-flex;
@@ -112,7 +144,7 @@
     font-size: var(--fs-sm);
     line-height: var(--lh-sm);
     padding: var(--sp-2);
-    margin-right: calc(-1 * var(--sp-2));
+    margin-left: calc(-1 * var(--sp-2));
     border-radius: var(--radius);
     cursor: pointer;
   }
@@ -151,9 +183,14 @@
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
   @media (width < 64rem) {
-    .site-bar-links, .site-bar-menu { display: none; }
+    .site-bar-inner { min-height: 56px; }
+    .site-bar-links, .team-switcher, .site-bar-search-field { display: none; }
+    .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
     .site-bar-phone { display: block; }
     .site-bar-area-phone { display: flex; }
+    .site-bar-search { display: inline-flex; }
+    .site-bar-search, .account-menu { margin-left: auto; }
+    .site-bar-search + .account-menu { margin-left: 0; }
   }
 
   /* Menu: a short list under a button. */

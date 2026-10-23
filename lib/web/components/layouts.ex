@@ -285,7 +285,8 @@ defmodule Web.Layouts do
   # you can go somewhere else, and your avatar on the right, which opens the account menu.
   # Outside every area (home, terms, privacy), a logged-in person's bar names their team,
   # with the switcher on it and nothing marked, so the name always opens the way back.
-  # On a phone the Menu button holds the switcher, the area's pages, and the account menu.
+  # Below 1024px (#471) the Menu button on the left holds the switcher and the area's pages,
+  # the logo sits over the area's name in the middle, and the avatar stays on the right.
   # See /styles/top-bar.
   def main_nav_bar(assigns) do
     {area, sections} = navigation(assigns)
@@ -325,11 +326,26 @@ defmodule Web.Layouts do
         <span :if={@switch_rows == []} id="nav-area" class="site-bar-area">{@bar_area.name}</span>
       </:links>
       <%= if @current_user do %>
-        <span :if={@bar_area} id="phone-nav-area" class="site-bar-area-phone">
+        <div :if={@bar_area} id="phone-nav-area" class="site-bar-area-phone">
+          <a href="/" class="brand">SAR <span>Duty</span></a>
           <span class="site-bar-area-name">{@bar_area.name}</span>
-        </span>
+        </div>
+        <%!-- Search (#471): a field on a desktop, an icon below 1024px, both before the avatar.
+          Uncomment and point both at the search page when it exists.
+        <.link navigate={@search_path} id="nav-search-field" class="site-bar-search-field">
+          <.icon name="hero-magnifying-glass-mini" />
+          <span class="truncate">Search members, activities…</span>
+          <kbd>/</kbd>
+        </.link>
+        <.link navigate={@search_path} id="nav-search" class="site-bar-search" aria-label="Search">
+          <.icon name="hero-magnifying-glass-mini" />
+        </.link>
+        --%>
         <.account_menu person={@person} />
-        <.site_bar_phone_menu waiting?={Enum.any?(List.flatten(@sections), & &1.count)}>
+        <.site_bar_phone_menu
+          :if={@switch_rows != [] or @sections != []}
+          waiting?={Enum.any?(List.flatten(@sections), & &1.count)}
+        >
           <%= if @switch_rows != [] do %>
             <div class="caps menu-heading">Switch team</div>
             <.switch_link :for={row <- @switch_rows} row={row} id_prefix="phone-switch-" />
@@ -339,8 +355,6 @@ defmodule Web.Layouts do
             <.menu_divider :if={index > 0} />
             <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
           <% end %>
-          <.menu_divider :if={@sections != []} />
-          <.account_links person={@person} id_prefix="phone-" />
         </.site_bar_phone_menu>
       <% else %>
         <.a
@@ -398,8 +412,8 @@ defmodule Web.Layouts do
 
   attr :person, :map, required: true, doc: "from Web.Navigation.person/3"
 
-  # Your avatar, top right, opening your name and email, Account settings, and Log out.
-  # The same on every team: it is about the login, not the team.
+  # Your avatar, top right at every width, opening your name and email, Account settings,
+  # and Log out. The same on every team: it is about the login, not the team.
   defp account_menu(assigns) do
     ~H"""
     <details id="account-menu" class="site-bar-menu account-menu relative">
@@ -407,28 +421,19 @@ defmodule Web.Layouts do
         <span class="avatar">{@person.initials}</span>
       </summary>
       <div class="menu" role="menu">
-        <.account_links person={@person} />
+        <div class="menu-person">
+          <span class="avatar">{@person.initials}</span>
+          <div class="min-w-0">
+            <div :if={@person.name} class="menu-name truncate">{@person.name}</div>
+            <div class="menu-note truncate">{@person.email}</div>
+          </div>
+        </div>
+        <.menu_divider />
+        <.a id="nav-account-settings" kind={:custom} navigate={~p"/account"}>Account settings</.a>
+        <.menu_divider />
+        <.a id="nav-log-out" kind={:custom} method="delete" href="/logout">Log out</.a>
       </div>
     </details>
-    """
-  end
-
-  attr :person, :map, required: true
-  attr :id_prefix, :string, default: ""
-
-  defp account_links(assigns) do
-    ~H"""
-    <div class="menu-person">
-      <span class="avatar">{@person.initials}</span>
-      <div class="min-w-0">
-        <div :if={@person.name} class="menu-name truncate">{@person.name}</div>
-        <div class="menu-note truncate">{@person.email}</div>
-      </div>
-    </div>
-    <.menu_divider :if={@id_prefix == ""} />
-    <.a id={@id_prefix <> "nav-account-settings"} kind={:custom} navigate={~p"/account"}>Account settings</.a>
-    <.menu_divider :if={@id_prefix == ""} />
-    <.a id={@id_prefix <> "nav-log-out"} kind={:custom} method="delete" href="/logout">Log out</.a>
     """
   end
 
