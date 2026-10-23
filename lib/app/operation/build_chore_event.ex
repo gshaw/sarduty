@@ -4,9 +4,9 @@ defmodule App.Operation.BuildChoreEvent do
   its accepted chores. SAR Duty owns the event, so each send rebuilds it; there are no
   added, changed, or skipped cases, and edits made in D4H are replaced.
 
-  - The event is titled for its chore category and month. It starts at 00:00 on its last
-    chore's day in the team's time zone, and lasts as long as the largest member total.
-    Its chores are all in one month, so it counts in that month's year.
+  - The event is titled for its chore category and month. It starts and ends at 00:00 on
+    its last chore's day in the team's time zone: zero length, since members' hours are on
+    their attendance. Its chores are all in one month, so it counts in that month's year.
   - Each member with accepted chores has one attendance, from the event's start, for
     their total. Anyone else's attendance on it is deleted.
   - An event gets its tags in their own row, so a refusal shows: a new one just after it
@@ -44,7 +44,7 @@ defmodule App.Operation.BuildChoreEvent do
       action: :create_activity,
       new_value:
         chores
-        |> activity_fields(totals, event, starts_at)
+        |> activity_fields(event, starts_at)
         |> Map.merge(%{"kind" => @kind, "full_team" => false, "shared" => false})
     }
 
@@ -84,7 +84,7 @@ defmodule App.Operation.BuildChoreEvent do
       action: :update_activity,
       d4h_record_id: id,
       old_value: %{"kind" => @kind},
-      new_value: activity_fields(chores, totals, event, starts_at)
+      new_value: activity_fields(chores, event, starts_at)
     }
 
     unpublish = if state.published?, do: [publish_row(id, false)], else: []
@@ -168,14 +168,12 @@ defmodule App.Operation.BuildChoreEvent do
     |> Enum.sort_by(fn {member, _minutes} -> {String.downcase(member.name), member.id} end)
   end
 
-  defp activity_fields(chores, totals, event, starts_at) do
-    longest = totals |> Enum.map(&elem(&1, 1)) |> Enum.max(fn -> 0 end)
-
+  defp activity_fields(chores, event, starts_at) do
     %{
       "title" => ChoreEventText.title(event.category, event.month),
       "started_at" => iso(starts_at),
       "description" => ChoreEventText.description(chores),
-      "finished_at" => starts_at |> DateTime.add(max(longest, 1), :minute) |> iso()
+      "finished_at" => iso(starts_at)
     }
   end
 
