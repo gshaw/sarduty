@@ -30,6 +30,8 @@
     outline: none;
     font: inherit;
   }
+  /* The field wears the focus ring, so the input inside doesn't draw a second one. */
+  .site-bar-search-field input:focus-visible { outline: none; box-shadow: none; }
   .site-bar-search-field input::placeholder { color: rgb(255 255 255 / 0.7); opacity: 1; }
   .site-bar-search-field input::-webkit-search-cancel-button { display: none; }
   .site-search-key { padding: 0 var(--sp-1); border: 1px solid rgb(255 255 255 / 0.3); border-radius: 4px; font: inherit; font-size: var(--fs-xs); }
@@ -106,6 +108,9 @@
     gap: var(--sp-4);
     margin-top: var(--sp-2);
     padding: var(--sp-2) var(--sp-4);
+    position: sticky;
+    bottom: 0;
+    background: var(--bg);
     border-top: 1px solid var(--border-subtle);
     color: var(--text-muted);
     font-size: var(--fs-xs);
