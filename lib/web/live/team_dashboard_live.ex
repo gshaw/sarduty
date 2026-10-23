@@ -74,7 +74,7 @@ defmodule Web.TeamDashboardLive do
     qualifications = MemberRecords.qualifications(member, now)
 
     chores =
-      if member.team.member_logins,
+      if Team.chores?(member.team),
         do: Chore.get_all_for_member(member, status: :declined),
         else: []
 

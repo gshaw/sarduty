@@ -317,7 +317,7 @@ defmodule Web.MeLiveTest do
 
     test "a team admin gets their own page, since they're a member too", %{conn: conn} do
       %{user: manager, team: team} = user_with_team_fixture()
-      team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+      team |> Ecto.Changeset.change(member_logins: true, chores_enabled: true) |> Repo.update!()
 
       lv = open(log_in_user(conn, manager), ~p"/teams/#{team}/me")
       assert has_element?(lv, "#side-nav-me[aria-current=page]")

@@ -6,6 +6,7 @@ defmodule Web.Settings.MemberLoginsLiveTest do
 
   alias App.Accounts
   alias App.Model.Event
+  alias App.Model.Team
   alias App.Repo
 
   setup %{conn: conn} do
@@ -36,5 +37,23 @@ defmodule Web.Settings.MemberLoginsLiveTest do
 
     refute Repo.reload!(team).member_logins
     refute Accounts.may_log_in?(member.email)
+  end
+
+  test "chores stay hidden until a team admin turns them on", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/member-logins")
+
+    lv
+    |> form("#member-logins-form", team: %{member_logins: "true"})
+    |> render_submit()
+
+    refute team |> Repo.reload!() |> Team.chores?()
+    refute has_element?(lv, ".tabs a", "Chore categories")
+
+    lv
+    |> form("#member-logins-form", team: %{member_logins: "true", chores_enabled: "true"})
+    |> render_submit()
+
+    assert team |> Repo.reload!() |> Team.chores?()
+    assert has_element?(lv, ".tabs a", "Chore categories")
   end
 end

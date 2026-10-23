@@ -12,6 +12,7 @@ defmodule Web.MeLive do
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
+  alias App.Model.Team
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.ViewData.MemberMilestones
@@ -77,11 +78,9 @@ defmodule Web.MeLive do
     }
   end
 
-  # A member's latest chores (#341), on a team with member logins on. Nil hides the section.
-  defp latest_chores(%{team: %{member_logins: true}} = member),
-    do: Chore.get_all_for_member(member, limit: 5)
-
-  defp latest_chores(_member), do: nil
+  # A member's latest chores (#341), on a team with chores on. Nil hides the section.
+  defp latest_chores(member),
+    do: if(Team.chores?(member.team), do: Chore.get_all_for_member(member, limit: 5))
 
   def render(assigns) do
     ~H"""

@@ -5,12 +5,13 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
 
   alias App.Model.Chore
   alias App.Model.ChoreCategory
+  alias App.Model.Team
 
   # The team's chore categories (#341), /teams/:subdomain/settings/chore-categories.
   # Only members log chores, so the page exists only with member logins on.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.member_logins, do: raise(Web.Status.NotFound)
+    if !Team.chores?(team), do: raise(Web.Status.NotFound)
 
     year = DateTime.utc_now() |> Service.Period.today(team.timezone) |> Map.fetch!(:year)
 

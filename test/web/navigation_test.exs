@@ -89,13 +89,16 @@ defmodule Web.NavigationTest do
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
-    test "chores show a team admin with member logins on, with a count while some wait" do
+    test "chores show a team admin with member logins and chores on, with a count while some wait" do
       refute "chores" in ("/teams/squamish"
-                          |> team_sections(team_admin?: true, chores: 3)
+                          |> team_sections([team_admin?: true, chores: 3], %{
+                            @team
+                            | member_logins: true
+                          })
                           |> keys()
                           |> List.flatten())
 
-      team = %{@team | member_logins: true}
+      team = %{@team | member_logins: true, chores_enabled: true}
       sections = team_sections("/teams/squamish", [team_admin?: true, chores: 3], team)
       assert [%{count: 3}] = for(links <- sections, link <- links, link.key == "chores", do: link)
       assert ["equipment", "chores"] in keys(sections)

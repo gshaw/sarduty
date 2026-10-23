@@ -122,12 +122,14 @@ defmodule Web.Navigation do
   defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
   defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
 
-  # Members log chores, so the page shows with member logins on. It shares Equipment's
-  # section: chores are mostly equipment upkeep, and a section of one link looked lost.
-  defp chore_links(%Team{member_logins: true} = team, count),
-    do: [link("chores", "Chores", ~p"/teams/#{team}/chores", count: count)]
-
-  defp chore_links(_team, _count), do: []
+  # Members log chores, so the page shows with member logins and chores on. It shares
+  # Equipment's section: chores are mostly equipment upkeep, and a section of one link
+  # looked lost.
+  defp chore_links(team, count) do
+    if Team.chores?(team),
+      do: [link("chores", "Chores", ~p"/teams/#{team}/chores", count: count)],
+      else: []
+  end
 
   defp people_links(team) do
     [

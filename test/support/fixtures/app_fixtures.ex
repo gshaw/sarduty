@@ -74,7 +74,11 @@ defmodule App.DataFixtures do
 
   @doc "A team with member logins on (#156), so its current members may log in."
   def member_logins_team_fixture(attrs \\ %{}) do
-    attrs |> team_fixture() |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+    # Chores (#341) need their own setting too; tests of them use this team.
+    attrs
+    |> team_fixture()
+    |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
+    |> Repo.update!()
   end
 
   @doc "A team with member logins on, a member on it, and that member's user."

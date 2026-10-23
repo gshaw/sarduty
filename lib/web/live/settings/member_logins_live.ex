@@ -14,7 +14,8 @@ defmodule Web.Settings.MemberLoginsLive do
   def handle_event("save", %{"team" => params}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
     enabled = params["member_logins"] == "true"
-    {:ok, team} = SetTeamMemberLogins.call(team, enabled, user)
+    chores = params["chores_enabled"] == "true"
+    {:ok, team} = SetTeamMemberLogins.call(team, enabled, user, chores)
 
     message =
       if enabled,
@@ -31,7 +32,15 @@ defmodule Web.Settings.MemberLoginsLive do
   end
 
   defp assign_form(socket, team),
-    do: assign(socket, :form, to_form(%{"member_logins" => team.member_logins}, as: "team"))
+    do:
+      assign(
+        socket,
+        :form,
+        to_form(
+          %{"member_logins" => team.member_logins, "chores_enabled" => team.chores_enabled},
+          as: "team"
+        )
+      )
 
   def render(assigns) do
     ~H"""
@@ -47,6 +56,7 @@ defmodule Web.Settings.MemberLoginsLive do
       <p class="mb-6">Retired members cannot log in.</p>
       <.form for={@form} id="member-logins-form" phx-submit="save">
         <.input field={@form[:member_logins]} type="checkbox" label="Let members log in" />
+        <.input field={@form[:chores_enabled]} type="checkbox" label="Let members log chores" />
         <.form_actions>
           <.button variant={:success}>Save settings</.button>
         </.form_actions>

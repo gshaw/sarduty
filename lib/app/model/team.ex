@@ -46,6 +46,8 @@ defmodule App.Model.Team do
     # Lets current members log in for their own ID card and tax credit letters (#156).
     # Set only by App.Operation.SetTeamMemberLogins from the team's settings.
     field :member_logins, :boolean, default: false
+    # Shows chores (#341) on a team with member logins on. Set with member logins.
+    field :chores_enabled, :boolean, default: false
     # Whether the team may issue ID cards. Set only by App.Operation.SetTeamIdCards from
     # /admin/id-cards: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
@@ -256,6 +258,9 @@ defmodule App.Model.Team do
     |> Member.current_query(now)
     |> select([m], %{team_id: m.team_id, d4h_member_id: m.d4h_member_id})
   end
+
+  @doc "Whether the team shows chores (#341): member logins and the chores setting on."
+  def chores?(%Team{member_logins: logins, chores_enabled: chores}), do: logins and chores
 
   def get(id), do: Repo.get(Team, id)
   def get!(id), do: Repo.get!(Team, id)

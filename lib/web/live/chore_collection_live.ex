@@ -4,6 +4,7 @@ defmodule Web.ChoreCollectionLive do
   alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Model.Team
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
   alias Service.Format
@@ -13,7 +14,7 @@ defmodule Web.ChoreCollectionLive do
   # Review changes pattern: every row starts selected, and a cleared row stays.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.member_logins, do: raise(Web.Status.NotFound)
+    if !Team.chores?(team), do: raise(Web.Status.NotFound)
 
     socket
     |> assign(service: D4H.service_name(team))
