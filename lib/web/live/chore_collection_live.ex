@@ -8,10 +8,11 @@ defmodule Web.ChoreCollectionLive do
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
   alias Service.Format
+  alias Web.ChoreText
 
-  # The team's chores (#341), /teams/:subdomain/chores. Waiting chores to accept, accepted
-  # ones to send to D4H when a team admin chooses, and what is in D4H. Both lists use the
-  # Review changes pattern: every row starts selected, and a cleared row stays.
+  # The team's chores (#341), /teams/:subdomain/chores. Waiting chores to accept, with the
+  # Review changes pattern: every row starts selected, and a cleared row stays. Accepting
+  # sends them to D4H, onto each chore category's activity for the month, listed below.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
@@ -29,14 +30,12 @@ defmodule Web.ChoreCollectionLive do
   defp load(socket) do
     team_id = socket.assigns.current_team.id
     waiting = Chore.get_waiting(team_id)
-    ready = Chore.get_ready(team_id)
 
     assign(socket,
       waiting: waiting,
-      ready: ready,
       events: ChoreEvent.get_all_with_totals(team_id),
+      to_send: ChoreEvent.count_to_send(team_id),
       selected: MapSet.new(waiting, & &1.id),
-      to_send: MapSet.new(ready, & &1.id),
       chore_count: length(waiting)
     )
   end
@@ -53,8 +52,27 @@ defmodule Web.ChoreCollectionLive do
     ~H"""
     <h1 class="title">Chores</h1>
     <p class="lead measure">
-      Accept a chore to count it. Send accepted chores to {@service} when you are ready.
+      Accepting a chore counts it and sends it to {@service}. Each chore category gets one {@service} activity a month.
     </p>
+
+    <.banner :if={@to_send > 0} kind={:warning} title="Changes not sent" id="chores-to-send">
+      <p>
+        {Format.count(@to_send,
+          one: "1 activity in #{@service} is out of date. The reason is in the table.",
+          many: "%d activities in #{@service} are out of date. The reasons are in the table."
+        )}
+      </p>
+      <.button
+        id="send-changes"
+        type="button"
+        variant={:warning}
+        size={:sm}
+        phx-click="send-changes"
+        phx-disable-with={"Sending to #{@service}…"}
+      >
+        Send changes
+      </.button>
+    </.banner>
 
     <h2 class="subheading mt-8">Waiting · {length(@waiting)}</h2>
     <.empty_state :if={@waiting == []} id="no-waiting-chores" title="No chores waiting">
@@ -69,7 +87,6 @@ defmodule Web.ChoreCollectionLive do
         <.chore_table
           id="waiting-chores"
           chores={@waiting}
-          name="chore_ids[]"
           selected={@selected}
           today={@today}
           current_team={@current_team}
@@ -79,7 +96,7 @@ defmodule Web.ChoreCollectionLive do
             id="accept"
             variant={:success}
             disabled={MapSet.size(@selected) == 0}
-            phx-disable-with="Accepting…"
+            phx-disable-with={"Sending to #{@service}…"}
           >
             Accept {count_chores(MapSet.size(@selected))}
           </.button>
@@ -87,43 +104,12 @@ defmodule Web.ChoreCollectionLive do
       </.form>
     </div>
 
-    <h2 class="subheading mt-8">Ready to send · {length(@ready)}</h2>
-    <.empty_state :if={@ready == []} id="no-ready-chores" title="Nothing to send">
-      Chores you accept wait here until you send them to {@service}.
-    </.empty_state>
-
-    <div :if={@ready != []}>
-      <p class="hint mb-4">
-        A send makes one {@service} activity for each category and year, dated on its last chore.
-      </p>
-      <.form for={%{}} id="send-form" phx-change="select-send" phx-submit="send">
-        <.chore_table
-          id="ready-chores"
-          chores={@ready}
-          name="send_ids[]"
-          selected={@to_send}
-          today={@today}
-          current_team={@current_team}
-        />
-        <.form_actions>
-          <.button
-            id="send"
-            variant={:primary}
-            disabled={MapSet.size(@to_send) == 0 || is_nil(@current_team.d4h_access_key)}
-            phx-disable-with={"Sending to #{@service}…"}
-          >
-            Send {count_chores(MapSet.size(@to_send))}
-          </.button>
-        </.form_actions>
-      </.form>
-    </div>
-
     <h2 class="subheading mt-8">In {@service}</h2>
     <p :if={@events != []} class="hint mb-4">
-      Change a sent chore here, then send the changes. Edits made in {@service} are replaced.
+      Changing or declining a chore changes its activity. Edits made in {@service} are replaced.
     </p>
-    <.empty_state :if={@events == []} id="no-chore-events" title="Nothing sent yet">
-      Chores you send show here, with a link to each {@service} activity.
+    <.empty_state :if={@events == []} id="no-chore-events" title={"Nothing in #{@service} yet"}>
+      Chores you accept show here, with a link to each {@service} activity.
     </.empty_state>
     <.table
       :if={@events != []}
@@ -132,8 +118,8 @@ defmodule Web.ChoreCollectionLive do
       row_id={&"chore-event-#{&1.event.id}"}
       class="table-striped table-stack"
     >
-      <:col :let={row} label="Date" class="whitespace-nowrap">
-        {row.date && Format.day_in_year(row.date, @today)}
+      <:col :let={row} label="Month" class="whitespace-nowrap">
+        {Format.month_year_long(row.event.month)}
       </:col>
       <:col :let={row} label="Category" class="stack-title">
         {row.event.chore_category.title}
@@ -155,17 +141,9 @@ defmodule Web.ChoreCollectionLive do
           {Format.date_short(row.event.sent_at, @current_team.timezone)}
         </span>
         <span :if={row.event.send_note} class="hint block">{row.event.send_note}</span>
-        <.button
-          :if={row.event.needs_send}
-          id={"send-changes-#{row.event.id}"}
-          type="button"
-          size={:sm}
-          phx-click="send-changes"
-          phx-value-id={row.event.id}
-          phx-disable-with="Sending…"
-        >
-          Send changes
-        </.button>
+        <span :if={row.event.needs_send and !row.event.send_note} class="hint block">
+          Not sent yet
+        </span>
       </:col>
     </.table>
     """
@@ -173,12 +151,11 @@ defmodule Web.ChoreCollectionLive do
 
   attr :id, :string, required: true
   attr :chores, :list, required: true
-  attr :name, :string, required: true
   attr :selected, :any, required: true
   attr :today, :any, required: true
   attr :current_team, :map, required: true
 
-  # Chores with a box each, for accepting or sending.
+  # Chores with a box each, for accepting.
   defp chore_table(assigns) do
     ~H"""
     <.table id={@id} rows={@chores} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
@@ -186,7 +163,7 @@ defmodule Web.ChoreCollectionLive do
         <input
           type="checkbox"
           id={"#{@id}-select-#{chore.id}"}
-          name={@name}
+          name="chore_ids[]"
           value={chore.id}
           checked={MapSet.member?(@selected, chore.id)}
           aria-label={"Select #{chore.description}"}
@@ -213,80 +190,35 @@ defmodule Web.ChoreCollectionLive do
   def handle_event("select", params, socket),
     do: {:noreply, assign(socket, :selected, params |> ids("chore_ids") |> MapSet.new())}
 
-  def handle_event("select-send", params, socket),
-    do: {:noreply, assign(socket, :to_send, params |> ids("send_ids") |> MapSet.new())}
-
   def handle_event("accept", params, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
+    %{current_team: team, current_user: user, service: service} = socket.assigns
 
     case ids(params, "chore_ids") do
       [] ->
         {:noreply, put_flash(socket, :error, "Select at least 1 chore to accept.")}
 
       ids ->
-        count = SaveChore.accept(team, ids, user, DateTime.utc_now())
+        now = DateTime.utc_now()
+        count = SaveChore.accept(team, ids, user, now)
+        result = SendChores.call(team, user, now)
+        {kind, text} = ChoreText.send_flash("Accepted #{count_chores(count)}", result, service)
 
         socket
-        |> put_flash(:info, "Accepted #{count_chores(count)}.")
+        |> put_flash(kind, text)
         |> load()
         |> then(&{:noreply, &1})
     end
   end
 
-  def handle_event("send", params, socket) do
+  def handle_event("send-changes", _params, socket) do
     %{current_team: team, current_user: user, service: service} = socket.assigns
+    result = SendChores.call(team, user, DateTime.utc_now())
+    {kind, text} = ChoreText.send_flash(nil, result, service)
 
-    case ids(params, "send_ids") do
-      [] ->
-        {:noreply, put_flash(socket, :error, "Select at least 1 chore to send.")}
-
-      ids ->
-        result = SendChores.call(team, ids, user, DateTime.utc_now())
-
-        socket
-        |> put_send_flash(result, service)
-        |> load()
-        |> then(&{:noreply, &1})
-    end
-  end
-
-  def handle_event("send-changes", %{"id" => id}, socket) do
-    %{current_team: team, current_user: user, service: service} = socket.assigns
-    event = ChoreEvent.find!(team, id)
-
-    socket =
-      case SendChores.send_changes(team, event, user, DateTime.utc_now()) do
-        :sent ->
-          put_flash(socket, :info, "Changes sent to #{service}.")
-
-        :failed ->
-          put_flash(socket, :error, "Changes not sent. The reason is in the table.")
-
-        :locked ->
-          put_flash(socket, :error, "Changes not sent. #{service} has approved the activity.")
-      end
-
-    {:noreply, load(socket)}
-  end
-
-  defp put_send_flash(socket, %{failed: 0} = result, service) do
-    activities = Format.count(result.events, one: "1 activity", many: "%d activities")
-
-    put_flash(
-      socket,
-      :info,
-      "Sent #{count_chores(result.chores)} to #{service} as #{activities}."
-    )
-  end
-
-  defp put_send_flash(socket, result, _service) do
-    message =
-      Format.count(result.failed,
-        one: "1 activity did not go through. The reason is in the table.",
-        many: "%d activities did not go through. The reasons are in the table."
-      )
-
-    put_flash(socket, :error, message)
+    socket
+    |> put_flash(kind, text)
+    |> load()
+    |> then(&{:noreply, &1})
   end
 
   defp ids(params, key) do

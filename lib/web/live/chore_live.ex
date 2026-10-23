@@ -5,19 +5,24 @@ defmodule Web.ChoreLive do
 
   alias App.Adapter.D4H
   alias App.Model.Chore
+  alias App.Model.ChoreEvent
   alias App.Model.Team
   alias App.Operation.SaveChore
+  alias App.Operation.SendChores
   alias Service.Format
+  alias Web.ChoreText
 
   # One chore (#341), /teams/:subdomain/chores/:id: a team admin accepts it, changes it,
-  # or declines it with a reason the member sees, in any status.
+  # or declines it with a reason the member sees, in any status. Each sends its chore
+  # category's activity for the month to D4H.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
     chore = Chore.find!(team, id)
 
     socket
-    |> assign(page_title: chore.description, chore: chore, locked?: Chore.locked?(chore))
+    |> assign(page_title: chore.description, chore: chore)
+    |> assign(activity: chore.chore_event && ChoreEvent.local_activity(chore.chore_event))
     |> assign(service: D4H.service_name(team))
     |> assign_decline_form(%{})
     |> then(&{:ok, &1})
@@ -62,19 +67,33 @@ defmodule Web.ChoreLive do
         <dt>Why not</dt>
         <dd id="chore-decline-reason">{@chore.decline_reason}</dd>
       </div>
+      <div :if={@chore.chore_event}>
+        <dt>Activity</dt>
+        <dd id="chore-activity">
+          <.a :if={@activity} navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>
+            {@activity.title}
+          </.a>
+          <span :if={!@activity and @chore.chore_event.d4h_activity_id} class="hint">
+            Refreshing from {@service}
+          </span>
+          <span :if={!@chore.chore_event.d4h_activity_id} class="hint">
+            Not sent to {@service} yet
+          </span>
+          <span :if={@chore.chore_event.send_note} class="hint block">
+            {@chore.chore_event.send_note}
+          </span>
+        </dd>
+      </div>
     </dl>
 
-    <.warning_text :if={@locked?} id="chore-locked">
-      {@service} has approved this chore's activity, so it cannot change here. Change it in {@service}.
-    </.warning_text>
-
-    <.form_actions :if={!@locked?}>
+    <.form_actions>
       <.button
         :if={@chore.status != :accepted}
         id="chore-accept"
         type="button"
         variant={:success}
         phx-click="accept"
+        phx-disable-with={"Sending to #{@service}…"}
       >
         Accept chore
       </.button>
@@ -83,14 +102,20 @@ defmodule Web.ChoreLive do
       </.button>
     </.form_actions>
 
-    <section :if={@chore.status != :declined and !@locked?} id="chore-decline" class="mt-8">
+    <section :if={@chore.status != :declined} id="chore-decline" class="mt-8">
       <h2 class="subheading">Decline</h2>
       <.form for={@decline_form} id="decline-form" class="measure" phx-submit="decline">
         <.input field={@decline_form[:reason]} type="textarea" rows="3" label="Why not">
           {first_name(@chore.member.name)} sees this on their Chores page.
         </.input>
         <.form_actions>
-          <.button id="chore-decline-button" variant={:danger}>Decline chore</.button>
+          <.button
+            id="chore-decline-button"
+            variant={:danger}
+            phx-disable-with={"Sending to #{@service}…"}
+          >
+            Decline chore
+          </.button>
         </.form_actions>
       </.form>
     </section>
@@ -101,17 +126,8 @@ defmodule Web.ChoreLive do
 
   def handle_event("accept", _params, socket) do
     %{current_team: team, current_user: user, chore: chore} = socket.assigns
-
-    case SaveChore.accept_one(team, chore, user, DateTime.utc_now()) do
-      {:ok, _chore} ->
-        socket
-        |> put_flash(:info, "Accepted #{chore.description}.")
-        |> push_navigate(to: ~p"/teams/#{team}/chores")
-        |> then(&{:noreply, &1})
-
-      {:error, :locked} ->
-        {:noreply, locked(socket)}
-    end
+    {:ok, _chore} = SaveChore.accept_one(team, chore, user, DateTime.utc_now())
+    {:noreply, send_and_return(socket, "Accepted #{chore.description}")}
   end
 
   def handle_event("decline", %{"decline" => %{"reason" => reason}}, socket) do
@@ -119,13 +135,7 @@ defmodule Web.ChoreLive do
 
     case SaveChore.decline(team, chore, reason, user, DateTime.utc_now()) do
       {:ok, _chore} ->
-        socket
-        |> put_flash(:info, "Declined #{chore.description}.")
-        |> push_navigate(to: ~p"/teams/#{team}/chores")
-        |> then(&{:noreply, &1})
-
-      {:error, :locked} ->
-        {:noreply, locked(socket)}
+        {:noreply, send_and_return(socket, "Declined #{chore.description}")}
 
       {:error, changeset} ->
         errors = for {:decline_reason, error} <- changeset.errors, do: {:reason, error}
@@ -133,12 +143,17 @@ defmodule Web.ChoreLive do
     end
   end
 
-  # D4H approved the chore's activity after this page opened.
-  def locked(socket) do
-    %{current_team: team, chore: chore, service: service} = socket.assigns
+  @doc """
+  Sends the team's chore events after a team admin's change, and goes back to the Chores
+  page, whose table shows why a send did not go through. `done` says what changed.
+  """
+  def send_and_return(socket, done) do
+    %{current_team: team, current_user: user, service: service} = socket.assigns
+    result = SendChores.call(team, user, DateTime.utc_now())
+    {kind, text} = ChoreText.send_flash(done, result, service)
 
     socket
-    |> put_flash(:error, "This chore cannot change. #{service} has approved its activity.")
-    |> push_navigate(to: ~p"/teams/#{team}/chores/#{chore.id}")
+    |> put_flash(kind, text)
+    |> push_navigate(to: ~p"/teams/#{team}/chores")
   end
 end

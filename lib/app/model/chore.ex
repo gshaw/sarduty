@@ -18,7 +18,7 @@ defmodule App.Model.Chore do
     belongs_to :member, Member
     belongs_to :chore_category, ChoreCategory
     belongs_to :decided_by_user, User
-    # The D4H event a team admin sent it on (App.Operation.SendChores); nil until then.
+    # While accepted, the D4H event of its chore category and month (App.Model.ChoreEvent).
     belongs_to :chore_event, ChoreEvent
     field :date, :date
     field :minutes, :integer
@@ -93,12 +93,6 @@ defmodule App.Model.Chore do
   @doc "Whether the member can change or delete it: only while it waits."
   def member_can_change?(%Chore{status: status}), do: status == :waiting
 
-  @doc "Whether it is on an event D4H has approved, so SAR Duty cannot change it."
-  def locked?(%Chore{chore_event_id: nil}), do: false
-
-  def locked?(%Chore{chore_event_id: id}),
-    do: ChoreEvent |> where([e], e.id == ^id and e.locked) |> Repo.exists?()
-
   @doc "Whether the member can delete it: while it waits, or once declined."
   def member_can_delete?(%Chore{status: status}), do: status in [:waiting, :declined]
 
@@ -131,22 +125,6 @@ defmodule App.Model.Chore do
     |> Repo.all()
   end
 
-  @doc "The team's accepted chores not sent yet, oldest first, with members and categories."
-  def get_ready(team_id) do
-    Chore
-    |> where([c], c.team_id == ^team_id and c.status == :accepted and is_nil(c.chore_event_id))
-    |> order_by([c], asc: c.date, asc: c.id)
-    |> preload([:member, :chore_category])
-    |> Repo.all()
-  end
-
-  @doc "How many of the team's accepted chores are not sent yet."
-  def count_ready(team_id) do
-    Chore
-    |> where([c], c.team_id == ^team_id and c.status == :accepted and is_nil(c.chore_event_id))
-    |> Repo.aggregate(:count)
-  end
-
   @doc "How many of the team's chores wait for a team admin."
   def count_waiting(team_id) do
     Chore
@@ -167,11 +145,11 @@ defmodule App.Model.Chore do
     |> Map.new()
   end
 
-  @doc "One of the team's chores, with its member, category, and who decided it."
+  @doc "One of the team's chores, with its member, category, event, and who decided it."
   def find!(%Team{} = team, id) do
     Chore
     |> Repo.get_by!(id: id, team_id: team.id)
-    |> Repo.preload([:member, :chore_category, :decided_by_user])
+    |> Repo.preload([:member, :chore_category, :chore_event, :decided_by_user])
   end
 
   @doc "One of the member's own chores."

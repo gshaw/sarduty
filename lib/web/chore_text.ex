@@ -31,4 +31,29 @@ defmodule Web.ChoreText do
   @doc ~s(Why it was declined: "Declined Oct 2, 2026: “Log the generator check.”")
   def declined(chore, timezone),
     do: "Declined #{Format.date_short(chore.decided_at, timezone)}: “#{chore.decline_reason}”"
+
+  @doc """
+  The flash after a team admin's change and the send it set off
+  (App.Operation.SendChores), as `{kind, text}`. `done` says what changed, such as
+  "Accepted 3 chores", or is nil for Send changes.
+  """
+  def send_flash(done, %{events: events, failed: failed}, service) do
+    {kind, result} =
+      cond do
+        failed > 0 ->
+          {:error,
+           Format.count(failed,
+             one: "1 activity did not go through to #{service}. The reason is in the table.",
+             many: "%d activities did not go through to #{service}. The reasons are in the table."
+           )}
+
+        events > 0 or is_nil(done) ->
+          {:info, "#{service} is up to date."}
+
+        true ->
+          {:info, nil}
+      end
+
+    {kind, [done && "#{done}.", result] |> Enum.reject(&is_nil/1) |> Enum.join(" ")}
+  end
 end

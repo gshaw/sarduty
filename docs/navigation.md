@@ -54,7 +54,8 @@ is left out, and so is its divider.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
 - **Chores shares Equipment's section** (2026-10-22): most chores are equipment upkeep,
-  and a section of one link looked lost. Chores shows only with member logins on.
+  and a section of one link looked lost. Chores shows only with member logins and chores
+  on (#463).
 - **Milestones sits right after Members** (2026-10-23): every current member's
   milestones, for team admins. It's about members themselves, as Members is; Groups,
   Qualifications, and Endorsements set up what members hold. Members see only their own, on Your membership, until

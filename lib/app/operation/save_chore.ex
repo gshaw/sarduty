@@ -3,11 +3,10 @@ defmodule App.Operation.SaveChore do
   Logging, changing, and deciding chores (#341). A member logs and changes their own
   chores while they wait; a team admin accepts, declines, or changes any of them.
 
-  Nothing here calls D4H. An accepted chore waits until a team admin sends it
-  (App.Operation.SendChores). Once sent, it belongs to that send's `ChoreEvent`, and
-  changing or declining it marks the event "Changes to send". A sent chore moved to
-  another chore category or year leaves its event and is ready to send again. A chore on
-  an event D4H has approved cannot change here: SAR Duty could not send the change.
+  Nothing here calls D4H. A team admin's decision or change marks the chore's event as
+  having changes to send, then puts the team's accepted chores on the events for their
+  chore categories and months (`ChoreEvent.place!/1`). The page then sends them
+  (App.Operation.SendChores).
 
   A team admin's change reads the chore again in its transaction, since another team
   admin or a send may have changed it since the page loaded it.
@@ -57,10 +56,7 @@ defmodule App.Operation.SaveChore do
     with {:ok, _chore} <- result, do: :ok
   end
 
-  @doc """
-  A team admin changes any field of a chore, with any date, in any status.
-  `{:error, :locked}` once D4H has approved its event.
-  """
+  @doc "A team admin changes any field of a chore, with any date, in any status."
   def change(%Team{} = team, %Chore{team_id: team_id} = chore, params)
       when team_id == team.id do
     admin_change(team, chore, &Chore.build_changeset(&1, params, category_ids(team.id, &1), nil))
@@ -79,32 +75,37 @@ defmodule App.Operation.SaveChore do
           |> Repo.all()
 
         Enum.each(chores, fn chore ->
-          {:ok, _chore} = chore |> Chore.decide_changeset(:accepted, user, now) |> decide(chore)
+          {:ok, _chore} = chore |> Chore.decide_changeset(:accepted, user, now) |> Repo.update()
         end)
 
+        :ok = ChoreEvent.place!(team.id)
         length(chores)
       end)
 
     count
   end
 
-  @doc "A team admin accepts one chore, in any status. `{:error, :locked}` as `change/3`."
+  @doc "A team admin accepts one chore, in any status."
   def accept_one(%Team{} = team, %Chore{team_id: team_id} = chore, user, now)
       when team_id == team.id,
       do: admin_change(team, chore, &Chore.decide_changeset(&1, :accepted, user, now))
 
-  @doc "A team admin declines a chore with a reason the member sees. `{:error, :locked}` as `change/3`."
+  @doc "A team admin declines a chore with a reason the member sees."
   def decline(%Team{} = team, %Chore{team_id: team_id} = chore, reason, user, now)
       when team_id == team.id,
       do: admin_change(team, chore, &Chore.decide_changeset(&1, :declined, user, now, reason))
 
+  # The chore's event has changes to send even when the chore stays on it, since its
+  # minutes or what it says may have changed. Placing it may move it to another event.
   defp admin_change(team, chore, build) do
     transaction(fn ->
       current = Repo.get_by!(Chore, id: chore.id, team_id: team.id)
 
-      if Chore.locked?(current),
-        do: {:error, :locked},
-        else: current |> build.() |> decide(current)
+      with {:ok, saved} <- current |> build.() |> Repo.update() do
+        :ok = ChoreEvent.mark_for_send!([current.chore_event_id])
+        :ok = ChoreEvent.place!(team.id)
+        {:ok, Repo.get!(Chore, saved.id)}
+      end
     end)
   end
 
@@ -114,23 +115,6 @@ defmodule App.Operation.SaveChore do
     current = Repo.get_by(Chore, id: chore.id, team_id: member.team_id, member_id: member.id)
     if current && allowed?.(current), do: {:ok, current}, else: {:error, :decided}
   end
-
-  defp decide(changeset, before), do: changeset |> Repo.update() |> place(before)
-
-  # A sent chore stays on its event while it is accepted and still fits it: the same
-  # chore category and year. Either way, the event has changes to send.
-  defp place({:ok, chore}, %Chore{chore_event_id: nil}), do: {:ok, chore}
-
-  defp place({:ok, chore}, %Chore{chore_event_id: event_id}) do
-    event = Repo.get!(ChoreEvent, event_id)
-    :ok = ChoreEvent.mark_for_send!([event_id])
-
-    if ChoreEvent.fits?(event, chore),
-      do: {:ok, chore},
-      else: chore |> Ecto.Changeset.change(chore_event_id: nil) |> Repo.update()
-  end
-
-  defp place(error, _before), do: error
 
   defp transaction(fun), do: Repo.transaction(fn -> fun.() |> ok_or_rollback() end)
 

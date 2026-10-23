@@ -71,11 +71,8 @@ defmodule App.ViewData.TeamDashboardViewData do
     }
   end
 
-  defp chores_to_send(team) do
-    if Team.chores?(team),
-      do: %{ready: Chore.count_ready(team.id), changed: ChoreEvent.count_to_send(team.id)},
-      else: %{ready: 0, changed: 0}
-  end
+  defp chores_to_send(team),
+    do: if(Team.chores?(team), do: ChoreEvent.count_to_send(team.id), else: 0)
 
   @doc """
   Splits activities into NextUp and Coming up. NextUp is the first one starting within

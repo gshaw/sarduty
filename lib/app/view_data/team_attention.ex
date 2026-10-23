@@ -219,31 +219,23 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp chores_to_send_item(%{ready: 0, changed: 0}, _service), do: nil
+  defp chores_to_send_item(0, _service), do: nil
 
-  # Accepted chores, and changes to sent ones, wait for a team admin to send them (#341).
-  defp chores_to_send_item(%{ready: ready, changed: changed}, service) do
+  # A team admin's decision sends chores to D4H at once (#341), so a chore activity with
+  # changes to send is one whose send did not go through.
+  defp chores_to_send_item(count, service) do
     name = D4H.service_name(service)
-
-    title =
-      if ready > 0,
-        do:
-          Format.count(ready,
-            one: "%d chore to send to #{name}",
-            many: "%d chores to send to #{name}"
-          ),
-        else:
-          Format.count(changed,
-            one: "Changes to send for %d chore activity",
-            many: "Changes to send for %d chore activities"
-          )
 
     %{
       key: :chores_to_send,
-      level: :info,
-      title: title,
-      detail: "Send them when you are ready. Nothing goes to #{name} until you do.",
-      action: "Send chores"
+      level: :warning,
+      title:
+        Format.count(count,
+          one: "%d chore activity out of date in #{name}",
+          many: "%d chore activities out of date in #{name}"
+        ),
+      detail: "The last send did not go through. Send the changes again.",
+      action: "Review chores"
     }
   end
 

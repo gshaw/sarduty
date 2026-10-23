@@ -8,12 +8,11 @@ defmodule Web.ChoreFormLive do
   alias Web.MeChoreFormLive
 
   # A team admin changes a chore (#341), /teams/:subdomain/chores/:id/edit: any field, any
-  # date, waiting or decided. Its status stays.
+  # date, waiting or decided. Its status stays. Saving sends its activity to D4H.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
     chore = Chore.find!(team, id)
-    if Chore.locked?(chore), do: raise(Web.Status.NotFound)
 
     socket
     |> assign(page_title: "Change chore", chore: chore, service: D4H.service_name(team))
@@ -46,7 +45,9 @@ defmodule Web.ChoreFormLive do
       />
       <.input field={@form[:description]} label="What they did" />
       <.form_actions>
-        <.button id="chore-save" variant={:success}>Save chore</.button>
+        <.button id="chore-save" variant={:success} phx-disable-with={"Sending to #{@service}…"}>
+          Save chore
+        </.button>
         <.button navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}"}>Cancel</.button>
       </.form_actions>
     </.form>
@@ -69,13 +70,7 @@ defmodule Web.ChoreFormLive do
 
     case SaveChore.change(team, chore, params) do
       {:ok, saved} ->
-        socket
-        |> put_flash(:info, "Saved #{saved.description}.")
-        |> push_navigate(to: ~p"/teams/#{team}/chores/#{chore.id}")
-        |> then(&{:noreply, &1})
-
-      {:error, :locked} ->
-        {:noreply, Web.ChoreLive.locked(socket)}
+        {:noreply, Web.ChoreLive.send_and_return(socket, "Saved #{saved.description}")}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}

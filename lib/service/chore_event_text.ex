@@ -7,9 +7,9 @@ defmodule Service.ChoreEventText do
 
   alias Service.Format
 
-  @doc ~s(The event's title: "Chores: Equipment maintenance, Sep 29 to Oct 19, 2026".)
-  def title(category_title, %Date{} = first, %Date{} = last),
-    do: "Chores: #{category_title}, #{Format.day_range(first, last)}"
+  @doc ~s(The event's title, for its chore category and month: "Chores: Equipment maintenance, October 2026".)
+  def title(category_title, %Date{} = month),
+    do: "Chores: #{category_title}, #{Format.month_year_long(month)}"
 
   @doc """
   The event's description: a note that SAR Duty made it, each member's chores by date
