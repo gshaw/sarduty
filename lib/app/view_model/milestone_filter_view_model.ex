@@ -22,9 +22,9 @@ defmodule App.ViewModel.MilestoneFilterViewModel do
 
   def kinds,
     do: [
-      {"All", ""},
+      {"Milestones", ""},
       {"Hours", "hours"},
-      {"Years on the team", "years"},
+      {"Years", "years"},
       {"Incidents", "incidents"}
     ]
 

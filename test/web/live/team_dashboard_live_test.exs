@@ -205,7 +205,7 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, ~s{#attention-not_seen a[href="#{path}"]})
 
     {:ok, list, _html} = live(log_in_user(conn, user), path)
-    assert has_element?(list, "#member_filter_form-summary", "1 member")
+    assert has_element?(list, "#member-view-active[aria-current=page]", "1")
     assert has_element?(list, "#clock-starts-#{drifting.id}", "Joined")
     refute has_element?(list, "#clock-starts-#{away.id}")
   end

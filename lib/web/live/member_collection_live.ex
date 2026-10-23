@@ -2,6 +2,7 @@ defmodule Web.MemberCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FilterBar
+  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.Member
@@ -32,7 +33,12 @@ defmodule Web.MemberCollectionLive do
     |> assign(now: now, today: today)
     |> assign(:standing?, standing_column?(current_team, filter_options, today, now))
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
+    |> assign(:standing_tile?, MemberFilterViewModel.switch_standing?(filter_options.standing))
     |> assign(:paginated, build_paginated_content(current_team, filter_options))
+    |> assign(
+      :standing_counts,
+      MemberFilterViewModel.standing_counts(current_team, filter_options, now)
+    )
     |> assign(:path_fn, build_path_fn(current_team, filter_options))
     |> assign(:form, to_form(changeset, as: "form"))
   end
@@ -49,17 +55,30 @@ defmodule Web.MemberCollectionLive do
         Add member
       </.button>
     </div>
+    <.stat_switch id="member-switch" label="Standing">
+      <:view
+        :for={{label, standing} <- MemberFilterViewModel.standing_switch()}
+        id={"member-view-#{standing}"}
+        patch={@path_fn.(standing: standing, page: nil)}
+        current={@filter_options.standing == standing}
+        count={@standing_counts[standing]}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
     <.filter_bar
       for={@form}
       id="member_filter_form"
       count={Service.Format.count(@paginated.total_entries, one: "%d member", many: "%d members")}
+      repeats={@paginated.total_entries == @standing_counts[@filter_options.standing]}
       clear={@path_fn.(:reset)}
       path_fn={@path_fn}
       page={@paginated}
-      hidden={[@form[:sort]]}
+      hidden={[@form[:sort]] ++ if(@standing_tile?, do: [@form[:standing]], else: [])}
     >
       <:search field={@form[:q]} />
       <:filter
+        :if={!@standing_tile?}
         field={@form[:standing]}
         label="Standing"
         options={MemberFilterViewModel.standing_kinds(@form[:standing].value)}
@@ -190,6 +209,17 @@ defmodule Web.MemberCollectionLive do
         {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
       </:col>
     </.table>
+
+    <.empty_state
+      :if={@paginated.entries == [] and @filter_options.q not in [nil, ""]}
+      id="no-matching-members"
+      title="No members match"
+    >
+      Change the search or the filters.
+      <:action :if={@filter_options.standing != "all"}>
+        <.a patch={@path_fn.(standing: "all", page: nil)}>Search all members</.a>
+      </:action>
+    </.empty_state>
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
