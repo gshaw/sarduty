@@ -98,13 +98,9 @@ defmodule Web.MilestoneCollectionLive do
       <:col :let={milestone} label="Milestone" class="whitespace-nowrap">
         {MilestoneList.title(milestone)}
       </:col>
+      <%!-- Plain text: which activity tipped a total over a line is chance (/styles). --%>
       <:col :let={milestone} label="Activity" class="max-md:hidden">
-        <.a
-          :if={milestone.activity}
-          navigate={~p"/teams/#{@current_team}/activities/#{milestone.activity.id}"}
-        >
-          {milestone.activity.title}
-        </.a>
+        {milestone.activity && milestone.activity.title}
       </:col>
     </.table>
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />

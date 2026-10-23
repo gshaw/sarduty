@@ -2,6 +2,7 @@ defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
   alias App.Model.Team
+  alias App.ViewData.Milestones
   alias Service.Format
   alias Web.Components.ActivityMap
 
@@ -157,6 +158,28 @@ defmodule Web.StyleGuideHTML.SampleData do
       },
       %{kind: :years, count: 5, on: ~D[2026-05-14], activity: nil}
     ]
+  end
+
+  @every_milestone_up_to %{hours: 5000, years: 30, incidents: 500}
+
+  # Every milestone of a kind, newest first, up to a little past what a long-serving
+  # member reaches: hours to 5,000, years to 30, incidents to 500. The lines come from
+  # Milestones.lines/2, so this page shows what the app does.
+  def every_milestone(kind) do
+    activity =
+      case kind do
+        :hours -> %{title: "Training night: navigation"}
+        :incidents -> %{title: "Missing hiker, Stawamus Chief"}
+        :years -> nil
+      end
+
+    kind
+    |> Milestones.lines(@every_milestone_up_to[kind])
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map(fn {count, i} ->
+      %{kind: kind, count: count, on: Date.add(~D[2026-06-01], -200 * i), activity: activity}
+    end)
   end
 
   # One member's qualifications, soonest expiry first, for the table's greyed rows.
