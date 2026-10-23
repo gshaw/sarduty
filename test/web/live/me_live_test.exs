@@ -111,14 +111,20 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#activities-list", "Last year's training")
     end
 
-    test "qualifications soonest first, with the days left on one expiring soon",
+    test "qualifications soonest first, with the days left on one expiring soon and none with no end",
          %{conn: conn, team: team, member: member} do
       first_aid = qualification_fixture(team, %{title: "First Aid"})
       ends_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
       qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
+      ics = qualification_fixture(team, %{title: "ICS 100"})
+      qualification_award_fixture(ics, member, %{ends_at: nil})
 
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#qualifications-list-#{first_aid.id} .badge", "30 days")
+
+      # No end is a blank cell.
+      assert has_element?(lv, "#qualifications-list-#{ics.id}", "ICS 100")
+      refute has_element?(lv, "#qualifications-list", "Does not expire")
     end
 
     test "the ID card, with Wallet buttons and the verify link",

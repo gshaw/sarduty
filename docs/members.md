@@ -110,7 +110,7 @@ admin's member page, from one query and one component each (#308, #339, decided
 2026-10-20). Org pages can use them later: each takes rows and a time zone, not a team.
 
 - **Qualifications** come from `MemberRecords.qualifications/2`: one table, one row per
-  qualification, soonest expiry first, then Does not expire, then Expired (muted). One
+  qualification, soonest expiry first, then those with no end, then Expired (muted). One
   that expires within 60 days, the app's one expiring window
   (`BuildGroupRulePreview.expiring_days/0`), gets a warning tag with its days left ("30
   days"), as a group's expiring members do. No banner says it again (decided
@@ -118,6 +118,11 @@ admin's member page, from one query and one component each (#308, #339, decided
   says what to do. The words are
   [Web.QualificationText](../lib/web/qualification_text.ex), so every page says the same
   thing.
+- **No end is a blank cell** (decided 2026-10-22), not "Does not expire": most rows have
+  no end, and the same words on each made the list read long.
+- **Every row, on both pages** (decided 2026-10-22). No shorter list on Your membership
+  with the rest a click away. On South Fraser's data a member has about 8, so a split
+  would cost most members a click to save a few rows; only 15 of 91 have more than 20.
 - **No groups** (decided 2026-10-20). #308 asked for groups by expiry. On South Fraser's
   data, 11 of 84 members had anything expiring within 60 days, never more than 1, and
   most groups held 1 or 2 rows under their own heading. A tag finds the one that matters.

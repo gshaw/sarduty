@@ -81,6 +81,19 @@ defmodule App.ViewData.MemberRecordsTest do
       assert rope.first_started_at == nil
     end
 
+    test "of two awards with no end, the one that started last is the latest" do
+      awards = [
+        award(1, "Avalanche", nil),
+        award(1, "Avalanche", nil, ~U[2018-02-01 00:00:00Z]),
+        award(1, "Avalanche", nil, ~U[2019-02-01 00:00:00Z])
+      ]
+
+      [avalanche] = MemberRecords.qualification_rows(awards, @now)
+      assert avalanche.award.starts_at == ~U[2019-02-01 00:00:00Z]
+      assert Enum.map(avalanche.earlier, & &1.starts_at) == [~U[2018-02-01 00:00:00Z], nil]
+      assert avalanche.first_started_at == ~U[2018-02-01 00:00:00Z]
+    end
+
     test "an expired qualification renewed in the past is expired, held from its first start" do
       awards = [
         award(1, "Rope", ~U[2024-09-01 00:00:00Z], ~U[2021-09-01 00:00:00Z]),

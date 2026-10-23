@@ -170,7 +170,7 @@ defmodule Web.StyleGuideHTML.SampleData do
         days: nil,
         expired?: false
       },
-      %{id: 3, title: "ICS 100", expires: "Does not expire", days: nil, expired?: false},
+      %{id: 3, title: "ICS 100", expires: nil, days: nil, expired?: false},
       %{
         id: 4,
         title: "Swiftwater Awareness",
