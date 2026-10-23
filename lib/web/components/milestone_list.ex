@@ -23,7 +23,7 @@ defmodule Web.Components.MilestoneList do
         <span class="min-w-0">
           <span class="block font-semibold">
             {title(milestone)}
-            <.badge :if={new?(milestone, @today)} kind={:success}>New</.badge>
+            <.badge :if={new?(milestone, @today)} kind={:primary}>New</.badge>
           </span>
           <span class="hint block">{detail(milestone)}</span>
         </span>
