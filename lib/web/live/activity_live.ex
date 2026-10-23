@@ -12,8 +12,12 @@ defmodule Web.ActivityLive do
   alias App.Model.Attendance
   alias App.Model.Coordinate
   alias App.Model.EquipmentUsage
+  alias App.Model.Member
+  alias App.Model.Reminder
+  alias App.Operation.SendReminders
   alias App.Repo
   alias App.ViewData.ActivityMembers
+  alias App.ViewData.ActivityReminders
   alias Service.Format
   alias Web.Components.ActivityMap
   alias Web.Components.Reply
@@ -61,14 +65,56 @@ defmodule Web.ActivityLive do
     members = ActivityMembers.load(activity)
     attendances = ActivityMembers.only(members, "attending")
 
-    assign(socket,
+    socket
+    |> assign(
       members: members,
       attendances: attendances,
       attendance_count: length(attendances),
       counts: ActivityMembers.counts(members),
       invitation: replier && Attendance.invitation(activity, replier)
     )
+    |> assign_reminders(members)
   end
+
+  # Reminders a team admin sends (#444): each member's latest, the last batch, and the
+  # round they can send now, before the start.
+  defp assign_reminders(socket, members) do
+    %{activity: activity, current_team: team, coming?: coming?, now: now} = socket.assigns
+    reminders = Reminder.for_activity(activity)
+    batch = ActivityReminders.last_batch(reminders, members)
+
+    assign(socket,
+      reminded: ActivityReminders.latest(reminders),
+      batch: batch,
+      batch_sender: batch && sender_name(team, batch.sent_by_user, now),
+      next_round:
+        socket.assigns.team_admin? && coming? && !activity.deleted_at &&
+          ActivityReminders.next_round(members, reminders, now)
+    )
+  end
+
+  defp sender_name(_team, nil, _now), do: nil
+
+  defp sender_name(team, user, now) do
+    case Member.find_by_email(team, user.email, now) do
+      %Member{name: name} -> name
+      nil -> user.email
+    end
+  end
+
+  def handle_event("remind", %{"round" => round}, %{assigns: %{team_admin?: true}} = socket)
+      when round in ["1", "2"] do
+    %{current_team: team, activity: activity, current_user: user} = socket.assigns
+    now = DateTime.utc_now()
+
+    case SendReminders.call(team, activity, user, String.to_integer(round), now) do
+      {:ok, _reminders} -> {:noreply, socket |> assign(now: now) |> assign_people()}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
+  # Only team admins send; a member's page has no button, but an event can still come.
+  def handle_event("remind", _params, socket), do: {:noreply, socket}
 
   # The view's word in the URL, the same before and after the start, as a D4H status.
   @views %{
@@ -90,6 +136,9 @@ defmodule Web.ActivityLive do
   def handle_info({:replied, _attendance}, socket), do: {:noreply, assign_people(socket)}
 
   def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
+
+  # Swoosh's test adapter tells each process a reminder came from, this one included.
+  def handle_info({:email, _email}, socket), do: {:noreply, socket}
 
   @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
 
@@ -175,6 +224,10 @@ defmodule Web.ActivityLive do
           started?={!@coming?}
           now={@now}
           team_admin?={@team_admin?}
+          reminded={@reminded}
+          batch={@batch}
+          batch_sender={@batch_sender}
+          next_round={@next_round}
         />
         <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
       </main>
@@ -357,21 +410,35 @@ defmodule Web.ActivityLive do
   attr :started?, :boolean, required: true
   attr :now, :any, required: true
   attr :team_admin?, :boolean, default: true
+  attr :reminded, :map, default: %{}, doc: "each member's latest reminder, by member id"
+  attr :batch, :map, default: nil, doc: "the last reminders sent"
+  attr :batch_sender, :string, default: nil
+  attr :next_round, :any, default: nil, doc: "{round, plan} a team admin can send now"
 
   # Who the activity invites, as counts that filter one table (#444). Before the start:
   # how each replied and when, New for the last 24 hours. From the start: D4H's
   # attendance, with each member's times. A column every row would repeat goes.
   def members_section(assigns) do
+    rows = ActivityMembers.only(assigns.members, assigns.view)
+
     assigns =
       assign(assigns,
-        rows: ActivityMembers.only(assigns.members, assigns.view),
-        timezone: assigns.activity.team.timezone
+        rows: rows,
+        timezone: assigns.activity.team.timezone,
+        reminded_shown?:
+          Enum.any?(rows, &(&1.status == "requested" and assigns.reminded[&1.member_id]))
       )
 
     ~H"""
     <section id="activity-members" class="mt-8">
       <.heading_row id="members-heading">
         <h2 class="heading">Members</h2>
+        <:note :if={@batch}>
+          <span id="members-batch">{batch_text(@batch, @batch_sender, @timezone)}</span>
+        </:note>
+        <:action :if={@next_round}>
+          <.reminders_button activity={@activity} next_round={@next_round} />
+        </:action>
       </.heading_row>
       <p :if={@members == []} id="members-empty" class="hint">
         {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}
@@ -428,11 +495,18 @@ defmodule Web.ActivityLive do
         </:col>
         <:col
           :let={row}
-          :if={!@started? and @view != "requested"}
+          :if={!@started? and (@view != "requested" or @reminded_shown?)}
           label="Replied"
           class="whitespace-nowrap"
         >
           {Format.month_day_time(row.replied_at, @timezone)}
+          <span
+            :if={row.status == "requested" and @reminded[row.member_id]}
+            id={"member-reminded-#{row.member.id}"}
+            class="hint"
+          >
+            {reminded_text(@reminded[row.member_id], @timezone)}
+          </span>
           <.badge
             :if={ActivityMembers.new?(row, @now)}
             kind={:primary}
@@ -473,6 +547,84 @@ defmodule Web.ActivityLive do
     </section>
     """
   end
+
+  attr :activity, :map, required: true
+  attr :next_round, :any, required: true
+
+  # Send N reminders, or Ask again (N) for round 2, after the browser's own confirm: an
+  # email can't be taken back. It names who it skips and why.
+  defp reminders_button(%{next_round: {round, plan}} = assigns) do
+    assigns = assign(assigns, round: round, plan: plan, count: length(plan.send))
+
+    ~H"""
+    <.button
+      id="members-remind"
+      phx-click="remind"
+      phx-value-round={@round}
+      phx-disable-with="Sending…"
+      data-confirm={reminders_confirm(@round, @plan, @activity.team)}
+    >
+      {if @round == 1,
+        do: Format.count(@count, one: "Send 1 reminder", many: "Send %d reminders"),
+        else: "Ask again (#{Format.number(@count)})"}
+    </.button>
+    """
+  end
+
+  defp reminders_confirm(round, plan, team) do
+    [confirm_ask(round, length(plan.send)), confirm_skipped(plan.skipped, team)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("\n\n")
+  end
+
+  defp confirm_ask(1, count) do
+    Format.count(count,
+      one: "Email 1 member who has not replied?",
+      many: "Email %d members who have not replied?"
+    ) <>
+      " Each gets one email from you with I'll be there and Can't make it." <>
+      " Replies to the email come to you."
+  end
+
+  defp confirm_ask(2, count) do
+    Format.count(count, one: "Ask 1 member again?", many: "Ask %d members again?") <>
+      " They have not replied since their first reminder." <>
+      " Each gets one more email from you, the last for this activity."
+  end
+
+  defp confirm_skipped([], _team), do: nil
+
+  defp confirm_skipped(skipped, team) do
+    names = skipped |> Enum.map(&skipped_text(&1, team)) |> Format.or_list()
+    "Not sent to #{names}."
+  end
+
+  defp skipped_text({member, :no_email}, team),
+    do: "#{member.name} (no email in #{D4H.service_name(team)})"
+
+  defp skipped_text({member, :reminders_off}, _team), do: "#{member.name} (reminders off)"
+
+  # "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since"
+  defp batch_text(batch, sender, timezone) do
+    sent =
+      Format.count(batch.sent, one: "%d sent", many: "%d sent") <>
+        " " <>
+        Format.month_day_time(batch.sent_at, timezone) <>
+        if(sender, do: " by #{sender}", else: "")
+
+    [
+      sent,
+      batch.failed > 0 && Format.count(batch.failed, one: "%d failed", many: "%d failed"),
+      Format.count(batch.replied_since, one: "%d replied since", many: "%d replied since")
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" · ")
+  end
+
+  defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Reminder failed"
+
+  defp reminded_text(%Reminder{sent_at: sent_at}, timezone),
+    do: "Reminded " <> Format.month_day(sent_at, timezone)
 
   defp members_path(activity, nil), do: ~p"/teams/#{activity.team}/activities/#{activity.id}"
 

@@ -9,6 +9,15 @@ defmodule Service.Format do
     String.replace(template, "%d", number(n))
   end
 
+  @doc ~s(Names in a sentence, the last after "or": "Dana Clark or Eli Haddad", "A, B, or C".)
+  def or_list([one]), do: one
+  def or_list([first, second]), do: "#{first} or #{second}"
+
+  def or_list([_, _, _ | _] = items) do
+    {rest, [last]} = Enum.split(items, -1)
+    Enum.join(rest, ", ") <> ", or " <> last
+  end
+
   @doc ~s(A date for letters and sentences: "October 20, 2026". Takes a `Date`, or a time and zone.)
   def date_long(%Date{} = date), do: Calendar.strftime(date, "%B %-d, %Y")
   def date_long(datetime, timezone), do: datetime(datetime, timezone, "%B %-d, %Y")

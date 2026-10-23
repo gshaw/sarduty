@@ -133,6 +133,12 @@ defmodule Web.StyleGuideHTML.Values do
           {~s{count(1, one: "1 member", many: "%d members")}, Format.count(1, member)},
           {~s{count(1204, one: "1 member", many: "%d members")}, Format.count(1204, member)}
         ]},
+       {:or_list, "Names in a sentence, such as who a reminder skips",
+        [
+          {~s{or_list(["Dana Clark", "Eli Haddad"])},
+           Format.or_list(["Dana Clark", "Eli Haddad"])},
+          {~s{or_list(["A", "B", "C"])}, Format.or_list(["A", "B", "C"])}
+        ]},
        {:duration, "Hours and minutes, everywhere",
         [
           {"duration(12_750)", Format.duration(12_750)},

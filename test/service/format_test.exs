@@ -100,4 +100,10 @@ defmodule Service.FormatTest do
       assert Format.days_ago(nil, @now, @zone) == nil
     end
   end
+
+  test "or_list joins names, the last after or" do
+    assert Format.or_list(["Dana Clark"]) == "Dana Clark"
+    assert Format.or_list(["Dana Clark", "Eli Haddad"]) == "Dana Clark or Eli Haddad"
+    assert Format.or_list(["A", "B", "C"]) == "A, B, or C"
+  end
 end
