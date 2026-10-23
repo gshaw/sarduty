@@ -59,6 +59,12 @@ needs the Workers Paid plan: 3,000 emails a month are included. The dashboard's
 **Activity log** shows each message and whether it was delivered or bounced. A message
 over 5 MiB, attachments included, is refused.
 
+Reminders to reply to an activity (#444) come from the team's name and reply to the team
+admin who sent them, through the API's `reply_to` field: Cloudflare refuses a Reply-To
+header, and any header not on its allowlist fails the whole send. They carry
+`List-Unsubscribe` and `List-Unsubscribe-Post`, which it allows, for a mail app's
+one-click unsubscribe.
+
 Emailing a tax credit letter waits for Cloudflare's answer, so the page says when it
 didn't send (#155). Emailing every eligible member's letter at once runs as an Oban job
 (#202).

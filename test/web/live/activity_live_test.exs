@@ -91,6 +91,62 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-panel-take-attendance")
   end
 
+  describe "reminders (#444)" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      App.Model.Member
+      |> Repo.get_by!(team_id: team.id, email: user.email)
+      |> Ecto.Changeset.change(name: "Alex Chen")
+      |> Repo.update!()
+
+      activity = activity_fixture(team, %{started_at: hours_from_now(72)})
+      cameron = member_fixture(team, %{name: "Cameron Ruiz"})
+      frankie = member_fixture(team, %{name: "Frankie Moore"})
+      wren = member_fixture(team, %{name: "Wren Adams", email: nil})
+
+      for m <- [cameron, frankie, wren],
+          do: attendance_fixture(activity, m, %{status: "requested"})
+
+      %{
+        conn: log_in_user(conn, user),
+        team: team,
+        activity: activity,
+        cameron: cameron,
+        wren: wren
+      }
+    end
+
+    test "a team admin sends them, after a confirm that names who it skips",
+         %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#members-remind", "Send 2 reminders")
+
+      assert has_element?(
+               lv,
+               ~s{#members-remind[data-confirm*="Email 2 members who have not replied?"]}
+             )
+
+      assert has_element?(lv, ~s{#members-remind[data-confirm*="Wren Adams (no email in D4H)"]})
+
+      lv |> element("#members-remind") |> render_click()
+
+      assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
+      assert_received {:email, %{to: [{"Frankie Moore", _}]}}
+      refute_received {:email, _}
+      refute has_element?(lv, "#members-remind")
+      assert has_element?(lv, "#members-batch", "2 sent")
+      assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
+      assert has_element?(lv, "#activity-members th", "Replied")
+      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
+      refute has_element?(lv, "#member-reminded-#{wren.id}")
+      refute has_element?(lv, "#member-row-#{cameron.id} td", "No reply ·")
+    end
+  end
+
   defp hours_from_now(hours),
     do: DateTime.utc_now() |> DateTime.add(hours, :hour) |> DateTime.truncate(:second)
 
@@ -213,6 +269,27 @@ defmodule Web.ActivityLiveTest do
       assert_received {:d4h_write, _id, %{"status" => "ABSENT"}}
       assert has_element?(lv, "#activity-reply-state", "Can't make it")
       assert has_element?(lv, "#activity-panel-counts", "0 signed up · 2 can't make it")
+    end
+
+    test "a member sees who was reminded, but no button", %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(48)})
+      other = member_fixture(team)
+      attendance_fixture(activity, other, %{status: "requested"})
+
+      Repo.insert!(%App.Model.Reminder{
+        team_id: team.id,
+        activity_id: activity.id,
+        member_id: other.id,
+        sent_at: DateTime.utc_now(),
+        round: 1,
+        status: :failed
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#members-batch", "0 sent")
+      assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
+      refute has_element?(lv, "#members-remind")
     end
 
     test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do
