@@ -362,6 +362,10 @@ defmodule App.Model.Member do
   end
 
   def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
+
+  @doc "The team's member with this id, or nil."
+  def find(team, id), do: Repo.get_by(Member, id: id, team_id: team.id)
+
   def get_by(params), do: Repo.get_by(Member, params)
 
   def insert!(params) do

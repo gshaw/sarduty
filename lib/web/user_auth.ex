@@ -23,6 +23,10 @@ defmodule Web.UserAuth do
   @known_browser_options [sign: true, max_age: 60 * 60 * 24 * 365, same_site: "Lax"]
   @known_browser_users 5
 
+  # The member a team admin views the team as (#425), by local id. Read through the URL's
+  # team, so it only ever applies on that team.
+  @view_as_key "view_as_member_id"
+
   @doc """
   Logs the user in.
 
@@ -140,10 +144,6 @@ defmodule Web.UserAuth do
   defp member_logins(nil), do: []
   defp member_logins(user), do: Member.get_logins(user.email, DateTime.utc_now())
 
-  # The URL's team's member who is this user, or nil. Admins get no pass here: a member
-  # page only ever shows the person logged in.
-  defp member_login(user, subdomain), do: user |> member_logins() |> find_login(subdomain)
-
   defp find_login(logins, subdomain), do: Enum.find(logins, &(&1.team.subdomain == subdomain))
 
   defp pick_default_team(_teams, nil), do: nil
@@ -259,11 +259,12 @@ defmodule Web.UserAuth do
   # `current_member` when they log in as one of its members, else nil. The page's
   # `access` (see Web) decides who may open it: team admins only unless it says :team or
   # :member. Anyone else gets a 404, so the page doesn't say whether the team exists.
-  def on_mount(:ensure_team_access, params, _session, socket) do
+  def on_mount(:ensure_team_access, params, session, socket) do
     user = socket.assigns.current_user
     # mount_current_user loaded the user's member logins for the menu; reuse them.
     logins = socket.assigns[:member_logins] || member_logins(user)
-    access = team_access!(user, logins, params["subdomain"], page_access(socket.view))
+    view_as = session[@view_as_key]
+    access = team_access!(user, logins, params["subdomain"], page_access(socket.view), view_as)
 
     if access.team_admin?, do: RecordUserSeen.call(user, access.current_team.id)
 
@@ -276,17 +277,60 @@ defmodule Web.UserAuth do
   # Who the user is on the URL's team, as `current_team`, `current_member`, and
   # `team_admin?`, when `access` lets them in; otherwise a 404. The LiveView hook and the
   # plug both decide here, so they never let in different people.
-  defp team_access!(user, logins, subdomain, access) do
+  #
+  # A team admin viewing as a member (#425) is that member, and not a team admin, on every
+  # page members open, so they see what the member sees. Team admin pages stay theirs.
+  # `viewing_as` is the member, on every page, for the banner and the read-only checks.
+  defp team_access!(user, logins, subdomain, access, view_as_id) do
     admin_team = authorized_team(user, subdomain)
-    member = find_login(logins, subdomain)
+    viewing_as = viewing_as(admin_team, view_as_id)
+
+    {admin_team, member} =
+      if viewing_as && access != :admin,
+        do: {nil, viewing_as},
+        else: {admin_team, find_login(logins, subdomain)}
 
     unless allowed?(access, admin_team, member), do: raise(Web.Status.NotFound)
+
+    report_context(user, member, viewing_as)
 
     %{
       current_team: admin_team || member.team,
       current_member: member,
-      team_admin?: admin_team != nil
+      team_admin?: admin_team != nil,
+      viewing_as: viewing_as
     }
+  end
+
+  # So an error report on a member's page names whose page broke; view as them to see it.
+  # Logger metadata, so it reaches crashes in this process, LiveView or request alike.
+  defp report_context(user, member, viewing_as) do
+    Honeybadger.context(
+      user_id: user.id,
+      member_id: member && member.id,
+      viewing_as: viewing_as != nil
+    )
+  end
+
+  defp viewing_as(nil, _id), do: nil
+  defp viewing_as(_team, nil), do: nil
+
+  defp viewing_as(team, id) do
+    case Member.find(team, id) do
+      nil -> nil
+      member -> %{member | team: team}
+    end
+  end
+
+  @doc "Starts viewing the team as `member` (#425): the member pages show what they see."
+  def put_view_as(conn, member), do: put_session(conn, @view_as_key, member.id)
+
+  @doc "What a page says when a team admin viewing as `member` tries to change something."
+  def view_as_refusal(member), do: "You're viewing as #{member.name}, so nothing is saved."
+
+  @doc "Stops viewing as a member, and returns the member's id, or nil."
+  def delete_view_as(conn) do
+    {get_session(conn, @view_as_key), delete_session(conn, @view_as_key)}
   end
 
   @doc "Who may open a team LiveView: `:admin` (the default), `:team`, or `:member`."
@@ -372,17 +416,23 @@ defmodule Web.UserAuth do
   """
   def require_team_access(conn, _opts) do
     user = conn.assigns.current_user
-    access = team_access!(user, member_logins(user), conn.path_params["subdomain"], :team)
+    subdomain = conn.path_params["subdomain"]
+    access = team_access!(user, member_logins(user), subdomain, :team, view_as_id(conn))
     assign(conn, Map.to_list(access))
   end
 
-  @doc "The plug for a member's own downloads: `member` is the logged-in member on the URL's team."
+  @doc """
+  The plug for a member's own downloads: `member` is the logged-in member on the URL's
+  team, or the member a team admin views as, with `viewing_as` set.
+  """
   def require_team_member(conn, _opts) do
-    case member_login(conn.assigns.current_user, conn.path_params["subdomain"]) do
-      nil -> raise Web.Status.NotFound
-      member -> assign(conn, :member, member)
-    end
+    user = conn.assigns.current_user
+    subdomain = conn.path_params["subdomain"]
+    access = team_access!(user, member_logins(user), subdomain, :member, view_as_id(conn))
+    assign(conn, member: access.current_member, viewing_as: access.viewing_as)
   end
+
+  defp view_as_id(conn), do: get_session(conn, @view_as_key)
 
   defp put_token_in_session(conn, token) do
     conn
