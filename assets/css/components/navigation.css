@@ -183,7 +183,6 @@
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
   @media (width < 64rem) {
-    .site-bar-inner { min-height: 56px; }
     .site-bar-links, .team-switcher, .site-bar-search-field { display: none; }
     .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
     .site-bar-phone { display: block; }
