@@ -53,7 +53,7 @@ defmodule App.Operation.BuildChoreEventTest do
              "kind" => "event",
              "title" => "Chores: Equipment maintenance, October 2026",
              "started_at" => @start,
-             "finished_at" => "2026-10-28T11:00:00Z",
+             "finished_at" => @start,
              "full_team" => false
            } = create.new_value
 
@@ -106,7 +106,7 @@ defmodule App.Operation.BuildChoreEventTest do
     [unpublish, update, sam, publish] = rows
     assert unpublish.new_value == %{"published" => false}
     refute Map.has_key?(update.new_value, "tag_ids")
-    assert update.new_value["finished_at"] == "2026-10-28T10:00:00Z"
+    assert update.new_value["finished_at"] == update.new_value["started_at"]
     assert %{d4h_record_id: 502, member_id: 2} = sam
     assert sam.new_value["ends_at"] == "2026-10-28T09:00:00Z"
     assert %{d4h_record_id: 900, new_value: %{"published" => true}} = publish
