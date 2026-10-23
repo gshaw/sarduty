@@ -45,6 +45,12 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **A template's groups are invited as a set** (source `template`, #162): one
   `create_attendance` row per member, with status `REQUESTED` rather than `ATTENDING`,
   applied at once.
+- **Chores are a set per event** (source `chores`, #341): a team admin's send makes or
+  rebuilds one D4H event from its chores. A new event's set creates the activity, then
+  its attendance: those rows say `created_in_set` and get the new activity's id as they
+  apply, in order. Its rows also delete attendance (`delete_attendance`) and publish
+  (`publish_activity`). D4H is read for ids only; SAR Duty owns the event. See
+  [chores.md](chores.md).
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H

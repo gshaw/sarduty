@@ -30,10 +30,48 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
   Duty keeps every chore with its date and minutes. No start time.
 - **A member's date is within the last 60 days and not in the future.** A team admin can
   set any date.
-- **A chore belongs to the month it was done in**, not the month it was logged.
+- **A chore counts on the day it was done**, not the day it was logged, so its year is
+  the year it was done.
 - **Waiting, Accepted, Declined.** A member changes or deletes a chore only while it
   waits, and deletes a declined one once they have read why. Accepted has no tag.
 - **A team admin accepts waiting chores in one step** at `/teams/:subdomain/chores`, with
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
   reason the member sees, in any status.
+
+## The send
+
+Accepted chores wait under Ready to send on the team's Chores page until a team admin
+sends them ([SendChores](../lib/app/operation/send_chores.ex)). How often is the team's
+choice: a week, a month, or a season's worth at a time. Accepting does not write to D4H.
+
+- **One D4H event per chore category and year in a send**
+  ([ChoreEvent](../lib/app/model/chore_event.ex)). One category, since an event takes one
+  hours tag. One year, since the event's date decides which tax credit letter counts the
+  hours: December and January chores sent together make two events.
+- **The event is dated on its last chore**: "Chores: Equipment maintenance, Sep 29 to Oct
+  19, 2026", from 00:00 that day in the team's time zone, as long as the largest member
+  total.
+- **One attendance per member**, from the event's start, for their total. The description
+  lists every chore, grouped by member, as HTML: D4H keeps lists and paragraphs but
+  strips tables.
+- **SAR Duty owns the event and rebuilds it on each send**
+  ([BuildChoreEvent](../lib/app/operation/build_chore_event.ex)). Changing or declining a
+  sent chore marks its event, and the In D4H table offers Send changes. A sent chore moved
+  to another category or year leaves its event and is ready to send again. A send makes
+  the title, the times, the description, and each member's attendance match; anyone
+  else's attendance is deleted, and so is a member's second row, since D4H lets a member
+  attend one activity twice (tried on #02228, 2026-10-21). D4H is read only for ids, so
+  edits made there are replaced. An event deleted in D4H is made again.
+- **Tags are set when the event is made, and never changed.** Then it is published, last,
+  since D4H locks a published activity's attendance. Sending changes makes it a draft,
+  changes it, and publishes it again. An event left with no chores stays a draft.
+- **When D4H will not publish**, as on a team whose activities need approval (South
+  Fraser's #02228 answered 409 on 2026-10-17), the event stays a draft. The send counts as
+  done, with a note beside it, since SAR Duty counts a draft's hours all the same. It
+  still answered 409 on 2026-10-21, when deleting attendance there worked.
+- **Once D4H has approved an event, it is locked.** D4H refuses changes to an approved
+  activity (#356), so SAR Duty stops offering Send changes and says to change it in D4H.
+- **Each event is a change set** of source `chores`, so it shows in the activity's and
+  each member's history. An event whose send did not go through keeps Send changes, with
+  D4H's error beside it.

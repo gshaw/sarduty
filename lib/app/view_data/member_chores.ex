@@ -15,9 +15,12 @@ defmodule App.ViewData.MemberChores do
     |> Enum.map(fn {month, chores} ->
       chores
       |> totals()
-      |> Map.merge(%{month: month, chores: Enum.sort_by(chores, &{&1.date, &1.id}, :desc)})
+      |> Map.merge(%{month: month, chores: newest_first(chores)})
     end)
   end
+
+  defp newest_first(chores),
+    do: chores |> Enum.sort_by(& &1.id, :desc) |> Enum.sort_by(& &1.date, {:desc, Date})
 
   @doc "Minutes by status: `%{accepted:, waiting:, declined:}`."
   def totals(chores) do

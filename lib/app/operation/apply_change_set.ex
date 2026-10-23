@@ -54,18 +54,41 @@ defmodule App.Operation.ApplyChangeSet do
     with :ok <- check_team(team),
          d4h = D4H.build_context_from_team(team),
          {:ok, current} <- read_current(d4h, change_set) do
-      rows =
-        for row <- change_set.rows, row.status in [:proposed, :failed] do
-          ChangeSetRow.record!(row, apply_row(d4h, row, current, opts), now)
-        end
+      # Rows go in order, so one can use the activity an earlier row created (#341).
+      {rows, _created} =
+        change_set.rows
+        |> Enum.filter(&(&1.status in [:proposed, :failed]))
+        |> Enum.map_reduce(created_activity(change_set.rows), fn row, created ->
+          row = with_created(row, created)
+          recorded = ChangeSetRow.record!(row, apply_row(d4h, row, current, opts), now)
+          {recorded, created_now(recorded) || created}
+        end)
 
       ChangeSet.mark_applied!(change_set, user, now)
       {:ok, rows}
     end
   end
 
+  # An activity the set created on an earlier apply, for its rows that failed then.
+  defp created_activity(rows), do: Enum.find_value(rows, &created_now/1)
+
+  defp created_now(%ChangeSetRow{action: :create_activity, status: :applied} = row),
+    do: row.d4h_record_id
+
+  defp created_now(_row), do: nil
+
+  defp with_created(row, created) do
+    if ChangeSetRow.created_in_set?(row) and created,
+      do: ChangeSetRow.fill_activity!(row, created),
+      else: row
+  end
+
   defp check_team(%Team{d4h_access_key: nil}), do: {:error, :no_team_key}
   defp check_team(%Team{}), do: :ok
+
+  # SAR Duty owns a chore event and rebuilds it on each send (#341), so D4H is not read
+  # for conflicts: the set read the event's attendance as it was planned, for ids.
+  defp read_current(_d4h, %ChangeSet{source: :chores}), do: {:ok, :owned}
 
   # An attendance set reads the activity's rows now, and D4H's published flag, since
   # attendance on a published activity is locked.
@@ -122,6 +145,12 @@ defmodule App.Operation.ApplyChangeSet do
   Whether a row can still be written, given D4H's attendance rows `current` (nil for a
   group set). `:ok`, or `{:skipped, text}` when D4H changed the record first.
   """
+  def check(%ChangeSetRow{} = row, :owned) do
+    if ChangeSetRow.created_in_set?(row) and is_nil(row.new_value["d4h_activity_id"]),
+      do: {:failed, "The event was not added to D4H, so this was not sent."},
+      else: :ok
+  end
+
   def check(%ChangeSetRow{action: :update_attendance} = row, current) do
     case Enum.find(current, &(&1.d4h_attendance_id == row.d4h_record_id)) do
       nil ->
@@ -189,6 +218,25 @@ defmodule App.Operation.ApplyChangeSet do
       new_value["status"] || "ATTENDING"
     )
     |> attendance_result()
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_attendance} = row) do
+    case D4H.delete_attendance(d4h, row.d4h_record_id) do
+      :ok -> {:applied, row.d4h_record_id}
+      {:error, error} -> {:failed, attendance_failure_text(error)}
+    end
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :publish_activity} = row) do
+    case D4H.publish_activity(
+           d4h,
+           row.old_value["kind"],
+           row.d4h_record_id,
+           row.new_value["published"]
+         ) do
+      {:ok, id} -> {:applied, id}
+      {:error, error} -> {:failed, Exception.message(error)}
+    end
   end
 
   defp write(d4h, %ChangeSetRow{action: :add_group_member, new_value: new_value}) do

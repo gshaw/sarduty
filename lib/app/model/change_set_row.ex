@@ -11,6 +11,8 @@ defmodule App.Model.ChangeSetRow do
   # and `new_value` what it gets, both with string keys. `d4h_record_id` is the attendance
   # row or group membership; a create fills it from D4H's answer. A row stays proposed
   # until it's applied, fails with D4H's error, or is skipped because D4H changed first.
+  # A row on an activity the same set creates (#341) has `"created_in_set" => true` in
+  # `new_value` and no activity id until the create applies.
   schema "change_set_rows" do
     belongs_to :change_set, ChangeSet
     belongs_to :team, Team
@@ -20,6 +22,7 @@ defmodule App.Model.ChangeSetRow do
       values: [
         :update_attendance,
         :create_attendance,
+        :delete_attendance,
         :add_group_member,
         :remove_group_member,
         :create_member,
@@ -31,6 +34,7 @@ defmodule App.Model.ChangeSetRow do
         :create_activity,
         :update_activity,
         :delete_activity,
+        :publish_activity,
         :create_qualification,
         :update_qualification,
         :delete_qualification,
@@ -67,6 +71,22 @@ defmodule App.Model.ChangeSetRow do
   def record!(%ChangeSetRow{} = row, {status, error}, _now) when status in [:failed, :skipped] do
     row |> change(status: status, error: error) |> Repo.update!()
   end
+
+  @doc "Fills in the activity a `created_in_set` row goes on, once the set has created it."
+  def fill_activity!(%ChangeSetRow{} = row, d4h_activity_id) do
+    new_value = Map.put(row.new_value, "d4h_activity_id", d4h_activity_id)
+
+    record_id =
+      if row.action in [:publish_activity, :update_activity, :set_activity_tags],
+        do: d4h_activity_id,
+        else: row.d4h_record_id
+
+    row |> change(new_value: new_value, d4h_record_id: record_id) |> Repo.update!()
+  end
+
+  @doc "Whether the row goes on an activity the same set creates."
+  def created_in_set?(%ChangeSetRow{new_value: %{"created_in_set" => true}}), do: true
+  def created_in_set?(%ChangeSetRow{}), do: false
 
   @doc "Puts a row back to proposed."
   def reset!(%ChangeSetRow{} = row),
