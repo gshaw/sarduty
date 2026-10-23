@@ -17,6 +17,7 @@ defmodule Web.Components.SearchBoxTest do
 
       assert has_element?(lv, "#search-open[aria-label=Search]")
       assert has_element?(lv, "#search-input[role=combobox]")
+      assert has_element?(lv, "#search-clear[aria-label=\"Clear search\"]")
 
       assert has_element?(
                lv,

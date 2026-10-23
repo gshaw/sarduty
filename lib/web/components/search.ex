@@ -57,7 +57,6 @@ defmodule Web.Components.Search do
         id={"#{@id}-open"}
         class="site-bar-search"
         aria-label="Search"
-        phx-click={open(@id)}
       >
         <.icon name="hero-magnifying-glass-mini" />
       </button>
@@ -90,6 +89,14 @@ defmodule Web.Components.Search do
               aria-controls={"#{@id}-results"}
               aria-expanded={to_string(@open)}
             />
+            <button
+              type="button"
+              id={"#{@id}-clear"}
+              class="site-search-clear"
+              aria-label="Clear search"
+            >
+              <.icon name="hero-x-mark-mini" />
+            </button>
             <kbd class="site-search-key" aria-hidden="true">/</kbd>
           </label>
           <button type="button" class="site-search-cancel" phx-click={close(@id)}>
@@ -120,10 +127,6 @@ defmodule Web.Components.Search do
     </div>
     """
   end
-
-  @doc "Opens the search: the sheet below 1024px, the panel above, with the field focused."
-  def open(id \\ "search"),
-    do: JS.add_class("is-open", to: "##{id}") |> JS.focus(to: "##{id}-input")
 
   @doc "Closes the search, leaving what was typed."
   def close(id \\ "search"),

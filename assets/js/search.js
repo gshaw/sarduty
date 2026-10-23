@@ -2,7 +2,8 @@
 // panel, moves through the results with the arrow keys, and opens one with Enter. Focus
 // stays in the field and aria-activedescendant names the highlighted result, as in the
 // WAI combobox pattern. Classes and attributes go through this.js(), so the server's
-// renders keep them. "/" anywhere outside a field jumps to the search.
+// renders keep them. "/" anywhere outside a field jumps to the search, and the glass below
+// 1024px opens it.
 //
 // The browser keeps the last 5 results opened, per person and team, under data-recent-key,
 // and sends them to the server on mount, which shows the ones this person can still open.
@@ -11,6 +12,23 @@ export const Search = {
   mounted() {
     this.input = this.el.querySelector("input[role=combobox]")
     this.active = 0
+
+    // The glass opens the sheet here rather than with JS commands, which add the class a
+    // frame later: the field must be showing and focused within the tap, or iOS won't
+    // raise the keyboard. open() keeps the class through the server's renders.
+    this.el.querySelector(`#${this.el.id}-open`).addEventListener("click", () => {
+      this.el.classList.add("is-open")
+      this.input.focus()
+    })
+    // The x clears the field and keeps the keyboard up; the input event runs the search.
+    const clear = this.el.querySelector(`#${this.el.id}-clear`)
+    clear.addEventListener("pointerdown", event => event.preventDefault())
+    clear.addEventListener("click", event => {
+      event.preventDefault()
+      this.input.value = ""
+      this.input.dispatchEvent(new Event("input", {bubbles: true}))
+      this.input.focus()
+    })
 
     this.input.addEventListener("focus", () => this.open())
     this.input.addEventListener("keydown", event => this.keydown(event))
