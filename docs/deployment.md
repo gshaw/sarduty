@@ -41,6 +41,11 @@ For a PR with a migration:
   checkpoints hold SQLite's write lock, sometimes for over 5 s, so `App.Repo` waits up to
   30 s for the lock (#416). Its metrics, such as `litestream_checkpoint_seconds`, are in
   Fly's metrics.
+- **Slow holds**: `App.Repo.SlowLog` logs any transaction that holds the database, or
+  statement that runs, over 5 s, with its caller. Each is a warning in the log and a
+  `repo.slow` event in Honeybadger Insights (`filter event_type::str == "repo.slow"`). A
+  lock error with no `repo.slow` transaction before it points at Litestream. It stays
+  after #416: a 5 s hold is worth knowing about.
 - **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
   consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
   `backups/` (gitignored), encrypted with age and stamped to the minute.
