@@ -162,7 +162,11 @@ defmodule Web.MeLive do
       <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
         Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
         <:action>
-          <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>Activities coming up</.a>
+          <p class="action">
+            <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>
+              Activities coming up
+            </.a>
+          </p>
         </:action>
       </.empty_state>
       <.table
@@ -226,7 +230,7 @@ defmodule Web.MeLive do
           {Format.duration(chore.minutes)}
         </:col>
       </.table>
-      <p :if={@chores != []} class="mt-2">
+      <p :if={@chores != []} class="action mt-2">
         <.a id="all-chores" navigate={~p"/teams/#{@team}/me/chores"}>All your chores</.a>
       </p>
     </section>

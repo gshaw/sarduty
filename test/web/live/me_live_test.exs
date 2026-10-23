@@ -140,7 +140,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#chores-list-#{declined.id} .badge", "Declined")
       assert has_element?(lv, "#chores-list-#{hd(chores).id}")
       refute has_element?(lv, "#chores-list-#{List.last(chores).id}")
-      assert has_element?(lv, "#all-chores")
+      assert has_element?(lv, ".action #all-chores")
     end
 
     test "qualifications soonest first, with the days left on one expiring soon and none with no end",

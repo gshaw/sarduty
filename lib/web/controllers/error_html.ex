@@ -62,7 +62,7 @@ defmodule Web.ErrorHTML do
           </h1>
           <p class="heading">{@description}</p>
           <p class="mb-8">{@help_text}</p>
-          <p>
+          <p class="action">
             <a href="/" class="link">Home page</a>
           </p>
         </main>
