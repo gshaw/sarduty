@@ -308,6 +308,73 @@ defmodule Web.MeLiveTest do
   end
 
   describe "downloads" do
+    test "a qualification with a certificate links to it, which opens in the browser",
+         %{conn: conn, team: team, member: member} do
+      award = certificate_award_fixture(team, member)
+      plain = qualification_award_fixture(qualification_fixture(team), member)
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#certificate-#{award.id}", "Certificate")
+      refute has_element?(lv, "#certificate-#{plain.id}")
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        assert conn.request_path =~ "/documents/77/download"
+
+        conn
+        |> Plug.Conn.put_resp_content_type("application/pdf", nil)
+        |> Plug.Conn.send_resp(200, "%PDF-1.7")
+      end)
+
+      conn = get(conn, ~p"/teams/#{team}/me/qualifications/#{award.id}/certificate")
+      assert response(conn, 200) == "%PDF-1.7"
+      assert get_resp_header(conn, "content-type") == ["application/pdf"]
+
+      assert get_resp_header(conn, "content-disposition") == [
+               ~s(inline; filename="Standard First Aid.pdf")
+             ]
+
+      assert get_resp_header(conn, "content-security-policy") == ["sandbox"]
+    end
+
+    test "a certificate that isn't a PDF or an image downloads", %{
+      conn: conn,
+      team: team,
+      member: member
+    } do
+      award = certificate_award_fixture(team, member)
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/html")
+        |> Plug.Conn.send_resp(200, "<script></script>")
+      end)
+
+      conn = get(conn, ~p"/teams/#{team}/me/qualifications/#{award.id}/certificate")
+      assert [disposition] = get_resp_header(conn, "content-disposition")
+      assert disposition =~ "attachment;"
+      assert get_resp_header(conn, "x-content-type-options") == ["nosniff"]
+    end
+
+    test "another member's certificate, or an award with none, is a 404",
+         %{conn: conn, team: team, member: member} do
+      theirs = certificate_award_fixture(team, member_fixture(team))
+      none = qualification_award_fixture(qualification_fixture(team), member)
+
+      for award <- [theirs, none] do
+        assert_error_sent 404, fn ->
+          get(conn, ~p"/teams/#{team}/me/qualifications/#{award.id}/certificate")
+        end
+      end
+    end
+
+    test "a certificate D4H won't send is a 404", %{conn: conn, team: team, member: member} do
+      award = certificate_award_fixture(team, member)
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+
+      conn = get(conn, ~p"/teams/#{team}/me/qualifications/#{award.id}/certificate")
+      assert response(conn, 404)
+    end
+
     test "the member's own letter", %{conn: conn, team: team, member: member} do
       letter = tax_credit_letter_fixture(member)
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")

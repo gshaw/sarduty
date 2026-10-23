@@ -54,6 +54,7 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/me/card/google-wallet",
     "/teams/:subdomain/me/details",
     "/teams/:subdomain/me/image",
+    "/teams/:subdomain/me/qualifications/:id/certificate",
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf"
   ]
 

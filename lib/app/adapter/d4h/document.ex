@@ -4,11 +4,13 @@ defmodule App.Adapter.D4H.Document do
             file_extension: nil,
             file_size: nil,
             file_type: nil,
-            available_sizes: []
+            available_sizes: [],
+            d4h_target_id: nil
 
   def build(record) do
     %__MODULE__{
       d4h_document_id: record["id"],
+      d4h_target_id: get_in(record, ["targetResource", "id"]),
       file_extension: record["fileExt"],
       file_size: record["fileSize"],
       file_type: record["fileType"],

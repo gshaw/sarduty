@@ -27,6 +27,30 @@ defmodule App.Adapter.D4HTest do
     assert D4H.fetch_team_image(context()) == {:ok, "png bytes", "team.png"}
   end
 
+  test "lists award certificates, and downloads one with its type" do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+
+      case conn.request_path do
+        "/v3/team/1/documents" ->
+          assert conn.query_params["target_resource_type"] == "MemberQualificationAward"
+
+          Req.Test.json(conn, %{
+            "results" => [%{"id" => 7, "targetResource" => %{"id" => 55}}],
+            "totalSize" => 1
+          })
+
+        "/v3/team/1/documents/7/download" ->
+          conn
+          |> Plug.Conn.put_resp_content_type("application/pdf", nil)
+          |> Plug.Conn.send_resp(200, "%PDF")
+      end
+    end)
+
+    assert [%{d4h_document_id: 7, d4h_target_id: 55}] = D4H.fetch_award_documents(context())
+    assert D4H.fetch_document(context(), 7) == {:ok, "%PDF", "application/pdf"}
+  end
+
   describe "services" do
     test "a team is on Records only at Records' host" do
       assert D4H.service(%App.Model.Team{d4h_api_host: "records.sarduty.com"}) == :records

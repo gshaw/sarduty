@@ -245,6 +245,7 @@ defmodule Web.Router do
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
+      get "/qualifications/:id/certificate", MeController, :certificate
     end
 
     # Team routes members reach too, like a LiveView with access: :team.
@@ -258,6 +259,7 @@ defmodule Web.Router do
       pipe_through :require_authorized_team_subdomain
 
       get "/members/:id/image", MemberController, :image
+      get "/members/:id/certificates/:award_id", MemberController, :certificate
       get "/members/:id/card/apple-wallet", MemberCardController, :pass
       get "/members/:id/card/google-wallet", MemberCardController, :google_pass
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show

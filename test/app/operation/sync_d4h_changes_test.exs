@@ -4,8 +4,8 @@ defmodule App.Operation.SyncD4HChangesTest do
   alias App.Operation.SyncD4HChanges
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
-            member-qualification-awards member-groups member-group-memberships equipment
-            equipment-usages)
+            member-qualification-awards award-documents member-groups
+            member-group-memberships equipment equipment-usages)
 
   defp heads(overrides \\ %{}) do
     @lists
@@ -36,9 +36,24 @@ defmodule App.Operation.SyncD4HChangesTest do
     plan = SyncD4HChanges.plan(heads(), heads(%{"members" => moved()}))
 
     assert plan.changed == ["members"]
-    assert plan.lists == ["members", "member-qualification-awards", "member-group-memberships"]
+
+    assert plan.lists == [
+             "members",
+             "member-qualification-awards",
+             "award-documents",
+             "member-group-memberships"
+           ]
+
     assert plan.activities == %{}
     assert plan.attendance_since == nil
+  end
+
+  test "changed awards or certificates refetch the certificates" do
+    plan = SyncD4HChanges.plan(heads(), heads(%{"member-qualification-awards" => moved()}))
+    assert plan.lists == ["member-qualification-awards", "award-documents"]
+
+    plan = SyncD4HChanges.plan(heads(), heads(%{"award-documents" => moved()}))
+    assert plan.lists == ["award-documents"]
   end
 
   test "changed equipment refetches its usages too" do

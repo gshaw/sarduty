@@ -12,6 +12,8 @@ defmodule App.Model.MemberQualificationAward do
     field :d4h_award_id, :integer
     field :starts_at, :utc_datetime
     field :ends_at, :utc_datetime
+    # Its certificate in D4H (#314), set by RefreshD4HData.UpsertAwardDocuments.
+    field :d4h_document_id, :integer
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -125,6 +127,39 @@ defmodule App.Model.MemberQualificationAward do
   end
 
   def get_by(params), do: Repo.get_by(MemberQualificationAward, params)
+
+  @doc """
+  The member's award with a certificate, by local id, with its qualification. Raises
+  Ecto.NoResultsError, a 404, otherwise. Looked up through the member and their team,
+  never by the bare id.
+  """
+  def find_certificate!(%Member{} = member, id) do
+    MemberQualificationAward
+    |> join(:inner, [a], q in assoc(a, :qualification))
+    |> where([a, q], a.id == ^id and a.member_id == ^member.id and q.team_id == ^member.team_id)
+    |> where([a], not is_nil(a.d4h_document_id))
+    |> preload([a, q], qualification: q)
+    |> Repo.one!()
+  end
+
+  @doc "Every award of the team's members, as `{id, d4h_award_id, d4h_document_id}`."
+  def document_ids(team_id) do
+    MemberQualificationAward
+    |> join(:inner, [a], m in assoc(a, :member))
+    |> join(:inner, [a], q in assoc(a, :qualification))
+    |> where([a, m, q], m.team_id == ^team_id and q.team_id == ^team_id)
+    |> select([a], {a.id, a.d4h_award_id, a.d4h_document_id})
+    |> Repo.all()
+  end
+
+  @doc "Sets the certificate on awards by local id: `[{id, d4h_document_id or nil}]`."
+  def set_documents(changes) do
+    Enum.each(changes, fn {id, document_id} ->
+      MemberQualificationAward
+      |> where(id: ^id)
+      |> Repo.update_all(set: [d4h_document_id: document_id])
+    end)
+  end
 
   def insert!(params) do
     changeset = MemberQualificationAward.build_new_changeset(params)

@@ -232,6 +232,36 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @award_documents [target_resource_type: "MemberQualificationAward"]
+
+  @doc """
+  Every document attached to a qualification award: its certificate (#314). The team key
+  reads RESTRICTED ones too. Records serves none yet.
+  """
+  def fetch_award_documents(context) do
+    context
+    |> reduce_pages("/documents", &D4H.Document.build/1, [], &[&1 | &2], @award_documents)
+    |> Enum.reverse()
+    |> Enum.concat()
+  end
+
+  @doc "The params that pick out award documents, for the sync's list head."
+  def award_documents_params, do: @award_documents
+
+  @doc """
+  A document's file and its content type, as D4H sends it: the file itself, not a link.
+  """
+  def fetch_document(context, document_id) do
+    response = Req.get!(context, url: "/documents/#{document_id}/download", decode_body: false)
+
+    if response.status == 200 do
+      content_type = response |> Req.Response.get_header("content-type") |> List.first()
+      {:ok, response.body, content_type || "application/octet-stream"}
+    else
+      {:error, response}
+    end
+  end
+
   # `:none` when the team has no profile image in D4H.
   def fetch_team_image(context) do
     case D4H.fetch_team_image_document(context) do

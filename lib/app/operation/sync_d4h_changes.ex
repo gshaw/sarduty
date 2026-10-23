@@ -28,6 +28,7 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
+  alias App.Operation.RefreshD4HData.UpsertAwardDocuments
   alias App.Operation.RefreshD4HData.UpsertEquipmentItems
   alias App.Operation.RefreshD4HData.UpsertEquipmentUsages
   alias App.Operation.RefreshD4HData.UpsertGroupMemberships
@@ -41,8 +42,8 @@ defmodule App.Operation.SyncD4HChanges do
   require Logger
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
-            member-qualification-awards member-groups member-group-memberships equipment
-            equipment-usages)
+            member-qualification-awards award-documents member-groups
+            member-group-memberships equipment equipment-usages)
 
   # A D4H team may not have the equipment module (#271).
   @equipment_lists ~w(equipment equipment-usages)
@@ -53,13 +54,14 @@ defmodule App.Operation.SyncD4HChanges do
   # Fetched whole when they change, in this order, since later ones point at earlier ones.
   # Equipment usages come after activities, in apply_plan/5, so a new activity's usages
   # aren't skipped.
-  @small_lists ~w(members member-qualifications member-qualification-awards member-groups
-                  member-group-memberships equipment equipment-usages)
+  @small_lists ~w(members member-qualifications member-qualification-awards award-documents
+                  member-groups member-group-memberships equipment equipment-usages)
 
   # Rows that were skipped for an unknown parent come in once the parent does.
   @dependents %{
-    "members" => ["member-qualification-awards", "member-group-memberships"],
-    "member-qualifications" => ["member-qualification-awards"],
+    "members" => ["member-qualification-awards", "award-documents", "member-group-memberships"],
+    "member-qualifications" => ["member-qualification-awards", "award-documents"],
+    "member-qualification-awards" => ["award-documents"],
     "member-groups" => ["member-group-memberships"],
     "equipment" => ["equipment-usages"]
   }
@@ -197,6 +199,10 @@ defmodule App.Operation.SyncD4HChanges do
       :none -> %{total_size: 0, newest_updated_at: nil}
     end
   end
+
+  # Award certificates (#314) are the documents list, filtered.
+  defp fetch_head(d4h, "award-documents"),
+    do: D4H.fetch_list_head(d4h, "/documents", D4H.award_documents_params())
 
   defp fetch_head(d4h, list), do: D4H.fetch_list_head(d4h, "/" <> list)
 
@@ -338,6 +344,9 @@ defmodule App.Operation.SyncD4HChanges do
 
   defp fetch_list("member-qualification-awards", d4h, team, progress),
     do: UpsertQualificationAwards.call(d4h, team, progress)
+
+  defp fetch_list("award-documents", d4h, team, _progress),
+    do: UpsertAwardDocuments.call(d4h, team)
 
   defp fetch_list("member-groups", d4h, team, progress),
     do: UpsertGroups.call(d4h, team, progress)
