@@ -2,7 +2,7 @@
 
 SAR Command Assist (SCA, [sarassist.ca](https://www.sarassist.ca)) is the incident tool
 many BC teams run at callouts. It is free, distributed by BCSARA, and written by Dylan
-Baker, a Campbell River SAR manager. SAR Duty doesn't call it and it doesn't call SAR
+Baker, a Campbell River SAR manager. "SCA" in issue comments means this. SAR Duty doesn't call it and it doesn't call SAR
 Duty; both read the same D4H. Notes from its site and our issues, 2026-10-22.
 
 ## What it does
@@ -27,7 +27,8 @@ From [its D4H Sync page](https://www.sarassist.ca/Support/D4HSync), SCA 7.13 or 
   a dedicated "SCA Sync" user with Member+, Draft Incidents, and Equipment Basic.
 - **No groups.** So SCA can't see what SAR Duty's [group rules](group-rules.md) decide,
   such as who is an active SARM rather than anyone who once took the course. Brad Parker
-  asked about this on 2026-10-22.
+  asked about this on 2026-10-22; the answer is a request for
+  SCA to read D4H group membership, since SAR Duty writes the group there.
 
 Sign-out times and kilometres feed the D4H entry for the incident. Since SCA covers
 incident attendance, SAR Duty removed its attendance import (#212, #424); attendance at
