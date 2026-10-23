@@ -21,7 +21,8 @@ defmodule Web.Components.Search do
     group: "Groups",
     endorsement: "Endorsements",
     template: "Templates",
-    page: "Pages"
+    page: "Pages",
+    recent: "Recent"
   }
 
   attr :id, :string, default: "search"
@@ -31,6 +32,11 @@ defmodule Web.Components.Search do
   attr :team, :map, required: true
   attr :service, :string, default: "D4H", doc: "where the team's records come from"
   attr :target, :any, default: nil, doc: "the LiveComponent the form's events go to"
+  attr :recent, :list, default: [], doc: "from Web.Search.recent/3, shown before typing"
+
+  attr :recent_key, :string,
+    default: nil,
+    doc: "where the browser keeps this person's recent picks on this team"
 
   attr :open, :boolean,
     default: false,
@@ -38,7 +44,13 @@ defmodule Web.Components.Search do
 
   def search_box(assigns) do
     ~H"""
-    <div id={@id} class={["site-search", @open && "is-open"]} phx-hook="Search">
+    <div
+      id={@id}
+      class={["site-search", @open && "is-open"]}
+      phx-hook="Search"
+      phx-target={@target}
+      data-recent-key={@recent_key}
+    >
       <button
         type="button"
         id={"#{@id}-open"}
@@ -88,11 +100,16 @@ defmodule Web.Components.Search do
             id={@id}
             query={@query}
             groups={@groups}
+            recent={@recent}
             kinds={@kinds}
             team={@team}
             service={@service}
           />
-          <p :if={@groups != []} class="site-search-keys" aria-hidden="true">
+          <p
+            :if={@groups != [] or (@recent != [] and @query in [nil, ""])}
+            class="site-search-keys"
+            aria-hidden="true"
+          >
             <span><kbd>↑</kbd> <kbd>↓</kbd> move</span>
             <span><kbd>Enter</kbd> open</span>
             <span><kbd>Esc</kbd> close</span>
@@ -116,23 +133,23 @@ defmodule Web.Components.Search do
   attr :id, :string, required: true
   attr :query, :string, required: true
   attr :groups, :list, required: true
+  attr :recent, :list, required: true
   attr :kinds, :list, required: true
   attr :team, :map, required: true
   attr :service, :string, required: true
 
+  # Before typing: the recent picks, then what search finds. After: the results.
   defp search_results(assigns) do
     terms = App.ViewData.Search.terms(assigns.query)
+    shown = if terms == [], do: assigns.recent, else: assigns.groups
 
     groups =
-      for group <- assigns.groups,
+      for group <- shown,
           do: Map.put(group, :more_path, more_path(group, terms, assigns.team, assigns.query))
 
     assigns = assign(assigns, terms: terms, groups: groups)
 
     ~H"""
-    <p :if={@terms == []} id={"#{@id}-hint"} class="site-search-hint">
-      {hint(@kinds)}
-    </p>
     <div :if={@groups != []} id={"#{@id}-results"} role="listbox" aria-label="Search results">
       <section
         :for={group <- @groups}
@@ -144,8 +161,8 @@ defmodule Web.Components.Search do
         <h2 id={"#{@id}-heading-#{group.kind}"}>{Map.fetch!(kind_names(), group.kind)}</h2>
         <.hit
           :for={hit <- group.hits}
-          id={"#{@id}-hit-#{group.kind}-#{hit.id}"}
-          kind={group.kind}
+          id={"#{@id}-hit-#{hit.kind}-#{hit.id}"}
+          kind={hit.kind}
           hit={hit}
           terms={@terms}
           team={@team}
@@ -160,6 +177,9 @@ defmodule Web.Components.Search do
         </.link>
       </section>
     </div>
+    <p :if={@terms == []} id={"#{@id}-hint"} class="site-search-hint">
+      {hint(@kinds)}
+    </p>
     <div :if={@terms != [] and @groups == []} id={"#{@id}-none"} class="site-search-none">
       <h2>Nothing matches “{@query}”</h2>
       <p>Search looks at names, D4H numbers, and barcodes. Check the spelling, or try fewer words.</p>
@@ -188,7 +208,14 @@ defmodule Web.Components.Search do
 
   defp hit(assigns) do
     ~H"""
-    <.link id={@id} navigate={@hit.path} class="site-search-hit" role="option" aria-selected="false">
+    <.link
+      id={@id}
+      navigate={@hit.path}
+      class="site-search-hit"
+      role="option"
+      aria-selected="false"
+      data-key={Web.Search.key(@hit)}
+    >
       <span :if={@kind == :member} class="avatar">{Web.Navigation.initials(@hit.title)}</span>
       <span class="site-search-text">
         <span class="site-search-title">{bold_terms(@hit.title, @terms)}</span>

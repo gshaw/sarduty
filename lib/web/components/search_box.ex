@@ -3,14 +3,15 @@ defmodule Web.Components.SearchBox do
   The top bar's search on a team's pages (#473): Web.Components.Search's markup, searching
   as you type. It lives in the layout, so every team page has it, and going to another page
   starts it fresh. Pass the team, `team_admin?` and `member?` as the page assigned them,
-  and the side navigation's `sections`, which are the pages it finds.
+  and the side navigation's `sections`, which are the pages it finds, and `user_id`, whose
+  recent picks the browser keeps.
   """
   use Web, :live_component
 
   alias App.Adapter.D4H
   alias Web.Components.Search
 
-  def mount(socket), do: {:ok, assign(socket, query: "", groups: [])}
+  def mount(socket), do: {:ok, assign(socket, query: "", groups: [], recent: [])}
 
   def update(assigns, socket) do
     {:ok,
@@ -18,8 +19,25 @@ defmodule Web.Components.SearchBox do
      |> assign(assigns)
      |> assign(
        kinds: Web.Search.kinds(assigns.team_admin?, assigns.member?),
-       service: if(D4H.records?(assigns.team), do: "SAR Duty Records", else: "D4H")
+       service: if(D4H.records?(assigns.team), do: "SAR Duty Records", else: "D4H"),
+       # Per person and team, so a shared iPad doesn't show the last person's picks.
+       recent_key: "sarduty:search-recent:#{assigns.user_id}:#{assigns.team.subdomain}"
      )}
+  end
+
+  # The hook sends the browser's recent picks when it mounts.
+  def handle_event("recent", %{"keys" => keys}, socket) do
+    %{team: team, team_admin?: team_admin?, member?: member?, sections: sections} =
+      socket.assigns
+
+    recent =
+      Web.Search.recent(team, keys,
+        team_admin?: team_admin?,
+        member?: member?,
+        sections: sections
+      )
+
+    {:noreply, assign(socket, recent: recent)}
   end
 
   def handle_event("search", %{"q" => query}, socket),
@@ -47,6 +65,8 @@ defmodule Web.Components.SearchBox do
         id={@id}
         query={@query}
         groups={@groups}
+        recent={@recent}
+        recent_key={@recent_key}
         kinds={@kinds}
         team={@team}
         service={@service}

@@ -67,6 +67,35 @@ defmodule Web.SearchTest do
     end
   end
 
+  describe "recent/3" do
+    test "the picks this person can still open, newest first, from untrusted keys" do
+      team = team_fixture()
+      member = member_fixture(team, %{name: "Ali Here"})
+      activity = activity_fixture(team, %{title: "Rope night"})
+
+      keys = [
+        "activity:#{activity.id}",
+        "member:#{member.id}",
+        "page:members",
+        "member:x",
+        "evil:1",
+        "member",
+        7
+      ]
+
+      admin = recent(team, keys, team_admin?: true, member?: false)
+
+      assert [%{kind: :recent, hits: hits}] = admin
+      assert Enum.map(hits, & &1.title) == ["Rope night", "Ali Here", "Members"]
+      assert hd(hits).path == "/teams/#{team.subdomain}/activities/#{activity.id}"
+
+      assert [%{hits: [%{title: "Rope night"}]}] =
+               recent(team, keys, team_admin?: false, member?: true)
+
+      assert recent(team, "not a list", team_admin?: true, member?: false) == []
+    end
+  end
+
   test "an All link opens the list with the search in place" do
     team = team_fixture()
 
@@ -74,6 +103,12 @@ defmodule Web.SearchTest do
              "/teams/#{team.subdomain}/members?q=ali+w&standing=all"
 
     assert Web.Search.more_path(:group, team, "x") == nil
+  end
+
+  defp recent(team, keys, who) do
+    area = Navigation.area("/teams/#{team.subdomain}", team)
+    sections = Navigation.sections(area, "/teams/#{team.subdomain}", who)
+    Web.Search.recent(team, keys, Keyword.put(who, :sections, sections))
   end
 
   defp search(team, query, who) do

@@ -58,6 +58,71 @@ defmodule Web.Search do
     end)
   end
 
+  @recent 5
+
+  @doc """
+  The recent picks (#473) from `keys`, the browser's list of `"kind:id"` strings, newest
+  first, as one group, or `[]`. Takes the same options as run/3, so a pick this person can't
+  open, on another team, or gone, is left out.
+  """
+  def recent(team, keys, opts) when is_list(keys) do
+    search_opts = [
+      kinds: kinds(Keyword.fetch!(opts, :team_admin?), Keyword.fetch!(opts, :member?)),
+      pages: opts |> Keyword.get(:sections, []) |> pages()
+    ]
+
+    keys =
+      keys
+      |> Enum.flat_map(&parse_key/1)
+      |> Enum.uniq()
+      |> Enum.take(@recent)
+
+    case Search.find(team, keys, search_opts) do
+      [] ->
+        []
+
+      hits ->
+        [%{kind: :recent, more?: false, hits: Enum.map(hits, &with_path(&1, &1.kind, team))}]
+    end
+  end
+
+  def recent(_team, _keys, _opts), do: []
+
+  # "member:12" or "page:tax-credit-letters", from the browser, so nothing is trusted: the
+  # kind must be one search knows, and a record's id a number.
+  defp parse_key(key) when is_binary(key) do
+    with [kind, id] <- String.split(key, ":", parts: 2),
+         {:ok, kind} <- parse_kind(kind),
+         {:ok, id} <- parse_id(kind, id) do
+      [{kind, id}]
+    else
+      _other -> []
+    end
+  end
+
+  defp parse_key(_key), do: []
+
+  defp parse_kind(text) do
+    case Enum.find(Search.kinds(), &(Atom.to_string(&1) == text)) do
+      nil -> :error
+      kind -> {:ok, kind}
+    end
+  end
+
+  defp parse_id(:page, id), do: {:ok, id}
+
+  defp parse_id(_kind, id) do
+    case Integer.parse(id) do
+      {id, ""} -> {:ok, id}
+      _other -> :error
+    end
+  end
+
+  @doc """
+  A hit's key for the recent picks: `"member:12"`.
+  """
+  def key(hit), do: "#{hit.kind}:#{hit.id}"
+
   @doc "The kinds whose page this person opens. Pages are always in: they are the ones they see."
   def kinds(team_admin?, member?) do
     Enum.filter(Search.kinds(), fn kind ->

@@ -373,4 +373,5 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_nav_sections(), to: SampleData
   defdelegate sample_member(), to: SampleData
   defdelegate sample_search_groups(), to: SampleData
+  defdelegate sample_search_recent(), to: SampleData
 end
