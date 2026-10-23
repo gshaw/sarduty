@@ -1,9 +1,11 @@
 # Chores
 
 Chores are time members give the team outside activities, such as fixing equipment or
-board work (#341, closes #11). A member logs each one from Your membership, a team admin
-accepts or declines it, and a team admin sends accepted chores to D4H when they choose.
-They exist only on a team with member logins on.
+board work (#341, closes #11). A member logs each one from Your membership, and a team
+admin accepts or declines it. Accepting sends it to D4H, on its chore category's
+activity for the month. They exist only on a team with member logins on and Let members
+log chores checked under Member logins in team settings; every team starts with it off
+(#463).
 
 ## Chore categories
 
@@ -16,7 +18,8 @@ secondary), and other D4H tags, picked as on an activity's Change tags page.
   secondary hours tag (`Activity.hours_tags/1`) when SAR Duty creates it, so a renamed
   hours tag still works.
 - **Tags go on an event when it is created and never change.** A category's new tags go
-  on the next new event. D4H refuses tag changes on a published activity (#356, #358).
+  on the next month's event. D4H refuses tag changes on a published activity (#356,
+  #358).
 - **A category is archived, never deleted.** Old chores keep it, and members cannot pick
   it. A team admin can restore it.
 
@@ -29,58 +32,71 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
 - **Each chore is its own row.** D4H gets one attendance per member per event, but SAR
   Duty keeps every chore with its date and minutes. No start time.
 - **A member's date is within the last 60 days and not in the future.** A team admin can
-  set any date.
-- **A chore counts on the day it was done**, not the day it was logged, so its year is
-  the year it was done.
+  set any date that has passed. Never the future, where D4H counts the hours as signed
+  up, not attended.
+- **A chore counts on the day it was done**, not the day it was logged, so its month
+  and year are the ones it was done in.
 - **Waiting, Accepted, Declined.** A member changes or deletes a chore only while it
   waits, and deletes a declined one once they have read why. Accepted has no tag.
 - **A team admin accepts waiting chores in one step** at `/teams/:subdomain/chores`, with
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
-  reason the member sees, in any status.
+  reason the member sees, in any status, and links its D4H activity.
 
 ## The send
 
-Accepted chores wait under Ready to send on the team's Chores page until a team admin
-sends them ([SendChores](../lib/app/operation/send_chores.ex)). How often is the team's
-choice: a week, a month, or a season's worth at a time. Accepting does not write to D4H.
+Every team admin decision sends to D4H at once
+([SendChores](../lib/app/operation/send_chores.ex)): accepting a chore, changing one, or
+declining one. There is no separate send step. An earlier version made one activity per
+send, so a team admin who accepted chores every day got an activity a day (2026-10-23).
 
-- **One D4H event per chore category and year in a send**
+- **One D4H event per chore category and month**
   ([ChoreEvent](../lib/app/model/chore_event.ex)). One category, since an event takes one
-  hours tag. One year, since the event's date decides which tax credit letter counts the
-  hours: December and January chores sent together make two events.
-- **The event is dated on its last chore**: "Chores: Equipment maintenance, Sep 29 to Oct
-  19, 2026", from 00:00 that day in the team's time zone, as long as the largest member
-  total.
+  hours tag. One month, so the event stays in one tax year and in the month its chores
+  were done. Each decision puts the team's accepted chores on their months' events,
+  making one when there is none, and sends the events that changed. No setting picks the
+  period: Andrew said how often D4H gets events does not matter, and leaned to monthly
+  (#341).
+- **The event is titled for its month and dated on its last chore**: "Chores: Equipment
+  maintenance, October 2026", from 00:00 that day in the team's time zone, as long as
+  the largest member total. Never in the future, where D4H counts attendance as signed
+  up.
 - **One attendance per member**, from the event's start, for their total. The description
   lists every chore, grouped by member, as HTML: D4H keeps lists and paragraphs but
   strips tables.
 - **SAR Duty owns the event and rebuilds it on each send**
-  ([BuildChoreEvent](../lib/app/operation/build_chore_event.ex)). Changing or declining a
-  sent chore marks its event, and the In D4H table offers Send changes. A sent chore moved
-  to another category or year leaves its event and is ready to send again. A send makes
-  the title, the times, the description, and each member's attendance match; anyone
-  else's attendance is deleted, and so is a member's second row, since D4H lets a member
-  attend one activity twice (tried on #02228, 2026-10-21). D4H is read only for ids, so
-  edits made there are replaced. An event deleted in D4H is made again.
+  ([BuildChoreEvent](../lib/app/operation/build_chore_event.ex)). A send makes the title,
+  the times, the description, and each member's attendance match; anyone else's
+  attendance is deleted, and so is a member's second row, since D4H lets a member attend
+  one activity twice (tried on #02228, 2026-10-21). D4H is read only for ids, so edits
+  made there are replaced. An event deleted in D4H is made again.
+- **Declining is the undo.** A declined chore leaves its event, and the send takes its
+  hours off. An event left with no chores stays a draft with no attendance, since D4H's
+  API cannot delete an event.
 - **Tags are set when the event is made, and never changed.** Then it is published, last,
-  since D4H locks a published activity's attendance. Sending changes makes it a draft,
-  changes it, and publishes it again. An event left with no chores stays a draft.
-- **When D4H will not publish**, as on a team whose activities need approval (South
-  Fraser's #02228 answered 409 on 2026-10-17), the event stays a draft. The send counts as
-  done, with a note beside it, since SAR Duty counts a draft's hours all the same. It
-  still answered 409 on 2026-10-21, when deleting attendance there worked.
-- **Once D4H has approved an event, it is locked.** D4H refuses changes to an approved
-  activity (#356), so SAR Duty stops offering Send changes and says to change it in D4H.
-- **Each event is a change set** of source `chores`, so it shows in the activity's and
-  each member's history. An event whose send did not go through keeps Send changes, with
-  D4H's error beside it.
+  once its attendance is in. Sending changes makes it a draft, changes it, and publishes
+  it again.
+- **When D4H will not publish**, as on South Fraser (#02228 answered 409 on 2026-10-17
+  and 2026-10-21), the event stays a draft. The send counts as done, with a note beside
+  it, since SAR Duty counts a draft's hours all the same. Why D4H refuses is not known:
+  South Fraser has no approval module.
+- **Nothing locks an event.** D4H's `approved` flag mirrors `published` on every team seen
+  (#358), so the first version, which stopped sending an approved event, stopped at the
+  first published one.
+- **A send that does not go through** leaves its event with changes to send and D4H's
+  error beside it. The Chores page then shows Send changes, and the team home a warning.
+  The next decision tries it again too.
+- **A team's sends run one at a time** (`:global.trans`), so two team admins accepting at
+  once cannot make a month's event twice. Production is one machine.
+- **Each send of an event is a change set** of source `chores`, so it shows in the
+  activity's and each member's history.
 
 ## Where else chores show
 
-- **Team home**: for team admins, "N chores to accept" and "N chores to send to D4H"
-  under Needs attention, and the waiting count beside Chores in the side navigation. For a
-  member, a declined chore under For you to do until they delete it.
+- **Team home**: for team admins, "N chores to accept" under Needs attention, and a
+  warning when a chore activity is out of date in D4H; the waiting count shows beside
+  Chores in the side navigation. For a member, a declined chore under For you to do until
+  they delete it.
 - **Your membership**: the member's 5 latest chores, with New chore and a link to all of
   them (#406).
 - **The year page** needs nothing of its own: a sent chore's activity carries its

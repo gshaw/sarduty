@@ -12,9 +12,9 @@ defmodule App.Model.ChoreTest do
     "description" => " Truck 2 tire pressures "
   }
 
-  defp errors(params, today \\ @today) do
+  defp errors(params, who \\ :member) do
     %Chore{}
-    |> Chore.build_changeset(Map.merge(@params, params), [7], today)
+    |> Chore.build_changeset(Map.merge(@params, params), [7], @today, who)
     |> Map.fetch!(:errors)
     |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
   end
@@ -31,8 +31,12 @@ defmodule App.Model.ChoreTest do
     assert errors(%{"date" => "2026-09-05"}) == [date: "Enter a date in the last 60 days"]
   end
 
-  test "a team admin sets any date" do
-    assert errors(%{"date" => "2020-01-01"}, nil) == []
+  test "a team admin sets any date that has passed" do
+    assert errors(%{"date" => "2020-01-01"}, :team_admin) == []
+
+    assert errors(%{"date" => "2026-11-06"}, :team_admin) == [
+             date: "Enter a date that has passed"
+           ]
   end
 
   test "minutes are 1 to a day, and the category is one it may have" do

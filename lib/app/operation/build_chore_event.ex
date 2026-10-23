@@ -4,9 +4,9 @@ defmodule App.Operation.BuildChoreEvent do
   its accepted chores. SAR Duty owns the event, so each send rebuilds it; there are no
   added, changed, or skipped cases, and edits made in D4H are replaced.
 
-  - The event is titled for its chore category and the days its chores span. It starts
-    at 00:00 on its last chore's day in the team's time zone, and lasts as long as the
-    largest member total. Its chores are all in one year, so it counts in that year.
+  - The event is titled for its chore category and month. It starts at 00:00 on its last
+    chore's day in the team's time zone, and lasts as long as the largest member total.
+    Its chores are all in one month, so it counts in that month's year.
   - Each member with accepted chores has one attendance, from the event's start, for
     their total. Anyone else's attendance on it is deleted.
   - An event gets its tags in their own row, so a refusal shows: a new one just after it
@@ -27,8 +27,9 @@ defmodule App.Operation.BuildChoreEvent do
   The rows for one event. `state` is nil when D4H has no event yet, or
   `%{d4h_activity_id:, published?:}`. `chores` are the accepted chores, with members.
   `current` is D4H's attendance on the event now (`D4H.AttendanceInfo`), read for ids.
-  `event` is `%{category:, timezone:, tags:}`, with the chore category's title and the
-  tags to set (`d4h_tag_id` and `title`), or `[]` to leave them.
+  `event` is `%{category:, month:, timezone:, tags:}`, with the chore category's title,
+  the first day of the event's month, and the tags to set (`d4h_tag_id` and `title`), or
+  `[]` to leave them.
   """
   def plan(state, chores, current, event)
 
@@ -157,12 +158,6 @@ defmodule App.Operation.BuildChoreEvent do
     |> Service.Convert.local_to_utc(~T[00:00:00], timezone)
   end
 
-  @doc ~s(The event's title: "Chores: Equipment maintenance, Sep 29 to Oct 19, 2026".)
-  def title(chores, category) do
-    dates = Enum.map(chores, & &1.date)
-    ChoreEventText.title(category, Enum.min(dates, Date), Enum.max(dates, Date))
-  end
-
   @doc "Each member's total accepted minutes, by name: `[{member, minutes}]`."
   def member_totals(chores) do
     chores
@@ -177,7 +172,7 @@ defmodule App.Operation.BuildChoreEvent do
     longest = totals |> Enum.map(&elem(&1, 1)) |> Enum.max(fn -> 0 end)
 
     %{
-      "title" => title(chores, event.category),
+      "title" => ChoreEventText.title(event.category, event.month),
       "started_at" => iso(starts_at),
       "description" => ChoreEventText.description(chores),
       "finished_at" => starts_at |> DateTime.add(max(longest, 1), :minute) |> iso()

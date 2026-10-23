@@ -42,19 +42,10 @@ defmodule Service.Format do
   def day_in_year(%Date{} = date, %Date{} = today),
     do: Calendar.strftime(date, if(date.year == today.year, do: "%b %-d", else: "%b %-d, %Y"))
 
-  @doc """
-  The days from `first` to `last` in one year, for a title: "Sep 29 to Oct 19, 2026", or
-  "Oct 19, 2026" for one day.
-  """
-  def day_range(%Date{} = first, %Date{} = first), do: date_short(first)
-
-  def day_range(%Date{} = first, %Date{} = last),
-    do: "#{Calendar.strftime(first, "%b %-d")} to #{date_short(last)}"
-
   @doc "A month's short name, for chart labels: \"Sep\"."
   def month_short(%Date{} = date), do: Calendar.strftime(date, "%b")
 
-  @doc ~s(A month in full with its year, for a chart's tip or "Member since": "September 2025".)
+  @doc ~s(A month in full with its year, for a chart's tip, "Member since", or a chore activity's title: "September 2025".)
   def month_year_long(%Date{} = date), do: Calendar.strftime(date, "%B %Y")
   def month_year_long(datetime, timezone), do: datetime(datetime, timezone, "%B %Y")
 

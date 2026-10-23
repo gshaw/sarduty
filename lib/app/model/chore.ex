@@ -18,7 +18,7 @@ defmodule App.Model.Chore do
     belongs_to :member, Member
     belongs_to :chore_category, ChoreCategory
     belongs_to :decided_by_user, User
-    # The D4H event a team admin sent it on (App.Operation.SendChores); nil until then.
+    # While accepted, the D4H event of its chore category and month (App.Model.ChoreEvent).
     belongs_to :chore_event, ChoreEvent
     field :date, :date
     field :minutes, :integer
@@ -39,10 +39,11 @@ defmodule App.Model.Chore do
 
   @doc """
   A chore's date, minutes, chore category, and description. `category_ids` are the ones
-  it may have. With `today`, the date must be within the last #{@window_days} days and
-  not in the future, as for a member; a team admin passes nil for any date.
+  it may have. With `today`, the date must not be in the future, where D4H counts the
+  hours as signed up, not attended; a member's must also be within the last
+  #{@window_days} days. A team admin passes `:team_admin` for any date that has passed.
   """
-  def build_changeset(data, params, category_ids, today) do
+  def build_changeset(data, params, category_ids, today, who \\ :member) do
     data
     |> cast(params, [:date, :minutes, :chore_category_id, :description])
     |> validate_required([:date], message: "Enter the date you did it")
@@ -56,20 +57,27 @@ defmodule App.Model.Chore do
     )
     |> validate_inclusion(:chore_category_id, category_ids, message: "Select a category")
     |> validate_length(:description, max: 200, message: "Keep it under 200 characters")
-    |> validate_window(today)
+    |> validate_date(today, who)
     |> App.Validate.in_field_order([:date, :minutes, :chore_category_id, :description])
   end
 
-  defp validate_window(changeset, nil), do: changeset
+  defp validate_date(changeset, nil, _who), do: changeset
 
-  defp validate_window(changeset, today) do
+  defp validate_date(changeset, today, who) do
     date = get_field(changeset, :date)
 
     cond do
-      is_nil(date) -> changeset
-      Date.after?(date, today) -> add_error(changeset, :date, "Enter a date that has passed")
-      Date.diff(today, date) > @window_days -> add_error(changeset, :date, window_message())
-      true -> changeset
+      is_nil(date) ->
+        changeset
+
+      Date.after?(date, today) ->
+        add_error(changeset, :date, "Enter a date that has passed")
+
+      who == :member and Date.diff(today, date) > @window_days ->
+        add_error(changeset, :date, window_message())
+
+      true ->
+        changeset
     end
   end
 
@@ -92,12 +100,6 @@ defmodule App.Model.Chore do
 
   @doc "Whether the member can change or delete it: only while it waits."
   def member_can_change?(%Chore{status: status}), do: status == :waiting
-
-  @doc "Whether it is on an event D4H has approved, so SAR Duty cannot change it."
-  def locked?(%Chore{chore_event_id: nil}), do: false
-
-  def locked?(%Chore{chore_event_id: id}),
-    do: ChoreEvent |> where([e], e.id == ^id and e.locked) |> Repo.exists?()
 
   @doc "Whether the member can delete it: while it waits, or once declined."
   def member_can_delete?(%Chore{status: status}), do: status in [:waiting, :declined]
@@ -131,22 +133,6 @@ defmodule App.Model.Chore do
     |> Repo.all()
   end
 
-  @doc "The team's accepted chores not sent yet, oldest first, with members and categories."
-  def get_ready(team_id) do
-    Chore
-    |> where([c], c.team_id == ^team_id and c.status == :accepted and is_nil(c.chore_event_id))
-    |> order_by([c], asc: c.date, asc: c.id)
-    |> preload([:member, :chore_category])
-    |> Repo.all()
-  end
-
-  @doc "How many of the team's accepted chores are not sent yet."
-  def count_ready(team_id) do
-    Chore
-    |> where([c], c.team_id == ^team_id and c.status == :accepted and is_nil(c.chore_event_id))
-    |> Repo.aggregate(:count)
-  end
-
   @doc "How many of the team's chores wait for a team admin."
   def count_waiting(team_id) do
     Chore
@@ -167,11 +153,11 @@ defmodule App.Model.Chore do
     |> Map.new()
   end
 
-  @doc "One of the team's chores, with its member, category, and who decided it."
+  @doc "One of the team's chores, with its member, category, event, and who decided it."
   def find!(%Team{} = team, id) do
     Chore
     |> Repo.get_by!(id: id, team_id: team.id)
-    |> Repo.preload([:member, :chore_category, :decided_by_user])
+    |> Repo.preload([:member, :chore_category, :chore_event, :decided_by_user])
   end
 
   @doc "One of the member's own chores."

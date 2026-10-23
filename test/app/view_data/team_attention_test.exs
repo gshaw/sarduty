@@ -22,7 +22,7 @@ defmodule App.ViewData.TeamAttentionTest do
         group_change_count: 0,
         proposed_change_count: 0,
         chore_count: 0,
-        chores_to_send: %{ready: 0, changed: 0},
+        chores_to_send: 0,
         untagged: [],
         letters: nil
       },
@@ -45,12 +45,11 @@ defmodule App.ViewData.TeamAttentionTest do
     assert %{key: :chores, level: :info, title: "3 chores to accept"} = item
   end
 
-  test "accepted chores, or changes to sent ones, ask a team admin to send them" do
-    assert [%{key: :chores_to_send, title: "5 chores to send to D4H"}] =
-             items(%{chores_to_send: %{ready: 5, changed: 1}}, @october)
+  test "a chore activity whose send did not go through is a warning" do
+    assert [%{key: :chores_to_send, level: :warning} = item] =
+             items(%{chores_to_send: 2}, @october)
 
-    assert [%{title: "Changes to send for 1 chore activity"}] =
-             items(%{chores_to_send: %{ready: 0, changed: 1}}, @october)
+    assert item.title == "2 chore activities out of date in D4H"
   end
 
   test "members not at an activity name the team's time frame" do

@@ -10,6 +10,7 @@ defmodule App.Operation.BuildChoreEventTest do
   @sam %Member{id: 2, d4h_member_id: 102, name: "Sam Rivera"}
   @event %{
     category: "Equipment maintenance",
+    month: ~D[2026-10-01],
     timezone: "America/Vancouver",
     tags: [%{d4h_tag_id: 7, title: "Primary Hours"}, %{d4h_tag_id: 8, title: "Chores"}]
   }
@@ -32,7 +33,7 @@ defmodule App.Operation.BuildChoreEventTest do
   test "the first send makes the event on the last chore's day, tags it, adds each member's attendance, then publishes it" do
     chores = [
       chore(1, @sam, 60),
-      chore(2, @avery, 180, ~D[2026-09-29]),
+      chore(2, @avery, 180, ~D[2026-10-02]),
       chore(3, @sam, 180, ~D[2026-10-28])
     ]
 
@@ -50,7 +51,7 @@ defmodule App.Operation.BuildChoreEventTest do
 
     assert %{
              "kind" => "event",
-             "title" => "Chores: Equipment maintenance, Sep 29 to Oct 28, 2026",
+             "title" => "Chores: Equipment maintenance, October 2026",
              "started_at" => @start,
              "finished_at" => "2026-10-28T11:00:00Z",
              "full_team" => false
