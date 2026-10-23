@@ -269,6 +269,9 @@ on these pages already, on the member's page and its tabs.
   check reads, and `UserAuth.view_as_refusal/1` the message.
 - The account menu stays the team admin's, and each start is a `member_viewed_as` event in
   `/admin/events`, kept two years.
+- Finding a broken page: `team_access!` gives Honeybadger the user, the member, and
+  whether they are viewing as someone, so an error report on Your membership names the
+  member. View as them to see the page break.
 
 ### What must stay true
 

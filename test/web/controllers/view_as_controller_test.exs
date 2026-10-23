@@ -108,6 +108,19 @@ defmodule Web.ViewAsControllerTest do
     refute has_element?(lv, "#view-as-banner")
   end
 
+  test "an error report names the member and the team admin",
+       %{conn: conn, team: team, sam: sam, admin: admin} do
+    letter = tax_credit_letter_fixture(sam)
+    conn = view_as(conn, team, sam)
+
+    # ConnTest runs the request in the test process, so its Logger metadata is ours.
+    get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
+    context = Honeybadger.context()
+    assert context.user_id == admin.id
+    assert context.member_id == sam.id
+    assert context.viewing_as
+  end
+
   describe "read-only" do
     test "contact details save nothing", %{conn: conn, team: team, sam: sam} do
       conn = view_as(conn, team, sam)

@@ -292,12 +292,24 @@ defmodule Web.UserAuth do
 
     unless allowed?(access, admin_team, member), do: raise(Web.Status.NotFound)
 
+    report_context(user, member, viewing_as)
+
     %{
       current_team: admin_team || member.team,
       current_member: member,
       team_admin?: admin_team != nil,
       viewing_as: viewing_as
     }
+  end
+
+  # So an error report on a member's page names whose page broke; view as them to see it.
+  # Logger metadata, so it reaches crashes in this process, LiveView or request alike.
+  defp report_context(user, member, viewing_as) do
+    Honeybadger.context(
+      user_id: user.id,
+      member_id: member && member.id,
+      viewing_as: viewing_as != nil
+    )
   end
 
   defp viewing_as(nil, _id), do: nil
