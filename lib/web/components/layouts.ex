@@ -285,8 +285,9 @@ defmodule Web.Layouts do
   # you can go somewhere else, and your avatar on the right, which opens the account menu.
   # Outside every area (home, terms, privacy), a logged-in person's bar names their team,
   # with the switcher on it and nothing marked, so the name always opens the way back.
-  # Below 1024px (#471) the Menu button on the left holds the switcher and the area's pages,
-  # the logo sits over the area's name in the middle, and the avatar stays on the right.
+  # Below 1024px (#471) the Menu button on the left holds the area's pages, the logo sits
+  # over the area's name in the middle, with the switcher on the name, and the avatar stays
+  # on the right. Its menus share one details name, so opening one closes the others.
   # See /styles/top-bar.
   def main_nav_bar(assigns) do
     {area, sections} = navigation(assigns)
@@ -328,7 +329,21 @@ defmodule Web.Layouts do
       <%= if @current_user do %>
         <div :if={@bar_area} id="phone-nav-area" class="site-bar-area-phone">
           <a href="/" class="brand">SAR <span>Duty</span></a>
-          <span class="site-bar-area-name">{@bar_area.name}</span>
+          <details
+            :if={@switch_rows != []}
+            id="phone-team-switcher"
+            name="site-bar"
+            class="phone-team-switcher group"
+          >
+            <summary aria-label={"#{@bar_area.name}, switch team"}>
+              <span class="site-bar-area-name">{@bar_area.name}</span>
+              <.icon name="hero-chevron-down-micro" class="group-open:rotate-180" />
+            </summary>
+            <nav class="site-bar-phone-panel" aria-label="Switch team">
+              <.switch_menu rows={@switch_rows} id_prefix="phone-switch-" />
+            </nav>
+          </details>
+          <span :if={@switch_rows == []} class="site-bar-area-name">{@bar_area.name}</span>
         </div>
         <%!-- Search (#471): a field on a desktop, an icon below 1024px, both before the avatar.
           Uncomment and point both at the search page when it exists.
@@ -343,14 +358,9 @@ defmodule Web.Layouts do
         --%>
         <.account_menu person={@person} />
         <.site_bar_phone_menu
-          :if={@switch_rows != [] or @sections != []}
+          :if={@sections != []}
           waiting?={Enum.any?(List.flatten(@sections), & &1.count)}
         >
-          <%= if @switch_rows != [] do %>
-            <div class="caps menu-heading">Switch team</div>
-            <.switch_link :for={row <- @switch_rows} row={row} id_prefix="phone-switch-" />
-            <.menu_divider />
-          <% end %>
           <%= for {links, index} <- Enum.with_index(@sections) do %>
             <.menu_divider :if={index > 0} />
             <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
@@ -381,16 +391,34 @@ defmodule Web.Layouts do
   # The area's name with a chevron, opening a menu of the places you can switch to.
   defp team_switcher(assigns) do
     ~H"""
-    <details id="team-switcher" class="site-bar-menu team-switcher relative">
+    <details id="team-switcher" name="site-bar" class="site-bar-menu team-switcher relative">
       <summary id="nav-area" aria-label={"#{@name}, switch team"}>
         <span class="truncate">{@name}</span>
         <.icon name="hero-chevron-down-micro" />
       </summary>
       <div class="menu" role="menu">
-        <div class="caps menu-heading">Switch team</div>
-        <.switch_link :for={row <- @rows} row={row} id_prefix="switch-" />
+        <.switch_menu rows={@rows} id_prefix="switch-" />
       </div>
     </details>
+    """
+  end
+
+  attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/4"
+  attr :id_prefix, :string, required: true
+
+  # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then SAR Duty
+  # admin below a divider with its shield, so it never reads as one more team.
+  defp switch_menu(assigns) do
+    {admin, teams} = Enum.split_with(assigns.rows, &(&1.kind == :admin))
+    assigns = assign(assigns, admin: admin, teams: teams)
+
+    ~H"""
+    <%= if @teams != [] do %>
+      <div class="caps menu-heading">Your teams</div>
+      <.switch_link :for={row <- @teams} row={row} id_prefix={@id_prefix} />
+    <% end %>
+    <.menu_divider :if={@teams != [] and @admin != []} />
+    <.switch_link :for={row <- @admin} row={row} id_prefix={@id_prefix} />
     """
   end
 
@@ -403,8 +431,9 @@ defmodule Web.Layouts do
       navigate={@row.path}
       id={@id_prefix <> @row.key}
       aria-current={@row.current && "page"}
-      class="nav-link"
+      class={["nav-link", @row.kind == :admin && "switch-admin"]}
     >
+      <.icon :if={@row.kind == :admin} name="hero-shield-check-micro" />
       {@row.label}
     </.link>
     """
@@ -416,7 +445,7 @@ defmodule Web.Layouts do
   # and Log out. The same on every team: it is about the login, not the team.
   defp account_menu(assigns) do
     ~H"""
-    <details id="account-menu" class="site-bar-menu account-menu relative">
+    <details id="account-menu" name="site-bar" class="site-bar-menu account-menu relative">
       <summary aria-label="Your account">
         <span class="avatar">{@person.initials}</span>
       </summary>

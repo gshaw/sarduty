@@ -192,17 +192,18 @@ defmodule Web.Navigation do
   defp team_area(team), do: %{kind: :team, name: team.name, team: team}
 
   @doc """
-  The team switcher's rows: "SAR Duty admin" first for SAR Duty admins, then each team
-  where you're a team admin or a member, A to Z, one row per team. The area you're in is
-  current; a team opened from Admin › Teams that isn't yours marks nothing. Empty when
-  there is nowhere else to go, so the bar's name is plain text.
-  `[%{key:, label:, path:, current:}]`.
+  The team switcher's rows: each team where you're a team admin or a member, A to Z, one
+  row per team, then "SAR Duty admin" last for SAR Duty admins, which the switcher sets
+  apart. The area you're in is current; a team opened from Admin › Teams that isn't
+  yours marks nothing. Empty when there is nowhere else to go, so the bar's name is plain
+  text. `[%{kind: :team | :admin, key:, label:, path:, current:}]`.
   """
   def switch_rows(is_admin, managed_teams, member_logins, area) do
     admin =
       if is_admin,
         do: [
           %{
+            kind: :admin,
             key: "admin",
             label: "SAR Duty admin",
             path: ~p"/admin",
@@ -214,6 +215,7 @@ defmodule Web.Navigation do
     teams =
       for team <- teams(managed_teams, member_logins) do
         %{
+          kind: :team,
           key: "team-" <> team.subdomain,
           label: team.name,
           path: ~p"/teams/#{team}",
@@ -221,7 +223,7 @@ defmodule Web.Navigation do
         }
       end
 
-    rows = admin ++ teams
+    rows = teams ++ admin
     if Enum.all?(rows, & &1.current), do: [], else: rows
   end
 

@@ -82,6 +82,49 @@ defmodule Web.StyleGuideHTML.SampleData do
     [sample_member(), %App.Model.Member{id: 1, name: "Avery Lee", team: pemberton}]
   end
 
+  # Who sees which switcher, for the top bar's examples: `{id, title, bar assigns}`.
+  def sample_switchers do
+    avery = sample_user()
+    admin = %{avery | is_admin: true}
+    squamish = sample_team()
+    [_member, pemberton_member] = sample_member_logins()
+    pemberton = pemberton_member.team
+
+    on_squamish = %{
+      current_team: squamish,
+      current_member: sample_member(),
+      team_admin?: true,
+      managed_teams: [squamish],
+      current_path: "/teams/squamish"
+    }
+
+    [
+      {"one-team", "On one team",
+       Map.merge(on_squamish, %{current_user: avery, member_logins: [sample_member()]})},
+      {"teams", "On two teams",
+       Map.merge(on_squamish, %{current_user: avery, member_logins: sample_member_logins()})},
+      {"admin-one-team", "A SAR Duty admin on one team",
+       Map.merge(on_squamish, %{current_user: admin, member_logins: [sample_member()]})},
+      {"admin-teams", "A SAR Duty admin on two teams",
+       Map.merge(on_squamish, %{current_user: admin, member_logins: sample_member_logins()})},
+      {"admin-area", "A SAR Duty admin in SAR Duty admin",
+       %{
+         current_user: admin,
+         current_team: squamish,
+         managed_teams: [squamish],
+         member_logins: sample_member_logins(),
+         current_path: "/admin"
+       }},
+      {"admin-other-team", "A SAR Duty admin on a team that isn't theirs",
+       %{
+         current_user: admin,
+         current_team: pemberton,
+         team_admin?: true,
+         current_path: "/teams/pemberton"
+       }}
+    ]
+  end
+
   # Squamish's space on its activities, for a team admin who is a member, with 2 proposed
   # changes waiting.
   def sample_nav_area, do: Web.Navigation.area("/teams/squamish/activities", sample_team())

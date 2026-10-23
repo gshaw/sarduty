@@ -28,16 +28,11 @@
     white-space: nowrap;
   }
 
-  /* Phones (#471): the logo over the area's name, centred on the bar. Equal room on both
-     sides keeps it centred, for Menu on the left and search and the avatar on the right; a
-     name too long ends in an ellipsis. */
+  /* Phones (#471): the logo over the area's name, centred on the bar, with the switcher on
+     the name. A name too long ends in an ellipsis. */
   .site-bar-area-phone {
     display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: calc(100% - 216px);
+    min-width: 0;
     flex-direction: column;
     align-items: center;
     color: #fff;
@@ -47,6 +42,20 @@
   }
   .site-bar-area-phone .brand { font-size: var(--fs-sm); line-height: var(--lh-sm); }
   .site-bar-area-phone .site-bar-area-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .phone-team-switcher { max-width: 100%; }
+  .phone-team-switcher > summary {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    max-width: 100%;
+    padding: 0 var(--sp-1);
+    list-style: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .phone-team-switcher > summary::-webkit-details-marker { display: none; }
+  .phone-team-switcher > summary:hover { background: rgb(255 255 255 / 0.1); }
+  .phone-team-switcher > summary .hero-chevron-down-micro { flex: none; }
 
   .site-bar-menu > summary {
     display: inline-flex;
@@ -130,8 +139,8 @@
   .site-bar-search:hover { background: rgb(255 255 255 / 0.1); }
   .site-bar-search .hero-magnifying-glass-mini { width: 24px; height: 24px; }
 
-  /* Phones and narrow windows: the switcher and the area's pages move behind a Menu button
-     on the left of the bar. */
+  /* Phones and narrow windows: the area's pages move behind a Menu button on the left of
+     the bar. */
   .site-bar-phone { display: none; order: -1; }
 
   .site-bar-phone > summary {
@@ -182,9 +191,22 @@
   .site-bar-phone-panel .menu-note { padding: var(--sp-2) var(--sp-4) var(--sp-1); color: rgb(255 255 255 / 0.6); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
+  /* SAR Duty admin in the switcher: below the teams, with a shield, so it is not a team. */
+  :is(.menu, .site-bar-phone-panel) a.switch-admin { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); }
+  .menu a.switch-admin .hero-shield-check-micro { color: var(--text-muted); }
+
+  /* Three columns, the outer two the same width, keep the name centred whether or not
+     there is a Menu. The panels open under the bar, so nothing here is positioned. */
   @media (width < 64rem) {
     .site-bar-links, .team-switcher, .site-bar-search-field { display: none; }
+    .site-bar-inner:has(> .site-bar-area-phone) {
+      display: grid;
+      grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+    }
     .site-bar-inner:has(> .site-bar-area-phone) > .brand { display: none; }
+    .site-bar-inner > .site-bar-phone { grid-area: 1 / 1; justify-self: start; }
+    .site-bar-inner > .site-bar-area-phone { grid-area: 1 / 2; }
+    .site-bar-inner > .account-menu { grid-area: 1 / 3; justify-self: end; }
     .site-bar-phone { display: block; }
     .site-bar-area-phone { display: flex; }
     .site-bar-search { display: inline-flex; }

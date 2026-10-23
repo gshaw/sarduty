@@ -22,7 +22,7 @@
       Every page is in one area: a team's space, SAR Duty admin, or Account settings. The bar names it after the logo, such as "Squamish SAR". There is one space per team: your role there decides which pages you see.
     </li>
     <li>
-      The team switcher sits on the name when you can go somewhere else. It lists SAR Duty admin first, for SAR Duty admins, then each team where you are a team admin or a member, A to Z. The team you're on is marked; a team opened from Admin › Teams that isn't yours marks nothing. With one place to be, the name is plain text.
+      The team switcher sits on the name when you can go somewhere else. It lists Your teams, each team where you are a team admin or a member, A to Z. For SAR Duty admins, SAR Duty admin comes last, below a divider and with a shield, so it never reads as one more team. The team you're on is marked; a team opened from Admin › Teams that isn't yours marks nothing. With one place to be, the name is plain text.
     </li>
     <li>
       The logo always goes to the home page. Logged in on the home, terms, or privacy page, the bar still names your team with the switcher on it, marking nothing, so the public site never strands you.
@@ -37,7 +37,7 @@
 
   <h3>On a phone</h3>
   <p>
-    Below 1024px the Menu button moves to the left, the logo sits over the area's name in the middle, and your initials stay on the right, so a phone or a shared iPad always shows who is logged in. The name ends in an ellipsis when it is too long. Menu holds Switch team and its rows, when there is somewhere else to go, then the area's pages in their sections; with neither, there is no Menu. Your initials open the same account menu as on a desktop. The panel opens under the amber rule, the width of the screen, with the current page marked in amber. Going to another page closes it.
+    Below 1024px the Menu button moves to the left, the logo sits over the area's name in the middle, and your initials stay on the right, so a phone or a shared iPad always shows who is logged in. The name ends in an ellipsis when it is too long. The switcher stays on the name, with a chevron, as on a desktop. Menu holds the area's pages in their sections; with none, there is no Menu. Your initials open the same account menu as on a desktop. Each panel opens under the amber rule, the width of the screen, with the current page marked in amber. Opening one closes the other, and going to another page closes both.
   </p>
   <div class="demo phone-width phone-bar-demo" style="padding: 0">
     <Web.Layouts.main_nav_bar
@@ -50,10 +50,31 @@
       current_path="/teams/squamish/activities"
     />
   </div>
+
+  <h3>Who sees which switcher</h3>
+  <p>
+    Each case on a desktop, then on a phone, with the switcher open.
+  </p>
+  <%= for {id, title, bar} <- sample_switchers() do %>
+    <h4>{title}</h4>
+    <div id={"switcher-#{id}"} class="demo bar-demo switcher-demo" style="padding: 0">
+      <Web.Layouts.main_nav_bar {bar} />
+    </div>
+    <div
+      id={"phone-switcher-#{id}"}
+      class="demo phone-width phone-bar-demo switcher-demo"
+      style="padding: 0"
+    >
+      <Web.Layouts.main_nav_bar {bar} />
+    </div>
+  <% end %>
+
   <script>
-    // Open the menus, so the examples show them.
-    document.querySelectorAll(".bar-demo .team-switcher, .phone-bar-demo .site-bar-phone")
-      .forEach(function (menu) { menu.open = true; });
+    // Open the menus, so the examples show them. Their shared name would let only one
+    // stay open, so drop it here.
+    document.querySelectorAll(
+      ".bar-demo .team-switcher, .phone-bar-demo:not(.switcher-demo) .site-bar-phone, .switcher-demo .phone-team-switcher"
+    ).forEach(function (menu) { menu.removeAttribute("name"); menu.open = true; });
   </script>
 
   <h3>Logged out</h3>
