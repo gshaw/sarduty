@@ -1,0 +1,60 @@
+<.shell title="Heading row" current={:heading_row}>
+  <h1>Heading row</h1>
+  <p class="lead">A heading with its action, and a note when the action needs one.</p>
+
+  <div class="demo">
+    <.heading_row>
+      <h2 class="heading">Members</h2>
+      <:note>4 sent Oct 26, 18:02 by Alex Chen · 2 replied since</:note>
+      <:action><.button>Send 1 reminder</.button></:action>
+    </.heading_row>
+  </div>
+
+  <h3>A page's title</h3>
+  <div class="demo">
+    <.heading_row>
+      <h1 class="title">Equipment</h1>
+      <:action><.button variant={:success}>Add item</.button></:action>
+    </.heading_row>
+  </div>
+
+  <h2>When to use</h2>
+  <ul>
+    <li>
+      A page or a section whose main action belongs to its heading, such as Add item over a list.
+    </li>
+    <li>
+      A note beside the action when people need it to decide, such as when reminders last went out and
+      how many replied since.
+    </li>
+  </ul>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>
+      Actions about one record. They go in an action list in its <a href={page_path(:detail_list)}>details</a>.
+    </li>
+    <li>A heading with nothing beside it. Use the heading alone.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>The heading is on the left. The note and the action are on the right, the note first.</li>
+    <li>
+      The note is one short line in hint text, made with <code>Service.Format</code>
+      for its values.
+    </li>
+    <li>On a phone the note and action wrap under the heading.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.heading_row&gt;</code>
+    with the heading inside, such as <code>&lt;h2 class="heading"&gt;</code>, and
+    <code>&lt;:note&gt;</code>
+    and <code>&lt;:action&gt;</code>
+    slots. It is the only way to put an action beside a heading: a test fails on
+    <code>.heading-row</code>
+    written by hand.
+  </p>
+</.shell>

@@ -15,12 +15,14 @@ defmodule Web.TemplateCollectionLive do
     <.breadcrumbs>
       <:item label="Templates" />
     </.breadcrumbs>
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">{@page_title}</h1>
-      <.button id="template-add" navigate={~p"/teams/#{@current_team}/templates/new"}>
-        Add template
-      </.button>
-    </div>
+      <:action>
+        <.button id="template-add" navigate={~p"/teams/#{@current_team}/templates/new"}>
+          Add template
+        </.button>
+      </:action>
+    </.heading_row>
     <p class="lead">
       A template adds items, tags, and invites to an activity in one step. Apply one from the activity's page.
     </p>

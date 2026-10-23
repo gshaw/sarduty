@@ -10,6 +10,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.D4H
   import Web.Components.FilterBar
   import Web.Components.GroupRule
+  import Web.Components.HeadingRow
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.OpenInMaps
@@ -80,6 +81,7 @@ defmodule Web.StyleGuideHTML do
          {:filter_bar, "Filter bar", "Search and filters above a long list."},
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},
+         {:heading_row, "Heading row", "A heading with its action, and a note."},
          {:map, "Map", "A dot per activity on a Mapbox map."},
          {:member_letter, "Member letter", "A member's tax credit letter for a year."},
          {:milestone_list, "Milestone list", "What a member reached, and the day."},

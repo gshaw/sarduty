@@ -51,8 +51,11 @@ defmodule App.Model.MemberTest do
     end
 
     test "finds current members with no attendance in the time frame, and guesses at no bots" do
+      # Far past System.unique_integer/1's fixture ids, which reached 777 on some seeds.
+      key_id = 99_000_777
+
       team =
-        team_fixture(%{d4h_access_key_member_id: 777, d4h_access_key_owner: "SAR Duty"})
+        team_fixture(%{d4h_access_key_member_id: key_id, d4h_access_key_owner: "SAR Duty"})
 
       joined = ~U[2025-01-01 00:00:00Z]
       recent = activity_fixture(team, %{started_at: ~U[2026-09-01 18:00:00Z]})
@@ -68,7 +71,7 @@ defmodule App.Model.MemberTest do
 
       # Standing is a filter of its own now (#366), so the old guesses are gone.
       marked = member_fixture(team, %{joined_at: joined, not_a_person: true})
-      key = member_fixture(team, %{joined_at: joined, d4h_member_id: 777})
+      key = member_fixture(team, %{joined_at: joined, d4h_member_id: key_id})
       bot_like = member_fixture(team, %{joined_at: joined, email: nil, phone: nil})
 
       _new = member_fixture(team, %{joined_at: ~U[2026-09-01 00:00:00Z]})

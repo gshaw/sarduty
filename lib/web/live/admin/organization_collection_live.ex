@@ -11,12 +11,14 @@ defmodule Web.Admin.OrganizationCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">Organizations</h1>
-      <.button navigate={~p"/admin/orgs/new"} variant={:success}>
-        New organization
-      </.button>
-    </div>
+      <:action>
+        <.button navigate={~p"/admin/orgs/new"} variant={:success}>
+          New organization
+        </.button>
+      </:action>
+    </.heading_row>
     <.empty_state :if={@organizations == []} id="no-organizations" title="No organizations yet">
       Add one with New organization.
     </.empty_state>

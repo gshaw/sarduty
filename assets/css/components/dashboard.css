@@ -4,7 +4,7 @@
 
 /* The logo stays beside the team name at every width rather than wrapping onto a line
    of its own; a long name wraps instead. */
-.team-heading { flex-wrap: nowrap; align-items: flex-start; }
+.team-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); }
 .team-heading > .logo-lg { flex: none; }
 
 /* Coming up: a row per activity, its title the link, so a row can hold the reply's

@@ -11,6 +11,9 @@
   .under-site-bar { padding-top: 56px; }
 
   /* A heading with an action beside it, such as a section's New button. */
+  /* A heading with its note and action (heading_row.ex). See /styles/heading-row. */
   .heading-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); }
   .heading-row > :is(h1, h2, h3) { margin-bottom: 0; }
+  .heading-row-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
+  .heading-row-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 }

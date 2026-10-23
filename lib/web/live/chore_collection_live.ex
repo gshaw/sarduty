@@ -164,16 +164,16 @@ defmodule Web.ChoreCollectionLive do
         </p>
 
         <section :for={row <- @events} id={"chore-event-#{row.event.id}"} class="mt-8">
-          <div class="heading-row">
+          <.heading_row>
             <h2 class="subheading">
               {Format.month_year_long(row.event.month)} · {row.event.chore_category.title}
             </h2>
-            <span class="hint">
+            <:note>
               {Format.count(row.members, one: "1 member", many: "%d members")} · {Format.duration(
                 row.minutes
               )}
-            </span>
-          </div>
+            </:note>
+          </.heading_row>
           <p class="hint mb-4">
             <span :if={row.activity}>
               {@service} activity

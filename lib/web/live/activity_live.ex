@@ -1,11 +1,11 @@
 defmodule Web.ActivityLive do
   use Web, {:live_view_app_layout, access: :team}
 
-  import Ecto.Query
   import Web.Components.ActivityMap
   import Web.Components.CopyButton
   import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
+  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -13,6 +13,8 @@ defmodule Web.ActivityLive do
   alias App.Model.Coordinate
   alias App.Model.EquipmentUsage
   alias App.Repo
+  alias App.ViewData.ActivityMembers
+  alias Service.Format
   alias Web.Components.ActivityMap
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
@@ -23,9 +25,10 @@ defmodule Web.ActivityLive do
 
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
-  # until the start (#444). Team admins also get Take attendance, its history, actions,
-  # and the links to member and equipment pages. A member never gets an activity D4H has
-  # deleted; a team admin sees it under a banner.
+  # until the start (#444). Under the map, Members lists who is invited and how they
+  # replied, filtered by `?view=`. Team admins also get Take attendance, its history,
+  # actions, and the links to member and equipment pages. A member never gets an
+  # activity D4H has deleted; a team admin sees it under a banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
@@ -44,7 +47,8 @@ defmodule Web.ActivityLive do
         hours_tags: Activity.hours_tags(team),
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),
-        replier: Reply.replier(socket.assigns, now)
+        replier: Reply.replier(socket.assigns, now),
+        members_view: view_status(params["view"])
       )
       |> assign_people()
 
@@ -53,16 +57,35 @@ defmodule Web.ActivityLive do
 
   # Who is invited and how they replied, again after a reply.
   defp assign_people(socket) do
-    %{current_team: team, activity: activity, replier: replier} = socket.assigns
-    attendances = fetch_attendances(activity)
+    %{activity: activity, replier: replier} = socket.assigns
+    members = ActivityMembers.load(activity)
+    attendances = ActivityMembers.only(members, "attending")
 
     assign(socket,
+      members: members,
       attendances: attendances,
       attendance_count: length(attendances),
-      counts: team |> Attendance.reply_counts([activity.id]) |> Map.fetch!(activity.id),
+      counts: ActivityMembers.counts(members),
       invitation: replier && Attendance.invitation(activity, replier)
     )
   end
+
+  # The view's word in the URL, the same before and after the start, as a D4H status.
+  @views %{
+    "signed-up" => "attending",
+    "attended" => "attending",
+    "cant-make-it" => "absent",
+    "absent" => "absent",
+    "no-reply" => "requested"
+  }
+
+  defp view_status(param), do: Map.get(@views, param)
+
+  defp view_param("attending", false = _started?), do: "signed-up"
+  defp view_param("attending", true), do: "attended"
+  defp view_param("absent", false), do: "cant-make-it"
+  defp view_param("absent", true), do: "absent"
+  defp view_param("requested", _started?), do: "no-reply"
 
   def handle_info({:replied, _attendance}, socket), do: {:noreply, assign_people(socket)}
 
@@ -143,13 +166,14 @@ defmodule Web.ActivityLive do
         />
       </aside>
       <main class="content-2/3">
-        <.main_content
+        <.main_content activity={@activity} hours_tags={@hours_tags} map={@map} />
+        <.members_section
           activity={@activity}
-          hours_tags={@hours_tags}
-          map={@map}
-          attendances={@attendances}
-          attendance_count={@attendance_count}
-          coming?={@coming?}
+          members={@members}
+          counts={@counts}
+          view={@members_view}
+          started?={!@coming?}
+          now={@now}
           team_admin?={@team_admin?}
         />
         <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
@@ -309,10 +333,6 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :hours_tags, :map, required: true
   attr :map, :map, default: nil
-  attr :attendances, :list, required: true
-  attr :attendance_count, :integer, required: true
-  attr :coming?, :boolean, required: true
-  attr :team_admin?, :boolean, default: true
 
   def main_content(assigns) do
     ~H"""
@@ -326,24 +346,151 @@ defmodule Web.ActivityLive do
       <div class="mb-4">
         <.markdown content={@activity.description} />
       </div>
-
-      <section id="activity-people">
-        <h2 class="heading">
-          {if @coming?, do: "Signed up", else: "Attended"} · {Service.Format.number(@attendance_count)}
-        </h2>
-        <p :if={@attendances == []} class="hint">
-          {if @coming?, do: "Nobody has signed up yet.", else: "Nobody attended."}
-        </p>
-        <.activity_attendance_table
-          :if={@attendances != []}
-          activity={@activity}
-          attendances={@attendances}
-          team_admin?={@team_admin?}
-        />
-      </section>
     </div>
     """
   end
+
+  attr :activity, :map, required: true
+  attr :members, :list, required: true
+  attr :counts, :map, required: true
+  attr :view, :string, default: nil, doc: "the D4H status showing, nil for All"
+  attr :started?, :boolean, required: true
+  attr :now, :any, required: true
+  attr :team_admin?, :boolean, default: true
+
+  # Who the activity invites, as counts that filter one table (#444). Before the start:
+  # how each replied and when, New for the last 24 hours. From the start: D4H's
+  # attendance, with each member's times. A column every row would repeat goes.
+  def members_section(assigns) do
+    assigns =
+      assign(assigns,
+        rows: ActivityMembers.only(assigns.members, assigns.view),
+        timezone: assigns.activity.team.timezone
+      )
+
+    ~H"""
+    <section id="activity-members" class="mt-8">
+      <.heading_row id="members-heading">
+        <h2 class="heading">Members</h2>
+      </.heading_row>
+      <p :if={@members == []} id="members-empty" class="hint">
+        {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}
+      </p>
+      <.stat_switch
+        :if={@members != []}
+        id="members-switch"
+        label={if @started?, do: "Attendance", else: "Replies"}
+      >
+        <:view
+          id="members-view-all"
+          patch={members_path(@activity, nil)}
+          current={@view == nil}
+          count={length(@members)}
+        >
+          All
+        </:view>
+        <:view
+          :for={status <- ActivityMembers.statuses()}
+          id={"members-view-#{view_param(status, @started?)}"}
+          patch={members_path(@activity, view_param(status, @started?))}
+          current={@view == status}
+          count={@counts[String.to_existing_atom(status)]}
+          marker={Reply.marker(status)}
+        >
+          {Reply.status_text(status, @started?)}
+        </:view>
+      </.stat_switch>
+      <.table
+        :if={@rows != []}
+        id="members-table"
+        rows={@rows}
+        row_id={&"member-row-#{&1.member.id}"}
+        class="table-striped w-fit"
+      >
+        <:col :let={row} label="Name" class="whitespace-nowrap">
+          <.a
+            :if={@team_admin?}
+            navigate={
+              ~p"/teams/#{@activity.team}/members/#{row.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+            }
+          >{row.member.name}</.a>
+          <span :if={!@team_admin?}>{row.member.name}</span>
+        </:col>
+        <:col
+          :let={row}
+          :if={@view == nil}
+          label={if @started?, do: "Attendance", else: "Reply"}
+          class="whitespace-nowrap"
+        >
+          <span class={["marker", "marker-#{Reply.marker(row.status)}"]}>
+            {Reply.status_text(row.status, @started?)}
+          </span>
+        </:col>
+        <:col
+          :let={row}
+          :if={!@started? and @view != "requested"}
+          label="Replied"
+          class="whitespace-nowrap"
+        >
+          {Format.month_day_time(row.replied_at, @timezone)}
+          <.badge
+            :if={ActivityMembers.new?(row, @now)}
+            kind={:primary}
+            title="Replied in the last 24 hours"
+          >
+            New
+          </.badge>
+        </:col>
+        <:col
+          :let={row}
+          :if={@started? and @view in [nil, "attending"]}
+          label="Start"
+          align="right"
+          class="whitespace-nowrap"
+        >
+          {attended_time(row, :start, @activity, @timezone)}
+        </:col>
+        <:col
+          :let={row}
+          :if={@started? and @view in [nil, "attending"]}
+          label="Finish"
+          align="right"
+          class="whitespace-nowrap"
+        >
+          {attended_time(row, :finish, @activity, @timezone)}
+        </:col>
+        <:col
+          :let={row}
+          :if={@started? and @view in [nil, "attending"]}
+          label="Duration"
+          align="right"
+          class="whitespace-nowrap"
+        >
+          {if row.status == "attending", do: Format.duration(row.duration_in_minutes)}
+        </:col>
+        <:col :let={row} label="ID" align="right" class="w-px">{row.member.ref_id}</:col>
+      </.table>
+    </section>
+    """
+  end
+
+  defp members_path(activity, nil), do: ~p"/teams/#{activity.team}/activities/#{activity.id}"
+
+  defp members_path(activity, view),
+    do: ~p"/teams/#{activity.team}/activities/#{activity.id}?#{[view: view]}"
+
+  # A member's own times once it starts; the start's date only when it isn't the
+  # activity's day. Blank for anyone who didn't attend.
+  defp attended_time(%{status: "attending"} = row, :start, activity, timezone) do
+    if ActivityMembers.same_day?(row.started_at, activity.started_at, timezone),
+      do: Format.time_short(row.started_at, timezone),
+      else: Format.month_day_time(row.started_at, timezone)
+  end
+
+  defp attended_time(%{status: "attending"} = row, :finish, _activity, timezone),
+    do: Format.time_short(row.finished_at, timezone)
+
+  defp attended_time(_row, _time, _activity, _timezone), do: nil
 
   attr :activity, :map, required: true
   attr :usages, :list, required: true
@@ -352,17 +499,19 @@ defmodule Web.ActivityLive do
   def equipment_section(assigns) do
     ~H"""
     <section id="activity-equipment" class="mt-8">
-      <div class="heading-row">
+      <.heading_row>
         <h2 class="heading">Equipment · {length(@usages)}</h2>
-        <.button
-          :if={@team_admin? and !@activity.deleted_at}
-          id="activity-equipment-add"
-          size={:sm}
-          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
-        >
-          Add equipment
-        </.button>
-      </div>
+        <:action>
+          <.button
+            :if={@team_admin? and !@activity.deleted_at}
+            id="activity-equipment-add"
+            size={:sm}
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
+          >
+            Add equipment
+          </.button>
+        </:action>
+      </.heading_row>
       <.table
         :if={@usages != []}
         id="activity-equipment-table"
@@ -387,44 +536,6 @@ defmodule Web.ActivityLive do
     """
   end
 
-  attr :activity, :map, required: true
-  attr :attendances, :list, required: true
-  attr :team_admin?, :boolean, default: true
-
-  def activity_attendance_table(assigns) do
-    ~H"""
-    <.table id="attendance_collection" rows={@attendances} class="table-striped w-fit">
-      <:col :let={record} label="ID" class="w-px">
-        {record.member.ref_id}
-      </:col>
-      <:col :let={record} label="Name">
-        <.a
-          :if={@team_admin?}
-          navigate={
-            ~p"/teams/#{@activity.team}/members/#{record.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-          }
-        >{record.member.name}</.a>
-        <span :if={!@team_admin?}>{record.member.name}</span>
-      </:col>
-      <:col :let={record} label="Start" align="right" class="whitespace-nowrap">
-        {Service.Format.datetime_short(
-          record.started_at,
-          @activity.team.timezone
-        )}
-      </:col>
-      <:col :let={record} label="Finish" align="right" class="whitespace-nowrap">
-        {Service.Format.time_short(
-          record.finished_at,
-          @activity.team.timezone
-        )}
-      </:col>
-      <:col :let={record} label="Duration" align="right" class="whitespace-nowrap">
-        {Service.Format.duration(record.duration_in_minutes)}
-      </:col>
-    </.table>
-    """
-  end
-
   @doc "Sends a page that calls D4H back to a deleted activity's page."
   def leave_deleted(socket, activity) do
     socket
@@ -439,16 +550,6 @@ defmodule Web.ActivityLive do
     team
     |> Activity.find!(activity_id)
     |> Repo.preload(:team)
-  end
-
-  def fetch_attendances(activity) do
-    activity
-    |> Ecto.assoc(:attendances)
-    |> where([a], a.status == "attending")
-    |> join(:inner, [a], m in assoc(a, :member))
-    |> order_by([a, m], asc: m.name)
-    |> preload(:member)
-    |> Repo.all()
   end
 
   defp format_activity_duration(activity) do

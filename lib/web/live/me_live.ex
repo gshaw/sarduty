@@ -201,10 +201,12 @@ defmodule Web.MeLive do
   defp chores(assigns) do
     ~H"""
     <section id="chores" class="mt-8">
-      <div class="heading-row">
+      <.heading_row>
         <h2 class="heading">Chores</h2>
-        <.a id="chore-log" navigate={~p"/teams/#{@team}/me/chores/new"}>New chore</.a>
-      </div>
+        <:action>
+          <.a id="chore-log" navigate={~p"/teams/#{@team}/me/chores/new"}>New chore</.a>
+        </:action>
+      </.heading_row>
       <.empty_state :if={@chores == []} id="no-chores" title="No chores yet">
         Log a chore after you do one, such as fixing equipment or admin. It counts once a team admin accepts it.
       </.empty_state>

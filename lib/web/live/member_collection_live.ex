@@ -45,16 +45,18 @@ defmodule Web.MemberCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <div class="heading-row">
+    <.heading_row>
       <h1 class="title">{@page_title}</h1>
-      <.button
-        :if={D4H.records?(@current_team)}
-        id="member-add"
-        navigate={~p"/teams/#{@current_team}/members/new"}
-      >
-        Add member
-      </.button>
-    </div>
+      <:action>
+        <.button
+          :if={D4H.records?(@current_team)}
+          id="member-add"
+          navigate={~p"/teams/#{@current_team}/members/new"}
+        >
+          Add member
+        </.button>
+      </:action>
+    </.heading_row>
     <.stat_switch id="member-switch" label="Standing">
       <:view
         :for={{label, standing} <- MemberFilterViewModel.standing_switch()}
