@@ -13,7 +13,7 @@ defmodule Web.ChoreCollectionLive do
   # Review changes pattern: every row starts selected, and a cleared row stays.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.member_logins, do: raise(Web.Status.NotFound)
+    if !App.Model.Team.chores?(team), do: raise(Web.Status.NotFound)
 
     socket
     |> assign(service: D4H.service_name(team))

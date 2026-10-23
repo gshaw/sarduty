@@ -16,7 +16,7 @@ defmodule Web.Settings.ChoreCategoryFormLive do
   # for, and the other tags its D4H events get. The layout is an activity's Change tags.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.member_logins, do: raise(Web.Status.NotFound)
+    if !App.Model.Team.chores?(team), do: raise(Web.Status.NotFound)
 
     category = if id = params["id"], do: ChoreCategory.find!(team, id)
     all_tags = Tag.get_all(team.id)

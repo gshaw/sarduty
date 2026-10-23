@@ -64,17 +64,18 @@ defmodule App.ViewData.TeamDashboardViewData do
       not_seen: not_seen_row(team, now),
       group_change_count: count_group_changes(team, now),
       proposed_change_count: ChangeSet.count_waiting(team.id),
-      chore_count: if(team.member_logins, do: Chore.count_waiting(team.id), else: 0),
+      chore_count: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0),
       chores_to_send: chores_to_send(team),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)
     }
   end
 
-  defp chores_to_send(%{member_logins: false}), do: %{ready: 0, changed: 0}
-
-  defp chores_to_send(team),
-    do: %{ready: Chore.count_ready(team.id), changed: ChoreEvent.count_to_send(team.id)}
+  defp chores_to_send(team) do
+    if Team.chores?(team),
+      do: %{ready: Chore.count_ready(team.id), changed: ChoreEvent.count_to_send(team.id)},
+      else: %{ready: 0, changed: 0}
+  end
 
   @doc """
   Splits activities into NextUp and Coming up. NextUp is the first one starting within

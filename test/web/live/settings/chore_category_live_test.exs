@@ -9,7 +9,10 @@ defmodule Web.Settings.ChoreCategoryLiveTest do
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    team = team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+
+    team =
+      team |> Ecto.Changeset.change(member_logins: true, chores_enabled: true) |> Repo.update!()
+
     %{conn: log_in_user(conn, user), team: team}
   end
 

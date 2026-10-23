@@ -10,7 +10,7 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
   # Only members log chores, so the page exists only with member logins on.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.member_logins, do: raise(Web.Status.NotFound)
+    if !App.Model.Team.chores?(team), do: raise(Web.Status.NotFound)
 
     year = DateTime.utc_now() |> Service.Period.today(team.timezone) |> Map.fetch!(:year)
 

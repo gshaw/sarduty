@@ -2,7 +2,7 @@ defmodule Web.Components.TeamSettingsTabs do
   use Web, :function_component
 
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
-  # title. Chore categories shows with member logins on, since members log chores. MCP
+  # title. Chore categories shows with chores on. MCP
   # tokens shows once a SAR Duty admin turns MCP on for the team.
 
   attr :team, :map, required: true
@@ -31,7 +31,7 @@ defmodule Web.Components.TeamSettingsTabs do
         Hours tags
       </:tab>
       <:tab
-        :if={@team.member_logins}
+        :if={App.Model.Team.chores?(@team)}
         navigate={~p"/teams/#{@team}/settings/chore-categories"}
         current={@current == :chore_categories}
       >

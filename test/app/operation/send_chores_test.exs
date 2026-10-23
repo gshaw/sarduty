@@ -12,7 +12,9 @@ defmodule App.Operation.SendChoresTest do
 
   setup do
     %{user: user, team: team} =
-      user_with_team_fixture(%{team: %{d4h_access_key: "team-key", member_logins: true}})
+      user_with_team_fixture(%{
+        team: %{d4h_access_key: "team-key", member_logins: true, chores_enabled: true}
+      })
 
     hours = tag_fixture(team, "Primary Hours")
     other = tag_fixture(team, "Chores")

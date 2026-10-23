@@ -10,7 +10,7 @@ defmodule Web.ChoreFormLive do
   # date, waiting or decided. Its status stays.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
-    if !team.member_logins, do: raise(Web.Status.NotFound)
+    if !App.Model.Team.chores?(team), do: raise(Web.Status.NotFound)
     chore = Chore.find!(team, id)
     if Chore.locked?(chore), do: raise(Web.Status.NotFound)
 

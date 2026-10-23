@@ -341,8 +341,7 @@ defmodule Web.UserAuth do
     {get_session(conn, @view_as_key), delete_session(conn, @view_as_key)}
   end
 
-  defp waiting_chores(%Team{member_logins: true} = team), do: Chore.count_waiting(team.id)
-  defp waiting_chores(_team), do: 0
+  defp waiting_chores(team), do: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0)
 
   @doc "Who may open a team LiveView: `:admin` (the default), `:team`, or `:member`."
   def page_access(nil), do: :admin

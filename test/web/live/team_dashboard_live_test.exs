@@ -110,7 +110,7 @@ defmodule Web.TeamDashboardLiveTest do
     {:ok, lv, _html} = open(conn, user, team)
     refute has_element?(lv, "#attention-chores")
 
-    team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+    team |> Ecto.Changeset.change(member_logins: true, chores_enabled: true) |> Repo.update!()
     {:ok, lv, _html} = open(conn, user, team)
     assert has_element?(lv, "#attention-chores", "1 chore to accept")
     assert has_element?(lv, ~s{#attention-chores a[href="/teams/#{team.subdomain}/chores"]})
