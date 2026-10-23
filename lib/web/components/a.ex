@@ -16,22 +16,26 @@ defmodule Web.Components.A do
   slot :inner_block, required: true
 
   def a(assigns) do
-    assigns =
-      assigns
-      |> assign(:link_class, determine_link_class(assigns))
-      |> assign(:link_target, determine_target(assigns))
+    assigns = assign(assigns, :link_class, determine_link_class(assigns))
+    render_link(assigns)
+  end
 
+  defp render_link(%{external: true} = assigns) do
     ~H"""
-    <.link class={@link_class} target={@link_target} {@rest}>{render_slot(@inner_block)}<.icon
-      :if={@external}
+    <.link class={@link_class} target="_blank" {@rest}><span class="link-text">{render_slot(
+      @inner_block
+    )}</span><.icon
       name="hero-arrow-top-right-on-square-micro"
       class="link-icon"
     /></.link>
     """
   end
 
-  defp determine_target(%{external: true}), do: "_blank"
-  defp determine_target(_assigns), do: nil
+  defp render_link(assigns) do
+    ~H"""
+    <.link class={@link_class} {@rest}>{render_slot(@inner_block)}</.link>
+    """
+  end
 
   defp determine_link_class(assigns) do
     [determine_kind_classes(assigns), assigns.class]
