@@ -292,7 +292,7 @@ defmodule Web.MeLive do
           contact={@member.primary_emergency_contact}
         />
         <.emergency_contact
-          :if={MemberSidebar.named?(@member.secondary_emergency_contact)}
+          :if={MemberSidebar.shown?(@member.secondary_emergency_contact)}
           id="contact-emergency-2"
           label="Second emergency contact"
           contact={@member.secondary_emergency_contact}
@@ -338,7 +338,7 @@ defmodule Web.MeLive do
     ~H"""
     <dt>{@label}</dt>
     <dd id={@id}>
-      <%= if MemberSidebar.named?(@contact) do %>
+      <%= if MemberSidebar.shown?(@contact) do %>
         {MemberSidebar.contact_name(@contact)}
         <span :for={phone <- MemberSidebar.phones(@contact)} class="block">
           {Service.Phone.format(phone)}

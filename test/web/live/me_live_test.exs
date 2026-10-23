@@ -189,6 +189,21 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
     end
 
+    test "both emergency contacts, when the second has something to show",
+         %{conn: conn, team: team, member: member} do
+      member
+      |> Ecto.Changeset.change(
+        primary_emergency_contact: %{"name" => "Sam Rivera", "primary_phone" => "6045550100"},
+        secondary_emergency_contact: %{"name" => "Lee Chan", "relation" => "Sister"}
+      )
+      |> Repo.update!()
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#contact-emergency", "Sam Rivera")
+      assert has_element?(lv, "#contact-emergency-2", "Lee Chan (Sister)")
+    end
+
     test "the 5 latest milestones", %{conn: conn, team: team, member: member} do
       member
       |> Ecto.Changeset.change(

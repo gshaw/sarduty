@@ -72,7 +72,7 @@ defmodule Web.Components.MemberSidebar do
       <%!-- Member pages are for team admins only, so no member sees another's (#423). --%>
       <dt>Emergency contact</dt>
       <.emergency_contact id="member-emergency" contact={@member.primary_emergency_contact} />
-      <%= if named?(@member.secondary_emergency_contact) do %>
+      <%= if shown?(@member.secondary_emergency_contact) do %>
         <dt>Second emergency contact</dt>
         <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
       <% end %>
@@ -113,7 +113,7 @@ defmodule Web.Components.MemberSidebar do
   defp emergency_contact(assigns) do
     ~H"""
     <dd id={@id}>
-      <%= if named?(@contact) or present?(@contact["primary_phone"]) do %>
+      <%= if shown?(@contact) do %>
         {contact_name(@contact)}
         <span :for={{phone, i} <- Enum.with_index(phones(@contact))} class="block">
           {Service.Phone.format(phone)}<.copy_button
@@ -135,8 +135,9 @@ defmodule Web.Components.MemberSidebar do
     """
   end
 
-  @doc "Whether an emergency contact has a name."
-  def named?(contact), do: is_map(contact) and present?(contact["name"])
+  @doc "Whether an emergency contact has a name or a phone, so there is something to show."
+  def shown?(contact),
+    do: is_map(contact) and (present?(contact["name"]) or phones(contact) != [])
 
   defp present?(value), do: value not in [nil, ""]
 

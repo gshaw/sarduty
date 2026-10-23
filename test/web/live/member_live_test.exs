@@ -4,8 +4,6 @@ defmodule Web.MemberLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Repo
-
   test "renders member page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
@@ -54,6 +52,31 @@ defmodule Web.MemberLiveTest do
     assert has_element?(lv, ~s|#member-emergency-copy-0[value="604-555-0100"]|)
     assert has_element?(lv, ~s|#member-emergency-call[href="tel:+16045550100"]|)
     refute has_element?(lv, "#member-emergency-2")
+  end
+
+  test "shows a team admin the second emergency contact when it has a name or a phone",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    member =
+      member_fixture(team, %{
+        primary_emergency_contact: %{"name" => "Sam Rivera"},
+        secondary_emergency_contact: %{"name" => "Lee Chan", "primary_phone" => "6045550102"}
+      })
+
+    phone_only =
+      member_fixture(team, %{secondary_emergency_contact: %{"primary_phone" => "6045550103"}})
+
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}")
+    assert has_element?(lv, "#member-emergency", "Sam Rivera")
+    assert has_element?(lv, "#member-emergency-2", "Lee Chan")
+    assert has_element?(lv, ~s|#member-emergency-2-call[href="tel:+16045550102"]|)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{phone_only.id}")
+    assert has_element?(lv, "#member-emergency", "None")
+    assert has_element?(lv, "#member-emergency-2", "604-555-0103")
   end
 
   test "a member with no emergency contact shows None", %{conn: conn} do
