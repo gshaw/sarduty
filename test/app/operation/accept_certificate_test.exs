@@ -81,11 +81,23 @@ defmodule App.Operation.AcceptCertificateTest do
     assert posts() == ["/member-qualification-awards", "/documents"]
     assert CertificateFile.bytes(ctx.certificate) == nil
 
-    award = MemberQualificationAward.get_by(d4h_award_id: 300)
-    assert %{member_id: member_id, d4h_document_id: 900} = award
-    assert member_id == ctx.member.id
+    award = MemberQualificationAward.get_by(member_id: ctx.member.id, d4h_award_id: 300)
+    assert award.d4h_document_id == 900
     assert award.starts_at == ~U[2026-10-17 07:00:00Z]
     assert award.ends_at == ~U[2029-10-18 07:00:00Z]
+  end
+
+  # A D4H award id is unique only for one member.
+  test "the award goes in for the certificate's member, never another's with its id", ctx do
+    other = member_fixture(ctx.team)
+    theirs = qualification_award_fixture(ctx.qualification, other, %{d4h_award_id: 300})
+    stub_d4h(200)
+
+    assert {:ok, _accepted} = accept(ctx)
+    assert Repo.reload!(theirs).d4h_document_id == nil
+
+    assert %{d4h_document_id: 900} =
+             MemberQualificationAward.get_by(member_id: ctx.member.id, d4h_award_id: 300)
   end
 
   test "a failed upload keeps the file, and Send again uploads it alone", ctx do

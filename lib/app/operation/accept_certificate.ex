@@ -185,7 +185,7 @@ defmodule App.Operation.AcceptCertificate do
   # Into the copy now; the next refresh finds it there and leaves it as it is.
   defp put_award(certificate, award_row, award_id, document_id) do
     award =
-      MemberQualificationAward.get_by(d4h_award_id: award_id) ||
+      MemberQualificationAward.get_by(member_id: certificate.member_id, d4h_award_id: award_id) ||
         MemberQualificationAward.insert!(%{
           member_id: certificate.member_id,
           qualification_id: certificate.qualification_id,

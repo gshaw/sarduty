@@ -53,8 +53,8 @@ defmodule Web.CertificateLive do
   end
 
   # Once accepted, the file is D4H's, opened through the award (#434).
-  defp accepted_award(%Certificate{status: :accepted, d4h_award_id: award_id}),
-    do: MemberQualificationAward.get_by(d4h_award_id: award_id)
+  defp accepted_award(%Certificate{status: :accepted, d4h_award_id: award_id} = certificate),
+    do: MemberQualificationAward.get_by(member_id: certificate.member_id, d4h_award_id: award_id)
 
   defp accepted_award(_certificate), do: nil
 
