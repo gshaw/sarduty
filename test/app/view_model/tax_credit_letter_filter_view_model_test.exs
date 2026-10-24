@@ -3,7 +3,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
   import App.DataFixtures
 
-  alias App.Model.Activity
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   setup do

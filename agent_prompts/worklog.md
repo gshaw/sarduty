@@ -15,6 +15,15 @@ One-line summary of what changed (or "no changes needed"). (commit <short-sha>, 
 
 <!-- New entries go directly below this line, newest first. -->
 
+## 2026-10-23 — review-tests
+
+Every route and event added since 2026-10-09 that takes an id looks it up through the
+team; no new P0 hole. Added tests that the sync's attendance deletes (month and activity
+fetches, which letter hours rest on) and equipment deletes never reach another team's
+rows; the attendance one fails when the team filter is removed. Fixed two warnings in
+test files, and `mise run test` now fails on them. Left: `GroupRules.flip_warning/3` is
+pure and untested (P2). 1544 passed.
+
 ## 2026-10-23 — review-docs
 
 Every link, module, function, and path the docs name exists (checked by script). Fixed:

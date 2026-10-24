@@ -5,7 +5,6 @@ defmodule Web.EndorsementCollectionLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.EndorsementQualification
-  alias App.Model.Team
   alias App.Repo
 
   setup %{conn: conn} do
@@ -109,8 +108,8 @@ defmodule Web.EndorsementCollectionLiveTest do
   end
 
   test "without ID cards there is nothing to tick", %{conn: conn, team: team} do
-    team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
-    endorsement_fixture(%Team{team | id_cards_enabled: false})
+    team = team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
+    endorsement_fixture(team)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements")
 
