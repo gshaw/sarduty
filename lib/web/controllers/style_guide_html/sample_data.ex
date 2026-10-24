@@ -12,23 +12,22 @@ defmodule Web.StyleGuideHTML.SampleData do
   def letters do
     Enum.map(
       [
-        {101, "Avery Chen", "avery@example.com", {212, 30}, {18, 0}, "TCL-2025-014"},
-        {117, "Blake Morrison", "blake@example.com", {198, 15}, {4, 45}, nil},
-        {123, "Casey Dhillon", "casey@example.com", {156, 0}, {62, 30}, "TCL-2025-015"},
-        {131, "Devon Okafor", "devon@example.com", {88, 45}, {12, 15}, nil},
-        {152, "Finley Tremblay", "finley@example.com", {41, 0}, {9, 30}, nil}
+        {"Avery Chen", "avery@example.com", {212, 30}, {18, 0}, "TCL-2025-014"},
+        {"Blake Morrison", "blake@example.com", {198, 15}, {4, 45}, nil},
+        {"Casey Dhillon", "casey@example.com", {156, 0}, {62, 30}, "TCL-2025-015"},
+        {"Devon Okafor", "devon@example.com", {88, 45}, {12, 15}, nil},
+        {"Finley Tremblay", "finley@example.com", {41, 0}, {9, 30}, nil}
       ],
       &letter_row/1
     )
   end
 
   # Hours as `{hours, minutes}`, shown the way the letters page shows them.
-  defp letter_row({id, name, email, primary, secondary, letter}) do
+  defp letter_row({name, email, primary, secondary, letter}) do
     primary = minutes(primary)
     secondary = minutes(secondary)
 
     %{
-      id: id,
       name: name,
       email: email,
       primary: Format.duration(primary),

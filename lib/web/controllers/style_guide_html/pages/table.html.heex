@@ -15,7 +15,7 @@
     <:header_row>
       <th></th>
       <th colspan="3">SARVAC hours</th>
-      <th colspan="3"></th>
+      <th colspan="2"></th>
     </:header_row>
     <:col :let={r} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
       <a href="#" class="link">{r.name}</a>
@@ -32,7 +32,6 @@
       <.button :if={!r.letter} variant={:success} size={:sm}>Create letter</.button>
     </:col>
     <:col :let={r} label="Email">{r.email}</:col>
-    <:col :let={r} label="ID" class="w-px" align="right" sorts={[{"↑", "id"}]}>{r.id}</:col>
   </.table>
 
   <h2>How it works</h2>

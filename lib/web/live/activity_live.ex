@@ -542,7 +542,6 @@ defmodule Web.ActivityLive do
         >
           {if row.status == "attending", do: Format.duration(row.duration_in_minutes)}
         </:col>
-        <:col :let={row} label="ID" align="right" class="w-px">{row.member.ref_id}</:col>
       </.table>
     </section>
     """

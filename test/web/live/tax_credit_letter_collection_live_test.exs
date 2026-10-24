@@ -24,6 +24,20 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
     assert html =~ "tax credit letters"
   end
 
+  test "shows no member ID, and an old ID sort link sorts by total", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/tax-credit-letters?sort=id&filter=none")
+
+    assert has_element?(lv, "#member_collection", member.name)
+    refute has_element?(lv, "#member_collection th", "ID")
+    refute has_element?(lv, "#member_collection", member.ref_id)
+  end
+
   describe "sending letters to everyone shown" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()

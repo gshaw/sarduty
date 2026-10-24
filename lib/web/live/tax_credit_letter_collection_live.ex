@@ -105,13 +105,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
       class="table-striped"
     >
       <:header_row>
-        <th colspan="3"></th>
+        <th colspan="2"></th>
         <th colspan="3" class="text-center">SARVAC hours</th>
         <th></th>
       </:header_row>
-      <:col :let={record} label="ID" class="w-px" sorts={[{"↑", "id"}]}>
-        {record.member.ref_id}
-      </:col>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
         <.a navigate={
           ~p"/teams/#{@current_team}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"

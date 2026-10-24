@@ -3,7 +3,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
   import App.DataFixtures
 
-  alias App.Model.Activity
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   setup do
@@ -33,6 +32,13 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
       %TaxCreditLetterFilterViewModel{year: year, filter: filter, sort: sort},
       now
     )
+  end
+
+  test "a sort that's gone, like the old ID sort, falls back to total" do
+    assert {:ok, %{sort: "total"}, _} = TaxCreditLetterFilterViewModel.validate(%{"sort" => "id"})
+
+    assert {:ok, %{sort: "name"}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{"sort" => "name"})
   end
 
   test "lists the same hours the letter counts, overlaps merged", %{team: team, member: member} do
