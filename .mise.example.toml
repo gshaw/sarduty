@@ -22,8 +22,11 @@ TEAM_LOGO_PATH = "/Users/gerry/Developer/sarduty.mount/team-logos"
 # DEV_SEND_SMS = "true"
 # For backups/backup.sh: the public half of the backup age key (age1...).
 # BACKUP_AGE_RECIPIENT = ""
-# Optional: pinged after each successful team refresh.
+# Optional: Healthchecks ping URLs, once per nightly refresh and once per sync round.
 # HEALTHCHECKS_URL = ""
+# HEALTHCHECKS_SYNC_URL = ""
+# Optional: point SAR Duty at a local SAR Duty Records instead of records.sarduty.com.
+# RECORDS_HOST = ""
 # Optional: sign Apple Wallet passes for member ID cards. PEM text. Set all four.
 # APPLE_PASS_TYPE_ID = "pass.com.sarduty.member-card"
 # APPLE_TEAM_ID = ""

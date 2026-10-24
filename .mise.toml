@@ -3,11 +3,11 @@
 [tools]
 age = "1.3.2"
 elixir = "1.20.4-otp-29"
-erlang = "29.0.6"
-node = "26.8.2"
-"npm:cspell" = "10.3.0"
-"npm:prettier" = "3.9.6"
-"npm:markdownlint-cli2" = "0.23.2"
+erlang = "29.1.2"
+node = "26.12.1"
+"npm:cspell" = "10.4.0"
+"npm:prettier" = "3.9.10"
+"npm:markdownlint-cli2" = "0.24.0"
 
 # Everything except the test suite. The Mix steps run in order inside
 # `check-elixir` because they share _build; the Node checkers only read and
@@ -47,7 +47,8 @@ if out=$(markdownlint-cli2 '**/*.md' 2>&1); then echo "$out" | grep '^Linting' |
 """
 
 [tasks.test]
-run = "mix test --color"
+# Warnings in test files fail too, as `check` does for lib/.
+run = "mix test --color --warnings-as-errors"
 
 [tasks.ci]
 description = "Run all checks, then the test suite"
