@@ -132,7 +132,7 @@ defmodule App.ViewData.EquipmentList do
 
   @doc """
   The Place filter's choices, as `{label, value}`: the places in `rows`, in group order,
-  then each member who holds something not retired, by name.
+  then each member who holds something, by name.
   """
   def place_options(rows) do
     rows |> places() |> Enum.map(&{elem(&1, 0), elem(&1, 0)}) |> Enum.concat(holders(rows))
@@ -140,7 +140,7 @@ defmodule App.ViewData.EquipmentList do
 
   defp holders(rows) do
     rows
-    |> Enum.filter(&(&1.holder_id && &1.item.status != "retired"))
+    |> Enum.filter(& &1.holder_id)
     |> Enum.uniq_by(& &1.holder_id)
     |> Enum.sort_by(&{&1.holder, &1.holder_id})
     |> Enum.map(&{&1.holder, member_place(&1.holder_id)})

@@ -134,9 +134,16 @@ defmodule App.ViewData.EquipmentListTest do
     end
   end
 
-  test "Place leaves out a member who holds only retired items" do
-    rows = EquipmentList.rows([item(9, "Old radio", member_id: 2, status: "retired")])
-    assert EquipmentList.place_options(rows) == [{"With members", "With members"}]
+  test "Place lists a member who holds only retired items: the team may want them back" do
+    rows =
+      EquipmentList.rows([
+        item(9, "Old radio", member_id: 2, member: %Member{name: "Ty Wong"}, status: "retired")
+      ])
+
+    assert EquipmentList.place_options(rows) == [
+             {"With members", "With members"},
+             {"Ty Wong", "member-2"}
+           ]
   end
 
   # Sam holds a first aid kit with a pouch in it, the pouch a splint, and a GPS on its own.

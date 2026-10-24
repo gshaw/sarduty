@@ -187,8 +187,8 @@ while they're away, and "Ground searcher · Joined March 2019 · Last attended S
   the items they hold, and every milestone, newest first. On a phone the ID card and
   letter come first, then the main column, then contact details, equipment, and
   milestones.
-- **Equipment**: every item they hold that isn't retired, by title, with its category
-  and barcode (#490), so they know what to bring back. No cap and no links: Equipment is
+- **Equipment**: every item they hold, retired ones too, with its category and barcode
+  (#490), so they know what to bring back. No cap and no links: Equipment is
   for team admins. Shown only when they hold something.
 - **Contact details** are the mobile number, address, and emergency contact, from the
   copy, so the page never reads D4H (#423).
