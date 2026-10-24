@@ -329,7 +329,8 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#coming-up", "Rope practice")
       assert has_element?(lv, "#to-do-empty")
       assert has_element?(lv, "#side-nav-dashboard[aria-current=page]")
-      refute has_element?(lv, "#side-nav-members")
+      refute has_element?(lv, "#side-nav-groups")
+      assert has_element?(lv, ~s{#stat-members a[href="/teams/#{team.subdomain}/members"]})
     end
 
     test "Coming up links to each activity's page from its title", %{conn: conn, team: team} do

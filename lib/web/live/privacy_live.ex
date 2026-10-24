@@ -13,7 +13,7 @@ defmodule Web.PrivacyLive do
     ~H"""
     <article id="privacy" class="max-w-prose">
       <h1 class="title">Privacy</h1>
-      <p class="hint">Last changed October 20, 2026.</p>
+      <p class="hint">Last changed October 23, 2026.</p>
       <p>
         SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
       </p>
@@ -25,6 +25,9 @@ defmodule Web.PrivacyLive do
       </p>
       <p>
         Anyone with a member's ID card code can see the member's name, photo, and team on the verify site.
+      </p>
+      <p id="privacy-members">
+        On a team with member logins on, members see each other's roster, attendance, groups, and qualifications. Phone numbers, addresses, emails, and emergency contacts stay with team admins.
       </p>
       <p>
         SAR Duty does not sell data, show ads, or use tracking cookies. Its cookies keep you logged in.

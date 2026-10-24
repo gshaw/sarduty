@@ -44,12 +44,12 @@ defmodule Web.ViewAsControllerTest do
     assert has_element?(lv, "#view-as-banner", "Nothing you do here is saved")
     # The member's side navigation, and the team admin's own account menu.
     assert has_element?(lv, "#side-nav-me")
-    refute has_element?(lv, "#side-nav-members")
+    refute has_element?(lv, "#side-nav-groups")
     assert has_element?(lv, "#account-menu .menu-name", "Alex Chen")
 
     lv = open(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#view-as-banner")
-    refute has_element?(lv, "#side-nav-members")
+    refute has_element?(lv, "#side-nav-groups")
 
     assert [event] = Event.get_recent(%{kind: :member_viewed_as}, 10)
     assert event.user_id == admin.id
@@ -60,8 +60,8 @@ defmodule Web.ViewAsControllerTest do
   test "team admin pages stay the team admin's", %{conn: conn, team: team, sam: sam} do
     conn = view_as(conn, team, sam)
 
-    lv = open(conn, ~p"/teams/#{team}/members")
-    assert has_element?(lv, "#side-nav-members")
+    lv = open(conn, ~p"/teams/#{team}/groups")
+    assert has_element?(lv, "#side-nav-groups")
     assert has_element?(lv, "#view-as-banner", "This page is yours as a team admin")
   end
 

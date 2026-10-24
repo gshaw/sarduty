@@ -108,17 +108,22 @@ defmodule Web.Components.SearchBoxTest do
     end
   end
 
-  test "a member finds activities and pages only", %{conn: conn} do
+  test "a member finds members, activities, and pages (#440)", %{conn: conn} do
     %{team: team, user: user} = member_with_login_fixture()
-    member_fixture(team, %{name: "Rope Rider"})
+    rider = member_fixture(team, %{name: "Rope Rider"})
     activity = activity_fixture(team, %{title: "Rope night"})
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
 
-    assert has_element?(lv, "#search-hint", "Find activities and pages by name or D4H number.")
+    assert has_element?(
+             lv,
+             "#search-hint",
+             "Find members, activities, and pages by name or D4H number."
+           )
 
     lv |> form("#search-form", %{q: "rope"}) |> render_change()
     assert has_element?(lv, "#search-hit-activity-#{activity.id}")
-    refute has_element?(lv, "#search-group-member")
+    assert has_element?(lv, "#search-hit-member-#{rider.id}")
+    refute has_element?(lv, "#search-group-equipment")
   end
 
   test "pages outside a team have no search", %{conn: conn} do

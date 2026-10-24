@@ -100,4 +100,15 @@ defmodule Web.MilestoneCollectionLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{nobody.id}")
     assert has_element?(lv, "#member-milestones", "None")
   end
+
+  # Built from attendance members see already (#440).
+  test "a member sees every member's milestones", %{conn: conn} do
+    %{team: team, user: user} = member_with_login_fixture()
+    sam = member_fixture(team, %{name: "Sam Rivera", joined_at: ~U[2026-01-01 00:00:00Z]})
+    attend_incident(team, sam, "Missing hiker", 10)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/milestones")
+    assert has_element?(lv, "#milestones-#{sam.id}-incidents-1", "Missing hiker")
+    assert has_element?(lv, "#side-nav-milestones[aria-current=page]")
+  end
 end

@@ -17,16 +17,17 @@ defmodule Web.Components.MemberSidebar do
   alias Web.Components.OpenInMaps
 
   @doc """
-  Assigns the header's `last_attended_at` and `standing`, and the sidebar's
-  `milestones`, for the socket's `member`. Call
-  it when the member loads, not on every render: a form's change events re-render.
+  Assigns the header's `last_attended_at` and `standing`, as the viewer sees it, and the
+  sidebar's `milestones`, for the socket's `member`. Call it when the member loads, not
+  on every render: a form's change events re-render.
   """
   def load_sidebar(socket) do
-    member = socket.assigns.member
+    %{member: member, team_admin?: team_admin?} = socket.assigns
+    standing = MemberAwayPeriod.standing_today(member, member.team.timezone)
 
     Phoenix.Component.assign(socket,
       last_attended_at: Member.last_attended_at(member),
-      standing: MemberAwayPeriod.standing_today(member, member.team.timezone),
+      standing: MemberAwayPeriod.visible_standing(standing, team_admin?),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now())
     )
   end
@@ -34,10 +35,11 @@ defmodule Web.Components.MemberSidebar do
   attr :member, :map, required: true
   attr :last_attended_at, :any, required: true, doc: "from load_sidebar/1"
   attr :standing, :any, required: true, doc: "from load_sidebar/1"
+  attr :team_admin?, :boolean, default: false, doc: "adds View as member"
 
   @doc """
-  The breadcrumbs and the member's name over every tab, with View as member: the same
-  header Your membership opens with.
+  The breadcrumbs and the member's name over every tab, with View as member for a team
+  admin: the same header Your membership opens with.
   """
   def member_head(assigns) do
     ~H"""
@@ -53,7 +55,7 @@ defmodule Web.Components.MemberSidebar do
       standing={@standing}
       facts={facts(@member, @last_attended_at, @member.team.timezone)}
     >
-      <:actions>
+      <:actions :if={@team_admin?}>
         <.button
           id="view-as"
           href={~p"/teams/#{@member.team}/members/#{@member.id}/view-as"}
@@ -73,64 +75,84 @@ defmodule Web.Components.MemberSidebar do
     required: true,
     doc: "the member's milestones, newest first, from load_sidebar/1"
 
+  attr :team_admin?, :boolean, default: false, doc: "adds contact details and Actions"
+
   # The header has the photo, role, joined, standing, and last attended, so the
-  # sidebar is the member's ID, how to reach them, and D4H.
+  # sidebar is the member's ID, how to reach them, and D4H. Members see the ID and
+  # milestones: other members' contact details stay with team admins (#440).
   def sidebar_content(assigns) do
     ~H"""
     <dl>
       <dt>ID</dt>
       <dd>{@member.ref_id}</dd>
-      <dt>Email</dt>
-      <dd>
-        <.a href={"mailto:#{@member.email}"}>{@member.email}</.a><.copy_button
-          id="member-copy-email"
-          value={@member.email}
-          label="Copy email"
-        />
-      </dd>
-      <dt>Phone</dt>
-      <dd id="member-phone">
-        {Service.Phone.format(@member.phone)}<.copy_button
-          id="member-copy-phone"
-          value={Service.Phone.format(@member.phone)}
-          label="Copy phone number"
-        />
-        <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
-      </dd>
-      <dt>Address</dt>
-      <dd>
-        {@member.address}<.copy_button
-          id="member-copy-address"
-          value={OpenInMaps.one_line(@member.address)}
-          label="Copy address"
-        />
-        <%!-- No label: the member's name beside their address would leave SAR Duty. --%>
-        <.open_in_maps id="member-maps" app={@maps_app} address={@member.address} />
-      </dd>
-      <%!-- Member pages are for team admins only, so no member sees another's (#423). --%>
-      <dt>Emergency contact</dt>
-      <.emergency_contact id="member-emergency" contact={@member.primary_emergency_contact} />
-      <%= if shown?(@member.secondary_emergency_contact) do %>
-        <dt>Second emergency contact</dt>
-        <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
-      <% end %>
+      <.contact_details :if={@team_admin?} member={@member} maps_app={@maps_app} />
       <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />
 
-      <%!-- A team on SAR Duty Records has no D4H to open, so it changes members here. --%>
-      <dt>Actions</dt>
-      <dd>
-        <ul id="member-actions" class="action-list">
-          <li :if={D4H.records?(@member.team)}>
-            <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
-          </li>
-          <li :if={!D4H.records?(@member.team)}>
-            <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>
-          </li>
-        </ul>
-      </dd>
+      <.member_actions :if={@team_admin?} member={@member} />
     </dl>
+    """
+  end
+
+  attr :member, :map, required: true
+
+  # A team on SAR Duty Records has no D4H to open, so it changes members here.
+  defp member_actions(assigns) do
+    ~H"""
+    <dt>Actions</dt>
+    <dd>
+      <ul id="member-actions" class="action-list">
+        <li :if={D4H.records?(@member.team)}>
+          <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
+        </li>
+        <li :if={!D4H.records?(@member.team)}>
+          <.a external={true} href={D4H.member_url(@member)}>Open D4H member</.a>
+        </li>
+      </ul>
+    </dd>
+    """
+  end
+
+  attr :member, :map, required: true
+  attr :maps_app, :string, required: true
+
+  defp contact_details(assigns) do
+    ~H"""
+    <dt>Email</dt>
+    <dd>
+      <.a href={"mailto:#{@member.email}"}>{@member.email}</.a><.copy_button
+        id="member-copy-email"
+        value={@member.email}
+        label="Copy email"
+      />
+    </dd>
+    <dt>Phone</dt>
+    <dd id="member-phone">
+      {Service.Phone.format(@member.phone)}<.copy_button
+        id="member-copy-phone"
+        value={Service.Phone.format(@member.phone)}
+        label="Copy phone number"
+      />
+      <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
+    </dd>
+    <dt>Address</dt>
+    <dd>
+      {@member.address}<.copy_button
+        id="member-copy-address"
+        value={OpenInMaps.one_line(@member.address)}
+        label="Copy address"
+      />
+      <%!-- No label: the member's name beside their address would leave SAR Duty. --%>
+      <.open_in_maps id="member-maps" app={@maps_app} address={@member.address} />
+    </dd>
+    <%!-- Team admins only, so no member sees another's (#423). --%>
+    <dt>Emergency contact</dt>
+    <.emergency_contact id="member-emergency" contact={@member.primary_emergency_contact} />
+    <%= if shown?(@member.secondary_emergency_contact) do %>
+      <dt>Second emergency contact</dt>
+      <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
+    <% end %>
     """
   end
 
