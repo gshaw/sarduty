@@ -141,7 +141,7 @@ defmodule Web.MeCertificateFormLive do
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
     <p class="lead measure">
-      A team admin looks at it, then adds the qualification to {@service}.
+      A team admin looks at it, then records the award in {@service}.
     </p>
 
     <.form

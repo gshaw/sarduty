@@ -43,7 +43,7 @@ defmodule Web.CertificateCollectionLive do
     ~H"""
     <h1 class="title">Certificates</h1>
     <p class="lead measure">
-      Members send a certificate for a qualification they hold. Accepting one adds the qualification to {@service} with the certificate attached.
+      Members send a certificate for a qualification they hold. Accepting one records the award in {@service} and attaches the certificate.
     </p>
 
     <.stat_switch id="certificates-switch" label="Certificates">
