@@ -37,15 +37,17 @@ For a PR with a migration:
 
 - **Litestream** replicates the database continuously to Cloudflare R2
   ([litestream.yml](../litestream.yml)). `bin/server` restores from the replica when the
-  database file is missing, then runs `litestream replicate` in the background. Its
-  checkpoints hold SQLite's write lock, sometimes for over 5 s, so `App.Repo` waits up to
-  30 s for the lock (#416). Its metrics, such as `litestream_checkpoint_seconds`, are in
-  Fly's metrics.
-- **Slow holds**: `App.Repo.SlowLog` logs any transaction that holds the database, or
-  statement that runs, over 5 s, with its caller. Each is a warning in the log and a
-  `repo.slow` event in Honeybadger Insights (`filter event_type::str == "repo.slow"`). A
-  lock error with no `repo.slow` transaction before it points at Litestream. It stays
-  after #416: a 5 s hold is worth knowing about.
+  database file is missing, then runs `litestream replicate` in the background.
+  Something sometimes holds SQLite's write lock for over 5 s, so `App.Repo` waits up to
+  30 s for it (#416). Litestream's metrics, such as `litestream_sync_seconds`, are in
+  Fly's metrics; a sync that takes 1 s is Litestream waiting for the lock.
+- **Slow holds**: `App.Repo.SlowLog` names whatever holds the write lock over 5 s, while
+  it holds it: the transaction's process and what it is running, and which OS process
+  holds the lock (this app, Litestream, or another). It also reports statements over
+  5 s, lock errors, and a stalled VM. Reports go to `/mnt/sarduty/repo_slow.log` first
+  (`fly ssh console -C "tail -50 /mnt/sarduty/repo_slow.log"`), then to the log and a
+  `repo.slow` event in Honeybadger Insights, which drops events during a lock burst. It
+  stays after #416: a 5 s hold is worth knowing about.
 - **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
   consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
   `backups/` (gitignored), encrypted with age and stamped to the minute.
