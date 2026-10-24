@@ -46,9 +46,11 @@ For a PR with a migration:
 - **Litestream** replicates the database continuously to Cloudflare R2
   ([litestream.yml](../litestream.yml)). `bin/server` restores from the replica when the
   database file is missing, then runs `litestream replicate` in the background.
-  Something sometimes holds SQLite's write lock for over 5 s, so `App.Repo` waits up to
-  30 s for it (#416). Litestream's metrics, such as `litestream_sync_seconds`, are in
-  Fly's metrics; a sync that takes 1 s is Litestream waiting for the lock.
+  `App.Repo` waits up to 30 s for SQLite's write lock. Litestream's metrics, such as
+  `litestream_sync_seconds`, are in Fly's metrics; a sync that takes 1 s is Litestream
+  waiting for the lock. The lock errors of #416 were exqlite's: before 0.42, a connection
+  waiting for the lock froze any process that freed one of its statements, including
+  the holder, and on our one CPU that froze the whole VM until the wait ran out.
 - **Slow holds**: `App.Repo.SlowLog` names whatever holds the write lock over 5 s, while
   it holds it: the transaction's process and what it is running, and which OS process
   holds the lock (this app, Litestream, or another). It also reports statements over
