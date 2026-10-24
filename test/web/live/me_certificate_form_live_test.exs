@@ -121,6 +121,8 @@ defmodule Web.MeCertificateFormLiveTest do
     conn = get(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/#{certificate.id}/file")
     assert conn.resp_body == "%PDF-1.7\n"
     assert get_resp_header(conn, "content-security-policy") == ["sandbox"]
+    # It changes and goes, so no browser keeps it.
+    assert get_resp_header(conn, "cache-control") == ["private, no-store"]
 
     other = certificate_fixture(member_fixture(ctx.team), ctx.qualification)
 

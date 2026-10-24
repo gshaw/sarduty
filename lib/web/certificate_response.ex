@@ -14,7 +14,8 @@ defmodule Web.CertificateResponse do
 
   def send_certificate(conn, team, award) do
     case LoadCertificate.call(team, award) do
-      {:ok, file} -> send_file(conn, file)
+      # D4H's file for an award doesn't change.
+      {:ok, file} -> respond(conn, file, "private, max-age=3600")
       :error -> send_resp(conn, :not_found, "")
     end
   end
@@ -26,17 +27,20 @@ defmodule Web.CertificateResponse do
         send_resp(conn, :not_found, "")
 
       bytes ->
-        send_file(conn, %{
+        file = %{
           body: bytes,
           content_type: certificate.content_type,
           filename: certificate.file_name,
           # Only a PDF or a JPEG is kept (Service.CertificateFile).
           inline?: true
-        })
+        }
+
+        # The member can change it while it waits, and it goes once decided.
+        respond(conn, file, "private, no-store")
     end
   end
 
-  defp send_file(conn, file) do
+  defp respond(conn, file, cache_control) do
     disposition = if file.inline?, do: "inline", else: "attachment"
 
     conn
@@ -45,7 +49,7 @@ defmodule Web.CertificateResponse do
       "content-disposition",
       ~s(#{disposition}; filename="#{safe(file.filename)}")
     )
-    |> put_resp_header("cache-control", "private, max-age=3600")
+    |> put_resp_header("cache-control", cache_control)
     |> put_resp_header("x-content-type-options", "nosniff")
     |> put_resp_header("content-security-policy", "sandbox")
     |> send_resp(200, file.body)
