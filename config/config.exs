@@ -72,8 +72,9 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-# SQLite allows one writer at a time, and something sometimes holds the write lock for
-# over 5 s (#416; App.Repo.SlowLog names it). So writes wait up to 30 s, not fail. A
+# SQLite allows one writer at a time, so a write waits up to 30 s for the lock rather
+# than fail. Before exqlite 0.42, a connection waiting here froze any process that freed
+# one of its statements, even the lock's holder, for the whole wait (#416). A
 # deferred transaction that reads and then writes never waits, whatever busy_timeout
 # says, and Oban's stager does that every second. Immediate transactions take the
 # write lock at BEGIN, so they wait like any other write (#385).
