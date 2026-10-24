@@ -139,7 +139,8 @@ defmodule Web.CertificateLiveTest do
     assert Repo.aggregate(Certificate, :count) == 1
   end
 
-  # D4H with Sam's First Aid from the certificate's start, with `documents` on it.
+  # D4H with Sam's First Aid from the certificate's start, with `documents` on it. D4H
+  # keeps the dates at midnight UTC: Oct 17 on the team's clock.
   defp stub_existing(ctx, documents) do
     test_pid = self()
 
@@ -155,8 +156,8 @@ defmodule Web.CertificateLiveTest do
                 "id" => 77,
                 "member" => %{"resourceType" => "Member", "id" => ctx.member.d4h_member_id},
                 "qualification" => %{"id" => ctx.qualification.d4h_qualification_id},
-                "startsAt" => "2026-10-18T07:00:00.000Z",
-                "endsAt" => "2029-10-18T07:00:00.000Z"
+                "startsAt" => "2026-10-18T00:00:00.000Z",
+                "endsAt" => "2029-10-18T00:00:00.000Z"
               }
             ],
             "totalSize" => 1
@@ -175,7 +176,13 @@ defmodule Web.CertificateLiveTest do
        ctx do
     stub_existing(ctx, [])
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
-    assert has_element?(lv, "#certificate-existing", "with no certificate")
+
+    assert has_element?(
+             lv,
+             "#certificate-existing",
+             "from Oct 18, 2026 in D4H, with no certificate"
+           )
+
     assert has_element?(lv, "#certificate-accept", "Attach certificate")
 
     {:ok, _lv, _html} =
@@ -185,7 +192,7 @@ defmodule Web.CertificateLiveTest do
     refute_received {:post, "/member-qualification-awards"}
     assert %{status: :accepted, d4h_award_id: 77} = Repo.reload!(ctx.certificate)
 
-    assert %{d4h_document_id: 901, starts_at: ~U[2026-10-18 07:00:00Z]} =
+    assert %{d4h_document_id: 901, starts_at: ~U[2026-10-18 00:00:00Z]} =
              MemberQualificationAward.get_by(d4h_award_id: 77)
   end
 

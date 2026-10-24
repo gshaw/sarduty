@@ -102,6 +102,8 @@ defmodule Web.CertificateLive do
       <p :if={error = attach_error(@certificate)} class="hint">{error}</p>
     </.banner>
 
+    <%!-- The award starts the certificate's day (QualificationAward.starts_on?/2). D4H
+      keeps it at midnight UTC, the day before on a Canadian clock. --%>
     <.banner
       :if={@existing}
       id="certificate-existing"
@@ -110,8 +112,7 @@ defmodule Web.CertificateLive do
     >
       <p>
         {Member.first_name(@certificate.member)} holds {CertificateText.title(@certificate)} from {Format.date_short(
-          @existing.starts_at,
-          @current_team.timezone
+          @certificate.starts_on
         )} in {@service}, {if @existing.certificate?,
           do: "with a certificate. Decline this one.",
           else:

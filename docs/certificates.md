@@ -61,10 +61,15 @@ qualification and dates, then accept it
   ([FindCertificateAward](../lib/app/operation/find_certificate_award.ex)). With no
   certificate on it, Attach certificate puts the file on that award and adds no second
   one: the set is the upload alone. With one, the team admin declines.
+- **The same day is the award's UTC date**
+  ([QualificationAward.starts_on?/2](../lib/app/adapter/d4h/qualification_award.ex)),
+  for the page and the set alike. D4H keeps award dates at midnight UTC, the day before
+  on a Canadian clock. SAR Duty's own awards start at midnight on the team's clock: the
+  same UTC date in every Canadian time zone.
 - **Never an award twice.** D4H's API can't remove one. Accepting reads D4H again before
-  it writes, and the set skips an award D4H has from the same qualification and day. When the upload
-  fails, the award stays and the certificate keeps waiting with its file; its dates lock,
-  and Send again applies the same set, so only the upload goes.
+  it writes, and the set skips an award D4H has from the same qualification and day.
+  When the upload fails, the award stays and the certificate keeps waiting with its file;
+  its dates lock, and Send again applies the same set, so only the upload goes.
 - **One change at a time.** An accept holds a lock on the certificate while it waits on
   D4H. A member's change or delete, and another team admin's decline, wait for it, then
   read the certificate again.

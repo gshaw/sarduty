@@ -7,6 +7,7 @@ defmodule App.Operation.FindCertificateAward do
   """
 
   alias App.Adapter.D4H
+  alias App.Adapter.D4H.QualificationAward
   alias App.Model.Certificate
   alias App.Model.Team
   alias App.Repo
@@ -22,8 +23,7 @@ defmodule App.Operation.FindCertificateAward do
 
     with %{} = qualification <- certificate.qualification,
          awards = D4H.fetch_member_awards(d4h, certificate.member.d4h_member_id),
-         %{} = award <-
-           match(awards, qualification.d4h_qualification_id, certificate.starts_on, team.timezone) do
+         %{} = award <- match(awards, qualification.d4h_qualification_id, certificate.starts_on) do
       documents = D4H.fetch_award_documents(d4h, award.d4h_award_id)
 
       {:ok,
@@ -41,13 +41,13 @@ defmodule App.Operation.FindCertificateAward do
   end
 
   @doc """
-  Pure. The award of `d4h_qualification_id` that starts on `starts_on` in the team's
-  time zone, or nil.
+  Pure. The award of `d4h_qualification_id` that starts on `starts_on`
+  (`QualificationAward.starts_on?/2`, as ApplyChangeSet checks it), or nil.
   """
-  def match(awards, d4h_qualification_id, starts_on, timezone) do
+  def match(awards, d4h_qualification_id, starts_on) do
     Enum.find(awards, fn award ->
-      award.d4h_qualification_id == d4h_qualification_id and award.starts_at != nil and
-        Service.Period.today(award.starts_at, timezone) == starts_on
+      award.d4h_qualification_id == d4h_qualification_id and
+        QualificationAward.starts_on?(award, starts_on)
     end)
   end
 end
