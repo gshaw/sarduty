@@ -293,14 +293,20 @@ defmodule Web.MeLiveTest do
 
       lv = open(conn, ~p"/teams/#{team}/me")
 
-      for item <- items, do: assert(has_element?(lv, "#equipment-#{item.id}", item.title))
-      assert has_element?(lv, "#equipment-#{hd(items).id} .hint", "Radio")
+      for item <- items,
+          do: assert(has_element?(lv, "#equipment-list-#{item.id}", item.title))
+
+      assert has_element?(lv, "#equipment-list-#{hd(items).id}", "Radio")
       refute has_element?(lv, "#equipment-list a")
-      assert has_element?(lv, "#equipment-#{old.id} .badge", "Retired")
+      assert has_element?(lv, "#equipment-list-#{old.id} .badge", "Retired")
       refute has_element?(lv, "#equipment-list", "Stray kit")
     end
 
-    test "a kit's contents follow it, in the kit", %{conn: conn, team: team, member: member} do
+    test "a kit's contents follow it, with the kit they're in", %{
+      conn: conn,
+      team: team,
+      member: member
+    } do
       kit = equipment_item_fixture(team, %{title: "First aid kit 6", member_id: member.id})
 
       pouch =
@@ -314,8 +320,8 @@ defmodule Web.MeLiveTest do
 
       lv = open(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(lv, "#equipment-#{pouch.id} .hint", "In First aid kit 6")
-      assert has_element?(lv, "#equipment-list li:nth-child(2)#equipment-#{pouch.id}")
+      assert has_element?(lv, "#equipment-list-#{pouch.id}", "First aid kit 6")
+      assert has_element?(lv, "#equipment-list tr:nth-child(2)#equipment-list-#{pouch.id}")
     end
 
     test "no Equipment for a member who holds nothing", %{conn: conn, team: team} do

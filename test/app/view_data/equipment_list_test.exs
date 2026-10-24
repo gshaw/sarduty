@@ -157,21 +157,22 @@ defmodule App.ViewData.EquipmentListTest do
     ]
   end
 
-  test "a kit's contents follow it, two levels deep, each in the item holding it" do
+  test "a kit's contents follow it, two levels deep, each with the items holding it" do
     rows = EquipmentList.held_rows(held())
 
-    assert Enum.map(rows, &{&1.item.title, &1.in && &1.in.title}) == [
-             {"First aid kit 6", nil},
+    assert Enum.map(rows, &{&1.item.title, &1.inside}) == [
+             {"First aid kit 6", ""},
              {"Bandages", "First aid kit 6"},
              {"Pouch", "First aid kit 6"},
-             {"Splint", "Pouch"},
-             {"GPS 5", nil}
+             {"Splint", "First aid kit 6 › Pouch"},
+             {"GPS 5", ""}
            ]
   end
 
   test "held items that hold each other stop at the cap" do
     loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
-    assert [%{in: %{}}, %{in: %{}}] = EquipmentList.held_rows(loop)
+    assert [%{inside: a}, %{inside: b}] = EquipmentList.held_rows(loop)
+    assert a != "" and b != ""
   end
 
   test "an item can't nest in itself forever" do

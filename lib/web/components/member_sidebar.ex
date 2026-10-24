@@ -12,12 +12,10 @@ defmodule Web.Components.MemberSidebar do
   alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
-  alias App.ViewData.EquipmentList
   alias App.ViewData.MemberMilestones
   alias Service.Format
   alias Web.Components.MilestoneList
   alias Web.Components.OpenInMaps
-  alias Web.EquipmentCollectionLive
 
   @doc """
   Assigns the header's `last_attended_at` and `standing`, and the sidebar's
@@ -31,7 +29,7 @@ defmodule Web.Components.MemberSidebar do
       last_attended_at: Member.last_attended_at(member),
       standing: MemberAwayPeriod.standing_today(member, member.team.timezone),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
-      equipment: held(member)
+      equipment: EquipmentItem.held_by(member.team, member)
     )
   end
 
@@ -79,7 +77,7 @@ defmodule Web.Components.MemberSidebar do
 
   attr :equipment, :list,
     required: true,
-    doc: "the items the member holds, kits then their contents, from load_sidebar/1"
+    doc: "the items the member holds, from load_sidebar/1"
 
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H.
@@ -147,57 +145,20 @@ defmodule Web.Components.MemberSidebar do
     """
   end
 
-  @equipment_shown 5
-
   attr :member, :map, required: true
   attr :equipment, :list, required: true
 
-  # Up to 5, since two teams issue full kits of up to 35 items, then the rest on Equipment.
+  # A count, with the list on the Equipment tab: two teams issue full kits of up to 35
+  # items, and kits hold kits.
   defp equipment_summary(assigns) do
-    assigns =
-      assign(assigns,
-        shown: Enum.take(assigns.equipment, @equipment_shown),
-        more?: length(assigns.equipment) > @equipment_shown
-      )
-
     ~H"""
     <dd id="member-equipment">
-      <ul class="list-none p-0 m-0">
-        <li :for={row <- @shown} id={"member-equipment-#{row.item.id}"}>
-          <.a navigate={~p"/teams/#{@member.team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
-          <span class="hint">{item_hint(row)}</span>
-          <EquipmentCollectionLive.status_badge item={row.item} />
-        </li>
-      </ul>
-      <ul :if={@more?} class="action-list">
-        <li>
-          <.a
-            id="member-equipment-all"
-            navigate={
-              ~p"/teams/#{@member.team}/equipment?#{[place: EquipmentList.member_place(@member.id), show: "all"]}"
-            }
-          >{Format.count(length(@equipment), one: "%d item", many: "All %d items")}</.a>
-        </li>
-      </ul>
+      <.a
+        id="member-equipment-link"
+        navigate={~p"/teams/#{@member.team}/members/#{@member.id}/equipment"}
+      >{Format.count(length(@equipment), one: "%d item", many: "%d items")}</.a>
     </dd>
     """
-  end
-
-  @doc """
-  The items `member` holds, as `EquipmentList.held_rows/1` gives them: each kit, then
-  what's inside it.
-  """
-  def held(member),
-    do: member.team |> EquipmentItem.held_by(member) |> EquipmentList.held_rows()
-
-  @doc """
-  What a held item's line says after its name: the kit it's in, \"In First aid kit 6\",
-  so its contents read as part of it, or else its category and barcode, \"Radio · R-014\".
-  """
-  def item_hint(%{in: %{title: title}}), do: "In #{title}"
-
-  def item_hint(%{item: item}) do
-    [item.kind, item.barcode] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
   end
 
   attr :member, :map, required: true

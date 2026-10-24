@@ -5,6 +5,7 @@ defmodule Web.EquipmentCollectionLive do
   import Web.Components.FilterBar
   import Web.Components.Scanner
   import Web.Components.StatSwitch
+  import Web.MemberEquipmentLive, only: [held_table: 1]
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
@@ -58,7 +59,6 @@ defmodule Web.EquipmentCollectionLive do
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
         member_place?: EquipmentList.member_id(place) != nil,
-        where?: where_column?(place, rows),
         groups: groups(rows, place, holder),
         form:
           to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
@@ -214,7 +214,15 @@ defmodule Web.EquipmentCollectionLive do
       class="mb-8"
     >
       <h2 class="heading">{place} · {length(rows)}</h2>
+      <%!-- A member's items, as their Equipment tab shows them. --%>
+      <.held_table
+        :if={@member_place?}
+        id={"equipment-#{slug(place)}"}
+        rows={rows}
+        team={@current_team}
+      />
       <.table
+        :if={!@member_place?}
         id={"equipment-#{slug(place)}"}
         rows={rows}
         row_id={&"item-#{&1.item.id}"}
@@ -224,8 +232,8 @@ defmodule Web.EquipmentCollectionLive do
           <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
           <.status_badge item={row.item} />
         </:col>
-        <:col :let={row} :if={@where?} label="Where">
-          {if @member_place?, do: row.inside, else: where(row)}
+        <:col :let={row} label="Where">
+          {where(row)}
         </:col>
         <:col :let={row} label="Category">{row.item.kind}</:col>
         <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
@@ -269,11 +277,6 @@ defmodule Web.EquipmentCollectionLive do
     </.table>
     """
   end
-
-  # A member place's heading names the member, so Where only says what an item is inside,
-  # and goes when nothing is inside another item.
-  defp where_column?(place, rows),
-    do: EquipmentList.member_id(place) == nil or Enum.any?(rows, &(&1.inside != ""))
 
   defp where(%{holder: nil, inside: inside}), do: inside
   defp where(%{holder: holder, inside: ""}), do: holder
