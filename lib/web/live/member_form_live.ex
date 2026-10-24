@@ -98,9 +98,13 @@ defmodule Web.MemberFormLive do
           A JPEG, PNG, or WebP of the member's face, under 10 MB. Their ID card shows it.
         </.hint>
         <.live_file_input upload={@uploads.photo} class="my-2" />
-        <.error :for={error <- upload_errors(@uploads.photo)}>{upload_error(error)}</.error>
+        <.error :for={error <- upload_errors(@uploads.photo)}>
+          {upload_error(error, @uploads.photo, "a JPEG, PNG, or WebP")}
+        </.error>
         <%= for entry <- @uploads.photo.entries do %>
-          <.error :for={error <- upload_errors(@uploads.photo, entry)}>{upload_error(error)}</.error>
+          <.error :for={error <- upload_errors(@uploads.photo, entry)}>
+            {upload_error(error, @uploads.photo, "a JPEG, PNG, or WebP")}
+          </.error>
         <% end %>
         <.form_actions>
           <.button id="save-photo" variant={:success}>Save photo</.button>
@@ -198,11 +202,6 @@ defmodule Web.MemberFormLive do
       {:error, text} -> put_flash(socket, :error, text)
     end
   end
-
-  defp upload_error(:too_large), do: "That file is too large. Use one under 10 MB."
-  defp upload_error(:not_accepted), do: "Use a JPEG, PNG, or WebP."
-  defp upload_error(:too_many_files), do: "Select one file."
-  defp upload_error(_error), do: "That file did not upload. Try again."
 
   # The member page, or the list when the copy hasn't caught up yet.
   defp saved(socket, member, text) do

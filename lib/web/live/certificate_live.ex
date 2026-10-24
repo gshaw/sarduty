@@ -5,6 +5,7 @@ defmodule Web.CertificateLive do
 
   alias App.Adapter.D4H
   alias App.Model.Certificate
+  alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
@@ -13,6 +14,7 @@ defmodule Web.CertificateLive do
   alias App.Repo
   alias Service.Format
   alias Web.CertificateText
+  alias Web.QualificationText
 
   # One certificate a member sent (#493), /teams/:subdomain/certificates/:id: the file
   # beside its dates. A team admin can change the qualification and dates, then accept it,
@@ -81,7 +83,7 @@ defmodule Web.CertificateLive do
       <p>
         The award is in {@service}, but its certificate did not upload. Send again to upload it.
       </p>
-      <p :if={error = upload_error(@certificate)} class="hint">{error}</p>
+      <p :if={error = attach_error(@certificate)} class="hint">{error}</p>
     </.banner>
 
     <div class="content-wrapper">
@@ -165,7 +167,7 @@ defmodule Web.CertificateLive do
           </.warning_text>
           <.form for={@decline_form} id="decline-form" phx-submit="decline">
             <.input field={@decline_form[:reason]} type="textarea" rows="3" label="Why not">
-              {first_name(@certificate.member.name)} sees this on Your membership.
+              {Member.first_name(@certificate.member)} sees this on Your membership.
             </.input>
             <.form_actions>
               <.button id="certificate-decline-button" variant={:danger}>
@@ -237,21 +239,16 @@ defmodule Web.CertificateLive do
 
   defp latest(assigns) do
     ~H"""
-    {award_dates(@award, @timezone)}
-    <span :if={@award.ends_at} class="hint block">{expiry(@award.ends_at, @now)}</span>
+    <span :if={@award.starts_at}>From {Format.date_short(@award.starts_at, @timezone)}</span>
+    <span :if={@award.ends_at} class="hint block">{ends(@award, @now, @timezone)}</span>
     """
   end
 
-  defp award_dates(%{starts_at: starts_at, ends_at: nil}, timezone),
-    do: "From #{Format.date_short(starts_at, timezone)}"
-
-  defp award_dates(%{starts_at: starts_at, ends_at: ends_at}, timezone),
-    do: "#{Format.date_short(starts_at, timezone)} to #{Format.date_short(ends_at, timezone)}"
-
-  defp expiry(ends_at, now) do
-    if DateTime.after?(ends_at, now),
-      do: "Expires in #{Format.days(Service.Convert.days_until(ends_at, now))}",
-      else: "Expired"
+  # When it ends, in the words of the member's qualifications: "Until Nov 30, 2026" or
+  # "Expired Sep 30, 2024".
+  defp ends(award, now, timezone) do
+    text = QualificationText.expires(award, now, timezone)
+    if MemberQualificationAward.expired?(award, now), do: text, else: "Until #{text}"
   end
 
   defp file_path(team, %Certificate{status: :waiting} = certificate, _award),
@@ -267,13 +264,11 @@ defmodule Web.CertificateLive do
 
   defp file_path(_team, _certificate, _award), do: nil
 
-  defp upload_error(%Certificate{change_set: %{rows: rows}}) do
+  defp attach_error(%Certificate{change_set: %{rows: rows}}) do
     Enum.find_value(rows, &(&1.action == :attach_award_document and &1.error))
   end
 
-  defp upload_error(_certificate), do: nil
-
-  defp first_name(name), do: name |> String.split(" ", parts: 2) |> hd()
+  defp attach_error(_certificate), do: nil
 
   def handle_event("accept", params, socket) do
     %{current_team: team, current_user: user, certificate: certificate} = socket.assigns

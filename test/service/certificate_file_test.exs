@@ -64,13 +64,13 @@ defmodule Service.CertificateFileTest do
   end
 
   test "anything else, or too big, is refused" do
-    assert {:error, "Choose a photo or a PDF."} = CertificateFile.prepare("<svg/>", "x.pdf")
+    assert {:error, "Select a photo or a PDF."} = CertificateFile.prepare("<svg/>", "x.pdf")
 
     assert {:error, "SAR Duty cannot read this photo. Send it as a JPEG."} =
              CertificateFile.prepare(<<0, 0, 0, 24, "ftypheic", 0::size(64)>>, "IMG.HEIC")
 
     big = "%PDF-" <> :binary.copy("x", CertificateFile.max_bytes())
-    assert {:error, "Choose a file under 10 MB."} = CertificateFile.prepare(big, "big.pdf")
+    assert {:error, "Select a file under 10 MB."} = CertificateFile.prepare(big, "big.pdf")
   end
 
   test "a photo claiming more pixels than any phone takes is refused before it is decoded" do

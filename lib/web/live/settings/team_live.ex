@@ -122,7 +122,9 @@ defmodule Web.Settings.TeamLive do
             </.button>
           </div>
           <.live_file_input upload={@uploads.signature} class="my-2" />
-          <.error :for={error <- upload_errors(@uploads.signature)}>{upload_error(error)}</.error>
+          <.error :for={error <- upload_errors(@uploads.signature)}>
+            {upload_error(error, @uploads.signature, "a PNG or JPEG")}
+          </.error>
           <.error :if={@signature_error} id="signature-error">{@signature_error}</.error>
         </div>
         <.input
@@ -317,9 +319,4 @@ defmodule Web.Settings.TeamLive do
   # No upload keeps the saved signature; only the remove button clears it.
   defp save_signature(team, nil), do: {:ok, team}
   defp save_signature(team, bytes), do: SaveTeamSignature.call(team, bytes)
-
-  defp upload_error(:too_large), do: "That file is too large. Use one under 5 MB."
-  defp upload_error(:not_accepted), do: "Use a PNG or JPEG."
-  defp upload_error(:too_many_files), do: "Select one file."
-  defp upload_error(_error), do: "That file did not upload. Try again."
 end

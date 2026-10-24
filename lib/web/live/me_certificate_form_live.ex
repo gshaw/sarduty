@@ -176,7 +176,9 @@ defmodule Web.MeCertificateFormLive do
           A photo or a PDF, up to {Format.file_size(Service.CertificateFile.max_bytes())}. On a phone you can take the photo now.
         </.hint>
         <.live_file_input upload={@uploads.certificate} class="my-2" />
-        <.error :for={error <- upload_errors(@uploads.certificate)}>{upload_error(error)}</.error>
+        <.error :for={error <- upload_errors(@uploads.certificate)}>
+          {upload_error(error, @uploads.certificate, "a photo or a PDF")}
+        </.error>
         <.error :for={error <- @form[:file_name].errors}>{translate_error(error)}</.error>
         <div
           :for={entry <- @uploads.certificate.entries}
@@ -188,7 +190,7 @@ defmodule Web.MeCertificateFormLive do
             <span class="block">{entry.client_name}</span>
             <span class="hint block">{Format.file_size(entry.client_size)}</span>
             <.error :for={error <- upload_errors(@uploads.certificate, entry)}>
-              {upload_error(error)}
+              {upload_error(error, @uploads.certificate, "a photo or a PDF")}
             </.error>
             <.a
               href="#"
@@ -206,7 +208,7 @@ defmodule Web.MeCertificateFormLive do
           Sent: <.a
             href={~p"/teams/#{@member.team}/me/certificates/#{@certificate.id}/file"}
             target="_blank"
-          >{@certificate.file_name}</.a>, {Format.file_size(@certificate.file_size)}. Choose a file to send another.
+          >{@certificate.file_name}</.a>, {Format.file_size(@certificate.file_size)}. Select a file to send another.
         </p>
       </div>
 
@@ -232,14 +234,6 @@ defmodule Web.MeCertificateFormLive do
   end
 
   defp image?(entry), do: String.starts_with?(entry.client_type, "image/")
-
-  defp upload_error(:too_large),
-    do:
-      "That file is too large. Use one under #{Format.file_size(Service.CertificateFile.max_bytes())}."
-
-  defp upload_error(:not_accepted), do: "Choose a photo or a PDF."
-  defp upload_error(:too_many_files), do: "Choose one file."
-  defp upload_error(_error), do: "That file did not upload. Try again."
 
   def handle_event("validate", %{"certificate" => params}, socket),
     do: {:noreply, assign_form(socket, params, :validate)}

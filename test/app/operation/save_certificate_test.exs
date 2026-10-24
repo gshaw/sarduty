@@ -25,12 +25,12 @@ defmodule App.Operation.SaveCertificateTest do
 
   test "a certificate needs a photo or a PDF", ctx do
     assert {:error, changeset} = SaveCertificate.send(ctx.member, params(ctx), nil)
-    assert {"Choose a photo or a PDF of the certificate.", _opts} = changeset.errors[:file_name]
+    assert {"Select a photo or a PDF of the certificate.", _opts} = changeset.errors[:file_name]
 
     assert {:error, changeset} =
              SaveCertificate.send(ctx.member, params(ctx), %{bytes: "<html>", file_name: "a.pdf"})
 
-    assert {"Choose a photo or a PDF.", _opts} = changeset.errors[:file_name]
+    assert {"Select a photo or a PDF.", _opts} = changeset.errors[:file_name]
     assert Repo.aggregate(Certificate, :count) == 0
   end
 

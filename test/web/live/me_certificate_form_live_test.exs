@@ -78,7 +78,7 @@ defmodule Web.MeCertificateFormLiveTest do
       )
       |> render_submit()
 
-    assert html =~ "Choose a photo or a PDF of the certificate."
+    assert html =~ "Select a photo or a PDF of the certificate."
     assert Repo.all(Certificate) == []
   end
 

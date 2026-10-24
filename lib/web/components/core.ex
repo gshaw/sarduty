@@ -610,6 +610,17 @@ defmodule Web.Components.Core do
   end
 
   @doc """
+  What to do about a LiveView upload's error, for its `<.error>`. `kinds` names the files
+  the upload takes, such as "a photo or a PDF".
+  """
+  def upload_error(:too_large, upload, _kinds),
+    do: "That file is too large. Use one under #{Service.Format.file_size(upload.max_file_size)}."
+
+  def upload_error(:not_accepted, _upload, kinds), do: "Select #{kinds}."
+  def upload_error(:too_many_files, _upload, _kinds), do: "Select one file."
+  def upload_error(_error, _upload, _kinds), do: "That file did not upload. Try again."
+
+  @doc """
   Translates the errors for a field from a keyword list of errors.
   """
   def translate_errors(errors, field) when is_list(errors) do

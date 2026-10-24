@@ -104,7 +104,7 @@ defmodule App.Operation.SaveCertificate do
   # The file ready to keep, before any transaction: a photo's resize would hold SQLite's
   # write lock (#385). `:missing` on a new certificate is an error, `:keep` keeps the one
   # sent.
-  defp prepare(:missing), do: {:error, "Choose a photo or a PDF of the certificate."}
+  defp prepare(:missing), do: {:error, "Select a photo or a PDF of the certificate."}
   defp prepare(:keep), do: {:ok, nil}
 
   defp prepare(%{bytes: bytes, file_name: file_name}),

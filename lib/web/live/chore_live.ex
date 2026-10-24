@@ -114,7 +114,7 @@ defmodule Web.ChoreLive do
       <h2 class="subheading">Decline</h2>
       <.form for={@decline_form} id="decline-form" class="measure" phx-submit="decline">
         <.input field={@decline_form[:reason]} type="textarea" rows="3" label="Why not">
-          {first_name(@chore.member.name)} sees this on their Chores page.
+          {Member.first_name(@chore.member)} sees this on their Chores page.
         </.input>
         <.form_actions>
           <.button
@@ -129,8 +129,6 @@ defmodule Web.ChoreLive do
     </section>
     """
   end
-
-  defp first_name(name), do: name |> String.split(" ", parts: 2) |> hd()
 
   def handle_event("accept", _params, socket) do
     %{current_team: team, current_user: user, chore: chore} = socket.assigns

@@ -21,7 +21,7 @@ defmodule Service.CertificateFile do
   """
   def prepare(bytes, file_name) when is_binary(bytes) do
     if byte_size(bytes) > @max_bytes,
-      do: {:error, "Choose a file under #{Service.Format.file_size(@max_bytes)}."},
+      do: {:error, "Select a file under #{Service.Format.file_size(@max_bytes)}."},
       else: prepare(type(bytes), bytes, file_name)
   end
 
@@ -40,11 +40,11 @@ defmodule Service.CertificateFile do
         {:error, "SAR Duty cannot read this photo. Send it as a JPEG."}
 
       {:error, _reason} ->
-        {:error, "SAR Duty cannot read this photo. Choose another photo or a PDF."}
+        {:error, "SAR Duty cannot read this photo. Select another photo or a PDF."}
     end
   end
 
-  defp prepare(:unknown, _bytes, _file_name), do: {:error, "Choose a photo or a PDF."}
+  defp prepare(:unknown, _bytes, _file_name), do: {:error, "Select a photo or a PDF."}
 
   @doc "What the file is, from its first bytes: `:pdf`, `:image`, `:heic`, or `:unknown`."
   def type(<<"%PDF-", _rest::binary>>), do: :pdf
