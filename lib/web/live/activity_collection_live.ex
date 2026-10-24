@@ -1,5 +1,5 @@
 defmodule Web.ActivityCollectionLive do
-  use Web, {:live_view_app_layout, access: :team, member_events: ["change"]}
+  use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.ActivityFilterTable
 

@@ -350,10 +350,12 @@ on these pages already, on the member's page and its tabs.
   admin's. The member is looked up through the URL's team, so another team ignores it.
 - A banner on every team page names the member, with **Stop viewing**
   (`DELETE /teams/:subdomain/view-as`), which goes back to the member's page.
-- It's read-only. Contact details turn their buttons off and refuse a save or a phone
-  change, Wallet passes redirect back, and the letter downloads without leaving the
-  member's to-do. Nothing reaches D4H and no code is sent. `viewing_as` is the assign each
-  check reads, and `UserAuth.view_as_refusal/1` the message.
+- It's read-only. On every page members open, only the page's `view_events` (filters,
+  form checks) reach it, and anything else, such as saving contact details or a chore,
+  says "You're viewing as …, so nothing is saved" (`UserAuth.view_as_refusal/1`) from
+  the team pages' hook (#440). Wallet passes redirect back, and the letter downloads
+  without leaving the member's to-do. Nothing reaches D4H and no code is sent. Replies,
+  a component's own events, check `viewing_as` themselves.
 - The account menu stays the team admin's, and each start is a `member_viewed_as` event in
   `/admin/events`, kept two years.
 - Finding a broken page: `team_access!` gives Honeybadger the user, the member, and
@@ -395,10 +397,14 @@ someone or their welfare. A value members can already see needs no guard.
 1. **The page**: `access: :team` on the LiveView ([Web](../lib/web.ex)), and the route in
    the router test's list.
 2. **Its events stay team admins'.** `:ensure_team_access` drops a member's event before
-   the page's `handle_event`, unless the page lists it in `member_events`, such as a
-   filter form's `"change"`. So `handle_event` has no `team_admin?` clauses. Events a
-   component handles (`phx-target`), such as replies and search, go to the component,
-   which checks for itself.
+   the page's `handle_event`, unless the page lists it in `view_events`: the events
+   that only change what the page shows, such as a filter form's `"change"`. So
+   `handle_event` has no `team_admin?` clauses. A member's own pages take every event
+   from the member. Viewing as a member, every page members open takes only its
+   `view_events`, and the rest say nothing is saved, so no page checks `viewing_as`
+   itself. Team admin pages stay the team admin's. Events a component handles
+   (`phx-target`), such as replies and search, go to the component, which checks for
+   itself.
 3. **Params**: the view model's `validate/2` takes `team_admin?` and drops what members
    can't set before it casts ([MemberFilterViewModel](../lib/app/view_model/member_filter_view_model.ex)).
    The list, its counts, and the form all read the result, so nothing after checks again.
@@ -412,6 +418,9 @@ someone or their welfare. A value members can already see needs no guard.
 
 Each guard gets a test: an element id that must be absent (`member-phone`), a member's
 URL params, and an event from a member that changes nothing.
+[Web.MemberPagesTest](../test/web/member_pages_test.exs) opens every page members reach,
+as a member and viewing as one, and fails on a link they can't open or a control whose
+event a member's page refuses. A new member page goes in its list.
 
 ### What must stay true
 

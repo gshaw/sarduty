@@ -1,5 +1,5 @@
 defmodule Web.MeDetailsLive do
-  use Web, {:live_view_app_layout, access: :member}
+  use Web, {:live_view_app_layout, access: :member, view_events: ["validate"]}
 
   alias App.Accounts
   alias App.Adapter.D4H
@@ -9,7 +9,6 @@ defmodule Web.MeDetailsLive do
   alias App.Operation.SetInvitationReminders
   alias App.ViewModel.MemberDetailsViewModel
   alias Web.LoginLimit
-  alias Web.UserAuth
 
   # A member's contact details (#156, #389), /teams/:subdomain/me/details: their mobile
   # number, then their address and emergency contacts. `member` comes from the login,
@@ -130,10 +129,7 @@ defmodule Web.MeDetailsLive do
   defp confirmed(socket, _member, _who, _ip, {:error, text}), do: put_flash(socket, :error, text)
 
   # The login is checked again, in case the team turned member logins off since the page
-  # opened. A team admin viewing as the member saves nothing.
-  defp with_login(%{assigns: %{viewing_as: %Member{} = member}} = socket, _fun),
-    do: put_flash(socket, :error, UserAuth.view_as_refusal(member))
-
+  # opened. A team admin viewing as the member never gets here: Web.UserAuth refuses.
   defp with_login(socket, fun) do
     %{current_user: user, current_member: member} = socket.assigns
 
@@ -178,7 +174,6 @@ defmodule Web.MeDetailsLive do
         code_form={@code_form}
         phone_form={@phone_form}
         text_login?={@text_login?}
-        viewing_as?={@viewing_as != nil}
       />
 
       <h2 class="heading mt-8">Mailing address and emergency contacts</h2>
@@ -214,7 +209,7 @@ defmodule Web.MeDetailsLive do
         />
 
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Saving…" disabled={@viewing_as != nil}>
+          <.button variant={:success} phx-disable-with="Saving…">
             Save details
           </.button>
         </.form_actions>
@@ -225,7 +220,6 @@ defmodule Web.MeDetailsLive do
         class="mt-8"
         label="Invitation reminders"
         checked={@member.invitation_reminders}
-        disabled={@viewing_as != nil}
         phx-click="reminders"
       >
         Team admins can email you when you have not replied to an activity.
@@ -249,7 +243,7 @@ defmodule Web.MeDetailsLive do
         Include the area code, like 604-555-1234.
       </.input>
       <.form_actions>
-        <.button phx-disable-with="Sending…" disabled={@viewing_as?}>Send code</.button>
+        <.button phx-disable-with="Sending…">Send code</.button>
       </.form_actions>
     </.form>
     <p :if={!@text_login?} id="phone-off" class="hint">

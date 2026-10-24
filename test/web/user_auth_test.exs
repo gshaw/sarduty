@@ -304,10 +304,11 @@ defmodule Web.UserAuthTest do
     end
 
     # Opening a page to members doesn't open its actions (#440).
-    test "a page members open keeps its events for team admins unless it lists them" do
-      assert UserAuth.member_events(Web.TeamDashboardLive) == []
-      assert UserAuth.member_events(Web.MemberCollectionLive) == ["change"]
-      assert UserAuth.member_events(Web.MemberQualificationsLive) == []
+    test "a page lists the events that only change what it shows" do
+      assert UserAuth.view_events(Web.TeamDashboardLive) == []
+      assert UserAuth.view_events(Web.MemberCollectionLive) == ["change"]
+      assert UserAuth.view_events(Web.MemberQualificationsLive) == []
+      assert UserAuth.view_events(Web.MeChoreFormLive) == ["validate"]
     end
   end
 
