@@ -120,7 +120,7 @@ defmodule App.Operation.AcceptCertificate do
 
     case ApplyChangeSet.call(team, set, user, now, document: document) do
       {:ok, rows} -> {:ok, rows}
-      {:error, :no_team_key} -> {:error, "Add the team's key in team settings first."}
+      {:error, :no_team_key} -> {:error, "Save your team's access key in team settings first."}
       {:error, error} -> {:error, Exception.message(error)}
     end
   end
