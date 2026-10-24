@@ -8,12 +8,11 @@ defmodule Web.MeController do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.Operation.BuildTaxCreditLetterAttachment
-  alias App.Operation.LoadImage
   alias App.Repo
 
   # A member's own downloads (#156). Web.UserAuth.require_team_member sets `member` from
   # the login, so nothing here takes a member id from the URL. A team admin viewing as the
-  # member (#425) gets the photo and the letter, but no Wallet pass: a pass would be the
+  # member (#425) gets the letter, but no Wallet pass: a pass would be the
   # member's, on the team admin's phone.
 
   plug :refuse_viewing_as when action in [:apple_pass, :google_pass]
@@ -36,21 +35,6 @@ defmodule Web.MeController do
       redirect(conn, external: url)
     else
       _ -> send_resp(conn, :not_found, "")
-    end
-  end
-
-  # The member's own photo, for Your membership. A 404 when D4H has none, so the page
-  # shows their initials.
-  def image(conn, _params) do
-    case LoadImage.page_photo(conn.assigns.member) do
-      nil ->
-        send_resp(conn, :not_found, "")
-
-      png ->
-        conn
-        |> put_resp_content_type("image/png", nil)
-        |> put_resp_header("cache-control", "private, max-age=3600")
-        |> send_resp(200, png)
     end
   end
 

@@ -46,6 +46,11 @@ defmodule Web.ViewAsControllerTest do
     assert has_element?(lv, "#side-nav-me")
     refute has_element?(lv, "#side-nav-groups")
     assert has_element?(lv, "#account-menu .menu-name", "Alex Chen")
+    # Sam's photo, not the team admin's.
+    assert has_element?(
+             lv,
+             ~s{#member-head-photo[src="/teams/#{team.subdomain}/members/#{sam.id}/image"]}
+           )
 
     lv = open(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#view-as-banner")

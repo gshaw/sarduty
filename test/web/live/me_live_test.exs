@@ -56,7 +56,11 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#nav-area", team.name)
       assert has_element?(lv, "#side-nav-me[aria-current=page]", "Your membership")
       refute has_element?(lv, "#side-nav-groups")
-      assert has_element?(lv, ~s{#member-head-photo[src="/teams/#{team.subdomain}/me/image"]})
+
+      assert has_element?(
+               lv,
+               ~s{#member-head-photo[src="/teams/#{team.subdomain}/members/#{member.id}/image"]}
+             )
     end
 
     test "a new member's page explains each part", %{conn: conn, team: team} do
@@ -330,14 +334,14 @@ defmodule Web.MeLiveTest do
     end
 
     test "the member's own photo, or a 404 so the page shows initials",
-         %{conn: conn, team: team} do
+         %{conn: conn, team: team, member: member} do
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
-      conn = get(conn, ~p"/teams/#{team}/me/image")
+      conn = get(conn, ~p"/teams/#{team}/members/#{member}/image")
       assert [content_type] = get_resp_header(conn, "content-type")
       assert content_type =~ "image/png"
 
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
-      assert conn |> recycle() |> get(~p"/teams/#{team}/me/image") |> response(404)
+      assert conn |> recycle() |> get(~p"/teams/#{team}/members/#{member}/image") |> response(404)
     end
   end
 

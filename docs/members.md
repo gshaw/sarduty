@@ -175,7 +175,7 @@ D4H. Logins are designed in issue #156; the pages in #389, and one page in #406.
 replacing the overview of #389 and taking in its pages: ID card, Qualifications, Hours,
 Tax credit letters, and Milestones are gone, with no redirects. It opens with the same
 header as the team member page (`<.person_head>`, `/styles/person-head`): their D4H photo
-in a circle, or their initials when D4H has none (`/me/image`), their name, an Away badge
+in a circle, or their initials when D4H has none (`/members/:id/image`), their name, an Away badge
 while they're away, and "Ground searcher · Joined March 2019 · Last attended Sep 30,
 2026". Neither page shows the member ID: teams number members in very different ways.
 
