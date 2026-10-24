@@ -12,6 +12,9 @@ defmodule App.Model.Qualification do
     has_many :member_qualification_awards, MemberQualificationAward
     field :d4h_qualification_id, :integer
     field :title, TrimmedString
+    # How long an award lasts, in months, as D4H suggests; nil when it never expires
+    # (#493). A certificate's form fills in its expiry from it.
+    field :expires_months_default, :integer
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -22,7 +25,8 @@ defmodule App.Model.Qualification do
     |> cast(params, [
       :team_id,
       :d4h_qualification_id,
-      :title
+      :title,
+      :expires_months_default
     ])
     |> validate_required([
       :team_id,

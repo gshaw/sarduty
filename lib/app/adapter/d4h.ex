@@ -341,6 +341,20 @@ defmodule App.Adapter.D4H do
     )
   end
 
+  @doc "A member's awards in D4H now, read before a certificate's award is sent (#493)."
+  def fetch_member_awards(context, d4h_member_id) do
+    context
+    |> reduce_pages(
+      "/member-qualification-awards",
+      &D4H.QualificationAward.build/1,
+      [],
+      &[&1 | &2],
+      member_id: d4h_member_id
+    )
+    |> Enum.reverse()
+    |> Enum.concat()
+  end
+
   def fetch_groups(context) do
     fetch_all(context, "/member-groups", &D4H.Group.build/1)
   end
@@ -884,6 +898,22 @@ defmodule App.Adapter.D4H do
     write(context, :post, "/member-qualification-awards", json, &D4H.QualificationAward.build/1)
   end
 
+  @doc """
+  Attaches a certificate to an award (#493): `file` is `%{title:, bytes:, filename:,
+  content_type:}`. Only the team's admins see it in D4H. `{:ok, %D4H.Document{}}`.
+  """
+  def upload_document(context, d4h_award_id, file) do
+    form = [
+      title: file.title,
+      targetResourceType: "MemberQualificationAward",
+      targetResourceId: to_string(d4h_award_id),
+      restricted: "RESTRICTED",
+      file: {file.bytes, filename: file.filename, content_type: file.content_type}
+    ]
+
+    write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1)
+  end
+
   @doc "Removes an award. DELETE is Records' own, not D4H's."
   def remove_award(context, d4h_award_id) do
     url = "/member-qualification-awards/#{d4h_award_id}"
@@ -1048,7 +1078,8 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  # `payload` is a JSON map, `{:body, bytes}` for a file, or nil for none.
+  # `payload` is a JSON map, `{:body, bytes}` for a file, `{:form, fields}` for a
+  # multipart form, or nil for none.
   defp write(context, method, url, payload, build) do
     options = [method: method, url: url, retry: false] ++ payload_options(payload)
 
@@ -1063,6 +1094,7 @@ defmodule App.Adapter.D4H do
   defp payload_options({:body, bytes}),
     do: [body: bytes, headers: %{"content-type" => "application/octet-stream"}]
 
+  defp payload_options({:form, fields}), do: [form_multipart: fields]
   defp payload_options(json), do: [json: json]
 
   defp iso(%DateTime{} = datetime), do: DateTime.to_iso8601(datetime)

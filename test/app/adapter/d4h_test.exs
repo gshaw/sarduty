@@ -51,6 +51,57 @@ defmodule App.Adapter.D4HTest do
     assert D4H.fetch_document(context(), 7) == {:ok, "%PDF", "application/pdf"}
   end
 
+  test "uploads a certificate to an award, seen only by the team's admins" do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      assert {conn.method, conn.request_path} == {"POST", "/v3/team/1/documents"}
+      conn = Plug.Parsers.call(conn, Plug.Parsers.init(parsers: [:multipart]))
+
+      assert %{
+               "title" => "First Aid certificate",
+               "targetResourceType" => "MemberQualificationAward",
+               "targetResourceId" => "55",
+               "restricted" => "RESTRICTED",
+               "file" => %Plug.Upload{filename: "first-aid.pdf", content_type: "application/pdf"}
+             } = conn.body_params
+
+      Req.Test.json(conn, %{"id" => 9, "targetResource" => %{"id" => 55}})
+    end)
+
+    file = %{
+      title: "First Aid certificate",
+      bytes: "%PDF",
+      filename: "first-aid.pdf",
+      content_type: "application/pdf"
+    }
+
+    assert {:ok, %{d4h_document_id: 9, d4h_target_id: 55}} =
+             D4H.upload_document(context(), 55, file)
+  end
+
+  test "reads one member's awards" do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+      assert conn.request_path == "/v3/team/1/member-qualification-awards"
+      assert conn.query_params["member_id"] == "7"
+
+      Req.Test.json(conn, %{
+        "results" => [
+          %{
+            "id" => 3,
+            "member" => %{"resourceType" => "Member", "id" => 7},
+            "qualification" => %{"id" => 4},
+            "startsAt" => "2026-10-01T07:00:00.000Z",
+            "endsAt" => nil
+          }
+        ],
+        "totalSize" => 1
+      })
+    end)
+
+    assert [%{d4h_award_id: 3, d4h_member_id: 7, d4h_qualification_id: 4}] =
+             D4H.fetch_member_awards(context(), 7)
+  end
+
   describe "services" do
     test "a team is on Records only at Records' host" do
       assert D4H.service(%App.Model.Team{d4h_api_host: "records.sarduty.com"}) == :records
