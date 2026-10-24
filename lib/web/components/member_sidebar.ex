@@ -9,8 +9,10 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
+  alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
+  alias App.ViewData.EquipmentList
   alias App.ViewData.MemberMilestones
   alias Service.Format
   alias Web.Components.MilestoneList
@@ -18,7 +20,7 @@ defmodule Web.Components.MemberSidebar do
 
   @doc """
   Assigns the header's `last_attended_at` and `standing`, and the sidebar's
-  `milestones`, for the socket's `member`. Call
+  `milestones` and `equipment`, for the socket's `member`. Call
   it when the member loads, not on every render: a form's change events re-render.
   """
   def load_sidebar(socket) do
@@ -27,7 +29,8 @@ defmodule Web.Components.MemberSidebar do
     Phoenix.Component.assign(socket,
       last_attended_at: Member.last_attended_at(member),
       standing: MemberAwayPeriod.standing_today(member, member.team.timezone),
-      milestones: MemberMilestones.for_member(member, DateTime.utc_now())
+      milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
+      equipment: EquipmentItem.held_by(member)
     )
   end
 
@@ -73,6 +76,10 @@ defmodule Web.Components.MemberSidebar do
     required: true,
     doc: "the member's milestones, newest first, from load_sidebar/1"
 
+  attr :equipment, :list,
+    required: true,
+    doc: "the items the member holds, by title, from load_sidebar/1"
+
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H.
   def sidebar_content(assigns) do
@@ -114,6 +121,11 @@ defmodule Web.Components.MemberSidebar do
         <dt>Second emergency contact</dt>
         <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
       <% end %>
+      <%!-- What they hold, so a team admin sees what to get back (#490). --%>
+      <%= if @equipment != [] do %>
+        <dt>Equipment</dt>
+        <.equipment_summary member={@member} equipment={@equipment} />
+      <% end %>
       <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />
@@ -132,6 +144,46 @@ defmodule Web.Components.MemberSidebar do
       </dd>
     </dl>
     """
+  end
+
+  @equipment_shown 5
+
+  attr :member, :map, required: true
+  attr :equipment, :list, required: true
+
+  # Up to 5, since two teams issue full kits of up to 35 items, then the rest on Equipment.
+  defp equipment_summary(assigns) do
+    assigns =
+      assign(assigns,
+        shown: Enum.take(assigns.equipment, @equipment_shown),
+        more?: length(assigns.equipment) > @equipment_shown
+      )
+
+    ~H"""
+    <dd id="member-equipment">
+      <ul class="list-none p-0 m-0">
+        <li :for={item <- @shown} id={"member-equipment-#{item.id}"}>
+          <.a navigate={~p"/teams/#{@member.team}/equipment/#{item.id}"}>{item.title}</.a>
+          <span class="hint">{item_hint(item)}</span>
+        </li>
+      </ul>
+      <ul :if={@more?} class="action-list">
+        <li>
+          <.a
+            id="member-equipment-all"
+            navigate={
+              ~p"/teams/#{@member.team}/equipment?place=#{EquipmentList.member_place(@member.id)}"
+            }
+          >{Format.count(length(@equipment), one: "%d item", many: "All %d items")}</.a>
+        </li>
+      </ul>
+    </dd>
+    """
+  end
+
+  @doc "An item's category and barcode, when it has them: \"Radio · R-014\"."
+  def item_hint(item) do
+    [item.kind, item.barcode] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
   end
 
   attr :member, :map, required: true

@@ -5,6 +5,10 @@ defmodule App.ViewData.EquipmentList do
   outermost item is (a D4H location, "With members", or "No location"), and `inside` is
   the chain of items holding it, such as "SOUTH FRASER 2 › 02 DRAWER #1".
 
+  A member is a place too, as in D4H (#490): the Place filter takes `"member-<id>"`, the
+  member's local id, and keeps the rows they hold. The browse page's Place table keeps
+  one "With members" row.
+
   Pure: items in, rows out. Items need their `member` preloaded.
   """
 
@@ -29,7 +33,7 @@ defmodule App.ViewData.EquipmentList do
 
   def show_values, do: Enum.map(shows(), &elem(&1, 1))
 
-  @doc "A row per item: `%{item, place, inside, holder, path}`."
+  @doc "A row per item: `%{item, place, inside, holder, holder_id, path}`."
   def rows(items) do
     by_d4h_id = Map.new(items, &{&1.d4h_equipment_id, &1})
     Enum.map(items, &row(&1, by_d4h_id))
@@ -45,6 +49,7 @@ defmodule App.ViewData.EquipmentList do
       place: place(outermost),
       inside: Enum.map_join(chain, " › ", & &1.title),
       holder: outermost.member && outermost.member.name,
+      holder_id: outermost.member_id,
       # Sorting by this puts each item's contents right after it.
       path: innermost_first |> Enum.reverse() |> Enum.map(&String.downcase(&1.title))
     }
@@ -93,13 +98,51 @@ defmodule App.ViewData.EquipmentList do
     Enum.any?([item.title, item.barcode, item.serial, item.kind], &contains?(&1, q))
   end
 
-  @doc "The rows in `place` with `category`. An empty one keeps every row."
+  @doc """
+  The rows in `place` with `category`. An empty one keeps every row. A member place
+  keeps the rows the member holds, so another team's member, or one who holds nothing,
+  keeps none, like an unknown place.
+  """
   def narrow(rows, place, category) do
-    Enum.filter(
-      rows,
-      &((place == "" or &1.place == place) and
-          (category == "" or category(&1.item) == category))
-    )
+    in_place? = in_place_fn(place)
+    Enum.filter(rows, &(in_place?.(&1) and (category == "" or category(&1.item) == category)))
+  end
+
+  defp in_place_fn(""), do: fn _row -> true end
+
+  defp in_place_fn(place) do
+    case member_id(place) do
+      nil -> &(&1.place == place)
+      id -> &(&1.holder_id == id)
+    end
+  end
+
+  @doc "The member's id in a member place, `\"member-12\"`, or nil for any other place."
+  def member_id("member-" <> id) do
+    case Integer.parse(id) do
+      {id, ""} -> id
+      _other -> nil
+    end
+  end
+
+  def member_id(_place), do: nil
+
+  @doc "A member's place, for the Place filter: `\"member-12\"`."
+  def member_place(member_id), do: "member-#{member_id}"
+
+  @doc """
+  The Place filter's choices, as `{label, value}`: the places in `rows`, in group order,
+  then each member who holds something, by name.
+  """
+  def place_options(rows) do
+    holders =
+      rows
+      |> Enum.filter(& &1.holder_id)
+      |> Enum.uniq_by(& &1.holder_id)
+      |> Enum.sort_by(&{&1.holder, &1.holder_id})
+      |> Enum.map(&{&1.holder, member_place(&1.holder_id)})
+
+    rows |> places() |> Enum.map(&{elem(&1, 0), elem(&1, 0)}) |> Enum.concat(holders)
   end
 
   @doc """
@@ -137,6 +180,23 @@ defmodule App.ViewData.EquipmentList do
   def group(rows) do
     rows
     |> Enum.group_by(& &1.place)
+    |> sort_groups()
+  end
+
+  @doc """
+  Rows grouped as `group/1` does, except that a member place is one group named after
+  the member. Give it the rows `narrow/3` kept for `place`.
+  """
+  def group(rows, place) do
+    case {member_id(place), rows} do
+      {nil, rows} -> group(rows)
+      {_id, []} -> []
+      {_id, [row | _rest]} -> sort_groups([{row.holder, rows}])
+    end
+  end
+
+  defp sort_groups(groups) do
+    groups
     |> Enum.sort_by(fn {place, _rows} -> {place_order(place), place} end)
     |> Enum.map(fn {place, rows} ->
       {place, Enum.sort_by(rows, &{&1.holder || "", &1.path, &1.item.id})}

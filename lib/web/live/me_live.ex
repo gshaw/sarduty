@@ -9,6 +9,7 @@ defmodule Web.MeLive do
 
   alias App.Adapter.D4H
   alias App.Model.Chore
+  alias App.Model.EquipmentItem
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -24,7 +25,7 @@ defmodule Web.MeLive do
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
   # latest activities, from any year so it is never empty on January 1, and their
   # qualifications in the main column; their ID card, latest tax credit letter, contact
-  # details, and milestones in a sidebar, split by space, not boxes (/styles/card).
+  # details, the equipment they hold, and milestones in a sidebar, split by space, not boxes (/styles/card).
   # `current_member` comes from the login (Web.UserAuth, :ensure_team_access), never from
   # the URL.
   def mount(_params, _session, socket) do
@@ -45,6 +46,7 @@ defmodule Web.MeLive do
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
+      |> assign(:equipment, EquipmentItem.held_by(member))
 
     {:ok, socket}
   end
@@ -121,6 +123,7 @@ defmodule Web.MeLive do
             team={@team}
             member={@member}
           />
+          <.equipment :if={@equipment != []} equipment={@equipment} />
           <.milestones milestones={@milestones} today={@today} />
         </div>
       </aside>
@@ -349,6 +352,23 @@ defmodule Web.MeLive do
       <p class="action mb-0">
         <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>Change contact details</.a>
       </p>
+    </div>
+    """
+  end
+
+  attr :equipment, :list, required: true
+
+  # Every item, so they know what to bring back (#490). No links: Equipment is for team
+  # admins.
+  defp equipment(assigns) do
+    ~H"""
+    <div id="equipment">
+      <h2 class="chart-title mb-1">Equipment</h2>
+      <ul id="equipment-list" class="list-none p-0 m-0">
+        <li :for={item <- @equipment} id={"equipment-#{item.id}"}>
+          {item.title} <span class="hint">{MemberSidebar.item_hint(item)}</span>
+        </li>
+      </ul>
     </div>
     """
   end

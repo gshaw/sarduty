@@ -57,6 +57,33 @@ It opens on two short tables: the places items are in and the categories (D4H's
 place, with the chain of items holding each one. A search, or a filter other than "In
 service", lists items from every place.
 
+## Items members hold
+
+D4H can put an item's location at a member, and the copy keeps it as
+`equipment_items.member_id` (#490). A member is a place, as in D4H.
+
+- **Equipment, Place** lists the D4H locations, With members, and No location, then each
+  member who holds something, current or retired, by name. It is a combobox, since a
+  team has dozens of holders. The URL takes the member's local id, `?place=member-12`,
+  never the name, since two members can share one. The section heading names the member
+  ("Sam Rivera · 12") and the table drops Where. An item inside a kit a member holds
+  counts as theirs, as it does for With members. The browse page's Place table keeps one
+  With members row, not one per member. There is no Member filter: it would conflict
+  with Place.
+- **The member page sidebar**, on every member tab, lists up to 5 items the member holds,
+  by title, each linking to its page with its category and barcode, then "All 12 items"
+  to Equipment with Place set to them. Shown only when they hold something.
+- **Your membership** lists every item, with no cap and no links, so a member knows what
+  to bring back.
+- Both lists leave out retired items, as the equipment page's In service does
+  ([EquipmentItem.held_by/1](../lib/app/model/equipment_item.ex)). They read the items
+  whose own location is the member, not what is inside them; the dev copy of D4H had no
+  item inside one a member holds (2026-10-23).
+- Every lookup is by the team: `place=member-<id>` for another team's member, or for a
+  member who holds nothing, lists nothing, like an unknown place.
+- Still to decide, waiting on Andrew: a badge for a retired member who still holds
+  items, a With retired members place, and a Needs attention line on the team home.
+
 ## Adding equipment to an activity
 
 The activity page has an Equipment section. "Add equipment" opens a page that builds a
