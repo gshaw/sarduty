@@ -34,8 +34,9 @@ defmodule App.Operation.AcceptCertificate do
   """
   def call(%Team{} = team, %Certificate{team_id: team_id} = certificate, params, user, now)
       when team_id == team.id and is_struct(user, User) do
-    # One accept at a time per certificate, so two team admins never award it twice.
-    :global.trans({{__MODULE__, certificate.id}, self()}, fn ->
+    # One change at a time per certificate, so two team admins never award it twice, and
+    # a member's change or another team admin's decline waits until it is in D4H.
+    SaveCertificate.locked(certificate, fn ->
       current = Repo.get_by!(Certificate, id: certificate.id, team_id: team.id)
 
       with :ok <- check_waiting(current),

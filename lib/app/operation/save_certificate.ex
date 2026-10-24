@@ -5,7 +5,8 @@ defmodule App.Operation.SaveCertificate do
   App.Operation.AcceptCertificate. Nothing here calls D4H.
 
   Each change reads the certificate again in its transaction, since a team admin may have
-  decided it since the page loaded it.
+  decided it since the page loaded it. Each also waits for an accept that is sending it
+  (`locked/2`).
   """
 
   alias App.Accounts.User
@@ -25,7 +26,7 @@ defmodule App.Operation.SaveCertificate do
       %Certificate{team_id: member.team_id, member_id: member.id}
       |> Certificate.build_changeset(params, qualification_ids(member.team_id))
 
-    with {:ok, prepared} <- prepare(changeset, file || :missing) do
+    with {:ok, prepared} <- (file || :missing) |> prepare() |> on_changeset(changeset) do
       transaction(fn ->
         changeset |> put_file(prepared) |> Repo.insert() |> keep_file(prepared)
       end)
@@ -37,11 +38,13 @@ defmodule App.Operation.SaveCertificate do
   `{:error, :decided}` once a team admin has decided it or started sending it.
   """
   def change_own(%Member{} = member, %Certificate{} = certificate, params, file) do
-    transaction(fn ->
+    prepared = prepare(file || :keep)
+
+    locked_transaction(certificate, fn ->
       with {:ok, current} <- own_now(member, certificate, &Certificate.member_can_change?/1),
            changeset =
              Certificate.build_changeset(current, params, qualification_ids(member.team_id)),
-           {:ok, prepared} <- prepare(changeset, file || :keep) do
+           {:ok, prepared} <- on_changeset(prepared, changeset) do
         changeset |> put_file(prepared) |> Repo.update() |> keep_file(prepared)
       end
     end)
@@ -60,7 +63,7 @@ defmodule App.Operation.SaveCertificate do
   """
   def delete_own(%Member{} = member, %Certificate{} = certificate) do
     result =
-      transaction(fn ->
+      locked_transaction(certificate, fn ->
         with {:ok, current} <- own_now(member, certificate, &Certificate.member_can_delete?/1),
              do: Repo.delete(current)
       end)
@@ -74,13 +77,21 @@ defmodule App.Operation.SaveCertificate do
   """
   def decline(%Team{} = team, %Certificate{team_id: team_id} = certificate, reason, user, now)
       when team_id == team.id and is_struct(user, User) do
-    transaction(fn ->
+    locked_transaction(certificate, fn ->
       case Repo.get_by(Certificate, id: certificate.id, team_id: team.id) do
         %Certificate{status: :waiting} = current -> decline_now(current, reason, user, now)
         _decided -> {:error, :decided}
       end
     end)
   end
+
+  @doc """
+  Runs `fun` while nothing else changes the certificate: an accept, a member's change or
+  delete, or a decline. An accept holds it while it waits on D4H, so the others read the
+  certificate only once it is done. Take it before a transaction, never inside one: a
+  transaction waiting here would hold SQLite's write lock that the accept needs.
+  """
+  def locked(%Certificate{id: id}, fun), do: :global.trans({{Certificate, id}, self()}, fun)
 
   defp decline_now(current, reason, user, now) do
     with {:ok, declined} <-
@@ -90,22 +101,20 @@ defmodule App.Operation.SaveCertificate do
     end
   end
 
-  # The file ready to keep: `:missing` on a new certificate is an error, `:keep` keeps
-  # the one sent. A bad changeset waits for its other errors to be fixed first.
-  defp prepare(changeset, :missing),
-    do: {:error, file_error(changeset, "Choose a photo or a PDF of the certificate.")}
+  # The file ready to keep, before any transaction: a photo's resize would hold SQLite's
+  # write lock (#385). `:missing` on a new certificate is an error, `:keep` keeps the one
+  # sent.
+  defp prepare(:missing), do: {:error, "Choose a photo or a PDF of the certificate."}
+  defp prepare(:keep), do: {:ok, nil}
 
-  defp prepare(_changeset, :keep), do: {:ok, nil}
+  defp prepare(%{bytes: bytes, file_name: file_name}),
+    do: Service.CertificateFile.prepare(bytes, file_name)
 
-  defp prepare(changeset, %{bytes: bytes, file_name: file_name}) do
-    case Service.CertificateFile.prepare(bytes, file_name) do
-      {:ok, prepared} -> {:ok, prepared}
-      {:error, text} -> {:error, file_error(changeset, text)}
-    end
-  end
+  # A file's problem goes on the changeset, for the form.
+  defp on_changeset({:ok, prepared}, _changeset), do: {:ok, prepared}
 
-  defp file_error(changeset, text),
-    do: %{Ecto.Changeset.add_error(changeset, :file_name, text) | action: :insert}
+  defp on_changeset({:error, text}, changeset),
+    do: {:error, %{Ecto.Changeset.add_error(changeset, :file_name, text) | action: :insert}}
 
   defp put_file(changeset, nil), do: changeset
 
@@ -123,6 +132,10 @@ defmodule App.Operation.SaveCertificate do
 
     if current && allowed?.(current), do: {:ok, current}, else: {:error, :decided}
   end
+
+  # The lock first, then the transaction: never the other way (locked/2).
+  defp locked_transaction(certificate, fun),
+    do: locked(certificate, fn -> transaction(fun) end)
 
   defp transaction(fun) do
     case Repo.transaction(fn -> fun.() |> ok_or_rollback() end) do

@@ -8,6 +8,7 @@ defmodule App.Operation.AcceptCertificateTest do
   alias App.Model.ChangeSetRow
   alias App.Model.MemberQualificationAward
   alias App.Operation.AcceptCertificate
+  alias App.Operation.SaveCertificate
 
   @now ~U[2026-10-24 17:00:00.000000Z]
 
@@ -105,6 +106,35 @@ defmodule App.Operation.AcceptCertificateTest do
 
     assert MemberQualificationAward.get_by(d4h_award_id: 300).starts_at ==
              ~U[2026-10-18 07:00:00Z]
+  end
+
+  test "a decline while the accept waits on D4H goes after it, and finds it decided", ctx do
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      case {conn.method, String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")} do
+        {"GET", _path} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        {"POST", "/member-qualification-awards"} ->
+          decline = fn ->
+            SaveCertificate.decline(ctx.team, ctx.certificate, "No", ctx.user, @now)
+          end
+
+          send(test_pid, {:decline, Task.async(decline)})
+          # Time for a decline that did not wait to go through.
+          Process.sleep(50)
+          Req.Test.json(conn, %{"id" => 300, "member" => %{"id" => 1}, "qualification" => %{}})
+
+        {"POST", "/documents"} ->
+          Req.Test.json(conn, %{"id" => 900})
+      end
+    end)
+
+    assert {:ok, %{status: :accepted}} = accept(ctx)
+    assert_received {:decline, task}
+    assert Task.await(task) == {:error, :decided}
+    assert %{status: :accepted} = Repo.reload!(ctx.certificate)
   end
 
   test "the team admin's dates are checked before anything is sent", ctx do

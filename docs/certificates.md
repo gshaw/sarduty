@@ -59,6 +59,9 @@ qualification and dates, then accept it
   first and skips one D4H has from the same qualification and day. When the upload
   fails, the award stays and the certificate keeps waiting with its file; its dates lock,
   and Send again applies the same set, so only the upload goes.
+- **One change at a time.** An accept holds a lock on the certificate while it waits on
+  D4H. A member's change or delete, and another team admin's decline, wait for it, then
+  read the certificate again.
 - **Nothing changes an accepted certificate in SAR Duty.** A wrong award is fixed in D4H.
 - **Until accepted, group rules and ID cards use what D4H has.** A waiting certificate
   doesn't expire; the count keeps it in view.
