@@ -18,6 +18,12 @@ fly deploy
 From `main`, after CI is green. The [Dockerfile](../Dockerfile) builds a release;
 [rel/overlays/bin/server](../rel/overlays/bin/server) starts it.
 
+Each app has its own Fly tokens in fnox, so a script or an agent never needs the full
+login: `FLY_ACCESS_TOKEN=$(fnox get FLY_SARDUTY_DEPLOY_TOKEN) fly deploy`, and
+`FLY_SARDUTY_SSH_TOKEN` for `fly ssh`, which is all it can do. They expire 2027-04-22;
+make new ones with `fly tokens create deploy -a sarduty -x 4320h` (or `ssh`). Who reaches
+production, and how, is #517.
+
 **Nothing in the build downloads through GitHub's release redirect with Erlang's
 `:httpc`.** Since OTP 29 it refuses that redirect's 10 KB of headers, so a build that
 compiles dependencies from scratch failed (#497). exqlite builds from the SQLite source

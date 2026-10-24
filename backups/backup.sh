@@ -7,6 +7,9 @@ set -euo pipefail
 
 : "${BACKUP_AGE_RECIPIENT:?set it in .mise.local.toml}"
 
+# The ssh-only token for this app, from fnox, unless one is passed in (#517).
+export FLY_ACCESS_TOKEN="${FLY_ACCESS_TOKEN:-$(fnox get FLY_SARDUTY_SSH_TOKEN)}"
+
 # Need to start container in fly.io if it was stopped by inactivity
 curl -s -o /dev/null https://sarduty.com/
 
