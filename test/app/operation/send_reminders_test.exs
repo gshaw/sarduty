@@ -46,6 +46,13 @@ defmodule App.Operation.SendRemindersTest do
                plan.skipped
     end
 
+    test "a member with a second row that has a reply has replied (#519)" do
+      cameron = member(1, "Cameron Ruiz")
+      rows = [row(cameron), row(cameron, "attending"), row(member(5, "Wren Adams"))]
+
+      assert names(SendReminders.plan(rows, [], 1, @now).send) == ["Wren Adams"]
+    end
+
     test "one round 1 per member: a later send goes only to the newly invited" do
       cameron = member(1, "Cameron Ruiz")
       rows = [row(cameron), row(member(5, "Wren Adams"))]

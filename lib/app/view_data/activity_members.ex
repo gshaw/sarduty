@@ -15,14 +15,18 @@ defmodule App.ViewData.ActivityMembers do
   @doc "D4H's statuses the table shows, in its order."
   def statuses, do: @statuses
 
-  @doc "The activity's invited members' rows, with the member, in the table's order."
+  @doc """
+  The activity's invited members' rows, with the member, in the table's order: one per
+  member, as `Attendance.one_per_member/1` picks.
+  """
   def load(%Activity{} = activity) do
     Attendance
     |> join(:inner, [r], m in assoc(r, :member))
     |> where([r, m], r.activity_id == ^activity.id and m.team_id == ^activity.team_id)
-    |> where([r], r.status in @statuses)
     |> preload([r, m], member: m)
     |> Repo.all()
+    |> Attendance.one_per_member()
+    |> Enum.filter(&(&1.status in @statuses))
     |> sort()
   end
 

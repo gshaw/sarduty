@@ -341,6 +341,8 @@ defmodule Web.ActivityLiveTest do
       })
 
       attendance_fixture(activity, wren, %{status: "requested"})
+      # D4H allows a second row for one member; the one with a reply shows (#519).
+      attendance_fixture(activity, member, %{status: "requested"})
 
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
