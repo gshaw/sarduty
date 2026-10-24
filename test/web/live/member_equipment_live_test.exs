@@ -59,7 +59,6 @@ defmodule Web.MemberEquipmentLiveTest do
     assert has_element?(lv, "#member-equipment-list-#{old.id} .badge", "Retired")
     assert has_element?(lv, ~s{nav.tabs a[aria-current="page"]}, "Equipment")
     assert has_element?(lv, "th", "Where")
-    assert has_element?(lv, "#member-equipment-link", "5 items")
     refute has_element?(lv, "td", "Stray")
   end
 

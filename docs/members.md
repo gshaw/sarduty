@@ -201,7 +201,7 @@ while they're away, and "Ground searcher · Joined March 2019 · Last attended S
   admin adds the gap as an away period. Hours count every attended activity, not only
   tagged ones. A plain dated list: no badges, graphics, or levels (decided 2026-10-20).
 - **Team admins see what members hold** (#490). A member who holds something gets an
-  Equipment tab, and the sidebar on every tab says how many items and links to it: see
+  Equipment tab, with no count in the sidebar (2026-10-24): see
   [equipment.md](equipment.md#items-members-hold).
 - **Team admins see milestones too** (2026-10-23). The member sidebar on every member
   tab shows the latest and links to the team's Milestones page,
