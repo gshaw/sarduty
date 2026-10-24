@@ -2,10 +2,10 @@ defmodule Web.MeLive do
   use Web, {:live_view_app_layout, access: :member}
 
   import Web.Components.Chart, only: [stat: 1]
+  import Web.Components.Equipment, only: [held_table: 1]
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.PersonHead
-  import Web.MemberEquipmentLive, only: [held_table: 1]
   import Web.ChoreText, only: [status_badge: 1]
 
   alias App.Adapter.D4H

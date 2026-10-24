@@ -161,8 +161,8 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#member-equipment-list-#{pouch.id}", "First aid kit 6")
     refute has_element?(lv, "td", "Stray")
 
-    path = ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}&show=all"
-    {:ok, lv, _html} = live(ctx.conn, path)
+    # A member place opens on All, so it counts the retired gauze as the sidebar does.
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}")
     assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 8")
     assert has_element?(lv, "#equipment-view-all[aria-current]", "8")
     assert has_element?(lv, "#equipment-view-in-service", "7")
@@ -174,6 +174,11 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#place-sam-rivera th", "Where")
     assert has_element?(lv, "#equipment-sam-rivera-#{splint.id}", "First aid kit 6 › Pouch")
     refute has_element?(lv, "#equipment-sam-rivera-#{splint.id}", "Sam Rivera")
+
+    # In service still filters here, and a place picked after it keeps it.
+    lv |> element("#equipment-view-in-service") |> render_click()
+    assert assert_patch(lv) =~ "show=in-service"
+    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 7")
   end
 
   test "a scanned barcode opens its item, and an unknown one says so", ctx do

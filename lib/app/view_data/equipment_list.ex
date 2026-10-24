@@ -18,8 +18,7 @@ defmodule App.ViewData.EquipmentList do
   @no_location "No location"
   @no_category "No category"
 
-  # Deeper than any real nesting. It stops a loop if D4H ever puts two items in each other.
-  @max_depth 10
+  @max_depth EquipmentItem.max_depth()
 
   # The page's stat switch. Who holds an item is the Place filter's "With members".
   def shows,
@@ -42,7 +41,6 @@ defmodule App.ViewData.EquipmentList do
   defp row(item, by_d4h_id) do
     chain = containers(item, by_d4h_id, [], 0)
     outermost = List.first(chain) || item
-    innermost_first = [item | Enum.reverse(chain)]
 
     %{
       item: item,
@@ -50,8 +48,7 @@ defmodule App.ViewData.EquipmentList do
       inside: Enum.map_join(chain, " › ", & &1.title),
       holder: outermost.member && outermost.member.name,
       holder_id: outermost.member_id,
-      # Sorting by this puts each item's contents right after it.
-      path: innermost_first |> Enum.reverse() |> Enum.map(&String.downcase(&1.title))
+      path: path(item, chain)
     }
   end
 
@@ -203,11 +200,20 @@ defmodule App.ViewData.EquipmentList do
     |> Enum.map(&Map.delete(&1, :path))
   end
 
-  # `chain` is the items holding `item`, outermost first. Sorting by `path` puts each
-  # kit's contents right after it.
-  defp held_row(item, chain) do
-    path = [item | Enum.reverse(chain)] |> Enum.reverse() |> Enum.map(&String.downcase(&1.title))
-    %{item: item, inside: Enum.map_join(chain, " › ", & &1.title), path: path}
+  # `chain` is the items holding `item`, outermost first.
+  defp held_row(item, chain),
+    do: %{
+      item: item,
+      inside: Enum.map_join(chain, " › ", & &1.title),
+      path: path(item, chain)
+    }
+
+  # Sorting by this puts each item's contents right after it: the items from the
+  # outermost in, ending with `item`. The id keeps two kits with one title apart.
+  defp path(item, chain) do
+    [item | Enum.reverse(chain)]
+    |> Enum.reverse()
+    |> Enum.map(&{String.downcase(&1.title), &1.id})
   end
 
   defp sort_groups(groups) do

@@ -63,9 +63,11 @@ defmodule App.Model.EquipmentItem do
     |> Repo.all()
   end
 
-  # As deep as App.ViewData.EquipmentList follows a chain of items. It stops a loop if
-  # D4H ever puts two items in each other.
+  # Deeper than any real nesting. It stops a loop if D4H ever puts two items in each other.
   @max_depth 10
+
+  @doc "How deep a chain of items is followed, here and in `App.ViewData.EquipmentList`."
+  def max_depth, do: @max_depth
 
   @doc """
   The items a member holds, by title (#490): those D4H locates with the member, and

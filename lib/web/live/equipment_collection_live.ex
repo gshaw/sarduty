@@ -2,10 +2,10 @@ defmodule Web.EquipmentCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.ActivityEquipmentLive, only: [scan_message: 1, no_item_text: 1]
+  import Web.Components.Equipment
   import Web.Components.FilterBar
   import Web.Components.Scanner
   import Web.Components.StatSwitch
-  import Web.MemberEquipmentLive, only: [held_table: 1]
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
@@ -15,8 +15,8 @@ defmodule Web.EquipmentCollectionLive do
   # The team's equipment, copied from D4H or SAR Duty Records (#271). It opens on the
   # places and categories, with counts; picking one, searching, or another filter lists
   # items, grouped by where they are. A Records team adds items here. On a phone,
-  # scanning a barcode opens its item. Place takes a member too, `?place=member-<id>`, from
-  # the member page's "All 12 items" (#490).
+  # scanning a barcode opens its item. Place takes a member too, `?place=member-<id>`
+  # (#490), and opens on All, as the member's sidebar and Equipment tab count.
   def mount(_params, _session, socket) do
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
     in_service = EquipmentList.filter(rows, "in-service", "", DateTime.utc_now())
@@ -39,13 +39,16 @@ defmodule Web.EquipmentCollectionLive do
   end
 
   def handle_params(params, _uri, socket) do
-    show =
-      if params["show"] in EquipmentList.show_values(), do: params["show"], else: "in-service"
-
     q = String.trim(params["q"] || "")
     place = params["place"] || ""
     category = params["category"] || ""
     now = DateTime.utc_now()
+
+    # A member place opens on All: retired items are still with the member (#490).
+    default_show = if EquipmentList.member_id(place), do: "all", else: "in-service"
+
+    show =
+      if params["show"] in EquipmentList.show_values(), do: params["show"], else: default_show
 
     {holder, held} = held_in(socket.assigns.current_team, place)
     narrowed = EquipmentList.narrow(socket.assigns.rows, place, category, held)
@@ -54,6 +57,7 @@ defmodule Web.EquipmentCollectionLive do
     socket =
       assign(socket,
         show: show,
+        default_show: default_show,
         show_counts: show_counts(narrowed, now),
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
@@ -61,7 +65,14 @@ defmodule Web.EquipmentCollectionLive do
         member_place?: EquipmentList.member_id(place) != nil,
         groups: groups(rows, place, holder),
         form:
-          to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
+          to_form(
+            # The default stays out of the URL, so a new place opens on its own default.
+            %{
+              "q" => q,
+              "place" => place,
+              "category" => category,
+              "show" => if(show == default_show, do: "", else: show)
+            },
             as: "form"
           )
       )
@@ -156,7 +167,7 @@ defmodule Web.EquipmentCollectionLive do
       <:view
         :for={{label, value} <- EquipmentList.shows()}
         id={"equipment-view-#{value}"}
-        patch={path_fn(@current_team, @form).(show: if(value == "in-service", do: "", else: value))}
+        patch={path_fn(@current_team, @form).(show: if(value == @default_show, do: "", else: value))}
         current={@show == value}
         count={@show_counts[value]}
       >
@@ -283,21 +294,4 @@ defmodule Web.EquipmentCollectionLive do
   defp where(%{holder: holder, inside: inside}), do: "#{holder} › #{inside}"
 
   defp slug(place), do: place |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-")
-
-  attr :item, EquipmentItem, required: true
-
-  def status_badge(%{item: %{status: "operational"}} = assigns), do: ~H""
-
-  def status_badge(%{item: %{status: status}} = assigns)
-      when status in ["unserviceable", "lost"] do
-    ~H"""
-    <.badge kind={:danger}>{String.capitalize(@item.status)}</.badge>
-    """
-  end
-
-  def status_badge(assigns) do
-    ~H"""
-    <.badge>{String.capitalize(@item.status)}</.badge>
-    """
-  end
 end

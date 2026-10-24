@@ -169,6 +169,20 @@ defmodule App.ViewData.EquipmentListTest do
            ]
   end
 
+  test "two kits with one title each keep their own contents" do
+    kits = [
+      item(1, "First aid kit", member_id: 9),
+      item(2, "First aid kit", member_id: 9),
+      item(3, "Splint", d4h_container_id: 1),
+      item(4, "Bandage", d4h_container_id: 2)
+    ]
+
+    assert kits |> EquipmentList.held_rows() |> Enum.map(& &1.item.id) == [1, 3, 2, 4]
+
+    assert [{"With members", rows}] = kits |> EquipmentList.rows() |> EquipmentList.group()
+    assert Enum.map(rows, & &1.item.id) == [1, 3, 2, 4]
+  end
+
   test "held items that hold each other stop at the cap" do
     loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
     assert [%{inside: a}, %{inside: b}] = EquipmentList.held_rows(loop)

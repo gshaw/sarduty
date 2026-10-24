@@ -72,7 +72,7 @@ D4H can put an item's location at a member, and the copy keeps it as
   counts always agree (decided 2026-10-23). On production that day 85 items sat inside 16 kits
   members hold, beside 1,683 held directly; one team had 55 inside 6 kits.
 - **One table** shows what a member holds, in three places
-  ([MemberEquipmentLive.held_table/1](../lib/web/live/member_equipment_live.ex)): each
+  ([Equipment.held_table/1](../lib/web/components/equipment.ex)): each
   kit followed by what's inside it, with Item, Where, Category, Barcode, Expires, and the
   equipment page's status badge for a retired, lost, or unserviceable item. Where says
   only what an item is inside, "First aid kit 6 › Splint pouch", as it does in a D4H
@@ -89,9 +89,10 @@ D4H can put an item's location at a member, and the copy keeps it as
   member who holds something, by name. It is a combobox, since a team has dozens of
   holders. The URL takes the member's local id, `?place=member-12`, never the name, since
   two members can share one. The section heading names the member ("Sam Rivera · 12")
-  over the same table, here with the stat switch and the search. The browse page's Place
-  table keeps one With members row, not one per member. There is no Member filter: it
-  would conflict with Place.
+  over the same table, here with the stat switch and the search. It opens on All, not In
+  service, so its count is the sidebar's. The browse page's Place table keeps one With
+  members row, not one per member. There is no Member filter: it would conflict with
+  Place.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.
 - **D4H won't retire a member who holds items** (2026-10-23): "Before a member is
