@@ -409,6 +409,9 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: key}) when key in [:chores, :chores_to_send],
     do: ~p"/teams/#{team}/chores"
 
+  defp attention_path(team, %{key: :attendance_to_send, activity_id: activity_id}),
+    do: ~p"/teams/#{team}/activities/#{activity_id}/attendance"
+
   defp attention_path(team, %{key: :letters, year: year}),
     do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
 

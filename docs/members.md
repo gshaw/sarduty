@@ -247,7 +247,9 @@ The team's Dashboard, `/teams/:subdomain`
 - **Take attendance** on Next up: team admins at any time, and members from 2 hours
   before the activity starts until 2 hours after it ends (#475,
   [taking-attendance.md](taking-attendance.md)).
-- **Team admins also get** Needs attention and Refresh now.
+- **Team admins also get** Needs attention and Refresh now. Needs attention says when
+  there's attendance to send: members take it on their own, so nothing else would tell
+  them (#475, [taking-attendance.md](taking-attendance.md)).
   A team admin who is a member sees both For you to do and Needs attention, one above
   the other. A member's page doesn't work out Needs attention at all.
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:

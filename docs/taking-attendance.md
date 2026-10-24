@@ -23,6 +23,13 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
   Nobody takes it for a deleted activity. The same function decides whether Take
   attendance shows on the activity panel and whether a scan is saved, and the page checks
   again on every scan and Undo, so a page left open stops when the window closes.
+- **Needs attention says there's attendance to send.** A team admin no longer makes a
+  link, so nothing else tells them members have scanned.
+  [TeamDashboardViewData.attendance_to_send/2](../lib/app/view_data/team_dashboard_view_data.ex)
+  lists activities not deleted, finished in the last 30 days, with a scan newer than their
+  latest `door` change set, or none. One activity is named in the item and opens its
+  Attendance page; several are counted, and the oldest opens. The 30 days keep a scan
+  nobody means to send from waiting forever.
 - **Each scan records who took it**: `recorded_by_user_id`, and `recorded_by_member_id`
   when that user is one of the team's members. The Attendance page's **Recorded by**
   column names them, or a user's email for someone who isn't a member. Scans from before
