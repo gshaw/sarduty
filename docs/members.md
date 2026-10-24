@@ -307,7 +307,8 @@ back. Replies close when the activity starts.
   works before the page connects. An answer that matches their reply shows the reply
   and Change instead. It closes at the start, and always has "Open activity (log in)".
 - **Invitation reminders** are the member's setting, not the login's: many members get
-  email without ever logging in. On by default, a switch in Contact details, and a
+  email without ever logging in. On by default, a switch for each team in account settings
+  ([AccountLive](../lib/web/live/account_live.ex)), and a
   reminder's "Turn off invitation reminders" link opens `/reminders/:token`
   ([InvitationRemindersLive](../lib/web/live/invitation_reminders_live.ex)), a page with
   one button that turns them back on too. A mail app's one-click unsubscribe posts to

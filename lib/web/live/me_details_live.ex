@@ -6,7 +6,6 @@ defmodule Web.MeDetailsLive do
   alias App.Model.Member
   alias App.Operation.ChangeOwnPhone
   alias App.Operation.SaveOwnDetails
-  alias App.Operation.SetInvitationReminders
   alias App.ViewModel.MemberDetailsViewModel
   alias Web.LoginLimit
   alias Web.UserAuth
@@ -20,10 +19,7 @@ defmodule Web.MeDetailsLive do
   # new number. Codes count against the login limits for that number. A code waiting for
   # an answer shows its form, even after a reload. Members don't change their email here;
   # team admins do, in D4H. A team admin viewing as the member (#425) sees the page with
-  # saving turned off.
-  #
-  # Invitation reminders (#444) are SAR Duty's own, on the member: a switch that saves
-  # when it's tapped. A reminder's link turns them off without a login.
+  # saving turned off. Invitation reminders are in account settings.
   def mount(_params, session, socket) do
     member = socket.assigns.current_member
     socket = assign(socket, :member, member)
@@ -93,14 +89,6 @@ defmodule Web.MeDetailsLive do
            else: ChangeOwnPhone.confirm(member, user, e164, code, DateTime.utc_now())
 
        confirmed(socket, member, who, ip, result)
-     end)}
-  end
-
-  def handle_event("reminders", _params, socket) do
-    {:noreply,
-     with_login(socket, fn member ->
-       member = SetInvitationReminders.call(member, not member.invitation_reminders)
-       assign(socket, :member, member)
      end)}
   end
 
@@ -219,17 +207,6 @@ defmodule Web.MeDetailsLive do
           </.button>
         </.form_actions>
       </.form>
-
-      <.switch
-        id="invitation-reminders"
-        class="mt-8"
-        label="Invitation reminders"
-        checked={@member.invitation_reminders}
-        disabled={@viewing_as != nil}
-        phx-click="reminders"
-      >
-        Team admins can email you when you have not replied to an activity.
-      </.switch>
 
       <p id="email-note" class="hint mt-8">
         Your email is {@member.email || "not set"}. Ask a team admin to change it.

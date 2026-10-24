@@ -25,6 +25,7 @@ defmodule Web.InvitationRemindersLiveTest do
     lv |> element("#reminders-off") |> render_click()
     assert has_element?(lv, "h1", "Invitation reminders are off")
     refute Repo.reload(member).invitation_reminders
+    assert has_element?(lv, ~s{#reminders-account[href="/account"]}, "Open account settings")
 
     lv |> element("#reminders-on") |> render_click()
     assert Repo.reload(member).invitation_reminders
