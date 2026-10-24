@@ -60,7 +60,7 @@ defmodule Web.Settings.MemberLoginsLive do
       </p>
       <p>
         Each member sees only their own ID card and letters. They log in with the email or
-        mobile number D4H has for them.
+        mobile number your team has for them.
       </p>
       <p class="mb-6">Retired members cannot log in.</p>
       <.form for={@form} id="member-logins-form" phx-submit="save">

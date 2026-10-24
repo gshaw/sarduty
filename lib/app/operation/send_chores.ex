@@ -30,7 +30,7 @@ defmodule App.Operation.SendChores do
   alias App.Repo
   alias Service.ChoreEventText
 
-  @draft "Left as a draft: D4H would not publish it."
+  @draft "Left as a draft: it could not be published."
   @untagged "Sent without its tags. Send the changes to try again."
 
   @doc """
@@ -89,7 +89,7 @@ defmodule App.Operation.SendChores do
   defp send_tags(nil, _chores, category, tags) do
     case event_tags(category, tags.hours, tags.all) do
       {:ok, event_tags} -> {:ok, event_tags}
-      {:error, title} -> {:error, "D4H has no tag named #{title}, this category's hours tag."}
+      {:error, title} -> {:error, "No tag is named #{title}, this category's hours tag."}
     end
   end
 
@@ -219,7 +219,7 @@ defmodule App.Operation.SendChores do
     end
   end
 
-  defp error_text(:no_team_key), do: "The team has no D4H access key."
+  defp error_text(:no_team_key), do: "Your team has no access key."
   defp error_text(%D4H.Error{} = error), do: Exception.message(error)
   defp error_text(text) when is_binary(text), do: text
   defp error_text(reason), do: inspect(reason)

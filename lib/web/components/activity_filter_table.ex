@@ -112,8 +112,8 @@ defmodule Web.Components.ActivityFilterTable do
           id={"activity-#{record.id}-tags-in-d4h"}
           class="hint"
         >
-          Published, so set its hours tag in D4H.
-          <.a external={true} href={D4H.activity_url(@team, record)}>Open D4H activity</.a>
+          Published, so set its hours tag in {D4H.service_name(@team)}.
+          <.a external={true} href={D4H.activity_url(@team, record)}>Open {D4H.service_name(@team)} activity</.a>
         </div>
       </:col>
       <:col :let={record} :if={@kind?} label="Kind" class="w-1/12">

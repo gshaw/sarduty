@@ -25,7 +25,7 @@ finish a task and leave. Write so a reader understands each sentence the first t
 SAR Duty sounds like a calm team-mate who knows the system: it says what happened and what
 to do next, then gets out of the way. It does not sell, apologize, or celebrate.
 
-- Say what is true now, in the reader's words: "Tags saved to D4H", not "Your request was
+- Say what is true now, in the reader's words: "Tags sent", not "Your request was
   processed".
 - Name the way forward: "This attendance link is closed. Ask a team admin for a new link."
 - Give a reason only when it changes what the reader does: "Members file by April 30."
@@ -33,12 +33,12 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
 ## Rules
 
 1. **Put what matters first.** The result or the action, then the reason. "Attendance
-   cannot be changed. The activity is published in D4H." Not "Because the activity is
-   published in D4H, …".
+   cannot be changed. The activity is published." Not "Because the activity is published,
+   …".
 2. **Keep sentences short.** At most 20 words in instructions, warnings, and errors, and 25
    anywhere else. If a sentence needs "and" twice, split it.
 3. **One instruction per sentence.** Steps are a numbered list with one action each.
-4. **Use the active voice and say who acts.** "SAR Duty refreshes from D4H every night",
+4. **Use the active voice and say who acts.** "SAR Duty refreshes every night",
    not "Data is refreshed nightly". Instructions use the imperative: "Paste the report".
 5. **Use the words in [the glossary](#glossary), every time.** One word for one thing, and
    one meaning for each word. Never switch to a synonym for variety.
@@ -60,7 +60,7 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
     24-hour clock ("14:05"), and durations read "212h 30m", never "212:30" or "212.5
     hours". No formatter fits? Add one. The style guide's Values page, `/styles/values`,
     runs every formatter on an example.
-11. **Talk to the reader as "you".** Say "your team" and "your D4H access key". Use "we"
+11. **Talk to the reader as "you".** Say "your team" and "your access key". Use "we"
     only for SAR Duty the service, and rarely. Words the reader says are in their own
     voice: the reply buttons ("I'll be there") and a box they check to agree ("I'll use
     this token only with…").
@@ -73,6 +73,12 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
     noun), cheque, defence, catalogue, travelled, cancelled. Keep "-ize" endings: organize,
     authorize. Code stays in US spelling: identifiers, CSS classes and tokens, routes,
     comments, and commit messages say `color`, not `colour`.
+16. **Name D4H or SAR Duty Records only where the reader must go there.** Say what
+    changed, not where: "This member has this award already", not "D4H has this award
+    already". Use the verbs both share: refresh and send. Name the service only to send
+    the reader there to act, as in "Unpublish it in D4H first" or "Open in D4H", and take
+    the name from the team: `@service` on a team page, `D4H.service_name/1` elsewhere. A
+    test fails on "D4H" written into text.
 
 ## Patterns
 
@@ -98,11 +104,11 @@ thing is on the page, such as "the button on the right".
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
 letters", "Select a year", "Phone must be 10 digits". Never "invalid", "error", "failed",
 or "something went wrong" alone. The message in the error summary and on the field is the
-same text. When D4H does not answer, say so and what to try: "D4H did not answer. Try
+same text. When no answer comes back, say so and what to try: "No answer came back. Try
 again."
 
 **Success messages.** What changed, in the past tense, with the count: "4 attendance
-changes saved to D4H". No "successfully". When the page already shows the change, such as
+changes sent". No "successfully". When the page already shows the change, such as
 a reply or a ticked box, skip the message.
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
@@ -115,7 +121,7 @@ the activity is published. Unpublish it in D4H first."
 **Empty states.** Say why it is empty and what to do: "No tax credit letters for 2025 yet.
 Create one from the member list." Not "No results".
 
-**Slow work.** Name the slow thing: "Refreshing from D4H…", "Calculating driving distances
+**Slow work.** Name the slow thing: "Refreshing…", "Calculating driving distances
 for 14 members…". Not "Loading…" or "Please wait".
 
 **Page titles.** The page's `h1`. A tab or step under a record adds its name after a middle
@@ -192,6 +198,7 @@ and must not be used for it.
 | mileage report                 | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
 | ID card                        | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
 | verify                         | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
+| access key                     | token, API key                                 | The D4H access key or Records access key. Alone when the page does not need to say which.            |
 | D4H access key                 | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
 | Records access key             | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
 | MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
@@ -221,23 +228,24 @@ and must not be used for it.
 
 ## Words to avoid
 
-| Avoid                         | Write                                    |
-| ----------------------------- | ---------------------------------------- |
-| click, tap, hit, press        | select                                   |
-| submit                        | the specific action: save, send, create  |
-| invalid, error, failed        | what is wrong and how to fix it          |
-| please, kindly, sorry, oops   | nothing                                  |
-| simply, just, easily, quickly | nothing                                  |
-| successfully                  | nothing                                  |
-| utilize, leverage             | use                                      |
-| in order to                   | to                                       |
-| prior to, subsequent to       | before, after                            |
-| ensure                        | make sure                                |
-| via                           | through, by, with                        |
-| e.g., i.e., etc.              | for example, that is, or list everything |
-| and/or                        | or                                       |
-| sync                          | refresh                                  |
-| N/A                           | "None", or leave the cell empty          |
+| Avoid                                                        | Write                                    |
+| ------------------------------------------------------------ | ---------------------------------------- |
+| click, tap, hit, press                                       | select                                   |
+| submit                                                       | the specific action: save, send, create  |
+| invalid, error, failed                                       | what is wrong and how to fix it          |
+| please, kindly, sorry, oops                                  | nothing                                  |
+| simply, just, easily, quickly                                | nothing                                  |
+| successfully                                                 | nothing                                  |
+| utilize, leverage                                            | use                                      |
+| in order to                                                  | to                                       |
+| prior to, subsequent to                                      | before, after                            |
+| ensure                                                       | make sure                                |
+| via                                                          | through, by, with                        |
+| e.g., i.e., etc.                                             | for example, that is, or list everything |
+| and/or                                                       | or                                       |
+| sync                                                         | refresh                                  |
+| N/A                                                          | "None", or leave the cell empty          |
+| in D4H, from D4H, to D4H (when the reader need not go there) | nothing: say what changed                |
 
 ## Checklist
 
@@ -260,3 +268,5 @@ Before committing text a person will read, check each line:
 - [ ] Numbers are digits. Every date, time, duration, count of days, and distance comes
       from a `Service.Format` function.
 - [ ] Text people read uses Canadian spelling. Code uses US spelling.
+- [ ] D4H or SAR Duty Records is named only where the reader must go there, and the name
+      comes from the team.

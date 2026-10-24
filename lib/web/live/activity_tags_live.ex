@@ -149,13 +149,13 @@ defmodule Web.ActivityTagsLive do
       :if={@published?}
       id="tags-published"
       kind={:warning}
-      title="This activity is published in D4H"
+      title="This activity is published"
     >
       <p>
-        D4H does not let SAR Duty change a published activity's tags. Change them in D4H.
+        {@service} does not let SAR Duty change a published activity's tags. Change them in {@service}.
       </p>
       <.button variant={:warning} href={D4H.activity_url(@current_team, @activity)}>
-        Open D4H activity
+        Open {@service} activity
       </.button>
     </.banner>
 
@@ -241,7 +241,7 @@ defmodule Web.ActivityTagsLive do
          ) do
       {:ok, %{status: :applied}} ->
         socket
-        |> put_flash(:info, "Tags saved to #{D4H.service_name(team)}.")
+        |> put_flash(:info, "Tags sent.")
         |> push_navigate(to: back)
         |> then(&{:noreply, &1})
 

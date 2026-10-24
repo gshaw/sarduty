@@ -120,7 +120,9 @@ defmodule Web.GroupLive do
             <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
-            <.a external={true} href={D4H.build_url(@team, "/team/members")}>Open D4H members</.a>
+            <.a external={true} href={D4H.build_url(@team, "/team/members")}>Open {D4H.service_name(
+              @team
+            )} members</.a>
           </li>
         </ul>
       </dd>
@@ -154,7 +156,7 @@ defmodule Web.GroupLive do
     assigns = assign(assigns, :g, g)
 
     ~H"""
-    <span class="text-danger-text">A group in these rules is no longer in D4H ({@g}).</span>
+    <span class="text-danger-text">A group in these rules was deleted ({@g}).</span>
     """
   end
 
@@ -162,8 +164,7 @@ defmodule Web.GroupLive do
     assigns = assign(assigns, :group, group)
 
     ~H"""
-    <.a navigate={~p"/teams/#{@team}/groups/#{@group.id}"}>{@group.title}</.a>
-    is a list kept by hand in D4H.
+    <.a navigate={~p"/teams/#{@team}/groups/#{@group.id}"}>{@group.title}</.a> is a list kept by hand.
     """
   end
 
@@ -192,7 +193,7 @@ defmodule Web.GroupLive do
         </ul>
       </div>
       <p :if={@preview.problems == []} class="hint mb-2">
-        What these rules would change in the D4H group.
+        What these rules would change in the group.
       </p>
 
       <.change_list

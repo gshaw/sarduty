@@ -8,7 +8,6 @@ defmodule Web.Components.SearchBox do
   """
   use Web, :live_component
 
-  alias App.Adapter.D4H
   alias Web.Components.Search
 
   def mount(socket), do: {:ok, assign(socket, query: "", groups: [], recent: [])}
@@ -19,7 +18,6 @@ defmodule Web.Components.SearchBox do
      |> assign(assigns)
      |> assign(
        kinds: Web.Search.kinds(assigns.team, assigns.team_admin?, assigns.member?),
-       service: if(D4H.records?(assigns.team), do: "SAR Duty Records", else: "D4H"),
        # Per person and team, so a shared iPad doesn't show the last person's picks.
        recent_key: "sarduty:search-recent:#{assigns.user_id}:#{assigns.team.subdomain}"
      )}
@@ -69,7 +67,6 @@ defmodule Web.Components.SearchBox do
         recent_key={@recent_key}
         kinds={@kinds}
         team={@team}
-        service={@service}
         target={@myself}
       />
     </div>

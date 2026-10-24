@@ -111,7 +111,7 @@ defmodule Web.ActivitySendAttendanceTest do
     assert_received {:d4h_write, "POST", "/attendance", %{"memberId" => ^lena_id}}
     assert_received {:d4h_write, "PATCH", "/attendance/503", %{"status" => "ABSENT"}}
 
-    assert render(lv) =~ "3 attendance changes saved to D4H."
+    assert render(lv) =~ "3 attendance changes sent."
     refute AttendanceLink.find_current(ctx.team, ctx.activity)
 
     sam_id = ctx.sam.id
@@ -175,7 +175,7 @@ defmodule Web.ActivitySendAttendanceTest do
     {:ok, _} = ctx.team.id |> Team.get!() |> Team.update(%{d4h_access_key: nil})
     lv = open(ctx)
     lv |> element("#review") |> render_click()
-    assert render(lv) =~ "Save the team&#39;s D4H access key"
+    assert render(lv) =~ "Save your team&#39;s access key"
   end
 
   test "when D4H can't be read, nothing is sent", ctx do
@@ -183,7 +183,7 @@ defmodule Web.ActivitySendAttendanceTest do
     lv = open(ctx)
     lv |> element("#review") |> render_click()
 
-    assert render(lv) =~ "D4H did not answer"
+    assert render(lv) =~ "No answer came back"
     refute has_element?(lv, "#send-form")
   end
 
@@ -219,7 +219,7 @@ defmodule Web.ActivitySendAttendanceTest do
     lv |> element("#review") |> render_click()
 
     assert render(lv) =~
-             "It may have been deleted or changed in D4H. D4H API error (404): Not Found"
+             "It may have been deleted or changed. Not Found (404)"
   end
 
   test "a write D4H refuses with a 400 says the activity may have changed", ctx do
@@ -242,7 +242,7 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(
              lv,
              "#failures",
-             "The activity may have been deleted or changed in D4H. D4H API error (400): Bad Request"
+             "The activity may have been deleted or changed. Bad Request (400)"
            )
   end
 

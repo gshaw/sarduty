@@ -9,7 +9,6 @@ defmodule App.Operation.ReplyToActivity do
   """
 
   alias App.Accounts.User
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.ChangeSet
@@ -38,7 +37,7 @@ defmodule App.Operation.ReplyToActivity do
          {:ok, row} <- send_row(team, activity, user, row, now) do
       {:ok, update_copy(attendance, activity, row, now)}
     else
-      {:error, reason} -> {:error, error_text(team, reason)}
+      {:error, reason} -> {:error, error_text(reason)}
     end
   end
 
@@ -124,17 +123,15 @@ defmodule App.Operation.ReplyToActivity do
     attendance |> Ecto.Changeset.change(changes) |> Repo.update!()
   end
 
-  defp error_text(team, reason) do
-    service = D4H.service_name(team)
-
+  defp error_text(reason) do
     case reason do
       :started -> "Replies closed when the activity started."
-      :deleted -> "This activity is deleted in #{service}."
-      :not_invited -> "Only members invited in #{service} can reply."
-      :gone -> "Your invitation is gone from #{service}. Ask a team admin."
-      :published -> "Your reply cannot be sent. #{service} has published this activity."
-      :no_team_key -> "SAR Duty cannot reach #{service} for your team. Ask a team admin."
-      _failed -> "#{service} did not answer. Try again."
+      :deleted -> "This activity is deleted."
+      :not_invited -> "Only invited members can reply."
+      :gone -> "Your invitation was deleted. Ask a team admin."
+      :published -> "Your reply cannot be sent. This activity is published."
+      :no_team_key -> "Your team has no access key. Ask a team admin."
+      _failed -> "No answer came back. Try again."
     end
   end
 end

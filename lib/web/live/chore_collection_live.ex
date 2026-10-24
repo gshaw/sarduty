@@ -3,7 +3,6 @@ defmodule Web.ChoreCollectionLive do
 
   import Web.Components.StatSwitch
 
-  alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Model.ChoreEvent
   alias App.Model.Team
@@ -24,7 +23,6 @@ defmodule Web.ChoreCollectionLive do
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
 
     socket
-    |> assign(service: D4H.service_name(team))
     |> assign(
       page_title: "Chores",
       today: Service.Period.today(DateTime.utc_now(), team.timezone)
@@ -92,14 +90,14 @@ defmodule Web.ChoreCollectionLive do
     ~H"""
     <h1 class="title">Chores</h1>
     <p class="lead measure">
-      Accepting a chore counts it and sends it to {@service}. Each chore category gets one {@service} activity a month.
+      Accepting a chore counts it and sends it. Each chore category gets one activity a month.
     </p>
 
     <.banner :if={@to_send > 0} kind={:warning} title="Changes not sent" id="chores-to-send">
       <p>
         {Format.count(@to_send,
-          one: "1 activity in #{@service} is out of date.",
-          many: "%d activities in #{@service} are out of date."
+          one: "1 activity is out of date.",
+          many: "%d activities are out of date."
         )}
       </p>
       <.button
@@ -107,7 +105,7 @@ defmodule Web.ChoreCollectionLive do
         type="button"
         variant={:warning}
         phx-click="send-changes"
-        phx-disable-with={"Sending to #{@service}…"}
+        phx-disable-with="Sending…"
       >
         Send changes
       </.button>
@@ -148,7 +146,7 @@ defmodule Web.ChoreCollectionLive do
                 id="accept"
                 variant={:success}
                 disabled={MapSet.size(@selected) == 0}
-                phx-disable-with={"Sending to #{@service}…"}
+                phx-disable-with="Sending…"
               >
                 Accept {count_chores(MapSet.size(@selected))}
               </.button>
@@ -156,11 +154,11 @@ defmodule Web.ChoreCollectionLive do
           </.form>
         </div>
       <% :accepted -> %>
-        <.empty_state :if={@events == []} id="no-chore-events" title={"Nothing in #{@service} yet"}>
-          Chores you accept show here, under their {@service} activity.
+        <.empty_state :if={@events == []} id="no-chore-events" title="Nothing sent yet">
+          Chores you accept show here, under their activity.
         </.empty_state>
         <p :if={@events != []} class="hint">
-          Open a chore to change or decline it, which changes its activity. Edits made in {@service} are replaced.
+          Open a chore to change or decline it, which changes its activity. Edits made outside SAR Duty are replaced.
         </p>
 
         <section :for={row <- @events} id={"chore-event-#{row.event.id}"} class="mt-8">
@@ -176,11 +174,11 @@ defmodule Web.ChoreCollectionLive do
           </.heading_row>
           <p class="hint mb-4">
             <span :if={row.activity}>
-              {@service} activity
+              Activity
               <.a navigate={~p"/teams/#{@current_team}/activities/#{row.activity.id}"}>{row.activity.ref_id}</.a>
             </span>
             <span :if={!row.activity and row.event.d4h_activity_id}>
-              {@service} activity linked after the next refresh
+              Activity linked after the next refresh
             </span>
             <span :if={row.event.sent_at}>
               {if row.event.d4h_activity_id, do: "· "}Sent {Format.date_short(
@@ -261,7 +259,7 @@ defmodule Web.ChoreCollectionLive do
     do: {:noreply, assign(socket, :selected, params |> ids("chore_ids") |> MapSet.new())}
 
   def handle_event("accept", params, socket) do
-    %{current_team: team, current_user: user, service: service} = socket.assigns
+    %{current_team: team, current_user: user} = socket.assigns
 
     case ids(params, "chore_ids") do
       [] ->
@@ -271,7 +269,7 @@ defmodule Web.ChoreCollectionLive do
         now = DateTime.utc_now()
         count = SaveChore.accept(team, ids, user, now)
         result = SendChores.call(team, user, now)
-        {kind, text} = ChoreText.send_flash("Accepted #{count_chores(count)}", result, service)
+        {kind, text} = ChoreText.send_flash("Accepted #{count_chores(count)}", result)
 
         socket
         |> put_flash(kind, text)
@@ -281,9 +279,9 @@ defmodule Web.ChoreCollectionLive do
   end
 
   def handle_event("send-changes", _params, socket) do
-    %{current_team: team, current_user: user, service: service} = socket.assigns
+    %{current_team: team, current_user: user} = socket.assigns
     result = SendChores.call(team, user, DateTime.utc_now())
-    {kind, text} = ChoreText.send_flash(nil, result, service)
+    {kind, text} = ChoreText.send_flash(nil, result)
 
     socket
     |> put_flash(kind, text)

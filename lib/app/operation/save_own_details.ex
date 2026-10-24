@@ -81,7 +81,7 @@ defmodule App.Operation.SaveOwnDetails do
         {:error, error}
 
       {:error, _reason} ->
-        {:error, "#{D4H.service_name(member.team)} did not take the change. Try again."}
+        {:error, "The change did not go through. Try again."}
     end
   end
 

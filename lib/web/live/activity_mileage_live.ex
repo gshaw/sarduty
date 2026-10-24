@@ -59,7 +59,7 @@ defmodule Web.ActivityMileageLive do
       </p>
     <% else %>
       <p>
-        The mileage report is not available. The activity has no latitude and longitude. Add its location in D4H.
+        The mileage report is not available. The activity has no latitude and longitude. Add its location in {@service}.
       </p>
     <% end %>
 

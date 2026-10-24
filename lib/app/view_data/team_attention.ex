@@ -26,10 +26,10 @@ defmodule App.ViewData.TeamAttention do
       missing_details_item(rows.missing_details_count, rows.service),
       not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
-      proposed_changes_item(rows.proposed_change_count, rows.service),
+      proposed_changes_item(rows.proposed_change_count),
       certificates_item(rows.certificate_count),
       chores_item(rows.chore_count),
-      chores_to_send_item(rows.chores_to_send, rows.service)
+      chores_to_send_item(rows.chores_to_send)
     ]
     |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
@@ -73,15 +73,17 @@ defmodule App.ViewData.TeamAttention do
           )
     }
 
-  defp drafts_item(count, :d4h) do
+  defp drafts_item(count, service) do
+    name = D4H.service_name(service)
+
     %{
       key: :drafts,
       level: :warning,
       title: Format.count(count, one: "%d draft activity", many: "%d draft activities"),
       detail:
         Format.count(count,
-          one: "Check its attendance, then publish it in D4H.",
-          many: "Check their attendance, then publish them in D4H."
+          one: "Check its attendance, then publish it in #{name}.",
+          many: "Check their attendance, then publish them in #{name}."
         ),
       action: "Show drafts"
     }
@@ -96,7 +98,7 @@ defmodule App.ViewData.TeamAttention do
       | detail: "Record renewals on each member's Qualifications tab."
     }
 
-  defp expiring_item(count, days, :d4h) do
+  defp expiring_item(count, days, service) do
     %{
       key: :expiring,
       level: :warning,
@@ -105,7 +107,7 @@ defmodule App.ViewData.TeamAttention do
           one: "%d award expires within #{Format.days(days)}",
           many: "%d awards expire within #{Format.days(days)}"
         ),
-      detail: "Record renewals in D4H.",
+      detail: "Record renewals in #{D4H.service_name(service)}.",
       action: "Show expiring awards"
     }
   end
@@ -128,12 +130,12 @@ defmodule App.ViewData.TeamAttention do
 
   defp not_seen_item(nil), do: nil
 
-  # The watched group is gone from D4H. Say so rather than watch everyone (#366).
+  # The watched group was deleted. Say so rather than watch everyone (#366).
   defp not_seen_item(%{missing_group: true}) do
     %{
       key: :watch_missing,
       level: :warning,
-      title: "The group you watch is no longer in D4H",
+      title: "The group you watch was deleted",
       detail: "Select another in team settings.",
       action: "Open team settings"
     }
@@ -168,8 +170,10 @@ defmodule App.ViewData.TeamAttention do
   def period(days), do: Format.days(days)
 
   # A team on SAR Duty Records changes its members in SAR Duty.
-  defp missing_details_where(:d4h), do: "Add the missing details in D4H."
   defp missing_details_where(:records), do: "Add the missing details on each member's page."
+
+  defp missing_details_where(service),
+    do: "Add the missing details in #{D4H.service_name(service)}."
 
   defp group_changes_item(0), do: nil
 
@@ -188,21 +192,15 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp proposed_changes_item(0, _service), do: nil
+  defp proposed_changes_item(0), do: nil
 
   # An AI agent's change sets wait for a team admin (#216).
-  defp proposed_changes_item(count, service) do
-    name = D4H.service_name(service)
-
+  defp proposed_changes_item(count) do
     %{
       key: :proposed_changes,
       level: :info,
-      title:
-        Format.count(count,
-          one: "%d proposed change to #{name}",
-          many: "%d proposed changes to #{name}"
-        ),
-      detail: "An AI agent proposed them. Nothing changes in #{name} until you send them.",
+      title: Format.count(count, one: "%d proposed change", many: "%d proposed changes"),
+      detail: "An AI agent proposed them. Nothing changes until you send them.",
       action: "Review proposed changes"
     }
   end
@@ -234,20 +232,18 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp chores_to_send_item(0, _service), do: nil
+  defp chores_to_send_item(0), do: nil
 
   # A team admin's decision sends chores to D4H at once (#341), so a chore activity with
   # changes to send is one whose send did not go through.
-  defp chores_to_send_item(count, service) do
-    name = D4H.service_name(service)
-
+  defp chores_to_send_item(count) do
     %{
       key: :chores_to_send,
       level: :warning,
       title:
         Format.count(count,
-          one: "%d chore activity out of date in #{name}",
-          many: "%d chore activities out of date in #{name}"
+          one: "%d chore activity out of date",
+          many: "%d chore activities out of date"
         ),
       detail: "The last send did not go through. Send the changes again.",
       action: "Review chores"
@@ -281,12 +277,14 @@ defmodule App.ViewData.TeamAttention do
       )
 
   # These are all published, and D4H refuses tags on a published activity (#358).
-  defp untagged_detail(count, :d4h),
-    do:
-      Format.count(count,
-        one: "Tax credit letters count no hours for it. Set its hours tag in D4H.",
-        many: "Tax credit letters count no hours for them. Set each one's hours tag in D4H."
-      )
+  defp untagged_detail(count, service) do
+    name = D4H.service_name(service)
+
+    Format.count(count,
+      one: "Tax credit letters count no hours for it. Set its hours tag in #{name}.",
+      many: "Tax credit letters count no hours for them. Set each one's hours tag in #{name}."
+    )
+  end
 
   defp letters_item(nil, _now, _timezone), do: nil
   defp letters_item(%{count: 0}, _now, _timezone), do: nil

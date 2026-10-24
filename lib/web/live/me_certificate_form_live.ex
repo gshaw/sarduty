@@ -3,7 +3,6 @@ defmodule Web.MeCertificateFormLive do
 
   import Ecto.Query
 
-  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
@@ -30,7 +29,7 @@ defmodule Web.MeCertificateFormLive do
     |> assign(qualifications: qualifications)
     |> assign(options: options(qualifications, latest))
     |> assign(page_title: if(certificate, do: "Change certificate", else: "Add a certificate"))
-    |> assign(service: D4H.service_name(member.team), filled: nil, fill_key: nil, fill: nil)
+    |> assign(filled: nil, fill_key: nil, fill: nil)
     |> allow_upload(:certificate,
       accept: ~w(image/* application/pdf),
       max_entries: 1,
@@ -141,7 +140,7 @@ defmodule Web.MeCertificateFormLive do
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
     <p class="lead measure">
-      A team admin looks at it, then records the award in {@service}.
+      A team admin looks at it, then records the award.
     </p>
 
     <.form
@@ -288,7 +287,7 @@ defmodule Web.MeCertificateFormLive do
           :info,
           if(certificate,
             do: "Saved your certificate.",
-            else: "Sent your certificate. A team admin adds it to #{socket.assigns.service}."
+            else: "Sent your certificate. A team admin looks at it next."
           )
         )
         |> push_navigate(to: ~p"/teams/#{member.team}/me")

@@ -23,7 +23,7 @@ defmodule App.Operation.ApplyEdit do
   def call(%Team{} = team, %User{} = user, %ChangeSetRow{} = row, now, opts) do
     if D4H.records?(team),
       do: apply_row(team, user, row, now, opts),
-      else: {:error, "Change this in D4H."}
+      else: {:error, "Change this in #{D4H.service_name(team)}."}
   end
 
   defp apply_row(team, user, row, now, opts) do

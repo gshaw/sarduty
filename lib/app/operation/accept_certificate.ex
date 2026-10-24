@@ -17,7 +17,6 @@ defmodule App.Operation.AcceptCertificate do
   import Ecto.Query
 
   alias App.Accounts.User
-  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.CertificateFile
   alias App.Model.ChangeSet
@@ -57,7 +56,7 @@ defmodule App.Operation.AcceptCertificate do
     with {:ok, set} <- change_set(team, current, user),
          {:ok, _rows} <- apply_set(team, set, user, now, current, bytes) do
       rows = set |> Repo.preload(:rows, force: true) |> Map.fetch!(:rows)
-      finish(team, rows, current, user, now)
+      finish(rows, current, user, now)
     end
   end
 
@@ -118,8 +117,7 @@ defmodule App.Operation.AcceptCertificate do
         {:ok, [attach(member, qualification, award)]}
 
       {:ok, %{certificate?: true}} ->
-        {:error,
-         "#{D4H.service_name(team)} has this award already, with a certificate. Decline this one."}
+        {:error, "This member has this award already, with a certificate. Decline this one."}
 
       {:error, text} ->
         {:error, text}
@@ -186,7 +184,7 @@ defmodule App.Operation.AcceptCertificate do
   defp applied_id(%ChangeSetRow{status: :applied, d4h_record_id: id}), do: id
   defp applied_id(_row), do: nil
 
-  defp finish(team, rows, current, user, now) do
+  defp finish(rows, current, user, now) do
     case outcome(rows) do
       {:accepted, award_id, document_id} ->
         accepted(current, dates(rows), award_id, document_id, user, now)
@@ -194,8 +192,7 @@ defmodule App.Operation.AcceptCertificate do
       {:award_only, award_id, error} ->
         current |> Ecto.Changeset.change(d4h_award_id: award_id) |> Repo.update!()
 
-        {:error,
-         "The award is in #{D4H.service_name(team)}, but the certificate did not upload. #{error}"}
+        {:error, "The award was sent, but the certificate did not upload. #{error}"}
 
       {:not_sent, error} ->
         {:error, error}

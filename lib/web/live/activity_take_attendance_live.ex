@@ -73,7 +73,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         {:noreply, assign(socket, review: review, selected: selected, failures: [])}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_text(error))}
+        {:noreply, put_flash(socket, :error, error_text(error, socket.assigns.service))}
     end
   end
 
@@ -101,8 +101,11 @@ defmodule Web.ActivityTakeAttendanceLive do
            keys,
            DateTime.utc_now()
          ) do
-      {:ok, results} -> {:noreply, show_results(socket, results)}
-      {:error, error} -> {:noreply, put_flash(socket, :error, error_text(error))}
+      {:ok, results} ->
+        {:noreply, show_results(socket, results)}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, error_text(error, socket.assigns.service))}
     end
   end
 
@@ -118,27 +121,30 @@ defmodule Web.ActivityTakeAttendanceLive do
     |> put_flash(kind, sent_text(saved, length(failures)))
   end
 
-  defp sent_text(saved, 0), do: "#{count_changes(saved)} saved to D4H."
+  defp sent_text(saved, 0), do: "#{count_changes(saved)} sent."
   defp sent_text(0, failed), do: "#{count_changes(failed)} did not go through."
 
   defp sent_text(saved, failed),
-    do: "#{count_changes(saved)} saved to D4H. #{count_changes(failed)} did not go through."
+    do: "#{count_changes(saved)} sent. #{count_changes(failed)} did not go through."
 
   defp count_changes(n),
     do: Service.Format.count(n, one: "%d attendance change", many: "%d attendance changes")
 
-  defp error_text(:published),
-    do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
-
-  defp error_text(:deleted), do: "This activity is deleted in D4H. Nothing can be sent to it."
-
-  defp error_text(:no_team_key), do: "Save the team's D4H access key in team settings first."
-
-  defp error_text(%D4H.Error{status: status} = error) when status in [400, 404],
+  defp error_text(:published, service),
     do:
-      "D4H cannot find this activity. It may have been deleted or changed in D4H. #{Exception.message(error)}"
+      "Attendance cannot be changed once the activity is published. Unpublish it in #{service} first."
 
-  defp error_text(error), do: "D4H did not answer. Try again. #{Exception.message(error)}"
+  defp error_text(:deleted, _service), do: "This activity is deleted. Nothing can be sent to it."
+
+  defp error_text(:no_team_key, _service),
+    do: "Save your team's access key in team settings first."
+
+  defp error_text(%D4H.Error{status: status} = error, _service) when status in [400, 404],
+    do:
+      "SAR Duty cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
+
+  defp error_text(error, _service),
+    do: "No answer came back. Try again. #{Exception.message(error)}"
 
   defp load_link(socket) do
     %{current_team: team, activity: activity} = socket.assigns
@@ -181,15 +187,21 @@ defmodule Web.ActivityTakeAttendanceLive do
     <div :if={@yet_to_arrive.signed_up > 0} id="yet-to-arrive-section">
       <h2 class="heading mt-4">Yet to arrive · {count_text(@yet_to_arrive)}</h2>
       <p>
-        Members D4H shows as signed up who have not arrived. Call or text to check whether
-        they're still coming.
+        Members signed up who have not arrived. Call or text to check whether they're still
+        coming.
       </p>
       <.yet_to_arrive_list yet_to_arrive={@yet_to_arrive} class="md:max-w-xl" />
     </div>
 
-    <h2 class="heading mt-4">Send to D4H</h2>
+    <h2 class="heading mt-4">Send attendance</h2>
     <.failures_section failures={@failures} />
-    <.send_section review={@review} selected={@selected} times={@times} activity={@activity} />
+    <.send_section
+      review={@review}
+      selected={@selected}
+      times={@times}
+      activity={@activity}
+      service={@service}
+    />
 
     <div :if={@no_shows != []} id="no-shows">
       <h2 class="heading mt-4">No-shows</h2>
@@ -218,7 +230,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         <span :if={Service.Phone.format(no_show.member.phone)}>{Service.Phone.format(
           no_show.member.phone
         )}</span>
-        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number in D4H</span>
+        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number</span>
         <.call_and_text
           id={"no-show-#{no_show.id}"}
           phone={no_show.member.phone}
@@ -264,6 +276,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   attr :selected, :any, required: true
   attr :times, :list, required: true
   attr :activity, :any, required: true
+  attr :service, :string, required: true
 
   defp send_section(%{review: nil} = assigns) do
     ~H"""
@@ -273,7 +286,12 @@ defmodule Web.ActivityTakeAttendanceLive do
         with their times. Members who signed up but did not arrive are marked absent.
         When every change goes through, SAR Duty closes the attendance link.
       </p>
-      <.button id="review" variant={:primary} phx-click="review" phx-disable-with="Reading D4H…">
+      <.button
+        id="review"
+        variant={:primary}
+        phx-click="review"
+        phx-disable-with="Checking attendance…"
+      >
         Review changes
       </.button>
     </div>
@@ -283,7 +301,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp send_section(%{review: %{published: true}} = assigns) do
     ~H"""
     <.warning_text id="published">
-      Attendance cannot be changed once the activity is published. Unpublish it in D4H first.
+      Attendance cannot be changed once the activity is published. Unpublish it in {@service} first.
     </.warning_text>
     """
   end
@@ -332,7 +350,7 @@ defmodule Web.ActivityTakeAttendanceLive do
             )}
           </span>
         </:col>
-        <:col :let={change} label="In D4H now">{status_text(change.status)}</:col>
+        <:col :let={change} label="Status now">{status_text(change.status)}</:col>
         <:col :let={change} label="Notes" class="stack-full stack-optional">
           <span :for={note <- change.notes} class={["block", note_class(note)]}>
             {note_text(note)}
@@ -379,7 +397,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         phone screens.
       </p>
       <p>
-        The link works until you close it or send to D4H. Anyone with it sees your members'
+        The link works until you close it or send the attendance. Anyone with it sees your members'
         names, and the mobile numbers of members who signed up and have not arrived.
       </p>
       <.button id="create-link" variant={:success} phx-click="create-link">
@@ -394,7 +412,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     <div id="open-link">
       <p>
         Send this link to the person taking attendance at the door. It works until you close
-        it or send to D4H.
+        it or send the attendance.
       </p>
       <div class="flex flex-wrap gap-2 items-center">
         <.a
@@ -499,5 +517,5 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp note_text(:left_before_arriving), do: "Left before arriving. Fix the times at the door."
 
   defp note_text(:signed_up_without_scan),
-    do: "Signed up in D4H, but no scan. Uncheck if they came."
+    do: "Signed up, but no scan. Uncheck if they came."
 end

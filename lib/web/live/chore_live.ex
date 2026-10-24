@@ -3,7 +3,6 @@ defmodule Web.ChoreLive do
 
   import Web.ChoreText, only: [status_badge: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Model.ChoreEvent
   alias App.Model.Member
@@ -25,7 +24,6 @@ defmodule Web.ChoreLive do
     |> assign(page_title: chore.description, chore: chore)
     |> assign(decided_by: decider_name(team, chore.decided_by_user, DateTime.utc_now()))
     |> assign(activity: chore.chore_event && ChoreEvent.local_activity(chore.chore_event))
-    |> assign(service: D4H.service_name(team))
     |> assign_decline_form(%{})
     |> then(&{:ok, &1})
   end
@@ -82,10 +80,10 @@ defmodule Web.ChoreLive do
         <dd id="chore-activity">
           <.a :if={@activity} navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>{@activity.title}</.a>
           <span :if={!@activity and @chore.chore_event.d4h_activity_id} class="hint">
-            Sent to {@service}. Linked after the next refresh.
+            Sent. Linked after the next refresh.
           </span>
           <span :if={!@chore.chore_event.d4h_activity_id} class="hint">
-            Not sent to {@service} yet
+            Not sent yet
           </span>
           <span :if={@chore.chore_event.send_note} class="hint block">
             {@chore.chore_event.send_note}
@@ -101,7 +99,7 @@ defmodule Web.ChoreLive do
         type="button"
         variant={:success}
         phx-click="accept"
-        phx-disable-with={"Sending to #{@service}…"}
+        phx-disable-with="Sending…"
       >
         Accept chore
       </.button>
@@ -120,7 +118,7 @@ defmodule Web.ChoreLive do
           <.button
             id="chore-decline-button"
             variant={:danger}
-            phx-disable-with={"Sending to #{@service}…"}
+            phx-disable-with="Sending…"
           >
             Decline chore
           </.button>
@@ -155,9 +153,9 @@ defmodule Web.ChoreLive do
   says what changed.
   """
   def send_and_return(socket, chore, done) do
-    %{current_team: team, current_user: user, service: service} = socket.assigns
+    %{current_team: team, current_user: user} = socket.assigns
     result = SendChores.call(team, user, DateTime.utc_now())
-    {kind, text} = ChoreText.send_flash(done, result, service)
+    {kind, text} = ChoreText.send_flash(done, result)
 
     socket
     |> put_flash(kind, text)

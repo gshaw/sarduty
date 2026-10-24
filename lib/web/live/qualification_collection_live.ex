@@ -197,7 +197,7 @@ defmodule Web.QualificationCollectionLive do
       id="no-qualifications"
       title="No qualifications yet"
     >
-      SAR Duty copies them from D4H when it refreshes.
+      Qualifications come in with each refresh.
     </.empty_state>
     <.empty_state
       :if={@view == :all and @all_count > 0 and @qualifications == []}

@@ -94,7 +94,7 @@ defmodule Web.Settings.TeamLiveTest do
     assert has_element?(
              lv,
              "select[name='form[watch_d4h_group_id]'] option[selected][value='424242']",
-             "A group no longer in D4H"
+             "A deleted group"
            )
   end
 

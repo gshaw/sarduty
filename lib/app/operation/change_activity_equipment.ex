@@ -93,15 +93,15 @@ defmodule App.Operation.ChangeActivityEquipment do
   # Tags are read from D4H now: a list from the last sync could drop a tag added since.
   defp plan_tag_row(_team, _activity, []), do: {:ok, nil}
 
-  defp plan_tag_row(%Team{d4h_access_key: nil} = team, _activity, _tags),
-    do: {:error, describe(team, :no_team_key)}
+  defp plan_tag_row(%Team{d4h_access_key: nil}, _activity, _tags),
+    do: {:error, describe(:no_team_key)}
 
   defp plan_tag_row(team, activity, tags) do
     d4h = D4H.build_context_from_team(team)
 
     case D4H.fetch_activity_tag_ids(d4h, activity.d4h_activity_id, activity.activity_kind) do
       {:ok, current} -> {:ok, plan_tags(activity, current, tags)}
-      {:error, error} -> {:error, describe(team, error)}
+      {:error, error} -> {:error, describe(error)}
     end
   end
 
@@ -140,7 +140,7 @@ defmodule App.Operation.ChangeActivityEquipment do
         {:ok, rows}
 
       {:error, reason} ->
-        {:error, describe(team, reason)}
+        {:error, describe(reason)}
     end
   end
 
@@ -169,9 +169,8 @@ defmodule App.Operation.ChangeActivityEquipment do
     end
   end
 
-  defp describe(team, :no_team_key), do: "Save a #{D4H.key_name(team)} in team settings first."
-  defp describe(team, :deleted), do: "This activity is deleted in #{D4H.service_name(team)}."
+  defp describe(:no_team_key), do: "Save your team's access key in team settings first."
+  defp describe(:deleted), do: "This activity is deleted."
 
-  defp describe(team, %D4H.Error{} = error),
-    do: "#{D4H.service_name(team)} did not answer. #{Exception.message(error)}"
+  defp describe(%D4H.Error{} = error), do: "The change was not sent. #{Exception.message(error)}"
 end

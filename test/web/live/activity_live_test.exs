@@ -128,7 +128,7 @@ defmodule Web.ActivityLiveTest do
                ~s{#members-remind[data-confirm*="Email 2 members who have not replied?"]}
              )
 
-      assert has_element?(lv, ~s{#members-remind[data-confirm*="Wren Adams (no email in D4H)"]})
+      assert has_element?(lv, ~s{#members-remind[data-confirm*="Wren Adams (no email)"]})
 
       lv |> element("#members-remind") |> render_click()
 
@@ -167,7 +167,7 @@ defmodule Web.ActivityLiveTest do
     test "says so and offers no actions", %{conn: conn, team: team, activity: activity} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
-      assert has_element?(lv, "#deleted-in-d4h", "Deleted in D4H")
+      assert has_element?(lv, "#deleted-in-d4h", "Deleted")
       refute has_element?(lv, "#activity-actions")
     end
 

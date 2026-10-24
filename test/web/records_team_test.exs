@@ -58,7 +58,7 @@ defmodule Web.RecordsTeamTest do
   test "the team home names Records", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#d4h-updated", "SAR Duty Records")
-    assert has_element?(lv, "#coming-up-empty", "SAR Duty Records")
+    assert has_element?(lv, "#coming-up-empty", "No activities planned.")
   end
 
   test "team settings asks for a Records access key", %{conn: conn, team: team} do
@@ -82,8 +82,8 @@ defmodule Web.RecordsTeamTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
 
-    assert lv |> element("button", "Refresh from SAR Duty Records") |> render_click() =~
-             "Team refreshed from SAR Duty Records."
+    assert lv |> element("button", "Refresh") |> render_click() =~
+             "Team refreshed."
 
     team = App.Repo.reload!(team)
     assert {team.name, team.lat} == {"Demo SAR", 49.2}

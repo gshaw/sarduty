@@ -52,7 +52,7 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   test "rejects a key D4H doesn't recognize" do
     changeset = check({:error, "Unable to determine team ID"})
 
-    assert {"Paste the key again. D4H does not accept this one.", _} =
+    assert {"Paste the key again. This one was refused.", _} =
              changeset.errors[:new_d4h_access_key]
 
     refute get_change(changeset, :d4h_access_key)
@@ -61,7 +61,7 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   test "says so when D4H doesn't respond" do
     changeset = check({:error, :unreachable})
 
-    assert {"D4H did not answer. Try again in a few minutes.", _} =
+    assert {"No answer came back. Try again in a few minutes.", _} =
              changeset.errors[:new_d4h_access_key]
   end
 

@@ -14,7 +14,7 @@ defmodule App.ViewData.GroupRules do
   @doc "Pure. The name of a group or endorsement in a rule."
   def name({:group, g}, context) do
     case context.groups[g] do
-      nil -> "a group no longer in D4H (#{g})"
+      nil -> "a deleted group (#{g})"
       group -> group.title
     end
   end
@@ -115,10 +115,10 @@ defmodule App.ViewData.GroupRules do
         "#{and_list(many)} use this group's list. Once it has rules, they use its rules instead."
 
       {[one], :last_rule} ->
-        "#{one} uses this group's rules. Without them, #{one} uses its list in D4H instead."
+        "#{one} uses this group's rules. Without them, #{one} uses this group's list instead."
 
       {many, :last_rule} ->
-        "#{and_list(many)} use this group's rules. Without them, they use its list in D4H instead."
+        "#{and_list(many)} use this group's rules. Without them, they use this group's list instead."
     end
   end
 

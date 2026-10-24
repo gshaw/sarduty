@@ -5,6 +5,7 @@ defmodule Web.UserAuth do
   import Phoenix.Controller
 
   alias App.Accounts
+  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.ChangeSet
   alias App.Model.Chore
@@ -270,7 +271,14 @@ defmodule Web.UserAuth do
 
     if access.team_admin?, do: RecordUserSeen.call(user, access.current_team.id)
 
-    {:cont, Phoenix.Component.assign(socket, Map.merge(access, waiting(access)))}
+    # `service` names where the team's records are, for text that sends the reader there.
+    service = D4H.service_name(access.current_team)
+
+    {:cont,
+     Phoenix.Component.assign(
+       socket,
+       access |> Map.merge(waiting(access)) |> Map.put(:service, service)
+     )}
   end
 
   # What waits for a team admin, for the side navigation: AI agent change sets, members'

@@ -142,8 +142,8 @@ all, and a broken reference must stop the plan, not leave nobody out:
 
 - No rules, or no In rule. Not in and Standing rules alone would add every member.
 - A rule with no groups or endorsements left.
-- An endorsement with no qualifications, or one naming a qualification no longer in D4H.
-- A group no longer in D4H, or one whose own rules have a problem.
+- An endorsement with no qualifications, or one naming a deleted qualification.
+- A deleted group, or one whose own rules have a problem.
 - A loop. The editor refuses one, and one already in the data stops.
 
 ## Applying the rules (#20)

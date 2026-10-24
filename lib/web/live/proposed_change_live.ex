@@ -38,7 +38,7 @@ defmodule Web.ProposedChangeLive do
         kind = if not_sent == 0, do: :info, else: :error
 
         message =
-          "Sent #{count_changes(applied)} to D4H." <>
+          "Sent #{count_changes(applied)}." <>
             if(not_sent > 0, do: " #{count_changes(not_sent)} did not go through.", else: "")
 
         {:noreply, socket |> put_flash(kind, message) |> load(change_set.id)}
@@ -55,7 +55,7 @@ defmodule Web.ProposedChangeLive do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Discarded the proposed changes. Nothing changed in D4H.")
+     |> put_flash(:info, "Discarded the proposed changes. Nothing was sent.")
      |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/proposed-changes")}
   end
 
@@ -74,13 +74,11 @@ defmodule Web.ProposedChangeLive do
 
   defp error_text(:decided), do: "These changes were already sent or discarded."
   defp error_text(:none_selected), do: "Select at least 1 change to send."
-  defp error_text(:no_team_key), do: "Save your team's D4H access key in team settings first."
+  defp error_text(:no_team_key), do: "Save your team's access key in team settings first."
 
-  defp error_text(:published),
-    do: "Attendance cannot be changed. The activity is published in D4H."
-
-  defp error_text(:deleted), do: "Attendance cannot be changed. The activity is deleted in D4H."
-  defp error_text(error), do: "D4H did not answer. Try again. #{Exception.message(error)}"
+  defp error_text(:published), do: "Attendance cannot be changed. The activity is published."
+  defp error_text(:deleted), do: "Attendance cannot be changed. The activity is deleted."
+  defp error_text(error), do: "No answer came back. Try again. #{Exception.message(error)}"
 
   def render(assigns) do
     ~H"""
@@ -106,7 +104,7 @@ defmodule Web.ProposedChangeLive do
         </dd>
       </div>
       <div :if={@change_set.applied_at}>
-        <dt>Sent to D4H</dt>
+        <dt>Sent</dt>
         <dd>
           {Service.Format.month_day_time(@change_set.applied_at, @current_team.timezone)}, by {@change_set.applied_by_user &&
             @change_set.applied_by_user.email}
@@ -119,8 +117,8 @@ defmodule Web.ProposedChangeLive do
     </dl>
 
     <p :if={ChangeSet.waiting?(@change_set)} class="lead">
-      Clear the box next to any change you do not want. SAR Duty reads D4H again before it
-      sends, and skips a change if someone changed that attendance in D4H first.
+      Clear the box next to any change you do not want. SAR Duty checks the attendance again
+      before it sends, and skips a change if someone changed that attendance first.
     </p>
 
     <.form for={%{}} id="review-form" phx-change="select" phx-submit="send">
@@ -165,7 +163,7 @@ defmodule Web.ProposedChangeLive do
           id="discard"
           type="button"
           phx-click="discard"
-          data-confirm="Discard these proposed changes? Nothing changes in D4H."
+          data-confirm="Discard these proposed changes? Nothing is sent."
         >
           Discard changes
         </.button>

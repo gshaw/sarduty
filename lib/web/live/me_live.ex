@@ -8,7 +8,6 @@ defmodule Web.MeLive do
   import Web.Components.PersonHead
   import Web.ChoreText, only: [status_badge: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.EquipmentItem
@@ -178,7 +177,7 @@ defmodule Web.MeLive do
         </div>
       </div>
       <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
-        Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
+        Activities you attend show here after SAR Duty refreshes.
         <:action>
           <p class="action">
             <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>Activities coming up</.a>
@@ -275,7 +274,7 @@ defmodule Web.MeLive do
         </:action>
       </.heading_row>
       <.empty_state :if={@rows == []} id="no-qualifications" title="No qualifications yet">
-        Qualifications your team records in {D4H.service_name(@team)} show here.
+        Qualifications your team records show here.
       </.empty_state>
       <.table
         :if={@rows != []}
@@ -336,9 +335,7 @@ defmodule Web.MeLive do
       {qualification_title(@certificate)}
     <% end %>
     <span :if={@certificate.status == :waiting} class="hint block">
-      Sent {Format.date_short(@certificate.inserted_at, @team.timezone)}. A team admin adds it to {D4H.service_name(
-        @team
-      )}.
+      Sent {Format.date_short(@certificate.inserted_at, @team.timezone)}. A team admin looks at it next.
     </span>
     <span :if={@certificate.status == :declined} class="hint block">
       {@certificate.decline_reason}

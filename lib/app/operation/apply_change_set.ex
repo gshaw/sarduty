@@ -59,7 +59,6 @@ defmodule App.Operation.ApplyChangeSet do
     with :ok <- check_team(team),
          d4h = D4H.build_context_from_team(team),
          {:ok, current} <- read_current(d4h, change_set) do
-      opts = Keyword.put(opts, :service_name, D4H.service_name(team))
       rows = apply_rows(d4h, change_set, current, now, opts)
       ChangeSet.mark_applied!(change_set, user, now)
       {:ok, rows}
@@ -173,7 +172,7 @@ defmodule App.Operation.ApplyChangeSet do
     end
   end
 
-  defp write(d4h, %ChangeSetRow{action: :award_qualification, new_value: new_value}, opts) do
+  defp write(d4h, %ChangeSetRow{action: :award_qualification, new_value: new_value}, _opts) do
     d4h
     |> D4H.award_qualification(
       new_value["d4h_qualification_id"],
@@ -181,7 +180,7 @@ defmodule App.Operation.ApplyChangeSet do
       new_value["starts_at"],
       new_value["ends_at"]
     )
-    |> record_result(& &1.d4h_award_id, opts[:service_name])
+    |> record_result(& &1.d4h_award_id)
   end
 
   defp write(d4h, %ChangeSetRow{action: :attach_award_document, new_value: new_value}, opts) do
@@ -194,7 +193,7 @@ defmodule App.Operation.ApplyChangeSet do
 
         d4h
         |> D4H.upload_document(new_value["d4h_award_id"], file)
-        |> record_result(& &1.d4h_document_id, opts[:service_name])
+        |> record_result(& &1.d4h_document_id)
     end
   end
 
@@ -208,7 +207,7 @@ defmodule App.Operation.ApplyChangeSet do
   def check(%ChangeSetRow{action: :update_attendance} = row, current, :member) do
     if Enum.any?(current, &(&1.d4h_attendance_id == row.d4h_record_id)),
       do: :ok,
-      else: {:skipped, "The attendance row is gone from D4H."}
+      else: {:skipped, "The attendance row was deleted."}
   end
 
   def check(row, current, _source), do: check(row, current)
@@ -219,25 +218,25 @@ defmodule App.Operation.ApplyChangeSet do
   """
   def check(%ChangeSetRow{} = row, :owned) do
     if ChangeSetRow.created_in_set?(row) and is_nil(row.new_value["d4h_activity_id"]),
-      do: {:failed, "The event was not added to D4H, so this was not sent."},
+      do: {:failed, "The event was not added, so this was not sent."},
       else: :ok
   end
 
   def check(%ChangeSetRow{action: :update_attendance} = row, current) do
     case Enum.find(current, &(&1.d4h_attendance_id == row.d4h_record_id)) do
       nil ->
-        {:skipped, "The attendance row is gone from D4H. Review again."}
+        {:skipped, "The attendance row was deleted. Review again."}
 
       info ->
         if info.status == row.old_value["status"],
           do: :ok,
-          else: {:skipped, "D4H changed this since the review. Review again."}
+          else: {:skipped, "This changed since you reviewed it. Review again."}
     end
   end
 
   def check(%ChangeSetRow{action: :create_attendance} = row, current) do
     if Enum.any?(current, &(&1.d4h_member_id == row.new_value["d4h_member_id"])),
-      do: {:skipped, "D4H has attendance for this member now. Review again."},
+      do: {:skipped, "This member has attendance now. Review again."},
       else: :ok
   end
 
@@ -248,14 +247,14 @@ defmodule App.Operation.ApplyChangeSet do
   # D4H would take a second usage of the same item and count it twice.
   def check(%ChangeSetRow{action: :create_equipment_usage} = row, current) do
     if Enum.any?(current, &(&1.d4h_equipment_id == row.new_value["d4h_equipment_id"])),
-      do: {:skipped, "D4H has this item on the activity now."},
+      do: {:skipped, "This item is on the activity already."},
       else: :ok
   end
 
   def check(%ChangeSetRow{action: :delete_equipment_usage} = row, current) do
     if Enum.any?(current, &(&1.d4h_equipment_usage_id == row.d4h_record_id)),
       do: :ok,
-      else: {:skipped, "D4H no longer has this item on the activity."}
+      else: {:skipped, "This item is off the activity already."}
   end
 
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
@@ -282,7 +281,7 @@ defmodule App.Operation.ApplyChangeSet do
   def check(%ChangeSetRow{action: :set_activity_tags} = row, {:tags, ids}) do
     if ids == row.old_value["tag_ids"],
       do: :ok,
-      else: {:skipped, "The tags changed in D4H since the page opened. Open it again."}
+      else: {:skipped, "The tags changed since the page opened. Open it again."}
   end
 
   # An equipment set's tag row was read from D4H as the set was planned, a moment before.
@@ -458,19 +457,16 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :delete_equipment_item} = row),
     do: d4h |> D4H.delete_equipment_item(row.d4h_record_id) |> record_result(& &1)
 
-  defp record_result(result, id, service_name \\ "SAR Duty Records")
-  defp record_result({:ok, record}, id, _service_name), do: {:applied, id.(record)}
-
-  defp record_result({:error, error}, _id, service_name),
-    do: {:failed, edit_failure_text(error, service_name)}
+  defp record_result({:ok, record}, id), do: {:applied, id.(record)}
+  defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}
 
   # Records refuses a write with a title that says what is wrong, so that is the message.
-  defp edit_failure_text(%D4H.Error{status: status, message: message}, _service_name)
+  defp edit_failure_text(%D4H.Error{status: status, message: message})
        when status in 400..499,
-       do: String.replace(message, ~r/^D4H API error \(\d+\): /, "")
+       do: String.replace(message, ~r/ \(\d+\)$/, "")
 
-  defp edit_failure_text(_error, service_name),
-    do: "#{service_name} did not answer. Try again in a few minutes."
+  defp edit_failure_text(_error),
+    do: "No answer came back. Try again in a few minutes."
 
   defp attendance_result({:ok, info}), do: {:applied, info.d4h_attendance_id}
   defp attendance_result({:error, error}), do: {:failed, attendance_failure_text(error)}
@@ -478,7 +474,7 @@ defmodule App.Operation.ApplyChangeSet do
   # D4H answers 400 or 404 when the activity or the attendance row is gone, so that
   # says so before D4H's own text.
   defp attendance_failure_text(%D4H.Error{status: status} = error) when status in [400, 404],
-    do: "The activity may have been deleted or changed in D4H. #{Exception.message(error)}"
+    do: "The activity may have been deleted or changed. #{Exception.message(error)}"
 
   defp attendance_failure_text(error), do: Exception.message(error)
 

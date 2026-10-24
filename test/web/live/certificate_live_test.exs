@@ -85,7 +85,7 @@ defmodule Web.CertificateLiveTest do
       |> render_submit()
       |> follow_redirect(ctx.conn)
 
-    assert render(lv) =~ "Accepted Standard First Aid for Sam Rivera. It is in D4H."
+    assert render(lv) =~ "Accepted Standard First Aid for Sam Rivera."
     assert %{status: :accepted} = Repo.reload!(ctx.certificate)
     assert %{d4h_document_id: 900} = award = MemberQualificationAward.get_by(d4h_award_id: 300)
 
@@ -180,7 +180,7 @@ defmodule Web.CertificateLiveTest do
     assert has_element?(
              lv,
              "#certificate-existing",
-             "from Oct 18, 2026 in D4H, with no certificate"
+             "from Oct 18, 2026, with no certificate"
            )
 
     assert has_element?(lv, "#certificate-accept", "Attach certificate")

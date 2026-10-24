@@ -103,7 +103,7 @@ defmodule App.Operation.AcceptCertificateTest do
   test "a failed upload keeps the file, and Send again uploads it alone", ctx do
     stub_d4h(422)
 
-    assert {:error, "The award is in D4H, but the certificate did not upload. Unsupported file"} =
+    assert {:error, "The award was sent, but the certificate did not upload. Unsupported file"} =
              accept(ctx)
 
     waiting = Repo.reload!(ctx.certificate)

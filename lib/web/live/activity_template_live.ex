@@ -3,7 +3,6 @@ defmodule Web.ActivityTemplateLive do
 
   import Web.ActivityEquipmentLive, only: [lines_table: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Template
@@ -28,7 +27,7 @@ defmodule Web.ActivityTemplateLive do
         socket
         |> assign(page_title: "Apply a template", activity: activity, used: used)
         |> assign(lines: [], tags: [], groups: [])
-        |> assign(templates: Template.get_all(team.id), service: D4H.service_name(team))
+        |> assign(templates: Template.get_all(team.id))
 
       {:ok, socket}
     end
@@ -99,7 +98,7 @@ defmodule Web.ActivityTemplateLive do
             <div :if={@groups != []} id="template-groups" class="mt-4">
               <h3 class="subheading">Invite</h3>
               <p class="hint mb-2">
-                SAR Duty invites each member of these groups who is not on the activity. They answer in {@service}.
+                SAR Duty invites each member of these groups who is not on the activity.
               </p>
               <.groups_to_invite id="template-groups-table" groups={@groups} />
             </div>

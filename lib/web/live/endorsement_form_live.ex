@@ -240,7 +240,7 @@ defmodule Web.EndorsementFormLive do
           <:col :let={row} label="Qualification">
             <span :if={row.title}>{row.title}</span>
             <span :if={!row.title} class="text-danger-text">
-              No longer in D4H ({row.d4h_id})
+              Deleted ({row.d4h_id})
             </span>
           </:col>
           <:col :let={row} label="" align="right">

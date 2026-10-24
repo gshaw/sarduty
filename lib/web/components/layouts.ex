@@ -113,7 +113,7 @@ defmodule Web.Layouts do
     <.banner kind={:warning} title={"Viewing as #{@member.name}"} id="view-as-banner" class="mb-6">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <p :if={!@team_admin?} class="mb-0">
-          This is what {@member.name} sees. Nothing you do here is saved or sent to D4H.
+          This is what {@member.name} sees. Nothing you do here is saved or sent.
         </p>
         <p :if={@team_admin?} class="mb-0">
           This page is yours as a team admin. Pages members see show what {@member.name} sees.

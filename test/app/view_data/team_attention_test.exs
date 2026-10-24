@@ -55,7 +55,7 @@ defmodule App.ViewData.TeamAttentionTest do
     assert [%{key: :chores_to_send, level: :warning} = item] =
              items(%{chores_to_send: 2}, @october)
 
-    assert item.title == "2 chore activities out of date in D4H"
+    assert item.title == "2 chore activities out of date"
   end
 
   test "members not at an activity name the team's time frame" do
@@ -83,7 +83,7 @@ defmodule App.ViewData.TeamAttentionTest do
     assert [item] = items(%{not_seen: %{days: 90, missing_group: true}}, @october)
     assert item.key == :watch_missing
     assert item.level == :warning
-    assert item.title == "The group you watch is no longer in D4H"
+    assert item.title == "The group you watch was deleted"
   end
 
   test "activities with no hours tag name the year" do

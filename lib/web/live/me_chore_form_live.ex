@@ -68,7 +68,7 @@ defmodule Web.MeChoreFormLive do
         options={Enum.map(@categories, &{&1.title, &1.id})}
       />
       <.input field={@form[:description]} label="What you did">
-        A team admin reads this, and so does everyone who opens the D4H event.
+        A team admin reads this, and so does everyone who opens its activity.
       </.input>
       <.form_actions>
         <.button id="chore-save" variant={:success}>

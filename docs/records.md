@@ -31,8 +31,10 @@ like a D4H key. Existing D4H teams need no change.
 - `D4H.service/1` says `:d4h` or `:records` for a team or a host, and `D4H.records?/1`
   is the short form. `D4H.service_name/1` and `D4H.key_name/1` give the words people
   read: "SAR Duty Records" and "Records access key".
-- A Records team sees no "Open D4H" links. Text that names where the records are, such as
-  the team home's refresh line, Needs attention, and team settings, names Records.
+- A Records team sees no "Open D4H" links. Text names the service only where the reader
+  must go there, such as the team home's refresh line and team settings, and takes the name
+  from the team: `@service`, set for every team page in `on_mount(:ensure_team_access)`.
+  Everywhere else the words are true on both services ([writing.md](writing.md), rule 16).
 - `D4H.records_host/0` is `records.sarduty.com`. In dev, `RECORDS_HOST` points it at a
   local copy.
 

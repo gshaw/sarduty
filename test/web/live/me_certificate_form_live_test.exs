@@ -65,7 +65,7 @@ defmodule Web.MeCertificateFormLiveTest do
     row = "#qualifications-list-certificate-#{certificate.id}"
     assert has_element?(lv, row, "Standard First Aid")
     assert has_element?(lv, row, "Waiting")
-    assert has_element?(lv, row, "A team admin adds it to D4H.")
+    assert has_element?(lv, row, "A team admin looks at it next.")
   end
 
   test "a certificate needs its file", ctx do

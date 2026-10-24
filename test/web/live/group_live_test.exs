@@ -85,7 +85,7 @@ defmodule Web.GroupLiveTest do
            )
 
     assert has_element?(lv, "#rule-group-#{gsar.id}", "Members must hold First Aid.")
-    assert has_element?(lv, "#rule-group-#{loa.id}", "LOA is a list kept by hand in D4H.")
+    assert has_element?(lv, "#rule-group-#{loa.id}", "LOA is a list kept by hand.")
     assert has_element?(lv, "#would-add-#{qualified.id}")
     assert has_element?(lv, "#would-add-#{trainee.id}")
     refute has_element?(lv, "#would-add-#{by_hand.id}")
@@ -209,7 +209,7 @@ defmodule Web.GroupLiveTest do
       |> Enum.filter(&(&1.d4h_group_id == ctx.group.d4h_group_id))
 
     assert lv |> element("#rule-#{rule.id} button") |> render() =~
-             "Without them, Rope Rescue Callout uses its list in D4H instead."
+             "Without them, Rope Rescue Callout uses this group&#39;s list instead."
   end
 
   test "the editor links each rule to its page, which adds and removes", ctx do

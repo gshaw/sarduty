@@ -3,7 +3,6 @@ defmodule Web.ReplyLinkLive do
 
   import Web.Components.Reply, only: [reply: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.Attendance
   alias Service.Format
   alias Web.Components.Reply
@@ -135,7 +134,7 @@ defmodule Web.ReplyLinkLive do
       />
     </div>
     <p :if={@activity.deleted_at} id="reply-link-deleted" class="mt-6">
-      This activity is deleted in {D4H.service_name(@team)}.
+      This activity is deleted.
     </p>
     <p
       :if={@invitation && !@activity.deleted_at && !Reply.open?(@invitation, @activity, @now)}

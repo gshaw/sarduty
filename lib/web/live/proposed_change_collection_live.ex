@@ -38,8 +38,8 @@ defmodule Web.ProposedChangeCollectionLive do
 
     <h1 class="title">Proposed changes</h1>
     <p class="lead">
-      An AI agent connected to SAR Duty can propose attendance changes. Nothing changes in D4H
-      until a team admin reviews them and sends them.
+      An AI agent connected to SAR Duty can propose attendance changes. Nothing changes until a
+      team admin reviews them and sends them.
     </p>
 
     <.stat_switch :if={@change_sets != []} id="proposed-switch" label="Proposed changes">
@@ -91,7 +91,7 @@ defmodule Web.ProposedChangeCollectionLive do
     do: [
       {"all", "All"},
       {"waiting", "Waiting for review"},
-      {"sent", "Sent to D4H"},
+      {"sent", "Sent"},
       {"discarded", "Discarded"}
     ]
 

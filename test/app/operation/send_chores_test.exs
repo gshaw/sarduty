@@ -308,7 +308,7 @@ defmodule App.Operation.SendChoresTest do
     assert %{
              d4h_activity_id: 900,
              needs_send: false,
-             send_note: "Left as a draft: D4H would not publish it."
+             send_note: "Left as a draft: it could not be published."
            } = event
   end
 
@@ -390,7 +390,7 @@ defmodule App.Operation.SendChoresTest do
     assert writes() == []
     [event] = Repo.all(ChoreEvent)
     assert %{d4h_activity_id: nil, needs_send: true} = event
-    assert event.send_note == "D4H has no tag named Primary Hours, this category's hours tag."
+    assert event.send_note == "No tag is named Primary Hours, this category's hours tag."
   end
 
   defp insert_sent_event(ctx, month, d4h_activity_id) do

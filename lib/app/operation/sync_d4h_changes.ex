@@ -452,7 +452,7 @@ defmodule App.Operation.SyncD4HChanges do
         [] ->
           Logger.info(
             "Attendance counts differ for team #{team.id} (#{local_total} here, " <>
-              "#{d4h_total} in D4H), but no year or month does"
+              "#{d4h_total} there), but no year or month does"
           )
       end
     end

@@ -143,7 +143,7 @@ defmodule Web.MemberGroupsLive do
       </:col>
     </.table>
     <p :if={@member.group_members == []} id="no-groups">
-      {@member.name} is not in any groups in {D4H.service_name(@member.team)}.
+      {@member.name} is not in any groups.
     </p>
     """
   end

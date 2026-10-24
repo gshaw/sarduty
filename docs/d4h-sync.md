@@ -202,7 +202,7 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   skips a kind D4H returns none of. If D4H lists one again, the mark clears.
 - Deleted activities are left out of the activity list, its years, the dashboard count,
   and letter hours. D4H already returns no attendance for them, so the attendance stage
-  deletes theirs. Their page says "Deleted in D4H" and offers no actions. Take attendance
+  deletes theirs. Their page says "Deleted" and offers no actions. Take attendance
   and the mileage report send you back to it, an attendance link on one takes no scans,
   and `SendAttendanceToD4H` refuses it.
 - Endorsements and group rules are never deleted by the sync. A rule for a deleted group
@@ -296,5 +296,5 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
   raises `D4H.Error` on a non-200 response or when the rows fall short of the total. A
   full attendance list took 35 s one page at a time and 15 s four at a time.
 - Other calls read the body without checking the status. A bad key there surfaces as a
-  `MatchError` that the worker turns into `D4H API error (status): …`. #33 covers them.
+  `MatchError` in the refresh's error. #33 covers them.
 - `Parse.datetime/1` expects D4H timestamps in UTC and raises on any other offset.
