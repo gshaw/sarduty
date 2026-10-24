@@ -20,6 +20,8 @@ defmodule Web.CertificateLiveTest do
       )
       |> Repo.update!()
 
+    # The page reads D4H's awards as it opens: none yet.
+    stub_d4h()
     member = member_fixture(team, %{name: "Sam Rivera"})
     qualification = qualification_fixture(team, %{title: "Standard First Aid"})
     certificate = certificate_fixture(member, qualification)
@@ -135,5 +137,63 @@ defmodule Web.CertificateLiveTest do
     hits = Web.Search.run(ctx.team, "sam", team_admin?: false, member?: true)
     refute Enum.any?(hits, &(&1.kind == :certificate))
     assert Repo.aggregate(Certificate, :count) == 1
+  end
+
+  # D4H with Sam's First Aid from the certificate's start, with `documents` on it.
+  defp stub_existing(ctx, documents) do
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+      if conn.method == "POST", do: send(test_pid, {:post, path})
+
+      case {conn.method, path} do
+        {"GET", "/member-qualification-awards"} ->
+          Req.Test.json(conn, %{
+            "results" => [
+              %{
+                "id" => 77,
+                "member" => %{"resourceType" => "Member", "id" => ctx.member.d4h_member_id},
+                "qualification" => %{"id" => ctx.qualification.d4h_qualification_id},
+                "startsAt" => "2026-10-18T07:00:00.000Z",
+                "endsAt" => "2029-10-18T07:00:00.000Z"
+              }
+            ],
+            "totalSize" => 1
+          })
+
+        {"GET", "/documents"} ->
+          Req.Test.json(conn, %{"results" => documents, "totalSize" => length(documents)})
+
+        {"POST", "/documents"} ->
+          Req.Test.json(conn, %{"id" => 901, "targetResource" => %{"id" => 77}})
+      end
+    end)
+  end
+
+  test "D4H has the award without a certificate: Attach certificate puts the file on it",
+       ctx do
+    stub_existing(ctx, [])
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    assert has_element?(lv, "#certificate-existing", "with no certificate")
+    assert has_element?(lv, "#certificate-accept", "Attach certificate")
+
+    {:ok, _lv, _html} =
+      lv |> form("#accept-form") |> render_submit() |> follow_redirect(ctx.conn)
+
+    assert_received {:post, "/documents"}
+    refute_received {:post, "/member-qualification-awards"}
+    assert %{status: :accepted, d4h_award_id: 77} = Repo.reload!(ctx.certificate)
+
+    assert %{d4h_document_id: 901, starts_at: ~U[2026-10-18 07:00:00Z]} =
+             MemberQualificationAward.get_by(d4h_award_id: 77)
+  end
+
+  test "D4H has the award with a certificate: the team admin declines this one", ctx do
+    stub_existing(ctx, [%{"id" => 5, "targetResource" => %{"id" => 77}}])
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    assert has_element?(lv, "#certificate-existing", "with a certificate. Decline this one.")
+    refute has_element?(lv, "#accept-form")
+    assert has_element?(lv, "#decline-form")
   end
 end

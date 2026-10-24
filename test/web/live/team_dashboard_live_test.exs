@@ -466,11 +466,35 @@ defmodule Web.TeamDashboardLiveTest do
       qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      form = ~p"/teams/#{team}/me/certificates/new?#{[qualification: first_aid.id]}"
 
       assert has_element?(
                lv,
-               ~s{#to-do-qualification-#{first_aid.id} a[href="/teams/#{team.subdomain}/me"]},
+               ~s{#to-do-qualification-#{first_aid.id} a[href="#{form}"]},
                "Your First Aid expires in 30 days"
+             )
+
+      assert has_element?(lv, "#to-do-qualification-#{first_aid.id}", "Add the new certificate.")
+
+      # A certificate for it waiting takes it off; declined, the certificate is the item.
+      certificate = certificate_fixture(member, first_aid)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-qualification-#{first_aid.id}")
+
+      certificate
+      |> Ecto.Changeset.change(status: :declined, decline_reason: "Blurry")
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#to-do-declined-certificates", "Your certificate was declined")
+
+      # With certificates off, it opens Your membership, as before.
+      team |> Ecto.Changeset.change(certificates_enabled: false) |> Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(
+               lv,
+               ~s{#to-do-qualification-#{first_aid.id} a[href="/teams/#{team.subdomain}/me"]}
              )
     end
   end

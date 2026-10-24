@@ -34,6 +34,11 @@ defmodule Web.MemberQualificationsLive do
         team.id |> Qualification.get_all() |> Enum.map(&{&1.title, &1.id})
       )
       |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
+      |> allow_upload(:certificate,
+        accept: ~w(image/* application/pdf),
+        max_entries: 1,
+        max_file_size: Service.CertificateFile.max_bytes()
+      )
 
     {:noreply, socket}
   end
@@ -50,12 +55,21 @@ defmodule Web.MemberQualificationsLive do
     %{current_team: team, current_user: user, member: member} = socket.assigns
     true = socket.assigns.records?
 
-    case AwardQualification.award(team, member, params, user, DateTime.utc_now()) do
-      :ok -> {:noreply, reload(socket, "Qualification awarded.")}
+    # A certificate (#493) is read once the form is right, so a mistake doesn't lose it,
+    # and checked before anything is awarded.
+    with {:ok, _values} <- AwardFormViewModel.validate(%AwardFormViewModel{}, params),
+         {:ok, certificate} <- certificate(socket),
+         :ok <-
+           AwardQualification.award(team, member, params, user, DateTime.utc_now(), certificate) do
+      {:noreply, reload(socket, "Qualification awarded.")}
+    else
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_award_form(socket, changeset)}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
     end
   end
+
+  def handle_event("cancel-certificate", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :certificate, ref)}
 
   def handle_event("remove-award", %{"id" => id}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
@@ -115,7 +129,12 @@ defmodule Web.MemberQualificationsLive do
       </aside>
       <main class="content-2/3">
         <.qualifications_content member={@member} awards={@awards} records?={@records?} />
-        <.award_form :if={@records?} form={@award_form} qualifications={@qualifications} />
+        <.award_form
+          :if={@records?}
+          form={@award_form}
+          qualifications={@qualifications}
+          upload={@uploads.certificate}
+        />
       </main>
     </div>
     """
@@ -191,6 +210,7 @@ defmodule Web.MemberQualificationsLive do
 
   attr :form, :map, required: true
   attr :qualifications, :list, required: true
+  attr :upload, :map, required: true
 
   defp award_form(assigns) do
     ~H"""
@@ -219,6 +239,24 @@ defmodule Web.MemberQualificationsLive do
           <.input field={@form[:starts_on]} type="date" label="Start" />
           <.input field={@form[:ends_on]} type="date" label="End (optional)" />
         </div>
+        <div id="award-certificate" class="mb-6">
+          <.label for={@upload.ref}>Certificate (optional)</.label>
+          <.hint>
+            A photo or a PDF, up to {Service.Format.file_size(Service.CertificateFile.max_bytes())}.
+          </.hint>
+          <.live_file_input upload={@upload} class="my-2" />
+          <.error :for={error <- upload_errors(@upload)}>{upload_error(error)}</.error>
+          <div :for={entry <- @upload.entries} id={"award-certificate-#{entry.ref}"} class="hint">
+            {entry.client_name}, {Service.Format.file_size(entry.client_size)} ·
+            <.a
+              href="#"
+              phx-click="cancel-certificate"
+              phx-value-ref={entry.ref}
+              aria-label={"Remove #{entry.client_name}"}
+            >Remove</.a>
+            <.error :for={error <- upload_errors(@upload, entry)}>{upload_error(error)}</.error>
+          </div>
+        </div>
         <.form_actions>
           <.button variant={:success}>Award qualification</.button>
         </.form_actions>
@@ -226,6 +264,23 @@ defmodule Web.MemberQualificationsLive do
     </section>
     """
   end
+
+  defp certificate(socket) do
+    case consume_uploaded_entries(socket, :certificate, fn %{path: path}, entry ->
+           {:ok, {File.read!(path), entry.client_name}}
+         end) do
+      [] -> {:ok, nil}
+      [{bytes, name}] -> Service.CertificateFile.prepare(bytes, name)
+    end
+  end
+
+  defp upload_error(:too_large),
+    do:
+      "That file is too large. Use one under #{Service.Format.file_size(Service.CertificateFile.max_bytes())}."
+
+  defp upload_error(:not_accepted), do: "Choose a photo or a PDF."
+  defp upload_error(:too_many_files), do: "Choose one file."
+  defp upload_error(_error), do: "That file did not upload. Try again."
 
   defp find_member(team, member_id),
     do: team |> Member.find!(member_id) |> Repo.preload(:team)

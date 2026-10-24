@@ -27,6 +27,9 @@ defmodule Web.TitledRecordFormLiveTest do
      }}
   end
 
+  defp reply("POST", "/documents", _body),
+    do: {200, %{"id" => 1_000_001, "targetResource" => %{"id" => 300}}}
+
   defp reply("POST", "/member-group-memberships", _body) do
     {200,
      %{
@@ -98,6 +101,28 @@ defmodule Web.TitledRecordFormLiveTest do
 
     path = "/member-qualification-awards/#{award.d4h_award_id}"
     assert_received {:records, "DELETE", ^path, nil}
+  end
+
+  test "an award takes a certificate, uploaded once the award is in (#493)",
+       %{conn: conn, team: team, member: member} do
+    stub()
+    qualification = qualification_fixture(team, %{d4h_qualification_id: 99})
+    {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/qualifications")
+
+    tab
+    |> file_input("#award-form", :certificate, [
+      %{name: "first-aid.pdf", content: "%PDF-1.7 certificate", type: "application/pdf"}
+    ])
+    |> render_upload("first-aid.pdf")
+
+    tab
+    |> form("#award-form", award: %{qualification_id: qualification.id, starts_on: "2026-05-01"})
+    |> render_submit()
+
+    assert_received {:records, "POST", "/member-qualification-awards", _award}
+    assert_received {:records, "POST", "/documents", {:multipart, body}}
+    assert body =~ ~s(name="targetResourceId"\r\n\r\n300)
+    assert body =~ "%PDF-1.7 certificate"
   end
 
   test "an award needs a qualification and a start, listed in the summary",
