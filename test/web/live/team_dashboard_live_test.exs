@@ -361,6 +361,7 @@ defmodule Web.TeamDashboardLiveTest do
 
       assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
       assert has_element?(lv, "#next-up-reply-state", "Signed up")
+      assert has_element?(lv, "#next-up-reply-calendar", "Add to calendar")
       assert has_element?(lv, "#next-up-hint", " · 2 signed up")
     end
 
@@ -378,6 +379,7 @@ defmodule Web.TeamDashboardLiveTest do
       assert has_element?(lv, "#coming-up-reply-#{asked.id}-no.btn-sm", "Can't make it")
       assert has_element?(lv, "#coming-up-reply-#{answered.id}-state", "Can't make it")
       assert has_element?(lv, "#coming-up-reply-#{answered.id}-change", "Change")
+      refute has_element?(lv, "#coming-up-reply-#{answered.id}-calendar")
       refute has_element?(lv, "#coming-up-#{not_invited.id} .reply")
       refute has_element?(lv, "#coming-up header", "reply")
     end

@@ -58,6 +58,7 @@ defmodule Web.Components.ReplyControl do
         state={Reply.state(@invitation, @changing?)}
         size={@size}
         target={@myself}
+        calendar_href={~p"/teams/#{@team}/activities/#{@activity.id}/calendar"}
       />
     </div>
     """

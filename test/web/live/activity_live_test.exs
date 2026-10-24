@@ -265,11 +265,18 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Signed up")
       refute has_element?(lv, "#activity-reply-yes")
 
+      assert has_element?(
+               lv,
+               ~s{#activity-reply-calendar[href="/teams/#{team.subdomain}/activities/#{activity.id}/calendar"]},
+               "Add to calendar"
+             )
+
       lv |> element("#activity-reply-change") |> render_click()
       lv |> element("#activity-reply-no") |> render_click()
 
       assert_received {:d4h_write, _id, %{"status" => "ABSENT"}}
       assert has_element?(lv, "#activity-reply-state", "Can't make it")
+      refute has_element?(lv, "#activity-reply-calendar")
       assert has_element?(lv, "#activity-panel-counts", "0 signed up · 2 can't make it")
     end
 
