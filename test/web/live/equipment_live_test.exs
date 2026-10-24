@@ -118,6 +118,51 @@ defmodule Web.EquipmentLiveTest do
     end
   end
 
+  test "the sidebar, its All link, and Equipment count a kit's contents alike", ctx do
+    sam = member_fixture(ctx.team, %{name: "Sam Rivera"})
+    kit = equipment_item_fixture(ctx.team, %{title: "First aid kit 6", member_id: sam.id})
+
+    pouch =
+      equipment_item_fixture(ctx.team, %{
+        title: "Pouch",
+        d4h_container_id: kit.d4h_equipment_id,
+        location_title: nil
+      })
+
+    equipment_item_fixture(ctx.team, %{
+      title: "Splint",
+      d4h_container_id: pouch.d4h_equipment_id,
+      location_title: nil
+    })
+
+    equipment_item_fixture(ctx.team, %{
+      title: "Old gauze",
+      status: "retired",
+      d4h_container_id: kit.d4h_equipment_id
+    })
+
+    for n <- 1..4,
+        do: equipment_item_fixture(ctx.team, %{title: "Radio #{n}", member_id: sam.id})
+
+    # Another team's item with the same container id isn't in Sam's kit.
+    equipment_item_fixture(team_fixture(), %{
+      title: "Stray",
+      d4h_container_id: kit.d4h_equipment_id
+    })
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members/#{sam.id}")
+    assert has_element?(lv, "#member-equipment-#{pouch.id} .hint", "In First aid kit 6")
+    path = ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}"
+    assert has_element?(lv, ~s{#member-equipment-all[href="#{path}"]}, "All 7 items")
+    refute has_element?(lv, "#member-equipment", "Stray")
+
+    {:ok, lv, _html} = live(ctx.conn, path)
+    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 7")
+    assert has_element?(lv, "#equipment-view-in-service", "7")
+    refute has_element?(lv, "td", "Stray")
+    refute has_element?(lv, "td", "Old gauze")
+  end
+
   test "a scanned barcode opens its item, and an unknown one says so", ctx do
     item = equipment_item_fixture(ctx.team, %{title: "Thermal camera 2", barcode: "SF0119"})
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")

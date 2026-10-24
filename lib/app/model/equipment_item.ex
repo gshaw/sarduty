@@ -63,16 +63,41 @@ defmodule App.Model.EquipmentItem do
     |> Repo.all()
   end
 
+  # As deep as App.ViewData.EquipmentList follows a chain of items. It stops a loop if
+  # D4H ever puts two items in each other.
+  @max_depth 10
+
   @doc """
-  The items a member holds that aren't retired, by title: D4H's location for each is the
-  member. Scoped by the member's team as well as their id.
+  The items a member holds that aren't retired, by title (#490): those D4H locates with
+  the member, and whatever sits inside them, down to 10 levels. One recursive query,
+  scoped by the team at every step. The member page, Your membership, and Equipment's
+  member place all read this, so they always agree.
   """
-  def held_by(%Member{} = member) do
+  def held_by(%Team{} = team, %Member{} = member) do
+    # cspell:ignore ctes -- Ecto's recursive_ctes/2, for SQLite's WITH RECURSIVE.
     EquipmentItem
-    |> where([i], i.team_id == ^member.team_id and i.member_id == ^member.id)
-    |> where([i], i.status != "retired")
+    |> recursive_ctes(true)
+    |> with_cte("held", as: ^union(held_directly(team, member), ^held_inside(team)))
+    |> where([i], i.id in subquery(from h in "held", select: h.id))
+    |> where([i], i.team_id == ^team.id and i.status != "retired")
     |> order_by([i], asc: i.title, asc: i.id)
     |> Repo.all()
+  end
+
+  # The member's own items, at depth 0.
+  defp held_directly(team, member) do
+    from i in EquipmentItem,
+      where: i.team_id == ^team.id and i.member_id == ^member.id,
+      select: %{id: i.id, d4h_equipment_id: i.d4h_equipment_id, depth: fragment("0")}
+  end
+
+  # The team's items inside one already found, one level deeper.
+  defp held_inside(team) do
+    from i in EquipmentItem,
+      join: h in "held",
+      on: i.d4h_container_id == h.d4h_equipment_id,
+      where: i.team_id == ^team.id and h.depth < @max_depth,
+      select: %{id: i.id, d4h_equipment_id: i.d4h_equipment_id, depth: h.depth + 1}
   end
 
   @doc "Items a person can add to an activity or a template: any but retired and lost ones."
