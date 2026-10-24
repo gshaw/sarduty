@@ -9,6 +9,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.AttendanceScan
   alias App.Model.Certificate
   alias App.Model.ChangeSet
   alias App.Model.Chore
@@ -69,6 +70,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       certificate_count:
         if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0),
       chores_to_send: chores_to_send(team),
+      attendance_to_send: attendance_to_send(team, now),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)
     }
@@ -76,6 +78,43 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   defp chores_to_send(team),
     do: if(Team.chores?(team), do: ChoreEvent.count_to_send(team.id), else: 0)
+
+  @attendance_to_send_days 30
+
+  @doc """
+  Activities with attendance a team admin hasn't sent (#475): not deleted, finished in the
+  last #{@attendance_to_send_days} days, with a scan newer than their latest send to D4H, or
+  never sent. Members take attendance on their own, so nothing else tells a team admin
+  it's there. The limit keeps a scan nobody means to send from waiting forever. Oldest
+  first, each `%{id:, title:, started_at:, scan_count:}`.
+  """
+  def attendance_to_send(%Team{} = team, now) do
+    now = DateTime.truncate(now, :second)
+    since = DateTime.add(now, -@attendance_to_send_days, :day)
+
+    last_sends =
+      ChangeSet
+      |> where([s], s.team_id == ^team.id and s.source == :door)
+      |> group_by([s], s.activity_id)
+      |> select([s], %{activity_id: s.activity_id, sent_at: max(s.inserted_at)})
+
+    Activity
+    |> where([a], a.team_id == ^team.id)
+    |> Activity.not_deleted()
+    |> where([a], a.finished_at >= ^since and a.finished_at <= ^now)
+    |> join(:inner, [a], s in AttendanceScan, on: s.activity_id == a.id and s.team_id == ^team.id)
+    |> join(:left, [a], l in subquery(last_sends), on: l.activity_id == a.id)
+    |> where([a, s, l], is_nil(l.sent_at) or s.inserted_at > l.sent_at)
+    |> group_by([a], a.id)
+    |> order_by([a], asc: a.started_at, asc: a.id)
+    |> select([a, s], %{
+      id: a.id,
+      title: a.title,
+      started_at: a.started_at,
+      scan_count: count(s.id)
+    })
+    |> Repo.all()
+  end
 
   @doc """
   Splits activities into NextUp and Coming up. NextUp is the first one starting within

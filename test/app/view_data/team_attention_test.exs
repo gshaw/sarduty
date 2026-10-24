@@ -24,6 +24,7 @@ defmodule App.ViewData.TeamAttentionTest do
         chore_count: 0,
         certificate_count: 0,
         chores_to_send: 0,
+        attendance_to_send: [],
         untagged: [],
         letters: nil
       },
@@ -56,6 +57,33 @@ defmodule App.ViewData.TeamAttentionTest do
              items(%{chores_to_send: 2}, @october)
 
     assert item.title == "2 chore activities out of date"
+  end
+
+  describe "attendance to send (#475)" do
+    @training %{id: 7, title: "Training night", started_at: ~U[2026-10-01 02:00:00Z]}
+    @rope %{id: 8, title: "Rope practice", started_at: ~U[2026-10-03 02:00:00Z]}
+
+    test "one activity is named in the title and opens" do
+      item = TeamAttention.attendance_to_send_item([@training], :d4h)
+
+      assert %{key: :attendance_to_send, level: :info, activity_id: 7} = item
+      assert item.title == "Attendance to send: Training night"
+      assert item.detail == "Review it, then send it to D4H."
+    end
+
+    test "several are counted, and the oldest is named and opens" do
+      item = TeamAttention.attendance_to_send_item([@training, @rope], :records)
+
+      assert item.title == "Attendance to send for 2 activities"
+      assert item.detail == "The oldest is Training night."
+      assert item.activity_id == 7
+    end
+
+    test "none means no item" do
+      assert TeamAttention.attendance_to_send_item([], :d4h) == nil
+      refute :attendance_to_send in keys(items(%{}, @october))
+      assert :attendance_to_send in keys(items(%{attendance_to_send: [@rope]}, @october))
+    end
   end
 
   test "members not at an activity name the team's time frame" do

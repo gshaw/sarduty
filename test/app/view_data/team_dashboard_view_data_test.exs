@@ -1,6 +1,10 @@
 defmodule App.ViewData.TeamDashboardViewDataTest do
-  use ExUnit.Case, async: true
+  use App.DataCase, async: true
 
+  import App.DataFixtures
+
+  alias App.Model.AttendanceScan
+  alias App.Model.ChangeSet
   alias App.ViewData.TeamDashboardViewData
 
   @now ~U[2026-10-06 16:00:00Z]
@@ -45,5 +49,100 @@ defmodule App.ViewData.TeamDashboardViewDataTest do
 
     {nil, coming_up} = TeamDashboardViewData.agenda([activity(15, 15 * 24)], @now)
     assert coming_up == []
+  end
+
+  describe "attendance_to_send/2 (#475)" do
+    defp scan!(activity, member, at) do
+      inserted_at = %{at | microsecond: {0, 6}}
+
+      AttendanceScan.insert!(%AttendanceScan{
+        team_id: activity.team_id,
+        activity_id: activity.id,
+        member_id: member.id,
+        kind: "arrived",
+        method: "name",
+        scanned_at: inserted_at,
+        inserted_at: inserted_at,
+        updated_at: inserted_at
+      })
+    end
+
+    defp send!(activity, at) do
+      inserted_at = %{at | microsecond: {0, 6}}
+
+      ChangeSet.propose!(
+        %ChangeSet{
+          team_id: activity.team_id,
+          source: :door,
+          activity_id: activity.id,
+          inserted_at: inserted_at,
+          updated_at: inserted_at
+        },
+        []
+      )
+    end
+
+    defp finished(team, days_ago) do
+      finished_at = DateTime.add(@now, -days_ago, :day)
+
+      activity_fixture(team, %{
+        started_at: DateTime.add(finished_at, -2, :hour),
+        finished_at: finished_at
+      })
+    end
+
+    test "lists finished activities with scans nobody sent, oldest first" do
+      team = team_fixture()
+      member = member_fixture(team)
+      older = finished(team, 5)
+      newer = finished(team, 1)
+      _no_scans = finished(team, 2)
+      too_old = finished(team, 31)
+
+      running =
+        activity_fixture(team, %{
+          started_at: DateTime.add(@now, -1, :hour),
+          finished_at: DateTime.add(@now, 1, :hour)
+        })
+
+      other_team = finished(team_fixture(), 1)
+
+      for activity <- [older, newer, newer, too_old, running, other_team],
+          do: scan!(activity, member, DateTime.add(activity.finished_at, -1, :hour))
+
+      assert [
+               %{id: older_id, scan_count: 1},
+               %{id: newer_id, title: _title, started_at: _started_at, scan_count: 2}
+             ] = TeamDashboardViewData.attendance_to_send(team, @now)
+
+      assert {older_id, newer_id} == {older.id, newer.id}
+    end
+
+    test "a send clears it, and a later scan brings it back" do
+      team = team_fixture()
+      member = member_fixture(team)
+      activity = finished(team, 1)
+      scan!(activity, member, DateTime.add(@now, -26, :hour))
+      send!(activity, DateTime.add(@now, -25, :hour))
+
+      assert TeamDashboardViewData.attendance_to_send(team, @now) == []
+
+      scan!(activity, member, DateTime.add(@now, -24, :hour))
+      assert [%{scan_count: 1}] = TeamDashboardViewData.attendance_to_send(team, @now)
+    end
+
+    test "a deleted activity is left out" do
+      team = team_fixture()
+
+      activity =
+        team
+        |> finished(1)
+        |> Ecto.Changeset.change(deleted_at: ~U[2026-10-06 00:00:00Z])
+        |> App.Repo.update!()
+
+      scan!(activity, member_fixture(team), DateTime.add(@now, -26, :hour))
+
+      assert TeamDashboardViewData.attendance_to_send(team, @now) == []
+    end
   end
 end
