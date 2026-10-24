@@ -94,8 +94,12 @@ D4H can put an item's location at a member, and the copy keeps it as
   would conflict with Place.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.
-- Still to decide, waiting on Andrew: a badge for a retired member who still holds
-  items, a With retired members place, and a Needs attention line on the team home.
+- **D4H won't retire a member who holds items** (2026-10-23): "Before a member is
+  retired, all their issued equipment must be returned to the team's inventory." So the
+  badge for a retired member with items, a With retired members place, and a Needs
+  attention line on the team home were dropped (#494, closed). The member's Equipment tab
+  is the list to work from before retiring them. Whether SAR Duty needs a standing for
+  the weeks between leaving and retiring is open on #490.
 
 ## Adding equipment to an activity
 
