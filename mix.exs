@@ -51,7 +51,6 @@ defmodule App.MixProject do
       {:jason, "~> 1.2"},
       {:oban, "~> 2.19"},
       {:lazy_html, ">= 0.0.0", only: :test},
-      # cspell:ignore mdex -- the Hex package name of MDEx, the Markdown renderer
       {:mdex, "~> 0.13"},
       {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},

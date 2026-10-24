@@ -18,6 +18,14 @@ fly deploy
 From `main`, after CI is green. The [Dockerfile](../Dockerfile) builds a release;
 [rel/overlays/bin/server](../rel/overlays/bin/server) starts it.
 
+**Nothing in the build downloads through GitHub's release redirect with Erlang's
+`:httpc`.** Since OTP 29 it refuses that redirect's 10 KB of headers, so a build that
+compiles dependencies from scratch failed (#497). exqlite builds from the SQLite source
+it ships, vix builds against Debian's libvips, and mdex downloads from its own Cloudflare
+mirror (`config/config.exs`). A new dependency that downloads a precompiled binary needs
+the same check: `fly deploy --build-only` after a change to `mix.lock` or
+`config/config.exs` rebuilds everything.
+
 **Migrations run at boot**, not as a release command: `App.Application.start/2` calls
 `App.Release.migrate/0` before anything else. A migration that fails keeps the app from
 starting, so test migrations against a copy of production data when they touch existing

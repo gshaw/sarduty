@@ -15,6 +15,7 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - mdex # the Hex package name of MDEx, the Markdown renderer, in mix.exs and config.exs
   - Exqlite # the SQLite driver Ecto uses; its error struct is matched in App.Repo.SlowLog and its test
   - PSLV # BC's provincial SAR volunteer registration, a real qualification in group rule tests
   - GSTL # Ground Search Team Leader, a real BC qualification in group rule tests

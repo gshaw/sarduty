@@ -1,4 +1,4 @@
-# cspell:ignore rebar tini trixie
+# cspell:ignore rebar tini trixie libvips
 
 # Find eligible builder and runner images on Docker Hub. We use Ubuntu/Debian
 # instead of Alpine to avoid DNS resolution issues in production.
@@ -23,8 +23,9 @@ ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
+# libvips-dev: vix builds against Debian's libvips rather than downloading its own (#497)
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential git \
+  && apt-get install -y --no-install-recommends build-essential git libvips-dev pkg-config \
   && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
@@ -36,6 +37,7 @@ RUN mix local.hex --force \
 
 # set build ENV
 ENV MIX_ENV="prod"
+ENV VIX_COMPILATION_MODE="PLATFORM_PROVIDED_LIBVIPS"
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
@@ -75,7 +77,7 @@ RUN mix release
 FROM ${RUNNER_IMAGE} AS final
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates wget \
+  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates wget libvips42t64 \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Litestream
