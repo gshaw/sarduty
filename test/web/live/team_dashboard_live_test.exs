@@ -5,6 +5,7 @@ defmodule Web.TeamDashboardLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AttendanceStub
+  alias App.Model.AttendanceScan
   alias App.Model.Team
   alias App.Repo
 
@@ -22,7 +23,7 @@ defmodule Web.TeamDashboardLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     activity = activity_fixture(team, at(-24, %{title: "Training night"}))
 
-    App.Model.AttendanceScan.insert!(%App.Model.AttendanceScan{
+    AttendanceScan.insert!(%AttendanceScan{
       team_id: team.id,
       activity_id: activity.id,
       member_id: member_fixture(team).id,
