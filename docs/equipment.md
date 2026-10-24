@@ -75,7 +75,9 @@ D4H can put an item's location at a member, and the copy keeps it as
   member who holds something, by name. It is a combobox, since a team has
   dozens of holders. The URL takes the member's local id, `?place=member-12`, never the
   name, since two members can share one. The section heading names the member ("Sam
-  Rivera · 12") and the table drops Where. The browse page's Place table keeps one With
+  Rivera · 12"), so Where leaves the name out and says only what an item is inside,
+  "First aid kit 6 › Splint pouch", as it does in a D4H location. The column goes when
+  nothing in the list is inside another item. The browse page's Place table keeps one With
   members row, not one per member. There is no Member filter: it would conflict with
   Place.
 - **The member page sidebar**, on every member tab, lists up to 5 items the member holds,

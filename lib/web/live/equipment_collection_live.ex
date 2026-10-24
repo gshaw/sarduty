@@ -58,6 +58,7 @@ defmodule Web.EquipmentCollectionLive do
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
         member_place?: EquipmentList.member_id(place) != nil,
+        where?: where_column?(place, rows),
         groups: groups(rows, place, holder),
         form:
           to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
@@ -223,8 +224,8 @@ defmodule Web.EquipmentCollectionLive do
           <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
           <.status_badge item={row.item} />
         </:col>
-        <:col :let={row} :if={!@member_place?} label="Where">
-          {where(row)}
+        <:col :let={row} :if={@where?} label="Where">
+          {if @member_place?, do: row.inside, else: where(row)}
         </:col>
         <:col :let={row} label="Category">{row.item.kind}</:col>
         <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
@@ -268,6 +269,11 @@ defmodule Web.EquipmentCollectionLive do
     </.table>
     """
   end
+
+  # A member place's heading names the member, so Where only says what an item is inside,
+  # and goes when nothing is inside another item.
+  defp where_column?(place, rows),
+    do: EquipmentList.member_id(place) == nil or Enum.any?(rows, &(&1.inside != ""))
 
   defp where(%{holder: nil, inside: inside}), do: inside
   defp where(%{holder: holder, inside: ""}), do: holder
