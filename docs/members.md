@@ -184,8 +184,12 @@ while they're away, and "Ground searcher · Joined March 2019 · Last attended S
 - **Sidebar**, sections split by space, no boxes (`/styles/card`): the ID card, when the
   team has ID cards on, then the latest tax credit letter to download, with its hours on
   the year page so they aren't mistaken for the last 12 months'; then contact details,
-  then every milestone, newest first. On a phone the ID card and letter come first, then
-  the main column, then contact details and milestones.
+  the items they hold, and every milestone, newest first. On a phone the ID card and
+  letter come first, then the main column, then contact details, equipment, and
+  milestones.
+- **Equipment**: every item they hold that isn't retired, by title, with its category
+  and barcode (#490), so they know what to bring back. No cap and no links: Equipment is
+  for team admins. Shown only when they hold something.
 - **Contact details** are the mobile number, address, and emergency contact, from the
   copy, so the page never reads D4H (#423).
 - Each part says why it is empty for a new member.
@@ -197,6 +201,9 @@ while they're away, and "Ground searcher · Joined March 2019 · Last attended S
   Years leave out the days away: teams reopen a rejoining member's D4H record, and a team
   admin adds the gap as an away period. Hours count every attended activity, not only
   tagged ones. A plain dated list: no badges, graphics, or levels (decided 2026-10-20).
+- **Team admins see what members hold** (#490). The member sidebar on every member tab
+  lists up to 5 of their items and links to the rest on Equipment: see
+  [equipment.md](equipment.md#items-members-hold).
 - **Team admins see milestones too** (2026-10-23). The member sidebar on every member
   tab shows the latest and links to the team's Milestones page,
   `/teams/:subdomain/milestones`, filtered to the member over all time. That page lists

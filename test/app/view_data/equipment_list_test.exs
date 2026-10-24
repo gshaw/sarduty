@@ -101,6 +101,38 @@ defmodule App.ViewData.EquipmentListTest do
     assert ids.("No location", "No category") == [7]
   end
 
+  test "a member is a place: Place lists them after the places, by their local id (#490)" do
+    rows =
+      EquipmentList.rows([
+        item(9, "Radio 22", member_id: 2, member: %Member{name: "Ty Wong"}) | items()
+      ])
+
+    assert EquipmentList.place_options(rows) == [
+             {"Yard", "Yard"},
+             {"With members", "With members"},
+             {"No location", "No location"},
+             {"Sam Ortiz", "member-9"},
+             {"Ty Wong", "member-2"}
+           ]
+
+    assert rows |> EquipmentList.narrow("member-9", "") |> Enum.map(& &1.item.id) == [5]
+
+    assert [{"Sam Ortiz", [%{item: %{id: 5}}]}] =
+             rows |> EquipmentList.narrow("member-9", "") |> EquipmentList.group("member-9")
+
+    assert EquipmentList.group(rows, "With members") == EquipmentList.group(rows)
+  end
+
+  test "a member who holds nothing, or a bad member id, keeps no rows" do
+    rows = EquipmentList.rows(items())
+
+    for place <- ["member-3", "member-9x", "member-"] do
+      narrowed = EquipmentList.narrow(rows, place, "")
+      assert narrowed == []
+      assert EquipmentList.group(narrowed, place) == []
+    end
+  end
+
   test "an item can't nest in itself forever" do
     loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
     assert [_a, _b] = EquipmentList.rows(loop)

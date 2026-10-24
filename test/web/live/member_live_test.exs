@@ -163,6 +163,61 @@ defmodule Web.MemberLiveTest do
     end
   end
 
+  test "the sidebar lists 5 items the member holds by title, then all of them (#490)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    items =
+      for n <- 1..6,
+          do:
+            equipment_item_fixture(team, %{
+              title: "Radio #{n}",
+              member_id: member.id,
+              barcode: "R-#{n}"
+            })
+
+    equipment_item_fixture(team, %{title: "Radio 0", member_id: member.id, status: "retired"})
+    other = member_fixture(team)
+    equipment_item_fixture(team, %{title: "Their radio", member_id: other.id})
+    # An id from another team never reaches this team's member.
+    equipment_item_fixture(team_fixture(), %{title: "Stray radio", member_id: member.id})
+    conn = log_in_user(conn, user)
+
+    for tab <- ["", "/history"] do
+      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{tab}")
+
+      [first | _rest] = items
+      sixth = List.last(items)
+      assert has_element?(lv, "#member-equipment-#{first.id} a", "Radio 1")
+      assert has_element?(lv, "#member-equipment-#{first.id} .hint", "Radio · R-1")
+      refute has_element?(lv, "#member-equipment-#{sixth.id}")
+      refute has_element?(lv, "#member-equipment", "Radio 0")
+      refute has_element?(lv, "#member-equipment", "Their radio")
+      refute has_element?(lv, "#member-equipment", "Stray radio")
+
+      assert has_element?(
+               lv,
+               ~s{#member-equipment-all[href="/teams/#{team.subdomain}/equipment?place=member-#{member.id}"]},
+               "All 6 items"
+             )
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+    assert has_element?(lv, "#member-equipment", "Their radio")
+    refute has_element?(lv, "#member-equipment-all")
+  end
+
+  test "a member who holds nothing has no Equipment in the sidebar", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    refute has_element?(lv, "#member-equipment")
+    refute has_element?(lv, "dt", "Equipment")
+  end
+
   test "the Tag filter keeps the activities with the tag", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     tag_fixture(team, "Swiftwater")

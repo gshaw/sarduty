@@ -63,6 +63,18 @@ defmodule App.Model.EquipmentItem do
     |> Repo.all()
   end
 
+  @doc """
+  The items a member holds that aren't retired, by title: D4H's location for each is the
+  member. Scoped by the member's team as well as their id.
+  """
+  def held_by(%Member{} = member) do
+    EquipmentItem
+    |> where([i], i.team_id == ^member.team_id and i.member_id == ^member.id)
+    |> where([i], i.status != "retired")
+    |> order_by([i], asc: i.title, asc: i.id)
+    |> Repo.all()
+  end
+
   @doc "Items a person can add to an activity or a template: any but retired and lost ones."
   def in_service?(%EquipmentItem{status: status}), do: status not in ["retired", "lost"]
 

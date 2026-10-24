@@ -13,7 +13,8 @@ defmodule Web.EquipmentCollectionLive do
   # The team's equipment, copied from D4H or SAR Duty Records (#271). It opens on the
   # places and categories, with counts; picking one, searching, or another filter lists
   # items, grouped by where they are. A Records team adds items here. On a phone,
-  # scanning a barcode opens its item.
+  # scanning a barcode opens its item. Place takes a member too, `?place=member-<id>`, from
+  # the member page's "All 12 items" (#490).
   def mount(_params, _session, socket) do
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
     in_service = EquipmentList.filter(rows, "in-service", "", DateTime.utc_now())
@@ -24,8 +25,10 @@ defmodule Web.EquipmentCollectionLive do
         rows: rows,
         places: EquipmentList.places(in_service),
         categories: EquipmentList.categories(in_service),
-        place_options: options(EquipmentList.places(rows)),
-        category_options: options(EquipmentList.categories(rows)),
+        place_options: EquipmentList.place_options(rows),
+        category_options: [
+          {"All", ""} | rows |> EquipmentList.categories() |> Enum.map(&elem(&1, 0))
+        ],
         scan_message: nil,
         scan_failed: false
       )
@@ -55,7 +58,8 @@ defmodule Web.EquipmentCollectionLive do
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
-        groups: EquipmentList.group(rows),
+        member_place?: EquipmentList.member_id(place) != nil,
+        groups: EquipmentList.group(rows, place),
         form:
           to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
             as: "form"
@@ -93,8 +97,6 @@ defmodule Web.EquipmentCollectionLive do
     do: {:noreply, assign(socket, scan_failed: true)}
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
-
-  defp options(counts), do: [{"All", ""} | Enum.map(counts, &elem(&1, 0))]
 
   # The page's path with some filters changed, for the filter bar's chips.
   defp path_fn(team, form) do
@@ -146,7 +148,13 @@ defmodule Web.EquipmentCollectionLive do
       hidden={[@form[:show]]}
     >
       <:search field={@form[:q]} placeholder="Name, barcode, or serial" />
-      <:filter field={@form[:place]} label="Place" options={@place_options} default="" />
+      <:filter
+        field={@form[:place]}
+        label="Place"
+        type="combobox"
+        options={@place_options}
+        default=""
+      />
       <:filter field={@form[:category]} label="Category" options={@category_options} default="" />
     </.filter_bar>
 
@@ -190,7 +198,7 @@ defmodule Web.EquipmentCollectionLive do
           <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
           <.status_badge item={row.item} />
         </:col>
-        <:col :let={row} label="Where">
+        <:col :let={row} :if={!@member_place?} label="Where">
           {where(row)}
         </:col>
         <:col :let={row} label="Category">{row.item.kind}</:col>

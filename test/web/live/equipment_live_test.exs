@@ -73,6 +73,51 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#item-#{ctx.radio.id}")
   end
 
+  test "Place takes a member: their items under their name, with no Where (#490)", ctx do
+    sam = member_fixture(ctx.team, %{name: "Sam Rivera"})
+    gps = equipment_item_fixture(ctx.team, %{title: "GPS 5", member_id: sam.id})
+    equipment_item_fixture(ctx.team, %{title: "Pager 31", member_id: sam.id})
+    other = member_fixture(ctx.team, %{name: "Ty Wong"})
+    equipment_item_fixture(ctx.team, %{title: "Radio 22", member_id: other.id})
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}")
+
+    assert has_element?(lv, ~s{#form_place-select option[value="member-#{sam.id}"]}, "Sam Rivera")
+    assert has_element?(lv, ~s{#form_place-select option[value="With members"]})
+    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 2")
+    assert has_element?(lv, "#place-sam-rivera #item-#{gps.id}", "GPS 5")
+    refute has_element?(lv, "#place-sam-rivera th", "Where")
+    refute has_element?(lv, "#place-with-members")
+    refute has_element?(lv, "td", "Radio 22")
+  end
+
+  test "the browse page keeps one With members row", ctx do
+    for name <- ["Sam Rivera", "Ty Wong"] do
+      member = member_fixture(ctx.team, %{name: name})
+      equipment_item_fixture(ctx.team, %{member_id: member.id, location_title: nil})
+    end
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
+
+    assert has_element?(lv, "#equipment-places-with-members", "2")
+    refute has_element?(lv, "#equipment-places tbody", "Sam Rivera")
+  end
+
+  test "a member of another team, or one who holds nothing, is an unknown place", ctx do
+    other_team = team_fixture()
+    stranger = member_fixture(other_team)
+    equipment_item_fixture(other_team, %{title: "Their radio", member_id: stranger.id})
+    idle = member_fixture(ctx.team)
+
+    for member <- [stranger, idle] do
+      {:ok, lv, _html} =
+        live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=member-#{member.id}")
+
+      assert has_element?(lv, "#no-matching-equipment")
+      refute has_element?(lv, ~s{#form_place-select option[value="member-#{member.id}"]})
+    end
+  end
+
   test "a scanned barcode opens its item, and an unknown one says so", ctx do
     item = equipment_item_fixture(ctx.team, %{title: "Thermal camera 2", barcode: "SF0119"})
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
