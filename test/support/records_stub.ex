@@ -30,9 +30,10 @@ defmodule App.RecordsStub do
     conn |> Plug.Conn.put_status(status) |> Req.Test.json(response)
   end
 
-  # A photo arrives as its bytes, anything else as JSON.
+  # A photo arrives as its bytes, a certificate as a multipart form, anything else as JSON.
   defp decode("", _content_type), do: nil
   defp decode(body, ["application/octet-stream" | _]), do: {:bytes, body}
+  defp decode(body, ["multipart/form-data" <> _boundary | _]), do: {:multipart, body}
   defp decode(body, _content_type), do: Jason.decode!(body)
 
   @doc "A member as Records answers with one."

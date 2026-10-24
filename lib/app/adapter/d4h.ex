@@ -245,6 +245,16 @@ defmodule App.Adapter.D4H do
     |> Enum.concat()
   end
 
+  @doc "The documents on one award now (#493): whether D4H has its certificate."
+  def fetch_award_documents(context, d4h_award_id) do
+    params = [{:target_resource_id, d4h_award_id} | @award_documents]
+
+    context
+    |> reduce_pages("/documents", &D4H.Document.build/1, [], &[&1 | &2], params)
+    |> Enum.reverse()
+    |> Enum.concat()
+  end
+
   @doc "The params that pick out award documents, for the sync's list head."
   def award_documents_params, do: @award_documents
 

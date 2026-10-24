@@ -9,6 +9,7 @@ defmodule Web.CertificateLive do
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Operation.AcceptCertificate
+  alias App.Operation.FindCertificateAward
   alias App.Operation.SaveCertificate
   alias App.Repo
   alias Service.Format
@@ -17,7 +18,8 @@ defmodule Web.CertificateLive do
   # One certificate a member sent (#493), /teams/:subdomain/certificates/:id: the file
   # beside its dates. A team admin can change the qualification and dates, then accept it,
   # which adds the award to D4H with the file, or decline it with a reason the member
-  # sees.
+  # sees. When D4H already has the award, read as the page opens, Attach certificate puts
+  # the file on it instead.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.certificates?(team), do: raise(Web.Status.NotFound)
@@ -38,8 +40,22 @@ defmodule Web.CertificateLive do
     |> assign(page_title: "#{CertificateText.title(certificate)}, #{certificate.member.name}")
     |> assign(options: options(socket.assigns.qualifications, certificate))
     |> assign(accepted_award: accepted_award(certificate))
+    |> assign(existing: existing(socket, certificate))
     |> assign_form(Certificate.build_changeset(certificate, %{}, []))
   end
+
+  # D4H's award of the same qualification from the same day, read once the page is live.
+  # A read that fails shows nothing: accepting reads D4H again before it writes.
+  defp existing(socket, %Certificate{status: :waiting} = certificate) do
+    with true <- connected?(socket) and not Certificate.dates_locked?(certificate),
+         {:ok, award} <- FindCertificateAward.call(socket.assigns.current_team, certificate) do
+      award
+    else
+      _none -> nil
+    end
+  end
+
+  defp existing(_socket, _certificate), do: nil
 
   defp options(qualifications, certificate) do
     own_ids =
@@ -84,6 +100,23 @@ defmodule Web.CertificateLive do
       <p :if={error = upload_error(@certificate)} class="hint">{error}</p>
     </.banner>
 
+    <.banner
+      :if={@existing}
+      id="certificate-existing"
+      kind={:warning}
+      title={"#{@service} already has this award"}
+    >
+      <p>
+        {first_name(@certificate.member.name)} holds {CertificateText.title(@certificate)} from {Format.date_short(
+          @existing.starts_at,
+          @current_team.timezone
+        )} in {@service}, {if @existing.certificate?,
+          do: "with a certificate. Decline this one.",
+          else:
+            "with no certificate. Attach certificate puts this file on that award and adds no second one."}
+      </p>
+    </.banner>
+
     <div class="content-wrapper">
       <div class="content-2/3">
         <.certificate_file
@@ -122,27 +155,29 @@ defmodule Web.CertificateLive do
         </dl>
 
         <.form
-          :if={@certificate.status == :waiting}
+          :if={@certificate.status == :waiting and !(@existing && @existing.certificate?)}
           for={@form}
           id="accept-form"
           phx-submit="accept"
         >
           <.error_summary form={@form} />
-          <%= if Certificate.dates_locked?(@certificate) do %>
-            <p class="hint">{CertificateText.dates(@certificate)}</p>
-          <% else %>
-            <.input
-              field={@form[:qualification_id]}
-              type="combobox"
-              label="Qualification"
-              prompt="Select a qualification"
-              options={@options}
-            />
-            <.input field={@form[:starts_on]} type="date" label="Start" />
-            <.input field={@form[:ends_on]} type="date" label="Expiry (optional)" />
-            <.warning_text class="mb-4">
-              Once it is in {@service}, only {@service} can change or remove the award.
-            </.warning_text>
+          <%= cond do %>
+            <% Certificate.dates_locked?(@certificate) -> %>
+              <p class="hint">{CertificateText.dates(@certificate)}</p>
+            <% @existing -> %>
+            <% true -> %>
+              <.input
+                field={@form[:qualification_id]}
+                type="combobox"
+                label="Qualification"
+                prompt="Select a qualification"
+                options={@options}
+              />
+              <.input field={@form[:starts_on]} type="date" label="Start" />
+              <.input field={@form[:ends_on]} type="date" label="Expiry (optional)" />
+              <.warning_text class="mb-4">
+                Once it is in {@service}, only {@service} can change or remove the award.
+              </.warning_text>
           <% end %>
           <.form_actions>
             <.button
@@ -150,9 +185,7 @@ defmodule Web.CertificateLive do
               variant={:success}
               phx-disable-with={"Sending to #{@service}…"}
             >
-              {if Certificate.dates_locked?(@certificate),
-                do: "Send again",
-                else: "Accept certificate"}
+              {accept_label(@certificate, @existing)}
             </.button>
           </.form_actions>
         </.form>
@@ -261,6 +294,14 @@ defmodule Web.CertificateLive do
   end
 
   defp upload_error(_certificate), do: nil
+
+  defp accept_label(certificate, existing) do
+    cond do
+      Certificate.dates_locked?(certificate) -> "Send again"
+      existing -> "Attach certificate"
+      true -> "Accept certificate"
+    end
+  end
 
   defp first_name(name), do: name |> String.split(" ", parts: 2) |> hd()
 
