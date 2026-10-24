@@ -197,6 +197,9 @@ so there is no environment variable. The old test version's `MCP_ACCESS_KEY` and
 | `DATABASE_PATH`   | SQLite file. Set in `fly.toml`.                                  |
 | `PHX_HOST`        | Public host. Set in `fly.toml`.                                  |
 
+Phoenix's release scripts and `fly.toml` set `PHX_SERVER`, `PORT`, `DNS_CLUSTER_QUERY`,
+and `RELEASE_NAME`. `DATABASE_POOL_SIZE` defaults to 5. None is a secret.
+
 Losing `CLOAK_KEY` makes every D4H and Records access key, Apple pass token, attendance
 link, and short link target unreadable.
 Dev and test use a key committed in `config/config.exs`.

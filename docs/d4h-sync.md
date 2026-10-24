@@ -174,9 +174,10 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   and back, in D4H's web app) both move the member's `updatedAt`, so losing manager
   access reaches SAR Duty within 10 minutes (tested 2026-10-06).
 
-- **Attendance, qualifications, awards, groups, group memberships, and tags are deleted** when
-  D4H stops returning them, at the end of each one's stage. A deleted qualification takes
-  its awards with it, a deleted group its memberships, and a deleted tag leaves its templates.
+- **Attendance, qualifications, awards, groups, group memberships, tags, and equipment
+  items and usages are deleted** when D4H stops returning them, at the end of each one's
+  stage. A deleted qualification takes its awards with it, a deleted group its
+  memberships, a deleted item its usages, and a deleted tag or item leaves its templates.
   [StaleRows](../lib/app/operation/refresh_d4h_data/stale_rows.ex) finds the rows, always
   within one team.
 - **Members and activities are never deleted.** A member deleted in D4H keeps their
@@ -235,8 +236,7 @@ starting `Error:` is a failure, and any other text is a stage in progress.
 
 Some pages call D4H live instead of reading the database: activity attendance, the
 mileage report, team settings refresh, and member photos. They use the team's key too.
-Every write, including the attendance import's, is a change set: see
-[change-sets.md](change-sets.md).
+Every write is a change set: see [change-sets.md](change-sets.md).
 
 The sync also stores each member's D4H access level (`d4h_permission`) and status. That
 decides who can log in: see [Who can log in](#who-can-log-in).

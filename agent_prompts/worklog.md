@@ -15,6 +15,16 @@ One-line summary of what changed (or "no changes needed"). (commit <short-sha>, 
 
 <!-- New entries go directly below this line, newest first. -->
 
+## 2026-10-23 — review-docs
+
+Every link, module, function, and path the docs name exists (checked by script). Fixed:
+the sync's delete list lacked equipment items and usages, d4h-sync still named the
+removed attendance import, the narrow layout is for any hand-held task, a lone team's
+one-team organization gave way to its own hours tags (#323), the release's env vars
+are listed, `.mise.example.toml` gains `HEALTHCHECKS_SYNC_URL` and `RECORDS_HOST`, and
+AGENTS.md's workers include tax credit letters. Flagged: migrations run twice outside a
+release (`App.Release.migrate/0` and the `Ecto.Migrator` child).
+
 ## 2026-10-23 — review-deps
 
 Hex packages were already current from #502. Bumped Erlang 29.0.6 → 29.1.2 (builder

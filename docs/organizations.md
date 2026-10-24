@@ -24,7 +24,8 @@ themselves. Issue #87 has the design.
   can't change them. Blank keeps `Primary Hours` and `Secondary Hours`. Letters still
   say "Primary Hours" and "Secondary Hours", SARVAC's terms; only the tags that feed
   them change. Letters already made keep their hours, and the letter list marks the
-  ones that changed. A lone team with its own tags gets a one-team organization.
+  ones that changed. A team names any tag its organization leaves blank, and a team with
+  no organization names its own, in **Settings → Hours tags** (#323).
 
 Saving an organization queues a pass update for every team it had or now has, so phones
 pick up the new back of the pass in a minute or so.

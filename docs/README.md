@@ -17,9 +17,10 @@ SAR Duty is a Phoenix LiveView app for search and rescue team managers. D4H is e
 team's system of record. Oban jobs copy each team's members, activities, attendance,
 qualifications, and groups from the D4H API into a local SQLite database, syncing what
 changed every 10 minutes, and the pages read from that copy. A team without D4H keeps
-its records in SAR Duty Records, which serves the same API. On top of it the app builds what D4H doesn't: tax credit
-letters as PDFs, mileage reports, attendance cleanup, and group qualification rules. It
-runs as one Fly machine with Litestream replicating the database.
+its records in SAR Duty Records, which serves the same API. On top of it the app builds
+what D4H doesn't: tax credit letters as PDFs, mileage reports, attendance cleanup, and
+group qualification rules. It runs as one Fly machine with Litestream replicating the
+database.
 
 ## The layers and the calling rules
 
@@ -51,8 +52,9 @@ The rules that are easy to break:
 ## Where do I put new code?
 
 - **New page** → a LiveView in `lib/web/live/`, with `use Web, :live_view_app_layout` for
-  team, member, and admin pages, `:live_view_narrow_layout` for logging in and signing
-  up, or `:live_view_marketing_layout` for public pages. A page in the side navigation
+  team, member, and admin pages, `:live_view_narrow_layout` for one task done with a
+  phone or iPad in hand (logging in, taking attendance, scanning; see `/styles/layout`),
+  or `:live_view_marketing_layout` for public pages. A page in the side navigation
   is a line in `Web.Navigation` ([navigation.md](navigation.md)). Add the route in `lib/web/router.ex`
   inside the `live_session` whose `on_mount` checks what the page needs (signed in, admin,
   or a member of the team in the URL).
