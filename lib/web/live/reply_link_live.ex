@@ -131,6 +131,7 @@ defmodule Web.ReplyLinkLive do
         id="reply-link"
         state={@current}
         change_href={~p"/replies/#{@token}?change=1"}
+        calendar_href={~p"/replies/#{@token}/calendar"}
       />
     </div>
     <p :if={@activity.deleted_at} id="reply-link-deleted" class="mt-6">

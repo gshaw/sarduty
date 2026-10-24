@@ -54,6 +54,12 @@ defmodule Web.ReplyLinkLiveTest do
     assert has_element?(lv, "#reply-link-state", "Signed up")
     assert has_element?(lv, ~s(#reply-link-change[href="#{reply_path}?change=1"]), "Change")
 
+    assert has_element?(
+             lv,
+             ~s(#reply-link-calendar[href="#{reply_path}/calendar"]),
+             "Add to calendar"
+           )
+
     # Nobody is logged in: the member's own set, sent by no user.
     assert [%ChangeSet{source: :member, applied_by_user_id: nil, proposed_by_user_id: nil}] =
              Repo.all(ChangeSet)
@@ -128,6 +134,25 @@ defmodule Web.ReplyLinkLiveTest do
     assert redirected_to(conn) == path <> "?reply=yes"
     assert Phoenix.Flash.get(conn.assigns.flash, :error)
     refute_received {:d4h_write, _id, _body}
+  end
+
+  test "Add to calendar is the link's activity as an .ics file, with no login",
+       %{conn: conn, member: member, activity: activity} do
+    conn = get(conn, ReplyLinks.reply_path(member, activity) <> "/calendar")
+
+    assert response(conn, 200) =~ "SUMMARY:Training night"
+    assert [content_type] = get_resp_header(conn, "content-type")
+    assert content_type =~ "text/calendar"
+  end
+
+  test "Add to calendar from a bad link, or for a deleted activity, is not found",
+       %{conn: conn, team: team, member: member} do
+    deleted =
+      activity_fixture(team, %{deleted_at: DateTime.truncate(DateTime.utc_now(), :second)})
+
+    for path <- ["/replies/made-up", ReplyLinks.reply_path(member, deleted)] do
+      assert_error_sent 404, fn -> get(conn, path <> "/calendar") end
+    end
   end
 
   test "a bad link, or one naming another team's activity, does nothing",

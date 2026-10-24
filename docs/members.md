@@ -287,7 +287,8 @@ A member replies to an activity they're invited to (#444): D4H has an attendance
 them. The two buttons, I'll be there and Can't make it, sit under the counts on the
 activity's page and in Next up, and small under the title in Coming up. After a reply
 the member sees it, "Signed up" or "Can't make it", with Change to bring the buttons
-back. Replies close when the activity starts.
+back. Signed up adds Add to calendar, the activity's .ics file. Replies close when the
+activity starts.
 
 - **The reply** is a member change set ([change-sets.md](change-sets.md)) made by
   [ReplyToActivity](../lib/app/operation/reply_to_activity.ex), sent at once, and the
@@ -305,7 +306,8 @@ back. Replies close when the activity starts.
   and the page is a form with that answer selected and one Send reply (#488), a plain
   post to [ReplyLinkController](../lib/web/controllers/reply_link_controller.ex) so it
   works before the page connects. An answer that matches their reply shows the reply
-  and Change instead. It closes at the start, and always has "Open activity (log in)".
+  and Change instead. Its Add to calendar is `/replies/:token/calendar`, the same .ics
+  with no login. It closes at the start, and always has "Open activity (log in)".
 - **Invitation reminders** are the member's setting, not the login's: many members get
   email without ever logging in. On by default, a switch for each team in account settings
   ([AccountLive](../lib/web/live/account_live.ex)), and a

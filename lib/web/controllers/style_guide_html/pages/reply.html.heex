@@ -8,7 +8,7 @@
 
   <h3>After a reply</h3>
   <div class="demo">
-    <.reply id="reply-demo-yes" state={:yes} />
+    <.reply id="reply-demo-yes" state={:yes} calendar_href="#" />
     <div class="mt-4"><.reply id="reply-demo-no" state={:no} /></div>
   </div>
 
@@ -16,6 +16,10 @@
   <div class="demo max-w-md">
     <a href="#" class="link">Training night: packaging and patient transport</a>
     <.reply id="reply-demo-row-ask" state={:ask} size={:sm} />
+    <div class="mt-4">
+      <a href="#" class="link">Rope rescue practice</a>
+      <.reply id="reply-demo-row-yes" state={:yes} size={:sm} calendar_href="#" />
+    </div>
     <div class="mt-4">
       <a href="#" class="link">Annual general meeting</a>
       <.reply id="reply-demo-row-no" state={:no} size={:sm} />
@@ -45,12 +49,17 @@
       A reply replaces the buttons with "Signed up" or "Can't make it", and Change brings the
       buttons back. That is the confirmation: no flash message.
     </li>
+    <li>
+      Signed up adds Add to calendar, a link to the activity's .ics file. Can't make it has none.
+    </li>
     <li>In a list row the buttons are small. On a touch screen they are still 44px.</li>
   </ul>
 
   <h2>In the app</h2>
   <p>
     <code>&lt;.live_component module=&#123;ReplyControl&#125; id="…" … /&gt;</code>
-    sends the reply as the member's change set and shows <code>&lt;.reply state=&#123;:ask&#125;&gt;</code>. Show it only when <code>Reply.open?/3</code>.
+    sends the reply as the member's change set and shows <code>&lt;.reply state=&#123;:ask&#125;&gt;</code>, with
+    <code>calendar_href</code>
+    for Add to calendar. Show it only when <code>Reply.open?/3</code>.
   </p>
 </.shell>

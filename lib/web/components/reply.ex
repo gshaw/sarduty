@@ -1,8 +1,8 @@
 defmodule Web.Components.Reply do
   @moduledoc """
   A member's reply to an activity they're invited to (#444): I'll be there and Can't
-  make it, then their reply and Change, which brings the buttons back. Replies close at
-  the start. `Web.Components.ReplyControl` sends them; this is what it shows, and the
+  make it, then their reply and Change, which brings the buttons back. Signed up adds
+  Add to calendar. Replies close at the start. `Web.Components.ReplyControl` sends them; this is what it shows, and the
   counts above it. See /styles/reply.
   """
   use Web, :function_component
@@ -85,6 +85,10 @@ defmodule Web.Components.Reply do
     default: nil,
     doc: "makes Change a link, for a page that replies with a form (#488)"
 
+  attr :calendar_href, :string,
+    default: nil,
+    doc: "the activity's .ics, for Add to calendar once signed up"
+
   @doc "The two buttons, or the member's reply and Change."
   def reply(assigns) do
     ~H"""
@@ -133,6 +137,15 @@ defmodule Web.Components.Reply do
           href={@change_href}
         >
           Change
+        </.button>
+        <.button
+          :if={@state == :yes && @calendar_href}
+          id={"#{@id}-calendar"}
+          variant={:link}
+          size={@size}
+          href={@calendar_href}
+        >
+          <.icon name="hero-calendar-days-mini" /> Add to calendar
         </.button>
       </p>
     </div>

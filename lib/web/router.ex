@@ -130,6 +130,8 @@ defmodule Web.Router do
 
     # Send reply on a reminder's reply page (#488).
     post "/replies/:token", ReplyLinkController, :create
+    # Add to calendar on the reply page: the reply link's activity as an .ics file.
+    get "/replies/:token/calendar", ActivityCalendarController, :reply
 
     # Short links, such as an attendance link. Lowercase codes, unlike an ID card's.
     get "/s/:code", ShortLinkController, :show
