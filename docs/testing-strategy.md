@@ -42,7 +42,8 @@ data?
 - Short D4H fetches, which the refresh must never treat as complete:
   `test/app/adapter/d4h/page_test.exs`.
 - The refresh deleting rows D4H no longer has, and only the current team's:
-  `test/app/operation/refresh_d4h_data/upsert_*_test.exs`.
+  `test/app/operation/refresh_d4h_data/upsert_*_test.exs`. Attendance, which letter hours
+  come from, is checked for both the sync's month and activity fetches.
 - The sync every 10 minutes: what it fetches when lists move, and the deletes it finds
   (`test/app/operation/sync_d4h_changes_test.exs`,
   `test/app/worker/sync_team_changes_worker_test.exs`), and the nightly run's Healthchecks

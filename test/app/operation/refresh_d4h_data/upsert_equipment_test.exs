@@ -98,4 +98,27 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
 
     assert {0, _progress} = run(team)
   end
+
+  test "deletes only this team's items and usages D4H no longer has" do
+    team = team_fixture()
+    activity = activity_fixture(team)
+    kept = equipment_item_fixture(team)
+    gone = equipment_item_fixture(team)
+    kept_usage = equipment_usage_fixture(activity, kept)
+    gone_usage = equipment_usage_fixture(activity, kept)
+
+    other_team = team_fixture()
+    their_item = equipment_item_fixture(other_team)
+    their_usage = equipment_usage_fixture(activity_fixture(other_team), their_item)
+
+    UpsertEquipmentUsages.delete_stale(team.id, MapSet.new([kept_usage.d4h_equipment_usage_id]))
+    UpsertEquipmentItems.delete_stale(team.id, MapSet.new([kept.d4h_equipment_id]))
+
+    assert Repo.get(EquipmentItem, kept.id)
+    refute Repo.get(EquipmentItem, gone.id)
+    assert Repo.get(EquipmentUsage, kept_usage.id)
+    refute Repo.get(EquipmentUsage, gone_usage.id)
+    assert Repo.get(EquipmentItem, their_item.id)
+    assert Repo.get(EquipmentUsage, their_usage.id)
+  end
 end

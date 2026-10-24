@@ -46,7 +46,8 @@
 - **View data**: [lib/app/view_data/](lib/app/view_data) bundle the read-only queries for
   one page.
 - **Workers**: [lib/app/worker/](lib/app/worker) are Oban jobs: the D4H sync every 10
-  minutes and the nightly full refresh, pass updates, login codes, and pruning.
+  minutes and the nightly full refresh, tax credit letters, pass updates, login codes,
+  and pruning.
 - **Fields and validators**: [lib/app/field/](lib/app/field) (`EncryptedString`,
   `TrimmedString`) and [lib/app/validate/](lib/app/validate).
 - **Service**: [lib/service/](lib/service) are stateless helpers — `Service.Format`,
