@@ -18,7 +18,8 @@ defmodule App.Operation.AwardQualification do
 
   @doc """
   `:ok`, `{:error, changeset}` for the form, or `{:error, text}`. `certificate` is a file
-  from `Service.CertificateFile.prepare/2`, or nil.
+  from `Service.CertificateFile.prepare/2`, or nil. `{:award_only, text}` when the award
+  went in but its certificate did not upload.
   """
   def award(
         %Team{} = team,
@@ -54,7 +55,8 @@ defmodule App.Operation.AwardQualification do
         :ok
 
       {:error, text} ->
-        {:error, "#{qualification.title} is awarded, but its certificate did not upload. #{text}"}
+        {:award_only,
+         "#{qualification.title} is awarded, but its certificate did not upload. #{text}"}
     end
   end
 

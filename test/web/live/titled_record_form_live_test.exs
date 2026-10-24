@@ -125,6 +125,39 @@ defmodule Web.TitledRecordFormLiveTest do
     assert body =~ "%PDF-1.7 certificate"
   end
 
+  # Records takes the award and refuses its certificate.
+  defp refuse_upload("POST", "/documents", _body),
+    do: {422, %{"title" => "Records refused the file"}}
+
+  defp refuse_upload(method, path, body), do: reply(method, path, body)
+
+  test "an award whose certificate does not upload starts the form over, with why",
+       %{conn: conn, team: team, member: member} do
+    RecordsStub.stub(&refuse_upload/3)
+
+    qualification = qualification_fixture(team, %{title: "First Aid", d4h_qualification_id: 99})
+    {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/qualifications")
+
+    tab
+    |> file_input("#award-form", :certificate, [
+      %{name: "first-aid.pdf", content: "%PDF-1.7 certificate", type: "application/pdf"}
+    ])
+    |> render_upload("first-aid.pdf")
+
+    start = ~s(#award-form input[name="award[starts_on]"][value="2026-05-01"])
+
+    filled =
+      form(tab, "#award-form",
+        award: %{qualification_id: qualification.id, starts_on: "2026-05-01"}
+      )
+
+    render_change(filled)
+    assert has_element?(tab, start)
+
+    assert render_submit(filled) =~ "First Aid is awarded, but its certificate did not upload."
+    refute has_element?(tab, start)
+  end
+
   test "an award needs a qualification and a start, listed in the summary",
        %{conn: conn, team: team, member: member} do
     qualification_fixture(team)

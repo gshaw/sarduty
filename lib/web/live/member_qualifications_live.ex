@@ -64,6 +64,8 @@ defmodule Web.MemberQualificationsLive do
       {:noreply, reload(socket, "Qualification awarded.")}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_award_form(socket, changeset)}
+      # The award is in, so the list shows it and the form starts over: never a second.
+      {:award_only, text} -> {:noreply, reload(socket, text, :error)}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
     end
   end
@@ -87,11 +89,11 @@ defmodule Web.MemberQualificationsLive do
     end
   end
 
-  defp reload(socket, text) do
+  defp reload(socket, text, kind \\ :info) do
     member = find_member(socket.assigns.current_team, socket.assigns.member.id)
 
     socket
-    |> put_flash(:info, text)
+    |> put_flash(kind, text)
     |> assign(:member, member)
     |> assign_awards()
     |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
