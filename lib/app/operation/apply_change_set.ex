@@ -264,17 +264,17 @@ defmodule App.Operation.ApplyChangeSet do
     starts_on = new_value["starts_at"] |> time() |> DateTime.to_date()
 
     if Enum.any?(awards, fn award ->
-         (award.d4h_qualification_id == new_value["d4h_qualification_id"] and
-            award.starts_at) && DateTime.to_date(award.starts_at) == starts_on
+         award.d4h_qualification_id == new_value["d4h_qualification_id"] and
+           D4H.QualificationAward.starts_on?(award, starts_on)
        end),
-       do: {:skipped, "D4H has this award already."},
+       do: {:skipped, "This member has this award already."},
        else: :ok
   end
 
   def check(%ChangeSetRow{action: :attach_award_document, new_value: new_value}, {:awards, _}) do
     if new_value["d4h_award_id"],
       do: :ok,
-      else: {:failed, "The award was not added to D4H, so the certificate was not sent."}
+      else: {:failed, "The award was not added, so the certificate was not sent."}
   end
 
   def check(%ChangeSetRow{action: :set_activity_tags} = row, {:tags, ids}) do

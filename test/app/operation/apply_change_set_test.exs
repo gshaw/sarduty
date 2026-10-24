@@ -105,7 +105,8 @@ defmodule App.Operation.ApplyChangeSetTest do
     assert callers == []
   end
 
-  # D4H's API can't remove an award, so a second one would stay (#493).
+  # D4H's API can't remove an award, so a second one would stay (#493). Which day an
+  # award starts on is QualificationAward.starts_on?/2's test.
   test "a certificate's award is skipped when D4H has it from the same day" do
     row = %ChangeSetRow{
       action: :award_qualification,
@@ -113,12 +114,12 @@ defmodule App.Operation.ApplyChangeSetTest do
     }
 
     same = %QualificationAward{d4h_qualification_id: 4, starts_at: ~U[2026-10-01 00:00:00Z]}
-    earlier = %{same | starts_at: ~U[2025-10-01 07:00:00Z]}
+    earlier = %{same | starts_at: ~U[2025-10-01 00:00:00Z]}
     other = %{same | d4h_qualification_id: 5}
 
     assert ApplyChangeSet.check(row, {:awards, [earlier, other]}) == :ok
 
-    assert {:skipped, "D4H has this award already."} =
+    assert {:skipped, "This member has this award already."} =
              ApplyChangeSet.check(row, {:awards, [same]})
   end
 

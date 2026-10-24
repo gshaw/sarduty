@@ -97,6 +97,7 @@ defmodule App.Operation.ApplyChangeSetCertificatesTest do
     assert_received {:upload, "300"}
   end
 
+  # D4H keeps an award's start at midnight UTC; the set's starts at midnight here.
   test "an award D4H has from the same day is not sent again, nor its file", ctx do
     test_pid = self()
 
@@ -109,7 +110,7 @@ defmodule App.Operation.ApplyChangeSetCertificatesTest do
             "id" => 8,
             "member" => %{"id" => 1},
             "qualification" => %{"id" => hd(ctx.set.rows).new_value["d4h_qualification_id"]},
-            "startsAt" => "2026-10-01T07:00:00.000Z",
+            "startsAt" => "2026-10-01T00:00:00.000Z",
             "endsAt" => nil
           }
         ],
