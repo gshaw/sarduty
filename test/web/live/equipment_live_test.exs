@@ -152,15 +152,17 @@ defmodule Web.EquipmentLiveTest do
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members/#{sam.id}")
     assert has_element?(lv, "#member-equipment-#{pouch.id} .hint", "In First aid kit 6")
-    path = ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}"
-    assert has_element?(lv, ~s{#member-equipment-all[href="#{path}"]}, "All 7 items")
+    path = ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}&show=all"
+    assert has_element?(lv, ~s{#member-equipment-all[href="#{path}"]}, "All 8 items")
     refute has_element?(lv, "#member-equipment", "Stray")
 
     {:ok, lv, _html} = live(ctx.conn, path)
-    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 7")
+    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 8")
+    assert has_element?(lv, "#equipment-view-all[aria-current]", "8")
     assert has_element?(lv, "#equipment-view-in-service", "7")
+    assert has_element?(lv, "#equipment-view-retired", "1")
+    assert has_element?(lv, "td", "Old gauze")
     refute has_element?(lv, "td", "Stray")
-    refute has_element?(lv, "td", "Old gauze")
   end
 
   test "a scanned barcode opens its item, and an unknown one says so", ctx do

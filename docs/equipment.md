@@ -66,12 +66,13 @@ D4H can put an item's location at a member, and the copy keeps it as
   [EquipmentItem.held_by/2](../lib/app/model/equipment_item.ex): the items D4H locates
   with the member, and whatever sits inside them, down to 10 levels, as the equipment
   page follows a chain. One recursive query, scoped by the team at every step, so another
-  team's item with a matching container id never counts. Retired items are left out. The
-  member page, Your membership, and Equipment's member place all read it, so their counts
+  team's item with a matching container id never counts. Retired items count too: D4H
+  still has them with the member, and the team may want them back (decided 2026-10-23).
+  The member page, Your membership, and Equipment's member place all read it, so their counts
   always agree (decided 2026-10-23). On production that day 85 items sat inside 16 kits
   members hold, beside 1,683 held directly; one team had 55 inside 6 kits.
 - **Equipment, Place** lists the D4H locations, With members, and No location, then each
-  member who holds something not retired, by name. It is a combobox, since a team has
+  member who holds something, by name. It is a combobox, since a team has
   dozens of holders. The URL takes the member's local id, `?place=member-12`, never the
   name, since two members can share one. The section heading names the member ("Sam
   Rivera · 12") and the table drops Where. The browse page's Place table keeps one With
@@ -79,14 +80,14 @@ D4H can put an item's location at a member, and the copy keeps it as
   Place.
 - **The member page sidebar**, on every member tab, lists up to 5 items the member holds,
   each linking to its page with its category and barcode, then "All 12 items" to
-  Equipment with Place set to them. Shown only when they hold something.
+  Equipment with Place set to them and All showing, so the count matches. Shown only when they hold something.
 - **Your membership** lists every item, with no cap and no links, so a member knows what
   to bring back.
 - In both lists a kit's contents follow it, and an item inside one says "In First aid
   kit 6" in place of its category and barcode, so it reads as part of the kit
   ([EquipmentList.held_rows/1](../lib/app/view_data/equipment_list.ex)).
-- With a member picked, the Retired tile reads 0: a retired item isn't with anyone
-  (decided 2026-10-23).
+- Both lists mark an item that is retired, lost, or unserviceable with the equipment
+  page's status badge.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.
 - Still to decide, waiting on Andrew: a badge for a retired member who still holds

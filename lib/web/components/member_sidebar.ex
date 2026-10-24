@@ -17,6 +17,7 @@ defmodule Web.Components.MemberSidebar do
   alias Service.Format
   alias Web.Components.MilestoneList
   alias Web.Components.OpenInMaps
+  alias Web.EquipmentCollectionLive
 
   @doc """
   Assigns the header's `last_attended_at` and `standing`, and the sidebar's
@@ -165,6 +166,7 @@ defmodule Web.Components.MemberSidebar do
         <li :for={row <- @shown} id={"member-equipment-#{row.item.id}"}>
           <.a navigate={~p"/teams/#{@member.team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
           <span class="hint">{item_hint(row)}</span>
+          <EquipmentCollectionLive.status_badge item={row.item} />
         </li>
       </ul>
       <ul :if={@more?} class="action-list">
@@ -172,7 +174,7 @@ defmodule Web.Components.MemberSidebar do
           <.a
             id="member-equipment-all"
             navigate={
-              ~p"/teams/#{@member.team}/equipment?place=#{EquipmentList.member_place(@member.id)}"
+              ~p"/teams/#{@member.team}/equipment?#{[place: EquipmentList.member_place(@member.id), show: "all"]}"
             }
           >{Format.count(length(@equipment), one: "%d item", many: "All %d items")}</.a>
         </li>

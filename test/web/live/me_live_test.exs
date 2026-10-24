@@ -286,7 +286,9 @@ defmodule Web.MeLiveTest do
                 barcode: nil
               })
 
-      equipment_item_fixture(team, %{title: "Old kit", member_id: member.id, status: "retired"})
+      old =
+        equipment_item_fixture(team, %{title: "Old kit", member_id: member.id, status: "retired"})
+
       equipment_item_fixture(team_fixture(), %{title: "Stray kit", member_id: member.id})
 
       lv = open(conn, ~p"/teams/#{team}/me")
@@ -294,7 +296,7 @@ defmodule Web.MeLiveTest do
       for item <- items, do: assert(has_element?(lv, "#equipment-#{item.id}", item.title))
       assert has_element?(lv, "#equipment-#{hd(items).id} .hint", "Radio")
       refute has_element?(lv, "#equipment-list a")
-      refute has_element?(lv, "#equipment-list", "Old kit")
+      assert has_element?(lv, "#equipment-#{old.id} .badge", "Retired")
       refute has_element?(lv, "#equipment-list", "Stray kit")
     end
 

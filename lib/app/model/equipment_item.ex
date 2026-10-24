@@ -68,8 +68,9 @@ defmodule App.Model.EquipmentItem do
   @max_depth 10
 
   @doc """
-  The items a member holds that aren't retired, by title (#490): those D4H locates with
-  the member, and whatever sits inside them, down to 10 levels. One recursive query,
+  The items a member holds, by title (#490): those D4H locates with the member, and
+  whatever sits inside them, down to 10 levels. Retired items too: D4H still has them
+  with the member, and the team may want them back. One recursive query,
   scoped by the team at every step. The member page, Your membership, and Equipment's
   member place all read this, so they always agree.
   """
@@ -79,7 +80,7 @@ defmodule App.Model.EquipmentItem do
     |> recursive_ctes(true)
     |> with_cte("held", as: ^union(held_directly(team, member), ^held_inside(team)))
     |> where([i], i.id in subquery(from h in "held", select: h.id))
-    |> where([i], i.team_id == ^team.id and i.status != "retired")
+    |> where([i], i.team_id == ^team.id)
     |> order_by([i], asc: i.title, asc: i.id)
     |> Repo.all()
   end

@@ -19,6 +19,7 @@ defmodule Web.MeLive do
   alias App.ViewData.MemberRecords
   alias Service.Format
   alias Web.Components.MemberSidebar
+  alias Web.EquipmentCollectionLive
   alias Web.QualificationText
 
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
@@ -366,6 +367,7 @@ defmodule Web.MeLive do
       <ul id="equipment-list" class="list-none p-0 m-0">
         <li :for={row <- @equipment} id={"equipment-#{row.item.id}"}>
           {row.item.title} <span class="hint">{MemberSidebar.item_hint(row)}</span>
+          <EquipmentCollectionLive.status_badge item={row.item} />
         </li>
       </ul>
     </div>
