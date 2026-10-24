@@ -85,7 +85,12 @@ defmodule Web.CertificateLiveTest do
 
     assert render(lv) =~ "Accepted Standard First Aid for Sam Rivera. It is in D4H."
     assert %{status: :accepted} = Repo.reload!(ctx.certificate)
-    assert %{d4h_document_id: 900} = MemberQualificationAward.get_by(d4h_award_id: 300)
+    assert %{d4h_document_id: 900} = award = MemberQualificationAward.get_by(d4h_award_id: 300)
+
+    # Once D4H has no file on the award, the page says so, not that it was declined.
+    award |> Ecto.Changeset.change(d4h_document_id: nil) |> Repo.update!()
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    assert has_element?(lv, "#certificate-file-gone", "when the certificate was accepted")
   end
 
   test "a team admin declines it with a reason the member sees", ctx do

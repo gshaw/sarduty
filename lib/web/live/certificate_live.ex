@@ -89,6 +89,7 @@ defmodule Web.CertificateLive do
         <.certificate_file
           certificate={@certificate}
           src={file_path(@current_team, @certificate, @accepted_award)}
+          service={@service}
         />
       </div>
       <aside class="content-1/3">
@@ -180,9 +181,19 @@ defmodule Web.CertificateLive do
 
   attr :certificate, :map, required: true
   attr :src, :string, default: nil
+  attr :service, :string, required: true
 
   # A photo as an image, a PDF in the browser's own viewer. The frame has no `sandbox`
   # attribute: it would block Chrome's viewer, and the file's own header sandboxes it.
+  # An accepted one opens through its award, which may have gone from D4H since.
+  defp certificate_file(%{src: nil, certificate: %{status: :accepted}} = assigns) do
+    ~H"""
+    <p id="certificate-file-gone" class="hint">
+      SAR Duty deleted its copy of the file when the certificate was accepted. The award in {@service} has no certificate now.
+    </p>
+    """
+  end
+
   defp certificate_file(%{src: nil} = assigns) do
     ~H"""
     <p id="certificate-file-gone" class="hint">
