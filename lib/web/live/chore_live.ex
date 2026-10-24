@@ -6,6 +6,7 @@ defmodule Web.ChoreLive do
   alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
@@ -22,10 +23,21 @@ defmodule Web.ChoreLive do
 
     socket
     |> assign(page_title: chore.description, chore: chore)
+    |> assign(decided_by: decider_name(team, chore.decided_by_user, DateTime.utc_now()))
     |> assign(activity: chore.chore_event && ChoreEvent.local_activity(chore.chore_event))
     |> assign(service: D4H.service_name(team))
     |> assign_decline_form(%{})
     |> then(&{:ok, &1})
+  end
+
+  # The team admin who decided, by their member name, or their email when no member has it.
+  defp decider_name(_team, nil, _now), do: nil
+
+  defp decider_name(team, user, now) do
+    case Member.find_by_email(team, user.email, now) do
+      %Member{name: name} -> name
+      nil -> user.email
+    end
   end
 
   defp assign_decline_form(socket, params, errors \\ []),
@@ -57,8 +69,8 @@ defmodule Web.ChoreLive do
         <.status_badge chore={@chore} />
         <span :if={@chore.status == :accepted}>Accepted</span>
         <span :if={@chore.decided_at} class="hint">
-          {Format.datetime_short(@chore.decided_at, @current_team.timezone)}{if @chore.decided_by_user,
-            do: ", #{@chore.decided_by_user.email}"}
+          {Format.datetime_short(@chore.decided_at, @current_team.timezone)}{if @decided_by,
+            do: ", #{@decided_by}"}
         </span>
       </dd>
       <div :if={@chore.status == :declined}>

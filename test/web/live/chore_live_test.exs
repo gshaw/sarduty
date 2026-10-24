@@ -230,6 +230,28 @@ defmodule Web.ChoreLiveTest do
     assert has_element?(lv, "#declined-chores #chore-#{chore.id}", "Standby is an activity.")
   end
 
+  test "a decided chore names the team admin who decided it", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+    named = App.AccountsFixtures.user_fixture()
+    manager_fixture(team, %{email: named.email, name: "Avery Chen"})
+    unnamed = App.AccountsFixtures.user_fixture()
+
+    decided = fn user ->
+      chore_fixture(member, category, %{
+        status: :accepted,
+        decided_at: ~U[2026-10-20 18:00:00.000000Z],
+        decided_by_user_id: user.id
+      })
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{decided.(named).id}")
+    assert has_element?(lv, "#chore-status", "Avery Chen")
+    refute has_element?(lv, "#chore-status", named.email)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{decided.(unnamed).id}")
+    assert has_element?(lv, "#chore-status", unnamed.email)
+  end
+
   test "another team's chore is not found", %{conn: conn, team: team} do
     other_team = team_fixture()
     chore = chore_fixture(member_fixture(other_team), chore_category_fixture(other_team))

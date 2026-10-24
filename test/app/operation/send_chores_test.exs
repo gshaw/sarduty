@@ -186,7 +186,7 @@ defmodule App.Operation.SendChoresTest do
 
     assert title == "Chores: Equipment maintenance, October 2026"
 
-    assert {"PATCH", "/attendance/701", %{"endsAt" => "2026-10-19T09:00:00Z"}} =
+    assert {"PATCH", "/attendance/701", %{"endsAt" => "2026-10-01T09:00:00Z"}} =
              Enum.find(writes, &match?({"PATCH", "/attendance/701", _json}, &1))
   end
 
@@ -197,11 +197,11 @@ defmodule App.Operation.SendChoresTest do
     send_chores(ctx)
 
     [create, tags, add, publish] = writes()
-    assert {"POST", "/events", %{"startsAt" => "2026-10-06T07:00:00Z"}} = create
+    assert {"POST", "/events", %{"startsAt" => "2026-10-01T07:00:00Z"}} = create
     assert {"POST", "/events/900/tags", %{"tagIds" => tag_ids}} = tags
     assert Enum.sort(tag_ids) == ctx.tags |> Enum.map(& &1.d4h_tag_id) |> Enum.sort()
 
-    assert {"POST", "/attendance", %{"activityId" => 900, "endsAt" => "2026-10-06T08:30:00Z"}} =
+    assert {"POST", "/attendance", %{"activityId" => 900, "endsAt" => "2026-10-01T08:30:00Z"}} =
              add
 
     assert {"POST", "/events/900/publish", %{"published" => true}} = publish
