@@ -37,7 +37,6 @@ defmodule Web.MemberHistoryLive do
           member={@member}
           maps_app={@current_user.maps_app}
           milestones={@milestones}
-          equipment={@equipment}
         />
       </aside>
       <main class="content-2/3">

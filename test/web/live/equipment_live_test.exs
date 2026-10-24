@@ -118,7 +118,7 @@ defmodule Web.EquipmentLiveTest do
     end
   end
 
-  test "the sidebar, the Equipment tab, and Equipment count a kit's contents alike", ctx do
+  test "the Equipment tab and Equipment count a kit's contents alike", ctx do
     sam = member_fixture(ctx.team, %{name: "Sam Rivera"})
     kit = equipment_item_fixture(ctx.team, %{title: "First aid kit 6", member_id: sam.id})
 
@@ -151,17 +151,13 @@ defmodule Web.EquipmentLiveTest do
       d4h_container_id: kit.d4h_equipment_id
     })
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members/#{sam.id}")
-    tab = ~p"/teams/#{ctx.team}/members/#{sam.id}/equipment"
-    assert has_element?(lv, ~s{#member-equipment-link[href="#{tab}"]}, "8 items")
-
-    {:ok, lv, _html} = live(ctx.conn, tab)
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members/#{sam.id}/equipment")
     html = lv |> element("#member-equipment-list") |> render()
     assert length(Regex.scan(~r/<tr /, html)) == 8
     assert has_element?(lv, "#member-equipment-list-#{pouch.id}", "First aid kit 6")
     refute has_element?(lv, "td", "Stray")
 
-    # A member place opens on All, so it counts the retired gauze as the sidebar does.
+    # A member place opens on All, so it counts the retired gauze as the tab does.
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}")
     assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 8")
     assert has_element?(lv, "#equipment-view-all[aria-current]", "8")

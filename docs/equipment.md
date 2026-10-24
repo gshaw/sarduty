@@ -79,10 +79,10 @@ D4H can put an item's location at a member, and the copy keeps it as
   location, and goes when nothing is inside another item
   ([EquipmentList.held_rows/1](../lib/app/view_data/equipment_list.ex)).
 - **The member's Equipment tab**, `/teams/:subdomain/members/:id/equipment`, after Groups,
-  shows only when they hold something. The sidebar on every member tab says how many,
-  "58 items", and links to it. A sidebar list was tried first: kits in kits filled its 5
-  lines with one pack's contents, and a full kit of 58 was too long (decided
-  2026-10-23).
+  shows only when they hold something, so the tab showing is how a team admin sees they
+  hold gear. A sidebar list was tried first: kits in kits filled its 5 lines with one
+  pack's contents, and a full kit of 58 was too long (decided 2026-10-23). A sidebar
+  count, "58 items", followed and was dropped because it repeated the tab (2026-10-24).
 - **Your membership** shows the table under Qualifications, with no links, so a member
   knows what to bring back. The sidebar is for short things.
 - **Equipment, Place** lists the D4H locations, With members, and No location, then each
@@ -90,7 +90,7 @@ D4H can put an item's location at a member, and the copy keeps it as
   holders. The URL takes the member's local id, `?place=member-12`, never the name, since
   two members can share one. The section heading names the member ("Sam Rivera · 12")
   over the same table, here with the stat switch and the search. It opens on All, not In
-  service, so its count is the sidebar's. The browse page's Place table keeps one With
+  service, so its count is the tab's. The browse page's Place table keeps one With
   members row, not one per member. There is no Member filter: it would conflict with
   Place.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
