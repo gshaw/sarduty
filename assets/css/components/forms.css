@@ -50,10 +50,10 @@
     padding: 6px var(--sp-4);
     margin: 0 var(--sp-3) 2px 0;
     border: 0;
-    border-radius: var(--radius);
+    border-radius: var(--radius-btn);
     color: var(--text);
     background: var(--surface-alt);
-    box-shadow: 0 2px 0 var(--border);
+    box-shadow: 0 2px 0 color-mix(in srgb, var(--surface-alt) 55%, var(--text));
     cursor: pointer;
   }
   @media (pointer: coarse) { input[type="file"]::file-selector-button { min-height: 44px; } }

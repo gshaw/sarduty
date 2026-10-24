@@ -46,7 +46,7 @@
   .home-dot.is-incident { background: var(--incident); }
   .home-dot.is-exercise { background: var(--exercise); }
   .home-dot.is-warning { background: var(--warning); }
-  .home-fake-btn { font-weight: 600; font-size: var(--fs-sm); padding: 2px var(--sp-3); border-radius: var(--radius); background: var(--surface-alt); box-shadow: 0 2px 0 var(--border); white-space: nowrap; }
+  .home-fake-btn { font-weight: 600; font-size: var(--fs-sm); padding: 2px var(--sp-3); border-radius: var(--radius-btn); background: var(--surface-alt); box-shadow: 0 2px 0 color-mix(in srgb, var(--surface-alt) 55%, var(--text)); white-space: nowrap; }
   .home-fake-btn.is-primary { background: var(--primary); color: var(--on-fill); box-shadow: 0 2px 0 color-mix(in srgb, var(--primary) 60%, #000); }
 
   .home-browser { width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: var(--bg); box-shadow: 0 12px 40px rgb(0 0 0 / 0.18); font-size: var(--fs-sm); line-height: var(--lh-sm); }

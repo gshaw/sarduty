@@ -12,6 +12,20 @@
     </.form_actions>
   </div>
 
+  <h2>What makes a button</h2>
+  <p>
+    6px corners and a dark edge under it. Rounded is something you do: a button. Square is
+    somewhere you go: <a href={page_path(:tabs)}>tabs</a>
+    and the <a href={page_path(:stat_switch)}>stat switch</a>. Inputs, tags, and chips keep
+    3px corners.
+  </p>
+  <p class="spec">
+    Corners are <code>--radius-btn</code>, 6px; everything else is <code>--radius</code>, 3px. A grey
+    button's edge is 2px of <code>--surface-alt</code>
+    mixed 45% with <code>--text</code>. A coloured button's
+    edge is its own colour, darker.
+  </p>
+
   <h2>When to use</h2>
   <ul>
     <li><strong>Primary</strong>: the one main action on a page.</li>
