@@ -86,6 +86,10 @@ if config_env() == :prod do
     database: System.fetch_env!("DATABASE_PATH"),
     pool_size: String.to_integer(System.get_env("DATABASE_POOL_SIZE") || "5")
 
+  # Beside the database on the volume, so it outlives a deploy (#416).
+  config :sarduty, App.Repo.SlowLog,
+    file: Path.join(Path.dirname(System.fetch_env!("DATABASE_PATH")), "repo_slow.log")
+
   config :sarduty, App.Vault,
     ciphers: [
       default: {

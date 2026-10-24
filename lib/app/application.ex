@@ -5,7 +5,6 @@ defmodule App.Application do
 
   use Application
 
-  alias App.Repo.SlowLog
   alias App.Worker.ErrorReporter
 
   # credo:disable-for-next-line Credo.Check.Readability.ImplTrue
@@ -16,10 +15,11 @@ defmodule App.Application do
     :ok = Oban.Telemetry.attach_default_logger()
     :ok = ErrorReporter.attach()
     :ok = Web.RequestLog.attach()
-    :ok = SlowLog.attach()
 
     children = [
       Web.Telemetry,
+      # Before the Repo, so it sees every transaction.
+      App.Repo.SlowLog,
       App.Repo,
       # Before Oban: jobs broadcast refresh progress, and children stop in reverse
       # order, so a job still draining at shutdown needs PubSub running.
