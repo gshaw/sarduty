@@ -316,26 +316,51 @@ defmodule Web.UserAuth do
         |> Map.merge(waiting(access))
         |> Map.put(:service, service)
       )
-      |> guard_events(page_access, access.team_admin?)
+      |> guard_events(page_access, access)
 
     {:cont, socket}
   end
 
-  # A page members open keeps its events for team admins (#440), except those it lists in
-  # `member_events` (see Web). A member's other events stop here, before the page's
-  # handle_event, so a page needs no check of its own. Events a component handles
-  # (phx-target) go to the component, which checks for itself.
-  defp guard_events(socket, :team, false) do
-    allowed = member_events(socket.view)
+  # Who sends which events (#440). A team admin sends every event on the pages they open,
+  # and a member every event on their own pages. Otherwise only some reach the page's
+  # handle_event (see Web): a member on a team page sends its `view_events` and
+  # `member_events`, and their other events stop silently since no control offers them.
+  # A team admin viewing as a member sends only `view_events`, and is told nothing is
+  # saved. Events a component handles (phx-target) go to the component, which checks for
+  # itself.
+  defp guard_events(socket, page_access, access),
+    do: guard_events(socket, refusal(page_access, access))
 
-    Phoenix.LiveView.attach_hook(socket, :member_events, :handle_event, fn event, _params, s ->
-      if event in allowed, do: {:cont, s}, else: {:halt, s}
+  defp guard_events(socket, :none), do: socket
+
+  defp guard_events(socket, refusal) do
+    allowed =
+      if refusal == :silent,
+        do: view_events(socket.view) ++ member_events(socket.view),
+        else: view_events(socket.view)
+
+    Phoenix.LiveView.attach_hook(socket, :view_events, :handle_event, fn event, _params, s ->
+      if event in allowed, do: {:cont, s}, else: {:halt, refuse(s, refusal)}
     end)
   end
 
-  defp guard_events(socket, _page_access, _team_admin?), do: socket
+  defp refuse(socket, :silent), do: socket
+  defp refuse(socket, text), do: Phoenix.LiveView.put_flash(socket, :error, text)
 
-  @doc "The events a member sends on an `access: :team` page; every other is team admins'."
+  # Team admin pages stay the team admin's, even while viewing as a member.
+  defp refusal(:admin, _access), do: :none
+  defp refusal(_page_access, %{viewing_as: %Member{} = member}), do: view_as_refusal(member)
+  defp refusal(:team, %{team_admin?: false}), do: :silent
+  defp refusal(_page_access, _access), do: :none
+
+  @doc """
+  The events on `view` that only change what it shows, which everyone who opens it sends.
+  """
+  def view_events(view) do
+    if function_exported?(view, :__view_events__, 0), do: view.__view_events__(), else: []
+  end
+
+  @doc "The actions on a team page `view` that members take too, but view as does not."
   def member_events(view) do
     if function_exported?(view, :__member_events__, 0), do: view.__member_events__(), else: []
   end

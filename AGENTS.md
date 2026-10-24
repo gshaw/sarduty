@@ -62,9 +62,10 @@
   with their email alone, like a login grant, and reach only their organization's space,
   `/orgs/:slug`, which shows each team's totals and never its people
   (`App.Model.OrganizationAdmin`; see [docs/organizations.md](docs/organizations.md)).
-  Team pages are for team admins unless a LiveView says `access: :team` or `:member`, and
-  an `access: :team` page's events stay team admins' unless it lists them in
-  `member_events`. Opening a page to members has its own steps in
+  Team pages are for team admins unless a LiveView says `access: :team` or `:member`. A
+  member on a team page sends only the events it lists in `view_events` and
+  `member_events`, and a team admin viewing as a member only its `view_events`. Opening
+  a page to members has its own steps in
   [docs/members.md](docs/members.md#opening-a-page-to-members).
 
 ## External integrations (know where to look)

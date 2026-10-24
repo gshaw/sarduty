@@ -1,5 +1,5 @@
 defmodule Web.MeChoreFormLive do
-  use Web, {:live_view_app_layout, access: :member}
+  use Web, {:live_view_app_layout, access: :member, view_events: ["validate"]}
 
   alias App.Model.Chore
   alias App.Model.ChoreCategory

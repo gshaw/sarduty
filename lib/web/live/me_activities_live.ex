@@ -1,5 +1,5 @@
 defmodule Web.MeActivitiesLive do
-  use Web, {:live_view_app_layout, access: :member}
+  use Web, {:live_view_app_layout, access: :member, view_events: ["year"]}
 
   import Web.Components.ActivityMap
   import Web.Components.Chart, only: [bar_list: 1]

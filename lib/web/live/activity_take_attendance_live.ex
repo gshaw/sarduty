@@ -1,12 +1,12 @@
 defmodule Web.ActivityTakeAttendanceLive do
-  # Members take attendance too (#475): every event here is theirs, including `scanned`
-  # and `scan_failed`, which the camera hook in qr_scanner.js sends.
+  # Members take attendance too (#475): a scan, a pick, and an undo are theirs. The
+  # camera hook in qr_scanner.js sends `scanned` and `scan_failed`.
   use Web,
       {:live_view_narrow_layout,
        size: :tool,
        access: :team,
-       member_events:
-         ~w(set_kind change clear_override scanned pick undo toggle_yet_to_arrive scan_failed)}
+       view_events: ~w(set_kind change clear_override toggle_yet_to_arrive scan_failed),
+       member_events: ~w(scanned pick undo)}
 
   import Web.Components.Scanner
   import Web.Components.YetToArrive
