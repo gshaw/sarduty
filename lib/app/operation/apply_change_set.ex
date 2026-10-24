@@ -28,6 +28,7 @@ defmodule App.Operation.ApplyChangeSet do
     :update_qualification,
     :delete_qualification,
     :award_qualification,
+    :attach_award_document,
     :remove_award,
     :create_group,
     :update_group,
@@ -120,6 +121,7 @@ defmodule App.Operation.ApplyChangeSet do
     end
   rescue
     error in D4H.Error -> {:error, error}
+    error in Req.TransportError -> {:error, error |> Exception.message() |> D4H.Error.exception()}
   end
 
   # An attendance set reads the activity's rows now, and D4H's published flag, since
