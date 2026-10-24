@@ -6,10 +6,7 @@ defmodule Web.RequestLogTest do
   alias Web.RequestLog
 
   describe "filter_path/2" do
-    test "cuts attendance tokens, short link codes and card codes" do
-      assert RequestLog.filter_path("sarduty.com", "/attendance/abc") == "/attendance/[FILTERED]"
-      assert RequestLog.filter_path("sarduty.com", "/s/ABC123") == "/s/[FILTERED]"
-
+    test "cuts card codes" do
       assert RequestLog.filter_path("sarduty.com", "/verify/K7Q4M2XA/photo") ==
                "/verify/[FILTERED]/photo"
 
@@ -41,13 +38,13 @@ defmodule Web.RequestLogTest do
       on_exit(fn -> Logger.configure(level: level) end)
     end
 
-    test "logs a short link request without its code, and the code param filtered", %{conn: conn} do
+    test "logs a path with a card code without the code", %{conn: conn} do
       log =
         capture_log([level: :info], fn ->
-          assert_error_sent 404, fn -> get(conn, "/s/SECRETCODE") end
+          assert conn |> get("/verify/SECRETCODE/photo") |> response(404)
         end)
 
-      assert log =~ "GET /s/[FILTERED]"
+      assert log =~ "GET /verify/[FILTERED]/photo"
       refute log =~ "SECRETCODE"
     end
 

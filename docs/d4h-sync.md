@@ -191,20 +191,20 @@ starting `Error:` is a failure, and any other text is a stage in progress.
   page for a bot or a shared D4H account, and the members stage never writes it.
   `Member.people_query/1` leaves those members out of the dashboard's member counts and
   missing-details check, and the members list's missing-details filter.
-  `Member.get_managers/2` and the attendance link's member list leave them out as well.
+  `Member.get_managers/2` and Take attendance's member list leave them out as well.
   The member page suggests it for a member with no email, no mobile phone, and no
   attendance.
 - **An activity D4H stops listing is marked deleted** (#160). D4H leaves deleted
   activities out of `GET /events`, `/exercises`, and `/incidents`, and a fetch for one
   returns 404. At the end of each kind's stage, `UpsertActivities.plan_deleted/2` picks
   this team's activities of that kind D4H didn't list, and the stage sets
-  `activities.deleted_at` to the refresh time and closes their open attendance links. It
+  `activities.deleted_at` to the refresh time. It
   skips a kind D4H returns none of. If D4H lists one again, the mark clears.
 - Deleted activities are left out of the activity list, its years, the dashboard count,
   and letter hours. D4H already returns no attendance for them, so the attendance stage
   deletes theirs. Their page says "Deleted" and offers no actions. Take attendance
-  and the mileage report send you back to it, an attendance link on one takes no scans,
-  and `SendAttendanceToD4H` refuses it.
+  and the mileage report send you back to it, a Take attendance page left open on one
+  takes no scans, and `SendAttendanceToD4H` refuses it.
 - Endorsements and group rules are never deleted by the sync. A rule for a deleted group
   is left unused; an endorsement naming a deleted qualification shows a warning on the
   endorsements page and on every group page that uses it.

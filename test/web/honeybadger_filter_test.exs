@@ -66,27 +66,28 @@ defmodule Web.HoneybadgerFilterTest do
       server: %{},
       correlation_context: %{},
       request: %{
-        url: "/attendance/secret-token",
+        url: "/verify/SECRETCODE/photo",
         params: %{"token" => "secret-token"},
         session: %{},
         context: %{},
         cgi_data: %{
           "HTTP_HOST" => "sarduty.com",
-          "PATH_INFO" => "attendance/secret-token",
-          "ORIGINAL_FULLPATH" => "/attendance/secret-token",
-          "HTTP_REFERER" => "https://sarduty.com/s/SHORTCODE"
+          "PATH_INFO" => "verify/SECRETCODE/photo",
+          "ORIGINAL_FULLPATH" => "/verify/SECRETCODE/photo",
+          "HTTP_REFERER" => "https://sarduty.com/verify/SECRETCODE"
         }
       }
     }
 
     %{request: request} = HoneybadgerFilter.filter(notice)
 
-    assert request.url == "/attendance/[FILTERED]"
+    assert request.url == "/verify/[FILTERED]/photo"
     assert request.params == %{"token" => "[FILTERED]"}
-    assert request.cgi_data["PATH_INFO"] == "attendance/[FILTERED]"
-    assert request.cgi_data["ORIGINAL_FULLPATH"] == "/attendance/[FILTERED]"
-    assert request.cgi_data["HTTP_REFERER"] == "https://sarduty.com/s/[FILTERED]"
+    assert request.cgi_data["PATH_INFO"] == "verify/[FILTERED]/photo"
+    assert request.cgi_data["ORIGINAL_FULLPATH"] == "/verify/[FILTERED]/photo"
+    assert request.cgi_data["HTTP_REFERER"] == "https://sarduty.com/verify/[FILTERED]"
     refute inspect(request) =~ "secret-token"
+    refute inspect(request) =~ "SECRETCODE"
   end
 
   test "cuts card codes from Insights request events" do
@@ -100,19 +101,22 @@ defmodule Web.HoneybadgerFilterTest do
   end
 
   test "never sends a LiveView's assigns to Insights" do
-    data = %{view: "Web.AttendanceLinkLive", assigns: %{members: [%{address: "1 Main St"}]}}
+    data = %{
+      view: "Web.ActivityTakeAttendanceLive",
+      assigns: %{members: [%{address: "1 Main St"}]}
+    }
 
     filtered = HoneybadgerFilter.filter_telemetry_event(data, %{}, [:phoenix, :live_view])
 
     refute Map.has_key?(filtered, :assigns)
-    assert filtered.view == "Web.AttendanceLinkLive"
+    assert filtered.view == "Web.ActivityTakeAttendanceLive"
   end
 
-  test "cuts tokens from a LiveView's URL in Insights" do
-    data = %{url: "https://sarduty.com/attendance/secret-token", params: %{}}
+  test "cuts card codes from a LiveView's URL in Insights" do
+    data = %{url: "https://sarduty.com/verify/SECRETCODE", params: %{}}
 
     filtered = HoneybadgerFilter.filter_telemetry_event(data, %{}, [:phoenix])
 
-    assert filtered.url == "https://sarduty.com/attendance/[FILTERED]"
+    assert filtered.url == "https://sarduty.com/verify/[FILTERED]"
   end
 end

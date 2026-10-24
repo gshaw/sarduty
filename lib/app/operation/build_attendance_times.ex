@@ -1,8 +1,10 @@
 defmodule App.Operation.BuildAttendanceTimes do
+  alias App.Accounts.User
   alias App.Model.Activity
   alias App.Model.AttendanceScan
+  alias App.Model.Member
 
-  # Turns the door's scans into each member's arrival and departure. Pure: the caller
+  # Turns the Take attendance scans into each member's arrival and departure. Pure: the caller
   # loads the scans.
   #
   # - The latest scan of each kind wins, so scanning again fixes a mistake.
@@ -18,8 +20,9 @@ defmodule App.Operation.BuildAttendanceTimes do
 
   @doc """
   One map per member with a scan, ordered by name:
-  `%{member: member, arrived_at: dt, left_at: dt, notes: [note]}`. A note is
-  `:no_arrival`, `:no_departure`, or `:left_before_arriving`.
+  `%{member: member, arrived_at: dt, left_at: dt, notes: [note], recorded_by: [name]}`.
+  A note is `:no_arrival`, `:no_departure`, or `:left_before_arriving`. `recorded_by`
+  names whoever recorded the scans the times come from, arrival first, without repeats.
   """
   def call(%Activity{} = activity, scans) do
     scans
@@ -49,9 +52,20 @@ defmodule App.Operation.BuildAttendanceTimes do
       member: hd(scans).member,
       arrived_at: truncate(arrived_at),
       left_at: truncate(left_at),
-      notes: arrival_notes ++ departure_notes ++ order_notes
+      notes: arrival_notes ++ departure_notes ++ order_notes,
+      recorded_by:
+        [arrival, departure]
+        |> Enum.map(&recorder_name/1)
+        |> Enum.uniq()
+        |> Enum.reject(&is_nil/1)
     }
   end
+
+  # The recorder's member name, or their email when they aren't a member, such as a SAR
+  # Duty admin, as history names users. Scans from before #475 have no recorder.
+  defp recorder_name(%AttendanceScan{recorded_by_member: %Member{name: name}}), do: name
+  defp recorder_name(%AttendanceScan{recorded_by_user: %User{email: email}}), do: email
+  defp recorder_name(_scan), do: nil
 
   defp latest(scans, kind) do
     scans

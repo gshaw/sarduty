@@ -7,8 +7,8 @@ defmodule Web.RouterTest do
   # Every top-level path on the main site. A new one fails here until it's added on
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
-  @main_top_level ~w(teams orgs admin account signup login logout s attendance replies reminders
-                     wallet styles terms privacy maps)
+  @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
+                     terms privacy maps)
   @verify_top_level ["orgs", "letters", ":code", "*path"]
 
   test "the main site's top-level paths are the allowed ones" do
@@ -49,6 +49,7 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/activities",
     "/teams/:subdomain/activities/:id",
     "/teams/:subdomain/activities/:id/calendar",
+    "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/me",
     "/teams/:subdomain/me/activities",
     "/teams/:subdomain/me/card/apple-wallet",
@@ -95,8 +96,6 @@ defmodule Web.RouterTest do
      :serial_numbers},
     {"GET", "/wallet/v1/passes/pass.type/S1", Web.WalletController, :pass},
     {"POST", "/wallet/v1/log", Web.WalletController, :log},
-    {"GET", "/s/abc123", Web.ShortLinkController, :show},
-    {"GET", "/attendance/token", Web.AttendanceLinkLive, nil},
     {"GET", "/replies/token", Web.ReplyLinkLive, nil},
     {"GET", "/reminders/token", Web.InvitationRemindersLive, nil},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},

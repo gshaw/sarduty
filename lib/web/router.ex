@@ -121,8 +121,6 @@ defmodule Web.Router do
       live "/terms", TermsLive
       live "/privacy", PrivacyLive
       live "/signup", TeamSignupLive
-      # Taking attendance at the door. The token is the only access: no login.
-      live "/attendance/:token", AttendanceLinkLive
       # A reminder email's links (#444): replying, and turning reminders off. No login.
       live "/replies/:token", ReplyLinkLive
       live "/reminders/:token", InvitationRemindersLive
@@ -132,9 +130,6 @@ defmodule Web.Router do
     post "/replies/:token", ReplyLinkController, :create
     # Add to calendar on the reply page: the reply link's activity as an .ics file.
     get "/replies/:token/calendar", ActivityCalendarController, :reply
-
-    # Short links, such as an attendance link. Lowercase codes, unlike an ID card's.
-    get "/s/:code", ShortLinkController, :show
 
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
@@ -204,6 +199,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit
       live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
       live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive
+      live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
       live "/teams/:subdomain/activities/:id/equipment", ActivityEquipmentLive
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive

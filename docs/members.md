@@ -78,7 +78,7 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
 These stay as they were, since a bot cannot attend or be invited, and skip members
 marked not a person with no rule: invites (`InviteGroups`), the home page's counts and
-charts, the missing details filter, and the attendance list at the door.
+charts, the missing details filter, and the member list on Take attendance.
 
 ## The attendance check
 
@@ -250,7 +250,10 @@ The team's Dashboard, `/teams/:subdomain`
 - **Replies** (#444): a member replies to an activity they're invited to from Next up and
   Coming up, until it starts. A team admin replies as their own member row, found by
   email, on a team with member logins off too. See [Replies](#replies).
-- **Team admins also get** Take attendance on Next up, Needs attention, and Refresh now.
+- **Take attendance** on Next up: team admins at any time, and members from 2 hours
+  before the activity starts until 2 hours after it ends (#475,
+  [taking-attendance.md](taking-attendance.md)).
+- **Team admins also get** Needs attention and Refresh now.
   A team admin who is a member sees both For you to do and Needs attention, one above
   the other. A member's page doesn't work out Needs attention at all.
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
@@ -279,8 +282,10 @@ hidden data makes people suspicious).
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
   reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,
   SARVAC hours, the place with copy and the maps link, Add to calendar and Open D4H
-  activity, the tags, the map, the description, Members, and the equipment. Team admins
-  also get Take attendance under the title, History, which can hold contact details and
+  activity, the tags, the map, the description, Members, and the equipment. Take
+  attendance is under the title for team admins, and for members from 2 hours before the
+  start until 2 hours after the end; a member's Yet to arrive there shows names only.
+  Team admins also get History, which can hold contact details and
   addresses, the Actions, Add equipment, and links to each member's and item's page.
   Members never see contact details.
 - **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for

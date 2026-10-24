@@ -1,8 +1,9 @@
 defmodule Web.Components.YetToArrive do
   @moduledoc """
-  The members who signed up for an activity and have not arrived, with Call and Text
-  buttons on touch screens, and a line counting arrivals. Used at the door and on the team admin's Take
-  attendance page (#245).
+  The members who signed up for an activity and have not arrived, and a line counting
+  arrivals. For team admins, each has their mobile number with Call and Text buttons on
+  touch screens; members see names only, since they never see contact details (#475).
+  Used on Take attendance and on the team admin's Attendance page (#245).
   """
   use Phoenix.Component
 
@@ -10,6 +11,7 @@ defmodule Web.Components.YetToArrive do
 
   attr :id, :string, default: "yet-to-arrive"
   attr :yet_to_arrive, :map, required: true, doc: "from App.Operation.BuildYetToArrive"
+  attr :contacts?, :boolean, default: false, doc: "mobile numbers with Call and Text"
   attr :class, :any, default: nil
 
   def yet_to_arrive_list(assigns) do
@@ -26,12 +28,12 @@ defmodule Web.Components.YetToArrive do
         >
           <span>
             <span class="font-semibold">{member.name}</span>
-            <span :if={Service.Phone.format(member.phone)} class="block hint">
+            <span :if={@contacts? and Service.Phone.format(member.phone)} class="block hint">
               {Service.Phone.format(member.phone)}
             </span>
-            <span :if={!Service.Phone.format(member.phone)} class="block hint">No mobile number</span>
+            <span :if={@contacts? and !Service.Phone.format(member.phone)} class="block hint">No mobile number</span>
           </span>
-          <.call_and_text id={"#{@id}-#{member.id}"} phone={member.phone} />
+          <.call_and_text :if={@contacts?} id={"#{@id}-#{member.id}"} phone={member.phone} />
         </li>
       </ul>
       <p id={"#{@id}-count"} class="mt-2 hint">{arrived_text(@yet_to_arrive)}</p>

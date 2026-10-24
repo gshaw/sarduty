@@ -1,519 +1,482 @@
 defmodule Web.ActivityTakeAttendanceLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_narrow_layout, size: :tool, access: :team}
 
-  import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Scanner
   import Web.Components.YetToArrive
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
-  alias App.Model.NoShow
-  alias App.Model.ShortLink
-  alias App.Operation.BuildAttendanceTimes
+  alias App.Model.Member
+  alias App.Model.MemberCard
   alias App.Operation.BuildYetToArrive
-  alias App.Operation.CloseAttendanceLink
-  alias App.Operation.CreateAttendanceLink
-  alias App.Operation.FollowUpNoShow
-  alias App.Operation.SendAttendanceToD4H
+  alias App.Operation.RecordAttendanceScan
   alias App.Repo
+  alias Web.UserAuth
 
-  # The team admin's side of taking attendance at the door: make or close the link, and
-  # watch arrivals and departures come in.
-  def mount(_params, _session, socket), do: {:ok, socket}
+  # Taking attendance for one activity (#475): team admins at any time, and members from 2
+  # hours before it starts until 2 hours after it ends (Activity.take_attendance?/3). It
+  # records ID card scans and members picked by name, and lists what it has recorded so a
+  # mistake can be undone. Every scan and Undo checks again, so a page left open stops
+  # when the window closes. Nothing reaches D4H until a team admin sends it from the
+  # Attendance page.
+  @max_name_matches 8
+  @recent_count 30
+  # A good scan's confirmation shows this long, then the page is ready for the next.
+  @confirm_ms 3000
 
-  def handle_params(params, _uri, socket) do
-    team = socket.assigns.current_team
-    activity = team |> Activity.find!(params["id"]) |> Repo.preload(:team)
+  def mount(%{"id" => id}, _session, socket) do
+    activity = socket.assigns.current_team |> Activity.find!(id) |> Repo.preload(:team)
 
     if Activity.deleted?(activity),
-      do: {:noreply, Web.ActivityLive.leave_deleted(socket, activity)},
-      else: load(socket, activity)
+      do: {:ok, Web.ActivityLive.leave_deleted(socket, activity)},
+      else: {:ok, open(socket, activity)}
   end
 
-  defp load(socket, activity) do
+  defp open(socket, activity) do
+    now = DateTime.utc_now()
+
     if connected?(socket),
       do: Phoenix.PubSub.subscribe(App.PubSub, AttendanceScan.topic(activity.id))
 
+    members =
+      activity.team_id
+      |> Member.get_all()
+      |> Enum.filter(&(Member.current?(&1, now) and not &1.not_a_person))
+
+    socket
+    |> assign(
+      page_title: "#{activity.title} · Take attendance",
+      activity: activity,
+      recorder: recorder(socket.assigns, now),
+      team: activity.team,
+      members: members,
+      kind: "arrived",
+      override: "",
+      search: "",
+      matches: [],
+      message: nil,
+      scan_failed: false,
+      show_yet_to_arrive: false
+    )
+    |> assign_closed(now)
+    |> load_scans()
+  end
+
+  # Why the door can't take attendance now, or nil when it can.
+  defp assign_closed(socket, now) do
+    case socket |> door() |> RecordAttendanceScan.check_open(now) do
+      :ok -> assign(socket, closed: nil)
+      {:error, reason} -> assign(socket, closed: reason)
+    end
+  end
+
+  # The member who takes attendance, so Recorded by names them: the user's member login,
+  # or a team admin's member on a team with member logins off, found as replies find them.
+  defp recorder(%{current_member: %Member{} = member}, _now), do: member
+
+  defp recorder(%{current_team: team, current_user: user}, now),
+    do: Member.find_by_email(team, user.email, now)
+
+  # Who takes attendance, for RecordAttendanceScan.
+  defp door(socket) do
+    %{
+      activity: socket.assigns.activity,
+      user: socket.assigns.current_user,
+      member: socket.assigns.recorder,
+      team_admin?: socket.assigns.team_admin?
+    }
+  end
+
+  def handle_info(:attendance_scans_changed, socket), do: {:noreply, load_scans(socket)}
+
+  # Only clears the confirmation it was set for, not a newer one.
+  def handle_info({:clear_message, message}, socket) do
+    if socket.assigns[:message] == message,
+      do: {:noreply, assign(socket, message: nil)},
+      else: {:noreply, socket}
+  end
+
+  def handle_event("set_kind", %{"kind" => kind}, socket) when kind in ["arrived", "left"],
+    do: {:noreply, assign(socket, kind: kind, message: nil)}
+
+  def handle_event("change", params, socket) do
+    search = params["search"] || ""
+
+    {:noreply,
+     assign(socket,
+       override: params["override"] || "",
+       search: search,
+       matches: if(card_text?(search), do: [], else: matches(socket.assigns.members, search))
+     )}
+  end
+
+  def handle_event("clear_override", _params, socket),
+    do: {:noreply, assign(socket, override: "")}
+
+  # The scanner sends the time box's value with each read, so the scan uses what the
+  # box shows even when the phone never sent a change for it.
+  def handle_event("scanned", %{"code" => input} = params, socket) do
+    kind = socket.assigns.kind
+    override = params["override"] || socket.assigns.override
+    hosts = Web.VerifyHost.trusted_hosts()
+
     socket =
-      socket
-      |> assign(page_title: "#{activity.title} · Take attendance", activity: activity)
-      |> assign(review: nil, selected: MapSet.new(), failures: [])
-      |> load_link()
-      |> load_times()
-      |> load_no_shows()
+      record(socket, fn door, now ->
+        RecordAttendanceScan.from_card(door, input, hosts, kind, override, now)
+      end)
 
     {:noreply, socket}
   end
 
-  def handle_info(:attendance_scans_changed, socket), do: {:noreply, load_times(socket)}
+  # A member's button submits the whole form, so the pick carries the time box as it
+  # shows (#168). Enter in the search box submits with no member: a card's link or code
+  # records that card, as a plug-in barcode scanner types it (#484); anything else only
+  # searches.
+  def handle_event("pick", %{"pick" => member_id} = params, socket) do
+    kind = socket.assigns.kind
+    override = params["override"] || ""
 
-  def handle_event("create-link", _params, socket) do
-    %{current_team: team, current_user: user, activity: activity} = socket.assigns
-    CreateAttendanceLink.call(team, activity, user, DateTime.utc_now())
-    {:noreply, socket |> load_link() |> put_flash(:info, "Attendance link made.")}
+    socket =
+      socket
+      |> assign(override: override)
+      |> record(&RecordAttendanceScan.from_name(&1, member_id, kind, override, &2))
+      |> assign(search: "", matches: [])
+
+    {:noreply, socket}
   end
 
-  def handle_event("close-link", _params, socket) do
-    %{current_team: team, activity: activity} = socket.assigns
-    CloseAttendanceLink.call(team, activity, DateTime.utc_now())
-    {:noreply, socket |> load_link() |> put_flash(:info, "Attendance link closed.")}
-  end
+  def handle_event("pick", params, socket) do
+    input = String.trim(params["search"] || "")
 
-  # Reads D4H live, so the plan matches D4H now.
-  def handle_event("review", _params, socket) do
-    %{current_team: team, activity: activity} = socket.assigns
+    if card_entry?(input) do
+      kind = socket.assigns.kind
+      override = params["override"] || ""
+      hosts = Web.VerifyHost.trusted_hosts()
 
-    case SendAttendanceToD4H.preview(team, activity) do
-      {:ok, review} ->
-        selected =
-          for change <- review.changes, change.selected, into: MapSet.new(), do: change.key
+      socket =
+        socket
+        |> assign(override: override, search: "", matches: [])
+        |> record(&RecordAttendanceScan.from_card(&1, input, hosts, kind, override, &2))
+        |> push_event("clear-search", %{})
 
-        {:noreply, assign(socket, review: review, selected: selected, failures: [])}
-
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_text(error, team))}
+      {:noreply, socket}
+    else
+      handle_event("change", params, socket)
     end
   end
 
-  # `done` is the state the click asks for, since a checkbox's click carries no state.
-  def handle_event("follow-up", %{"id" => id, "done" => done}, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
-    FollowUpNoShow.call(team, id, done == "true", user, DateTime.utc_now())
-    {:noreply, load_no_shows(socket)}
+  def handle_event("undo", %{"id" => scan_id}, socket) do
+    socket =
+      with_open_door(socket, fn door, now ->
+        case RecordAttendanceScan.undo(door, scan_id, now) do
+          :ok -> assign(socket, message: {:info, "Scan removed."})
+          # Closed between the check and the undo.
+          {:error, _reason} -> assign_closed(socket, now)
+        end
+      end)
+
+    {:noreply, socket}
   end
 
-  def handle_event("select", params, socket),
-    do: {:noreply, assign(socket, :selected, MapSet.new(params["keys"] || []))}
+  def handle_event("toggle_yet_to_arrive", _params, socket),
+    do: {:noreply, update(socket, :show_yet_to_arrive, &(!&1))}
 
-  def handle_event("cancel-review", _params, socket),
-    do: {:noreply, assign(socket, review: nil, selected: MapSet.new())}
+  def handle_event("scan_failed", _params, socket),
+    do: {:noreply, assign(socket, :scan_failed, true)}
 
-  def handle_event("send", params, socket) do
-    %{current_team: team, activity: activity} = socket.assigns
-    keys = params["keys"] || []
+  defp record(socket, record) do
+    with_open_door(socket, fn door, now ->
+      {kind, _text} = message = message(record.(door, now), socket.assigns.team)
 
-    case SendAttendanceToD4H.call(
-           team,
-           activity,
-           socket.assigns.current_user,
-           keys,
-           DateTime.utc_now()
-         ) do
-      {:ok, results} ->
-        {:noreply, show_results(socket, results)}
+      if kind in [:arrived, :left],
+        do: Process.send_after(self(), {:clear_message, message}, @confirm_ms)
 
-      {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_text(error, team))}
+      socket
+      |> assign(message: message)
+      |> push_event("scan-sound", %{sound: kind})
+    end)
+  end
+
+  # Reads the activity again, so one deleted since the page opened stops it too. A team
+  # admin viewing as a member sees the member's page, and saves nothing.
+  defp with_open_door(%{assigns: %{viewing_as: %Member{} = member}} = socket, _action),
+    do: assign(socket, message: {:error, UserAuth.view_as_refusal(member)})
+
+  defp with_open_door(socket, action) do
+    now = DateTime.utc_now()
+    activity = socket.assigns.activity |> Repo.reload!() |> Repo.preload(:team)
+    socket = socket |> assign(activity: activity) |> assign_closed(now)
+
+    cond do
+      Activity.deleted?(activity) -> Web.ActivityLive.leave_deleted(socket, activity)
+      socket.assigns.closed -> assign(socket, message: nil)
+      true -> socket |> door() |> action.(now)
     end
   end
 
-  defp show_results(socket, results) do
-    failures = for {change, {:error, message}} <- results, do: {change, message}
-    saved = length(results) - length(failures)
-    kind = if failures == [], do: :info, else: :error
+  # `{kind, text}`: `:arrived` or `:left` for a good scan, `:error`, or `:info`. The kind
+  # picks the banner's colour and the scan's sound.
+  defp message({:ok, scan}, team) do
+    time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
 
-    socket
-    |> assign(review: nil, selected: MapSet.new(), failures: failures)
-    |> load_link()
-    |> load_no_shows()
-    |> put_flash(kind, sent_text(saved, length(failures)))
+    case scan.kind do
+      "arrived" -> {:arrived, "#{scan.member.name} arrived at #{time}."}
+      "left" -> {:left, "#{scan.member.name} left at #{time}."}
+    end
   end
 
-  defp sent_text(saved, 0), do: "#{count_changes(saved)} sent."
-  defp sent_text(0, failed), do: "#{count_changes(failed)} did not go through."
+  defp message({:error, reason}, _team), do: {:error, error_text(reason)}
 
-  defp sent_text(saved, failed),
-    do: "#{count_changes(saved)} sent. #{count_changes(failed)} did not go through."
+  defp error_text(:not_found), do: "No ID card has this code. Find the member by name instead."
+  defp error_text(:other_site), do: "This is not a SAR Duty ID card. Find the member by name."
+  defp error_text(:other_team), do: "This ID card is for another team."
+  defp error_text(:revoked), do: "This ID card is cancelled. Find the member by name instead."
+  defp error_text(:left_team), do: "This member is retired."
+  defp error_text(:bad_time), do: "Enter the time as hours and minutes, like 09:30."
 
-  defp count_changes(n),
-    do: Service.Format.count(n, one: "%d attendance change", many: "%d attendance changes")
-
-  defp error_text(:published, team),
-    do: "Attendance cannot be changed once the activity is published. #{D4H.unpublish_text(team)}"
-
-  defp error_text(:deleted, _team), do: "This activity is deleted. Nothing can be sent to it."
-
-  defp error_text(:no_team_key, _team),
-    do: "Save your team's access key in team settings first."
-
-  defp error_text(%D4H.Error{status: status} = error, team) when status in [400, 404],
-    do:
-      "#{D4H.service_name(team)} cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
-
-  defp error_text(error, team), do: D4H.error_text(team, error)
-
-  defp load_link(socket) do
-    %{current_team: team, activity: activity} = socket.assigns
-    link = AttendanceLink.find_current(team, activity)
-    link = if link && AttendanceLink.open?(link, DateTime.utc_now()), do: link
-    assign(socket, link: link)
-  end
-
-  defp load_no_shows(socket),
-    do: assign(socket, no_shows: NoShow.get_all(socket.assigns.activity))
-
-  defp load_times(socket) do
+  # Signed up is read again with the scans, so the 10-minute sync's changes show too.
+  defp load_scans(socket) do
     activity = socket.assigns.activity
-    scans = AttendanceScan.get_all(activity)
-
-    assign(socket,
-      times: BuildAttendanceTimes.call(activity, scans),
-      yet_to_arrive: activity |> Attendance.signed_up_members() |> BuildYetToArrive.call(scans)
-    )
+    all_scans = AttendanceScan.get_all(activity)
+    yet_to_arrive = activity |> Attendance.signed_up_members() |> BuildYetToArrive.call(all_scans)
+    scans = all_scans |> Enum.reverse() |> Enum.take(@recent_count)
+    assign(socket, scans: scans, yet_to_arrive: yet_to_arrive)
   end
+
+  @doc "Current members whose name contains every word typed, up to #{@max_name_matches}."
+  def matches(_members, search) when byte_size(search) < 2, do: []
+
+  def matches(members, search) do
+    words = search |> String.downcase() |> String.split()
+
+    members
+    |> Enum.filter(fn member ->
+      name = String.downcase(member.name)
+      Enum.all?(words, &String.contains?(name, &1))
+    end)
+    |> Enum.sort_by(& &1.name)
+    |> Enum.take(@max_name_matches)
+  end
+
+  @doc """
+  Whether text in the name box is a card's link or code rather than a name. A printed
+  code has a dash and almost every code has a digit; names have neither.
+  """
+  def card_entry?(text) do
+    String.contains?(text, "://") or
+      (MemberCard.normalize_code(text) != nil and String.match?(text, ~r/[\d-]/))
+  end
+
+  # As card_entry?/1, but also true while a scanner is still typing a link, so the name
+  # search doesn't say "no member" at each character.
+  defp card_text?(text) do
+    text = text |> String.trim() |> String.downcase()
+    String.starts_with?(text, "ht") or card_entry?(text)
+  end
+
+  attr :message, :any, required: true
+
+  # Big and coloured, so the person at the door sees each scan land at a glance.
+  defp message(%{message: {:info, text}} = assigns) do
+    assigns = assign(assigns, :text, text)
+
+    ~H"""
+    <p id="message" role="status" class="mt-4 mb-0 font-semibold">{@text}</p>
+    """
+  end
+
+  defp message(%{message: {kind, text}} = assigns) do
+    assigns = assign(assigns, kind: kind, text: text)
+
+    ~H"""
+    <.band
+      id="message"
+      role="status"
+      kind={message_kind(@kind)}
+      icon={message_icon(@kind)}
+      title={@text}
+      class="mt-4"
+    />
+    """
+  end
+
+  defp message_kind(:arrived), do: :success
+  defp message_kind(:left), do: :info
+  defp message_kind(:error), do: :danger
+
+  defp message_icon(:arrived), do: "hero-arrow-right-end-on-rectangle"
+  defp message_icon(:left), do: "hero-arrow-left-start-on-rectangle"
+  defp message_icon(:error), do: "hero-exclamation-circle"
 
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
-      <:item
-        label={"#{@activity.ref_id}"}
-        path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
-      />
+      <:item label="Activities" path={~p"/teams/#{@team}/activities"} />
+      <:item label={"#{@activity.ref_id}"} path={~p"/teams/#{@team}/activities/#{@activity.id}"} />
       <:item label="Take attendance" />
     </.breadcrumbs>
-    <h1 class="title">{@activity.title}</h1>
-
-    <h2 class="heading">Attendance link</h2>
-    <.link_section link={@link} activity={@activity} />
-
-    <h2 class="heading mt-4">Arrivals and departures</h2>
-    <.times_section times={@times} activity={@activity} />
-
-    <div :if={@yet_to_arrive.signed_up > 0} id="yet-to-arrive-section">
-      <h2 class="heading mt-4">Yet to arrive · {count_text(@yet_to_arrive)}</h2>
-      <p>
-        Members signed up who have not arrived. Call or text to check whether they're still
-        coming.
-      </p>
-      <.yet_to_arrive_list yet_to_arrive={@yet_to_arrive} class="md:max-w-xl" />
-    </div>
-
-    <h2 class="heading mt-4">Send attendance</h2>
-    <.failures_section failures={@failures} />
-    <.send_section
-      review={@review}
-      selected={@selected}
-      times={@times}
-      activity={@activity}
-      team={@current_team}
-    />
-
-    <div :if={@no_shows != []} id="no-shows">
-      <h2 class="heading mt-4">No-shows</h2>
-      <.no_shows_section no_shows={@no_shows} activity={@activity} />
-    </div>
-    """
-  end
-
-  attr :no_shows, :list, required: true
-  attr :activity, :any, required: true
-
-  defp no_shows_section(assigns) do
-    ~H"""
-    <p>
-      These members signed up and did not arrive. Check that each one is OK, then mark them
-      followed up.
+    <h1 class="title mb-1">{@activity.title}</h1>
+    <p id="activity-summary" class="text-text-muted">
+      {when_text(@activity, @team)}<span :if={@activity.address}> · {@activity.address}</span>
     </p>
-    <.table
-      id="no-show-list"
-      rows={@no_shows}
-      row_id={&"no-show-#{&1.id}"}
-      class="table-striped table-stack md:w-fit"
-    >
-      <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
-      <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
-        <span :if={Service.Phone.format(no_show.member.phone)}>{Service.Phone.format(
-          no_show.member.phone
-        )}</span>
-        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number</span>
-        <.call_and_text
-          id={"no-show-#{no_show.id}"}
-          phone={no_show.member.phone}
-          class="mt-1"
+
+    <p :if={@closed} id="closed" class="mt-4 font-semibold">
+      {closed_text(@closed, @activity, @team)}
+    </p>
+    <div :if={!@closed} id="controls">
+      <div :if={@yet_to_arrive.signed_up > 0} class="mt-4">
+        <.button
+          id="toggle-yet-to-arrive"
+          type="button"
+          aria-expanded={to_string(@show_yet_to_arrive)}
+          aria-controls="yet-to-arrive"
+          phx-click="toggle_yet_to_arrive"
+        >
+          Yet to arrive · {count_text(@yet_to_arrive)}
+        </.button>
+        <.yet_to_arrive_list
+          :if={@show_yet_to_arrive}
+          yet_to_arrive={@yet_to_arrive}
+          contacts?={@team_admin?}
+          class="mt-2"
         />
-      </:col>
-      <:col :let={no_show} label="Email" class="stack-full stack-optional break-all">
-        <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>{no_show.member.email}</.a>
-      </:col>
-      <:col :let={no_show} label="Followed up" class="stack-full">
-        <label class="flex items-center gap-2 whitespace-nowrap min-h-6">
-          <input
-            type="checkbox"
-            id={"follow-up-#{no_show.id}"}
-            phx-click="follow-up"
-            phx-value-id={no_show.id}
-            phx-value-done={to_string(no_show.followed_up_at == nil)}
-            checked={no_show.followed_up_at != nil}
-          />
-          <span :if={no_show.followed_up_at} class="hint">
-            {Service.Format.month_day_time(no_show.followed_up_at, @activity.team.timezone)}
-          </span>
-        </label>
-      </:col>
-    </.table>
-    """
-  end
+      </div>
 
-  attr :failures, :list, required: true
+      <div id="kind" class="mt-4 flex gap-2" role="group" aria-label="Members are">
+        <.button
+          :for={{kind, label} <- [{"arrived", "Arriving"}, {"left", "Leaving"}]}
+          id={"kind-#{kind}"}
+          type="button"
+          variant={if @kind == kind, do: :primary, else: :default}
+          class="flex-1"
+          aria-pressed={to_string(@kind == kind)}
+          phx-click="set_kind"
+          phx-value-kind={kind}
+          data-return-focus
+        >
+          {label}
+        </.button>
+      </div>
 
-  defp failures_section(assigns) do
-    ~H"""
-    <div :if={@failures != []} id="failures" class="mb-4">
-      <p class="text-danger-text font-semibold">These changes did not go through:</p>
-      <ul>
-        <li :for={{change, message} <- @failures}>{change.member.name}: {message}</li>
-      </ul>
-    </div>
-    """
-  end
+      <form id="door-form" phx-change="change" phx-submit="pick">
+        <div class="mt-4">
+          <.input type="time" id="override" name="override" value={@override} label="Time (optional)">
+            Leave this empty to use the time of each scan. Set it to catch up from a paper list.
+          </.input>
+          <p :if={@override != ""} id="override-note" class="-mt-4 font-semibold">
+            Recording as {@override} ·
+            <.a id="clear-override" href="#" phx-click="clear_override">Clear time</.a>
+          </p>
+        </div>
 
-  attr :review, :any, required: true
-  attr :selected, :any, required: true
-  attr :times, :list, required: true
-  attr :activity, :any, required: true
-  attr :team, :any, required: true
+        <.message :if={@message} message={@message} />
 
-  defp send_section(%{review: nil} = assigns) do
-    ~H"""
-    <div id="send-start">
-      <p>
-        Review the changes before SAR Duty makes them. Members who arrived are marked attended
-        with their times. Members who signed up but did not arrive are marked absent.
-        When every change goes through, SAR Duty closes the attendance link.
-      </p>
-      <.button
-        id="review"
-        variant={:primary}
-        phx-click="review"
-        phx-disable-with="Checking attendance…"
-      >
-        Review changes
-      </.button>
-    </div>
-    """
-  end
+        <.qr_scanner
+          label="Scan ID cards"
+          variant={:success}
+          data-continuous
+          data-override-input="override"
+          class="mt-4"
+        />
+        <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
+          The camera did not start. Allow camera access, or find members by name.
+        </p>
 
-  defp send_section(%{review: %{published: true}} = assigns) do
-    ~H"""
-    <.warning_text id="published">
-      Attendance cannot be changed once the activity is published. {D4H.unpublish_text(@team)}
-    </.warning_text>
-    """
-  end
+        <div class="mt-4">
+          <.input
+            type="search"
+            id="search"
+            name="search"
+            value={@search}
+            label="Find a member by name"
+            autocomplete="off"
+            phx-debounce="150"
+            phx-hook="ScannerInput"
+          >
+            Or scan an ID card with a plug-in barcode scanner.
+          </.input>
+        </div>
+        <ul :if={@matches != []} id="matches" class="-mt-4">
+          <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
+            <span>{member.name}</span>
+            <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id}>
+              {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
+            </.button>
+          </li>
+        </ul>
+        <p
+          :if={@matches == [] and String.length(@search) >= 2 and not card_text?(@search)}
+          id="no-matches"
+          class="-mt-4"
+        >
+          No current member has that name.
+        </p>
+      </form>
 
-  defp send_section(assigns) do
-    %{review: review, selected: selected} = assigns
-
-    count =
-      Enum.count(review.changes, &(SendAttendanceToD4H.sendable?(&1) and &1.key in selected))
-
-    assigns = assign(assigns, :count, count)
-
-    ~H"""
-    <.form for={%{}} id="send-form" phx-change="select" phx-submit="send">
-      <p :if={@review.changes == []} id="no-changes">
-        No changes. Nobody has been scanned at the door.
-      </p>
-      <.table
-        :if={@review.changes != []}
-        id="changes"
-        rows={@review.changes}
-        row_id={&"change-#{&1.key}"}
-        class="table-striped table-stack"
-      >
-        <:col :let={change} label="" class="w-px stack-check" select_all>
-          <input
-            :if={SendAttendanceToD4H.sendable?(change)}
-            type="checkbox"
-            id={"select-#{change.key}"}
-            name="keys[]"
-            value={change.key}
-            checked={change.key in @selected}
-          />
+      <h2 class="heading mt-4">Recorded</h2>
+      <p :if={@scans == []} id="no-scans">Nobody yet. Scans show here as you take them.</p>
+      <.table :if={@scans != []} id="scans" rows={@scans} class="table-striped">
+        <:col :let={scan} label="Name">{scan.member.name}</:col>
+        <:col :let={scan} label="Scan" class="whitespace-nowrap">
+          {if scan.kind == "arrived", do: "Arrived", else: "Left"} {Service.Format.time_short(
+            AttendanceScan.time(scan),
+            @team.timezone
+          )}
         </:col>
-        <:col :let={change} label="Member" class="stack-title">
-          <label for={"select-#{change.key}"}>{change.member.name}</label>
-        </:col>
-        <:col :let={change} label="Change">
-          <span class={action_class(change.action)}>{action_text(change.action)}</span>
-        </:col>
-        <:col :let={change} label="Times" class="whitespace-nowrap stack-optional">
-          <span :if={change.arrived_at}>
-            {Service.Format.time_short(change.arrived_at, @activity.team.timezone)}–{Service.Format.time_short(
-              change.left_at,
-              @activity.team.timezone
-            )}
-          </span>
-        </:col>
-        <:col :let={change} label="Status now">{status_text(change.status)}</:col>
-        <:col :let={change} label="Notes" class="stack-full stack-optional">
-          <span :for={note <- change.notes} class={["block", note_class(note)]}>
-            {note_text(note)}
-          </span>
+        <:col :let={scan} label="" class="w-px">
+          <.button
+            id={"undo-#{scan.id}"}
+            type="button"
+            size={:sm}
+            variant={:link}
+            phx-click="undo"
+            phx-value-id={scan.id}
+          >
+            Undo
+          </.button>
         </:col>
       </.table>
-      <.form_actions class="mt-2">
-        <.button id="send" variant={:success} disabled={@count == 0} phx-disable-with="Sending…">
-          Send {Service.Format.count(@count, one: "%d change", many: "%d changes")}
-        </.button>
-        <.button type="button" phx-click="cancel-review">Cancel</.button>
-      </.form_actions>
-    </.form>
-    """
-  end
-
-  defp action_text(:update), do: "Attended"
-  defp action_text(:create), do: "Attended, not signed up"
-  defp action_text(:absent), do: "Absent"
-  defp action_text(:unchanged), do: "No change"
-  defp action_text(:blocked), do: "Fix the times first"
-
-  defp action_class(:absent), do: "text-danger-text font-semibold"
-  defp action_class(:blocked), do: "text-danger-text"
-  defp action_class(:unchanged), do: "text-text-muted"
-  defp action_class(_action), do: "text-success-text font-semibold"
-
-  defp status_text(nil), do: "Not listed"
-  defp status_text("requested"), do: "No reply"
-  defp status_text("attending"), do: "Signed up"
-  defp status_text("absent"), do: "Absent"
-  defp status_text(status), do: status
-
-  attr :link, :any, required: true
-  attr :activity, :any, required: true
-
-  defp link_section(%{link: nil} = assigns) do
-    ~H"""
-    <div id="no-link">
-      <p>
-        Make a link for the person taking attendance at the door. They open it on a phone and
-        scan each member's ID card as they arrive and leave. They do not need an account.
-        A plug-in barcode scanner works too, on a laptop or an iPad, if it reads QR codes on
-        phone screens.
-      </p>
-      <p>
-        The link works until you close it or send the attendance. Anyone with it sees your members'
-        names, and the mobile numbers of members who signed up and have not arrived.
-      </p>
-      <.button id="create-link" variant={:success} phx-click="create-link">
-        Make attendance link
-      </.button>
     </div>
-    """
-  end
 
-  defp link_section(assigns) do
-    ~H"""
-    <div id="open-link">
-      <p>
-        Send this link to the person taking attendance at the door. It works until you close
-        it or send the attendance.
-      </p>
-      <div class="flex flex-wrap gap-2 items-center">
-        <.a
-          id="attendance-link-url"
-          href={link_url(@link)}
-          external={true}
-          class="font-mono break-all"
-        >{link_url(@link)}</.a>
-        <.button
-          id="copy-link"
-          type="button"
-          phx-click={
-            JS.dispatch("sarduty:copy", to: "#attendance-link-url", detail: %{status: "#copy-status"})
-          }
-        >
-          Copy link
-        </.button>
-        <.button
-          id="share-link"
-          type="button"
-          phx-hook="ShareLink"
-          data-url={link_url(@link)}
-          hidden
-        >
-          Share link
-        </.button>
-        <span
-          id="copy-status"
-          role="status"
-          phx-update="ignore"
-          class="text-success-text font-semibold"
-        ></span>
-      </div>
-      <div class="mt-2 flex flex-wrap gap-4 items-center">
-        <.a
-          id="create-link"
-          href="#"
-          phx-click="create-link"
-          data-confirm="Make a new link? This link stops working."
-        >Make new link</.a>
-        <.button
-          id="close-link"
-          variant={:danger}
-          phx-click="close-link"
-          data-confirm="Close this link? It stops taking attendance."
-        >
-          Close link
-        </.button>
-      </div>
-    </div>
-    """
-  end
-
-  # Links made before short links have none, so they show the long one.
-  defp link_url(%AttendanceLink{short_link: %ShortLink{} = short_link}),
-    do: url(~p"/s/#{short_link.code}")
-
-  defp link_url(%AttendanceLink{token: token}), do: url(~p"/attendance/#{token}")
-
-  attr :times, :list, required: true
-  attr :activity, :any, required: true
-
-  defp times_section(%{times: []} = assigns) do
-    ~H"""
-    <p id="no-times">
-      Nobody has arrived yet. Members show here as the attendance link records them.
+    <p :if={@team_admin?} class="action mt-8">
+      <.a
+        id="send-attendance"
+        navigate={~p"/teams/#{@team}/activities/#{@activity.id}/attendance"}
+      >Send attendance to D4H</.a>
     </p>
     """
   end
 
-  defp times_section(assigns) do
-    ~H"""
-    <p>
-      {Service.Format.count(length(@times), one: "%d member", many: "%d members")}. SAR Duty uses
-      the start time for anyone who arrives within {Service.Format.duration(
-        BuildAttendanceTimes.grace_minutes()
-      )} of the start, early or late. It uses the end time for anyone who leaves within {Service.Format.duration(
-        BuildAttendanceTimes.grace_minutes()
-      )} of the end.
-    </p>
-    <.table id="times" rows={@times} class="table-striped table-stack md:w-fit">
-      <:col :let={row} label="Name" class="stack-title">{row.member.name}</:col>
-      <:col :let={row} label="Arrived" align="right">
-        {Service.Format.time_short(row.arrived_at, @activity.team.timezone)}
-      </:col>
-      <:col :let={row} label="Left" align="right">
-        {Service.Format.time_short(row.left_at, @activity.team.timezone)}
-      </:col>
-      <:col :let={row} label="Notes" class="stack-full stack-optional">
-        <span :for={note <- row.notes} class={["block", note_class(note)]}>{note_text(note)}</span>
-      </:col>
-    </.table>
-    """
+  defp when_text(activity, team) do
+    "#{Service.Format.day_coming_up(activity.started_at, DateTime.utc_now(), team.timezone)} " <>
+      "#{Service.Format.time_short(activity.started_at, team.timezone)}–" <>
+      Service.Format.time_short(activity.finished_at, team.timezone)
   end
 
-  defp note_class(:left_before_arriving), do: "text-danger-text"
-  defp note_class(:signed_up_without_scan), do: "font-semibold"
-  defp note_class(_note), do: "text-text-muted"
+  # Only a member's window closes; a team admin takes attendance at any time.
+  defp closed_text(:not_yet, activity, team) do
+    {opens_at, _closes_at} = Activity.attendance_window(activity)
 
-  defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."
-  defp note_text(:no_departure), do: "No departure scan. Uses the end time."
-  defp note_text(:left_before_arriving), do: "Left before arriving. Fix the times at the door."
+    "You can take attendance from #{window_time(opens_at, team)}, " <>
+      "#{window_hours()} before it starts."
+  end
 
-  defp note_text(:signed_up_without_scan),
-    do: "Signed up, but no scan. Uncheck if they came."
+  defp closed_text(:closed, activity, team) do
+    {_opens_at, closes_at} = Activity.attendance_window(activity)
+
+    "Taking attendance closed at #{window_time(closes_at, team)}. " <>
+      "Ask a team admin to add anyone missing."
+  end
+
+  defp window_hours, do: Service.Format.duration(Activity.attendance_window_hours() * 60)
+
+  # The time alone today, and with its day otherwise.
+  defp window_time(at, team) do
+    now = DateTime.utc_now()
+
+    if Service.Format.day_coming_up(at, now, team.timezone) == "Today",
+      do: Service.Format.time_short(at, team.timezone),
+      else: Service.Format.month_day_time(at, team.timezone)
+  end
 end

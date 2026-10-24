@@ -267,7 +267,7 @@ defmodule Web.TeamDashboardLive do
       activity={@activity}
       team={@team}
       now={@now}
-      team_admin?={@team_admin?}
+      take_attendance?={Activity.take_attendance?(@activity, @team_admin?, @now)}
     >
       <.activity_kind_mark activity={@activity} class="text-sm" />
       <h2 class="activity-panel-title">
