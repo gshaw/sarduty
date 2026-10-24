@@ -5,15 +5,18 @@ defmodule Web.EquipmentCollectionLive do
   import Web.Components.FilterBar
   import Web.Components.Scanner
   import Web.Components.StatSwitch
+  import Web.MemberEquipmentLive, only: [held_table: 1]
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
+  alias App.Model.Member
   alias App.ViewData.EquipmentList
 
   # The team's equipment, copied from D4H or SAR Duty Records (#271). It opens on the
   # places and categories, with counts; picking one, searching, or another filter lists
   # items, grouped by where they are. A Records team adds items here. On a phone,
-  # scanning a barcode opens its item.
+  # scanning a barcode opens its item. Place takes a member too, `?place=member-<id>`, from
+  # the member page's "All 12 items" (#490).
   def mount(_params, _session, socket) do
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
     in_service = EquipmentList.filter(rows, "in-service", "", DateTime.utc_now())
@@ -24,8 +27,10 @@ defmodule Web.EquipmentCollectionLive do
         rows: rows,
         places: EquipmentList.places(in_service),
         categories: EquipmentList.categories(in_service),
-        place_options: options(EquipmentList.places(rows)),
-        category_options: options(EquipmentList.categories(rows)),
+        place_options: EquipmentList.place_options(rows),
+        category_options: [
+          {"All", ""} | rows |> EquipmentList.categories() |> Enum.map(&elem(&1, 0))
+        ],
         scan_message: nil,
         scan_failed: false
       )
@@ -42,20 +47,19 @@ defmodule Web.EquipmentCollectionLive do
     category = params["category"] || ""
     now = DateTime.utc_now()
 
-    narrowed = EquipmentList.narrow(socket.assigns.rows, place, category)
+    {holder, held} = held_in(socket.assigns.current_team, place)
+    narrowed = EquipmentList.narrow(socket.assigns.rows, place, category, held)
     rows = EquipmentList.filter(narrowed, show, q, now)
 
     socket =
       assign(socket,
         show: show,
-        show_counts:
-          Map.new(EquipmentList.show_values(), fn value ->
-            {value, length(EquipmentList.filter(narrowed, value, "", now))}
-          end),
+        show_counts: show_counts(narrowed, now),
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
-        groups: EquipmentList.group(rows),
+        member_place?: EquipmentList.member_id(place) != nil,
+        groups: groups(rows, place, holder),
         form:
           to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
             as: "form"
@@ -92,9 +96,33 @@ defmodule Web.EquipmentCollectionLive do
   def handle_event("scan_failed", _params, socket),
     do: {:noreply, assign(socket, scan_failed: true)}
 
-  defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
+  # Each stat switch tile's count, in the place and category picked.
+  defp show_counts(narrowed, now) do
+    Map.new(EquipmentList.show_values(), fn value ->
+      {value, length(EquipmentList.filter(narrowed, value, "", now))}
+    end)
+  end
 
-  defp options(counts), do: [{"All", ""} | Enum.map(counts, &elem(&1, 0))]
+  # The member a member place names, looked up through the team, and the ids of what they
+  # hold. Nil and none for any other place, or a member of another team.
+  defp held_in(team, place) do
+    holder = EquipmentList.member_id(place) && Member.find(team, EquipmentList.member_id(place))
+
+    if holder,
+      do: {holder, team |> EquipmentItem.held_by(holder) |> MapSet.new(& &1.id)},
+      else: {nil, MapSet.new()}
+  end
+
+  # A member place is one group under their name; an unknown member's lists nothing.
+  defp groups(rows, place, holder) do
+    cond do
+      holder -> EquipmentList.group_held(rows, holder.name)
+      EquipmentList.member_id(place) -> []
+      true -> EquipmentList.group(rows)
+    end
+  end
+
+  defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
 
   # The page's path with some filters changed, for the filter bar's chips.
   defp path_fn(team, form) do
@@ -146,7 +174,13 @@ defmodule Web.EquipmentCollectionLive do
       hidden={[@form[:show]]}
     >
       <:search field={@form[:q]} placeholder="Name, barcode, or serial" />
-      <:filter field={@form[:place]} label="Place" options={@place_options} default="" />
+      <:filter
+        field={@form[:place]}
+        label="Place"
+        type="combobox"
+        options={@place_options}
+        default=""
+      />
       <:filter field={@form[:category]} label="Category" options={@category_options} default="" />
     </.filter_bar>
 
@@ -180,7 +214,15 @@ defmodule Web.EquipmentCollectionLive do
       class="mb-8"
     >
       <h2 class="heading">{place} · {length(rows)}</h2>
+      <%!-- A member's items, as their Equipment tab shows them. --%>
+      <.held_table
+        :if={@member_place?}
+        id={"equipment-#{slug(place)}"}
+        rows={rows}
+        team={@current_team}
+      />
       <.table
+        :if={!@member_place?}
         id={"equipment-#{slug(place)}"}
         rows={rows}
         row_id={&"item-#{&1.item.id}"}

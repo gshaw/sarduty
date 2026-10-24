@@ -5,16 +5,19 @@ defmodule Web.MeLive do
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.PersonHead
+  import Web.MemberEquipmentLive, only: [held_table: 1]
   import Web.ChoreText, only: [status_badge: 1]
 
   alias App.Adapter.D4H
   alias App.Model.Chore
+  alias App.Model.EquipmentItem
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
+  alias App.ViewData.EquipmentList
   alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
   alias Service.Format
@@ -23,8 +26,9 @@ defmodule Web.MeLive do
 
   # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
   # latest activities, from any year so it is never empty on January 1, and their
-  # qualifications in the main column; their ID card, latest tax credit letter, contact
-  # details, and milestones in a sidebar, split by space, not boxes (/styles/card).
+  # qualifications and the equipment they hold in the main column; their ID card, latest
+  # tax credit letter, contact details, and milestones in a sidebar, split by space, not
+  # boxes (/styles/card).
   # `current_member` comes from the login (Web.UserAuth, :ensure_team_access), never from
   # the URL.
   def mount(_params, _session, socket) do
@@ -45,6 +49,7 @@ defmodule Web.MeLive do
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
+      |> assign(:equipment, team |> EquipmentItem.held_by(member) |> EquipmentList.held_rows())
 
     {:ok, socket}
   end
@@ -103,6 +108,7 @@ defmodule Web.MeLive do
         />
         <.chores :if={@chores} team={@team} chores={@chores} />
         <.qualifications team={@team} now={@now} qualifications={@qualifications} />
+        <.equipment :if={@equipment != []} team={@team} rows={@equipment} />
       </div>
       <aside class="membership-aside">
         <div :if={@team.id_cards_enabled or @letter} class="membership-aside-top">
@@ -350,6 +356,20 @@ defmodule Web.MeLive do
         <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>Change contact details</.a>
       </p>
     </div>
+    """
+  end
+
+  attr :team, :map, required: true
+  attr :rows, :list, required: true
+
+  # Everything they hold, so they know what to bring back (#490), as a team admin sees it
+  # on their Equipment tab. No links: item pages are for team admins.
+  defp equipment(assigns) do
+    ~H"""
+    <section id="equipment" class="mt-8">
+      <h2 class="heading">Equipment</h2>
+      <.held_table id="equipment-list" rows={@rows} team={@team} links={false} />
+    </section>
     """
   end
 

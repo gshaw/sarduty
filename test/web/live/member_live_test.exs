@@ -163,6 +163,42 @@ defmodule Web.MemberLiveTest do
     end
   end
 
+  test "the sidebar counts what the member holds and opens their Equipment tab (#490)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    for n <- 1..6, do: equipment_item_fixture(team, %{title: "Radio #{n}", member_id: member.id})
+    equipment_item_fixture(team, %{title: "Radio 0", member_id: member.id, status: "retired"})
+    other = member_fixture(team)
+    equipment_item_fixture(team, %{title: "Their radio", member_id: other.id})
+    # An id from another team never reaches this team's member.
+    equipment_item_fixture(team_fixture(), %{title: "Stray radio", member_id: member.id})
+    conn = log_in_user(conn, user)
+    tab = "/teams/#{team.subdomain}/members/#{member.id}/equipment"
+
+    for path <- ["", "/history"] do
+      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{path}")
+
+      assert has_element?(lv, ~s{#member-equipment-link[href="#{tab}"]}, "7 items")
+      assert has_element?(lv, ~s{nav.tabs a[href="#{tab}"]}, "Equipment")
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+    assert has_element?(lv, "#member-equipment-link", "1 item")
+  end
+
+  test "a member who holds nothing has no Equipment in the sidebar or the tabs",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    refute has_element?(lv, "#member-equipment")
+    refute has_element?(lv, "dt", "Equipment")
+    refute has_element?(lv, "nav.tabs a", "Equipment")
+  end
+
   test "the Tag filter keeps the activities with the tag", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     tag_fixture(team, "Swiftwater")
