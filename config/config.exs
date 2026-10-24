@@ -72,8 +72,9 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-# SQLite allows one writer at a time, and something sometimes holds the write lock for
-# over 5 s (#416; App.Repo.SlowLog names it). So writes wait up to 30 s, not fail. A
+# SQLite allows one writer at a time, and Litestream is one of them: each checkpoint
+# holds the write lock while it copies the WAL, about once a minute and after every
+# sync, sometimes for more than 5 s (#416). So writes wait up to 30 s, not fail. A
 # deferred transaction that reads and then writes never waits, whatever busy_timeout
 # says, and Oban's stager does that every second. Immediate transactions take the
 # write lock at BEGIN, so they wait like any other write (#385).
