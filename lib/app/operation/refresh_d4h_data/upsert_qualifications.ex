@@ -49,7 +49,8 @@ defmodule App.Operation.RefreshD4HData.UpsertQualifications do
     params = %{
       team_id: team.id,
       d4h_qualification_id: d4h_qualification.d4h_qualification_id,
-      title: d4h_qualification.title
+      title: d4h_qualification.title,
+      expires_months_default: d4h_qualification.expires_months_default
     }
 
     qualification =

@@ -360,6 +360,9 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :award_qualification} = row, _page),
     do: "#{row.new_value["title"] || "A qualification"} awarded in SAR Duty"
 
+  def describe_row(%ChangeSetRow{action: :attach_award_document} = row, _page),
+    do: "Certificate for #{row.new_value["title"] || "a qualification"} added in SAR Duty"
+
   def describe_row(%ChangeSetRow{action: :remove_award} = row, _page),
     do: "#{row.old_value["title"] || "A qualification"} removed in SAR Duty"
 
@@ -397,6 +400,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:template), do: "template"
   def source_label(:tags), do: "tags"
   def source_label(:chores), do: "chores"
+  def source_label(:certificates), do: "certificates"
 
   defp qualification(%D4HChange{label: label}) when is_binary(label), do: label
   defp qualification(_c), do: "A qualification"

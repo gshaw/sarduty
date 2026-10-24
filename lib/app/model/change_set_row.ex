@@ -12,7 +12,8 @@ defmodule App.Model.ChangeSetRow do
   # row or group membership; a create fills it from D4H's answer. A row stays proposed
   # until it's applied, fails with D4H's error, or is skipped because D4H changed first.
   # A row on an activity the same set creates (#341) has `"created_in_set" => true` in
-  # `new_value` and no activity id until the create applies.
+  # `new_value` and no activity id until the create applies. So does a certificate's
+  # row on the award its set makes (#493), with no award id until the award applies.
   schema "change_set_rows" do
     belongs_to :change_set, ChangeSet
     belongs_to :team, Team
@@ -39,6 +40,7 @@ defmodule App.Model.ChangeSetRow do
         :update_qualification,
         :delete_qualification,
         :award_qualification,
+        :attach_award_document,
         :remove_award,
         :create_group,
         :update_group,
@@ -84,7 +86,13 @@ defmodule App.Model.ChangeSetRow do
     row |> change(new_value: new_value, d4h_record_id: record_id) |> Repo.update!()
   end
 
-  @doc "Whether the row goes on an activity the same set creates."
+  @doc "Fills in the award a `created_in_set` certificate row goes on (#493)."
+  def fill_award!(%ChangeSetRow{} = row, d4h_award_id) do
+    new_value = Map.put(row.new_value, "d4h_award_id", d4h_award_id)
+    row |> change(new_value: new_value) |> Repo.update!()
+  end
+
+  @doc "Whether the row goes on an activity or an award the same set creates."
   def created_in_set?(%ChangeSetRow{new_value: %{"created_in_set" => true}}), do: true
   def created_in_set?(%ChangeSetRow{}), do: false
 
