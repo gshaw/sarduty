@@ -3,9 +3,13 @@ defmodule Web.Components.MemberTabs do
 
   attr :member, :map, required: true
 
+  attr :equipment, :list,
+    default: [],
+    doc: "the items the member holds, from load_sidebar/1; Equipment shows when there are any"
+
   attr :active_tab, :atom,
     required: true,
-    values: [:attendance, :qualifications, :groups, :standing, :card, :history]
+    values: [:attendance, :qualifications, :groups, :equipment, :standing, :card, :history]
 
   def member_tabs(assigns) do
     ~H"""
@@ -27,6 +31,13 @@ defmodule Web.Components.MemberTabs do
         current={@active_tab == :groups}
       >
         Groups
+      </:tab>
+      <:tab
+        :if={@equipment != [] or @active_tab == :equipment}
+        navigate={~p"/teams/#{@member.team}/members/#{@member.id}/equipment"}
+        current={@active_tab == :equipment}
+      >
+        Equipment
       </:tab>
       <:tab
         navigate={~p"/teams/#{@member.team}/members/#{@member.id}/standing"}

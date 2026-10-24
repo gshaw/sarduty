@@ -275,6 +275,60 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#milestones-list-years-15 .badge")
     end
 
+    test "every item the member holds, with no cap and no links (#490)",
+         %{conn: conn, team: team, member: member} do
+      items =
+        for n <- 1..7,
+            do:
+              equipment_item_fixture(team, %{
+                title: "Kit #{n}",
+                member_id: member.id,
+                barcode: nil
+              })
+
+      old =
+        equipment_item_fixture(team, %{title: "Old kit", member_id: member.id, status: "retired"})
+
+      equipment_item_fixture(team_fixture(), %{title: "Stray kit", member_id: member.id})
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      for item <- items,
+          do: assert(has_element?(lv, "#equipment-list-#{item.id}", item.title))
+
+      assert has_element?(lv, "#equipment-list-#{hd(items).id}", "Radio")
+      refute has_element?(lv, "#equipment-list a")
+      assert has_element?(lv, "#equipment-list-#{old.id} .badge", "Retired")
+      refute has_element?(lv, "#equipment-list", "Stray kit")
+    end
+
+    test "a kit's contents follow it, with the kit they're in", %{
+      conn: conn,
+      team: team,
+      member: member
+    } do
+      kit = equipment_item_fixture(team, %{title: "First aid kit 6", member_id: member.id})
+
+      pouch =
+        equipment_item_fixture(team, %{
+          title: "Pouch",
+          d4h_container_id: kit.d4h_equipment_id,
+          location_title: nil
+        })
+
+      equipment_item_fixture(team, %{title: "Zip ties", member_id: member.id})
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#equipment-list-#{pouch.id}", "First aid kit 6")
+      assert has_element?(lv, "#equipment-list tr:nth-child(2)#equipment-list-#{pouch.id}")
+    end
+
+    test "no Equipment for a member who holds nothing", %{conn: conn, team: team} do
+      lv = open(conn, ~p"/teams/#{team}/me")
+      refute has_element?(lv, "#equipment")
+    end
+
     test "the member's own photo, or a 404 so the page shows initials",
          %{conn: conn, team: team} do
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))

@@ -57,6 +57,51 @@ It opens on two short tables: the places items are in and the categories (D4H's
 place, with the chain of items holding each one. A search, or a filter other than "In
 service", lists items from every place.
 
+## Items members hold
+
+D4H can put an item's location at a member, and the copy keeps it as
+`equipment_items.member_id` (#490). A member is a place, as in D4H.
+
+- **What a member holds** is one function,
+  [EquipmentItem.held_by/2](../lib/app/model/equipment_item.ex): the items D4H locates
+  with the member, and whatever sits inside them, down to 10 levels, as the equipment
+  page follows a chain. One recursive query, scoped by the team at every step, so another
+  team's item with a matching container id never counts. Retired items count too: D4H
+  still has them with the member, and the team may want them back (decided 2026-10-23).
+  The member page, Your membership, and Equipment's member place all read it, so their
+  counts always agree (decided 2026-10-23). On production that day 85 items sat inside 16 kits
+  members hold, beside 1,683 held directly; one team had 55 inside 6 kits.
+- **One table** shows what a member holds, in three places
+  ([Equipment.held_table/1](../lib/web/components/equipment.ex)): each
+  kit followed by what's inside it, with Item, Where, Category, Barcode, Expires, and the
+  equipment page's status badge for a retired, lost, or unserviceable item. Where says
+  only what an item is inside, "First aid kit 6 › Splint pouch", as it does in a D4H
+  location, and goes when nothing is inside another item
+  ([EquipmentList.held_rows/1](../lib/app/view_data/equipment_list.ex)).
+- **The member's Equipment tab**, `/teams/:subdomain/members/:id/equipment`, after Groups,
+  shows only when they hold something. The sidebar on every member tab says how many,
+  "58 items", and links to it. A sidebar list was tried first: kits in kits filled its 5
+  lines with one pack's contents, and a full kit of 58 was too long (decided
+  2026-10-23).
+- **Your membership** shows the table under Qualifications, with no links, so a member
+  knows what to bring back. The sidebar is for short things.
+- **Equipment, Place** lists the D4H locations, With members, and No location, then each
+  member who holds something, by name. It is a combobox, since a team has dozens of
+  holders. The URL takes the member's local id, `?place=member-12`, never the name, since
+  two members can share one. The section heading names the member ("Sam Rivera · 12")
+  over the same table, here with the stat switch and the search. It opens on All, not In
+  service, so its count is the sidebar's. The browse page's Place table keeps one With
+  members row, not one per member. There is no Member filter: it would conflict with
+  Place.
+- `place=member-<id>` for another team's member, or for a member who holds nothing,
+  lists nothing, like an unknown place.
+- **D4H won't retire a member who holds items** (2026-10-23): "Before a member is
+  retired, all their issued equipment must be returned to the team's inventory." So the
+  badge for a retired member with items, a With retired members place, and a Needs
+  attention line on the team home were dropped (#494, closed). The member's Equipment tab
+  is the list to work from before retiring them. Whether SAR Duty needs a standing for
+  the weeks between leaving and retiring is open on #490.
+
 ## Adding equipment to an activity
 
 The activity page has an Equipment section. "Add equipment" opens a page that builds a

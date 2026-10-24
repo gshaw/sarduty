@@ -101,6 +101,94 @@ defmodule App.ViewData.EquipmentListTest do
     assert ids.("No location", "No category") == [7]
   end
 
+  test "a member is a place: Place lists them after the places, by their local id (#490)" do
+    rows =
+      EquipmentList.rows([
+        item(9, "Radio 22", member_id: 2, member: %Member{name: "Ty Wong"}) | items()
+      ])
+
+    assert EquipmentList.place_options(rows) == [
+             {"Yard", "Yard"},
+             {"With members", "With members"},
+             {"No location", "No location"},
+             {"Sam Ortiz", "member-9"},
+             {"Ty Wong", "member-2"}
+           ]
+
+    held = MapSet.new([5, 4])
+    assert rows |> EquipmentList.narrow("member-9", "", held) |> Enum.map(& &1.item.id) == [4, 5]
+
+    assert [{"Sam Ortiz", [%{item: %{id: 5}}]}] =
+             rows
+             |> EquipmentList.narrow("member-9", "", MapSet.new([5]))
+             |> EquipmentList.group_held("Sam Ortiz")
+  end
+
+  test "a member who holds nothing, or a bad member id, keeps no rows" do
+    rows = EquipmentList.rows(items())
+
+    for place <- ["member-3", "member-9x", "member-"] do
+      narrowed = EquipmentList.narrow(rows, place, "")
+      assert narrowed == []
+      assert EquipmentList.group_held(narrowed, "Anyone") == []
+    end
+  end
+
+  test "Place lists a member who holds only retired items: the team may want them back" do
+    rows =
+      EquipmentList.rows([
+        item(9, "Old radio", member_id: 2, member: %Member{name: "Ty Wong"}, status: "retired")
+      ])
+
+    assert EquipmentList.place_options(rows) == [
+             {"With members", "With members"},
+             {"Ty Wong", "member-2"}
+           ]
+  end
+
+  # Sam holds a first aid kit with a pouch in it, the pouch a splint, and a GPS on its own.
+  defp held do
+    [
+      item(1, "First aid kit 6", member_id: 9, kind: "Kit", barcode: "K-006"),
+      item(2, "GPS 5", member_id: 9, kind: "GPS"),
+      item(3, "Pouch", d4h_container_id: 1),
+      item(4, "Splint", d4h_container_id: 3),
+      item(5, "Bandages", d4h_container_id: 1)
+    ]
+  end
+
+  test "a kit's contents follow it, two levels deep, each with the items holding it" do
+    rows = EquipmentList.held_rows(held())
+
+    assert Enum.map(rows, &{&1.item.title, &1.inside}) == [
+             {"First aid kit 6", ""},
+             {"Bandages", "First aid kit 6"},
+             {"Pouch", "First aid kit 6"},
+             {"Splint", "First aid kit 6 › Pouch"},
+             {"GPS 5", ""}
+           ]
+  end
+
+  test "two kits with one title each keep their own contents" do
+    kits = [
+      item(1, "First aid kit", member_id: 9),
+      item(2, "First aid kit", member_id: 9),
+      item(3, "Splint", d4h_container_id: 1),
+      item(4, "Bandage", d4h_container_id: 2)
+    ]
+
+    assert kits |> EquipmentList.held_rows() |> Enum.map(& &1.item.id) == [1, 3, 2, 4]
+
+    assert [{"With members", rows}] = kits |> EquipmentList.rows() |> EquipmentList.group()
+    assert Enum.map(rows, & &1.item.id) == [1, 3, 2, 4]
+  end
+
+  test "held items that hold each other stop at the cap" do
+    loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
+    assert [%{inside: a}, %{inside: b}] = EquipmentList.held_rows(loop)
+    assert a != "" and b != ""
+  end
+
   test "an item can't nest in itself forever" do
     loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
     assert [_a, _b] = EquipmentList.rows(loop)

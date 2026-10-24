@@ -4,6 +4,7 @@ defmodule Web.MemberStandingLive do
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
+  alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
@@ -32,6 +33,7 @@ defmodule Web.MemberStandingLive do
      |> assign(:page_title, "#{member.name} · Standing")
      |> assign(:member, member)
      |> assign(:last_attended_at, Member.last_attended_at(member))
+     |> assign(:equipment, EquipmentItem.held_by(member.team, member))
      |> load_standing()
      |> assign_new_form()}
   end
@@ -167,13 +169,14 @@ defmodule Web.MemberStandingLive do
   def render(assigns) do
     ~H"""
     <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:standing} />
+    <.member_tabs member={@member} active_tab={:standing} equipment={@equipment} />
     <div class="content-wrapper">
       <aside class="content-1/3">
         <.sidebar_content
           member={@member}
           maps_app={@current_user.maps_app}
           milestones={@milestones}
+          equipment={@equipment}
         />
       </aside>
       <main class="content-2/3">

@@ -9,6 +9,7 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.Phone, only: [call_and_text: 1]
 
   alias App.Adapter.D4H
+  alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.ViewData.MemberMilestones
@@ -18,7 +19,7 @@ defmodule Web.Components.MemberSidebar do
 
   @doc """
   Assigns the header's `last_attended_at` and `standing`, and the sidebar's
-  `milestones`, for the socket's `member`. Call
+  `milestones` and `equipment`, for the socket's `member`. Call
   it when the member loads, not on every render: a form's change events re-render.
   """
   def load_sidebar(socket) do
@@ -27,7 +28,8 @@ defmodule Web.Components.MemberSidebar do
     Phoenix.Component.assign(socket,
       last_attended_at: Member.last_attended_at(member),
       standing: MemberAwayPeriod.standing_today(member, member.team.timezone),
-      milestones: MemberMilestones.for_member(member, DateTime.utc_now())
+      milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
+      equipment: EquipmentItem.held_by(member.team, member)
     )
   end
 
@@ -73,6 +75,10 @@ defmodule Web.Components.MemberSidebar do
     required: true,
     doc: "the member's milestones, newest first, from load_sidebar/1"
 
+  attr :equipment, :list,
+    required: true,
+    doc: "the items the member holds, from load_sidebar/1"
+
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H.
   def sidebar_content(assigns) do
@@ -114,6 +120,11 @@ defmodule Web.Components.MemberSidebar do
         <dt>Second emergency contact</dt>
         <.emergency_contact id="member-emergency-2" contact={@member.secondary_emergency_contact} />
       <% end %>
+      <%!-- What they hold, so a team admin sees what to get back (#490). --%>
+      <%= if @equipment != [] do %>
+        <dt>Equipment</dt>
+        <.equipment_summary member={@member} equipment={@equipment} />
+      <% end %>
       <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />
@@ -131,6 +142,22 @@ defmodule Web.Components.MemberSidebar do
         </ul>
       </dd>
     </dl>
+    """
+  end
+
+  attr :member, :map, required: true
+  attr :equipment, :list, required: true
+
+  # A count, with the list on the Equipment tab: two teams issue full kits of up to 35
+  # items, and kits hold kits.
+  defp equipment_summary(assigns) do
+    ~H"""
+    <dd id="member-equipment">
+      <.a
+        id="member-equipment-link"
+        navigate={~p"/teams/#{@member.team}/members/#{@member.id}/equipment"}
+      >{Format.count(length(@equipment), one: "%d item", many: "%d items")}</.a>
+    </dd>
     """
   end
 
