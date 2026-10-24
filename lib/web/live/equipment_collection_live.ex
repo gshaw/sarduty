@@ -8,6 +8,7 @@ defmodule Web.EquipmentCollectionLive do
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
+  alias App.Model.Member
   alias App.ViewData.EquipmentList
 
   # The team's equipment, copied from D4H or SAR Duty Records (#271). It opens on the
@@ -45,21 +46,19 @@ defmodule Web.EquipmentCollectionLive do
     category = params["category"] || ""
     now = DateTime.utc_now()
 
-    narrowed = EquipmentList.narrow(socket.assigns.rows, place, category)
+    {holder, held} = held_in(socket.assigns.current_team, place)
+    narrowed = EquipmentList.narrow(socket.assigns.rows, place, category, held)
     rows = EquipmentList.filter(narrowed, show, q, now)
 
     socket =
       assign(socket,
         show: show,
-        show_counts:
-          Map.new(EquipmentList.show_values(), fn value ->
-            {value, length(EquipmentList.filter(narrowed, value, "", now))}
-          end),
+        show_counts: show_counts(narrowed, now),
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
         member_place?: EquipmentList.member_id(place) != nil,
-        groups: EquipmentList.group(rows, place),
+        groups: groups(rows, place, holder),
         form:
           to_form(%{"q" => q, "place" => place, "category" => category, "show" => show},
             as: "form"
@@ -95,6 +94,32 @@ defmodule Web.EquipmentCollectionLive do
 
   def handle_event("scan_failed", _params, socket),
     do: {:noreply, assign(socket, scan_failed: true)}
+
+  # Each stat switch tile's count, in the place and category picked.
+  defp show_counts(narrowed, now) do
+    Map.new(EquipmentList.show_values(), fn value ->
+      {value, length(EquipmentList.filter(narrowed, value, "", now))}
+    end)
+  end
+
+  # The member a member place names, looked up through the team, and the ids of what they
+  # hold. Nil and none for any other place, or a member of another team.
+  defp held_in(team, place) do
+    holder = EquipmentList.member_id(place) && Member.find(team, EquipmentList.member_id(place))
+
+    if holder,
+      do: {holder, team |> EquipmentItem.held_by(holder) |> MapSet.new(& &1.id)},
+      else: {nil, MapSet.new()}
+  end
+
+  # A member place is one group under their name; an unknown member's lists nothing.
+  defp groups(rows, place, holder) do
+    cond do
+      holder -> EquipmentList.group_held(rows, holder.name)
+      EquipmentList.member_id(place) -> []
+      true -> EquipmentList.group(rows)
+    end
+  end
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
 

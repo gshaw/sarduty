@@ -9,7 +9,6 @@ defmodule Web.MeLive do
 
   alias App.Adapter.D4H
   alias App.Model.Chore
-  alias App.Model.EquipmentItem
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -46,7 +45,7 @@ defmodule Web.MeLive do
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
-      |> assign(:equipment, EquipmentItem.held_by(member))
+      |> assign(:equipment, MemberSidebar.held(member))
 
     {:ok, socket}
   end
@@ -365,8 +364,8 @@ defmodule Web.MeLive do
     <div id="equipment">
       <h2 class="chart-title mb-1">Equipment</h2>
       <ul id="equipment-list" class="list-none p-0 m-0">
-        <li :for={item <- @equipment} id={"equipment-#{item.id}"}>
-          {item.title} <span class="hint">{MemberSidebar.item_hint(item)}</span>
+        <li :for={row <- @equipment} id={"equipment-#{row.item.id}"}>
+          {row.item.title} <span class="hint">{MemberSidebar.item_hint(row)}</span>
         </li>
       </ul>
     </div>

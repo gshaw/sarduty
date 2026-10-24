@@ -30,7 +30,7 @@ defmodule Web.Components.MemberSidebar do
       last_attended_at: Member.last_attended_at(member),
       standing: MemberAwayPeriod.standing_today(member, member.team.timezone),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
-      equipment: EquipmentItem.held_by(member)
+      equipment: held(member)
     )
   end
 
@@ -78,7 +78,7 @@ defmodule Web.Components.MemberSidebar do
 
   attr :equipment, :list,
     required: true,
-    doc: "the items the member holds, by title, from load_sidebar/1"
+    doc: "the items the member holds, kits then their contents, from load_sidebar/1"
 
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H.
@@ -162,9 +162,9 @@ defmodule Web.Components.MemberSidebar do
     ~H"""
     <dd id="member-equipment">
       <ul class="list-none p-0 m-0">
-        <li :for={item <- @shown} id={"member-equipment-#{item.id}"}>
-          <.a navigate={~p"/teams/#{@member.team}/equipment/#{item.id}"}>{item.title}</.a>
-          <span class="hint">{item_hint(item)}</span>
+        <li :for={row <- @shown} id={"member-equipment-#{row.item.id}"}>
+          <.a navigate={~p"/teams/#{@member.team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
+          <span class="hint">{item_hint(row)}</span>
         </li>
       </ul>
       <ul :if={@more?} class="action-list">
@@ -181,8 +181,20 @@ defmodule Web.Components.MemberSidebar do
     """
   end
 
-  @doc "An item's category and barcode, when it has them: \"Radio · R-014\"."
-  def item_hint(item) do
+  @doc """
+  The items `member` holds, as `EquipmentList.held_rows/1` gives them: each kit, then
+  what's inside it.
+  """
+  def held(member),
+    do: member.team |> EquipmentItem.held_by(member) |> EquipmentList.held_rows()
+
+  @doc """
+  What a held item's line says after its name: the kit it's in, \"In First aid kit 6\",
+  so its contents read as part of it, or else its category and barcode, \"Radio · R-014\".
+  """
+  def item_hint(%{in: %{title: title}}), do: "In #{title}"
+
+  def item_hint(%{item: item}) do
     [item.kind, item.barcode] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" · ")
   end
 

@@ -298,6 +298,24 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#equipment-list", "Stray kit")
     end
 
+    test "a kit's contents follow it, in the kit", %{conn: conn, team: team, member: member} do
+      kit = equipment_item_fixture(team, %{title: "First aid kit 6", member_id: member.id})
+
+      pouch =
+        equipment_item_fixture(team, %{
+          title: "Pouch",
+          d4h_container_id: kit.d4h_equipment_id,
+          location_title: nil
+        })
+
+      equipment_item_fixture(team, %{title: "Zip ties", member_id: member.id})
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      assert has_element?(lv, "#equipment-#{pouch.id} .hint", "In First aid kit 6")
+      assert has_element?(lv, "#equipment-list li:nth-child(2)#equipment-#{pouch.id}")
+    end
+
     test "no Equipment for a member who holds nothing", %{conn: conn, team: team} do
       lv = open(conn, ~p"/teams/#{team}/me")
       refute has_element?(lv, "#equipment")

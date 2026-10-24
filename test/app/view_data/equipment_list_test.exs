@@ -115,12 +115,13 @@ defmodule App.ViewData.EquipmentListTest do
              {"Ty Wong", "member-2"}
            ]
 
-    assert rows |> EquipmentList.narrow("member-9", "") |> Enum.map(& &1.item.id) == [5]
+    held = MapSet.new([5, 4])
+    assert rows |> EquipmentList.narrow("member-9", "", held) |> Enum.map(& &1.item.id) == [4, 5]
 
     assert [{"Sam Ortiz", [%{item: %{id: 5}}]}] =
-             rows |> EquipmentList.narrow("member-9", "") |> EquipmentList.group("member-9")
-
-    assert EquipmentList.group(rows, "With members") == EquipmentList.group(rows)
+             rows
+             |> EquipmentList.narrow("member-9", "", MapSet.new([5]))
+             |> EquipmentList.group_held("Sam Ortiz")
   end
 
   test "a member who holds nothing, or a bad member id, keeps no rows" do
@@ -129,8 +130,41 @@ defmodule App.ViewData.EquipmentListTest do
     for place <- ["member-3", "member-9x", "member-"] do
       narrowed = EquipmentList.narrow(rows, place, "")
       assert narrowed == []
-      assert EquipmentList.group(narrowed, place) == []
+      assert EquipmentList.group_held(narrowed, "Anyone") == []
     end
+  end
+
+  test "Place leaves out a member who holds only retired items" do
+    rows = EquipmentList.rows([item(9, "Old radio", member_id: 2, status: "retired")])
+    assert EquipmentList.place_options(rows) == [{"With members", "With members"}]
+  end
+
+  # Sam holds a first aid kit with a pouch in it, the pouch a splint, and a GPS on its own.
+  defp held do
+    [
+      item(1, "First aid kit 6", member_id: 9, kind: "Kit", barcode: "K-006"),
+      item(2, "GPS 5", member_id: 9, kind: "GPS"),
+      item(3, "Pouch", d4h_container_id: 1),
+      item(4, "Splint", d4h_container_id: 3),
+      item(5, "Bandages", d4h_container_id: 1)
+    ]
+  end
+
+  test "a kit's contents follow it, two levels deep, each in the item holding it" do
+    rows = EquipmentList.held_rows(held())
+
+    assert Enum.map(rows, &{&1.item.title, &1.in && &1.in.title}) == [
+             {"First aid kit 6", nil},
+             {"Bandages", "First aid kit 6"},
+             {"Pouch", "First aid kit 6"},
+             {"Splint", "Pouch"},
+             {"GPS 5", nil}
+           ]
+  end
+
+  test "held items that hold each other stop at the cap" do
+    loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
+    assert [%{in: %{}}, %{in: %{}}] = EquipmentList.held_rows(loop)
   end
 
   test "an item can't nest in itself forever" do
