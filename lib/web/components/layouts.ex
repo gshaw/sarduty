@@ -271,7 +271,8 @@ defmodule Web.Layouts do
       member_logins: assigns[:member_logins] || [],
       current_path: assigns[:current_path],
       proposed_change_count: assigns[:proposed_change_count] || 0,
-      chore_count: assigns[:chore_count] || 0
+      chore_count: assigns[:chore_count] || 0,
+      certificate_count: assigns[:certificate_count] || 0
     }
   end
 
@@ -285,7 +286,8 @@ defmodule Web.Layouts do
         team_admin?: assigns.team_admin?,
         member?: assigns.current_member != nil,
         proposed_changes: assigns.proposed_change_count,
-        chores: assigns.chore_count
+        chores: assigns.chore_count,
+        certificates: assigns.certificate_count
       )
 
     {area, sections}
@@ -301,6 +303,7 @@ defmodule Web.Layouts do
   attr :current_path, :string, default: nil
   attr :proposed_change_count, :integer, default: 0
   attr :chore_count, :integer, default: 0
+  attr :certificate_count, :integer, default: 0
   attr :size, :atom, default: :wide
 
   slot :search,

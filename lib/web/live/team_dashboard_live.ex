@@ -406,6 +406,8 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :proposed_changes}),
     do: ~p"/teams/#{team}/proposed-changes"
 
+  defp attention_path(team, %{key: :certificates}), do: ~p"/teams/#{team}/certificates"
+
   defp attention_path(team, %{key: key}) when key in [:chores, :chores_to_send],
     do: ~p"/teams/#{team}/chores"
 

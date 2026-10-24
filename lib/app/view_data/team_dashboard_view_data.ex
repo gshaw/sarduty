@@ -9,6 +9,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Certificate
   alias App.Model.ChangeSet
   alias App.Model.Chore
   alias App.Model.ChoreEvent
@@ -65,6 +66,8 @@ defmodule App.ViewData.TeamDashboardViewData do
       group_change_count: count_group_changes(team, now),
       proposed_change_count: ChangeSet.count_waiting(team.id),
       chore_count: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0),
+      certificate_count:
+        if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0),
       chores_to_send: chores_to_send(team),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)

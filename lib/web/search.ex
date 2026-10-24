@@ -25,7 +25,8 @@ defmodule Web.Search do
     group: Web.GroupLive,
     endorsement: Web.EndorsementFormLive,
     template: Web.TemplateFormLive,
-    chore: Web.ChoreLive
+    chore: Web.ChoreLive,
+    certificate: Web.CertificateLive
   }
 
   @doc "The page each kind of record opens."
@@ -126,12 +127,13 @@ defmodule Web.Search do
 
   @doc """
   The kinds whose page this person opens on `team`. Pages are always in: they are the ones
-  they see. Chores only on a team with chores on, as their page.
+  they see. Chores and certificates only on a team with them on, as their pages.
   """
   def kinds(team, team_admin?, member?) do
     Enum.filter(Search.kinds(), fn
       :page -> true
       :chore -> Team.chores?(team) and opens?(:chore, team_admin?, member?)
+      :certificate -> Team.certificates?(team) and opens?(:certificate, team_admin?, member?)
       kind -> opens?(kind, team_admin?, member?)
     end)
   end
@@ -156,6 +158,7 @@ defmodule Web.Search do
   def hit_path(:endorsement, team, id), do: ~p"/teams/#{team}/endorsements/#{id}"
   def hit_path(:template, team, id), do: ~p"/teams/#{team}/templates/#{id}"
   def hit_path(:chore, team, id), do: ~p"/teams/#{team}/chores/#{id}"
+  def hit_path(:certificate, team, id), do: ~p"/teams/#{team}/certificates/#{id}"
   def hit_path(:page, _team, _id), do: nil
 
   @doc "The list a group's \"All …\" link opens, filtered by `query`, or nil when it has none."

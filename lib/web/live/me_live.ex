@@ -8,6 +8,7 @@ defmodule Web.MeLive do
   import Web.ChoreText, only: [status_badge: 1]
 
   alias App.Adapter.D4H
+  alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
@@ -15,6 +16,7 @@ defmodule Web.MeLive do
   alias App.Model.Team
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
+  alias App.Operation.SaveCertificate
   alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
   alias Service.Format
@@ -42,6 +44,7 @@ defmodule Web.MeLive do
       |> assign_activities(attended, now)
       |> assign(:chores, latest_chores(member))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
+      |> assign(:certificates, sent_certificates(member))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
@@ -78,6 +81,11 @@ defmodule Web.MeLive do
     }
   end
 
+  # The member's waiting and declined certificates (#493), on a team with certificates
+  # on. Nil hides Add a certificate.
+  defp sent_certificates(member),
+    do: if(Team.certificates?(member.team), do: Certificate.get_open_for_member(member))
+
   # A member's latest chores (#341), on a team with chores on. Nil hides the section.
   defp latest_chores(member),
     do: if(Team.chores?(member.team), do: Chore.get_all_for_member(member, limit: 5))
@@ -102,7 +110,12 @@ defmodule Web.MeLive do
           stats={@stats}
         />
         <.chores :if={@chores} team={@team} chores={@chores} />
-        <.qualifications team={@team} now={@now} qualifications={@qualifications} />
+        <.qualifications
+          team={@team}
+          now={@now}
+          qualifications={@qualifications}
+          certificates={@certificates}
+        />
       </div>
       <aside class="membership-aside">
         <div :if={@team.id_cards_enabled or @letter} class="membership-aside-top">
@@ -235,40 +248,108 @@ defmodule Web.MeLive do
   attr :team, :map, required: true
   attr :now, :any, required: true
   attr :qualifications, :list, required: true
+  attr :certificates, :list, default: nil
 
+  # Certificates the member sent (#493) sit at the top of the one table, so it reads the
+  # same on a team on SAR Duty Records.
   defp qualifications(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :rows,
+        Enum.map(assigns.certificates || [], &%{certificate: &1}) ++ assigns.qualifications
+      )
+
     ~H"""
     <section id="qualifications" class="mt-8">
-      <h2 class="heading">Qualifications</h2>
-      <.empty_state :if={@qualifications == []} id="no-qualifications" title="No qualifications yet">
+      <.heading_row>
+        <h2 class="heading">Qualifications</h2>
+        <:action :if={@certificates}>
+          <.a id="certificate-add" navigate={~p"/teams/#{@team}/me/certificates/new"}>Add a certificate</.a>
+        </:action>
+      </.heading_row>
+      <.empty_state :if={@rows == []} id="no-qualifications" title="No qualifications yet">
         Qualifications your team records in {D4H.service_name(@team)} show here.
       </.empty_state>
       <.table
-        :if={@qualifications != []}
+        :if={@rows != []}
         id="qualifications-list"
-        rows={@qualifications}
-        row_id={&"qualifications-list-#{&1.award.qualification_id}"}
-        row_class={&QualificationText.row_class/1}
+        rows={@rows}
+        row_id={&row_id/1}
+        row_class={&row_class/1}
       >
         <:col :let={row} label="Qualification">
-          {row.award.qualification.title}
-          <span :if={row.award.d4h_document_id} class="hint block">
-            <.a
-              id={"certificate-#{row.award.id}"}
-              href={~p"/teams/#{@team}/me/qualifications/#{row.award.id}/certificate"}
-            >Certificate</.a>
-          </span>
+          <.sent_certificate :if={row[:certificate]} team={@team} certificate={row.certificate} />
+          <%= if row[:award] do %>
+            {row.award.qualification.title}
+            <span :if={row.award.d4h_document_id} class="hint block">
+              <.a
+                id={"certificate-#{row.award.id}"}
+                href={~p"/teams/#{@team}/me/qualifications/#{row.award.id}/certificate"}
+              >Certificate</.a>
+            </span>
+          <% end %>
         </:col>
         <:col :let={row} label="Expires" class="whitespace-nowrap">
-          {QualificationText.expires(row.award, @now, @team.timezone)}
-          <.badge :if={row.status == :expiring} kind={:warning}>
-            {QualificationText.days_left(row)}
-          </.badge>
+          <%= if certificate = row[:certificate] do %>
+            {certificate.ends_on && Format.date_short(certificate.ends_on)}
+            <.badge :if={certificate.status == :waiting}>Waiting</.badge>
+            <.badge :if={certificate.status == :declined} kind={:warning}>Declined</.badge>
+          <% else %>
+            {QualificationText.expires(row.award, @now, @team.timezone)}
+            <.badge :if={row.status == :expiring} kind={:warning}>
+              {QualificationText.days_left(row)}
+            </.badge>
+          <% end %>
         </:col>
       </.table>
     </section>
     """
   end
+
+  defp row_id(%{certificate: certificate}),
+    do: "qualifications-list-certificate-#{certificate.id}"
+
+  defp row_id(row), do: "qualifications-list-#{row.award.qualification_id}"
+
+  defp row_class(%{certificate: _certificate}), do: nil
+  defp row_class(row), do: QualificationText.row_class(row)
+
+  attr :team, :map, required: true
+  attr :certificate, :map, required: true
+
+  # Waiting: changed from its link until it goes to D4H. Declined: why, until deleted.
+  defp sent_certificate(assigns) do
+    ~H"""
+    <%= if @certificate.status == :waiting and Certificate.member_can_change?(@certificate) do %>
+      <.a
+        id={"certificate-edit-#{@certificate.id}"}
+        navigate={~p"/teams/#{@team}/me/certificates/#{@certificate.id}/edit"}
+      >{qualification_title(@certificate)}</.a>
+    <% else %>
+      {qualification_title(@certificate)}
+    <% end %>
+    <span :if={@certificate.status == :waiting} class="hint block">
+      Sent {Format.date_short(@certificate.inserted_at, @team.timezone)}. A team admin adds it to {D4H.service_name(
+        @team
+      )}.
+    </span>
+    <span :if={@certificate.status == :declined} class="hint block">
+      {@certificate.decline_reason}
+    </span>
+    <.a
+      :if={@certificate.status == :declined}
+      id={"certificate-delete-#{@certificate.id}"}
+      href="#"
+      phx-click="delete-certificate"
+      phx-value-id={@certificate.id}
+      data-confirm={"Delete your #{qualification_title(@certificate)} certificate?"}
+    >Delete</.a>
+    """
+  end
+
+  defp qualification_title(%{qualification: %{title: title}}), do: title
+  defp qualification_title(_certificate), do: "Certificate"
 
   attr :team, :map, required: true
   attr :card, :map, default: nil
@@ -394,6 +475,19 @@ defmodule Web.MeLive do
       <% end %>
     </dd>
     """
+  end
+
+  def handle_event("delete-certificate", %{"id" => id}, socket) do
+    member = socket.assigns.member
+    certificate = Certificate.find_for_member!(member, id)
+
+    socket =
+      case SaveCertificate.delete_own(member, certificate) do
+        :ok -> put_flash(socket, :info, "Deleted your certificate.")
+        {:error, :decided} -> put_flash(socket, :error, "This certificate cannot be deleted now.")
+      end
+
+    {:noreply, assign(socket, :certificates, sent_certificates(member))}
   end
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"

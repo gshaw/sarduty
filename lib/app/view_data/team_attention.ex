@@ -27,6 +27,7 @@ defmodule App.ViewData.TeamAttention do
       not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service),
+      certificates_item(rows.certificate_count),
       chores_item(rows.chore_count),
       chores_to_send_item(rows.chores_to_send, rows.service)
     ]
@@ -203,6 +204,20 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: "An AI agent proposed them. Nothing changes in #{name} until you send them.",
       action: "Review proposed changes"
+    }
+  end
+
+  defp certificates_item(0), do: nil
+
+  # Members' certificates wait for a team admin to accept them (#493).
+  defp certificates_item(count) do
+    %{
+      key: :certificates,
+      level: :info,
+      title:
+        Format.count(count, one: "%d certificate to accept", many: "%d certificates to accept"),
+      detail: "Look at each one, then accept or decline it.",
+      action: "Review certificates"
     }
   end
 

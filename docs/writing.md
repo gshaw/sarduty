@@ -176,7 +176,7 @@ and must not be used for it.
 | published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H does not let SAR Duty change its tags.                          |
 | qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | award                          | held qualification, grant, cert                | One member's hold on a qualification, from its start to its expiry if any. A renewal is a new award. |
-| certificate                    | proof, card, qualification                     | The paper or PDF proof of a course, which a team admin records in D4H as a qualification.            |
+| certificate                    | proof, card, qualification                     | Proof of a course, on paper, in a photo, or as a PDF. A team admin records it in D4H as an award.    |
 | group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
 | group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in or not in groups or endorsements, or a standing.   |
 | endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
@@ -185,7 +185,7 @@ and must not be used for it.
 | category                       | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type, and not a chore category.                |
 | chore                          | task, job, duty, volunteer hours               | Time a member gives the team outside activities, such as fixing equipment, logged by them.           |
 | chore category                 | chore type, chore kind                         | What a chore counts as, such as Equipment maintenance. It gets one D4H activity a month.             |
-| accepted, declined             | approved, rejected, counted                    | A team admin's answer on a chore. "Approved" is D4H's word for activities.                           |
+| accepted, declined             | approved, rejected, counted                    | A team admin's answer on a chore or a certificate. "Approved" is D4H's word for activities.          |
 | equipment                      | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
 | item                           | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
 | template                       | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups to invite, applied to an activity in one step.       |

@@ -56,4 +56,21 @@ defmodule Web.Settings.MemberLoginsLiveTest do
     assert team |> Repo.reload!() |> Team.chores?()
     assert has_element?(lv, ".tabs a", "Chore categories")
   end
+
+  test "certificates stay off until a team admin turns them on", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/member-logins")
+
+    lv
+    |> form("#member-logins-form", team: %{member_logins: "true"})
+    |> render_submit()
+
+    refute team |> Repo.reload!() |> Team.certificates?()
+
+    lv
+    |> form("#member-logins-form", team: %{member_logins: "true", certificates_enabled: "true"})
+    |> render_submit()
+
+    assert team |> Repo.reload!() |> Team.certificates?()
+    assert has_element?(lv, "#side-nav-certificates")
+  end
 end
