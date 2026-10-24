@@ -85,6 +85,8 @@ D4H can put an item's location at a member, and the copy keeps it as
 - In both lists a kit's contents follow it, and an item inside one says "In First aid
   kit 6" in place of its category and barcode, so it reads as part of the kit
   ([EquipmentList.held_rows/1](../lib/app/view_data/equipment_list.ex)).
+- With a member picked, the Retired tile reads 0: a retired item isn't with anyone
+  (decided 2026-10-23).
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.
 - Still to decide, waiting on Andrew: a badge for a retired member who still holds
