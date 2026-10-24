@@ -66,7 +66,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   def sort_kinds,
     do: %{
-      "ID" => "id",
       "Name" => "name",
       "Primary" => "primary",
       "Secondary" => "secondary",
@@ -148,13 +147,20 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     data
     |> cast(params, [:q, :year, :page, :filter, :letter, :sort])
     |> Field.truncate(:q, max_length: 100)
-    |> validate_inclusion(:sort, Map.values(sort_kinds()))
+    |> drop_unknown_sort()
     |> validate_inclusion(:filter, filters() |> Enum.map(fn {_label, value} -> value end))
     |> validate_inclusion(:letter, letter_kinds() |> Enum.map(fn {_label, value} -> value end))
     |> validate_number(:year,
       greater_than_or_equal_to: 2014,
       less_than_or_equal_to: Date.utc_today().year + 1
     )
+  end
+
+  # An old link may carry a sort that's gone, such as ?sort=id; it gets the default.
+  defp drop_unknown_sort(changeset) do
+    if get_change(changeset, :sort) in [nil | Map.values(sort_kinds())],
+      do: changeset,
+      else: delete_change(changeset, :sort)
   end
 
   defp filter_records(records, "none"), do: Enum.filter(records, &(&1.total_minutes == 0))
@@ -170,9 +176,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   defp filter_records(records, nil), do: records
 
   # Name breaks ties, so the order holds still between page loads.
-  defp sort_records(records, "id"),
-    do: Enum.sort_by(records, &{is_nil(&1.member.ref_id), &1.member.ref_id, &1.member.name})
-
   defp sort_records(records, "name"), do: Enum.sort_by(records, & &1.member.name)
   defp sort_records(records, "primary"), do: sort_desc(records, :primary_minutes)
   defp sort_records(records, "secondary"), do: sort_desc(records, :secondary_minutes)
