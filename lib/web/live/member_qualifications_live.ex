@@ -34,6 +34,11 @@ defmodule Web.MemberQualificationsLive do
         team.id |> Qualification.get_all() |> Enum.map(&{&1.title, &1.id})
       )
       |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
+      |> allow_upload(:certificate,
+        accept: ~w(image/* application/pdf),
+        max_entries: 1,
+        max_file_size: Service.CertificateFile.max_bytes()
+      )
 
     {:noreply, socket}
   end
@@ -50,12 +55,23 @@ defmodule Web.MemberQualificationsLive do
     %{current_team: team, current_user: user, member: member} = socket.assigns
     true = socket.assigns.records?
 
-    case AwardQualification.award(team, member, params, user, DateTime.utc_now()) do
-      :ok -> {:noreply, reload(socket, "Qualification awarded.")}
+    # A certificate (#493) is read once the form is right, so a mistake doesn't lose it,
+    # and checked before anything is awarded.
+    with {:ok, _values} <- AwardFormViewModel.validate(%AwardFormViewModel{}, params),
+         {:ok, certificate} <- certificate(socket),
+         :ok <-
+           AwardQualification.award(team, member, params, user, DateTime.utc_now(), certificate) do
+      {:noreply, reload(socket, "Qualification awarded.")}
+    else
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_award_form(socket, changeset)}
+      # The award is in, so the list shows it and the form starts over: never a second.
+      {:award_only, text} -> {:noreply, reload(socket, text, :error)}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
     end
   end
+
+  def handle_event("cancel-certificate", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :certificate, ref)}
 
   def handle_event("remove-award", %{"id" => id}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
@@ -73,11 +89,11 @@ defmodule Web.MemberQualificationsLive do
     end
   end
 
-  defp reload(socket, text) do
+  defp reload(socket, text, kind \\ :info) do
     member = find_member(socket.assigns.current_team, socket.assigns.member.id)
 
     socket
-    |> put_flash(:info, text)
+    |> put_flash(kind, text)
     |> assign(:member, member)
     |> assign_awards()
     |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
@@ -115,7 +131,12 @@ defmodule Web.MemberQualificationsLive do
       </aside>
       <main class="content-2/3">
         <.qualifications_content member={@member} awards={@awards} records?={@records?} />
-        <.award_form :if={@records?} form={@award_form} qualifications={@qualifications} />
+        <.award_form
+          :if={@records?}
+          form={@award_form}
+          qualifications={@qualifications}
+          upload={@uploads.certificate}
+        />
       </main>
     </div>
     """
@@ -191,6 +212,7 @@ defmodule Web.MemberQualificationsLive do
 
   attr :form, :map, required: true
   attr :qualifications, :list, required: true
+  attr :upload, :map, required: true
 
   defp award_form(assigns) do
     ~H"""
@@ -219,12 +241,43 @@ defmodule Web.MemberQualificationsLive do
           <.input field={@form[:starts_on]} type="date" label="Start" />
           <.input field={@form[:ends_on]} type="date" label="End (optional)" />
         </div>
+        <div id="award-certificate" class="mb-6">
+          <.label for={@upload.ref}>Certificate (optional)</.label>
+          <.hint>
+            A photo or a PDF, up to {Service.Format.file_size(Service.CertificateFile.max_bytes())}.
+          </.hint>
+          <.live_file_input upload={@upload} class="my-2" />
+          <.error :for={error <- upload_errors(@upload)}>
+            {upload_error(error, @upload, "a photo or a PDF")}
+          </.error>
+          <div :for={entry <- @upload.entries} id={"award-certificate-#{entry.ref}"} class="hint">
+            {entry.client_name}, {Service.Format.file_size(entry.client_size)} ·
+            <.a
+              href="#"
+              phx-click="cancel-certificate"
+              phx-value-ref={entry.ref}
+              aria-label={"Remove #{entry.client_name}"}
+            >Remove</.a>
+            <.error :for={error <- upload_errors(@upload, entry)}>
+              {upload_error(error, @upload, "a photo or a PDF")}
+            </.error>
+          </div>
+        </div>
         <.form_actions>
           <.button variant={:success}>Award qualification</.button>
         </.form_actions>
       </.form>
     </section>
     """
+  end
+
+  defp certificate(socket) do
+    case consume_uploaded_entries(socket, :certificate, fn %{path: path}, entry ->
+           {:ok, {File.read!(path), entry.client_name}}
+         end) do
+      [] -> {:ok, nil}
+      [{bytes, name}] -> Service.CertificateFile.prepare(bytes, name)
+    end
   end
 
   defp find_member(team, member_id),

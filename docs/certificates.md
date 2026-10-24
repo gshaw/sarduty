@@ -56,10 +56,20 @@ qualification and dates, then accept it
   ([change-sets.md](change-sets.md)). Then SAR Duty puts the award in its copy with its
   `d4h_document_id`, so pages, group rules, and ID cards see it before the next refresh,
   and deletes the file.
-- **Never an award twice.** D4H's API can't remove one. The set reads the member's awards
-  first and skips one D4H has from the same qualification and day. When the upload
-  fails, the award stays and the certificate keeps waiting with its file; its dates lock,
-  and Send again applies the same set, so only the upload goes.
+- **D4H already has the award** when it holds the member's award of the same
+  qualification from the same day, read as the page opens
+  ([FindCertificateAward](../lib/app/operation/find_certificate_award.ex)). With no
+  certificate on it, Attach certificate puts the file on that award and adds no second
+  one: the set is the upload alone. With one, the team admin declines.
+- **The same day is the award's UTC date**
+  ([QualificationAward.starts_on?/2](../lib/app/adapter/d4h/qualification_award.ex)),
+  for the page and the set alike. D4H keeps award dates at midnight UTC, the day before
+  on a Canadian clock. SAR Duty's own awards start at midnight on the team's clock: the
+  same UTC date in every Canadian time zone.
+- **Never an award twice.** D4H's API can't remove one. Accepting reads D4H again before
+  it writes, and the set skips an award D4H has from the same qualification and day.
+  When the upload fails, the award stays and the certificate keeps waiting with its file;
+  its dates lock, and Send again applies the same set, so only the upload goes.
 - **One change at a time.** An accept holds a lock on the certificate while it waits on
   D4H. A member's change or delete, and another team admin's decline, wait for it, then
   read the certificate again.
@@ -70,7 +80,11 @@ qualification and dates, then accept it
 ## Where else certificates show
 
 - **Team home**: "N certificates to accept" under Needs attention, and the waiting count
-  beside Certificates in the side navigation.
+  beside Certificates in the side navigation. For a member, "Your X expires in N days"
+  under For you to do opens the form for that qualification, and leaves while a
+  certificate for it waits. A declined certificate shows there until they delete it.
+- **SAR Duty Records**: a team admin's Award a qualification form on a member's
+  Qualifications tab takes an optional certificate, uploaded once the award is in.
 - **Search** finds a certificate by its qualification or member, for team admins.
 - **Privacy**: SAR Duty keeps a certificate only until a team admin accepts or declines
   it.

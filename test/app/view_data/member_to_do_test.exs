@@ -65,4 +65,21 @@ defmodule App.ViewData.MemberToDoTest do
 
     assert MemberToDo.items(nil, false, [], [], @now, @tz, [%{status: :waiting, id: 4}]) == []
   end
+
+  test "a waiting certificate takes its qualification off; a declined one is an item (#493)" do
+    rows = [
+      %{status: :expiring, award: %{qualification_id: 7}, days_left: 19},
+      %{status: :expiring, award: %{qualification_id: 8}, days_left: 30}
+    ]
+
+    certificates = [
+      %{status: :waiting, qualification_id: 7, id: 1},
+      %{status: :declined, qualification_id: 8, id: 2}
+    ]
+
+    assert [%{key: :qualification, award: %{qualification_id: 8}}, item] =
+             MemberToDo.items(nil, false, [], rows, @now, @tz, [], certificates)
+
+    assert %{key: :declined_certificates, certificates: [%{id: 2}]} = item
+  end
 end

@@ -9,6 +9,7 @@ defmodule Web.TeamDashboardLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -97,6 +98,11 @@ defmodule Web.TeamDashboardLive do
         do: Chore.get_all_for_member(member, status: :declined),
         else: []
 
+    certificates =
+      if Team.certificates?(member.team),
+        do: Certificate.get_open_for_member(member),
+        else: []
+
     assign(socket,
       to_do:
         MemberToDo.items(
@@ -106,7 +112,8 @@ defmodule Web.TeamDashboardLive do
           qualifications,
           now,
           member.team.timezone,
-          chores
+          chores,
+          certificates
         )
     )
   end
@@ -462,14 +469,40 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
+  # With certificates on (#493), the link opens the form for the qualification.
   defp to_do_item(%{item: %{key: :qualification}} = assigns) do
+    assigns = assign(assigns, :certificates?, Team.certificates?(assigns.team))
+
     ~H"""
     <li id={"to-do-qualification-#{@item.award.qualification_id}"} class="py-3">
       <.a
-        navigate={~p"/teams/#{@team}/me"}
+        navigate={
+          if @certificates?,
+            do:
+              ~p"/teams/#{@team}/me/certificates/new?#{[qualification: @item.award.qualification_id]}",
+            else: ~p"/teams/#{@team}/me"
+        }
         class="font-semibold"
       >Your {@item.award.qualification.title} expires in {Format.days(@item.days)}</.a>
-      <span class="hint block">Renewed it? Give the new certificate to a team admin.</span>
+      <span :if={@certificates?} class="hint block">Renewed it? Add the new certificate.</span>
+      <span :if={!@certificates?} class="hint block">
+        Renewed it? Give the new certificate to a team admin.
+      </span>
+    </li>
+    """
+  end
+
+  defp to_do_item(%{item: %{key: :declined_certificates}} = assigns) do
+    ~H"""
+    <li id="to-do-declined-certificates" class="py-3">
+      <.a
+        navigate={~p"/teams/#{@team}/me"}
+        class="font-semibold"
+      >{Format.count(length(@item.certificates),
+        one: "Your certificate was declined",
+        many: "%d of your certificates were declined"
+      )}</.a>
+      <span class="hint block">{declined_certificate_hint(@item.certificates)}</span>
     </li>
     """
   end
@@ -511,6 +544,12 @@ defmodule Web.TeamDashboardLive do
       "#{chore.description}, #{Format.date_short(chore.date)}. Read why, then delete it or log it again."
 
   defp declined_hint(_chores), do: "Read why, then delete them or log them again."
+
+  defp declined_certificate_hint([certificate]),
+    do: "#{Web.CertificateText.title(certificate)}. Read why, then delete it or send it again."
+
+  defp declined_certificate_hint(_certificates),
+    do: "Read why, then delete them or send them again."
 
   # "52 hours primary, 25 hours secondary", or a plain line for an old letter whose
   # hours did not parse.
