@@ -14,8 +14,13 @@ defmodule Web.Settings.MemberLoginsLive do
   def handle_event("save", %{"team" => params}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
     enabled = params["member_logins"] == "true"
-    chores = params["chores_enabled"] == "true"
-    {:ok, team} = SetTeamMemberLogins.call(team, enabled, user, chores)
+
+    options = [
+      chores: params["chores_enabled"] == "true",
+      certificates: params["certificates_enabled"] == "true"
+    ]
+
+    {:ok, team} = SetTeamMemberLogins.call(team, enabled, user, options)
 
     message =
       if enabled,
@@ -37,7 +42,11 @@ defmodule Web.Settings.MemberLoginsLive do
         socket,
         :form,
         to_form(
-          %{"member_logins" => team.member_logins, "chores_enabled" => team.chores_enabled},
+          %{
+            "member_logins" => team.member_logins,
+            "chores_enabled" => team.chores_enabled,
+            "certificates_enabled" => team.certificates_enabled
+          },
           as: "team"
         )
       )
@@ -57,6 +66,11 @@ defmodule Web.Settings.MemberLoginsLive do
       <.form for={@form} id="member-logins-form" phx-submit="save">
         <.input field={@form[:member_logins]} type="checkbox" label="Let members log in" />
         <.input field={@form[:chores_enabled]} type="checkbox" label="Let members log chores" />
+        <.input
+          field={@form[:certificates_enabled]}
+          type="checkbox"
+          label="Let members send certificates"
+        />
         <.form_actions>
           <.button variant={:success}>Save settings</.button>
         </.form_actions>

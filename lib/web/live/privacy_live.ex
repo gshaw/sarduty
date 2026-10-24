@@ -13,7 +13,7 @@ defmodule Web.PrivacyLive do
     ~H"""
     <article id="privacy" class="max-w-prose">
       <h1 class="title">Privacy</h1>
-      <p class="hint">Last changed October 20, 2026.</p>
+      <p class="hint">Last changed October 23, 2026.</p>
       <p>
         SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
       </p>
@@ -22,6 +22,9 @@ defmodule Web.PrivacyLive do
       </p>
       <p>
         SAR Duty also keeps the email or phone number you log in with. It keeps records of each login, with the IP address, for 90 days.
+      </p>
+      <p id="privacy-certificates">
+        SAR Duty keeps a certificate a member sends only until a team admin accepts or declines it.
       </p>
       <p>
         Anyone with a member's ID card code can see the member's name, photo, and team on the verify site.

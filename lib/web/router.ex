@@ -238,6 +238,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/:id", QualificationLive
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
+      live "/teams/:subdomain/certificates", CertificateCollectionLive
+      live "/teams/:subdomain/certificates/:id", CertificateLive
       live "/teams/:subdomain/chores", ChoreCollectionLive
       live "/teams/:subdomain/chores/:id", ChoreLive
       live "/teams/:subdomain/chores/:id/edit", ChoreFormLive
@@ -260,6 +262,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/me/chores", MeChoresLive
       live "/teams/:subdomain/me/chores/new", MeChoreFormLive, :new
       live "/teams/:subdomain/me/chores/:id/edit", MeChoreFormLive, :edit
+      live "/teams/:subdomain/me/certificates/new", MeCertificateFormLive, :new
+      live "/teams/:subdomain/me/certificates/:id/edit", MeCertificateFormLive, :edit
       live "/teams/:subdomain/me/details", MeDetailsLive
     end
 
@@ -272,6 +276,7 @@ defmodule Web.Router do
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
       get "/qualifications/:id/certificate", MeController, :certificate
+      get "/certificates/:id/file", MeController, :sent_certificate
     end
 
     # Team routes members reach too, like a LiveView with access: :team.
@@ -286,6 +291,7 @@ defmodule Web.Router do
 
       get "/members/:id/image", MemberController, :image
       get "/members/:id/certificates/:award_id", MemberController, :certificate
+      get "/certificates/:id/file", CertificateController, :file
       get "/members/:id/card/apple-wallet", MemberCardController, :pass
       get "/members/:id/card/google-wallet", MemberCardController, :google_pass
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show

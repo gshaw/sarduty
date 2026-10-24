@@ -47,8 +47,8 @@ defmodule Web.Navigation do
   `%{key:, label:, path:, current:, count:}`; the one for `path` is current.
 
   On a team: `team_admin?` when you manage it, `member?` when you log in as one of its
-  members, and what waits for a team admin: `proposed_changes`, AI agent change sets, and
-  `chores`, members' chores.
+  members, and what waits for a team admin: `proposed_changes`, AI agent change sets,
+  `chores`, members' chores, and `certificates`, members' certificates.
   """
   def sections(area, path, opts \\ [])
 
@@ -57,10 +57,11 @@ defmodule Web.Navigation do
     member? = Keyword.get(opts, :member?, false)
     proposed_changes = Keyword.get(opts, :proposed_changes, 0)
     chores = Keyword.get(opts, :chores, 0)
+    certificates = Keyword.get(opts, :certificates, 0)
 
     team_sections =
       cond do
-        team_admin? -> team_admin_sections(team, proposed_changes, chores)
+        team_admin? -> team_admin_sections(team, proposed_changes, chores, certificates)
         member? -> [[dashboard_link(team)], [activities_link(team)]]
         true -> []
       end
@@ -94,11 +95,11 @@ defmodule Web.Navigation do
 
   def sections(_area, _path, _opts), do: []
 
-  defp team_admin_sections(team, proposed_changes, chores) do
+  defp team_admin_sections(team, proposed_changes, chores, certificates) do
     [
       [dashboard_link(team)],
       activity_links(team, proposed_changes),
-      people_links(team),
+      people_links(team, certificates),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team, chores)],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
@@ -131,15 +132,25 @@ defmodule Web.Navigation do
       else: []
   end
 
-  defp people_links(team) do
+  # Certificates follow Qualifications on a team where members send them (#493).
+  defp people_links(team, certificates) do
     [
       link("members", "Members", ~p"/teams/#{team}/members"),
       link("milestones", "Milestones", ~p"/teams/#{team}/milestones"),
       link("groups", "Groups", ~p"/teams/#{team}/groups"),
-      link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
-      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
-      link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
-    ]
+      link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications")
+    ] ++
+      certificate_links(team, certificates) ++
+      [
+        link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
+        link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
+      ]
+  end
+
+  defp certificate_links(team, count) do
+    if Team.certificates?(team),
+      do: [link("certificates", "Certificates", ~p"/teams/#{team}/certificates", count: count)],
+      else: []
   end
 
   defp link(key, label, path, opts \\ []) do

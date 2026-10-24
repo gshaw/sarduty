@@ -22,6 +22,7 @@ defmodule Web.Components.Search do
     endorsement: "Endorsements",
     template: "Templates",
     chore: "Chores",
+    certificate: "Certificates",
     page: "Pages",
     recent: "Recent"
   }
@@ -269,6 +270,13 @@ defmodule Web.Components.Search do
       join([
         hit.member_name,
         Format.date_short(hit.date),
+        if(hit.status != :accepted, do: hit.status |> Atom.to_string() |> String.capitalize())
+      ])
+
+  defp line(:certificate, hit),
+    do:
+      join([
+        hit.member_name,
         if(hit.status != :accepted, do: hit.status |> Atom.to_string() |> String.capitalize())
       ])
 

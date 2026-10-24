@@ -4,7 +4,8 @@
 
 The search in the top bar (#473) finds a team's members, activities, equipment,
 qualifications, groups, endorsements, templates, and pages by name, D4H number, or
-barcode, and chores by what the member wrote. [App.ViewData.Search](../lib/app/view_data/search.ex) matches and ranks;
+barcode, chores by what the member wrote, and certificates by their qualification or
+member. [App.ViewData.Search](../lib/app/view_data/search.ex) matches and ranks;
 [Web.Search](../lib/web/search.ex) decides what the person searching may find and where
 each result opens.
 
@@ -37,7 +38,8 @@ callbacks, so every write path updates it, including the refresh's bulk writes.
 Each kind opens one page, listed in `Web.Search.live_views/0`, and that page's `access`
 decides who finds it, by the same rule as the team pages' hook (`UserAuth.opens?/3`). A
 member who logs in finds activities; a team admin finds every kind. Chores are found only
-on a team with chores on (`Team.chores?/1`), as their pages open only there.
+on a team with chores on (`Team.chores?/1`), as their pages open only there, and
+certificates only on a team with them on (`Team.certificates?/1`).
 
 Pages come from the side navigation the person sees, from `Web.Navigation.sections/3`, so
 a page added there is found with no change here. A page matches only where a word of its

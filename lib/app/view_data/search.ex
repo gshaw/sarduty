@@ -1,7 +1,8 @@
 defmodule App.ViewData.Search do
   @moduledoc """
   Global search (#473): a team's records and pages whose name, D4H number, or barcode, or
-  a chore's words, match every word typed, in any order. It reads the live tables on each
+  a chore's words, or a certificate's qualification or member, match every word typed, in
+  any order. It reads the live tables on each
   search, with no index, so nothing can go stale; the largest team's activities take a
   few ms.
 
@@ -10,6 +11,7 @@ defmodule App.ViewData.Search do
   import Ecto.Query
 
   alias App.Model.Activity
+  alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.Endorsement
   alias App.Model.EquipmentItem
@@ -30,6 +32,7 @@ defmodule App.ViewData.Search do
     :endorsement,
     :template,
     :chore,
+    :certificate,
     :page
   ]
 
@@ -182,6 +185,7 @@ defmodule App.ViewData.Search do
   defp tiebreak(:activity, hit, now), do: abs(DateTime.diff(hit.started_at, now))
   defp tiebreak(:equipment, hit, _now), do: if(hit.in_service?, do: 0, else: 1)
   defp tiebreak(:chore, hit, _now), do: -Date.to_gregorian_days(hit.date)
+  defp tiebreak(:certificate, hit, _now), do: if(hit.status == :waiting, do: 0, else: 1)
   defp tiebreak(_kind, _hit, _now), do: 0
 
   # Each kind's rows where every word is in one of its fields.
@@ -244,6 +248,23 @@ defmodule App.ViewData.Search do
     |> fetch()
   end
 
+  # Its qualification or the member who sent it (#493): a certificate has no name.
+  defp candidates(:certificate, team, filter, _opts) do
+    Certificate
+    |> where([c], c.team_id == ^team.id)
+    |> join(:inner, [c], m in assoc(c, :member), as: :member)
+    |> join(:left, [c], q in assoc(c, :qualification), as: :qualification)
+    |> matching_certificate(filter)
+    |> order_by([c], desc: c.inserted_at, desc: c.id)
+    |> select([c, member: m, qualification: q], %{
+      id: c.id,
+      title: coalesce(q.title, "Deleted qualification"),
+      status: c.status,
+      member_name: m.name
+    })
+    |> fetch()
+  end
+
   # Pages match at the start of a word, so "ali" doesn't find Qualifications.
   defp candidates(:page, _team, {:terms, terms}, opts) do
     opts
@@ -281,6 +302,21 @@ defmodule App.ViewData.Search do
         end)
 
       where(query, ^any_field)
+    end)
+  end
+
+  defp matching_certificate(query, {:ids, ids}), do: where(query, [c], c.id in ^ids)
+
+  defp matching_certificate(query, {:terms, terms}) do
+    Enum.reduce(terms, query, fn term, query ->
+      pattern = "%" <> escape_like(term) <> "%"
+
+      where(
+        query,
+        [member: m, qualification: q],
+        fragment("? LIKE ? ESCAPE '\\'", m.name, ^pattern) or
+          fragment("? LIKE ? ESCAPE '\\'", q.title, ^pattern)
+      )
     end)
   end
 
