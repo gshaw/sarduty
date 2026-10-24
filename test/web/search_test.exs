@@ -49,12 +49,34 @@ defmodule Web.SearchTest do
       assert hit.path == "/teams/#{team.subdomain}/activities/#{activity.id}"
     end
 
-    test "a member finds activities and their pages, not other members", %{team: team} do
+    test "a member finds activities, members, and their pages (#440)", %{team: team} do
       groups = search(team, "rope", team_admin?: false, member?: true)
-      assert Enum.map(groups, & &1.kind) == [:activity]
+      assert groups |> Enum.map(& &1.kind) |> Enum.sort() == [:activity, :member]
 
       assert [%{kind: :page, hits: [%{title: "Your membership"}]}] =
                search(team, "membership", team_admin?: false, member?: true)
+    end
+
+    # Away is often leave: only team admins see it (#440). Retired comes from D4H.
+    test "a member sees another member's standing only when retired", %{team: team} do
+      away = member_fixture(team, %{name: "Sky Away"})
+      away_period_fixture(away, ~D[2026-10-01], ~D[2026-12-31])
+      member_fixture(team, %{name: "Sky Bot", not_a_person: true})
+      member_fixture(team, %{name: "Sky Gone", d4h_status: "RETIRED"})
+
+      standings = fn who ->
+        [%{hits: hits}] = search(team, "sky", who)
+        Map.new(hits, &{&1.title, &1.standing})
+      end
+
+      assert %{
+               "Sky Away" => {:away, ~D[2026-12-31]},
+               "Sky Bot" => :not_a_person,
+               "Sky Gone" => :retired
+             } = standings.(team_admin?: true, member?: false)
+
+      assert standings.(team_admin?: false, member?: true) ==
+               %{"Sky Away" => :active, "Sky Bot" => :active, "Sky Gone" => :retired}
     end
 
     test "pages a member doesn't see aren't found", %{team: team} do
@@ -118,8 +140,8 @@ defmodule Web.SearchTest do
       assert Enum.map(hits, & &1.title) == ["Rope night", "Ali Here", "Members"]
       assert hd(hits).path == "/teams/#{team.subdomain}/activities/#{activity.id}"
 
-      assert [%{hits: [%{title: "Rope night"}]}] =
-               recent(team, keys, team_admin?: false, member?: true)
+      assert [%{hits: hits}] = recent(team, keys, team_admin?: false, member?: true)
+      assert Enum.map(hits, & &1.title) == ["Rope night", "Ali Here", "Members"]
 
       assert recent(team, "not a list", team_admin?: true, member?: false) == []
     end

@@ -1,12 +1,12 @@
 defmodule Web.MilestoneCollectionLive do
   @moduledoc """
-  The team's milestones (#389), for team admins: who reached what, newest first. Opens on
-  the last 90 days, for thanking people at a meeting or in a newsletter. A member's
-  sidebar links here filtered to them, over all time. Members see only their own, on Your
-  membership.
+  The team's milestones (#389): who reached what, newest first. Opens on the last 90 days,
+  for thanking people at a meeting or in a newsletter. A member's sidebar links here
+  filtered to them, over all time. Members open it too (#440): it comes from attendance
+  they see already.
   """
 
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team, member_events: ["change"]}
 
   import Web.Components.FilterBar
   import Web.Components.StatSwitch

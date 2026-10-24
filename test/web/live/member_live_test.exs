@@ -89,12 +89,75 @@ defmodule Web.MemberLiveTest do
     assert has_element?(lv, "#member-emergency", "None")
   end
 
-  test "a member can't open another member's page, so never sees their contacts", %{conn: conn} do
-    %{team: team, user: user} = member_with_login_fixture()
-    other = member_fixture(team, %{primary_emergency_contact: %{"name" => "Sam Rivera"}})
+  describe "for a member (#440)" do
+    setup %{conn: conn} do
+      %{team: team, user: user, member: member} = member_with_login_fixture()
+      %{conn: log_in_user(conn, user), team: team, member: member}
+    end
 
-    assert_raise Web.Status.NotFound, fn ->
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{other.id}")
+    test "the team admin's page without contact details, Actions, or View as member",
+         %{conn: conn, team: team} do
+      other =
+        member_fixture(team, %{
+          ref_id: "M-42",
+          phone: "6045551234",
+          address: "12 Elm St",
+          primary_emergency_contact: %{"name" => "Sam Rivera"}
+        })
+
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+
+      assert has_element?(lv, "#member-head", other.name)
+      assert has_element?(lv, "dd", "M-42")
+      assert has_element?(lv, "#member-milestones")
+      refute has_element?(lv, "#member-phone")
+      refute has_element?(lv, "#member-emergency")
+      refute has_element?(lv, "#member-copy-email")
+      refute has_element?(lv, "#member-actions")
+      refute has_element?(lv, "#view-as")
+      refute html =~ other.email
+      refute html =~ "Sam Rivera"
+    end
+
+    test "Attendance, Qualifications, and Groups tabs only", %{conn: conn, team: team} do
+      other = member_fixture(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+
+      for tab <- ["qualifications", "groups"] do
+        assert has_element?(lv, ~s{a[href="/teams/#{team.subdomain}/members/#{other.id}/#{tab}"]})
+      end
+
+      for tab <- ["standing", "card", "history"] do
+        refute has_element?(lv, ~s{a[href="/teams/#{team.subdomain}/members/#{other.id}/#{tab}"]})
+
+        assert_raise Web.Status.NotFound, fn ->
+          live(conn, ~p"/teams/#{team}/members/#{other.id}/#{tab}")
+        end
+      end
+    end
+
+    test "the header badges Retired, never Away or Not a person", %{conn: conn, team: team} do
+      away = member_fixture(team)
+      away_period_fixture(away, Date.add(Date.utc_today(), -5), Date.add(Date.utc_today(), 30))
+      bot = member_fixture(team, %{not_a_person: true})
+      retired = member_fixture(team, %{d4h_status: "RETIRED"})
+
+      for other <- [away, bot] do
+        {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+        refute has_element?(lv, "#member-head-standing")
+      end
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{retired.id}")
+      assert has_element?(lv, "#member-head-standing", "Retired")
+    end
+
+    test "their own member page opens Your membership", %{conn: conn, team: team, member: member} do
+      for path <- ["", "/qualifications", "/groups"] do
+        assert {:error, {:live_redirect, %{to: to}}} =
+                 live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{path}")
+
+        assert to == ~p"/teams/#{team}/me"
+      end
     end
   end
 

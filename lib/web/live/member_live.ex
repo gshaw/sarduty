@@ -1,9 +1,11 @@
 defmodule Web.MemberLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team, member_events: ["change"]}
+
+  on_mount {Web.Components.MemberPage, :own_page}
 
   import Web.Components.AttendanceFilterTable
-  import Web.Components.MemberSidebar
-  import Web.Components.MemberTabs
+  import Web.Components.MemberPage
+  import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
   alias App.Model.Member
   alias App.Repo
@@ -52,27 +54,24 @@ defmodule Web.MemberLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:attendance} />
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
-          member={@member}
-          maps_app={@current_user.maps_app}
-          milestones={@milestones}
-        />
-      </aside>
-      <main class="content-2/3">
-        <.attendance_filter_table
-          form={@filter_form}
-          paginated={@paginated}
-          total_minutes={@total_minutes}
-          sort={@sort}
-          path_fn={@path_fn}
-          member={@member}
-        />
-      </main>
-    </div>
+    <.member_page
+      member={@member}
+      tab={:attendance}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      milestones={@milestones}
+      maps_app={@current_user.maps_app}
+      team_admin?={@team_admin?}
+    >
+      <.attendance_filter_table
+        form={@filter_form}
+        paginated={@paginated}
+        total_minutes={@total_minutes}
+        sort={@sort}
+        path_fn={@path_fn}
+        member={@member}
+      />
+    </.member_page>
     """
   end
 

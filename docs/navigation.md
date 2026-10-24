@@ -32,19 +32,20 @@ the account menu and no area name.
 Sections, split by a divider, with no headings. A section with nothing the person can see
 is left out, and so is its divider.
 
-| Section | Links                                                                         | Who         |
-| ------- | ----------------------------------------------------------------------------- | ----------- |
-| 1       | Dashboard                                                                     | everyone    |
-| 2       | Activities                                                                    | everyone    |
-| 2       | Templates, Proposed changes                                                   | team admins |
-| 3       | Members, Milestones, Groups, Qualifications, Endorsements, Tax credit letters | team admins |
-| 4       | Equipment, Chores                                                             | team admins |
-| 5       | Team settings                                                                 | team admins |
-| 6       | Your membership                                                               | members     |
+| Section | Links                                                    | Who         |
+| ------- | -------------------------------------------------------- | ----------- |
+| 1       | Dashboard                                                | everyone    |
+| 2       | Activities                                               | everyone    |
+| 2       | Templates, Proposed changes                              | team admins |
+| 3       | Members, Milestones                                      | everyone    |
+| 3       | Groups, Qualifications, Endorsements, Tax credit letters | team admins |
+| 4       | Equipment, Chores                                        | team admins |
+| 5       | Team settings                                            | team admins |
+| 6       | Your membership                                          | members     |
 
 - A team admin who is a member sees all six. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities, and
-  Your membership, each in its own section.
+  Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities,
+  Members and Milestones, and Your membership, each in its own section (#440).
 - **Templates and Proposed changes are links of their own**, after Activities, so a team
   admin finds them without opening Activities first. Proposed changes shows only when the
   team has MCP on, or something waits. It counts the AI agent change sets that wait for a
@@ -60,9 +61,8 @@ is left out, and so is its divider.
   and a section of one link looked lost. Chores shows only with member logins and chores
   on (#463).
 - **Milestones sits right after Members** (2026-10-23): every current member's
-  milestones, for team admins. It's about members themselves, as Members is; Groups,
-  Qualifications, and Endorsements set up what members hold. Members see only their own, on Your membership, until
-  we decide how members see other members' pages.
+  milestones. It's about members themselves, as Members is; Groups, Qualifications, and
+  Endorsements set up what members hold. Members open both (#440).
 - Later pages already have homes: Checklists in Equipment's section, and Documents and a
   team ID cards page after Tax credit letters.
 
@@ -106,7 +106,7 @@ is left out, and so is its divider.
 
 A new page is a route and a LiveView with `use Web, :live_view_app_layout`, or the narrow
 layout for a task done with a phone or iPad in hand; see `/styles/layout`. A team page is
-for team admins unless it says `access: :team` or `access: :member`
-([members.md](members.md)). If it belongs in the side navigation, add a line to
+for team admins unless it says `access: :team` or `access: :member`; opening one to
+members has its own steps ([members.md](members.md#opening-a-page-to-members)). If it belongs in the side navigation, add a line to
 `Web.Navigation`. A page under an existing link needs nothing: the link is current on it.
 The guide shows the parts at `/styles/top-bar` and `/styles/side-nav`.

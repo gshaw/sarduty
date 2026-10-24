@@ -1,8 +1,8 @@
 defmodule Web.MemberCardLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.MemberSidebar
-  import Web.Components.MemberTabs
+  import Web.Components.MemberPage
+  import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
   alias App.Model.Member
   alias App.Model.MemberCard
@@ -104,34 +104,31 @@ defmodule Web.MemberCardLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:card} />
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
-          member={@member}
-          maps_app={@current_user.maps_app}
-          milestones={@milestones}
-        />
-      </aside>
-      <main class="content-2/3">
-        <.banner
-          :if={!@current_team.id_cards_enabled}
-          id="id-cards-off"
-          kind={:warning}
-          title="ID cards are not on for your team"
-        >
-          A SAR Duty admin turns them on once they have checked your team. Ask one to.
-        </.banner>
-        <.card_content
-          :if={@current_team.id_cards_enabled}
-          card={@card}
-          member={@member}
-          qualifications={@qualifications}
-          phones={@phones}
-        />
-      </main>
-    </div>
+    <.member_page
+      member={@member}
+      tab={:card}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      milestones={@milestones}
+      maps_app={@current_user.maps_app}
+      team_admin?={@team_admin?}
+    >
+      <.banner
+        :if={!@current_team.id_cards_enabled}
+        id="id-cards-off"
+        kind={:warning}
+        title="ID cards are not on for your team"
+      >
+        A SAR Duty admin turns them on once they have checked your team. Ask one to.
+      </.banner>
+      <.card_content
+        :if={@current_team.id_cards_enabled}
+        card={@card}
+        member={@member}
+        qualifications={@qualifications}
+        phones={@phones}
+      />
+    </.member_page>
     """
   end
 

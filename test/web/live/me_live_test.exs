@@ -55,7 +55,7 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "h1", member.name)
       assert has_element?(lv, "#nav-area", team.name)
       assert has_element?(lv, "#side-nav-me[aria-current=page]", "Your membership")
-      refute has_element?(lv, "#side-nav-members")
+      refute has_element?(lv, "#side-nav-groups")
       assert has_element?(lv, ~s{#member-head-photo[src="/teams/#{team.subdomain}/me/image"]})
     end
 
@@ -290,7 +290,7 @@ defmodule Web.MeLiveTest do
   describe "who reaches it" do
     test "a member reaches no team admin page", %{conn: conn, team: team, member: member} do
       assert_raise Web.Status.NotFound, fn ->
-        live(conn, ~p"/teams/#{team}/members/#{member.id}")
+        live(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
       end
 
       assert_error_sent 404, fn ->
@@ -321,7 +321,7 @@ defmodule Web.MeLiveTest do
 
       lv = open(log_in_user(conn, manager), ~p"/teams/#{team}/me")
       assert has_element?(lv, "#side-nav-me[aria-current=page]")
-      assert has_element?(lv, "#side-nav-members")
+      assert has_element?(lv, "#side-nav-groups")
     end
 
     test "someone not a member there gets a 404, even an admin", %{conn: conn, team: team} do

@@ -112,6 +112,16 @@ defmodule App.Model.MemberAwayPeriod do
   def get_all_for_team(team_id),
     do: MemberAwayPeriod |> where([p], p.team_id == ^team_id) |> Repo.all()
 
+  @doc """
+  A standing as `team_admin?` sees it (#440). Members see Retired, which comes from D4H.
+  Away periods and Not a person are team admins' own records, and away is often leave, so
+  to a member everyone else is active. Every page that shows another member's standing
+  passes it through here.
+  """
+  def visible_standing(standing, true = _team_admin?), do: standing
+  def visible_standing(:retired, false), do: :retired
+  def visible_standing(_standing, false), do: :active
+
   @doc "The member's standing today in the team's time zone."
   def standing_today(%Member{} = member, timezone, now \\ DateTime.utc_now()),
     do: standing(member, for_member(member), Service.Period.today(now, timezone), now)

@@ -61,7 +61,7 @@ defmodule Web.Navigation do
     team_sections =
       cond do
         team_admin? -> team_admin_sections(team, proposed_changes, chores)
-        member? -> [[dashboard_link(team)], [activities_link(team)]]
+        member? -> [[dashboard_link(team)], [activities_link(team)], member_links(team)]
         true -> []
       end
 
@@ -132,13 +132,20 @@ defmodule Web.Navigation do
   end
 
   defp people_links(team) do
+    member_links(team) ++
+      [
+        link("groups", "Groups", ~p"/teams/#{team}/groups"),
+        link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
+        link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
+        link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
+      ]
+  end
+
+  # The people pages members open too (#440).
+  defp member_links(team) do
     [
       link("members", "Members", ~p"/teams/#{team}/members"),
-      link("milestones", "Milestones", ~p"/teams/#{team}/milestones"),
-      link("groups", "Groups", ~p"/teams/#{team}/groups"),
-      link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications"),
-      link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
-      link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
+      link("milestones", "Milestones", ~p"/teams/#{team}/milestones")
     ]
   end
 

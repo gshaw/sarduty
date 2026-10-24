@@ -1,9 +1,11 @@
 defmodule Web.MemberGroupsLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team}
+
+  on_mount {Web.Components.MemberPage, :own_page}
 
   import Ecto.Query
-  import Web.Components.MemberSidebar
-  import Web.Components.MemberTabs
+  import Web.Components.MemberPage
+  import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
   alias App.Adapter.D4H
   alias App.Model.Group
@@ -80,40 +82,37 @@ defmodule Web.MemberGroupsLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:groups} />
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
-          member={@member}
-          maps_app={@current_user.maps_app}
-          milestones={@milestones}
+    <.member_page
+      member={@member}
+      tab={:groups}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      milestones={@milestones}
+      maps_app={@current_user.maps_app}
+      team_admin?={@team_admin?}
+    >
+      <.groups_content member={@member} records?={@records?} team_admin?={@team_admin?} />
+      <form
+        :if={@team_admin? and @records? and @other_groups != []}
+        id="add-group-form"
+        phx-submit="add-group"
+        class="mt-8 measure"
+      >
+        <h2 class="heading">Add to a group</h2>
+        <.input
+          name="group_id"
+          id="add-group-id"
+          type="combobox"
+          label="Group"
+          value=""
+          prompt="Select a group"
+          options={Enum.map(@other_groups, &{&1.title, &1.id})}
         />
-      </aside>
-      <main class="content-2/3">
-        <.groups_content member={@member} records?={@records?} />
-        <form
-          :if={@records? and @other_groups != []}
-          id="add-group-form"
-          phx-submit="add-group"
-          class="mt-8 measure"
-        >
-          <h2 class="heading">Add to a group</h2>
-          <.input
-            name="group_id"
-            id="add-group-id"
-            type="combobox"
-            label="Group"
-            value=""
-            prompt="Select a group"
-            options={Enum.map(@other_groups, &{&1.title, &1.id})}
-          />
-          <.form_actions>
-            <.button variant={:success}>Add to group</.button>
-          </.form_actions>
-        </form>
-      </main>
-    </div>
+        <.form_actions>
+          <.button variant={:success}>Add to group</.button>
+        </.form_actions>
+      </form>
+    </.member_page>
     """
   end
 
@@ -125,10 +124,12 @@ defmodule Web.MemberGroupsLive do
       rows={@member.group_members}
       class="table-striped"
     >
+      <%!-- Plain text for a member: group pages are team admins' (#440). --%>
       <:col :let={gm} label="Group">
-        <.a navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>{gm.group.title}</.a>
+        <.a :if={@team_admin?} navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>{gm.group.title}</.a>
+        <span :if={!@team_admin?}>{gm.group.title}</span>
       </:col>
-      <:col :let={gm} :if={@records?} label="" class="w-px whitespace-nowrap">
+      <:col :let={gm} :if={@team_admin? and @records?} label="" class="w-px whitespace-nowrap">
         <.button
           id={"remove-group-#{gm.id}"}
           type="button"

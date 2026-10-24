@@ -208,7 +208,12 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#members-view-attended", "2")
       assert has_element?(lv, "#members-table", "Casey Dhillon")
       assert has_element?(lv, "#members-table", "1h 30m")
-      refute has_element?(lv, "#members-table a")
+
+      assert has_element?(
+               lv,
+               ~s{#member-row-#{other.id} a[href^="/teams/#{team.subdomain}/members/#{other.id}"]}
+             )
+
       assert has_element?(lv, "#activity-map circle")
       assert has_element?(lv, ".badge", "Rope")
       assert has_element?(lv, "dt", "SARVAC hours")
