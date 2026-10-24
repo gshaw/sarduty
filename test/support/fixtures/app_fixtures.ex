@@ -3,6 +3,8 @@ defmodule App.DataFixtures do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.Certificate
+  alias App.Model.CertificateFile
   alias App.Model.Chore
   alias App.Model.ChoreCategory
   alias App.Model.Endorsement
@@ -74,10 +76,15 @@ defmodule App.DataFixtures do
 
   @doc "A team with member logins on (#156), so its current members may log in."
   def member_logins_team_fixture(attrs \\ %{}) do
-    # Chores (#341) need their own setting too; tests of them use this team.
+    # Chores (#341) and certificates (#493) need their own settings too; tests of them
+    # use this team.
     attrs
     |> team_fixture()
-    |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
+    |> Ecto.Changeset.change(
+      member_logins: true,
+      chores_enabled: true,
+      certificates_enabled: true
+    )
     |> Repo.update!()
   end
 
@@ -440,5 +447,25 @@ defmodule App.DataFixtures do
     }
     |> Map.merge(attrs)
     |> Repo.insert!()
+  end
+
+  @doc "A certificate the member sent (#493), waiting, with a small PDF as its file."
+  def certificate_fixture(%Member{} = member, %Qualification{} = qualification, attrs \\ %{}) do
+    certificate =
+      %Certificate{
+        team_id: member.team_id,
+        member_id: member.id,
+        qualification_id: qualification.id,
+        starts_on: ~D[2026-10-18],
+        ends_on: ~D[2029-10-18],
+        file_name: "first-aid.pdf",
+        content_type: "application/pdf",
+        file_size: 9
+      }
+      |> Map.merge(attrs)
+      |> Repo.insert!()
+
+    if certificate.status == :waiting, do: CertificateFile.put!(certificate, "%PDF-1.7\n")
+    certificate
   end
 end

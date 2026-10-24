@@ -22,6 +22,7 @@ defmodule App.ViewData.TeamAttentionTest do
         group_change_count: 0,
         proposed_change_count: 0,
         chore_count: 0,
+        certificate_count: 0,
         chores_to_send: 0,
         untagged: [],
         letters: nil
@@ -43,6 +44,11 @@ defmodule App.ViewData.TeamAttentionTest do
   test "waiting chores ask a team admin to accept them" do
     assert [item] = items(%{chore_count: 3}, @october)
     assert %{key: :chores, level: :info, title: "3 chores to accept"} = item
+  end
+
+  test "waiting certificates ask a team admin to accept them" do
+    assert [item] = items(%{certificate_count: 1}, @october)
+    assert %{key: :certificates, level: :info, title: "1 certificate to accept"} = item
   end
 
   test "a chore activity whose send did not go through is a warning" do

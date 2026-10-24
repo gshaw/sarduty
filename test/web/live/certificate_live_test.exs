@@ -1,0 +1,134 @@
+defmodule Web.CertificateLiveTest do
+  use Web.ConnCase
+
+  import App.DataFixtures
+  import Phoenix.LiveViewTest
+
+  alias App.Model.Certificate
+  alias App.Model.MemberQualificationAward
+  alias App.Repo
+
+  setup %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    team =
+      team
+      |> Ecto.Changeset.change(
+        member_logins: true,
+        certificates_enabled: true,
+        d4h_access_key: "team-key"
+      )
+      |> Repo.update!()
+
+    member = member_fixture(team, %{name: "Sam Rivera"})
+    qualification = qualification_fixture(team, %{title: "Standard First Aid"})
+    certificate = certificate_fixture(member, qualification)
+
+    %{
+      conn: log_in_user(conn, user),
+      team: team,
+      member: member,
+      qualification: qualification,
+      certificate: certificate
+    }
+  end
+
+  defp stub_d4h do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      case {conn.method, String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")} do
+        {"GET", "/member-qualification-awards"} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        {"POST", "/member-qualification-awards"} ->
+          Req.Test.json(conn, %{
+            "id" => 300,
+            "member" => %{"resourceType" => "Member", "id" => 1},
+            "qualification" => %{"id" => 1}
+          })
+
+        {"POST", "/documents"} ->
+          Req.Test.json(conn, %{"id" => 900, "targetResource" => %{"id" => 300}})
+      end
+    end)
+  end
+
+  test "waiting certificates are counted in the side navigation and listed", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates")
+    assert has_element?(lv, "#side-nav-certificates[aria-current=page]", "1")
+    assert has_element?(lv, "#certificates-view-waiting", "1")
+    assert has_element?(lv, "#certificate-#{ctx.certificate.id}", "Sam Rivera")
+    assert has_element?(lv, "#certificate-#{ctx.certificate.id}", "Oct 18, 2026 to Oct 18, 2029")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    assert has_element?(lv, "#attention-certificates", "1 certificate to accept")
+
+    assert has_element?(
+             lv,
+             ~s{#attention-certificates a[href="/teams/#{ctx.team.subdomain}/certificates"]}
+           )
+  end
+
+  test "a team admin sees the PDF in a frame without a sandbox attribute, and accepts it",
+       ctx do
+    stub_d4h()
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    file = ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}/file"
+    assert has_element?(lv, "iframe#certificate-pdf[src='#{file}']")
+    refute has_element?(lv, "iframe[sandbox]")
+    assert has_element?(lv, "#certificate-latest", "None")
+
+    {:ok, lv, _html} =
+      lv
+      |> form("#accept-form", certificate: %{qualification_id: ctx.qualification.id})
+      |> render_submit()
+      |> follow_redirect(ctx.conn)
+
+    assert render(lv) =~ "Accepted Standard First Aid for Sam Rivera. It is in D4H."
+    assert %{status: :accepted} = Repo.reload!(ctx.certificate)
+    assert %{d4h_document_id: 900} = MemberQualificationAward.get_by(d4h_award_id: 300)
+  end
+
+  test "a team admin declines it with a reason the member sees", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    assert lv |> form("#decline-form", decline: %{reason: ""}) |> render_submit() =~ "Enter why"
+
+    {:ok, _lv, _html} =
+      lv
+      |> form("#decline-form", decline: %{reason: "This is for AST 2."})
+      |> render_submit()
+      |> follow_redirect(ctx.conn)
+
+    assert %{status: :declined, decline_reason: "This is for AST 2."} =
+             Repo.reload!(ctx.certificate)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    assert has_element?(lv, "#certificate-file-gone")
+    refute has_element?(lv, "#accept-form")
+  end
+
+  test "the file is served sandboxed, and only through its team", ctx do
+    conn = get(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}/file")
+    assert conn.resp_body == "%PDF-1.7\n"
+    assert get_resp_header(conn, "content-type") == ["application/pdf"]
+    assert get_resp_header(conn, "content-security-policy") == ["sandbox"]
+
+    other_team = member_logins_team_fixture()
+
+    other =
+      certificate_fixture(member_fixture(other_team), qualification_fixture(other_team))
+
+    assert_error_sent 404, fn ->
+      get(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{other.id}/file")
+    end
+  end
+
+  test "search finds a certificate by its member", ctx do
+    hits = Web.Search.run(ctx.team, "sam", team_admin?: true, member?: false)
+    assert %{kind: :certificate, hits: [hit]} = Enum.find(hits, &(&1.kind == :certificate))
+    assert hit.path == ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}"
+
+    hits = Web.Search.run(ctx.team, "sam", team_admin?: false, member?: true)
+    refute Enum.any?(hits, &(&1.kind == :certificate))
+    assert Repo.aggregate(Certificate, :count) == 1
+  end
+end

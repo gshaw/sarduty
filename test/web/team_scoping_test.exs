@@ -6,6 +6,7 @@ defmodule Web.TeamScopingTest do
   import App.DataFixtures
 
   alias App.Model.ChangeSet
+  alias App.Repo
 
   @templates [
     "/teams/:subdomain/activities/:id",
@@ -26,6 +27,12 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/chores/:id",
     "/teams/:subdomain/chores/:id/edit",
     "/teams/:subdomain/me/chores/:id/edit",
+    # Certificates (#493): this team has them on, so these find the record through it.
+    "/teams/:subdomain/certificates/:id",
+    "/teams/:subdomain/certificates/:id/file",
+    # A member's own certificate. Web.MeCertificateFormLiveTest covers another member's.
+    "/teams/:subdomain/me/certificates/:id/edit",
+    "/teams/:subdomain/me/certificates/:id/file",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -59,6 +66,12 @@ defmodule Web.TeamScopingTest do
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+
+    team =
+      team
+      |> Ecto.Changeset.change(member_logins: true, certificates_enabled: true)
+      |> Repo.update!()
+
     other_team = team_fixture()
     member = member_fixture(other_team)
     group = group_fixture(other_team)
@@ -77,6 +90,7 @@ defmodule Web.TeamScopingTest do
       endorsement: endorsement,
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
+      certificate: certificate_fixture(member, qualification_fixture(other_team)),
       change_set:
         ChangeSet.propose!(
           %ChangeSet{team_id: other_team.id, source: :agent},
@@ -207,6 +221,18 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/me/chores/:id/edit", s, o),
     do: ~p"/teams/#{s}/me/chores/#{o.chore.id}/edit"
+
+  defp path_for("/teams/:subdomain/certificates/:id", s, o),
+    do: ~p"/teams/#{s}/certificates/#{o.certificate.id}"
+
+  defp path_for("/teams/:subdomain/certificates/:id/file", s, o),
+    do: ~p"/teams/#{s}/certificates/#{o.certificate.id}/file"
+
+  defp path_for("/teams/:subdomain/me/certificates/:id/edit", s, o),
+    do: ~p"/teams/#{s}/me/certificates/#{o.certificate.id}/edit"
+
+  defp path_for("/teams/:subdomain/me/certificates/:id/file", s, o),
+    do: ~p"/teams/#{s}/me/certificates/#{o.certificate.id}/file"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

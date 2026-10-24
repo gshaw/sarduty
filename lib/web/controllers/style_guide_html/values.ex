@@ -151,6 +151,13 @@ defmodule Web.StyleGuideHTML.Values do
        {:tenths, "One decimal place, under a label that names the unit",
         [{"tenths(1.5)", Format.tenths(1.5)}]},
        {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
+       {:months, "How long a qualification lasts",
+        [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]},
+       {:file_size, "A file's size",
+        [
+          {"file_size(64_200)", Format.file_size(64_200)},
+          {"file_size(2_400_000)", Format.file_size(2_400_000)}
+        ]},
        {:km, "A distance", [{"km(42)", Format.km(42)}]},
        {:coordinate, "A place",
         [

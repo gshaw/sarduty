@@ -80,6 +80,27 @@ defmodule Service.Format do
   @doc ~s(A count of days: "1 day", "30 days", "1,095 days". Work days out with `Service.Convert`.)
   def days(n) when is_integer(n), do: count(n, one: "1 day", many: "%d days")
 
+  @doc ~s(A length in months, as whole years when it is some: "6 months", "1 year", "3 years", "18 months".)
+  def months(n) when is_integer(n) and n > 0 and rem(n, 12) == 0,
+    do: count(div(n, 12), one: "1 year", many: "%d years")
+
+  def months(n) when is_integer(n), do: count(n, one: "1 month", many: "%d months")
+
+  @doc ~s(A file's size: "820 bytes", "64 KB", "2.4 MB".)
+  def file_size(bytes) when is_integer(bytes) and bytes < 1000,
+    do: count(bytes, one: "1 byte", many: "%d bytes")
+
+  def file_size(bytes) when is_integer(bytes) and bytes < 1_000_000,
+    do: number(round(bytes / 1000)) <> " KB"
+
+  def file_size(bytes) when is_integer(bytes) do
+    tenths = round(bytes / 100_000)
+
+    if rem(tenths, 10) == 0,
+      do: number(div(tenths, 10)) <> " MB",
+      else: decimals(tenths / 10, 1) <> " MB"
+  end
+
   @doc ~s(A distance in whole km: "42 km", "1,204 km".)
   def km(n) when is_number(n), do: number(n) <> " km"
 
