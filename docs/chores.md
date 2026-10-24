@@ -63,13 +63,15 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
   making one when there is none, and sends the events that changed. No setting picks the
   period: Andrew said how often D4H gets events does not matter, and leaned to monthly
   (#341).
-- **The event is titled for its month and dated on its last chore**: "Chores: Equipment
-  maintenance, October 2026", at 00:00 that day in the team's time zone. It lasts no
-  time at all: members' hours are on their attendance, and an event as long as the
-  largest total looked like a real activity on D4H's calendar (Andrew, 2026-10-23). D4H
-  and Records take an event that ends when it starts, and attendance that runs past its
-  end (tried on #02228, 2026-10-23). Never in the future, where D4H counts attendance as
-  signed up.
+- **The event is titled and dated for its month**: "Chores: Equipment maintenance,
+  October 2026", at 00:00 on the 1st in the team's time zone. It used to sit on the last
+  chore's day, so it moved with each chore; on the 1st it stays put and keeps D4H's
+  calendar tidy (team admin, 2026-10-24). It lasts no time at all: members' hours are on
+  their attendance, and an event as long as the largest total looked like a real
+  activity on D4H's calendar (Andrew, 2026-10-23). D4H and Records take an event that
+  ends when it starts, and attendance that runs past its end (tried on #02228,
+  2026-10-23). Never in the future, where D4H counts attendance as signed up: the 1st
+  is never after a chore in its month.
 - **One attendance per member**, from the event's start, for their total. The description
   lists every chore, grouped by member, as HTML: D4H keeps lists and paragraphs but
   strips tables.

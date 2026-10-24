@@ -5,8 +5,8 @@ defmodule App.Operation.BuildChoreEvent do
   added, changed, or skipped cases, and edits made in D4H are replaced.
 
   - The event is titled for its chore category and month. It starts and ends at 00:00 on
-    its last chore's day in the team's time zone: zero length, since members' hours are on
-    their attendance. Its chores are all in one month, so it counts in that month's year.
+    the 1st of its month in the team's time zone, so it stays put as chores come in: zero
+    length, since members' hours are on their attendance. It counts in that month's year.
   - Each member with accepted chores has one attendance, from the event's start, for
     their total. Anyone else's attendance on it is deleted.
   - An event gets its tags in their own row, so a refusal shows: a new one just after it
@@ -37,7 +37,7 @@ defmodule App.Operation.BuildChoreEvent do
   def plan(nil, [], _current, _event), do: []
 
   def plan(nil, chores, _current, event) do
-    starts_at = starts_at(chores, event.timezone)
+    starts_at = starts_at(event.month, event.timezone)
     totals = member_totals(chores)
 
     create = %ChangeSetRow{
@@ -77,7 +77,7 @@ defmodule App.Operation.BuildChoreEvent do
   end
 
   def plan(%{d4h_activity_id: id} = state, chores, current, event) do
-    starts_at = starts_at(chores, event.timezone)
+    starts_at = starts_at(event.month, event.timezone)
     totals = member_totals(chores)
 
     update = %ChangeSetRow{
@@ -150,11 +150,10 @@ defmodule App.Operation.BuildChoreEvent do
     end
   end
 
-  @doc "When the event starts: 00:00 on its last chore's day, in the team's time zone."
-  def starts_at(chores, timezone) do
-    chores
-    |> Enum.map(& &1.date)
-    |> Enum.max(Date)
+  @doc "When the event starts: 00:00 on the 1st of its month, in the team's time zone."
+  def starts_at(%Date{} = month, timezone) do
+    month
+    |> Date.beginning_of_month()
     |> Service.Convert.local_to_utc(~T[00:00:00], timezone)
   end
 

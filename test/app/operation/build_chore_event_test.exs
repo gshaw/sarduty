@@ -16,8 +16,8 @@ defmodule App.Operation.BuildChoreEventTest do
   }
   # A sent event that has its tags: nothing to set.
   @sent %{@event | tags: []}
-  # 00:00 on Oct 28, the last chore's day, in Vancouver.
-  @start "2026-10-28T07:00:00Z"
+  # 00:00 on Oct 1, the 1st of the event's month, in Vancouver.
+  @start "2026-10-01T07:00:00Z"
 
   defp chore(id, member, minutes, date \\ ~D[2026-10-06]),
     do: %Chore{
@@ -30,7 +30,7 @@ defmodule App.Operation.BuildChoreEventTest do
 
   defp actions(rows), do: Enum.map(rows, & &1.action)
 
-  test "the first send makes the event on the last chore's day, tags it, adds each member's attendance, then publishes it" do
+  test "the first send makes the event on the 1st of its month, tags it, adds each member's attendance, then publishes it" do
     chores = [
       chore(1, @sam, 60),
       chore(2, @avery, 180, ~D[2026-10-02]),
@@ -68,9 +68,17 @@ defmodule App.Operation.BuildChoreEventTest do
     assert %{"d4h_member_id" => 101, "created_in_set" => true, "starts_at" => @start} =
              avery.new_value
 
-    assert avery.new_value["ends_at"] == "2026-10-28T10:00:00Z"
-    assert sam.new_value["ends_at"] == "2026-10-28T11:00:00Z"
+    assert avery.new_value["ends_at"] == "2026-10-01T10:00:00Z"
+    assert sam.new_value["ends_at"] == "2026-10-01T11:00:00Z"
     assert %{"created_in_set" => true, "published" => true} = publish.new_value
+  end
+
+  test "the event starts at 00:00 on the 1st of its month, in the team's time zone" do
+    assert BuildChoreEvent.starts_at(~D[2026-11-01], "America/Vancouver") ==
+             ~U[2026-11-01 07:00:00Z]
+
+    assert BuildChoreEvent.starts_at(~D[2026-12-01], "America/Toronto") ==
+             ~U[2026-12-01 05:00:00Z]
   end
 
   test "a changed chore changes its member's time, and only theirs" do
@@ -79,15 +87,15 @@ defmodule App.Operation.BuildChoreEventTest do
         d4h_attendance_id: 501,
         d4h_member_id: 101,
         status: "attending",
-        started_at: ~U[2026-10-28 07:00:00Z],
-        finished_at: ~U[2026-10-28 10:00:00Z]
+        started_at: ~U[2026-10-01 07:00:00Z],
+        finished_at: ~U[2026-10-01 10:00:00Z]
       },
       %AttendanceInfo{
         d4h_attendance_id: 502,
         d4h_member_id: 102,
         status: "attending",
-        started_at: ~U[2026-10-28 07:00:00Z],
-        finished_at: ~U[2026-10-28 08:00:00Z]
+        started_at: ~U[2026-10-01 07:00:00Z],
+        finished_at: ~U[2026-10-01 08:00:00Z]
       }
     ]
 
@@ -108,7 +116,7 @@ defmodule App.Operation.BuildChoreEventTest do
     refute Map.has_key?(update.new_value, "tag_ids")
     assert update.new_value["finished_at"] == update.new_value["started_at"]
     assert %{d4h_record_id: 502, member_id: 2} = sam
-    assert sam.new_value["ends_at"] == "2026-10-28T09:00:00Z"
+    assert sam.new_value["ends_at"] == "2026-10-01T09:00:00Z"
     assert %{d4h_record_id: 900, new_value: %{"published" => true}} = publish
   end
 
@@ -152,8 +160,8 @@ defmodule App.Operation.BuildChoreEventTest do
         d4h_attendance_id: id,
         d4h_member_id: 101,
         status: "attending",
-        started_at: ~U[2026-10-06 07:00:00Z],
-        finished_at: ~U[2026-10-06 07:30:00Z]
+        started_at: ~U[2026-10-01 07:00:00Z],
+        finished_at: ~U[2026-10-01 07:30:00Z]
       }
     end
 
