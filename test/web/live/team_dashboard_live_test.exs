@@ -18,6 +18,29 @@ defmodule Web.TeamDashboardLiveTest do
     Map.merge(%{started_at: started_at, finished_at: DateTime.add(started_at, 2, :hour)}, attrs)
   end
 
+  test "attendance nobody sent opens the activity's Attendance page (#475)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity = activity_fixture(team, at(-24, %{title: "Training night"}))
+
+    App.Model.AttendanceScan.insert!(%App.Model.AttendanceScan{
+      team_id: team.id,
+      activity_id: activity.id,
+      member_id: member_fixture(team).id,
+      kind: "arrived",
+      method: "name",
+      scanned_at: DateTime.utc_now()
+    })
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#attention-attendance_to_send", "Attendance to send: Training night")
+
+    assert has_element?(
+             lv,
+             ~s{#attention-attendance_to_send a[href="/teams/#{team.subdomain}/activities/#{activity.id}/attendance"]}
+           )
+  end
+
   test "renders team dashboard", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
