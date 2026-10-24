@@ -1,12 +1,14 @@
-/* Buttons: flat, with a hard bottom edge, GOV.UK style. Each variant sets the same four
-   --btn-* properties; hover only where there is a pointer, and a press drops the button
-   onto its edge. See /styles/button. */
+/* Buttons: flat, with a hard bottom edge, GOV.UK style. The 6px corners and the dark edge
+   are what make a button (#526): rounded is something you do, square is somewhere you go
+   (tabs and the stat switch). Each variant sets the same four --btn-* properties; hover
+   only where there is a pointer, and a press drops the button onto its edge. See
+   /styles/button. */
 @layer components {
   .btn {
     --btn-bg: var(--surface-alt);
     --btn-bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text));
     --btn-fg: var(--text);
-    --btn-edge: var(--border);
+    --btn-edge: color-mix(in srgb, var(--surface-alt) 55%, var(--text));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -17,7 +19,7 @@
     line-height: var(--lh-md);
     padding: 6px var(--sp-4);
     border: 0;
-    border-radius: var(--radius);
+    border-radius: var(--radius-btn);
     color: var(--btn-fg);
     background: var(--btn-bg);
     box-shadow: 0 2px 0 var(--btn-edge);
@@ -40,7 +42,7 @@
     --btn-bg: var(--surface-alt);
     --btn-bg-hover: color-mix(in srgb, var(--surface-alt) 85%, var(--text));
     --btn-fg: var(--text);
-    --btn-edge: var(--border);
+    --btn-edge: color-mix(in srgb, var(--surface-alt) 55%, var(--text));
   }
 
   .btn-success {
