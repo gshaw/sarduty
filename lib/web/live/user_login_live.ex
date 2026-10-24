@@ -11,6 +11,9 @@ defmodule Web.UserLoginLive do
     ~H"""
     <div>
       <h1 class="heading">Log in</h1>
+      <p :if={@take_attendance?} id="login-take-attendance" class="lead">
+        Log in to take attendance.
+      </p>
       <p :if={@text_login}>
         Enter the email or mobile number D4H has for you. If you may log in, we'll send you a
         code. There's no password.
@@ -67,10 +70,11 @@ defmodule Web.UserLoginLive do
     """
   end
 
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      assign(socket,
        page_title: "Log in",
+       take_attendance?: Web.TakeAttendanceLive.path?(session["user_return_to"]),
        text_login: Accounts.text_login?(),
        form: to_form(%{"login" => nil}, as: "user"),
        trigger_submit: false

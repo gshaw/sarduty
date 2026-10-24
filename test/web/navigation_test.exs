@@ -52,10 +52,10 @@ defmodule Web.NavigationTest do
   end
 
   describe "sections/3" do
-    test "a member sees Dashboard, Activities, and Your membership, each its own section" do
+    test "a member sees Dashboard, Activities and Take attendance, and Your membership" do
       sections = team_sections("/teams/squamish/me", member?: true, proposed_changes: 2)
-      assert keys(sections) == [["dashboard"], ["activities"], ["me"]]
-      assert [_dashboard, [%{count: nil}] | _rest] = sections
+      assert keys(sections) == [["dashboard"], ["activities", "take-attendance"], ["me"]]
+      assert [_dashboard, [%{count: nil}, _take_attendance] | _rest] = sections
 
       assert [
                _dashboard,
@@ -68,7 +68,7 @@ defmodule Web.NavigationTest do
       assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
                [
                  ["dashboard"],
-                 ["activities", "templates"],
+                 ["activities", "take-attendance", "templates"],
                  [
                    "members",
                    "milestones",
@@ -117,9 +117,9 @@ defmodule Web.NavigationTest do
       activity_keys = fn sections -> sections |> Enum.at(1) |> Enum.map(& &1.key) end
 
       sections = team_sections("/teams/squamish", team_admin?: true)
-      assert activity_keys.(sections) == ["activities", "templates"]
+      assert activity_keys.(sections) == ["activities", "take-attendance", "templates"]
 
-      [_dashboard, [_activities, _templates, proposed] | _rest] =
+      [_dashboard, [_activities, _take_attendance, _templates, proposed] | _rest] =
         team_sections("/teams/squamish/proposed-changes/3",
           team_admin?: true,
           proposed_changes: 2
@@ -129,7 +129,7 @@ defmodule Web.NavigationTest do
 
       mcp_team = %{@team | mcp_enabled: true}
 
-      [_dashboard, [_activities, _templates, proposed] | _rest] =
+      [_dashboard, [_activities, _take_attendance, _templates, proposed] | _rest] =
         "/teams/squamish" |> team_sections([team_admin?: true], mcp_team)
 
       assert proposed.count == nil
@@ -140,6 +140,11 @@ defmodule Web.NavigationTest do
       assert current(team_sections("/teams/squamish", opts)) == ["dashboard"]
       assert current(team_sections("/teams/squamish/activities/7/tags", opts)) == ["activities"]
       assert current(team_sections("/teams/squamish/templates/3", opts)) == ["templates"]
+
+      assert current(team_sections("/teams/squamish/take-attendance", opts)) == [
+               "take-attendance"
+             ]
+
       assert current(team_sections("/teams/squamish/settings/managers", opts)) == ["settings"]
       assert current(team_sections("/teams/squamish/me/details", opts)) == ["me"]
       assert current(team_sections("/teams/squamish/members-x", opts)) == []
