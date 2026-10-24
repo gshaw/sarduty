@@ -5,12 +5,18 @@ defmodule App.Worker.FinishRunWorkerTest do
   alias App.Worker.FinishRunWorker
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.ScheduleTeamRefreshesWorker
+  alias App.Worker.SyncTeamChangesWorker
 
   @started_at ~U[2026-10-07 06:00:00.000000Z]
 
   setup do
     Application.put_env(:sarduty, :healthchecks_url, "https://hc.test/refresh")
-    on_exit(fn -> Application.delete_env(:sarduty, :healthchecks_url) end)
+    Application.put_env(:sarduty, :healthchecks_sync_url, "https://hc.test/sync")
+
+    on_exit(fn ->
+      Application.delete_env(:sarduty, :healthchecks_url)
+      Application.delete_env(:sarduty, :healthchecks_sync_url)
+    end)
 
     test = self()
 
@@ -26,9 +32,11 @@ defmodule App.Worker.FinishRunWorkerTest do
   end
 
   # Inline Oban testing stores no jobs, so these are written straight to the table.
-  defp refresh_job(state, attrs \\ %{}) do
+  defp refresh_job(state, attrs \\ %{}), do: job(RefreshTeamDataWorker, state, attrs)
+
+  defp job(worker, state, attrs) do
     %{team_id: 1}
-    |> RefreshTeamDataWorker.new()
+    |> worker.new()
     |> Ecto.Changeset.change(
       Map.merge(%{state: state, inserted_at: DateTime.add(@started_at, 1, :second)}, attrs)
     )
@@ -40,6 +48,12 @@ defmodule App.Worker.FinishRunWorkerTest do
     assert FinishRunWorker.outcome(1, 2) == :wait
     assert FinishRunWorker.outcome(0, 0) == :success
     assert FinishRunWorker.outcome(0, 1) == :fail
+  end
+
+  test "only a refresh pings a failure" do
+    assert FinishRunWorker.ping_signal(:fail, true) == :fail
+    assert FinishRunWorker.ping_signal(:fail, false) == :success
+    assert FinishRunWorker.ping_signal(:success, false) == :success
   end
 
   test "waits for a refresh that will retry" do
@@ -61,6 +75,14 @@ defmodule App.Worker.FinishRunWorkerTest do
 
     assert perform("refresh") == :ok
     assert_received {:ping, "/refresh/fail"}
+  end
+
+  test "a sync that crashed doesn't fail the round" do
+    job(SyncTeamChangesWorker, "discarded", %{discarded_at: DateTime.add(@started_at, 1, :minute)})
+
+    assert perform("sync") == :ok
+    assert_received {:ping, "/sync"}
+    assert Event.get_last(:d4h_sync_round).data["outcome"] == "fail"
   end
 
   test "a cancelled refresh, or one discarded before the run, doesn't fail it" do

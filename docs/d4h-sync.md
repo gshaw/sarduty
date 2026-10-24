@@ -95,12 +95,14 @@ door's, leaves it as it was (`Attendance.replied_at/4`).
   [FinishRunWorker](../lib/app/worker/finish_run_worker.ex), which waits until no team job
   is left (retries included) and then pings success. The nightly run pings `/fail`
   instead when a team's job ran out of attempts; a missing or rejected key cancels the job,
-  so it doesn't count. Healthchecks emails when a run is missing or runs past its grace.
+  so it doesn't count. A sync round never pings `/fail`, even when a team's sync crashed:
+  the next round is 10 minutes away and Honeybadger has the crash. Before 2026-10-24 it
+  did, and SQLite lock errors (#416) sent a down and an up every day or two. Healthchecks emails when a run is missing or runs past its grace.
   Only jobs queued since the run started count. Oban's Lifeline puts a job left
   executing by a restart back after an hour, and its Pruner drops finished jobs after a
   week (`config/config.exs`). Before both, a job orphaned on 2026-06-09 held the first
   run open until it was cancelled by hand.
-  - `sarduty-sync` (`HEALTHCHECKS_SYNC_URL`): period 10 minutes, grace 5 minutes. A late
+  - `sarduty-sync` (`HEALTHCHECKS_SYNC_URL`): period 10 minutes, grace 20 minutes. A late
     ping means a round no longer fits in 10 minutes. A round was about 1 s per team in
     October 2026.
   - The nightly check (`HEALTHCHECKS_URL`): period 1 day, grace 2 hours. A full refresh

@@ -6,8 +6,9 @@ defmodule App.Worker.FinishRunWorker do
 
   The refresh fails when any team's job ran out of attempts. A missing or rejected key
   cancels the job instead, so it doesn't count: only the team can fix it, and the
-  dashboards already say so. A sync never fails the run, since a failed sync is
-  cancelled and the next is 10 minutes away.
+  dashboards already say so. A sync never fails the run, not even one that crashed
+  past its rescue: the next is 10 minutes away, and Honeybadger has the crash. The
+  sync check only alerts when rounds stop or run late.
 
   It also records the run as an event: how long it took, how many teams, and what the
   team events since it started say, for the admin events page.
@@ -32,6 +33,7 @@ defmodule App.Worker.FinishRunWorker do
       check: :sync,
       worker: SyncTeamChangesWorker,
       wait: 5,
+      fails: false,
       event: :d4h_sync_round,
       team_event: :d4h_team_sync
     },
@@ -39,6 +41,7 @@ defmodule App.Worker.FinishRunWorker do
       check: :refresh,
       worker: RefreshTeamDataWorker,
       wait: 60,
+      fails: true,
       event: :d4h_refresh_run,
       team_event: :d4h_team_refresh
     }
@@ -76,11 +79,15 @@ defmodule App.Worker.FinishRunWorker do
         {:snooze, wait}
 
       signal ->
-        Healthchecks.ping(check, signal)
+        Healthchecks.ping(check, ping_signal(signal, config.fails))
         record(config, args["teams"], started_at, signal)
         :ok
     end
   end
+
+  @doc "The ping for a run's outcome: a run that never fails pings success instead."
+  def ping_signal(:fail, false), do: :success
+  def ping_signal(signal, _fails), do: signal
 
   defp record(config, teams, started_at, signal) do
     now = DateTime.utc_now()
