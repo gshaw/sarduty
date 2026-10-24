@@ -79,6 +79,9 @@ defmodule App.Model.Member do
     |> Repo.all()
   end
 
+  @doc "The first word of the member's name, for a line that speaks of them."
+  def first_name(%{name: name}), do: name |> String.split(" ", parts: 2) |> hd()
+
   @doc """
   What the member lacks that login and emailed letters need, in the order the members
   page shows it: `:mobile_phone`, `:email`.

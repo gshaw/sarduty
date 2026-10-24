@@ -1,6 +1,7 @@
 defmodule Web.MeController do
   use Web, :controller
 
+  alias App.Model.Certificate
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.TaxCreditLetter
@@ -58,6 +59,12 @@ defmodule Web.MeController do
     member = conn.assigns.member
     award = MemberQualificationAward.find_certificate!(member, id)
     Web.CertificateResponse.send_certificate(conn, member.team, award)
+  end
+
+  # A certificate the member sent (#493), while SAR Duty keeps its file.
+  def sent_certificate(conn, %{"id" => id}) do
+    certificate = Certificate.find_for_member!(conn.assigns.member, id)
+    Web.CertificateResponse.send_sent(conn, certificate)
   end
 
   def tax_credit_letter(conn, %{"id" => id}) do

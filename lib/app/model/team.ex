@@ -48,6 +48,9 @@ defmodule App.Model.Team do
     field :member_logins, :boolean, default: false
     # Shows chores (#341) on a team with member logins on. Set with member logins.
     field :chores_enabled, :boolean, default: false
+    # Lets members send certificates (#493) on a team with member logins on. Set with
+    # member logins.
+    field :certificates_enabled, :boolean, default: false
     # Whether the team may issue ID cards. Set only by App.Operation.SetTeamIdCards from
     # /admin/id-cards: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
@@ -261,6 +264,13 @@ defmodule App.Model.Team do
 
   @doc "Whether the team shows chores (#341): member logins and the chores setting on."
   def chores?(%Team{member_logins: logins, chores_enabled: chores}), do: logins and chores
+
+  @doc """
+  Whether members send certificates (#493): member logins and the certificates setting
+  on.
+  """
+  def certificates?(%Team{member_logins: logins, certificates_enabled: certificates}),
+    do: logins and certificates
 
   def get(id), do: Repo.get(Team, id)
   def get!(id), do: Repo.get!(Team, id)

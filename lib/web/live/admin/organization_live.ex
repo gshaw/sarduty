@@ -80,7 +80,9 @@ defmodule Web.Admin.OrganizationLive do
         <.hint>
           PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
         </.hint>
-        <.error :for={error <- upload_errors(@uploads.logo)}>{upload_error(error)}</.error>
+        <.error :for={error <- upload_errors(@uploads.logo)}>
+          {upload_error(error, @uploads.logo, "a PNG or JPEG")}
+        </.error>
         <.error :for={{message, _opts} <- @form[:logo].errors}>{message}</.error>
       </div>
 
@@ -178,9 +180,4 @@ defmodule Web.Admin.OrganizationLive do
   end
 
   defp own_host(_organization), do: "verify.example.org"
-
-  defp upload_error(:too_large), do: "That file is too large. Use a smaller one."
-  defp upload_error(:not_accepted), do: "Use a PNG or JPEG."
-  defp upload_error(:too_many_files), do: "Select one file."
-  defp upload_error(_error), do: "That file did not upload. Try again."
 end

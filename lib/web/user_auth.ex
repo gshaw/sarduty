@@ -5,6 +5,7 @@ defmodule Web.UserAuth do
   import Phoenix.Controller
 
   alias App.Accounts
+  alias App.Model.Certificate
   alias App.Model.ChangeSet
   alias App.Model.Chore
   alias App.Model.Member
@@ -272,15 +273,16 @@ defmodule Web.UserAuth do
     {:cont, Phoenix.Component.assign(socket, Map.merge(access, waiting(access)))}
   end
 
-  # What waits for a team admin, for the side navigation: AI agent change sets, and
-  # members' chores.
+  # What waits for a team admin, for the side navigation: AI agent change sets, members'
+  # chores, and members' certificates.
   defp waiting(%{team_admin?: true, current_team: team}),
     do: %{
       proposed_change_count: ChangeSet.count_waiting(team.id),
-      chore_count: waiting_chores(team)
+      chore_count: waiting_chores(team),
+      certificate_count: waiting_certificates(team)
     }
 
-  defp waiting(_access), do: %{proposed_change_count: 0, chore_count: 0}
+  defp waiting(_access), do: %{proposed_change_count: 0, chore_count: 0, certificate_count: 0}
 
   # Who the user is on the URL's team, as `current_team`, `current_member`, and
   # `team_admin?`, when `access` lets them in; otherwise a 404. The LiveView hook and the
@@ -345,6 +347,9 @@ defmodule Web.UserAuth do
   end
 
   defp waiting_chores(team), do: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0)
+
+  defp waiting_certificates(team),
+    do: if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0)
 
   @doc "Who may open a team LiveView: `:admin` (the default), `:team`, or `:member`."
   def page_access(nil), do: :admin
