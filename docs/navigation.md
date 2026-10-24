@@ -24,8 +24,8 @@ still lists the area's pages.
 - **Account settings**, `/account`: one page, so no side navigation. It is about the login,
   the same on every team.
 
-Public pages, logging in, and the door's attendance link are in no area. Their bar has
-the account menu and no area name.
+Public pages and logging in are in no area. Their bar has the account menu and no area
+name.
 
 ## The side navigation
 

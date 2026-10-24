@@ -387,7 +387,7 @@ defmodule App.ViewData.ChangeHistory do
   defp row_group(_row), do: "deleted"
 
   @doc "Where a change set came from, as people say it."
-  def source_label(:door), do: "attendance link"
+  def source_label(:door), do: "Take attendance"
   def source_label(:group_rule), do: "group rule"
   def source_label(:attendance_import), do: "import attendance"
   def source_label(:agent), do: "AI agent"

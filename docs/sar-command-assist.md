@@ -31,8 +31,8 @@ From [its D4H Sync page](https://www.sarassist.ca/Support/D4HSync), SCA 7.13 or 
   SCA to read D4H group membership, since SAR Duty writes the group there.
 
 Sign-out times and kilometres feed the D4H entry for the incident. Since SCA covers
-incident attendance, SAR Duty removed its attendance import (#212, #424); attendance at
-the door ([attendance-at-the-door.md](attendance-at-the-door.md)) is for trainings.
+incident attendance, SAR Duty removed its attendance import (#212, #424); Take attendance
+([taking-attendance.md](taking-attendance.md)) is for trainings.
 
 ## Where they meet
 

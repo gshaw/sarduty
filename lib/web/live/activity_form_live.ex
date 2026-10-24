@@ -78,7 +78,7 @@ defmodule Web.ActivityFormLive do
     <section :if={@activity} id="activity-delete" class="mt-8 measure">
       <h2 class="heading">Delete the activity</h2>
       <p>
-        It leaves every list and letter. Its attendance links stop taking scans.
+        It leaves every list and letter. Take attendance stops taking scans for it.
       </p>
       <.button
         id="activity-delete-button"

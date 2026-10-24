@@ -1,7 +1,7 @@
 defmodule Web.Components.ActivityPanel do
   @moduledoc """
   An activity at a glance (#444): its day and time in large type, the counts, the
-  member's reply, and Take attendance for team admins. It heads an activity's page, and
+  member's reply, and Take attendance for whoever may take it now (#475). It heads an activity's page, and
   it is the Dashboard's Next up (#205), which adds the title and place and keeps its
   count in that line. See /styles/activity-panel.
   """
@@ -16,7 +16,11 @@ defmodule Web.Components.ActivityPanel do
   attr :now, :any, required: true
   attr :label, :string, default: nil, doc: ~s(a word over the day, such as "Next up")
   attr :counts, :map, default: nil, doc: "`Attendance.reply_counts/2`'s, for the counts line"
-  attr :team_admin?, :boolean, default: false, doc: "adds Take attendance"
+
+  attr :take_attendance?, :boolean,
+    default: false,
+    doc: "adds Take attendance: `Activity.take_attendance?/3`"
+
   slot :inner_block, doc: "what else matters, above the counts, such as the title"
   slot :reply, doc: "the member's reply control, while they can reply"
 
@@ -40,7 +44,7 @@ defmodule Web.Components.ActivityPanel do
         <div :if={@reply != []} class="activity-panel-reply">{render_slot(@reply)}</div>
       </div>
       <.button
-        :if={@team_admin? and !@activity.deleted_at}
+        :if={@take_attendance?}
         id={"#{@id}-take-attendance"}
         variant={:primary}
         navigate={~p"/teams/#{@team}/activities/#{@activity.id}/take-attendance"}

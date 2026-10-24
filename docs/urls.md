@@ -25,11 +25,11 @@ enforces the top-level list and the held URLs.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
-  `login`, `logout`, `s`, `attendance`, `replies`, `reminders`, `wallet`, `styles`,
-  `terms`, `privacy`, `maps`, and `dev` in development. A new one is added to the router
+  `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
+  `maps`, and `dev` in development. A new one is added to the router
   test on purpose.
-- **Anything printed or texted goes through `/s/` or the verify site**, so it stays short
-  and never depends on a team page's path.
+- **Anything printed on a card goes through the verify site**, so it stays short and never
+  depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives
   `Phoenix.Param` on `subdomain`, and `App.Model.Organization` on `slug`, so a future move
   is one router change and a grep.
@@ -43,7 +43,6 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   `/me/tax-credit-letters/:id/pdf`: a member's downloads, kept so saved links keep
   working.
 - `/wallet/google`: Google Wallet's save and delete callbacks, set on the pass class.
-- `/s/:code` and `/attendance/:token`: shared attendance links.
 - `/replies/:token` and `/reminders/:token`: a reminder email's links, to reply and to
   turn reminders off (#444). Mail apps post to `/reminders/:token` for one-click
   unsubscribe.

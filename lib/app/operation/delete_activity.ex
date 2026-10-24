@@ -1,7 +1,8 @@
 defmodule App.Operation.DeleteActivity do
   @moduledoc """
   A team admin deletes an activity of a team on SAR Duty Records (docs/records.md).
-  Records marks it deleted, as D4H does, and the sync marks the copy. Its attendance links and scans stay.
+  Records marks it deleted, as D4H does, and the sync marks the copy. Its attendance scans
+  stay.
   """
 
   alias App.Accounts.User

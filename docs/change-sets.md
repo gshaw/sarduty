@@ -1,7 +1,8 @@
 # Change sets
 
 Every write SAR Duty makes to D4H is a change set (#174, step 1). A change set is a list
-of D4H edits with what proposed them (`source`: the door, a group rule, or an AI agent,
+of D4H edits with what proposed them (`source`: the door, which is
+[Take attendance](taking-attendance.md), a group rule, or an AI agent,
 among others), one row per D4H record, and D4H's answer for each row. They live in
 `change_sets` and `change_set_rows`
 ([ChangeSet](../lib/app/model/change_set.ex),
@@ -13,7 +14,7 @@ D4H's write functions, and
 new kind of write is a new row action there, not a new call from a page or an operation.
 
 - **Propose, then apply.** A caller builds the rows with `ChangeSet.propose!/2` and hands
-  the set to `ApplyChangeSet.call/4`. The door and group rules propose and apply in one
+  the set to `ApplyChangeSet.call/4`. Take attendance and group rules propose and apply in one
   click, since each has its own review page first. Old sets from the removed Import
   attendance page keep their source, `attendance_import` (#424).
 - **An AI agent's set waits** (#216). An agent connected through MCP proposes attendance
@@ -71,7 +72,7 @@ new kind of write is a new row action there, not a new call from a page or an op
   again tries its proposed and failed rows once more.
 - **`old_value` and `new_value`** hold what D4H had and what it gets, as JSON with string
   keys and times as ISO 8601 strings.
-- **Local side effects stay with the caller.** The door records no-shows and group rules
+- **Local side effects stay with the caller.** Take attendance records no-shows and group rules
   update `group_members` from the rows that applied. Group rules still log to
   `group_membership_changes`, which the group page shows.
 

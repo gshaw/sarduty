@@ -63,7 +63,8 @@ defmodule Web.ActivityLiveTest do
            )
   end
 
-  test "Take attendance is under the title for a team admin, not in Actions", %{conn: conn} do
+  test "Take attendance is under the title for a team admin, and Send attendance in Actions",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity = activity_fixture(team)
 
@@ -76,6 +77,11 @@ defmodule Web.ActivityLiveTest do
            )
 
     refute has_element?(lv, "#activity-actions", "Take attendance")
+
+    assert has_element?(
+             lv,
+             ~s{#activity-send-attendance[href="/teams/#{team.subdomain}/activities/#{activity.id}/attendance"]}
+           )
   end
 
   test "a team admin who is a member replies too, with member logins off", %{conn: conn} do
@@ -174,7 +180,7 @@ defmodule Web.ActivityLiveTest do
     test "sends its D4H pages back to the activity", %{conn: conn, team: team, activity: activity} do
       activity_path = ~p"/teams/#{team}/activities/#{activity.id}"
 
-      for page <- ["take-attendance", "mileage"] do
+      for page <- ["take-attendance", "attendance", "mileage"] do
         assert {:error, {:live_redirect, %{to: ^activity_path}}} =
                  live(conn, "#{activity_path}/#{page}")
       end
@@ -222,6 +228,20 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#activity-actions")
       refute has_element?(lv, "#activity-history-link")
       refute has_element?(lv, "#activity-equipment-add")
+    end
+
+    test "Take attendance shows from 2 hours before the start", %{conn: conn, team: team} do
+      later =
+        activity_fixture(team, %{started_at: hours_from_now(3), finished_at: hours_from_now(4)})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{later.id}")
+      refute has_element?(lv, "#activity-panel-take-attendance")
+
+      soon =
+        activity_fixture(team, %{started_at: hours_from_now(1), finished_at: hours_from_now(2)})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{soon.id}")
+      assert has_element?(lv, "#activity-panel-take-attendance")
     end
 
     test "a coming activity lists who signed up", %{conn: conn, team: team, member: member} do

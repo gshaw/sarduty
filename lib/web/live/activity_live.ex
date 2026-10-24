@@ -188,7 +188,7 @@ defmodule Web.ActivityLive do
       team={@activity.team}
       now={@now}
       counts={@counts}
-      team_admin?={@team_admin?}
+      take_attendance?={Activity.take_attendance?(@activity, @team_admin?, @now)}
     >
       <:reply :if={Reply.open?(@invitation, @activity, @now)}>
         <.live_component
@@ -350,6 +350,12 @@ defmodule Web.ActivityLive do
       <dt :if={@team_admin? and !@activity.deleted_at}>Actions</dt>
       <dd :if={@team_admin? and !@activity.deleted_at}>
         <ul id="activity-actions" class="action-list">
+          <li>
+            <.a
+              id="activity-send-attendance"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
+            >Send attendance to D4H</.a>
+          </li>
           <li :if={D4H.records?(@activity.team)}>
             <.a
               id="activity-edit"
