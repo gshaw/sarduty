@@ -9,6 +9,24 @@ D4H from the activity's **Attendance** page
 ([ActivityAttendanceLive](../lib/web/live/activity_attendance_live.ex)). Issue #139 has
 the first design and the D4H test it rests on; #475 replaced its links with a login.
 
+## The team's page
+
+`/teams/:subdomain/take-attendance`
+([TakeAttendanceLive](../lib/web/live/take_attendance_live.ex)) is for an iPad at the
+hall. It lists the activities taking attendance now
+(`Activity.taking_attendance_now/2`) as rows to tap. With one, it opens that activity's
+scanner, replacing itself so Back doesn't bounce. With none, it names the next activity
+and when taking attendance opens. It shows its own address with Copy link, so a team
+adds it to the iPad's Home Screen or prints a QR code of it for the hall or command post.
+The address can't move ([urls.md](urls.md)). The scanner links back to it, Other
+activities now, while more than one activity is on. Take attendance is in the side
+navigation for members and team admins, always.
+
+Logged out, it goes to the login page as every team page does, and logging in comes back
+to it. When the page to come back to is a Take attendance page, the login pages say "Log
+in to take attendance.", and Remember me's hint says to leave it unticked on a shared
+device and log out when done.
+
 ## What must stay true
 
 - **A login, not a link.** There are no attendance links and no page without a login. A

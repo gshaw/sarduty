@@ -8,6 +8,9 @@ defmodule Web.UserLoginCodeLive do
   # the login form, the submit goes through LiveView, then posts to the controller, which
   # logs in. The button stays busy until that POST leaves the page.
   def mount(params, session, socket) do
+    socket =
+      assign(socket, take_attendance?: Web.TakeAttendanceLive.path?(session["user_return_to"]))
+
     case {session["login_phone"], session["login_email"] || params["email"]} do
       {nil, nil} ->
         {:ok, push_navigate(socket, to: ~p"/login")}
@@ -36,6 +39,9 @@ defmodule Web.UserLoginCodeLive do
     ~H"""
     <div id="login-code">
       <h1 class="heading">Enter your code</h1>
+      <p :if={@take_attendance?} id="login-take-attendance" class="lead">
+        Log in to take attendance.
+      </p>
       <p :if={@field == "email"}>
         If <strong>{@value}</strong> can use SAR Duty, we've emailed it a 6-digit code. It
         works once, for 15 minutes.
@@ -66,7 +72,12 @@ defmodule Web.UserLoginCodeLive do
           type="checkbox"
           label="Remember me on this computer for 60 days"
         >
-          Leave it off on a shared computer. Then closing the browser logs you out.
+          <span :if={@take_attendance?} id="remember-shared-device">
+            On a device the team shares, leave this unticked. Log out when you're done.
+          </span>
+          <span :if={!@take_attendance?}>
+            Leave it off on a shared computer. Then closing the browser logs you out.
+          </span>
         </.input>
         <.form_actions>
           <.button

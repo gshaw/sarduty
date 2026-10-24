@@ -62,7 +62,7 @@ defmodule Web.Navigation do
     team_sections =
       cond do
         team_admin? -> team_admin_sections(team, proposed_changes, chores, certificates)
-        member? -> [[dashboard_link(team)], [activities_link(team)]]
+        member? -> [[dashboard_link(team)], [activities_link(team), take_attendance_link(team)]]
         true -> []
       end
 
@@ -116,12 +116,18 @@ defmodule Web.Navigation do
 
     [
       activities_link(team),
+      take_attendance_link(team),
       link("templates", "Templates", ~p"/teams/#{team}/templates")
     ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
   end
 
   defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
   defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
+
+  # Always there, not only while an activity is on: links that come and go with the clock
+  # make the menu harder to learn (#475).
+  defp take_attendance_link(team),
+    do: link("take-attendance", "Take attendance", ~p"/teams/#{team}/take-attendance")
 
   # Members log chores, so the page shows with member logins and chores on. It shares
   # Equipment's section: chores are mostly equipment upkeep, and a section of one link

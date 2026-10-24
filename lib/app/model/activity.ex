@@ -244,6 +244,34 @@ defmodule App.Model.Activity do
   end
 
   @doc """
+  The team's activities whose attendance window is open at `now` (attendance_window?/2),
+  oldest start first, for the team's Take attendance page.
+  """
+  def taking_attendance_now(%Team{} = team, now) do
+    seconds = @attendance_window_hours * 3600
+    now = DateTime.truncate(now, :second)
+
+    Activity
+    |> where([a], a.team_id == ^team.id)
+    |> not_deleted()
+    |> where([a], a.started_at <= ^DateTime.add(now, seconds))
+    |> where([a], a.finished_at >= ^DateTime.add(now, -seconds))
+    |> order_by([a], asc: a.started_at, asc: a.id)
+    |> Repo.all()
+  end
+
+  @doc "The team's next activity to start after `now`, or nil."
+  def next_after(%Team{} = team, now) do
+    Activity
+    |> where([a], a.team_id == ^team.id)
+    |> not_deleted()
+    |> where([a], a.started_at > ^DateTime.truncate(now, :second))
+    |> order_by([a], asc: a.started_at, asc: a.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc """
   Activities that started in the last #{Service.Period.recent_days()} days and have finished by `now`.
   The dashboard counts drafts this way, and the activity list's "Last 30 days" shows
   the same rows, so the count and the list agree.

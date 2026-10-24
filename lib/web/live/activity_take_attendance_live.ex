@@ -52,6 +52,8 @@ defmodule Web.ActivityTakeAttendanceLive do
       page_title: "#{activity.title} · Take attendance",
       activity: activity,
       recorder: recorder(socket.assigns, now),
+      # Overlapping activities, so whoever holds the iPad can switch to the other one.
+      others_now?: length(Activity.taking_attendance_now(activity.team, now)) > 1,
       team: activity.team,
       members: members,
       kind: "arrived",
@@ -337,6 +339,9 @@ defmodule Web.ActivityTakeAttendanceLive do
     <h1 class="title mb-1">{@activity.title}</h1>
     <p id="activity-summary" class="text-text-muted">
       {when_text(@activity, @team)}<span :if={@activity.address}> · {@activity.address}</span>
+    </p>
+    <p :if={@others_now?} class="action">
+      <.a id="other-activities" navigate={~p"/teams/#{@team}/take-attendance"}>Other activities now</.a>
     </p>
 
     <p :if={@closed} id="closed" class="mt-4 font-semibold">
