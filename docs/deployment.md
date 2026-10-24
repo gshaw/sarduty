@@ -27,9 +27,11 @@ the same check: `fly deploy --build-only` after a change to `mix.lock` or
 `config/config.exs` rebuilds everything.
 
 **Migrations run at boot**, not as a release command: `App.Application.start/2` calls
-`App.Release.migrate/0` before anything else. A migration that fails keeps the app from
-starting, so test migrations against a copy of production data when they touch existing
-rows.
+`App.Release.migrate/0` before anything else. It starts its own 2-connection Repo; the
+`Ecto.Migrator` child Phoenix generates for SQLite runs on the app's 5 and failed on a
+fresh database, since SQLite prepares an ALTER TABLE against the connection's cached
+schema. A migration that fails keeps the app from starting, so test migrations against a
+copy of production data when they touch existing rows.
 
 For a PR with a migration:
 
