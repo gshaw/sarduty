@@ -85,7 +85,7 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, ~s{#form_place-select option[value="member-#{sam.id}"]}, "Sam Rivera")
     assert has_element?(lv, ~s{#form_place-select option[value="With members"]})
     assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 2")
-    assert has_element?(lv, "#place-sam-rivera #item-#{gps.id}", "GPS 5")
+    assert has_element?(lv, "#equipment-sam-rivera-#{gps.id}", "GPS 5")
     refute has_element?(lv, "#place-sam-rivera th", "Where")
     refute has_element?(lv, "#place-with-members")
     refute has_element?(lv, "td", "Radio 22")
@@ -118,7 +118,7 @@ defmodule Web.EquipmentLiveTest do
     end
   end
 
-  test "the sidebar, its All link, and Equipment count a kit's contents alike", ctx do
+  test "the sidebar, the Equipment tab, and Equipment count a kit's contents alike", ctx do
     sam = member_fixture(ctx.team, %{name: "Sam Rivera"})
     kit = equipment_item_fixture(ctx.team, %{title: "First aid kit 6", member_id: sam.id})
 
@@ -152,11 +152,16 @@ defmodule Web.EquipmentLiveTest do
     })
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members/#{sam.id}")
-    assert has_element?(lv, "#member-equipment-#{pouch.id} .hint", "In First aid kit 6")
-    path = ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}&show=all"
-    assert has_element?(lv, ~s{#member-equipment-all[href="#{path}"]}, "All 8 items")
-    refute has_element?(lv, "#member-equipment", "Stray")
+    tab = ~p"/teams/#{ctx.team}/members/#{sam.id}/equipment"
+    assert has_element?(lv, ~s{#member-equipment-link[href="#{tab}"]}, "8 items")
 
+    {:ok, lv, _html} = live(ctx.conn, tab)
+    html = lv |> element("#member-equipment-list") |> render()
+    assert length(Regex.scan(~r/<tr /, html)) == 8
+    assert has_element?(lv, "#member-equipment-list-#{pouch.id}", "First aid kit 6")
+    refute has_element?(lv, "td", "Stray")
+
+    path = ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}&show=all"
     {:ok, lv, _html} = live(ctx.conn, path)
     assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 8")
     assert has_element?(lv, "#equipment-view-all[aria-current]", "8")
@@ -167,8 +172,8 @@ defmodule Web.EquipmentLiveTest do
 
     # Where says what each item is inside, without the name the heading already gives.
     assert has_element?(lv, "#place-sam-rivera th", "Where")
-    assert has_element?(lv, "#item-#{splint.id}", "First aid kit 6 › Pouch")
-    refute has_element?(lv, "#item-#{splint.id}", "Sam Rivera")
+    assert has_element?(lv, "#equipment-sam-rivera-#{splint.id}", "First aid kit 6 › Pouch")
+    refute has_element?(lv, "#equipment-sam-rivera-#{splint.id}", "Sam Rivera")
   end
 
   test "a scanned barcode opens its item, and an unknown one says so", ctx do

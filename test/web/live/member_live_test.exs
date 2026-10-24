@@ -163,55 +163,32 @@ defmodule Web.MemberLiveTest do
     end
   end
 
-  test "the sidebar lists 5 items the member holds by title, then all of them (#490)",
+  test "the sidebar counts what the member holds and opens their Equipment tab (#490)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
-
-    items =
-      for n <- 1..6,
-          do:
-            equipment_item_fixture(team, %{
-              title: "Radio #{n}",
-              member_id: member.id,
-              barcode: "R-#{n}"
-            })
-
-    old =
-      equipment_item_fixture(team, %{title: "Radio 0", member_id: member.id, status: "retired"})
-
+    for n <- 1..6, do: equipment_item_fixture(team, %{title: "Radio #{n}", member_id: member.id})
+    equipment_item_fixture(team, %{title: "Radio 0", member_id: member.id, status: "retired"})
     other = member_fixture(team)
     equipment_item_fixture(team, %{title: "Their radio", member_id: other.id})
     # An id from another team never reaches this team's member.
     equipment_item_fixture(team_fixture(), %{title: "Stray radio", member_id: member.id})
     conn = log_in_user(conn, user)
+    tab = "/teams/#{team.subdomain}/members/#{member.id}/equipment"
 
-    for tab <- ["", "/history"] do
-      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{tab}")
+    for path <- ["", "/history"] do
+      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{path}")
 
-      [first | _rest] = items
-      sixth = List.last(items)
-      assert has_element?(lv, "#member-equipment-#{first.id} a", "Radio 1")
-      assert has_element?(lv, "#member-equipment-#{first.id} .hint", "Radio · R-1")
-      refute has_element?(lv, "#member-equipment-#{sixth.id}")
-      # D4H still has a retired item with the member, so the team may want it back.
-      assert has_element?(lv, "#member-equipment-#{old.id} .badge", "Retired")
-      refute has_element?(lv, "#member-equipment", "Their radio")
-      refute has_element?(lv, "#member-equipment", "Stray radio")
-
-      assert has_element?(
-               lv,
-               ~s{#member-equipment-all[href="/teams/#{team.subdomain}/equipment?place=member-#{member.id}&show=all"]},
-               "All 7 items"
-             )
+      assert has_element?(lv, ~s{#member-equipment-link[href="#{tab}"]}, "7 items")
+      assert has_element?(lv, ~s{nav.tabs a[href="#{tab}"]}, "Equipment")
     end
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
-    assert has_element?(lv, "#member-equipment", "Their radio")
-    refute has_element?(lv, "#member-equipment-all")
+    assert has_element?(lv, "#member-equipment-link", "1 item")
   end
 
-  test "a member who holds nothing has no Equipment in the sidebar", %{conn: conn} do
+  test "a member who holds nothing has no Equipment in the sidebar or the tabs",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
 
@@ -219,6 +196,7 @@ defmodule Web.MemberLiveTest do
 
     refute has_element?(lv, "#member-equipment")
     refute has_element?(lv, "dt", "Equipment")
+    refute has_element?(lv, "nav.tabs a", "Equipment")
   end
 
   test "the Tag filter keeps the activities with the tag", %{conn: conn} do

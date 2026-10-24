@@ -189,24 +189,25 @@ defmodule App.ViewData.EquipmentList do
   def group_held(rows, name), do: sort_groups([{name, rows}])
 
   @doc """
-  The items a member holds, from `EquipmentItem.held_by/2`, as `%{item, in}` with each
-  kit's contents right after it. `in` is the item holding it, or nil for one D4H
-  locates with the member.
+  The items a member holds, from `EquipmentItem.held_by/2`, as `%{item, inside}` with
+  each kit's contents right after it. `inside` is the chain of items holding it, as
+  `rows/1` gives it, such as "First aid kit 6 › Splint pouch", or "" for one D4H locates
+  with the member.
   """
   def held_rows(items) do
     by_d4h_id = Map.new(items, &{&1.d4h_equipment_id, &1})
 
     items
-    |> Enum.map(fn item ->
-      chain = containers(item, by_d4h_id, [], 0)
-
-      path =
-        [item | Enum.reverse(chain)] |> Enum.reverse() |> Enum.map(&String.downcase(&1.title))
-
-      %{item: item, in: List.last(chain), path: path}
-    end)
+    |> Enum.map(&held_row(&1, containers(&1, by_d4h_id, [], 0)))
     |> Enum.sort_by(&{&1.path, &1.item.id})
     |> Enum.map(&Map.delete(&1, :path))
+  end
+
+  # `chain` is the items holding `item`, outermost first. Sorting by `path` puts each
+  # kit's contents right after it.
+  defp held_row(item, chain) do
+    path = [item | Enum.reverse(chain)] |> Enum.reverse() |> Enum.map(&String.downcase(&1.title))
+    %{item: item, inside: Enum.map_join(chain, " › ", & &1.title), path: path}
   end
 
   defp sort_groups(groups) do
