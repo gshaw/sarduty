@@ -35,7 +35,7 @@ is left out, and so is its divider.
 | Section | Links                                                                         | Who         |
 | ------- | ----------------------------------------------------------------------------- | ----------- |
 | 1       | Dashboard                                                                     | everyone    |
-| 2       | Activities                                                                    | everyone    |
+| 2       | Activities, Take attendance                                                   | everyone    |
 | 2       | Templates, Proposed changes                                                   | team admins |
 | 3       | Members, Milestones, Groups, Qualifications, Endorsements, Tax credit letters | team admins |
 | 4       | Equipment, Chores                                                             | team admins |
@@ -43,8 +43,12 @@ is left out, and so is its divider.
 | 6       | Your membership                                                               | members     |
 
 - A team admin who is a member sees all six. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities, and
-  Your membership, each in its own section.
+  Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities and
+  Take attendance, and Your membership, in three sections.
+- **Take attendance is always there**, after Activities, for members and team admins
+  (#475). Not only while an activity is on: links that come and go with the clock make
+  the menu harder to learn. It opens `/teams/:subdomain/take-attendance`, which goes
+  straight to the scanner when one activity is on.
 - **Templates and Proposed changes are links of their own**, after Activities, so a team
   admin finds them without opening Activities first. Proposed changes shows only when the
   team has MCP on, or something waits. It counts the AI agent change sets that wait for a

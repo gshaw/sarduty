@@ -192,6 +192,8 @@ defmodule Web.Router do
       ] do
       live "/teams/:subdomain", TeamDashboardLive
       live "/teams/:subdomain/activities", ActivityCollectionLive
+      # Teams print a QR code of this one (#475), so it can't move: docs/urls.md.
+      live "/teams/:subdomain/take-attendance", TakeAttendanceLive
       live "/teams/:subdomain/activities/new", ActivityFormLive, :new
       live "/teams/:subdomain/activities/:id", ActivityLive
       live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit

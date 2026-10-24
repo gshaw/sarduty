@@ -50,6 +50,7 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/activities/:id",
     "/teams/:subdomain/activities/:id/calendar",
     "/teams/:subdomain/activities/:id/take-attendance",
+    "/teams/:subdomain/take-attendance",
     "/teams/:subdomain/me",
     "/teams/:subdomain/me/activities",
     "/teams/:subdomain/me/card/apple-wallet",
@@ -97,6 +98,7 @@ defmodule Web.RouterTest do
     {"GET", "/reminders/token", Web.InvitationRemindersLive, nil},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
+    {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},
     {"POST", "/teams/nsr/mcp", Web.MCPController, :post}
   ]
 
