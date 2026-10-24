@@ -3,6 +3,7 @@ defmodule App.Operation.ApplyChangeSetTest do
 
   alias App.Adapter.D4H.AttendanceInfo
   alias App.Adapter.D4H.EquipmentUsage
+  alias App.Adapter.D4H.QualificationAward
   alias App.Model.ChangeSetRow
   alias App.Operation.ApplyChangeSet
 
@@ -88,7 +89,8 @@ defmodule App.Operation.ApplyChangeSetTest do
              delete_qualification award_qualification remove_award create_group update_group
              delete_group create_equipment_usage delete_equipment_usage set_activity_tags
              create_equipment_item
-             update_equipment_item delete_equipment_item delete_attendance publish_activity)
+             update_equipment_item delete_equipment_item delete_attendance publish_activity
+             upload_document)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do
@@ -101,6 +103,34 @@ defmodule App.Operation.ApplyChangeSetTest do
           do: "#{path} calls D4H.#{write}"
 
     assert callers == []
+  end
+
+  # D4H's API can't remove an award, so a second one would stay (#493).
+  test "a certificate's award is skipped when D4H has it from the same day" do
+    row = %ChangeSetRow{
+      action: :award_qualification,
+      new_value: %{"d4h_qualification_id" => 4, "starts_at" => "2026-10-01T07:00:00Z"}
+    }
+
+    same = %QualificationAward{d4h_qualification_id: 4, starts_at: ~U[2026-10-01 00:00:00Z]}
+    earlier = %{same | starts_at: ~U[2025-10-01 07:00:00Z]}
+    other = %{same | d4h_qualification_id: 5}
+
+    assert ApplyChangeSet.check(row, {:awards, [earlier, other]}) == :ok
+
+    assert {:skipped, "D4H has this award already."} =
+             ApplyChangeSet.check(row, {:awards, [same]})
+  end
+
+  test "a certificate goes only on an award D4H has" do
+    row = %ChangeSetRow{
+      action: :attach_award_document,
+      new_value: %{"created_in_set" => true, "d4h_award_id" => nil}
+    }
+
+    assert {:failed, _text} = ApplyChangeSet.check(row, {:awards, []})
+    filled = put_in(row.new_value["d4h_award_id"], 3)
+    assert ApplyChangeSet.check(filled, {:awards, []}) == :ok
   end
 
   test "a tags row goes only when D4H has the tags the page opened with" do

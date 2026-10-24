@@ -46,7 +46,8 @@ defmodule App.Operation.ApplyChangeSet do
   login.
 
   `photo:` in `opts` is the image a `:set_member_photo` row sends. The row never holds
-  it, so a photo is never kept in SAR Duty.
+  it, so a photo is never kept in SAR Duty. `document:` is the certificate an
+  `:attach_award_document` row sends, `%{bytes:, filename:, content_type:}` (#493).
   """
   def call(team, change_set, user, now, opts \\ [])
 
@@ -57,38 +58,49 @@ defmodule App.Operation.ApplyChangeSet do
     with :ok <- check_team(team),
          d4h = D4H.build_context_from_team(team),
          {:ok, current} <- read_current(d4h, change_set) do
+      opts = Keyword.put(opts, :service_name, D4H.service_name(team))
       rows = apply_rows(d4h, change_set, current, now, opts)
       ChangeSet.mark_applied!(change_set, user, now)
       {:ok, rows}
     end
   end
 
-  # Rows go in order, so one can use the activity an earlier row created (#341).
+  # Rows go in order, so one can use the activity (#341) or the award (#493) an earlier
+  # row created.
   defp apply_rows(d4h, change_set, current, now, opts) do
     {rows, _created} =
       change_set.rows
       |> Enum.filter(&(&1.status in [:proposed, :failed]))
-      |> Enum.map_reduce(created_activity(change_set.rows), fn row, created ->
+      |> Enum.map_reduce(created(change_set.rows), fn row, created ->
         row = with_created(row, created)
         result = apply_row(d4h, row, change_set.source, current, opts)
         recorded = ChangeSetRow.record!(row, result, now)
-        {recorded, created_now(recorded) || created}
+        {recorded, created(recorded, created)}
       end)
 
     rows
   end
 
-  # An activity the set created on an earlier apply, for its rows that failed then.
-  defp created_activity(rows), do: Enum.find_value(rows, &created_now/1)
+  # What the set created on an earlier apply, for its rows that failed then.
+  defp created(rows), do: Enum.reduce(rows, %{}, &created/2)
 
-  defp created_now(%ChangeSetRow{action: :create_activity, status: :applied} = row),
-    do: row.d4h_record_id
+  defp created(%ChangeSetRow{action: :create_activity, status: :applied} = row, created),
+    do: Map.put(created, :activity, row.d4h_record_id)
 
-  defp created_now(_row), do: nil
+  defp created(%ChangeSetRow{action: :award_qualification, status: :applied} = row, created),
+    do: Map.put(created, :award, row.d4h_record_id)
+
+  defp created(_row, created), do: created
+
+  defp with_created(%ChangeSetRow{action: :attach_award_document} = row, created) do
+    if ChangeSetRow.created_in_set?(row) and created[:award],
+      do: ChangeSetRow.fill_award!(row, created[:award]),
+      else: row
+  end
 
   defp with_created(row, created) do
-    if ChangeSetRow.created_in_set?(row) and created,
-      do: ChangeSetRow.fill_activity!(row, created),
+    if ChangeSetRow.created_in_set?(row) and created[:activity],
+      do: ChangeSetRow.fill_activity!(row, created[:activity]),
       else: row
   end
 
@@ -98,6 +110,17 @@ defmodule App.Operation.ApplyChangeSet do
   # SAR Duty owns a chore event and rebuilds it on each send (#341), so D4H is not read
   # for conflicts: the set read the event's attendance as it was planned, for ids.
   defp read_current(_d4h, %ChangeSet{source: :chores}), do: {:ok, :owned}
+
+  # A certificate's set reads the member's awards now: D4H can't remove an award, so one
+  # it has already is never sent twice (#493).
+  defp read_current(d4h, %ChangeSet{source: :certificates, rows: rows}) do
+    case Enum.find(rows, &(&1.action == :award_qualification and &1.status != :applied)) do
+      nil -> {:ok, {:awards, []}}
+      row -> {:ok, {:awards, D4H.fetch_member_awards(d4h, row.new_value["d4h_member_id"])}}
+    end
+  rescue
+    error in D4H.Error -> {:error, error}
+  end
 
   # An attendance set reads the activity's rows now, and D4H's published flag, since
   # attendance on a published activity is locked.
@@ -145,6 +168,31 @@ defmodule App.Operation.ApplyChangeSet do
 
       bytes ->
         d4h |> D4H.set_member_photo(row.d4h_record_id, bytes) |> record_result(& &1.d4h_member_id)
+    end
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :award_qualification, new_value: new_value}, opts) do
+    d4h
+    |> D4H.award_qualification(
+      new_value["d4h_qualification_id"],
+      new_value["d4h_member_id"],
+      new_value["starts_at"],
+      new_value["ends_at"]
+    )
+    |> record_result(& &1.d4h_award_id, opts[:service_name])
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :attach_award_document, new_value: new_value}, opts) do
+    case opts[:document] do
+      nil ->
+        {:failed, "Send the certificate again."}
+
+      document ->
+        file = Map.put(document, :title, "#{new_value["title"]} certificate")
+
+        d4h
+        |> D4H.upload_document(new_value["d4h_award_id"], file)
+        |> record_result(& &1.d4h_document_id, opts[:service_name])
     end
   end
 
@@ -209,6 +257,25 @@ defmodule App.Operation.ApplyChangeSet do
   end
 
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
+
+  # The same qualification from the same day: D4H can't remove an award, so a second
+  # would stay (#493).
+  def check(%ChangeSetRow{action: :award_qualification, new_value: new_value}, {:awards, awards}) do
+    starts_on = new_value["starts_at"] |> time() |> DateTime.to_date()
+
+    if Enum.any?(awards, fn award ->
+         (award.d4h_qualification_id == new_value["d4h_qualification_id"] and
+            award.starts_at) && DateTime.to_date(award.starts_at) == starts_on
+       end),
+       do: {:skipped, "D4H has this award already."},
+       else: :ok
+  end
+
+  def check(%ChangeSetRow{action: :attach_award_document, new_value: new_value}, {:awards, _}) do
+    if new_value["d4h_award_id"],
+      do: :ok,
+      else: {:failed, "The award was not added to D4H, so the certificate was not sent."}
+  end
 
   def check(%ChangeSetRow{action: :set_activity_tags} = row, {:tags, ids}) do
     if ids == row.old_value["tag_ids"],
@@ -359,17 +426,6 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :delete_qualification} = row),
     do: d4h |> D4H.delete_qualification(row.d4h_record_id) |> record_result(& &1)
 
-  defp write(d4h, %ChangeSetRow{action: :award_qualification, new_value: new_value}) do
-    d4h
-    |> D4H.award_qualification(
-      new_value["d4h_qualification_id"],
-      new_value["d4h_member_id"],
-      new_value["starts_at"],
-      new_value["ends_at"]
-    )
-    |> record_result(& &1.d4h_award_id)
-  end
-
   defp write(d4h, %ChangeSetRow{action: :remove_award} = row),
     do: d4h |> D4H.remove_award(row.d4h_record_id) |> record_result(& &1)
 
@@ -400,15 +456,19 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :delete_equipment_item} = row),
     do: d4h |> D4H.delete_equipment_item(row.d4h_record_id) |> record_result(& &1)
 
-  defp record_result({:ok, record}, id), do: {:applied, id.(record)}
-  defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}
+  defp record_result(result, id, service_name \\ "SAR Duty Records")
+  defp record_result({:ok, record}, id, _service_name), do: {:applied, id.(record)}
+
+  defp record_result({:error, error}, _id, service_name),
+    do: {:failed, edit_failure_text(error, service_name)}
 
   # Records refuses a write with a title that says what is wrong, so that is the message.
-  defp edit_failure_text(%D4H.Error{status: status, message: message}) when status in 400..499,
-    do: String.replace(message, ~r/^D4H API error \(\d+\): /, "")
+  defp edit_failure_text(%D4H.Error{status: status, message: message}, _service_name)
+       when status in 400..499,
+       do: String.replace(message, ~r/^D4H API error \(\d+\): /, "")
 
-  defp edit_failure_text(_error),
-    do: "SAR Duty Records did not answer. Try again in a few minutes."
+  defp edit_failure_text(_error, service_name),
+    do: "#{service_name} did not answer. Try again in a few minutes."
 
   defp attendance_result({:ok, info}), do: {:applied, info.d4h_attendance_id}
   defp attendance_result({:error, error}), do: {:failed, attendance_failure_text(error)}
