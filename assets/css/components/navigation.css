@@ -248,30 +248,26 @@
     .side-nav { display: none; }
   }
 
-  /* Tabs: each tab is its own page. Tabs that don't fit wrap rather than scroll. */
-  .tabs { display: flex; flex-wrap: wrap; gap: var(--sp-1); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-6); }
+  /* Tabs (#525): each tab is its own page. Grey tiles that wrap at every width, with the
+     stat switch's look: the current page is light blue with a bar at its foot. Square
+     corners, since a tab is somewhere you go, not something you do. A long label wraps
+     inside its tile. */
+  .tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-6); }
 
   .tabs a {
     padding: var(--sp-2) var(--sp-4);
+    background: var(--surface-alt);
     font-weight: 600;
     color: var(--text);
     text-decoration: none;
-    border: 1px solid transparent;
-    border-top-width: 3px;
-    border-bottom: 0;
-    margin-bottom: -1px;
-    white-space: nowrap;
+    text-wrap: balance;
   }
 
-  .tabs a:hover { color: var(--link-hover); text-decoration: underline; }
-  .tabs a[aria-current="page"] { background: var(--bg); border-color: var(--border); border-top-color: var(--primary); }
+  .tabs a:hover { background: var(--border-subtle); color: var(--text); }
+  .tabs a[aria-current="page"] { background: var(--shade-1); box-shadow: inset 0 -3px var(--current); }
 
-  /* Phones: smaller tabs that may wrap to a second row, so the current one is a bar
-     under its name rather than a folder tab. */
   @media (width < 40rem) {
-    .tabs { gap: 0; }
-    .tabs a { padding-inline: var(--sp-2); font-size: var(--fs-sm); line-height: var(--lh-sm); border: 0; margin-bottom: 0; }
-    .tabs a[aria-current="page"] { background: none; box-shadow: inset 0 -3px var(--primary); }
+    .tabs a { padding-inline: var(--sp-3); font-size: var(--fs-sm); line-height: var(--lh-sm); }
   }
   @media (pointer: coarse) { .tabs a { display: inline-flex; align-items: center; min-height: 44px; } }
 

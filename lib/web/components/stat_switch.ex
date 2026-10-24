@@ -6,7 +6,7 @@ defmodule Web.Components.StatSwitch do
 
   @doc """
   Renders a row of counts over a list, each on a grey tile with what it counts, the current one
-  light blue with a primary bar. All comes first. A view's `marker` puts a coloured square before its label,
+  light blue with a bar at its foot. All comes first. A view's `marker` puts a coloured square before its label,
   as the rows show it: `marker="incident"` is `.marker-incident`. An `icon` puts an icon
   there instead, such as `icon="hero-clock-micro"`.
 

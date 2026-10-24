@@ -4,7 +4,7 @@
   .title-hero { font-size: 40px; line-height: 48px; font-weight: 700; margin-bottom: var(--sp-2); }
   @media (min-width: 40rem) { .title-hero { font-size: 56px; line-height: 64px; } }
 
-  .title { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; margin-bottom: var(--sp-4); }
+  .title { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; margin-bottom: var(--sp-4); overflow-wrap: break-word; }
   .lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-4); }
   .heading { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin-bottom: var(--sp-2); }
   .subheading { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
