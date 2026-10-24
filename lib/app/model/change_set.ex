@@ -25,7 +25,8 @@ defmodule App.Model.ChangeSet do
     # :equipment adds or removes items on an activity (#271). :template invites a template's groups
     # to an activity (#162). :tags sets an activity's tags from its tags page (#323).
     # :attendance_import is only on old rows: the page that made them is gone (#424).
-    # :chores sends a team admin's accepted chores as a D4H event (#341).
+    # :chores sends a team admin's accepted chores as a D4H event (#341). :certificates
+    # adds a member's certificate to D4H, as an award with the file on it (#493).
     field :source, Ecto.Enum,
       values: [
         :door,
@@ -37,7 +38,8 @@ defmodule App.Model.ChangeSet do
         :equipment,
         :template,
         :tags,
-        :chores
+        :chores,
+        :certificates
       ]
 
     field :summary, :string

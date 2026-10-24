@@ -57,6 +57,13 @@ new kind of write is a new row action there, not a new call from a page or an op
   the new activity's id as they apply, in order. Its rows also delete attendance
   (`delete_attendance`) and publish (`publish_activity`). D4H is read for ids only; SAR
   Duty owns the event. See [chores.md](chores.md).
+- **A certificate is a set of two rows** (source `certificates`, #493): a member's
+  certificate a team admin accepts. `award_qualification` gives the award, then
+  `attach_award_document` uploads the file to it (`D4H.upload_document/3`): that row says
+  `created_in_set` and gets the new award's id as it applies. The file goes to the
+  applier as `document:` and is never in a row. The set reads the member's awards first,
+  and skips an award D4H has from the same qualification and day: D4H's API can't remove
+  an award, so a second would stay. A failed upload is sent again on the same award.
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H
