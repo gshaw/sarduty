@@ -29,6 +29,9 @@ defmodule Web.PrivacyLive do
       <p>
         Anyone with a member's ID card code can see the member's name, photo, and team on the verify site.
       </p>
+      <p id="privacy-members">
+        On a team with member logins on, members see each other's roster, attendance, groups, and qualifications. Phone numbers, addresses, emails, and emergency contacts stay with team admins.
+      </p>
       <p>
         SAR Duty does not sell data, show ads, or use tracking cookies. Its cookies keep you logged in.
       </p>

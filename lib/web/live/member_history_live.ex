@@ -2,8 +2,8 @@ defmodule Web.MemberHistoryLive do
   use Web, :live_view_app_layout
 
   import Web.Components.ChangeHistory
-  import Web.Components.MemberSidebar
-  import Web.Components.MemberTabs
+  import Web.Components.MemberPage
+  import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
   alias App.Model.Member
   alias App.Repo
@@ -29,20 +29,18 @@ defmodule Web.MemberHistoryLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:history} equipment={@equipment} />
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
-          member={@member}
-          maps_app={@current_user.maps_app}
-          milestones={@milestones}
-        />
-      </aside>
-      <main class="content-2/3">
-        <.change_history id="member-history" entries={@entries} timezone={@current_team.timezone} />
-      </main>
-    </div>
+    <.member_page
+      member={@member}
+      tab={:history}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      milestones={@milestones}
+      equipment={@equipment}
+      maps_app={@current_user.maps_app}
+      team_admin?={@team_admin?}
+    >
+      <.change_history id="member-history" entries={@entries} timezone={@current_team.timezone} />
+    </.member_page>
     """
   end
 end

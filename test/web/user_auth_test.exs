@@ -258,7 +258,7 @@ defmodule Web.UserAuthTest do
     test "a member gets a 404 from a page for team admins" do
       %{team: team, user: user} = App.DataFixtures.member_with_login_fixture()
 
-      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.MemberCollectionLive) end
+      assert_raise Web.Status.NotFound, fn -> mount_team(user, team, Web.GroupCollectionLive) end
     end
 
     test "a team admin who is a member is both, on the URL's team" do
@@ -297,10 +297,17 @@ defmodule Web.UserAuthTest do
     end
 
     test "a page is for team admins unless it says otherwise" do
-      assert UserAuth.page_access(Web.MemberCollectionLive) == :admin
+      assert UserAuth.page_access(Web.GroupCollectionLive) == :admin
       assert UserAuth.page_access(Web.TeamDashboardLive) == :team
       assert UserAuth.page_access(Web.MeLive) == :member
       assert UserAuth.page_access(nil) == :admin
+    end
+
+    # Opening a page to members doesn't open its actions (#440).
+    test "a page members open keeps its events for team admins unless it lists them" do
+      assert UserAuth.member_events(Web.TeamDashboardLive) == []
+      assert UserAuth.member_events(Web.MemberCollectionLive) == ["change"]
+      assert UserAuth.member_events(Web.MemberQualificationsLive) == []
     end
   end
 

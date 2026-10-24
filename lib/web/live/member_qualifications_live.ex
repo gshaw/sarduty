@@ -1,10 +1,11 @@
 defmodule Web.MemberQualificationsLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team}
+
+  on_mount {Web.Components.MemberPage, :own_page}
 
   import Web.Components.FileDrop
-
-  import Web.Components.MemberSidebar
-  import Web.Components.MemberTabs
+  import Web.Components.MemberPage
+  import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
   alias App.Adapter.D4H
   alias App.Model.Member
@@ -121,26 +122,29 @@ defmodule Web.MemberQualificationsLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:qualifications} equipment={@equipment} />
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
-          member={@member}
-          maps_app={@current_user.maps_app}
-          milestones={@milestones}
-        />
-      </aside>
-      <main class="content-2/3">
-        <.qualifications_content member={@member} awards={@awards} records?={@records?} />
-        <.award_form
-          :if={@records?}
-          form={@award_form}
-          qualifications={@qualifications}
-          upload={@uploads.certificate}
-        />
-      </main>
-    </div>
+    <.member_page
+      member={@member}
+      tab={:qualifications}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      milestones={@milestones}
+      equipment={@equipment}
+      maps_app={@current_user.maps_app}
+      team_admin?={@team_admin?}
+    >
+      <.qualifications_content
+        member={@member}
+        awards={@awards}
+        records?={@records?}
+        team_admin?={@team_admin?}
+      />
+      <.award_form
+        :if={@team_admin? and @records?}
+        form={@award_form}
+        qualifications={@qualifications}
+        upload={@uploads.certificate}
+      />
+    </.member_page>
     """
   end
 
@@ -155,9 +159,15 @@ defmodule Web.MemberQualificationsLive do
       row_id={&"member-qualifications-#{&1.award.qualification_id}"}
       row_class={&QualificationText.row_class/1}
     >
+      <%!-- A member gets Your membership's columns (#440): no Certificate, since D4H marks
+      the documents RESTRICTED, and no qualification pages, which are team admins'. --%>
       <:col :let={row} label="Qualification">
-        <.a navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}>{row.award.qualification.title}</.a>
-        <span :if={row.award.d4h_document_id} class="hint block">
+        <.a
+          :if={@team_admin?}
+          navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}
+        >{row.award.qualification.title}</.a>
+        <span :if={!@team_admin?}>{row.award.qualification.title}</span>
+        <span :if={@team_admin? and row.award.d4h_document_id} class="hint block">
           <.a
             id={"certificate-#{row.award.id}"}
             href={~p"/teams/#{@member.team}/members/#{@member}/certificates/#{row.award.id}"}
@@ -170,10 +180,10 @@ defmodule Web.MemberQualificationsLive do
           {QualificationText.days_left(row)}
         </.badge>
       </:col>
-      <:col :let={row} label="First held" class="w-px whitespace-nowrap">
+      <:col :let={row} :if={@team_admin?} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}
       </:col>
-      <:col :let={row} label="Earlier awards" class="w-px whitespace-nowrap">
+      <:col :let={row} :if={@team_admin?} label="Earlier awards" class="w-px whitespace-nowrap">
         <span
           :for={award <- row.earlier}
           id={"member-qualifications-award-#{award.id}"}
@@ -183,7 +193,7 @@ defmodule Web.MemberQualificationsLive do
           <.remove_button :if={@records?} award={award} member={@member} />
         </span>
       </:col>
-      <:col :let={row} :if={@records?} class="w-px whitespace-nowrap">
+      <:col :let={row} :if={@team_admin? and @records?} class="w-px whitespace-nowrap">
         <.remove_button award={row.award} member={@member} />
       </:col>
     </.table>

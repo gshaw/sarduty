@@ -675,7 +675,7 @@ defmodule Web.TeamDashboardLive do
           id="stat-members"
           value={Format.number(@charts.members)}
           label="Current members"
-          href={if(@team_admin?, do: ~p"/teams/#{@team}/members")}
+          href={~p"/teams/#{@team}/members"}
           delta={"#{@charts.members_joined} joined in #{@charts.year}"}
         />
       </div>
@@ -758,11 +758,7 @@ defmodule Web.TeamDashboardLive do
   def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
   # A second refresh while one runs does nothing; the button is disabled, but a page open
-  # in 2 tabs can still send one.
-  # Only team admins refresh; a member's page has no button, but an event can still come.
-  def handle_event("refresh", _params, %{assigns: %{team_admin?: false}} = socket),
-    do: {:noreply, socket}
-
+  # in 2 tabs can still send one. Only team admins send it: Web.UserAuth drops a member's.
   def handle_event("refresh", _params, socket) do
     if refreshing?(socket.assigns.view_data),
       do: {:noreply, socket},

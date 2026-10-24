@@ -1,5 +1,5 @@
 defmodule Web.MemberCollectionLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team, member_events: ["change"]}
 
   import Web.Components.FilterBar
   import Web.Components.StatSwitch
@@ -13,7 +13,7 @@ defmodule Web.MemberCollectionLive do
   end
 
   def handle_params(params, _uri, socket) do
-    case MemberFilterViewModel.validate(params) do
+    case MemberFilterViewModel.validate(params, socket.assigns.team_admin?) do
       {:ok, filter_options, changeset} ->
         {:noreply, assign_list(socket, filter_options, changeset)}
 
@@ -23,7 +23,7 @@ defmodule Web.MemberCollectionLive do
   end
 
   defp assign_list(socket, filter_options, changeset) do
-    current_team = socket.assigns.current_team
+    %{current_team: current_team, team_admin?: team_admin?} = socket.assigns
     now = DateTime.utc_now()
     today = Service.Period.today(now, current_team.timezone)
 
@@ -31,13 +31,19 @@ defmodule Web.MemberCollectionLive do
     |> assign(Map.take(filter_options, [:sort, :details, :attended]))
     |> assign(:filter_options, filter_options)
     |> assign(now: now, today: today)
-    |> assign(:standing?, standing_column?(current_team, filter_options, today, now))
+    |> assign(
+      :standing?,
+      team_admin? and standing_column?(current_team, filter_options, today, now)
+    )
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
-    |> assign(:standing_tile?, MemberFilterViewModel.switch_standing?(filter_options.standing))
+    |> assign(
+      :standing_tile?,
+      MemberFilterViewModel.switch_standing?(filter_options.standing, team_admin?)
+    )
     |> assign(:paginated, build_paginated_content(current_team, filter_options))
     |> assign(
       :standing_counts,
-      MemberFilterViewModel.standing_counts(current_team, filter_options, now)
+      MemberFilterViewModel.standing_counts(current_team, filter_options, team_admin?, now)
     )
     |> assign(:path_fn, build_path_fn(current_team, filter_options))
     |> assign(:form, to_form(changeset, as: "form"))
@@ -49,7 +55,7 @@ defmodule Web.MemberCollectionLive do
       <h1 class="title">{@page_title}</h1>
       <:action>
         <.button
-          :if={D4H.records?(@current_team)}
+          :if={@team_admin? and D4H.records?(@current_team)}
           id="member-add"
           navigate={~p"/teams/#{@current_team}/members/new"}
         >
@@ -59,7 +65,7 @@ defmodule Web.MemberCollectionLive do
     </.heading_row>
     <.stat_switch id="member-switch" label="Standing">
       <:view
-        :for={{label, standing} <- MemberFilterViewModel.standing_switch()}
+        :for={{label, standing} <- MemberFilterViewModel.standing_switch(@team_admin?)}
         id={"member-view-#{standing}"}
         patch={@path_fn.(standing: standing, page: nil)}
         current={@filter_options.standing == standing}
@@ -83,7 +89,7 @@ defmodule Web.MemberCollectionLive do
         :if={!@standing_tile?}
         field={@form[:standing]}
         label="Standing"
-        options={MemberFilterViewModel.standing_kinds(@form[:standing].value)}
+        options={MemberFilterViewModel.standing_kinds(@form[:standing].value, @team_admin?)}
         default="current"
       />
       <:filter
@@ -107,7 +113,9 @@ defmodule Web.MemberCollectionLive do
         options={MemberFilterViewModel.activity_tag_kinds(@current_team)}
         default=""
       />
+      <%!-- Team admins' own lists: missing details, and check-ins and away periods (#440). --%>
       <:filter
+        :if={@team_admin?}
         field={@form[:details]}
         label="Details"
         more
@@ -115,6 +123,7 @@ defmodule Web.MemberCollectionLive do
         default="all"
       />
       <:filter
+        :if={@team_admin?}
         field={@form[:attended]}
         label="Attended"
         more
@@ -286,7 +295,7 @@ defmodule Web.MemberCollectionLive do
   defp missing_label(:email), do: "Email"
 
   def handle_event("change", %{"form" => form_params}, socket) do
-    case MemberFilterViewModel.validate(form_params) do
+    case MemberFilterViewModel.validate(form_params, socket.assigns.team_admin?) do
       {:ok, filter_options, _changeset} ->
         path = build_filter_path(socket.assigns.current_team, filter_options)
         {:noreply, push_patch(socket, to: path, replace: true)}

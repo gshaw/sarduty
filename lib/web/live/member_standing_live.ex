@@ -1,8 +1,7 @@
 defmodule Web.MemberStandingLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.MemberSidebar
-  import Web.Components.MemberTabs
+  import Web.Components.MemberPage
 
   alias App.Model.EquipmentItem
   alias App.Model.Member
@@ -168,167 +167,165 @@ defmodule Web.MemberStandingLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
-    <.member_tabs member={@member} active_tab={:standing} equipment={@equipment} />
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
-          member={@member}
-          maps_app={@current_user.maps_app}
-          milestones={@milestones}
-        />
-      </aside>
-      <main class="content-2/3">
-        <section id="standing">
-          <h2 class="heading">Standing</h2>
-          <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
-          <p class="hint">
-            Active unless the member is away or not a person. SAR Duty keeps it, and
-            nothing here is sent. A member away sees when they're back on Your
-            membership, never the reason.
-          </p>
-        </section>
+    <.member_page
+      member={@member}
+      tab={:standing}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      milestones={@milestones}
+      equipment={@equipment}
+      maps_app={@current_user.maps_app}
+      team_admin?={@team_admin?}
+    >
+      <section id="standing">
+        <h2 class="heading">Standing</h2>
+        <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
+        <p class="hint">
+          Active unless the member is away or not a person. SAR Duty keeps it, and
+          nothing here is sent. A member away sees when they're back on Your
+          membership, never the reason.
+        </p>
+      </section>
 
-        <section id="away-periods" class="mt-8">
-          <h2 class="heading">Away periods</h2>
-          <.table
-            :if={@periods != []}
-            id="away-period-list"
-            rows={@periods}
-            row_id={&"away-period-#{&1.id}"}
-            class="table-striped"
-          >
-            <:col :let={period} label="Reason">
-              {period.reason}
-            </:col>
-            <:col :let={period} label="First day" class="w-px whitespace-nowrap">
-              {Service.Format.date_short(period.starts_on)}
-            </:col>
-            <:col :let={period} label="Last day" class="w-px whitespace-nowrap">
-              {Service.Format.date_short(period.ends_on)}
-            </:col>
-            <:col :let={period} label="" class="w-px whitespace-nowrap">
-              <.button
-                :if={MemberAwayPeriod.early_end(period, @today) != :error}
-                id={"end-away-#{period.id}"}
-                size={:sm}
-                phx-click="end-away"
-                phx-value-id={period.id}
-                data-confirm={"End the #{period_name(period)} today? #{@member.name} is active from today."}
-              >
-                End away period
-              </.button>
-              <.button
-                id={"delete-away-#{period.id}"}
-                size={:sm}
-                variant={:danger}
-                phx-click="delete-away"
-                phx-value-id={period.id}
-                data-confirm={"Delete the #{period_name(period)}? It comes out of #{@member.name}'s standing."}
-              >
-                Delete
-              </.button>
-            </:col>
-          </.table>
-          <p :if={@periods == []} id="no-away-periods" class="text-text-muted">
-            No away periods.
-          </p>
+      <section id="away-periods" class="mt-8">
+        <h2 class="heading">Away periods</h2>
+        <.table
+          :if={@periods != []}
+          id="away-period-list"
+          rows={@periods}
+          row_id={&"away-period-#{&1.id}"}
+          class="table-striped"
+        >
+          <:col :let={period} label="Reason">
+            {period.reason}
+          </:col>
+          <:col :let={period} label="First day" class="w-px whitespace-nowrap">
+            {Service.Format.date_short(period.starts_on)}
+          </:col>
+          <:col :let={period} label="Last day" class="w-px whitespace-nowrap">
+            {Service.Format.date_short(period.ends_on)}
+          </:col>
+          <:col :let={period} label="" class="w-px whitespace-nowrap">
+            <.button
+              :if={MemberAwayPeriod.early_end(period, @today) != :error}
+              id={"end-away-#{period.id}"}
+              size={:sm}
+              phx-click="end-away"
+              phx-value-id={period.id}
+              data-confirm={"End the #{period_name(period)} today? #{@member.name} is active from today."}
+            >
+              End away period
+            </.button>
+            <.button
+              id={"delete-away-#{period.id}"}
+              size={:sm}
+              variant={:danger}
+              phx-click="delete-away"
+              phx-value-id={period.id}
+              data-confirm={"Delete the #{period_name(period)}? It comes out of #{@member.name}'s standing."}
+            >
+              Delete
+            </.button>
+          </:col>
+        </.table>
+        <p :if={@periods == []} id="no-away-periods" class="text-text-muted">
+          No away periods.
+        </p>
 
-          <p :if={@standing == :not_a_person} id="away-not-a-person" class="hint mt-6">
-            Turn off Not a person to add an away period.
-          </p>
-          <p :if={@standing == :retired} id="away-retired" class="hint mt-6">
-            Retired members get no away periods.
-          </p>
-          <.form
-            :if={@standing not in [:not_a_person, :retired]}
-            for={@away_form}
-            id="away-form"
-            phx-change="validate-away"
-            phx-submit="add-away"
-            class="measure mt-6"
-          >
-            <h3 class="subheading">Add an away period</h3>
-            <.error_summary form={@away_form} />
-            <div class="grid md:grid-cols-2 gap-x-6">
-              <.input field={@away_form[:starts_on]} type="date" label="First day" />
-              <.input field={@away_form[:ends_on]} type="date" label="Last day" />
-            </div>
-            <.input field={@away_form[:reason]} label="Reason" maxlength="60">
-              For example, Parental leave or Moving. Leave out medical details.
-            </.input>
-            <.form_actions>
-              <.button variant={:success}>Add away period</.button>
-            </.form_actions>
-          </.form>
-        </section>
+        <p :if={@standing == :not_a_person} id="away-not-a-person" class="hint mt-6">
+          Turn off Not a person to add an away period.
+        </p>
+        <p :if={@standing == :retired} id="away-retired" class="hint mt-6">
+          Retired members get no away periods.
+        </p>
+        <.form
+          :if={@standing not in [:not_a_person, :retired]}
+          for={@away_form}
+          id="away-form"
+          phx-change="validate-away"
+          phx-submit="add-away"
+          class="measure mt-6"
+        >
+          <h3 class="subheading">Add an away period</h3>
+          <.error_summary form={@away_form} />
+          <div class="grid md:grid-cols-2 gap-x-6">
+            <.input field={@away_form[:starts_on]} type="date" label="First day" />
+            <.input field={@away_form[:ends_on]} type="date" label="Last day" />
+          </div>
+          <.input field={@away_form[:reason]} label="Reason" maxlength="60">
+            For example, Parental leave or Moving. Leave out medical details.
+          </.input>
+          <.form_actions>
+            <.button variant={:success}>Add away period</.button>
+          </.form_actions>
+        </.form>
+      </section>
 
-        <section id="check-ins" class="mt-8">
-          <h2 class="heading">Check-ins</h2>
-          <p class="hint">
-            Record when you reach a member who has not been coming. It restarts their attendance
-            clock. The next team admin sees who called and what they heard.
-          </p>
-          <.table
-            :if={@check_ins != []}
-            id="check-in-list"
-            rows={@check_ins}
-            row_id={&"check-in-#{&1.id}"}
-            class="table-striped"
-          >
-            <:col :let={check_in} label="Day" class="w-px whitespace-nowrap">
-              {Service.Format.date_short(check_in.checked_in_on)}
-            </:col>
-            <:col :let={check_in} label="What they heard">
-              {check_in.note}
-              <div class="text-text-muted">{check_in_by(check_in)}</div>
-            </:col>
-            <:col :let={check_in} label="" class="w-px whitespace-nowrap">
-              <.button
-                id={"delete-check-in-#{check_in.id}"}
-                size={:sm}
-                variant={:danger}
-                phx-click="delete-check-in"
-                phx-value-id={check_in.id}
-                data-confirm={"Delete the check-in from #{Service.Format.date_short(check_in.checked_in_on)}? It no longer restarts #{@member.name}'s attendance clock."}
-              >
-                Delete
-              </.button>
-            </:col>
-          </.table>
-          <p :if={@check_ins == []} id="no-check-ins" class="text-text-muted">No check-ins yet.</p>
+      <section id="check-ins" class="mt-8">
+        <h2 class="heading">Check-ins</h2>
+        <p class="hint">
+          Record when you reach a member who has not been coming. It restarts their attendance
+          clock. The next team admin sees who called and what they heard.
+        </p>
+        <.table
+          :if={@check_ins != []}
+          id="check-in-list"
+          rows={@check_ins}
+          row_id={&"check-in-#{&1.id}"}
+          class="table-striped"
+        >
+          <:col :let={check_in} label="Day" class="w-px whitespace-nowrap">
+            {Service.Format.date_short(check_in.checked_in_on)}
+          </:col>
+          <:col :let={check_in} label="What they heard">
+            {check_in.note}
+            <div class="text-text-muted">{check_in_by(check_in)}</div>
+          </:col>
+          <:col :let={check_in} label="" class="w-px whitespace-nowrap">
+            <.button
+              id={"delete-check-in-#{check_in.id}"}
+              size={:sm}
+              variant={:danger}
+              phx-click="delete-check-in"
+              phx-value-id={check_in.id}
+              data-confirm={"Delete the check-in from #{Service.Format.date_short(check_in.checked_in_on)}? It no longer restarts #{@member.name}'s attendance clock."}
+            >
+              Delete
+            </.button>
+          </:col>
+        </.table>
+        <p :if={@check_ins == []} id="no-check-ins" class="text-text-muted">No check-ins yet.</p>
 
-          <.form
-            for={@check_in_form}
-            id="check-in-form"
-            phx-change="validate-check-in"
-            phx-submit="check-in"
-            class="measure mt-6"
-          >
-            <h3 class="subheading">Record a check-in</h3>
-            <.error_summary form={@check_in_form} />
-            <.input field={@check_in_form[:checked_in_on]} type="date" label="Day you reached them" />
-            <.input
-              field={@check_in_form[:note]}
-              type="textarea"
-              label="What you heard (optional)"
-            />
-            <.form_actions>
-              <.button variant={:success}>Record check-in</.button>
-            </.form_actions>
-          </.form>
-        </section>
-
-        <section id="not-a-person-section" class="mt-8">
-          <.live_component
-            module={NotAPersonSwitch}
-            id="not-a-person"
-            member={@member}
-            user={@current_user}
+        <.form
+          for={@check_in_form}
+          id="check-in-form"
+          phx-change="validate-check-in"
+          phx-submit="check-in"
+          class="measure mt-6"
+        >
+          <h3 class="subheading">Record a check-in</h3>
+          <.error_summary form={@check_in_form} />
+          <.input field={@check_in_form[:checked_in_on]} type="date" label="Day you reached them" />
+          <.input
+            field={@check_in_form[:note]}
+            type="textarea"
+            label="What you heard (optional)"
           />
-        </section>
-      </main>
-    </div>
+          <.form_actions>
+            <.button variant={:success}>Record check-in</.button>
+          </.form_actions>
+        </.form>
+      </section>
+
+      <section id="not-a-person-section" class="mt-8">
+        <.live_component
+          module={NotAPersonSwitch}
+          id="not-a-person"
+          member={@member}
+          user={@current_user}
+        />
+      </section>
+    </.member_page>
     """
   end
 
