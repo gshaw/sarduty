@@ -129,11 +129,12 @@ defmodule Web.EquipmentLiveTest do
         location_title: nil
       })
 
-    equipment_item_fixture(ctx.team, %{
-      title: "Splint",
-      d4h_container_id: pouch.d4h_equipment_id,
-      location_title: nil
-    })
+    splint =
+      equipment_item_fixture(ctx.team, %{
+        title: "Splint",
+        d4h_container_id: pouch.d4h_equipment_id,
+        location_title: nil
+      })
 
     equipment_item_fixture(ctx.team, %{
       title: "Old gauze",
@@ -163,6 +164,11 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#equipment-view-retired", "1")
     assert has_element?(lv, "td", "Old gauze")
     refute has_element?(lv, "td", "Stray")
+
+    # Where says what each item is inside, without the name the heading already gives.
+    assert has_element?(lv, "#place-sam-rivera th", "Where")
+    assert has_element?(lv, "#item-#{splint.id}", "First aid kit 6 › Pouch")
+    refute has_element?(lv, "#item-#{splint.id}", "Sam Rivera")
   end
 
   test "a scanned barcode opens its item, and an unknown one says so", ctx do
