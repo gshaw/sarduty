@@ -247,7 +247,9 @@ defmodule Web.MemberQualificationsLive do
             A photo or a PDF, up to {Service.Format.file_size(Service.CertificateFile.max_bytes())}.
           </.hint>
           <.live_file_input upload={@upload} class="my-2" />
-          <.error :for={error <- upload_errors(@upload)}>{upload_error(error)}</.error>
+          <.error :for={error <- upload_errors(@upload)}>
+            {upload_error(error, @upload, "a photo or a PDF")}
+          </.error>
           <div :for={entry <- @upload.entries} id={"award-certificate-#{entry.ref}"} class="hint">
             {entry.client_name}, {Service.Format.file_size(entry.client_size)} ·
             <.a
@@ -256,7 +258,9 @@ defmodule Web.MemberQualificationsLive do
               phx-value-ref={entry.ref}
               aria-label={"Remove #{entry.client_name}"}
             >Remove</.a>
-            <.error :for={error <- upload_errors(@upload, entry)}>{upload_error(error)}</.error>
+            <.error :for={error <- upload_errors(@upload, entry)}>
+              {upload_error(error, @upload, "a photo or a PDF")}
+            </.error>
           </div>
         </div>
         <.form_actions>
@@ -275,14 +279,6 @@ defmodule Web.MemberQualificationsLive do
       [{bytes, name}] -> Service.CertificateFile.prepare(bytes, name)
     end
   end
-
-  defp upload_error(:too_large),
-    do:
-      "That file is too large. Use one under #{Service.Format.file_size(Service.CertificateFile.max_bytes())}."
-
-  defp upload_error(:not_accepted), do: "Choose a photo or a PDF."
-  defp upload_error(:too_many_files), do: "Choose one file."
-  defp upload_error(_error), do: "That file did not upload. Try again."
 
   defp find_member(team, member_id),
     do: team |> Member.find!(member_id) |> Repo.preload(:team)
