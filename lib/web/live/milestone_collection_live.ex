@@ -6,7 +6,7 @@ defmodule Web.MilestoneCollectionLive do
   they see already.
   """
 
-  use Web, {:live_view_app_layout, access: :team, member_events: ["change"]}
+  use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.FilterBar
   import Web.Components.StatSwitch

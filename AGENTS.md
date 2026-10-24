@@ -58,9 +58,9 @@
   (`Team.get_managed_by/2`). Admins reach every team. On a team with member logins on,
   any current member logs in to the team's Dashboard and their own page, Your
   membership, `/teams/:subdomain/me` (`Member.get_logins/2`). Team pages are for team
-  admins unless a LiveView says `access: :team` or `:member`, and an `access: :team`
-  page's events stay team admins' unless it lists them in `member_events`. Opening a
-  page to members has its own steps in
+  admins unless a LiveView says `access: :team` or `:member`. A member on a team page,
+  and a team admin viewing as a member, send only the events a page lists in
+  `view_events`. Opening a page to members has its own steps in
   [docs/members.md](docs/members.md#opening-a-page-to-members).
 
 ## External integrations (know where to look)
