@@ -25,9 +25,9 @@ defmodule App.Operation.SendReminders do
   @wait 24 * 60 * 60
 
   @doc """
-  Who round `round` goes to, from the activity's invited `rows` (with their members) and
-  its `reminders` so far, as `%{send: [member], skipped: [{member, :no_email |
-  :reminders_off}]}`, each by name.
+  Who round `round` goes to, from the activity's rows of any status (with their
+  members) and its `reminders` so far, as `%{send: [member], skipped: [{member,
+  :no_email | :reminders_off}]}`, each by name.
   """
   def plan(rows, reminders, round, %DateTime{} = now) when round in [1, 2] do
     by_member = Enum.group_by(reminders, & &1.member_id)
@@ -41,12 +41,13 @@ defmodule App.Operation.SendReminders do
     %{send: send, skipped: Enum.map(skipped, &{&1, skip_reason(&1)})}
   end
 
-  # Each member with no reply once, by name.
+  # Each member with no reply once, by name. A member with a second row that has a
+  # reply has replied (#519).
   defp no_reply_members(rows) do
     rows
+    |> Attendance.one_per_member()
     |> Enum.filter(&(&1.status == "requested"))
     |> Enum.map(& &1.member)
-    |> Enum.uniq_by(& &1.id)
     |> Enum.sort_by(&String.downcase(&1.name))
   end
 
@@ -82,17 +83,18 @@ defmodule App.Operation.SendReminders do
         {:error, "Reminders closed when the activity started."}
 
       true ->
-        %{send: members} = plan(no_replies(activity), Reminder.for_activity(activity), round, now)
+        %{send: members} =
+          plan(invited_rows(activity), Reminder.for_activity(activity), round, now)
+
         {:ok, deliver_all(team, activity, user, members, round, now)}
     end
   end
 
-  # The activity's members with no reply, scoped through the team.
-  defp no_replies(activity) do
+  # The activity's rows, scoped through the team; plan/4 keeps those with no reply.
+  defp invited_rows(activity) do
     Attendance
     |> join(:inner, [r], m in assoc(r, :member))
     |> where([r, m], r.activity_id == ^activity.id and m.team_id == ^activity.team_id)
-    |> where([r], r.status == "requested")
     |> preload([r, m], member: m)
     |> Repo.all()
   end

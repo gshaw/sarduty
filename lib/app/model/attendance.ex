@@ -63,31 +63,52 @@ defmodule App.Model.Attendance do
   # def delete(%Attendance{} = record), do: Repo.delete(record)
 
   @doc """
+  One row per member per activity. D4H allows two rows for one member on an activity
+  (#519), so every list, count, and reply starts here. The row with a reply wins:
+  attending, then absent, then any other status, then requested; the oldest on a tie.
+  Keeps the order of each member's first row.
+  """
+  def one_per_member(rows) do
+    best =
+      rows |> Enum.group_by(&key/1) |> Map.new(fn {k, rs} -> {k, Enum.min_by(rs, &rank/1)} end)
+
+    rows |> Enum.map(&key/1) |> Enum.uniq() |> Enum.map(&Map.fetch!(best, &1))
+  end
+
+  defp key(row), do: {row.activity_id, row.member_id}
+  defp rank(row), do: {status_rank(row.status), row.id}
+
+  defp status_rank("attending"), do: 0
+  defp status_rank("absent"), do: 1
+  defp status_rank("requested"), do: 3
+  defp status_rank(_status), do: 2
+
+  @doc """
   The member's row on the activity, their invitation (#444), or nil when they aren't
-  invited. Both must be the activity's team's. D4H allows two rows for one member; the
-  first is the one replies change.
+  invited. Both must be the activity's team's. The row `one_per_member/1` picks, so a
+  reply changes the row the activity's page shows.
   """
   def invitation(%Activity{} = activity, %Member{} = member) do
     Attendance
     |> join(:inner, [r], m in assoc(r, :member))
     |> where([r, m], r.activity_id == ^activity.id and r.member_id == ^member.id)
     |> where([r, m], m.team_id == ^activity.team_id and m.team_id == ^member.team_id)
-    |> order_by([r], asc: r.id)
-    |> limit(1)
-    |> Repo.one()
+    |> Repo.all()
+    |> one_per_member()
+    |> List.first()
   end
 
   @doc """
   The member's invitations to these activities, as `%{activity_id => attendance}`: the
-  first row of each, as `invitation/2` picks.
+  row of each `invitation/2` picks.
   """
   def invitations(%Member{} = member, activity_ids) do
     Attendance
     |> join(:inner, [r], m in assoc(r, :member))
     |> where([r, m], r.activity_id in ^activity_ids and r.member_id == ^member.id)
     |> where([r, m], m.team_id == ^member.team_id)
-    |> order_by([r], desc: r.id)
     |> Repo.all()
+    |> one_per_member()
     |> Map.new(&{&1.activity_id, &1})
   end
 
@@ -95,20 +116,30 @@ defmodule App.Model.Attendance do
   How each activity's invited members stand, by D4H status, as `%{activity_id =>
   %{attending: n, absent: n, requested: n}}`. On an activity's own panel, attending
   reads "signed up" before the start and "attended" from it. Only the team's members'
-  rows count; every id gets a map, zeros included.
+  rows count, each member once (`one_per_member/1`); every id gets a map, zeros included.
   """
   def reply_counts(%Team{} = team, activity_ids) do
-    zero = %{attending: 0, absent: 0, requested: 0}
-
     Attendance
     |> join(:inner, [r], m in assoc(r, :member))
     |> where([r, m], r.activity_id in ^activity_ids and m.team_id == ^team.id)
-    |> where([r], r.status in ["attending", "absent", "requested"])
-    |> group_by([r], [r.activity_id, r.status])
-    |> select([r], {r.activity_id, r.status, count(r.id)})
+    |> select([r], map(r, [:id, :activity_id, :member_id, :status]))
     |> Repo.all()
-    |> Enum.reduce(Map.new(activity_ids, &{&1, zero}), fn {id, status, n}, counts ->
-      Map.update!(counts, id, &Map.put(&1, status_key(status), n))
+    |> count_replies(activity_ids)
+  end
+
+  @doc "`reply_counts/2` from the activities' rows: each member once, by status."
+  def count_replies(rows, activity_ids) do
+    zero = %{attending: 0, absent: 0, requested: 0}
+
+    rows
+    |> one_per_member()
+    |> Enum.filter(&(&1.status in ["attending", "absent", "requested"]))
+    |> Enum.reduce(Map.new(activity_ids, &{&1, zero}), fn row, counts ->
+      Map.update!(
+        counts,
+        row.activity_id,
+        &Map.update!(&1, status_key(row.status), fn n -> n + 1 end)
+      )
     end)
   end
 

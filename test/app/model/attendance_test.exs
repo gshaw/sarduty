@@ -27,6 +27,51 @@ defmodule App.Model.AttendanceTest do
     defp ids(query), do: query |> select([r], r.id) |> Repo.all() |> Enum.sort()
   end
 
+  describe "one row per member per activity (#519)" do
+    defp row(id, activity_id, member_id, status),
+      do: %Attendance{id: id, activity_id: activity_id, member_id: member_id, status: status}
+
+    test "the row with a reply wins, then the oldest, in the first row's order" do
+      rows = [
+        row(1, 10, 1, "requested"),
+        row(2, 10, 2, "requested"),
+        row(3, 10, 1, "attending"),
+        row(4, 10, 3, "absent"),
+        row(5, 10, 3, "attending"),
+        row(6, 10, 2, "requested"),
+        row(7, 10, 4, "requested"),
+        row(8, 10, 4, "absent"),
+        row(9, 11, 1, "requested")
+      ]
+
+      assert rows |> Attendance.one_per_member() |> Enum.map(& &1.id) == [3, 2, 5, 8, 9]
+    end
+
+    test "counts each member once, with every activity zeroed" do
+      rows = [row(1, 10, 1, "requested"), row(2, 10, 1, "attending"), row(3, 10, 2, "absent")]
+
+      assert Attendance.count_replies(rows, [10, 11]) == %{
+               10 => %{attending: 1, absent: 1, requested: 0},
+               11 => %{attending: 0, absent: 0, requested: 0}
+             }
+    end
+
+    test "a reply changes the row the page shows" do
+      team = team_fixture()
+      member = member_fixture(team)
+      activity = activity_fixture(team)
+      attendance_fixture(activity, member, %{status: "requested"})
+      shown = attendance_fixture(activity, member, %{status: "attending"})
+
+      assert Attendance.invitation(activity, member).id == shown.id
+      assert Attendance.invitations(member, [activity.id])[activity.id].id == shown.id
+
+      assert Attendance.reply_counts(team, [activity.id]) == %{
+               activity.id => %{attending: 1, absent: 0, requested: 0}
+             }
+    end
+  end
+
   describe "replied_at/4, as the refresh sees a row change (#444)" do
     @starts ~U[2026-10-29 02:00:00Z]
     @changed ~U[2026-10-26 16:12:30.123456Z]
