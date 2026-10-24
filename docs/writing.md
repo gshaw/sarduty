@@ -27,7 +27,8 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
 
 - Say what is true now, in the reader's words: "Tags saved to D4H", not "Your request was
   processed".
-- Name the way forward: "This attendance link is closed. Ask a team admin for a new link."
+- Name the way forward: "Taking attendance closed at 23:00. Ask a team admin to add anyone
+  missing."
 - Give a reason only when it changes what the reader does: "Members file by April 30."
 
 ## Rules
@@ -134,7 +135,7 @@ these words, which change when the activity starts:
 | Absent     | Can't make it    | Absent         |
 
 Only `Attendance.attended/2` makes a member attended. "Absent" is only for an activity that
-has started, such as a no-show the door marks. Never call a reply "absent", and never call a
+has started, such as a no-show Take attendance marks. Never call a reply "absent", and never call a
 member who signed up "attending".
 
 - **Counts** use the same words: "23 signed up" before it starts and "23 attended" once it
@@ -145,7 +146,7 @@ member who signed up "attending".
   "Change". That is the confirmation, in the app and after replying from an email: no flash
   message and no thank-you line. Replies close when the activity starts.
 - **Members who are not invited** see nothing about invitations. Never "Not invited".
-- **At the door**, members who signed up and have not arrived are "Yet to arrive".
+- **On Take attendance**, members who signed up and have not arrived are "Yet to arrive".
 
 ## Glossary
 
@@ -197,9 +198,9 @@ and must not be used for it.
 | MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
 | send                           | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
-| attendance link                | sign-in link, check-in link, door link         | The link a team admin makes so someone at the door can take attendance for one activity.             |
-| arrived, left                  | signed in, signed out, checked in, checked out | A member's scans at the door. "Arriving" and "Leaving" are the modes on the door's page.             |
-| check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan at the door: that is "arrived".       |
+| Take attendance                | sign-in, check-in, kiosk, door page            | The page where anyone logged in to the team scans members arriving at and leaving one activity.      |
+| arrived, left                  | signed in, signed out, checked in, checked out | A member's scans. "Arriving" and "Leaving" are the modes on the scanner, Take attendance.            |
+| check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan: that is "arrived".                   |
 | standing                       | status, availability, state                    | Active, Away, Not a person, or Retired. "Status" is D4H's member status.                             |
 | retired                        | departed, left the team, former, inactive      | A member no longer on the team: D4H retired them or no longer lists them. D4H's own word.            |
 | not retired                    | current (as a filter)                          | The Standing filter's default: Active, Away, and Not a person. All adds the retired.                 |
