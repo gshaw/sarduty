@@ -15,6 +15,13 @@ One-line summary of what changed (or "no changes needed"). (commit <short-sha>, 
 
 <!-- New entries go directly below this line, newest first. -->
 
+## 2026-10-23 — refresh-history
+
+Added late October for the 146 commits since 39e3370: members' own space and view as
+member, equipment and templates, chores, replies and reminders, hours tags per team,
+standing and the new group rules, the side navigation, filter bar, stat switch, and
+search, and the SQLite lock fix. The year is now "Many teams, members, and the door".
+
 ## 2026-10-23 — review-tests
 
 Every route and event added since 2026-10-09 that takes an id looks it up through the

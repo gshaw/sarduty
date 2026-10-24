@@ -3,19 +3,33 @@
 The project's story, in place of a changelog: what changed, when, and why it mattered.
 Newest first. Maintained by [agent_prompts/refresh-history.md](../agent_prompts/refresh-history.md).
 
-## 2026 — Many teams, ID cards, and the door
+## 2026 — Many teams, members, and the door
 
-- **October.** Teams sign themselves up, and access comes from D4H: anyone D4H makes an
-  Owner or Editor logs in with an emailed or texted code (#125, #146, #150, #241). The
-  copy syncs every 10 minutes instead of nightly, marks members and activities D4H
-  deletes, and keeps a history of every change per member and activity (#163, #160,
+- **Late October.** Members log in to their own space: their ID card, tax credit letters,
+  hours, activities, qualifications, milestones, and a to-do list, where they change
+  their contact details and reply to activities (#156, #389, #406, #444). Team admins can
+  see a member's pages as the member does (#425). Equipment goes on activities by search,
+  template, or a phone scanning barcodes, and templates add tags and invite groups in one
+  step (#271, #162). Behind a team setting, members log chores for team admins to accept
+  and send to D4H (#341, #463). Admins send reply reminders, and the email's answer opens
+  a page with one Send reply (#444, #488). Hours tags can be named per organization and
+  per team, so more teams get letters, and untagged activities show under Needs attention
+  (#289, #323). Members have a standing, with away periods and check-ins, that group
+  rules and filters use; group rules take In and Not in, and endorsements name sets of
+  qualifications (#320, #334, #366). Pages gained a side navigation, a filter bar, counts
+  that filter a list, and a search across the team's records (#312, #350, #449, #473). A
+  newer SQLite driver ended the morning lock stalls (#416).
+- **Early October.** Teams sign themselves up, and access comes from D4H: anyone D4H
+  makes an Owner or Editor logs in with an emailed or texted code (#125, #146, #150,
+  #241). The copy syncs every 10 minutes instead of nightly, marks members and activities
+  D4H deletes, and keeps a history of every change per member and activity (#163, #160,
   #219). Every write to D4H became a change set (#181). Attendance is taken at the door
   by scanning ID cards, with a yet-to-arrive list and no-shows, then sent to D4H after a
-  review (#139, #245). Tax credit letters count hours row by row, carry a signature and
-  a QR code to verify them, and go to every eligible member at once (#191–#208). An MCP
+  review (#139, #245). Tax credit letters count hours row by row, carry a signature and a
+  QR code to verify them, and go to every eligible member at once (#191–#208). An MCP
   trial lets a manager's AI agent read the team's data and propose attendance changes
-  (#28, #216). A design system and writing guide reshaped every page (#131, #23), with
-  a public home page, privacy and terms (#217, #210). Teams without D4H can keep their
+  (#28, #216). A design system and writing guide reshaped every page (#131, #23), with a
+  public home page, privacy and terms (#217, #210). Teams without D4H can keep their
   records in SAR Duty Records and edit them here (#266–#270).
 - **September.** Member ID cards arrived, with Apple and Google Wallet passes that update
   on the phone, and a public verify site (#64–#90). Group rules can be reviewed and
@@ -53,4 +67,4 @@ Newest first. Maintained by [agent_prompts/refresh-history.md](../agent_prompts/
   Fly.io.
 - **November.** Generated as a Phoenix app with `phx.gen.auth`, briefly named SAR Task.
 
-Last updated: 2026-10-09 (39e3370)
+Last updated: 2026-10-23 (08f1adc)
