@@ -1,17 +1,29 @@
 defmodule Web.AccountLive do
   @moduledoc """
-  Account settings, at /account: who you're logged in as, and the maps app place links open
-  (#301). Team settings live under each team, so the URL names the team they change
-  (#153); the account menu reaches them (#312).
+  Account settings, at /account: who you're logged in as, the maps app place links open
+  (#301), and invitation reminders (#444) for each team the user logs in to as a member.
+  Team settings live under each team, so the URL names the team they change (#153); the
+  account menu reaches them (#312).
+
+  Invitation reminders are the member's setting, so each switch changes the member row
+  the user logs in as (`Member.get_logins/2`), looked up again on every tap. A team admin
+  viewing a team as a member (#425) sees their own switches, turned off.
   """
 
   use Web, :live_view_app_layout
 
+  alias App.Model.Member
+  alias App.Operation.SetInvitationReminders
   alias App.Operation.SetMapsApp
   alias Web.Components.OpenInMaps
+  alias Web.UserAuth
 
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Account settings")}
+  def mount(_params, session, socket) do
+    {:ok,
+     assign(socket,
+       page_title: "Account settings",
+       viewing_as?: UserAuth.viewing_as?(session)
+     )}
   end
 
   def render(assigns) do
@@ -40,9 +52,29 @@ defmodule Web.AccountLive do
           </label>
         </fieldset>
       </form>
+      <section :if={@member_logins != []} id="emails" class="mt-8">
+        <h2 class="subheading">Emails</h2>
+        <p :if={@viewing_as?} id="emails-view-as" class="hint">
+          You're viewing a team as a member, so nothing is saved. Stop viewing to change these.
+        </p>
+        <.switch
+          :for={member <- @member_logins}
+          id={"invitation-reminders-#{member.team.subdomain}"}
+          label={reminders_label(@member_logins, member)}
+          checked={member.invitation_reminders}
+          disabled={@viewing_as?}
+          phx-click="reminders"
+          phx-value-id={member.id}
+        >
+          Team admins at {member.team.name} can email you when you have not replied to an activity.
+        </.switch>
+      </section>
     </div>
     """
   end
+
+  defp reminders_label([_one], _member), do: "Invitation reminders"
+  defp reminders_label(_logins, member), do: "Invitation reminders from #{member.team.name}"
 
   def handle_event("set-maps-app", %{"maps_app" => app}, socket) do
     case SetMapsApp.call(socket.assigns.current_user, app) do
@@ -55,5 +87,21 @@ defmodule Web.AccountLive do
       {:error, _changeset} ->
         {:noreply, socket}
     end
+  end
+
+  def handle_event("reminders", _params, %{assigns: %{viewing_as?: true}} = socket),
+    do: {:noreply, put_flash(socket, :error, "You're viewing as a member, so nothing is saved.")}
+
+  # The member comes from the user's own logins, never from the id alone.
+  def handle_event("reminders", %{"id" => id}, socket) do
+    %{current_user: user} = socket.assigns
+    now = DateTime.utc_now()
+
+    with {id, ""} <- Integer.parse(id),
+         %Member{} = member <- Member.get_login(user.email, id, now) do
+      SetInvitationReminders.call(member, not member.invitation_reminders)
+    end
+
+    {:noreply, assign(socket, :member_logins, Member.get_logins(user.email, now))}
   end
 end

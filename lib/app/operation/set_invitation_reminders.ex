@@ -1,7 +1,7 @@
 defmodule App.Operation.SetInvitationReminders do
   @moduledoc """
-  Turns a member's invitation reminders on or off (#444): from Your details, the page a
-  reminder's link opens, or a mail app's one-click unsubscribe. SAR Duty's own setting;
+  Turns a member's invitation reminders on or off (#444): from account settings, the page
+  a reminder's link opens, or a mail app's one-click unsubscribe. SAR Duty's own setting;
   nothing goes to D4H.
   """
   alias App.Model.Member

@@ -127,14 +127,9 @@ defmodule Web.MeDetailsLiveTest do
     end
   end
 
-  test "the invitation reminders switch saves when it's tapped (#444)",
-       %{conn: conn, team: team, member: member} do
+  test "invitation reminders are in account settings, not here",
+       %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
-    assert has_element?(lv, "#invitation-reminders[checked]")
-
-    lv |> element("#invitation-reminders") |> render_click()
-
-    refute Repo.reload(member).invitation_reminders
-    refute has_element?(lv, "#invitation-reminders[checked]")
+    refute has_element?(lv, "[id^=invitation-reminders]")
   end
 end

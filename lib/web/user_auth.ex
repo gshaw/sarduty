@@ -333,6 +333,9 @@ defmodule Web.UserAuth do
   @doc "Starts viewing the team as `member` (#425): the member pages show what they see."
   def put_view_as(conn, member), do: put_session(conn, @view_as_key, member.id)
 
+  @doc "Whether a team admin is viewing a team as a member (#425), for pages outside a team."
+  def viewing_as?(session), do: session[@view_as_key] != nil
+
   @doc "What a page says when a team admin viewing as `member` tries to change something."
   def view_as_refusal(member), do: "You're viewing as #{member.name}, so nothing is saved."
 

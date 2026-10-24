@@ -9,7 +9,7 @@ defmodule Web.InvitationRemindersLive do
   # Where a reminder's "Turn off invitation reminders" goes (#444): no login, only the
   # link's token, for one member. Opening it changes nothing; the button does, and the
   # same page turns them back on. A mail app's own unsubscribe posts to this URL instead
-  # (InvitationRemindersController). The setting is the member's, shown in Your details.
+  # (InvitationRemindersController). The setting is the member's, in account settings.
   def mount(%{"token" => token}, _session, socket) do
     member =
       case ReplyLinks.verify_reminders(token) do
@@ -63,7 +63,7 @@ defmodule Web.InvitationRemindersLive do
         Turn on reminders
       </.button>
       <p class="mt-6 mb-0">
-        <.a id="reminders-membership" href={~p"/teams/#{@member.team}/me"}>Open your membership</.a>
+        <.a id="reminders-account" href={~p"/account"}>Open account settings</.a>
         <span class="hint">(log in)</span>
       </p>
     </div>
