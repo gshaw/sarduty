@@ -15,6 +15,15 @@ One-line summary of what changed (or "no changes needed"). (commit <short-sha>, 
 
 <!-- New entries go directly below this line, newest first. -->
 
+## 2026-10-23 — review-deps
+
+Hex packages were already current from #502. Bumped Erlang 29.0.6 → 29.1.2 (builder
+image `1.20.4-erlang-29.1.2-debian-trixie-20261020-slim`, runner `trixie-20261020-slim`),
+Node 26.12.1, cspell 10.4.0, prettier 3.9.10, markdownlint-cli2 0.24.0. Reported, not
+changed: `mix hex.audit` flags Cloak 1.1.4 for CVE-2026-95105 (AES-CTR has no
+authentication); the vault uses only AES-GCM, so SAR Duty is not affected and there is no
+fixed Cloak release yet. Litestream 0.5.17 is the latest.
+
 ## 2026-10-09 — refresh-history
 
 Added September and October 2026 for the ~150 commits since f9ca9e8: ID cards and
