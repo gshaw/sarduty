@@ -25,6 +25,17 @@
     />
   </div>
 
+  <div class="demo">
+    <.person_head
+      id="person-head-retired-demo"
+      name="Robin Patel"
+      photo="/styles/no-photo.png"
+      standing={:retired}
+      item_count={3}
+      facts={["Joined May 2008", "Last attended Mar 12, 2026"]}
+    />
+  </div>
+
   <h2>When to use</h2>
   <p>
     The top of a member's own page: the team member page, on every tab, and Your membership.
@@ -41,7 +52,7 @@
       The photo comes from D4H. When there is none, the page path answers 404 and the circle shows the member's initials.
     </li>
     <li>
-      A badge beside the name when the member isn't active: amber for Away until a date, grey for Retired and Not a person. The reason stays on the Standing tab.
+      A badge beside the name when the member isn't active: amber for Away until a date, grey for Retired and Not a person. A retired member who still holds items is amber too, and counts them: Retired with 3 items. The reason stays on the Standing tab.
     </li>
     <li>
       One line of facts: role, when they joined, and when they last attended. A fact D4H doesn't have is left out. No member ID: teams number members in very different ways.
@@ -51,8 +62,8 @@
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.person_head id name photo standing facts&gt;</code>
-    with standing from <code>MemberAwayPeriod.standing_today/3</code>
+    <code>&lt;.person_head id name photo standing item_count facts&gt;</code>
+    with standing from <code>MemberAwayPeriod.standing_today/3</code>, item_count the length of <code>EquipmentItem.held_by/2</code>,
     and facts from <code>PersonHead.facts/3</code>. Buttons go in <code>:actions</code>.
   </p>
 </.shell>

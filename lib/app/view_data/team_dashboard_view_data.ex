@@ -12,6 +12,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.ChangeSet
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.Member
@@ -21,6 +22,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.SyncD4HChanges
   alias App.Repo
+  alias App.ViewData.EquipmentList
   alias App.ViewData.TeamAttention
   alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.TaxCreditLetterFilterViewModel
@@ -66,6 +68,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       proposed_change_count: ChangeSet.count_waiting(team.id),
       chore_count: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0),
       chores_to_send: chores_to_send(team),
+      retired_held: retired_held(team, now),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)
     }
@@ -73,6 +76,11 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   defp chores_to_send(team),
     do: if(Team.chores?(team), do: ChoreEvent.count_to_send(team.id), else: 0)
+
+  # Items still with retired members (#490), from the query Equipment's With retired
+  # members reads, so the counts match the page the item links to.
+  defp retired_held(team, now),
+    do: team |> EquipmentItem.held_by_retired_members(now) |> EquipmentList.retired_held()
 
   @doc """
   Splits activities into NextUp and Coming up. NextUp is the first one starting within

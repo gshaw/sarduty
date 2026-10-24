@@ -13,6 +13,7 @@ defmodule Web.Components.PersonHead do
   attr :name, :string, required: true
   attr :photo, :string, required: true, doc: "the photo's path; a 404 leaves the initials"
   attr :standing, :any, default: :active, doc: "from MemberAwayPeriod.standing_today/3"
+  attr :item_count, :integer, default: 0, doc: "the items the member holds, for Retired"
   attr :facts, :list, default: [], doc: "short strings for the line under the name"
   slot :actions, doc: "buttons on the right"
 
@@ -27,7 +28,7 @@ defmodule Web.Components.PersonHead do
       <div class="min-w-0">
         <div class="person-head-title">
           <h1 class="title mb-0">{@name}</h1>
-          <.standing_badge id={"#{@id}-standing"} standing={@standing} />
+          <.standing_badge id={"#{@id}-standing"} standing={@standing} item_count={@item_count} />
         </div>
         <p :if={@facts != []} id={"#{@id}-facts"} class="hint mt-1 mb-0">
           {Enum.join(@facts, " · ")}

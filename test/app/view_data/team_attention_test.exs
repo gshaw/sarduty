@@ -23,6 +23,7 @@ defmodule App.ViewData.TeamAttentionTest do
         proposed_change_count: 0,
         chore_count: 0,
         chores_to_send: 0,
+        retired_held: %{members: 0, items: 0},
         untagged: [],
         letters: nil
       },
@@ -50,6 +51,20 @@ defmodule App.ViewData.TeamAttentionTest do
              items(%{chores_to_send: 2}, @october)
 
     assert item.title == "2 chore activities out of date in D4H"
+  end
+
+  test "items still with retired members are info, title only (#490)" do
+    assert [item] = items(%{retired_held: %{members: 10, items: 23}}, @october)
+
+    assert %{
+             key: :retired_equipment,
+             level: :info,
+             title: "10 retired members have 23 items",
+             detail: nil
+           } = item
+
+    assert [%{title: "1 retired member has 1 item"}] =
+             items(%{retired_held: %{members: 1, items: 1}}, @october)
   end
 
   test "members not at an activity name the team's time frame" do

@@ -6,8 +6,10 @@ defmodule App.ViewData.EquipmentList do
   the chain of items holding it, such as "SOUTH FRASER 2 › 02 DRAWER #1".
 
   A member is a place too, as in D4H (#490): the Place filter takes `"member-<id>"`, the
-  member's local id, and keeps the rows `EquipmentItem.held_by/2` finds. The browse
-  page's Place table keeps one "With members" row.
+  member's local id, and keeps the rows `EquipmentItem.held_by/2` finds. Items with a
+  retired member are "With retired members", from
+  `EquipmentItem.held_by_retired_members/2` (`with_retired/2`). The browse page's Place
+  table keeps its two member rows, not one per member.
 
   Pure: items in, rows out. Items need their `member` preloaded.
   """
@@ -15,6 +17,7 @@ defmodule App.ViewData.EquipmentList do
   alias App.Model.EquipmentItem
 
   @with_members "With members"
+  @with_retired_members "With retired members"
   @no_location "No location"
   @no_category "No category"
 
@@ -98,6 +101,46 @@ defmodule App.ViewData.EquipmentList do
     Enum.any?([item.title, item.barcode, item.serial, item.kind], &contains?(&1, q))
   end
 
+  @doc "The place for items with retired members, the team home's link (#490)."
+  def with_retired_members, do: @with_retired_members
+
+  @doc """
+  Moves the rows of the items in `held`, `{item, member}` from
+  `EquipmentItem.held_by_retired_members/2`, to "With retired members", each with the
+  retired member and their `holder_left_at`.
+  """
+  def with_retired(rows, held) do
+    by_item_id = Map.new(held, fn {item, member} -> {item.id, member} end)
+
+    Enum.map(rows, fn row ->
+      case by_item_id[row.item.id] do
+        nil ->
+          row
+
+        member ->
+          %{
+            row
+            | place: @with_retired_members,
+              holder: member.name,
+              holder_id: member.id
+          }
+          |> Map.put(:holder_left_at, member.left_at)
+      end
+    end)
+  end
+
+  @doc """
+  The team home's count (#490), `%{members, items}`: the items in `held`, from
+  `EquipmentItem.held_by_retired_members/2`, retired ones too, as With retired members
+  lists them on All.
+  """
+  def retired_held(held) do
+    %{
+      members: held |> Enum.uniq_by(fn {_item, member} -> member.id end) |> length(),
+      items: length(held)
+    }
+  end
+
   @doc """
   The rows in `place` with `category`. An empty one keeps every row. A member place
   keeps the rows whose item ids are in `held`, from `EquipmentItem.held_by/2`, so
@@ -176,7 +219,7 @@ defmodule App.ViewData.EquipmentList do
 
   @doc """
   Rows grouped by place, as `{place, rows}`: D4H locations by name, then "With
-  members", then "No location". In a place, each item's contents follow it.
+  members", "With retired members", and "No location". In a place, each item's contents follow it.
   """
   def group(rows) do
     rows
@@ -218,6 +261,7 @@ defmodule App.ViewData.EquipmentList do
   end
 
   defp place_order(@with_members), do: 1
-  defp place_order(@no_location), do: 2
+  defp place_order(@with_retired_members), do: 2
+  defp place_order(@no_location), do: 3
   defp place_order(_location), do: 0
 end

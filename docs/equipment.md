@@ -71,13 +71,30 @@ D4H can put an item's location at a member, and the copy keeps it as
   The member page, Your membership, and Equipment's member place all read it, so their counts
   always agree (decided 2026-10-23). On production that day 85 items sat inside 16 kits
   members hold, beside 1,683 held directly; one team had 55 inside 6 kits.
-- **Equipment, Place** lists the D4H locations, With members, and No location, then each
-  member who holds something, by name. It is a combobox, since a team has
+- **Equipment, Place** lists the D4H locations, With members, With retired members, and No
+  location, then each member who holds something, by name. It is a combobox, since a team has
   dozens of holders. The URL takes the member's local id, `?place=member-12`, never the
   name, since two members can share one. The section heading names the member ("Sam
-  Rivera · 12") and the table drops Where. The browse page's Place table keeps one With
-  members row, not one per member. There is no Member filter: it would conflict with
+  Rivera · 12") and the table drops Where. The browse page's Place table keeps its two
+  member rows, not one per member. There is no Member filter: it would conflict with
   Place.
+- **With retired members** is everything a member holds who isn't current by
+  `Member.current_dynamic/2`, the one test of current, and With members is the rest
+  (#490). D4H lets a team retire a member who still holds items: South Fraser had 10
+  retired members holding 23 items (2026-10-23). It reads
+  [EquipmentItem.held_by_retired_members/2](../lib/app/model/equipment_item.ex), the
+  team-wide form of `held_by/2`: the same recursive query, started from every retired
+  member's items, carrying the member down into each kit, retired items too. Its table has Who has it in place of Where: the member's name, linking
+  to their page, then "Retired Sep 30, 2026" from D4H's leave date in the team's zone, or
+  nothing when D4H gave none.
+- **A retired member's badge** in the header, on every member tab, turns amber and
+  counts what they still hold, "Retired with 3 items", the sidebar's count, so retired
+  items count. No separate warning in the sidebar.
+- **The team home's Needs attention** says "10 retired members have 23 items", info, not
+  a warning, and links to Place: With retired members with All showing, as the sidebar's
+  All link does. No names: the page lists them. The counts come from
+  `held_by_retired_members/2` too (`EquipmentList.retired_held/1`), retired items
+  included, so they match the page. The item goes away once every item is back.
 - **The member page sidebar**, on every member tab, lists up to 5 items the member holds,
   each linking to its page with its category and barcode, then "All 12 items" to
   Equipment with Place set to them and All showing, so the count matches. Shown only when they hold something.
@@ -90,8 +107,6 @@ D4H can put an item's location at a member, and the copy keeps it as
   page's status badge.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.
-- Still to decide, waiting on Andrew: a badge for a retired member who still holds
-  items, a With retired members place, and a Needs attention line on the team home.
 
 ## Adding equipment to an activity
 

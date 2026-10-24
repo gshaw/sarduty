@@ -283,6 +283,53 @@ defmodule Web.TeamDashboardLiveTest do
     refute has_element?(lv, "#attention-untagged")
   end
 
+  test "items with retired members need attention, counted as Equipment lists them (#490)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    robin = member_fixture(team, %{left_at: ~U[2026-09-30 19:00:00Z]})
+    casey = member_fixture(team, %{d4h_status: "RETIRED"})
+    pack = equipment_item_fixture(team, %{title: "Pack 3", member_id: robin.id})
+    equipment_item_fixture(team, %{title: "Radio 9", d4h_container_id: pack.d4h_equipment_id})
+    equipment_item_fixture(team, %{title: "Helmet 9", member_id: casey.id})
+    equipment_item_fixture(team, %{title: "Old pager", member_id: casey.id, status: "retired"})
+    equipment_item_fixture(team, %{member_id: member_fixture(team).id})
+    other = team_fixture()
+    stranger = member_fixture(other, %{left_at: ~U[2026-01-01 08:00:00Z]})
+    equipment_item_fixture(other, %{member_id: stranger.id})
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+    assert has_element?(
+             lv,
+             "#attention-retired_equipment.is-info",
+             "2 retired members have 4 items"
+           )
+
+    refute has_element?(lv, "#attention-retired_equipment .hint")
+
+    path = "/teams/#{team.subdomain}/equipment?place=With+retired+members&show=all"
+    assert has_element?(lv, ~s{#attention-retired_equipment a[href="#{path}"]})
+
+    {:ok, equipment, _html} =
+      lv |> element("#attention-retired_equipment a") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(equipment, "#place-with-retired-members h2", "With retired members · 4")
+  end
+
+  test "no item when every retired member's items are back", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{left_at: ~U[2026-01-01 08:00:00Z]})
+    equipment_item_fixture(team, %{member_id: member_fixture(team).id})
+    other = team_fixture()
+    stranger = member_fixture(other, %{left_at: ~U[2026-01-01 08:00:00Z]})
+    equipment_item_fixture(other, %{member_id: stranger.id})
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    refute has_element?(lv, "#attention-retired_equipment")
+  end
+
   test "a qualification running out needs attention", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     qualification = qualification_fixture(team)

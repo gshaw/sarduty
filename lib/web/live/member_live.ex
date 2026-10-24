@@ -52,7 +52,12 @@ defmodule Web.MemberLive do
 
   def render(assigns) do
     ~H"""
-    <.member_head member={@member} last_attended_at={@last_attended_at} standing={@standing} />
+    <.member_head
+      member={@member}
+      last_attended_at={@last_attended_at}
+      standing={@standing}
+      equipment={@equipment}
+    />
     <.member_tabs member={@member} active_tab={:attendance} />
     <div class="content-wrapper">
       <aside class="content-1/3">

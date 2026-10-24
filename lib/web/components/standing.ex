@@ -9,12 +9,22 @@ defmodule Web.Components.Standing do
 
   attr :id, :string, default: nil
   attr :standing, :any, required: true, doc: "from MemberAwayPeriod.standing_today/3"
+  attr :item_count, :integer, default: 0, doc: "the items the member holds"
 
   @doc """
   The standing as a badge beside a member's name, or nothing when they are active. Away
-  ends, so it is a warning; Retired and Not a person are settled.
+  ends, so it is a warning; Retired and Not a person are settled. Retired with items still
+  to come back is a warning too, and counts them (#490).
   """
   def standing_badge(%{standing: :active} = assigns), do: ~H""
+
+  def standing_badge(%{standing: :retired, item_count: count} = assigns) when count > 0 do
+    ~H"""
+    <.badge id={@id} kind={:warning}>
+      {Service.Format.count(@item_count, one: "Retired with %d item", many: "Retired with %d items")}
+    </.badge>
+    """
+  end
 
   def standing_badge(assigns) do
     assigns = assign(assigns, kind: badge_kind(assigns.standing))

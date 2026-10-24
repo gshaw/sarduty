@@ -28,7 +28,8 @@ defmodule App.ViewData.TeamAttention do
       group_changes_item(rows.group_change_count),
       proposed_changes_item(rows.proposed_change_count, rows.service),
       chores_item(rows.chore_count),
-      chores_to_send_item(rows.chores_to_send, rows.service)
+      chores_to_send_item(rows.chores_to_send, rows.service),
+      retired_held_item(rows.retired_held)
     ]
     |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
@@ -236,6 +237,23 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: "The last send did not go through. Send the changes again.",
       action: "Review chores"
+    }
+  end
+
+  defp retired_held_item(%{items: 0}), do: nil
+
+  # Equipment still with members who retired in D4H (#490). No names: a team can have 10,
+  # and the page it links to lists them.
+  defp retired_held_item(%{members: members, items: items}) do
+    who =
+      Format.count(members, one: "%d retired member has", many: "%d retired members have")
+
+    %{
+      key: :retired_equipment,
+      level: :info,
+      title: "#{who} #{Format.count(items, one: "%d item", many: "%d items")}",
+      detail: nil,
+      action: "Show equipment"
     }
   end
 

@@ -75,30 +75,76 @@ defmodule App.Model.EquipmentItem do
   member place all read this, so they always agree.
   """
   def held_by(%Team{} = team, %Member{} = member) do
-    # cspell:ignore ctes -- Ecto's recursive_ctes/2, for SQLite's WITH RECURSIVE.
     EquipmentItem
-    |> recursive_ctes(true)
-    |> with_cte("held", as: ^union(held_directly(team, member), ^held_inside(team)))
-    |> where([i], i.id in subquery(from h in "held", select: h.id))
-    |> where([i], i.team_id == ^team.id)
+    |> where([i], i.team_id == ^team.id and i.member_id == ^member.id)
+    |> held(team)
+    |> distinct(true)
     |> order_by([i], asc: i.title, asc: i.id)
     |> Repo.all()
   end
 
-  # The member's own items, at depth 0.
-  defp held_directly(team, member) do
-    from i in EquipmentItem,
-      where: i.team_id == ^team.id and i.member_id == ^member.id,
-      select: %{id: i.id, d4h_equipment_id: i.d4h_equipment_id, depth: fragment("0")}
+  @doc """
+  Every item with a retired member, as `{item, member}`, by name then title: what
+  `held_by/2` finds for each of them, by the same rule, retired items too (#490). Retired is anyone not current by `Member.current_dynamic/2`.
+  Equipment's With retired members and the team home's count both read this.
+  """
+  def held_by_retired_members(%Team{} = team, now) do
+    team
+    |> located_with_retired(now)
+    |> held(team)
+    |> with_holder(team)
+    |> Repo.all()
+    # An item D4H locates with a member and inside another's kit, if one ever is, once.
+    |> Enum.uniq_by(fn {item, _member} -> item.id end)
   end
 
-  # The team's items inside one already found, one level deeper.
+  # Each held item with the member it's held by, by name then title.
+  defp with_holder(held, team) do
+    held
+    |> join(:inner, [i, h], m in Member, on: m.id == h.member_id and m.team_id == ^team.id)
+    |> order_by([i, _h, m], asc: m.name, asc: m.id, asc: i.title, asc: i.id)
+    |> select([i, _h, m], {i, m})
+  end
+
+  # The team's items D4H locates with a member of the team who isn't current.
+  defp located_with_retired(team, now) do
+    EquipmentItem
+    |> join(:inner, [i], m in Member, on: m.id == i.member_id, as: :member)
+    |> where([i, member: m], i.team_id == ^team.id and m.team_id == ^team.id)
+    |> where(^dynamic(not (^Member.current_dynamic(now, :member))))
+  end
+
+  # cspell:ignore ctes -- Ecto's recursive_ctes/2, for SQLite's WITH RECURSIVE.
+  # The team's items reached from `roots`, items D4H locates with a member: the roots and
+  # whatever sits inside them, joined to the `held` rows, which carry the root's member_id.
+  defp held(roots, team) do
+    roots =
+      select(roots, [i], %{
+        id: i.id,
+        d4h_equipment_id: i.d4h_equipment_id,
+        member_id: i.member_id,
+        depth: fragment("0")
+      })
+
+    EquipmentItem
+    |> recursive_ctes(true)
+    |> with_cte("held", as: ^union(roots, ^held_inside(team)))
+    |> join(:inner, [i], h in "held", on: h.id == i.id)
+    |> where([i], i.team_id == ^team.id)
+  end
+
+  # The team's items inside one already found, one level deeper, with its member.
   defp held_inside(team) do
     from i in EquipmentItem,
       join: h in "held",
       on: i.d4h_container_id == h.d4h_equipment_id,
       where: i.team_id == ^team.id and h.depth < @max_depth,
-      select: %{id: i.id, d4h_equipment_id: i.d4h_equipment_id, depth: h.depth + 1}
+      select: %{
+        id: i.id,
+        d4h_equipment_id: i.d4h_equipment_id,
+        member_id: h.member_id,
+        depth: h.depth + 1
+      }
   end
 
   @doc "Items a person can add to an activity or a template: any but retired and lost ones."

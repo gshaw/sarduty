@@ -165,6 +165,87 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "td", "Stray")
   end
 
+  # Robin retired with a leave date, Casey with only D4H's Retired, Ash with only a retired
+  # item. Sam is current. Another team's retired member holds their own team's items.
+  defp retired_holders(team) do
+    robin = member_fixture(team, %{name: "Robin Patel", left_at: ~U[2026-09-30 19:00:00Z]})
+    casey = member_fixture(team, %{name: "Casey Dhillon", d4h_status: "RETIRED"})
+    ash = member_fixture(team, %{name: "Ash Lee", left_at: ~U[2026-01-01 08:00:00Z]})
+    sam = member_fixture(team, %{name: "Sam Rivera"})
+
+    gps =
+      equipment_item_fixture(team, %{title: "GPS 3", member_id: robin.id, location_title: nil})
+
+    helmet = equipment_item_fixture(team, %{title: "Helmet 9", member_id: casey.id})
+    equipment_item_fixture(team, %{title: "Old pager", member_id: ash.id, status: "retired"})
+    equipment_item_fixture(team, %{title: "Pager 31", member_id: sam.id})
+
+    other_team = team_fixture()
+
+    stranger =
+      member_fixture(other_team, %{name: "Dana Stone", left_at: ~U[2026-01-01 08:00:00Z]})
+
+    equipment_item_fixture(other_team, %{title: "Their radio", member_id: stranger.id})
+
+    %{robin: robin, casey: casey, ash: ash, sam: sam, gps: gps, helmet: helmet}
+  end
+
+  test "Place splits members: With members and With retired members (#490)", ctx do
+    %{robin: robin} = retired_holders(ctx.team)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
+
+    assert has_element?(lv, "#equipment-places-with-members", "1")
+    assert has_element?(lv, "#equipment-places-with-retired-members", "2")
+
+    assert has_element?(
+             lv,
+             ~s{#equipment-places-with-retired-members a[href="/teams/#{ctx.team.subdomain}/equipment?place=With+retired+members"]}
+           )
+
+    assert has_element?(
+             lv,
+             ~s{#form_place-select option[value="With retired members"]},
+             "With retired members"
+           )
+
+    assert has_element?(lv, ~s{#form_place-select option[value="member-#{robin.id}"]})
+  end
+
+  test "With retired members says who has it and when they retired (#490)", ctx do
+    holders = retired_holders(ctx.team)
+    path = ~p"/teams/#{ctx.team}/equipment?place=With+retired+members"
+
+    {:ok, lv, _html} = live(ctx.conn, path)
+
+    assert has_element?(lv, "#place-with-retired-members h2", "With retired members · 2")
+    refute has_element?(lv, "#place-with-retired-members th", "Where")
+    assert has_element?(lv, "#place-with-retired-members th", "Who has it")
+
+    gps = "#place-with-retired-members #item-#{holders.gps.id}"
+
+    assert has_element?(
+             lv,
+             ~s{#{gps} a[href="/teams/#{ctx.team.subdomain}/members/#{holders.robin.id}"]},
+             "Robin Patel"
+           )
+
+    assert has_element?(lv, "#{gps} .hint", "Retired Sep 30, 2026")
+
+    helmet = "#place-with-retired-members #item-#{holders.helmet.id}"
+    assert has_element?(lv, helmet, "Casey Dhillon")
+    refute has_element?(lv, "#{helmet} .hint")
+
+    refute has_element?(lv, "td", "Pager 31")
+    refute has_element?(lv, "td", "Old pager")
+    refute has_element?(lv, "td", "Their radio")
+
+    # D4H still has a retired item with Ash, so All lists it here.
+    {:ok, lv, _html} = live(ctx.conn, path <> "&show=all")
+    assert has_element?(lv, "#place-with-retired-members h2", "With retired members · 3")
+    assert has_element?(lv, "#place-with-retired-members td", "Old pager")
+  end
+
   test "a scanned barcode opens its item, and an unknown one says so", ctx do
     item = equipment_item_fixture(ctx.team, %{title: "Thermal camera 2", barcode: "SF0119"})
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")

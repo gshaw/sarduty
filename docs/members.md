@@ -64,7 +64,9 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 - The member's **Standing** tab lists away periods, past ones too, with a form to add one
   and buttons to end one today or delete it. Any team admin can. The header on every
   member tab badges a standing other than Active: amber for Away until a date, grey for
-  Retired and Not a person. Each change goes in the member's history, from
+  Retired and Not a person. A retired member who still holds items gets an amber
+  "Retired with 3 items" in place of the grey Retired (#490), counting the sidebar's
+  Equipment list. Each change goes in the member's history, from
   `member_standing_changes`, which keeps the reason and dates.
 - A member away sees the same Away badge on Your membership, as a reminder. Members never
   see the reason, which is `redact: true`.
@@ -202,8 +204,9 @@ while they're away, and "Ground searcher · Joined March 2019 · Last attended S
   admin adds the gap as an away period. Hours count every attended activity, not only
   tagged ones. A plain dated list: no badges, graphics, or levels (decided 2026-10-20).
 - **Team admins see what members hold** (#490). The member sidebar on every member tab
-  lists up to 5 of their items and links to the rest on Equipment: see
-  [equipment.md](equipment.md#items-members-hold).
+  lists up to 5 of their items and links to the rest on Equipment. A retired member's
+  header badge counts them, and the team home says when items are still with retired
+  members: see [equipment.md](equipment.md#items-members-hold).
 - **Team admins see milestones too** (2026-10-23). The member sidebar on every member
   tab shows the latest and links to the team's Milestones page,
   `/teams/:subdomain/milestones`, filtered to the member over all time. That page lists

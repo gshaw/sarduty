@@ -38,10 +38,12 @@ defmodule Web.Components.MemberSidebar do
   attr :member, :map, required: true
   attr :last_attended_at, :any, required: true, doc: "from load_sidebar/1"
   attr :standing, :any, required: true, doc: "from load_sidebar/1"
+  attr :equipment, :list, required: true, doc: "from load_sidebar/1"
 
   @doc """
   The breadcrumbs and the member's name over every tab, with View as member: the same
-  header Your membership opens with.
+  header Your membership opens with. A retired member's badge counts the items they still
+  hold, the sidebar's Equipment list (#490).
   """
   def member_head(assigns) do
     ~H"""
@@ -55,6 +57,7 @@ defmodule Web.Components.MemberSidebar do
       name={@member.name}
       photo={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
       standing={@standing}
+      item_count={length(@equipment)}
       facts={facts(@member, @last_attended_at, @member.team.timezone)}
     >
       <:actions>

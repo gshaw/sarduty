@@ -211,6 +211,58 @@ defmodule Web.MemberLiveTest do
     refute has_element?(lv, "#member-equipment-all")
   end
 
+  test "a retired member who holds items: the badge counts them on every tab (#490)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{left_at: ~U[2026-09-30 19:00:00Z], d4h_status: "RETIRED"})
+    # A pack with a radio in it counts both, and a retired item counts, as the sidebar
+    # lists them.
+    pack = equipment_item_fixture(team, %{title: "Pack 3", member_id: member.id})
+    equipment_item_fixture(team, %{title: "Radio 9", d4h_container_id: pack.d4h_equipment_id})
+    equipment_item_fixture(team, %{title: "Helmet 9", member_id: member.id})
+    equipment_item_fixture(team, %{title: "Old radio", member_id: member.id, status: "retired"})
+    equipment_item_fixture(team_fixture(), %{title: "Stray radio", member_id: member.id})
+    conn = log_in_user(conn, user)
+
+    for tab <- ["", "/history", "/standing", "/qualifications", "/groups"] do
+      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{tab}")
+
+      assert has_element?(lv, "#member-head-standing.badge-warning", "Retired with 4 items")
+    end
+  end
+
+  test "a retired member whose only item is retired: D4H still has it with them",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{left_at: ~U[2026-01-01 08:00:00Z]})
+    equipment_item_fixture(team, %{title: "Old radio", member_id: member.id, status: "retired"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-head-standing.badge-warning", "Retired with 1 item")
+  end
+
+  test "a retired member who holds nothing keeps the grey Retired badge", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{left_at: ~U[2026-01-01 08:00:00Z]})
+    equipment_item_fixture(team_fixture(), %{title: "Stray radio", member_id: member.id})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-head-standing", "Retired")
+    refute has_element?(lv, "#member-head-standing.badge-warning")
+  end
+
+  test "a current member who holds items has no badge", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    equipment_item_fixture(team, %{member_id: member.id})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    refute has_element?(lv, "#member-head-standing")
+  end
+
   test "a member who holds nothing has no Equipment in the sidebar", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)

@@ -174,6 +174,53 @@ defmodule App.ViewData.EquipmentListTest do
     assert [%{in: %{}}, %{in: %{}}] = EquipmentList.held_rows(loop)
   end
 
+  # Robin retired with a pack holding a radio, and a retired pager. Casey has no leave date.
+  defp retired_held do
+    robin = %Member{id: 20, name: "Robin Patel", left_at: ~U[2026-09-30 19:00:00Z]}
+    casey = %Member{id: 21, name: "Casey Dhillon", d4h_status: "RETIRED"}
+
+    [
+      {item(20, "Pack 3", member_id: 20, member: robin), robin},
+      {item(21, "Radio 9", d4h_container_id: 20), robin},
+      {item(22, "Pager 4", member_id: 20, member: robin, status: "retired"), robin},
+      {item(23, "Helmet 9", member_id: 21, member: casey), casey}
+    ]
+  end
+
+  test "items with retired members move to With retired members, after With members (#490)" do
+    held = retired_held()
+
+    rows =
+      held
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.concat(items())
+      |> EquipmentList.rows()
+      |> EquipmentList.with_retired(held)
+
+    row = fn id -> Enum.find(rows, &(&1.item.id == id)) end
+
+    assert row.(21).place == "With retired members"
+    assert {row.(21).holder, row.(21).holder_id} == {"Robin Patel", 20}
+    assert row.(21).holder_left_at == ~U[2026-09-30 19:00:00Z]
+    assert row.(23).holder_left_at == nil
+    assert row.(5).place == "With members"
+
+    assert rows |> EquipmentList.places() |> Enum.map(&elem(&1, 0)) ==
+             ["Yard", "With members", "With retired members", "No location"]
+
+    options = EquipmentList.place_options(rows)
+    assert {"With retired members", "With retired members"} in options
+    assert {"Robin Patel", "member-20"} in options
+  end
+
+  test "the team home counts what With retired members lists on All (#490)" do
+    assert EquipmentList.retired_held(retired_held()) == %{members: 2, items: 4}
+    assert EquipmentList.retired_held([]) == %{members: 0, items: 0}
+
+    [{_pager, _robin} = only_retired] = Enum.filter(retired_held(), &(elem(&1, 0).id == 22))
+    assert EquipmentList.retired_held([only_retired]) == %{members: 1, items: 1}
+  end
+
   test "an item can't nest in itself forever" do
     loop = [item(1, "A", d4h_container_id: 2), item(2, "B", d4h_container_id: 1)]
     assert [_a, _b] = EquipmentList.rows(loop)

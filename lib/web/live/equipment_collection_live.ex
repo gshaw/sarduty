@@ -15,10 +15,19 @@ defmodule Web.EquipmentCollectionLive do
   # places and categories, with counts; picking one, searching, or another filter lists
   # items, grouped by where they are. A Records team adds items here. On a phone,
   # scanning a barcode opens its item. Place takes a member too, `?place=member-<id>`, from
-  # the member page's "All 12 items" (#490).
+  # the member page's "All 12 items" (#490). With retired members lists what is still to
+  # come back, with who has it and when they retired.
   def mount(_params, _session, socket) do
-    rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
-    in_service = EquipmentList.filter(rows, "in-service", "", DateTime.utc_now())
+    team = socket.assigns.current_team
+    now = DateTime.utc_now()
+
+    rows =
+      team.id
+      |> EquipmentItem.get_all()
+      |> EquipmentList.rows()
+      |> EquipmentList.with_retired(EquipmentItem.held_by_retired_members(team, now))
+
+    in_service = EquipmentList.filter(rows, "in-service", "", now)
 
     socket =
       assign(socket,
@@ -223,8 +232,18 @@ defmodule Web.EquipmentCollectionLive do
           <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
           <.status_badge item={row.item} />
         </:col>
-        <:col :let={row} :if={!@member_place?} label="Where">
+        <:col
+          :let={row}
+          :if={!@member_place? and place != EquipmentList.with_retired_members()}
+          label="Where"
+        >
           {where(row)}
+        </:col>
+        <:col :let={row} :if={place == EquipmentList.with_retired_members()} label="Who has it">
+          <.a navigate={~p"/teams/#{@current_team}/members/#{row.holder_id}"}>{row.holder}</.a>
+          <span :if={row.holder_left_at} class="hint">
+            Retired {Service.Format.date_short(row.holder_left_at, @current_team.timezone)}
+          </span>
         </:col>
         <:col :let={row} label="Category">{row.item.kind}</:col>
         <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
