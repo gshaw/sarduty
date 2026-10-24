@@ -30,7 +30,8 @@ A member sends one from Your membership, Add a certificate:
 file's first bytes, never its name. A PDF is kept as it came. A photo is turned the way
 the camera held it, shrunk to 2000 px, and saved as a JPEG without its metadata (GPS,
 camera). HEIC goes the same way when the bundled libvips reads it, and is refused
-otherwise. Up to 10 MB; anything else is refused.
+otherwise. Up to 10 MB, and a photo up to 120 million pixels, read from its header before
+anything is decoded; anything else is refused.
 
 - **Kept only while it waits**, in `certificate_files`, apart from `certificates` so
   lists never load it. Accepting or declining deletes it. After that D4H holds it.

@@ -22,6 +22,16 @@ defmodule Service.CertificateFileTest do
     jpeg
   end
 
+  # A 4 × 4 PNG whose header claims `width` × `height` pixels.
+  # cspell:ignore IHDR -- the PNG header chunk, which holds the size
+  defp png_claiming(width, height) do
+    <<signature::binary-8, length::32, "IHDR", _width::32, _height::32, rest::binary-5, _crc::32,
+      tail::binary>> = png_fixture(4, 4)
+
+    header = <<"IHDR", width::32, height::32, rest::binary>>
+    <<signature::binary, length::32, header::binary, :erlang.crc32(header)::32, tail::binary>>
+  end
+
   test "the type comes from the first bytes, not the name" do
     assert CertificateFile.type("%PDF-1.7\n") == :pdf
     assert 4 |> png_fixture(4) |> CertificateFile.type() == :image
@@ -61,5 +71,13 @@ defmodule Service.CertificateFileTest do
 
     big = "%PDF-" <> :binary.copy("x", CertificateFile.max_bytes())
     assert {:error, "Choose a file under 10 MB."} = CertificateFile.prepare(big, "big.pdf")
+  end
+
+  test "a photo claiming more pixels than any phone takes is refused before it is decoded" do
+    bomb = png_claiming(40_000, 40_000)
+    assert byte_size(bomb) < 1000
+
+    assert CertificateFile.prepare(bomb, "scan.png") ==
+             {:error, "SAR Duty cannot read a photo this large. Select a smaller photo or a PDF."}
   end
 end
