@@ -12,6 +12,18 @@
     </.tabs>
   </div>
 
+  <h3>Long labels</h3>
+  <div class="demo">
+    <.tabs label="Team settings">
+      <:tab navigate="#">General</:tab>
+      <:tab navigate="#">Team admins</:tab>
+      <:tab navigate="#">Member logins</:tab>
+      <:tab navigate="#" current>Hours tags for tax credit letters and the hours report</:tab>
+      <:tab navigate="#">Chore categories</:tab>
+      <:tab navigate="#">MCP tokens</:tab>
+    </.tabs>
+  </div>
+
   <h2>When to use</h2>
   <p>
     A few pages about the same record, such as a member's attendance, qualifications, and groups.
@@ -25,7 +37,18 @@
   <h2>How it works</h2>
   <ul>
     <li>Each tab is its own page with its own URL, so links and the back button work.</li>
-    <li>The tab for the page you are on is marked.</li>
+    <li>
+      Each tab is a grey tile. The tab for the page you are on is light blue with a bar at its
+      foot.
+    </li>
+    <li>
+      Tiles that don't fit wrap to the next row, at every width. A label too long for the screen
+      wraps inside its tile, so the page never scrolls sideways.
+    </li>
+    <li>
+      Tabs share the <a href={page_path(:stat_switch)}>stat switch</a>'s look, since both switch
+      what you're looking at.
+    </li>
   </ul>
 
   <h2>In the app</h2>

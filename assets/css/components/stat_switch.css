@@ -1,8 +1,8 @@
 /* A stat switch: a list's split as counts, each a link that filters the list, All first.
    Each count is a grey tile, so the whole tile reads as the target. The current one is
-   light blue with a primary bar at its foot. Square corners and one label weight, so
-   nothing moves when the current count changes. Counts that don't fit wrap to a second
-   row. See /styles/stat-switch. */
+   light blue with a bar at its foot, like the current tab. Square corners and one label
+   weight, so nothing moves when the current count changes. Counts that don't fit wrap
+   to a second row. See /styles/stat-switch. */
 @layer components {
   .stat-switch {
     display: flex;
@@ -24,7 +24,7 @@
   .stat-switch-value { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
   .stat-switch-label { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 600; color: var(--text-muted); white-space: nowrap; }
   .stat-switch a:hover { background: var(--border-subtle); }
-  .stat-switch a[aria-current="page"] { background: var(--shade-1); box-shadow: inset 0 -3px var(--primary); }
+  .stat-switch a[aria-current="page"] { background: var(--shade-1); box-shadow: inset 0 -3px var(--current); }
   .stat-switch a[aria-current="page"] .stat-switch-label { color: var(--text); }
   .stat-switch a.is-zero .stat-switch-value { color: var(--text-muted); }
 

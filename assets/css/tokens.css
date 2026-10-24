@@ -48,8 +48,9 @@
   --link-hover: light-dark(#003078, #b3d6fb); /* Links under the pointer */
 
   /* group: Actions and status */
-  --primary: light-dark(#1d4f91, #2f6fc4); /* Main buttons, current tab, page number */
+  --primary: light-dark(#1d4f91, #2f6fc4); /* Main buttons, page number */
   --primary-hover: light-dark(#163d70, #2563b0); /* Main button under the pointer or pressed */
+  --current: light-dark(#1d4f91, #7ab8f5); /* The bar under the current tab or stat switch count */
   --success: light-dark(#00703c, #1f7f4c); /* Fills: save and add buttons, success banner */
   --success-text: light-dark(#00703c, #4cc38a); /* Green text: Add, tinted success tags */
   --danger: light-dark(#c2301a, #c93a24); /* Fills: delete buttons, danger tags and banners */
@@ -66,7 +67,7 @@
   --event: light-dark(#5b3ea6, #6a4cc0); /* D4H event */
 
   /* group: Charts */
-  --shade-1: light-dark(#dbe7f5, #172b45); /* Heat cells: a little; the current stat switch count */
+  --shade-1: light-dark(#dbe7f5, #172b45); /* Heat cells: a little; the current tab or stat switch count */
   --shade-2: light-dark(#a9c6e8, #1f4a80); /* Heat cells: some */
   --shade-3: light-dark(#5b8fd1, #3474c8); /* Heat cells: a lot */
   --shade-4: light-dark(#1d4f91, #7ab8f5); /* Heat cells: the busiest */
