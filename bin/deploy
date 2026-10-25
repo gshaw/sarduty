@@ -1,0 +1,248 @@
+#!/usr/bin/env bash
+# Deploys origin/main to Fly from a throwaway worktree, holding the deploy lock that
+# every session shares (docs/deployment.md). Run it as `mise run deploy`.
+#
+#   -v, --verbose   stream Fly's own output under each step
+#   --wait          wait for another deploy's lock instead of stopping
+#   --force         deploy even when production already runs origin/main
+#   --dry-run       show what would ship, then stop before Fly builds anything
+#
+# Output is plain lines, no colour or spinner, when it isn't a terminal or NO_COLOR is
+# set. Every run keeps Fly's full output in a log, named at the end.
+#
+# Written for macOS's bash 3.2: no associative arrays, no ${var,,}.
+# cspell:ignore esac elif — bash's own keywords, closing case and chaining if
+
+set -uo pipefail
+
+APP=sarduty
+SITE=https://sarduty.com
+LOCK=/tmp/sarduty-deploy.lock
+
+# `mise run deploy --dry-run` parses the flags itself and hands them over as usage_*
+# variables, not arguments; `bin/deploy --dry-run` passes arguments.
+on() { [ "${1:-}" = true ] && echo 1 || echo 0; }
+verbose=$(on "${usage_verbose:-}") wait=$(on "${usage_wait:-}")
+force=$(on "${usage_force:-}") dry=$(on "${usage_dry_run:-}")
+for arg in "$@"; do
+  case $arg in
+    -v | --verbose) verbose=1 ;;
+    --wait) wait=1 ;;
+    --force) force=1 ;;
+    --dry-run) dry=1 ;;
+    -h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "deploy: unknown option $arg (try --help)" >&2; exit 2 ;;
+  esac
+done
+
+# --- Output -------------------------------------------------------------------------
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  tty=1
+  B=$'\e[1m' D=$'\e[2m' R=$'\e[0m' G=$'\e[32m' Y=$'\e[33m' E=$'\e[31m' C=$'\e[36m'
+else
+  tty=0 B='' D='' R='' G='' Y='' E='' C=''
+fi
+
+started=$(date +%s)
+log=/tmp/sarduty-deploy-$(date +%Y%m%d-%H%M%S).log
+: >"$log"
+
+ok() { printf '  %s✓%s %-15s %s\n' "$G" "$R" "$1" "${2:-}"; }
+warn() { printf '  %s!%s %-15s %s\n' "$Y" "$R" "$1" "${2:-}"; }
+fail() { printf '  %s✗%s %-15s %s\n' "$E" "$R" "$1" "${2:-}"; }
+note() { printf '    %s%s%s\n' "$D" "$1" "$R"; }
+cut_to() { if [ ${#2} -gt "$1" ]; then printf '%s…' "${2:0:$(($1 - 1))}"; else printf '%s' "$2"; fi; }
+elapsed() { local s=$(($(date +%s) - $1)); printf '%dm%02ds' $((s / 60)) $((s % 60)); }
+
+# Fly's output while it runs: under the step with -v, only into the log without.
+stream() {
+  if [ "$verbose" = 1 ]; then
+    tee -a "$log" | sed -u "s/^/      ${D}│${R} /"
+  else
+    cat >>"$log"
+  fi
+}
+
+# --- Clean up, whatever happens ------------------------------------------------------
+
+worktree='' have_lock=0 fly_pid=''
+cleanup() {
+  [ -n "$fly_pid" ] && kill "$fly_pid" 2>/dev/null
+  [ -n "$worktree" ] && git worktree remove --force "$worktree" >/dev/null 2>&1
+  [ "$have_lock" = 1 ] && rm -rf "$LOCK"
+  [ "$tty" = 1 ] && printf '\e[?25h' # the spinner hides the cursor
+}
+trap cleanup EXIT
+trap 'echo; fail "Stopped" "Ctrl-C. Fly may still finish the rollout: fly status -a $APP"; exit 130' INT TERM
+
+die() {
+  fail "$1" "$2"
+  [ -s "$log" ] && { echo; tail -n 15 "$log" | sed "s/^/      ${D}│${R} /"; echo; note "Full log: $log"; }
+  exit 1
+}
+
+# --- Before anything changes ---------------------------------------------------------
+
+printf '\n  %s → %s  %s\n\n' "${B}SAR Duty$R" "${B}production$R" "${D}$APP on Fly$R"
+
+for tool in git fly fnox curl; do
+  command -v "$tool" >/dev/null || die "Tools" "$tool isn't on PATH"
+done
+
+token=$(fnox get FLY_SARDUTY_DEPLOY_TOKEN 2>/dev/null) && [ -n "$token" ] ||
+  die "Fly token" "fnox has no FLY_SARDUTY_DEPLOY_TOKEN"
+export FLY_ACCESS_TOKEN=$token
+
+# The lock is a directory, since mkdir either makes it or fails, even with two at once.
+owner="mise run deploy · $USER · $(basename "$PWD") · pid $$"
+until mkdir "$LOCK" 2>/dev/null; do
+  held=$(cat "$LOCK/owner" 2>/dev/null || echo "someone")
+  if [ "$wait" = 0 ]; then
+    fail "Lock" "another deploy holds it"
+    note "$held"
+    note "Wait with --wait. Remove $LOCK only if that deploy is gone."
+    exit 75
+  fi
+  [ -z "${waiting:-}" ] && { warn "Lock" "waiting for: $held"; waiting=1; }
+  sleep 15
+done
+have_lock=1
+echo "$owner $(date '+%Y-%m-%d %H:%M:%S %Z')" >"$LOCK/owner"
+ok "Lock" "$D$LOCK$R"
+
+git fetch --quiet origin main 2>>"$log" || die "Fetch" "git fetch origin main failed"
+sha=$(git rev-parse --short=8 origin/main)
+ok "main" "${C}$sha${R} $(cut_to 60 "$(git log -1 --format='%s' origin/main)") ${D}($(git log -1 --format='%cr' origin/main))${R}"
+
+# Images this script builds are tagged main-<sha>, so the next run knows what's live.
+releases() { fly releases -a "$APP" --json 2>>"$log"; }
+field() { sed -n "s/.*\"$1\": *\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\}\$/\1/p" | head -1; }
+live_json=$(releases) || die "Fly" "can't read $APP's releases"
+live_version=$(printf '%s\n' "$live_json" | field Version)
+live_sha=$(printf '%s\n' "$live_json" | field ImageRef | sed -n 's/.*:main-\([0-9a-f]*\)$/\1/p')
+
+if [ -n "$live_sha" ]; then
+  ok "Live now" "v$live_version · ${C}$live_sha${R}"
+  if [ "$live_sha" = "$sha" ] && [ "$force" = 0 ]; then
+    echo
+    note "Production already runs $sha. Nothing to deploy (--force to deploy anyway)."
+    echo
+    exit 0
+  fi
+else
+  ok "Live now" "v$live_version ${D}(an image from before this script; can't list what's new)${R}"
+fi
+
+# What's shipping, when the live commit is one main still has.
+if [ -n "$live_sha" ] && git merge-base --is-ancestor "$live_sha" origin/main 2>/dev/null; then
+  count=$(git rev-list --count "$live_sha..origin/main")
+  printf '\n  %sShipping %s commit%s%s\n' "$B" "$count" "$([ "$count" = 1 ] || echo s)" "$R"
+  git log --format="%h%x09%s" "$live_sha..origin/main" | head -12 |
+    while IFS=$'\t' read -r h s; do printf '    %s%s%s %s\n' "$C" "${h:0:8}" "$R" "$(cut_to 72 "$s")"; done
+  [ "$count" -gt 12 ] && note "and $((count - 12)) more"
+  migrations=$(git diff --name-only --diff-filter=A "$live_sha" origin/main -- priv/repo/migrations | xargs -n1 basename 2>/dev/null | sed 's/\.exs$//')
+  if [ -n "$migrations" ]; then
+    printf '\n  %s %s\n' "${B}Migrations$R" "${D}that run at boot$R"
+    printf '%s\n' "$migrations" | sed "s/^/    /"
+  fi
+elif [ -n "$live_sha" ]; then
+  warn "History" "live $live_sha isn't on main; this replaces it"
+fi
+echo
+
+if [ "$dry" = 1 ]; then
+  note "Dry run: stopping before Fly builds anything."
+  echo
+  exit 0
+fi
+
+worktree=$(mktemp -d -t sarduty-deploy-wt)
+rmdir "$worktree"
+git worktree add --quiet --detach "$worktree" origin/main 2>>"$log" || die "Worktree" "couldn't check out origin/main"
+ok "Checkout" "${D}a clean copy of origin/main, apart from this worktree${R}"
+
+# --- Fly ------------------------------------------------------------------------------
+
+# Fly's output names its steps; the newest one seen is the step on screen.
+phase_of() {
+  local p=prep
+  grep -q -E 'Building image|building image|depot' "$1" && p=build
+  grep -q -E 'image size|Pushing image|pushing manifest' "$1" && p=push
+  grep -q -E 'Updating existing machines|Acquiring lease' "$1" && p=rollout
+  grep -q -E 'smoke checks|Checking health|health checks' "$1" && p=health
+  grep -q -E 'is now in a good state|Visit your newly deployed app' "$1" && p=healthy
+  echo $p
+}
+label_of() {
+  case $1 in
+    prep) echo "Preparing" ;; build) echo "Building image" ;; push) echo "Pushing image" ;;
+    rollout) echo "Rolling out" ;; health) echo "Health checks" ;; healthy) echo "Machine healthy" ;;
+  esac
+}
+
+run_fly() {
+  local flylog=$1 i=0 shown='' since now status
+  local spin=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+  : >"$flylog"
+  rm -f "$flylog.status"
+  # The pipe's last command is the one $! names, so fly's own status goes in a file.
+  {
+    (cd "$worktree" && fly deploy -a "$APP" --image-label "main-$sha")
+    echo $? >"$flylog.status"
+  } 2>&1 | tee -a "$flylog" | stream &
+  fly_pid=$!
+  since=$(date +%s)
+  [ "$tty" = 1 ] && printf '\e[?25l'
+  while kill -0 "$fly_pid" 2>/dev/null; do
+    now=$(phase_of "$flylog")
+    if [ "$now" != "$shown" ]; then
+      [ "$tty" = 1 ] && printf '\r\e[K'
+      [ -n "$shown" ] && ok "$(label_of "$shown")" "${D}$(elapsed "$since")${R}"
+      [ "$tty" = 0 ] && [ "$now" != healthy ] && printf '  · %s\n' "$(label_of "$now")"
+      shown=$now since=$(date +%s)
+    fi
+    if [ "$tty" = 1 ] && [ "$verbose" = 0 ]; then
+      printf '\r  %s%s%s %-15s %s' "$C" "${spin[i % 10]}" "$R" "$(label_of "$shown")" "$D$(elapsed "$since")$R"
+      i=$((i + 1))
+    fi
+    sleep 0.2
+  done
+  wait "$fly_pid"
+  status=$(cat "$flylog.status" 2>/dev/null || echo 1)
+  fly_pid=
+  [ "$tty" = 1 ] && printf '\r\e[K\e[?25h'
+  [ "$status" = 0 ] && ok "$(label_of "$shown")" "${D}$(elapsed "$since")${R}"
+  return "$status"
+}
+
+flylog=$(mktemp -t sarduty-fly)
+if ! run_fly "$flylog"; then
+  # Fly's remote builder sometimes can't resolve its own API; once more usually works.
+  if grep -q '_api.internal' "$flylog"; then
+    warn "Builder" "Fly's builder lost DNS (_api.internal); trying once more"
+    run_fly "$flylog" || die "Deploy" "fly deploy failed twice"
+  else
+    die "Deploy" "fly deploy failed; production is still v$live_version"
+  fi
+fi
+
+# --- After ----------------------------------------------------------------------------
+
+new_json=$(releases) || die "Fly" "deployed, but can't read the releases"
+new_version=$(printf '%s\n' "$new_json" | field Version)
+new_status=$(printf '%s\n' "$new_json" | field Status)
+[ "$new_status" = complete ] || warn "Release" "v$new_version is $new_status"
+
+check=$(curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time 15 "$SITE/")
+code=${check%% *}
+ms=$(awk -v t="${check##* }" 'BEGIN { printf "%d", t * 1000 }')
+if [ "$code" = 200 ]; then
+  ok "$SITE" "200 in ${ms} ms"
+else
+  warn "$SITE" "answered $code; check fly logs -a $APP"
+fi
+
+printf '\n  %s✔ v%s is live%s · %s%s%s · %s\n' "$G$B" "$new_version" "$R" "$C" "$sha" "$R" "$(elapsed "$started")"
+note "Log: $log"
+echo

@@ -75,6 +75,16 @@ run = "prettier --check '**/*.md'"
 [tasks.server]
 run = "mix phx.server"
 
+[tasks.deploy]
+description = "Deploy origin/main to Fly, holding the shared deploy lock"
+usage = """
+flag "-v --verbose" help="Stream Fly's own output under each step"
+flag "--wait" help="Wait for another deploy's lock instead of stopping"
+flag "--force" help="Deploy even when production already runs origin/main"
+flag "--dry-run" help="Show what would ship, then stop before Fly builds anything"
+"""
+run = "bin/deploy"
+
 [tasks.vacuum]
 run = "sqlite3 db/sarduty_dev.db \"VACUUM;\""
 

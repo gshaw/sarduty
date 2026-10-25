@@ -12,10 +12,23 @@ sarduty.com.
 ## Deploying
 
 ```sh
-fly deploy
+mise run deploy               # or: mise run deploy -- --verbose
 ```
 
-From `main`, after CI is green. The [Dockerfile](../Dockerfile) builds a release;
+From any worktree, after the PR is merged and CI is green. [bin/deploy](../bin/deploy)
+deploys `origin/main`, never the branch you're on, from a clean throwaway worktree, so
+local files can't reach the build. It holds `/tmp/sarduty-deploy.lock` while it runs:
+several sessions merge and deploy the same day, and two deploys at once race on Fly, or
+roll back each other's work. Hand deploys take the same lock (`mkdir` it, write who in
+`owner`, remove it when done).
+
+It tags each image `main-<sha>`, so the next run lists the commits and migrations it
+ships, and stops when production already runs `origin/main`. Fly's full output goes to a
+log named at the end; `--verbose` shows it as it comes, and the output is plain lines when
+it isn't a terminal. `--wait` waits for another deploy's lock, and `--dry-run` stops
+before Fly builds anything. A builder that loses DNS (`_api.internal`) gets one retry.
+
+The [Dockerfile](../Dockerfile) builds a release;
 [rel/overlays/bin/server](../rel/overlays/bin/server) starts it.
 
 Each app has its own Fly tokens in fnox, so a script or an agent never needs the full
