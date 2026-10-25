@@ -162,16 +162,13 @@ defmodule Web.AdminDashboardLiveTest do
     assert has_element?(lv, "#team-#{team.id}", admin.email)
   end
 
-  test "redirects non-admin users", %{conn: conn} do
+  test "is a 404 for anyone who isn't a SAR Duty admin (#513)", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
+    conn = log_in_user(conn, user)
 
-    conn =
-      conn
-      |> log_in_user(user)
-      |> get(~p"/admin")
-
-    assert redirected_to(conn) == "/"
-    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "admin"
+    for path <- ["/admin", "/admin/orgs", "/admin/events", "/admin/teams/1"] do
+      assert_error_sent 404, fn -> get(conn, path) end
+    end
   end
 
   test "redirects unauthenticated users", %{conn: conn} do

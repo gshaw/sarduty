@@ -172,6 +172,7 @@ defmodule Web.Router do
         {Web.UserAuth, :ensure_admin}
       ] do
       live "/admin", AdminDashboardLive
+      live "/admin/teams/:id", Admin.TeamLive
       live "/admin/admins", Admin.AdminCollectionLive
       live "/admin/events", Admin.EventCollectionLive
       live "/admin/id-cards", Admin.IdCardsLive

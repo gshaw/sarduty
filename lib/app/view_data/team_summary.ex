@@ -8,6 +8,7 @@ defmodule App.ViewData.TeamSummary do
   import Ecto.Query
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
@@ -26,7 +27,7 @@ defmodule App.ViewData.TeamSummary do
 
     by_team =
       (manager_emails(teams, now) ++ grant_emails(ids))
-      |> Enum.group_by(&elem(&1, 0), &(&1 |> elem(1) |> String.trim() |> String.downcase()))
+      |> Enum.group_by(&elem(&1, 0), &normalize(elem(&1, 1)))
 
     Map.new(ids, &{&1, by_team |> Map.get(&1, []) |> Enum.uniq() |> Enum.sort()})
   end
@@ -58,6 +59,51 @@ defmodule App.ViewData.TeamSummary do
     do: if(Team.key_owner_is_sar_duty?(team), do: team.d4h_access_key_member_id)
 
   @doc """
+  Everyone who reaches one team as a team admin, one row per email, A to Z, for its
+  SAR Duty admin page (#513): `%{email:, roles:, grant:, last_seen_at:}`. `roles` are its
+  D4H access levels, such as "D4H Owner", and `grant` its login grant, or nil. An email
+  that is both is one row.
+  """
+  def team_admin_rows(%Team{} = team, now) do
+    roles = manager_roles(team, now)
+    grants = team |> TeamLoginGrant.get_for_team() |> Map.new(&{&1.email, &1})
+    emails = Enum.uniq(Map.keys(roles) ++ Map.keys(grants))
+    seen = last_seen_by_email(emails)
+
+    for email <- Enum.sort(emails) do
+      %{
+        email: email,
+        roles: roles |> Map.get(email, []) |> Enum.uniq(),
+        grant: grants[email],
+        last_seen_at: seen[email]
+      }
+    end
+  end
+
+  # Each manager's email and their access, such as "D4H Owner".
+  defp manager_roles(team, now) do
+    service = D4H.service_name(team)
+
+    team
+    |> Member.get_managers(now)
+    |> Enum.reject(&is_nil(&1.email))
+    |> Enum.group_by(
+      &normalize(&1.email),
+      &"#{service} #{Member.permission_label(&1.d4h_permission)}"
+    )
+  end
+
+  defp normalize(email), do: email |> String.trim() |> String.downcase()
+
+  defp last_seen_by_email(emails) do
+    User
+    |> where([u], fragment("lower(?)", u.email) in ^emails and not is_nil(u.last_seen_at))
+    |> select([u], {fragment("lower(?)", u.email), u.last_seen_at})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   The last time a team admin opened one of each team's pages, or nil: the latest
   `users.last_seen_at` among its team admins. RecordUserSeen stamps it for team admins
   only, never members or SAR Duty admins. `%{team_id => DateTime | nil}`.
@@ -68,12 +114,7 @@ defmodule App.ViewData.TeamSummary do
   def last_seen_from(emails_by_team) do
     emails = emails_by_team |> Map.values() |> List.flatten() |> Enum.uniq()
 
-    seen =
-      User
-      |> where([u], fragment("lower(?)", u.email) in ^emails and not is_nil(u.last_seen_at))
-      |> select([u], {fragment("lower(?)", u.email), u.last_seen_at})
-      |> Repo.all()
-      |> Map.new()
+    seen = last_seen_by_email(emails)
 
     Map.new(emails_by_team, fn {team_id, emails} ->
       latest =

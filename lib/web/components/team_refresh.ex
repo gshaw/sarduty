@@ -6,6 +6,7 @@ defmodule Web.Components.TeamRefresh do
   """
   use Web, :function_component
 
+  alias App.Adapter.D4H
   alias App.Model.Team
 
   @doc "`:ok`, `:never`, or `:failed`: a refresh in progress reads as its last result."
@@ -39,4 +40,37 @@ defmodule Web.Components.TeamRefresh do
 
   def not_refreshed_since(%Team{} = team),
     do: "Not refreshed since #{Service.Format.date_short(team.d4h_refreshed_at, team.timezone)}"
+
+  @doc """
+  Whose access key the team uses, for SAR Duty admin pages (#513): `:none`, `:sar_duty`
+  (a D4H account set up for SAR Duty), `:records` (Records names the key itself), or
+  `{:person, name}`, a key that stops working when that person leaves, or `:unknown`
+  before a refresh has read whose it is.
+  """
+  def key_kind(%Team{d4h_access_key: key}) when key in [nil, ""], do: :none
+
+  def key_kind(%Team{} = team) do
+    cond do
+      D4H.records?(team) -> :records
+      team.d4h_access_key_owner == nil -> :unknown
+      Team.key_owner_is_sar_duty?(team) -> :sar_duty
+      true -> {:person, team.d4h_access_key_owner}
+    end
+  end
+
+  attr :team, :map, required: true
+  attr :id, :string, default: nil
+
+  @doc "The key in a few words: None, SAR Duty, SAR Duty Records, or Person's: name."
+  def team_key(assigns) do
+    assigns = assign(assigns, :kind, key_kind(assigns.team))
+
+    ~H"""
+    <span :if={@kind == :none} id={@id} class="text-danger-text">None</span>
+    <span :if={@kind == :sar_duty} id={@id}>SAR Duty</span>
+    <span :if={@kind == :records} id={@id}>SAR Duty Records</span>
+    <span :if={@kind == :unknown} id={@id}>Owner not known yet</span>
+    <span :if={match?({:person, _name}, @kind)} id={@id}>Person's: {elem(@kind, 1)}</span>
+    """
+  end
 end

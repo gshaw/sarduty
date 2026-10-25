@@ -23,6 +23,6 @@ defmodule Web.Admin.IdCardsLiveTest do
 
   test "a team admin who isn't a SAR Duty admin can't see it", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
-    assert {:error, {:redirect, %{to: "/"}}} = live(log_in_user(conn, user), ~p"/admin/id-cards")
+    assert_raise Web.Status.NotFound, fn -> live(log_in_user(conn, user), ~p"/admin/id-cards") end
   end
 end

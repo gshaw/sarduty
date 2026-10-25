@@ -269,17 +269,12 @@ defmodule Web.UserAuth do
     {:cont, Phoenix.Component.assign(socket, current_organization: organization)}
   end
 
+  # Every page under /admin: a 404 for anyone who isn't a SAR Duty admin, as on team and
+  # organization pages, so the page doesn't say it exists (#513).
   def on_mount(:ensure_admin, _params, _session, socket) do
-    if socket.assigns.current_user.is_admin do
-      {:cont, socket}
-    else
-      socket =
-        socket
-        |> Phoenix.LiveView.put_flash(:error, "Only SAR Duty admins can see this page.")
-        |> Phoenix.LiveView.redirect(to: ~p"/")
-
-      {:halt, socket}
-    end
+    if socket.assigns.current_user.is_admin,
+      do: {:cont, socket},
+      else: raise(Web.Status.NotFound)
   end
 
   # Every page under /teams/:subdomain (#406). The URL's team is `current_team` for
