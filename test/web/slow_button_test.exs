@@ -1,14 +1,15 @@
 defmodule Web.SlowButtonTest do
   @moduledoc """
   A button whose event waits on something slow says so while it waits, with
-  phx-disable-with, so a tap never looks like it did nothing and cannot be sent twice.
+  phx-disable-with, so a tap never looks like it did nothing and that button cannot be
+  sent twice.
 
   Slow means the event reaches one of @slow: HTTP (D4H, Records, Mapbox, Wallet, email,
-  texts), the mailer, a PDF, or signing a pass. The test follows every call in the
-  compiled code's debug info, so a helper in another module counts, and a queued job or
-  assign_async does not. It misses only a call it cannot see: a module held in a variable. Then it checks
-  the button that sends each slow handle_event, in the same source file: the phx-click
-  tag, or the submit button of the phx-submit form (#567).
+  texts), the mailer, a PDF, or signing a pass. The test follows every call and capture in
+  the compiled code's debug info, so a helper in another module counts, and a queued job
+  or assign_async does not. It misses only a call it cannot see: a module held in a
+  variable. Then it checks the button that sends each slow handle_event, in the same
+  source file: the phx-click tag, or the submit button of the phx-submit form (#567).
   """
   use ExUnit.Case, async: true
 
@@ -84,6 +85,11 @@ defmodule Web.SlowButtonTest do
   defp collect({{:., _, [callee, name]}, _, _args} = node, acc, _module)
        when is_atom(callee) and is_atom(name),
        do: call(node, {callee, name}, acc)
+
+  # A local or imported capture, &push/1. Its name has no args list.
+  defp collect({:&, _, [{:/, _, [{name, meta, ctx}, _arity]}]} = node, acc, module)
+       when is_atom(name) and is_atom(ctx),
+       do: call(node, {meta[:import] || module, name}, acc)
 
   # A local call, or an imported one, which keeps its module in the meta.
   defp collect({name, meta, args} = node, acc, module) when is_atom(name) and is_list(args),
@@ -229,7 +235,8 @@ defmodule Web.SlowButtonTest do
 
   # The form's submit buttons: inside it up to its closing tag, or outside with form="id".
   defp submit_buttons(text, {start, form}) do
-    close = if form =~ ~r/^<\.form/, do: "</.form>", else: "</form>"
+    [_, tag_name] = Regex.run(~r/^<([.\w]+)/, form)
+    close = "</#{tag_name}>"
     rest = binary_part(text, start, byte_size(text) - start)
     [inside | _] = String.split(rest, close, parts: 2)
     inside = for {_, tag} <- buttons(inside), submit?(tag), do: tag

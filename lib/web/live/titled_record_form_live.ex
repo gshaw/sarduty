@@ -53,9 +53,9 @@ defmodule Web.TitledRecordFormLive do
       <.error_summary form={@form} />
       <.input field={@form[:title]} label="Title" />
       <.form_actions>
-        <.button variant={:success} phx-disable-with={if @record, do: "Saving…", else: "Adding…"}>{if @record,
-          do: "Save #{@kind}",
-          else: @page_title}</.button>
+        <.button variant={:success} phx-disable-with={if @record, do: "Saving…", else: "Adding…"}>
+          {if @record, do: "Save #{@kind}", else: @page_title}
+        </.button>
       </.form_actions>
     </.form>
 

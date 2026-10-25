@@ -99,7 +99,9 @@
       <.button variant={variant} disabled>Save</.button>
     </:col>
     <:col :let={{variant, _label}} label="Busy">
-      <.button variant={variant} disabled data-phx-disable-with-restore="Save">Saving…</.button>
+      <.button variant={variant} class="phx-click-loading" phx-disable-with="Saving…" disabled>
+        Saving…
+      </.button>
     </:col>
   </.table>
   <ul>
@@ -128,7 +130,7 @@
   <div class="demo">
     <.form_actions>
       <.button variant={:warning}>Email letter</.button>
-      <.button variant={:warning} disabled data-phx-disable-with-restore="Email letter">
+      <.button variant={:warning} class="phx-click-loading" phx-disable-with="Sending…" disabled>
         Sending…
       </.button>
     </.form_actions>

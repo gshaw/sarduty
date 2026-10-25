@@ -246,9 +246,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
         size={:sm}
         phx-click="create"
         value={@record.member.id}
-        phx-disable-with="Creating…"
+        phx-disable-with="Sending…"
       >
-        Create letter
+        Send letter
       </.button>
     <% end %>
     """

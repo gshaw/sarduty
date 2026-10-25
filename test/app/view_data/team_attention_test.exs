@@ -179,7 +179,7 @@ defmodule App.ViewData.TeamAttentionTest do
   test "tax credit letters show from January to April only, in the team's zone" do
     letters = %{letters: %{year: 2025, count: 11}}
 
-    assert [%{key: :letters, year: 2025, title: "11 tax credit letters to create for 2025"}] =
+    assert [%{key: :letters, year: 2025, title: "11 tax credit letters to send for 2025"}] =
              items(letters, @march)
 
     assert items(letters, @october) == []

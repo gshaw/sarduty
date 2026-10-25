@@ -78,9 +78,9 @@ defmodule Web.MemberFormLive do
         Team admins log in to SAR Duty and change the team's records.
       </.input>
       <.form_actions>
-        <.button variant={:success} phx-disable-with={if @member, do: "Saving…", else: "Adding…"}>{if @member,
-          do: "Save member",
-          else: "Add member"}</.button>
+        <.button variant={:success} phx-disable-with={if @member, do: "Saving…", else: "Adding…"}>
+          {if @member, do: "Save member", else: "Add member"}
+        </.button>
       </.form_actions>
     </.form>
 

@@ -29,7 +29,7 @@
     </:col>
     <:col :let={r} label="Letter" class="w-px">
       <a :if={r.letter} href="#" class="link mono">{r.letter}</a>
-      <.button :if={!r.letter} variant={:success} size={:sm}>Create letter</.button>
+      <.button :if={!r.letter} variant={:success} size={:sm}>Send letter</.button>
     </:col>
     <:col :let={r} label="Email">{r.email}</:col>
   </.table>

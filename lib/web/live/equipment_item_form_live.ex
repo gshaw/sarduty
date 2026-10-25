@@ -78,9 +78,9 @@ defmodule Web.EquipmentItemFormLive do
       </div>
       <.input field={@form[:expires_on]} type="date" label="Expires (optional)" />
       <.form_actions>
-        <.button variant={:success} phx-disable-with={if @item, do: "Saving…", else: "Adding…"}>{if @item,
-          do: "Save item",
-          else: "Add item"}</.button>
+        <.button variant={:success} phx-disable-with={if @item, do: "Saving…", else: "Adding…"}>
+          {if @item, do: "Save item", else: "Add item"}
+        </.button>
       </.form_actions>
     </.form>
 
