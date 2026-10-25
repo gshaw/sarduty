@@ -173,7 +173,7 @@ defmodule Web.ActivityLive do
       :if={@activity.deleted_at}
       id="deleted-in-d4h"
       kind={:danger}
-      title={"Deleted in #{D4H.service_name(@activity.team)}"}
+      title="Deleted"
     >
       <p>
         SAR Duty saw it was gone on {Service.Format.date_long(
@@ -327,7 +327,9 @@ defmodule Web.ActivityLive do
             >Add to calendar</.a>
           </li>
           <li :if={!D4H.records?(@activity.team)}>
-            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>Open D4H activity</.a>
+            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>Open {D4H.service_name(
+              @activity.team
+            )} activity</.a>
           </li>
         </ul>
       </dd>
@@ -359,7 +361,7 @@ defmodule Web.ActivityLive do
           <%!-- D4H refuses tags on a published activity (#358). --%>
           <li :if={!D4H.records?(@activity.team) and D4H.tags_locked?(@activity.team, @activity)}>
             <div id="activity-tags-in-d4h" class="hint">
-              Change its tags in D4H. D4H does not let SAR Duty change a published activity's tags.
+              Published, so change its tags in {D4H.service_name(@activity.team)}.
             </div>
           </li>
           <li :if={!D4H.tags_locked?(@activity.team, @activity)}>
@@ -561,7 +563,7 @@ defmodule Web.ActivityLive do
       phx-click="remind"
       phx-value-round={@round}
       phx-disable-with="Sending…"
-      data-confirm={reminders_confirm(@round, @plan, @activity.team)}
+      data-confirm={reminders_confirm(@round, @plan)}
     >
       {if @round == 1,
         do: Format.count(@count, one: "Send 1 reminder", many: "Send %d reminders"),
@@ -570,8 +572,8 @@ defmodule Web.ActivityLive do
     """
   end
 
-  defp reminders_confirm(round, plan, team) do
-    [confirm_ask(round, length(plan.send)), confirm_skipped(plan.skipped, team)]
+  defp reminders_confirm(round, plan) do
+    [confirm_ask(round, length(plan.send)), confirm_skipped(plan.skipped)]
     |> Enum.reject(&is_nil/1)
     |> Enum.join("\n\n")
   end
@@ -591,17 +593,15 @@ defmodule Web.ActivityLive do
       " Each gets one more email from you, the last for this activity."
   end
 
-  defp confirm_skipped([], _team), do: nil
+  defp confirm_skipped([]), do: nil
 
-  defp confirm_skipped(skipped, team) do
-    names = skipped |> Enum.map(&skipped_text(&1, team)) |> Format.or_list()
+  defp confirm_skipped(skipped) do
+    names = skipped |> Enum.map(&skipped_text/1) |> Format.or_list()
     "Not sent to #{names}."
   end
 
-  defp skipped_text({member, :no_email}, team),
-    do: "#{member.name} (no email in #{D4H.service_name(team)})"
-
-  defp skipped_text({member, :reminders_off}, _team), do: "#{member.name} (reminders off)"
+  defp skipped_text({member, :no_email}), do: "#{member.name} (no email)"
+  defp skipped_text({member, :reminders_off}), do: "#{member.name} (reminders off)"
 
   # "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since"
   defp batch_text(batch, sender, timezone) do
@@ -692,7 +692,7 @@ defmodule Web.ActivityLive do
     socket
     |> put_flash(
       :error,
-      "This activity is deleted in #{D4H.service_name(socket.assigns.current_team)}. Nothing can be sent to it."
+      "This activity is deleted. Nothing can be sent to it."
     )
     |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}")
   end

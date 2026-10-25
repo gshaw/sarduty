@@ -15,7 +15,7 @@ defmodule App.Adapter.D4H.Error do
 
     %__MODULE__{
       status: response.status,
-      message: "D4H API error (#{response.status}): #{String.slice(reason, 0, 500)}"
+      message: "#{String.slice(reason, 0, 500)} (#{response.status})"
     }
   end
 

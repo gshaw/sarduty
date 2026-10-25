@@ -79,7 +79,7 @@ defmodule Web.ActivityTagsLiveTest do
     lv |> form("#activity-tags-form", %{hours: "none"}) |> render_submit()
 
     refute_received {:d4h_write, _path, _body}
-    assert render(lv) =~ "The tags changed in D4H since the page opened."
+    assert render(lv) =~ "The tags changed since the page opened."
   end
 
   test "Other is offered once the team names an other tag", ctx do
@@ -114,13 +114,13 @@ defmodule Web.ActivityTagsLiveTest do
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/tags")
 
-    assert has_element?(lv, "#tags-published", "This activity is published in D4H")
+    assert has_element?(lv, "#tags-published", "This activity is published")
     assert has_element?(lv, "#tags-published a", "Open D4H activity")
     refute has_element?(lv, "#activity-tags-form")
     assert Repo.get!(Activity, activity.id).is_published
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
-    assert has_element?(lv, "#activity-tags-in-d4h", "Change its tags in D4H.")
+    assert has_element?(lv, "#activity-tags-in-d4h", "Published, so change its tags in D4H.")
     refute has_element?(lv, "#activity-change-tags")
     assert has_element?(lv, "#activity-apply-template")
     assert has_element?(lv, "#activity-equipment-add")

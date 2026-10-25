@@ -103,7 +103,7 @@ defmodule App.ViewData.ChangeHistoryTest do
              fields: ["d4h_permission"],
              old_value: %{"d4h_permission" => 1},
              new_value: %{"d4h_permission" => 2}
-           }) == "D4H access changed from Editor to Member"
+           }) == "Access changed from Editor to Member"
   end
 
   test "a deleted group keeps its name" do
@@ -120,6 +120,6 @@ defmodule App.ViewData.ChangeHistoryTest do
                new_value: %{"deleted_at" => "2026-10-03T03:00:00Z"}
              },
              :activity
-           ) == "Deleted in D4H"
+           ) == "Deleted"
   end
 end

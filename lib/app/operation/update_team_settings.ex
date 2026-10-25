@@ -61,7 +61,7 @@ defmodule App.Operation.UpdateTeamSettings do
     add_error(
       changeset,
       :new_d4h_access_key,
-      "Paste the key again. #{D4H.service_name(team)} does not accept this one."
+      "Paste the key again. #{D4H.service_name(team)} refused this one."
     )
   end
 

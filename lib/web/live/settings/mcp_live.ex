@@ -54,7 +54,7 @@ defmodule Web.Settings.MCPLive do
          put_flash(
            socket,
            :error,
-           "Only a member D4H makes an Owner or Editor can create a token."
+           "Only members with Owner or Editor access in #{socket.assigns.service} can create a token."
          )}
     end
   end
@@ -87,7 +87,7 @@ defmodule Web.Settings.MCPLive do
         qualifications, and change history.
       </p>
       <p>
-        Agents cannot change D4H. They can propose attendance changes, and nothing happens
+        Agents cannot change your team's records. They can propose attendance changes, and nothing happens
         until a team admin sends them from Proposed changes. Agents never see email, phone
         numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
@@ -96,8 +96,8 @@ defmodule Web.Settings.MCPLive do
         it your team members' names, hours, and history.
       </p>
       <p>
-        Each token is yours. It stops working when you revoke it, or when D4H no longer makes
-        you an Owner or Editor.
+        Each token is yours. It stops working when you revoke it, or when you lose Owner or
+        Editor access in {@service}.
       </p>
 
       <div :if={@new_token} id="new-token" class="callout mb-4">
@@ -137,7 +137,7 @@ defmodule Web.Settings.MCPLive do
         </.form_actions>
       </.form>
       <p :if={!@can_create} id="cannot-create" class="text-text-muted">
-        Only a member D4H makes an Owner or Editor can create a token.
+        Only members with Owner or Editor access in {@service} can create a token.
       </p>
 
       <h2 class="heading mt-8">Tokens</h2>

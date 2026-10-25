@@ -23,7 +23,7 @@ defmodule App.Operation.ApplyEdit do
   def call(%Team{} = team, %User{} = user, %ChangeSetRow{} = row, now, opts) do
     if D4H.records?(team),
       do: apply_row(team, user, row, now, opts),
-      else: {:error, "Change this in D4H."}
+      else: {:error, "Change this in #{D4H.service_name(team)}."}
   end
 
   defp apply_row(team, user, row, now, opts) do
@@ -48,7 +48,7 @@ defmodule App.Operation.ApplyEdit do
         {:error, error}
 
       {:error, reason} ->
-        {:error, describe(reason)}
+        {:error, describe(team, reason)}
     end
   end
 
@@ -63,8 +63,8 @@ defmodule App.Operation.ApplyEdit do
       Logger.warning("Sync after an edit failed for team #{team.id}: #{inspect(error)}")
   end
 
-  defp describe(:no_team_key), do: "This team has no key. Ask a SAR Duty admin."
-  defp describe(:deleted), do: "This activity is deleted. Nothing can change on it."
-  defp describe(:published), do: "This activity is published. Unpublish it first."
-  defp describe(error) when is_exception(error), do: Exception.message(error)
+  defp describe(_team, :no_team_key), do: "This team has no key. Ask a SAR Duty admin."
+  defp describe(_team, :deleted), do: "This activity is deleted. Nothing can change on it."
+  defp describe(_team, :published), do: "This activity is published. Unpublish it first."
+  defp describe(team, error) when is_exception(error), do: D4H.error_text(team, error)
 end

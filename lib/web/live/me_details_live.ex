@@ -2,7 +2,6 @@ defmodule Web.MeDetailsLive do
   use Web, {:live_view_app_layout, access: :member}
 
   alias App.Accounts
-  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Operation.ChangeOwnPhone
   alias App.Operation.SaveOwnDetails
@@ -138,7 +137,7 @@ defmodule Web.MeDetailsLive do
          values = MemberDetailsViewModel.to_values(values),
          {:ok, _result} <- SaveOwnDetails.call(member, user, values, DateTime.utc_now()) do
       socket
-      |> put_flash(:info, "Your contact details are saved in #{service(member)}.")
+      |> put_flash(:info, "Your contact details are saved.")
       |> push_navigate(to: ~p"/teams/#{member.team}/me/details")
     else
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -149,14 +148,12 @@ defmodule Web.MeDetailsLive do
     end
   end
 
-  defp service(member), do: D4H.service_name(member.team)
-
   def render(assigns) do
     ~H"""
     <div class="measure">
       <h1 class="title">Contact details</h1>
       <p class="lead">
-        Changes go to {service(@member)}, where your team admins see them.
+        Changes go to your team's records, where your team admins see them.
       </p>
 
       <h2 class="heading">Mobile number</h2>
@@ -217,9 +214,9 @@ defmodule Web.MeDetailsLive do
 
   defp phone_content(%{pending: nil} = assigns) do
     ~H"""
-    <p id="current-phone">{@member.phone || "None in #{service(@member)}"}</p>
+    <p id="current-phone">{@member.phone || "None"}</p>
     <p class="hint">
-      Login codes by text go to this number. A change goes to {service(@member)} once you enter the code we text to the new one.
+      Login codes by text go to this number. A change is saved once you enter the code we text to the new one.
     </p>
     <.form :if={@text_login?} for={@phone_form} id="phone-form" phx-submit="send">
       <.input field={@phone_form[:phone]} type="tel" label="New mobile number" required>

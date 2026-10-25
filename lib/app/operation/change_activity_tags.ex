@@ -121,9 +121,8 @@ defmodule App.Operation.ChangeActivityTags do
     activity |> Ecto.Changeset.change(tags: tags) |> Repo.update!()
   end
 
-  defp describe(team, :no_team_key), do: "Save a #{D4H.key_name(team)} in team settings first."
-  defp describe(team, :deleted), do: "This activity is deleted in #{D4H.service_name(team)}."
+  defp describe(_team, :no_team_key), do: "Save your team's access key in team settings first."
+  defp describe(_team, :deleted), do: "This activity is deleted."
 
-  defp describe(team, %D4H.Error{} = error),
-    do: "#{D4H.service_name(team)} did not answer. #{Exception.message(error)}"
+  defp describe(team, error), do: D4H.error_text(team, error)
 end

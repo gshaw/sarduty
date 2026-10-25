@@ -6,7 +6,6 @@ defmodule Web.MeActivitiesLive do
   import Web.Components.MeYear
   import Web.Components.MemberLetter
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.TaxCreditLetter
   alias App.ViewData.MemberRecords
@@ -120,7 +119,7 @@ defmodule Web.MeActivitiesLive do
     </div>
 
     <.empty_state :if={@attendances == []} id="no-attendance" title={"No activities in #{@year}"}>
-      Activities you attend show here after SAR Duty refreshes from {D4H.service_name(@team)}.
+      Activities you attend show here after SAR Duty refreshes.
     </.empty_state>
     <.table
       :if={@attendances != []}
@@ -145,7 +144,7 @@ defmodule Web.MeActivitiesLive do
       </:col>
     </.table>
     <p id="missing" class="hint mt-4">
-      Missing an activity? Tell a team admin, who can fix it in {D4H.service_name(@team)}.
+      Missing an activity? Tell a team admin.
     </p>
     """
   end

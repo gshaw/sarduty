@@ -193,7 +193,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         </strong>
       </p>
       <p :if={@sent.no_email != []} id="letters-no-email">
-        No email in D4H, so not emailed: {Enum.map_join(@sent.no_email, ", ", & &1.name)}.
+        No email, so not emailed: {Enum.map_join(@sent.no_email, ", ", & &1.name)}.
       </p>
       <p :if={@sent.failed != []} id="letters-failed">
         The email did not send to {Enum.map_join(@sent.failed, ", ", & &1.name)}. Open
@@ -317,7 +317,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         put_flash(
           socket,
           :error,
-          "Created the letter. #{letter.member.name} has no email in D4H."
+          "Created the letter. #{letter.member.name} has no email."
         )
 
       {:error, _reason} ->

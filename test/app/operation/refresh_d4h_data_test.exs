@@ -15,7 +15,7 @@ defmodule App.Operation.RefreshD4HDataTest do
 
     assert RefreshD4HData.call(team) == {:error, {:key_rejected, 401}}
 
-    assert RefreshD4HData.error_message({:key_rejected, 401}) ==
-             "D4H rejected your D4H access key (401). Save a new one in team settings."
+    assert RefreshD4HData.error_message(team, {:key_rejected, 401}) ==
+             "D4H refused your access key (401). Save a new one in team settings."
   end
 end

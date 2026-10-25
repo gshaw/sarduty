@@ -259,7 +259,7 @@ defmodule Web.EquipmentCollectionLive do
     <.empty_state :if={@rows == []} id="no-equipment" title="No equipment yet">
       {if D4H.records?(@current_team),
         do: "Add the team's first item.",
-        else: "SAR Duty copies equipment from D4H when it refreshes."}
+        else: "Equipment comes in with each refresh."}
     </.empty_state>
     <.empty_state
       :if={!@browsing and @rows != [] and @groups == []}

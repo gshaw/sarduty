@@ -83,7 +83,7 @@ defmodule Web.GroupCollectionLive do
     </.table>
 
     <.empty_state :if={@all_count == 0} id="no-groups" title="No groups yet">
-      SAR Duty copies groups from D4H when it refreshes.
+      Groups come in with each refresh.
     </.empty_state>
     <.empty_state
       :if={@all_count > 0 and @groups == []}

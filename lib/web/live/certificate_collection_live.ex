@@ -3,7 +3,6 @@ defmodule Web.CertificateCollectionLive do
 
   import Web.Components.StatSwitch
 
-  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.Team
   alias Service.Format
@@ -17,7 +16,7 @@ defmodule Web.CertificateCollectionLive do
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.certificates?(team), do: raise(Web.Status.NotFound)
-    {:ok, assign(socket, page_title: "Certificates", service: D4H.service_name(team))}
+    {:ok, assign(socket, page_title: "Certificates")}
   end
 
   def handle_params(params, _uri, socket) do
@@ -43,7 +42,7 @@ defmodule Web.CertificateCollectionLive do
     ~H"""
     <h1 class="title">Certificates</h1>
     <p class="lead measure">
-      Members send a certificate for a qualification they hold. Accepting one records the award in {@service} and attaches the certificate.
+      Members send a certificate for a qualification they hold. Accepting one records the award and attaches the certificate.
     </p>
 
     <.stat_switch id="certificates-switch" label="Certificates">
@@ -63,7 +62,7 @@ defmodule Web.CertificateCollectionLive do
       id={"no-#{@view}-certificates"}
       title={empty_title(@view)}
     >
-      {empty_text(@view, @service)}
+      {empty_text(@view)}
     </.empty_state>
 
     <p :if={@certificates != [] and @view == :waiting} class="hint mb-4">
@@ -100,11 +99,10 @@ defmodule Web.CertificateCollectionLive do
   defp empty_title(:accepted), do: "No certificates accepted"
   defp empty_title(:declined), do: "No certificates declined"
 
-  defp empty_text(:waiting, _service),
+  defp empty_text(:waiting),
     do: "Certificates members send show here for you to accept."
 
-  defp empty_text(:accepted, service),
-    do: "Certificates you accept show here, once they are in #{service}."
+  defp empty_text(:accepted), do: "Certificates you accept show here, once they are sent."
 
-  defp empty_text(:declined, _service), do: "Certificates you decline show here, with the reason."
+  defp empty_text(:declined), do: "Certificates you decline show here, with the reason."
 end

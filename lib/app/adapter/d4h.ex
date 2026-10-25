@@ -62,6 +62,28 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc """
+  An error from the service in text people read, naming who refused or did not answer:
+  "D4H refused it: Forbidden (403)" or "SAR Duty Records did not answer. Try again." A
+  refusal keeps the service's own reason, since the fix is usually there.
+  """
+  def error_text(team_or_host, %D4H.Error{status: status} = error) when status in 400..499,
+    do: "#{service_name(team_or_host)} refused it: #{Exception.message(error)}"
+
+  def error_text(team_or_host, _error),
+    do: "#{service_name(team_or_host)} did not answer. Try again."
+
+  @doc """
+  Where to unpublish an activity, so attendance can change. A team on SAR Duty Records
+  does it on the activity's Change or delete page in SAR Duty, not in Records.
+  """
+  def unpublish_text(team_or_host) do
+    case service(team_or_host) do
+      :d4h -> "Unpublish it in D4H first."
+      :records -> "Unpublish it with Change or delete on the activity's page first."
+    end
+  end
+
   def regions do
     %{
       "America" => "api.d4h.org",

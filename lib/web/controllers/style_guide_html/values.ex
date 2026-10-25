@@ -176,7 +176,7 @@ defmodule Web.StyleGuideHTML.Values do
   defp elsewhere do
     {"Elsewhere", "Formatters that belong to one kind of value, beside its code.",
      [
-       {:"Service.Phone.format", "A phone number, from D4H or as typed",
+       {:"Service.Phone.format", "A phone number, from a refresh or as typed",
         [
           {~s{Service.Phone.format("(604) 555 1234")}, Service.Phone.format("(604) 555 1234")},
           {~s{Service.Phone.format("+44 20 7946 0958")}, Service.Phone.format("+44 20 7946 0958")}

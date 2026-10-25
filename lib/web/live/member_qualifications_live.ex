@@ -186,7 +186,7 @@ defmodule Web.MemberQualificationsLive do
       </:col>
     </.table>
     <p :if={@awards == []} id="no-qualifications">
-      {@member.name} has no qualifications in {D4H.service_name(@member.team)}.
+      {@member.name} has no qualifications.
     </p>
     """
   end

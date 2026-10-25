@@ -464,11 +464,10 @@ defmodule App.Operation.BuildGroupRulePreview do
     do: "Nothing earns #{name}. Add a qualification to it."
 
   def describe_problem({:missing_qualification, name}),
-    do: "#{name} names a qualification that is no longer in D4H. Remove or replace it."
+    do: "#{name} names a deleted qualification. Remove or replace it."
 
   def describe_problem({:missing_group, d4h_group_id}),
-    do:
-      "A rule names a group that is no longer in D4H (#{d4h_group_id}). Remove it from the rule."
+    do: "A rule names a deleted group (#{d4h_group_id}). Remove it from the rule."
 
   def describe_problem({:broken_group, title}),
     do: "The rules of #{title} need fixing first."

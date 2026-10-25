@@ -106,8 +106,8 @@ defmodule Web.EndorsementCollectionLive do
           </div>
           <div :if={row.missing > 0} class="text-danger-text" id={"endorsement-#{row.id}-missing"}>
             {Format.count(row.missing,
-              one: "1 is no longer in D4H.",
-              many: "%d are no longer in D4H."
+              one: "1 was deleted.",
+              many: "%d were deleted."
             )}
             <.a navigate={~p"/teams/#{@current_team}/endorsements/#{row.id}"}>Remove it</.a>
           </div>
@@ -147,7 +147,7 @@ defmodule Web.EndorsementCollectionLive do
   defp problem(row) do
     cond do
       row.same_as != [] -> "same qualifications as #{names(row.same_as)}"
-      row.missing > 0 -> "a qualification is no longer in D4H"
+      row.missing > 0 -> "a qualification was deleted"
       true -> "no qualifications yet"
     end
   end

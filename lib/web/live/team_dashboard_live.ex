@@ -207,7 +207,7 @@ defmodule Web.TeamDashboardLive do
     <div class="hint mt-1">
       <p id="refresh-status" class="mb-0 truncate">
         <.spinner :if={@refreshing?} id="refreshing" class="text-link">
-          {refreshing_text(@team, @view_data.refresh_result)}
+          {refreshing_text(@view_data.refresh_result)}
         </.spinner>
         <span :if={!@refreshing?} id="d4h-updated">{refreshed_ago(@team, @now)}</span>
       </p>
@@ -224,7 +224,9 @@ defmodule Web.TeamDashboardLive do
           Refresh now
         </.button>
         <span :if={@team_admin? and !D4H.records?(@team)} aria-hidden="true">·</span>
-        <.a :if={!D4H.records?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>Open D4H</.a>
+        <.a :if={!D4H.records?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>Open {D4H.service_name(
+          @team
+        )}</.a>
       </p>
     </div>
     """
@@ -313,7 +315,7 @@ defmodule Web.TeamDashboardLive do
         <span class="hint">Next 14 days</span>
       </header>
       <p :if={@activities == []} id="coming-up-empty" class="chart-caption">
-        No activities planned in {D4H.service_name(@team)}.
+        No activities planned.
       </p>
       <ul :if={@activities != []} id="coming-up-list" class="dash-list">
         <li
@@ -631,7 +633,7 @@ defmodule Web.TeamDashboardLive do
             overlay={false}
           />
           <p :if={!@map} id="activity-map" class="chart-caption">
-            No activities with a place in {D4H.service_name(@team)} in the last 12 months.
+            No activities with a place in the last 12 months.
           </p>
         </section>
         <section class="card">
@@ -656,8 +658,8 @@ defmodule Web.TeamDashboardLive do
   end
 
   # The refresh's own progress, such as "Members: 120/480 (25%)", after the slow thing.
-  defp refreshing_text(team, "Refreshing"), do: "Refreshing from #{D4H.service_name(team)}…"
-  defp refreshing_text(team, stage), do: "Refreshing from #{D4H.service_name(team)}… #{stage}"
+  defp refreshing_text("Refreshing"), do: "Refreshing…"
+  defp refreshing_text(stage), do: "Refreshing… #{stage}"
 
   # Progress messages arrive at every stage of a full refresh; the page recounts once the
   # refresh or sync is done, not at each stage.

@@ -7,6 +7,7 @@ defmodule Web.MCPController do
   """
   use Web, :controller
 
+  alias App.Adapter.D4H
   alias App.MCP.Tools
   alias App.Model.MCPToken
   alias App.Operation.AuthorizeMCPRequest
@@ -116,6 +117,7 @@ defmodule Web.MCPController do
     requested = params["protocolVersion"]
     version = if requested in @protocol_versions, do: requested, else: hd(@protocol_versions)
     team = token.team
+    service = D4H.service_name(team)
 
     {:ok,
      %{
@@ -123,8 +125,8 @@ defmodule Web.MCPController do
        "capabilities" => %{"tools" => %{"listChanged" => false}},
        "serverInfo" => %{"name" => "sarduty", "title" => "SAR Duty", "version" => "1.0.0"},
        "instructions" =>
-         "Data for #{team.name}, copied from D4H by SAR Duty. Times are in " <>
-           "#{team.timezone}. Nothing here changes D4H. propose_attendance_changes saves " <>
+         "Data for #{team.name}, copied from #{service} by SAR Duty. Times are in " <>
+           "#{team.timezone}. Nothing here changes #{service}. propose_attendance_changes saves " <>
            "a proposal that a team admin reviews and sends in SAR Duty."
      }}
   end

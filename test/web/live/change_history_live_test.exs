@@ -32,7 +32,7 @@ defmodule Web.ChangeHistoryLiveTest do
 
     assert has_element?(lv, "#member-history", "Rope rescue attendance changed: attended")
     assert has_element?(lv, "#member-history", "Oct 9, 10:00 to 10:10")
-    assert has_element?(lv, "#member-history", "Someone in D4H")
+    assert has_element?(lv, "#member-history", "Someone outside SAR Duty")
   end
 
   test "an activity's history names the member", ctx do

@@ -1,7 +1,6 @@
 defmodule Web.ChoreFormLive do
   use Web, :live_view_app_layout
 
-  alias App.Adapter.D4H
   alias App.Model.Chore
   alias App.Model.Team
   alias App.Operation.SaveChore
@@ -15,7 +14,7 @@ defmodule Web.ChoreFormLive do
     chore = Chore.find!(team, id)
 
     socket
-    |> assign(page_title: "Change chore", chore: chore, service: D4H.service_name(team))
+    |> assign(page_title: "Change chore", chore: chore)
     |> assign(today: Service.Period.today(DateTime.utc_now(), team.timezone))
     |> assign(categories: MeChoreFormLive.categories(team.id, chore))
     |> assign_form(Chore.build_changeset(chore, %{}, [], nil))
@@ -46,7 +45,7 @@ defmodule Web.ChoreFormLive do
       />
       <.input field={@form[:description]} label="What they did" />
       <.form_actions>
-        <.button id="chore-save" variant={:success} phx-disable-with={"Sending to #{@service}…"}>
+        <.button id="chore-save" variant={:success} phx-disable-with="Sending…">
           Save chore
         </.button>
         <.button navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}"}>Cancel</.button>

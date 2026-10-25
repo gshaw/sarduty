@@ -58,7 +58,7 @@ defmodule Web.MemberCardLive do
     socket =
       case EmailMemberCard.call(team, member, DateTime.utc_now()) do
         :ok -> put_flash(socket, :info, "Emailed the ID card to #{member.email}.")
-        {:error, :no_email} -> put_flash(socket, :error, "#{member.name} has no email in D4H.")
+        {:error, :no_email} -> put_flash(socket, :error, "#{member.name} has no email.")
         {:error, _reason} -> put_flash(socket, :error, "The email did not send. Try again.")
       end
 

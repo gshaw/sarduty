@@ -131,12 +131,14 @@ defmodule App.ViewData.ChangeHistory do
   `:activity`, the page it shows on, which decides whether it names the activity or the
   member. The change's `activity` or `member` must be preloaded for attendance.
   """
-  def describe(%D4HChange{record_kind: :member, action: :added}, _page, _tz), do: "Added to D4H"
+  def describe(%D4HChange{record_kind: :member, action: :added}, _page, _tz),
+    do: "Added to the team"
 
   def describe(%D4HChange{record_kind: :member, action: :changed} = c, _page, tz),
     do: c.fields |> Enum.map(&member_field(&1, c, tz)) |> Enum.uniq() |> sentences()
 
-  def describe(%D4HChange{record_kind: :activity, action: :added}, _page, _tz), do: "Added to D4H"
+  def describe(%D4HChange{record_kind: :activity, action: :added}, _page, _tz),
+    do: "Activity added"
 
   def describe(%D4HChange{record_kind: :activity, action: :changed} = c, _page, tz),
     do: c.fields |> Enum.map(&activity_field(&1, c, tz)) |> sentences()
@@ -155,7 +157,7 @@ defmodule App.ViewData.ChangeHistory do
     do: "#{qualification(c)} awarded. #{expiry(c.new_value["ends_at"], tz)}"
 
   def describe(%D4HChange{record_kind: :award, action: :removed} = c, _page, _tz),
-    do: "#{qualification(c)} removed from D4H"
+    do: "#{qualification(c)} removed"
 
   def describe(%D4HChange{record_kind: :award, action: :changed} = c, _page, tz) do
     if "ends_at" in c.fields,
@@ -183,7 +185,7 @@ defmodule App.ViewData.ChangeHistory do
     do: "Status changed from #{from_to(c, "d4h_status", &member_status/1)}"
 
   defp member_field("d4h_permission", c, _tz),
-    do: "D4H access changed from #{from_to(c, "d4h_permission", &permission/1)}"
+    do: "Access changed from #{from_to(c, "d4h_permission", &permission/1)}"
 
   defp member_field("joined_at", c, tz),
     do: "Joined date changed to #{day(c.new_value["joined_at"], tz)}"
@@ -214,7 +216,7 @@ defmodule App.ViewData.ChangeHistory do
   end
 
   defp activity_field("deleted_at", c, _tz),
-    do: if(c.new_value["deleted_at"], do: "Deleted in D4H", else: "Back in D4H")
+    do: if(c.new_value["deleted_at"], do: "Deleted", else: "Restored")
 
   defp attendance_subject(%D4HChange{activity: %{title: title}}, :member), do: title
   defp attendance_subject(%D4HChange{member: %{name: name}}, :activity), do: name

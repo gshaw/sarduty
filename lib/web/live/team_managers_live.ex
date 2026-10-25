@@ -30,9 +30,9 @@ defmodule Web.TeamManagersLive do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:managers} />
     <p :if={!D4H.records?(@current_team)} class="max-w-3xl">
-      These people can log in to SAR Duty for {@current_team.name}. They are the members D4H
-      makes an Owner or Editor. Members who are retired or have left cannot log in. To add or
-      remove someone, change their access in D4H. SAR Duty follows within 10 minutes.
+      These people can log in to SAR Duty for {@current_team.name}. They are the members with
+      Owner or Editor access in {@service}. Members who are retired or have left cannot log in.
+      To add or remove someone, change their access in {@service}. SAR Duty follows within 10 minutes.
     </p>
     <p :if={D4H.records?(@current_team)} class="max-w-3xl">
       These people can log in to SAR Duty for {@current_team.name}. They are the members who

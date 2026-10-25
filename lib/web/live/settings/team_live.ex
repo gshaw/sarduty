@@ -40,7 +40,7 @@ defmodule Web.Settings.TeamLive do
       id ->
         if List.keymember?(groups, id, 1),
           do: groups,
-          else: [{"A group no longer in D4H", id} | groups]
+          else: [{"A deleted group", id} | groups]
     end
   end
 
@@ -210,7 +210,7 @@ defmodule Web.Settings.TeamLive do
           <.button variant={:success}>Save settings</.button>
           <:trailing>
             <.button type="button" phx-click="refresh">
-              Refresh from {D4H.service_name(@current_team)}
+              Refresh
             </.button>
           </:trailing>
         </.form_actions>
@@ -298,7 +298,7 @@ defmodule Web.Settings.TeamLive do
           socket
           |> assign(current_team: team)
           |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Team refreshed from #{D4H.service_name(team)}.")
+          |> put_flash(:info, "Team refreshed.")
 
         {:noreply, socket}
 

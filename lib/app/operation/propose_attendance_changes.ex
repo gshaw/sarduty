@@ -54,8 +54,8 @@ defmodule App.Operation.ProposeAttendanceChanges do
   defp find_activity(team, id) do
     case Repo.get_by(Activity, id: id, team_id: team.id) do
       nil -> {:error, ["No activity #{id} on this team."]}
-      %Activity{deleted_at: %DateTime{}} -> {:error, ["The activity is deleted in D4H."]}
-      %Activity{is_published: true} -> {:error, ["The activity is published in D4H."]}
+      %Activity{deleted_at: %DateTime{}} -> {:error, ["The activity is deleted."]}
+      %Activity{is_published: true} -> {:error, ["The activity is published."]}
       activity -> {:ok, activity}
     end
   end

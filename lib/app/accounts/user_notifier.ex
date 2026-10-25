@@ -67,7 +67,6 @@ defmodule App.Accounts.UserNotifier do
   @doc "Tells a member, at their email, that their mobile number changed (#156)."
   def deliver_phone_changed(email_address, team, new_phone) do
     team_name = team.name
-    service = D4H.service_name(team)
 
     email =
       new()
@@ -76,7 +75,7 @@ defmodule App.Accounts.UserNotifier do
       |> subject("Your mobile number on #{team_name} changed")
       |> text_body("""
       Your mobile number on #{team_name} is now #{new_phone}. You changed it in SAR Duty, and
-      #{service} has it too.
+      your team's records have it too.
 
       If you did not make this change, tell one of your team admins.
       """)
@@ -109,9 +108,10 @@ defmodule App.Accounts.UserNotifier do
 
     Signed up by: #{signer_email}
     Team page: #{Web.Endpoint.url()}/teams/#{team.subdomain}
-    D4H access key from: #{team.d4h_access_key_owner || "unknown"}
+    Records in: #{D4H.service_name(team)}
+    Access key from: #{team.d4h_access_key_owner || "unknown"}
 
-    Its first D4H refresh has started. Review it on #{Web.Endpoint.url()}/admin.
+    Its first refresh has started. Review it on #{Web.Endpoint.url()}/admin.
     """)
     |> Mailer.deliver()
   end

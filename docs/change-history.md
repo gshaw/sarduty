@@ -13,7 +13,7 @@ from D4H on Oct 3". It merges these sources, newest first
   Duty's own data, from `member_standing_changes`.
 - **Seen in D4H**: `d4h_changes`, what the refresh saw change in D4H since the run
   before. D4H says neither when nor who, so the page shows the window between the 2 runs
-  ("Oct 9, 10:00 to 10:10") and "Someone in D4H". D4H's API has a `createdBy` on some
+  ("Oct 9, 10:00 to 10:10") and "Someone outside SAR Duty". D4H's API has a `createdBy` on some
   records but no `updatedBy` and no audit log (checked in its spec, 2026-10-07).
 
 ## How changes are recorded

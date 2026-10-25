@@ -147,7 +147,9 @@ defmodule Web.QualificationLive do
             >Rename or delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
-            <.a external={true} href={D4H.build_url(@team, "/team/qualifications")}>Open D4H qualifications</.a>
+            <.a external={true} href={D4H.build_url(@team, "/team/qualifications")}>Open {D4H.service_name(
+              @team
+            )} qualifications</.a>
           </li>
         </ul>
       </dd>

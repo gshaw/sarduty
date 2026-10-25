@@ -172,7 +172,7 @@ defmodule Web.StyleGuideHTML do
        "hero-arrow-top-right-on-square-mini", "hero-arrow-top-right-on-square",
        "A link that leaves SAR Duty, such as Open in D4H"},
       {"arrow-path", "hero-arrow-path-micro", "hero-arrow-path-mini", "hero-arrow-path",
-       "Refresh from D4H"},
+       "Refresh"},
       {"document-duplicate", "hero-document-duplicate-micro", "hero-document-duplicate-mini",
        "hero-document-duplicate", "Copy the value before it"},
       {"arrow-down-tray", "hero-arrow-down-tray-micro", "hero-arrow-down-tray-mini",
@@ -247,18 +247,18 @@ defmodule Web.StyleGuideHTML do
         sample: "Expired",
         look: "Solid red",
         means: "Wrong or blocked now.",
-        examples: "Expired, Not signed up, D4H key rejected"
+        examples: "Expired, Not signed up, Key refused"
       },
       %{
         kind: :outline,
         sample: "Primary hours",
         look: "Outlined",
-        means: "A tag from D4H. Data, not status.",
-        examples: "Whatever D4H holds: Rope, Marine, Avalanche"
+        means: "An activity's own tag. Data, not status.",
+        examples: "Whatever the team uses: Rope, Marine, Avalanche"
       },
       %{
         kind: :kinds,
-        look: "Solid, D4H colours",
+        look: "Solid, the kind's colour",
         means: "The kind of activity, shown on its own, such as beside a title.",
         examples: "Only these three words"
       },
@@ -364,7 +364,7 @@ defmodule Web.StyleGuideHTML do
     [
       {"Avery Chen",
        "Holds OFA Level 1 and GSAR Member, which meets both endorsements in the rule.",
-       "Added to D4H Mar 2, 2024", nil},
+       "Added Mar 2, 2024", nil},
       {"Casey Dhillon", "Wilderness First Aid expires Nov 12, 2025.",
        "Renewal course booked for Nov 1, 2025", 12},
       {"Devon Okafor", "No First Aid qualification.",

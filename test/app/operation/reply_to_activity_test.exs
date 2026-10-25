@@ -154,7 +154,7 @@ defmodule App.Operation.ReplyToActivityTest do
     test "a published activity takes no reply, and the copy stays", ctx do
       stub_d4h(ctx, true)
 
-      assert {:error, "Your reply cannot be sent. D4H has published this activity."} =
+      assert {:error, "Your reply cannot be sent. This activity is published."} =
                ReplyToActivity.call(ctx.team, ctx.activity, ctx.member, :no, ctx.user, ctx.now)
 
       refute_received {:d4h_write, _}
@@ -164,7 +164,7 @@ defmodule App.Operation.ReplyToActivityTest do
     test "a member who is not invited gets an answer, and D4H is never called", ctx do
       outsider = member_fixture(ctx.team)
 
-      assert {:error, "Only members invited in D4H can reply."} =
+      assert {:error, "Only invited members can reply."} =
                ReplyToActivity.call(ctx.team, ctx.activity, outsider, :yes, ctx.user, ctx.now)
 
       assert Repo.all(ChangeSet) == []

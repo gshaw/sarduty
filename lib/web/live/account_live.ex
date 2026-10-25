@@ -31,7 +31,7 @@ defmodule Web.AccountLive do
     <div class="measure">
       <h1 class="title">Account settings</h1>
       <p id="account-email">
-        Logged in as {@current_user.email}. Your email and your teams come from D4H.
+        Logged in as {@current_user.email}. Your email and your teams come from each team's records.
       </p>
       <form id="maps-app-form" class="mt-8" phx-change="set-maps-app" phx-submit="set-maps-app">
         <fieldset>

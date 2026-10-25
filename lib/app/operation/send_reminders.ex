@@ -13,7 +13,6 @@ defmodule App.Operation.SendReminders do
   import Ecto.Query
 
   alias App.Accounts.User
-  alias App.Adapter.D4H
   alias App.Mailer.ReminderMailer
   alias App.Model.Activity
   alias App.Model.Attendance
@@ -77,7 +76,7 @@ defmodule App.Operation.SendReminders do
       when team_id == team.id and round in [1, 2] do
     cond do
       activity.deleted_at ->
-        {:error, "This activity is deleted in #{D4H.service_name(team)}."}
+        {:error, "This activity is deleted."}
 
       not DateTime.before?(now, activity.started_at) ->
         {:error, "Reminders closed when the activity started."}

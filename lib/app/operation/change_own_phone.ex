@@ -13,7 +13,6 @@ defmodule App.Operation.ChangeOwnPhone do
   alias App.Accounts.User
   alias App.Accounts.UserNotifier
   alias App.Accounts.UserToken
-  alias App.Adapter.D4H
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
   alias App.Model.Member
@@ -149,7 +148,7 @@ defmodule App.Operation.ChangeOwnPhone do
         {:error, error}
 
       {:error, _reason} ->
-        {:error, "#{D4H.service_name(member.team)} did not take the change. Try again."}
+        {:error, "The change did not go through. Try again."}
     end
   end
 end

@@ -4,7 +4,6 @@ defmodule Web.TemplateFormLive do
   import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1]
   import Web.ActivityTemplateLive, only: [tags_to_add: 1, groups_to_invite: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.Tag
@@ -33,7 +32,6 @@ defmodule Web.TemplateFormLive do
         all_groups: Group.get_all(team.id)
       )
       |> assign(page_title: if(template, do: template.title, else: "Add template"))
-      |> assign(service: D4H.service_name(team))
       |> assign_form(Template.build_changeset(template || %Template{}, %{}))
 
     {:ok, socket}
@@ -94,7 +92,7 @@ defmodule Web.TemplateFormLive do
             </:col>
           </.table>
           <p :if={@all_groups == []} class="hint">
-            The team has no groups in {@service}.
+            The team has no groups yet.
           </p>
         </section>
       </aside>
@@ -123,7 +121,7 @@ defmodule Web.TemplateFormLive do
 
           <h2 class="heading mt-8">Invite · {length(@groups)}</h2>
           <p class="hint mb-4">
-            Applying the template invites each member of these groups to the activity. They answer in {@service}.
+            Applying the template invites each member of these groups to the activity.
           </p>
           <.groups_to_invite :if={@groups != []} id="template-groups" groups={@groups} />
           <p :if={@groups == []} id="template-no-groups" class="hint mb-4">

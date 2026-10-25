@@ -178,7 +178,7 @@ defmodule Web.TaxCreditLetterLive do
         put_flash(socket, :info, "Emailed the tax credit letter to #{letter.member.email}.")
 
       {:error, :no_email} ->
-        put_flash(socket, :error, "#{letter.member.name} has no email in D4H.")
+        put_flash(socket, :error, "#{letter.member.name} has no email.")
 
       {:error, _reason} ->
         put_flash(socket, :error, "The email did not send. Try again.")

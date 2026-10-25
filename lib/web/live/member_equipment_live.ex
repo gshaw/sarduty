@@ -5,7 +5,6 @@ defmodule Web.MemberEquipmentLive do
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
-  alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Repo
   alias App.ViewData.EquipmentList
@@ -43,7 +42,7 @@ defmodule Web.MemberEquipmentLive do
       </aside>
       <main class="content-2/3">
         <.empty_state :if={@rows == []} id="no-member-equipment" title="No equipment">
-          Items {D4H.service_name(@member.team)} puts with {@member.name} show here.
+          Items placed with {@member.name} show here.
         </.empty_state>
         <.held_table :if={@rows != []} id="member-equipment-list" rows={@rows} team={@member.team} />
       </main>

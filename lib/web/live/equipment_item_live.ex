@@ -95,7 +95,7 @@ defmodule Web.EquipmentItemLive do
             <dd>
               <ul id="item-actions" class="action-list">
                 <li>
-                  <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open D4H item</.a>
+                  <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open {@service} item</.a>
                 </li>
               </ul>
             </dd>

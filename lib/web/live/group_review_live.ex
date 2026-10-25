@@ -59,19 +59,19 @@ defmodule Web.GroupReviewLive do
       {:ok, %{applied: applied, failed: 0}} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Sent #{count_changes(applied)} to D4H.")
+         |> put_flash(:info, "Sent #{count_changes(applied)}.")
          |> push_navigate(to: group_path)}
 
       {:ok, %{applied: applied, failed: failed}} ->
         message =
-          "Sent #{count_changes(applied)} to D4H. #{count_changes(failed)} did not go " <>
+          "Sent #{count_changes(applied)}. #{count_changes(failed)} did not go " <>
             "through. See Recent changes for why."
 
         {:noreply, socket |> put_flash(:error, message) |> push_navigate(to: group_path)}
 
       {:error, :no_team_key} ->
         {:noreply,
-         put_flash(socket, :error, "Save the team's D4H access key in team settings first.")}
+         put_flash(socket, :error, "Save your team's access key in team settings first.")}
 
       {:error, :rules_broken} ->
         {:noreply, put_flash(socket, :error, "Fix the group's rules first.")}
@@ -88,19 +88,19 @@ defmodule Web.GroupReviewLive do
 
     <h1 class="title">Review changes</h1>
     <p class="lead">
-      Clear the box next to anyone you want to skip. SAR Duty makes the changes in D4H right
-      away, with the team's D4H access key.
+      Clear the box next to anyone you want to skip. SAR Duty sends the changes right away,
+      with your team's access key.
     </p>
 
     <div id="data-age" class="flex items-center gap-4 mb-4 text-sm">
       <span :if={refreshing?(@current_team)}>
-        <.spinner>Refreshing from D4H…</.spinner>
+        <.spinner>Refreshing…</.spinner>
       </span>
       <span :if={failed?(@current_team)} id="refresh-error" class="text-danger-text">
         {String.replace_prefix(@current_team.d4h_refresh_result, "Error: ", "Cannot refresh: ")}
       </span>
       <span :if={!refreshing?(@current_team) && App.Model.Team.d4h_updated_at(@current_team)}>
-        Refreshed from D4H {Service.Format.minutes_ago(
+        Refreshed {Service.Format.minutes_ago(
           App.Model.Team.d4h_updated_at(@current_team),
           DateTime.utc_now(),
           @current_team.timezone
@@ -113,7 +113,7 @@ defmodule Web.GroupReviewLive do
         phx-click="refresh"
         disabled={refreshing?(@current_team)}
       >
-        Refresh from D4H
+        Refresh
       </.button>
     </div>
 
@@ -122,7 +122,7 @@ defmodule Web.GroupReviewLive do
       id="no-team-key"
       class="callout mb-4"
     >
-      Sending changes needs the team's D4H access key.
+      Sending changes needs your team's access key.
       <.a navigate={~p"/teams/#{@current_team}/settings"}>Save it in team settings.</.a>
     </p>
 

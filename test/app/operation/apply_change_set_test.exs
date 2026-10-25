@@ -30,12 +30,12 @@ defmodule App.Operation.ApplyChangeSetTest do
   end
 
   test "an update is skipped when D4H changed the row since" do
-    assert {:skipped, "D4H changed this since the review. Review again."} =
+    assert {:skipped, "This changed since you reviewed it. Review again."} =
              update("requested") |> ApplyChangeSet.check([info(501, 7, "attending")])
   end
 
   test "an update is skipped when the row is gone from D4H" do
-    assert {:skipped, "The attendance row is gone from D4H. Review again."} =
+    assert {:skipped, "The attendance row was deleted. Review again."} =
              update("requested") |> ApplyChangeSet.check([info(502, 7, "requested")])
   end
 
@@ -52,7 +52,7 @@ defmodule App.Operation.ApplyChangeSetTest do
   end
 
   test "a member's reply is skipped when their row is gone from D4H" do
-    assert {:skipped, "The attendance row is gone from D4H."} =
+    assert {:skipped, "The attendance row was deleted."} =
              update("requested") |> ApplyChangeSet.check([info(502, 7, "requested")], :member)
   end
 

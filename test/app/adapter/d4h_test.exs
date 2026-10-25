@@ -122,6 +122,22 @@ defmodule App.Adapter.D4HTest do
       assert D4H.key_name("records.sarduty.com") == "Records access key"
       assert D4H.key_name("api.ca.d4h.org") == "D4H access key"
     end
+
+    test "an error names who refused or did not answer" do
+      refused = %D4H.Error{status: 403, message: "Forbidden (403)"}
+      assert D4H.error_text(:d4h, refused) == "D4H refused it: Forbidden (403)"
+
+      down = %D4H.Error{status: 503, message: "Service Unavailable (503)"}
+      assert D4H.error_text(:records, down) == "SAR Duty Records did not answer. Try again."
+
+      timeout = %Req.TransportError{reason: :timeout}
+      assert D4H.error_text(:d4h, timeout) == "D4H did not answer. Try again."
+    end
+
+    test "a Records team unpublishes in SAR Duty, not in Records" do
+      assert D4H.unpublish_text(:d4h) == "Unpublish it in D4H first."
+      refute D4H.unpublish_text(:records) =~ "Records"
+    end
   end
 
   describe "lists" do

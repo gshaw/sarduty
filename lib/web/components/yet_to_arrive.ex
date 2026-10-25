@@ -29,7 +29,7 @@ defmodule Web.Components.YetToArrive do
             <span :if={Service.Phone.format(member.phone)} class="block hint">
               {Service.Phone.format(member.phone)}
             </span>
-            <span :if={!Service.Phone.format(member.phone)} class="block hint">No mobile number in D4H</span>
+            <span :if={!Service.Phone.format(member.phone)} class="block hint">No mobile number</span>
           </span>
           <.call_and_text id={"#{@id}-#{member.id}"} phone={member.phone} />
         </li>

@@ -52,7 +52,7 @@ defmodule Web.Settings.HoursTagsLive do
     <.team_settings_tabs team={@current_team} current={:hours_tags} />
     <div class="measure">
       <p class="lead">
-        The D4H tags that say which hours an activity counts for on tax credit letters.
+        The tags that say which hours an activity counts for on tax credit letters.
       </p>
       <p class="mb-6">
         Letters already made keep their hours when a tag changes.

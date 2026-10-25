@@ -27,7 +27,7 @@ defmodule Web.CertificateLive do
     if !Team.certificates?(team), do: raise(Web.Status.NotFound)
 
     socket
-    |> assign(service: D4H.service_name(team), now: DateTime.utc_now())
+    |> assign(now: DateTime.utc_now())
     |> assign(qualifications: Qualification.get_all(team.id))
     |> load(id)
     |> assign_decline_form(%{})
@@ -94,10 +94,10 @@ defmodule Web.CertificateLive do
       :if={@certificate.status == :waiting and Certificate.dates_locked?(@certificate)}
       id="certificate-not-uploaded"
       kind={:warning}
-      title={"The certificate is not in #{@service} yet"}
+      title="The certificate did not upload"
     >
       <p>
-        The award is in {@service}, but its certificate did not upload. Send again to upload it.
+        The award was sent, but its certificate did not upload. Send again to upload it.
       </p>
       <p :if={error = attach_error(@certificate)} class="hint">{error}</p>
     </.banner>
@@ -108,12 +108,12 @@ defmodule Web.CertificateLive do
       :if={@existing}
       id="certificate-existing"
       kind={:warning}
-      title={"#{@service} already has this award"}
+      title="This member has this award already"
     >
       <p>
         {Member.first_name(@certificate.member)} holds {CertificateText.title(@certificate)} from {Format.date_short(
           @certificate.starts_on
-        )} in {@service}, {if @existing.certificate?,
+        )}, {if @existing.certificate?,
           do: "with a certificate. Decline this one.",
           else:
             "with no certificate. Attach certificate puts this file on that award and adds no second one."}
@@ -125,7 +125,6 @@ defmodule Web.CertificateLive do
         <.certificate_file
           certificate={@certificate}
           src={file_path(@current_team, @certificate, @accepted_award)}
-          service={@service}
         />
       </div>
       <aside class="content-1/3">
@@ -136,7 +135,7 @@ defmodule Web.CertificateLive do
           </dd>
           <dt>Sent</dt>
           <dd>{Format.datetime_short(@certificate.inserted_at, @current_team.timezone)}</dd>
-          <dt :if={@certificate.status == :waiting}>In {@service} now</dt>
+          <dt :if={@certificate.status == :waiting}>On record now</dt>
           <dd :if={@certificate.status == :waiting} id="certificate-latest">
             <.latest award={@latest} now={@now} timezone={@current_team.timezone} />
           </dd>
@@ -179,15 +178,20 @@ defmodule Web.CertificateLive do
               />
               <.input field={@form[:starts_on]} type="date" label="Start" />
               <.input field={@form[:ends_on]} type="date" label="Expiry (optional)" />
+              <%!-- A Records team changes and removes awards in SAR Duty. --%>
               <.warning_text class="mb-4">
-                Once it is in {@service}, only {@service} can change or remove the award.
+                Accepting sends the award.
+                <span :if={!D4H.records?(@current_team)}>
+                  After that, only {@service} can change or remove it.
+                </span>
+                Check the qualification and dates first.
               </.warning_text>
           <% end %>
           <.form_actions>
             <.button
               id="certificate-accept"
               variant={:success}
-              phx-disable-with={"Sending to #{@service}…"}
+              phx-disable-with="Sending…"
             >
               {accept_label(@certificate, @existing)}
             </.button>
@@ -197,7 +201,8 @@ defmodule Web.CertificateLive do
         <section :if={@certificate.status == :waiting} id="certificate-decline" class="mt-8">
           <h2 class="subheading">Decline</h2>
           <.warning_text :if={Certificate.dates_locked?(@certificate)} class="mb-4">
-            The award stays in {@service}. Only {@service} can remove it.
+            The award stays. Declining deletes only the certificate.
+            <span :if={!D4H.records?(@current_team)}>Only {@service} can remove the award.</span>
           </.warning_text>
           <.form for={@decline_form} id="decline-form" phx-submit="decline">
             <.input field={@decline_form[:reason]} type="textarea" rows="3" label="Why not">
@@ -217,7 +222,6 @@ defmodule Web.CertificateLive do
 
   attr :certificate, :map, required: true
   attr :src, :string, default: nil
-  attr :service, :string, required: true
 
   # A photo as an image, a PDF in the browser's own viewer. The frame has no `sandbox`
   # attribute: it would block Chrome's viewer, and the file's own header sandboxes it.
@@ -225,7 +229,7 @@ defmodule Web.CertificateLive do
   defp certificate_file(%{src: nil, certificate: %{status: :accepted}} = assigns) do
     ~H"""
     <p id="certificate-file-gone" class="hint">
-      SAR Duty deleted its copy of the file when the certificate was accepted. The award in {@service} has no certificate now.
+      SAR Duty deleted its copy of the file when the certificate was accepted. The award has no certificate now.
     </p>
     """
   end
@@ -360,7 +364,7 @@ defmodule Web.CertificateLive do
     socket
     |> put_flash(
       :info,
-      "Accepted #{CertificateText.title(certificate)} for #{certificate.member.name}. It is in #{socket.assigns.service}."
+      "Accepted #{CertificateText.title(certificate)} for #{certificate.member.name}."
     )
     |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/certificates")
   end

@@ -37,18 +37,18 @@ defmodule Web.ChoreText do
   (App.Operation.SendChores), as `{kind, text}`. `done` says what changed, such as
   "Accepted 3 chores", or is nil for Send changes.
   """
-  def send_flash(done, %{events: events, failed: failed}, service) do
+  def send_flash(done, %{events: events, failed: failed}) do
     {kind, result} =
       cond do
         failed > 0 ->
           {:error,
            Format.count(failed,
-             one: "1 activity did not go through to #{service}.",
-             many: "%d activities did not go through to #{service}."
+             one: "1 activity did not go through.",
+             many: "%d activities did not go through."
            )}
 
         events > 0 or is_nil(done) ->
-          {:info, "#{service} is up to date."}
+          {:info, "Chore activities are up to date."}
 
         true ->
           {:info, nil}

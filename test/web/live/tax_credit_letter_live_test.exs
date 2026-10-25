@@ -51,7 +51,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     lv |> element("#email-letter") |> render_click()
 
     assert_no_email_sent()
-    assert render(lv) =~ "has no email in D4H"
+    assert render(lv) =~ "has no email."
   end
 
   describe "hours" do

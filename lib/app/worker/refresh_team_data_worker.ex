@@ -1,6 +1,7 @@
 defmodule App.Worker.RefreshTeamDataWorker do
   use Oban.Worker, queue: :refresh, max_attempts: 3
 
+  alias App.Adapter.D4H
   alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.RefreshD4HData
@@ -23,7 +24,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
       e ->
         record(team, started_at, %{outcome: "failed", error: e |> Exception.message() |> short()})
 
-        {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{Exception.message(e)}"})
+        {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{refresh_error(team, e)}"})
         broadcast_team_refresh(team)
         # Reraise so the job fails with the real exception and stacktrace, which
         # App.Worker.ErrorReporter sends to Honeybadger.
@@ -42,12 +43,17 @@ defmodule App.Worker.RefreshTeamDataWorker do
   # Only a person can fix a missing or rejected key, so a cancelled job is neither
   # retried nor sent to Honeybadger.
   defp finish({:error, reason}, team, started_at) do
-    message = RefreshD4HData.error_message(reason)
+    message = RefreshD4HData.error_message(team, reason)
     record(team, started_at, %{outcome: "key_error", error: message})
     {:ok, team} = Team.update(team, %{d4h_refresh_result: "Error: #{message}"})
     broadcast_team_refresh(team)
     {:cancel, message}
   end
+
+  # A failed request names who refused or did not answer. Anything else is SAR Duty's own.
+  defp refresh_error(team, %D4H.Error{} = error), do: D4H.error_text(team, error)
+  defp refresh_error(team, %Req.TransportError{} = error), do: D4H.error_text(team, error)
+  defp refresh_error(_team, error), do: Exception.message(error)
 
   defp broadcast_team_refresh(team) do
     Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
