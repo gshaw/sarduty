@@ -51,6 +51,7 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/activities/:id/calendar",
     "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/take-attendance",
+    "/teams/:subdomain/whiteboard",
     "/teams/:subdomain/me",
     "/teams/:subdomain/me/activities",
     "/teams/:subdomain/me/card/apple-wallet",

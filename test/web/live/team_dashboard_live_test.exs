@@ -543,4 +543,66 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#to-do")
     assert has_element?(lv, "#refresh-now")
   end
+
+  describe "the whiteboard card (#515)" do
+    test "a member reads every live note, and no card when there are none", %{conn: conn} do
+      %{team: team, user: user} = member_with_login_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#whiteboard")
+
+      important = whiteboard_note_fixture(team, %{text: "Pager test Sunday.", important: true})
+
+      linked =
+        whiteboard_note_fixture(team, %{
+          text: "Winter tires go on.",
+          url: "https://www.example.com/tires"
+        })
+
+      whiteboard_note_fixture(team, %{
+        text: "Dues are due by October 15.",
+        archived_at: DateTime.utc_now(:second) |> DateTime.add(-3, :day)
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#whiteboard-note-#{important.id}", "Important")
+
+      assert has_element?(
+               lv,
+               ~s{#whiteboard-note-#{linked.id} a[href="https://www.example.com/tires"]},
+               "example.com"
+             )
+
+      refute has_element?(lv, "#whiteboard", "Dues are due")
+
+      assert has_element?(
+               lv,
+               ~s{#whiteboard a[href="/teams/#{team.subdomain}/whiteboard"]},
+               "All notes"
+             )
+    end
+
+    test "an organization's note says who it is from", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      note = whiteboard_note_fixture(team, %{owner_kind: :organization})
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
+      assert has_element?(lv, "#whiteboard-note-#{note.id}", "From your organization")
+    end
+
+    test "a team admin sees the card with no notes, unless the module is off", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#whiteboard-empty", "No notes on the whiteboard.")
+
+      whiteboard_note_fixture(team)
+      team |> Ecto.Changeset.change(whiteboard_enabled: false) |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#whiteboard")
+    end
+  end
 end

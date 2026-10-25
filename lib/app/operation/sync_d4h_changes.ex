@@ -14,6 +14,10 @@ defmodule App.Operation.SyncD4HChanges do
   Every sync also reads the open years' activities whole (Service.Period), even when no
   head moved: D4H doesn't change an activity's `updatedAt` when its tags change, and
   letters and "Needs attention" read those tags.
+
+  The whiteboard (#515) is the 14th list. A team with its module off answers 403, which
+  reads as an empty list here, never as a rejected key. While the team's whiteboard is
+  off, the sync skips it and the nightly refresh tries again.
   """
 
   import Ecto.Query
@@ -37,13 +41,14 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Operation.RefreshD4HData.UpsertQualificationAwards
   alias App.Operation.RefreshD4HData.UpsertQualifications
   alias App.Operation.RefreshD4HData.UpsertTags
+  alias App.Operation.RefreshD4HData.UpsertWhiteboardNotes
   alias App.Repo
 
   require Logger
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
-            member-group-memberships equipment equipment-usages)
+            member-group-memberships equipment equipment-usages whiteboard)
 
   # A D4H team may not have the equipment module (#271).
   @equipment_lists ~w(equipment equipment-usages)
@@ -55,7 +60,8 @@ defmodule App.Operation.SyncD4HChanges do
   # Equipment usages come after activities, in apply_plan/5, so a new activity's usages
   # aren't skipped.
   @small_lists ~w(members member-qualifications member-qualification-awards award-documents
-                  member-groups member-group-memberships equipment equipment-usages)
+                  member-groups member-group-memberships equipment equipment-usages
+                  whiteboard)
 
   # Rows that were skipped for an unknown parent come in once the parent does.
   @dependents %{
@@ -167,7 +173,7 @@ defmodule App.Operation.SyncD4HChanges do
 
   def call(%Team{} = team, now) do
     d4h = D4H.build_context_from_team(team)
-    heads = fetch_heads(d4h)
+    heads = fetch_heads(d4h, whiteboard?: team.whiteboard_enabled)
 
     changed =
       case plan(previous_heads(team), heads) do
@@ -183,21 +189,36 @@ defmodule App.Operation.SyncD4HChanges do
         else: reraise(error, __STACKTRACE__)
   end
 
+  @empty_head %{total_size: 0, newest_updated_at: nil}
+
   @doc """
   Every list's head, 4 requests at a time. A D4H team without equipment gets empty
-  equipment lists.
+  equipment lists, and one with the whiteboard off an empty whiteboard. With
+  `whiteboard?: false` the whiteboard isn't asked.
   """
-  def fetch_heads(d4h) do
+  def fetch_heads(d4h, opts \\ []) do
+    whiteboard? = Keyword.get(opts, :whiteboard?, true)
+
     @lists
-    |> parallel(&{&1, fetch_head(d4h, &1)})
+    |> parallel(fn
+      "whiteboard" when not whiteboard? -> {"whiteboard", @empty_head}
+      list -> {list, fetch_head(d4h, list)}
+    end)
     |> Map.new()
   end
 
   defp fetch_head(d4h, list) when list in @equipment_lists do
     case UpsertEquipmentItems.no_equipment(fn -> D4H.fetch_list_head(d4h, "/" <> list) end) do
       {:ok, head} -> head
-      :none -> %{total_size: 0, newest_updated_at: nil}
+      :none -> @empty_head
     end
+  end
+
+  defp fetch_head(d4h, "whiteboard") do
+    D4H.fetch_list_head(d4h, "/whiteboard")
+  rescue
+    error in D4H.Error ->
+      if error.status == 403, do: @empty_head, else: reraise(error, __STACKTRACE__)
   end
 
   # Award certificates (#314) are the documents list, filtered.
@@ -359,6 +380,8 @@ defmodule App.Operation.SyncD4HChanges do
 
   defp fetch_list("equipment-usages", d4h, team, progress),
     do: UpsertEquipmentUsages.call(d4h, team, progress)
+
+  defp fetch_list("whiteboard", d4h, team, _progress), do: UpsertWhiteboardNotes.call(d4h, team)
 
   # D4H ids of the activities saved or marked deleted whose attendance is worth checking.
   defp sync_activities(_d4h, _team, activities, _now) when activities == %{}, do: MapSet.new()

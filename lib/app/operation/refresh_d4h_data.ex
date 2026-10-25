@@ -72,6 +72,7 @@ defmodule App.Operation.RefreshD4HData do
       progress = refresh_qualifications(d4h, team, progress)
       progress = refresh_groups(d4h, team, progress)
       progress = refresh_equipment(d4h, team, progress)
+      progress = refresh_whiteboard(d4h, team, progress)
       RefreshD4HData.Progress.complete(progress)
     end)
 
@@ -171,6 +172,14 @@ defmodule App.Operation.RefreshD4HData do
 
     progress = RefreshD4HData.Progress.update_stage(progress, "Equipment usages")
     {_count, progress} = RefreshD4HData.UpsertEquipmentUsages.call(d4h, team, progress)
+    RefreshD4HData.Progress.finish_stage(progress)
+  end
+
+  # Every night, even while the team's whiteboard is off, so a team that turns the module
+  # on in D4H gets its notes the next night (#515).
+  defp refresh_whiteboard(d4h, team, progress) do
+    progress = RefreshD4HData.Progress.update_stage(progress, "Whiteboard")
+    RefreshD4HData.UpsertWhiteboardNotes.call(d4h, team)
     RefreshD4HData.Progress.finish_stage(progress)
   end
 

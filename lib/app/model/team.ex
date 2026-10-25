@@ -55,6 +55,9 @@ defmodule App.Model.Team do
     # checks who acts: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
     field :id_cards_enabled, :boolean, default: false
+    # False while D4H answers 403 for the team's whiteboard, with its module off (#515).
+    # Set only by the whiteboard's read in the sync and the full refresh.
+    field :whiteboard_enabled, :boolean, default: true
     # The hours tags the team's organization leaves blank (#323); see
     # App.Model.Activity.hours_tags/1. Set on the team's hours tags settings page.
     field :primary_hours_tag, TrimmedString

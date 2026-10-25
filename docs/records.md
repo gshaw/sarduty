@@ -76,6 +76,10 @@ that title.
   anything beyond status and barcode are Records' own. A new place is D4H's
   `POST /equipment-locations`.
 
+- **Whiteboard notes** (#515): Records serves D4H's `/whiteboard` in its shape, so the
+  Dashboard card and the Whiteboard page work as for a D4H team. It is always on, and
+  the Whiteboard page's Archived list is the only place a Records team sees old notes.
+
 Every Records-only write: `POST /members`, `permission` on a member, `PUT` and `DELETE`
 on `/members/<id>/image`, `DELETE` on
 `/events`, `/exercises`, and `/incidents`, `DELETE /member-qualifications/<id>`,

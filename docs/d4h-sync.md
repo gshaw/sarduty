@@ -20,10 +20,10 @@ refresh once a night as the safety net (#163).
   first 401 or 403 stops the syncs until a new key is saved in team settings or a nightly
   refresh gets past the key.
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
-- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 13 lists for
+- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 14 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
   change. If none moved since the last look (`teams.d4h_sync_state`), only the open
-  years' read below follows: 13 small requests and 3 pages.
+  years' read below follows: 14 small requests and 3 pages.
 - Every sync reads the open years' activities whole (#358): this year's, and last
   year's too from January to April ([Service.Period](../lib/service/period.ex)). D4H
   doesn't change an activity's `updatedAt` when its tags change, so the heads never see a
@@ -32,7 +32,7 @@ refresh once a night as the safety net (#163).
   SAR Duty Records changes `updatedAt` with tags, so the heads already see its edits, but
   it takes the same read so both services stay on one path.
 - A small list that moved (members, qualifications, awards, award certificates, groups,
-  memberships, equipment items and usages) is fetched whole through the full refresh's own stage, along
+  memberships, equipment items and usages, whiteboard notes) is fetched whole through the full refresh's own stage, along
   with the lists that point at it, so rows skipped for an unknown parent come in. Their
   stale-row deletes and the member departure rule keep working. Equipment usages come
   after activities, so a new activity's usages aren't skipped.
@@ -153,6 +153,7 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 7. Groups, then group memberships.
 8. Equipment items, then equipment usages ([equipment.md](equipment.md)). A team without
    D4H's equipment module gets a 403 and has none.
+9. Whiteboard notes; see [Whiteboard](#whiteboard).
 
 Order matters: attendance needs members and activities, awards need qualifications,
 memberships need groups. A row whose parent is unknown locally is skipped.
@@ -165,6 +166,30 @@ Progress goes through [Progress](../lib/app/operation/refresh_d4h_data/progress.
 update writes `teams.d4h_refresh_result` and broadcasts on the `"team_refresh"` PubSub
 topic. `Team.refresh_state/1` reads the column for both dashboards: `OK`, anything
 starting `Error:` is a failure, and any other text is a stage in progress.
+
+## Whiteboard
+
+The team's whiteboard notes (#515), which everyone on the team reads on the Dashboard
+and the Whiteboard page, are copied to `whiteboard_notes` by
+[UpsertWhiteboardNotes](../lib/app/operation/refresh_d4h_data/upsert_whiteboard_notes.ex).
+
+- The whiteboard is the sync's 14th list head. Post, Change, and an archive by hand move
+  its `updatedAt`, and a delete lowers its total. When either moved, the sync reads every
+  note, archived ones and the organization's too, and writes them in one transaction,
+  keyed by D4H id so a note keeps its local id. Notes D4H no longer has go. The nightly
+  refresh does the same read every night.
+- A note that runs out on its day changes nothing in D4H and needs no sync: pages show
+  `archived_at > now` from the copy.
+- Every note is one page today: the largest team's 752 notes came back in one page of 1000 in under
+  a second (2026-10-24).
+- **A 403 is the module off, never a rejected key.** One D4H team of 15 had the module
+  off (2026-10-20), and D4H answers 403 "The required modules are not enabled for this
+  context". The head reads it as an empty list, and the read saves no notes and sets
+  `teams.whiteboard_enabled` false, which hides the card and the Whiteboard page. Any
+  other 401 or 403 stops the team's syncs (`key_rejected`), so this one is rescued where
+  it is asked. While it is off, the sync skips the whiteboard and the nightly refresh
+  tries again, so a team that turns the module on gets its notes the next night.
+- SAR Duty Records serves the whiteboard in D4H's shape, always on.
 
 ## Where the copy drifts
 

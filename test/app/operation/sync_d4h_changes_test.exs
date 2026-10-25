@@ -5,7 +5,7 @@ defmodule App.Operation.SyncD4HChangesTest do
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
-            member-group-memberships equipment equipment-usages)
+            member-group-memberships equipment equipment-usages whiteboard)
 
   defp heads(overrides \\ %{}) do
     @lists
