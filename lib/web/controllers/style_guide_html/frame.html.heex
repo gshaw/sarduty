@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{page_title(@current)} · SAR Duty style guide</title>
+    <%!-- The bar's navy, as in the app, so iOS fills the area under the clock with it. --%>
+    <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
+    <script>
+      // Before first paint, so a saved theme doesn't flash. A chosen theme also sets the
+      // browser's colour, which otherwise follows the system's.
+      (function () {
+        var navy = { light: "#13243a", dark: "#0a111b" };
+        window.setThemeColor = function (theme) {
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+            var system = meta.media.indexOf("dark") >= 0 ? "dark" : "light";
+            meta.content = navy[theme || system];
+          });
+        };
+        var theme = localStorage.getItem("styles-theme");
+        if (theme) document.documentElement.dataset.theme = theme;
+        window.setThemeColor(theme);
+      })();
+    </script>
+    <Web.Layouts.favicon_links />
+    <%!-- The app's stylesheet, so every example looks as it does in the app. --%>
+    <link rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <%!-- Mounts the hooks examples need, such as the combobox's. --%>
+    <script type="module" src={~p"/assets/js/styles.js"}>
+    </script>
+    <.styles />
+  </head>
+  <body>
+    <%!-- The app's own bar, as on the home page: your team with the switcher, or Log in.
+    Below 1024px its Menu holds the side nav. --%>
+    <Web.Layouts.main_nav_bar
+      current_user={@current_user}
+      current_team={@current_team}
+      managed_teams={@managed_teams}
+      member_logins={@member_logins}
+      user_organizations={@user_organizations}
+      current_path={@conn.request_path}
+      pages={nav_sections(@current)}
+    >
+      <:menu_foot>
+        <hr />
+        <.theme_switch />
+      </:menu_foot>
+    </Web.Layouts.main_nav_bar>
+    {@inner_content}
+    <script>
+      // iOS Safari only applies :active, the pressed look, when a touch listener exists.
+      document.addEventListener("touchstart", function () {}, { passive: true });
+
+      (function () {
+        var buttons = document.querySelectorAll("[data-theme-choice]");
+        function show() {
+          var current = document.documentElement.dataset.theme || "";
+          buttons.forEach(function (b) {
+            b.setAttribute("aria-pressed", b.dataset.themeChoice === current);
+          });
+        }
+        buttons.forEach(function (b) {
+          b.addEventListener("click", function () {
+            var theme = b.dataset.themeChoice;
+            if (theme) {
+              document.documentElement.dataset.theme = theme;
+              localStorage.setItem("styles-theme", theme);
+            } else {
+              delete document.documentElement.dataset.theme;
+              localStorage.removeItem("styles-theme");
+            }
+            window.setThemeColor(theme);
+            show();
+          });
+        });
+        show();
+      })();
+
+      // The phone's Menu opens at the page you're on, not 30 pages above it.
+      (function () {
+        var menu = document.getElementById("phone-menu");
+        if (!menu) return;
+        menu.addEventListener("toggle", function () {
+          var panel = menu.querySelector(".site-bar-phone-panel");
+          var current = panel.querySelector('[aria-current="page"]');
+          if (menu.open && current) panel.scrollTop = current.offsetTop - panel.clientHeight / 2;
+        });
+      })();
+    </script>
+  </body>
+</html>

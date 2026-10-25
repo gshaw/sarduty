@@ -311,19 +311,27 @@ defmodule Web.Layouts do
   attr :certificate_count, :integer, default: 0
   attr :size, :atom, default: :wide
 
+  attr :pages, :list,
+    default: nil,
+    doc: "the Menu's links on a page outside every area, such as the style guide's"
+
   slot :search,
     doc: "the search, before the avatar (#473): a field on a desktop, an icon below 1024px"
 
+  slot :menu_foot, doc: "after the Menu's links, such as the style guide's theme switch"
+
   # The top bar (#406): the area's name after the logo, with the team switcher on it when
   # you can go somewhere else, and your avatar on the right, which opens the account menu.
-  # Outside every area (home, terms, privacy), a logged-in person's bar names their team,
-  # with the switcher on it and nothing marked, so the name always opens the way back.
-  # Below 1024px (#471) the Menu button on the left holds the area's pages, the logo sits
+  # Outside every area (home, terms, privacy, the style guide), a logged-in person's bar
+  # names their team, with the switcher on it and nothing marked, so the name always opens
+  # the way back. Below 1024px (#471) the Menu button on the left holds the area's pages,
+  # or the style guide's, logged in or not, the logo sits
   # over the area's name in the middle, with the switcher on the name, and the avatar stays
   # on the right. Its menus share one details name, so opening one closes the others.
   # See /styles/top-bar.
   def main_nav_bar(assigns) do
     {area, sections} = navigation(assigns)
+    sections = assigns.pages || sections
 
     {switch_rows, person} =
       if user = assigns.current_user do
@@ -386,15 +394,6 @@ defmodule Web.Layouts do
           {render_slot(@search)}
           <.account_menu person={@person} />
         </div>
-        <.site_bar_phone_menu
-          :if={@sections != []}
-          waiting?={Enum.any?(List.flatten(@sections), & &1.count)}
-        >
-          <%= for {links, index} <- Enum.with_index(@sections) do %>
-            <.menu_divider :if={index > 0} />
-            <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
-          <% end %>
-        </.site_bar_phone_menu>
       <% else %>
         <.a
           :if={!login_page?(@current_path)}
@@ -404,6 +403,16 @@ defmodule Web.Layouts do
           class="site-bar-login"
         ><.icon name="hero-arrow-right-end-on-rectangle" /> Log in</.a>
       <% end %>
+      <.site_bar_phone_menu
+        :if={@sections != []}
+        waiting?={Enum.any?(List.flatten(@sections), & &1.count)}
+      >
+        <%= for {links, index} <- Enum.with_index(@sections) do %>
+          <.menu_divider :if={index > 0} />
+          <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
+        <% end %>
+        {render_slot(@menu_foot)}
+      </.site_bar_phone_menu>
     </.site_bar>
     """
   end
@@ -530,14 +539,14 @@ defmodule Web.Layouts do
   attr :id_prefix, :string, required: true
 
   # One page in the side navigation or the phone menu, with a count when something waits
-  # there.
-  defp nav_link(assigns) do
+  # there. An open link is a section whose pages are listed below it, as in the style guide.
+  def nav_link(assigns) do
     ~H"""
     <.link
       navigate={@link.path}
       id={@id_prefix <> @link.key}
       aria-current={@link.current && "page"}
-      class="nav-link"
+      class={["nav-link", @link[:open] && "is-open"]}
     >
       {@link.label}
       <.badge :if={@link.count} kind={:warning}>{@link.count}</.badge>

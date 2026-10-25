@@ -1,6 +1,8 @@
 // The style guide's own script. Its pages are not LiveViews, so hooks that the examples
 // need are mounted here by hand.
 import {Combobox} from "./combobox"
+// The top bar's Log out is a DELETE link, which phoenix_html sends.
+import "phoenix_html"
 
 document.querySelectorAll("[phx-hook=Combobox]").forEach(el => {
   const hook = Object.create(Combobox)

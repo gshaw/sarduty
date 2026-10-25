@@ -3,18 +3,26 @@ defmodule Web.StyleGuideController do
 
   alias Web.StyleGuideHTML
 
-  # The design system: GOV.UK's patterns, Carbon's density, light and dark. It renders
-  # without the app's layouts, so it shows the tokens and components on their own.
-  plug :put_root_layout, false
+  # The design system: GOV.UK's patterns, Carbon's density, light and dark. Its own frame
+  # under the app's top bar, so the team switcher is there as on any page outside a team.
+  plug :put_root_layout, html: {StyleGuideHTML, :frame}
   plug :put_layout, false
+  plug :assign_menus
 
-  def index(conn, _params), do: render(conn, :index_page)
+  def index(conn, _params), do: render(conn, :index_page, current: :index)
 
   def show(conn, %{"page" => slug}) do
     case StyleGuideHTML.find(slug) do
-      {:group, group} -> render(conn, :group_page, group: group)
-      {:page, template} -> render(conn, template)
-      nil -> raise Web.Status.NotFound
+      {:group, {group, _title, _about, _pages} = g} ->
+        render(conn, :group_page, group: g, current: group)
+
+      {:page, page} ->
+        render(conn, StyleGuideHTML.template(page), current: page)
+
+      nil ->
+        raise Web.Status.NotFound
     end
   end
+
+  defp assign_menus(conn, opts), do: Web.UserAuth.assign_menus(conn, opts)
 end
