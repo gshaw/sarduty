@@ -13,7 +13,7 @@ defmodule Web.MemberCardLiveTest do
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
-    %{conn: log_in_user(conn, user), team: team, member: member}
+    %{conn: log_in_user(conn, user), user: user, team: team, member: member}
   end
 
   test "a member's first card gets their Wallet serial, and cards made before keep theirs",
@@ -40,6 +40,35 @@ defmodule Web.MemberCardLiveTest do
     assert has_element?(lv, ~s(#card-verify-link[href="#{url}"]))
   end
 
+  test "a retired member gets no card, and an old one shows not active",
+       %{conn: conn, team: team} do
+    member = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    assert has_element?(lv, "#no-card", "is retired")
+    refute has_element?(lv, "#issue")
+    render_click(lv, "issue", %{})
+    assert MemberCard.find_current(team, member) == nil
+
+    member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    assert has_element?(lv, "#card-status", "Not active")
+    assert has_element?(lv, "#revoke")
+    refute has_element?(lv, "#email-pass")
+  end
+
+  test "endorsements: a link to pick them until the team shows some, then the member's",
+       %{conn: conn, team: team, member: member} do
+    member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    assert has_element?(lv, "#card-qualifications a", "Select endorsements to show")
+
+    endorsement_fixture(team, %{on_card: true})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    assert has_element?(lv, "#card-qualifications", "None")
+    refute has_element?(lv, "#card-qualifications a")
+  end
+
   test "a team without ID cards sees why, and no way to issue one", %{
     conn: conn,
     team: team,
@@ -54,16 +83,16 @@ defmodule Web.MemberCardLiveTest do
     assert MemberCard.find_current(team, member) == nil
   end
 
-  test "replacing a card cancels the old one", %{conn: conn, team: team, member: member} do
-    old = member_card_fixture(member)
+  # A pass goes on the member's phone, from Your membership, never the team admin's.
+  test "offers no Wallet buttons", %{conn: conn, team: team, member: member} do
+    App.ApplePassCredentials.configure()
+    App.GoogleWalletCredentials.configure()
+    member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
-    lv |> element("#replace") |> render_click()
-
-    assert Repo.reload!(old).revoked_at
-    new = MemberCard.find_current(team, member)
-    assert new.code != old.code
-    assert has_element?(lv, "#card-code", MemberCard.format_code(new.code))
+    assert has_element?(lv, "#email-pass")
+    refute has_element?(lv, "#apple-pass")
+    refute has_element?(lv, "#google-pass")
   end
 
   test "cancels a card", %{conn: conn, team: team, member: member} do
@@ -74,6 +103,7 @@ defmodule Web.MemberCardLiveTest do
 
     assert Repo.reload!(card).revoked_at
     assert has_element?(lv, "#no-card")
+    refute render(lv) =~ "Cancelled"
   end
 
   describe "with Apple Wallet set up" do
@@ -109,7 +139,17 @@ defmodule Web.MemberCardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       refute has_element?(lv, "#email-pass")
-      assert has_element?(lv, "#apple-pass")
+      assert has_element?(lv, "#card-delivery", "has no email. Add one in D4H")
+    end
+
+    test "says how the card reaches the member", %{conn: conn, team: team, member: member} do
+      member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+      assert has_element?(lv, "#card-delivery", "Email it so #{member.name} can add it")
+
+      team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+      assert has_element?(lv, "#card-delivery", "adds it to Wallet from Your membership")
     end
   end
 
@@ -127,7 +167,7 @@ defmodule Web.MemberCardLiveTest do
     } do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
-      assert has_element?(lv, "#card-phones", "Not on a phone yet")
+      assert has_element?(lv, "#card-phones", "Not in Wallet yet")
       refute has_element?(lv, "#test-update")
     end
 
@@ -144,7 +184,28 @@ defmodule Web.MemberCardLiveTest do
       assert has_element?(lv, "#card-phones", "On 2 phones · last downloaded Sep 30, 15:42")
     end
 
-    test "sends a test update to the phone", %{conn: conn, team: team, member: member, card: card} do
+    test "only a SAR Duty admin sends a test update", %{
+      conn: conn,
+      team: team,
+      member: member,
+      card: card
+    } do
+      PassRegistration.register!(card, "device-1", "push-token-1")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+      refute has_element?(lv, "#test-update")
+      render_click(lv, "test-update", %{})
+      refute Repo.reload!(card).pass_test_at
+    end
+
+    test "sends a test update to the phone", %{
+      conn: conn,
+      user: user,
+      team: team,
+      member: member,
+      card: card
+    } do
+      make_admin(user)
       PassRegistration.register!(card, "device-1", "push-token-1")
       test_pid = self()
 
@@ -169,12 +230,12 @@ defmodule Web.MemberCardLiveTest do
       :ok
     end
 
-    test "offers the Google pass and no Apple one", %{conn: conn, team: team, member: member} do
-      member_card_fixture(member)
+    test "says when the card is in Google Wallet", %{conn: conn, team: team, member: member} do
+      card = member_card_fixture(member)
+      MemberCard.mark_in_wallet!(card, DateTime.utc_now())
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
-      assert has_element?(lv, "#google-pass")
-      refute has_element?(lv, "#apple-pass")
+      assert has_element?(lv, "#card-phones", "In Google Wallet")
     end
 
     test "emails the Google Wallet link", %{conn: conn, team: team, member: member} do

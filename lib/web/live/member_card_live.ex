@@ -4,6 +4,7 @@ defmodule Web.MemberCardLive do
   import Web.Components.MemberPage
   import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
+  alias App.Model.Endorsement
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
@@ -28,27 +29,29 @@ defmodule Web.MemberCardLive do
   def handle_params(params, _uri, socket) do
     team = socket.assigns.current_team
     member = team |> Member.find!(params["id"]) |> Repo.preload([:team])
+    now = DateTime.utc_now()
 
     socket =
       socket
       |> assign(:page_title, "#{member.name} · ID card")
       |> assign(:member, member)
+      |> assign(:current?, Member.current?(member, now))
       |> load_sidebar()
       |> assign_card(MemberCard.find_current(team, member))
-      |> assign(:qualifications, BuildCardQualifications.call(team, member, DateTime.utc_now()))
+      |> assign(:qualifications, BuildCardQualifications.call(team, member, now))
+      |> assign(:endorsements_on_card?, Endorsement.any_on_card?(team.id))
 
     {:noreply, socket}
   end
 
+  # The page shows the new card, so no message.
   def handle_event("issue", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
 
     case IssueMemberCard.call(team, member, DateTime.utc_now()) do
-      {:ok, card} ->
-        {:noreply, socket |> assign_card(card) |> put_flash(:info, "Issued a new ID card.")}
-
-      {:error, :id_cards_off} ->
-        {:noreply, put_flash(socket, :error, id_cards_off())}
+      {:ok, card} -> {:noreply, assign_card(socket, card)}
+      {:error, :id_cards_off} -> {:noreply, put_flash(socket, :error, id_cards_off(team))}
+      {:error, :retired} -> {:noreply, socket}
     end
   end
 
@@ -65,13 +68,19 @@ defmodule Web.MemberCardLive do
     {:noreply, socket}
   end
 
+  # The page shows the card is gone, so no message.
   def handle_event("revoke", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
     :ok = RevokeMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, socket |> assign_card(nil) |> put_flash(:info, "Cancelled the ID card.")}
+    {:noreply, assign_card(socket, nil)}
   end
 
-  def handle_event("test-update", _params, socket) do
+  # A check that Apple Wallet updates still reach phones (#76), for SAR Duty admins.
+  def handle_event(
+        "test-update",
+        _params,
+        %{assigns: %{current_user: %{is_admin: true}}} = socket
+      ) do
     %{current_team: team, member: member} = socket.assigns
 
     case MemberCard.find_current(team, member) do
@@ -86,6 +95,8 @@ defmodule Web.MemberCardLive do
     end
   end
 
+  def handle_event("test-update", _params, socket), do: {:noreply, socket}
+
   def handle_info(:pass_fetched, socket) do
     %{current_team: team, member: member} = socket.assigns
     {:noreply, assign_card(socket, MemberCard.find_current(team, member))}
@@ -94,13 +105,18 @@ defmodule Web.MemberCardLive do
   # Swoosh's test adapter sends each email to the process that sent it.
   def handle_info(_message, socket), do: {:noreply, socket}
 
-  defp id_cards_off,
-    do: "ID cards are not on for your team. Ask a SAR Duty admin to turn them on."
+  # Once a team is in an organization, its organization admins turn cards on (#512).
+  defp id_cards_off(%{organization_id: nil}),
+    do: "A SAR Duty admin turns them on after checking your team. Ask one to turn them on."
+
+  defp id_cards_off(_team), do: "Your organization admins turn them on. Ask one to turn them on."
 
   defp assign_card(socket, card) do
     phones = if card, do: length(PassRegistration.get_all_for_serial(card)), else: 0
     socket |> assign(:card, card) |> assign(:phones, phones)
   end
+
+  defp wallet?, do: BuildApplePass.configured?() or BuildGooglePass.configured?()
 
   def render(assigns) do
     ~H"""
@@ -117,19 +133,30 @@ defmodule Web.MemberCardLive do
       <.banner
         :if={!@current_team.id_cards_enabled}
         id="id-cards-off"
-        kind={:warning}
-        title="ID cards are not on for your team"
+        kind={:danger}
+        title="ID cards are off"
       >
-        A SAR Duty admin turns them on once they have checked your team. Ask one to.
+        {id_cards_off(@current_team)}
       </.banner>
       <.card_content
         :if={@current_team.id_cards_enabled}
         card={@card}
         member={@member}
+        current?={@current?}
         qualifications={@qualifications}
+        endorsements_on_card?={@endorsements_on_card?}
         phones={@phones}
+        admin?={@current_user.is_admin}
+        member_logins?={@current_team.member_logins}
+        service={@service}
       />
     </.member_page>
+    """
+  end
+
+  defp card_content(%{card: nil, current?: false} = assigns) do
+    ~H"""
+    <p id="no-card">{@member.name} is retired, so they cannot get an ID card.</p>
     """
   end
 
@@ -147,24 +174,33 @@ defmodule Web.MemberCardLive do
     <div id="card">
       <dl>
         <dt>Code</dt>
-        <dd id="card-code" class="mono text-lg">{MemberCard.format_code(@card.code)}</dd>
+        <dd class="mono">
+          <.a id="card-verify-link" href={verify_url(@card)}>{Web.VerifyHost.host()}/<span id="card-code">{MemberCard.format_code(
+            @card.code
+          )}</span></.a>
+        </dd>
+        <dt>Status</dt>
+        <dd id="card-status">
+          {if @current?, do: "Active", else: "Not active: #{@member.name} is retired"}
+        </dd>
         <dt>Issued</dt>
-        <dd>{Service.Format.date_long(@card.inserted_at, @member.team.timezone)}</dd>
-        <dt>On the back</dt>
+        <dd>{Service.Format.date_short(@card.inserted_at, @member.team.timezone)}</dd>
+        <dt>Endorsements</dt>
         <dd id="card-qualifications">
           <div :for={q <- @qualifications}>
             {BuildCardQualifications.describe(q, @member.team.timezone)}
           </div>
-          <div :if={@qualifications == []}>
-            None held.
+          <div :if={@qualifications == [] and @endorsements_on_card?}>None</div>
+          <div :if={!@endorsements_on_card?}>
+            Your team shows no endorsements on ID cards.
             <.a navigate={~p"/teams/#{@member.team}/endorsements"}>Select endorsements to show</.a>
           </div>
         </dd>
-        <dt :if={BuildApplePass.configured?()}>Apple Wallet</dt>
-        <dd :if={BuildApplePass.configured?()}>
-          <span id="card-phones">{phone_status(@phones, @card, @member.team.timezone)}</span>
+        <dt :if={wallet?()}>Wallet</dt>
+        <dd :if={wallet?()}>
+          <span id="card-phones">{wallet_status(@phones, @card, @member.team.timezone)}</span>
           <.button
-            :if={@phones > 0}
+            :if={@admin? and @phones > 0}
             id="test-update"
             phx-click="test-update"
             phx-disable-with="Sending…"
@@ -173,15 +209,9 @@ defmodule Web.MemberCardLive do
           </.button>
         </dd>
       </dl>
-      <p>
-        Anyone can verify this ID card at <.a id="card-verify-link" href={verify_url(@card)}>{Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}</.a>.
-      </p>
-      <.form_actions
-        :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
-        class="mb-4"
-      >
+      <.form_actions>
         <.button
-          :if={@member.email}
+          :if={@current? && @member.email && wallet?()}
           id="email-pass"
           variant={:primary}
           phx-click="email"
@@ -190,45 +220,46 @@ defmodule Web.MemberCardLive do
         >
           Email ID card
         </.button>
-        <.button
-          :if={BuildApplePass.configured?()}
-          id="apple-pass"
-          href={~p"/teams/#{@member.team}/members/#{@member.id}/card/apple-wallet"}
-        >
-          Add to Apple Wallet
-        </.button>
-        <.button
-          :if={BuildGooglePass.configured?()}
-          id="google-pass"
-          href={~p"/teams/#{@member.team}/members/#{@member.id}/card/google-wallet"}
-        >
-          Add to Google Wallet
-        </.button>
+        <:trailing>
+          <.button
+            id="revoke"
+            variant={:danger}
+            phx-click="revoke"
+            data-confirm={"Cancel #{@member.name}'s ID card? Its code stops working, and Wallet shows it as cancelled."}
+          >
+            Cancel ID card
+          </.button>
+        </:trailing>
       </.form_actions>
-      <.form_actions>
-        <.button
-          id="replace"
-          phx-click="issue"
-          data-confirm="Replace this ID card? The old code stops working."
-        >
-          Replace card
-        </.button>
-        <.button
-          id="revoke"
-          variant={:danger}
-          phx-click="revoke"
-          data-confirm="Cancel this ID card? The code stops working."
-        >
-          Cancel card
-        </.button>
-      </.form_actions>
+      <p :if={@current? and wallet?()} id="card-delivery" class="hint">
+        {delivery_hint(assigns)}
+      </p>
     </div>
     """
   end
 
-  defp phone_status(0, _card, _timezone), do: "Not on a phone yet"
+  # How the card reaches the member's phone, now that only they add it to Wallet.
+  defp delivery_hint(%{member_logins?: true, member: member}),
+    do: "#{member.name} adds it to Wallet from Your membership."
 
-  defp phone_status(phones, card, timezone) do
+  defp delivery_hint(%{member: %{email: nil} = member, service: service}),
+    do: "#{member.name} has no email. Add one in #{service} to email the ID card."
+
+  defp delivery_hint(%{member: member}),
+    do: "Email it so #{member.name} can add it to Wallet."
+
+  defp wallet_status(phones, card, timezone) do
+    google = if card.in_wallet_at, do: "In Google Wallet"
+
+    case [apple_status(phones, card, timezone), google] |> Enum.reject(&is_nil/1) do
+      [] -> "Not in Wallet yet"
+      parts -> Enum.join(parts, " · ")
+    end
+  end
+
+  defp apple_status(0, _card, _timezone), do: nil
+
+  defp apple_status(phones, card, timezone) do
     on = "On #{Service.Format.count(phones, one: "1 phone", many: "%d phones")}"
 
     case card.pass_fetched_at do
