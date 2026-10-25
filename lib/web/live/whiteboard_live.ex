@@ -156,8 +156,10 @@ defmodule Web.WhiteboardLive do
             Archive
           </.button>
         </span>
+        <%!-- Not on an organization's note: posted again, it would be the team's. --%>
         <span :if={@view == :archived} class="flex gap-3">
           <.button
+            :if={WhiteboardNote.team_note?(note)}
             id={"whiteboard-again-#{note.id}"}
             size={:sm}
             navigate={~p"/teams/#{@current_team}/whiteboard/new?#{[from: note.id]}"}

@@ -21,7 +21,7 @@ defmodule Web.WhiteboardNoteFormLive do
           {note, WhiteboardNoteFormViewModel.from_note(note, team.timezone, today)}
 
         {:new, %{"from" => id}} ->
-          {nil, team |> find_note!(id) |> WhiteboardNoteFormViewModel.again(today)}
+          {nil, team |> find_team_note!(id) |> WhiteboardNoteFormViewModel.again(today)}
 
         {:new, _params} ->
           {nil, WhiteboardNoteFormViewModel.new(today)}
@@ -47,7 +47,7 @@ defmodule Web.WhiteboardNoteFormLive do
     end
   end
 
-  # An organization's note is read-only to its teams.
+  # An organization's note is read-only to its teams, and not theirs to post again.
   defp find_team_note!(team, id) do
     note = find_note!(team, id)
     if !WhiteboardNote.team_note?(note), do: raise(Web.Status.NotFound)

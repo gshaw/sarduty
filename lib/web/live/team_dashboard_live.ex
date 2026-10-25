@@ -37,7 +37,8 @@ defmodule Web.TeamDashboardLive do
   # the team's year, plus For you to do. A member replies to the activities they're
   # invited to from Next up and Coming up (#444). Team admins also get Take attendance,
   # Needs attention, and Refresh now. A team admin who is a member gets both lists.
-  # Everyone reads the whiteboard (#515), after the lists that need them.
+  # Everyone reads the whiteboard (#515) in a strip under Next up: its Important notes, or
+  # its newest, at most 2. Posting and archiving are on the Whiteboard page.
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -69,10 +70,16 @@ defmodule Web.TeamDashboardLive do
       view_data: TeamDashboardViewData.build(team, now, attention?: socket.assigns.team_admin?)
     )
     |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
-    |> assign(notes: if(team.whiteboard_enabled, do: WhiteboardNote.live(team, now), else: []))
+    |> assign_notes(team, now)
     |> assign(replier: Reply.replier(socket.assigns, now))
     |> assign_replies()
     |> assign_member(now)
+  end
+
+  defp assign_notes(socket, team, now) do
+    notes = if team.whiteboard_enabled, do: WhiteboardNote.live(team, now), else: []
+    {shown, more} = WhiteboardNote.for_dashboard(notes)
+    assign(socket, notes: shown, more_notes: more)
   end
 
   # Next up's count, and the replier's invitations to Next up and Coming up, again after
@@ -164,7 +171,15 @@ defmodule Web.TeamDashboardLive do
       team_admin?={@team_admin?}
     />
 
-    <div class="card-grid">
+    <.whiteboard
+      :if={@notes != []}
+      team={@current_team}
+      notes={@notes}
+      more={@more_notes}
+      org_name={@org_name}
+    />
+
+    <div class="card-grid items-start">
       <.coming_up
         team={@current_team}
         activities={@view_data.coming_up}
@@ -174,14 +189,6 @@ defmodule Web.TeamDashboardLive do
       <div class="card-stack span-6">
         <.needs_attention :if={@team_admin?} team={@current_team} items={@view_data.attention} />
         <.to_do :if={@current_member} team={@current_team} items={@to_do} />
-        <.whiteboard
-          :if={@notes != [] or (@team_admin? and @current_team.whiteboard_enabled)}
-          team={@current_team}
-          notes={@notes}
-          org_name={@org_name}
-          today={Service.Period.today(@now, @current_team.timezone)}
-          team_admin?={@team_admin?}
-        />
       </div>
     </div>
 
@@ -441,59 +448,42 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :notes, :list, required: true
+  attr :more, :integer, required: true
   attr :org_name, :string, default: nil
-  attr :today, Date, required: true
-  attr :team_admin?, :boolean, required: true
 
-  # Every live note (#515). Only team admins see it with none, so they can post one, and
-  # only they get Change and Archive, on the team's own notes.
+  # One line a note, its rule blue when Important, and no title: the grey says what it is.
+  # A tap opens a clipped note in place; the full text is always in the markup, so a
+  # screen reader reads it all.
   defp whiteboard(assigns) do
     ~H"""
-    <section id="whiteboard" class="card">
-      <header>
-        <h2 class="chart-title">Whiteboard</h2>
-      </header>
-      <p :if={@notes == []} id="whiteboard-empty" class="chart-caption">
-        No notes on the whiteboard. Post one for everyone on the team to read.
-      </p>
-      <ul :if={@notes != []} id="whiteboard-list" class="dash-list">
-        <li :for={note <- @notes} id={"whiteboard-note-#{note.id}"}>
-          <p class="mb-0"><WhiteboardText.note_text note={note} /></p>
-          <WhiteboardText.note_link note={note} class="block" />
-          <p class="hint mb-0">
-            {WhiteboardText.note_line(note, @team.timezone, @org_name, @today)}
-          </p>
+    <section id="whiteboard" class="whiteboard" aria-labelledby="whiteboard-title">
+      <h2 id="whiteboard-title" class="sr-only">Whiteboard</h2>
+      <ul class="whiteboard-notes">
+        <li
+          :for={note <- @notes}
+          id={"whiteboard-note-#{note.id}"}
+          class={["whiteboard-note", note.important && "is-important"]}
+        >
           <p
-            :if={@team_admin? and WhiteboardNote.team_note?(note)}
-            class="hint mb-0 flex items-center gap-3"
+            class="whiteboard-text"
+            phx-click={JS.toggle_class("is-open", to: "#whiteboard-note-#{note.id}")}
           >
-            <.a
-              id={"whiteboard-change-#{note.id}"}
-              navigate={~p"/teams/#{@team}/whiteboard/#{note.id}/edit"}
-            >Change</.a>
-            <span aria-hidden="true">·</span>
-            <.button
-              id={"whiteboard-archive-#{note.id}"}
-              type="button"
-              variant={:link}
-              size={:sm}
-              phx-click="archive-note"
-              phx-value-id={note.id}
-              data-confirm={WhiteboardText.archive_confirm()}
-            >
-              Archive
-            </.button>
+            <span :if={note.important} class="sr-only">Important:</span>
+            <span :if={!WhiteboardNote.team_note?(note)} class="text-text-muted">
+              {WhiteboardText.speaker(@org_name)}
+            </span>
+            <WhiteboardText.note_text note={note} tag={false} />
           </p>
+          <WhiteboardText.note_link note={note} class="whiteboard-link" />
         </li>
       </ul>
-      <footer>
-        <ul class="action-list">
-          <li :if={@team_admin?}>
-            <.a id="whiteboard-post" navigate={~p"/teams/#{@team}/whiteboard/new"}>Post a note</.a>
-          </li>
-          <li><.a navigate={~p"/teams/#{@team}/whiteboard"}>All notes</.a></li>
-        </ul>
-      </footer>
+      <p :if={@more > 0} class="action whiteboard-more">
+        <.a id="whiteboard-more" navigate={~p"/teams/#{@team}/whiteboard"}>{Format.count(
+          @more,
+          one: "%d more note",
+          many: "%d more notes"
+        )}</.a>
+      </p>
     </section>
     """
   end
@@ -763,16 +753,6 @@ defmodule Web.TeamDashboardLive do
     if refreshing?(socket.assigns.view_data),
       do: {:noreply, socket},
       else: start_refresh(socket)
-  end
-
-  # Only team admins archive: Web.UserAuth drops a member's (#440).
-  def handle_event("archive-note", %{"id" => id}, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
-
-    case WhiteboardText.archive(team, user, id) do
-      :ok -> {:noreply, assign(socket, notes: WhiteboardNote.live(team, DateTime.utc_now()))}
-      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
-    end
   end
 
   defp start_refresh(socket) do

@@ -46,7 +46,7 @@ is left out, and so is its divider.
 
 | Section | Links                                                    | Who         |
 | ------- | -------------------------------------------------------- | ----------- |
-| 1       | Dashboard                                                | everyone    |
+| 1       | Dashboard, Whiteboard                                    | everyone    |
 | 2       | Activities, Take attendance                              | everyone    |
 | 2       | Templates, Proposed changes                              | team admins |
 | 3       | Members, Milestones                                      | everyone    |
@@ -56,9 +56,12 @@ is left out, and so is its divider.
 | 6       | Your membership                                          | members     |
 
 - A team admin who is a member sees all six. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 5. A member sees Dashboard, Activities and
-  Take attendance, Members and Milestones, and Your membership, each in its own section
-  (#440).
+  Admin and is not a member there sees 1 to 5. A member sees Dashboard and Whiteboard,
+  Activities and Take attendance, Members and Milestones, and Your membership, each in its
+  own section (#440).
+- **Whiteboard follows Dashboard** while the team has D4H's whiteboard on (#515). The
+  Dashboard shows a line or 2 of its notes; the page has them all, and team admins post
+  from it.
 - **Take attendance is always there**, after Activities, for members and team admins
   (#475). Not only while an activity is on: links that come and go with the clock make
   the menu harder to learn. It opens `/teams/:subdomain/take-attendance`, which goes

@@ -37,6 +37,21 @@ defmodule App.Model.WhiteboardNote do
     |> Repo.all()
   end
 
+  @doc """
+  The live notes the Dashboard shows, and how many it leaves to the Whiteboard page: the
+  Important ones, or the newest when none are, at most 2. `notes` come as `live/2` sorts
+  them. Returns `{shown, more}`.
+  """
+  def for_dashboard(notes) do
+    shown =
+      case Enum.filter(notes, & &1.important) do
+        [] -> Enum.take(notes, 1)
+        important -> Enum.take(important, 2)
+      end
+
+    {shown, length(notes) - length(shown)}
+  end
+
   @doc "One page of the team's archived notes, the newest first. An `App.Page`."
   def archived(%Team{} = team, now, page \\ 1) do
     team

@@ -64,7 +64,7 @@ defmodule Web.NavigationTest do
       sections = team_sections("/teams/squamish/me", member?: true, proposed_changes: 2)
 
       assert keys(sections) == [
-               ["dashboard"],
+               ["dashboard", "whiteboard"],
                ["activities", "take-attendance"],
                ["members", "milestones"],
                ["me"]
@@ -83,7 +83,7 @@ defmodule Web.NavigationTest do
     test "a team admin who is a member sees all six sections" do
       assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
                [
-                 ["dashboard"],
+                 ["dashboard", "whiteboard"],
                  ["activities", "take-attendance", "templates"],
                  [
                    "members",
@@ -123,6 +123,19 @@ defmodule Web.NavigationTest do
                           |> team_sections([member?: true], team)
                           |> keys()
                           |> List.flatten())
+    end
+
+    test "Whiteboard follows Dashboard while the team has the module on" do
+      assert [["dashboard", "whiteboard"] | _rest] =
+               "/teams/squamish/whiteboard" |> team_sections(member?: true) |> keys()
+
+      assert "/teams/squamish/whiteboard" |> team_sections(member?: true) |> current() ==
+               ["whiteboard"]
+
+      team = %{@team | whiteboard_enabled: false}
+
+      assert [["dashboard"] | _rest] =
+               "/teams/squamish" |> team_sections([team_admin?: true], team) |> keys()
     end
 
     test "someone who is neither sees nothing" do

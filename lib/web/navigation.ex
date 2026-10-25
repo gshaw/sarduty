@@ -73,7 +73,7 @@ defmodule Web.Navigation do
 
         member? ->
           [
-            [dashboard_link(team)],
+            dashboard_links(team),
             [activities_link(team), take_attendance_link(team)],
             member_links(team)
           ]
@@ -122,7 +122,7 @@ defmodule Web.Navigation do
 
   defp team_admin_sections(team, proposed_changes, chores, certificates) do
     [
-      [dashboard_link(team)],
+      dashboard_links(team),
       activity_links(team, proposed_changes),
       people_links(team, certificates),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team, chores)],
@@ -146,7 +146,16 @@ defmodule Web.Navigation do
     ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
   end
 
-  defp dashboard_link(team), do: link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)
+  # The Whiteboard page is where notes are posted and read in full (#515); the Dashboard
+  # shows a line or 2 of them.
+  defp dashboard_links(team) do
+    [link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)] ++
+      if(team.whiteboard_enabled,
+        do: [link("whiteboard", "Whiteboard", ~p"/teams/#{team}/whiteboard")],
+        else: []
+      )
+  end
+
   defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
 
   # Always there, not only while an activity is on: links that come and go with the clock

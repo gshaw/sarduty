@@ -64,4 +64,23 @@ defmodule App.Model.WhiteboardNoteTest do
     assert WhiteboardNote.last_day(note, "Etc/UTC") == ~D[2026-10-26]
     assert WhiteboardNote.last_day(%WhiteboardNote{}, "Etc/UTC") == nil
   end
+
+  describe "for_dashboard/1" do
+    defp note(text, important \\ false), do: %WhiteboardNote{text: text, important: important}
+    defp texts({shown, more}), do: {Enum.map(shown, & &1.text), more}
+
+    test "the Important notes, at most 2, and the rest left over" do
+      notes = [note("A", true), note("B", true), note("C", true), note("D"), note("E")]
+      assert notes |> WhiteboardNote.for_dashboard() |> texts() == {["A", "B"], 3}
+
+      assert [note("A", true), note("D")] |> WhiteboardNote.for_dashboard() |> texts() ==
+               {["A"], 1}
+    end
+
+    test "the newest alone when none is Important, and nothing with no notes" do
+      assert [note("D"), note("E")] |> WhiteboardNote.for_dashboard() |> texts() == {["D"], 1}
+      assert [note("D")] |> WhiteboardNote.for_dashboard() |> texts() == {["D"], 0}
+      assert WhiteboardNote.for_dashboard([]) == {[], 0}
+    end
+  end
 end
