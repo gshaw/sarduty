@@ -128,7 +128,12 @@ defmodule Web.MemberFormLive do
         <p>
           {@member.name} retired on {Service.Format.date_long(@member.left_at, @current_team.timezone)}.
         </p>
-        <.button id="member-rejoin" type="button" phx-click="rejoin" phx-disable-with="Saving…">Mark as rejoined</.button>
+        <.button
+          id="member-rejoin"
+          type="button"
+          phx-click="rejoin"
+          phx-disable-with="Marking as rejoined…"
+        >Mark as rejoined</.button>
       <% else %>
         <p>
           A retired member keeps their attendance and letters. They no longer count as a team
@@ -139,7 +144,7 @@ defmodule Web.MemberFormLive do
           type="button"
           variant={:danger}
           phx-click="retire"
-          phx-disable-with="Saving…"
+          phx-disable-with="Marking as retired…"
           data-confirm={"Mark #{@member.name} as retired today?"}
         >
           Mark as retired

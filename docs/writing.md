@@ -127,10 +127,9 @@ the activity is published. Unpublish it in D4H first."
 Create one from the member list." Not "No results".
 
 **Slow work.** Name the slow thing: "Refreshing…", "Calculating driving distances
-for 14 members…". Not "Loading…" or "Please wait". A button that waits on email, D4H or
-SAR Duty Records, Wallet, Mapbox, or a PDF says what it is doing until the answer comes,
-with the button's verb: "Sending…" for an email or a send, "Saving…", "Adding…",
-"Removing…", "Deleting…", "Turning on…". See `/styles/button#slow`.
+for 14 members…". Not "Loading…" or "Please wait". A slow button says what it is doing
+until the answer comes, with its own verb: "Saving…", "Adding…", "Removing…". An email or
+a send says "Sending…". See `/styles/button#slow`.
 
 **Page titles.** The page's `h1`. A tab or step under a record adds its name after a middle
 dot: "Avery Chen · Standing", "Training night · Take attendance". The browser title adds
