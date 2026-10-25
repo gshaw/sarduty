@@ -68,9 +68,18 @@ defmodule Web.Navigation do
 
     team_sections =
       cond do
-        team_admin? -> team_admin_sections(team, proposed_changes, chores, certificates)
-        member? -> [[dashboard_link(team)], [activities_link(team), take_attendance_link(team)]]
-        true -> []
+        team_admin? ->
+          team_admin_sections(team, proposed_changes, chores, certificates)
+
+        member? ->
+          [
+            [dashboard_link(team)],
+            [activities_link(team), take_attendance_link(team)],
+            member_links(team)
+          ]
+
+        true ->
+          []
       end
 
     member_sections =
@@ -156,17 +165,24 @@ defmodule Web.Navigation do
 
   # Certificates follow Qualifications on a team where members send them (#493).
   defp people_links(team, certificates) do
-    [
-      link("members", "Members", ~p"/teams/#{team}/members"),
-      link("milestones", "Milestones", ~p"/teams/#{team}/milestones"),
-      link("groups", "Groups", ~p"/teams/#{team}/groups"),
-      link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications")
-    ] ++
+    member_links(team) ++
+      [
+        link("groups", "Groups", ~p"/teams/#{team}/groups"),
+        link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications")
+      ] ++
       certificate_links(team, certificates) ++
       [
         link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
         link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
       ]
+  end
+
+  # The people pages members open too (#440).
+  defp member_links(team) do
+    [
+      link("members", "Members", ~p"/teams/#{team}/members"),
+      link("milestones", "Milestones", ~p"/teams/#{team}/milestones")
+    ]
   end
 
   defp certificate_links(team, count) do

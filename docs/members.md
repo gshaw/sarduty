@@ -1,6 +1,7 @@
 # Members
 
-The members list and a member's page, for team admins, and member logins, for members.
+The members list and a member's page, for team admins and, read only, for members (#440),
+and member logins.
 
 ## The members list
 
@@ -67,7 +68,9 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
   Retired and Not a person. Each change goes in the member's history, from
   `member_standing_changes`, which keeps the reason and dates.
 - A member away sees the same Away badge on Your membership, as a reminder. Members never
-  see the reason, which is `redact: true`.
+  see the reason, which is `redact: true`. Nobody else who logs in as a member sees an
+  Away badge, count, filter, or sort (#440): away is often leave. They see every other
+  standing, Not a person included.
 - **Check-ins** are on the same tab: a team admin records the day they reached a member
   and what they heard ([MemberCheckIn](../lib/app/model/member_check_in.ex)). It
   restarts the member's attendance clock and changes nothing else: not standing, not
@@ -173,7 +176,7 @@ D4H. Logins are designed in issue #156; the pages in #389, and one page in #406.
 replacing the overview of #389 and taking in its pages: ID card, Qualifications, Hours,
 Tax credit letters, and Milestones are gone, with no redirects. It opens with the same
 header as the team member page (`<.person_head>`, `/styles/person-head`): their D4H photo
-in a circle, or their initials when D4H has none (`/me/image`), their name, an Away badge
+in a circle, or their initials when D4H has none (`/members/:id/image`), their name, an Away badge
 while they're away, and "Ground searcher · Joined March 2019 · Last attended Sep 30,
 2026". Neither page shows the member ID: teams number members in very different ways.
 
@@ -207,8 +210,8 @@ while they're away, and "Ground searcher · Joined March 2019 · Last attended S
   tab shows the latest and links to the team's Milestones page,
   `/teams/:subdomain/milestones`, filtered to the member over all time. That page lists
   every current member's, newest first, filtered by member, kind, and period, and opens
-  on the last 90 days, for thanking people at a meeting or in a newsletter. Members
-  don't see it: only their own, until we decide how members see other members.
+  on the last 90 days, for thanking people at a meeting or in a newsletter. Members open
+  it too (#440): it comes from attendance they see already.
   [MemberMilestones](../lib/app/view_data/member_milestones.ex) loads them. Still not
   stored: South Fraser takes about 0.3 s on Fly (15,000 attended rows, 2026-10-23), once
   the page connects, and a stored copy would go stale whenever attendance, `joined_at`,
@@ -264,9 +267,10 @@ The team's Dashboard, `/teams/:subdomain`
   renewed), and a new tax credit letter (from January to April, until the member
   downloads it, `downloaded_at`). Each leaves once done. With nothing to do, the card
   says so in one line.
-- `"refresh"` checks `team_admin?`, and only a team admin's visit starts the catch-up
-  sync.
-- Links to team admin pages, such as Members from the stats, show only to team admins.
+- `"refresh"` is a team admin's event: the team pages' hook refuses it from a member
+  (#440), and only a team admin's visit starts the catch-up sync.
+- Links to team admin pages show only to team admins. The Current members stat links to
+  Members for everyone (#440).
 
 ### Activities for members
 
@@ -287,9 +291,9 @@ hidden data makes people suspicious).
   activity, the tags, the map, the description, Members, and the equipment. Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
-  Team admins also get History, which can hold contact details and
-  addresses, the Actions, Add equipment, and links to each member's and item's page.
-  Members never see contact details.
+  Team admins also get History, which can hold contact details and addresses, the
+  Actions, Add equipment, and links to each item's page. Member names link to member
+  pages for everyone (#440). Members never see contact details.
 - **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for
   anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
   with no redirect.
@@ -373,9 +377,63 @@ on these pages already, on the member's page and its tabs.
   whether they are viewing as someone, so an error report on Your membership names the
   member. View as them to see the page break.
 
+### Members for members
+
+Members open the Members list, Milestones, and three tabs of a member's page (#440). They
+see what they could work out from activities they open, plus role, ID, groups, and
+qualifications. They don't see what comes from team admins' own tools: contact details,
+away periods, check-ins, history, and ID cards.
+
+- **The list**: the same columns, search, and Period, Group, and Tag filters. The
+  Standing switch is Not retired, Not a person, and Retired, and its menu adds All. No
+  Active, since Not retired minus Active would name who is away. No Attended or Details
+  filter, no Standing sort, and no Add member. The Standing column shows only when a
+  current member is Not a person, and says Active for anyone away.
+- **A member's page** is the team admin's minus controls: Attendance, Qualifications
+  (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain
+  text. The sidebar is the ID and Milestones. The header has the photo and facts, a
+  Retired or Not a person badge, never Away, and no View as member. Equipment, Standing,
+  ID card, and History stay team admins'.
+- **Their own page** opens Your membership: a member opening their own member page is
+  sent there (`MemberPage.on_mount(:own_page, …)`), so every link to it works.
+- **Email stays private**, with phone and address (decided 2026-10-24): no team needs it
+  shown to every member. A directory members opt into can come later if people ask.
+
+## Opening a page to members
+
+How every page both roles open is built (#440). Members get the team admin's page minus
+its controls, and the few values kept private. Decide each value, then scope it in one of
+the places below, once.
+
+**The test for each value.** Show it if members can rebuild it from pages they open, or
+D4H shows it to them. Cut it if it exists only because a team admin wrote it down (away
+periods, check-ins, history, the missing details list), or it is about how to reach
+someone or their welfare. A value members can already see needs no guard.
+
+1. **The page**: `access: :team` on the LiveView ([Web](../lib/web.ex)), and the route in
+   the router test's list.
+2. **Its events stay team admins'.** `:ensure_team_access` drops a member's event before
+   the page's `handle_event`, unless the page lists it in `member_events`, such as a
+   filter form's `"change"`. So `handle_event` has no `team_admin?` clauses. Events a
+   component handles (`phx-target`), such as replies and search, go to the component,
+   which checks for itself.
+3. **Params**: the view model's `validate/2` takes `team_admin?` and drops what members
+   can't set before it casts ([MemberFilterViewModel](../lib/app/view_model/member_filter_view_model.ex)).
+   The list, its counts, and the form all read the result, so nothing after checks again.
+4. **Parts of the page**: the page decides, and a part doesn't ask. Something only team
+   admins see is its own component or column, shown with `:if={@team_admin?}`. A shared
+   component with such a part takes `team_admin?` with `default: false`, so a page that
+   forgets shows the member's view. [MemberPage](../lib/web/components/member_page.ex)
+   takes it once for the header, tabs, and sidebar of every member tab.
+5. **One home for a rule pages share**: another member's standing as the viewer sees it
+   is `MemberAwayPeriod.visible_standing/2`, which the header and search both use.
+
+Each guard gets a test: an element id that must be absent (`member-phone`), a member's
+URL params, and an event from a member that changes nothing.
+
 ### What must stay true
 
-- **A member page shows only the person logged in**, or the member a team admin views as.
+- **A member's own page shows only the person logged in**, or the member a team admin views as.
   `current_member` comes from the login, in `on_mount(:ensure_team_access, …)`, and
   `member` in the `require_team_member` plug ([Web.UserAuth](../lib/web/user_auth.ex)). No
   member page or download takes a member id from the URL. A letter is found by its id and

@@ -301,18 +301,43 @@ defmodule Web.UserAuth do
     # mount_current_user loaded the user's member logins for the menu; reuse them.
     logins = socket.assigns[:member_logins] || member_logins(user)
     view_as = session[@view_as_key]
-    access = team_access!(user, logins, params["subdomain"], page_access(socket.view), view_as)
+    page_access = page_access(socket.view)
+    access = team_access!(user, logins, params["subdomain"], page_access, view_as)
 
     if access.team_admin?, do: RecordUserSeen.call(user, access.current_team.id)
 
     # `service` names where the team's records are, for text that sends the reader there.
     service = D4H.service_name(access.current_team)
 
-    {:cont,
-     Phoenix.Component.assign(
-       socket,
-       access |> Map.merge(waiting(access)) |> Map.put(:service, service)
-     )}
+    socket =
+      socket
+      |> Phoenix.Component.assign(
+        access
+        |> Map.merge(waiting(access))
+        |> Map.put(:service, service)
+      )
+      |> guard_events(page_access, access.team_admin?)
+
+    {:cont, socket}
+  end
+
+  # A page members open keeps its events for team admins (#440), except those it lists in
+  # `member_events` (see Web). A member's other events stop here, before the page's
+  # handle_event, so a page needs no check of its own. Events a component handles
+  # (phx-target) go to the component, which checks for itself.
+  defp guard_events(socket, :team, false) do
+    allowed = member_events(socket.view)
+
+    Phoenix.LiveView.attach_hook(socket, :member_events, :handle_event, fn event, _params, s ->
+      if event in allowed, do: {:cont, s}, else: {:halt, s}
+    end)
+  end
+
+  defp guard_events(socket, _page_access, _team_admin?), do: socket
+
+  @doc "The events a member sends on an `access: :team` page; every other is team admins'."
+  def member_events(view) do
+    if function_exported?(view, :__member_events__, 0), do: view.__member_events__(), else: []
   end
 
   # What waits for a team admin, for the side navigation: AI agent change sets, members'

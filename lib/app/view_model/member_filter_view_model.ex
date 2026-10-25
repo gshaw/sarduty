@@ -46,21 +46,34 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {"Retired", "retired"}
   ]
 
+  # What a member's list offers (#440): every standing but Away, which is team admins'
+  # own record and often leave. No Active either: Not retired minus Active would name
+  # who is away.
+  @member_standings [{"Not a person", "not_a_person"}, {"Retired", "retired"}]
+
   @doc """
   The Standing filter (#366): Not retired, the default, is every member but the retired,
   and All adds them. Its value stays `"current"`. The attendance check can watch several standings, as
   `"active,away"`; that value gets an option of its own, "Active or away", when it's the
-  one shown.
+  one shown. A member gets Not retired, Not a person, Retired, and All.
   """
-  def standing_kinds(current \\ nil) do
+  def standing_kinds(current, team_admin?) do
     combined =
       case standings(current) do
         [_, _ | _] = several -> [{several |> Enum.map(&label/1) |> or_list(), current}]
         _one_or_none -> []
       end
 
-    Enum.concat([[{"Not retired", "current"}], @standings, combined, [{"All", "all"}]])
+    Enum.concat([
+      [{"Not retired", "current"}],
+      standings_for(team_admin?),
+      combined,
+      [{"All", "all"}]
+    ])
   end
+
+  defp standings_for(true), do: @standings
+  defp standings_for(false), do: @member_standings
 
   @doc "Whether the Standing filter `value` can show retired members."
   def shows_retired?(value), do: value == "all" or "retired" in standings(value)
@@ -118,13 +131,33 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
 
-  def validate(params) do
-    changeset = build_new_changeset(params)
+  @doc """
+  Checks the list's `params`. A member's (#440) first lose what only team admins' records
+  answer: the Attended and Details filters, the standings `standing_kinds/2` doesn't offer
+  them, and the Standing sort. Everything else reads the result, so the list, the
+  switch's counts, and the form show members nothing more, whatever the URL says.
+  """
+  def validate(params, team_admin?) do
+    changeset = params |> viewer_params(team_admin?) |> build_new_changeset()
 
     case apply_action(changeset, :replace) do
       {:ok, filter_options} -> {:ok, filter_options, changeset}
       {:error, _} = result -> result
     end
+  end
+
+  defp viewer_params(params, true), do: params
+
+  defp viewer_params(params, false) do
+    member_values = nil |> standing_kinds(false) |> Enum.map(&elem(&1, 1))
+
+    params
+    |> Map.drop(["attended", "details"])
+    |> Map.reject(fn
+      {"standing", value} -> value not in member_values
+      {"sort", value} -> is_binary(value) and String.starts_with?(value, "standing")
+      _other -> false
+    end)
   end
 
   def build_paginated_content(team, filter_options, now \\ DateTime.utc_now()) do
@@ -138,28 +171,32 @@ defmodule App.ViewModel.MemberFilterViewModel do
   list and its count always match (the home page's attendance check, #366).
   """
   def count(team, params, now \\ DateTime.utc_now()) do
-    {:ok, filter_options, _changeset} = validate(params)
+    {:ok, filter_options, _changeset} = validate(params, true)
     team |> filter_query(filter_options, now) |> Repo.count_entries()
   end
 
   @doc """
   The Standing switch's parts (#469): Not retired first, as the list opens, then each
-  standing. No All: Not retired and Retired add up to it.
+  standing. No All: Not retired and Retired add up to it. A member's are Not retired, Not
+  a person, and Retired (#440).
   """
-  def standing_switch, do: [{"Not retired", "current"} | @standings]
+  def standing_switch(team_admin?), do: [{"Not retired", "current"} | standings_for(team_admin?)]
 
   @doc """
   Whether the switch has a part for `value`. All, and the attendance check's
   `"active,away"`, don't, so the list shows them as the Standing menu.
   """
-  def switch_standing?(value), do: List.keymember?(standing_switch(), value, 1)
+  def switch_standing?(value, team_admin?),
+    do: team_admin? |> standing_switch() |> List.keymember?(value, 1)
 
   @doc """
-  How many members each standing in `standing_switch/0` has, before the search and after
+  How many members each standing in `standing_switch/1` has, before the search and after
   every other filter, keyed by value.
   """
-  def standing_counts(team, filter_options, now \\ DateTime.utc_now()) do
-    Map.new(standing_switch(), fn {_label, standing} ->
+  def standing_counts(team, filter_options, team_admin?, now \\ DateTime.utc_now()) do
+    team_admin?
+    |> standing_switch()
+    |> Map.new(fn {_label, standing} ->
       options = %{filter_options | q: nil, standing: standing}
       {standing, team |> filter_query(options, now) |> Repo.count_entries()}
     end)

@@ -50,4 +50,26 @@ defmodule Web.MemberControllerTest do
 
     assert conn |> get(~p"/teams/#{team}/members/#{member.id}/image") |> response(404)
   end
+
+  describe "for a member (#440)" do
+    setup %{conn: conn} do
+      %{team: team, user: user} = member_with_login_fixture()
+      %{conn: log_in_user(conn, user), team: team, other: member_fixture(team)}
+    end
+
+    test "sends another member's photo, for their page's header",
+         %{conn: conn, team: team, other: other} do
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
+      assert conn |> get(~p"/teams/#{team}/members/#{other.id}/image") |> response(200)
+    end
+
+    test "a certificate stays a 404: D4H marks them RESTRICTED",
+         %{conn: conn, team: team, other: other} do
+      award = certificate_award_fixture(team, other)
+
+      assert_error_sent 404, fn ->
+        get(conn, ~p"/teams/#{team}/members/#{other.id}/certificates/#{award.id}")
+      end
+    end
+  end
 end

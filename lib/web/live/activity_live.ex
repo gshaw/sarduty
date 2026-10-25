@@ -102,8 +102,7 @@ defmodule Web.ActivityLive do
     end
   end
 
-  def handle_event("remind", %{"round" => round}, %{assigns: %{team_admin?: true}} = socket)
-      when round in ["1", "2"] do
+  def handle_event("remind", %{"round" => round}, socket) when round in ["1", "2"] do
     %{current_team: team, activity: activity, current_user: user} = socket.assigns
     now = DateTime.utc_now()
 
@@ -113,7 +112,7 @@ defmodule Web.ActivityLive do
     end
   end
 
-  # Only team admins send; a member's page has no button, but an event can still come.
+  # A stale page can send a round that no longer exists.
   def handle_event("remind", _params, socket), do: {:noreply, socket}
 
   # The view's word in the URL, the same before and after the start, as a D4H status.
@@ -282,7 +281,7 @@ defmodule Web.ActivityLive do
   attr :hours_tags, :map, required: true
   attr :attendances, :list, required: true
   attr :attendance_count, :integer, required: true
-  attr :team_admin?, :boolean, default: true
+  attr :team_admin?, :boolean, default: false
 
   def sidebar_content(assigns) do
     ~H"""
@@ -417,7 +416,7 @@ defmodule Web.ActivityLive do
   attr :view, :string, default: nil, doc: "the D4H status showing, nil for All"
   attr :started?, :boolean, required: true
   attr :now, :any, required: true
-  attr :team_admin?, :boolean, default: true
+  attr :team_admin?, :boolean, default: false
   attr :reminded, :map, default: %{}, doc: "each member's latest reminder, by member id"
   attr :batch, :map, default: nil, doc: "the last reminders sent"
   attr :batch_sender, :string, default: nil
@@ -483,13 +482,9 @@ defmodule Web.ActivityLive do
         class="table-striped w-fit"
       >
         <:col :let={row} label="Name" class="whitespace-nowrap">
-          <.a
-            :if={@team_admin?}
-            navigate={
-              ~p"/teams/#{@activity.team}/members/#{row.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-            }
-          >{row.member.name}</.a>
-          <span :if={!@team_admin?}>{row.member.name}</span>
+          <.a navigate={
+            ~p"/teams/#{@activity.team}/members/#{row.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+          }>{row.member.name}</.a>
         </:col>
         <:col
           :let={row}
@@ -651,7 +646,7 @@ defmodule Web.ActivityLive do
 
   attr :activity, :map, required: true
   attr :usages, :list, required: true
-  attr :team_admin?, :boolean, default: true
+  attr :team_admin?, :boolean, default: false
 
   def equipment_section(assigns) do
     ~H"""

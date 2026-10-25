@@ -12,6 +12,7 @@ defmodule Web.Search do
     router: Web.Router,
     statics: Web.static_paths()
 
+  alias App.Model.MemberAwayPeriod
   alias App.Model.Team
   alias App.ViewData.Search
   alias Web.UserAuth
@@ -47,8 +48,10 @@ defmodule Web.Search do
   never show. `team_admin?` and `member?` are as the page assigned them.
   """
   def run(team, query, opts) do
+    team_admin? = Keyword.fetch!(opts, :team_admin?)
+
     search_opts = [
-      kinds: kinds(team, Keyword.fetch!(opts, :team_admin?), Keyword.fetch!(opts, :member?)),
+      kinds: kinds(team, team_admin?, Keyword.fetch!(opts, :member?)),
       pages: opts |> Keyword.get(:sections, []) |> pages(),
       now: Keyword.get(opts, :now, DateTime.utc_now())
     ]
@@ -56,7 +59,7 @@ defmodule Web.Search do
     team
     |> Search.run(query, search_opts)
     |> Enum.map(fn group ->
-      %{group | hits: Enum.map(group.hits, &with_path(&1, group.kind, team))}
+      %{group | hits: Enum.map(group.hits, &shown(&1, group.kind, team, team_admin?))}
     end)
   end
 
@@ -68,8 +71,10 @@ defmodule Web.Search do
   open, on another team, or gone, is left out.
   """
   def recent(team, keys, opts) when is_list(keys) do
+    team_admin? = Keyword.fetch!(opts, :team_admin?)
+
     search_opts = [
-      kinds: kinds(team, Keyword.fetch!(opts, :team_admin?), Keyword.fetch!(opts, :member?)),
+      kinds: kinds(team, team_admin?, Keyword.fetch!(opts, :member?)),
       pages: opts |> Keyword.get(:sections, []) |> pages()
     ]
 
@@ -84,7 +89,13 @@ defmodule Web.Search do
         []
 
       hits ->
-        [%{kind: :recent, more?: false, hits: Enum.map(hits, &with_path(&1, &1.kind, team))}]
+        [
+          %{
+            kind: :recent,
+            more?: false,
+            hits: Enum.map(hits, &shown(&1, &1.kind, team, team_admin?))
+          }
+        ]
     end
   end
 
@@ -145,7 +156,14 @@ defmodule Web.Search do
     for link <- List.flatten(sections), do: %{id: link.key, title: link.label, path: link.path}
   end
 
-  defp with_path(hit, kind, team), do: Map.put_new(hit, :path, hit_path(kind, team, hit.id))
+  # A hit with where it opens, and a member's standing as the person searching sees it.
+  defp shown(hit, kind, team, team_admin?) do
+    hit = Map.put_new(hit, :path, hit_path(kind, team, hit.id))
+
+    if kind == :member,
+      do: Map.update!(hit, :standing, &MemberAwayPeriod.visible_standing(&1, team_admin?)),
+      else: hit
+  end
 
   defp page_access(kind), do: @live_views |> Map.fetch!(kind) |> UserAuth.page_access()
 

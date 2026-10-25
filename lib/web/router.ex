@@ -291,7 +291,6 @@ defmodule Web.Router do
     scope "/teams/:subdomain/me" do
       pipe_through :require_team_member
 
-      get "/image", MeController, :image
       get "/card/apple-wallet", MeController, :apple_pass
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
@@ -304,12 +303,12 @@ defmodule Web.Router do
       pipe_through :require_team_access
 
       get "/activities/:id/calendar", ActivityCalendarController, :show
+      get "/members/:id/image", MemberController, :image
     end
 
     scope "/teams/:subdomain" do
       pipe_through :require_authorized_team_subdomain
 
-      get "/members/:id/image", MemberController, :image
       get "/members/:id/certificates/:award_id", MemberController, :certificate
       get "/certificates/:id/file", CertificateController, :file
       get "/members/:id/card/apple-wallet", MemberCardController, :pass

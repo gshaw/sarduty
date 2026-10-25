@@ -474,4 +474,86 @@ defmodule Web.MemberCollectionLiveTest do
     positions = Enum.map(names, &elem(:binary.match(html, &1), 0))
     positions == Enum.sort(positions)
   end
+
+  # Away periods are often leave, and check-ins and missing details are team admins' own
+  # lists: a member's list never filters, counts, sorts, or labels by them (#440).
+  describe "for a member" do
+    setup %{conn: conn} do
+      %{team: team, user: user, member: member} = member_with_login_fixture()
+      today = Date.utc_today()
+      away = member_fixture(team, %{name: "Avery Away", phone: nil})
+      away_period_fixture(away, Date.add(today, -5), Date.add(today, 30))
+      bot = member_fixture(team, %{name: "Nico Bot", not_a_person: true})
+      member_fixture(team, %{name: "Rae Retired", left_at: ~U[2025-06-01 00:00:00Z]})
+      %{conn: log_in_user(conn, user), team: team, member: member, away: away, bot: bot}
+    end
+
+    test "the roster with Not retired, Not a person, and Retired, and no team admin filters",
+         %{conn: conn, team: team, away: away, bot: bot} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
+
+      assert has_element?(lv, "td", "Avery Away")
+      assert has_element?(lv, "td", "Nico Bot")
+      assert has_element?(lv, "#member-view-current", "3")
+      assert has_element?(lv, "#member-view-retired", "1")
+      refute has_element?(lv, "#member-view-active")
+      refute has_element?(lv, "#member-view-away")
+      assert has_element?(lv, "#member-view-not_a_person", "1")
+      refute has_element?(lv, "select[name='form[details]']")
+      refute has_element?(lv, "select[name='form[attended]']")
+      refute has_element?(lv, "#member-add")
+      refute render(lv) =~ "Away until"
+
+      # Away reads Active to a member: it's often leave.
+      assert has_element?(lv, "#standing-#{bot.id}", "Not a person")
+      assert has_element?(lv, "#standing-#{away.id}", "Active")
+      refute has_element?(lv, ~s{th a[href*="sort=standing"]})
+    end
+
+    test "no Standing column when nobody is Not a person", %{conn: conn, team: team, bot: bot} do
+      bot |> Ecto.Changeset.change(not_a_person: false) |> App.Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
+
+      refute has_element?(lv, "th", "Standing")
+    end
+
+    test "ignores the URL's standings, Attended, Details, and Standing sort",
+         %{conn: conn, team: team} do
+      for params <- [
+            "standing=away",
+            "standing=active",
+            "standing=active,away",
+            "attended=30",
+            "details=missing",
+            "sort=standing"
+          ] do
+        {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members?when=all&#{params}")
+
+        assert has_element?(lv, "#member-view-current[aria-current]"), params
+        assert has_element?(lv, "td", "Avery Away"), params
+        assert has_element?(lv, "td", "Nico Bot"), params
+        refute has_element?(lv, "#attended-hint"), params
+        refute has_element?(lv, "th", "Missing"), params
+      end
+    end
+
+    test "Not a person filters to bot accounts", %{conn: conn, team: team, away: away} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all&standing=not_a_person")
+
+      assert has_element?(lv, "#member-view-not_a_person[aria-current]")
+      assert has_element?(lv, "td", "Nico Bot")
+      refute has_element?(lv, "td", away.name)
+    end
+
+    test "All shows retired members, with the Standing menu", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all&standing=all")
+
+      assert has_element?(lv, "td", "Rae Retired")
+      assert has_element?(lv, "th", "Retired")
+
+      for {value, shown?} <- [current: true, retired: true, all: true, active: false, away: false] do
+        assert has_element?(lv, "select[name='form[standing]'] option[value=#{value}]") == shown?
+      end
+    end
+  end
 end

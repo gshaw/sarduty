@@ -4,6 +4,7 @@ defmodule Web.MemberQualificationsLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Adapter.D4H
   alias App.Repo
 
   defp awards(team, member) do
@@ -75,5 +76,51 @@ defmodule Web.MemberQualificationsLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/qualifications")
 
     assert has_element?(lv, "#no-qualifications")
+  end
+
+  describe "for a member (#440)" do
+    setup %{conn: conn} do
+      team =
+        %{d4h_api_host: D4H.records_host()}
+        |> member_logins_team_fixture()
+        |> Ecto.Changeset.change(d4h_access_key: "sdr_key")
+        |> Repo.update!()
+
+      viewer = member_fixture(team, %{d4h_permission: 2})
+      user = App.AccountsFixtures.user_fixture(%{email: viewer.email})
+      %{conn: log_in_user(conn, user), team: team}
+    end
+
+    test "the team admin's columns, with no links, Certificate, or Remove",
+         %{conn: conn, team: team} do
+      other = member_fixture(team)
+      %{first_aid: first_aid, old: old} = awards(team, other)
+      certificate_award_fixture(team, other)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}/qualifications")
+
+      row = "#member-qualifications-#{first_aid.id}"
+      assert has_element?(lv, row, "First Aid")
+      refute has_element?(lv, "#{row} a")
+      refute has_element?(lv, "[id^=certificate-]")
+      assert has_element?(lv, "th", "First held")
+      assert has_element?(lv, "#member-qualifications-award-#{old.id}")
+      refute has_element?(lv, "[id^=remove-award-]")
+      refute has_element?(lv, "#award-qualification")
+    end
+
+    # The page opens to members; its actions don't. Web.UserAuth drops the event before
+    # the page's handle_event, which on a Records team would remove the award.
+    test "an award event from a member changes nothing", %{conn: conn, team: team} do
+      other = member_fixture(team)
+      %{latest: latest} = awards(team, other)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}/qualifications")
+      render_click(lv, "remove-award", %{"id" => "#{latest.id}"})
+      render_click(lv, "award", %{"award" => %{"qualification_id" => ""}})
+
+      assert Repo.get(App.Model.MemberQualificationAward, latest.id)
+      assert has_element?(lv, "#member-qualifications")
+    end
   end
 end

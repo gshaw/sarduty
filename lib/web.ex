@@ -81,15 +81,25 @@ defmodule Web do
   # for team admins; `:team` for its members too; `:member` for members only, their own
   # pages. `use Web, {:live_view_app_layout, access: :team}`. Web.UserAuth checks it, so a
   # page nobody marked stays closed.
+  #
+  # On an `access: :team` page, events stay the team admins' (#440): Web.UserAuth drops
+  # any other event a member sends, so opening a page never opens its actions. A page
+  # names the events members send too, such as its filter form's:
+  # `access: :team, member_events: ["change"]`.
   defp live_view(layout, opts) do
     access = Keyword.get(opts, :access, :admin)
+    member_events = Keyword.get(opts, :member_events, [])
     true = access in [:admin, :team, :member]
+    true = member_events == [] or access == :team
 
     quote do
       use Phoenix.LiveView, layout: unquote(layout)
 
       @doc false
       def __team_access__, do: unquote(access)
+
+      @doc false
+      def __member_events__, do: unquote(member_events)
 
       import Web.Components.A
       import Web.Components.Breadcrumbs
