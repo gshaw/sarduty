@@ -10,7 +10,7 @@ defmodule Web.TeamManagersLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     editor = manager_fixture(team, %{name: "Eli Editor", d4h_permission: 1})
     _member = manager_fixture(team, %{name: "Mo Member", d4h_permission: 2})
-    grant = TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
+    grant = TeamLoginGrant.grant!(team, "office@example.com", "role address")
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
 

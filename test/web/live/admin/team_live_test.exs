@@ -5,6 +5,7 @@ defmodule Web.Admin.TeamLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Event
   alias App.Model.TeamLoginGrant
   alias App.Repo
 
@@ -26,8 +27,8 @@ defmodule Web.Admin.TeamLiveTest do
   test "lists team admins once per email, with D4H access and login grants",
        %{conn: conn, team: team} do
     manager_fixture(team, %{email: "Owner@example.com"})
-    TeamLoginGrant.grant!(team.subdomain, "owner@example.com", "Treasurer")
-    TeamLoginGrant.grant!(team.subdomain, "office@example.com", nil)
+    TeamLoginGrant.grant!(team, "owner@example.com", "Treasurer")
+    TeamLoginGrant.grant!(team, "office@example.com", nil)
 
     {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
 
@@ -54,6 +55,61 @@ defmodule Web.Admin.TeamLiveTest do
     lv |> element("#mcp-on") |> render_click()
     assert Repo.reload!(team).mcp_enabled
     assert has_element?(lv, "#team-mcp-state", "On")
+  end
+
+  describe "login grants" do
+    test "a SAR Duty admin adds one, stored lowercase, with an event naming who acted",
+         %{conn: conn, admin: admin, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+
+      lv
+      |> form("#grant-form", grant: %{email: " Office@Example.com ", reason: "Shared inbox"})
+      |> render_submit()
+
+      assert [grant] = TeamLoginGrant.get_for_team(team)
+      assert grant.email == "office@example.com"
+      assert grant.added_by_user_id == admin.id
+      assert has_element?(lv, "#team-admin-office\\@example\\.com", "Added by #{admin.email}")
+
+      event = Event.get_last(:login_grant_added)
+      assert event.user_id == admin.id
+      assert event.team_id == team.id
+      assert event.data["who"] == Event.who("office@example.com")
+    end
+
+    test "a bad or repeated email is a field error", %{conn: conn, team: team} do
+      TeamLoginGrant.grant!(team, "office@example.com", nil)
+      {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+
+      html = lv |> form("#grant-form", grant: %{email: "office"}) |> render_submit()
+      assert html =~ "Enter an email like name@example.com."
+
+      html = lv |> form("#grant-form", grant: %{email: "OFFICE@example.com"}) |> render_submit()
+      assert html =~ "This email has a login grant already."
+      assert length(TeamLoginGrant.get_for_team(team)) == 1
+    end
+
+    test "Remove takes away only the grant from an email that is also a D4H Owner",
+         %{conn: conn, admin: admin, team: team} do
+      manager_fixture(team, %{email: "owner@example.com"})
+      grant = TeamLoginGrant.grant!(team, "owner@example.com", "Treasurer")
+      {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+
+      lv |> element("#remove-grant-#{grant.id}") |> render_click()
+
+      assert TeamLoginGrant.get_for_team(team) == []
+      assert has_element?(lv, "#team-admin-owner\\@example\\.com", "D4H Owner")
+      assert Event.get_last(:login_grant_removed).user_id == admin.id
+    end
+
+    test "removing is scoped to the team", %{conn: conn, team: team} do
+      other = team_fixture()
+      grant = TeamLoginGrant.grant!(other, "office@example.com", nil)
+      {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+
+      assert render_click(lv, "remove_grant", %{id: grant.id}) =~ "removed already"
+      assert [_grant] = TeamLoginGrant.get_for_team(other)
+    end
   end
 
   test "is a 404 for team admins and organization admins", %{conn: conn, team: team} do

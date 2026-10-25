@@ -15,7 +15,7 @@ defmodule App.Operation.SetTeamOrganizationTest do
     team = team_fixture(%{name: "Coast Range SAR"})
     manager_fixture(team, %{email: "owner@example.com"})
     manager_fixture(team, %{email: "Owner@example.com", d4h_permission: 1})
-    TeamLoginGrant.grant!(team.subdomain, "office@example.com", "office")
+    TeamLoginGrant.grant!(team, "office@example.com", "office")
 
     organization =
       organization_fixture([], %{

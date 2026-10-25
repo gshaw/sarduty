@@ -51,13 +51,13 @@ defmodule App.AccountsTest do
 
     test "an email an admin let into a team may, and reaches only that team" do
       team = team_fixture()
-      TeamLoginGrant.grant!(team.subdomain, " Shared@Example.com ", "role address")
+      TeamLoginGrant.grant!(team, " Shared@Example.com ", "role address")
 
       assert Accounts.may_log_in?("shared@example.com", @now)
       assert [%{id: id}] = Team.get_managed_by("SHARED@example.com", @now)
       assert id == team.id
 
-      TeamLoginGrant.revoke!(team.subdomain, "shared@example.com")
+      TeamLoginGrant.revoke!(team, "shared@example.com")
       refute Accounts.may_log_in?("shared@example.com", @now)
     end
 
