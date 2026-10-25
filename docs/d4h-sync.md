@@ -274,10 +274,11 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
 - **The team key's account** is left out when it's a "SAR Duty" account, since it isn't a
   person. A team key from a person's own account leaves them in.
 - **Login grants** let an email into one team that D4H doesn't list as a manager there: a
-  shared role address, or a team whose key fails. An admin adds one through
-  `bin/sarduty rpc`:
-  `App.Model.TeamLoginGrant.grant!(subdomain, email, reason)`, and removes it with
-  `revoke!(subdomain, email)`. `/admin` and the team's Team admins page list them.
+  shared role address, or a team whose key fails. A grant can do everything a team admin
+  does. A SAR Duty admin adds and removes them on the team's admin page,
+  `/admin/teams/:id` (#513), which keeps who added each; their events record who acted.
+  The team's Team admins page lists them too. From a console it is
+  `TeamLoginGrant.grant!(team, email, reason)` and `revoke!(team, email)`.
 - **Landing**: the page that asked for a login, else the team the user last opened
   (`users.last_team_id`), else their first. An admin with no team lands on `/admin`.
 - `/teams/:subdomain/settings/managers` shows the team who can log in, with the same list on `/admin`.

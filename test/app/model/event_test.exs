@@ -52,9 +52,9 @@ defmodule App.Model.EventTest do
 
   test "a login grant, added and removed, is recorded without its email" do
     team = team_fixture()
-    TeamLoginGrant.grant!(team.subdomain, "Office@Example.org", "shared inbox")
-    TeamLoginGrant.revoke!(team.subdomain, "office@example.org")
-    TeamLoginGrant.revoke!(team.subdomain, "office@example.org")
+    TeamLoginGrant.grant!(team, "Office@Example.org", "shared inbox")
+    TeamLoginGrant.revoke!(team, "office@example.org")
+    TeamLoginGrant.revoke!(team, "office@example.org")
 
     who = Event.who("office@example.org")
     assert %Event{team_id: team_id, data: %{"who" => ^who}} = Event.get_last(:login_grant_added)

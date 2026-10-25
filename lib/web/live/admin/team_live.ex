@@ -6,6 +6,7 @@ defmodule Web.Admin.TeamLive do
   alias App.Adapter.D4H
   alias App.Model.MCPToken
   alias App.Model.Team
+  alias App.Model.TeamLoginGrant
   alias App.Operation.SetTeamIdCards
   alias App.Operation.SetTeamMCP
   alias App.Repo
@@ -30,14 +31,20 @@ defmodule Web.Admin.TeamLive do
   defp assign_team(socket, team) do
     now = DateTime.utc_now()
 
-    assign(socket,
+    socket
+    |> assign(
       team: team,
       now: now,
       team_admins: TeamSummary.team_admin_rows(team, now),
       cards: Map.get(TeamSummary.card_counts(), team.id, 0),
       tokens: Map.get(MCPToken.count_live_by_team(), team.id, 0)
     )
+    |> assign_new(:grant_form, fn ->
+      grant_form(TeamLoginGrant.build_changeset(%TeamLoginGrant{}))
+    end)
   end
+
+  defp grant_form(changeset), do: to_form(changeset, as: "grant")
 
   def handle_info(
         {:team_refreshed, %Team{id: id} = updated},
@@ -166,12 +173,49 @@ defmodule Web.Admin.TeamLive do
               <div :for={role <- row.roles}>{role}</div>
               <div :if={row.grant}>
                 Login grant{if row.grant.reason, do: ": #{row.grant.reason}"}
+                <.hint :if={row.grant.added_by_user}>Added by {row.grant.added_by_user.email}</.hint>
               </div>
             </:col>
             <:col :let={row} label="Last seen" class="whitespace-nowrap max-md:hidden">
               {Service.Format.days_ago(row.last_seen_at, @now, @team.timezone) || "Never"}
             </:col>
+            <:col :let={row} label="" class="w-px">
+              <.button
+                :if={row.grant}
+                id={"remove-grant-#{row.grant.id}"}
+                type="button"
+                size={:sm}
+                variant={:danger}
+                phx-click="remove_grant"
+                phx-value-id={row.grant.id}
+                data-confirm={remove_grant_confirm(row, @team)}
+              >
+                Remove
+              </.button>
+            </:col>
           </.table>
+
+          <.form
+            for={@grant_form}
+            id="grant-form"
+            phx-change="validate_grant"
+            phx-submit="add_grant"
+            class="mt-6"
+          >
+            <h3 class="subheading">Add a login grant</h3>
+            <p class="hint mb-4">
+              A grant can do everything a team admin does, including sending changes to {D4H.service_name(
+                @team
+              )}. Add one for someone {D4H.service_name(@team)} can't make an Owner or Editor, such as a shared office address.
+            </p>
+            <div class="grid md:grid-cols-2 gap-x-6">
+              <.input field={@grant_form[:email]} type="email" label="Email" />
+              <.input field={@grant_form[:reason]} label="Why (optional)" placeholder="Treasurer" />
+            </div>
+            <.form_actions>
+              <.button variant={:success}>Add login grant</.button>
+            </.form_actions>
+          </.form>
         </section>
 
         <section id="team-id-cards" class="mb-8 max-w-3xl">
@@ -270,6 +314,52 @@ defmodule Web.Admin.TeamLive do
 
   defp region(team) do
     Enum.find_value(D4H.regions(), fn {name, host} -> host == team.d4h_api_host && name end)
+  end
+
+  # An email that is a D4H Owner too keeps that; Remove takes away only the grant.
+  defp remove_grant_confirm(%{roles: [], email: email}, team),
+    do: "Remove #{email}'s login grant? They can no longer open #{team.name}."
+
+  defp remove_grant_confirm(%{email: email}, _team),
+    do: "Remove #{email}'s login grant? Their own access still lets them in."
+
+  def handle_event("validate_grant", %{"grant" => params}, socket) do
+    changeset =
+      %TeamLoginGrant{team_id: socket.assigns.team.id}
+      |> TeamLoginGrant.build_changeset(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, grant_form: grant_form(changeset))}
+  end
+
+  def handle_event("add_grant", %{"grant" => params}, socket) do
+    %{team: team, current_user: user} = socket.assigns
+
+    case TeamLoginGrant.add(team, params, user) do
+      {:ok, grant} ->
+        socket =
+          socket
+          |> assign(grant_form: grant_form(TeamLoginGrant.build_changeset(%TeamLoginGrant{})))
+          |> assign_team(team)
+          |> put_flash(:info, "Added a login grant for #{grant.email}.")
+
+        {:noreply, socket}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, grant_form: grant_form(changeset))}
+    end
+  end
+
+  def handle_event("remove_grant", %{"id" => id}, socket) do
+    %{team: team, current_user: user} = socket.assigns
+
+    socket =
+      case TeamLoginGrant.remove(team, id, user) do
+        {:ok, grant} -> put_flash(socket, :info, "Removed #{grant.email}'s login grant.")
+        {:error, :not_found} -> put_flash(socket, :error, "That login grant was removed already.")
+      end
+
+    {:noreply, assign_team(socket, team)}
   end
 
   def handle_event("refresh", _params, socket) do

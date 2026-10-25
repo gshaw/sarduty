@@ -87,7 +87,7 @@ defmodule Web.AdminDashboardLiveTest do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
     team = team_fixture()
-    TeamLoginGrant.grant!(team.subdomain, "office@example.com", "role address")
+    TeamLoginGrant.grant!(team, "office@example.com", "role address")
     App.AccountsFixtures.user_fixture(%{email: "office@example.com"})
 
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
