@@ -30,7 +30,7 @@ defmodule App.Operation.SendChores do
   alias App.Repo
   alias Service.ChoreEventText
 
-  @draft "Left as a draft: it could not be published."
+  @draft "Left as a draft."
   @untagged "Sent without its tags. Send the changes to try again."
 
   @doc """
@@ -61,13 +61,19 @@ defmodule App.Operation.SendChores do
     chores = ChoreEvent.chores(event)
 
     with {:ok, state} <- read_state(d4h, event),
-         {:ok, send_tags} <- send_tags(state, chores, event.chore_category, tags),
+         {:ok, send_tags} <- send_tags(team, state, chores, event.chore_category, tags),
          {:ok, current} <- read_attendance(d4h, state) do
       rows = plan(team, event, chores, state, current, send_tags)
       apply_rows(team, event, state, rows, user, now)
     else
       {:error, error} ->
-        ChoreEvent.record_send!(event, event.d4h_activity_id, {:failed, error_text(error)}, now)
+        ChoreEvent.record_send!(
+          event,
+          event.d4h_activity_id,
+          {:failed, error_text(team, error)},
+          now
+        )
+
         :failed
     end
   end
@@ -84,16 +90,19 @@ defmodule App.Operation.SendChores do
   # A new event needs its hours tag, or its hours count nowhere. A sent one gets its tags
   # again only when it lacks the hours tag: a send whose tags D4H refused. An event with
   # no chores gets none.
-  defp send_tags(_state, [], _category, _tags), do: {:ok, []}
+  defp send_tags(_team, _state, [], _category, _tags), do: {:ok, []}
 
-  defp send_tags(nil, _chores, category, tags) do
+  defp send_tags(team, nil, _chores, category, tags) do
     case event_tags(category, tags.hours, tags.all) do
-      {:ok, event_tags} -> {:ok, event_tags}
-      {:error, title} -> {:error, "No tag is named #{title}, this category's hours tag."}
+      {:ok, event_tags} ->
+        {:ok, event_tags}
+
+      {:error, title} ->
+        {:error, "No tag is named #{title}, this category's hours tag. #{add_tag(team)}"}
     end
   end
 
-  defp send_tags(state, _chores, category, tags) do
+  defp send_tags(_team, state, _chores, category, tags) do
     case event_tags(category, tags.hours, tags.all) do
       {:ok, [hours | _others] = event_tags} ->
         if hours.d4h_tag_id in state.tag_ids, do: {:ok, []}, else: {:ok, event_tags}
@@ -154,7 +163,13 @@ defmodule App.Operation.SendChores do
         if match?({:failed, _error}, outcome), do: :failed, else: :sent
 
       {:error, reason} ->
-        ChoreEvent.record_send!(event, event.d4h_activity_id, {:failed, error_text(reason)}, now)
+        ChoreEvent.record_send!(
+          event,
+          event.d4h_activity_id,
+          {:failed, error_text(team, reason)},
+          now
+        )
+
         :failed
     end
   end
@@ -171,7 +186,7 @@ defmodule App.Operation.SendChores do
       not_sent ->
         cond do
           Enum.all?(not_sent, &publish?/1) ->
-            {:sent, @draft}
+            {:sent, draft(hd(not_sent))}
 
           row = Enum.find(not_sent, &(&1.action == :set_activity_tags)) ->
             {:failed, untagged(row)}
@@ -183,6 +198,16 @@ defmodule App.Operation.SendChores do
   end
 
   defp untagged(row), do: "#{@untagged} #{row.error}"
+
+  defp draft(%{error: nil}), do: @draft
+  defp draft(row), do: "#{@draft} #{row.error}"
+
+  # A team on SAR Duty Records has no tags page: its hours tags come with the team.
+  defp add_tag(team) do
+    if D4H.records?(team),
+      do: "Select another hours tag in team settings.",
+      else: "Add it in #{D4H.service_name(team)}, or select another hours tag in team settings."
+  end
 
   defp publish?(row), do: row.action == :publish_activity and row.new_value["published"] == true
 
@@ -219,8 +244,8 @@ defmodule App.Operation.SendChores do
     end
   end
 
-  defp error_text(:no_team_key), do: "Your team has no access key."
-  defp error_text(%D4H.Error{} = error), do: Exception.message(error)
-  defp error_text(text) when is_binary(text), do: text
-  defp error_text(reason), do: inspect(reason)
+  defp error_text(_team, :no_team_key), do: "Your team has no access key."
+  defp error_text(team, %D4H.Error{} = error), do: D4H.error_text(team, error)
+  defp error_text(_team, text) when is_binary(text), do: text
+  defp error_text(_team, reason), do: inspect(reason)
 end

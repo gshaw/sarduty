@@ -59,7 +59,7 @@ defmodule App.Operation.ApplyChangeSet do
     with :ok <- check_team(team),
          d4h = D4H.build_context_from_team(team),
          {:ok, current} <- read_current(d4h, change_set) do
-      rows = apply_rows(d4h, change_set, current, now, opts)
+      rows = apply_rows(team, d4h, change_set, current, now, opts)
       ChangeSet.mark_applied!(change_set, user, now)
       {:ok, rows}
     end
@@ -67,13 +67,16 @@ defmodule App.Operation.ApplyChangeSet do
 
   # Rows go in order, so one can use the activity (#341) or the award (#493) an earlier
   # row created.
-  defp apply_rows(d4h, change_set, current, now, opts) do
+  defp apply_rows(team, d4h, change_set, current, now, opts) do
     {rows, _created} =
       change_set.rows
       |> Enum.filter(&(&1.status in [:proposed, :failed]))
       |> Enum.map_reduce(created(change_set.rows), fn row, created ->
         row = with_created(row, created)
-        result = apply_row(d4h, row, change_set.source, current, opts)
+
+        result =
+          d4h |> apply_row(row, change_set.source, current, opts) |> failure_text(row, team)
+
         recorded = ChangeSetRow.record!(row, result, now)
         {recorded, created(recorded, created)}
       end)
@@ -313,7 +316,7 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :delete_attendance} = row) do
     case D4H.delete_attendance(d4h, row.d4h_record_id) do
       :ok -> {:applied, row.d4h_record_id}
-      {:error, error} -> {:failed, attendance_failure_text(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
@@ -325,21 +328,21 @@ defmodule App.Operation.ApplyChangeSet do
            row.new_value["published"]
          ) do
       {:ok, id} -> {:applied, id}
-      {:error, error} -> {:failed, Exception.message(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
   defp write(d4h, %ChangeSetRow{action: :add_group_member, new_value: new_value}) do
     case D4H.add_group_member(d4h, new_value["d4h_group_id"], new_value["d4h_member_id"]) do
       {:ok, membership} -> {:applied, membership.d4h_group_membership_id}
-      {:error, error} -> {:failed, Exception.message(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
   defp write(d4h, %ChangeSetRow{action: :remove_group_member} = row) do
     case D4H.remove_group_membership(d4h, row.d4h_record_id) do
       :ok -> {:applied, row.d4h_record_id}
-      {:error, error} -> {:failed, Exception.message(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
@@ -352,14 +355,14 @@ defmodule App.Operation.ApplyChangeSet do
            new_value["km"]
          ) do
       {:ok, usage} -> {:applied, usage.d4h_equipment_usage_id}
-      {:error, error} -> {:failed, Exception.message(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
   defp write(d4h, %ChangeSetRow{action: :delete_equipment_usage} = row) do
     case D4H.delete_equipment_usage(d4h, row.d4h_record_id) do
       :ok -> {:applied, row.d4h_record_id}
-      {:error, error} -> {:failed, Exception.message(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
@@ -368,7 +371,7 @@ defmodule App.Operation.ApplyChangeSet do
 
     case D4H.set_activity_tags(d4h, kind, row.d4h_record_id, row.new_value["tag_ids"]) do
       {:ok, _activity} -> {:applied, row.d4h_record_id}
-      {:error, error} -> {:failed, Exception.message(error)}
+      {:error, error} -> {:failed, error}
     end
   end
 
@@ -460,23 +463,29 @@ defmodule App.Operation.ApplyChangeSet do
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}
 
-  # Records refuses a write with a title that says what is wrong, so that is the message.
+  # Records refuses an edit with a title that says what is wrong, so that is the message.
+  # Any other failure goes to failure_text/3.
   defp edit_failure_text(%D4H.Error{status: status, message: message})
        when status in 400..499,
        do: String.replace(message, ~r/ \(\d+\)$/, "")
 
-  defp edit_failure_text(_error),
-    do: "No answer came back. Try again in a few minutes."
+  defp edit_failure_text(error), do: error
 
   defp attendance_result({:ok, info}), do: {:applied, info.d4h_attendance_id}
-  defp attendance_result({:error, error}), do: {:failed, attendance_failure_text(error)}
+  defp attendance_result({:error, error}), do: {:failed, error}
 
-  # D4H answers 400 or 404 when the activity or the attendance row is gone, so that
-  # says so before D4H's own text.
-  defp attendance_failure_text(%D4H.Error{status: status} = error) when status in [400, 404],
-    do: "The activity may have been deleted or changed. #{Exception.message(error)}"
+  # A failed write names who refused or did not answer. D4H answers an attendance write
+  # 400 or 404 when the activity or the row is gone, so that says so first.
+  defp failure_text({:failed, error}, row, team) when is_exception(error) do
+    text = D4H.error_text(team, error)
 
-  defp attendance_failure_text(error), do: Exception.message(error)
+    if row.action in [:create_attendance, :update_attendance, :delete_attendance] and
+         match?(%D4H.Error{status: status} when status in [400, 404], error),
+       do: {:failed, "The activity may have been deleted or changed. #{text}"},
+       else: {:failed, text}
+  end
+
+  defp failure_text(result, _row, _team), do: result
 
   defp time(nil), do: nil
 

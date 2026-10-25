@@ -183,7 +183,7 @@ defmodule Web.ActivitySendAttendanceTest do
     lv = open(ctx)
     lv |> element("#review") |> render_click()
 
-    assert render(lv) =~ "No answer came back"
+    assert render(lv) =~ "D4H did not answer. Try again."
     refute has_element?(lv, "#send-form")
   end
 
@@ -242,7 +242,7 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(
              lv,
              "#failures",
-             "The activity may have been deleted or changed. Bad Request (400)"
+             "The activity may have been deleted or changed. D4H refused it: Bad Request (400)"
            )
   end
 

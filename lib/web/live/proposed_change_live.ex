@@ -1,6 +1,7 @@
 defmodule Web.ProposedChangeLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.D4H
   alias App.Model.ChangeSet
   alias App.Operation.ApplyProposedChangeSet
 
@@ -44,7 +45,7 @@ defmodule Web.ProposedChangeLive do
         {:noreply, socket |> put_flash(kind, message) |> load(change_set.id)}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, error_text(reason))}
+        {:noreply, put_flash(socket, :error, error_text(reason, team))}
     end
   end
 
@@ -72,13 +73,15 @@ defmodule Web.ProposedChangeLive do
 
   defp count_changes(n), do: Service.Format.count(n, one: "%d change", many: "%d changes")
 
-  defp error_text(:decided), do: "These changes were already sent or discarded."
-  defp error_text(:none_selected), do: "Select at least 1 change to send."
-  defp error_text(:no_team_key), do: "Save your team's access key in team settings first."
+  defp error_text(:decided, _team), do: "These changes were already sent or discarded."
+  defp error_text(:none_selected, _team), do: "Select at least 1 change to send."
+  defp error_text(:no_team_key, _team), do: "Save your team's access key in team settings first."
 
-  defp error_text(:published), do: "Attendance cannot be changed. The activity is published."
-  defp error_text(:deleted), do: "Attendance cannot be changed. The activity is deleted."
-  defp error_text(error), do: "No answer came back. Try again. #{Exception.message(error)}"
+  defp error_text(:published, team),
+    do: "Attendance cannot be changed once the activity is published. #{D4H.unpublish_text(team)}"
+
+  defp error_text(:deleted, _team), do: "Attendance cannot be changed. The activity is deleted."
+  defp error_text(error, team), do: D4H.error_text(team, error)
 
   def render(assigns) do
     ~H"""

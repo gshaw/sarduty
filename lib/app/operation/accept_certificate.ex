@@ -17,6 +17,7 @@ defmodule App.Operation.AcceptCertificate do
   import Ecto.Query
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.CertificateFile
   alias App.Model.ChangeSet
@@ -161,7 +162,7 @@ defmodule App.Operation.AcceptCertificate do
     case ApplyChangeSet.call(team, set, user, now, document: document) do
       {:ok, rows} -> {:ok, rows}
       {:error, :no_team_key} -> {:error, "Save your team's access key in team settings first."}
-      {:error, error} -> {:error, Exception.message(error)}
+      {:error, error} -> {:error, D4H.error_text(team, error)}
     end
   end
 

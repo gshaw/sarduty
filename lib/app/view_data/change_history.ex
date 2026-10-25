@@ -131,12 +131,14 @@ defmodule App.ViewData.ChangeHistory do
   `:activity`, the page it shows on, which decides whether it names the activity or the
   member. The change's `activity` or `member` must be preloaded for attendance.
   """
-  def describe(%D4HChange{record_kind: :member, action: :added}, _page, _tz), do: "Added"
+  def describe(%D4HChange{record_kind: :member, action: :added}, _page, _tz),
+    do: "Added to the team"
 
   def describe(%D4HChange{record_kind: :member, action: :changed} = c, _page, tz),
     do: c.fields |> Enum.map(&member_field(&1, c, tz)) |> Enum.uniq() |> sentences()
 
-  def describe(%D4HChange{record_kind: :activity, action: :added}, _page, _tz), do: "Added"
+  def describe(%D4HChange{record_kind: :activity, action: :added}, _page, _tz),
+    do: "Activity added"
 
   def describe(%D4HChange{record_kind: :activity, action: :changed} = c, _page, tz),
     do: c.fields |> Enum.map(&activity_field(&1, c, tz)) |> sentences()

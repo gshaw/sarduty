@@ -58,8 +58,11 @@ defmodule Web.ActivityMileageLive do
         <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
       </p>
     <% else %>
+      <%!-- A Records team's activity form takes an address, not a location, so a Records
+           team has nowhere to add one. --%>
       <p>
-        The mileage report is not available. The activity has no latitude and longitude. Add its location in {@service}.
+        The mileage report is not available. The activity has no latitude and longitude.
+        <span :if={!D4H.records?(@current_team)}>Add its location in {@service}.</span>
       </p>
     <% end %>
 

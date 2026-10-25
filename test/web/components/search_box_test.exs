@@ -22,7 +22,7 @@ defmodule Web.Components.SearchBoxTest do
       assert has_element?(
                lv,
                "#search-hint",
-               "Find members, activities, equipment, qualifications, groups, endorsements, templates, and pages by name, number, or barcode."
+               "Find members, activities, equipment, qualifications, groups, endorsements, templates, and pages by name, ID number, barcode, or serial number."
              )
     end
 
@@ -114,7 +114,7 @@ defmodule Web.Components.SearchBoxTest do
     activity = activity_fixture(team, %{title: "Rope night"})
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
 
-    assert has_element?(lv, "#search-hint", "Find activities and pages by name or number.")
+    assert has_element?(lv, "#search-hint", "Find activities and pages by name or ID number.")
 
     lv |> form("#search-form", %{q: "rope"}) |> render_change()
     assert has_element?(lv, "#search-hit-activity-#{activity.id}")

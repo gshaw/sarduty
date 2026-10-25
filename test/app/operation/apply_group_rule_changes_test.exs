@@ -109,10 +109,10 @@ defmodule App.Operation.ApplyGroupRuleChangesTest do
 
     refute GroupMember.get_by(group_id: ctx.group.id, member_id: ctx.qualified.id)
 
-    assert %{error: "Forbidden (403)"} =
+    assert %{error: "D4H refused it: Forbidden (403)"} =
              Repo.get_by(GroupMembershipChange, action: :add)
 
-    assert %{status: :failed, error: "Forbidden (403)"} =
+    assert %{status: :failed, error: "D4H refused it: Forbidden (403)"} =
              Repo.get_by(ChangeSetRow, action: :add_group_member)
   end
 

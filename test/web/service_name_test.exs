@@ -2,15 +2,15 @@ defmodule Web.ServiceNameTest do
   use ExUnit.Case, async: true
 
   # A team on SAR Duty Records reads the same pages as a D4H team, so text names the
-  # service only where the reader must go there, and takes the name from the team:
-  # `@service` on a team page, `D4H.service_name/1` elsewhere (docs/writing.md). A
-  # "D4H" written into a string or HEEx text fails here. `D4H.` calls, comments, and docs
-  # are code, not text.
+  # service only where the reader must go there or where it refused or did not answer,
+  # and takes the name from the team: `@service` on a team page, `D4H.service_name/1`
+  # elsewhere (docs/writing.md). A "D4H" written into a string or HEEx text fails here.
+  # `D4H.` calls, comments, and docs are code, not text.
   @word ~r/(?<![\w.])D4H(?![\w]|\.\w)/
 
   # Files that may name D4H, and why.
   @files %{
-    "lib/app/adapter/" => "the adapter is D4H; its names and errors are for us",
+    "lib/app/adapter/" => "the adapter is D4H; people read its errors through D4H.error_text/2",
     "lib/app/mcp/tool/" => "tool descriptions are for agents, shared by every team",
     "lib/app/operation/sign_up_team.ex" => "signup's D4H path",
     "lib/app/view_model/event_filter_view_model.ex" => "event labels on /admin/events",
@@ -42,6 +42,8 @@ defmodule Web.ServiceNameTest do
       "the same, as a D4H team reads it",
     {"lib/web/controllers/style_guide_html/pages/forms.html.heex", "From D4H. Change it there."} =>
       "a read-only field's hint, which sends the reader to D4H",
+    {"lib/web/controllers/style_guide_html/pages/toast.html.heex", "D4H refused the change"} =>
+      "an error toast that says who refused",
     {"lib/web/controllers/style_guide_html/pages/row_link.html.heex", "in D4H."} =>
       "Needs attention as a D4H team reads it, which sends the reader there",
     {"lib/web/controllers/style_guide_html/pages/warning_text.html.heex",

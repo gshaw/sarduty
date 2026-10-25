@@ -73,12 +73,16 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
     noun), cheque, defence, catalogue, travelled, cancelled. Keep "-ize" endings: organize,
     authorize. Code stays in US spelling: identifiers, CSS classes and tokens, routes,
     comments, and commit messages say `color`, not `colour`.
-16. **Name D4H or SAR Duty Records only where the reader must go there.** Say what
-    changed, not where: "This member has this award already", not "D4H has this award
-    already". Use the verbs both share: refresh and send. Name the service only to send
-    the reader there to act, as in "Unpublish it in D4H first" or "Open in D4H", and take
-    the name from the team: `@service` on a team page, `D4H.service_name/1` elsewhere. A
-    test fails on "D4H" written into text.
+16. **Name D4H or SAR Duty Records only where the reader must go there, or where it
+    refused or did not answer.** Say what changed, not where: "This member has this award
+    already", not "D4H has this award already". Use the verbs both share: refresh and
+    send. Name the service to send the reader there to act, as in "Unpublish it in D4H
+    first" or "Open in D4H". Name it as the actor when it says no or goes quiet, so the
+    reader knows where the fix is: "D4H refused it: Forbidden (403)". Take the name from
+    the team: `@service` on a team page, `D4H.service_name/1` elsewhere, and
+    `D4H.error_text/2` for an error from the service. A test fails on "D4H" written into
+    text. A Records team changes its activities and awards in SAR Duty, so never send it
+    to Records for those.
 
 ## Patterns
 
@@ -104,8 +108,8 @@ thing is on the page, such as "the button on the right".
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
 letters", "Select a year", "Phone must be 10 digits". Never "invalid", "error", "failed",
 or "something went wrong" alone. The message in the error summary and on the field is the
-same text. When no answer comes back, say so and what to try: "No answer came back. Try
-again."
+same text. When D4H or SAR Duty Records refuses or does not answer, name it and say what
+to try: "D4H did not answer. Try again." `D4H.error_text/2` writes both.
 
 **Success messages.** What changed, in the past tense, with the count: "4 attendance
 changes sent". No "successfully". When the page already shows the change, such as
@@ -268,5 +272,5 @@ Before committing text a person will read, check each line:
 - [ ] Numbers are digits. Every date, time, duration, count of days, and distance comes
       from a `Service.Format` function.
 - [ ] Text people read uses Canadian spelling. Code uses US spelling.
-- [ ] D4H or SAR Duty Records is named only where the reader must go there, and the name
-      comes from the team.
+- [ ] D4H or SAR Duty Records is named only where the reader must go there or where it
+      refused or did not answer, and the name comes from the team.

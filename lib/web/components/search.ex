@@ -185,7 +185,9 @@ defmodule Web.Components.Search do
     </p>
     <div :if={@terms != [] and @groups == []} id={"#{@id}-none"} class="site-search-none">
       <h2>Nothing matches “{@query}”</h2>
-      <p>Search looks at names, numbers, and barcodes. Check the spelling, or try fewer words.</p>
+      <p>
+        Search looks at names, ID numbers, barcodes, and serial numbers. Check the spelling, or try fewer words.
+      </p>
       <p>
         SAR Duty refreshes every 10 minutes, so something just added may not be here yet.
       </p>
@@ -349,7 +351,12 @@ defmodule Web.Components.Search do
   # What this person can find, from the kinds they see.
   defp hint(kinds) do
     things = for kind <- kinds, do: @kind_names |> Map.fetch!(kind) |> String.downcase()
-    by = if :equipment in kinds, do: "name, number, or barcode", else: "name or number"
+
+    by =
+      if :equipment in kinds,
+        do: "name, ID number, barcode, or serial number",
+        else: "name or ID number"
+
     "Find #{list(things)} by #{by}."
   end
 

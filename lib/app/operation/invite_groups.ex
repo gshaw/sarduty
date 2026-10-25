@@ -110,8 +110,7 @@ defmodule App.Operation.InviteGroups do
 
   defp describe(team, :published),
     do:
-      "Nobody was invited. Attendance cannot be changed once the activity is published. Unpublish it in #{D4H.service_name(team)} first."
+      "Nobody was invited. Attendance cannot be changed once the activity is published. #{D4H.unpublish_text(team)}"
 
-  defp describe(_team, %D4H.Error{} = error),
-    do: "Nobody was invited. #{Exception.message(error)}"
+  defp describe(team, error), do: "Nobody was invited. #{D4H.error_text(team, error)}"
 end

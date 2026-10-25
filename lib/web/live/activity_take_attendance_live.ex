@@ -73,7 +73,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         {:noreply, assign(socket, review: review, selected: selected, failures: [])}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_text(error, socket.assigns.service))}
+        {:noreply, put_flash(socket, :error, error_text(error, team))}
     end
   end
 
@@ -105,7 +105,7 @@ defmodule Web.ActivityTakeAttendanceLive do
         {:noreply, show_results(socket, results)}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_text(error, socket.assigns.service))}
+        {:noreply, put_flash(socket, :error, error_text(error, team))}
     end
   end
 
@@ -130,21 +130,19 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp count_changes(n),
     do: Service.Format.count(n, one: "%d attendance change", many: "%d attendance changes")
 
-  defp error_text(:published, service),
-    do:
-      "Attendance cannot be changed once the activity is published. Unpublish it in #{service} first."
+  defp error_text(:published, team),
+    do: "Attendance cannot be changed once the activity is published. #{D4H.unpublish_text(team)}"
 
-  defp error_text(:deleted, _service), do: "This activity is deleted. Nothing can be sent to it."
+  defp error_text(:deleted, _team), do: "This activity is deleted. Nothing can be sent to it."
 
-  defp error_text(:no_team_key, _service),
+  defp error_text(:no_team_key, _team),
     do: "Save your team's access key in team settings first."
 
-  defp error_text(%D4H.Error{status: status} = error, _service) when status in [400, 404],
+  defp error_text(%D4H.Error{status: status} = error, team) when status in [400, 404],
     do:
-      "SAR Duty cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
+      "#{D4H.service_name(team)} cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
 
-  defp error_text(error, _service),
-    do: "No answer came back. Try again. #{Exception.message(error)}"
+  defp error_text(error, team), do: D4H.error_text(team, error)
 
   defp load_link(socket) do
     %{current_team: team, activity: activity} = socket.assigns
@@ -200,7 +198,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       selected={@selected}
       times={@times}
       activity={@activity}
-      service={@service}
+      team={@current_team}
     />
 
     <div :if={@no_shows != []} id="no-shows">
@@ -276,7 +274,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   attr :selected, :any, required: true
   attr :times, :list, required: true
   attr :activity, :any, required: true
-  attr :service, :string, required: true
+  attr :team, :any, required: true
 
   defp send_section(%{review: nil} = assigns) do
     ~H"""
@@ -301,7 +299,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp send_section(%{review: %{published: true}} = assigns) do
     ~H"""
     <.warning_text id="published">
-      Attendance cannot be changed once the activity is published. Unpublish it in {@service} first.
+      Attendance cannot be changed once the activity is published. {D4H.unpublish_text(@team)}
     </.warning_text>
     """
   end

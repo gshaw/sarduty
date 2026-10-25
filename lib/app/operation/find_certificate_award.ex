@@ -37,7 +37,7 @@ defmodule App.Operation.FindCertificateAward do
       nil -> {:ok, nil}
     end
   rescue
-    error in [D4H.Error, Req.TransportError] -> {:error, Exception.message(error)}
+    error in [D4H.Error, Req.TransportError] -> {:error, D4H.error_text(team, error)}
   end
 
   @doc """

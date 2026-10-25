@@ -3,6 +3,7 @@ defmodule Web.CertificateLive do
 
   import Ecto.Query
 
+  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
@@ -177,8 +178,13 @@ defmodule Web.CertificateLive do
               />
               <.input field={@form[:starts_on]} type="date" label="Start" />
               <.input field={@form[:ends_on]} type="date" label="Expiry (optional)" />
+              <%!-- A Records team changes and removes awards in SAR Duty. --%>
               <.warning_text class="mb-4">
-                Accepting sends the award. Check the qualification and dates first.
+                Accepting sends the award.
+                <span :if={!D4H.records?(@current_team)}>
+                  After that, only {@service} can change or remove it.
+                </span>
+                Check the qualification and dates first.
               </.warning_text>
           <% end %>
           <.form_actions>
@@ -196,6 +202,7 @@ defmodule Web.CertificateLive do
           <h2 class="subheading">Decline</h2>
           <.warning_text :if={Certificate.dates_locked?(@certificate)} class="mb-4">
             The award stays. Declining deletes only the certificate.
+            <span :if={!D4H.records?(@current_team)}>Only {@service} can remove the award.</span>
           </.warning_text>
           <.form for={@decline_form} id="decline-form" phx-submit="decline">
             <.input field={@decline_form[:reason]} type="textarea" rows="3" label="Why not">

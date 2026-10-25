@@ -23,8 +23,8 @@ defmodule App.Operation.ChangeActivityTags do
   won't take tags (#358), or `{:error, text}` to show. The local copy takes D4H's published
   flag, so the activity's page agrees before the next refresh.
   """
-  def current(%Team{d4h_access_key: nil}, _activity),
-    do: {:error, describe(:no_team_key)}
+  def current(%Team{d4h_access_key: nil} = team, _activity),
+    do: {:error, describe(team, :no_team_key)}
 
   def current(%Team{} = team, %Activity{} = activity) do
     d4h = D4H.build_context_from_team(team)
@@ -38,7 +38,7 @@ defmodule App.Operation.ChangeActivityTags do
           else: {:ok, now.tag_ids |> Enum.uniq() |> Enum.sort()}
 
       {:error, error} ->
-        {:error, describe(error)}
+        {:error, describe(team, error)}
     end
   end
 
@@ -110,7 +110,7 @@ defmodule App.Operation.ChangeActivityTags do
         {:ok, row}
 
       {:error, reason} ->
-        {:error, describe(reason)}
+        {:error, describe(team, reason)}
     end
   end
 
@@ -121,8 +121,8 @@ defmodule App.Operation.ChangeActivityTags do
     activity |> Ecto.Changeset.change(tags: tags) |> Repo.update!()
   end
 
-  defp describe(:no_team_key), do: "Save your team's access key in team settings first."
-  defp describe(:deleted), do: "This activity is deleted."
+  defp describe(_team, :no_team_key), do: "Save your team's access key in team settings first."
+  defp describe(_team, :deleted), do: "This activity is deleted."
 
-  defp describe(%D4H.Error{} = error), do: "The tags were not sent. #{Exception.message(error)}"
+  defp describe(team, error), do: D4H.error_text(team, error)
 end

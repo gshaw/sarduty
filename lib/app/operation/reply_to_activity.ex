@@ -131,7 +131,7 @@ defmodule App.Operation.ReplyToActivity do
       :gone -> "Your invitation was deleted. Ask a team admin."
       :published -> "Your reply cannot be sent. This activity is published."
       :no_team_key -> "Your team has no access key. Ask a team admin."
-      _failed -> "No answer came back. Try again."
+      _failed -> "Your reply was not sent. Try again, or ask a team admin."
     end
   end
 end
