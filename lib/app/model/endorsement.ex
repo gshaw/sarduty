@@ -73,6 +73,10 @@ defmodule App.Model.Endorsement do
     |> hd()
   end
 
+  @doc "Whether the team shows any endorsement on ID cards."
+  def any_on_card?(team_id),
+    do: Endorsement |> where([e], e.team_id == ^team_id and e.on_card) |> Repo.exists?()
+
   @doc "The team's endorsements with their qualifications, in name order."
   def get_all(team_id) do
     Endorsement

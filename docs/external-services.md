@@ -101,7 +101,7 @@ Signs member ID card passes ([BuildApplePass](../lib/app/operation/build_apple_p
 [Service.ApplePass](../lib/service/apple_pass.ex)) with a Pass Type ID certificate from
 Gerry's Apple developer account. Signing runs the `openssl` CLI, which the Fly image
 installs. Apple's WWDR G4 intermediate is public and lives in `priv/apple/`. All four
-variables are optional: without them the ID Card tab offers no pass.
+variables are optional: without them SAR Duty offers no pass.
 
 - `APPLE_PASS_TYPE_ID` — `pass.com.sarduty.member-card`.
 - `APPLE_TEAM_ID` — the developer account's team ID.
@@ -125,7 +125,7 @@ Sends member ID card passes to Google
 project `sar-duty`. The issuer account is in the
 [Pay & Wallet Console](https://pay.google.com/business/console/) as "SAR Duty", where the
 service account is a Developer. Setup is in #74. Both variables are optional: without
-them the ID Card tab offers no Google pass.
+them SAR Duty offers no Google pass.
 
 - `GOOGLE_WALLET_ISSUER_ID` — `3388000000023212691`.
 - `GOOGLE_WALLET_SERVICE_ACCOUNT` — the service account's JSON key file, on one line.

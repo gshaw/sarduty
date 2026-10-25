@@ -89,10 +89,13 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   token the next time its pass is built.
 - APNs only works in production, so dev can build passes but never deliver a push.
 
-The ID Card tab shows how many phones hold the pass and when one last fetched it
-(`pass_fetched_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without
-a reload. **Send test update**
-([SendTestPassUpdate](../lib/app/operation/send_test_pass_update.ex)) sets `pass_test_at`
+The ID Card tab's Wallet row shows how many phones hold the pass and when one last
+fetched it (`pass_fetched_at`), and whether the member saved it to Google Wallet
+(`in_wallet_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without a
+reload. Under the buttons it says how the card reaches the member: from Your membership
+on a team with member logins, otherwise by email. **Send test update**, for SAR Duty
+admins only, checks that pushes still reach phones (#76)
+([SendTestPassUpdate](../lib/app/operation/send_test_pass_update.ex)). It sets `pass_test_at`
 and pushes. The pass gains a "Test update" back field whose `changeMessage` puts a notice
 on the lock screen. The fingerprint leaves that field out, so a test never makes a
 refresh push, and the card's code, token and serial don't change.
@@ -188,7 +191,10 @@ expired once it passes.
 
 A card is active while the member is current, not retired
 (`Member.current?/2`).
-Qualifications don't change that. They're listed, not required.
+Qualifications don't change that. They're listed, not required. A retired member gets no
+new card ([IssueMemberCard](../lib/app/operation/issue_member_card.ex) refuses), and the
+ID Card tab's Status row says their old one is not active, as the verify site does. There
+is no Replace: Cancel ID card, then Issue ID card, gives the member a new code.
 
 A team picks what to list on the **Endorsements** page (#320). For each endorsement the
 member holds, the back of the pass, the verify site,
