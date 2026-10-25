@@ -44,6 +44,8 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:organization_admin_added), do: "Organization admin added"
   def label(:organization_admin_removed), do: "Organization admin removed"
   def label(:organization_hours_tags_changed), do: "Organization hours tags changed"
+  def label(:organization_team_added), do: "Team added to an organization"
+  def label(:organization_team_removed), do: "Team removed from an organization"
 
   def validate(params) do
     changeset =

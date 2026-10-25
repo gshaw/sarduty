@@ -195,6 +195,8 @@ defmodule Web.Router do
         {Web.UserAuth, :ensure_org_access}
       ] do
       live "/orgs/:slug", Org.TeamCollectionLive
+      live "/orgs/:slug/teams/new", Org.TeamNewLive
+      live "/orgs/:slug/teams/:subdomain", Org.TeamLive
       live "/orgs/:slug/settings", Org.SettingsLive
       live "/orgs/:slug/settings/admins", Org.AdminsLive
       live "/orgs/:slug/settings/hours-tags", Org.HoursTagsLive

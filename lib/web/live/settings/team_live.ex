@@ -9,6 +9,7 @@ defmodule Web.Settings.TeamLive do
   alias App.Model.Team
   alias App.Operation.SaveTeamSignature
   alias App.Operation.UpdateTeamSettings
+  alias App.Repo
 
   # The team comes from the URL, /teams/:subdomain/settings (#153).
   def mount(_params, _session, socket) do
@@ -17,6 +18,7 @@ defmodule Web.Settings.TeamLive do
     socket =
       socket
       |> assign(page_title: "Team settings")
+      |> assign(organization: team |> Repo.preload(:organization) |> Map.get(:organization))
       |> assign_form(Team.build_settings_changeset(team))
       |> assign(watch_groups: watch_groups(team))
       |> assign(signature_error: nil)
@@ -50,16 +52,41 @@ defmodule Web.Settings.TeamLive do
     <.team_settings_tabs team={@current_team} current={:general} />
     <div class="measure">
       <%!-- The tabs list the other settings. MCP tokens shows there only once a SAR Duty
-      admin turns it on, and ID cards are on Endorsements, so say how to get them. --%>
+      admin turns it on, and ID cards are on Endorsements, so say how to get them. A team
+      in an organization (#512) says who its organization admins are. --%>
       <ul
-        :if={!@current_team.id_cards_enabled or !@current_team.mcp_enabled}
+        :if={@organization != nil or !@current_team.id_cards_enabled or !@current_team.mcp_enabled}
         class="row-links mb-4"
       >
+        <li :if={@organization} id="settings-organization" class="py-2">
+          <div class="media">
+            <img
+              :if={@organization.logo}
+              src={Web.OrganizationController.logo_url(@organization)}
+              width="32"
+              height="32"
+              class="size-8 rounded"
+              alt=""
+            />
+            <div>
+              {@organization.name}
+              <span class="hint block">
+                Its organization admins set your hours tags and can turn your ID cards on or
+                off.
+                <.a navigate={~p"/teams/#{@current_team}/settings/managers"}>See who they are</.a>
+              </span>
+            </div>
+          </div>
+        </li>
         <li :if={!@current_team.id_cards_enabled} id="settings-cards-off" class="py-2">
           ID cards
-          <span class="hint block">
+          <span :if={!@organization} class="hint block">
             Members carry them in Apple Wallet or Google Wallet. A SAR Duty admin turns them
             on once they have checked your team.
+          </span>
+          <span :if={@organization} class="hint block">
+            Members carry them in Apple Wallet or Google Wallet. {@organization.short_name}'s
+            organization admins or a SAR Duty admin turn them on.
           </span>
         </li>
         <li :if={!@current_team.mcp_enabled} id="settings-mcp-off" class="py-2">

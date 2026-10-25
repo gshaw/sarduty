@@ -41,7 +41,9 @@ defmodule App.Model.Event do
     member_viewed_as: 730,
     organization_admin_added: 730,
     organization_admin_removed: 730,
-    organization_hours_tags_changed: 730
+    organization_hours_tags_changed: 730,
+    organization_team_added: 730,
+    organization_team_removed: 730
   }
 
   @kinds Map.keys(@retention_days)
