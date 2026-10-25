@@ -2,7 +2,8 @@
 // form submits and the server renders, and a text box with an empty list beside it, under
 // phx-update="ignore". Typing lists the select's options that contain every word typed;
 // picking one sets the select and fires its input event, so phx-change still runs. A
-// clearable one, a filter's, lists the empty option first, as All. The ARIA follows the
+// clearable one, a filter's, lists the empty option first, as All. The x empties the text
+// box and the select, and lists every option again. The ARIA follows the
 // WAI combobox pattern: focus stays in the text box and aria-activedescendant names the
 // highlighted option.
 export const Combobox = {
@@ -24,6 +25,10 @@ export const Combobox = {
       })
     }
     this.input.addEventListener("click", () => (this.isOpen() ? this.close() : this.open(true)))
+    // The x keeps focus in the text box, so the list stays open to pick again.
+    const clear = this.el.querySelector(".combobox-clear")
+    clear.addEventListener("mousedown", event => event.preventDefault())
+    clear.addEventListener("click", () => this.clear())
     this.input.addEventListener("keydown", event => this.keydown(event))
     this.input.addEventListener("blur", () => {
       this.close()
@@ -188,6 +193,19 @@ export const Combobox = {
     this.close()
     this.select.dispatchEvent(new Event("input", {bubbles: true}))
     this.select.dispatchEvent(new Event("change", {bubbles: true}))
+  },
+
+  clear() {
+    if (this.input.disabled) return
+    const had = this.select.value !== ""
+    this.select.value = ""
+    this.input.value = ""
+    this.input.focus()
+    this.open(true)
+    if (had) {
+      this.select.dispatchEvent(new Event("input", {bubbles: true}))
+      this.select.dispatchEvent(new Event("change", {bubbles: true}))
+    }
   },
 
   selectedLabel() {
