@@ -116,7 +116,7 @@ defmodule Web.MemberGroupsLive do
           id="add-group-id"
           name="group_id"
           value=""
-          options={Enum.map(@other_groups, &{group_label(&1, @organization_name), &1.id})}
+          options={Enum.map(@other_groups, &{Group.label(&1, @organization_name), &1.id})}
           aria-label="Group"
         />
         <.button id="add-group" phx-disable-with="Adding…">Add to group</.button>
@@ -160,11 +160,6 @@ defmodule Web.MemberGroupsLive do
     </p>
     """
   end
-
-  defp group_label(%Group{organization_owned: true} = group, organization_name),
-    do: "#{group.title} · #{organization_name}"
-
-  defp group_label(group, _organization_name), do: group.title
 
   defp find_member(team, member_id) do
     group_members_query =

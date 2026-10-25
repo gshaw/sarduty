@@ -68,6 +68,13 @@ defmodule App.Model.GroupRule do
     |> distinct(true)
   end
 
+  @doc "Whether the group has rules. A group without them is a list kept by hand."
+  def ruled?(%Group{} = group) do
+    GroupRule
+    |> where([r], r.team_id == ^group.team_id and r.d4h_group_id == ^group.d4h_group_id)
+    |> Repo.exists?()
+  end
+
   @doc "Takes the endorsement out of every rule, and deletes a rule it leaves empty."
   def remove_endorsement!(%Endorsement{} = endorsement) do
     rule_ids =

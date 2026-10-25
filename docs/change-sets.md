@@ -29,7 +29,9 @@ new kind of write is a new row action there, not a new call from a page or an op
   own their groups, and awards wait on #174's step 4.
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
-  any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)).
+  any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or
+  removing many members from the Members list (#547) is one `edit` set with a row each,
+  applied by SetGroupMembers, not ApplyEdit.
   [ApplyEdit](../lib/app/operation/apply_edit.ex) proposes and applies it in one step,
   then runs the sync so the next page shows the change. A group's row skips the sync:
   its caller writes the copy, as group rules do. The row names only the fields

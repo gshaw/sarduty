@@ -4,6 +4,7 @@ defmodule App.Model.Group do
   alias App.Field.TrimmedString
   alias App.Model.Group
   alias App.Model.GroupMember
+  alias App.Model.GroupRule
   alias App.Model.Team
   alias App.Repo
 
@@ -41,6 +42,22 @@ defmodule App.Model.Group do
     |> order_by([r], asc: r.title)
     |> Repo.all()
   end
+
+  @doc "The team's groups without rules, the lists kept by hand, by title."
+  def get_kept_by_hand(team_id) do
+    ruled = GroupRule.ruled_d4h_group_ids_query(team_id)
+
+    Group
+    |> where([g], g.team_id == ^team_id and g.d4h_group_id not in subquery(ruled))
+    |> order_by([g], asc: g.title)
+    |> Repo.all()
+  end
+
+  @doc ~s(The title as a picker lists it, with the organization for its groups: "Callout · BCSARA".)
+  def label(%Group{organization_owned: true} = group, organization_name),
+    do: "#{group.title} · #{organization_name}"
+
+  def label(%Group{} = group, _organization_name), do: group.title
 
   def find!(team, id), do: Repo.get_by!(Group, id: id, team_id: team.id)
   def get_by(params), do: Repo.get_by(Group, params)
