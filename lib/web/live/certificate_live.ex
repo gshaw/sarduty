@@ -248,7 +248,12 @@ defmodule Web.CertificateLive do
               <% Certificate.dates_locked?(@certificate) -> %>
                 <p class="hint">{CertificateText.dates(@certificate)}</p>
               <% @existing -> %>
-                <.confirm_box form={@form} selected={@selected} service={@service} team={@current_team} />
+                <.confirm_box
+                  form={@form}
+                  selected={@selected}
+                  service={@service}
+                  team={@current_team}
+                />
               <% true -> %>
                 <.input
                   field={@form[:qualification_id]}
@@ -275,7 +280,12 @@ defmodule Web.CertificateLive do
                     </li>
                   </ul>
                 </.warning_text>
-                <.confirm_box form={@form} selected={@selected} service={@service} team={@current_team} />
+                <.confirm_box
+                  form={@form}
+                  selected={@selected}
+                  service={@service}
+                  team={@current_team}
+                />
             <% end %>
             <.form_actions>
               <.button
@@ -314,6 +324,7 @@ defmodule Web.CertificateLive do
   attr :form, :map, required: true
   attr :selected, :map, default: nil
   attr :service, :string, required: true
+  attr :team, :map, required: true
 
   # The box names what goes to the service: the qualification picked and the dates.
   defp confirm_box(assigns) do
