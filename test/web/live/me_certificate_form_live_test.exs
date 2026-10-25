@@ -108,6 +108,16 @@ defmodule Web.MeCertificateFormLiveTest do
     assert Repo.all(Certificate) == []
   end
 
+  test "a missing file shows beside the other mistakes, not after them", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
+    lv |> form("#certificate-form", certificate: %{starts_on: ""}) |> render_submit()
+
+    assert has_element?(lv, ~s(#certificate-errors a[href="#certificate_file_name"]))
+    assert has_element?(lv, ~s(#certificate-errors a[href="#certificate_starts_on"]))
+    assert has_element?(lv, "#certificate_file_name.field-error")
+    assert Repo.all(Certificate) == []
+  end
+
   test "a declined certificate shows why until the member deletes it", ctx do
     certificate =
       certificate_fixture(ctx.member, ctx.qualification, %{

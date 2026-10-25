@@ -17,6 +17,8 @@ defmodule App.Operation.SaveCertificate do
   alias App.Model.Team
   alias App.Repo
 
+  @missing_file "Select a photo or a PDF of the certificate."
+
   @doc """
   A member sends a certificate. `file` is `%{bytes:, file_name:}` from the upload, or nil.
   `{:ok, certificate}` or `{:error, changeset}`, with a file's problem on `:file_name`.
@@ -104,11 +106,18 @@ defmodule App.Operation.SaveCertificate do
   # The file ready to keep, before any transaction: a photo's resize would hold SQLite's
   # write lock (#385). `:missing` on a new certificate is an error, `:keep` keeps the one
   # sent.
-  defp prepare(:missing), do: {:error, "Select a photo or a PDF of the certificate."}
+  defp prepare(:missing), do: {:error, @missing_file}
   defp prepare(:keep), do: {:ok, nil}
 
   defp prepare(%{bytes: bytes, file_name: file_name}),
     do: Service.CertificateFile.prepare(bytes, file_name)
+
+  @doc """
+  The form's changeset with the missing file's error, so a new certificate sent with no
+  file says so beside its other mistakes, not after they are fixed.
+  """
+  def missing_file(changeset),
+    do: %{Ecto.Changeset.add_error(changeset, :file_name, @missing_file) | action: :insert}
 
   # A file's problem goes on the changeset, for the form.
   defp on_changeset({:ok, prepared}, _changeset), do: {:ok, prepared}
