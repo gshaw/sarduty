@@ -93,12 +93,11 @@ The ID Card tab's Wallet row shows how many phones hold the pass and when one la
 fetched it (`pass_fetched_at`), and whether the member saved it to Google Wallet
 (`in_wallet_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without a
 reload. Under the buttons it says how the card reaches the member: from Your membership
-on a team with member logins, otherwise by email. **Send test update**, for SAR Duty
-admins only, checks that pushes still reach phones (#76)
-([SendTestPassUpdate](../lib/app/operation/send_test_pass_update.ex)). It sets `pass_test_at`
-and pushes. The pass gains a "Test update" back field whose `changeMessage` puts a notice
-on the lock screen. The fingerprint leaves that field out, so a test never makes a
-refresh push, and the card's code, token and serial don't change.
+on a team with member logins, otherwise by email.
+
+There is no test button. "Last downloaded" shows a phone fetched the pass after a change,
+and a failed push logs "APNs pass push failed". To see a stale pass update, change
+something it shows, such as the team's endorsements.
 
 Wallet has no CSS and shows images only as PNG, so
 [LoadImage](../lib/app/operation/load_image.ex) shapes them with

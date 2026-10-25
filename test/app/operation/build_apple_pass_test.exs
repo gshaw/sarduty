@@ -155,26 +155,8 @@ defmodule App.Operation.BuildApplePassTest do
     refute fingerprint.(base) == fingerprint.(left)
   end
 
-  test "a test update adds a back field with a notice, and changes nothing else" do
-    card = card(authentication_token: "token-0123456789abcdef")
-    tested = card(authentication_token: "token-0123456789abcdef", pass_test_at: @now)
-    json = BuildApplePass.pass_json(card, [], @config, @now)
-    tested_json = BuildApplePass.pass_json(tested, [], @config, @now)
-
-    refute Enum.any?(json.generic.backFields, &(&1.key == "test"))
-
-    assert %{label: "Test update", value: "Sep 30, 05:00:00"} =
-             test_field = Enum.find(tested_json.generic.backFields, &(&1.key == "test"))
-
-    assert test_field.changeMessage == "SAR Duty test update %@"
-    assert tested_json.authenticationToken == json.authenticationToken
-    assert tested_json.serialNumber == json.serialNumber
-    assert tested_json.barcodes == json.barcodes
-    assert BuildApplePass.fingerprint(tested_json) == BuildApplePass.fingerprint(json)
-  end
-
   test "a team in an organization names it as issuer, and SAR Duty nowhere" do
-    card = card(authentication_token: "token-0123456789abcdef", pass_test_at: @now)
+    card = card(authentication_token: "token-0123456789abcdef")
     organization = %Organization{name: "BC Search and Rescue Association"}
     card = put_in(card.member.team.organization, organization)
     json = BuildApplePass.pass_json(card, [], @config, @now)
