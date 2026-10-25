@@ -27,6 +27,25 @@ defmodule App.Model.Tag do
     |> Repo.all()
   end
 
+  @doc """
+  The tag titles these teams have, for an organization's hours tags (#512): how many of
+  the teams have each, and whether it is a D4H organisation's own tag. The
+  organisation's come first, then A to Z. `[%{title:, teams:, organisation?:}]`.
+  """
+  def team_counts(team_ids) do
+    Tag
+    |> where([t], t.team_id in ^team_ids)
+    |> group_by([t], t.title)
+    |> select([t], %{
+      title: t.title,
+      teams: count(t.team_id, :distinct),
+      organisation?: fragment("max(? = 'Organisation')", t.owner_type)
+    })
+    |> Repo.all()
+    |> Enum.map(&%{&1 | organisation?: &1.organisation? in [1, true]})
+    |> Enum.sort_by(&{not &1.organisation?, String.downcase(&1.title)})
+  end
+
   @doc "A team's tag titles, A to Z, for a filter of activities by tag."
   def titles(team_id) do
     Tag

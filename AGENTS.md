@@ -58,8 +58,11 @@
   reaches a team when their email matches a member D4H makes an Owner or Editor
   (`Team.get_managed_by/2`). Admins reach every team. On a team with member logins on,
   any current member logs in to the team's Dashboard and their own page, Your
-  membership, `/teams/:subdomain/me` (`Member.get_logins/2`). Team pages are for team
-  admins unless a LiveView says `access: :team` or `:member`; see
+  membership, `/teams/:subdomain/me` (`Member.get_logins/2`). Organization admins log in
+  with their email alone, like a login grant, and reach only their organization's space,
+  `/orgs/:slug`, which shows each team's totals and never its people
+  (`App.Model.OrganizationAdmin`; see [docs/organizations.md](docs/organizations.md)).
+  Team pages are for team admins unless a LiveView says `access: :team` or `:member`; see
   [docs/members.md](docs/members.md).
 
 ## External integrations (know where to look)

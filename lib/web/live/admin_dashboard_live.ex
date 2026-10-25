@@ -6,6 +6,7 @@ defmodule Web.AdminDashboardLive do
   alias App.Model.Member
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
+  alias App.ViewData.TeamSummary
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.ScheduleTeamRefreshesWorker
 
@@ -30,7 +31,11 @@ defmodule Web.AdminDashboardLive do
     grants = Enum.group_by(TeamLoginGrant.get_all(), & &1.team_id)
     logins = Map.new(teams, &{&1.id, logins(users, managers[&1.id], grants[&1.id] || [])})
 
-    assign(socket, managers: managers, logins: logins)
+    assign(socket,
+      managers: managers,
+      logins: logins,
+      last_seen: TeamSummary.last_seen(teams, now)
+    )
   end
 
   def handle_info({:team_refreshed, updated_team}, socket) do
@@ -79,7 +84,9 @@ defmodule Web.AdminDashboardLive do
         </div>
       </:col>
       <:col :let={team} label="Last seen" class="whitespace-nowrap">
-        <span id={"team-#{team.id}-last-seen"}>{team_last_seen(team, @logins[team.id], @now)}</span>
+        <span id={"team-#{team.id}-last-seen"}>
+          {Service.Format.days_ago(@last_seen[team.id], @now, team.timezone)}
+        </span>
       </:col>
       <:col :let={team} label="Contacts">
         <.a
@@ -208,15 +215,6 @@ defmodule Web.AdminDashboardLive do
       Team.key_owner_is_sar_duty?(team) -> "Team key: #{team.d4h_access_key_owner}"
       true -> "Person's key: #{team.d4h_access_key_owner}"
     end
-  end
-
-  # The most recent visit by anyone on the team.
-  defp team_last_seen(team, logins, now) do
-    logins
-    |> Enum.map(& &1.last_seen_at)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.max(DateTime, fn -> nil end)
-    |> Service.Format.days_ago(now, team.timezone)
   end
 
   defp format_refreshed_at(team) do

@@ -20,8 +20,10 @@ enforces the top-level list and the held URLs.
   person logged in, or the member a team admin views as (#425). The old `/me/card`, `/me/qualifications`, `/me/hours`,
   `/me/milestones`, and `/me/tax-credit-letters` pages are gone with no redirects. See
   [members.md](members.md).
-- **Organizations are `/orgs/:slug`** on both sites. Admin pages use the id:
-  `/admin/orgs/:id`.
+- **Organizations are `/orgs/:slug`** on both sites. On the app it is the organization's
+  space (#512): `/orgs/:slug` (Teams), `/orgs/:slug/settings`, `/settings/admins`, and
+  `/settings/hours-tags`. `/admin/orgs/:id` went with no redirect. The verify site's
+  `/orgs/:slug` is matched by host first, so the two never meet.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,

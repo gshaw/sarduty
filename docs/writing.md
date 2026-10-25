@@ -168,7 +168,7 @@ and must not be used for it.
 | SAR Duty                       | SARDuty, Sar Duty, the app, the system         | This service.                                                                                        |
 | D4H                            | d4h, D4H Decisions, D4H Technologies           | The team's system of record.                                                                         |
 | SAR Duty Records               | the store, hosted D4H, Records app             | Where a team without D4H keeps its records. "Records" alone only after the full name on the page.    |
-| team                           | organization, unit, group, chapter             | A search and rescue team using SAR Duty.                                                             |
+| team                           | unit, group, chapter                           | A search and rescue team using SAR Duty.                                                             |
 | member                         | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
 | account                        | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
 | your membership                | member area, your details, profile, my page    | A member's own page on one team: their activities, qualifications, ID card, letters, and details.    |
@@ -177,6 +177,9 @@ and must not be used for it.
 | team admin                     | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
 | Owner, Editor                  | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |
 | SAR Duty admin                 | superuser, staff, admin (alone, on team pages) | A person who runs SAR Duty and can open every team.                                                  |
+| organization                   | association, parent, society                   | An association of teams, such as BCSARA, with its own space in SAR Duty.                             |
+| organization admin             | org admin, association admin, administrator    | Someone a SAR Duty admin lets into an organization's space. They see team totals, never people.      |
+| organization settings          | settings (alone, in the menu), org settings    | An organization's settings: General, Organization admins, and Hours tags.                            |
 | member logins                  | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
 | activity                       | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
 | incident                       | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |

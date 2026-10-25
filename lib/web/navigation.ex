@@ -1,9 +1,10 @@
 defmodule Web.Navigation do
   @moduledoc """
   Where a page sits, for the top bar and the side navigation (#312, #406). A page is in one
-  area: a team's space, SAR Duty admin, or Account settings. The bar names the area, with
-  the team switcher on it, and the side navigation lists the area's pages in sections. Who
-  you are on the team decides which sections you see.
+  area: a team's space, an organization's space (#512), SAR Duty admin, or Account
+  settings. The bar names the area, with the team switcher on it, and the side navigation
+  lists the area's pages in sections. Who you are on the team decides which sections you
+  see.
 
   Pure: the layout passes in what the page assigned. See docs/navigation.md.
   """
@@ -13,19 +14,25 @@ defmodule Web.Navigation do
     router: Web.Router,
     statics: Web.static_paths()
 
+  alias App.Model.Organization
   alias App.Model.Team
 
   @doc """
   The page's area, or nil outside one, from its path. A team's pages need the URL's team
-  as `current_team`, as the team pages' hook assigns it.
-  `%{kind: :team | :admin | :settings, name:, team:}`.
+  as `current_team`, as the team pages' hook assigns it, and an organization's pages its
+  `current_organization`. `%{kind: :team | :org | :admin | :settings, name:, team:}`; an
+  organization's also has `organization:` and the `short_name` the phone bar shows.
   """
-  def area(path, current_team)
+  def area(path, current_team, current_organization \\ nil)
 
-  def area(nil, _current_team), do: nil
+  def area(nil, _current_team, _current_organization), do: nil
 
-  def area(path, current_team) do
+  def area(path, current_team, current_organization) do
     case String.split(path, "/", trim: true) do
+      ["orgs", slug | _rest] ->
+        if match?(%Organization{slug: ^slug}, current_organization),
+          do: org_area(current_organization)
+
       ["admin" | _rest] ->
         %{kind: :admin, name: "SAR Duty admin", team: nil}
 
@@ -72,6 +79,16 @@ defmodule Web.Navigation do
     (team_sections ++ member_sections)
     |> Enum.reject(&(&1 == []))
     |> mark_current(path)
+  end
+
+  def sections(%{kind: :org, organization: organization}, path, _opts) do
+    mark_current(
+      [
+        [link("org-teams", "Teams", ~p"/orgs/#{organization}", exact: true)],
+        [link("org-settings", "Organization settings", ~p"/orgs/#{organization}/settings")]
+      ],
+      path
+    )
   end
 
   def sections(%{kind: :admin}, path, _opts) do
@@ -189,18 +206,20 @@ defmodule Web.Navigation do
   @doc """
   The area the bar names on a page outside every area (home, terms, privacy) when logged
   in, so it looks as it does everywhere else: the team logging in lands on (the last you
-  opened, or your first), else the team you log in to as a member, else SAR Duty admin
-  for an admin; nil otherwise. Only for the bar's name: the page stays outside, so the
-  switcher marks nothing. Pass the `current_team` the page assigned.
+  opened, or your first), else the team you log in to as a member, else your first
+  organization, else SAR Duty admin for an admin; nil otherwise. Only for the bar's name:
+  the page stays outside, so the switcher marks nothing. Pass the `current_team` the page
+  assigned.
   """
-  def outside_area(user, current_team, member_logins)
+  def outside_area(user, current_team, member_logins, organizations \\ [])
 
-  def outside_area(nil, _current_team, _member_logins), do: nil
+  def outside_area(nil, _current_team, _member_logins, _organizations), do: nil
 
-  def outside_area(user, current_team, member_logins) do
+  def outside_area(user, current_team, member_logins, organizations) do
     cond do
       current_team -> team_area(current_team)
       member = List.first(member_logins) -> team_area(member.team)
+      organization = List.first(organizations) -> org_area(organization)
       user.is_admin -> %{kind: :admin, name: "SAR Duty admin", team: nil}
       true -> nil
     end
@@ -208,40 +227,66 @@ defmodule Web.Navigation do
 
   defp team_area(team), do: %{kind: :team, name: team.name, team: team}
 
+  # `team: nil`, since the layout reads the area's team.
+  defp org_area(organization),
+    do: %{
+      kind: :org,
+      name: organization.name,
+      short_name: organization.short_name,
+      organization: organization,
+      team: nil
+    }
+
   @doc """
   The team switcher's rows: each team where you're a team admin or a member, A to Z, one
-  row per team, then "SAR Duty admin" last for SAR Duty admins, which the switcher sets
-  apart. The area you're in is current; a team opened from Admin › Teams that isn't
-  yours marks nothing. Empty when there is nowhere else to go, so the bar's name is plain
-  text. `[%{kind: :team | :admin, key:, label:, path:, current:}]`.
+  row per team, then each organization you're an organization admin of (#512), then "SAR
+  Duty admin" last for SAR Duty admins, which the switcher sets apart. SAR Duty admins
+  reach other organizations from Admin › Organizations. The area you're in is current; a
+  team or organization opened as a SAR Duty admin that isn't yours marks nothing. Empty
+  when there is nowhere else to go, so the bar's name is plain text.
+  `[%{kind: :team | :org | :admin, key:, label:, path:, current:}]`.
   """
-  def switch_rows(is_admin, managed_teams, member_logins, area) do
-    admin =
-      if is_admin,
-        do: [
-          %{
-            kind: :admin,
-            key: "admin",
-            label: "SAR Duty admin",
-            path: ~p"/admin",
-            current: match?(%{kind: :admin}, area)
-          }
-        ],
-        else: []
+  def switch_rows(is_admin, managed_teams, member_logins, organizations \\ [], area) do
+    teams = for team <- teams(managed_teams, member_logins), do: team_row(team, area)
 
-    teams =
-      for team <- teams(managed_teams, member_logins) do
-        %{
-          kind: :team,
-          key: "team-" <> team.subdomain,
-          label: team.name,
-          path: ~p"/teams/#{team}",
-          current: match?(%{kind: :team, team: %{id: id}} when id == team.id, area)
-        }
-      end
+    orgs =
+      for organization <- Enum.sort_by(organizations, &String.downcase(&1.name)),
+          do: org_row(organization, area)
 
-    rows = teams ++ admin
+    admin = if is_admin, do: [admin_row(area)], else: []
+
+    rows = teams ++ orgs ++ admin
     if Enum.all?(rows, & &1.current), do: [], else: rows
+  end
+
+  defp team_row(team, area) do
+    %{
+      kind: :team,
+      key: "team-" <> team.subdomain,
+      label: team.name,
+      path: ~p"/teams/#{team}",
+      current: match?(%{kind: :team, team: %{id: id}} when id == team.id, area)
+    }
+  end
+
+  defp org_row(organization, area) do
+    %{
+      kind: :org,
+      key: "org-" <> organization.slug,
+      label: organization.name,
+      path: ~p"/orgs/#{organization}",
+      current: match?(%{kind: :org, organization: %{id: id}} when id == organization.id, area)
+    }
+  end
+
+  defp admin_row(area) do
+    %{
+      kind: :admin,
+      key: "admin",
+      label: "SAR Duty admin",
+      path: ~p"/admin",
+      current: match?(%{kind: :admin}, area)
+    }
   end
 
   # Every team you manage or log in to as a member, once each, A to Z.

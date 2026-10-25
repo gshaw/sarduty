@@ -10,6 +10,8 @@ defmodule Web.UserAuth do
   alias App.Model.ChangeSet
   alias App.Model.Chore
   alias App.Model.Member
+  alias App.Model.Organization
+  alias App.Model.OrganizationAdmin
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
 
@@ -166,6 +168,13 @@ defmodule Web.UserAuth do
     end
   end
 
+  # The organization a URL's slug names, when this user may open it: one they are an
+  # organization admin of, or any for a SAR Duty admin.
+  defp authorized_organization(user, organizations, slug) do
+    Enum.find(organizations, &(&1.slug == slug)) ||
+      if(user.is_admin && is_binary(slug), do: Organization.get_by_slug(slug))
+  end
+
   defp ensure_user_token(conn) do
     if token = get_session(conn, :user_token) do
       {token, conn}
@@ -242,6 +251,22 @@ defmodule Web.UserAuth do
 
       {:halt, socket}
     end
+  end
+
+  # Every page under /orgs/:slug (#512): `current_organization` for its organization
+  # admins and SAR Duty admins; a 404 for anyone else, so the page doesn't say whether
+  # the organization exists. An organization admin's visit stamps their Last seen.
+  def on_mount(:ensure_org_access, params, _session, socket) do
+    user = socket.assigns.current_user
+
+    organization =
+      authorized_organization(user, socket.assigns.user_organizations, params["slug"])
+
+    if is_nil(organization), do: raise(Web.Status.NotFound)
+
+    unless user.is_admin, do: OrganizationAdmin.record_seen(organization.id, user)
+
+    {:cont, Phoenix.Component.assign(socket, current_organization: organization)}
   end
 
   def on_mount(:ensure_admin, _params, _session, socket) do
@@ -391,7 +416,8 @@ defmodule Web.UserAuth do
   end
 
   # The team for pages outside /teams/:subdomain, and every team the user manages, for the
-  # account menu. One query for both. The member logins are for the menu too.
+  # account menu. One query for both. The member logins and the organizations they are an
+  # admin of (#512) are for the menu too.
   defp mount_current_team(socket) do
     current_user = socket.assigns.current_user
     teams = managed_teams(current_user)
@@ -400,7 +426,11 @@ defmodule Web.UserAuth do
     |> Phoenix.Component.assign(current_team: pick_default_team(teams, current_user))
     |> Phoenix.Component.assign(managed_teams: teams)
     |> Phoenix.Component.assign(member_logins: member_logins(current_user))
+    |> Phoenix.Component.assign(user_organizations: user_organizations(current_user))
   end
+
+  defp user_organizations(nil), do: []
+  defp user_organizations(user), do: OrganizationAdmin.organizations_for_email(user.email)
 
   @doc "Sends a logged-in user to their team rather than the login form."
   def redirect_if_user_is_authenticated(conn, _opts) do
@@ -491,8 +521,8 @@ defmodule Web.UserAuth do
   @doc """
   Where logging in lands: the team the user last opened when they still manage it, else
   their only or first team. Someone who manages none lands on their team's Dashboard as a
-  member (#406), an admin on /admin, and anyone else on the home page, which says why
-  they have no team.
+  member (#406), then their first organization (#512), an admin on /admin, and anyone
+  else on the home page, which says why they have no team.
   """
   def signed_in_path(user) do
     team = default_team(user)
@@ -500,6 +530,7 @@ defmodule Web.UserAuth do
     cond do
       team -> ~p"/teams/#{team}"
       member = user |> member_logins() |> List.first() -> ~p"/teams/#{member.team}"
+      organization = user |> user_organizations() |> List.first() -> ~p"/orgs/#{organization}"
       user.is_admin -> ~p"/admin"
       true -> ~p"/"
     end

@@ -298,6 +298,10 @@ defmodule Web.Components.Core do
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
+  attr :clearable, :boolean,
+    default: false,
+    doc: "for a combobox: lists the prompt first, so picking it empties the value"
+
   attr :rest, :global,
     include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
@@ -375,6 +379,7 @@ defmodule Web.Components.Core do
         value={@value}
         options={@options}
         prompt={@prompt}
+        clearable={@clearable}
         class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       />

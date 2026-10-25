@@ -37,6 +37,8 @@ words:
   - aria-describedby
   - aria-labelledby
   - bcsara # BC Search and Rescue Association, the first parent organization
+  - nsara # a made-up association in organization tests (#512)
+  - wsara # a made-up association in organization tests and mockups (#512)
   - behaviour
   - dedup
   - Ecto

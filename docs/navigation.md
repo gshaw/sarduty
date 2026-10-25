@@ -16,6 +16,12 @@ still lists the area's pages.
   controls they see (#406). The team is the URL's, which the team pages' hook assigns as
   `current_team`, with `team_admin?` and `current_member`. There is no separate member
   area.
+- **An organization's space**, `/orgs/:slug/…` (#512), for its organization admins and
+  SAR Duty admins. The organization is the URL's, which its pages' hook assigns as
+  `current_organization`. Its side navigation is Teams, then Organization settings, whose
+  pages are tabs: General, Organization admins, and Hours tags. The bar names the
+  organization, and the phone bar its short name. It has no search, since search reads a
+  team's tables.
 - **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams, Organizations, and ID cards,
   then Admins, Events, and MCP, then the Style guide.
 - **The footer** (Verify an ID card, Terms, Privacy) is only on the public pages: home,
@@ -75,13 +81,17 @@ is left out, and so is its divider.
 - **The logo** always goes to the home page, logged in or not, so the public site is
   never out of reach. Logged in on a page outside every area (home, terms, privacy), the
   bar looks as it does elsewhere: it names the team logging in lands on, else your member
-  team, else SAR Duty admin (`Navigation.outside_area/3`), with the switcher on it. The
+  team, else your first organization, else SAR Duty admin (`Navigation.outside_area/4`),
+  with the switcher on it. The
   page is in no area, so the switcher marks nothing and the name always opens it.
-- **After the logo, the area's name**: the team's, SAR Duty admin, or Account settings.
+- **After the logo, the area's name**: the team's, the organization's, SAR Duty admin, or
+  Account settings.
 - **The team switcher** sits on the name when you can go somewhere else, at every width.
   Its menu lists Your teams, each team where you are a team admin or a member, A to Z,
-  one row per team (`Navigation.switch_rows/4`). For SAR Duty admins, SAR Duty admin
-  comes last, below a divider and with a shield, so it never reads as one more team
+  one row per team (`Navigation.switch_rows/5`), then Your organizations, each one you are
+  an organization admin of, with a building icon (#512). SAR Duty admins reach the other
+  organizations from Admin › Organizations. For SAR Duty admins, SAR Duty admin comes
+  last, below a divider and with a shield, so it never reads as one more team
   (2026-10-23). The team you're on is marked, and each row goes to the team's Dashboard; a
   team opened from Admin › Teams that isn't yours marks nothing. With one place to be,
   the name is plain text.
