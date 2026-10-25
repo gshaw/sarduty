@@ -29,7 +29,8 @@ defmodule App.ViewData.TeamAttention do
       proposed_changes_item(rows.proposed_change_count),
       certificates_item(rows.certificate_count),
       chores_item(rows.chore_count),
-      chores_to_send_item(rows.chores_to_send)
+      chores_to_send_item(rows.chores_to_send),
+      attendance_to_send_item(rows.attendance_to_send)
     ]
     |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
@@ -247,6 +248,32 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: "The last send did not go through. Send the changes again.",
       action: "Review chores"
+    }
+  end
+
+  @doc """
+  Attendance a team admin hasn't sent, from `TeamDashboardViewData.attendance_to_send/2`,
+  oldest first. The item carries the activity to open: the only one, or the oldest.
+  """
+  def attendance_to_send_item([]), do: nil
+
+  def attendance_to_send_item([activity]) do
+    %{
+      key: :attendance_to_send,
+      level: :info,
+      activity_id: activity.id,
+      title: "Attendance to send: #{activity.title}",
+      detail: "Review the changes, then send them.",
+      action: "Send attendance"
+    }
+  end
+
+  def attendance_to_send_item([oldest | _rest] = activities) do
+    %{
+      attendance_to_send_item([oldest])
+      | title:
+          "Attendance to send for #{Format.count(length(activities), one: "%d activity", many: "%d activities")}",
+        detail: "The oldest is #{oldest.title}."
     }
   end
 

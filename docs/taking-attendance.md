@@ -24,6 +24,18 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
   attendance shows on the activity panel and whether a scan is saved. The page checks
   again on every scan and Undo, and once a minute, so a page left open opens with the
   window and stops when it closes.
+- **Needs attention says there's attendance to send.** A team admin no longer makes a
+  link, so nothing else tells them members have scanned.
+  [TeamDashboardViewData.attendance_to_send/2](../lib/app/view_data/team_dashboard_view_data.ex)
+  lists activities not deleted, finished in the last 30 days, with a scan since their
+  `attendance_sent_at`. A review sets it when it has nothing to send, and a send when
+  every change went through and none waits on fixed times
+  ([Activity.mark_attendance_sent/2](../lib/app/model/activity.ex)); a change left
+  unchecked is the team admin's choice, and with all of them unchecked, Send reads "Send
+  no changes". It takes the review's time, not the send's, so a
+  scan in between still waits. One activity is named in the item and opens its
+  Attendance page; several are counted, and the oldest opens. The 30 days keep a scan
+  nobody means to send from waiting forever.
 - **Each scan records who took it**: `recorded_by_user_id`, and `recorded_by_member_id`
   when that user is one of the team's members. The Attendance page's **Recorded by**
   column names them, or a user's email for someone who isn't a member. Scans from before

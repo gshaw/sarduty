@@ -52,10 +52,17 @@ defmodule Web.ActivitySendAttendanceTest do
     }
   end
 
-  # Answers reads like D4H and reports each write to the test.
-  defp stub_d4h(ctx, published \\ false) do
+  # Answers reads like D4H and reports each write to the test. Mei was invited and Sam
+  # signed up, unless `rows` says otherwise.
+  defp stub_d4h(ctx, opts \\ []) do
     test_pid = self()
-    rows = [row(ctx, 501, ctx.mei, "REQUESTED"), row(ctx, 503, ctx.sam, "ATTENDING")]
+    published = Keyword.get(opts, :published, false)
+
+    rows =
+      Keyword.get(opts, :rows, [
+        row(ctx, 501, ctx.mei, "REQUESTED"),
+        row(ctx, 503, ctx.sam, "ATTENDING")
+      ])
 
     Req.Test.stub(App.Adapter.D4H, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
@@ -94,6 +101,7 @@ defmodule Web.ActivitySendAttendanceTest do
     lv = open(ctx)
 
     lv |> element("#review") |> render_click()
+    refute Repo.reload!(ctx.activity).attendance_sent_at
     assert has_element?(lv, "#change-member-#{ctx.mei.id}", "Attended")
     assert has_element?(lv, "#change-member-#{ctx.lena.id}", "not signed up")
     assert has_element?(lv, "#change-member-#{ctx.sam.id}", "Absent")
@@ -108,6 +116,7 @@ defmodule Web.ActivitySendAttendanceTest do
     assert_received {:d4h_write, "PATCH", "/attendance/503", %{"status" => "ABSENT"}}
 
     assert render(lv) =~ "3 attendance changes sent."
+    assert Repo.reload!(ctx.activity).attendance_sent_at
 
     sam_id = ctx.sam.id
     assert [%NoShow{member_id: ^sam_id} = no_show] = NoShow.get_all(ctx.activity)
@@ -155,10 +164,71 @@ defmodule Web.ActivitySendAttendanceTest do
 
     assert_received {:d4h_write, "PATCH", "/attendance/501", _}
     refute_received {:d4h_write, _, _, _}
+    # Unchecked is a team admin's choice, so the attendance counts as sent.
+    assert Repo.reload!(ctx.activity).attendance_sent_at
+  end
+
+  test "with every change unchecked, Send sends none and clears Needs attention", ctx do
+    stub_d4h(ctx)
+    lv = open(ctx)
+    lv |> element("#review") |> render_click()
+
+    lv |> form("#send-form") |> render_change(%{"keys" => []})
+    assert has_element?(lv, "#send:not([disabled])", "Send no changes")
+    lv |> form("#send-form") |> render_submit(%{})
+
+    refute_received {:d4h_write, _, _, _}
+    assert render(lv) =~ "No changes sent."
+    assert Repo.reload!(ctx.activity).attendance_sent_at
+  end
+
+  # Needs attention lists the activity until its attendance counts as sent (#475).
+  test "a review with nothing to send counts the attendance as sent", ctx do
+    stub_d4h(ctx,
+      rows: [row(ctx, 501, ctx.mei, "ATTENDING"), row(ctx, 502, ctx.lena, "ATTENDING")]
+    )
+
+    lv = open(ctx)
+    lv |> element("#review") |> render_click()
+
+    assert has_element?(lv, "#change-member-#{ctx.mei.id}", "No change")
+    assert has_element?(lv, "#send[disabled]")
+    assert Repo.reload!(ctx.activity).attendance_sent_at
+  end
+
+  test "a send counts as of its review, so a scan since still waits", ctx do
+    stub_d4h(ctx)
+    lv = open(ctx)
+    lv |> element("#review") |> render_click()
+
+    walk_in = member_fixture(ctx.team, %{name: "Ava Singh"})
+
+    scan =
+      AttendanceScan.insert!(%AttendanceScan{
+        team_id: ctx.team.id,
+        activity_id: ctx.activity.id,
+        member_id: walk_in.id,
+        kind: "arrived",
+        method: "name",
+        scanned_at: DateTime.utc_now()
+      })
+
+    lv |> form("#send-form") |> render_submit(%{"keys" => all_keys(ctx)})
+
+    assert render(lv) =~ "3 attendance changes sent."
+    assert DateTime.before?(Repo.reload!(ctx.activity).attendance_sent_at, scan.inserted_at)
+  end
+
+  test "a send without a review sends nothing", ctx do
+    stub_d4h(ctx)
+    lv = open(ctx)
+
+    render_submit(lv, "send", %{"keys" => all_keys(ctx)})
+    refute_received {:d4h_write, _, _, _}
   end
 
   test "a published activity can't be changed", ctx do
-    stub_d4h(ctx, true)
+    stub_d4h(ctx, published: true)
     lv = open(ctx)
     lv |> element("#review") |> render_click()
 
@@ -202,6 +272,7 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(lv, "#failures", "Mei Chen")
     assert has_element?(lv, "#failures", "Not allowed")
     assert render(lv) =~ "2 attendance changes did not go through."
+    refute Repo.reload!(ctx.activity).attendance_sent_at
   end
 
   test "when D4H cannot find the activity, review says it may have been deleted", ctx do

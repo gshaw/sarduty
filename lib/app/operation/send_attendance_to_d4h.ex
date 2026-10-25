@@ -114,6 +114,18 @@ defmodule App.Operation.SendAttendanceToD4H do
   @doc "Whether a change writes to D4H when it's kept."
   def sendable?(%{action: action}), do: action in [:update, :create, :absent]
 
+  @doc "Whether a plan leaves nothing to send or fix: D4H has every member's times."
+  def up_to_date?(changes), do: Enum.all?(changes, &(&1.action == :unchanged))
+
+  @doc """
+  Whether a send finished the review it came from: every change sent went through, and
+  none waits on times to fix. Changes the team admin unchecked stay unsent on purpose.
+  """
+  def finished?(changes, results) do
+    Enum.all?(results, &match?({_change, :ok}, &1)) and
+      not Enum.any?(changes, &(&1.action == :blocked))
+  end
+
   @doc """
   Reads D4H and plans. `{:ok, %{published: boolean, changes: [change]}}`, or
   `{:error, %D4H.Error{}}` when D4H can't be read, `{:error, :no_team_key}`, or
@@ -135,18 +147,35 @@ defmodule App.Operation.SendAttendanceToD4H do
   end
 
   @doc """
+  A team admin's review at `now`: `preview/2`, and when it leaves nothing to send or fix,
+  the activity's attendance counts as sent as of `now` (Activity.mark_attendance_sent/2),
+  so Needs attention stops listing it. Take `now` before the review reads anything, so a
+  scan during the read waits for the next one.
+  """
+  def review(%Team{} = team, %Activity{} = activity, now) do
+    with {:ok, %{published: false, changes: changes}} = review <- preview(team, activity) do
+      if up_to_date?(changes), do: Activity.mark_attendance_sent(activity, now)
+      review
+    end
+  end
+
+  @doc """
   Makes the kept changes, named by `keys`, from a fresh plan, as a change set applied
-  by `user`. Scans taken after a send show up in the next review. `{:ok, results}` with
+  by `user`. `reviewed_at` is the time of the review the team admin chose them in. Once
+  the send finishes it (`finished?/2`), the attendance counts as sent as of then, so a
+  scan since, which the admin never saw, stays in Needs attention. `{:ok, results}` with
   `{change, :ok | {:error, message}}` for each change sent; `{:error, :published}` when
   D4H has published the activity; otherwise the error from `preview/2`.
   """
-  def call(%Team{} = team, %Activity{} = activity, %User{} = user, keys, now) do
+  def call(%Team{} = team, %Activity{} = activity, %User{} = user, keys, reviewed_at, now) do
     keys = MapSet.new(keys)
 
     case preview(team, activity) do
       {:ok, %{published: false, changes: changes}} ->
         kept = for change <- changes, sendable?(change), change.key in keys, do: change
-        apply_changes(team, activity, user, kept, now)
+        result = apply_changes(team, activity, user, kept, now)
+        mark_sent(result, activity, changes, reviewed_at)
+        result
 
       {:ok, %{published: true}} ->
         {:error, :published}
@@ -155,6 +184,12 @@ defmodule App.Operation.SendAttendanceToD4H do
         error
     end
   end
+
+  defp mark_sent({:ok, results}, activity, changes, reviewed_at) do
+    if finished?(changes, results), do: Activity.mark_attendance_sent(activity, reviewed_at)
+  end
+
+  defp mark_sent(_error, _activity, _changes, _reviewed_at), do: :ok
 
   defp apply_changes(_team, _activity, _user, [], _now), do: {:ok, []}
 

@@ -36,7 +36,7 @@ defmodule Web.ActivityAttendanceLive do
     socket =
       socket
       |> assign(page_title: "#{activity.title} · Attendance", activity: activity)
-      |> assign(review: nil, selected: MapSet.new(), failures: [])
+      |> assign(review: nil, reviewed_at: nil, selected: MapSet.new(), failures: [])
       |> load_times()
       |> load_no_shows()
 
@@ -48,13 +48,15 @@ defmodule Web.ActivityAttendanceLive do
   # Reads D4H live, so the plan matches D4H now.
   def handle_event("review", _params, socket) do
     %{current_team: team, activity: activity} = socket.assigns
+    now = DateTime.utc_now()
 
-    case SendAttendanceToD4H.preview(team, activity) do
+    case SendAttendanceToD4H.review(team, activity, now) do
       {:ok, review} ->
         selected =
           for change <- review.changes, change.selected, into: MapSet.new(), do: change.key
 
-        {:noreply, assign(socket, review: review, selected: selected, failures: [])}
+        {:noreply,
+         assign(socket, review: review, reviewed_at: now, selected: selected, failures: [])}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, error_text(error, team))}
@@ -72,10 +74,13 @@ defmodule Web.ActivityAttendanceLive do
     do: {:noreply, assign(socket, :selected, MapSet.new(params["keys"] || []))}
 
   def handle_event("cancel-review", _params, socket),
-    do: {:noreply, assign(socket, review: nil, selected: MapSet.new())}
+    do: {:noreply, assign(socket, review: nil, reviewed_at: nil, selected: MapSet.new())}
+
+  # Sends only from a review, whose time says which scans the team admin saw.
+  def handle_event("send", _params, %{assigns: %{review: nil}} = socket), do: {:noreply, socket}
 
   def handle_event("send", params, socket) do
-    %{current_team: team, activity: activity} = socket.assigns
+    %{current_team: team, activity: activity, reviewed_at: reviewed_at} = socket.assigns
     keys = params["keys"] || []
 
     case SendAttendanceToD4H.call(
@@ -83,6 +88,7 @@ defmodule Web.ActivityAttendanceLive do
            activity,
            socket.assigns.current_user,
            keys,
+           reviewed_at,
            DateTime.utc_now()
          ) do
       {:ok, results} -> {:noreply, show_results(socket, results)}
@@ -96,11 +102,17 @@ defmodule Web.ActivityAttendanceLive do
     kind = if failures == [], do: :info, else: :error
 
     socket
-    |> assign(review: nil, selected: MapSet.new(), failures: failures)
+    |> assign(review: nil, reviewed_at: nil, selected: MapSet.new(), failures: failures)
     |> load_no_shows()
     |> put_flash(kind, sent_text(saved, length(failures)))
   end
 
+  defp send_label(0), do: "Send no changes"
+
+  defp send_label(count),
+    do: "Send #{Service.Format.count(count, one: "%d change", many: "%d changes")}"
+
+  defp sent_text(0, 0), do: "No changes sent."
   defp sent_text(saved, 0), do: "#{count_changes(saved)} sent."
   defp sent_text(0, failed), do: "#{count_changes(failed)} did not go through."
 
@@ -279,7 +291,12 @@ defmodule Web.ActivityAttendanceLive do
     count =
       Enum.count(review.changes, &(SendAttendanceToD4H.sendable?(&1) and &1.key in selected))
 
-    assigns = assign(assigns, :count, count)
+    # With every change unchecked, Send sends none and still clears Needs attention.
+    assigns =
+      assign(assigns,
+        count: count,
+        sendable?: Enum.any?(review.changes, &SendAttendanceToD4H.sendable?/1)
+      )
 
     ~H"""
     <.form for={%{}} id="send-form" phx-change="select" phx-submit="send">
@@ -325,8 +342,8 @@ defmodule Web.ActivityAttendanceLive do
         </:col>
       </.table>
       <.form_actions class="mt-2">
-        <.button id="send" variant={:success} disabled={@count == 0} phx-disable-with="Sending…">
-          Send {Service.Format.count(@count, one: "%d change", many: "%d changes")}
+        <.button id="send" variant={:success} disabled={not @sendable?} phx-disable-with="Sending…">
+          {send_label(@count)}
         </.button>
         <.button type="button" phx-click="cancel-review">Cancel</.button>
       </.form_actions>
