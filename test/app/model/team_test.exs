@@ -20,4 +20,10 @@ defmodule App.Model.TeamTest do
       assert Team.refresh_state("OK") == :ok
     end
   end
+
+  test "the subdomain new is reserved for Add a team (#512)" do
+    changeset = Team.build_changeset(%Team{}, %{subdomain: "new"})
+    assert {"This subdomain is reserved. Use another.", _opts} = changeset.errors[:subdomain]
+    refute Team.build_changeset(%Team{}, %{subdomain: "newton"}).errors[:subdomain]
+  end
 end

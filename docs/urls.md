@@ -21,8 +21,10 @@ enforces the top-level list and the held URLs.
   `/me/milestones`, and `/me/tax-credit-letters` pages are gone with no redirects. See
   [members.md](members.md).
 - **Organizations are `/orgs/:slug`** on both sites. On the app it is the organization's
-  space (#512): `/orgs/:slug` (Teams), `/orgs/:slug/settings`, `/settings/admins`, and
-  `/settings/hours-tags`. `/admin/orgs/:id` went with no redirect. The verify site's
+  space (#512): `/orgs/:slug` (Teams), `/orgs/:slug/teams/new` (Add a team),
+  `/orgs/:slug/teams/:subdomain`, `/orgs/:slug/settings`, `/settings/admins`, and
+  `/settings/hours-tags`. A team can't have the subdomain `new`, which Add a team would
+  hide; the Team changeset refuses it. `/admin/orgs/:id` went with no redirect. The verify site's
   `/orgs/:slug` is matched by host first, so the two never meet.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.

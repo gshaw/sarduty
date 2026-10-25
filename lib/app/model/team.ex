@@ -71,6 +71,9 @@ defmodule App.Model.Team do
     timestamps(type: :utc_datetime_usec)
   end
 
+  # /orgs/:slug/teams/new is Add a team (#512), so a team named "new" would be hidden.
+  @reserved_subdomains ~w(new)
+
   def build_new_changeset(params \\ %{}), do: build_changeset(%Team{}, params)
 
   @hours_tag_fields [:primary_hours_tag, :secondary_hours_tag, :other_hours_tag]
@@ -203,6 +206,9 @@ defmodule App.Model.Team do
     |> Validate.name(:name)
     |> Validate.address(:mailing_address)
     |> validate_length(:authorized_by_name, max: 250)
+    |> validate_exclusion(:subdomain, @reserved_subdomains,
+      message: "This subdomain is reserved. Use another."
+    )
   end
 
   def get_all do

@@ -41,6 +41,9 @@ defmodule Web.PrivacyLive do
       <p id="privacy-access">
         SAR Duty's admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
       </p>
+      <p id="privacy-organizations">
+        When a team belongs to an organization, its organization admins, such as an association's staff, see each of its teams' totals, never members' names or contact details.
+      </p>
       <p>
         To see, fix, or remove your data, ask your team. Most of it comes from D4H, so the change is made there. For anything else, email <.a
           id="privacy-contact"

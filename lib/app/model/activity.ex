@@ -81,6 +81,11 @@ defmodule App.Model.Activity do
     end)
   end
 
+  @doc ~s(An hours kind in a sentence: "primary hours".)
+  def hours_kind_name(:primary), do: "primary hours"
+  def hours_kind_name(:secondary), do: "secondary hours"
+  def hours_kind_name(:other), do: "other hours"
+
   @doc "The organization's or team's field for an hours kind."
   def hours_tag_field(:primary), do: :primary_hours_tag
   def hours_tag_field(:secondary), do: :secondary_hours_tag

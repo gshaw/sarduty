@@ -45,6 +45,15 @@ defmodule Web.Org.TeamCollectionLive do
     ~H"""
     <.heading_row>
       <h1 class="title">Teams</h1>
+      <:action :if={@current_user.is_admin}>
+        <.button
+          id="add-team"
+          navigate={~p"/orgs/#{@current_organization}/teams/new"}
+          variant={:success}
+        >
+          Add team
+        </.button>
+      </:action>
     </.heading_row>
 
     <.empty_state :if={@teams == []} id="no-teams" title="No teams yet">
@@ -68,7 +77,10 @@ defmodule Web.Org.TeamCollectionLive do
             alt=""
           />
           <div>
-            <span id={"team-#{team.id}-name"}>{team.name}</span>
+            <.a
+              id={"team-#{team.id}-name"}
+              navigate={~p"/orgs/#{@current_organization}/teams/#{team}"}
+            >{team.name}</.a>
             <.hint>{D4H.service_name(team)}</.hint>
           </div>
         </div>
