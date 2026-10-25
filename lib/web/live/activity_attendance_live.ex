@@ -114,12 +114,11 @@ defmodule Web.ActivityAttendanceLive do
   defp error_text(:deleted, _team), do: "This activity is deleted. Nothing can be sent to it."
   defp error_text(:no_team_key, _team), do: "Save your team's access key in team settings first."
 
-  defp error_text(%D4H.Error{status: status} = error, _team) when status in [400, 404],
+  defp error_text(%D4H.Error{status: status} = error, team) when status in [400, 404],
     do:
-      "SAR Duty cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
+      "#{D4H.service_name(team)} cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
 
-  defp error_text(error, _team),
-    do: "No answer came back. Try again. #{Exception.message(error)}"
+  defp error_text(error, team), do: D4H.error_text(team, error)
 
   # Names the service: the reader goes there to unpublish.
   defp published_text(team),
