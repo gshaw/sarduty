@@ -87,10 +87,15 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
 - **Tags are set when the event is made, and never changed.** Then it is published, last,
   once its attendance is in. Sending changes makes it a draft, changes it, and publishes
   it again.
-- **When D4H will not publish**, as on South Fraser (#02228 answered 409 on 2026-10-17
-  and 2026-10-21), the event stays a draft. The send counts as done, with a note beside
-  it, since SAR Duty counts a draft's hours all the same. Why D4H refuses is not known:
-  South Fraser has no approval module.
+- **When D4H will not publish**, the event stays a draft. The send counts as done, with a
+  note beside it, since SAR Duty counts a draft's hours all the same. D4H does not: its
+  statistics take only published activities, so the team publishes the draft in D4H.
+- **Why South Fraser's publish failed.** D4H answered 409 to every publish from the API
+  (#02228, 2026-10-17 and 2026-10-21) while D4H's own Approve button worked. BCSARA, the
+  organization, had set a forced approval message long ago, and South Fraser's own
+  approval message setting, in D4H's admin area, was off. Turning it on fixed the
+  publish (2026-10-25, #575). Another BCSARA team that turns on chores may need the
+  same.
 - **Nothing locks an event.** D4H's `approved` flag mirrors `published` on every team seen
   (#358), so the first version, which stopped sending an approved event, stopped at the
   first published one.
