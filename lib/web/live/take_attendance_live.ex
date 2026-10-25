@@ -5,9 +5,10 @@ defmodule Web.TakeAttendanceLive do
   alias Service.Format
 
   # The team's Take attendance page (#475), for an iPad at the hall: the activities
-  # taking attendance now as big buttons. With one, it opens that activity's scanner. It
-  # looks again each minute, so an iPad left on it opens the scanner when the window
-  # does. Its address doesn't change, so a team prints a QR code of it; logged out, it
+  # taking attendance now, and what's coming up. Every row opens its scanner, which says
+  # when a member can start. It never opens a scanner by itself, so the page always says
+  # what it is. It looks again each minute, so an activity moves to Now when its window
+  # opens. Its address doesn't change, so a team prints a QR code of it; logged out, it
   # goes to the login page, and logging in comes back here.
   @tick_ms :timer.minutes(1)
 
@@ -24,15 +25,11 @@ defmodule Web.TakeAttendanceLive do
   defp load(socket, now) do
     team = socket.assigns.current_team
 
-    case Activity.taking_attendance_now(team, now) do
-      # Replace, so Back from the scanner doesn't land here and bounce again.
-      [activity] ->
-        push_navigate(socket, to: scanner_path(team, activity), replace: true)
-
-      activities ->
-        next = if activities == [], do: Activity.next_after(team, now)
-        assign(socket, now: now, activities: activities, next: next)
-    end
+    assign(socket,
+      now: now,
+      activities: Activity.taking_attendance_now(team, now),
+      coming_up: Activity.taking_attendance_later(team, now)
+    )
   end
 
   @doc """
@@ -50,62 +47,44 @@ defmodule Web.TakeAttendanceLive do
   def render(assigns) do
     ~H"""
     <h1 class="title">Take attendance</h1>
+    <p id="intro" class="lead">
+      Scan ID cards as members arrive and leave.
+    </p>
 
-    <ul :if={@activities != []} id="activities" class="row-links">
-      <.activity_row
-        :for={activity <- @activities}
-        id={"activity-#{activity.id}"}
-        activity={activity}
-        navigate={scanner_path(@current_team, activity)}
-        team={@current_team}
-        now={@now}
-      />
-    </ul>
+    <section id="now" class="mt-8">
+      <h2 class="heading">Now</h2>
+      <ul :if={@activities != []} id="activities" class="row-links">
+        <.activity_row
+          :for={activity <- @activities}
+          id={"activity-#{activity.id}"}
+          activity={activity}
+          navigate={scanner_path(@current_team, activity)}
+          team={@current_team}
+          now={@now}
+        />
+      </ul>
+      <p :if={@activities == []} id="no-activity">No activity now.</p>
+    </section>
 
-    <div :if={@activities == []} id="no-activity">
-      <p class="lead">No activity now.</p>
-      <div :if={@next} id="next-activity">
-        <h2 class="heading">Next activity</h2>
+    <section id="coming-up" class="mt-8">
+      <h2 class="heading">Coming up</h2>
+      <%= if @coming_up != [] do %>
+        <p id="opens-at" class="hint">
+          Taking attendance opens {Format.duration(Activity.attendance_window_hours() * 60)} before each starts.
+        </p>
         <ul class="row-links">
           <.activity_row
-            id={"next-#{@next.id}"}
-            activity={@next}
-            navigate={~p"/teams/#{@current_team}/activities/#{@next.id}"}
+            :for={activity <- @coming_up}
+            id={"coming-#{activity.id}"}
+            activity={activity}
+            navigate={scanner_path(@current_team, activity)}
             team={@current_team}
             now={@now}
           />
         </ul>
-        <p id="opens-at">{opens_text(@next, @current_team)}</p>
-      </div>
-      <p :if={!@next} id="nothing-coming">Nothing coming up.</p>
-    </div>
-
-    <section id="page-address" class="mt-12">
-      <h2 class="heading">This page's address</h2>
-      <div class="flex flex-wrap gap-2 items-center">
-        <.a
-          id="page-url"
-          href={url(~p"/teams/#{@current_team}/take-attendance")}
-          class="font-mono break-all"
-        >{url(~p"/teams/#{@current_team}/take-attendance")}</.a>
-        <.button
-          id="copy-page-url"
-          type="button"
-          phx-click={JS.dispatch("sarduty:copy", to: "#page-url", detail: %{status: "#copy-status"})}
-        >
-          Copy link
-        </.button>
-        <span
-          id="copy-status"
-          role="status"
-          phx-update="ignore"
-          class="text-success-text font-semibold"
-        ></span>
-      </div>
-      <p class="hint">
-        Add this page to the iPad's Home Screen, or print a QR code of this address for the hall.
-        It opens after logging in.
-      </p>
+      <% else %>
+        <p id="nothing-coming">Nothing coming up.</p>
+      <% end %>
     </section>
     """
   end
@@ -134,14 +113,5 @@ defmodule Web.TakeAttendanceLive do
     "#{Format.day_coming_up(activity.started_at, now, team.timezone)} " <>
       "#{Format.time_short(activity.started_at, team.timezone)}–" <>
       Format.time_short(activity.finished_at, team.timezone)
-  end
-
-  # The time alone: the row above has the day, and the window is counted from its start.
-  defp opens_text(activity, team) do
-    {opens_at, _closes_at} = Activity.attendance_window(activity)
-    hours = Format.duration(Activity.attendance_window_hours() * 60)
-
-    "Taking attendance opens at #{Format.time_short(opens_at, team.timezone)}, " <>
-      "#{hours} before it starts."
   end
 end
