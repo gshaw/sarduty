@@ -44,6 +44,13 @@ defmodule Service.PDFLockTest do
     end)
   end
 
+  # The PDF with each stream's data cut out, so random ciphertext can't spell a word.
+  defp without_streams(pdf) do
+    pdf
+    |> streams()
+    |> Enum.reduce(pdf, &String.replace(&2, &1, "", global: false))
+  end
+
   defp decrypt(key, <<iv::binary-16, data::binary>>),
     do:
       :crypto.crypto_one_time(:aes_256_cbc, key, iv, data, encrypt: false, padding: :pkcs_padding)
@@ -70,9 +77,10 @@ defmodule Service.PDFLockTest do
     plain = letter_with_images()
     locked = PDFLock.lock(plain)
 
+    # About 230 KB of ciphertext holds "Tax" by chance about 1 run in 40.
     for text <- ["Tax", "credit", "SAR Duty", "Treasurer", "D:2026", "Elixir-PDF"] do
       assert plain =~ text
-      refute locked =~ text
+      refute without_streams(locked) =~ text
     end
 
     for data <- streams(plain), do: refute(locked =~ data)
