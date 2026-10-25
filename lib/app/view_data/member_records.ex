@@ -6,7 +6,6 @@ defmodule App.ViewData.MemberRecords do
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Operation.BuildGroupRulePreview
-  alias App.Operation.CountTaxCreditHours
   alias App.Repo
 
   # A member's own records, for their page (#156, stage 2): hours and attended activities
@@ -41,13 +40,6 @@ defmodule App.ViewData.MemberRecords do
     (Enum.to_list(this_year..min(joined, this_year)//-1) ++ years(member, now))
     |> Enum.uniq()
     |> Enum.sort(:desc)
-  end
-
-  @doc "Primary, secondary, and total minutes in `year`, counted as the letter counts them."
-  def hours(%Member{} = member, year, now) do
-    member.team
-    |> CountTaxCreditHours.call(year, [member.id], now)
-    |> CountTaxCreditHours.get(member.id)
   end
 
   @doc "The member's attended rows that started in `year`, newest first, with the activity."

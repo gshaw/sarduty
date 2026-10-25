@@ -30,7 +30,7 @@ defmodule Web.MeLiveTest do
   end
 
   # An activity the member attended, from `started_at` for `minutes`.
-  defp attend(team, member, title, kind, started_at, minutes) do
+  defp attend(team, member, title, kind, started_at, minutes, tags \\ []) do
     finished_at = DateTime.add(started_at, minutes * 60)
 
     activity =
@@ -38,7 +38,8 @@ defmodule Web.MeLiveTest do
         title: title,
         activity_kind: kind,
         started_at: started_at,
-        finished_at: finished_at
+        finished_at: finished_at,
+        tags: tags
       })
 
     attendance_fixture(activity, member, %{
@@ -75,47 +76,86 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#letter")
     end
 
-    test "the 10 latest activities from any year, and a link to the latest one's year",
+    test "this year's 10 latest, and a link to all of them on this year's page",
          %{conn: conn, team: team, member: member} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      %{year: year, mid_year: mid_year} = this_year_fixture(team)
 
-      for n <- 1..11 do
-        started_at = DateTime.add(now, -n * 40, :day)
-        attend(team, member, "Training #{n}", "exercise", started_at, 60)
-      end
+      [oldest | _rest] =
+        for n <- 1..11 do
+          attend(team, member, "Training #{n}", "exercise", DateTime.add(mid_year, n, :second), 1)
+        end
+
+      last_year = (year - 1) |> Date.new!(6, 1) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+      attend(team, member, "Last year's search", "incident", last_year, 60)
 
       lv = open(conn, ~p"/teams/#{team}/me")
-      year = now |> DateTime.add(-40, :day) |> Service.YearRange.year_in(team.timezone)
 
-      assert has_element?(lv, "h2", "Latest activities")
-      assert has_element?(lv, "#activities-list", "Training 1")
-      assert has_element?(lv, "#activities-list", "Training 10")
-      refute has_element?(lv, "#activities-list", "Training 11")
+      assert has_element?(lv, "h2", "Activities")
+      assert has_element?(lv, ~s|#year option[value="#{year}"][selected]|)
+      assert has_element?(lv, "#activities-list", "Training 11")
+      assert has_element?(lv, "#activities-list", "Training 2")
+      refute has_element?(lv, "#activities-list-#{oldest.id}")
+      refute has_element?(lv, "#activities-list", "Last year's search")
 
       assert has_element?(
                lv,
                ~s{#all-activities[href="/teams/#{team.subdomain}/me/activities?year=#{year}"]},
-               "All your activities"
+               "All 11 activities in #{year}"
              )
     end
 
-    test "the last 12 months as activities, incidents, and hours",
+    test "a year's total, primary, and secondary hours, counted as the letter counts them",
          %{conn: conn, team: team, member: member} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      attend(team, member, "Missing hiker", "incident", DateTime.add(now, -60, :day), 180)
-      attend(team, member, "Rope night", "exercise", DateTime.add(now, -30, :day), 120)
-      attend(team, member, "Last year's training", "exercise", DateTime.add(now, -400, :day), 60)
+      %{year: year} = this_year_fixture(team)
+      june = (year - 1) |> Date.new!(6, 1) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+
+      # A day apart, since the letter counts overlapping time once.
+      attend(team, member, "Rope rescue", "exercise", june, 180, ["Primary Hours"])
+
+      attend(team, member, "PR booth", "event", DateTime.add(june, 1, :day), 120, [
+        "Secondary Hours"
+      ])
+
+      attend(team, member, "Board meeting", "event", DateTime.add(june, 2, :day), 240)
+
+      attend(team, member, "Two years ago", "exercise", DateTime.add(june, -365, :day), 600, [
+        "Primary Hours"
+      ])
+
+      lv = open(conn, ~p"/teams/#{team}/me?year=#{year - 1}")
+
+      assert has_element?(lv, "#stat-total", "5")
+      assert has_element?(lv, "#stat-total .label", "Total hours")
+      assert has_element?(lv, "#stat-primary", "3")
+      assert has_element?(lv, "#stat-secondary", "2")
+      refute has_element?(lv, "#stat-incidents")
+      assert has_element?(lv, "#activities-list", "Board meeting")
+      refute has_element?(lv, "#activities-list", "Two years ago")
+      assert has_element?(lv, "#all-activities", "All 3 activities in #{year - 1}")
+    end
+
+    test "the year menu picks the year, and a year with nothing says so",
+         %{conn: conn, team: team, member: member} do
+      %{year: year} = this_year_fixture(team)
+      last_year = (year - 1) |> Date.new!(6, 1) |> DateTime.new!(~T[18:00:00], "Etc/UTC")
+      attend(team, member, "Last year's search", "incident", last_year, 60)
 
       lv = open(conn, ~p"/teams/#{team}/me")
 
-      assert has_element?(lv, "#year-stats", "The last 12 months")
-      assert has_element?(lv, "#stat-activities", "2")
-      assert has_element?(lv, "#stat-incidents", "1")
-      assert has_element?(lv, "#stat-incidents .label", "Incident")
-      refute has_element?(lv, "#stat-incidents .label", "Incidents")
-      assert has_element?(lv, "#stat-activities .label", "Activities")
-      assert has_element?(lv, "#stat-hours", "5")
-      assert has_element?(lv, "#activities-list", "Last year's training")
+      assert has_element?(lv, "#no-activities-in-year", "No activities in #{year}")
+      refute has_element?(lv, "#no-activities")
+      refute has_element?(lv, "#year-stats")
+
+      lv |> form("#years", %{year: year - 1}) |> render_change()
+
+      assert_patch(lv, ~p"/teams/#{team}/me?year=#{year - 1}")
+      assert has_element?(lv, "#activities-list", "Last year's search")
+      refute has_element?(lv, "#no-activities-in-year")
+    end
+
+    test "a year with no attendance, or not a year, is a 404", %{conn: conn, team: team} do
+      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=1999") end
+      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
     end
 
     test "the 5 latest chores, a New chore link, and a link to the rest",

@@ -55,13 +55,13 @@
     .filter-bar.is-open .filter-bar-menus { display: block; }
 
     .filter-bar-more { display: none; }
-    .filter-menu, .filter-menu.is-more { display: block; margin-bottom: var(--sp-3); padding: 0; border: 0; background: none; font-size: var(--fs-md); line-height: var(--lh-md); }
-    .filter-menu.is-on { background: none; }
-    .filter-menu:has(:focus-visible) { outline: 0; box-shadow: none; }
-    .filter-menu :is(select, input):focus-visible { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
-    .filter-menu-label, .filter-menu.is-on .filter-menu-label { display: block; margin-bottom: var(--sp-1); color: var(--text); font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); }
-    .filter-menu select, .filter-menu .combobox-input input { width: 100%; min-height: 44px; padding: var(--sp-1) var(--sp-8) var(--sp-1) var(--sp-2); border: var(--border-width) solid var(--text); background-color: var(--bg); font-weight: 400; }
-    .filter-menu .combobox { width: 100%; }
+    .filter-bar-menus .filter-menu { display: block; margin-bottom: var(--sp-3); padding: 0; border: 0; background: none; font-size: var(--fs-md); line-height: var(--lh-md); }
+    .filter-bar-menus .filter-menu.is-on { background: none; }
+    .filter-bar-menus .filter-menu:has(:focus-visible) { outline: 0; box-shadow: none; }
+    .filter-bar-menus .filter-menu :is(select, input):focus-visible { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
+    .filter-bar-menus .filter-menu-label, .filter-bar-menus .filter-menu.is-on .filter-menu-label { display: block; margin-bottom: var(--sp-1); color: var(--text); font-weight: 600; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+    .filter-bar-menus .filter-menu :is(select, .combobox-input input) { width: 100%; min-height: 44px; padding: var(--sp-1) var(--sp-8) var(--sp-1) var(--sp-2); border: var(--border-width) solid var(--text); background-color: var(--bg); font-weight: 400; }
+    .filter-bar-menus .filter-menu .combobox { width: 100%; }
 
     .filter-bar-done { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); }
     .filter-bar-done .btn { margin-left: auto; }

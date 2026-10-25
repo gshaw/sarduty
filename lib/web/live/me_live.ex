@@ -1,13 +1,15 @@
 defmodule Web.MeLive do
-  use Web, {:live_view_app_layout, access: :member}
+  use Web, {:live_view_app_layout, access: :member, view_events: ["year"]}
 
   import Web.Components.Chart, only: [stat: 1]
   import Web.Components.Equipment, only: [held_table: 1]
+  import Web.Components.MeYear
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.PersonHead
   import Web.ChoreText, only: [status_badge: 1]
 
+  alias App.Model.Activity
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.EquipmentItem
@@ -21,14 +23,16 @@ defmodule Web.MeLive do
   alias App.ViewData.EquipmentList
   alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
+  alias App.ViewData.MemberYear
   alias Service.Format
   alias Web.CertificateText
   alias Web.Components.MemberSidebar
   alias Web.QualificationText
 
-  # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. Their
-  # latest activities, from any year so it is never empty on January 1, and their
-  # qualifications and the equipment they hold in the main column; their ID card, latest
+  # Your membership (#406), /teams/:subdomain/me: a member's own page on one team. One
+  # year of their activities (#576), this year unless `?year=` picks another, with its
+  # hours as the tax credit letter counts them, and their qualifications and the
+  # equipment they hold in the main column; their ID card, latest
   # tax credit letter, contact details, and milestones in a sidebar, split by space, not
   # boxes (/styles/card).
   # `current_member` comes from the login (Web.UserAuth, :ensure_team_access), never from
@@ -45,7 +49,7 @@ defmodule Web.MeLive do
       |> assign(member: member, team: team, now: now)
       |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
       |> assign(:standing, MemberAwayPeriod.standing_today(member, team.timezone, now))
-      |> assign_activities(attended, now)
+      |> assign_years(attended)
       |> assign(:chores, latest_chores(member))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:certificates, sent_certificates(member))
@@ -57,33 +61,31 @@ defmodule Web.MeLive do
     {:ok, socket}
   end
 
-  # The 10 latest, when the last was for the header, the year of the latest for the year
-  # page's link, and the last 12 months as 3 numbers.
-  defp assign_activities(socket, attended, now) do
+  # When they last attended, for the header, and the years the menu offers.
+  defp assign_years(socket, attended) do
+    %{member: member, team: team, now: now} = socket.assigns
+
     assign(socket,
-      activities: Enum.take(attended, 10),
+      any_activities?: attended != [],
       last_attended_at: attended |> List.first() |> then(&(&1 && &1.started_at)),
-      latest_year: latest_year(attended, socket.assigns.team.timezone),
-      stats: year_stats(attended, now)
+      years: MemberRecords.years_on_team(member, now),
+      this_year: Service.YearRange.year_in(now, team.timezone)
     )
   end
 
-  defp latest_year([latest | _rest], timezone),
-    do: Service.YearRange.year_in(latest.started_at, timezone)
+  # The year's 10 latest, its activity count for the year page's link, and its hours.
+  def handle_params(params, _uri, socket) do
+    %{member: member, team: team, years: years, now: now} = socket.assigns
+    year = year!(params["year"], years)
+    rows = MemberRecords.attendances(member, year, now)
 
-  defp latest_year([], _timezone), do: nil
-
-  # Each activity counted once, and every attended row's time.
-  defp year_stats(attended, now) do
-    a_year_ago = DateTime.shift(now, year: -1)
-    last_12 = Enum.filter(attended, &DateTime.after?(&1.started_at, a_year_ago))
-    activities = last_12 |> Enum.map(& &1.activity) |> Enum.uniq_by(& &1.id)
-
-    %{
-      activities: length(activities),
-      incidents: Enum.count(activities, &(&1.activity_kind == "incident")),
-      minutes: last_12 |> Enum.map(&MemberRecords.minutes/1) |> Enum.sum()
-    }
+    {:noreply,
+     assign(socket,
+       year: year,
+       activities: Enum.take(rows, 10),
+       activity_count: MemberYear.activities(rows),
+       hours: MemberYear.hours(rows, year, team.timezone, Activity.hours_tags(team))
+     )}
   end
 
   # The member's waiting and declined certificates (#493), on a team with certificates
@@ -110,9 +112,13 @@ defmodule Web.MeLive do
       <div class="min-w-0">
         <.activities
           team={@team}
-          latest_year={@latest_year}
+          year={@year}
+          this_year={@this_year}
+          years={@years}
           activities={@activities}
-          stats={@stats}
+          activity_count={@activity_count}
+          any_activities?={@any_activities?}
+          hours={@hours}
         />
         <.chores :if={@chores} team={@team} chores={@chores} />
         <.qualifications
@@ -148,42 +154,51 @@ defmodule Web.MeLive do
   end
 
   attr :team, :map, required: true
-  attr :latest_year, :integer, default: nil
+  attr :year, :integer, required: true
+  attr :this_year, :integer, required: true
+  attr :years, :list, required: true
   attr :activities, :list, required: true
-  attr :stats, :map, required: true
+  attr :activity_count, :integer, required: true
+  attr :any_activities?, :boolean, required: true
+  attr :hours, :map, required: true
 
+  # Total first: it's the number people check. Primary and secondary are the letter's.
   defp activities(assigns) do
     ~H"""
     <section id="activities">
-      <h2 class="heading">Latest activities</h2>
-      <div :if={@stats.activities > 0} id="year-stats">
-        <p class="chart-caption mb-2">The last 12 months</p>
-        <div class="chart-stats">
-          <.stat
-            id="stat-activities"
-            value={Format.number(@stats.activities)}
-            label={Format.count(@stats.activities, one: "Activity", many: "Activities")}
-          />
-          <.stat
-            id="stat-incidents"
-            series={:incident}
-            value={Format.number(@stats.incidents)}
-            label={Format.count(@stats.incidents, one: "Incident", many: "Incidents")}
-          />
-          <.stat
-            id="stat-hours"
-            value={Format.hours(@stats.minutes)}
-            label={Format.count(div(round(@stats.minutes), 60), one: "Hour", many: "Hours")}
-          />
-        </div>
+      <.heading_row>
+        <h2 class="heading">Activities</h2>
+        <:action><.year_menu years={@years} year={@year} class={nil} /></:action>
+      </.heading_row>
+      <div :if={@activities != []} id="year-stats" class="chart-stats">
+        <.stat id="stat-total" value={Format.hours(@hours.total_minutes)} label="Total hours" />
+        <.stat
+          id="stat-primary"
+          value={Format.hours(@hours.primary_minutes)}
+          label="Primary hours"
+        />
+        <.stat
+          id="stat-secondary"
+          value={Format.hours(@hours.secondary_minutes)}
+          label="Secondary hours"
+        />
       </div>
-      <.empty_state :if={@activities == []} id="no-activities" title="No activities yet">
+      <.empty_state :if={!@any_activities?} id="no-activities" title="No activities yet">
         Activities you attend show here after SAR Duty refreshes.
         <:action>
           <p class="action">
             <.a id="coming-up-link" navigate={~p"/teams/#{@team}/activities"}>Activities coming up</.a>
           </p>
         </:action>
+      </.empty_state>
+      <.empty_state
+        :if={@any_activities? and @activities == []}
+        id="no-activities-in-year"
+        title={"No activities in #{@year}"}
+      >
+        {if @year == @this_year,
+          do: "Activities you attend show here after SAR Duty refreshes.",
+          else: "Pick another year to see its activities."}
       </.empty_state>
       <.table
         :if={@activities != []}
@@ -207,8 +222,8 @@ defmodule Web.MeLive do
       <p :if={@activities != []} class="action mt-2">
         <.a
           id="all-activities"
-          navigate={~p"/teams/#{@team}/me/activities?year=#{@latest_year}"}
-        >All your activities</.a>
+          navigate={~p"/teams/#{@team}/me/activities?year=#{@year}"}
+        >All {Format.count(@activity_count, one: "1 activity", many: "%d activities")} in {@year}</.a>
       </p>
     </section>
     """
@@ -493,6 +508,9 @@ defmodule Web.MeLive do
     </dd>
     """
   end
+
+  def handle_event("year", %{"year" => year}, socket),
+    do: {:noreply, push_patch(socket, to: ~p"/teams/#{socket.assigns.team}/me?year=#{year}")}
 
   def handle_event("delete-certificate", %{"id" => id}, socket) do
     member = socket.assigns.member
