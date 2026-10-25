@@ -88,6 +88,21 @@ defmodule App.DataFixtures do
     |> Repo.insert!()
   end
 
+  @doc "A note on the team's whiteboard (#515), live for a week unless `archived_at` says."
+  def whiteboard_note_fixture(%Team{} = team, attrs \\ %{}) do
+    now = DateTime.utc_now(:second)
+
+    %App.Model.WhiteboardNote{
+      team_id: team.id,
+      d4h_whiteboard_note_id: System.unique_integer([:positive]),
+      text: "Pager test Sunday at 10:00.",
+      archived_at: DateTime.add(now, 7, :day),
+      d4h_created_at: DateTime.add(now, -1, :day)
+    }
+    |> struct!(attrs)
+    |> Repo.insert!()
+  end
+
   @doc "A team with member logins on (#156), so its current members may log in."
   def member_logins_team_fixture(attrs \\ %{}) do
     # Chores (#341) and certificates (#493) need their own settings too; tests of them

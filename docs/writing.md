@@ -212,6 +212,11 @@ and must not be used for it.
 | MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
 | refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
 | send                           | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
+| whiteboard                     | notice board, bulletin board, announcements    | D4H's board of short notes for everyone on the team.                                                 |
+| note                           | post (as a noun), message, announcement        | One item on the whiteboard: up to 140 characters, with an optional link.                             |
+| post                           | publish, share, add                            | Putting a note on the whiteboard.                                                                    |
+| archive                        | take down, remove, hide                        | Taking a note off the whiteboard. It stays under Archived, and D4H or SAR Duty Records keeps it.     |
+| delete (a note)                | remove, erase                                  | Taking a note away for good, archived or not. Neither SAR Duty nor D4H keeps it.                     |
 | Take attendance                | sign-in, check-in, kiosk, door page            | The page where anyone logged in to the team scans members arriving at and leaving one activity.      |
 | arrived, left                  | signed in, signed out, checked in, checked out | A member's scans. "Arriving" and "Leaving" are the modes on the scanner, Take attendance.            |
 | check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan: that is "arrived".                   |

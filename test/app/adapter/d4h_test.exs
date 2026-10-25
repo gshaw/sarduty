@@ -7,6 +7,48 @@ defmodule App.Adapter.D4HTest do
     D4H.build_context(access_key: "key", api_host: "api.team-manager.ca.d4h.com", d4h_team_id: 1)
   end
 
+  describe "the whiteboard (#515)" do
+    defp whiteboard_context(api_host),
+      do: D4H.build_context(access_key: "key", api_host: api_host, d4h_team_id: 1)
+
+    test "reads every note, the newest first, from D4H and from Records" do
+      for host <- ["api.ca.d4h.org", D4H.records_host()] do
+        Req.Test.stub(App.Adapter.D4H, fn conn ->
+          conn = Plug.Conn.fetch_query_params(conn)
+          assert conn.request_path == "/v3/team/1/whiteboard"
+          assert %{"sort" => "createdAt", "order" => "desc", "size" => "1000"} = conn.query_params
+
+          Req.Test.json(conn, %{
+            "results" => [
+              %{"id" => 2, "text" => "Live", "owner" => %{"resourceType" => "Team"}},
+              %{"id" => 1, "text" => "Old", "owner" => %{"resourceType" => "Organisation"}}
+            ],
+            "totalSize" => 2
+          })
+        end)
+
+        context = whiteboard_context(host)
+
+        assert {:ok, [%{text: "Live", owner_kind: :team}, %{owner_kind: :organization}]} =
+                 D4H.fetch_whiteboard_notes(context)
+      end
+    end
+
+    test "a 403 is the module off, and any other failure raises" do
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        conn
+        |> Plug.Conn.put_status(403)
+        |> Req.Test.json(%{"title" => "Forbidden"})
+      end)
+
+      context = whiteboard_context("api.ca.d4h.org")
+      assert D4H.fetch_whiteboard_notes(context) == :off
+
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 401, ""))
+      assert_raise D4H.Error, fn -> D4H.fetch_whiteboard_notes(context) end
+    end
+  end
+
   test "a team with no profile image has no logo to fetch" do
     Req.Test.stub(App.Adapter.D4H, fn conn ->
       assert conn.request_path == "/v3/team/1/documents"

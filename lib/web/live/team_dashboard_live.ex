@@ -14,6 +14,7 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
+  alias App.Model.WhiteboardNote
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.ViewData.MemberRecords
@@ -27,6 +28,7 @@ defmodule Web.TeamDashboardLive do
   alias Web.Components.ActivityPanel
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
+  alias Web.WhiteboardText
 
   # The top half is what needs doing: what's next, and what needs a team admin. The lower
   # half is the team's year, loaded after it so the work never waits on the charts (#205).
@@ -35,6 +37,7 @@ defmodule Web.TeamDashboardLive do
   # the team's year, plus For you to do. A member replies to the activities they're
   # invited to from Next up and Coming up (#444). Team admins also get Take attendance,
   # Needs attention, and Refresh now. A team admin who is a member gets both lists.
+  # Everyone reads the whiteboard (#515), after the lists that need them.
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -49,6 +52,7 @@ defmodule Web.TeamDashboardLive do
     socket =
       socket
       |> assign(page_title: current_team.name)
+      |> assign(org_name: WhiteboardText.org_name(current_team))
       |> assign_page(current_team)
 
     {:ok, socket}
@@ -65,6 +69,7 @@ defmodule Web.TeamDashboardLive do
       view_data: TeamDashboardViewData.build(team, now, attention?: socket.assigns.team_admin?)
     )
     |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
+    |> assign(notes: if(team.whiteboard_enabled, do: WhiteboardNote.live(team, now), else: []))
     |> assign(replier: Reply.replier(socket.assigns, now))
     |> assign_replies()
     |> assign_member(now)
@@ -169,6 +174,13 @@ defmodule Web.TeamDashboardLive do
       <div class="card-stack span-6">
         <.needs_attention :if={@team_admin?} team={@current_team} items={@view_data.attention} />
         <.to_do :if={@current_member} team={@current_team} items={@to_do} />
+        <.whiteboard
+          :if={@notes != [] or (@team_admin? and @current_team.whiteboard_enabled)}
+          team={@current_team}
+          notes={@notes}
+          org_name={@org_name}
+          today={Service.Period.today(@now, @current_team.timezone)}
+        />
       </div>
     </div>
 
@@ -425,6 +437,37 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :letters, year: year}),
     do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
+
+  attr :team, :map, required: true
+  attr :notes, :list, required: true
+  attr :org_name, :string, default: nil
+  attr :today, Date, required: true
+
+  # Every live note (#515). Only team admins see it with none, so they can post one.
+  defp whiteboard(assigns) do
+    ~H"""
+    <section id="whiteboard" class="card">
+      <header>
+        <h2 class="chart-title">Whiteboard</h2>
+      </header>
+      <p :if={@notes == []} id="whiteboard-empty" class="chart-caption">
+        No notes on the whiteboard. Post one for everyone on the team to read.
+      </p>
+      <ul :if={@notes != []} id="whiteboard-list" class="dash-list">
+        <li :for={note <- @notes} id={"whiteboard-note-#{note.id}"}>
+          <p class="mb-0"><WhiteboardText.note_text note={note} /></p>
+          <WhiteboardText.note_link note={note} class="block" />
+          <p class="hint mb-0">
+            {WhiteboardText.note_line(note, @team.timezone, @org_name, @today)}
+          </p>
+        </li>
+      </ul>
+      <footer class="action">
+        <.a navigate={~p"/teams/#{@team}/whiteboard"}>All notes</.a>
+      </footer>
+    </section>
+    """
+  end
 
   attr :team, :map, required: true
   attr :items, :list, required: true

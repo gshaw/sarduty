@@ -7,13 +7,14 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   alias App.Model.Attendance
   alias App.Model.Event
   alias App.Model.Team
+  alias App.Model.WhiteboardNote
   alias App.Operation.SyncD4HChanges
   alias App.Worker.SyncTeamChangesWorker
 
   @newest "2026-10-05T12:00:00Z"
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
-            member-group-memberships equipment equipment-usages)
+            member-group-memberships equipment equipment-usages whiteboard)
 
   defp head(total, newest \\ @newest),
     do: %{"results" => [%{"updatedAt" => newest}], "totalSize" => total}
@@ -30,7 +31,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   defp list_name(conn), do: conn.path_info |> List.last()
 
-  test "when nothing changed, a sync makes the 13 list checks and reads the open years" do
+  test "when nothing changed, a sync makes the 14 list checks and reads the open years" do
     check_unchanged_sync(synced_team())
   end
 
@@ -57,7 +58,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 
-    requests = for _ <- 1..16, do: assert_receive({:d4h, _list, _params})
+    requests = for _ <- 1..17, do: assert_receive({:d4h, _list, _params})
     open_years = for {:d4h, list, %{"starts_after" => _}} <- requests, do: list
     assert Enum.sort(open_years) == ~w(events exercises incidents)
     refute_received {:d4h, _, _}
@@ -241,5 +242,98 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     assert {team, false} = SyncD4HChanges.record_failure(team, DateTime.add(start, 50, :minute))
     assert {team, true} = SyncD4HChanges.record_failure(team, DateTime.add(start, 60, :minute))
     assert {_team, false} = SyncD4HChanges.record_failure(team, DateTime.add(start, 70, :minute))
+  end
+
+  describe "the whiteboard (#515)" do
+    defp note(id, text, updated_at),
+      do: %{
+        "id" => id,
+        "text" => text,
+        "important" => false,
+        "owner" => %{"resourceType" => "Team", "id" => 1},
+        "archivedAt" => "2030-01-01T08:00:00Z",
+        "createdAt" => "2026-10-1#{id}T16:00:00Z",
+        "updatedAt" => updated_at
+      }
+
+    # Every list unchanged but the whiteboard, whose stub answers.
+    defp stub_whiteboard(whiteboard) do
+      test = self()
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+
+        cond do
+          conn.query_params["starts_after"] ->
+            Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+          list_name(conn) == "whiteboard" ->
+            send(test, {:whiteboard, conn.query_params})
+            whiteboard.(conn)
+
+          true ->
+            Req.Test.json(conn, head(10))
+        end
+      end)
+    end
+
+    test "a moved head reads every note and replaces the team's copy" do
+      team = synced_team()
+      newest = "2026-10-21T09:00:00Z"
+      notes = [note(2, "Pager test Sunday.", newest), note(1, "Winter tires.", newest)]
+
+      stub_whiteboard(fn conn ->
+        if conn.query_params["size"] == "1",
+          do: Req.Test.json(conn, %{"results" => [hd(notes)], "totalSize" => 2}),
+          else: Req.Test.json(conn, %{"results" => notes, "totalSize" => 2})
+      end)
+
+      assert perform(team) == :ok
+      assert_received {:whiteboard, %{"size" => "1", "sort" => "updatedAt"}}
+      assert_received {:whiteboard, %{"size" => "1000", "sort" => "createdAt"}}
+
+      texts = team |> WhiteboardNote.live(DateTime.utc_now()) |> Enum.map(& &1.text)
+      assert texts == ["Pager test Sunday.", "Winter tires."]
+      [kept | _] = WhiteboardNote.live(team, DateTime.utc_now())
+
+      # The next sync sees the same head and reads nothing more.
+      team = Repo.reload(team)
+      assert perform(team) == :ok
+      assert_received {:whiteboard, %{"size" => "1"}}
+      refute_received {:whiteboard, _}
+
+      # A note deleted in D4H lowers the total, and goes here too. The other keeps its id.
+      stub_whiteboard(fn conn ->
+        Req.Test.json(conn, %{"results" => [hd(notes)], "totalSize" => 1})
+      end)
+
+      assert perform(Repo.reload(team)) == :ok
+      assert [%WhiteboardNote{id: id}] = WhiteboardNote.live(team, DateTime.utc_now())
+      assert id == kept.id
+    end
+
+    test "a 403 turns the whiteboard off, never the key, and the sync stops asking" do
+      team = synced_team()
+
+      stub_whiteboard(fn conn ->
+        conn
+        |> Plug.Conn.put_status(403)
+        |> Req.Test.json(%{
+          "title" => "Forbidden",
+          "detail" => "The required modules are not enabled for this context"
+        })
+      end)
+
+      assert perform(team) == :ok
+      team = Repo.reload(team)
+      refute SyncD4HChanges.key_rejected?(team)
+      refute team.whiteboard_enabled
+      assert SyncTeamChangesWorker.syncs?(team)
+
+      assert perform(team) == :ok
+      assert_received {:whiteboard, _head}
+      assert_received {:whiteboard, _read}
+      refute_received {:whiteboard, _}
+    end
   end
 end

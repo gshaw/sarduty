@@ -415,6 +415,26 @@ defmodule App.Adapter.D4H do
   def fetch_equipment_usages(context),
     do: fetch_all(context, "/equipment-usages", &D4H.EquipmentUsage.build/1)
 
+  @doc """
+  Every note on the team's whiteboard (#515), archived ones and the organization's too,
+  the newest first: `{:ok, notes}`, or `:off` when D4H answers 403 because the team has
+  the module off. Any other failure raises D4H.Error, as for the other lists.
+  """
+  def fetch_whiteboard_notes(context) do
+    notes =
+      context
+      |> reduce_pages("/whiteboard", &D4H.WhiteboardNote.build/1, [], &[&1 | &2],
+        sort: "createdAt",
+        order: "desc"
+      )
+      |> Enum.reverse()
+      |> Enum.concat()
+
+    {:ok, notes}
+  rescue
+    error in D4H.Error -> if error.status == 403, do: :off, else: reraise(error, __STACKTRACE__)
+  end
+
   defp fetch_all(context, url, build) do
     context
     |> reduce_pages(url, build, [], &[&1 | &2])
