@@ -143,7 +143,12 @@ defmodule Web.MeCertificateFormLive do
       </.input>
 
       <.form_actions>
-        <.button id="certificate-save" variant={:success} phx-disable-with="Sending…">
+        <.button
+          id="certificate-save"
+          variant={:success}
+          phx-disable-with="Sending…"
+          disabled={@viewing_as != nil}
+        >
           {if @certificate, do: "Save certificate", else: "Send certificate"}
         </.button>
         <.button navigate={~p"/teams/#{@member.team}/me"}>Cancel</.button>
@@ -152,6 +157,7 @@ defmodule Web.MeCertificateFormLive do
             id="certificate-delete"
             type="button"
             variant={:danger}
+            disabled={@viewing_as != nil}
             phx-click="delete"
             data-confirm={CertificateText.delete_question(@certificate)}
           >

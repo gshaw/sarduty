@@ -71,7 +71,7 @@ defmodule Web.MeChoreFormLive do
         A team admin reads this, and so does everyone who opens its activity.
       </.input>
       <.form_actions>
-        <.button id="chore-save" variant={:success}>
+        <.button id="chore-save" variant={:success} disabled={@viewing_as != nil}>
           {if @chore, do: "Save chore", else: "Log chore"}
         </.button>
         <.button navigate={~p"/teams/#{@member.team}/me/chores"}>Cancel</.button>
@@ -80,6 +80,7 @@ defmodule Web.MeChoreFormLive do
             id="chore-delete"
             type="button"
             variant={:danger}
+            disabled={@viewing_as != nil}
             phx-click="delete"
             data-confirm={"Delete #{@chore.description}?"}
           >

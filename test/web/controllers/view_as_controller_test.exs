@@ -130,6 +130,7 @@ defmodule Web.ViewAsControllerTest do
     test "contact details save nothing", %{conn: conn, team: team, sam: sam} do
       conn = view_as(conn, team, sam)
       lv = open(conn, ~p"/teams/#{team}/me/details")
+      assert has_element?(lv, "#details-form button[disabled]", "Save details")
 
       html = lv |> form("#details-form", details: %{address: "9 Elm St"}) |> render_submit()
       assert html =~ "You&#39;re viewing as Sam Rivera, so nothing is saved."
@@ -147,6 +148,8 @@ defmodule Web.ViewAsControllerTest do
       assert has_element?(lv, "#flash-error", "so nothing is saved")
 
       lv = open(conn, ~p"/teams/#{team}/me/chores/#{chore.id}/edit")
+      assert has_element?(lv, "#chore-save[disabled]")
+      assert has_element?(lv, "#chore-delete[disabled]")
       render_click(lv, "delete", %{})
       lv |> form("#chore-form") |> render_submit()
       assert has_element?(lv, "#flash-error", "so nothing is saved")

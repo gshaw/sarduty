@@ -159,6 +159,7 @@ defmodule Web.MeDetailsLive do
         code_form={@code_form}
         phone_form={@phone_form}
         text_login?={@text_login?}
+        viewing_as?={@viewing_as != nil}
       />
 
       <h2 class="heading mt-8">Mailing address and emergency contacts</h2>
@@ -194,7 +195,7 @@ defmodule Web.MeDetailsLive do
         />
 
         <.form_actions>
-          <.button variant={:success} phx-disable-with="Saving…">
+          <.button variant={:success} phx-disable-with="Saving…" disabled={@viewing_as != nil}>
             Save details
           </.button>
         </.form_actions>
@@ -207,6 +208,7 @@ defmodule Web.MeDetailsLive do
     """
   end
 
+  # Viewing as the member, the buttons are greyed out; Web.UserAuth refuses their events.
   defp phone_content(%{pending: nil} = assigns) do
     ~H"""
     <p id="current-phone">{@member.phone || "None"}</p>
@@ -218,7 +220,7 @@ defmodule Web.MeDetailsLive do
         Include the area code, like 604-555-1234.
       </.input>
       <.form_actions>
-        <.button phx-disable-with="Sending…">Send code</.button>
+        <.button phx-disable-with="Sending…" disabled={@viewing_as?}>Send code</.button>
       </.form_actions>
     </.form>
     <p :if={!@text_login?} id="phone-off" class="hint">

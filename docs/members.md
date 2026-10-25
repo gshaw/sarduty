@@ -370,7 +370,8 @@ on these pages already, on the member's page and its tabs.
 - It's read-only. On every page members open, only the page's `view_events` (filters,
   form checks) reach it, and anything else, such as saving contact details or a chore,
   says "You're viewing as …, so nothing is saved" (`UserAuth.view_as_refusal/1`) from
-  the team pages' hook (#440). Wallet passes redirect back, and the letter downloads
+  the team pages' hook (#440). The save and delete buttons on Your membership's forms
+  are greyed out too, so they don't look like they work. Wallet passes redirect back, and the letter downloads
   without leaving the member's to-do. Nothing reaches D4H and no code is sent. Replies,
   a component's own events, check `viewing_as` themselves.
 - The account menu stays the team admin's, and each start is a `member_viewed_as` event in
