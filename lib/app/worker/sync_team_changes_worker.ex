@@ -62,7 +62,7 @@ defmodule App.Worker.SyncTeamChangesWorker do
       {:ok, team, changed} ->
         record(team, started_at, %{outcome: "changed", lists: changed})
         Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
-        %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
+        PushPassUpdatesWorker.enqueue(team)
         :ok
 
       {:error, {:key_rejected, status} = reason} ->

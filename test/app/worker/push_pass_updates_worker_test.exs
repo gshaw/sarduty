@@ -1,5 +1,6 @@
 defmodule App.Worker.PushPassUpdatesWorkerTest do
   use App.DataCase
+  use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
   import App.DataFixtures
 
@@ -9,13 +10,13 @@ defmodule App.Worker.PushPassUpdatesWorkerTest do
     team = team_fixture()
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      {:ok, first} = %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert()
-      {:ok, second} = %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert()
-      assert second.conflict?
+      PushPassUpdatesWorker.enqueue(team)
+      PushPassUpdatesWorker.enqueue(team)
+      assert [job] = all_enqueued(worker: PushPassUpdatesWorker)
 
-      first |> Ecto.Changeset.change(state: "executing") |> Repo.update!()
-      {:ok, third} = %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert()
-      refute third.conflict?
+      job |> Ecto.Changeset.change(state: "executing") |> Repo.update!()
+      PushPassUpdatesWorker.enqueue(team)
+      assert [_waiting] = all_enqueued(worker: PushPassUpdatesWorker)
     end)
   end
 end

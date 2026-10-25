@@ -12,6 +12,10 @@ defmodule App.Worker.NotifyLoginBlockedWorker do
   alias App.Accounts.User
   alias App.Accounts.UserNotifier
 
+  @doc "Queues the notice for `%{email: email}` or `%{phone: e164}`."
+  def enqueue(%{email: email} = args) when is_binary(email), do: args |> new() |> Oban.insert!()
+  def enqueue(%{phone: phone} = args) when is_binary(phone), do: args |> new() |> Oban.insert!()
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"email" => email}}), do: notify(email)
 

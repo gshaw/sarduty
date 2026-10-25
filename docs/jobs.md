@@ -29,7 +29,8 @@ again ([change-sets.md](change-sets.md)). A slow result for this page only goes 
   job, or a job that runs before its row exists.
 - **Inserted through the worker's `enqueue`**, which takes structs and builds the args,
   like `SyncTeamChangesWorker.enqueue/1`. Operations call it; a LiveView calls it only
-  when there is nothing else to do, like a refresh button.
+  when there is nothing else to do, like a refresh button. A source test,
+  `test/app/worker/enqueue_usage_test.exs`, fails on a job built anywhere else.
 - **Unique when a second copy repeats the work**: per team for refresh, sync, and pass
   pushes. Give `period: :infinity`, since Oban's default only looks back 60 seconds.
 - **Retries match how long the result is useful.** Oban's default, 20 attempts over

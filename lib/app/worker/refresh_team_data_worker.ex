@@ -44,7 +44,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
     record(team, started_at, %{outcome: "ok", missed: missed})
     {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
     broadcast_team_refresh(team)
-    %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
+    PushPassUpdatesWorker.enqueue(team)
     :ok
   end
 
