@@ -1,5 +1,10 @@
 defmodule App.Worker.PushPassUpdatesWorker do
-  use Oban.Worker, queue: :default, max_attempts: 1
+  # One per team waiting. A running one doesn't block the next, since it may have read
+  # the cards before the change that queued it.
+  use Oban.Worker,
+    queue: :default,
+    max_attempts: 1,
+    unique: [keys: [:team_id], states: [:available, :scheduled], period: :infinity]
 
   alias App.Model.Team
   alias App.Operation.PushPassUpdates

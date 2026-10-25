@@ -16,7 +16,7 @@ defmodule App.Worker.SyncTeamChangesWorker do
   use Oban.Worker,
     queue: :sync,
     max_attempts: 1,
-    unique: [keys: [:team_id], states: [:available, :scheduled, :executing]]
+    unique: [keys: [:team_id], states: [:available, :scheduled, :executing], period: :infinity]
 
   alias App.Model.Event
   alias App.Model.Team

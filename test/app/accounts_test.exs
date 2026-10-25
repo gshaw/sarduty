@@ -315,6 +315,22 @@ defmodule App.AccountsTest do
       assert body =~ ~r/@\S+ ##{code}\z/
     end
 
+    test "a refused text leaves no code, so the retry sends a new one at once" do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
+
+      Req.Test.stub(App.Adapter.Twilio, fn conn ->
+        conn |> Plug.Conn.put_status(500) |> Req.Test.json(%{"code" => 20_500})
+      end)
+
+      assert Accounts.deliver_login_text("+16045551234") == {:error, 500}
+      assert Repo.aggregate(UserToken, :count) == 0
+
+      text_login_fixture()
+      code = text_code_fixture("+16045551234")
+      assert {:ok, %User{}} = Accounts.log_in_with_text_code("+16045551234", code)
+    end
+
     test "sends nothing for a member who may not log in, or a number two people share" do
       text_login_fixture()
       team = team_fixture()
