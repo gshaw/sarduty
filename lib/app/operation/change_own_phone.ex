@@ -3,7 +3,7 @@ defmodule App.Operation.ChangeOwnPhone do
   A member changes their own mobile number (#156). Text login uses it, so the new one
   must prove it works first: request/4 texts it a code, and confirm/4 takes the code
   back. Only then does the change go to D4H, as a change set of source `:member`, and
-  the member's email gets a notice in case someone else made it. Members don't change
+  a job emails the member a notice in case someone else made it. Members don't change
   their email; team admins do, in D4H.
 
   Numbers are E.164 (`+16045550123`), as a code's `sent_to`.
@@ -18,6 +18,7 @@ defmodule App.Operation.ChangeOwnPhone do
   alias App.Model.Member
   alias App.Operation.ApplyChangeSet
   alias App.Repo
+  alias App.Worker.NotifyPhoneChangedWorker
 
   @doc """
   Checks the new number and texts it a code. `{:ok, e164}`, or `{:error, text}` to
@@ -137,12 +138,7 @@ defmodule App.Operation.ChangeOwnPhone do
 
     case ApplyChangeSet.call(member.team, change_set, user, now) do
       {:ok, [%ChangeSetRow{status: :applied}]} ->
-        updated = member |> Ecto.Changeset.change(phone: phone) |> Repo.update!()
-
-        if member.email not in [nil, ""],
-          do: UserNotifier.deliver_phone_changed(member.email, member.team, phone)
-
-        {:ok, updated}
+        save_phone(member, phone)
 
       {:ok, [%ChangeSetRow{error: error}]} ->
         {:error, error}
@@ -150,5 +146,14 @@ defmodule App.Operation.ChangeOwnPhone do
       {:error, _reason} ->
         {:error, "The change did not go through. Try again."}
     end
+  end
+
+  # The copy and the notice's job commit together.
+  defp save_phone(member, phone) do
+    Repo.transaction(fn ->
+      updated = member |> Ecto.Changeset.change(phone: phone) |> Repo.update!()
+      if member.email not in [nil, ""], do: NotifyPhoneChangedWorker.enqueue(updated)
+      updated
+    end)
   end
 end

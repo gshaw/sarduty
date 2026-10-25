@@ -135,6 +135,14 @@ defmodule App.Model.MemberCard do
 
   def status(%MemberCard{}, _now), do: :revoked
 
+  @doc "A cancelled card, by id, or nil. Its member is found through the card's team."
+  def get_revoked(id) do
+    MemberCard
+    |> join(:inner, [c], m in assoc(c, :member), on: m.team_id == c.team_id)
+    |> where([c], c.id == ^id and not is_nil(c.revoked_at))
+    |> Repo.one()
+  end
+
   @doc """
   When a pass stops being good: the last moment of the month three months after the
   team last checked D4H, in the team's zone. Each refresh moves it, so a pass expires on

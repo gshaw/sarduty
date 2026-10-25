@@ -94,8 +94,11 @@ defmodule App.Operation.SendRemindersTest do
     end
 
     test "emails each member at once, from the team, with replies to the team admin", ctx do
-      assert {:ok, [%Reminder{status: :sent, round: 1}]} =
+      assert {:ok, [%Reminder{status: :queued, round: 1} = reminder]} =
                SendReminders.call(ctx.team, ctx.activity, ctx.user, 1, DateTime.utc_now())
+
+      # Its job ran as it was queued, since Oban runs inline in tests.
+      assert Repo.reload!(reminder).status == :sent
 
       assert_email_sent(fn email ->
         assert email.to == [{"Cameron Ruiz", "cameron@example.com"}]

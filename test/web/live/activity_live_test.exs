@@ -151,6 +151,29 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#member-reminded-#{wren.id}")
       refute has_element?(lv, "#member-row-#{cameron.id} td", "No reply ·")
     end
+
+    test "a reminder waiting for its job shows as sending until the job is done",
+         %{conn: conn, team: team, activity: activity, cameron: cameron} do
+      reminder =
+        Repo.insert!(%App.Model.Reminder{
+          team_id: team.id,
+          activity_id: activity.id,
+          member_id: cameron.id,
+          sent_at: DateTime.utc_now(),
+          round: 1,
+          status: :queued
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
+      assert has_element?(lv, "#members-batch", "1 sending")
+      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminder sending")
+
+      reminder |> Ecto.Changeset.change(status: :sent) |> Repo.update!()
+      send(lv.pid, {:reminder_done, activity.id})
+
+      assert has_element?(lv, "#members-batch", "1 sent")
+      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
+    end
   end
 
   defp hours_from_now(hours),

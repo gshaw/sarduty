@@ -23,7 +23,11 @@ defmodule Web.ActivityLive do
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
 
+  # A reminder's job tells the page when it's sent or failed.
   def mount(_params, _session, socket) do
+    if connected?(socket),
+      do: Phoenix.PubSub.subscribe(App.PubSub, SendReminders.topic(socket.assigns.current_team))
+
     {:ok, socket}
   end
 
@@ -133,6 +137,14 @@ defmodule Web.ActivityLive do
   defp view_param("requested", _started?), do: "no-reply"
 
   def handle_info({:replied, _attendance}, socket), do: {:noreply, assign_people(socket)}
+
+  def handle_info(
+        {:reminder_done, activity_id},
+        %{assigns: %{activity: %{id: activity_id}}} = socket
+      ),
+      do: {:noreply, assign_people(socket)}
+
+  def handle_info({:reminder_done, _other_activity}, socket), do: {:noreply, socket}
 
   def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
@@ -605,15 +617,23 @@ defmodule Web.ActivityLive do
   defp skipped_text({member, :reminders_off}), do: "#{member.name} (reminders off)"
 
   # "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since"
+  # While none has gone yet: "4 sending Oct 26, 18:02 by Alex Chen".
   defp batch_text(batch, sender, timezone) do
+    all_sending? = batch.sent == 0 and batch.sending > 0
+
     sent =
-      Format.count(batch.sent, one: "%d sent", many: "%d sent") <>
+      if(all_sending?,
+        do: Format.count(batch.sending, one: "%d sending", many: "%d sending"),
+        else: Format.count(batch.sent, one: "%d sent", many: "%d sent")
+      ) <>
         " " <>
         Format.month_day_time(batch.sent_at, timezone) <>
         if(sender, do: " by #{sender}", else: "")
 
     [
       sent,
+      batch.sending > 0 && !all_sending? &&
+        Format.count(batch.sending, one: "%d sending", many: "%d sending"),
       batch.failed > 0 && Format.count(batch.failed, one: "%d failed", many: "%d failed"),
       Format.count(batch.replied_since, one: "%d replied since", many: "%d replied since")
     ]
@@ -622,6 +642,7 @@ defmodule Web.ActivityLive do
   end
 
   defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Reminder failed"
+  defp reminded_text(%Reminder{status: :queued}, _timezone), do: "Reminder sending"
 
   defp reminded_text(%Reminder{sent_at: sent_at}, timezone),
     do: "Reminded " <> Format.month_day(sent_at, timezone)

@@ -9,22 +9,22 @@ defmodule App.Operation.SignUpTeam do
 
   import Ecto.Changeset
 
-  alias App.Accounts
-  alias App.Accounts.UserNotifier
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
   alias App.Validate
   alias App.ViewModel.TeamSignupViewModel
+  alias App.Worker.NotifyTeamSignedUpWorker
   alias App.Worker.RefreshTeamDataWorker
+  alias App.Worker.SendLoginCodeWorker
 
   @manager_permissions [0, 1]
 
   def call(params) do
     with {:ok, view_model} <- TeamSignupViewModel.validate(params),
          {:ok, whoami, d4h_team, signer} <- check_with_d4h(view_model) do
-      {:ok, go_live(view_model, whoami, d4h_team, signer)}
+      {:ok, create_team(view_model, whoami, d4h_team, signer)}
     else
       {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
       {:error, {field, message}} -> {:error, form_error(params, field, message)}
@@ -48,14 +48,6 @@ defmodule App.Operation.SignUpTeam do
            ) do
       {:ok, whoami, d4h_team, signer}
     end
-  end
-
-  defp go_live(view_model, whoami, d4h_team, signer) do
-    team = create_team(view_model, whoami, d4h_team, signer)
-    %{team_id: team.id} |> RefreshTeamDataWorker.new() |> Oban.insert!()
-    UserNotifier.deliver_team_signed_up(Accounts.admin_emails(), team, view_model.email)
-    Accounts.deliver_login_code(view_model.email)
-    team
   end
 
   @doc """
@@ -133,7 +125,8 @@ defmodule App.Operation.SignUpTeam do
   end
 
   # The team, keyed by the token, and the signer as its first member, so the login code
-  # can go out before the first refresh fills in everyone else.
+  # can go out before the first refresh fills in everyone else. Its first refresh, the
+  # admins' notice, and the login code are jobs that commit with it.
   defp create_team(view_model, whoami, d4h_team, signer) do
     {lat, lng} = d4h_team.coordinate || {0.0, 0.0}
 
@@ -154,21 +147,25 @@ defmodule App.Operation.SignUpTeam do
           d4h_access_key_member_id: D4H.WhoAmI.member_id(whoami, whoami.d4h_team_id)
         })
 
-      Member.insert!(%{
-        team_id: team.id,
-        d4h_member_id: signer.d4h_member_id,
-        ref_id: signer.ref_id,
-        name: signer.name,
-        email: signer.email,
-        phone: signer.phone,
-        address: signer.address,
-        position: signer.position,
-        joined_at: signer.joined_at,
-        left_at: signer.left_at,
-        d4h_permission: signer.permission,
-        d4h_status: signer.status
-      })
+      member =
+        Member.insert!(%{
+          team_id: team.id,
+          d4h_member_id: signer.d4h_member_id,
+          ref_id: signer.ref_id,
+          name: signer.name,
+          email: signer.email,
+          phone: signer.phone,
+          address: signer.address,
+          position: signer.position,
+          joined_at: signer.joined_at,
+          left_at: signer.left_at,
+          d4h_permission: signer.permission,
+          d4h_status: signer.status
+        })
 
+      RefreshTeamDataWorker.enqueue(team)
+      NotifyTeamSignedUpWorker.enqueue(team, member)
+      SendLoginCodeWorker.enqueue_email(view_model.email)
       team
     end)
     |> elem(1)

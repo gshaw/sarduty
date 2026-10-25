@@ -6,9 +6,9 @@ defmodule App.Operation.SendReminders do
   round 1. Never a third: after round 2, only newly invited members get one. A member
   with no email in D4H, or with invitation reminders off, is skipped and named.
 
-  plan/4 says who gets one, pure. call/5 records a row per reminder before its email
-  goes, so two team admins sending at once can't send twice, then marks the ones
-  Cloudflare refused.
+  plan/4 says who gets one, pure. call/5 records a queued row per reminder with its
+  job, in one transaction, so two team admins sending at once can't send twice.
+  App.Worker.SendReminderWorker then sends each with deliver/3, retrying a refusal.
   """
   import Ecto.Query
 
@@ -20,6 +20,7 @@ defmodule App.Operation.SendReminders do
   alias App.Model.Reminder
   alias App.Model.Team
   alias App.Repo
+  alias App.Worker.SendReminderWorker
 
   @wait 24 * 60 * 60
 
@@ -69,8 +70,8 @@ defmodule App.Operation.SendReminders do
   defp skip_reason(%Member{}), do: :reminders_off
 
   @doc """
-  Sends round `round` from `user` and records it. `{:ok, reminders}`, each sent or
-  failed, or `{:error, text}` once the activity has started or is deleted.
+  Queues round `round` from `user`. `{:ok, reminders}`, each queued, or `{:error,
+  text}` once the activity has started or is deleted.
   """
   def call(%Team{} = team, %Activity{team_id: team_id} = activity, %User{} = user, round, now)
       when team_id == team.id and round in [1, 2] do
@@ -85,7 +86,7 @@ defmodule App.Operation.SendReminders do
         %{send: members} =
           plan(invited_rows(activity), Reminder.for_activity(activity), round, now)
 
-        {:ok, deliver_all(team, activity, user, members, round, now)}
+        {:ok, Enum.flat_map(members, &queue(activity, &1, user, round, now))}
     end
   end
 
@@ -98,22 +99,21 @@ defmodule App.Operation.SendReminders do
     |> Repo.all()
   end
 
-  defp deliver_all(team, activity, user, members, round, now) do
-    sender = sender(team, user, now)
+  # The row and its job commit together, or neither does.
+  defp queue(activity, member, user, round, now) do
+    {:ok, queued} =
+      Repo.transaction(fn ->
+        case activity |> row(member, user, round, now) |> Reminder.insert() do
+          nil ->
+            []
 
-    recorded =
-      for member <- members,
-          reminder = activity |> row(member, user, round, now) |> Reminder.insert(),
-          do: {reminder, member}
+          reminder ->
+            SendReminderWorker.enqueue(reminder)
+            [reminder]
+        end
+      end)
 
-    recorded
-    |> Task.async_stream(
-      fn {_reminder, member} -> ReminderMailer.deliver(member, activity, team, sender) end,
-      max_concurrency: 4,
-      timeout: :timer.seconds(30),
-      on_timeout: :kill_task
-    )
-    |> Enum.zip_with(recorded, fn result, {reminder, _member} -> record(reminder, result) end)
+    queued
   end
 
   defp row(activity, member, user, round, now) do
@@ -124,13 +124,57 @@ defmodule App.Operation.SendReminders do
       sent_by_user_id: user.id,
       sent_at: now,
       round: round,
-      status: :sent
+      status: :queued
     }
   end
 
-  defp record(reminder, {:ok, {:ok, _sent}}), do: reminder
-  defp record(reminder, {:ok, {:error, error}}), do: Reminder.fail!(reminder, inspect(error))
-  defp record(reminder, {:exit, reason}), do: Reminder.fail!(reminder, inspect(reason))
+  @doc """
+  Emails one queued reminder and marks it sent, for its job. A refusal is `{:error,
+  reason}`, so the job tries again; on the `last?` attempt the reminder is marked failed
+  first. One no longer queued is `{:cancel, reason}`, and so is one whose activity
+  started or was deleted before it went, which is marked failed. The activity's page
+  hears through `topic/1` once a reminder is sent or failed.
+  """
+  def deliver(reminder_id, last?, now) do
+    case Reminder.get_queued(reminder_id) do
+      nil -> {:cancel, "no queued reminder"}
+      reminder -> deliver_queued(reminder, last?, now)
+    end
+  end
+
+  defp deliver_queued(%Reminder{activity: activity} = reminder, last?, now) do
+    if activity.deleted_at || not DateTime.before?(now, activity.started_at) do
+      reminder |> Reminder.fail!("The activity started before it went.") |> broadcast()
+      {:cancel, "the activity started"}
+    else
+      send_email(reminder, last?, now)
+    end
+  end
+
+  defp send_email(%Reminder{team: team} = reminder, last?, now) do
+    sender = sender(team, reminder.sent_by_user, now)
+
+    case ReminderMailer.deliver(reminder.member, reminder.activity, team, sender) do
+      {:ok, _sent} ->
+        reminder |> Reminder.sent!() |> broadcast()
+        :ok
+
+      {:error, error} ->
+        if last?, do: reminder |> Reminder.fail!(inspect(error)) |> broadcast()
+        {:error, error}
+    end
+  end
+
+  @doc "The topic a team's reminder changes go out on, as `{:reminder_done, activity_id}`."
+  def topic(%Team{id: team_id}), do: "reminders:#{team_id}"
+
+  defp broadcast(%Reminder{} = reminder) do
+    Phoenix.PubSub.broadcast(
+      App.PubSub,
+      topic(%Team{id: reminder.team_id}),
+      {:reminder_done, reminder.activity_id}
+    )
+  end
 
   @doc """
   Who a reminder is from, `%{name:, email:}`: the team admin's own member name on the
