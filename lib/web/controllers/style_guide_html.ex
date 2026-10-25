@@ -8,6 +8,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Chart
   import Web.Components.CopyButton
   import Web.Components.D4H
+  import Web.Components.FileDrop
   import Web.Components.FilterBar
   import Web.Components.GroupRule
   import Web.Components.HeadingRow
@@ -78,6 +79,7 @@ defmodule Web.StyleGuideHTML do
          {:detail_list, "Detail list", "Key facts about one record."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
+         {:file_drop, "File drop", "Drop, paste, or select a file to upload."},
          {:filter_bar, "Filter bar", "Search and filters above a long list."},
          {:forms, "Forms",
           "Every input: text, select, date, text area, checkboxes, radios, and switches."},

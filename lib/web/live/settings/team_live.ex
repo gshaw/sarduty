@@ -1,6 +1,7 @@
 defmodule Web.Settings.TeamLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FileDrop
   import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
@@ -99,34 +100,34 @@ defmodule Web.Settings.TeamLive do
             type="email"
           />
         </div>
-        <div id="team-signature" class="mb-6">
-          <.label for={@uploads.signature.ref}>Signer's signature (optional)</.label>
-          <.hint>
-            A PNG or JPEG of the signature, on white or transparent. New tax credit letters
-            print it above the signer's name. Letters already made keep theirs.
-          </.hint>
-          <div :if={@current_team.signature} class="my-2 flex flex-wrap items-center gap-4">
-            <img
-              id="signature-preview"
-              src={Web.ImageData.png_data_url(@current_team.signature)}
-              class="h-16 max-w-xs border border-border-subtle bg-paper p-1"
-              alt="The signer's signature"
-            />
-            <.button
-              id="remove-signature"
-              type="button"
-              phx-click="remove_signature"
-              data-confirm="Remove the signature? New tax credit letters go out unsigned until you add one."
-            >
-              Remove signature
-            </.button>
-          </div>
-          <.live_file_input upload={@uploads.signature} class="my-2" />
-          <.error :for={error <- upload_errors(@uploads.signature)}>
-            {upload_error(error, @uploads.signature, "a PNG or JPEG")}
-          </.error>
-          <.error :if={@signature_error} id="signature-error">{@signature_error}</.error>
-        </div>
+        <.file_drop
+          id="team-signature"
+          upload={@uploads.signature}
+          label="Signer's signature (optional)"
+          kinds="a PNG or JPEG"
+          errors={if @signature_error, do: [@signature_error], else: []}
+        >
+          A PNG or JPEG of the signature, on white or transparent. New tax credit letters
+          print it above the signer's name. Letters already made keep theirs.
+          <:current :if={@current_team.signature}>
+            <div class="flex flex-wrap items-center gap-4">
+              <img
+                id="signature-preview"
+                src={Web.ImageData.png_data_url(@current_team.signature)}
+                class="h-16 max-w-xs border border-border-subtle bg-paper p-1"
+                alt="The signer's signature"
+              />
+              <.button
+                id="remove-signature"
+                type="button"
+                phx-click="remove_signature"
+                data-confirm="Remove the signature? New tax credit letters go out unsigned until you add one."
+              >
+                Remove signature
+              </.button>
+            </div>
+          </:current>
+        </.file_drop>
         <.input
           field={@form[:not_seen_days]}
           type="select"
@@ -266,6 +267,9 @@ defmodule Web.Settings.TeamLive do
         {:noreply, assign_form(socket, changeset)}
     end
   end
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :signature, ref)}
 
   def handle_event("remove_signature", _params, socket) do
     {:ok, team} = SaveTeamSignature.call(socket.assigns.current_team, nil)

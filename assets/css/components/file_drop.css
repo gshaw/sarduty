@@ -1,0 +1,29 @@
+/* File drop (<.file_drop>): a dashed box that takes a dropped or pasted file, around the
+   browser's own file button. LiveView adds phx-drop-target-active while a file is over
+   it. On a touch screen it is the button alone. See /styles/file-drop. */
+@layer components {
+  .file-drop {
+    display: grid;
+    justify-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-6);
+    border: var(--border-width) dashed var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+  .file-drop-icon { display: block; line-height: 0; color: var(--text-muted); }
+  .file-drop.phx-drop-target-active { border-color: var(--primary); background: var(--shade-1); }
+  .file-drop.phx-drop-target-active .file-drop-icon { color: var(--primary); }
+  .file-drop.is-invalid { border-color: var(--danger-text); }
+
+  /* A file chosen: it shows instead of the icon and the words. */
+  .file-drop:has(.file-drop-file) { justify-items: start; text-align: left; border-style: solid; border-color: var(--border-subtle); }
+  .file-drop:has(.file-drop-file) :is(.file-drop-icon, .file-drop-text) { display: none; }
+  .file-drop-thumb { width: 96px; max-height: 96px; object-fit: contain; background: var(--surface-alt); border: 1px solid var(--border-subtle); }
+  .file-drop-doc { line-height: 0; color: var(--text-muted); }
+
+  @media (pointer: coarse) {
+    .file-drop { border: 0; padding: 0; justify-items: start; text-align: left; }
+    .file-drop :is(.file-drop-icon, .file-drop-text) { display: none; }
+  }
+}

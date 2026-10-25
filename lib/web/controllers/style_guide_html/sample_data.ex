@@ -9,6 +9,47 @@ defmodule Web.StyleGuideHTML.SampleData do
   # cspell:ignore Tremblay exsss
   # Made-up rows for the style guide, shaped like the app's pages.
 
+  @doc """
+  An upload like the certificate form's, for the file drop: `:empty`, `:chosen` with a
+  PDF, or `:too_large` with one refused. The guide has no LiveView, so it is built on a
+  bare socket.
+  """
+  def sample_upload(state) do
+    upload =
+      %Phoenix.LiveView.Socket{}
+      |> Phoenix.LiveView.allow_upload(:certificate,
+        accept: ~w(image/* application/pdf),
+        max_entries: 1,
+        max_file_size: Service.CertificateFile.max_bytes()
+      )
+      |> then(& &1.assigns.uploads.certificate)
+
+    entry = %Phoenix.LiveView.UploadEntry{
+      ref: "0",
+      upload_ref: upload.ref,
+      upload_config: :certificate,
+      client_name: "first-aid.pdf",
+      client_size: 245_000,
+      client_type: "application/pdf",
+      valid?: true
+    }
+
+    case state do
+      :empty ->
+        upload
+
+      :chosen ->
+        %{upload | entries: [entry]}
+
+      :too_large ->
+        %{
+          upload
+          | entries: [%{entry | client_size: 14_200_000, valid?: false}],
+            errors: [{"0", :too_large}]
+        }
+    end
+  end
+
   def letters do
     Enum.map(
       [

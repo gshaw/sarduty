@@ -1,6 +1,8 @@
 defmodule Web.MemberFormLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FileDrop
+
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Operation.SaveMember
@@ -93,19 +95,14 @@ defmodule Web.MemberFormLive do
         />
       </p>
       <form id="photo-form" phx-change="validate-photo" phx-submit="save-photo">
-        <.label for={@uploads.photo.ref}>New photo</.label>
-        <.hint>
+        <.file_drop
+          id="member-photo-file"
+          upload={@uploads.photo}
+          label="New photo"
+          kinds="a JPEG, PNG, or WebP"
+        >
           A JPEG, PNG, or WebP of the member's face, under 10 MB. Their ID card shows it.
-        </.hint>
-        <.live_file_input upload={@uploads.photo} class="my-2" />
-        <.error :for={error <- upload_errors(@uploads.photo)}>
-          {upload_error(error, @uploads.photo, "a JPEG, PNG, or WebP")}
-        </.error>
-        <%= for entry <- @uploads.photo.entries do %>
-          <.error :for={error <- upload_errors(@uploads.photo, entry)}>
-            {upload_error(error, @uploads.photo, "a JPEG, PNG, or WebP")}
-          </.error>
-        <% end %>
+        </.file_drop>
         <.form_actions>
           <.button id="save-photo" variant={:success}>Save photo</.button>
           <:trailing>
@@ -181,6 +178,9 @@ defmodule Web.MemberFormLive do
   end
 
   def handle_event("validate-photo", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :photo, ref)}
 
   def handle_event("save-photo", _params, socket) do
     case consume_uploaded_entries(socket, :photo, fn %{path: path}, _entry ->

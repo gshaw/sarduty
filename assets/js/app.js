@@ -27,6 +27,7 @@ import topbar from "../vendor/topbar"
 import {QRScanner} from "./qr_scanner"
 import {SoundSwitch, listenForScanSounds} from "./scan_sound"
 import {Combobox} from "./combobox"
+import {FileDrop} from "./file_drop"
 import {SelectAll} from "./select_all"
 import {ShareLink} from "./share_link"
 import {ScannerInput} from "./scanner_input"
@@ -36,7 +37,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Combobox, QRScanner, ScannerInput, Search, SelectAll, ShareLink, SoundSwitch},
+  hooks: {...colocatedHooks, Combobox, FileDrop, QRScanner, ScannerInput, Search, SelectAll, ShareLink, SoundSwitch},
 })
 
 listenForScanSounds()

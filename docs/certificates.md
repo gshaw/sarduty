@@ -23,8 +23,9 @@ A member sends one from Your membership, Add a certificate:
   right; the team admin checks it.
 - **The expiry fills in** from D4H's `expiresMonthsDefault` for the qualification, or
   else the length of the member's last award of it, until the member types their own.
-- **One file input**, `accept="image/*,application/pdf"`, with no `capture` attribute:
-  that forces the camera and blocks PDFs. Phones offer the camera themselves.
+- **One file drop** (`<.file_drop>`, every upload's): drop the file, paste it, or select
+  the button. `accept="image/*,application/pdf"`, with no `capture` attribute: that
+  forces the camera and blocks PDFs. Phones offer the camera themselves.
 - **Waiting, Accepted, Declined.** A waiting certificate sits at the top of the member's
   Qualifications table, with a Waiting tag, and they change or delete it until its award
   is in D4H. A declined one shows why until they delete it.
