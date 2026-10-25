@@ -614,7 +614,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     lv |> form("#door-form", search: "Raj") |> render_change()
     pick(lv, raj)
 
-    assert has_element?(lv, "#message", "so nothing is saved")
+    assert has_element?(lv, "#flash-error", "so nothing is saved")
     assert scans(activity) == []
   end
 end

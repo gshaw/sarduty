@@ -19,7 +19,6 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Operation.BuildYetToArrive
   alias App.Operation.RecordAttendanceScan
   alias App.Repo
-  alias Web.UserAuth
 
   # Taking attendance for one activity (#475): team admins at any time, and members from 2
   # hours before it starts until 2 hours after it ends (Activity.take_attendance?/3). It
@@ -217,10 +216,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   # Runs `action` with the socket read again, while the door may take attendance. A team
-  # admin viewing as a member sees the member's page, and saves nothing.
-  defp with_open_door(%{assigns: %{viewing_as: %Member{} = member}} = socket, _action),
-    do: assign(socket, message: {:error, UserAuth.view_as_refusal(member)})
-
+  # admin viewing as a member never gets here: Web.UserAuth refuses their scans (#440).
   defp with_open_door(socket, action) do
     now = DateTime.utc_now()
     socket = reload(socket, now)
