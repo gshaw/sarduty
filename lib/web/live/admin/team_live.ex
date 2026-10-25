@@ -206,7 +206,7 @@ defmodule Web.Admin.TeamLive do
             <p class="hint mb-4">
               A grant can do everything a team admin does, including sending changes to {D4H.service_name(
                 @team
-              )}. Add one for someone {D4H.service_name(@team)} can't make an Owner or Editor, such as a shared office address.
+              )}. Add one for someone {D4H.service_name(@team)} cannot make an Owner or Editor, such as a shared office address.
             </p>
             <div class="grid md:grid-cols-2 gap-x-6">
               <.input field={@grant_form[:email]} type="email" label="Email" />

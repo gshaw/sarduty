@@ -85,18 +85,17 @@ defmodule Web.Org.TeamLive do
       class="mb-6"
     >
       <p :if={SyncD4HChanges.key_rejected?(@team)} class="mb-0">
-        Its access key was refused. A team admin saves a new one in team settings.
+        {D4H.service_name(@team)} refused its access key. A team admin saves a new one in
+        team settings.
       </p>
       <p :if={!SyncD4HChanges.key_rejected?(@team)} class="mb-0">
-        SAR Duty could not refresh the team's records. It tries again every night.
+        SAR Duty could not refresh the team. It tries again every 10 minutes.
       </p>
     </.banner>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
         <dl id="team-facts">
-          <dt>Refreshes from</dt>
-          <dd>{D4H.service_name(@team)}</dd>
           <dt>Members</dt>
           <dd id="team-members">
             {Service.Format.count(@members, one: "%d member", many: "%d members")}
@@ -108,7 +107,9 @@ defmodule Web.Org.TeamLive do
           <dt>Hours tags</dt>
           <dd id="team-hours-tags">
             <div :for={row <- @hours_tags}>
-              {row.tag} <span class="hint">{row.kind}{if row.own?, do: ", the team's own"}</span>
+              {row.tag}
+              <span class="hint">{Activity.hours_kind_name(row.kind)}{if row.own?,
+                do: ", the team's own"}</span>
             </div>
           </dd>
           <dt>Untagged activities</dt>
