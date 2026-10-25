@@ -45,6 +45,6 @@ defmodule Web.Admin.MCPLiveTest do
 
   test "is for admins only", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
-    assert {:error, {:redirect, _}} = live(log_in_user(conn, user), ~p"/admin/mcp")
+    assert_raise Web.Status.NotFound, fn -> live(log_in_user(conn, user), ~p"/admin/mcp") end
   end
 end

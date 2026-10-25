@@ -22,6 +22,6 @@ defmodule Web.Admin.AdminCollectionLiveTest do
   test "is for admins only", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
 
-    assert {:error, {:redirect, _}} = live(log_in_user(conn, user), ~p"/admin/admins")
+    assert_raise Web.Status.NotFound, fn -> live(log_in_user(conn, user), ~p"/admin/admins") end
   end
 end

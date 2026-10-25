@@ -73,7 +73,7 @@ defmodule Web.AdminDashboardLive do
             alt=""
           />
           <div>
-            <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
+            <.a navigate={~p"/admin/teams/#{team.id}"}>{team.name}</.a>
             <.hint>
               <span class="whitespace-nowrap">{team.subdomain} · ID {team.id}</span>
               <span :if={team.organization} id={"team-#{team.id}-organization"} class="block">
