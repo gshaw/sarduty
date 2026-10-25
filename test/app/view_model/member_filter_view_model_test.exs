@@ -32,23 +32,32 @@ defmodule App.ViewModel.MemberFilterViewModelTest do
     assert member.q == "Sam"
     assert changeset.changes == %{q: "Sam"}
 
-    for standing <- ~w(active away not_a_person) do
+    for standing <- ~w(active away active,away retired,away) do
       assert {:ok, %{standing: "current"}, _} =
                MemberFilterViewModel.validate(%{"standing" => standing}, false)
     end
 
-    for standing <- ~w(current retired all) do
+    for standing <- ~w(current not_a_person retired all) do
       assert {:ok, %{standing: ^standing}, _} =
                MemberFilterViewModel.validate(%{"standing" => standing}, false)
     end
   end
 
-  test "a member's Standing switch and menu offer Not retired, Retired, and All" do
+  test "a member's Standing switch and menu offer everything but Active and Away" do
     assert MemberFilterViewModel.standing_switch(false) ==
-             [{"Not retired", "current"}, {"Retired", "retired"}]
+             [
+               {"Not retired", "current"},
+               {"Not a person", "not_a_person"},
+               {"Retired", "retired"}
+             ]
 
     assert MemberFilterViewModel.standing_kinds("all", false) ==
-             [{"Not retired", "current"}, {"Retired", "retired"}, {"All", "all"}]
+             [
+               {"Not retired", "current"},
+               {"Not a person", "not_a_person"},
+               {"Retired", "retired"},
+               {"All", "all"}
+             ]
 
     refute MemberFilterViewModel.switch_standing?("active", false)
     assert MemberFilterViewModel.switch_standing?("active", true)

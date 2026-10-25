@@ -69,8 +69,8 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
   `member_standing_changes`, which keeps the reason and dates.
 - A member away sees the same Away badge on Your membership, as a reminder. Members never
   see the reason, which is `redact: true`. Nobody else who logs in as a member sees an
-  Away badge, count, filter, or sort (#440): away is often leave. They see Not a person,
-  so a team account doesn't pass for a teammate.
+  Away badge, count, filter, or sort (#440): away is often leave. They see every other
+  standing, Not a person included.
 - **Check-ins** are on the same tab: a team admin records the day they reached a member
   and what they heard ([MemberCheckIn](../lib/app/model/member_check_in.ex)). It
   restarts the member's attendance clock and changes nothing else: not standing, not
@@ -385,14 +385,15 @@ qualifications. They don't see what comes from team admins' own tools: contact d
 away periods, check-ins, history, and ID cards.
 
 - **The list**: the same columns, search, and Period, Group, and Tag filters. The
-  Standing switch is Not retired and Retired, and its menu adds All. No
-  Attended or Details filter, no Standing sort, and no Add member. The Standing column
-  shows only when a current member is Not a person, and says Active for anyone away.
+  Standing switch is Not retired, Not a person, and Retired, and its menu adds All. No
+  Active, since Not retired minus Active would name who is away. No Attended or Details
+  filter, no Standing sort, and no Add member. The Standing column shows only when a
+  current member is Not a person, and says Active for anyone away.
 - **A member's page** is the team admin's minus controls: Attendance, Qualifications
   (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain
   text. The sidebar is the ID and Milestones. The header has the photo and facts, a
-  Retired or Not a person badge, never Away, and no View as member. Equipment, Standing, ID card, and History
-  stay team admins'.
+  Retired or Not a person badge, never Away, and no View as member. Equipment, Standing,
+  ID card, and History stay team admins'.
 - **Their own page** opens Your membership: a member opening their own member page is
   sent there (`MemberPage.on_mount(:own_page, …)`), so every link to it works.
 - **Email stays private**, with phone and address, as #440 proposed: a directory members

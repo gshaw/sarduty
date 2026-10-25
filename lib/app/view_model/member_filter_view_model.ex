@@ -46,16 +46,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {"Retired", "retired"}
   ]
 
-  # What a member's list offers (#440): Retired comes from D4H. Away periods are team
-  # admins' own records, and away is often leave. Not a person shows in the Standing
-  # column, but a member has no reason to filter by it.
-  @member_standings [{"Retired", "retired"}]
+  # What a member's list offers (#440): every standing but Away, which is team admins'
+  # own record and often leave. No Active either: Not retired minus Active would name
+  # who is away.
+  @member_standings [{"Not a person", "not_a_person"}, {"Retired", "retired"}]
 
   @doc """
   The Standing filter (#366): Not retired, the default, is every member but the retired,
   and All adds them. Its value stays `"current"`. The attendance check can watch several standings, as
   `"active,away"`; that value gets an option of its own, "Active or away", when it's the
-  one shown. A member gets Not retired, Retired, and All.
+  one shown. A member gets Not retired, Not a person, Retired, and All.
   """
   def standing_kinds(current, team_admin?) do
     combined =
@@ -177,8 +177,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   @doc """
   The Standing switch's parts (#469): Not retired first, as the list opens, then each
-  standing. No All: Not retired and Retired add up to it. A member's are Not retired and
-  Retired (#440).
+  standing. No All: Not retired and Retired add up to it. A member's are Not retired, Not
+  a person, and Retired (#440).
   """
   def standing_switch(team_admin?), do: [{"Not retired", "current"} | standings_for(team_admin?)]
 

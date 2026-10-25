@@ -488,7 +488,7 @@ defmodule Web.MemberCollectionLiveTest do
       %{conn: log_in_user(conn, user), team: team, member: member, away: away, bot: bot}
     end
 
-    test "the roster with Not retired and Retired, and no team admin filters or columns",
+    test "the roster with Not retired, Not a person, and Retired, and no team admin filters",
          %{conn: conn, team: team, away: away, bot: bot} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
 
@@ -498,13 +498,13 @@ defmodule Web.MemberCollectionLiveTest do
       assert has_element?(lv, "#member-view-retired", "1")
       refute has_element?(lv, "#member-view-active")
       refute has_element?(lv, "#member-view-away")
-      refute has_element?(lv, "#member-view-not_a_person")
+      assert has_element?(lv, "#member-view-not_a_person", "1")
       refute has_element?(lv, "select[name='form[details]']")
       refute has_element?(lv, "select[name='form[attended]']")
       refute has_element?(lv, "#member-add")
       refute render(lv) =~ "Away until"
 
-      # Not a person shows, so a team account doesn't pass for a teammate; away doesn't.
+      # Away reads Active to a member: it's often leave.
       assert has_element?(lv, "#standing-#{bot.id}", "Not a person")
       assert has_element?(lv, "#standing-#{away.id}", "Active")
       refute has_element?(lv, ~s{th a[href*="sort=standing"]})
@@ -521,7 +521,7 @@ defmodule Web.MemberCollectionLiveTest do
          %{conn: conn, team: team} do
       for params <- [
             "standing=away",
-            "standing=not_a_person",
+            "standing=active",
             "standing=active,away",
             "attended=30",
             "details=missing",
@@ -535,6 +535,14 @@ defmodule Web.MemberCollectionLiveTest do
         refute has_element?(lv, "#attended-hint"), params
         refute has_element?(lv, "th", "Missing"), params
       end
+    end
+
+    test "Not a person filters to bot accounts", %{conn: conn, team: team, away: away} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all&standing=not_a_person")
+
+      assert has_element?(lv, "#member-view-not_a_person[aria-current]")
+      assert has_element?(lv, "td", "Nico Bot")
+      refute has_element?(lv, "td", away.name)
     end
 
     test "All shows retired members, with the Standing menu", %{conn: conn, team: team} do
