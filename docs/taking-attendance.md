@@ -27,8 +27,12 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
 - **Needs attention says there's attendance to send.** A team admin no longer makes a
   link, so nothing else tells them members have scanned.
   [TeamDashboardViewData.attendance_to_send/2](../lib/app/view_data/team_dashboard_view_data.ex)
-  lists activities not deleted, finished in the last 30 days, with a scan newer than their
-  latest `door` change set, or none. One activity is named in the item and opens its
+  lists activities not deleted, finished in the last 30 days, with a scan since their
+  `attendance_sent_at`. A review sets it when it has nothing to send, and a send when
+  every change went through and none waits on fixed times
+  ([Activity.mark_attendance_sent/2](../lib/app/model/activity.ex)); a change left
+  unchecked is the team admin's choice. It takes the review's time, not the send's, so a
+  scan in between still waits. One activity is named in the item and opens its
   Attendance page; several are counted, and the oldest opens. The 30 days keep a scan
   nobody means to send from waiting forever.
 - **Each scan records who took it**: `recorded_by_user_id`, and `recorded_by_member_id`

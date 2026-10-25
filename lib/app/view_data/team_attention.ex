@@ -30,7 +30,7 @@ defmodule App.ViewData.TeamAttention do
       certificates_item(rows.certificate_count),
       chores_item(rows.chore_count),
       chores_to_send_item(rows.chores_to_send),
-      attendance_to_send_item(rows.attendance_to_send, rows.service)
+      attendance_to_send_item(rows.attendance_to_send)
     ]
     |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
@@ -252,26 +252,25 @@ defmodule App.ViewData.TeamAttention do
   end
 
   @doc """
-  Attendance a team admin hasn't sent to D4H, from `TeamDashboardViewData.attendance_to_send/2`,
+  Attendance a team admin hasn't sent, from `TeamDashboardViewData.attendance_to_send/2`,
   oldest first. The item carries the activity to open: the only one, or the oldest.
-  `service` is where the team's records live, as for `items/2`.
   """
-  def attendance_to_send_item([], _service), do: nil
+  def attendance_to_send_item([]), do: nil
 
-  def attendance_to_send_item([activity], service) do
+  def attendance_to_send_item([activity]) do
     %{
       key: :attendance_to_send,
       level: :info,
       activity_id: activity.id,
       title: "Attendance to send: #{activity.title}",
-      detail: "Review it, then send it to #{D4H.service_name(service)}.",
+      detail: "Review the changes, then send them.",
       action: "Send attendance"
     }
   end
 
-  def attendance_to_send_item([oldest | _rest] = activities, service) do
+  def attendance_to_send_item([oldest | _rest] = activities) do
     %{
-      attendance_to_send_item([oldest], service)
+      attendance_to_send_item([oldest])
       | title:
           "Attendance to send for #{Format.count(length(activities), one: "%d activity", many: "%d activities")}",
         detail: "The oldest is #{oldest.title}."

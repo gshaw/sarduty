@@ -137,6 +137,8 @@ defmodule App.Model.Activity do
     # Set by the refresh when D4H stops listing the activity. Deleted activities are kept
     # for their attendance scans, and left out of every list.
     field :deleted_at, :utc_datetime
+    # SAR Duty's own, never D4H's: see mark_attendance_sent/2.
+    field :attendance_sent_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -225,6 +227,21 @@ defmodule App.Model.Activity do
   def take_attendance?(%Activity{deleted_at: %DateTime{}}, _team_admin?, _now), do: false
   def take_attendance?(%Activity{}, true, _now), do: true
   def take_attendance?(%Activity{} = activity, false, now), do: attendance_window?(activity, now)
+
+  @doc """
+  Records that the activity's attendance is sent as of `at`, the time of a team admin's
+  review: its send went through, or it had nothing to send (SendAttendanceToD4H). Needs
+  attention lists the scans after it (#475). It never moves back, so a send from an older
+  review can't bring back what a newer one cleared.
+  """
+  def mark_attendance_sent(%Activity{} = activity, %DateTime{} = at) do
+    Activity
+    |> where([a], a.id == ^activity.id and a.team_id == ^activity.team_id)
+    |> where([a], is_nil(a.attendance_sent_at) or a.attendance_sent_at < ^at)
+    |> Repo.update_all(set: [attendance_sent_at: at])
+
+    :ok
+  end
 
   @doc """
   Activities that started in the last #{Service.Period.recent_days()} days and have finished by `now`.

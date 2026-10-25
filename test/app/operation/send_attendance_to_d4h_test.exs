@@ -111,11 +111,47 @@ defmodule App.Operation.SendAttendanceToD4HTest do
              SendAttendanceToD4H.plan([time(mei)], rows, [mei])
   end
 
+  # Up to date, a review counts the attendance as sent (#475).
+  test "a plan is up to date when every change is no change" do
+    [mei, sam] = [member(1, "Mei"), member(2, "Sam")]
+
+    assert [time(mei)]
+           |> SendAttendanceToD4H.plan([row(mei, "attending")], [mei])
+           |> SendAttendanceToD4H.up_to_date?()
+
+    refute [time(mei)]
+           |> SendAttendanceToD4H.plan([row(mei, "attending"), row(sam, "attending")], [mei, sam])
+           |> SendAttendanceToD4H.up_to_date?()
+
+    refute [time(mei, [:left_before_arriving])]
+           |> SendAttendanceToD4H.plan([row(mei, "attending")], [mei])
+           |> SendAttendanceToD4H.up_to_date?()
+  end
+
+  test "a send finishes its review when every change sent went through and none waits" do
+    [mei, sam] = [member(1, "Mei"), member(2, "Sam")]
+    [update] = SendAttendanceToD4H.plan([time(mei)], [row(mei, "requested")], [mei])
+
+    assert SendAttendanceToD4H.finished?([update], [{update, :ok}])
+    refute SendAttendanceToD4H.finished?([update], [{update, {:error, "Not allowed"}}])
+
+    with_blocked =
+      SendAttendanceToD4H.plan(
+        [time(mei), time(sam, [:left_before_arriving])],
+        [row(mei, "requested")],
+        [mei, sam]
+      )
+
+    refute SendAttendanceToD4H.finished?(with_blocked, [{update, :ok}])
+  end
+
   test "refuses an activity deleted in D4H before reading D4H" do
     team = %Team{id: 1, d4h_access_key: "key"}
     activity = %Activity{team_id: 1, deleted_at: ~U[2026-10-05 06:00:00Z]}
 
     assert SendAttendanceToD4H.preview(team, activity) == {:error, :deleted}
-    assert SendAttendanceToD4H.call(team, activity, %User{}, [], @start) == {:error, :deleted}
+
+    assert SendAttendanceToD4H.call(team, activity, %User{}, [], @start, @start) ==
+             {:error, :deleted}
   end
 end

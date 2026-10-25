@@ -83,36 +83,24 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   @doc """
   Activities with attendance a team admin hasn't sent (#475): not deleted, finished in the
-  last #{@attendance_to_send_days} days, with a scan newer than their latest send to D4H, or
-  never sent. Members take attendance on their own, so nothing else tells a team admin
-  it's there. The limit keeps a scan nobody means to send from waiting forever. Oldest
-  first, each `%{id:, title:, started_at:, scan_count:}`.
+  last #{@attendance_to_send_days} days, with a scan since their attendance was last sent
+  (Activity.mark_attendance_sent/2), or never sent. Members take attendance on their
+  own, so nothing else tells a team admin it's there. The limit keeps a scan nobody
+  means to send from waiting forever. Oldest first, each `%{id:, title:}`.
   """
   def attendance_to_send(%Team{} = team, now) do
     now = DateTime.truncate(now, :second)
     since = DateTime.add(now, -@attendance_to_send_days, :day)
-
-    last_sends =
-      ChangeSet
-      |> where([s], s.team_id == ^team.id and s.source == :door)
-      |> group_by([s], s.activity_id)
-      |> select([s], %{activity_id: s.activity_id, sent_at: max(s.inserted_at)})
 
     Activity
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
     |> where([a], a.finished_at >= ^since and a.finished_at <= ^now)
     |> join(:inner, [a], s in AttendanceScan, on: s.activity_id == a.id and s.team_id == ^team.id)
-    |> join(:left, [a], l in subquery(last_sends), on: l.activity_id == a.id)
-    |> where([a, s, l], is_nil(l.sent_at) or s.inserted_at > l.sent_at)
+    |> where([a, s], is_nil(a.attendance_sent_at) or s.inserted_at > a.attendance_sent_at)
     |> group_by([a], a.id)
     |> order_by([a], asc: a.started_at, asc: a.id)
-    |> select([a, s], %{
-      id: a.id,
-      title: a.title,
-      started_at: a.started_at,
-      scan_count: count(s.id)
-    })
+    |> select([a], %{id: a.id, title: a.title})
     |> Repo.all()
   end
 
