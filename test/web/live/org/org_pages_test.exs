@@ -293,6 +293,57 @@ defmodule Web.Org.OrgPagesTest do
     end
   end
 
+  describe "ID cards on a team's page" do
+    test "an organization admin turns them off, and its team admins get an email",
+         %{conn: conn, dana: dana, coast: coast} do
+      coast |> member_fixture() |> member_card_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/teams/#{coast}")
+
+      assert has_element?(lv, "#team-id-cards-state", "1 card")
+      lv |> element("#id-cards-off") |> render_click()
+
+      assert has_element?(lv, "#team-id-cards-state", "Off")
+      refute Repo.reload!(coast).id_cards_enabled
+      assert_received {:email, %{subject: "ID cards are off for Coast Range SAR"}}
+
+      lv |> element("#id-cards-on") |> render_click()
+      assert Repo.reload!(coast).id_cards_enabled
+    end
+  end
+
+  describe "the Teams stat switch" do
+    test "each count matches the rows its view shows", %{conn: conn, dana: dana, coast: coast} do
+      coast
+      |> Ecto.Changeset.change(id_cards_enabled: false, d4h_refresh_result: "OK")
+      |> Repo.update!()
+
+      conn = log_in_user(conn, dana)
+
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara")
+      assert has_element?(lv, "#team-view-all", "2")
+      assert has_element?(lv, "#team-view-not-refreshing", "1")
+      assert has_element?(lv, "#team-view-id-cards-off", "1")
+
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara?view=id-cards-off")
+      assert has_element?(lv, "#team-#{coast.id}")
+
+      assert lv
+             |> element("#teams")
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.find("tr")
+             |> length() == 1
+
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara?view=not-refreshing")
+      refute has_element?(lv, "#team-#{coast.id}")
+    end
+
+    test "an unknown view falls back to All", %{conn: conn, dana: dana} do
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara?view=nonsense")
+      assert has_element?(lv, "#team-view-all[aria-current=page]")
+    end
+  end
+
   describe "Add a team" do
     test "is a 404 for an organization admin", %{conn: conn, dana: dana} do
       conn = log_in_user(conn, dana)

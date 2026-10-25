@@ -1,7 +1,8 @@
 # Member ID cards
 
 A team manager issues a member an ID card from the member's **ID Card** tab, once a SAR
-Duty admin has turned ID cards on for the team at `/admin/id-cards`. A member sees the
+Duty admin has turned ID cards on for the team at `/admin/id-cards`, or its organization
+admins have, on its page in the organization (#512). A member sees the
 card on their own page ([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the
 verify site, `verify.sarduty.com/K7Q4-M2XA`
@@ -11,9 +12,12 @@ organization gets its branding: see [organizations.md](organizations.md).
 
 ## What must stay true
 
-- **Only teams an admin checked issue cards.** A card verifies on SAR Duty's own verify
-  site, and anyone can sign up a team on SAR Duty Records, so `teams.id_cards_enabled` is
-  set only by a SAR Duty admin ([SetTeamIdCards](../lib/app/operation/set_team_id_cards.ex)).
+- **Only teams a SAR Duty admin checked issue cards.** A card verifies on SAR Duty's own
+  verify site, and anyone can sign up a team on SAR Duty Records, so a SAR Duty admin
+  checks a team when turning on its cards, or when adding it to an organization. That
+  organization's admins can then turn its cards on or off, and nobody else
+  ([SetTeamIdCards](../lib/app/operation/set_team_id_cards.ex) checks who acts). Each
+  change emails the team's team admins.
   [IssueMemberCard](../lib/app/operation/issue_member_card.ex) refuses a team without it,
   and every path that issues goes through it. Teams that signed up before the switch have
   it on; a new team starts with it off. Turning it off cancels every live card on the

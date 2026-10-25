@@ -2,6 +2,7 @@ defmodule Web.Org.TeamCollectionLive do
   use Web, :live_view_app_layout
 
   import Ecto.Query
+  import Web.Components.StatSwitch
   import Web.Components.TeamRefresh
 
   alias App.Adapter.D4H
@@ -9,6 +10,9 @@ defmodule Web.Org.TeamCollectionLive do
   alias App.Model.Team
   alias App.Repo
   alias App.ViewData.TeamSummary
+  alias App.ViewModel.TeamListViewModel
+
+  @views ["all", "not-refreshing", "id-cards-off", "untagged"]
 
   # An organization's first page (#512): one row per team, with counts and never its
   # people. Teams are found through the organization only.
@@ -41,6 +45,39 @@ defmodule Web.Org.TeamCollectionLive do
     {:ok, socket}
   end
 
+  def handle_params(params, _uri, socket) do
+    view = TeamListViewModel.view(params, @views)
+    assigns = socket.assigns
+
+    socket =
+      assign(socket,
+        view: view,
+        rows: Enum.filter(assigns.teams, &in_view?(&1, view, assigns)),
+        counts:
+          Map.new(@views, &{&1, Enum.count(assigns.teams, fn t -> in_view?(t, &1, assigns) end)})
+      )
+
+    {:noreply, socket}
+  end
+
+  # Each view's teams. The stat switch counts the same rows the table shows.
+  defp in_view?(_team, "all", _assigns), do: true
+  defp in_view?(team, "not-refreshing", _assigns), do: not_refreshing?(team)
+  defp in_view?(team, "id-cards-off", _assigns), do: !team.id_cards_enabled
+  defp in_view?(team, "untagged", assigns), do: Map.get(assigns.untagged, team.id, 0) > 0
+
+  defp view_path(organization, view),
+    do: ~p"/orgs/#{organization}?#{TeamListViewModel.query_params(view, @views)}"
+
+  @doc "The views, for the stat switch: its value and label."
+  def views,
+    do: [
+      {"all", "All"},
+      {"not-refreshing", "Not refreshing"},
+      {"id-cards-off", "ID cards off"},
+      {"untagged", "Untagged activities"}
+    ]
+
   def render(assigns) do
     ~H"""
     <.heading_row>
@@ -60,10 +97,22 @@ defmodule Web.Org.TeamCollectionLive do
       A SAR Duty admin adds {@current_organization.short_name}'s teams.
     </.empty_state>
 
+    <.stat_switch :if={@teams != []} id="team-views" label="Teams">
+      <:view
+        :for={{view, label} <- views()}
+        id={"team-view-#{view}"}
+        patch={view_path(@current_organization, view)}
+        current={@view == view}
+        count={@counts[view]}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
+
     <.table
       :if={@teams != []}
       id="teams"
-      rows={@teams}
+      rows={@rows}
       row_id={&"team-#{&1.id}"}
       class="table-striped"
     >
