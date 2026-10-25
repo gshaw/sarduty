@@ -106,13 +106,14 @@ defmodule Web.Components.Core do
   slot :inner_block, required: true
   slot :trailing
 
+  # The buttons wrap onto a new line when they don't fit, so a row never runs off a phone.
   def form_actions(assigns) do
     ~H"""
     <div class={["form-actions flex flex-wrap", @class]}>
-      <div class="flex gap-2 grow">
+      <div class="flex flex-wrap gap-2 grow">
         {render_slot(@inner_block)}
       </div>
-      <div :if={@trailing != []} class="flex gap-2">
+      <div :if={@trailing != []} class="flex flex-wrap gap-2">
         {render_slot(@trailing)}
       </div>
     </div>
