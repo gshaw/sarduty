@@ -188,10 +188,7 @@ defmodule Web.WhiteboardLive do
     """
   end
 
-  # Only team admins see the buttons, but an event can still come from a member's page.
-  def handle_event(_event, _params, %{assigns: %{team_admin?: false}} = socket),
-    do: {:noreply, socket}
-
+  # Only team admins send these: Web.UserAuth drops a member's (#440).
   def handle_event("archive", %{"id" => id}, socket),
     do: act(socket, &WhiteboardText.archive/3, id)
 

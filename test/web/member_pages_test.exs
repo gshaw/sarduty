@@ -46,6 +46,7 @@ defmodule Web.MemberPagesTest do
     end
 
     attendance_fixture(coming, sam, %{status: "requested"})
+    whiteboard_note_fixture(team)
     chore = chore_fixture(sam, chore_category_fixture(team))
     tax_credit_letter_fixture(sam)
     certificate = certificate_fixture(sam, qualification_fixture(team))
@@ -70,6 +71,7 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/members/#{avery.id}/qualifications",
       "/teams/#{s}/members/#{avery.id}/groups",
       "/teams/#{s}/milestones",
+      "/teams/#{s}/whiteboard",
       "/teams/#{s}/me",
       "/teams/#{s}/me/activities",
       "/teams/#{s}/me/certificates/new",

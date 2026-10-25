@@ -765,10 +765,7 @@ defmodule Web.TeamDashboardLive do
       else: start_refresh(socket)
   end
 
-  # Only team admins archive; a member's card has no button, but an event can still come.
-  def handle_event("archive-note", _params, %{assigns: %{team_admin?: false}} = socket),
-    do: {:noreply, socket}
-
+  # Only team admins archive: Web.UserAuth drops a member's (#440).
   def handle_event("archive-note", %{"id" => id}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
 
