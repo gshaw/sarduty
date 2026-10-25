@@ -1,0 +1,27 @@
+/* A member's certificate on its page (#493): the file on a grey mat, then the details
+   and the decision. Side by side from 64rem, where the side navigation still leaves the
+   file about 560px; one column, file first, below that. */
+@layer components {
+  .cert-layout { display: grid; gap: var(--sp-8); }
+  @media (width >= 64rem) {
+    .cert-layout { grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; }
+    .cert-layout-panel { position: sticky; top: var(--sp-6); }
+  }
+
+  /* White paper shows its edge on the mat, and a tall phone photo stops at 70% of the
+     screen. Selecting it opens the file at full size. */
+  .cert-view { display: grid; place-items: center; padding: var(--sp-6); background: var(--surface-alt); }
+  .cert-view img {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    background: var(--paper);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 6px 16px rgb(0 0 0 / 0.12);
+    cursor: zoom-in;
+  }
+  .cert-view iframe { width: 100%; height: 70vh; border: 0; background: var(--paper); }
+  @media (width < 40rem) {
+    .cert-view { padding: var(--sp-3); }
+    .cert-view img, .cert-view iframe { max-height: 55vh; }
+  }
+}

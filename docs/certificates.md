@@ -1,8 +1,8 @@
 # Certificates
 
-A member sends a certificate for a qualification they hold, such as a renewed First Aid,
-and a team admin accepts it into D4H as an award with the file attached, or declines it
-with a reason the member sees (#493). They exist only on a team with member logins on
+A member sends a certificate, such as a renewed First Aid, and a team admin accepts it
+into D4H as an award with the file attached, or declines it with a reason the member
+sees (#493). They exist only on a team with member logins on
 and Let members send certificates checked under Member logins in team settings; every
 team starts with it off.
 
@@ -13,9 +13,14 @@ A member sends one from Your membership, Add a certificate:
 ([MeCertificateFormLive](../lib/web/live/me_certificate_form_live.ex),
 [SaveCertificate](../lib/app/operation/save_certificate.ex)).
 
-- **Any of the team's qualifications**, the member's own first, organisation-owned ones
-  too: D4H takes an award of either with the team's key (tried on South Fraser,
-  2026-10-21).
+- **The file first**, then the qualification, the dates, and a note.
+- **The qualification is optional.** A team has over 100, and members are not always
+  sure which one a course is. Not sure? They leave it blank, and a note for the team
+  admin says which course it was. The list is any of the team's qualifications, the
+  member's own first, organisation-owned ones too: D4H takes an award of either with the
+  team's key (tried on South Fraser, 2026-10-21).
+- **No warnings about dates on the member's form.** A certificate can be odd and still
+  right; the team admin checks it.
 - **The expiry fills in** from D4H's `expiresMonthsDefault` for the qualification, or
   else the length of the member's last award of it, until the member types their own.
 - **One file input**, `accept="image/*,application/pdf"`, with no `capture` attribute:
@@ -47,9 +52,27 @@ anything is decoded; anything else is refused.
 
 A team admin opens a certificate from Certificates, `/teams/:subdomain/certificates`,
 and sees the file beside its dates and the member's award D4H has now
-([CertificateLive](../lib/web/live/certificate_live.ex)). They can change the
+([CertificateLive](../lib/web/live/certificate_live.ex)). They pick or change the
 qualification and dates, then accept it
 ([AcceptCertificate](../lib/app/operation/accept_certificate.ex)).
+
+- **The file on a grey mat**, at most 70% of the screen tall, so white paper shows its
+  edge and a phone photo fits. Selecting it opens it at full size. The details and the
+  decision sit beside it from 64rem, under it below that.
+- **A box the team admin selects** before accepting: "I checked the certificate. It is
+  Standard First Aid, Oct 18, 2026 to Oct 18, 2029." It names what goes, since only D4H
+  can change an award once it is there. It clears when the qualification or dates change
+  after it was selected. Nothing keeps it.
+- **The qualification's hint** says whether the member picked it, and when the member
+  has never held it: "New for Sam: no award of it yet."
+- **The expiry fills in** as on the member's form when the team admin picks another
+  qualification (Web.CertificateExpiry).
+- **Dates that look wrong are a warning, never an error**: a start after today, an
+  expiry more than a month off the qualification's usual length, or no expiry when it
+  usually has one (`Certificate.date_warnings/4`). An expiry already past is fine: it goes
+  in as a past award, and the hint says so.
+- **Wrong after all?** An accepted certificate's page links to the member in D4H, where
+  the award is fixed.
 
 - **One change set, applied at once** (source `certificates`): `award_qualification`,
   then `attach_award_document`, which uploads the file to the award the first row made

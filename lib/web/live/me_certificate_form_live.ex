@@ -1,20 +1,20 @@
 defmodule Web.MeCertificateFormLive do
   use Web, {:live_view_app_layout, access: :member}
 
-  import Ecto.Query
-
   alias App.Model.Certificate
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Operation.SaveCertificate
-  alias App.Repo
   alias Service.Format
+  alias Web.CertificateExpiry
   alias Web.CertificateText
 
-  # A member sends a certificate for a qualification (#493), or changes one while it
-  # waits: /teams/:subdomain/me/certificates/new, with `?qualification=<id>` to start on
-  # one, and /me/certificates/:id/edit. The expiry fills in from the qualification.
+  # A member sends a certificate (#493), or changes one while it waits:
+  # /teams/:subdomain/me/certificates/new, with `?qualification=<id>` to start on one,
+  # and /me/certificates/:id/edit. The file comes first; the qualification is optional,
+  # since a team admin picks it from the certificate when the member is not sure. The
+  # expiry fills in from the qualification (Web.CertificateExpiry).
   def mount(params, _session, socket) do
     member = socket.assigns.current_member
     if !Team.certificates?(member.team), do: raise(Web.Status.NotFound)
@@ -22,14 +22,14 @@ defmodule Web.MeCertificateFormLive do
     if certificate && !Certificate.member_can_change?(certificate), do: raise(Web.Status.NotFound)
 
     qualifications = Qualification.get_all(member.team_id)
-    latest = latest_awards(member)
+    latest = MemberQualificationAward.latest_by_qualification(member.id)
 
     socket
     |> assign(member: member, certificate: certificate, latest: latest)
     |> assign(qualifications: qualifications)
     |> assign(options: options(qualifications, latest))
     |> assign(page_title: if(certificate, do: "Change certificate", else: "Add a certificate"))
-    |> assign(filled: nil, fill_key: nil, fill: nil)
+    |> assign(expiry: CertificateExpiry.new(certificate))
     |> allow_upload(:certificate,
       accept: ~w(image/* application/pdf),
       max_entries: 1,
@@ -46,27 +46,14 @@ defmodule Web.MeCertificateFormLive do
 
   defp start(socket, certificate, _qualification_id, _qualifications) do
     params = %{
-      "qualification_id" => to_string(certificate.qualification_id),
+      "qualification_id" =>
+        certificate.qualification_id && to_string(certificate.qualification_id),
       "starts_on" => Date.to_iso8601(certificate.starts_on),
-      "ends_on" => certificate.ends_on && Date.to_iso8601(certificate.ends_on)
+      "ends_on" => certificate.ends_on && Date.to_iso8601(certificate.ends_on),
+      "note" => certificate.note
     }
 
-    socket
-    |> assign(
-      filled: params["ends_on"],
-      fill_key: {certificate.qualification_id, certificate.starts_on}
-    )
-    |> assign_form(params, nil)
-  end
-
-  # The member's latest award of each qualification, for the order of the list and the
-  # expiry it fills in.
-  defp latest_awards(member) do
-    MemberQualificationAward
-    |> where(member_id: ^member.id)
-    |> order_by([a], asc_nulls_first: a.starts_at, asc: a.id)
-    |> Repo.all()
-    |> Map.new(&{&1.qualification_id, &1})
+    assign_form(socket, params, nil)
   end
 
   # The member's own first, then every other the team has.
@@ -75,62 +62,17 @@ defmodule Web.MeCertificateFormLive do
     CertificateText.qualification_options(qualifications, own_ids, "Your qualifications")
   end
 
-  # The expiry fills in when the qualification or the start changes, unless the member
-  # typed their own. Blank stays blank: it never expires.
   defp assign_form(socket, params, action) do
-    {params, socket} = fill_expiry(socket, params)
+    %{expiry: expiry, qualifications: qualifications, latest: latest} = socket.assigns
+    {params, expiry} = CertificateExpiry.fill(expiry, params, qualifications, latest)
 
     changeset =
       (socket.assigns.certificate || %Certificate{})
-      |> Certificate.build_changeset(params, Enum.map(socket.assigns.qualifications, & &1.id))
+      |> Certificate.member_changeset(params, Enum.map(qualifications, & &1.id))
       |> Map.put(:action, action)
 
-    assign(socket, form: to_form(changeset, as: "certificate"))
+    assign(socket, expiry: expiry, form: to_form(changeset, as: "certificate"))
   end
-
-  defp fill_expiry(socket, params) do
-    %{filled: filled, fill_key: fill_key, latest: latest} = socket.assigns
-    qualification = find_qualification(socket, params["qualification_id"])
-    starts_on = parse_date(params["starts_on"])
-    key = {qualification && qualification.id, starts_on}
-    award = qualification && latest[qualification.id]
-
-    cond do
-      key == fill_key ->
-        {params, socket}
-
-      params["ends_on"] not in [nil, "", filled] ->
-        {params, assign(socket, fill_key: key)}
-
-      default = Certificate.default_ends_on(starts_on, qualification, award) ->
-        {ends_on, months} = default
-        value = Date.to_iso8601(ends_on)
-
-        {Map.put(params, "ends_on", value),
-         assign(socket, fill_key: key, filled: value, fill: {qualification, months})}
-
-      true ->
-        {Map.put(params, "ends_on", ""), assign(socket, fill_key: key, filled: nil, fill: nil)}
-    end
-  end
-
-  # Whether the expiry is still the one filled in, for its hint.
-  defp filled?(form, filled), do: filled != nil and date_text(form[:ends_on].value) == filled
-
-  defp date_text(%Date{} = date), do: Date.to_iso8601(date)
-  defp date_text(text), do: text
-
-  defp find_qualification(socket, id),
-    do: Enum.find(socket.assigns.qualifications, &(to_string(&1.id) == id))
-
-  defp parse_date(text) when is_binary(text) do
-    case Date.from_iso8601(text) do
-      {:ok, date} -> date
-      {:error, _reason} -> nil
-    end
-  end
-
-  defp parse_date(_text), do: nil
 
   def render(assigns) do
     ~H"""
@@ -151,28 +93,10 @@ defmodule Web.MeCertificateFormLive do
       phx-submit="save"
     >
       <.error_summary form={@form} />
-      <.input
-        field={@form[:qualification_id]}
-        type="combobox"
-        label="Qualification"
-        prompt="Select a qualification"
-        options={@options}
-      />
-      <.input field={@form[:starts_on]} type="date" label="Start">
-        The date on the certificate.
-      </.input>
-      <.input field={@form[:ends_on]} type="date" label="Expiry (optional)">
-        <%= if @fill && filled?(@form, @filled) do %>
-          Filled in: {elem(@fill, 0).title} lasts {Format.months(elem(@fill, 1))}. Leave it blank if it never expires.
-        <% else %>
-          Leave it blank if it never expires.
-        <% end %>
-      </.input>
-
       <div id="certificate-file" class="mb-6">
         <.label for={@uploads.certificate.ref}>Certificate</.label>
         <.hint>
-          A photo or a PDF, up to {Format.file_size(Service.CertificateFile.max_bytes())}. On a phone you can take the photo now.
+          A photo or a PDF, up to {Format.file_size(Service.CertificateFile.max_bytes())}.
         </.hint>
         <.live_file_input upload={@uploads.certificate} class="my-2" />
         <.error :for={error <- upload_errors(@uploads.certificate)}>
@@ -211,6 +135,34 @@ defmodule Web.MeCertificateFormLive do
         </p>
       </div>
 
+      <.input
+        field={@form[:qualification_id]}
+        type="combobox"
+        label="Qualification (optional)"
+        prompt="Select a qualification"
+        options={@options}
+      >
+        Not sure? Leave it blank. A team admin picks it from the certificate.
+      </.input>
+      <.input field={@form[:starts_on]} type="date" label="Start">
+        The date on the certificate.
+      </.input>
+      <.input field={@form[:ends_on]} type="date" label="Expiry (optional)">
+        <%= if fill = CertificateExpiry.hint(@expiry, @form) do %>
+          Filled in: {elem(fill, 0).title} lasts {Format.months(elem(fill, 1))}. Leave it blank if it never expires.
+        <% else %>
+          Leave it blank if it never expires.
+        <% end %>
+      </.input>
+      <.input
+        field={@form[:note]}
+        type="textarea"
+        rows="3"
+        label="Note for a team admin (optional)"
+      >
+        For example, which course it was.
+      </.input>
+
       <.form_actions>
         <.button id="certificate-save" variant={:success} phx-disable-with="Sending…">
           {if @certificate, do: "Save certificate", else: "Send certificate"}
@@ -222,7 +174,7 @@ defmodule Web.MeCertificateFormLive do
             type="button"
             variant={:danger}
             phx-click="delete"
-            data-confirm={"Delete your #{@certificate.qualification && @certificate.qualification.title} certificate?"}
+            data-confirm={CertificateText.delete_question(@certificate)}
           >
             Delete certificate
           </.button>

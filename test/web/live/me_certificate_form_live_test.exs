@@ -68,6 +68,32 @@ defmodule Web.MeCertificateFormLiveTest do
     assert has_element?(lv, row, "A team admin looks at it next.")
   end
 
+  test "a member not sure of the qualification leaves it blank and writes a note", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
+    assert has_element?(lv, "#certificate_qualification_id[placeholder='Type to search']")
+
+    lv
+    |> file_input("#certificate-form", :certificate, [
+      %{name: "wfa.pdf", content: "%PDF-1.7 certificate", type: "application/pdf"}
+    ])
+    |> render_upload("wfa.pdf")
+
+    {:ok, lv, _html} =
+      lv
+      |> form("#certificate-form",
+        certificate: %{starts_on: "2026-09-14", note: "  The 40-hour course.  "}
+      )
+      |> render_submit()
+      |> follow_redirect(ctx.conn)
+
+    [certificate] = Repo.all(Certificate)
+    assert %{qualification_id: nil, note: "The 40-hour course."} = certificate
+
+    row = "#qualifications-list-certificate-#{certificate.id}"
+    assert has_element?(lv, row, "Certificate")
+    assert has_element?(lv, row, "A team admin picks the qualification next.")
+  end
+
   test "a certificate needs its file", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
 

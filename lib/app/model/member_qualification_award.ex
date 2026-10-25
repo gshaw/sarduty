@@ -147,6 +147,18 @@ defmodule App.Model.MemberQualificationAward do
   def get_by(params), do: Repo.get_by(MemberQualificationAward, params)
 
   @doc """
+  The member's latest award of each qualification they hold or held, by qualification
+  id: what a certificate's page compares with and fills its expiry from.
+  """
+  def latest_by_qualification(member_id) do
+    MemberQualificationAward
+    |> where(member_id: ^member_id)
+    |> order_by([a], asc_nulls_first: a.starts_at, asc: a.id)
+    |> Repo.all()
+    |> Map.new(&{&1.qualification_id, &1})
+  end
+
+  @doc """
   The member's award with a certificate, by local id, with its qualification. Raises
   Ecto.NoResultsError, a 404, otherwise. Looked up through the member and their team,
   never by the bare id.

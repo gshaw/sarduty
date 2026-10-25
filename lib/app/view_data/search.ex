@@ -258,7 +258,7 @@ defmodule App.ViewData.Search do
     |> order_by([c], desc: c.inserted_at, desc: c.id)
     |> select([c, member: m, qualification: q], %{
       id: c.id,
-      title: coalesce(q.title, "Deleted qualification"),
+      title: coalesce(q.title, "Certificate"),
       status: c.status,
       member_name: m.name
     })

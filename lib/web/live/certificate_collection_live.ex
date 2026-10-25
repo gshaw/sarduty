@@ -42,7 +42,7 @@ defmodule Web.CertificateCollectionLive do
     ~H"""
     <h1 class="title">Certificates</h1>
     <p class="lead measure">
-      Members send a certificate for a qualification they hold. Accepting one records the award and attaches the certificate.
+      Members send a certificate. Accepting one records the award and attaches the certificate.
     </p>
 
     <.stat_switch id="certificates-switch" label="Certificates">
@@ -66,7 +66,7 @@ defmodule Web.CertificateCollectionLive do
     </.empty_state>
 
     <p :if={@certificates != [] and @view == :waiting} class="hint mb-4">
-      Open a certificate to compare it with its dates, then accept or decline it.
+      Open a certificate to check its qualification and dates, then accept or decline it.
     </p>
 
     <.table
@@ -81,6 +81,12 @@ defmodule Web.CertificateCollectionLive do
         <.a navigate={~p"/teams/#{@current_team}/certificates/#{certificate.id}"}>{CertificateText.title(
           certificate
         )}</.a>
+        <span
+          :if={certificate.status == :waiting and is_nil(certificate.qualification_id)}
+          class="hint block"
+        >
+          No qualification picked
+        </span>
         <span :if={certificate.status == :declined} class="hint block">
           {certificate.decline_reason}
         </span>

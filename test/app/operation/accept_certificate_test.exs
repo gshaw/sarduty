@@ -61,8 +61,11 @@ defmodule App.Operation.AcceptCertificateTest do
     end)
   end
 
-  defp accept(ctx, params \\ %{}),
-    do: AcceptCertificate.call(ctx.team, ctx.certificate, params, ctx.user, @now)
+  # The team admin has selected the box that says they checked the certificate.
+  defp accept(ctx, params \\ %{}) do
+    params = Map.put_new(params, "confirmed", "true")
+    AcceptCertificate.call(ctx.team, ctx.certificate, params, ctx.user, @now)
+  end
 
   defp posts do
     receive do
