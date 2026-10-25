@@ -44,9 +44,7 @@ defmodule Web.GroupReviewLive do
   def handle_event("refresh", _params, socket) do
     team = socket.assigns.current_team
 
-    %{team_id: team.id}
-    |> RefreshTeamDataWorker.new()
-    |> Oban.insert()
+    RefreshTeamDataWorker.enqueue(team)
 
     {:noreply, assign(socket, :current_team, %{team | d4h_refresh_result: "Refreshing"})}
   end

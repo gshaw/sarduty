@@ -16,9 +16,7 @@ defmodule App.Operation.SaveOrganization do
          {:ok, organization} <- Repo.update(changeset) do
       organization = if logo, do: Organization.put_logo!(organization, logo), else: organization
 
-      for team_id <- Organization.team_ids(organization) do
-        %{team_id: team_id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
-      end
+      organization |> Organization.team_ids() |> PushPassUpdatesWorker.enqueue_team_ids()
 
       {:ok, organization}
     else

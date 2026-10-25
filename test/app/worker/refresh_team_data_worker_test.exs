@@ -10,9 +10,9 @@ defmodule App.Worker.RefreshTeamDataWorkerTest do
     other = team_fixture()
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      {:ok, first} = %{team_id: team.id} |> RefreshTeamDataWorker.new() |> Oban.insert()
-      {:ok, second} = %{team_id: team.id} |> RefreshTeamDataWorker.new() |> Oban.insert()
-      {:ok, third} = %{team_id: other.id} |> RefreshTeamDataWorker.new() |> Oban.insert()
+      {:ok, first} = RefreshTeamDataWorker.enqueue(team)
+      {:ok, second} = RefreshTeamDataWorker.enqueue(team)
+      {:ok, third} = RefreshTeamDataWorker.enqueue(other)
 
       refute first.conflict?
       assert second.conflict?

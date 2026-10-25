@@ -129,7 +129,7 @@ defmodule Web.EndorsementFormLive do
   # Every change here can change what ID cards list, so passes on phones get pushed. The
   # job skips passes that look the same.
   defp push_passes(%{assigns: %{current_team: %{id_cards_enabled: true} = team}}),
-    do: %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
+    do: PushPassUpdatesWorker.enqueue(team)
 
   defp push_passes(_socket), do: :ok
 

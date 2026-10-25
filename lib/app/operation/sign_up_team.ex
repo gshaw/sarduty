@@ -165,7 +165,7 @@ defmodule App.Operation.SignUpTeam do
 
       RefreshTeamDataWorker.enqueue(team)
       NotifyTeamSignedUpWorker.enqueue(team, member)
-      SendLoginCodeWorker.enqueue_email(view_model.email)
+      SendLoginCodeWorker.enqueue(%{email: view_model.email})
       team
     end)
     |> elem(1)

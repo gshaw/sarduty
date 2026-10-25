@@ -79,7 +79,7 @@ defmodule Web.UserSessionController do
 
   # A job sends the code, or doesn't, after the reply. Sending inline made the reply a
   # few hundred ms slower for someone with access (#176).
-  defp send_code(args), do: args |> SendLoginCodeWorker.new() |> Oban.insert!()
+  defp send_code(args), do: SendLoginCodeWorker.enqueue(args)
 
   def create(conn, %{"user" => %{"phone" => phone, "code" => code} = params}) do
     ip = VerifyLimit.client_ip(conn)
@@ -143,7 +143,7 @@ defmodule Web.UserSessionController do
       SecurityEvent.record(conn, :login_blocked, data: Map.put(data, :scope, scope))
     end
 
-    if :account in blocks, do: args |> NotifyLoginBlockedWorker.new() |> Oban.insert!()
+    if :account in blocks, do: NotifyLoginBlockedWorker.enqueue(args)
   end
 
   defp log_in(conn, user, params, who, known?) do

@@ -18,7 +18,7 @@ defmodule Web.EndorsementCollectionLive do
     picked = params |> Map.get("ids", []) |> Enum.filter(&MapSet.member?(known, &1))
     Endorsement.set_on_card!(team.id, picked)
     # Passes already on phones change too; the job pushes only those that look different.
-    %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
+    PushPassUpdatesWorker.enqueue(team)
 
     socket =
       socket

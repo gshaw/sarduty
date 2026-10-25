@@ -363,7 +363,7 @@ defmodule Web.Admin.TeamLive do
   end
 
   def handle_event("refresh", _params, socket) do
-    %{team_id: socket.assigns.team.id} |> RefreshTeamDataWorker.new() |> Oban.insert()
+    RefreshTeamDataWorker.enqueue(socket.assigns.team)
     {:noreply, socket}
   end
 

@@ -776,9 +776,7 @@ defmodule Web.TeamDashboardLive do
   end
 
   defp start_refresh(socket) do
-    %{team_id: socket.assigns.current_team.id}
-    |> RefreshTeamDataWorker.new()
-    |> Oban.insert()
+    RefreshTeamDataWorker.enqueue(socket.assigns.current_team)
 
     view_data = %{socket.assigns.view_data | refresh_result: "Refreshing"}
 

@@ -10,6 +10,13 @@ defmodule App.Worker.PushPassUpdatesWorker do
   alias App.Operation.PushPassUpdates
   alias App.Operation.UpdateGooglePasses
 
+  @doc "Queues a push of the team's changed passes, unless one is already waiting."
+  def enqueue(%Team{id: id}), do: enqueue_team_ids([id])
+
+  @doc "Queues a push for each of these teams, by id."
+  def enqueue_team_ids(team_ids),
+    do: team_ids |> Enum.map(&new(%{team_id: &1})) |> Enum.each(&Oban.insert!/1)
+
   # Queued after each team refresh, so a failed push never fails the refresh.
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"team_id" => team_id}}) do

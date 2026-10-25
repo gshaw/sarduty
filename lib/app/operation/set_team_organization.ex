@@ -89,7 +89,7 @@ defmodule App.Operation.SetTeamOrganization do
       data: %{organization_id: organization.id}
     )
 
-    %{team_id: team.id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
+    PushPassUpdatesWorker.enqueue(team)
 
     case kind do
       :organization_team_added -> TeamAdminMailer.deliver_joined(team, organization, now)
