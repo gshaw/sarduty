@@ -52,6 +52,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       page_title: "#{activity.title} · Take attendance",
       activity: activity,
       recorder: recorder(socket.assigns, now),
+      others_now?: others_now?(activity, now),
       team: activity.team,
       members: members,
       kind: "arrived",
@@ -95,7 +96,9 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   def handle_info(:tick, socket) do
     Process.send_after(self(), :tick, @tick_ms)
-    {:noreply, reload(socket, DateTime.utc_now())}
+    now = DateTime.utc_now()
+    socket = reload(socket, now)
+    {:noreply, assign(socket, others_now?: others_now?(socket.assigns.activity, now))}
   end
 
   # Only clears the confirmation it was set for, not a newer one.
@@ -233,6 +236,14 @@ defmodule Web.ActivityTakeAttendanceLive do
       else: assign_closed(socket, now)
   end
 
+  # Another activity is taking attendance, so whoever holds the iPad can switch to it:
+  # one that overlaps, or tonight's when this page is still on last week's.
+  defp others_now?(activity, now) do
+    activity.team
+    |> Activity.taking_attendance_now(now)
+    |> Enum.any?(&(&1.id != activity.id))
+  end
+
   # `{kind, text}`: `:arrived` or `:left` for a good scan, `:error`, or `:info`. The kind
   # picks the banner's colour and the scan's sound.
   defp message({:ok, scan}, team) do
@@ -337,6 +348,9 @@ defmodule Web.ActivityTakeAttendanceLive do
     <h1 class="title mb-1">{@activity.title}</h1>
     <p id="activity-summary" class="text-text-muted">
       {when_text(@activity, @team)}<span :if={@activity.address}> · {@activity.address}</span>
+    </p>
+    <p :if={@others_now?} class="action">
+      <.a id="other-activities" navigate={~p"/teams/#{@team}/take-attendance"}>Other activities now</.a>
     </p>
 
     <p :if={@closed} id="closed" class="mt-4 font-semibold">
