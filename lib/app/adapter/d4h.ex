@@ -989,6 +989,54 @@ defmodule App.Adapter.D4H do
     do:
       write(context, :delete, "/member-groups/#{d4h_group_id}", nil, fn _body -> d4h_group_id end)
 
+  @doc """
+  Posts a note to the team's whiteboard (#515). `attrs` has string keys: `text`, `url`
+  (nil for none), `important`, and `archived_at` (a DateTime or ISO 8601 time).
+  """
+  def create_whiteboard_note(context, attrs) do
+    json =
+      attrs
+      |> whiteboard_json()
+      |> Map.reject(fn {key, value} -> key == :url and is_nil(value) end)
+
+    write(context, :post, "/whiteboard", json, &D4H.WhiteboardNote.build/1)
+  end
+
+  @doc "Changes the fields `attrs` names. Archiving sends `archived_at` alone."
+  def update_whiteboard_note(context, d4h_whiteboard_note_id, attrs) do
+    url = "/whiteboard/#{d4h_whiteboard_note_id}"
+    write(context, :patch, url, whiteboard_json(attrs), &D4H.WhiteboardNote.build/1)
+  end
+
+  @doc "Deletes a note for good. One D4H has already deleted counts as deleted."
+  def delete_whiteboard_note(context, d4h_whiteboard_note_id) do
+    request = [method: :delete, url: "/whiteboard/#{d4h_whiteboard_note_id}", retry: false]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status}} when status in 200..299 or status == 404 ->
+        {:ok, d4h_whiteboard_note_id}
+
+      result ->
+        {:error, write_error(result)}
+    end
+  end
+
+  defp whiteboard_json(attrs) do
+    attrs
+    |> rename(%{
+      "text" => :text,
+      "url" => :url,
+      "important" => :important,
+      "archived_at" => :archivedAt
+    })
+    |> Map.update(:archivedAt, nil, &whiteboard_time/1)
+    |> Map.reject(fn {key, value} -> key == :archivedAt and is_nil(value) end)
+  end
+
+  # D4H takes a time with Z and no offset.
+  defp whiteboard_time(%DateTime{} = at), do: at |> DateTime.shift_zone!("Etc/UTC") |> iso()
+  defp whiteboard_time(at), do: at
+
   @equipment_fields %{
     "title" => "ref",
     # Only Records takes this. D4H's item takes its type from its kind.

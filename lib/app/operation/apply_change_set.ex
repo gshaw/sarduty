@@ -38,6 +38,9 @@ defmodule App.Operation.ApplyChangeSet do
     :delete_equipment_item
   ]
 
+  # A whiteboard note (#515) is changed as it was on the page; nothing is read first.
+  @whiteboard [:create_whiteboard_note, :update_whiteboard_note, :delete_whiteboard_note]
+
   @doc """
   Applies the set's proposed and failed rows. `{:ok, rows}` with each row as recorded;
   `{:error, :no_team_key}`, `{:error, :deleted}` or `{:error, :published}` for an
@@ -261,6 +264,7 @@ defmodule App.Operation.ApplyChangeSet do
   end
 
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
+  def check(%ChangeSetRow{action: action}, nil) when action in @whiteboard, do: :ok
 
   # The same qualification from the same day: D4H can't remove an award, so a second
   # would stay (#493).
@@ -459,6 +463,21 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :delete_equipment_item} = row),
     do: d4h |> D4H.delete_equipment_item(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :create_whiteboard_note, new_value: new_value}),
+    do:
+      d4h
+      |> D4H.create_whiteboard_note(new_value)
+      |> record_result(& &1.d4h_whiteboard_note_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_whiteboard_note} = row) do
+    d4h
+    |> D4H.update_whiteboard_note(row.d4h_record_id, row.new_value)
+    |> record_result(& &1.d4h_whiteboard_note_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_whiteboard_note} = row),
+    do: d4h |> D4H.delete_whiteboard_note(row.d4h_record_id) |> record_result(& &1)
 
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}

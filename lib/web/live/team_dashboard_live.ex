@@ -180,6 +180,7 @@ defmodule Web.TeamDashboardLive do
           notes={@notes}
           org_name={@org_name}
           today={Service.Period.today(@now, @current_team.timezone)}
+          team_admin?={@team_admin?}
         />
       </div>
     </div>
@@ -442,8 +443,10 @@ defmodule Web.TeamDashboardLive do
   attr :notes, :list, required: true
   attr :org_name, :string, default: nil
   attr :today, Date, required: true
+  attr :team_admin?, :boolean, required: true
 
-  # Every live note (#515). Only team admins see it with none, so they can post one.
+  # Every live note (#515). Only team admins see it with none, so they can post one, and
+  # only they get Change and Archive, on the team's own notes.
   defp whiteboard(assigns) do
     ~H"""
     <section id="whiteboard" class="card">
@@ -460,10 +463,36 @@ defmodule Web.TeamDashboardLive do
           <p class="hint mb-0">
             {WhiteboardText.note_line(note, @team.timezone, @org_name, @today)}
           </p>
+          <p
+            :if={@team_admin? and WhiteboardNote.team_note?(note)}
+            class="hint mb-0 flex items-center gap-3"
+          >
+            <.a
+              id={"whiteboard-change-#{note.id}"}
+              navigate={~p"/teams/#{@team}/whiteboard/#{note.id}/edit"}
+            >Change</.a>
+            <span aria-hidden="true">·</span>
+            <.button
+              id={"whiteboard-archive-#{note.id}"}
+              type="button"
+              variant={:link}
+              size={:sm}
+              phx-click="archive-note"
+              phx-value-id={note.id}
+              data-confirm={WhiteboardText.archive_confirm()}
+            >
+              Archive
+            </.button>
+          </p>
         </li>
       </ul>
-      <footer class="action">
-        <.a navigate={~p"/teams/#{@team}/whiteboard"}>All notes</.a>
+      <footer>
+        <ul class="action-list">
+          <li :if={@team_admin?}>
+            <.a id="whiteboard-post" navigate={~p"/teams/#{@team}/whiteboard/new"}>Post a note</.a>
+          </li>
+          <li><.a navigate={~p"/teams/#{@team}/whiteboard"}>All notes</.a></li>
+        </ul>
       </footer>
     </section>
     """
@@ -738,6 +767,19 @@ defmodule Web.TeamDashboardLive do
     if refreshing?(socket.assigns.view_data),
       do: {:noreply, socket},
       else: start_refresh(socket)
+  end
+
+  # Only team admins archive; a member's card has no button, but an event can still come.
+  def handle_event("archive-note", _params, %{assigns: %{team_admin?: false}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("archive-note", %{"id" => id}, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    case WhiteboardText.archive(team, user, id) do
+      :ok -> {:noreply, assign(socket, notes: WhiteboardNote.live(team, DateTime.utc_now()))}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
   end
 
   defp start_refresh(socket) do

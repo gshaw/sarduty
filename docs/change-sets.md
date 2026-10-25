@@ -65,6 +65,13 @@ new kind of write is a new row action there, not a new call from a page or an op
   applier as `document:` and is never in a row. The set reads the member's awards first,
   and skips an award D4H has from the same qualification and day: D4H's API can't remove
   an award, so a second would stay. A failed upload is sent again on the same award.
+- **A whiteboard note is a set of one row** (source `whiteboard`, #515): a team admin's
+  Post a note (`create_whiteboard_note`), Change or Archive (`update_whiteboard_note`;
+  Archive sends `archivedAt` alone), or Delete (`delete_whiteboard_note`), from
+  [SaveWhiteboardNote](../lib/app/operation/save_whiteboard_note.ex). Nothing is read
+  first. The rows hold the note's fields, so a deleted note's text stays in its set. The
+  operation then writes the local copy, and the sync's next head check reads it back.
+  An organization's note is never sent.
 - **D4H is read fresh before writing.** An attendance set reads the activity's rows and
   published flag. A row whose D4H status changed since it was proposed is skipped, not
   overwritten, and a create is skipped when D4H has a row for that member now, since D4H

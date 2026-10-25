@@ -9,7 +9,8 @@ defmodule Web.WhiteboardLive do
 
   # Every note on the team's whiteboard (#515), /teams/:subdomain/whiteboard, from the
   # Dashboard card's All notes. Everyone on the team reads it. Archived is the only place
-  # a SAR Duty Records team can see old notes.
+  # a SAR Duty Records team can see old notes. Team admins get Change and Archive on the
+  # team's live notes, Post again on every archived note, and Delete on the team's own.
   @views [live: "On the whiteboard", archived: "Archived"]
 
   def mount(_params, _session, socket) do
@@ -76,7 +77,14 @@ defmodule Web.WhiteboardLive do
       <:item label="Dashboard" path={~p"/teams/#{@current_team}"} />
       <:item label="Whiteboard" />
     </.breadcrumbs>
-    <h1 class="title">Whiteboard</h1>
+    <.heading_row>
+      <h1 class="title">Whiteboard</h1>
+      <:action :if={@team_admin?}>
+        <.button id="whiteboard-post" navigate={~p"/teams/#{@current_team}/whiteboard/new"}>
+          Post a note
+        </.button>
+      </:action>
+    </.heading_row>
     <p class="lead measure">
       Short notes for everyone on the team. A note leaves the whiteboard after its last day, and stays here under Archived.
     </p>
@@ -128,6 +136,47 @@ defmodule Web.WhiteboardLive do
       <:col :let={note} label="Until" class="whitespace-nowrap">
         {WhiteboardText.until(note, @current_team.timezone, @today)}
       </:col>
+      <:col :let={note} :if={@team_admin?} label="" class="whitespace-nowrap">
+        <span :if={@view == :live and WhiteboardNote.team_note?(note)} class="flex gap-3">
+          <.button
+            id={"whiteboard-change-#{note.id}"}
+            size={:sm}
+            navigate={~p"/teams/#{@current_team}/whiteboard/#{note.id}/edit"}
+          >
+            Change
+          </.button>
+          <.button
+            id={"whiteboard-archive-#{note.id}"}
+            size={:sm}
+            type="button"
+            phx-click="archive"
+            phx-value-id={note.id}
+            data-confirm={WhiteboardText.archive_confirm()}
+          >
+            Archive
+          </.button>
+        </span>
+        <span :if={@view == :archived} class="flex gap-3">
+          <.button
+            id={"whiteboard-again-#{note.id}"}
+            size={:sm}
+            navigate={~p"/teams/#{@current_team}/whiteboard/new?#{[from: note.id]}"}
+          >
+            Post again
+          </.button>
+          <.button
+            :if={WhiteboardNote.team_note?(note)}
+            id={"whiteboard-delete-#{note.id}"}
+            size={:sm}
+            type="button"
+            phx-click="delete"
+            phx-value-id={note.id}
+            data-confirm={"Delete this note? #{Web.WhiteboardNoteFormLive.gone_text(@current_team)}"}
+          >
+            Delete
+          </.button>
+        </span>
+      </:col>
     </.table>
 
     <.pagination
@@ -137,5 +186,23 @@ defmodule Web.WhiteboardLive do
       path_fn={fn [page: page] -> view_path(@current_team, :archived, page) end}
     />
     """
+  end
+
+  # Only team admins see the buttons, but an event can still come from a member's page.
+  def handle_event(_event, _params, %{assigns: %{team_admin?: false}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("archive", %{"id" => id}, socket),
+    do: act(socket, &WhiteboardText.archive/3, id)
+
+  def handle_event("delete", %{"id" => id}, socket), do: act(socket, &WhiteboardText.delete/3, id)
+
+  defp act(socket, fun, id) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    case fun.(team, user, id) do
+      :ok -> {:noreply, load(socket)}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
   end
 end

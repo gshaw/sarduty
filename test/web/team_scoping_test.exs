@@ -28,6 +28,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/chores/:id",
     "/teams/:subdomain/chores/:id/edit",
     "/teams/:subdomain/me/chores/:id/edit",
+    "/teams/:subdomain/whiteboard/:id/edit",
     # Certificates (#493): this team has them on, so these find the record through it.
     "/teams/:subdomain/certificates/:id",
     "/teams/:subdomain/certificates/:id/file",
@@ -89,6 +90,7 @@ defmodule Web.TeamScopingTest do
       chore_category: chore_category_fixture(other_team),
       chore: chore_fixture(member, chore_category_fixture(other_team)),
       endorsement: endorsement,
+      whiteboard_note: whiteboard_note_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
       certificate: certificate_fixture(member, qualification_fixture(other_team)),
@@ -289,4 +291,7 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}/pdf"
+
+  defp path_for("/teams/:subdomain/whiteboard/:id/edit", s, o),
+    do: ~p"/teams/#{s}/whiteboard/#{o.whiteboard_note.id}/edit"
 end
