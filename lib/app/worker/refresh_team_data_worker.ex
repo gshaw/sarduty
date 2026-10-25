@@ -1,5 +1,10 @@
 defmodule App.Worker.RefreshTeamDataWorker do
-  use Oban.Worker, queue: :refresh, max_attempts: 3
+  # One per team waiting or running: the running one fetches everything a second would.
+  # A failed one waiting to retry doesn't block a new one.
+  use Oban.Worker,
+    queue: :refresh,
+    max_attempts: 3,
+    unique: [keys: [:team_id], states: [:available, :scheduled, :executing], period: :infinity]
 
   alias App.Adapter.D4H
   alias App.Model.Event

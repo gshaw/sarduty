@@ -6,6 +6,8 @@
 app = "sarduty"
 primary_region = "yyz"
 kill_signal = "SIGTERM"
+# Oban gives running jobs 15 s to finish at a deploy; Fly's default of 5 s cut them off.
+kill_timeout = 20
 
 [build]
 

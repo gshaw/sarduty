@@ -183,6 +183,11 @@ fi
 - **New side effects go in an Operation**, not a LiveView `handle_event`. Some older
   LiveViews call the D4H adapter directly (`ActivityMileageLive`, `Settings.TeamLive`);
   don't copy that.
+- **Background work follows [docs/jobs.md](docs/jobs.md).** A job when nobody waits for
+  the answer or a retry would fix it; inline when the person needs it or it writes to
+  D4H. Args are ids, never structs or personal data. Insert the job in the same
+  transaction as its row, through the worker's `enqueue`. A failed send returns
+  `{:error, reason}`, never `:ok`.
 - **Every D4H write is a change set.** Build rows with `ChangeSet.propose!/2` and apply
   them with `ApplyChangeSet.call/4`. Never call D4H's write functions from anywhere
   else; a test fails if you do.
@@ -282,6 +287,7 @@ change, read the relevant doc:
   [docs/external-services.md](docs/external-services.md).
 - **Fly, Litestream, and changing production data** →
   [docs/deployment.md](docs/deployment.md).
+- **Background jobs: job or inline, retries, queues** → [docs/jobs.md](docs/jobs.md).
 - **What is tested and why** → [docs/testing-strategy.md](docs/testing-strategy.md).
 - **New routes and URL rules** → [docs/urls.md](docs/urls.md).
 - **Words in the UI, emails, and PDFs** → [docs/writing.md](docs/writing.md).

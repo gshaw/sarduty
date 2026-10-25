@@ -24,17 +24,17 @@ database.
 
 ## The layers and the calling rules
 
-| Layer       | Path                                  | Responsibility                                        | May call                             |
-| ----------- | ------------------------------------- | ----------------------------------------------------- | ------------------------------------ |
-| Web         | `lib/web/`                            | LiveViews, controllers, components                    | Operations, models, view models/data |
-| Operations  | `lib/app/operation/`                  | Side effects and orchestration, `call/…`              | Adapters, models, other operations   |
-| Workers     | `lib/app/worker/`                     | Oban jobs; schedule and run operations                | Operations, models                   |
-| Adapters    | `lib/app/adapter/`                    | One external API each; map responses to structs       | `Req`                                |
-| Models      | `lib/app/model/`, `lib/app/accounts/` | Ecto schemas and their queries                        | `Repo`, fields, validators           |
-| View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                               |
-| View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                               |
-| MCP tools   | `lib/app/mcp/`                        | Views of a team's data for agents, and proposals      | Models, operations                   |
-| Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)               |
+| Layer       | Path                                  | Responsibility                                        | May call                                                 |
+| ----------- | ------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| Web         | `lib/web/`                            | LiveViews, controllers, components                    | Operations, models, view models/data, workers' `enqueue` |
+| Operations  | `lib/app/operation/`                  | Side effects and orchestration, `call/…`              | Adapters, models, other operations                       |
+| Workers     | `lib/app/worker/`                     | Oban jobs; schedule and run operations                | Operations, models                                       |
+| Adapters    | `lib/app/adapter/`                    | One external API each; map responses to structs       | `Req`                                                    |
+| Models      | `lib/app/model/`, `lib/app/accounts/` | Ecto schemas and their queries                        | `Repo`, fields, validators                               |
+| View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                                                   |
+| View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                                                   |
+| MCP tools   | `lib/app/mcp/`                        | Views of a team's data for agents, and proposals      | Models, operations                                       |
+| Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)                                   |
 
 The rules that are easy to break:
 
@@ -76,6 +76,8 @@ The rules that are easy to break:
 - **New side effect** → an Operation in `lib/app/operation/`. If it has logic worth
   testing, give it a pure function and test that; see
   [testing-strategy.md](testing-strategy.md).
+- **New background work** → a worker in `lib/app/worker/` with an `enqueue` function. See
+  [jobs.md](jobs.md) for whether it should be a job at all.
 - **New shared UI** → a function component in `lib/web/components/`: `core.ex` for the
   pieces every page uses, or its own module. Every LiveView layout imports the same shared
   modules (`live_view/1` in `lib/web.ex`); a component only one or two pages use is
@@ -107,6 +109,7 @@ The rules that are easy to break:
 - [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
+- [jobs.md](jobs.md) — background jobs: when work is a job, how one is shaped, and how it reports a failure.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
 - [deployment.md](deployment.md) — Fly, Litestream, migrations, backups, and changing production data.
 - [testing-strategy.md](testing-strategy.md) — what the test suite covers and why.

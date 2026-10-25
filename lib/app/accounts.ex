@@ -68,17 +68,18 @@ defmodule App.Accounts do
 
   @doc """
   Emails a login code when the email may log in, making its user on first use. Does
-  nothing otherwise, and returns `:ok` either way, so the page never says which emails
-  are known. A code sent in the last minute stands, so a double tap sends one email; a
-  later request replaces it.
+  nothing otherwise. A code sent in the last minute stands, so a double tap sends one
+  email; a later request replaces it. `:ok`, or `{:error, reason}` when Cloudflare
+  refused it, so `SendLoginCodeWorker` tries again. The page never sees the answer,
+  so it never says which emails are known.
   """
   def deliver_login_code(email) do
     if may_log_in?(email) do
       user = get_or_create_user(email)
       send_login_code(user, user.email)
+    else
+      :ok
     end
-
-    :ok
   end
 
   @doc "Whether login codes can go out by text: Twilio is set up."
@@ -88,17 +89,15 @@ defmodule App.Accounts do
   Texts a login code to an E.164 number, like deliver_login_code/1 does by email. The
   number must belong to exactly one email that may log in: D4H holds no other link from
   a number to an account, and a shared family number can't pick between two people.
-  Returns `:ok` either way.
+  `:ok`, or `{:error, reason}` when Twilio refused it.
   """
   def deliver_login_text(phone) do
-    if text_login?() do
-      case text_login_email(phone) do
-        nil -> nil
-        email -> email |> get_or_create_user() |> send_login_code(phone)
-      end
+    with true <- text_login?(),
+         email when is_binary(email) <- text_login_email(phone) do
+      email |> get_or_create_user() |> send_login_code(phone)
+    else
+      _no_one -> :ok
     end
-
-    :ok
   end
 
   @doc "The one email that may log in with this number, or nil."
@@ -114,16 +113,30 @@ defmodule App.Accounts do
 
   # The code goes to `sent_to`: the user's email, or an E.164 number for a text.
   defp send_login_code(user, sent_to) do
-    unless recent_login_code?(user, sent_to) do
+    if recent_login_code?(user, sent_to) do
+      :ok
+    else
       user |> UserToken.by_user_and_contexts_query(["login"]) |> Repo.delete_all()
       {code, user_token} = UserToken.build_login_code(user, sent_to)
-      Repo.insert!(user_token)
+      user_token = Repo.insert!(user_token)
 
-      if String.starts_with?(sent_to, "+"),
-        do: UserNotifier.deliver_login_text(sent_to, code),
-        else: UserNotifier.deliver_login_code(user, code)
+      case deliver_code(user, sent_to, code) do
+        {:error, reason} ->
+          # It never arrived, so it mustn't count as sent in the last minute: the retry
+          # sends a new one.
+          Repo.delete!(user_token)
+          {:error, reason}
+
+        _sent ->
+          :ok
+      end
     end
   end
+
+  defp deliver_code(_user, "+" <> _ = phone, code),
+    do: UserNotifier.deliver_login_text(phone, code)
+
+  defp deliver_code(user, _email, code), do: UserNotifier.deliver_login_code(user, code)
 
   defp recent_login_code?(user, sent_to) do
     user
