@@ -27,6 +27,7 @@ defmodule App.Model.ChangeSet do
     # :attendance_import is only on old rows: the page that made them is gone (#424).
     # :chores sends a team admin's accepted chores as a D4H event (#341). :certificates
     # adds a member's certificate to D4H, as an award with the file on it (#493).
+    # :whiteboard posts, changes, archives, or deletes a whiteboard note (#515).
     field :source, Ecto.Enum,
       values: [
         :door,
@@ -39,7 +40,8 @@ defmodule App.Model.ChangeSet do
         :template,
         :tags,
         :chores,
-        :certificates
+        :certificates,
+        :whiteboard
       ]
 
     field :summary, :string

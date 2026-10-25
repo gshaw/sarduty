@@ -259,6 +259,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/certificates/:id", CertificateLive
       live "/teams/:subdomain/chores", ChoreCollectionLive
       live "/teams/:subdomain/whiteboard", WhiteboardLive
+      live "/teams/:subdomain/whiteboard/new", WhiteboardNoteFormLive, :new
+      live "/teams/:subdomain/whiteboard/:id/edit", WhiteboardNoteFormLive, :edit
       live "/teams/:subdomain/chores/:id", ChoreLive
       live "/teams/:subdomain/chores/:id/edit", ChoreFormLive
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive

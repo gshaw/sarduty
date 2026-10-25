@@ -11,6 +11,7 @@ defmodule Web.WhiteboardText do
 
   alias App.Model.Team
   alias App.Model.WhiteboardNote
+  alias App.Operation.SaveWhiteboardNote
   alias App.Repo
   alias Service.Format
 
@@ -77,6 +78,31 @@ defmodule Web.WhiteboardText do
   @doc ~s("From BCSARA", the team's organization's short name, on an organization's note.)
   def from(nil), do: "From your organization"
   def from(org_name), do: "From #{org_name}"
+
+  @doc "The Archive button's confirm."
+  def archive_confirm, do: "Archive this note? It comes off the whiteboard for everyone."
+
+  @doc """
+  Archives the team's note with this local id, from a page's Archive button. The id comes
+  from the page, so the note is found through the team. `:ok` or `{:error, text}`.
+  """
+  def archive(%Team{} = team, user, id),
+    do: with_note(team, id, &SaveWhiteboardNote.archive(team, user, &1))
+
+  @doc "Deletes the team's note with this local id, from the Archived list's Delete."
+  def delete(%Team{} = team, user, id),
+    do: with_note(team, id, &SaveWhiteboardNote.delete(team, user, &1))
+
+  defp with_note(team, id, fun) do
+    with {id, ""} <- id |> to_string() |> Integer.parse(),
+         %WhiteboardNote{} = note <- WhiteboardNote.get_for_team(team, id),
+         {:ok, _note} <- fun.(note) do
+      :ok
+    else
+      {:error, text} when is_binary(text) -> {:error, text}
+      _missing -> {:error, "The note is gone. Reload the page."}
+    end
+  end
 
   @doc "The short name of the team's organization in SAR Duty, or nil."
   def org_name(%Team{} = team) do

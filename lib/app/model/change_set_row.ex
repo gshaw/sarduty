@@ -50,7 +50,10 @@ defmodule App.Model.ChangeSetRow do
         :set_activity_tags,
         :create_equipment_item,
         :update_equipment_item,
-        :delete_equipment_item
+        :delete_equipment_item,
+        :create_whiteboard_note,
+        :update_whiteboard_note,
+        :delete_whiteboard_note
       ]
 
     field :d4h_record_id, :integer
