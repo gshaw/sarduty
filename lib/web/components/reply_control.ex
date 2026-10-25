@@ -3,9 +3,12 @@ defmodule Web.Components.ReplyControl do
   Sends a member's reply (#444) and shows it with `Web.Components.Reply`.
 
   Assigns: `team`, `activity`, `member` (from `Reply.replier/2`), `invitation` (their
-  attendance row), `user`, `viewing_as`, and `size`, `:sm` in a list row. The page
-  shows it only when `Reply.open?/3`. A reply sends `{:replied, attendance}` to the
-  page, which recounts; a refusal sends `{:reply_failed, text}` for the page's flash.
+  attendance row), `user`, `viewing_as`, and `size`, `:sm` in a list row. `viewing_as`
+  is required, nil unless a team admin is viewing as a member. Its events skip the team
+  pages' hook (#440), so a page that left it out would send the team admin's reply as
+  the member. The page shows it only when `Reply.open?/3`. A reply sends
+  `{:replied, attendance}` to the page, which recounts; a refusal sends
+  `{:reply_failed, text}` for the page's flash.
   """
   use Web, :live_component
 
@@ -16,12 +19,11 @@ defmodule Web.Components.ReplyControl do
   alias Web.Components.Reply
   alias Web.UserAuth
 
-  def update(assigns, socket) do
+  def update(%{viewing_as: _} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
      |> assign_new(:size, fn -> :md end)
-     |> assign_new(:viewing_as, fn -> nil end)
      |> assign_new(:changing?, fn -> false end)}
   end
 

@@ -130,12 +130,35 @@ defmodule Web.ViewAsControllerTest do
     test "contact details save nothing", %{conn: conn, team: team, sam: sam} do
       conn = view_as(conn, team, sam)
       lv = open(conn, ~p"/teams/#{team}/me/details")
-
       assert has_element?(lv, "#details-form button[disabled]", "Save details")
 
       html = lv |> form("#details-form", details: %{address: "9 Elm St"}) |> render_submit()
       assert html =~ "You&#39;re viewing as Sam Rivera, so nothing is saved."
       refute_received {:d4h, "PATCH", _path}
+    end
+
+    # Web.UserAuth refuses the event before the page sees it (#440); chores had no
+    # check of their own.
+    test "chores save nothing", %{conn: conn, team: team, sam: sam} do
+      chore = chore_fixture(sam, chore_category_fixture(team))
+      conn = view_as(conn, team, sam)
+
+      lv = open(conn, ~p"/teams/#{team}/me/chores")
+      render_click(lv, "delete", %{"id" => "#{chore.id}"})
+      assert has_element?(lv, "#flash-error", "so nothing is saved")
+
+      lv = open(conn, ~p"/teams/#{team}/me/chores/#{chore.id}/edit")
+      assert has_element?(lv, "#chore-save[disabled]")
+      assert has_element?(lv, "#chore-delete[disabled]")
+      render_click(lv, "delete", %{})
+      lv |> form("#chore-form") |> render_submit()
+      assert has_element?(lv, "#flash-error", "so nothing is saved")
+
+      lv = open(conn, ~p"/teams/#{team}/me/chores/new")
+      lv |> form("#chore-form") |> render_submit()
+
+      assert [%{id: id}] = Repo.all(App.Model.Chore)
+      assert id == chore.id
     end
 
     test "the letter downloads but stays on the member's to-do",

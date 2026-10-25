@@ -1,5 +1,5 @@
 defmodule Web.MeDetailsLive do
-  use Web, {:live_view_app_layout, access: :member}
+  use Web, {:live_view_app_layout, access: :member, view_events: ["validate"]}
 
   alias App.Accounts
   alias App.Model.Member
@@ -7,7 +7,6 @@ defmodule Web.MeDetailsLive do
   alias App.Operation.SaveOwnDetails
   alias App.ViewModel.MemberDetailsViewModel
   alias Web.LoginLimit
-  alias Web.UserAuth
 
   # A member's contact details (#156, #389), /teams/:subdomain/me/details: their mobile
   # number, then their address and emergency contacts. `member` comes from the login,
@@ -117,10 +116,7 @@ defmodule Web.MeDetailsLive do
   defp confirmed(socket, _member, _who, _ip, {:error, text}), do: put_flash(socket, :error, text)
 
   # The login is checked again, in case the team turned member logins off since the page
-  # opened. A team admin viewing as the member saves nothing.
-  defp with_login(%{assigns: %{viewing_as: %Member{} = member}} = socket, _fun),
-    do: put_flash(socket, :error, UserAuth.view_as_refusal(member))
-
+  # opened. A team admin viewing as the member never gets here: Web.UserAuth refuses.
   defp with_login(socket, fun) do
     %{current_user: user, current_member: member} = socket.assigns
 
@@ -212,6 +208,7 @@ defmodule Web.MeDetailsLive do
     """
   end
 
+  # Viewing as the member, the buttons are greyed out; Web.UserAuth refuses their events.
   defp phone_content(%{pending: nil} = assigns) do
     ~H"""
     <p id="current-phone">{@member.phone || "None"}</p>

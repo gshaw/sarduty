@@ -1,12 +1,12 @@
 defmodule Web.ActivityTakeAttendanceLive do
-  # Members take attendance too (#475): every event here is theirs, including `scanned`
-  # and `scan_failed`, which the camera hook in qr_scanner.js sends.
+  # Members take attendance too (#475): a scan, a pick, and an undo are theirs. The
+  # camera hook in qr_scanner.js sends `scanned` and `scan_failed`.
   use Web,
       {:live_view_narrow_layout,
        size: :tool,
        access: :team,
-       member_events:
-         ~w(set_kind change clear_override scanned pick undo toggle_yet_to_arrive scan_failed)}
+       view_events: ~w(set_kind change clear_override toggle_yet_to_arrive scan_failed),
+       member_events: ~w(scanned pick undo)}
 
   import Web.Components.Scanner
   import Web.Components.YetToArrive
@@ -19,7 +19,6 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Operation.BuildYetToArrive
   alias App.Operation.RecordAttendanceScan
   alias App.Repo
-  alias Web.UserAuth
 
   # Taking attendance for one activity (#475): team admins at any time, and members from 2
   # hours before it starts until 2 hours after it ends (Activity.take_attendance?/3). It
@@ -217,10 +216,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   # Runs `action` with the socket read again, while the door may take attendance. A team
-  # admin viewing as a member sees the member's page, and saves nothing.
-  defp with_open_door(%{assigns: %{viewing_as: %Member{} = member}} = socket, _action),
-    do: assign(socket, message: {:error, UserAuth.view_as_refusal(member)})
-
+  # admin viewing as a member never gets here: Web.UserAuth refuses their scans (#440).
   defp with_open_door(socket, action) do
     now = DateTime.utc_now()
     socket = reload(socket, now)
