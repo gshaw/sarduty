@@ -236,6 +236,7 @@ defmodule Web.Admin.TeamLive do
           <.button
             :if={!@team.id_cards_enabled}
             id="id-cards-on"
+            phx-disable-with="Turning on…"
             type="button"
             phx-click="id_cards"
             phx-value-enabled="true"
@@ -245,6 +246,7 @@ defmodule Web.Admin.TeamLive do
           <.button
             :if={@team.id_cards_enabled}
             id="id-cards-off"
+            phx-disable-with="Turning off…"
             type="button"
             variant={:danger}
             phx-click="id_cards"

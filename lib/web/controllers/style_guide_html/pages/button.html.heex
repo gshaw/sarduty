@@ -99,7 +99,7 @@
       <.button variant={variant} disabled>Save</.button>
     </:col>
     <:col :let={{variant, _label}} label="Busy">
-      <.button variant={variant} disabled><.spinner>Saving…</.spinner></.button>
+      <.button variant={variant} disabled data-phx-disable-with-restore="Save">Saving…</.button>
     </:col>
   </.table>
   <ul>
@@ -113,10 +113,36 @@
       <strong>Disabled</strong> is a last resort. Prefer an error that says what is missing.
     </li>
     <li>
-      <strong>Busy</strong> shows a spinner and says what it is doing, for work that takes more
-      than a second.
+      <strong>Busy</strong>
+      shows a spinner and says what it is doing, and cannot be sent twice. See Slow buttons.
     </li>
   </ul>
+
+  <h2 id="slow">Slow buttons</h2>
+  <p>
+    A button that waits on something slow, such as an email, a change sent to the team's
+    records, a Wallet pass, a map, or a PDF, says what it is doing until the answer comes. A
+    tap never looks like it did nothing, and it cannot be sent twice. Name the slow thing
+    with the button's verb: Sending…, Saving…, Adding…, Removing…, Deleting…, Refreshing…,
+    Turning on…. Never Loading… or Please wait.
+  </p>
+  <div class="demo">
+    <.form_actions>
+      <.button variant={:warning}>Email letter</.button>
+      <.button variant={:warning} disabled data-phx-disable-with-restore="Email letter">
+        Sending…
+      </.button>
+    </.form_actions>
+  </div>
+  <p class="spec">
+    <code>phx-disable-with="Sending…"</code>
+    on the button, or on the submit button of a form. LiveView swaps in the text, disables the
+    button, and puts it back when the event answers; the spinner comes with it. A button that
+    starts a job or an <code>assign_async</code>
+    answers at once and needs none: the page shows the progress.
+    <code>test/web/slow_button_test.exs</code>
+    fails when a slow button is missing it.
+  </p>
 
   <h2>Button rows</h2>
   <div class="demo">

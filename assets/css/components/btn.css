@@ -102,6 +102,21 @@
 
   .btn:disabled, .btn[disabled], .btn-disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* Busy: LiveView swaps in the phx-disable-with text and sets this attribute until the
+     event answers, so a slow button spins beside what it is doing (#567). The spinner is
+     .spinner's. */
+  .btn[data-phx-disable-with-restore]::before {
+    content: "";
+    width: 1em;
+    height: 1em;
+    flex: none;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .btn[data-phx-disable-with-restore]::before { animation-duration: 2.4s; } }
+
   /* Copy button: a small icon after a value, with Copied beside it after a copy. On a
      touch screen its tap area grows to 44px without moving the text. See
      /styles/copy-button. */

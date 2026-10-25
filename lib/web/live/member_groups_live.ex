@@ -110,7 +110,7 @@ defmodule Web.MemberGroupsLive do
           options={Enum.map(@other_groups, &{&1.title, &1.id})}
         />
         <.form_actions>
-          <.button variant={:success}>Add to group</.button>
+          <.button variant={:success} phx-disable-with="Adding…">Add to group</.button>
         </.form_actions>
       </form>
     </.member_page>
@@ -137,6 +137,7 @@ defmodule Web.MemberGroupsLive do
           variant={:link}
           size={:sm}
           phx-click="remove-group"
+          phx-disable-with="Removing…"
           phx-value-id={gm.id}
           data-confirm={"Remove #{@member.name} from #{gm.group.title}?"}
         >

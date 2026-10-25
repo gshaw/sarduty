@@ -109,6 +109,7 @@ defmodule Web.WhiteboardNoteFormLive do
       </p>
       <.button
         id="whiteboard-note-delete-button"
+        phx-disable-with="Deleting…"
         type="button"
         variant={:danger}
         phx-click="delete"

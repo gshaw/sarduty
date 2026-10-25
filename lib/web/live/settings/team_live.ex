@@ -235,9 +235,9 @@ defmodule Web.Settings.TeamLive do
           </p>
         </div>
         <.form_actions>
-          <.button variant={:success}>Save settings</.button>
+          <.button variant={:success} phx-disable-with="Saving…">Save settings</.button>
           <:trailing>
-            <.button type="button" phx-click="refresh">
+            <.button type="button" phx-click="refresh" phx-disable-with="Refreshing…">
               Refresh
             </.button>
           </:trailing>

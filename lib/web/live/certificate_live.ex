@@ -310,7 +310,11 @@ defmodule Web.CertificateLive do
               {Member.first_name(@certificate.member)} sees this on Your membership.
             </.input>
             <.form_actions>
-              <.button id="certificate-decline-button" variant={:danger}>
+              <.button
+                id="certificate-decline-button"
+                variant={:danger}
+                phx-disable-with="Declining…"
+              >
                 Decline certificate
               </.button>
             </.form_actions>

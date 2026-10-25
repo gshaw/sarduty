@@ -78,7 +78,9 @@ defmodule Web.MemberFormLive do
         Team admins log in to SAR Duty and change the team's records.
       </.input>
       <.form_actions>
-        <.button variant={:success}>{if @member, do: "Save member", else: "Add member"}</.button>
+        <.button variant={:success} phx-disable-with={if @member, do: "Saving…", else: "Adding…"}>{if @member,
+          do: "Save member",
+          else: "Add member"}</.button>
       </.form_actions>
     </.form>
 
@@ -104,12 +106,13 @@ defmodule Web.MemberFormLive do
           A JPEG, PNG, or WebP of the member's face, under 10 MB. Their ID card shows it.
         </.file_drop>
         <.form_actions>
-          <.button id="save-photo" variant={:success}>Save photo</.button>
+          <.button id="save-photo" variant={:success} phx-disable-with="Saving…">Save photo</.button>
           <:trailing>
             <.button
               id="remove-photo"
               type="button"
               phx-click="remove-photo"
+              phx-disable-with="Removing…"
               data-confirm={"Remove #{@member.name}'s photo? Their ID card shows a placeholder until you add one."}
             >
               Remove photo
@@ -125,7 +128,7 @@ defmodule Web.MemberFormLive do
         <p>
           {@member.name} retired on {Service.Format.date_long(@member.left_at, @current_team.timezone)}.
         </p>
-        <.button id="member-rejoin" type="button" phx-click="rejoin">Mark as rejoined</.button>
+        <.button id="member-rejoin" type="button" phx-click="rejoin" phx-disable-with="Saving…">Mark as rejoined</.button>
       <% else %>
         <p>
           A retired member keeps their attendance and letters. They no longer count as a team
@@ -136,6 +139,7 @@ defmodule Web.MemberFormLive do
           type="button"
           variant={:danger}
           phx-click="retire"
+          phx-disable-with="Saving…"
           data-confirm={"Mark #{@member.name} as retired today?"}
         >
           Mark as retired

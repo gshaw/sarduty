@@ -139,6 +139,7 @@ defmodule Web.ActivityEquipmentLive do
                 size={:sm}
                 variant={:danger}
                 phx-click="remove-usage"
+                phx-disable-with="Removing…"
                 phx-value-id={usage.id}
                 data-confirm={"Remove #{usage.equipment_item.title} from this activity?"}
               >
