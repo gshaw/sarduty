@@ -24,7 +24,7 @@ defmodule App.Operation.SaveCertificate do
   def send(%Member{} = member, params, file) do
     changeset =
       %Certificate{team_id: member.team_id, member_id: member.id}
-      |> Certificate.build_changeset(params, qualification_ids(member.team_id))
+      |> Certificate.member_changeset(params, qualification_ids(member.team_id))
 
     with {:ok, prepared} <- (file || :missing) |> prepare() |> on_changeset(changeset) do
       transaction(fn ->
@@ -43,7 +43,7 @@ defmodule App.Operation.SaveCertificate do
     locked_transaction(certificate, fn ->
       with {:ok, current} <- own_now(member, certificate, &Certificate.member_can_change?/1),
            changeset =
-             Certificate.build_changeset(current, params, qualification_ids(member.team_id)),
+             Certificate.member_changeset(current, params, qualification_ids(member.team_id)),
            {:ok, prepared} <- on_changeset(prepared, changeset) do
         changeset |> put_file(prepared) |> Repo.update() |> keep_file(prepared)
       end

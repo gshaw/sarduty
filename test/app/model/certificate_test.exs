@@ -6,19 +6,69 @@ defmodule App.Model.CertificateTest do
 
   @params %{"qualification_id" => "7", "starts_on" => "2026-10-18", "ends_on" => "2029-10-18"}
 
-  defp errors(params) do
+  defp errors(changeset_fun, params) do
     %Certificate{}
-    |> Certificate.build_changeset(Map.merge(@params, params), [7])
+    |> changeset_fun.(Map.merge(@params, params), [7])
     |> Map.fetch!(:errors)
     |> Enum.map(fn {field, {message, _opts}} -> {field, message} end)
   end
 
-  test "a certificate takes one of the team's qualifications, a start, and an expiry if any" do
-    assert errors(%{}) == []
-    assert errors(%{"ends_on" => ""}) == []
-    assert errors(%{"qualification_id" => "8"}) == [qualification_id: "Select a qualification"]
-    assert errors(%{"starts_on" => ""}) == [starts_on: "Enter the date on the certificate"]
-    assert errors(%{"ends_on" => "2026-10-18"}) == [ends_on: "Enter an expiry after the start"]
+  test "a member sends a start, an expiry if any, and the qualification only if they know it" do
+    member = &Certificate.member_changeset/3
+    assert errors(member, %{}) == []
+    assert errors(member, %{"ends_on" => ""}) == []
+    assert errors(member, %{"qualification_id" => ""}) == []
+
+    assert errors(member, %{"qualification_id" => "8"}) == [
+             qualification_id: "Select a qualification"
+           ]
+
+    assert errors(member, %{"starts_on" => ""}) == [
+             starts_on: "Enter the date on the certificate"
+           ]
+
+    assert errors(member, %{"ends_on" => "2026-10-18"}) == [
+             ends_on: "Enter an expiry after the start"
+           ]
+
+    assert errors(member, %{"note" => String.duplicate("a", 301)}) ==
+             [note: "Keep the note under 300 characters"]
+  end
+
+  test "a team admin accepts a qualification once they select the box" do
+    accept = &Certificate.accept_changeset/3
+    assert errors(accept, %{"confirmed" => "true"}) == []
+    assert errors(accept, %{}) == [confirmed: "Check the certificate, then select the box"]
+
+    assert errors(accept, %{"confirmed" => "false"}) == [
+             confirmed: "Check the certificate, then select the box"
+           ]
+
+    assert errors(accept, %{"qualification_id" => "", "confirmed" => "true"}) ==
+             [qualification_id: "Select a qualification"]
+  end
+
+  test "dates that look wrong are warnings: a start after today, or not the usual length" do
+    today = ~D[2026-10-24]
+    usual = {~D[2029-10-18], 36}
+    assert Certificate.date_warnings(~D[2026-10-18], ~D[2029-10-18], usual, today) == []
+    # A certificate to the end of the month is still the usual length.
+    assert Certificate.date_warnings(~D[2026-10-18], ~D[2029-10-31], usual, today) == []
+
+    assert Certificate.date_warnings(~D[2027-10-18], ~D[2029-10-18], {~D[2030-10-18], 36}, today) ==
+             [:starts_after_today, {:length, 36, 24}]
+
+    assert Certificate.date_warnings(~D[2026-10-18], nil, usual, today) == [{:no_expiry, 36}]
+    # With no usual length, only the start is checked.
+    assert Certificate.date_warnings(~D[2007-06-26], ~D[2010-06-26], nil, today) == []
+    assert Certificate.date_warnings(nil, nil, nil, today) == []
+  end
+
+  test "an expiry on or before today goes in as a past award" do
+    assert Certificate.expired_by?(~D[2010-06-26], ~D[2026-10-24])
+    assert Certificate.expired_by?(~D[2026-10-24], ~D[2026-10-24])
+    refute Certificate.expired_by?(~D[2029-10-18], ~D[2026-10-24])
+    refute Certificate.expired_by?(nil, ~D[2026-10-24])
   end
 
   test "the expiry fills in from D4H's length, else the member's last award" do

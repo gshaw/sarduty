@@ -81,7 +81,9 @@ defmodule Web.CertificateLiveTest do
 
     {:ok, lv, _html} =
       lv
-      |> form("#accept-form", certificate: %{qualification_id: ctx.qualification.id})
+      |> form("#accept-form",
+        certificate: %{qualification_id: ctx.qualification.id, confirmed: true}
+      )
       |> render_submit()
       |> follow_redirect(ctx.conn)
 
@@ -93,6 +95,78 @@ defmodule Web.CertificateLiveTest do
     award |> Ecto.Changeset.change(d4h_document_id: nil) |> Repo.update!()
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
     assert has_element?(lv, "#certificate-file-gone", "when the certificate was accepted")
+    assert has_element?(lv, "#certificate-fix", "Fix the award in D4H.")
+  end
+
+  test "with no qualification picked, the team admin picks one and checks it", ctx do
+    wfa =
+      qualification_fixture(ctx.team, %{title: "Wilderness First Aid", expires_months_default: 36})
+
+    certificate =
+      certificate_fixture(ctx.member, ctx.qualification, %{
+        qualification_id: nil,
+        ends_on: nil,
+        note: "The 40-hour course."
+      })
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{certificate.id}")
+    assert has_element?(lv, "h1", "Certificate from Sam Rivera")
+    assert has_element?(lv, "#certificate-note", "The 40-hour course.")
+
+    assert has_element?(
+             lv,
+             "#accept-form",
+             "Sam did not select one. Read it from the certificate."
+           )
+
+    # Picking one fills in its expiry, and the box names what goes.
+    lv |> form("#accept-form", certificate: %{qualification_id: wfa.id}) |> render_change()
+    assert has_element?(lv, "#certificate_ends_on[value='2029-10-18']")
+    assert has_element?(lv, "#accept-form", "New for Sam: no award of it yet.")
+
+    assert has_element?(
+             lv,
+             "label[for=certificate_confirmed]",
+             "It is Wilderness First Aid, Oct 18, 2026 to Oct 18, 2029."
+           )
+
+    html = lv |> form("#accept-form", certificate: %{qualification_id: wfa.id}) |> render_submit()
+    assert html =~ "Check the certificate, then select the box"
+    assert %{status: :waiting, qualification_id: nil} = Repo.reload!(certificate)
+
+    # A box selected for one qualification clears when another is picked.
+    values = %{qualification_id: wfa.id, confirmed: true}
+    lv |> form("#accept-form", certificate: values) |> render_change()
+    assert has_element?(lv, "#certificate_confirmed[checked]")
+
+    lv
+    |> form("#accept-form", certificate: %{values | qualification_id: ctx.qualification.id})
+    |> render_change()
+
+    refute has_element?(lv, "#certificate_confirmed[checked]")
+  end
+
+  test "dates that look wrong are a warning, and an old certificate a past award", ctx do
+    wfa =
+      qualification_fixture(ctx.team, %{title: "Wilderness First Aid", expires_months_default: 36})
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    refute has_element?(lv, "#certificate-date-warnings")
+
+    values = %{qualification_id: wfa.id, starts_on: "2099-10-18", ends_on: "2100-10-18"}
+    lv |> form("#accept-form", certificate: values) |> render_change()
+    assert has_element?(lv, "#certificate-date-warnings", "The start is after today.")
+
+    assert has_element?(
+             lv,
+             "#certificate-date-warnings",
+             "Wilderness First Aid lasts 3 years. These dates are 1 year apart."
+           )
+
+    values = %{values | starts_on: "2007-06-26", ends_on: "2010-06-26"}
+    lv |> form("#accept-form", certificate: values) |> render_change()
+    refute has_element?(lv, "#certificate-date-warnings")
+    assert has_element?(lv, "#accept-form", "Already expired. It goes on record as a past award.")
   end
 
   test "a team admin declines it with a reason the member sees", ctx do
@@ -186,7 +260,10 @@ defmodule Web.CertificateLiveTest do
     assert has_element?(lv, "#certificate-accept", "Attach certificate")
 
     {:ok, _lv, _html} =
-      lv |> form("#accept-form") |> render_submit() |> follow_redirect(ctx.conn)
+      lv
+      |> form("#accept-form", certificate: %{confirmed: true})
+      |> render_submit()
+      |> follow_redirect(ctx.conn)
 
     assert_received {:post, "/documents"}
     refute_received {:post, "/member-qualification-awards"}

@@ -70,7 +70,7 @@ defmodule App.Operation.AcceptCertificate do
       {:ok, current}
     else
       current
-      |> Certificate.build_changeset(params, SaveCertificate.qualification_ids(current.team_id))
+      |> Certificate.accept_changeset(params, SaveCertificate.qualification_ids(current.team_id))
       |> Repo.update()
     end
   end

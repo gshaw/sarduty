@@ -22,6 +22,7 @@ defmodule Web.MeLive do
   alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
   alias Service.Format
+  alias Web.CertificateText
   alias Web.Components.MemberSidebar
   alias Web.QualificationText
 
@@ -330,12 +331,14 @@ defmodule Web.MeLive do
       <.a
         id={"certificate-edit-#{@certificate.id}"}
         navigate={~p"/teams/#{@team}/me/certificates/#{@certificate.id}/edit"}
-      >{qualification_title(@certificate)}</.a>
+      >{CertificateText.title(@certificate)}</.a>
     <% else %>
-      {qualification_title(@certificate)}
+      {CertificateText.title(@certificate)}
     <% end %>
     <span :if={@certificate.status == :waiting} class="hint block">
-      Sent {Format.date_short(@certificate.inserted_at, @team.timezone)}. A team admin looks at it next.
+      Sent {Format.date_short(@certificate.inserted_at, @team.timezone)}. {if @certificate.qualification_id,
+        do: "A team admin looks at it next.",
+        else: "A team admin selects the qualification next."}
     </span>
     <span :if={@certificate.status == :declined} class="hint block">
       {@certificate.decline_reason}
@@ -346,13 +349,10 @@ defmodule Web.MeLive do
       href="#"
       phx-click="delete-certificate"
       phx-value-id={@certificate.id}
-      data-confirm={"Delete your #{qualification_title(@certificate)} certificate?"}
+      data-confirm={CertificateText.delete_question(@certificate)}
     >Delete</.a>
     """
   end
-
-  defp qualification_title(%{qualification: %{title: title}}), do: title
-  defp qualification_title(_certificate), do: "Certificate"
 
   attr :team, :map, required: true
   attr :card, :map, default: nil

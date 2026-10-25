@@ -7,7 +7,6 @@ defmodule App.Model.Certificate do
   alias App.Model.CertificateFile
   alias App.Model.ChangeSet
   alias App.Model.Member
-  alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Repo
@@ -31,6 +30,8 @@ defmodule App.Model.Certificate do
     field :file_name, :string
     field :content_type, :string
     field :file_size, :integer
+    # The member's note for the team admin, such as which course it was.
+    field :note, TrimmedString, redact: true
     field :decline_reason, TrimmedString, redact: true
     field :decided_at, :utc_datetime_usec
     # Set once the award is in D4H, even when its file is not yet.
@@ -40,17 +41,35 @@ defmodule App.Model.Certificate do
   end
 
   @doc """
-  The qualification and dates, from the member or a team admin. `qualification_ids` are
-  the ones it may have: the team's.
+  What the member sends: the qualification if they know it, the dates, and a note.
+  `qualification_ids` are the ones it may have: the team's.
   """
-  def build_changeset(data, params, qualification_ids) do
+  def member_changeset(data, params, qualification_ids) do
+    data
+    |> cast(params, [:qualification_id, :starts_on, :ends_on, :note])
+    |> validate_dates(qualification_ids)
+    |> validate_length(:note, max: 300, message: "Keep the note under 300 characters")
+    |> App.Validate.in_field_order([:qualification_id, :starts_on, :ends_on, :note])
+  end
+
+  @doc """
+  What a team admin accepts: a qualification, the dates, and `confirmed`, the box they
+  select once they have checked them against the certificate. Nothing keeps it.
+  """
+  def accept_changeset(data, params, qualification_ids) do
     data
     |> cast(params, [:qualification_id, :starts_on, :ends_on])
     |> validate_required([:qualification_id], message: "Select a qualification")
+    |> validate_dates(qualification_ids)
+    |> validate_acceptance(:confirmed, message: "Check the certificate, then select the box")
+    |> App.Validate.in_field_order([:qualification_id, :starts_on, :ends_on, :confirmed])
+  end
+
+  defp validate_dates(changeset, qualification_ids) do
+    changeset
     |> validate_required([:starts_on], message: "Enter the date on the certificate")
     |> validate_inclusion(:qualification_id, qualification_ids, message: "Select a qualification")
     |> validate_ends_after_start()
-    |> App.Validate.in_field_order([:qualification_id, :starts_on, :ends_on])
   end
 
   defp validate_ends_after_start(changeset) do
@@ -100,6 +119,41 @@ defmodule App.Model.Certificate do
   end
 
   defp months(_qualification, _award), do: nil
+
+  @doc """
+  What looks wrong about the dates, for the team admin to check: never an error, since a
+  certificate can be odd and still right. `:starts_after_today`, or the expiry against
+  `default`, `default_ends_on/3`'s answer: `{:length, usual_months, months}` when they
+  are over a month apart, or `{:no_expiry, usual_months}`.
+  """
+  def date_warnings(starts_on, ends_on, default, %Date{} = today) do
+    after_today = if starts_on && Date.after?(starts_on, today), do: [:starts_after_today]
+    (after_today || []) ++ length_warnings(starts_on, ends_on, default)
+  end
+
+  defp length_warnings(_starts_on, _ends_on, nil), do: []
+  defp length_warnings(_starts_on, nil, {_usual_ends_on, months}), do: [{:no_expiry, months}]
+
+  defp length_warnings(starts_on, ends_on, {usual_ends_on, months}) do
+    if abs(Date.diff(ends_on, usual_ends_on)) > 31,
+      do: [{:length, months, months_between(starts_on, ends_on)}],
+      else: []
+  end
+
+  # Whole months from one date to the other, to the nearest.
+  defp months_between(starts_on, ends_on) do
+    months = (ends_on.year - starts_on.year) * 12 + ends_on.month - starts_on.month
+
+    cond do
+      ends_on.day - starts_on.day >= 15 -> months + 1
+      ends_on.day - starts_on.day <= -15 -> months - 1
+      true -> months
+    end
+  end
+
+  @doc "Whether the award would be over already: it goes in as a past award."
+  def expired_by?(nil, _today), do: false
+  def expired_by?(%Date{} = ends_on, %Date{} = today), do: not Date.after?(ends_on, today)
 
   @doc "Whether the member can change it: while it waits and nothing is in D4H yet."
   def member_can_change?(%Certificate{status: status, d4h_award_id: award_id}),
@@ -174,19 +228,5 @@ defmodule App.Model.Certificate do
     Certificate
     |> Repo.get_by!(id: id, team_id: member.team_id, member_id: member.id)
     |> Repo.preload(:qualification)
-  end
-
-  @doc """
-  The member's latest award of the certificate's qualification in the copy: what D4H
-  has now. Nil when they have none.
-  """
-  def latest_award(%Certificate{qualification_id: nil}), do: nil
-
-  def latest_award(%Certificate{} = certificate) do
-    MemberQualificationAward
-    |> where(member_id: ^certificate.member_id, qualification_id: ^certificate.qualification_id)
-    |> order_by([a], desc_nulls_last: a.starts_at, desc: a.id)
-    |> limit(1)
-    |> Repo.one()
   end
 end
