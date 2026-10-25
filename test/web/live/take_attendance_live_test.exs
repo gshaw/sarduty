@@ -5,6 +5,8 @@ defmodule Web.TakeAttendanceLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Repo
+
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     %{conn: log_in_user(conn, user), team: team}
@@ -57,13 +59,31 @@ defmodule Web.TakeAttendanceLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
     assert has_element?(lv, "#no-activity", "No activity now.")
-    assert has_element?(lv, "#next-activity", "Swiftwater")
-    assert has_element?(lv, "#next-activity", "Taking attendance opens at")
+    assert has_element?(lv, "#next-#{next.id}", "Swiftwater")
+    assert has_element?(lv, "#opens-at", "Taking attendance opens at")
+    assert has_element?(lv, "#opens-at", "2 hours before it starts.")
 
     assert has_element?(
              lv,
              ~s{#next-activity a[href="/teams/#{team.subdomain}/activities/#{next.id}"]}
            )
+  end
+
+  # The tick stands in for the clock: moving the activity moves its window over now.
+  test "left open, it opens the scanner when an activity's window opens", %{
+    conn: conn,
+    team: team
+  } do
+    later = at(team, 3)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
+    assert has_element?(lv, "#next-#{later.id}")
+
+    later
+    |> Ecto.Changeset.change(started_at: hours_from_now(1), finished_at: hours_from_now(3))
+    |> Repo.update!()
+
+    send(lv.pid, :tick)
+    assert_redirect(lv, ~p"/teams/#{team}/activities/#{later.id}/take-attendance")
   end
 
   test "with nothing coming up, says so", %{conn: conn, team: team} do
@@ -88,6 +108,23 @@ defmodule Web.TakeAttendanceLiveTest do
 
     at(team, 1)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{rope.id}/take-attendance")
+
+    assert has_element?(
+             lv,
+             ~s{#other-activities[href="/teams/#{team.subdomain}/take-attendance"]}
+           )
+  end
+
+  test "a scanner left on last week's activity links to the one on now", %{
+    conn: conn,
+    team: team
+  } do
+    last_week = at(team, -170)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{last_week.id}/take-attendance")
+    refute has_element?(lv, "#other-activities")
+
+    at(team, 1)
+    send(lv.pid, :tick)
 
     assert has_element?(
              lv,
@@ -130,6 +167,8 @@ defmodule Web.TakeAttendanceLiveTest do
       conn = get(build_conn(), ~p"/teams/#{team}/take-attendance")
       assert redirected_to(conn) == ~p"/login"
       assert get_session(conn, :user_return_to) == "/teams/#{team.subdomain}/take-attendance"
+      # No toast to cover the line on the login page.
+      refute Phoenix.Flash.get(conn.assigns.flash, :error)
 
       {:ok, lv, _html} = conn |> recycle() |> live(~p"/login")
       assert has_element?(lv, "#login-take-attendance", "Log in to take attendance.")
@@ -143,6 +182,11 @@ defmodule Web.TakeAttendanceLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/login/code")
       assert has_element?(lv, "#login-take-attendance")
       assert has_element?(lv, "#remember-shared-device", "leave this unticked")
+    end
+
+    test "another team page keeps the toast", %{team: team} do
+      conn = get(build_conn(), ~p"/teams/#{team}")
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Log in to see this page."
     end
 
     test "other pages don't add the lines" do

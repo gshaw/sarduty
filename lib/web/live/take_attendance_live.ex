@@ -5,26 +5,33 @@ defmodule Web.TakeAttendanceLive do
   alias Service.Format
 
   # The team's Take attendance page (#475), for an iPad at the hall: the activities
-  # taking attendance now as big buttons. With one, it opens that activity's scanner. Its
-  # address doesn't change, so a team prints a QR code of it; logged out, it goes to the
-  # login page, and logging in comes back here.
+  # taking attendance now as big buttons. With one, it opens that activity's scanner. It
+  # looks again each minute, so an iPad left on it opens the scanner when the window
+  # does. Its address doesn't change, so a team prints a QR code of it; logged out, it
+  # goes to the login page, and logging in comes back here.
+  @tick_ms :timer.minutes(1)
+
   def mount(_params, _session, socket) do
+    if connected?(socket), do: Process.send_after(self(), :tick, @tick_ms)
+    {:ok, socket |> assign(page_title: "Take attendance") |> load(DateTime.utc_now())}
+  end
+
+  def handle_info(:tick, socket) do
+    Process.send_after(self(), :tick, @tick_ms)
+    {:noreply, load(socket, DateTime.utc_now())}
+  end
+
+  defp load(socket, now) do
     team = socket.assigns.current_team
-    now = DateTime.utc_now()
 
     case Activity.taking_attendance_now(team, now) do
+      # Replace, so Back from the scanner doesn't land here and bounce again.
       [activity] ->
-        # Replace, so Back from the scanner doesn't land here and bounce again.
-        {:ok, push_navigate(socket, to: scanner_path(team, activity), replace: true)}
+        push_navigate(socket, to: scanner_path(team, activity), replace: true)
 
       activities ->
-        {:ok,
-         assign(socket,
-           page_title: "Take attendance",
-           now: now,
-           activities: activities,
-           next: if(activities == [], do: Activity.next_after(team, now))
-         )}
+        next = if activities == [], do: Activity.next_after(team, now)
+        assign(socket, now: now, activities: activities, next: next)
     end
   end
 
@@ -45,26 +52,31 @@ defmodule Web.TakeAttendanceLive do
     <h1 class="title">Take attendance</h1>
 
     <ul :if={@activities != []} id="activities" class="row-links">
-      <li :for={activity <- @activities}>
-        <.row_link id={"activity-#{activity.id}"} navigate={scanner_path(@current_team, activity)}>
-          <strong class="text-link text-lg">{activity.title}</strong>
-          <span class="hint block">
-            <.activity_kind_mark activity={activity} />
-            · {when_text(activity, @current_team, @now)}<span :if={activity.address}> · {activity.address}</span>
-          </span>
-        </.row_link>
-      </li>
+      <.activity_row
+        :for={activity <- @activities}
+        id={"activity-#{activity.id}"}
+        activity={activity}
+        navigate={scanner_path(@current_team, activity)}
+        team={@current_team}
+        now={@now}
+      />
     </ul>
 
     <div :if={@activities == []} id="no-activity">
       <p class="lead">No activity now.</p>
-      <p :if={@next} id="next-activity">
-        Next is <.a navigate={~p"/teams/#{@current_team}/activities/#{@next.id}"}>{@next.title}</.a>, {when_text(
-          @next,
-          @current_team,
-          @now
-        )}. Taking attendance opens at {opens_text(@next, @current_team, @now)}.
-      </p>
+      <div :if={@next} id="next-activity">
+        <h2 class="heading">Next activity</h2>
+        <ul class="row-links">
+          <.activity_row
+            id={"next-#{@next.id}"}
+            activity={@next}
+            navigate={~p"/teams/#{@current_team}/activities/#{@next.id}"}
+            team={@current_team}
+            now={@now}
+          />
+        </ul>
+        <p id="opens-at">{opens_text(@next, @current_team)}</p>
+      </div>
       <p :if={!@next} id="nothing-coming">Nothing coming up.</p>
     </div>
 
@@ -98,19 +110,38 @@ defmodule Web.TakeAttendanceLive do
     """
   end
 
+  attr :id, :string, required: true
+  attr :activity, :any, required: true
+  attr :navigate, :string, required: true
+  attr :team, :any, required: true
+  attr :now, :any, required: true
+
+  defp activity_row(assigns) do
+    ~H"""
+    <li>
+      <.row_link id={@id} navigate={@navigate}>
+        <strong class="text-link text-lg">{@activity.title}</strong>
+        <span class="hint block">
+          <.activity_kind_mark activity={@activity} />
+          · {when_text(@activity, @team, @now)}<span :if={@activity.address}> · {@activity.address}</span>
+        </span>
+      </.row_link>
+    </li>
+    """
+  end
+
   defp when_text(activity, team, now) do
     "#{Format.day_coming_up(activity.started_at, now, team.timezone)} " <>
       "#{Format.time_short(activity.started_at, team.timezone)}–" <>
       Format.time_short(activity.finished_at, team.timezone)
   end
 
-  # The time alone when it's the same day as the start, and with its day otherwise.
-  defp opens_text(activity, team, now) do
+  # The time alone: the row above has the day, and the window is counted from its start.
+  defp opens_text(activity, team) do
     {opens_at, _closes_at} = Activity.attendance_window(activity)
+    hours = Format.duration(Activity.attendance_window_hours() * 60)
 
-    if Format.day_coming_up(opens_at, now, team.timezone) ==
-         Format.day_coming_up(activity.started_at, now, team.timezone),
-       do: Format.time_short(opens_at, team.timezone),
-       else: Format.month_day_time(opens_at, team.timezone)
+    "Taking attendance opens at #{Format.time_short(opens_at, team.timezone)}, " <>
+      "#{hours} before it starts."
   end
 end

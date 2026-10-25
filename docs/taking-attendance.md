@@ -16,16 +16,19 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
 hall. It lists the activities taking attendance now
 (`Activity.taking_attendance_now/2`) as rows to tap. With one, it opens that activity's
 scanner, replacing itself so Back doesn't bounce. With none, it names the next activity
-and when taking attendance opens. It shows its own address with Copy link, so a team
-adds it to the iPad's Home Screen or prints a QR code of it for the hall or command post.
-The address can't move ([urls.md](urls.md)). The scanner links back to it, Other
-activities now, while more than one activity is on. Take attendance is in the side
+and when taking attendance opens. It looks again each minute, so an iPad left on it
+opens the scanner when the window opens. It shows its own address with Copy link, so a
+team adds it to the iPad's Home Screen or prints a QR code of it for the hall or command
+post. The address can't move ([urls.md](urls.md)). The scanner links back to it, Other
+activities now, while another activity is taking attendance: one that overlaps, or
+tonight's when Safari kept last week's scanner open. Take attendance is in the side
 navigation for members and team admins, always.
 
 Logged out, it goes to the login page as every team page does, and logging in comes back
 to it. When the page to come back to is a Take attendance page, the login pages say "Log
 in to take attendance.", and Remember me's hint says to leave it unticked on a shared
-device and log out when done.
+device and log out when done. The "Log in to see this page." toast is left off there,
+since toasts stay until tapped and it would cover that line.
 
 ## What must stay true
 

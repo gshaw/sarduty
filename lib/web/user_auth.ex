@@ -424,11 +424,19 @@ defmodule Web.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "Log in to see this page.")
+      |> put_login_flash()
       |> maybe_store_return_to()
       |> redirect(to: ~p"/login")
       |> halt()
     end
+  end
+
+  # On the way to Take attendance the login page says what logging in is for (#475), so a
+  # toast there would only cover it on the hall's iPad.
+  defp put_login_flash(conn) do
+    if conn.method == "GET" and conn |> current_path() |> Web.TakeAttendanceLive.path?(),
+      do: conn,
+      else: put_flash(conn, :error, "Log in to see this page.")
   end
 
   def require_authorized_team_subdomain(conn, _opts) do

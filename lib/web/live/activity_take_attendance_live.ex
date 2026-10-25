@@ -52,8 +52,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       page_title: "#{activity.title} · Take attendance",
       activity: activity,
       recorder: recorder(socket.assigns, now),
-      # Overlapping activities, so whoever holds the iPad can switch to the other one.
-      others_now?: length(Activity.taking_attendance_now(activity.team, now)) > 1,
+      others_now?: others_now?(activity, now),
       team: activity.team,
       members: members,
       kind: "arrived",
@@ -97,7 +96,9 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   def handle_info(:tick, socket) do
     Process.send_after(self(), :tick, @tick_ms)
-    {:noreply, reload(socket, DateTime.utc_now())}
+    now = DateTime.utc_now()
+    socket = reload(socket, now)
+    {:noreply, assign(socket, others_now?: others_now?(socket.assigns.activity, now))}
   end
 
   # Only clears the confirmation it was set for, not a newer one.
@@ -233,6 +234,14 @@ defmodule Web.ActivityTakeAttendanceLive do
     if Activity.deleted?(activity),
       do: Web.ActivityLive.leave_deleted(socket, activity),
       else: assign_closed(socket, now)
+  end
+
+  # Another activity is taking attendance, so whoever holds the iPad can switch to it:
+  # one that overlaps, or tonight's when this page is still on last week's.
+  defp others_now?(activity, now) do
+    activity.team
+    |> Activity.taking_attendance_now(now)
+    |> Enum.any?(&(&1.id != activity.id))
   end
 
   # `{kind, text}`: `:arrived` or `:left` for a good scan, `:error`, or `:info`. The kind
