@@ -338,7 +338,7 @@ defmodule Web.MeLive do
     <span :if={@certificate.status == :waiting} class="hint block">
       Sent {Format.date_short(@certificate.inserted_at, @team.timezone)}. {if @certificate.qualification_id,
         do: "A team admin looks at it next.",
-        else: "A team admin picks the qualification next."}
+        else: "A team admin selects the qualification next."}
     </span>
     <span :if={@certificate.status == :declined} class="hint block">
       {@certificate.decline_reason}

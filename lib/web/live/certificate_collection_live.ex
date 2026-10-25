@@ -85,7 +85,7 @@ defmodule Web.CertificateCollectionLive do
           :if={certificate.status == :waiting and is_nil(certificate.qualification_id)}
           class="hint block"
         >
-          No qualification picked
+          No qualification selected
         </span>
         <span :if={certificate.status == :declined} class="hint block">
           {certificate.decline_reason}

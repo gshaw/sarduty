@@ -142,7 +142,7 @@ defmodule Web.MeCertificateFormLive do
         prompt="Select a qualification"
         options={@options}
       >
-        Not sure? Leave it blank. A team admin picks it from the certificate.
+        Not sure? Leave it blank. A team admin reads it from the certificate.
       </.input>
       <.input field={@form[:starts_on]} type="date" label="Start">
         The date on the certificate.

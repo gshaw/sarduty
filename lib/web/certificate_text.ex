@@ -30,10 +30,10 @@ defmodule Web.CertificateText do
     who =
       cond do
         is_nil(selected_id) and is_nil(certificate.qualification_id) ->
-          "#{first} did not pick one. Read it from the certificate."
+          "#{first} did not select one. Read it from the certificate."
 
         selected_id == certificate.qualification_id ->
-          "#{first} picked this. Check it against the certificate."
+          "#{first} selected this. Check it against the certificate."
 
         true ->
           nil

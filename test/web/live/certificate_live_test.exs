@@ -112,7 +112,12 @@ defmodule Web.CertificateLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{certificate.id}")
     assert has_element?(lv, "h1", "Certificate from Sam Rivera")
     assert has_element?(lv, "#certificate-note", "The 40-hour course.")
-    assert has_element?(lv, "#accept-form", "Sam did not pick one. Read it from the certificate.")
+
+    assert has_element?(
+             lv,
+             "#accept-form",
+             "Sam did not select one. Read it from the certificate."
+           )
 
     # Picking one fills in its expiry, and the box names what goes.
     lv |> form("#accept-form", certificate: %{qualification_id: wfa.id}) |> render_change()
