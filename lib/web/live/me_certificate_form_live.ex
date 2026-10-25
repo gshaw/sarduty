@@ -1,6 +1,8 @@
 defmodule Web.MeCertificateFormLive do
   use Web, {:live_view_app_layout, access: :member}
 
+  import Web.Components.FileDrop
+
   alias App.Model.Certificate
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
@@ -93,47 +95,23 @@ defmodule Web.MeCertificateFormLive do
       phx-submit="save"
     >
       <.error_summary form={@form} />
-      <div id="certificate-file" class="mb-6">
-        <.label for={@uploads.certificate.ref}>Certificate</.label>
-        <.hint>
-          A photo or a PDF, up to {Format.file_size(Service.CertificateFile.max_bytes())}.
-        </.hint>
-        <.live_file_input upload={@uploads.certificate} class="my-2" />
-        <.error :for={error <- upload_errors(@uploads.certificate)}>
-          {upload_error(error, @uploads.certificate, "a photo or a PDF")}
-        </.error>
-        <.error :for={error <- @form[:file_name].errors}>{translate_error(error)}</.error>
-        <div
-          :for={entry <- @uploads.certificate.entries}
-          id={"certificate-entry-#{entry.ref}"}
-          class="media mt-2"
-        >
-          <.live_img_preview :if={image?(entry)} entry={entry} class="photo-sm" />
-          <div>
-            <span class="block">{entry.client_name}</span>
-            <span class="hint block">{Format.file_size(entry.client_size)}</span>
-            <.error :for={error <- upload_errors(@uploads.certificate, entry)}>
-              {upload_error(error, @uploads.certificate, "a photo or a PDF")}
-            </.error>
-            <.a
-              href="#"
-              phx-click="cancel-upload"
-              phx-value-ref={entry.ref}
-              aria-label={"Remove #{entry.client_name}"}
-            >Remove</.a>
-          </div>
-        </div>
-        <p
-          :if={@certificate && @uploads.certificate.entries == []}
-          id="certificate-sent-file"
-          class="hint"
-        >
-          Sent: <.a
-            href={~p"/teams/#{@member.team}/me/certificates/#{@certificate.id}/file"}
-            target="_blank"
-          >{@certificate.file_name}</.a>, {Format.file_size(@certificate.file_size)}. Select a file to send another.
-        </p>
-      </div>
+      <.file_drop
+        id="certificate-file"
+        upload={@uploads.certificate}
+        label="Certificate"
+        kinds="a photo or a PDF"
+        errors={Enum.map(@form[:file_name].errors, &translate_error/1)}
+      >
+        A photo or a PDF, up to {Format.file_size(Service.CertificateFile.max_bytes())}.
+        <:current :if={@certificate && @uploads.certificate.entries == []}>
+          <p id="certificate-sent-file" class="hint mb-0">
+            Sent: <.a
+              href={~p"/teams/#{@member.team}/me/certificates/#{@certificate.id}/file"}
+              target="_blank"
+            >{@certificate.file_name}</.a>, {Format.file_size(@certificate.file_size)}. Select a file to send another.
+          </p>
+        </:current>
+      </.file_drop>
 
       <.input
         field={@form[:qualification_id]}
@@ -183,8 +161,6 @@ defmodule Web.MeCertificateFormLive do
     </.form>
     """
   end
-
-  defp image?(entry), do: String.starts_with?(entry.client_type, "image/")
 
   def handle_event("validate", %{"certificate" => params}, socket),
     do: {:noreply, assign_form(socket, params, :validate)}

@@ -1,0 +1,77 @@
+<.shell title="File drop" current={:file_drop}>
+  <h1>File drop</h1>
+  <p class="lead">Drop, paste, or select a file to upload.</p>
+
+  <div class="demo">
+    <div class="measure">
+      <.file_drop
+        id="file-drop-demo"
+        upload={SampleData.sample_upload(:empty)}
+        label="Certificate"
+        kinds="a photo or a PDF"
+      >
+        A photo or a PDF, up to 10 MB.
+      </.file_drop>
+    </div>
+  </div>
+
+  <h3>A file over it</h3>
+  <div class="demo">
+    <div class="measure">
+      <.file_drop
+        id="file-drop-demo-over"
+        upload={SampleData.sample_upload(:empty)}
+        label="Certificate"
+        kinds="a photo or a PDF"
+        class="phx-drop-target-active"
+      />
+    </div>
+  </div>
+
+  <h3>A file chosen</h3>
+  <div class="demo">
+    <div class="measure">
+      <.file_drop
+        id="file-drop-demo-chosen"
+        upload={SampleData.sample_upload(:chosen)}
+        label="Certificate"
+        kinds="a photo or a PDF"
+      />
+    </div>
+  </div>
+
+  <h3>Refused</h3>
+  <div class="demo">
+    <div class="measure">
+      <.file_drop
+        id="file-drop-demo-refused"
+        upload={SampleData.sample_upload(:too_large)}
+        label="Certificate"
+        kinds="a photo or a PDF"
+      />
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Every upload: a certificate, a member's photo, a signature, or a logo. One file at a time.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Drop a file on the box, or select the browser's own button.</li>
+    <li>
+      Paste a file anywhere on the page, such as a screenshot. It works only on a page with one file drop.
+    </li>
+    <li>A photo shows small once chosen, and Remove takes it off.</li>
+    <li>On a phone or iPad it is the button alone, which offers the camera.</li>
+    <li>What it has now, such as the current logo, shows above the box.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.file_drop upload=&#123;@uploads.x&#125; label="…" kinds="a photo or a PDF"&gt;hint&lt;/.file_drop&gt;</code>
+    for an upload from <code>allow_upload/3</code>. Its Remove sends <code>cancel-upload</code>
+    with the entry's ref.
+  </p>
+</.shell>

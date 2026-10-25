@@ -243,7 +243,7 @@ defmodule Web.Settings.TeamLiveTest do
 
       upload(lv, "not an image")
 
-      assert has_element?(lv, "#signature-error", "Use a PNG or JPEG image of the signature.")
+      assert has_element?(lv, "#team-signature", "Use a PNG or JPEG image of the signature.")
       assert Repo.get!(Team, team.id).signature == nil
     end
   end

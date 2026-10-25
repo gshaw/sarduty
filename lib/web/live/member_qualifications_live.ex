@@ -1,6 +1,8 @@
 defmodule Web.MemberQualificationsLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FileDrop
+
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
@@ -70,7 +72,7 @@ defmodule Web.MemberQualificationsLive do
     end
   end
 
-  def handle_event("cancel-certificate", %{"ref" => ref}, socket),
+  def handle_event("cancel-upload", %{"ref" => ref}, socket),
     do: {:noreply, cancel_upload(socket, :certificate, ref)}
 
   def handle_event("remove-award", %{"id" => id}, socket) do
@@ -241,28 +243,14 @@ defmodule Web.MemberQualificationsLive do
           <.input field={@form[:starts_on]} type="date" label="Start" />
           <.input field={@form[:ends_on]} type="date" label="End (optional)" />
         </div>
-        <div id="award-certificate" class="mb-6">
-          <.label for={@upload.ref}>Certificate (optional)</.label>
-          <.hint>
-            A photo or a PDF, up to {Service.Format.file_size(Service.CertificateFile.max_bytes())}.
-          </.hint>
-          <.live_file_input upload={@upload} class="my-2" />
-          <.error :for={error <- upload_errors(@upload)}>
-            {upload_error(error, @upload, "a photo or a PDF")}
-          </.error>
-          <div :for={entry <- @upload.entries} id={"award-certificate-#{entry.ref}"} class="hint">
-            {entry.client_name}, {Service.Format.file_size(entry.client_size)} ·
-            <.a
-              href="#"
-              phx-click="cancel-certificate"
-              phx-value-ref={entry.ref}
-              aria-label={"Remove #{entry.client_name}"}
-            >Remove</.a>
-            <.error :for={error <- upload_errors(@upload, entry)}>
-              {upload_error(error, @upload, "a photo or a PDF")}
-            </.error>
-          </div>
-        </div>
+        <.file_drop
+          id="award-certificate"
+          upload={@upload}
+          label="Certificate (optional)"
+          kinds="a photo or a PDF"
+        >
+          A photo or a PDF, up to {Service.Format.file_size(Service.CertificateFile.max_bytes())}.
+        </.file_drop>
         <.form_actions>
           <.button variant={:success}>Award qualification</.button>
         </.form_actions>

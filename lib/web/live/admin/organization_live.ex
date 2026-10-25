@@ -2,6 +2,7 @@ defmodule Web.Admin.OrganizationLive do
   use Web, :live_view_app_layout
 
   import Web.Components.CopyButton
+  import Web.Components.FileDrop
 
   alias App.Model.Organization
   alias App.Model.Team
@@ -65,26 +66,23 @@ defmodule Web.Admin.OrganizationLive do
         each team name its own.
       </.input>
 
-      <div class="mb-6">
-        <.label for={@uploads.logo.ref}>Logo</.label>
-        <div class="media my-2">
+      <.file_drop
+        id="organization-logo-file"
+        upload={@uploads.logo}
+        label="Logo"
+        kinds="a PNG or JPEG"
+        errors={for {message, _opts} <- @form[:logo].errors, do: message}
+      >
+        PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
+        <:current :if={@organization.logo}>
           <img
-            :if={@organization.logo}
             id="organization-logo"
             src={Web.OrganizationController.logo_url(@organization)}
             class="size-16 rounded border border-border-subtle"
             alt=""
           />
-          <.live_file_input upload={@uploads.logo} />
-        </div>
-        <.hint>
-          PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
-        </.hint>
-        <.error :for={error <- upload_errors(@uploads.logo)}>
-          {upload_error(error, @uploads.logo, "a PNG or JPEG")}
-        </.error>
-        <.error :for={{message, _opts} <- @form[:logo].errors}>{message}</.error>
-      </div>
+        </:current>
+      </.file_drop>
 
       <fieldset id="organization-teams">
         <legend>Member teams</legend>
@@ -138,6 +136,9 @@ defmodule Web.Admin.OrganizationLive do
 
     {:noreply, socket |> assign_form(changeset) |> assign(team_ids: team_ids(params, socket))}
   end
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :logo, ref)}
 
   def handle_event("save", params, socket) do
     logo =
