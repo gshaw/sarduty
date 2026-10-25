@@ -148,13 +148,14 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   @doc """
   A team admin's review at `now`: `preview/2`, and when it leaves nothing to send or fix,
-  the activity's attendance counts as sent as of `now` (Activity.mark_attendance_sent/2),
-  so Needs attention stops listing it. Take `now` before the review reads anything, so a
-  scan during the read waits for the next one.
+  or D4H has published the activity, which makes its attendance final, the attendance
+  counts as sent as of `now` (Activity.mark_attendance_sent/2), so Needs attention stops
+  listing it. Take `now` before the review reads anything, so a scan during the read
+  waits for the next one.
   """
   def review(%Team{} = team, %Activity{} = activity, now) do
-    with {:ok, %{published: false, changes: changes}} = review <- preview(team, activity) do
-      if up_to_date?(changes), do: Activity.mark_attendance_sent(activity, now)
+    with {:ok, %{published: published, changes: changes}} = review <- preview(team, activity) do
+      if published or up_to_date?(changes), do: Activity.mark_attendance_sent(activity, now)
       review
     end
   end

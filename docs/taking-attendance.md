@@ -50,8 +50,10 @@ since toasts stay until tapped and it would cover that line.
 - **Needs attention says there's attendance to send.** A team admin no longer makes a
   link, so nothing else tells them members have scanned.
   [TeamDashboardViewData.attendance_to_send/2](../lib/app/view_data/team_dashboard_view_data.ex)
-  lists activities not deleted, finished in the last 30 days, with a scan since their
-  `attendance_sent_at`. A review sets it when it has nothing to send, and a send when
+  lists activities not deleted and not published, finished in the last 30 days, with a
+  scan since their `attendance_sent_at`. A published activity's attendance is final:
+  whoever published it checked it in D4H, and D4H refuses a send. A review sets
+  `attendance_sent_at` when it has nothing to send or D4H says published, and a send when
   every change went through and none waits on fixed times
   ([Activity.mark_attendance_sent/2](../lib/app/model/activity.ex)); a change left
   unchecked is the team admin's choice, and with all of them unchecked, Send reads "Send

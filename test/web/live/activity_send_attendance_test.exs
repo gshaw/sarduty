@@ -227,13 +227,14 @@ defmodule Web.ActivitySendAttendanceTest do
     refute_received {:d4h_write, _, _, _}
   end
 
-  test "a published activity can't be changed", ctx do
+  test "a published activity can't be changed, and its review clears Needs attention", ctx do
     stub_d4h(ctx, published: true)
     lv = open(ctx)
     lv |> element("#review") |> render_click()
 
-    assert has_element?(lv, "#published", "Unpublish it in D4H first")
+    assert has_element?(lv, "#published", "unpublish it in D4H first")
     refute has_element?(lv, "#send-form")
+    assert Repo.reload!(ctx.activity).attendance_sent_at
   end
 
   test "without a D4H access key, review says to save one", ctx do

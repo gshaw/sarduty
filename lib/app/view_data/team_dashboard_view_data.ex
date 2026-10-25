@@ -82,11 +82,13 @@ defmodule App.ViewData.TeamDashboardViewData do
   @attendance_to_send_days 30
 
   @doc """
-  Activities with attendance a team admin hasn't sent (#475): not deleted, finished in the
-  last #{@attendance_to_send_days} days, with a scan since their attendance was last sent
-  (Activity.mark_attendance_sent/2), or never sent. Members take attendance on their
-  own, so nothing else tells a team admin it's there. The limit keeps a scan nobody
-  means to send from waiting forever. Oldest first, each `%{id:, title:}`.
+  Activities with attendance a team admin hasn't sent (#475): not deleted, not published,
+  finished in the last #{@attendance_to_send_days} days, with a scan since their
+  attendance was last sent (Activity.mark_attendance_sent/2), or never sent. Members take
+  attendance on their own, so nothing else tells a team admin it's there. A published
+  activity's attendance is final: it can't take a send, and whoever published it has
+  checked it. The limit keeps a scan nobody means to send from waiting forever. Oldest
+  first, each `%{id:, title:}`.
   """
   def attendance_to_send(%Team{} = team, now) do
     now = DateTime.truncate(now, :second)
@@ -95,6 +97,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Activity
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
+    |> where([a], not a.is_published)
     |> where([a], a.finished_at >= ^since and a.finished_at <= ^now)
     |> join(:inner, [a], s in AttendanceScan, on: s.activity_id == a.id and s.team_id == ^team.id)
     |> where([a, s], is_nil(a.attendance_sent_at) or s.inserted_at > a.attendance_sent_at)

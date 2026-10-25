@@ -127,6 +127,20 @@ defmodule App.ViewData.TeamDashboardViewDataTest do
       assert TeamDashboardViewData.attendance_to_send(team, @now) == []
     end
 
+    test "a published activity is left out: its attendance is final" do
+      team = team_fixture()
+
+      activity =
+        team
+        |> finished(1)
+        |> Ecto.Changeset.change(is_published: true)
+        |> App.Repo.update!()
+
+      scan!(activity, member_fixture(team), DateTime.add(@now, -26, :hour))
+
+      assert TeamDashboardViewData.attendance_to_send(team, @now) == []
+    end
+
     test "a deleted activity is left out" do
       team = team_fixture()
 
