@@ -1,4 +1,4 @@
-// The door page's name box, which a plug-in barcode scanner types ID cards into (#484).
+// Take attendance's name box, which a plug-in barcode scanner types ID cards into (#484).
 // On a laptop it takes the cursor when the page opens, and back after Arriving or
 // Leaving, so the first scan goes straight in. Not on a touch screen: iOS would open
 // its keyboard over the page, and ignores focus a page sets without a tap anyway.

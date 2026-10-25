@@ -85,7 +85,7 @@
 
 /* .table-stack: on a phone each row is a block, and each cell sits under its column's
    label (data-label), so nothing hides off the side (#27). For short tables used on a
-   phone, such as the door's. The .stack-title cell names the row and spans the block,
+   phone, such as Take attendance. The .stack-title cell names the row and spans the block,
    .stack-full cells span it too, a .stack-check cell's checkbox sits at its left, and an
    empty .stack-optional cell is left out. Outside the layer, so it beats a cell's
    text-right and a table's w-fit. */
