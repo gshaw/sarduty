@@ -25,7 +25,8 @@
   .person-head-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
   .person-head-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-left: auto; }
   .avatar-lg { position: relative; width: 64px; height: 64px; overflow: hidden; font-size: var(--fs-lg); line-height: var(--lh-lg); }
-  .avatar-lg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* Opaque, so the initials under it never show through a transparent photo. */
+  .avatar-lg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: var(--bg); }
 
   /* Milestones: a grey icon per kind. A New tag marks one from the last 30 days. */
   .milestone-list > li { display: flex; gap: var(--sp-3); align-items: flex-start; padding-block: var(--sp-2); border-top: 1px solid var(--border-subtle); }
