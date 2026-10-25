@@ -14,7 +14,6 @@ defmodule Web.MemberCardLive do
   alias App.Operation.EmailMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Operation.RevokeMemberCard
-  alias App.Operation.SendTestPassUpdate
   alias App.Repo
 
   # A phone fetching the pass ticks "last fetched" over. The topic is by the URL's member
@@ -75,28 +74,6 @@ defmodule Web.MemberCardLive do
     {:noreply, assign_card(socket, nil)}
   end
 
-  # A check that Apple Wallet updates still reach phones (#76), for SAR Duty admins.
-  def handle_event(
-        "test-update",
-        _params,
-        %{assigns: %{current_user: %{is_admin: true}}} = socket
-      ) do
-    %{current_team: team, member: member} = socket.assigns
-
-    case MemberCard.find_current(team, member) do
-      nil ->
-        {:noreply, assign_card(socket, nil)}
-
-      card ->
-        {:ok, phones} = SendTestPassUpdate.call(card, DateTime.utc_now())
-        count = Service.Format.count(phones, one: "1 phone", many: "%d phones")
-        message = "Sent a test update to #{count}. Each should show a notice within a minute."
-        {:noreply, socket |> assign_card(Repo.reload!(card)) |> put_flash(:info, message)}
-    end
-  end
-
-  def handle_event("test-update", _params, socket), do: {:noreply, socket}
-
   def handle_info(:pass_fetched, socket) do
     %{current_team: team, member: member} = socket.assigns
     {:noreply, assign_card(socket, MemberCard.find_current(team, member))}
@@ -146,7 +123,6 @@ defmodule Web.MemberCardLive do
         qualifications={@qualifications}
         endorsements_on_card?={@endorsements_on_card?}
         phones={@phones}
-        admin?={@current_user.is_admin}
         member_logins?={@current_team.member_logins}
         service={@service}
       />
@@ -199,14 +175,6 @@ defmodule Web.MemberCardLive do
         <dt :if={wallet?()}>Wallet</dt>
         <dd :if={wallet?()}>
           <span id="card-phones">{wallet_status(@phones, @card, @member.team.timezone)}</span>
-          <.button
-            :if={@admin? and @phones > 0}
-            id="test-update"
-            phx-click="test-update"
-            phx-disable-with="Sending…"
-          >
-            Send test update
-          </.button>
         </dd>
       </dl>
       <.form_actions>

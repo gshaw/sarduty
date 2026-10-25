@@ -92,11 +92,10 @@ defmodule App.Operation.BuildApplePass do
 
   @doc """
   A hash of what a member sees on the pass, less the last-refreshed date, which changes
-  every day, and the test update time, which a manager pushes by hand. Updates are
-  pushed only when it changes.
+  every day. Updates are pushed only when it changes.
   """
   def fingerprint(json) do
-    back = Enum.reject(json.generic.backFields, &(&1.key in ["checked", "test"]))
+    back = Enum.reject(json.generic.backFields, &(&1.key == "checked"))
 
     json
     |> put_in([:generic, :backFields], back)
@@ -179,7 +178,7 @@ defmodule App.Operation.BuildApplePass do
     end
   end
 
-  defp back_fields(%MemberCard{member: %{team: team}} = card, code, qualifications) do
+  defp back_fields(%MemberCard{member: %{team: team}}, code, qualifications) do
     List.flatten([
       %{
         key: "verify",
@@ -188,27 +187,9 @@ defmodule App.Operation.BuildApplePass do
       },
       qualification_fields(qualifications, team.timezone),
       %{key: "checked", label: "Last updated", value: last_checked(team)},
-      test_field(card, team),
       %{key: "issuer", label: "Issued by", value: MemberCard.issued_by(team)}
     ])
   end
-
-  # Sent from the ID Card tab. The changeMessage puts a notice on the lock screen, which
-  # is how a manager sees the update arrive.
-  defp test_field(%MemberCard{pass_test_at: nil}, _team), do: []
-
-  defp test_field(card, team) do
-    %{
-      key: "test",
-      label: "Test update",
-      value: Service.Format.month_day_time_seconds(card.pass_test_at, team.timezone),
-      changeMessage: test_message(team)
-    }
-  end
-
-  # An organization's teams see no SAR Duty on the pass.
-  defp test_message(%{organization: nil}), do: "SAR Duty test update %@"
-  defp test_message(_team), do: "Test update %@"
 
   defp name_label(card, now) do
     case MemberCard.status(card, now) do

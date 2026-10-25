@@ -25,7 +25,6 @@ defmodule App.Model.MemberCard do
     field :pass_updated_at, :utc_datetime_usec
     # When a phone last fetched the pass, and when a manager last sent a test update.
     field :pass_fetched_at, :utc_datetime_usec
-    field :pass_test_at, :utc_datetime_usec
     # Shared by a member's cards, so a replacement updates the same Wallet pass.
     field :serial_number, :string
     # Google Wallet: the pass as last sent to Google, or nil when it has none.
@@ -266,14 +265,6 @@ defmodule App.Model.MemberCard do
 
   @doc "The PubSub topic a member's ID Card tab listens on for phone fetches."
   def pass_topic(member_id), do: "member_card:#{member_id}"
-
-  @doc """
-  Marks a test update. Bumping `pass_updated_at` makes the phone see the pass as
-  changed when it asks; the fingerprint is left alone, so a refresh doesn't push it.
-  """
-  def record_test_update!(%MemberCard{} = card, now) do
-    card |> change(pass_test_at: now, pass_updated_at: now) |> Repo.update!()
-  end
 
   def record_google_pass!(%MemberCard{} = card, fingerprint) do
     card |> change(google_pass_fingerprint: fingerprint) |> Repo.update!()
