@@ -177,11 +177,10 @@ defmodule Web.MemberCardLive do
         Anyone can verify this ID card at <.a id="card-verify-link" href={verify_url(@card)}>{Web.VerifyHost.host()}/{MemberCard.format_code(@card.code)}</.a>.
       </p>
       <.form_actions
-        :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
+        :if={@member.email && (BuildApplePass.configured?() or BuildGooglePass.configured?())}
         class="mb-4"
       >
         <.button
-          :if={@member.email}
           id="email-pass"
           variant={:primary}
           phx-click="email"
@@ -189,20 +188,6 @@ defmodule Web.MemberCardLive do
           data-confirm={"Email the ID card to #{@member.email}?"}
         >
           Email ID card
-        </.button>
-        <.button
-          :if={BuildApplePass.configured?()}
-          id="apple-pass"
-          href={~p"/teams/#{@member.team}/members/#{@member.id}/card/apple-wallet"}
-        >
-          Add to Apple Wallet
-        </.button>
-        <.button
-          :if={BuildGooglePass.configured?()}
-          id="google-pass"
-          href={~p"/teams/#{@member.team}/members/#{@member.id}/card/google-wallet"}
-        >
-          Add to Google Wallet
         </.button>
       </.form_actions>
       <.form_actions>

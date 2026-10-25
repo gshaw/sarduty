@@ -352,7 +352,7 @@ defmodule Web.MeLiveTest do
       end
 
       assert_error_sent 404, fn ->
-        get(conn, ~p"/teams/#{team}/members/#{member.id}/card/apple-wallet")
+        get(conn, ~p"/teams/#{team}/tax-credit-letters/0/pdf")
       end
     end
 

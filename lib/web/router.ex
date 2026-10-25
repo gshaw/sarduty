@@ -311,8 +311,6 @@ defmodule Web.Router do
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
       get "/certificates/:id/file", CertificateController, :file
-      get "/members/:id/card/apple-wallet", MemberCardController, :pass
-      get "/members/:id/card/google-wallet", MemberCardController, :google_pass
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete

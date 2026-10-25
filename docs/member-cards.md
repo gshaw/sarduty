@@ -62,9 +62,10 @@ organization gets its branding: see [organizations.md](organizations.md).
 
 ## Apple Wallet
 
-The ID Card tab emails the current card's pass to the member's D4H address as an
-attachment, or downloads it, when Apple Wallet is set up (see
-[external-services.md](external-services.md)).
+A member adds their card from Your membership, `/teams/:subdomain/me`. The team admin's
+ID Card tab emails the current card's pass to the member's D4H address as an attachment,
+when Apple Wallet is set up (see [external-services.md](external-services.md)). It has
+no Wallet buttons: they would put the member's card on the team admin's phone.
 
 Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 `authentication_token`. Wallet registers the phone with
@@ -106,9 +107,9 @@ goes on the pass.
 
 ## Google Wallet
 
-The ID Card tab's **Add to Google Wallet** sends the current card's pass to Google and
-opens Google's save page. The email to the member has the same link, beside the Apple
-pass. The link is a JWT that names the pass and nothing else; Google holds the pass
+Your membership's **Add to Google Wallet** sends the current card's pass to Google and
+opens Google's save page. The email from the team admin's ID Card tab has the same link,
+beside the Apple pass. The link is a JWT that names the pass and nothing else; Google holds the pass
 itself.
 
 Google keeps the pass, so there's no phone to push to.

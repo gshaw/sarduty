@@ -66,6 +66,18 @@ defmodule Web.MemberCardLiveTest do
     assert has_element?(lv, "#card-code", MemberCard.format_code(new.code))
   end
 
+  # A pass goes on the member's phone, from Your membership, never the team admin's.
+  test "offers no Wallet buttons", %{conn: conn, team: team, member: member} do
+    App.ApplePassCredentials.configure()
+    App.GoogleWalletCredentials.configure()
+    member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    assert has_element?(lv, "#email-pass")
+    refute has_element?(lv, "#apple-pass")
+    refute has_element?(lv, "#google-pass")
+  end
+
   test "cancels a card", %{conn: conn, team: team, member: member} do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
@@ -109,7 +121,6 @@ defmodule Web.MemberCardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       refute has_element?(lv, "#email-pass")
-      assert has_element?(lv, "#apple-pass")
     end
   end
 
@@ -167,14 +178,6 @@ defmodule Web.MemberCardLiveTest do
       App.GoogleWalletCredentials.configure()
       App.GoogleWalletCredentials.stub(self())
       :ok
-    end
-
-    test "offers the Google pass and no Apple one", %{conn: conn, team: team, member: member} do
-      member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-
-      assert has_element?(lv, "#google-pass")
-      refute has_element?(lv, "#apple-pass")
     end
 
     test "emails the Google Wallet link", %{conn: conn, team: team, member: member} do
