@@ -53,9 +53,13 @@ defmodule Web.Components.MemberPage do
   @doc """
   Sends a member who opens their own member page to Your membership (#440), which has
   everything this page would and more. For the `on_mount` of a tab members open; a team
-  admin stays.
+  admin stays. It checks on every `handle_params`, so a patch to their own id goes there
+  too.
   """
-  def on_mount(:own_page, %{"id" => id}, _session, socket) do
+  def on_mount(:own_page, _params, _session, socket),
+    do: {:cont, Phoenix.LiveView.attach_hook(socket, :own_page, :handle_params, &own_page/3)}
+
+  defp own_page(%{"id" => id}, _uri, socket) do
     case socket.assigns do
       %{team_admin?: false, current_member: %{id: member_id}, current_team: team} ->
         if id == Integer.to_string(member_id),

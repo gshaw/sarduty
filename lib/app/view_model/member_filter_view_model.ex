@@ -46,8 +46,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {"Retired", "retired"}
   ]
 
-  # What a member's list offers (#440): Retired comes from D4H. Away periods and Not a
-  # person are team admins' own records, and away is often leave.
+  # What a member's list offers (#440): Retired comes from D4H. Away periods are team
+  # admins' own records, and away is often leave. Not a person shows in the Standing
+  # column, but a member has no reason to filter by it.
   @member_standings [{"Retired", "retired"}]
 
   @doc """

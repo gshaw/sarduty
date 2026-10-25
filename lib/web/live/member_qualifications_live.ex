@@ -32,19 +32,27 @@ defmodule Web.MemberQualificationsLive do
       |> assign_awards()
       |> load_sidebar()
       |> assign(:records?, D4H.records?(team))
-      |> assign(
-        :qualifications,
-        team.id |> Qualification.get_all() |> Enum.map(&{&1.title, &1.id})
-      )
-      |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
-      |> allow_upload(:certificate,
-        accept: ~w(image/* application/pdf),
-        max_entries: 1,
-        max_file_size: Service.CertificateFile.max_bytes()
-      )
+      |> assign_award_tools()
 
     {:noreply, socket}
   end
+
+  # The award form, for a team admin on a team on SAR Duty Records. Members never see it.
+  defp assign_award_tools(%{assigns: %{team_admin?: true, records?: true}} = socket) do
+    socket
+    |> assign(
+      :qualifications,
+      socket.assigns.current_team.id |> Qualification.get_all() |> Enum.map(&{&1.title, &1.id})
+    )
+    |> assign_award_form(AwardFormViewModel.changeset(%AwardFormViewModel{}))
+    |> allow_upload(:certificate,
+      accept: ~w(image/* application/pdf),
+      max_entries: 1,
+      max_file_size: Service.CertificateFile.max_bytes()
+    )
+  end
+
+  defp assign_award_tools(socket), do: socket
 
   # Awarding and removing qualifications, for a team on SAR Duty Records (docs/records.md).
   def handle_event("validate-award", %{"award" => params}, socket) do

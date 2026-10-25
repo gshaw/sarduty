@@ -33,7 +33,7 @@ defmodule Web.MemberCollectionLive do
     |> assign(now: now, today: today)
     |> assign(
       :standing?,
-      team_admin? and standing_column?(current_team, filter_options, today, now)
+      standing_column?(current_team, filter_options, team_admin?, today, now)
     )
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
     |> assign(
@@ -157,9 +157,9 @@ defmodule Web.MemberCollectionLive do
         :if={@standing?}
         label="Standing"
         class="whitespace-nowrap"
-        sorts={[{"↑", "standing"}, {"↓", "standing-"}]}
+        sorts={if @team_admin?, do: [{"↑", "standing"}, {"↓", "standing-"}]}
       >
-        <span id={"standing-#{record.member.id}"}>{standing_text(record, @today, @now)}</span>
+        <span id={"standing-#{record.member.id}"}>{standing_text(record, @team_admin?, @today, @now)}</span>
       </:col>
       <:col :let={record} :if={@details == "missing"} label="Missing">
         <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
@@ -237,20 +237,32 @@ defmodule Web.MemberCollectionLive do
   end
 
   # Shown only when some current member is not active, or the filter goes past Not retired.
-  defp standing_column?(_team, %{standing: standing}, _today, _now)
+  # A member never sees Away (#440), so their list shows it only for Not a person: Retired
+  # has its own column.
+  defp standing_column?(team, _filter_options, false = _team_admin?, _today, now),
+    do: Member.any_not_a_person?(team, now)
+
+  defp standing_column?(_team, %{standing: standing}, _team_admin?, _today, _now)
        when standing not in [nil, "current"],
        do: true
 
-  defp standing_column?(team, _filter_options, today, now),
+  defp standing_column?(team, _filter_options, _team_admin?, today, now),
     do: Member.any_not_active?(team, today, now)
 
   # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
-  defp standing_text(record, today, now) do
+  defp standing_text(record, team_admin?, today, now) do
     cond do
-      not Member.current?(record.member, now) -> "Retired"
-      record.member.not_a_person -> "Not a person"
-      record.away_until -> "Away until #{Service.Format.day_in_year(record.away_until, today)}"
-      true -> "Active"
+      not Member.current?(record.member, now) ->
+        "Retired"
+
+      record.member.not_a_person ->
+        "Not a person"
+
+      team_admin? and record.away_until ->
+        "Away until #{Service.Format.day_in_year(record.away_until, today)}"
+
+      true ->
+        "Active"
     end
   end
 

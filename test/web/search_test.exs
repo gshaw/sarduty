@@ -57,8 +57,9 @@ defmodule Web.SearchTest do
                search(team, "membership", team_admin?: false, member?: true)
     end
 
-    # Away is often leave: only team admins see it (#440). Retired comes from D4H.
-    test "a member sees another member's standing only when retired", %{team: team} do
+    # Away is often leave: only team admins see it (#440). Retired comes from D4H, and Not
+    # a person keeps a team account from passing for a teammate.
+    test "a member sees another member's standing unless away", %{team: team} do
       away = member_fixture(team, %{name: "Sky Away"})
       away_period_fixture(away, ~D[2026-10-01], ~D[2026-12-31])
       member_fixture(team, %{name: "Sky Bot", not_a_person: true})
@@ -76,7 +77,7 @@ defmodule Web.SearchTest do
              } = standings.(team_admin?: true, member?: false)
 
       assert standings.(team_admin?: false, member?: true) ==
-               %{"Sky Away" => :active, "Sky Bot" => :active, "Sky Gone" => :retired}
+               %{"Sky Away" => :active, "Sky Bot" => :not_a_person, "Sky Gone" => :retired}
     end
 
     test "pages a member doesn't see aren't found", %{team: team} do

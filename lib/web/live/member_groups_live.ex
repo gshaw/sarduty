@@ -71,14 +71,16 @@ defmodule Web.MemberGroupsLive do
     socket |> put_flash(:info, text) |> assign_member(member)
   end
 
-  defp assign_member(socket, member) do
+  defp assign_member(socket, member),
+    do: assign(socket, member: member, other_groups: other_groups(socket, member))
+
+  # The groups to add the member to, for a team admin on a team on SAR Duty Records.
+  defp other_groups(%{assigns: %{team_admin?: true, records?: true}} = socket, member) do
     in_groups = MapSet.new(member.group_members, & &1.group_id)
-
-    others =
-      socket.assigns.current_team.id |> Group.get_all() |> Enum.reject(&(&1.id in in_groups))
-
-    assign(socket, member: member, other_groups: others)
+    socket.assigns.current_team.id |> Group.get_all() |> Enum.reject(&(&1.id in in_groups))
   end
+
+  defp other_groups(_socket, _member), do: []
 
   def render(assigns) do
     ~H"""

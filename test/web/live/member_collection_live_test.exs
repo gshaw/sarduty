@@ -483,13 +483,13 @@ defmodule Web.MemberCollectionLiveTest do
       today = Date.utc_today()
       away = member_fixture(team, %{name: "Avery Away", phone: nil})
       away_period_fixture(away, Date.add(today, -5), Date.add(today, 30))
-      member_fixture(team, %{name: "Nico Bot", not_a_person: true})
+      bot = member_fixture(team, %{name: "Nico Bot", not_a_person: true})
       member_fixture(team, %{name: "Rae Retired", left_at: ~U[2025-06-01 00:00:00Z]})
-      %{conn: log_in_user(conn, user), team: team, member: member}
+      %{conn: log_in_user(conn, user), team: team, member: member, away: away, bot: bot}
     end
 
     test "the roster with Not retired and Retired, and no team admin filters or columns",
-         %{conn: conn, team: team} do
+         %{conn: conn, team: team, away: away, bot: bot} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
 
       assert has_element?(lv, "td", "Avery Away")
@@ -501,9 +501,20 @@ defmodule Web.MemberCollectionLiveTest do
       refute has_element?(lv, "#member-view-not_a_person")
       refute has_element?(lv, "select[name='form[details]']")
       refute has_element?(lv, "select[name='form[attended]']")
-      refute has_element?(lv, "th", "Standing")
       refute has_element?(lv, "#member-add")
       refute render(lv) =~ "Away until"
+
+      # Not a person shows, so a team account doesn't pass for a teammate; away doesn't.
+      assert has_element?(lv, "#standing-#{bot.id}", "Not a person")
+      assert has_element?(lv, "#standing-#{away.id}", "Active")
+      refute has_element?(lv, ~s{th a[href*="sort=standing"]})
+    end
+
+    test "no Standing column when nobody is Not a person", %{conn: conn, team: team, bot: bot} do
+      bot |> Ecto.Changeset.change(not_a_person: false) |> App.Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
+
+      refute has_element?(lv, "th", "Standing")
     end
 
     test "ignores the URL's standings, Attended, Details, and Standing sort",

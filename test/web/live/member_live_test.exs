@@ -137,19 +137,19 @@ defmodule Web.MemberLiveTest do
       end
     end
 
-    test "the header badges Retired, never Away or Not a person", %{conn: conn, team: team} do
+    test "the header badges Retired and Not a person, never Away", %{conn: conn, team: team} do
       away = member_fixture(team)
       away_period_fixture(away, Date.add(Date.utc_today(), -5), Date.add(Date.utc_today(), 30))
       bot = member_fixture(team, %{not_a_person: true})
       retired = member_fixture(team, %{d4h_status: "RETIRED"})
 
-      for other <- [away, bot] do
-        {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
-        refute has_element?(lv, "#member-head-standing")
-      end
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{away.id}")
+      refute has_element?(lv, "#member-head-standing")
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{retired.id}")
-      assert has_element?(lv, "#member-head-standing", "Retired")
+      for {other, badge} <- [{bot, "Not a person"}, {retired, "Retired"}] do
+        {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+        assert has_element?(lv, "#member-head-standing", badge)
+      end
     end
 
     test "their own member page opens Your membership", %{conn: conn, team: team, member: member} do
@@ -159,6 +159,17 @@ defmodule Web.MemberLiveTest do
 
         assert to == ~p"/teams/#{team}/me"
       end
+    end
+
+    test "a patch to their own member page opens Your membership too",
+         %{conn: conn, team: team, member: member} do
+      other = member_fixture(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               render_patch(lv, ~p"/teams/#{team}/members/#{member.id}")
+
+      assert to == ~p"/teams/#{team}/me"
     end
   end
 

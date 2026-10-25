@@ -155,6 +155,17 @@ defmodule App.Model.Member do
     |> Repo.exists?()
   end
 
+  @doc """
+  Whether any current member of the team is not a person (#440). A member's members
+  list, which never shows Away, shows its Standing column only then.
+  """
+  def any_not_a_person?(%Team{} = team, now) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.not_a_person)
+    |> current_query(now)
+    |> Repo.exists?()
+  end
+
   @doc "Narrows `query` to people, leaving out members a team admin marked not a person."
   def people_query(query), do: where(query, [m], not m.not_a_person)
 
