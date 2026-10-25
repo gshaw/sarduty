@@ -545,29 +545,50 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#refresh-now")
   end
 
-  describe "the whiteboard card (#515)" do
-    test "a member reads every live note, and no card when there are none", %{conn: conn} do
+  describe "the whiteboard strip (#515)" do
+    test "a member reads the Important notes, at most 2, and a link to the rest", %{conn: conn} do
       %{team: team, user: user} = member_with_login_fixture()
       conn = log_in_user(conn, user)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       refute has_element?(lv, "#whiteboard")
 
-      important = whiteboard_note_fixture(team, %{text: "Pager test Sunday.", important: true})
+      plain = whiteboard_note_fixture(team, %{text: "Dues are due by November 30."})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#whiteboard-note-#{plain.id}", "Dues are due")
+      refute has_element?(lv, "#whiteboard-more")
+
+      first =
+        whiteboard_note_fixture(team, %{
+          text: "Pager test Sunday.",
+          important: true,
+          d4h_created_at: ~U[2026-10-20 00:00:00Z]
+        })
 
       linked =
         whiteboard_note_fixture(team, %{
           text: "Winter tires go on.",
-          url: "https://www.example.com/tires"
+          important: true,
+          url: "https://www.example.com/tires",
+          d4h_created_at: ~U[2026-10-21 00:00:00Z]
+        })
+
+      third =
+        whiteboard_note_fixture(team, %{
+          text: "Oldest Important.",
+          important: true,
+          d4h_created_at: ~U[2026-10-01 00:00:00Z]
         })
 
       whiteboard_note_fixture(team, %{
-        text: "Dues are due by October 15.",
+        text: "Archived last week.",
+        important: true,
         archived_at: DateTime.utc_now(:second) |> DateTime.add(-3, :day)
       })
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      assert has_element?(lv, "#whiteboard-note-#{important.id}", "Important")
+      assert has_element?(lv, "#whiteboard-note-#{first.id}.is-important", "Important:")
 
       assert has_element?(
                lv,
@@ -575,29 +596,31 @@ defmodule Web.TeamDashboardLiveTest do
                "example.com"
              )
 
-      refute has_element?(lv, "#whiteboard", "Dues are due")
+      refute has_element?(lv, "#whiteboard-note-#{third.id}")
+      refute has_element?(lv, "#whiteboard-note-#{plain.id}")
+      refute has_element?(lv, "#whiteboard", "Archived last week")
 
       assert has_element?(
                lv,
-               ~s{#whiteboard a[href="/teams/#{team.subdomain}/whiteboard"]},
-               "All notes"
+               ~s{#whiteboard-more[href="/teams/#{team.subdomain}/whiteboard"]},
+               "2 more notes"
              )
     end
 
-    test "an organization's note says who it is from", %{conn: conn} do
+    test "an organization's note opens with who it is from", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       note = whiteboard_note_fixture(team, %{owner_kind: :organization})
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
-      assert has_element?(lv, "#whiteboard-note-#{note.id}", "From your organization")
+      assert has_element?(lv, "#whiteboard-note-#{note.id}", "Your organization:")
     end
 
-    test "a team admin sees the card with no notes, unless the module is off", %{conn: conn} do
+    test "a team admin sees no strip with no notes, nor with the module off", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       conn = log_in_user(conn, user)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      assert has_element?(lv, "#whiteboard-empty", "No notes on the whiteboard.")
+      refute has_element?(lv, "#whiteboard")
 
       whiteboard_note_fixture(team)
       team |> Ecto.Changeset.change(whiteboard_enabled: false) |> Repo.update!()

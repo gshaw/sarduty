@@ -16,26 +16,92 @@ defmodule Web.WhiteboardText do
   alias Service.Format
 
   attr :note, WhiteboardNote, required: true
+  attr :tag, :boolean, default: true, doc: "whether an Important note shows its tag"
 
-  @doc "The note's text, with an Important tag after it."
+  @doc "The note's text, its web addresses as links, with an Important tag after it."
   def note_text(assigns) do
     ~H"""
-    {@note.text}
-    <.badge :if={@note.important} kind={:primary}>Important</.badge>
+    <%= for segment <- segments(@note.text) do %>
+      <.segment segment={segment} />
+    <% end %>
+    <.badge :if={@tag and @note.important} kind={:primary}>Important</.badge>
     """
   end
+
+  attr :segment, :any, required: true
+
+  # One line each, so no space creeps in between a link and the full stop after it.
+  defp segment(%{segment: {:link, _href, _label}} = assigns) do
+    ~H"""
+    <.a external={true} href={elem(@segment, 1)}>{elem(@segment, 2)}</.a>
+    """
+  end
+
+  defp segment(assigns), do: ~H"{@segment}"
 
   attr :note, WhiteboardNote, required: true
   attr :class, :any, default: nil
 
-  @doc "The note's link, shown as its host, such as bcsara.com."
+  @doc "The note's link, shown as its host, such as bcsara.com, unless the text holds it."
   def note_link(assigns) do
     ~H"""
-    <span :if={@note.url} class={@class}>
+    <span :if={@note.url && !link_in_text?(@note)} class={@class}>
       <.a external={true} href={@note.url}>{link_text(@note.url)}</.a>
     </span>
     """
   end
+
+  # cspell:ignore sfsar (South Fraser SAR's web address, in the example below)
+  # A web address in a note's text: one with http(s):// or www., or a bare host with a
+  # path, like sfsar.ca/d4h. A bare host alone, like bcsara.com, stays text, so an email
+  # address or "e.g." never turns into a link.
+  @address ~r/(?<![\w@.\/-])(?:(?:https?:\/\/|www\.)[^\s<>"]+|[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/[^\s<>"]*)/i
+
+  @doc """
+  A note's text split into plain text and `{:link, href, label}` for each web address in
+  it. Punctuation that ends a sentence stays text, not part of the link.
+  """
+  def segments(text) do
+    {segments, rest_at} =
+      @address
+      |> Regex.scan(text, return: :index)
+      |> Enum.flat_map_reduce(0, fn [{at, length}], from ->
+        before = binary_part(text, from, at - from)
+        {[before | link_segment(binary_part(text, at, length))], at + length}
+      end)
+
+    rest = binary_part(text, rest_at, byte_size(text) - rest_at)
+    Enum.reject(segments ++ List.wrap(rest), &(&1 == ""))
+  end
+
+  defp link_segment(part) do
+    [_all, address, tail] = Regex.run(~r/\A(.*?)([.,;:!?)'"]*)\z/s, part)
+    href = if address =~ ~r{\Ahttps?://}i, do: address, else: "https://" <> address
+    [{:link, href, address}, tail]
+  end
+
+  @doc "Whether the note's text already holds its link, so it needs no second one."
+  def link_in_text?(%WhiteboardNote{url: nil}), do: false
+
+  def link_in_text?(%WhiteboardNote{url: url, text: text}) do
+    text
+    |> segments()
+    |> Enum.any?(fn
+      {:link, href, _label} -> bare(href) == bare(url)
+      _text -> false
+    end)
+  end
+
+  defp bare(url) do
+    url
+    |> String.downcase()
+    |> String.replace(~r{\A(https?://)?(www\.)?}, "")
+    |> String.trim_trailing("/")
+  end
+
+  @doc ~s("BCSARA:", before an organization's note on the Dashboard.)
+  def speaker(nil), do: "Your organization:"
+  def speaker(org_name), do: "#{org_name}:"
 
   @doc ~s(A link's host without "www.", or the address of a mailto link.)
   def link_text("mailto:" <> address), do: address
@@ -48,17 +114,6 @@ defmodule Web.WhiteboardText do
       _other ->
         url
     end
-  end
-
-  @doc ~s(The line under a note: "Posted Oct 22 · Until Oct 25 · From BCSARA".)
-  def note_line(note, timezone, org_name, today) do
-    [
-      "Posted #{posted(note, timezone, today)}",
-      until(note, timezone, today) && "Until #{until(note, timezone, today)}",
-      note.owner_kind == :organization && from(org_name)
-    ]
-    |> Enum.filter(&is_binary/1)
-    |> Enum.join(" · ")
   end
 
   @doc "The day the note was posted, with its year when that isn't this year."

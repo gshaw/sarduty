@@ -185,7 +185,7 @@ and the Whiteboard page, are copied to `whiteboard_notes` by
 - **A 403 is the module off, never a rejected key.** One D4H team of 15 had the module
   off (2026-10-20), and D4H answers 403 "The required modules are not enabled for this
   context". The head reads it as an empty list, and the read saves no notes and sets
-  `teams.whiteboard_enabled` false, which hides the card and the Whiteboard page. Any
+  `teams.whiteboard_enabled` false, which hides the Dashboard's strip and the Whiteboard page. Any
   other 401 or 403 stops the team's syncs (`key_rejected`), so this one is rescued where
   it is asked. While it is off, the sync skips the whiteboard and the nightly refresh
   tries again, so a team that turns the module on gets its notes the next night.

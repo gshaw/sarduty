@@ -134,14 +134,17 @@ defmodule Web.WhiteboardLiveTest do
       assert has_element?(lv, ~s{#whiteboard-note-form input[value="https://example.com/dues"]})
     end
 
-    test "archive takes a note off the card, and delete removes it", %{conn: conn} do
+    test "archive takes a note off the whiteboard, and delete removes it", %{conn: conn} do
       {conn, team} = admin_conn(conn)
       note = whiteboard_note_fixture(team, %{d4h_whiteboard_note_id: 77})
       stub_d4h()
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/whiteboard")
       lv |> element("#whiteboard-archive-#{note.id}") |> render_click()
       assert_received {:d4h, "PATCH", _path, _body}
+      refute has_element?(lv, "#whiteboard-note-#{note.id}")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       refute has_element?(lv, "#whiteboard-note-#{note.id}")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/whiteboard?view=archived")
@@ -168,22 +171,27 @@ defmodule Web.WhiteboardLiveTest do
       refute Repo.reload(note)
     end
 
-    test "an organization's note has Post again only", %{conn: conn} do
+    test "an organization's note is read-only: no Change, Archive, Post again, or Delete", %{
+      conn: conn
+    } do
       {conn, team} = admin_conn(conn)
       live_note = whiteboard_note_fixture(team, %{owner_kind: :organization})
       old = archived_note(team, %{owner_kind: :organization})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/whiteboard")
       assert has_element?(lv, "#whiteboard-note-#{live_note.id}")
       refute has_element?(lv, "#whiteboard-change-#{live_note.id}")
       refute has_element?(lv, "#whiteboard-archive-#{live_note.id}")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/whiteboard?view=archived")
-      assert has_element?(lv, "#whiteboard-again-#{old.id}")
+      refute has_element?(lv, "#whiteboard-again-#{old.id}")
       refute has_element?(lv, "#whiteboard-delete-#{old.id}")
 
-      assert_raise Web.Status.NotFound, fn ->
-        live(conn, ~p"/teams/#{team}/whiteboard/#{live_note.id}/edit")
+      for path <- [
+            ~p"/teams/#{team}/whiteboard/#{live_note.id}/edit",
+            ~p"/teams/#{team}/whiteboard/new?from=#{old.id}"
+          ] do
+        assert_raise Web.Status.NotFound, fn -> live(conn, path) end
       end
     end
   end
