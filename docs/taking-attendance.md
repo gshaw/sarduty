@@ -13,16 +13,18 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
 
 `/teams/:subdomain/take-attendance`
 ([TakeAttendanceLive](../lib/web/live/take_attendance_live.ex)) is for an iPad at the
-hall. It lists the activities taking attendance now
-(`Activity.taking_attendance_now/2`) as rows to tap. With one, it opens that activity's
-scanner, replacing itself so Back doesn't bounce. With none, it names the next activity
-and when taking attendance opens. It looks again each minute, so an iPad left on it
-opens the scanner when the window opens. It shows its own address with Copy link, so a
-team adds it to the iPad's Home Screen or prints a QR code of it for the hall or command
-post. The address can't move ([urls.md](urls.md)). The scanner links back to it, Other
-activities now, while another activity is taking attendance: one that overlaps, or
-tonight's when Safari kept last week's scanner open. Take attendance is in the side
-navigation for members and team admins, always.
+hall. Under a line saying what it's for, **Now** lists the activities taking attendance
+now (`Activity.taking_attendance_now/2`), and **Coming up** the next 5 whose window opens
+later, within 14 days (`Activity.taking_attendance_later/2`). Every row opens that
+activity's scanner, which says when a member can start. It never opens a scanner by
+itself: with one activity on, it jumped straight there, so "Other activities now" and a
+printed QR code landed somewhere that didn't say what it was (2026-10-25). It looks again
+each minute, so an activity moves to Now when its window opens. A team adds it to the
+iPad's Home Screen or prints a QR code of its address for the hall or command post. The
+address can't move ([urls.md](urls.md)). The scanner links back to it, Other activities
+now, while another activity is taking attendance: one that overlaps, or tonight's when
+Safari kept last week's scanner open. Take attendance is in the side navigation for
+members and team admins, always.
 
 Logged out, it goes to the login page as every team page does, and logging in comes back
 to it. When the page to come back to is a Take attendance page, the login pages say "Log

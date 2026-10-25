@@ -24,15 +24,18 @@ defmodule Web.TakeAttendanceLiveTest do
     )
   end
 
-  test "with one activity now, opens its scanner", %{conn: conn, team: team} do
+  test "with one activity now, lists it and stays", %{conn: conn, team: team} do
     activity = at(team, 1)
-    at(team, 30)
     at(team_fixture(), 0)
 
-    scanner = ~p"/teams/#{team}/activities/#{activity.id}/take-attendance"
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
 
-    assert {:error, {:live_redirect, %{to: ^scanner}}} =
-             live(conn, ~p"/teams/#{team}/take-attendance")
+    assert has_element?(lv, "#intro", "Scan ID cards")
+
+    assert has_element?(
+             lv,
+             ~s{#now #activity-#{activity.id}[href="/teams/#{team.subdomain}/activities/#{activity.id}/take-attendance"]}
+           )
   end
 
   test "with several, lists each, oldest start first", %{conn: conn, team: team} do
@@ -44,46 +47,59 @@ defmodule Web.TakeAttendanceLiveTest do
 
     assert has_element?(lv, "#activity-#{rope.id}", "Rope practice")
     assert has_element?(lv, "#activity-#{rope.id}", "Murrin Park")
-
-    assert has_element?(
-             lv,
-             ~s{#activity-#{first_aid.id}[href="/teams/#{team.subdomain}/activities/#{first_aid.id}/take-attendance"]}
-           )
-
+    assert has_element?(lv, "#activity-#{first_aid.id}")
     refute has_element?(lv, "#activity-#{deleted.id}")
     assert render(lv) =~ ~r/Rope practice.*First aid/s
   end
 
-  test "with none, says when the next one opens", %{conn: conn, team: team} do
-    next = at(team, 48, %{title: "Swiftwater"})
+  test "Coming up lists what opens later, each row its scanner", %{conn: conn, team: team} do
+    now = at(team, 1)
+    swiftwater = at(team, 48, %{title: "Swiftwater"})
+    rope = at(team, 24, %{title: "Rope practice"})
+    at(team, 15 * 24, %{title: "Too far off"})
+    at(team, 30, %{deleted_at: ~U[2026-10-05 06:00:00Z], title: "Deleted"})
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
-    assert has_element?(lv, "#no-activity", "No activity now.")
-    assert has_element?(lv, "#next-#{next.id}", "Swiftwater")
-    assert has_element?(lv, "#opens-at", "Taking attendance opens at")
-    assert has_element?(lv, "#opens-at", "2 hours before it starts.")
+
+    refute has_element?(lv, "#coming-#{now.id}")
+    assert has_element?(lv, "#opens-at", "Taking attendance opens 2 hours before each starts.")
 
     assert has_element?(
              lv,
-             ~s{#next-activity a[href="/teams/#{team.subdomain}/activities/#{next.id}"]}
+             ~s{#coming-#{swiftwater.id}[href="/teams/#{team.subdomain}/activities/#{swiftwater.id}/take-attendance"]}
            )
+
+    assert render(lv) =~ ~r/Rope practice.*Swiftwater/s
+    refute render(lv) =~ "Too far off"
+    refute render(lv) =~ "Deleted"
+    assert has_element?(lv, "#coming-#{rope.id}")
+  end
+
+  test "Coming up stops at 5", %{conn: conn, team: team} do
+    for hours <- 10..15, do: at(team, hours)
+
+    {:ok, lv, html} = live(conn, ~p"/teams/#{team}/take-attendance")
+
+    assert has_element?(lv, "#no-activity", "No activity now.")
+    assert length(Regex.scan(~r/id="coming-\d+"/, html)) == 5
   end
 
   # The tick stands in for the clock: moving the activity moves its window over now.
-  test "left open, it opens the scanner when an activity's window opens", %{
+  test "left open, an activity moves to Now when its window opens", %{
     conn: conn,
     team: team
   } do
     later = at(team, 3)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
-    assert has_element?(lv, "#next-#{later.id}")
+    assert has_element?(lv, "#coming-#{later.id}")
 
     later
     |> Ecto.Changeset.change(started_at: hours_from_now(1), finished_at: hours_from_now(3))
     |> Repo.update!()
 
     send(lv.pid, :tick)
-    assert_redirect(lv, ~p"/teams/#{team}/activities/#{later.id}/take-attendance")
+    assert has_element?(lv, "#activity-#{later.id}")
+    refute has_element?(lv, "#coming-#{later.id}")
   end
 
   test "with nothing coming up, says so", %{conn: conn, team: team} do
@@ -91,14 +107,6 @@ defmodule Web.TakeAttendanceLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
     assert has_element?(lv, "#nothing-coming", "Nothing coming up.")
-  end
-
-  test "shows its own address to copy", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
-
-    assert has_element?(lv, ~s{#page-url[href$="/teams/#{team.subdomain}/take-attendance"]})
-    assert has_element?(lv, "#copy-page-url", "Copy link")
-    assert has_element?(lv, "#page-address", "print a QR code")
   end
 
   test "the scanner links back here while another activity is on", %{conn: conn, team: team} do

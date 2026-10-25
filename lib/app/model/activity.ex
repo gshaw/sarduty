@@ -265,15 +265,25 @@ defmodule App.Model.Activity do
     |> Repo.all()
   end
 
-  @doc "The team's next activity to start after `now`, or nil."
-  def next_after(%Team{} = team, now) do
+  @coming_up_days 14
+  @coming_up_count 5
+
+  @doc """
+  The team's next #{@coming_up_count} activities whose attendance window opens after `now`,
+  starting within #{@coming_up_days} days, for Coming up on the team's Take attendance page.
+  With taking_attendance_now/2 it covers every activity still to come.
+  """
+  def taking_attendance_later(%Team{} = team, now) do
+    now = DateTime.truncate(now, :second)
+
     Activity
     |> where([a], a.team_id == ^team.id)
     |> not_deleted()
-    |> where([a], a.started_at > ^DateTime.truncate(now, :second))
+    |> where([a], a.started_at > ^DateTime.add(now, @attendance_window_hours * 3600))
+    |> where([a], a.started_at <= ^DateTime.add(now, @coming_up_days, :day))
     |> order_by([a], asc: a.started_at, asc: a.id)
-    |> limit(1)
-    |> Repo.one()
+    |> limit(@coming_up_count)
+    |> Repo.all()
   end
 
   @doc """
