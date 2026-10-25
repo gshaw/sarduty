@@ -8,6 +8,25 @@
   .combobox-input { position: relative; }
   .combobox-input input { padding-right: var(--sp-8); }
   .combobox-input input.input-sm { width: 100%; }
+  /* The x clears the text box, once it has text, and sits before the chevron. */
+  .combobox-input:has(input:not(:placeholder-shown)) input { padding-right: var(--sp-16); }
+  .combobox-clear {
+    position: absolute;
+    right: var(--sp-8);
+    top: 50%;
+    translate: 0 -50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--text-muted);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .combobox-clear:hover { color: var(--text); }
+  .combobox-input:has(input:placeholder-shown, input:disabled) .combobox-clear { display: none; }
+  .combobox.input-sm .combobox-clear { width: 24px; height: 24px; right: var(--sp-6); }
   .combobox-chevron {
     position: absolute;
     right: var(--sp-2);

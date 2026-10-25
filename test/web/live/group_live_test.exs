@@ -196,7 +196,7 @@ defmodule Web.GroupLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ctx.path)
     lv |> element("#edit-rules") |> render_click()
 
-    assert lv |> element("#add-rule-form button") |> render() =~
+    assert lv |> element("#add-rule") |> render() =~
              "Rope Rescue Callout uses this group&#39;s list. Once it has rules, Rope Rescue Callout uses its rules instead."
 
     lv

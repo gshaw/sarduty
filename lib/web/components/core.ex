@@ -423,7 +423,8 @@ defmodule Web.Components.Core do
   are the same as for a select. `options` take `options_for_select/2`'s shape, so
   `{group, [{name, value}]}` lists the options under a heading per group. `<.input
   type="combobox">` adds the label; use this one where the field has an aria-label
-  instead. `size={:sm}` is for a row of small controls. See /styles/combobox.
+  instead. `size={:sm}` is for a row of small controls. The x at its end clears it. See
+  /styles/combobox.
 
   ## Examples
 
@@ -446,7 +447,8 @@ defmodule Web.Components.Core do
     default: false,
     doc: "lists the prompt first, so picking it empties the value, as a filter's All"
 
-  attr :placeholder, :string, default: "Type part of the name"
+  # Not "name": Safari offers contacts to a field whose placeholder says it.
+  attr :placeholder, :string, default: "Type to search"
   attr :size, :atom, values: [:md, :sm], default: :md
   attr :class, :any, default: nil, doc: "on the wrapper; is-invalid marks the text box"
   attr :rest, :global, include: ~w(disabled)
@@ -477,6 +479,9 @@ defmodule Web.Components.Core do
             class={@size == :sm && "input-sm"}
             {@rest}
           />
+          <button type="button" id={"#{@id}-clear"} class="combobox-clear" aria-label="Clear">
+            <.icon name="hero-x-mark-mini" />
+          </button>
           <.icon name="hero-chevron-down-mini" class="combobox-chevron" />
         </div>
         <ul id={"#{@id}-listbox"} role="listbox" class="combobox-list" hidden></ul>
