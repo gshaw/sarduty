@@ -1,13 +1,14 @@
 /* A member's reply to an activity (reply.ex, #444): two buttons, then their reply and
    Change. In an activity panel, and small under a title in a list. See /styles/reply. */
 .reply-buttons { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.reply-row { display: flex; align-items: center; gap: var(--sp-3); margin: 0; }
-.reply-state { display: inline-flex; align-items: center; gap: var(--sp-1); font-weight: 700; }
+/* A narrow column, like Coming up beside Needs attention, wraps the links under the reply. */
+.reply-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp-3); margin: 0; }
+.reply-state { display: inline-flex; align-items: center; gap: var(--sp-1); font-weight: 700; white-space: nowrap; }
 .reply-state.is-yes { color: var(--success-text); }
 
 /* In a list row: under the title, at the row's own text size. */
 .reply-sm { margin-top: var(--sp-2); }
-.reply-sm .reply-row { gap: var(--sp-2); }
+.reply-sm .reply-row { gap: 0 var(--sp-2); }
 .reply-sm .reply-state { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 600; }
 .reply-sm .reply-state:not(.is-yes) { color: var(--text-muted); font-weight: 400; }
 
