@@ -168,6 +168,20 @@ defmodule Web.ActivitySendAttendanceTest do
     assert Repo.reload!(ctx.activity).attendance_sent_at
   end
 
+  test "with every change unchecked, Send sends none and clears Needs attention", ctx do
+    stub_d4h(ctx)
+    lv = open(ctx)
+    lv |> element("#review") |> render_click()
+
+    lv |> form("#send-form") |> render_change(%{"keys" => []})
+    assert has_element?(lv, "#send:not([disabled])", "Send no changes")
+    lv |> form("#send-form") |> render_submit(%{})
+
+    refute_received {:d4h_write, _, _, _}
+    assert render(lv) =~ "No changes sent."
+    assert Repo.reload!(ctx.activity).attendance_sent_at
+  end
+
   # Needs attention lists the activity until its attendance counts as sent (#475).
   test "a review with nothing to send counts the attendance as sent", ctx do
     stub_d4h(ctx,

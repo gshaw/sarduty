@@ -31,7 +31,8 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
   `attendance_sent_at`. A review sets it when it has nothing to send, and a send when
   every change went through and none waits on fixed times
   ([Activity.mark_attendance_sent/2](../lib/app/model/activity.ex)); a change left
-  unchecked is the team admin's choice. It takes the review's time, not the send's, so a
+  unchecked is the team admin's choice, and with all of them unchecked, Send reads "Send
+  no changes". It takes the review's time, not the send's, so a
   scan in between still waits. One activity is named in the item and opens its
   Attendance page; several are counted, and the oldest opens. The 30 days keep a scan
   nobody means to send from waiting forever.

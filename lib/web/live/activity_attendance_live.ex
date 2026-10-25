@@ -107,6 +107,12 @@ defmodule Web.ActivityAttendanceLive do
     |> put_flash(kind, sent_text(saved, length(failures)))
   end
 
+  defp send_label(0), do: "Send no changes"
+
+  defp send_label(count),
+    do: "Send #{Service.Format.count(count, one: "%d change", many: "%d changes")}"
+
+  defp sent_text(0, 0), do: "No changes sent."
   defp sent_text(saved, 0), do: "#{count_changes(saved)} sent."
   defp sent_text(0, failed), do: "#{count_changes(failed)} did not go through."
 
@@ -285,7 +291,12 @@ defmodule Web.ActivityAttendanceLive do
     count =
       Enum.count(review.changes, &(SendAttendanceToD4H.sendable?(&1) and &1.key in selected))
 
-    assigns = assign(assigns, :count, count)
+    # With every change unchecked, Send sends none and still clears Needs attention.
+    assigns =
+      assign(assigns,
+        count: count,
+        sendable?: Enum.any?(review.changes, &SendAttendanceToD4H.sendable?/1)
+      )
 
     ~H"""
     <.form for={%{}} id="send-form" phx-change="select" phx-submit="send">
@@ -331,8 +342,8 @@ defmodule Web.ActivityAttendanceLive do
         </:col>
       </.table>
       <.form_actions class="mt-2">
-        <.button id="send" variant={:success} disabled={@count == 0} phx-disable-with="Sending…">
-          Send {Service.Format.count(@count, one: "%d change", many: "%d changes")}
+        <.button id="send" variant={:success} disabled={not @sendable?} phx-disable-with="Sending…">
+          {send_label(@count)}
         </.button>
         <.button type="button" phx-click="cancel-review">Cancel</.button>
       </.form_actions>
