@@ -11,9 +11,12 @@ defmodule Web.Components.MemberTabs do
     required: true,
     values: [:attendance, :qualifications, :groups, :equipment, :standing, :card, :history]
 
-  attr :team_admin?, :boolean, default: false, doc: "adds Standing, ID card, and History"
+  attr :team_admin?, :boolean,
+    default: false,
+    doc: "adds Equipment, Standing, ID card, and History"
 
-  # Standing, ID card, and History are team admins' own records (#440).
+  # Standing, ID card, and History are team admins' own records (#440), and the team's
+  # equipment pages are theirs too. A member sees what they hold on Your membership.
   def member_tabs(assigns) do
     ~H"""
     <.tabs label="Member">
@@ -36,7 +39,7 @@ defmodule Web.Components.MemberTabs do
         Groups
       </:tab>
       <:tab
-        :if={@equipment != [] or @active_tab == :equipment}
+        :if={@team_admin? and (@equipment != [] or @active_tab == :equipment)}
         navigate={~p"/teams/#{@member.team}/members/#{@member.id}/equipment"}
         current={@active_tab == :equipment}
       >

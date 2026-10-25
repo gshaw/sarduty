@@ -121,13 +121,14 @@ defmodule Web.MemberLiveTest do
 
     test "Attendance, Qualifications, and Groups tabs only", %{conn: conn, team: team} do
       other = member_fixture(team)
+      equipment_item_fixture(team, %{member_id: other.id})
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
 
       for tab <- ["qualifications", "groups"] do
         assert has_element?(lv, ~s{a[href="/teams/#{team.subdomain}/members/#{other.id}/#{tab}"]})
       end
 
-      for tab <- ["standing", "card", "history"] do
+      for tab <- ["equipment", "standing", "card", "history"] do
         refute has_element?(lv, ~s{a[href="/teams/#{team.subdomain}/members/#{other.id}/#{tab}"]})
 
         assert_raise Web.Status.NotFound, fn ->
@@ -213,16 +214,19 @@ defmodule Web.MemberLiveTest do
     assert has_element?(lv, "#member-head-facts", "Not attended yet")
   end
 
-  test "every tab opens with the same header and View as member", %{conn: conn} do
+  test "every tab opens with the same header, tabs, and View as member", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
+    equipment_item_fixture(team, %{member_id: member.id})
     conn = log_in_user(conn, user)
+    tabs = ["", "/qualifications", "/groups", "/equipment", "/standing", "/card", "/history"]
 
-    for tab <- ["", "/qualifications", "/groups", "/standing", "/card", "/history"] do
+    for tab <- tabs do
       {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members/#{member.id}#{tab}")
 
       assert has_element?(lv, "#member-head h1", member.name)
       assert has_element?(lv, "#view-as", "View as member")
+      assert has_element?(lv, "nav.tabs a", "History")
     end
   end
 

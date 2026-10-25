@@ -266,10 +266,10 @@ The team's Dashboard, `/teams/:subdomain`
   renewed), and a new tax credit letter (from January to April, until the member
   downloads it, `downloaded_at`). Each leaves once done. With nothing to do, the card
   says so in one line.
-- `"refresh"` checks `team_admin?`, and only a team admin's visit starts the catch-up
-  sync.
-- Links to team admin pages show only to team admins. Members from the stats shows to
-  everyone (#440).
+- `"refresh"` is a team admin's event: the team pages' hook refuses it from a member
+  (#440), and only a team admin's visit starts the catch-up sync.
+- Links to team admin pages show only to team admins. The Current members stat links to
+  Members for everyone (#440).
 
 ### Activities for members
 
@@ -384,14 +384,14 @@ qualifications. They don't see what comes from team admins' own tools: contact d
 standing other than Retired, check-ins, history, and ID cards.
 
 - **The list**: the same columns, search, and Period, Group, and Tag filters. The
-  Standing switch is Not retired and Retired, and the menu, for All, adds All. No
+  Standing switch is Not retired and Retired, and its menu adds All. No
   Attended or Details filter, no Standing column (Retired has its own), no Standing
   sort, and no Add member.
 - **A member's page** is the team admin's minus controls: Attendance, Qualifications
-  (Qualification and Expires, as on Your membership, with no Certificate since D4H marks
-  the documents RESTRICTED), and Groups as plain text. The sidebar is the ID and
-  Milestones. The header has the photo and facts, a Retired badge only, and no View as
-  member. Standing, ID card, and History stay team admins'.
+  (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain
+  text. The sidebar is the ID and Milestones. The header has the photo and facts, a
+  Retired badge only, and no View as member. Equipment, Standing, ID card, and History
+  stay team admins'.
 - **Their own page** opens Your membership: a member opening their own member page is
   sent there (`MemberPage.on_mount(:own_page, …)`), so every link to it works.
 - **Email stays private**, with phone and address, as #440 proposed: a directory members

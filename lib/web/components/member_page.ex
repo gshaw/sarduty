@@ -2,8 +2,8 @@ defmodule Web.Components.MemberPage do
   @moduledoc """
   The frame of every tab of a member's page: the header, the tabs, and the sidebar
   around the tab's own content. Members open three tabs (#440), and the frame takes
-  `team_admin?` once and decides what they see: no View as member, no Standing, ID card,
-  or History tab, and no contact details or Actions.
+  `team_admin?` once and decides what they see: no View as member, no Equipment, Standing,
+  ID card, or History tab, and no contact details or Actions.
   """
   use Web, :function_component
 

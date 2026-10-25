@@ -112,6 +112,9 @@ defmodule Web.ActivityLive do
     end
   end
 
+  # A stale page can send a round that no longer exists.
+  def handle_event("remind", _params, socket), do: {:noreply, socket}
+
   # The view's word in the URL, the same before and after the start, as a D4H status.
   @views %{
     "signed-up" => "attending",

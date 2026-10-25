@@ -159,8 +159,8 @@ defmodule Web.MemberQualificationsLive do
       row_id={&"member-qualifications-#{&1.award.qualification_id}"}
       row_class={&QualificationText.row_class/1}
     >
-      <%!-- A member gets Your membership's columns (#440): no Certificate, since D4H marks
-      the documents RESTRICTED, and no qualification pages, which are team admins'. --%>
+      <%!-- A member gets no Certificate (#440), since D4H marks the documents RESTRICTED,
+      and no links to qualification pages, which are team admins'. --%>
       <:col :let={row} label="Qualification">
         <.a
           :if={@team_admin?}
@@ -180,17 +180,17 @@ defmodule Web.MemberQualificationsLive do
           {QualificationText.days_left(row)}
         </.badge>
       </:col>
-      <:col :let={row} :if={@team_admin?} label="First held" class="w-px whitespace-nowrap">
+      <:col :let={row} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}
       </:col>
-      <:col :let={row} :if={@team_admin?} label="Earlier awards" class="w-px whitespace-nowrap">
+      <:col :let={row} label="Earlier awards" class="w-px whitespace-nowrap">
         <span
           :for={award <- row.earlier}
           id={"member-qualifications-award-#{award.id}"}
           class="flex items-center gap-2"
         >
           {QualificationText.held(award, @member.team.timezone)}
-          <.remove_button :if={@records?} award={award} member={@member} />
+          <.remove_button :if={@team_admin? and @records?} award={award} member={@member} />
         </span>
       </:col>
       <:col :let={row} :if={@team_admin? and @records?} class="w-px whitespace-nowrap">

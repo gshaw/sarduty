@@ -91,10 +91,10 @@ defmodule Web.MemberQualificationsLiveTest do
       %{conn: log_in_user(conn, user), team: team}
     end
 
-    test "Qualification and Expires, with no links, Certificate, or earlier awards",
+    test "the team admin's columns, with no links, Certificate, or Remove",
          %{conn: conn, team: team} do
       other = member_fixture(team)
-      %{first_aid: first_aid} = awards(team, other)
+      %{first_aid: first_aid, old: old} = awards(team, other)
       certificate_award_fixture(team, other)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}/qualifications")
@@ -103,8 +103,8 @@ defmodule Web.MemberQualificationsLiveTest do
       assert has_element?(lv, row, "First Aid")
       refute has_element?(lv, "#{row} a")
       refute has_element?(lv, "[id^=certificate-]")
-      refute has_element?(lv, "th", "First held")
-      refute has_element?(lv, "th", "Earlier awards")
+      assert has_element?(lv, "th", "First held")
+      assert has_element?(lv, "#member-qualifications-award-#{old.id}")
       refute has_element?(lv, "[id^=remove-award-]")
       refute has_element?(lv, "#award-qualification")
     end
