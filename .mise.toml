@@ -68,6 +68,18 @@ run = [
   "mix credo --strict",
 ]
 
+# The pre-push hook's checks: ci-static-analysis without the forced compile, the
+# slow half. CI still compiles with warnings as errors.
+[tasks.ci-push]
+depends = ["ci-elixir-lint", "ci-format-md", "spell", "markdownlint"]
+
+[tasks.ci-elixir-lint]
+run = [
+  "mix format --check-formatted",
+  "mix deps.unlock --check-unused",
+  "mix credo --strict",
+]
+
 [tasks.ci-format-md]
 description = "Check Markdown formatting (Prettier) without modifying files"
 run = "prettier --check '**/*.md'"

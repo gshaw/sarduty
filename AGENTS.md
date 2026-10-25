@@ -135,9 +135,9 @@ fi
   misconfigured rather than satisfied.
 - CI runs `mise run -c ci-static-analysis` and `mise run test` on every PR
   ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Don't merge on red.
-- **`git push` runs the static checks first** (`bin/git-hooks/pre-push`). When it
-  fails, run `mise run check`, commit the fix, and push again. Never `--no-verify` to
-  get past a failure.
+- **`git push` runs the static checks first**, all but the compile
+  (`bin/git-hooks/pre-push`). When it fails, run `mise run check`, commit the fix, and
+  push again. Never `--no-verify` to get past a failure.
 - **Deploys are manual**: `fly deploy` from `main`. Never deploy, and never read or write
   production data, unless asked. The how is in [docs/deployment.md](docs/deployment.md).
 - Create migrations with `mix ecto.gen.migration name_with_underscores`. Migrations run

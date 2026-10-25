@@ -24,8 +24,9 @@ Then `mise run server` and open <https://sarduty.test>.
 - `mise run check` formats, compiles, lints, and spell-checks.
 - `mise run test` runs the tests; `mise run ci` runs checks and tests. Run it before
   pushing.
-- `git push` runs CI's static checks first, through `bin/git-hooks/pre-push`, once
-  `core.hooksPath` is set as in Setup. `git push --no-verify` skips them.
+- `git push` first runs CI's static checks, all but the compile, through
+  `bin/git-hooks/pre-push`, once `core.hooksPath` is set as in Setup.
+  `git push --no-verify` skips them.
 - `fly deploy` deploys `main` — see [docs/deployment.md](docs/deployment.md).
 
 How the app is built: [docs/README.md](docs/README.md). Working in this repo as an agent:
