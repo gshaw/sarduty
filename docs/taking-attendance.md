@@ -21,8 +21,9 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
   members take it from 2 hours before the activity starts until 2 hours after it ends;
   outside that the page says when it opens, or that it closed and to ask a team admin.
   Nobody takes it for a deleted activity. The same function decides whether Take
-  attendance shows on the activity panel and whether a scan is saved, and the page checks
-  again on every scan and Undo, so a page left open stops when the window closes.
+  attendance shows on the activity panel and whether a scan is saved. The page checks
+  again on every scan and Undo, and once a minute, so a page left open opens with the
+  window and stops when it closes.
 - **Each scan records who took it**: `recorded_by_user_id`, and `recorded_by_member_id`
   when that user is one of the team's members. The Attendance page's **Recorded by**
   column names them, or a user's email for someone who isn't a member. Scans from before
@@ -115,7 +116,7 @@ codes. Wallet turns the brightness up when it shows a pass.
 
 ## Sending to D4H
 
-The **Send to D4H** part of the Attendance page
+The **Send attendance** part of the Attendance page
 ([SendAttendanceToD4H](../lib/app/operation/send_attendance_to_d4h.ex)) reads the
 activity's attendance from D4H live, plans one change per member, and shows them with
 checkboxes. Sending reads D4H again, plans again, and sends the kept changes as a

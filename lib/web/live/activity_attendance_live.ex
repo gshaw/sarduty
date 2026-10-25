@@ -57,7 +57,7 @@ defmodule Web.ActivityAttendanceLive do
         {:noreply, assign(socket, review: review, selected: selected, failures: [])}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, error_text(error))}
+        {:noreply, put_flash(socket, :error, error_text(error, team))}
     end
   end
 
@@ -86,7 +86,7 @@ defmodule Web.ActivityAttendanceLive do
            DateTime.utc_now()
          ) do
       {:ok, results} -> {:noreply, show_results(socket, results)}
-      {:error, error} -> {:noreply, put_flash(socket, :error, error_text(error))}
+      {:error, error} -> {:noreply, put_flash(socket, :error, error_text(error, team))}
     end
   end
 
@@ -101,27 +101,31 @@ defmodule Web.ActivityAttendanceLive do
     |> put_flash(kind, sent_text(saved, length(failures)))
   end
 
-  defp sent_text(saved, 0), do: "#{count_changes(saved)} saved to D4H."
+  defp sent_text(saved, 0), do: "#{count_changes(saved)} sent."
   defp sent_text(0, failed), do: "#{count_changes(failed)} did not go through."
 
   defp sent_text(saved, failed),
-    do: "#{count_changes(saved)} saved to D4H. #{count_changes(failed)} did not go through."
+    do: "#{count_changes(saved)} sent. #{count_changes(failed)} did not go through."
 
   defp count_changes(n),
     do: Service.Format.count(n, one: "%d attendance change", many: "%d attendance changes")
 
-  defp error_text(:published),
-    do: "Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
+  defp error_text(:published, team), do: published_text(team)
+  defp error_text(:deleted, _team), do: "This activity is deleted. Nothing can be sent to it."
+  defp error_text(:no_team_key, _team), do: "Save your team's access key in team settings first."
 
-  defp error_text(:deleted), do: "This activity is deleted in D4H. Nothing can be sent to it."
-
-  defp error_text(:no_team_key), do: "Save the team's D4H access key in team settings first."
-
-  defp error_text(%D4H.Error{status: status} = error) when status in [400, 404],
+  defp error_text(%D4H.Error{status: status} = error, _team) when status in [400, 404],
     do:
-      "D4H cannot find this activity. It may have been deleted or changed in D4H. #{Exception.message(error)}"
+      "SAR Duty cannot find this activity. It may have been deleted or changed. #{Exception.message(error)}"
 
-  defp error_text(error), do: "D4H did not answer. Try again. #{Exception.message(error)}"
+  defp error_text(error, _team),
+    do: "No answer came back. Try again. #{Exception.message(error)}"
+
+  # Names the service: the reader goes there to unpublish.
+  defp published_text(team),
+    do:
+      "Attendance cannot be changed once the activity is published. " <>
+        "Unpublish it in #{D4H.service_name(team)} first."
 
   defp load_no_shows(socket),
     do: assign(socket, no_shows: NoShow.get_all(socket.assigns.activity))
@@ -147,9 +151,9 @@ defmodule Web.ActivityAttendanceLive do
       <:item label="Attendance" />
     </.breadcrumbs>
     <h1 class="title">{@activity.title}</h1>
+    <%!-- Secondary: Review changes is the page's one main action. --%>
     <.button
       id="take-attendance"
-      variant={:primary}
       navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}/take-attendance"}
     >
       Take attendance
@@ -161,13 +165,13 @@ defmodule Web.ActivityAttendanceLive do
     <div :if={@yet_to_arrive.signed_up > 0} id="yet-to-arrive-section">
       <h2 class="heading mt-4">Yet to arrive · {count_text(@yet_to_arrive)}</h2>
       <p>
-        Members D4H shows as signed up who have not arrived. Call or text to check whether
-        they're still coming.
+        Members signed up who have not arrived. Call or text to check whether they're still
+        coming.
       </p>
       <.yet_to_arrive_list yet_to_arrive={@yet_to_arrive} contacts? class="md:max-w-xl" />
     </div>
 
-    <h2 class="heading mt-4">Send to D4H</h2>
+    <h2 class="heading mt-4">Send attendance</h2>
     <.failures_section failures={@failures} />
     <.send_section review={@review} selected={@selected} times={@times} activity={@activity} />
 
@@ -198,7 +202,7 @@ defmodule Web.ActivityAttendanceLive do
         <span :if={Service.Phone.format(no_show.member.phone)}>{Service.Phone.format(
           no_show.member.phone
         )}</span>
-        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number in D4H</span>
+        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number</span>
         <.call_and_text
           id={"no-show-#{no_show.id}"}
           phone={no_show.member.phone}
@@ -252,7 +256,12 @@ defmodule Web.ActivityAttendanceLive do
         Review the changes before SAR Duty makes them. Members who arrived are marked attended
         with their times. Members who signed up but did not arrive are marked absent.
       </p>
-      <.button id="review" variant={:primary} phx-click="review" phx-disable-with="Reading D4H…">
+      <.button
+        id="review"
+        variant={:primary}
+        phx-click="review"
+        phx-disable-with="Checking attendance…"
+      >
         Review changes
       </.button>
     </div>
@@ -261,9 +270,7 @@ defmodule Web.ActivityAttendanceLive do
 
   defp send_section(%{review: %{published: true}} = assigns) do
     ~H"""
-    <.warning_text id="published">
-      Attendance cannot be changed once the activity is published. Unpublish it in D4H first.
-    </.warning_text>
+    <.warning_text id="published">{published_text(@activity.team)}</.warning_text>
     """
   end
 
@@ -311,7 +318,7 @@ defmodule Web.ActivityAttendanceLive do
             )}
           </span>
         </:col>
-        <:col :let={change} label="In D4H now">{status_text(change.status)}</:col>
+        <:col :let={change} label="Status now">{status_text(change.status)}</:col>
         <:col :let={change} label="Notes" class="stack-full stack-optional">
           <span :for={note <- change.notes} class={["block", note_class(note)]}>
             {note_text(note)}
@@ -394,6 +401,5 @@ defmodule Web.ActivityAttendanceLive do
   defp note_text(:left_before_arriving),
     do: "Left before arriving. Fix the times in Take attendance."
 
-  defp note_text(:signed_up_without_scan),
-    do: "Signed up in D4H, but no scan. Uncheck if they came."
+  defp note_text(:signed_up_without_scan), do: "Signed up, but no scan. Uncheck if they came."
 end

@@ -54,8 +54,11 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
   Marks one activity deleted now, when SAR Duty deleted it in SAR Duty Records. The
   sync can't always: it never marks the last activity of a kind (plan_deleted/2).
   """
-  def mark_one_deleted(team, activity_id, now),
-    do: set_deleted_at(team.id, [activity_id], DateTime.truncate(now, :second))
+  def mark_one_deleted(team, activity_id, now) do
+    Repo.transaction(fn ->
+      set_deleted_at(team.id, [activity_id], DateTime.truncate(now, :second))
+    end)
+  end
 
   # Kept, not deleted: scans and no-shows point at them. A deleted activity takes no
   # scans (Activity.take_attendance?/3). Returns the plan, with local ids. The sync calls

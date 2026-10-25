@@ -83,6 +83,20 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     assert scans(activity) == []
   end
 
+  test "a scan shows the activity as it is now", %{
+    conn: conn,
+    path: path,
+    activity: activity,
+    member: member
+  } do
+    {:ok, lv, _html} = live(conn, path)
+    activity |> Ecto.Changeset.change(title: "Rope practice, moved") |> Repo.update!()
+
+    lv |> form("#door-form", search: "mei") |> render_change()
+    pick(lv, member)
+    assert has_element?(lv, "h1", "Rope practice, moved")
+  end
+
   test "another team's activity is not found", %{conn: conn, team: team} do
     other = team_fixture() |> activity_fixture()
 
@@ -491,6 +505,84 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       render_submit(lv, "pick", %{"pick" => raj.id})
       assert has_element?(lv, "#closed", "Taking attendance closed at")
       assert scans(activity) == []
+    end
+
+    test "a page left open refuses Undo once the window closes", %{conn: conn, team: team} do
+      activity = activity_fixture(team)
+      raj = member_fixture(team, %{name: "Raj Patel"})
+      {:ok, lv, _html} = open_member(conn, team, activity)
+      lv |> form("#door-form", search: "Raj") |> render_change()
+      pick(lv, raj)
+      [scan] = scans(activity)
+
+      activity
+      |> Ecto.Changeset.change(started_at: hours_from_now(-6), finished_at: hours_from_now(-3))
+      |> Repo.update!()
+
+      lv |> element("#undo-#{scan.id}") |> render_click()
+      assert has_element?(lv, "#closed", "Taking attendance closed at")
+      assert [_scan] = scans(activity)
+    end
+
+    # The tick stands in for the clock: moving the activity moves its window past now.
+    test "a page left open opens with the window, and closes with it", %{
+      conn: conn,
+      team: team
+    } do
+      activity =
+        activity_fixture(team, %{started_at: hours_from_now(3), finished_at: hours_from_now(5)})
+
+      {:ok, lv, _html} = open_member(conn, team, activity)
+      assert has_element?(lv, "#closed", "You can take attendance from")
+
+      activity =
+        activity
+        |> Ecto.Changeset.change(started_at: hours_from_now(1), finished_at: hours_from_now(3))
+        |> Repo.update!()
+
+      send(lv.pid, :tick)
+      assert has_element?(lv, "#controls")
+
+      activity
+      |> Ecto.Changeset.change(started_at: hours_from_now(-6), finished_at: hours_from_now(-3))
+      |> Repo.update!()
+
+      send(lv.pid, :tick)
+      assert has_element?(lv, "#closed", "Taking attendance closed at")
+    end
+
+    # Each event the page takes, sent as a member, so a rule that limits members' events
+    # (#440) has to allow them all. The camera's scanned and scan_failed come from the
+    # QrScanner hook, not from an element a sweep of the page would find.
+    test "uses every control, the camera's included", %{conn: conn, team: team} do
+      activity = activity_fixture(team)
+      raj = member_fixture(team, %{name: "Raj Patel"})
+      attendance_fixture(activity, raj, %{status: "attending"})
+      card = member_card_fixture(raj)
+      {:ok, lv, _html} = open_member(conn, team, activity)
+
+      lv |> element("#toggle-yet-to-arrive") |> render_click()
+      assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}")
+
+      render_hook(lv, "scan_failed", %{})
+      assert has_element?(lv, "#scan-failed")
+
+      render_hook(lv, "scanned", %{code: card.code})
+      assert has_element?(lv, "#message", "Raj Patel arrived at")
+
+      lv |> element("#kind-left") |> render_click()
+      lv |> form("#door-form", override: "21:15") |> render_change()
+      assert has_element?(lv, "#override-note", "Recording as 21:15")
+      lv |> element("#clear-override") |> render_click()
+      refute has_element?(lv, "#override-note")
+
+      lv |> form("#door-form", search: "Raj") |> render_change()
+      pick(lv, raj)
+      assert has_element?(lv, "#message", "Raj Patel left at")
+
+      left = activity |> scans() |> Enum.find(&(&1.kind == "left"))
+      lv |> element("#undo-#{left.id}") |> render_click()
+      assert [%{kind: "arrived"}] = scans(activity)
     end
 
     test "on a team with member logins off, gets a 404" do

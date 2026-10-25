@@ -17,13 +17,14 @@ defmodule Web.ActivityTakeAttendanceLive do
   # Taking attendance for one activity (#475): team admins at any time, and members from 2
   # hours before it starts until 2 hours after it ends (Activity.take_attendance?/3). It
   # records ID card scans and members picked by name, and lists what it has recorded so a
-  # mistake can be undone. Every scan and Undo checks again, so a page left open stops
-  # when the window closes. Nothing reaches D4H until a team admin sends it from the
-  # Attendance page.
+  # mistake can be undone. Every scan and Undo checks again, and so does a tick each
+  # minute, so a page left open opens and stops with the window. Nothing reaches D4H
+  # until a team admin sends it from the Attendance page.
   @max_name_matches 8
   @recent_count 30
   # A good scan's confirmation shows this long, then the page is ready for the next.
   @confirm_ms 3000
+  @tick_ms :timer.minutes(1)
 
   def mount(%{"id" => id}, _session, socket) do
     activity = socket.assigns.current_team |> Activity.find!(id) |> Repo.preload(:team)
@@ -36,8 +37,10 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp open(socket, activity) do
     now = DateTime.utc_now()
 
-    if connected?(socket),
-      do: Phoenix.PubSub.subscribe(App.PubSub, AttendanceScan.topic(activity.id))
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(App.PubSub, AttendanceScan.topic(activity.id))
+      Process.send_after(self(), :tick, @tick_ms)
+    end
 
     members =
       activity.team_id
@@ -89,6 +92,11 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   def handle_info(:attendance_scans_changed, socket), do: {:noreply, load_scans(socket)}
+
+  def handle_info(:tick, socket) do
+    Process.send_after(self(), :tick, @tick_ms)
+    {:noreply, reload(socket, DateTime.utc_now())}
+  end
 
   # Only clears the confirmation it was set for, not a newer one.
   def handle_info({:clear_message, message}, socket) do
@@ -168,8 +176,8 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   def handle_event("undo", %{"id" => scan_id}, socket) do
     socket =
-      with_open_door(socket, fn door, now ->
-        case RecordAttendanceScan.undo(door, scan_id, now) do
+      with_open_door(socket, fn socket, now ->
+        case socket |> door() |> RecordAttendanceScan.undo(scan_id, now) do
           :ok -> assign(socket, message: {:info, "Scan removed."})
           # Closed between the check and the undo.
           {:error, _reason} -> assign_closed(socket, now)
@@ -186,8 +194,8 @@ defmodule Web.ActivityTakeAttendanceLive do
     do: {:noreply, assign(socket, :scan_failed, true)}
 
   defp record(socket, record) do
-    with_open_door(socket, fn door, now ->
-      {kind, _text} = message = message(record.(door, now), socket.assigns.team)
+    with_open_door(socket, fn socket, now ->
+      {kind, _text} = message = socket |> door() |> record.(now) |> message(socket.assigns.team)
 
       if kind in [:arrived, :left],
         do: Process.send_after(self(), {:clear_message, message}, @confirm_ms)
@@ -198,21 +206,31 @@ defmodule Web.ActivityTakeAttendanceLive do
     end)
   end
 
-  # Reads the activity again, so one deleted since the page opened stops it too. A team
+  # Runs `action` with the socket read again, while the door may take attendance. A team
   # admin viewing as a member sees the member's page, and saves nothing.
   defp with_open_door(%{assigns: %{viewing_as: %Member{} = member}} = socket, _action),
     do: assign(socket, message: {:error, UserAuth.view_as_refusal(member)})
 
   defp with_open_door(socket, action) do
     now = DateTime.utc_now()
-    activity = socket.assigns.activity |> Repo.reload!() |> Repo.preload(:team)
-    socket = socket |> assign(activity: activity) |> assign_closed(now)
+    socket = reload(socket, now)
 
     cond do
-      Activity.deleted?(activity) -> Web.ActivityLive.leave_deleted(socket, activity)
+      Activity.deleted?(socket.assigns.activity) -> socket
       socket.assigns.closed -> assign(socket, message: nil)
-      true -> socket |> door() |> action.(now)
+      true -> action.(socket, now)
     end
+  end
+
+  # Reads the activity again, so a new time or title shows, and one deleted since the page
+  # opened leaves it.
+  defp reload(socket, now) do
+    activity = socket.assigns.activity |> Repo.reload!() |> Repo.preload(:team)
+    socket = assign(socket, activity: activity, team: activity.team)
+
+    if Activity.deleted?(activity),
+      do: Web.ActivityLive.leave_deleted(socket, activity),
+      else: assign_closed(socket, now)
   end
 
   # `{kind, text}`: `:arrived` or `:left` for a good scan, `:error`, or `:info`. The kind
@@ -443,7 +461,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       <.a
         id="send-attendance"
         navigate={~p"/teams/#{@team}/activities/#{@activity.id}/attendance"}
-      >Send attendance to D4H</.a>
+      >Send attendance</.a>
     </p>
     """
   end

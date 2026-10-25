@@ -9,7 +9,7 @@ defmodule Web.ActivitySendAttendanceTest do
   alias App.Model.Team
   alias App.Repo
 
-  # The Send to D4H part of the Attendance page, with D4H stubbed. Mei was invited
+  # The Send attendance part of the Attendance page, with D4H stubbed. Mei was invited
   # and arrived, Lena walked in, and Sam signed up and didn't come.
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})

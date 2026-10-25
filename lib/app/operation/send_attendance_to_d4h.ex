@@ -136,9 +136,9 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   @doc """
   Makes the kept changes, named by `keys`, from a fresh plan, as a change set applied
-  by `user`. Scans taken after a send show up in the next review. `{:ok, results}` with `{change, :ok | {:error, message}}` for each change sent;
-  `{:error, :published}` when D4H has published the activity; otherwise the error from
-  `preview/2`.
+  by `user`. Scans taken after a send show up in the next review. `{:ok, results}` with
+  `{change, :ok | {:error, message}}` for each change sent; `{:error, :published}` when
+  D4H has published the activity; otherwise the error from `preview/2`.
   """
   def call(%Team{} = team, %Activity{} = activity, %User{} = user, keys, now) do
     keys = MapSet.new(keys)
@@ -228,7 +228,7 @@ defmodule App.Operation.SendAttendanceToD4H do
     }
   end
 
-  defp reason(%{action: :update}), do: "Scanned at the door"
-  defp reason(%{action: :create}), do: "Scanned at the door, not signed up"
-  defp reason(%{action: :absent}), do: "Signed up, not scanned at the door"
+  defp reason(%{action: :update}), do: "Arrived"
+  defp reason(%{action: :create}), do: "Arrived, not signed up"
+  defp reason(%{action: :absent}), do: "Signed up, did not arrive"
 end

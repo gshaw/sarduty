@@ -356,7 +356,7 @@ defmodule Web.ActivityLive do
             <.a
               id="activity-send-attendance"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
-            >Send attendance to D4H</.a>
+            >Send attendance</.a>
           </li>
           <li :if={D4H.records?(@activity.team)}>
             <.a
