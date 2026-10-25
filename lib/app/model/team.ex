@@ -51,8 +51,8 @@ defmodule App.Model.Team do
     # Lets members send certificates (#493) on a team with member logins on. Set with
     # member logins.
     field :certificates_enabled, :boolean, default: false
-    # Whether the team may issue ID cards. Set only by App.Operation.SetTeamIdCards from
-    # /admin/id-cards: a card verifies on SAR Duty's verify site, and anyone can sign up a
+    # Whether the team may issue ID cards. Set only by App.Operation.SetTeamIdCards, which
+    # checks who acts: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
     field :id_cards_enabled, :boolean, default: false
     # The hours tags the team's organization leaves blank (#323); see

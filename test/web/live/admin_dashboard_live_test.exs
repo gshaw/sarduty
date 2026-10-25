@@ -31,27 +31,7 @@ defmodule Web.AdminDashboardLiveTest do
            )
   end
 
-  test "lists each team's users", %{conn: conn} do
-    %{user: admin} = user_with_team_fixture()
-    admin = make_admin(admin)
-
-    %{user: first, team: team} = user_with_team_fixture()
-    second = App.AccountsFixtures.user_fixture()
-    manager_fixture(team, %{email: second.email, d4h_permission: 1})
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(admin)
-      |> live(~p"/admin")
-
-    row = "#team-#{team.id}"
-
-    assert has_element?(lv, "#{row} li", first.email)
-    assert has_element?(lv, "#{row} li", second.email)
-    refute has_element?(lv, "#{row} a[href^='mailto:']")
-  end
-
-  test "says whose D4H account each team key is", %{conn: conn} do
+  test "says whose account each team key is", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
 
@@ -61,105 +41,83 @@ defmodule Web.AdminDashboardLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
 
-    assert has_element?(lv, "#team-#{sar_duty.id}-key", "Team key: SAR Duty")
-    assert has_element?(lv, "#team-#{person.id}-key", "Person's key: Sam Rivers")
-    assert has_element?(lv, "#team-#{no_key.id}-key", "No team key")
+    assert has_element?(lv, "#team-#{sar_duty.id}-key", "SAR Duty")
+    assert has_element?(lv, "#team-#{person.id}-key", "Person's: Sam Rivers")
+    assert has_element?(lv, "#team-#{no_key.id}-key", "None")
   end
 
-  test "counts each team's managers and links to them", %{conn: conn} do
+  test "counts each team's team admins once per email, and None in red", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
     team = team_fixture()
-    manager_fixture(team, %{name: "Ada Owner"})
-    manager_fixture(team, %{name: "Eli Editor", d4h_permission: 1})
-    manager_fixture(team, %{name: "Mo Member", d4h_permission: 2})
+    manager_fixture(team, %{email: "owner@example.com"})
+    manager_fixture(team, %{email: "editor@example.com", d4h_permission: 1})
+    manager_fixture(team, %{email: "member@example.com", d4h_permission: 2})
+    TeamLoginGrant.grant!(team, "owner@example.com", "also a grant")
+    TeamLoginGrant.grant!(team, "office@example.com", nil)
+    nobody = team_fixture()
 
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
 
-    assert has_element?(
-             lv,
-             ~s|#team-#{team.id}-managers[href="/teams/#{team.subdomain}/settings/managers"]|,
-             "2 team admins"
-           )
+    assert has_element?(lv, "#team-#{team.id}-team-admins", "3")
+    assert has_element?(lv, "#team-#{nobody.id}-team-admins.text-danger-text", "None")
+    refute has_element?(lv, "#team-#{team.id}", "owner@example.com")
   end
 
-  test "lists the logins of emails an admin let in", %{conn: conn} do
-    %{user: admin} = user_with_team_fixture()
-    admin = make_admin(admin)
-    team = team_fixture()
-    TeamLoginGrant.grant!(team, "office@example.com", "role address")
-    App.AccountsFixtures.user_fixture(%{email: "office@example.com"})
-
-    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
-
-    assert has_element?(lv, "#team-#{team.id} li", "office@example.com")
+  test "links each team to its admin page", %{conn: conn} do
+    %{user: admin, team: team} = user_with_team_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin")
+    assert has_element?(lv, ~s|#team-#{team.id}-name[href="/admin/teams/#{team.id}"]|)
   end
 
-  test "shows when each team and contact was last seen", %{conn: conn} do
+  test "shows when each team was last seen", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     admin = make_admin(admin)
-
     %{user: recent, team: team} = user_with_team_fixture()
-    earlier = App.AccountsFixtures.user_fixture()
-    manager_fixture(team, %{email: earlier.email})
     unused = team_fixture()
+    seen(recent, DateTime.utc_now(:second))
 
-    now = DateTime.utc_now(:second)
-    seen(recent, now)
-    seen(earlier, DateTime.add(now, -130, :day))
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(admin)
-      |> live(~p"/admin")
+    {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin")
 
     assert has_element?(lv, "#team-#{team.id}-last-seen", "Today")
-    assert render(element(lv, "#team-#{team.id} li", earlier.email)) =~ "4 months ago"
-    refute has_element?(lv, "#team-#{unused.id}-last-seen", ~r/\S/)
+    assert has_element?(lv, "#team-#{unused.id}-last-seen", "Never")
   end
 
-  test "shows why a team's refresh failed", %{conn: conn} do
+  test "each stat switch count matches the rows its view shows", %{conn: conn} do
     %{user: admin, team: team} = user_with_team_fixture()
     admin = make_admin(admin)
+    Team.update(team, %{d4h_refresh_result: "OK", d4h_refreshed_at: DateTime.utc_now()})
+    failing = team_fixture(%{d4h_access_key: "k", d4h_access_key_owner: "Sam Rivers"})
+    {:ok, _team} = Team.update(failing, %{d4h_refresh_result: "Error: 500"})
+    conn = log_in_user(conn, admin)
 
-    {:ok, _team} =
-      Team.update(team, %{
-        d4h_refresh_result: "Error: No access key. Save one in team settings."
-      })
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(admin)
-      |> live(~p"/admin")
-
-    assert has_element?(lv, "#team-#{team.id} .text-danger-text", "No access key.")
+    for {view, ids} <- [
+          {"not-refreshing", [failing.id]},
+          {"no-team-admins", [failing.id]},
+          {"person-key", [failing.id]},
+          {"id-cards-on", [team.id, failing.id]},
+          {"mcp-on", []}
+        ] do
+      {:ok, lv, _html} = live(conn, ~p"/admin?view=#{view}")
+      assert has_element?(lv, "#team-view-#{view}", "#{length(ids)}")
+      for id <- ids, do: assert(has_element?(lv, "#team-#{id}"))
+      for id <- [team.id, failing.id] -- ids, do: refute(has_element?(lv, "#team-#{id}"))
+    end
   end
 
-  test "flags a team with no users", %{conn: conn} do
+  test "an unknown view falls back to All", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
-    admin = make_admin(admin)
-    team = team_fixture()
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(admin)
-      |> live(~p"/admin")
-
-    assert has_element?(lv, "#team-#{team.id}", "No accounts")
+    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin?view=nope")
+    assert has_element?(lv, "#team-view-all[aria-current=page]")
   end
 
-  test "keeps a team's contacts after a refresh broadcast", %{conn: conn} do
+  test "a refresh broadcast updates the team's row", %{conn: conn} do
     %{user: admin, team: team} = user_with_team_fixture()
-    admin = make_admin(admin)
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(admin)
-      |> live(~p"/admin")
+    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin")
 
     send(lv.pid, {:team_refreshed, %{Team.get!(team.id) | d4h_refresh_result: "OK"}})
 
-    assert has_element?(lv, "#team-#{team.id}", admin.email)
+    assert has_element?(lv, "#team-#{team.id}-refresh", "OK")
   end
 
   test "is a 404 for anyone who isn't a SAR Duty admin (#513)", %{conn: conn} do

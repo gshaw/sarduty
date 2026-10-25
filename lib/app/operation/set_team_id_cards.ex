@@ -3,8 +3,8 @@ defmodule App.Operation.SetTeamIdCards do
   Lets a team issue ID cards, or stops it. A card verifies on SAR Duty's verify site, and
   anyone can sign up a team on SAR Duty Records, so a SAR Duty admin checks a team before
   it may issue them: when turning on its cards, or when adding it to an organization
-  (#512). So a SAR Duty admin acts, from /admin/id-cards, or one of the team's own
-  organization admins, from the team's page in the organization. Anyone else is
+  (#512). So a SAR Duty admin acts, from the team's admin page, /admin/teams/:id (#513),
+  or one of the team's own organization admins, from its page in the organization. Anyone else is
   refused, which also stops someone removed while their page is still open.
 
   Turning it off cancels every live card on the team, and phones holding one are told to

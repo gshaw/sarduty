@@ -85,8 +85,8 @@
   [lib/app/adapter/cloudflare_email.ex](lib/app/adapter/cloudflare_email.ex): mail in
   production. Dev uses the local mailbox at `/dev/mailbox`.
 - **Litestream to Cloudflare R2**: continuous SQLite backup.
-- **MCP**: a trial at `/teams/:subdomain/mcp` (#28). An admin turns it on per team in
-  `/admin/mcp`, and managers create personal bearer tokens in team settings. Tools in
+- **MCP**: a trial at `/teams/:subdomain/mcp` (#28). An admin turns it on per team on
+  the team's admin page, `/admin/teams/:id`, and managers create personal bearer tokens in team settings. Tools in
   [lib/app/mcp/tool/](lib/app/mcp/tool) are scoped to the token's team and build output
   from an explicit field allowlist: never contact details, addresses, coordinates, letter
   text, or keys. They only read, except `propose_attendance_changes`, which saves a
