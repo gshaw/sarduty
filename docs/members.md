@@ -163,8 +163,8 @@ members ([navigation.md](navigation.md)). Their own pages are under
 
 | Page            | Path                   | What it holds                                                     |
 | --------------- | ---------------------- | ----------------------------------------------------------------- |
-| Your membership | `/me`                  | Latest activities, qualifications, ID card, letter, and more      |
-| The year page   | `/me/activities?year=` | Every activity in a year, that year's letter, and its hours       |
+| Your membership | `/me`                  | A year's activities, qualifications, ID card, letter, and more    |
+| The year page   | `/me/activities?year=` | A year's hours, letter, map, and numbers, and every activity      |
 | Contact details | `/me/details`          | Mobile number, mailing address, and emergency contacts, to change |
 
 Members don't change their email: teams keep it consistent, and team admins change it in
@@ -180,16 +180,19 @@ in a circle, or their initials when D4H has none (`/members/:id/image`), their n
 Away badge while they're away, and "Ground searcher · Joined March 2019 · Last attended
 Sep 30, 2026". Neither page shows the member ID: teams number members in very different ways.
 
-- **Main column**: the 10 latest activities they attended, from any year so the page is
-  never empty on January 1, under 3 numbers for the last 12 months: activities, incidents,
-  and hours. A link opens the year page on the latest activity's year. Then their
-  qualifications: Qualification and Expires, from the same rows a team admin sees. Then
-  the equipment they hold, when they hold any, so they know what to bring back: the
-  table a team admin sees on their Equipment tab, retired items too, with no links
-  (#490, [equipment.md](equipment.md#items-members-hold)).
+- **Main column**: one year of their activities (#576), this year unless the year menu
+  beside Activities picks another (`?year=`, the year page's years). Its total, primary,
+  and secondary hours, counted as the letter counts them, since members read them to see
+  where they stand; then its 10 latest activities, and "All 41 activities in 2026" to
+  the year page. A year with nothing says "No activities in 2027", so in January they
+  pick last year from the menu. Then their qualifications: Qualification and Expires,
+  from the same rows a team admin sees. Then the equipment they hold, when they hold
+  any, so they know what to bring back: the table a team admin sees on their Equipment
+  tab, retired items too, with no links (#490,
+  [equipment.md](equipment.md#items-members-hold)).
 - **Sidebar**, sections split by space, no boxes (`/styles/card`): the ID card, when the
   team has ID cards on, then the latest tax credit letter to download, with its hours on
-  the year page so they aren't mistaken for the last 12 months'; then contact details
+  the year page so they aren't mistaken for the year's above; then contact details
   and every milestone, newest first. On a phone the ID card and letter come first, then
   the main column, then contact details and milestones.
 - **Contact details** are the mobile number, address, and emergency contact, from the
@@ -229,14 +232,21 @@ Activities.
 
 - **The year switch** runs from this year back to the year the member joined
   (`MemberRecords.years_on_team/2`).
-- **That year's letter**, as Your membership shows it. For the current year it says the
-  letter comes once a team admin makes it, after the year ends. A past year with no letter
-  shows nothing.
-- **Hours in the year**: the count of activities, then bars for primary, secondary, and
-  other hours. Primary and secondary count as the letter does (`CountTaxCreditHours`), so
-  they match it. Other is the time on activities with neither hours tag.
-- **Where they went that year**: the Dashboard's map with only the activities they
-  attended, beside the letter and the hours. No map when none of them has a place.
+- **Hours in the year** (#576), the main column: bars for primary, secondary, and other
+  hours, then hours by month, stacked by incident, exercise, and event. Primary and
+  secondary count as the letter does (`CountTaxCreditHours`), so they match it. Other is
+  the time on activities with neither hours tag.
+- **That year's letter**, beside the hours, as Your membership shows it. For the current
+  year it says the letter comes once a team admin makes it, after the year ends. A past
+  year with no letter shows nothing. On a phone it comes first.
+- **Where they went that year**, under the letter: the Dashboard's map with only the
+  activities they attended. No map when none of them has a place.
+- **The year in numbers**, over the table: total hours as the letter counts them,
+  activities, and incidents, each with a sparkline by month and against the year before:
+  the same days of last year for this year, the whole year before for a past one
+  ([MemberYear](../lib/app/view_data/member_year.ex)). No streaks, calendar of days out,
+  or comparison with teammates: the page tells a member about their year, not how they
+  rank or what they missed.
 - **Every attended activity**, newest first, with which hours it counts for. Coming
   sign-ups are not here: Next up and the team's Activities have them.
 

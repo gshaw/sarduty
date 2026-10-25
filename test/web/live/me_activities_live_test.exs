@@ -43,7 +43,7 @@ defmodule Web.MeActivitiesLiveTest do
 
     refute html =~ "Rope practice"
     assert has_element?(lv, "#no-attendance")
-    assert has_element?(lv, "#activity-count", "0 activities")
+    refute has_element?(lv, "#year-stats")
   end
 
   test "is titled for the year under Your membership, with this year's letter to come",
@@ -98,13 +98,53 @@ defmodule Web.MeActivitiesLiveTest do
              ~s{#letter-download[href="/teams/#{team.subdomain}/me/tax-credit-letters/#{letter.id}/pdf"]}
            )
 
-    assert has_element?(lv, "#activity-count", "3 activities")
+    assert has_element?(lv, "#stat-activities", "3")
+    assert has_element?(lv, "#stat-total", "8")
     assert has_element?(lv, "#hours-bars li", "Primary")
     assert has_element?(lv, "#hours-bars li", "6 hours")
     assert has_element?(lv, "#hours-bars li", "2 hours")
     assert has_element?(lv, "#hours-bars li", "3 hours")
     assert has_element?(lv, "#attendance tr", "Board meeting")
     assert has_element?(lv, "#attendance td", "Other")
+  end
+
+  test "the year's numbers against the same days of last year, and hours by month",
+       %{conn: conn, team: team, member: member, year: year, mid_year: mid_year} do
+    incident =
+      activity_fixture(team, %{
+        activity_kind: "incident",
+        tags: ["Primary Hours"],
+        started_at: mid_year
+      })
+
+    attendance_fixture(incident, member, %{
+      started_at: mid_year,
+      finished_at: DateTime.add(mid_year, 4 * 3600)
+    })
+
+    # Last year, a year before this year's, so before this time last year: 2 activities
+    # and under an hour.
+    early = DateTime.shift(mid_year, year: -1)
+
+    for minute <- [0, 1] do
+      started = DateTime.add(early, minute, :minute)
+      activity = activity_fixture(team, %{tags: ["Primary Hours"], started_at: started})
+
+      attendance_fixture(activity, member, %{
+        started_at: started,
+        finished_at: DateTime.add(started, 60)
+      })
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities")
+
+    assert has_element?(lv, "#stat-total", "4 more than this time last year")
+    assert has_element?(lv, "#stat-activities", "1 fewer than this time last year")
+    assert has_element?(lv, "#stat-incidents", "1 more than this time last year")
+    assert has_element?(lv, "#hours-by-month-chart")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities?year=#{year - 1}")
+    assert has_element?(lv, "#stat-activities", "2 more than in #{year - 2}")
   end
 
   test "a past year with no letter shows no letter",

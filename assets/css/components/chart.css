@@ -142,3 +142,10 @@
 .value-rows { list-style: none; margin: 0; padding-left: 0; }
 .value-rows > * { display: flex; justify-content: space-between; gap: var(--sp-4); padding-block: var(--sp-1); }
 .value-rows > * > :last-child { flex: none; }
+
+/* The year page on a phone (#576): the letter first, then its cards in order. */
+@media (max-width: 959px) {
+  .year-grid > .card-stack { display: contents; }
+  .year-grid > .card-stack > .card { grid-column: span 12; }
+  .year-grid .year-letter { order: -1; }
+}

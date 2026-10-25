@@ -2,20 +2,22 @@ defmodule Web.MeActivitiesLive do
   use Web, {:live_view_app_layout, access: :member, view_events: ["year"]}
 
   import Web.Components.ActivityMap
-  import Web.Components.Chart, only: [bar_list: 1]
+  import Web.Components.Chart, only: [bar_list: 1, column_chart: 1, sparkline: 1, stat: 1]
   import Web.Components.MeYear
   import Web.Components.MemberLetter
 
   alias App.Model.Activity
   alias App.Model.TaxCreditLetter
   alias App.ViewData.MemberRecords
+  alias App.ViewData.MemberYear
   alias App.ViewData.TeamDashboardCharts
   alias Service.Format
   alias Web.Components.ActivityMap
 
-  # The year page (#339, #406), /teams/:subdomain/me/activities?year=2025: every activity
-  # the member attended in a year, that year's tax credit letter, its primary, secondary,
-  # and other hours, and where they went. `current_member` comes from the login, never
+  # The year page (#339, #406, #576), /teams/:subdomain/me/activities?year=2025: a
+  # member's year. Its primary, secondary, and other hours and hours by month, its tax
+  # credit letter and where they went, then its numbers against the year before over
+  # every activity they attended. On a phone the letter comes first. `current_member` comes from the login, never
   # the URL.
   def mount(_params, _session, socket) do
     member = socket.assigns.current_member
@@ -33,10 +35,9 @@ defmodule Web.MeActivitiesLive do
   end
 
   def handle_params(params, _uri, socket) do
-    %{member: member, years: years, now: now, hours_tags: hours_tags} = socket.assigns
+    %{member: member, years: years, now: now} = socket.assigns
     year = year!(params["year"], years)
     attendances = MemberRecords.attendances(member, year, now)
-    hours = MemberRecords.hours(member, year, now)
 
     socket =
       socket
@@ -44,10 +45,23 @@ defmodule Web.MeActivitiesLive do
       |> assign(:year, year)
       |> assign(:attendances, attendances)
       |> assign(:letter, Enum.find(socket.assigns.letters, &(&1.year == year)))
-      |> assign(:bars, bars(hours, MemberRecords.other_minutes(attendances, hours_tags)))
       |> assign(:map, where_they_went(attendances, member.team, now))
+      |> assign_numbers(year, attendances)
 
     {:noreply, socket}
+  end
+
+  # The hours bars, and the year against the year before.
+  defp assign_numbers(socket, year, attendances) do
+    %{member: member, now: now, hours_tags: hours_tags} = socket.assigns
+    tz = member.team.timezone
+    before = MemberRecords.attendances(member, year - 1, now)
+    hours = MemberYear.hours(attendances, year, tz, hours_tags)
+
+    assign(socket,
+      bars: bars(hours, MemberRecords.other_minutes(attendances, hours_tags)),
+      summary: MemberYear.summary(attendances, before, year, now, tz, hours_tags)
+    )
   end
 
   def handle_event("year", %{"year" => year}, socket),
@@ -90,32 +104,71 @@ defmodule Web.MeActivitiesLive do
     <h1 class="title">Your activities in {@year}</h1>
     <.year_menu years={@years} year={@year} />
 
-    <div class="card-grid mt-6 mb-6">
-      <div class={["card-stack", @map && "span-7"]}>
-        <section :if={@letter || @year == @this_year} class="card side-card">
-          <.member_letter id="letter" team={@team} letter={@letter} year={@year} />
-        </section>
+    <div class="card-grid year-grid mt-6">
+      <div class="card-stack span-7">
         <section id="hours" class="card">
           <header>
             <h2 class="chart-title">Hours in {@year}</h2>
-            <span id="activity-count" class="hint">
-              {Format.count(length(@attendances), one: "1 activity", many: "%d activities")}
-            </span>
           </header>
           <.bar_list id="hours-bars" rows={@bars} />
         </section>
+        <section :if={@attendances != []} id="hours-by-month" class="card">
+          <header>
+            <h2 class="chart-title">Hours by month</h2>
+          </header>
+          <.column_chart
+            id="hours-by-month-chart"
+            columns={@summary.hour_columns}
+            series={TeamDashboardCharts.series()}
+            height={160}
+            caption={"Hours by month in #{@year}"}
+          />
+        </section>
       </div>
-      <section :if={@map} id="where-you-went" class="card span-5">
-        <header>
-          <h2 class="chart-title">Where you went in {@year}</h2>
-        </header>
-        <.activity_map
-          id="year-map"
-          map={@map}
-          label={"Map of your activities in #{@year}"}
-          overlay={false}
-        />
-      </section>
+      <div class="card-stack span-5">
+        <section :if={@letter || @year == @this_year} class="card side-card year-letter">
+          <.member_letter id="letter" team={@team} letter={@letter} year={@year} />
+        </section>
+        <section :if={@map} id="where-you-went" class="card">
+          <header>
+            <h2 class="chart-title">Where you went in {@year}</h2>
+          </header>
+          <.activity_map
+            id="year-map"
+            map={@map}
+            label={"Map of your activities in #{@year}"}
+            overlay={false}
+          />
+        </section>
+      </div>
+    </div>
+
+    <div :if={@attendances != []} id="year-stats" class="chart-stats">
+      <.stat
+        id="stat-total"
+        value={Format.hours(@summary.total_minutes)}
+        label="Total hours"
+        delta={versus(@summary.versus.hours, @year, @this_year)}
+      >
+        <.sparkline values={@summary.monthly.hours} />
+      </.stat>
+      <.stat
+        id="stat-activities"
+        value={Format.number(@summary.activities)}
+        label={Format.count(@summary.activities, one: "Activity", many: "Activities")}
+        delta={versus(@summary.versus.activities, @year, @this_year)}
+      >
+        <.sparkline values={@summary.monthly.activities} />
+      </.stat>
+      <.stat
+        id="stat-incidents"
+        series={:incident}
+        value={Format.number(@summary.incidents)}
+        label={Format.count(@summary.incidents, one: "Incident", many: "Incidents")}
+        delta={versus(@summary.versus.incidents, @year, @this_year)}
+      >
+        <.sparkline values={@summary.monthly.incidents} series={:incident} />
+      </.stat>
     </div>
 
     <.empty_state :if={@attendances == []} id="no-attendance" title={"No activities in #{@year}"}>
@@ -147,6 +200,19 @@ defmodule Web.MeActivitiesLive do
       Missing an activity? Tell a team admin.
     </p>
     """
+  end
+
+  # "12 more than this time last year" for this year, "12 more than in 2024" for a past
+  # one, as on the Dashboard.
+  defp versus({now, before}, year, this_year) do
+    than = if year == this_year, do: "this time last year", else: "in #{year - 1}"
+
+    cond do
+      now > before -> "#{Format.number(now - before)} more than #{than}"
+      now < before -> "#{Format.number(before - now)} fewer than #{than}"
+      year == this_year -> "Same as this time last year"
+      true -> "Same as #{year - 1}"
+    end
   end
 
   defp hours_label(:primary), do: "Primary"
