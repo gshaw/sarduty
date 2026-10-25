@@ -1,6 +1,7 @@
 defmodule App.Operation.BuildAttendanceTimesTest do
   use ExUnit.Case, async: true
 
+  alias App.Accounts.User
   alias App.Model.Activity
   alias App.Model.AttendanceScan
   alias App.Model.Member
@@ -109,5 +110,43 @@ defmodule App.Operation.BuildAttendanceTimesTest do
   test "times drop their seconds, as D4H keeps whole minutes" do
     [row] = times([scan(@mei, "arrived", ~U[2026-10-10 09:50:42.123456Z])])
     assert row.arrived_at == ~U[2026-10-10 09:50:00Z]
+  end
+
+  describe "recorded by" do
+    @andrew %Member{id: 3, name: "Andrew Wallwork"}
+    @admin %User{id: 9, email: "admin@example.com"}
+
+    test "names who recorded the arrival, then the departure, once each" do
+      [row] =
+        times([
+          scan(@mei, "arrived", ~U[2026-10-10 09:00:00Z], recorded_by_member: @andrew),
+          scan(@mei, "left", ~U[2026-10-10 15:00:00Z], recorded_by_user: @admin)
+        ])
+
+      assert row.recorded_by == ["Andrew Wallwork", "admin@example.com"]
+
+      [row] =
+        times([
+          scan(@mei, "arrived", ~U[2026-10-10 09:00:00Z], recorded_by_member: @andrew),
+          scan(@mei, "left", ~U[2026-10-10 15:00:00Z], recorded_by_member: @andrew)
+        ])
+
+      assert row.recorded_by == ["Andrew Wallwork"]
+    end
+
+    test "names only the scans the times come from" do
+      [row] =
+        times([
+          scan(@mei, "arrived", ~U[2026-10-10 09:00:00Z], recorded_by_user: @admin),
+          scan(@mei, "arrived", ~U[2026-10-10 09:05:00Z], recorded_by_member: @andrew)
+        ])
+
+      assert row.recorded_by == ["Andrew Wallwork"]
+    end
+
+    test "an old scan from an attendance link names nobody" do
+      [row] = times([scan(@mei, "arrived", ~U[2026-10-10 09:00:00Z])])
+      assert row.recorded_by == []
+    end
   end
 end

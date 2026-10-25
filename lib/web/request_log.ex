@@ -1,9 +1,9 @@
 defmodule Web.RequestLog do
   @moduledoc """
   Logs each request as Phoenix would, `GET /path` then `Sent 200 in 3ms`, but with
-  secrets cut out of the path: attendance tokens, short link codes, and card codes
-  (#176). Phoenix's own request lines are off (`log: false` in the endpoint), since
-  they print the whole path. Web.HoneybadgerFilter uses filter_path/2 too.
+  card codes cut out of the path (#176). Phoenix's own request lines are off (`log:
+  false` in the endpoint), since they print the whole path. Web.HoneybadgerFilter uses
+  filter_path/2 too.
   """
 
   require Logger
@@ -35,7 +35,7 @@ defmodule Web.RequestLog do
   end
 
   @doc """
-  The path with any token or code in it replaced by `[FILTERED]`. `host` tells the
+  The path with any card code in it replaced by `[FILTERED]`. `host` tells the
   verify site, where a bare `/K7Q4M2XA` is a card code, from the app.
   """
   def filter_path(host, path) when is_binary(path) do
@@ -48,11 +48,6 @@ defmodule Web.RequestLog do
 
   defp filter_segments(true, ["", code | rest]) when code != "" and code not in @verify_paths,
     do: ["", @filtered | rest]
-
-  defp filter_segments(_verify?, ["", "attendance", _token | rest]),
-    do: ["", "attendance", @filtered | rest]
-
-  defp filter_segments(_verify?, ["", "s", _code | rest]), do: ["", "s", @filtered | rest]
 
   defp filter_segments(_verify?, ["", verify, _code | rest]) when verify in ["verify", "VERIFY"],
     do: ["", verify, @filtered | rest]

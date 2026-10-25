@@ -9,6 +9,30 @@ defmodule App.Model.ActivityTest do
 
   @defaults %{primary: "Primary Hours", secondary: "Secondary Hours", other: nil}
 
+  # 19:00–21:00 UTC.
+  @evening %Activity{started_at: ~U[2026-10-10 19:00:00Z], finished_at: ~U[2026-10-10 21:00:00Z]}
+
+  describe "take_attendance?/3" do
+    test "a member takes attendance from 2 hours before the start to 2 hours after the end" do
+      refute Activity.take_attendance?(@evening, false, ~U[2026-10-10 16:59:59Z])
+      assert Activity.take_attendance?(@evening, false, ~U[2026-10-10 17:00:00Z])
+      assert Activity.take_attendance?(@evening, false, ~U[2026-10-10 20:00:00Z])
+      assert Activity.take_attendance?(@evening, false, ~U[2026-10-10 23:00:00Z])
+      refute Activity.take_attendance?(@evening, false, ~U[2026-10-10 23:00:01Z])
+    end
+
+    test "a team admin takes attendance at any time" do
+      assert Activity.take_attendance?(@evening, true, ~U[2026-10-01 12:00:00Z])
+      assert Activity.take_attendance?(@evening, true, ~U[2026-10-11 09:00:00Z])
+    end
+
+    test "nobody takes attendance for a deleted activity" do
+      deleted = %{@evening | deleted_at: ~U[2026-10-10 18:00:00Z]}
+      refute Activity.take_attendance?(deleted, true, ~U[2026-10-10 20:00:00Z])
+      refute Activity.take_attendance?(deleted, false, ~U[2026-10-10 20:00:00Z])
+    end
+  end
+
   describe "hours_tags/1" do
     test "a team with no organization keeps the default tags" do
       assert Activity.hours_tags(%Team{organization_id: nil}) == @defaults

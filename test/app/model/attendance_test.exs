@@ -141,7 +141,7 @@ defmodule App.Model.AttendanceTest do
     "lib/app/operation/build_mileage_report.ex" => "one activity's attendees",
     "lib/app/view_data/change_history.ex" => "a label",
     "lib/web/live/proposed_change_live.ex" => "a label",
-    "lib/web/live/activity_take_attendance_live.ex" => "a label",
+    "lib/web/live/activity_attendance_live.ex" => "a label",
     "lib/app/operation/build_chore_event.ex" => "a D4H row's own status, to leave a row alone",
     "lib/web/components/reply.ex" => "a member's own reply, before the start",
     "lib/app/view_data/activity_members.ex" => "one activity's replies, sign-ups included"

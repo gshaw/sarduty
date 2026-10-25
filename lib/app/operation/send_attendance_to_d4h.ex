@@ -2,7 +2,6 @@ defmodule App.Operation.SendAttendanceToD4H do
   alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
@@ -137,10 +136,9 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   @doc """
   Makes the kept changes, named by `keys`, from a fresh plan, as a change set applied
-  by `user`. When they all go through, it closes the activity's attendance links.
-  `{:ok, results}` with `{change, :ok | {:error, message}}` for each change sent;
-  `{:error, :published}` when D4H has published the activity; otherwise the error from
-  `preview/2`.
+  by `user`. Scans taken after a send show up in the next review. `{:ok, results}` with
+  `{change, :ok | {:error, message}}` for each change sent; `{:error, :published}` when
+  D4H has published the activity; otherwise the error from `preview/2`.
   """
   def call(%Team{} = team, %Activity{} = activity, %User{} = user, keys, now) do
     keys = MapSet.new(keys)
@@ -148,23 +146,13 @@ defmodule App.Operation.SendAttendanceToD4H do
     case preview(team, activity) do
       {:ok, %{published: false, changes: changes}} ->
         kept = for change <- changes, sendable?(change), change.key in keys, do: change
-        send_kept(team, activity, user, kept, now)
+        apply_changes(team, activity, user, kept, now)
 
       {:ok, %{published: true}} ->
         {:error, :published}
 
       error ->
         error
-    end
-  end
-
-  defp send_kept(team, activity, user, kept, now) do
-    with {:ok, results} <- apply_changes(team, activity, user, kept, now) do
-      # A failed change keeps the link open, so the door can still fix times.
-      if Enum.all?(results, &match?({_change, :ok}, &1)),
-        do: AttendanceLink.close_all!(team, activity, now)
-
-      {:ok, results}
     end
   end
 
@@ -240,7 +228,7 @@ defmodule App.Operation.SendAttendanceToD4H do
     }
   end
 
-  defp reason(%{action: :update}), do: "Scanned at the door"
-  defp reason(%{action: :create}), do: "Scanned at the door, not signed up"
-  defp reason(%{action: :absent}), do: "Signed up, not scanned at the door"
+  defp reason(%{action: :update}), do: "Arrived"
+  defp reason(%{action: :create}), do: "Arrived, not signed up"
+  defp reason(%{action: :absent}), do: "Signed up, did not arrive"
 end

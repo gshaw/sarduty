@@ -135,7 +135,7 @@ defmodule App.Model.Activity do
     field :finished_at, :utc_datetime
     field :tags, {:array, :string}
     # Set by the refresh when D4H stops listing the activity. Deleted activities are kept
-    # for their attendance links and scans, and left out of every list.
+    # for their attendance scans, and left out of every list.
     field :deleted_at, :utc_datetime
     timestamps(type: :utc_datetime_usec)
   end
@@ -197,6 +197,34 @@ defmodule App.Model.Activity do
   def not_deleted(query), do: where(query, [r], is_nil(r.deleted_at))
 
   def deleted?(%Activity{deleted_at: deleted_at}), do: deleted_at != nil
+
+  @attendance_window_hours 2
+
+  def attendance_window_hours, do: @attendance_window_hours
+
+  @doc """
+  When members take attendance (#475): from #{@attendance_window_hours} hours before the
+  activity starts until #{@attendance_window_hours} hours after it ends.
+  """
+  def attendance_window(%Activity{started_at: started_at, finished_at: finished_at}) do
+    seconds = @attendance_window_hours * 3600
+    {DateTime.add(started_at, -seconds), DateTime.add(finished_at, seconds)}
+  end
+
+  def attendance_window?(%Activity{} = activity, now) do
+    {opens_at, closes_at} = attendance_window(activity)
+    not DateTime.before?(now, opens_at) and not DateTime.after?(now, closes_at)
+  end
+
+  @doc """
+  Whether someone who reaches the team's pages may take attendance now: a team admin at
+  any time, to catch up from a paper list, and a member during attendance_window?/2.
+  Nobody on a deleted activity. Decides both whether Take attendance shows and whether a
+  scan is saved.
+  """
+  def take_attendance?(%Activity{deleted_at: %DateTime{}}, _team_admin?, _now), do: false
+  def take_attendance?(%Activity{}, true, _now), do: true
+  def take_attendance?(%Activity{} = activity, false, now), do: attendance_window?(activity, now)
 
   @doc """
   Activities that started in the last #{Service.Period.recent_days()} days and have finished by `now`.

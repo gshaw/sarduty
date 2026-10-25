@@ -1,21 +1,24 @@
 defmodule App.Model.AttendanceScan do
   use App, :model
 
+  alias App.Accounts.User
   alias App.Model.Activity
-  alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
 
-  # A member arriving at or leaving an activity, recorded at the door from their ID card
-  # (`method` "card") or picked by name ("name"). Scans stay in SAR Duty until a team
-  # admin sends the attendance to D4H.
+  # A member arriving at or leaving an activity, recorded on the Take attendance page from
+  # their ID card (`method` "card") or picked by name ("name"). `recorded_by_user` took
+  # it, and `recorded_by_member` is that user's member on the team, when they log in as
+  # one; scans from attendance links before #475 have neither. Scans stay in SAR Duty
+  # until a team admin sends the attendance to D4H.
   schema "attendance_scans" do
     belongs_to :team, Team
     belongs_to :activity, Activity
     belongs_to :member, Member
-    belongs_to :attendance_link, AttendanceLink
+    belongs_to :recorded_by_user, User
+    belongs_to :recorded_by_member, Member
     field :kind, :string
     field :method, :string
     field :scanned_at, :utc_datetime_usec
@@ -25,7 +28,7 @@ defmodule App.Model.AttendanceScan do
 
   def kinds, do: ["arrived", "left"]
 
-  @doc "The time the scan stands for: the time typed at the door, or when it happened."
+  @doc "The time the scan stands for: the time typed in the time box, or when it happened."
   def time(%AttendanceScan{override_at: nil, scanned_at: scanned_at}), do: scanned_at
   def time(%AttendanceScan{override_at: override_at}), do: override_at
 
@@ -47,14 +50,14 @@ defmodule App.Model.AttendanceScan do
     count
   end
 
-  @doc "The activity's scans, oldest first, with their members."
+  @doc "The activity's scans, oldest first, with their members and who recorded them."
   def get_all(%Activity{} = activity) do
     AttendanceScan
     |> where([s], s.activity_id == ^activity.id and s.team_id == ^activity.team_id)
     |> join(:inner, [s], m in assoc(s, :member))
     |> where([s, m], m.team_id == ^activity.team_id)
     |> order_by([s], asc: s.scanned_at, asc: s.id)
-    |> preload(:member)
+    |> preload([:member, :recorded_by_user, :recorded_by_member])
     |> Repo.all()
   end
 

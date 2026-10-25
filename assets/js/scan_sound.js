@@ -1,4 +1,4 @@
-// Short tones for a scan's result on the door's page and the verify site, made with
+// Short tones for a scan's result on Take attendance and the verify site, made with
 // Web Audio so there are no sound files. The LiveView pushes a "scan-sound" event with
 // one of the names in TONES. Browsers play sound only after a tap, so a tap on a scanner
 // resumes the audio. On an iPhone the silent switch mutes Web Audio unless the page's

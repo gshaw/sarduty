@@ -4,14 +4,12 @@ defmodule Web.ActivitySendAttendanceTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.NoShow
   alias App.Model.Team
-  alias App.Operation.CreateAttendanceLink
   alias App.Repo
 
-  # The Send to D4H part of the Take attendance page, with D4H stubbed. Mei was invited
+  # The Send attendance part of the Attendance page, with D4H stubbed. Mei was invited
   # and arrived, Lena walked in, and Sam signed up and didn't come.
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})
@@ -30,8 +28,6 @@ defmodule Web.ActivitySendAttendanceTest do
         scanned_at: DateTime.utc_now()
       })
     end
-
-    CreateAttendanceLink.call(team, activity, user, DateTime.utc_now())
 
     %{
       conn: log_in_user(conn, user),
@@ -87,7 +83,7 @@ defmodule Web.ActivitySendAttendanceTest do
 
   defp open(ctx) do
     {:ok, lv, _html} =
-      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/take-attendance")
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/attendance")
 
     Req.Test.allow(App.Adapter.D4H, self(), lv.pid)
     lv
@@ -112,7 +108,6 @@ defmodule Web.ActivitySendAttendanceTest do
     assert_received {:d4h_write, "PATCH", "/attendance/503", %{"status" => "ABSENT"}}
 
     assert render(lv) =~ "3 attendance changes sent."
-    refute AttendanceLink.find_current(ctx.team, ctx.activity)
 
     sam_id = ctx.sam.id
     assert [%NoShow{member_id: ^sam_id} = no_show] = NoShow.get_all(ctx.activity)
@@ -187,7 +182,7 @@ defmodule Web.ActivitySendAttendanceTest do
     refute has_element?(lv, "#send-form")
   end
 
-  test "a refused write is listed, and the link stays open", ctx do
+  test "a refused write is listed", ctx do
     stub_d4h(ctx)
     lv = open(ctx)
     lv |> element("#review") |> render_click()
@@ -207,7 +202,6 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(lv, "#failures", "Mei Chen")
     assert has_element?(lv, "#failures", "Not allowed")
     assert render(lv) =~ "2 attendance changes did not go through."
-    assert AttendanceLink.find_current(ctx.team, ctx.activity)
   end
 
   test "when D4H cannot find the activity, review says it may have been deleted", ctx do

@@ -69,4 +69,34 @@ defmodule App.Operation.RecordAttendanceScanTest do
     assert override_at("9am", @evening, ~U[2026-10-11 02:00:00Z]) == :error
     assert override_at("25:00", @evening, ~U[2026-10-11 02:00:00Z]) == :error
   end
+
+  describe "check_open/2" do
+    # 18:00–21:00 in Vancouver: members take attendance from 16:00 to 23:00.
+    test "a member takes attendance only during the window" do
+      member = %{activity: @evening, team_admin?: false}
+
+      assert RecordAttendanceScan.check_open(member, ~U[2026-10-10 22:59:00Z]) ==
+               {:error, :not_yet}
+
+      assert RecordAttendanceScan.check_open(member, ~U[2026-10-10 23:00:00Z]) == :ok
+      assert RecordAttendanceScan.check_open(member, ~U[2026-10-11 06:00:00Z]) == :ok
+
+      assert RecordAttendanceScan.check_open(member, ~U[2026-10-11 06:01:00Z]) ==
+               {:error, :closed}
+    end
+
+    test "a team admin takes attendance at any time" do
+      admin = %{activity: @evening, team_admin?: true}
+      assert RecordAttendanceScan.check_open(admin, ~U[2026-10-18 16:00:00Z]) == :ok
+    end
+
+    test "nobody takes attendance for a deleted activity" do
+      deleted = %{@evening | deleted_at: ~U[2026-10-10 20:00:00Z]}
+
+      assert RecordAttendanceScan.check_open(
+               %{activity: deleted, team_admin?: true},
+               ~U[2026-10-10 20:00:00Z]
+             ) == {:error, :closed}
+    end
+  end
 end

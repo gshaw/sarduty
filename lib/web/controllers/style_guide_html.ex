@@ -196,10 +196,10 @@ defmodule Web.StyleGuideHTML do
        "hero-exclamation-circle", "Danger banners, error toasts, and bands"},
       {"arrow-right-end-on-rectangle", "hero-arrow-right-end-on-rectangle-micro",
        "hero-arrow-right-end-on-rectangle-mini", "hero-arrow-right-end-on-rectangle",
-       "A member arrived, at the door"},
+       "A member arrived, on Take attendance"},
       {"arrow-left-start-on-rectangle", "hero-arrow-left-start-on-rectangle-micro",
        "hero-arrow-left-start-on-rectangle-mini", "hero-arrow-left-start-on-rectangle",
-       "A member left, at the door"}
+       "A member left, on Take attendance"}
     ]
   end
 

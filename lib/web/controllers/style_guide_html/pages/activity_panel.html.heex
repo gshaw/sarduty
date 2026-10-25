@@ -11,7 +11,7 @@
       team={sample_team()}
       now={panel_now()}
       counts={panel_counts()}
-      team_admin?={true}
+      take_attendance?={true}
     >
       <:reply><.reply id="activity-panel-demo-reply" state={:yes} calendar_href="#" /></:reply>
     </.activity_panel>
@@ -58,8 +58,9 @@
       under the counts, until it starts. Anyone else gets the counts alone.
     </li>
     <li>
-      Team admins get Take attendance, the page's primary button, in every state. Members get no
-      button.
+      Take attendance is the page's primary button. Team admins get it at any time, to catch up
+      from a paper list. Members get it from 2 hours before the activity starts until 2 hours
+      after it ends, and no button otherwise.
     </li>
     <li>
       On a phone it stacks: the day and time on one line, then the rest, then a full-width button.
@@ -68,9 +69,10 @@
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.activity_panel id="…" activity=&#123;…&#125; team=&#123;…&#125; now=&#123;…&#125; counts=&#123;…&#125; team_admin?=&#123;…&#125;&gt;</code>
+    <code>&lt;.activity_panel id="…" activity=&#123;…&#125; team=&#123;…&#125; now=&#123;…&#125; counts=&#123;…&#125; take_attendance?=&#123;…&#125;&gt;</code>
     with the reply control in its <code>&lt;:reply&gt;</code>
-    slot. Next up adds <code>label="Next up"</code>
+    slot, and <code>take_attendance?</code>
+    from <code>Activity.take_attendance?/3</code>. Next up adds <code>label="Next up"</code>
     and its title and place inside, and leaves out <code>counts</code>.
   </p>
 </.shell>

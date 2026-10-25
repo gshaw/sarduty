@@ -2,10 +2,10 @@
 // to the LiveView, which takes the code out of it. It never follows a link from a card.
 // With data-reader="barcode", as on the equipment pages, it reads an item's barcode
 // instead: Code 128, Code 39, UPC and EAN, and QR codes.
-// With data-continuous, as on the door's attendance page, it keeps scanning after a read
+// With data-continuous, as on Take attendance, it keeps scanning after a read
 // and skips the same card for a few seconds, so one card held up isn't recorded twice.
 // With data-override-input, each read also sends that input's value, so the time box on
-// the door's page counts even if the phone never sent a change for it.
+// Take attendance counts even if the phone never sent a change for it.
 // The scanning flag goes on the [data-scan-state] element inside the hook. LiveView
 // patches the data attributes of a phx-update="ignore" container, so a flag on the
 // container itself is wiped by the next render while the camera keeps running.

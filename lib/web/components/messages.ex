@@ -127,7 +127,7 @@ defmodule Web.Components.Messages do
 
   @doc """
   Renders a result band: the outcome of a check, big and in colour, such as a verified ID
-  card or a scan at the door.
+  card or a scan on Take attendance.
 
   ## Examples
 

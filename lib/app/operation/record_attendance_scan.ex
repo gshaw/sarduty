@@ -1,48 +1,62 @@
 defmodule App.Operation.RecordAttendanceScan do
   alias App.Model.Activity
-  alias App.Model.AttendanceLink
   alias App.Model.AttendanceScan
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Repo
 
-  # Records a member arriving or leaving from the door's page. `kind` is "arrived" or
-  # "left", and `override` is the "HH:MM" typed at the door, or "" for the moment of the
-  # scan. Each returns `{:ok, scan}` with the member, or `{:error, reason}`.
+  # Records a member arriving or leaving from the Take attendance page. The `door` is who
+  # takes it: `%{activity:, user:, member:, team_admin?:}`, with the activity's team
+  # loaded and `member` the user's own member on the team, or nil. `kind` is "arrived"
+  # or "left", and `override` is the "HH:MM" typed in the time box, or "" for the moment
+  # of the scan. Each returns `{:ok, scan}` with the member, or `{:error, reason}`.
 
   @doc """
   From what the camera read on an ID card, or a code typed from one. `hosts` are the
   sites a card's QR code may link to.
   """
-  def from_card(%AttendanceLink{} = link, input, hosts, kind, override, now) do
-    with :ok <- check_open(link, now),
+  def from_card(door, input, hosts, kind, override, now) do
+    with :ok <- check_open(door, now),
          {:ok, card} <- find_card(input, hosts),
-         :ok <- check_card(link, card, now) do
-      record(link, card.member, kind, "card", override, now)
+         :ok <- check_card(door.activity, card, now) do
+      record(door, card.member, kind, "card", override, now)
     end
   end
 
   @doc "From a member picked by name, for someone without their ID card."
-  def from_name(%AttendanceLink{} = link, member_id, kind, override, now) do
-    with :ok <- check_open(link, now),
-         %Member{} = member <- Repo.get_by(Member, id: member_id, team_id: link.team_id) do
-      record(link, member, kind, "name", override, now)
+  def from_name(door, member_id, kind, override, now) do
+    team_id = door.activity.team_id
+
+    with :ok <- check_open(door, now),
+         %Member{} = member <- Repo.get_by(Member, id: member_id, team_id: team_id) do
+      record(door, member, kind, "name", override, now)
     else
       nil -> {:error, :not_found}
       error -> error
     end
   end
 
-  @doc "Removes one of the link's activity's scans, while the link is open."
-  def undo(%AttendanceLink{} = link, scan_id, now) do
-    with :ok <- check_open(link, now) do
-      AttendanceScan.delete(link.activity, scan_id)
+  @doc "Removes one of the activity's scans, while the door may take attendance."
+  def undo(door, scan_id, now) do
+    with :ok <- check_open(door, now) do
+      AttendanceScan.delete(door.activity, scan_id)
       :ok
     end
   end
 
-  defp check_open(link, now),
-    do: if(AttendanceLink.open?(link, now), do: :ok, else: {:error, :closed})
+  @doc """
+  `:ok` when the door may take attendance now (Activity.take_attendance?/3), otherwise
+  `{:error, :not_yet}` before a member's window opens, or `{:error, :closed}`.
+  """
+  def check_open(%{activity: activity, team_admin?: team_admin?}, now) do
+    {opens_at, _closes_at} = Activity.attendance_window(activity)
+
+    cond do
+      Activity.take_attendance?(activity, team_admin?, now) -> :ok
+      not Activity.deleted?(activity) and DateTime.before?(now, opens_at) -> {:error, :not_yet}
+      true -> {:error, :closed}
+    end
+  end
 
   defp find_card(input, hosts) do
     case MemberCard.code_from_scan(input, hosts) do
@@ -60,8 +74,8 @@ defmodule App.Operation.RecordAttendanceScan do
     end
   end
 
-  defp check_card(link, card, now) do
-    if card.team_id == link.team_id and card.member.team_id == link.team_id do
+  defp check_card(activity, card, now) do
+    if card.team_id == activity.team_id and card.member.team_id == activity.team_id do
       case MemberCard.status(card, now) do
         :active -> :ok
         :inactive -> {:error, :left_team}
@@ -72,17 +86,18 @@ defmodule App.Operation.RecordAttendanceScan do
     end
   end
 
-  defp record(link, member, kind, method, override, now) do
-    timezone = link.activity.team.timezone
+  defp record(door, member, kind, method, override, now) do
+    %{activity: activity, user: user} = door
 
-    case override_at(override, link.activity, now, timezone) do
+    case override_at(override, activity, now, activity.team.timezone) do
       {:ok, override_at} ->
         scan =
           AttendanceScan.insert!(%AttendanceScan{
-            team_id: link.team_id,
-            activity_id: link.activity_id,
+            team_id: activity.team_id,
+            activity_id: activity.id,
             member_id: member.id,
-            attendance_link_id: link.id,
+            recorded_by_user_id: user.id,
+            recorded_by_member_id: door.member && door.member.id,
             kind: kind,
             method: method,
             scanned_at: now,
@@ -97,7 +112,7 @@ defmodule App.Operation.RecordAttendanceScan do
   end
 
   @doc """
-  The time typed at the door, "HH:MM" in the team's time zone, as UTC. It goes on the
+  The time typed in the time box, "HH:MM" in the team's time zone, as UTC. It goes on the
   date that puts it nearest the activity, so a catch-up the next morning lands on the
   activity's day, and a time after midnight lands on the right side of it. Between
   dates equally near, as on a multi-day activity, the one nearest `now` wins. `{:ok, nil}`

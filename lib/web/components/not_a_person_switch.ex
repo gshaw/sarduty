@@ -34,7 +34,7 @@ defmodule Web.Components.NotAPersonSwitch do
         phx-target={@myself}
       >
         For a bot or a shared account. SAR Duty leaves it out of member counts, the missing
-        details check, team admins, and attendance at the door. Group rules and the attendance
+        details check, team admins, and Take attendance. Group rules and the attendance
         check leave it out only when set to Active.
       </.switch>
       <p

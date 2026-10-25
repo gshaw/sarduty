@@ -313,9 +313,20 @@ defmodule Web.TeamDashboardLiveTest do
       %{conn: log_in_user(conn, user), team: team, member: member, user: user}
     end
 
+    test "Next up has Take attendance once its window opens", %{conn: conn, team: team} do
+      soon = activity_fixture(team, at(1, %{title: "Rope practice"}))
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+      assert has_element?(
+               lv,
+               ~s{#next-up-take-attendance[href="/teams/#{team.subdomain}/activities/#{soon.id}/take-attendance"]}
+             )
+    end
+
     test "is the team admin's page without the controls: no Refresh now, Needs attention, or Take attendance",
          %{conn: conn, team: team} do
-      activity_fixture(team, at(2, %{title: "Rope practice"}))
+      # Members take attendance from 2 hours before the start (#475).
+      activity_fixture(team, at(3, %{title: "Rope practice"}))
       activity_fixture(team, at(72, %{title: "Swiftwater"}))
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 

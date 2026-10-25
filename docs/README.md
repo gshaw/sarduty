@@ -104,7 +104,7 @@ The rules that are easy to break:
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
 - [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
-- [attendance-at-the-door.md](attendance-at-the-door.md) — attendance links, scanning ID cards at an activity, and the times they record.
+- [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
