@@ -29,6 +29,8 @@ defmodule App.DataFixtures do
   alias App.Model.TemplateTag
   alias App.Repo
 
+  require Ecto.Query
+
   # ID cards are on, as for every team that signed up before the switch; pass
   # `id_cards_enabled: false` for a team an admin hasn't turned them on for.
   def team_fixture(attrs \\ %{}) do
@@ -70,8 +72,20 @@ defmodule App.DataFixtures do
       |> Map.merge(attrs)
       |> Repo.insert!()
 
-    Organization.set_teams!(organization, Enum.map(teams, & &1.id))
+    ids = Enum.map(teams, & &1.id)
+
+    Team
+    |> Ecto.Query.where([t], t.id in ^ids)
+    |> Repo.update_all(set: [organization_id: organization.id])
+
     organization
+  end
+
+  @doc "An organization admin (#512), inserted directly, so any email works."
+  def organization_admin_fixture(%Organization{} = organization, email, attrs \\ %{}) do
+    %App.Model.OrganizationAdmin{organization_id: organization.id, email: String.downcase(email)}
+    |> Map.merge(attrs)
+    |> Repo.insert!()
   end
 
   @doc "A team with member logins on (#156), so its current members may log in."

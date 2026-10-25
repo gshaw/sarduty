@@ -182,8 +182,22 @@ defmodule Web.Router do
       live "/admin/id-cards", Admin.IdCardsLive
       live "/admin/mcp", Admin.MCPLive
       live "/admin/orgs", Admin.OrganizationCollectionLive
-      live "/admin/orgs/new", Admin.OrganizationLive, :new
-      live "/admin/orgs/:id", Admin.OrganizationLive, :edit
+      live "/admin/orgs/new", Admin.OrganizationNewLive
+    end
+
+    # An organization's space (#512): its organization admins and SAR Duty admins. Its
+    # pages show each team's totals, never its people. The verify host's own /orgs/:slug
+    # is in the host-matched scope above, so it never reaches here.
+    live_session :org_session,
+      on_mount: [
+        {Web.UserAuth, :mount_current_path},
+        {Web.UserAuth, :ensure_authenticated},
+        {Web.UserAuth, :ensure_org_access}
+      ] do
+      live "/orgs/:slug", Org.TeamCollectionLive
+      live "/orgs/:slug/settings", Org.SettingsLive
+      live "/orgs/:slug/settings/admins", Org.AdminsLive
+      live "/orgs/:slug/settings/hours-tags", Org.HoursTagsLive
     end
 
     # Every team page, in one live_session so moving between them doesn't reload (#406).

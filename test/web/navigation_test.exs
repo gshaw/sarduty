@@ -3,11 +3,19 @@ defmodule Web.NavigationTest do
 
   alias App.Accounts.User
   alias App.Model.Member
+  alias App.Model.Organization
   alias App.Model.Team
   alias Web.Navigation
 
   @team %Team{id: 1, name: "Squamish SAR", subdomain: "squamish"}
   @pemberton %Team{id: 2, name: "Pemberton SAR", subdomain: "pemberton"}
+  @wsara %Organization{id: 5, name: "Western SAR Association", short_name: "WSARA", slug: "wsara"}
+  @nsara %Organization{
+    id: 6,
+    name: "Northern SAR Association",
+    short_name: "NSARA",
+    slug: "nsara"
+  }
 
   defp keys(sections), do: Enum.map(sections, fn links -> Enum.map(links, & &1.key) end)
   defp current(sections), do: for(links <- sections, link <- links, link.current, do: link.key)
@@ -190,6 +198,54 @@ defmodule Web.NavigationTest do
       area = Navigation.area("/teams/pemberton", @pemberton)
       rows = Navigation.switch_rows(true, [], [], area)
       assert rows(rows) == [{"SAR Duty admin", false}]
+    end
+  end
+
+  describe "an organization's space (#512)" do
+    test "its pages are its area, when the URL's organization is the current one" do
+      assert %{kind: :org, name: "Western SAR Association", short_name: "WSARA", team: nil} =
+               Navigation.area("/orgs/wsara/settings/admins", nil, @wsara)
+
+      assert Navigation.area("/orgs/nsara", nil, @wsara) == nil
+      assert Navigation.area("/orgs/wsara", @team, nil) == nil
+    end
+
+    test "its sections are Teams, then Organization settings" do
+      path = "/orgs/wsara/settings/hours-tags"
+      sections = path |> Navigation.area(nil, @wsara) |> Navigation.sections(path)
+
+      assert keys(sections) == [["org-teams"], ["org-settings"]]
+      assert current(sections) == ["org-settings"]
+
+      teams = "/orgs/wsara" |> Navigation.area(nil, @wsara) |> Navigation.sections("/orgs/wsara")
+      assert current(teams) == ["org-teams"]
+    end
+
+    test "the switcher lists your organizations after your teams, before SAR Duty admin" do
+      area = Navigation.area("/orgs/wsara", nil, @wsara)
+      rows = Navigation.switch_rows(true, [@team], [], [@wsara, @nsara], area)
+
+      assert Enum.map(rows, &{&1.kind, &1.key, &1.current}) == [
+               {:team, "team-squamish", false},
+               {:org, "org-nsara", false},
+               {:org, "org-wsara", true},
+               {:admin, "admin", false}
+             ]
+    end
+
+    test "an organization admin with no team sees no switcher in their one organization" do
+      area = Navigation.area("/orgs/wsara", nil, @wsara)
+      assert Navigation.switch_rows(false, [], [], [@wsara], area) == []
+    end
+
+    test "outside every area, the bar names their first organization after member teams" do
+      user = %User{is_admin: true}
+
+      assert %{kind: :org, organization: @wsara} =
+               Navigation.outside_area(user, nil, [], [@wsara, @nsara])
+
+      assert %{kind: :team, team: @team} =
+               Navigation.outside_area(user, nil, [%Member{team: @team}], [@wsara])
     end
   end
 

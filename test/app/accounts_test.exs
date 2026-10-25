@@ -61,6 +61,22 @@ defmodule App.AccountsTest do
       refute Accounts.may_log_in?("shared@example.com", @now)
     end
 
+    test "an organization admin's email may, with no D4H match (#512)" do
+      organization = organization_fixture()
+      organization_admin_fixture(organization, "office@wsara.example.org")
+
+      assert Accounts.may_log_in?(" Office@WSARA.example.org ", @now)
+      refute Accounts.may_log_in?("someone@wsara.example.org", @now)
+    end
+
+    test "a SAR Duty admin D4H doesn't list may not, even with an organization admin row" do
+      organization = organization_fixture()
+      organization_admin_fixture(organization, "gone@example.com")
+      user_fixture(%{email: "gone@example.com", is_admin: true})
+
+      refute Accounts.may_log_in?("gone@example.com", @now)
+    end
+
     test "an admin who is a current member somewhere may, without managing a team" do
       team = team_fixture()
       manager_fixture(team, %{email: "admin@example.com", d4h_permission: 2})

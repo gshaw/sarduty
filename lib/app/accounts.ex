@@ -1,8 +1,8 @@
 defmodule App.Accounts do
   @moduledoc """
   Users and their login codes and sessions. A user is an email that may log in: a
-  manager of some team in D4H (#57), an admin who is a current member of one (#141), or
-  a member of a team with member logins on (#156). Which teams they manage is
+  manager of some team in D4H (#57), an admin who is a current member of one (#141), a
+  member of a team with member logins on (#156), or an organization admin (#512). Which teams they manage is
   App.Model.Team.get_managed_by/2; which they're a member of is
   App.Model.Member.get_logins/2.
   """
@@ -14,6 +14,7 @@ defmodule App.Accounts do
   alias App.Accounts.UserToken
   alias App.Adapter.Twilio
   alias App.Model.Member
+  alias App.Model.OrganizationAdmin
   alias App.Model.Team
   alias App.Repo
 
@@ -50,8 +51,9 @@ defmodule App.Accounts do
 
   @doc """
   Whether this email may log in: a current manager's on some team, a current member's on
-  a team with member logins on, or an admin's that D4H still lists as a current member
-  somewhere. Being an admin alone isn't enough, so every login stands on D4H (#141).
+  a team with member logins on, an organization admin's (#512), or an admin's that D4H
+  still lists as a current member somewhere. Being an admin alone isn't enough, so every
+  SAR Duty admin's login stands on D4H (#141), even with an organization admin row.
   """
   def may_log_in?(email, now \\ DateTime.utc_now()) do
     case get_user_by_email(email) do
@@ -59,7 +61,8 @@ defmodule App.Accounts do
         Member.current_email?(email, now)
 
       _user ->
-        Team.get_managed_by(email, now) != [] or Member.get_logins(email, now) != []
+        Team.get_managed_by(email, now) != [] or Member.get_logins(email, now) != [] or
+          OrganizationAdmin.email_exists?(email)
     end
   end
 

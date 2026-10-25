@@ -4,21 +4,19 @@ defmodule App.Operation.SaveOrganization do
   alias App.Worker.PushPassUpdatesWorker
 
   @doc """
-  Creates or updates an organization from the admin form: its fields, a new logo when
-  one was uploaded (raw image bytes, any size), and exactly these member teams. Every
-  team it had or now has gets its passes rebuilt, since the back of the pass names the
-  organization.
+  Saves an organization's General settings (#512): its fields, and a new logo when one
+  was uploaded (raw image bytes, any size). Its teams get their passes rebuilt, since
+  the back of the pass names the organization. Teams join and leave through
+  App.Operation.SetTeamOrganization, never here.
   """
-  def call(%Organization{} = organization, params, logo_bytes, team_ids) do
+  def call(%Organization{} = organization, params, logo_bytes) do
     changeset = Organization.build_changeset(organization, params)
 
     with {:ok, logo} <- shape_logo(logo_bytes),
-         {:ok, organization} <- Repo.insert_or_update(changeset) do
+         {:ok, organization} <- Repo.update(changeset) do
       organization = if logo, do: Organization.put_logo!(organization, logo), else: organization
-      before = Organization.team_ids(organization)
-      Organization.set_teams!(organization, team_ids)
 
-      for team_id <- Enum.uniq(before ++ team_ids) do
+      for team_id <- Organization.team_ids(organization) do
         %{team_id: team_id} |> PushPassUpdatesWorker.new() |> Oban.insert!()
       end
 

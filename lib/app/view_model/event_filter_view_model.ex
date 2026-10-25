@@ -41,6 +41,9 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:id_cards_turned_on), do: "ID cards turned on"
   def label(:id_cards_turned_off), do: "ID cards turned off"
   def label(:member_viewed_as), do: "Viewed as a member"
+  def label(:organization_admin_added), do: "Organization admin added"
+  def label(:organization_admin_removed), do: "Organization admin removed"
+  def label(:organization_hours_tags_changed), do: "Organization hours tags changed"
 
   def validate(params) do
     changeset =

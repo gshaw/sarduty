@@ -264,11 +264,13 @@ defmodule Web.Layouts do
     %{
       current_user: assigns[:current_user],
       current_team: assigns[:current_team],
+      current_organization: assigns[:current_organization],
       current_member: assigns[:current_member],
       viewing_as: assigns[:viewing_as],
       team_admin?: assigns[:team_admin?] || false,
       managed_teams: assigns[:managed_teams] || [],
       member_logins: assigns[:member_logins] || [],
+      user_organizations: assigns[:user_organizations] || [],
       current_path: assigns[:current_path],
       proposed_change_count: assigns[:proposed_change_count] || 0,
       chore_count: assigns[:chore_count] || 0,
@@ -279,7 +281,8 @@ defmodule Web.Layouts do
   # The page's area and its pages, for the bar, the side navigation, and the phone menu.
   # Web.Navigation decides both.
   defp navigation(assigns) do
-    area = Navigation.area(assigns.current_path, assigns.current_team)
+    area =
+      Navigation.area(assigns.current_path, assigns.current_team, assigns.current_organization)
 
     sections =
       Navigation.sections(area, assigns.current_path,
@@ -295,11 +298,13 @@ defmodule Web.Layouts do
 
   attr :current_user, :map, default: nil
   attr :current_team, :map, default: nil
+  attr :current_organization, :map, default: nil
   attr :current_member, :map, default: nil
   attr :viewing_as, :map, default: nil
   attr :team_admin?, :boolean, default: false
   attr :managed_teams, :list, default: []
   attr :member_logins, :list, default: []
+  attr :user_organizations, :list, default: []
   attr :current_path, :string, default: nil
   attr :proposed_change_count, :integer, default: 0
   attr :chore_count, :integer, default: 0
@@ -326,6 +331,7 @@ defmodule Web.Layouts do
            user.is_admin,
            assigns.managed_teams,
            assigns.member_logins,
+           assigns.user_organizations,
            area
          ), Navigation.person(user, own_member(assigns), assigns.member_logins)}
       else
@@ -337,7 +343,8 @@ defmodule Web.Layouts do
         Navigation.outside_area(
           assigns.current_user,
           assigns.current_team,
-          assigns.member_logins
+          assigns.member_logins,
+          assigns.user_organizations
         )
 
     assigns =
@@ -364,14 +371,16 @@ defmodule Web.Layouts do
             class="phone-team-switcher group"
           >
             <summary aria-label={"#{@bar_area.name}, switch team"}>
-              <span class="site-bar-area-name">{@bar_area.name}</span>
+              <span class="site-bar-area-name">{@bar_area[:short_name] || @bar_area.name}</span>
               <.icon name="hero-chevron-down-micro" class="group-open:rotate-180" />
             </summary>
             <nav class="site-bar-phone-panel" aria-label="Switch team">
               <.switch_menu rows={@switch_rows} id_prefix="phone-switch-" />
             </nav>
           </details>
-          <span :if={@switch_rows == []} class="site-bar-area-name">{@bar_area.name}</span>
+          <span :if={@switch_rows == []} class="site-bar-area-name">
+            {@bar_area[:short_name] || @bar_area.name}
+          </span>
         </div>
         <div class="site-bar-end">
           {render_slot(@search)}
@@ -410,7 +419,7 @@ defmodule Web.Layouts do
   end
 
   attr :name, :string, required: true
-  attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/4"
+  attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/5"
 
   # The area's name with a chevron, opening a menu of the places you can switch to.
   defp team_switcher(assigns) do
@@ -427,21 +436,33 @@ defmodule Web.Layouts do
     """
   end
 
-  attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/4"
+  attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/5"
   attr :id_prefix, :string, required: true
 
-  # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then SAR Duty
-  # admin below a divider with its shield, so it never reads as one more team.
+  # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then Your
+  # organizations (#512), then SAR Duty admin below a divider with its shield, so it never
+  # reads as one more team.
   defp switch_menu(assigns) do
-    {admin, teams} = Enum.split_with(assigns.rows, &(&1.kind == :admin))
-    assigns = assign(assigns, admin: admin, teams: teams)
+    groups = Enum.group_by(assigns.rows, & &1.kind)
+
+    assigns =
+      assign(assigns,
+        teams: groups[:team] || [],
+        orgs: groups[:org] || [],
+        admin: groups[:admin] || []
+      )
 
     ~H"""
     <%= if @teams != [] do %>
       <div class="caps menu-heading">Your teams</div>
       <.switch_link :for={row <- @teams} row={row} id_prefix={@id_prefix} />
     <% end %>
-    <.menu_divider :if={@teams != [] and @admin != []} />
+    <%= if @orgs != [] do %>
+      <.menu_divider :if={@teams != []} />
+      <div class="caps menu-heading">Your organizations</div>
+      <.switch_link :for={row <- @orgs} row={row} id_prefix={@id_prefix} />
+    <% end %>
+    <.menu_divider :if={(@teams != [] or @orgs != []) and @admin != []} />
     <.switch_link :for={row <- @admin} row={row} id_prefix={@id_prefix} />
     """
   end
@@ -458,6 +479,7 @@ defmodule Web.Layouts do
       class={["nav-link", @row.kind == :admin && "switch-admin"]}
     >
       <.icon :if={@row.kind == :admin} name="hero-shield-check-micro" />
+      <.icon :if={@row.kind == :org} name="hero-building-office-2-micro" />
       {@row.label}
     </.link>
     """

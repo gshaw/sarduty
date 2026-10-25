@@ -3,9 +3,33 @@
 <!-- cspell:ignore OSARVA SRVTC -->
 
 A team can belong to one parent organization, like BCSARA (bcsara.com). Its cards and
-check pages then carry the organization's name and logo instead of SAR Duty's. An admin
-sets organizations up at `/admin/orgs`; teams can't join or leave one
-themselves. Issue #87 has the design.
+check pages then carry the organization's name and logo instead of SAR Duty's. Issue #87
+has the design of its own verify host.
+
+## Its space and its admins (#512)
+
+Each organization has its own space at `/orgs/:slug`, beside a team's space, SAR Duty
+admin, and account settings. A SAR Duty admin creates it in Admin › Organizations, then
+types in its **organization admins'** emails on its Organization admins tab.
+
+- **Organization admins** log in with that email alone, like a login grant: no D4H match
+  (`Accounts.may_log_in?/2`). A SAR Duty admin's login still needs D4H (#141), so the
+  form refuses a SAR Duty admin's email. Organization admins can't add other organization
+  admins. Opening their pages stamps `organization_admins.last_seen_at`, at most hourly,
+  never `users.last_seen_at`, which would make their own team look recently used.
+- **They keep** its name, short name, website, time zone, and logo (General), and its
+  hours tags (Hours tags). Saving General queues pass updates for its teams; hours tags
+  are not on a pass, so saving them records an `organization_hours_tags_changed` event
+  with the old and new tags instead.
+- **They see each team's totals, never its people**: no member names, emails, phone
+  numbers, or team pages. A test sweeps every `/orgs` page from the router for seeded
+  names, emails, and phones.
+- **The organization's time zone** is for dates about it, such as an organization
+  admin's Last seen. A team's row keeps the team's own zone.
+- **Who acts is checked in the code that acts**, not just the page:
+  `OrganizationAdmin.add/3` and `remove/3` take SAR Duty admins only.
+- The `/orgs/:slug` pages share one `live_session` and an `:ensure_org_access` hook that
+  404s anyone who is neither its organization admin nor a SAR Duty admin.
 
 ## What an organization changes today
 
@@ -27,8 +51,8 @@ themselves. Issue #87 has the design.
   ones that changed. A team names any tag its organization leaves blank, and a team with
   no organization names its own, in **Settings → Hours tags** (#323).
 
-Saving an organization queues a pass update for every team it had or now has, so phones
-pick up the new back of the pass in a minute or so.
+Saving an organization's General settings queues a pass update for each of its teams, so
+phones pick up the new back of the pass in a minute or so.
 
 The card's QR code and "how to check" text still say `verify.sarduty.com`. That changes
 only when the organization has its own host.
@@ -37,8 +61,8 @@ only when the organization has its own host.
 
 Not built yet. When an organization wants `verify.bcsara.com`:
 
-1. **They add a DNS record**: `verify` CNAME `verify.sarduty.com`. The organization's
-   admin page shows the exact record. The target is the verify host, not the app, so if
+1. **They add a DNS record**: `verify` CNAME `verify.sarduty.com`. Organization settings
+   will show the exact record once #87 builds this. The target is the verify host, not the app, so if
    verify ever moves, one record of ours moves every organization. On Cloudflare it must
    be DNS only (grey cloud), or Fly can't issue the certificate.
 2. **They agree** to give notice before removing it, so cards can move back to

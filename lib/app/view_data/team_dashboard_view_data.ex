@@ -227,10 +227,13 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> Enum.sum()
   end
 
-  # Published activities with no hours tag (#323), for teams that use the hours tags: ones
-  # with their primary or secondary tag in D4H. One row per open year. Empty for other
-  # teams.
-  defp untagged_rows(team, now) do
+  @doc """
+  Published activities with no hours tag (#323), for teams that use the hours tags: ones
+  with their primary or secondary tag among their tags. One row per open year,
+  `%{year:, count:}`. Empty for other teams. An organization's Teams page counts them too
+  (#512).
+  """
+  def untagged_rows(team, now) do
     hours_tags = Activity.hours_tags(team)
 
     if uses_hours_tags?(team, hours_tags) do

@@ -9,8 +9,8 @@ defmodule App.Model.Event do
 
   # Days each kind is kept. App.Worker.PruneEventsWorker deletes older ones each night.
   # Login events carry IPs, which are personal data, so they go after 90 days. Changes to
-  # who can reach a team, MCP tokens included, and team admins viewing as a member
-  # are kept two years, as a record.
+  # who can reach a team or an organization, MCP tokens included, and team admins viewing
+  # as a member are kept two years, as a record.
   @retention_days %{
     d4h_sync_round: 90,
     d4h_refresh_run: 90,
@@ -38,7 +38,10 @@ defmodule App.Model.Event do
     member_logins_turned_off: 730,
     id_cards_turned_on: 730,
     id_cards_turned_off: 730,
-    member_viewed_as: 730
+    member_viewed_as: 730,
+    organization_admin_added: 730,
+    organization_admin_removed: 730,
+    organization_hours_tags_changed: 730
   }
 
   @kinds Map.keys(@retention_days)
