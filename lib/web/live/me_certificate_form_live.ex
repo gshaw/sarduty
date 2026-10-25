@@ -1,5 +1,5 @@
 defmodule Web.MeCertificateFormLive do
-  use Web, {:live_view_app_layout, access: :member}
+  use Web, {:live_view_app_layout, access: :member, view_events: ["validate", "cancel-upload"]}
 
   import Web.Components.FileDrop
 

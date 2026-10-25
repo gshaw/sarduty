@@ -6,8 +6,9 @@ defmodule Web.Components.ReplyControl do
   attendance row), `user`, `viewing_as`, and `size`, `:sm` in a list row. `viewing_as`
   is required, nil unless a team admin is viewing as a member. Its events skip the team
   pages' hook (#440), so a page that left it out would send the team admin's reply as
-  the member. The page shows it only when `Reply.open?/3`. A reply sends `{:replied, attendance}` to the
-  page, which recounts; a refusal sends `{:reply_failed, text}` for the page's flash.
+  the member. The page shows it only when `Reply.open?/3`. A reply sends
+  `{:replied, attendance}` to the page, which recounts; a refusal sends
+  `{:reply_failed, text}` for the page's flash.
   """
   use Web, :live_component
 

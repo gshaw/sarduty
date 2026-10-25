@@ -128,6 +128,6 @@ is left out, and so is its divider.
 A new page is a route and a LiveView with `use Web, :live_view_app_layout`, or the narrow
 layout for a task done with a phone or iPad in hand; see `/styles/layout`. A team page is
 for team admins unless it says `access: :team` or `access: :member`; opening one to
-members has its own steps ([members.md](members.md#opening-a-page-to-members)). If it belongs in the side navigation, add a line to
-`Web.Navigation`. A page under an existing link needs nothing: the link is current on it.
+members has its own steps ([members.md](members.md#opening-a-page-to-members)). If it
+belongs in the side navigation, add a line to `Web.Navigation`. A page under an existing link needs nothing: the link is current on it.
 The guide shows the parts at `/styles/top-bar` and `/styles/side-nav`.

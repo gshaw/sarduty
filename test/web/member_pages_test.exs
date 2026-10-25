@@ -128,6 +128,21 @@ defmodule Web.MemberPagesTest do
     end
   end
 
+  # A form's change only redraws it, so view as gets it too, without the refusal on
+  # every keystroke. Take attendance's name box picks on change, a member action.
+  test "viewing as a member, every form's change reaches the page",
+       %{viewing_as: conn} = context do
+    for path <- context.pages do
+      view = route(path).view
+
+      for event <- conn |> document(path) |> events(["phx-change"]) do
+        assert event in Web.UserAuth.view_events(view) or
+                 event in Web.UserAuth.member_events(view),
+               "#{path} offers #{inspect(event)}, which #{inspect(view)} refuses view as"
+      end
+    end
+  end
+
   defp document(conn, path) do
     {:ok, lv, _html} = live(conn, path)
     lv |> render() |> LazyHTML.from_fragment()
@@ -145,10 +160,10 @@ defmodule Web.MemberPagesTest do
 
   # Events the page's handle_event gets: a control's own event, or a JS command's push,
   # unless it targets a component, which handles it and checks for itself.
-  defp events(doc) do
-    for attrs <- attributes(doc, "[phx-click], [phx-submit], [phx-change]"),
+  defp events(doc, names \\ ["phx-click", "phx-submit", "phx-change"]) do
+    for attrs <- attributes(doc, Enum.map_join(names, ", ", &"[#{&1}]")),
         attrs["phx-target"] == nil,
-        name <- ["phx-click", "phx-submit", "phx-change"],
+        name <- names,
         value = attrs[name],
         event <- event_names(value),
         not String.starts_with?(event, "lv:"),
