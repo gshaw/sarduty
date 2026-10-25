@@ -95,8 +95,9 @@ defmodule Web.MeCertificateFormLive do
       phx-submit="save"
     >
       <.error_summary form={@form} />
+      <%!-- The field's id, so the error summary's link lands on the file. --%>
       <.file_drop
-        id="certificate-file"
+        id={@form[:file_name].id}
         upload={@uploads.certificate}
         label="Certificate"
         kinds="a photo or a PDF"
@@ -173,11 +174,21 @@ defmodule Web.MeCertificateFormLive do
   def handle_event("save", %{"certificate" => params}, socket) do
     %{member: member, certificate: certificate} = socket.assigns
     socket = assign_form(socket, params, :insert)
+    changeset = socket.assigns.form.source
 
-    # The file is read only once the rest is right, so a mistake doesn't lose it.
-    if socket.assigns.form.source.valid?,
-      do: save(socket, member, certificate, socket.assigns.form.source.params),
-      else: {:noreply, socket}
+    # The file is read only once the rest is right, so a mistake doesn't lose it. A missing
+    # one is checked now, so every mistake shows at once.
+    cond do
+      !certificate and socket.assigns.uploads.certificate.entries == [] ->
+        form = changeset |> SaveCertificate.missing_file() |> to_form(as: "certificate")
+        {:noreply, assign(socket, form: form)}
+
+      changeset.valid? ->
+        save(socket, member, certificate, changeset.params)
+
+      true ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("delete", _params, socket) do
