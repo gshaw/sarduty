@@ -82,8 +82,10 @@
   .btn-link { padding-inline: 0; }
 
   /* Touch screens: every button, link look included, is at least 44px square (WCAG
-     2.5.5). A link has no box, so only the space around it grows. */
-  @media (pointer: coarse) { .btn { min-width: 44px; min-height: 44px; } }
+     2.5.5). A link has no box, so only the space around it grows. The min-width drops
+     flex's "no narrower than the text", so a flex row would squeeze its buttons until
+     their words overlap; flex-shrink puts it back. */
+  @media (pointer: coarse) { .btn { min-width: 44px; min-height: 44px; flex-shrink: 0; } }
 
   @media (hover: hover) {
     .btn:not(:disabled):hover { background: var(--btn-bg-hover); color: var(--btn-fg); text-decoration: none; }
