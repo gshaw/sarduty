@@ -183,25 +183,32 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   defp sent_banner(assigns) do
     ~H"""
-    <.banner id="letters-sent" kind={:success} title="Letters sent">
+    <.banner id="letters-sent" kind={:success} title="Letters created">
       <p>
         <strong>
           {Service.Format.count(@sent.created,
             one: "%d tax credit letter",
             many: "%d tax credit letters"
-          )} created for {@sent.year}. {@sent.emailed} emailed.
+          )} created for {@sent.year}. {emailing_text(@sent)}
         </strong>
+        <span :if={@sent.emailing > 0}>A row shows when its email fails.</span>
       </p>
       <p :if={@sent.no_email != []} id="letters-no-email">
         No email, so not emailed: {Enum.map_join(@sent.no_email, ", ", & &1.name)}.
       </p>
-      <p :if={@sent.failed != []} id="letters-failed">
-        The email did not send to {Enum.map_join(@sent.failed, ", ", & &1.name)}. Open
-        their letters to try again.
-      </p>
     </.banner>
     """
   end
+
+  defp emailing_text(%{emailing: 0}), do: nil
+  defp emailing_text(%{emailing: count, created: count}), do: "Emailing them now."
+
+  defp emailing_text(%{emailing: count}),
+    do:
+      Service.Format.count(count,
+        one: "Emailing %d of them now.",
+        many: "Emailing %d of them now."
+      )
 
   defp record_actions(assigns) do
     ~H"""
@@ -217,6 +224,21 @@ defmodule Web.TaxCreditLetterCollectionLive do
         title={"The letter says #{Service.Format.duration(@record.letter_minutes)}"}
       >
         Hours changed
+      </.badge>
+      <span
+        :if={@record.tax_credit_letter_email_status == :sending}
+        id={"letter-emailing-#{@record.tax_credit_letter_id}"}
+        class="hint"
+      >
+        Emailing
+      </span>
+      <.badge
+        :if={@record.tax_credit_letter_email_status == :failed}
+        id={"letter-email-failed-#{@record.tax_credit_letter_id}"}
+        kind={:warning}
+        title="Open the letter to email it again"
+      >
+        Email failed
       </.badge>
     <% else %>
       <.button variant={:success} size={:sm} phx-click="create" value={@record.member.id}>
@@ -245,14 +267,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
   def handle_event("send_all", _params, socket) do
     %{current_team: team, filter_options: filter_options, to_send: to_send} = socket.assigns
 
-    %{
-      team_id: team.id,
-      year: filter_options.year,
-      member_ids: Enum.map(to_send, & &1.member.id),
-      user_id: socket.assigns.current_user.id
-    }
-    |> CreateTaxCreditLettersWorker.new()
-    |> Oban.insert!()
+    member_ids = Enum.map(to_send, & &1.member.id)
+
+    CreateTaxCreditLettersWorker.enqueue(
+      team,
+      filter_options.year,
+      member_ids,
+      socket.assigns.current_user
+    )
 
     {:noreply,
      assign(socket, sending: %{count: length(to_send), year: filter_options.year}, sent: nil)}
@@ -286,6 +308,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
   def handle_info({:tax_credit_letters_sent, summary}, socket) do
     {:noreply, socket |> assign(sending: nil, sent: summary) |> assign_records()}
   end
+
+  # One letter's email job is done: its row says whether it went.
+  def handle_info({:tax_credit_letter_emailed, _letter_id}, socket),
+    do: {:noreply, assign_records(socket)}
 
   # Swoosh's test adapter tells the process that sent the email, which in tests is this
   # one, since Oban runs the job inline.

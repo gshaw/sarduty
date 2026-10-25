@@ -14,24 +14,17 @@ defmodule App.Operation.CreateTaxCreditLettersTest do
     assert CreateTaxCreditLetters.pick([@avery], [1]) == []
   end
 
-  test "counts letters made and emailed, and names who had no email or a failed one" do
+  test "counts letters made and emailing, and names who had no email" do
     summary =
       CreateTaxCreditLetters.summarize(
-        [{@avery, :ok}, {@blake, {:error, :no_email}}, {@casey, {:error, :timeout}}],
+        [{@avery, :emailing}, {@blake, :no_email}, {@casey, :emailing}],
         2025
       )
 
-    assert summary == %{
-             year: 2025,
-             created: 3,
-             emailed: 1,
-             no_email: [@blake],
-             failed: [@casey]
-           }
+    assert summary == %{year: 2025, created: 3, emailing: 2, no_email: [@blake]}
   end
 
   test "nothing to send is an empty summary" do
-    assert %{created: 0, emailed: 0, no_email: [], failed: []} =
-             CreateTaxCreditLetters.summarize([], 2025)
+    assert %{created: 0, emailing: 0, no_email: []} = CreateTaxCreditLetters.summarize([], 2025)
   end
 end
