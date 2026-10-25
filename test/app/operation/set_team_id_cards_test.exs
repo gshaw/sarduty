@@ -40,9 +40,36 @@ defmodule App.Operation.SetTeamIdCardsTest do
     assert Event.get_last(:id_cards_turned_off).data["revoked"] == 1
   end
 
-  test "only a SAR Duty admin may", %{admin: _admin} do
-    assert_raise FunctionClauseError, fn ->
-      SetTeamIdCards.call(team_fixture(), true, user_fixture())
-    end
+  test "a SAR Duty admin or the team's organization admins may; anyone else is refused" do
+    team = team_fixture(%{id_cards_enabled: false})
+    organization = organization_fixture([team])
+    dana = user_fixture()
+    organization_admin_fixture(organization, dana.email)
+    stranger = user_fixture()
+    other_admin = user_fixture()
+    organization_admin_fixture(organization_fixture(), other_admin.email)
+    team = Repo.reload!(team)
+
+    assert SetTeamIdCards.call(team, true, stranger) == {:error, :forbidden}
+    assert SetTeamIdCards.call(team, true, other_admin) == {:error, :forbidden}
+    assert {:ok, %{id_cards_enabled: true}} = SetTeamIdCards.call(team, true, dana)
+    assert Event.get_last(:id_cards_turned_on).user_id == dana.id
+  end
+
+  test "each change emails the team's team admins, naming who acted", %{admin: admin} do
+    team = team_fixture(%{name: "Coast Range SAR"})
+    manager_fixture(team, %{email: "owner@example.com"})
+    team |> member_fixture() |> member_card_fixture()
+
+    {:ok, team} = SetTeamIdCards.call(team, false, admin)
+
+    assert_received {:email, %{to: [{"", "owner@example.com"}]} = email}
+    assert email.subject == "ID cards are off for Coast Range SAR"
+    assert email.reply_to == {"", "support@sarduty.com"}
+    assert email.text_body =~ "#{admin.email} turned off ID cards for Coast Range SAR"
+    assert email.text_body =~ "Its 1 card is cancelled."
+
+    {:ok, _team} = SetTeamIdCards.call(team, true, admin)
+    assert_received {:email, %{subject: "ID cards are on for Coast Range SAR"}}
   end
 end

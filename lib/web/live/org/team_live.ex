@@ -7,6 +7,7 @@ defmodule Web.Org.TeamLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Team
+  alias App.Operation.SetTeamIdCards
   alias App.Operation.SetTeamOrganization
   alias App.Operation.SyncD4HChanges
   alias App.Repo
@@ -40,6 +41,7 @@ defmodule Web.Org.TeamLive do
       members: [team] |> TeamSummary.member_counts(now) |> Map.get(team.id, 0),
       last_seen: TeamSummary.last_seen([team], now)[team.id],
       hours_tags: hours_tags(team),
+      cards: Map.get(TeamSummary.card_counts(), team.id, 0),
       untagged: TeamDashboardViewData.untagged_rows(team, now),
       letters: for(y <- [year, year - 1], do: {y, letter_count(team, y)})
     )
@@ -123,6 +125,42 @@ defmodule Web.Org.TeamLive do
         </dl>
       </aside>
       <main class="content-2/3">
+        <section id="team-id-cards" class="mb-8 measure">
+          <h2 class="heading">ID cards</h2>
+          <p :if={@team.id_cards_enabled} id="team-id-cards-state">
+            <span class="text-success-text">On</span>
+            · {Service.Format.count(@cards, one: "%d card", many: "%d cards")}
+          </p>
+          <p :if={!@team.id_cards_enabled} id="team-id-cards-state">
+            <span class="text-text-muted">Off</span>
+          </p>
+          <p>
+            Members carry them in Apple Wallet or Google Wallet. Turning them off cancels every
+            card, and turning them back on does not bring those back. Its team admins get an
+            email either way.
+          </p>
+          <.button
+            :if={!@team.id_cards_enabled}
+            id="id-cards-on"
+            type="button"
+            phx-click="id_cards"
+            phx-value-enabled="true"
+          >
+            Turn on ID cards
+          </.button>
+          <.button
+            :if={@team.id_cards_enabled}
+            id="id-cards-off"
+            type="button"
+            variant={:danger}
+            phx-click="id_cards"
+            phx-value-enabled="false"
+            data-confirm={"Turn off ID cards for #{@team.name}? This cancels its #{Service.Format.count(@cards, one: "%d card", many: "%d cards")}, and its team admins get an email."}
+          >
+            Turn off ID cards
+          </.button>
+        </section>
+
         <section :if={@current_user.is_admin} id="team-remove" class="measure">
           <h2 class="heading">Remove from {@current_organization.short_name}</h2>
           <p>
@@ -143,6 +181,23 @@ defmodule Web.Org.TeamLive do
       </main>
     </div>
     """
+  end
+
+  def handle_event("id_cards", %{"enabled" => enabled}, socket) do
+    %{team: team, current_user: user} = socket.assigns
+
+    case SetTeamIdCards.call(team, enabled == "true", user) do
+      {:ok, team} ->
+        message =
+          if team.id_cards_enabled,
+            do: "ID cards turned on for #{team.name}.",
+            else: "ID cards turned off for #{team.name}. Its cards are cancelled."
+
+        {:noreply, socket |> assign_team(team) |> put_flash(:info, message)}
+
+      {:error, :forbidden} ->
+        {:noreply, put_flash(socket, :error, "You can no longer change its ID cards.")}
+    end
   end
 
   def handle_event("remove", _params, socket) do
