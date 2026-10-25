@@ -1,6 +1,7 @@
 #!/bin/sh
-# Runs CI's static checks before a push, so a format, Credo, or spelling slip fails
-# here in seconds instead of in CI. It checks the working tree, not the pushed commits.
+# Runs CI's static checks, less the forced compile, before a push, so a format,
+# Credo, or spelling slip fails here in seconds instead of in CI. It checks the
+# working tree, not the pushed commits.
 # Skip it once with `git push --no-verify`.
 # Turn it on per clone: git config core.hooksPath bin/git-hooks
 
@@ -8,8 +9,8 @@
 export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:/opt/homebrew/bin:$PATH"
 export MAPBOX_ACCESS_TOKEN="${MAPBOX_ACCESS_TOKEN:-dummy}"
 
-echo "pre-push: mise run ci-static-analysis (skip with --no-verify)"
-if ! mise run -c ci-static-analysis; then
+echo "pre-push: mise run ci-push (skip with --no-verify)"
+if ! mise run -c ci-push; then
   echo "pre-push: checks failed; run mise run check to fix, then push again" >&2
   exit 1
 fi
