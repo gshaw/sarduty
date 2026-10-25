@@ -28,7 +28,7 @@ Callout                  In: GSAR Qualified Callout or MIT Callout · Standing i
 
 The Callout page reads "Members of GSAR Qualified Callout or MIT Callout who are active",
 then a line for each group it names: what a smart group needs, or "Rope Rescue is a list
-kept by hand in D4H."
+kept by hand."
 
 **Standing is explicit** (#366, decided 2026-10-18). A group without a Standing rule takes
 away members and bots like anyone else. When a group has rules but no Standing rule, the
@@ -43,6 +43,36 @@ This replaced two features: the endorsements a group's rule required (#320) and 
 a group started from (#327). A recurring requirement, such as 20 hours of rope practice a
 year, is an expiring D4H qualification awarded each year (#15), and a group requires both
 the course endorsement and the practice one.
+
+## Groups kept by hand (#546)
+
+A group has rules or is kept by hand, never both. Every team adds, renames, and deletes
+groups in SAR Duty, and adds and removes the members of a group without rules, on the
+group's page or the member's Groups tab. A group with rules changes only through Review
+changes: a hand change would be undone by the next review, or by automatic mode (#419).
+So its page says "Its rules decide who is in it." and has no add row or Remove buttons,
+and [SetGroupMember](../lib/app/operation/set_group_member.ex) refuses it too.
+
+- Each change is a change set of one row through
+  [ApplyEdit](../lib/app/operation/apply_edit.ex), source `edit`. No sync follows it.
+  [SaveTitledRecord](../lib/app/operation/save_titled_record.ex) and SetGroupMember write
+  `groups` and `group_members` from the service's answer, as Review changes does, and the
+  next 10-minute sync confirms it. A sync per click would fetch every group's members.
+- A hand add or remove is logged to `group_membership_changes` with who made it and no
+  reason, so Recent changes shows it beside the rules' changes.
+- When other groups' rules name a hand-kept group, its page says so: an add there changes
+  their pending changes.
+- Two groups can't share a title, in any case, counting the organization's.
+- Deleting a group deletes its own rules. Its confirm names what else stops: its members,
+  the rules of groups that name it, the templates that add its members, and the attendance
+  check.
+
+**The organization's groups.** A team's list in D4H includes its organization's groups,
+`owner.resourceType == "Organisation"`, kept as `groups.organization_owned`. Renaming or
+deleting one might change it for every team in the organization, so SAR Duty never does,
+on the page or in SaveTitledRecord. Adding and removing members is fine: the team's key
+can, and the membership belongs to the team (checked live 2026-10-25). Their titles carry
+the organization's short name, "Aircraft · BCSARA".
 
 ## Storage
 

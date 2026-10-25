@@ -12,6 +12,7 @@ defmodule App.Model.Group do
     has_many :group_members, GroupMember
     field :d4h_group_id, :integer
     field :title, TrimmedString
+    field :organization_owned, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -22,7 +23,8 @@ defmodule App.Model.Group do
     |> cast(params, [
       :team_id,
       :d4h_group_id,
-      :title
+      :title,
+      :organization_owned
     ])
     |> validate_required([
       :team_id,

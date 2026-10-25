@@ -1,14 +1,22 @@
 defmodule Web.TitledRecordFormLive do
   use Web, :live_view_app_layout
 
+  import Ecto.Query
+
   alias App.Adapter.D4H
   alias App.Model.Group
+  alias App.Model.GroupMember
+  alias App.Model.GroupRule
   alias App.Model.Qualification
+  alias App.Model.Template
+  alias App.Operation.BuildGroupRulePreview
   alias App.Operation.SaveTitledRecord
+  alias App.Repo
   alias App.ViewModel.TitleFormViewModel
 
-  # Adding, renaming, and deleting qualifications and groups of a team on SAR Duty
-  # Records (docs/records.md). Both are only a title. A D4H team changes them in D4H.
+  # Adding, renaming, and deleting qualifications and groups. Both are only a title.
+  # Qualifications are for a team on SAR Duty Records (docs/records.md); a D4H team
+  # changes them in D4H. Groups are for every team (#546), except the organization's.
   @kinds %{
     new_qualification: :qualification,
     edit_qualification: :qualification,
@@ -18,15 +26,17 @@ defmodule Web.TitledRecordFormLive do
 
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    unless D4H.records?(team), do: raise(Web.Status.NotFound)
-
     kind = Map.fetch!(@kinds, socket.assigns.live_action)
+    unless kind == :group or D4H.records?(team), do: raise(Web.Status.NotFound)
+
     record = if id = params["id"], do: find!(kind, team, id)
+    if record && Map.get(record, :organization_owned), do: raise(Web.Status.NotFound)
     form = %TitleFormViewModel{title: record && record.title}
 
     socket =
       socket
       |> assign(kind: kind, record: record, form_data: form)
+      |> assign(:delete_text, record && delete_text(kind, team, record))
       |> assign(page_title: page_title(kind, record))
       |> assign_form(TitleFormViewModel.changeset(form, %{}, 200))
 
@@ -61,14 +71,14 @@ defmodule Web.TitledRecordFormLive do
 
     <section :if={@record} id="record-delete" class="mt-8 measure">
       <h2 class="heading">Delete the {@kind}</h2>
-      <p>{delete_text(@kind)}</p>
+      <p>{@delete_text}</p>
       <.button
         id="record-delete-button"
         phx-disable-with="Deleting…"
         type="button"
         variant={:danger}
         phx-click="delete"
-        data-confirm={"Delete #{@record.title}? #{delete_text(@kind)}"}
+        data-confirm={"Delete #{@record.title}? #{@delete_text}"}
       >
         Delete {@kind}
       </.button>
@@ -87,8 +97,53 @@ defmodule Web.TitledRecordFormLive do
 
   defp record_path(team, :group, record), do: ~p"/teams/#{team}/groups/#{record.id}"
 
-  defp delete_text(:qualification), do: "Every member who holds it loses it."
-  defp delete_text(:group), do: "Its members leave it. Its group rules stop working."
+  defp delete_text(:qualification, _team, _record), do: "Every member who holds it loses it."
+
+  # What else stops: the groups whose rules name it, the templates that add its members,
+  # and the attendance check.
+  defp delete_text(:group, team, group) do
+    count = GroupMember |> where(group_id: ^group.id) |> Repo.aggregate(:count)
+    context = BuildGroupRulePreview.load(team)
+
+    rules =
+      context.rules
+      |> GroupRule.used_by(group.d4h_group_id)
+      |> Enum.map(&context.groups[&1])
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(& &1.title)
+      |> Enum.sort()
+
+    templates =
+      Template
+      |> join(:inner, [t], tg in assoc(t, :template_groups))
+      |> where([t, tg], t.team_id == ^team.id and tg.group_id == ^group.id)
+      |> order_by([t], asc: t.title)
+      |> select([t], t.title)
+      |> Repo.all()
+
+    [
+      if(count == 0,
+        do: "Nobody is in it.",
+        else:
+          "Its #{Service.Format.count(count, one: "%d member leaves", many: "%d members leave")} it."
+      ),
+      if(rules != [],
+        do: "The rules of #{Service.Format.and_list(rules)} stop working until you change them."
+      ),
+      templates_text(templates),
+      if(team.watch_d4h_group_id == group.d4h_group_id,
+        do: "The attendance check stops until you select another group."
+      )
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+
+  defp templates_text([]), do: nil
+  defp templates_text([one]), do: "The template #{one} stops adding its members."
+
+  defp templates_text(templates),
+    do: "The templates #{Service.Format.and_list(templates)} stop adding its members."
 
   def handle_event("save", %{"form" => params}, socket) do
     %{current_team: team, current_user: user, kind: kind, record: record} = socket.assigns

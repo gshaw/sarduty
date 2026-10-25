@@ -132,45 +132,59 @@ defmodule Web.StyleGuideHTML.Values do
         [
           {~s{count(1, one: "1 member", many: "%d members")}, Format.count(1, member)},
           {~s{count(1204, one: "1 member", many: "%d members")}, Format.count(1204, member)}
-        ]},
-       {:or_list, "Names in a sentence, such as who a reminder skips",
-        [
-          {~s{or_list(["Dana Clark", "Eli Haddad"])},
-           Format.or_list(["Dana Clark", "Eli Haddad"])},
-          {~s{or_list(["A", "B", "C"])}, Format.or_list(["A", "B", "C"])}
-        ]},
-       {:duration, "Hours and minutes, everywhere",
-        [
-          {"duration(12_750)", Format.duration(12_750)},
-          {"duration(12_120)", Format.duration(12_120)},
-          {"duration(60)", Format.duration(60)},
-          {"duration(45)", Format.duration(45)}
-        ]},
-       {:hours, "Minutes as whole hours, under a label that says hours",
-        [{"hours(72_299)", Format.hours(72_299)}]},
-       {:tenths, "One decimal place, under a label that names the unit",
-        [{"tenths(1.5)", Format.tenths(1.5)}]},
-       {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
-       {:months, "How long a qualification lasts",
-        [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]},
-       {:file_size, "A file's size",
-        [
-          {"file_size(64_200)", Format.file_size(64_200)},
-          {"file_size(2_400_000)", Format.file_size(2_400_000)}
-        ]},
-       {:km, "A distance", [{"km(42)", Format.km(42)}]},
-       {:coordinate, "A place",
-        [
-          {"coordinate({49.75533, -123.1311}, 5)", Format.coordinate({49.75533, -123.1311}, 5)},
-          {"coordinate({49.75533, -123.1311}, 3)", Format.coordinate({49.75533, -123.1311}, 3)}
-        ]},
-       {:run_time, "How long a job took, for admins",
-        [
-          {"run_time(850)", Format.run_time(850)},
-          {"run_time(4_200)", Format.run_time(4_200)},
-          {"run_time(210_000)", Format.run_time(210_000)}
         ]}
-     ]}
+     ] ++
+       name_lists() ++
+       [
+         {:duration, "Hours and minutes, everywhere",
+          [
+            {"duration(12_750)", Format.duration(12_750)},
+            {"duration(12_120)", Format.duration(12_120)},
+            {"duration(60)", Format.duration(60)},
+            {"duration(45)", Format.duration(45)}
+          ]},
+         {:hours, "Minutes as whole hours, under a label that says hours",
+          [{"hours(72_299)", Format.hours(72_299)}]},
+         {:tenths, "One decimal place, under a label that names the unit",
+          [{"tenths(1.5)", Format.tenths(1.5)}]},
+         {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
+         {:months, "How long a qualification lasts",
+          [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]},
+         {:file_size, "A file's size",
+          [
+            {"file_size(64_200)", Format.file_size(64_200)},
+            {"file_size(2_400_000)", Format.file_size(2_400_000)}
+          ]},
+         {:km, "A distance", [{"km(42)", Format.km(42)}]},
+         {:coordinate, "A place",
+          [
+            {"coordinate({49.75533, -123.1311}, 5)", Format.coordinate({49.75533, -123.1311}, 5)},
+            {"coordinate({49.75533, -123.1311}, 3)", Format.coordinate({49.75533, -123.1311}, 3)}
+          ]},
+         {:run_time, "How long a job took, for admins",
+          [
+            {"run_time(850)", Format.run_time(850)},
+            {"run_time(4_200)", Format.run_time(4_200)},
+            {"run_time(210_000)", Format.run_time(210_000)}
+          ]}
+       ]}
+  end
+
+  # Split from quantities only to keep each function short.
+  defp name_lists do
+    [
+      {:and_list, "Names in a sentence, such as what deleting a group stops",
+       [
+         {~s{and_list(["Callout", "MIT Callout"])}, Format.and_list(["Callout", "MIT Callout"])},
+         {~s{and_list(["A", "B", "C"])}, Format.and_list(["A", "B", "C"])}
+       ]},
+      {:or_list, "Names in a sentence, such as who a reminder skips",
+       [
+         {~s{or_list(["Dana Clark", "Eli Haddad"])},
+          Format.or_list(["Dana Clark", "Eli Haddad"])},
+         {~s{or_list(["A", "B", "C"])}, Format.or_list(["A", "B", "C"])}
+       ]}
+    ]
   end
 
   defp elsewhere do

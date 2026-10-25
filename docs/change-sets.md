@@ -28,9 +28,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   can never apply a set, and it can't propose group or award changes yet: group rules
   own their groups, and awards wait on #174's step 4.
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
-  a team on SAR Duty Records ([records.md](records.md)).
+  a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
+  any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)).
   [ApplyEdit](../lib/app/operation/apply_edit.ex) proposes and applies it in one step,
-  then runs the sync so the next page shows the change. The row names only the fields
+  then runs the sync so the next page shows the change. A group's row skips the sync:
+  its caller writes the copy, as group rules do. The row names only the fields
   that changed, with their old values. Edits don't read D4H first.
 - **A member's own edit is a set of one row** (source `member`, #156): a member
   changing their address or emergency contacts from their page, applied at once. See
@@ -87,8 +89,8 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **`old_value` and `new_value`** hold what D4H had and what it gets, as JSON with string
   keys and times as ISO 8601 strings.
 - **Local side effects stay with the caller.** Take attendance records no-shows and group rules
-  update `group_members` from the rows that applied. Group rules still log to
-  `group_membership_changes`, which the group page shows.
+  update `group_members` from the rows that applied. Group rules and hand changes to a
+  group log to `group_membership_changes`, which the group page shows.
 
 Applied rows show on each member's and activity's history page, beside what the refresh
 saw change in D4H: see [change-history.md](change-history.md).

@@ -5,8 +5,11 @@ defmodule Web.GroupLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.EndorsementQualification
+  alias App.Model.GroupMember
+  alias App.Model.GroupMembershipChange
   alias App.Model.GroupRule
   alias App.Model.GroupRuleReference
+  alias App.Repo
 
   # The crash tests below log the LiveView's exit.
   @moduletag :capture_log
@@ -26,6 +29,7 @@ defmodule Web.GroupLiveTest do
 
     %{
       team: team,
+      user_email: user.email,
       group: group,
       conn: conn,
       path: ~p"/teams/#{team}/groups/#{group.id}",
@@ -280,6 +284,113 @@ defmodule Web.GroupLiveTest do
   end
 
   # A miss raises and takes the LiveView down, as a 404 would on a page load.
+  describe "a group kept by hand (#546)" do
+    setup ctx do
+      team = ctx.team |> Ecto.Changeset.change(d4h_access_key: "key") |> Repo.update!()
+      stub_d4h()
+      %{team: team}
+    end
+
+    test "adds and removes members in D4H, and writes the copy without a sync", ctx do
+      avery = member_fixture(ctx.team, %{name: "Avery Chen", d4h_member_id: 501})
+      robin = member_fixture(ctx.team, %{name: "Robin Tse"})
+      robin_in = group_member_fixture(ctx.group, robin)
+      {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+      refute has_element?(lv, "#members-by-rules")
+      lv |> form("#add-member-form", %{member_id: avery.id}) |> render_submit()
+
+      assert_received {:d4h, "POST", "/member-group-memberships", body}
+      assert body == %{"groupId" => ctx.group.d4h_group_id, "memberId" => 501}
+      added = Repo.get_by!(GroupMember, group_id: ctx.group.id, member_id: avery.id)
+      assert added.d4h_group_membership_id == 400
+      assert has_element?(lv, "#group-member-#{added.id}")
+      refute has_element?(lv, "#flash-info")
+
+      assert lv
+             |> element("#remove-member-#{robin_in.id}")
+             |> render() =~ ~s(data-confirm="Remove Robin Tse from #{ctx.group.title}?")
+
+      lv |> element("#remove-member-#{robin_in.id}") |> render_click()
+
+      path = "/member-group-memberships/#{robin_in.d4h_group_membership_id}"
+      assert_received {:d4h, "DELETE", ^path, nil}
+      refute Repo.get(GroupMember, robin_in.id)
+      refute has_element?(lv, "#group-member-#{robin_in.id}")
+      refute_received {:d4h, "GET", _path, _body}
+
+      assert [removed, _added] = GroupMembershipChange.recent_for_group(ctx.group)
+      assert %{action: :remove, reason: nil, error: nil} = removed
+      assert has_element?(lv, "#recent-changes", "Added Avery Chen · by #{ctx.user_email}")
+    end
+
+    test "a group with rules has no add row or Remove, and refuses one sent anyway", ctx do
+      member = member_fixture(ctx.team)
+      group_member = group_member_fixture(ctx.group, member)
+      group_rule_fixture(ctx.group, ctx.endorsement)
+      {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+      assert has_element?(lv, "#members-by-rules", "Its rules decide who is in it.")
+      refute has_element?(lv, "#add-member-form")
+      refute has_element?(lv, "#remove-member-#{group_member.id}")
+
+      render_click(lv, "remove-member", %{"id" => to_string(group_member.id)})
+      refute_received {:d4h, "DELETE", _path, _body}
+      assert Repo.get(GroupMember, group_member.id)
+    end
+
+    test "names the groups whose rules use it", ctx do
+      callout = group_fixture(ctx.team, %{title: "Callout"})
+      group_rule_fixture(callout, ctx.group)
+      {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+      assert has_element?(lv, "#used-by", "The rules of Callout use this group.")
+
+      assert has_element?(
+               lv,
+               ~s{#used-by a[href="/teams/#{ctx.team.subdomain}/groups/#{callout.id}"]}
+             )
+    end
+
+    test "the organization's group can't be renamed or deleted, but takes members", ctx do
+      organization_fixture([ctx.team], %{short_name: "BCSARA"})
+      group = group_fixture(ctx.team, %{title: "Aircraft", organization_owned: true})
+      member_fixture(ctx.team)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/groups/#{group.id}")
+
+      refute has_element?(lv, "#group-edit")
+      assert has_element?(lv, "#group-organization", "Only BCSARA can rename or delete it.")
+      assert has_element?(lv, "#add-member-form")
+
+      assert_raise Web.Status.NotFound, fn ->
+        live(ctx.conn, ~p"/teams/#{ctx.team}/groups/#{group.id}/edit")
+      end
+    end
+  end
+
+  # D4H's answer to each write, sent to the test. A read is sent too, so a test can say
+  # nothing synced.
+  defp stub_d4h do
+    test = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(test, {:d4h, conn.method, path, if(body != "", do: Jason.decode!(body))})
+
+      case conn.method do
+        "GET" ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0, "page" => 0})
+
+        "POST" ->
+          Req.Test.json(conn, %{"id" => 400, "member" => %{"id" => 1}, "group" => %{"id" => 1}})
+
+        _method ->
+          Req.Test.json(conn, %{})
+      end
+    end)
+  end
+
   defp crash(lv, event, params) do
     Process.flag(:trap_exit, true)
     assert {{%Ecto.NoResultsError{}, _stack}, _call} = catch_exit(render_click(lv, event, params))

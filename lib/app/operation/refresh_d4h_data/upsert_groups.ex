@@ -39,18 +39,25 @@ defmodule App.Operation.RefreshD4HData.UpsertGroups do
       |> where([g], g.team_id == ^team_id)
       |> StaleRows.ids(:d4h_group_id, synced_d4h_ids)
 
-    memberships = where(GroupMember, [gm], gm.group_id in ^stale_ids)
+    count = delete(stale_ids)
+    Logger.info("Deleted #{count} stale groups for team #{team_id}")
+  end
+
+  @doc "Deletes the groups with local `ids` and their memberships. Returns how many."
+  def delete(ids) do
+    memberships = where(GroupMember, [gm], gm.group_id in ^ids)
     RecordD4HChanges.removed(:group_membership, Repo.all(memberships))
     Repo.delete_all(memberships)
-    {count, _} = Group |> where([g], g.id in ^stale_ids) |> Repo.delete_all()
-    Logger.info("Deleted #{count} stale groups for team #{team_id}")
+    {count, _} = Group |> where([g], g.id in ^ids) |> Repo.delete_all()
+    count
   end
 
   defp upsert_group(team, d4h_group) do
     params = %{
       team_id: team.id,
       d4h_group_id: d4h_group.d4h_group_id,
-      title: d4h_group.title
+      title: d4h_group.title,
+      organization_owned: d4h_group.organization_owned
     }
 
     group =
