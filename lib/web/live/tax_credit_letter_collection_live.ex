@@ -241,8 +241,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
         Email failed
       </.badge>
     <% else %>
-      <.button variant={:success} size={:sm} phx-click="create" value={@record.member.id}>
-        Create letter
+      <.button
+        variant={:success}
+        size={:sm}
+        phx-click="create"
+        value={@record.member.id}
+        phx-disable-with="Sending…"
+      >
+        Send letter
       </.button>
     <% end %>
     """

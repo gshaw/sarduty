@@ -67,7 +67,7 @@ defmodule Web.Org.TeamNewLive do
         </ul>
 
         <.form_actions>
-          <.button variant={:success}>Add team</.button>
+          <.button variant={:success} phx-disable-with="Adding…">Add team</.button>
         </.form_actions>
       </.form>
     </div>

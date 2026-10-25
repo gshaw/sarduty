@@ -324,11 +324,11 @@ defmodule App.ViewData.TeamAttention do
         year: year,
         title:
           Format.count(count,
-            one: "%d tax credit letter to create for #{year}",
-            many: "%d tax credit letters to create for #{year}"
+            one: "%d tax credit letter to send for #{year}",
+            many: "%d tax credit letters to send for #{year}"
           ),
         detail: "Members file by April 30.",
-        action: "Create letters"
+        action: "Send letters"
       }
     end
   end

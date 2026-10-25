@@ -99,6 +99,7 @@ defmodule Web.Components.Reply do
           variant={:success}
           size={@size}
           phx-click="reply"
+          phx-disable-with="Sending…"
           phx-value-reply="yes"
           phx-target={@target}
         >
@@ -108,6 +109,7 @@ defmodule Web.Components.Reply do
           id={"#{@id}-no"}
           size={@size}
           phx-click="reply"
+          phx-disable-with="Sending…"
           phx-value-reply="no"
           phx-target={@target}
         >

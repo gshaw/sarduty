@@ -77,10 +77,11 @@
   .band-danger { --c: var(--danger); }
   .band-warning { --c: var(--warning); color: var(--on-warning); }
 
-  /* The spinner and the slow thing it names. */
+  /* The spinner and the slow thing it names. A busy button draws the same one. */
   .spinner-text { display: inline-flex; align-items: center; gap: var(--sp-2); }
 
-  .spinner {
+  .spinner,
+  .btn[phx-disable-with]:is(.phx-click-loading, .phx-submit-loading)::before {
     display: inline-block;
     width: 1em;
     height: 1em;
@@ -92,7 +93,9 @@
   }
 
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner, .btn[phx-disable-with]:is(.phx-click-loading, .phx-submit-loading)::before { animation-duration: 2.4s; }
+  }
 }
 
 /* The band's icon at 32px. Outside the layer: the icon plugin's own size is a utility. */

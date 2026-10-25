@@ -55,10 +55,16 @@ defmodule Web.Components.Core do
   @doc """
   Renders a button, or a link styled as one when given `navigate` or `href`.
 
+  A button whose event waits on email, D4H, Records, Wallet, Mapbox, or a PDF gets
+  `phx-disable-with` naming the slow thing, like "Sending…": it disables the button and
+  shows a spinner until the event answers. Web.SlowButtonTest fails without it. See
+  /styles/button#slow.
+
   ## Examples
 
       <.button variant={:success}>Save</.button>
       <.button variant={:danger} size={:sm} phx-click="delete">Delete</.button>
+      <.button phx-click="email" phx-disable-with="Sending…">Email letter</.button>
       <.button navigate={~p"/login"}>Log in</.button>
   """
   attr :type, :string, default: nil

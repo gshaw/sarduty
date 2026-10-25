@@ -57,7 +57,7 @@ defmodule Web.TaxCreditLetterLive do
       >
         Download PDF
       </.button>
-      <.button id="email-letter" variant={:warning} phx-click="email">Email letter</.button>
+      <.button id="email-letter" variant={:warning} phx-click="email" phx-disable-with="Sending…">Email letter</.button>
       <:trailing>
         <.button
           variant={:danger}

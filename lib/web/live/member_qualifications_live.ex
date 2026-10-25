@@ -214,6 +214,7 @@ defmodule Web.MemberQualificationsLive do
       variant={:link}
       size={:sm}
       phx-click="remove-award"
+      phx-disable-with="Removing…"
       phx-value-id={@award.id}
       data-confirm={"Remove #{@award.qualification.title} from #{@member.name}?"}
     >
@@ -262,7 +263,7 @@ defmodule Web.MemberQualificationsLive do
           A photo or a PDF, up to {Service.Format.file_size(Service.CertificateFile.max_bytes())}.
         </.file_drop>
         <.form_actions>
-          <.button variant={:success}>Award qualification</.button>
+          <.button variant={:success} phx-disable-with="Awarding…">Award qualification</.button>
         </.form_actions>
       </.form>
     </section>

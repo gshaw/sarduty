@@ -71,7 +71,9 @@ defmodule Web.ActivityFormLive do
         Attendance cannot be changed once the activity is published.
       </.input>
       <.form_actions>
-        <.button variant={:success}>{if @activity, do: "Save activity", else: "Add activity"}</.button>
+        <.button variant={:success} phx-disable-with={if @activity, do: "Saving…", else: "Adding…"}>
+          {if @activity, do: "Save activity", else: "Add activity"}
+        </.button>
       </.form_actions>
     </.form>
 
@@ -82,6 +84,7 @@ defmodule Web.ActivityFormLive do
       </p>
       <.button
         id="activity-delete-button"
+        phx-disable-with="Deleting…"
         type="button"
         variant={:danger}
         phx-click="delete"

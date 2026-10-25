@@ -78,7 +78,9 @@ defmodule Web.EquipmentItemFormLive do
       </div>
       <.input field={@form[:expires_on]} type="date" label="Expires (optional)" />
       <.form_actions>
-        <.button variant={:success}>{if @item, do: "Save item", else: "Add item"}</.button>
+        <.button variant={:success} phx-disable-with={if @item, do: "Saving…", else: "Adding…"}>
+          {if @item, do: "Save item", else: "Add item"}
+        </.button>
       </.form_actions>
     </.form>
 
@@ -87,6 +89,7 @@ defmodule Web.EquipmentItemFormLive do
       <p>Its activities lose it too. To keep its history, set its status to Retired instead.</p>
       <.button
         id="item-delete-button"
+        phx-disable-with="Deleting…"
         type="button"
         variant={:danger}
         phx-click="delete"

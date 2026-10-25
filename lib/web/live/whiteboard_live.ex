@@ -150,6 +150,7 @@ defmodule Web.WhiteboardLive do
             size={:sm}
             type="button"
             phx-click="archive"
+            phx-disable-with="Archiving…"
             phx-value-id={note.id}
             data-confirm={WhiteboardText.archive_confirm()}
           >
@@ -172,6 +173,7 @@ defmodule Web.WhiteboardLive do
             size={:sm}
             type="button"
             phx-click="delete"
+            phx-disable-with="Deleting…"
             phx-value-id={note.id}
             data-confirm={"Delete this note? #{Web.WhiteboardNoteFormLive.gone_text(@current_team)}"}
           >
