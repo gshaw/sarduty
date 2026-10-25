@@ -57,7 +57,7 @@ defmodule Web.Components.GroupRule do
         options={@options}
         aria-label="Group, endorsement, or standing"
       />
-      <.button size={:sm} data-confirm={@add_confirm}>Add rule</.button>
+      <.button id="add-rule" size={:sm} data-confirm={@add_confirm}>Add rule</.button>
       <.a navigate={@new_path}>New endorsement</.a>
     </form>
 
