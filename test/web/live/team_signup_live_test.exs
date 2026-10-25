@@ -1,5 +1,6 @@
 defmodule Web.TeamSignupLiveTest do
   use Web.ConnCase
+  use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
   import App.AccountsFixtures
   import Phoenix.LiveViewTest
@@ -8,6 +9,9 @@ defmodule Web.TeamSignupLiveTest do
   alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.SignUpTeam
+  alias App.Worker.NotifyTeamSignedUpWorker
+  alias App.Worker.RefreshTeamDataWorker
+  alias App.Worker.SendLoginCodeWorker
 
   @d4h_team_id 7700
 
@@ -88,7 +92,13 @@ defmodule Web.TeamSignupLiveTest do
     }
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      assert {:ok, %Team{name: "Ridge SAR"}} = SignUpTeam.call(params)
+      assert {:ok, %Team{name: "Ridge SAR"} = team} = SignUpTeam.call(params)
+
+      # The first refresh, the admins' notice, and the login code commit with the team.
+      assert_enqueued(worker: RefreshTeamDataWorker, args: %{team_id: team.id})
+      assert_enqueued(worker: NotifyTeamSignedUpWorker, args: %{team_id: team.id})
+      assert_enqueued(worker: SendLoginCodeWorker, args: %{email: "pat@example.com"})
+      assert %{success: 2} = Oban.drain_queue(queue: :default)
     end)
 
     team = Team.get_by(d4h_team_id: @d4h_team_id)

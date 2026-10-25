@@ -12,6 +12,9 @@ defmodule App.Worker.RefreshTeamDataWorker do
   alias App.Operation.RefreshD4HData
   alias App.Worker.PushPassUpdatesWorker
 
+  @doc "Queues a full refresh of the team, unless one is already waiting or running."
+  def enqueue(%Team{id: id}), do: %{team_id: id} |> new() |> Oban.insert()
+
   # Retry a failed refresh after 15, then 30 minutes, rather than waiting a day.
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}), do: attempt * 15 * 60

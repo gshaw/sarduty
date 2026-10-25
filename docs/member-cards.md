@@ -77,8 +77,8 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - **When a pass is built** for an email, a download, or a phone, and its fingerprint
   changed, it pushes too. Building records the fingerprint, so the next refresh would
   otherwise see nothing new and the phones would keep the old pass.
-- **On cancel or replace** it pushes right away, and Wallet fetches a voided pass that
-  says "Cancelled".
+- **On cancel or replace** a job per card (`UpdateCancelledCardWorker`, queued with the
+  cancel) pushes, and Wallet fetches a voided pass that says "Cancelled".
 - A phone that APNs says dropped the pass, or whose token is bad, is deleted.
 - **A member keeps one Wallet serial number** across replacements, so a replacement pass
   lands on the existing pass instead of beside it. Each card has its own token, and a
@@ -118,8 +118,9 @@ pass again, and every saved copy changes:
 - **After every team refresh**, for cards whose pass changed. The fingerprint leaves out
   the "last checked" date, as for Apple. A card with no `google_pass_fingerprint` has no
   pass at Google and is skipped.
-- **On cancel or replace** the old pass is sent as `EXPIRED`, with no QR code or photo,
-  and Wallet moves it to "Expired passes".
+- **On cancel or replace** the same job sends the old pass as `EXPIRED`, with no QR code
+  or photo, and Wallet moves it to "Expired passes". A refusal is tried again: the
+  refresh only sends live cards, so nothing else would.
 - **A replacement is a new pass.** Each card has its own Wallet object, because Google
   has no per-phone token to say which card a phone holds. The member adds the new one.
 

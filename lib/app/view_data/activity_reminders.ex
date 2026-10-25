@@ -14,7 +14,8 @@ defmodule App.ViewData.ActivityReminders do
   end
 
   @doc """
-  The last send, as `%{sent_at:, sent_by_user:, sent:, failed:, replied_since:}`, or nil
+  The last send, as `%{sent_at:, sent_by_user:, sent:, sending:, failed:,
+  replied_since:}`, or nil
   before the first. Replied since counts its members who have a reply now: they had
   none when it went.
   """
@@ -23,16 +24,21 @@ defmodule App.ViewData.ActivityReminders do
   def last_batch(reminders, rows) do
     sent_at = reminders |> Enum.map(& &1.sent_at) |> Enum.max(DateTime)
     batch = Enum.filter(reminders, &(DateTime.compare(&1.sent_at, sent_at) == :eq))
-    replied = for row <- rows, row.status != "requested", into: MapSet.new(), do: row.member_id
     by_status = Enum.frequencies_by(batch, & &1.status)
 
     %{
       sent_at: sent_at,
       sent_by_user: hd(batch).sent_by_user,
       sent: Map.get(by_status, :sent, 0),
+      sending: Map.get(by_status, :queued, 0),
       failed: Map.get(by_status, :failed, 0),
-      replied_since: Enum.count(batch, &MapSet.member?(replied, &1.member_id))
+      replied_since: replied_since(batch, rows)
     }
+  end
+
+  defp replied_since(batch, rows) do
+    replied = for row <- rows, row.status != "requested", into: MapSet.new(), do: row.member_id
+    Enum.count(batch, &MapSet.member?(replied, &1.member_id))
   end
 
   @doc """

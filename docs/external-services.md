@@ -63,7 +63,8 @@ Reminders to reply to an activity (#444) come from the team's name and reply to 
 admin who sent them, through the API's `reply_to` field: Cloudflare refuses a Reply-To
 header, and any header not on its allowlist fails the whole send. They carry
 `List-Unsubscribe` and `List-Unsubscribe-Post`, which it allows, for a mail app's
-one-click unsubscribe.
+one-click unsubscribe. Each is its own job, `SendReminderWorker`, so a refusal is tried
+again over about an hour, and the page shows a reminder that never went as failed.
 
 Emailing a tax credit letter waits for Cloudflare's answer, so the page says when it
 didn't send (#155). Emailing every eligible member's letter at once runs as an Oban job

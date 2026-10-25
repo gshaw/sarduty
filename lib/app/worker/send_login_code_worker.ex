@@ -12,6 +12,9 @@ defmodule App.Worker.SendLoginCodeWorker do
 
   alias App.Accounts
 
+  @doc "Queues a login code for the email, sent only if it may log in."
+  def enqueue_email(email) when is_binary(email), do: %{email: email} |> new() |> Oban.insert!()
+
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}), do: attempt * 10
 

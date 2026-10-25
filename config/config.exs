@@ -92,7 +92,9 @@ config :sarduty, Oban,
   engine: Oban.Engines.Lite,
   repo: App.Repo,
   # One sync at a time, so two teams' syncs never hold the SQLite write lock together.
-  queues: [default: 5, refresh: 1, sync: 1],
+  # Bulk is for fan-out, one job per email or card, so a long send never holds up a
+  # login code and its PDFs leave the one CPU for pages (docs/jobs.md).
+  queues: [default: 5, bulk: 2, refresh: 1, sync: 1],
   # Lifeline puts back a job left executing by a restart, so it runs again rather than
   # sitting there for good; an hour is far longer than any team's refresh. Pruner keeps a
   # week of finished jobs for looking into a run; events keep the longer history.

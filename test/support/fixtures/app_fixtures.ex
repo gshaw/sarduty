@@ -152,6 +152,26 @@ defmodule App.DataFixtures do
     path
   end
 
+  @doc """
+  Makes every email fail until the test ends, as Cloudflare refusing it. It changes the
+  app's config, so only a test that isn't async may use it.
+  """
+  def refusing_mailer_fixture do
+    original = Application.get_env(:sarduty, App.Mailer)
+    ExUnit.Callbacks.on_exit(fn -> Application.put_env(:sarduty, App.Mailer, original) end)
+
+    Application.put_env(:sarduty, App.Mailer,
+      adapter: App.Adapter.CloudflareEmail,
+      account_id: "test",
+      api_token: "test",
+      req_options: [plug: {Req.Test, App.Adapter.CloudflareEmail}, retry: false]
+    )
+
+    Req.Test.stub(App.Adapter.CloudflareEmail, fn conn ->
+      conn |> Plug.Conn.put_status(500) |> Req.Test.json(%{"success" => false})
+    end)
+  end
+
   def make_admin(user) do
     user
     |> Ecto.Changeset.change(%{is_admin: true})

@@ -8,8 +8,9 @@ defmodule App.Operation.SetTeamIdCards do
   else is refused, which also stops someone removed, or a team taken out of the
   organization, while the page is still open.
 
-  Turning it off cancels every live card on the team, and phones holding one are told to
-  fetch the voided pass, so turning it back on never wakes old cards. Either way the
+  Turning it off cancels every live card on the team, with a job per card that tells
+  phones holding one to fetch the voided pass, so turning it back on never wakes old
+  cards. Either way the
   team's team admins get an email.
   """
 
@@ -21,9 +22,8 @@ defmodule App.Operation.SetTeamIdCards do
   alias App.Model.MemberCard
   alias App.Model.OrganizationAdmin
   alias App.Model.Team
-  alias App.Operation.PushPassUpdates
-  alias App.Operation.UpdateGooglePasses
   alias App.Repo
+  alias App.Worker.UpdateCancelledCardWorker
 
   def call(%Team{} = team, enabled, %User{} = user, now \\ DateTime.utc_now())
       when is_boolean(enabled) do
@@ -47,6 +47,7 @@ defmodule App.Operation.SetTeamIdCards do
       Repo.transaction(fn ->
         team = team |> Ecto.Changeset.change(id_cards_enabled: enabled) |> Repo.update!()
         revoked = if enabled, do: [], else: MemberCard.revoke_team!(team, now)
+        UpdateCancelledCardWorker.enqueue_all(revoked)
         kind = if enabled, do: :id_cards_turned_on, else: :id_cards_turned_off
 
         Event.record!(kind,
@@ -58,8 +59,6 @@ defmodule App.Operation.SetTeamIdCards do
         {team, revoked}
       end)
 
-    PushPassUpdates.push_cards(revoked)
-    UpdateGooglePasses.update_cards(revoked, now)
     TeamAdminMailer.deliver_id_cards(team, enabled, user.email, length(revoked), now)
     {:ok, team}
   end
