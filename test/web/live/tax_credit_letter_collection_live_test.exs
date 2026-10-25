@@ -11,6 +11,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.SaveTeamSignature
   alias App.Repo
+  alias App.Worker.EmailTaxCreditLetterWorker
 
   test "renders tax credit letters collection", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -71,7 +72,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(
                lv,
                "#letters-sent",
-               "2 tax credit letters created for 2025. 1 emailed."
+               "2 tax credit letters created for 2025. Emailing 1 of them now."
              )
 
       assert has_element?(lv, "#letters-no-email", "Blake")
@@ -84,6 +85,31 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert query |> Repo.all() |> Enum.sort() == Enum.sort([avery.id, blake.id, casey.id])
       assert Repo.get!(TaxCreditLetter, had.id).ref_id == had.ref_id
       assert Event.get_last(:tax_credit_letters_sent).data["created"] == 2
+
+      # Each email is its own job, which ran inline, and the letter says it went.
+      statuses =
+        from l in TaxCreditLetter, where: l.year == 2025, select: {l.member_id, l.email_status}
+
+      assert statuses |> Repo.all() |> Map.new() ==
+               %{avery.id => :sent, blake.id => nil, casey.id => nil}
+    end
+
+    test "a letter whose email failed every time says so in its row",
+         %{conn: conn, team: team} do
+      avery = member_fixture(team, %{name: "Avery"})
+      attend(team, avery)
+      refusing_mailer_fixture()
+
+      CreateTaxCreditLetters.call(team, 2025, [avery.id])
+      letter = Repo.get_by!(TaxCreditLetter, member_id: avery.id)
+      assert letter.email_status == :sending
+
+      job = %Oban.Job{args: %{"tax_credit_letter_id" => letter.id}, attempt: 5, max_attempts: 5}
+      assert {:error, _reason} = EmailTaxCreditLetterWorker.perform(job)
+      assert Repo.reload!(letter).email_status == :failed
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      assert has_element?(lv, "#letter-email-failed-#{letter.id}", "Email failed")
     end
 
     test "the letter switch counts members before the search and lists one part",

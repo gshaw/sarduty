@@ -45,17 +45,18 @@ can fix it: a rejected key, no email, a record gone. Never return `:ok` for a se
 failed.
 
 Honeybadger is for us. A failure the team needs to see also goes on a row the page
-shows, like `Reminder.status` or `ChangeSetRow.status`. A job with one attempt that a deploy kills is
+shows, like `Reminder.status`, `TaxCreditLetter.email_status`, or
+`ChangeSetRow.status`. A job with one attempt that a deploy kills is
 discarded without a word, so a job that matters gets 2 or more, or a status.
 
 ## Queues
 
-| Queue     | Limit | For                                                            |
-| --------- | ----- | -------------------------------------------------------------- |
-| `default` | 5     | Small jobs someone may be waiting on: login codes, notices     |
-| `bulk`    | 2     | Fan-out, one job per email or card: reminders, cancelled cards |
-| `refresh` | 1     | The full D4H refresh, nightly or from a button                 |
-| `sync`    | 1     | The 10-minute D4H sync                                         |
+| Queue     | Limit | For                                                                     |
+| --------- | ----- | ----------------------------------------------------------------------- |
+| `default` | 5     | Small jobs someone may be waiting on: login codes, notices              |
+| `bulk`    | 2     | Fan-out, one job per email or card: reminders, letters, cancelled cards |
+| `refresh` | 1     | The full D4H refresh, nightly or from a button                          |
+| `sync`    | 1     | The 10-minute D4H sync                                                  |
 
 `bulk` keeps a long send from holding up a login code, and leaves the one CPU for
 pages. `refresh` and `sync` take 1 so two teams' copies never hold the write lock

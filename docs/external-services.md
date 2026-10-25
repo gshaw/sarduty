@@ -67,8 +67,9 @@ one-click unsubscribe. Each is its own job, `SendReminderWorker`, so a refusal i
 again over about an hour, and the page shows a reminder that never went as failed.
 
 Emailing a tax credit letter waits for Cloudflare's answer, so the page says when it
-didn't send (#155). Emailing every eligible member's letter at once runs as an Oban job
-(#202).
+didn't send (#155). Sending every eligible member's letter at once runs as an Oban job
+(#202) that makes the letters, each with its own email job, retried over about two
+hours. A letter keeps whether its email went, and its row says when it failed (#516).
 
 ## Twilio
 

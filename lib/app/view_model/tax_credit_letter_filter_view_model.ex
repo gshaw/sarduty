@@ -126,6 +126,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     |> Map.put(:member, member)
     |> Map.put(:tax_credit_letter_id, letter && letter.id)
     |> Map.put(:tax_credit_letter_ref_id, letter && letter.ref_id)
+    |> Map.put(:tax_credit_letter_email_status, letter && letter.email_status)
     |> Map.put(:letter_minutes, letter && TaxCreditLetter.total_minutes(letter))
     |> Map.put(
       :letter_hours_status,

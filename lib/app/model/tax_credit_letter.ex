@@ -26,6 +26,9 @@ defmodule App.Model.TaxCreditLetter do
     # When the member first downloaded it from their own pages. A team admin's download
     # doesn't count.
     field :downloaded_at, :utc_datetime_usec
+    # Whether its email went: sending while its job waits, then sent or failed. Empty for
+    # a letter never emailed, or one made before #516.
+    field :email_status, Ecto.Enum, values: [:sending, :sent, :failed]
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
@@ -50,6 +53,21 @@ defmodule App.Model.TaxCreditLetter do
     ])
     |> validate_number(:year, greater_than_or_equal_to: 2014, less_than: 2100)
   end
+
+  @doc """
+  A letter whose email is waiting for its job, with its member and team, or nil once
+  it's sent, failed, or gone.
+  """
+  def get_sending(id) do
+    TaxCreditLetter
+    |> where([tcl], tcl.id == ^id and tcl.email_status == :sending)
+    |> preload(member: :team)
+    |> Repo.one()
+  end
+
+  @doc "Records how the letter's email went."
+  def set_email_status!(%TaxCreditLetter{} = letter, status),
+    do: letter |> change(email_status: status) |> Repo.update!()
 
   def find!(team, id) do
     query =
