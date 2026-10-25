@@ -13,7 +13,7 @@ defmodule Web.PrivacyLive do
     ~H"""
     <article id="privacy" class="max-w-prose">
       <h1 class="title">Privacy</h1>
-      <p class="hint">Last changed October 23, 2026.</p>
+      <p class="hint">Last changed October 24, 2026.</p>
       <p>
         SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
       </p>

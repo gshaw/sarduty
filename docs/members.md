@@ -396,8 +396,8 @@ away periods, check-ins, history, and ID cards.
   ID card, and History stay team admins'.
 - **Their own page** opens Your membership: a member opening their own member page is
   sent there (`MemberPage.on_mount(:own_page, …)`), so every link to it works.
-- **Email stays private**, with phone and address, as #440 proposed: a directory members
-  opt into can come later if people ask.
+- **Email stays private**, with phone and address (decided 2026-10-24): no team needs it
+  shown to every member. A directory members opt into can come later if people ask.
 
 ## Opening a page to members
 
