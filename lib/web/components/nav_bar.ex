@@ -51,7 +51,9 @@ defmodule Web.Components.NavBar do
 
   attr :label, :string, required: true, doc: "the area, as the nav's aria-label"
 
-  slot :section, required: true
+  slot :section, required: true do
+    attr :class, :string
+  end
 
   # An area's pages down the left of each of its pages (#312), in sections split by a
   # divider, with no headings (#406). Below 1024px the Menu button holds them instead. See
@@ -59,7 +61,7 @@ defmodule Web.Components.NavBar do
   def side_nav(assigns) do
     ~H"""
     <nav id="side-nav" class="side-nav" aria-label={@label}>
-      <div :for={section <- @section} class="side-nav-group">
+      <div :for={section <- @section} class={["side-nav-group", section[:class]]}>
         {render_slot(section)}
       </div>
     </nav>

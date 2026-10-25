@@ -42,7 +42,7 @@ defmodule Web.StyleGuideHTML do
 
   # cspell:ignore HETS
 
-  # The guide's groups, in the bar's order: {group, title, about, [{page, title, about}]}.
+  # The guide's groups, in the side nav's order: {group, title, about, [{page, title, about}]}.
   # A group lists its pages at /styles/<group>, A to Z after Get started. A page is also
   # its template name, and its path is the name with dashes.
   def groups do
@@ -117,8 +117,7 @@ defmodule Web.StyleGuideHTML do
   def page_path(:index), do: "/styles"
   def page_path(page), do: "/styles/" <> (page |> Atom.to_string() |> String.replace("_", "-"))
 
-  # What /styles/<slug> shows: {:group, group}, {:page, template}, or nil. A page's template
-  # is its name with _page, as embed_templates names it.
+  # What /styles/<slug> shows: {:group, group}, {:page, page}, or nil.
   def find(slug) do
     path = "/styles/" <> slug
 
@@ -131,16 +130,68 @@ defmodule Web.StyleGuideHTML do
 
   defp find_page(pages, path) do
     Enum.find_value(pages, fn {page, _title, _about} ->
-      page != :index && page_path(page) == path &&
-        {:page, String.to_existing_atom("#{page}_page")}
+      page != :index && page_path(page) == path && {:page, page}
     end)
   end
 
-  # The group a page or group belongs to, for the bar's tabs and the side nav.
+  # A page's template is its name with _page, as embed_templates names it.
+  def template(page), do: String.to_existing_atom("#{page}_page")
+
+  # The group a page or group belongs to, for the side nav and the breadcrumbs.
   def group_of(current) do
     Enum.find(groups(), fn {group, _title, _about, pages} ->
       group == current || Enum.any?(pages, &(elem(&1, 0) == current))
     end)
+  end
+
+  # A page's or group's title, for the browser tab and the breadcrumbs.
+  def page_title(current) do
+    {_group, title, _about, pages} = group_of(current)
+
+    case List.keyfind(pages, current, 0) do
+      {_page, page_title, _about} -> page_title
+      nil -> title
+    end
+  end
+
+  # The side nav and the phone's Menu: the 4 groups, the open one marked, then its pages.
+  # Get started is one page, so it lists none. Links as Web.Navigation makes them.
+  def nav_sections(current) do
+    {open, _title, _about, pages} = group_of(current)
+
+    groups =
+      for {group, title, _about, _pages} <- groups(), do: nav_link(group, title, current, open)
+
+    pages =
+      for {page, title, _about} <- pages, open != :index, do: nav_link(page, title, current, nil)
+
+    Enum.reject([groups, pages], &(&1 == []))
+  end
+
+  defp nav_link(key, label, current, open) do
+    %{
+      key: Atom.to_string(key),
+      label: label,
+      path: page_path(key),
+      current: key == current,
+      open: key == open and key != current,
+      count: nil
+    }
+  end
+
+  # Auto, Light, and Dark, at the foot of the side nav and the phone's Menu. The frame's
+  # script marks the one in use and saves a choice.
+  def theme_switch(assigns) do
+    ~H"""
+    <div class="guide-theme">
+      <span>Theme</span>
+      <div class="theme-switch" role="group" aria-label="Theme">
+        <button type="button" data-theme-choice="">Auto</button>
+        <button type="button" data-theme-choice="light">Light</button>
+        <button type="button" data-theme-choice="dark">Dark</button>
+      </div>
+    </div>
+    """
   end
 
   # The logo files that uv run assets/brand/draw_logo.py writes, and where each goes.

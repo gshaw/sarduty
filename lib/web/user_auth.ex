@@ -142,6 +142,20 @@ defmodule Web.UserAuth do
   """
   def default_team(user), do: user |> managed_teams() |> pick_default_team(user)
 
+  @doc """
+  The top bar's menus on a page that isn't a LiveView, as a LiveView mounts them: every team
+  the user manages, the members they log in as, and the organizations they are an admin
+  of. The style guide uses it.
+  """
+  def assign_menus(conn, _opts) do
+    user = conn.assigns.current_user
+
+    conn
+    |> assign(:managed_teams, managed_teams(user))
+    |> assign(:member_logins, member_logins(user))
+    |> assign(:user_organizations, user_organizations(user))
+  end
+
   defp managed_teams(nil), do: []
   defp managed_teams(user), do: Team.get_managed_by(user.email, DateTime.utc_now())
 

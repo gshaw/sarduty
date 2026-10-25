@@ -35,6 +35,10 @@ still lists the area's pages.
 Public pages and logging in are in no area. Their bar has the account menu and no area
 name.
 
+The style guide, `/styles`, is in no area either, so its bar is the home page's. Its own
+side navigation lists its 4 groups, then the open group's pages, and on a phone it goes
+behind the bar's Menu, logged in or not.
+
 ## The side navigation
 
 Sections, split by a divider, with no headings. A section with nothing the person can see
