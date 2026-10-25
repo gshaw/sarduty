@@ -96,13 +96,12 @@ defmodule Web.Navigation do
       [
         [
           link("admin-teams", "Teams", ~p"/admin", exact: true),
-          link("admin-orgs", "Organizations", ~p"/admin/orgs"),
-          link("admin-id-cards", "ID cards", ~p"/admin/id-cards")
+          link("admin-orgs", "Organizations", ~p"/admin/orgs")
         ],
         [
           link("admin-admins", "Admins", ~p"/admin/admins"),
           link("admin-events", "Events", ~p"/admin/events"),
-          link("admin-mcp", "MCP", ~p"/admin/mcp")
+          link("admin-mcp", "MCP calls", ~p"/admin/mcp")
         ],
         [link("admin-styles", "Style guide", "/styles")]
       ],

@@ -1,42 +1,75 @@
 defmodule Web.AdminDashboardLive do
   use Web, :live_view_app_layout
 
-  alias App.Accounts.User
-  alias App.Adapter.D4H
-  alias App.Model.Member
+  import Web.Components.StatSwitch
+  import Web.Components.TeamRefresh
+
   alias App.Model.Team
-  alias App.Model.TeamLoginGrant
   alias App.ViewData.TeamSummary
-  alias App.Worker.RefreshTeamDataWorker
+  alias App.ViewModel.TeamListViewModel
   alias App.Worker.ScheduleTeamRefreshesWorker
 
+  @views ["all", "not-refreshing", "no-team-admins", "person-key", "id-cards-on", "mcp-on"]
+
+  # Every team, one short row each (#513). Its emails, key, and switches are on its own
+  # page, /admin/teams/:id. Refreshes update the rows live.
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    teams = Team.get_all()
+    teams = Team.get_all() |> Enum.sort_by(&String.downcase(&1.name))
     now = DateTime.utc_now()
+    emails = TeamSummary.team_admin_emails(teams, now)
 
     socket =
-      socket
-      |> assign(page_title: "Teams", teams: teams, now: now)
-      |> assign_access(teams, now)
+      assign(socket,
+        page_title: "Teams",
+        teams: teams,
+        now: now,
+        team_admins: Map.new(emails, fn {id, list} -> {id, length(list)} end),
+        last_seen: TeamSummary.last_seen_from(emails),
+        cards: TeamSummary.card_counts()
+      )
 
     {:ok, socket}
   end
 
-  # Who reaches each team: its D4H managers, emails an admin let in, and which have logins.
-  defp assign_access(socket, teams, now) do
-    managers = Map.new(teams, &{&1.id, Member.get_managers(&1, now)})
-    users = App.Repo.all(User)
-    grants = Enum.group_by(TeamLoginGrant.get_all(), & &1.team_id)
-    logins = Map.new(teams, &{&1.id, logins(users, managers[&1.id], grants[&1.id] || [])})
+  def handle_params(params, _uri, socket),
+    do:
+      {:noreply, socket |> assign(view: TeamListViewModel.view(params, @views)) |> assign_rows()}
+
+  defp assign_rows(socket) do
+    %{teams: teams, view: view} = socket.assigns
 
     assign(socket,
-      managers: managers,
-      logins: logins,
-      last_seen: TeamSummary.last_seen(teams, now)
+      rows: Enum.filter(teams, &in_view?(&1, view, socket.assigns)),
+      counts:
+        Map.new(@views, fn v -> {v, Enum.count(teams, &in_view?(&1, v, socket.assigns))} end)
     )
   end
+
+  # Each view's teams. The stat switch counts the same rows the table shows.
+  defp in_view?(_team, "all", _assigns), do: true
+  defp in_view?(team, "not-refreshing", _assigns), do: not_refreshing?(team)
+
+  defp in_view?(team, "no-team-admins", assigns),
+    do: Map.get(assigns.team_admins, team.id, 0) == 0
+
+  defp in_view?(team, "person-key", _assigns), do: match?({:person, _name}, key_kind(team))
+  defp in_view?(team, "id-cards-on", _assigns), do: team.id_cards_enabled
+  defp in_view?(team, "mcp-on", _assigns), do: team.mcp_enabled
+
+  @doc "The views, for the stat switch: its value and label."
+  def views,
+    do: [
+      {"all", "All"},
+      {"not-refreshing", "Not refreshing"},
+      {"no-team-admins", "No team admins"},
+      {"person-key", "Person's key"},
+      {"id-cards-on", "ID cards on"},
+      {"mcp-on", "MCP on"}
+    ]
+
+  defp view_path(view), do: ~p"/admin?#{TeamListViewModel.query_params(view, @views)}"
 
   def handle_info({:team_refreshed, updated_team}, socket) do
     # The broadcast team has no organization loaded, so keep the one from mount.
@@ -47,7 +80,7 @@ defmodule Web.AdminDashboardLive do
           else: team
       end)
 
-    {:noreply, assign(socket, teams: teams)}
+    {:noreply, socket |> assign(teams: teams) |> assign_rows()}
   end
 
   def render(assigns) do
@@ -61,9 +94,22 @@ defmodule Web.AdminDashboardLive do
         </.button>
       </:action>
     </.heading_row>
-    <.table id="teams" rows={@teams} row_id={&"team-#{&1.id}"} class="table-striped">
+
+    <.stat_switch id="team-views" label="Teams">
+      <:view
+        :for={{view, label} <- views()}
+        id={"team-view-#{view}"}
+        patch={view_path(view)}
+        current={@view == view}
+        count={@counts[view]}
+      >
+        {label}
+      </:view>
+    </.stat_switch>
+
+    <.table id="teams" rows={@rows} row_id={&"team-#{&1.id}"} class="table-striped">
       <:col :let={team} label="Team">
-        <div class="media items-start">
+        <div class="media">
           <img
             id={"team-#{team.id}-logo"}
             src={~p"/teams/#{team}/logo?shape=square"}
@@ -73,101 +119,67 @@ defmodule Web.AdminDashboardLive do
             alt=""
           />
           <div>
-            <.a navigate={~p"/admin/teams/#{team.id}"}>{team.name}</.a>
+            <.a id={"team-#{team.id}-name"} navigate={~p"/admin/teams/#{team.id}"}>{team.name}</.a>
             <.hint>
-              <span class="whitespace-nowrap">{team.subdomain} · ID {team.id}</span>
-              <span :if={team.organization} id={"team-#{team.id}-organization"} class="block">
-                {team.organization.short_name}
-              </span>
+              {team.subdomain}<span :if={team.organization} id={"team-#{team.id}-organization"}> · {team.organization.short_name}</span>
             </.hint>
           </div>
         </div>
       </:col>
       <:col :let={team} label="Last seen" class="whitespace-nowrap">
         <span id={"team-#{team.id}-last-seen"}>
-          {Service.Format.days_ago(@last_seen[team.id], @now, team.timezone)}
+          {Service.Format.days_ago(@last_seen[team.id], @now, team.timezone) || "Never"}
         </span>
       </:col>
-      <:col :let={team} label="Contacts">
-        <.a
-          id={"team-#{team.id}-managers"}
-          navigate={~p"/teams/#{team}/settings/managers"}
-        >{Service.Format.count(length(@managers[team.id]),
-          one: "%d team admin",
-          many: "%d team admins"
-        )}</.a>
-        <span :if={@logins[team.id] == []} class="block text-danger-text">No accounts</span>
-        <ul :if={@logins[team.id] != []}>
-          <li
-            :for={user <- @logins[team.id]}
-            class="flex items-baseline gap-2 md:whitespace-nowrap"
-          >
-            <span>{user.email}</span>
-            <span
-              :if={user.last_seen_at}
-              class="hint ml-auto pl-4"
-              title={Service.Format.datetime_short(user.last_seen_at, team.timezone)}
-            >
-              {Service.Format.days_ago(user.last_seen_at, @now, team.timezone)}
-            </span>
-          </li>
-        </ul>
-      </:col>
-      <:col :let={team} label="D4H refresh">
-        <.refresh_status result={team.d4h_refresh_result} />
-        <.hint>
-          <div id={"team-#{team.id}-key"}>{key_summary(team)}</div>
-          <div :if={team.d4h_access_key_saved_at} class="whitespace-nowrap">
-            Key saved {Service.Format.date_long(team.d4h_access_key_saved_at, team.timezone)}
-          </div>
-          <div :if={team.d4h_refreshed_at} class="whitespace-nowrap">
-            Last OK {format_refreshed_at(team)}
-          </div>
-          <div :if={team.d4h_synced_at} id={"team-#{team.id}-synced"} class="whitespace-nowrap">
-            Synced {Service.Format.minutes_ago(team.d4h_synced_at, DateTime.utc_now(), team.timezone)}
-          </div>
-        </.hint>
-        <.button
-          type="button"
-          size={:sm}
-          phx-click="refresh"
-          phx-value-team-id={team.id}
-          disabled={Team.refresh_state(team.d4h_refresh_result) == :refreshing}
+      <:col :let={team} label="Team admins" class="max-md:hidden">
+        <span
+          id={"team-#{team.id}-team-admins"}
+          class={Map.get(@team_admins, team.id, 0) == 0 && "text-danger-text"}
         >
-          Refresh
-        </.button>
+          {if Map.get(@team_admins, team.id, 0) == 0, do: "None", else: @team_admins[team.id]}
+        </span>
+      </:col>
+      <:col :let={team} label="Refresh">
+        <.spinner
+          :if={Team.refresh_state(team.d4h_refresh_result) == :refreshing}
+          class="text-sm text-link"
+        >
+          Refreshing
+        </.spinner>
+        <.team_refresh
+          :if={Team.refresh_state(team.d4h_refresh_result) != :refreshing}
+          team={team}
+          id={"team-#{team.id}-refresh"}
+        />
+      </:col>
+      <:col :let={team} label="Key" class="max-md:hidden">
+        <.team_key team={team} id={"team-#{team.id}-key"} />
+      </:col>
+      <:col :let={team} label="ID cards" class="max-md:hidden">
+        <span id={"team-#{team.id}-cards"}>
+          {if team.id_cards_enabled, do: Map.get(@cards, team.id, 0), else: "Off"}
+        </span>
       </:col>
     </.table>
 
     <dl id="key-notes" class="mt-8 max-w-3xl text-sm">
       <dt>Last seen</dt>
       <dd>
-        The last time someone on the team opened a team page. Admin visits do not count.
-        Dates before mid-September 2026 are last logins, so the real last visit can be up
-        to 60 days later.
+        The last time a team admin opened one of the team's pages. Members' and SAR Duty admins'
+        visits do not count. Dates before mid-September 2026 are last logins, so the real last
+        visit can be up to 60 days later.
       </dd>
-      <dt>Team key</dt>
+      <dt>Team admins</dt>
       <dd>
-        The team's D4H access key, saved in team settings, and the D4H member it belongs to. SAR Duty
-        uses it for every D4H request. "Person's key" means the member is not a SAR Duty
-        account, so the key stops working if that person leaves.
+        Who can log in as one: the D4H Owners and Editors with an email, and login grants. Last
+        seen says who does.
+      </dd>
+      <dt>Key</dt>
+      <dd>
+        The team's access key, saved in team settings, and whose account it is. "Person's" means
+        it stops working if that person leaves.
       </dd>
     </dl>
-    """
-  end
-
-  attr :result, :string
-
-  defp refresh_status(assigns) do
-    assigns = assign(assigns, :state, Team.refresh_state(assigns.result))
-
-    ~H"""
-    <span :if={@state == :never} class="text-text-muted">Never refreshed</span>
-    <span :if={@state == :ok} class="text-success-text">OK</span>
-    <.spinner :if={@state == :refreshing} class="text-sm text-link">{@result}</.spinner>
-    <span :if={@state == :failed} class="text-sm text-danger-text">
-      {String.replace_prefix(@result, "Error: ", "")}
-    </span>
     """
   end
 
@@ -179,47 +191,8 @@ defmodule Web.AdminDashboardLive do
     {:noreply, put_flash(socket, :info, "Refreshes scheduled for all teams.")}
   end
 
-  def handle_event("refresh", %{"team-id" => team_id}, socket) do
-    %{team_id: String.to_integer(team_id)}
-    |> RefreshTeamDataWorker.new()
-    |> Oban.insert()
-
-    {:noreply, socket}
-  end
-
   defp refresh_summary(teams) do
     ok_count = Enum.count(teams, &(Team.refresh_state(&1.d4h_refresh_result) == :ok))
     "#{ok_count} of #{length(teams)} teams refreshed OK."
-  end
-
-  # Users who can reach the team, by email: its managers who have logged in, and emails
-  # an admin let in.
-  defp logins(users, managers, grants) do
-    emails =
-      managers
-      |> MapSet.new(&String.downcase(&1.email || ""))
-      |> MapSet.union(MapSet.new(grants, & &1.email))
-
-    users
-    |> Enum.filter(&MapSet.member?(emails, String.downcase(&1.email)))
-    |> Enum.sort_by(& &1.email)
-  end
-
-  defp key_summary(%Team{d4h_access_key: key}) when key in [nil, ""], do: "No team key"
-  defp key_summary(%Team{d4h_access_key_owner: nil}), do: "Team key"
-
-  # Records names the key itself, so whose it is says nothing there.
-  defp key_summary(%Team{} = team) do
-    cond do
-      D4H.records?(team) -> "SAR Duty Records key: #{team.d4h_access_key_owner}"
-      Team.key_owner_is_sar_duty?(team) -> "Team key: #{team.d4h_access_key_owner}"
-      true -> "Person's key: #{team.d4h_access_key_owner}"
-    end
-  end
-
-  defp format_refreshed_at(team) do
-    if team.d4h_refreshed_at do
-      Service.Format.datetime_short(team.d4h_refreshed_at, team.timezone)
-    end
   end
 end

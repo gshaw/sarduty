@@ -22,8 +22,10 @@ still lists the area's pages.
   pages are tabs: General, Organization admins, and Hours tags. The bar names the
   organization, and the phone bar its short name. It has no search, since search reads a
   team's tables.
-- **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams, Organizations, and ID cards,
-  then Admins, Events, and MCP, then the Style guide.
+- **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams and Organizations, then
+  Admins, Events, and MCP calls, then the Style guide. Each team has its own page,
+  `/admin/teams/:id`, under Teams, with its refresh, team admins and login grants, and its
+  ID cards and MCP switches (#513). Every admin page is a 404 for anyone else.
 - **The footer** (Verify an ID card, Terms, Privacy) is only on the public pages: home,
   terms, and privacy. In an area its links are noise. In dev, app pages keep a line with
   the dashboard and the mailbox.

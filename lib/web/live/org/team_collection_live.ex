@@ -5,7 +5,6 @@ defmodule Web.Org.TeamCollectionLive do
   import Web.Components.StatSwitch
   import Web.Components.TeamRefresh
 
-  alias App.Adapter.D4H
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
@@ -130,7 +129,6 @@ defmodule Web.Org.TeamCollectionLive do
               id={"team-#{team.id}-name"}
               navigate={~p"/orgs/#{@current_organization}/teams/#{team}"}
             >{team.name}</.a>
-            <.hint>{D4H.service_name(team)}</.hint>
           </div>
         </div>
       </:col>
@@ -163,8 +161,8 @@ defmodule Web.Org.TeamCollectionLive do
       <dd>The last time a team admin opened one of the team's pages.</dd>
       <dt>Refresh</dt>
       <dd>
-        SAR Duty copies each team's records every 10 minutes and again each night. "Not
-        refreshed since" gives the last time that worked.
+        SAR Duty refreshes each team every 10 minutes and again each night. "Not refreshed
+        since" gives the last time that worked.
       </dd>
       <dt>Untagged activities</dt>
       <dd>

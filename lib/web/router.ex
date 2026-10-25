@@ -175,7 +175,6 @@ defmodule Web.Router do
       live "/admin/teams/:id", Admin.TeamLive
       live "/admin/admins", Admin.AdminCollectionLive
       live "/admin/events", Admin.EventCollectionLive
-      live "/admin/id-cards", Admin.IdCardsLive
       live "/admin/mcp", Admin.MCPLive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationNewLive

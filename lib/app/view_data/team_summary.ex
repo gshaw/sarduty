@@ -1,7 +1,8 @@
 defmodule App.ViewData.TeamSummary do
   @moduledoc """
   Counts about many teams at once, for lists of teams: `/admin` and an organization's
-  Teams page (#512). Each is a few grouped queries for every team, never one per team.
+  Teams page (#512). Each is a few grouped queries for every team, except
+  `untagged_counts/2`, which reuses the team dashboard's count, a few queries per team.
   Counts only: no names, emails, or numbers leave here except `team_admin_emails/2`,
   which only SAR Duty admin pages show.
   """

@@ -9,7 +9,7 @@ defmodule Web.Org.SettingsLive do
   alias App.Operation.SaveOrganization
 
   # Organization settings › General (#512): its name, time zone, and logo. The slug
-  # cannot change: its scan page and logo URL use it.
+  # cannot change: its verify page and logo URL use it.
   def mount(_params, _session, socket) do
     organization = socket.assigns.current_organization
 
@@ -31,7 +31,7 @@ defmodule Web.Org.SettingsLive do
         In full, as on the back of the ID card: "BC Search and Rescue Association".
       </.input>
       <.input field={@form[:short_name]} label="Short name">
-        Beside the logo on the scan page: "BCSARA".
+        Beside the logo on the verify page: "BCSARA".
       </.input>
       <.input field={@form[:website]} label="Website" placeholder="https://" />
       <.input
@@ -51,7 +51,7 @@ defmodule Web.Org.SettingsLive do
         kinds="a PNG or JPEG"
         errors={for {message, _opts} <- @form[:logo].errors, do: message}
       >
-        PNG or JPEG, square or wide. Shown on its scan page, never on a team's ID card.
+        PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
         <:current :if={@current_organization.logo}>
           <img
             id="organization-logo"
@@ -67,14 +67,14 @@ defmodule Web.Org.SettingsLive do
       </.form_actions>
     </.form>
 
-    <section id="organization-scan-page" class="mt-8 measure">
-      <h2 class="heading">Scan page</h2>
+    <section id="organization-verify-page" class="mt-8 measure">
+      <h2 class="heading">Verify page</h2>
       <p>
-        Its own page for checking ID cards, with its logo and name. Its slug cannot be
+        Its own page to verify ID cards, with its logo and name. Its slug cannot be
         changed.
       </p>
       <.copy_code_block
-        id="organization-scan-url"
+        id="organization-verify-url"
         value={"#{Web.VerifyHost.host()}/orgs/#{@current_organization.slug}"}
         label="Copy address"
       />

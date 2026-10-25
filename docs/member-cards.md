@@ -1,7 +1,7 @@
 # Member ID cards
 
 A team manager issues a member an ID card from the member's **ID Card** tab, once a SAR
-Duty admin has turned ID cards on for the team at `/admin/id-cards`, or its organization
+Duty admin has turned ID cards on for the team on its admin page, `/admin/teams/:id`, or its organization
 admins have, on its page in the organization (#512). A member sees the
 card on their own page ([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the

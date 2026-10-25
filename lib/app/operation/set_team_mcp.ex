@@ -1,8 +1,8 @@
 defmodule App.Operation.SetTeamMCP do
   @moduledoc """
-  Turns the MCP trial on or off for a team (#28). Only an admin does this, from
-  /admin/mcp. Turning it off revokes every token on the team, so turning it back on
-  never wakes old tokens.
+  Turns the MCP trial on or off for a team (#28). Only a SAR Duty admin does this, from
+  the team's admin page, /admin/teams/:id (#513). Turning it off revokes every token on
+  the team, so turning it back on never wakes old tokens.
   """
 
   alias App.Accounts.User

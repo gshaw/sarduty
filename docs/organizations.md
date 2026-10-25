@@ -42,13 +42,13 @@ types in its **organization admins'** emails on its Organization admins tab.
 
 ## What an organization changes today
 
-- **Its scan page**, `verify.sarduty.com/orgs/<slug>`, shows the organization's logo and
+- **Its verify page**, `verify.sarduty.com/orgs/<slug>`, shows the organization's logo and
   short name in the bar and its name in the footer. The check itself is unchanged, since
   it works for any card. The host on the right and the "Powered by" footer stay, since the
   host is what checkers are told to look for.
 - **A card's result keeps the team's brand.** The organization's name goes under the team
   name, as plain text. Its "Check another card" button goes back to the organization's
-  scan page.
+  verify page.
 - **The back of the pass** says who issued it: "North Shore Rescue, a member team of BC
   Search and Rescue Association", with no SAR Duty. The front doesn't change.
 

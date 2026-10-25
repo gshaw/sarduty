@@ -9,7 +9,8 @@ policy. The policy lives in the agent's prompt, not in SAR Duty.
 
 ## Who gets in
 
-- **The switch.** `teams.mcp_enabled`, set only by an admin on `/admin/mcp`
+- **The switch.** `teams.mcp_enabled`, set only by a SAR Duty admin on the team's admin
+  page, `/admin/teams/:id`
   ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)). Turning it off revokes every token
   on the team, so turning it back on wakes none of them.
 - **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, which
@@ -74,7 +75,7 @@ included, in that zone.
 
 [CallMCPTool](../lib/app/operation/call_mcp_tool.ex) logs every `tools/call` in
 `mcp_calls`: user, team, token, tool, the arguments the tool's schema declares, rows
-returned or the error, and time taken. `/admin/mcp` shows the newest 200.
+returned or the error, and time taken. MCP calls, `/admin/mcp`, shows the newest 200.
 `PruneEventsWorker` deletes calls after 90 days. Creating and revoking tokens and the
 switch are events, kept two years.
 

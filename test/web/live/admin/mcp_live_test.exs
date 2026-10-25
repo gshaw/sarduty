@@ -8,13 +8,13 @@ defmodule Web.Admin.MCPLiveTest do
   alias App.Operation.CreateMCPToken
   alias App.Repo
 
-  test "turns MCP on, lists calls, and turning it off revokes the team's tokens", %{conn: conn} do
+  test "the team's page turns MCP on; calls list here; off revokes its tokens", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     admin = make_admin(user)
     conn = log_in_user(conn, admin)
 
-    {:ok, lv, _html} = live(conn, ~p"/admin/mcp")
-    lv |> element("#mcp-on-#{team.id}") |> render_click()
+    {:ok, team_lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+    team_lv |> element("#mcp-on") |> render_click()
     assert Repo.reload!(team).mcp_enabled
 
     team = Repo.reload!(team)
@@ -36,9 +36,9 @@ defmodule Web.Admin.MCPLiveTest do
     assert has_element?(lv, "#mcp-call-#{call.id}", "list_activities")
     assert has_element?(lv, "#mcp-call-#{call.id}", "from: 2026-01-01")
     assert has_element?(lv, "#mcp-call-#{call.id}", "Laptop")
-    assert has_element?(lv, "#mcp-team-#{team.id}", "On")
+    refute has_element?(lv, "#mcp-teams")
 
-    lv |> element("#mcp-off-#{team.id}") |> render_click()
+    team_lv |> element("#mcp-off") |> render_click()
     refute Repo.reload!(team).mcp_enabled
     assert Repo.reload!(record).revoked_at
   end

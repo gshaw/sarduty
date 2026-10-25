@@ -56,6 +56,19 @@ defmodule App.Operation.SetTeamIdCardsTest do
     assert Event.get_last(:id_cards_turned_on).user_id == dana.id
   end
 
+  test "a team taken out of the organization is refused, even from a page loaded before" do
+    team = team_fixture(%{id_cards_enabled: true})
+    organization = organization_fixture([team])
+    dana = user_fixture()
+    organization_admin_fixture(organization, dana.email)
+    loaded = Repo.reload!(team)
+
+    loaded |> Ecto.Changeset.change(organization_id: nil) |> Repo.update!()
+
+    assert SetTeamIdCards.call(loaded, false, dana) == {:error, :forbidden}
+    assert Repo.reload!(team).id_cards_enabled
+  end
+
   test "each change emails the team's team admins, naming who acted", %{admin: admin} do
     team = team_fixture(%{name: "Coast Range SAR"})
     manager_fixture(team, %{email: "owner@example.com"})
