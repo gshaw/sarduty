@@ -8,6 +8,9 @@
       <.flash id="sample-flash-error" kind={:error} title="D4H refused the change">
         Nothing changed. Check the access key in team settings.
       </.flash>
+      <.flash id="sample-flash-new-version" kind={:info} title="SAR Duty has a new version">
+        <.a href="#">Reload this page</.a> to use it.
+      </.flash>
       <.flash id="sample-flash-disconnected" kind={:error} title="Server disconnected">
         Reconnecting… <.spinner />
       </.flash>
@@ -43,6 +46,9 @@
   <ul>
     <li>Info toasts are for success and progress.</li>
     <li>Error toasts are for an action that failed. A short title, then what to do.</li>
+    <li>
+      A page open since a deploy says SAR Duty has a new version, with a link to reload it.
+    </li>
   </ul>
 
   <h2>When not to use</h2>
