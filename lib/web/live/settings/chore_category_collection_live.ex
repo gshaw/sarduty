@@ -58,7 +58,7 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
       <:col :let={category} label="Category" class="stack-title">
         <.a navigate={~p"/teams/#{@current_team}/settings/chore-categories/#{category.id}"}>{category.title}</.a>
       </:col>
-      <:col :let={category} label="SARVAC hours">{hours_label(category.hours)}</:col>
+      <:col :let={category} label="Tax credit hours">{hours_label(category.hours)}</:col>
       <:col :let={category} label="Other tags">
         <span class="badges">
           <.badge :for={tag <- ChoreCategory.tags(category)} kind={:outline}>{tag.title}</.badge>

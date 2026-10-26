@@ -46,7 +46,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
 
     [
       "Attached is your #{letter.year} tax credit letter from #{team.name}.",
-      "Claim the Search and Rescue Volunteers Tax Credit (SRVTC) on line 31240 of your tax return. Keep this letter in case the CRA asks for it.",
+      "Claim the search and rescue volunteers amount on line 31240 of your tax return. Keep this letter in case the CRA asks for it.",
       questions_line(team)
     ]
     |> Enum.reject(&is_nil/1)

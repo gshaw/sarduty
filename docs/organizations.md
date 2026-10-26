@@ -55,8 +55,7 @@ types in its **organization admins'** emails on its Organization admins tab.
 - **Which D4H tags count as hours** on its teams' tax credit letters (#289). The OSARVA
   teams tag activities `SRVTC Primary Activity` and `SRVTC Secondary Activity`, and
   can't change them. Blank keeps `Primary Hours` and `Secondary Hours`. Letters still
-  say "Primary Hours" and "Secondary Hours", SARVAC's terms; only the tags that feed
-  them change. Letters already made keep their hours, and the letter list marks the
+  say "Primary Hours" and "Secondary Hours"; only the tags that feed them change. Letters already made keep their hours, and the letter list marks the
   ones that changed. A team names any tag its organization leaves blank, and a team with
   no organization names its own, in **Settings → Hours tags** (#323).
 

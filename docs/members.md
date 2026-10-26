@@ -299,7 +299,7 @@ hidden data makes people suspicious).
 - **An activity's page** is the team admin's: under the title, the day and time and the
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
   reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,
-  SARVAC hours, the place with copy and the maps link, Add to calendar and Open D4H
+  tax credit hours, the place with copy and the maps link, Add to calendar and Open D4H
   activity, the tags, the map, the description, Members, and the equipment. Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
