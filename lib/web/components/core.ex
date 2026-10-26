@@ -536,7 +536,7 @@ defmodule Web.Components.Core do
   attr :attribute, :string, required: true
   attr :action, :string, default: nil
   attr :key, :string, default: nil
-  attr :icon, :string, required: true
+  attr :icon, :string, required: true, values: @icon_names
   attr :title, :string, required: true
 
   # Trix's own buttons: it reads the data attributes and marks the active one.
