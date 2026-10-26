@@ -131,6 +131,17 @@ defmodule App.Operation.ApplyChangeSet do
 
   # An attendance set reads the activity's rows now, and D4H's published flag, since
   # attendance on a published activity is locked.
+  # An agent's tags on several activities (#595) read each activity's tags and published
+  # flag now, so a change made since the proposal isn't overwritten.
+  defp read_current(d4h, %ChangeSet{source: :agent, activity: nil, rows: rows}) do
+    pending = &(&1.action == :set_activity_tags and &1.status in [:proposed, :failed])
+
+    case Enum.filter(rows, pending) do
+      [] -> {:ok, nil}
+      tag_rows -> read_tag_sets(d4h, tag_rows)
+    end
+  end
+
   defp read_current(_d4h, %ChangeSet{activity: nil}), do: {:ok, nil}
 
   defp read_current(_d4h, %ChangeSet{activity: %{deleted_at: %DateTime{}}}),
@@ -159,6 +170,19 @@ defmodule App.Operation.ApplyChangeSet do
       {:ok, true} -> {:error, :published}
       error -> error
     end
+  end
+
+  defp read_tag_sets(d4h, rows) do
+    Enum.reduce_while(rows, {:ok, {:tag_sets, %{}}}, fn row, {:ok, {:tag_sets, sets}} ->
+      case D4H.fetch_activity_tags(d4h, row.d4h_record_id, row.old_value["kind"]) do
+        {:ok, %{tag_ids: ids, published?: published?}} ->
+          set = %{tag_ids: ids |> Enum.uniq() |> Enum.sort(), published?: published?}
+          {:cont, {:ok, {:tag_sets, Map.put(sets, row.d4h_record_id, set)}}}
+
+        {:error, _error} = error ->
+          {:halt, error}
+      end
+    end)
   end
 
   defp apply_row(d4h, row, source, current, opts) do
@@ -302,6 +326,18 @@ defmodule App.Operation.ApplyChangeSet do
     if ids == row.old_value["tag_ids"],
       do: :ok,
       else: {:skipped, "The tags changed since the page opened. Open it again."}
+  end
+
+  # D4H refuses tags on a published activity (#358), and SAR Duty can't publish it again
+  # after a change (live, 2026-10-26), so an agent's tags go on drafts only.
+  def check(%ChangeSetRow{action: :set_activity_tags} = row, {:tag_sets, sets}) do
+    proposed_from = row.old_value["tag_ids"]
+
+    case Map.get(sets, row.d4h_record_id) do
+      %{published?: true} -> {:skipped, "Tags cannot be changed once the activity is published."}
+      %{tag_ids: ^proposed_from} -> :ok
+      _changed -> {:skipped, "This changed since you reviewed it. Review again."}
+    end
   end
 
   # An equipment set's tag row was read from D4H as the set was planned, a moment before.

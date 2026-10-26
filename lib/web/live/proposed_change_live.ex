@@ -21,6 +21,7 @@ defmodule Web.ProposedChangeLive do
     assign(socket,
       page_title: change_set.summary || "Attendance changes",
       change_set: change_set,
+      tags?: Enum.any?(change_set.rows, &(&1.action == :set_activity_tags)),
       selected: MapSet.new(waiting)
     )
   end
@@ -120,9 +121,13 @@ defmodule Web.ProposedChangeLive do
       </div>
     </dl>
 
-    <p :if={ChangeSet.waiting?(@change_set)} class="lead">
+    <p :if={ChangeSet.waiting?(@change_set) and not @tags?} class="lead">
       Clear the box next to any change you do not want. SAR Duty checks the attendance again
       before it sends, and skips a change if someone changed that attendance first.
+    </p>
+    <p :if={ChangeSet.waiting?(@change_set) and @tags?} class="lead">
+      Clear the box next to any change you do not want. SAR Duty checks each activity's tags
+      again before it sends, and skips one that someone changed or published first.
     </p>
 
     <.form for={%{}} id="review-form" phx-change="select" phx-submit="send">
@@ -142,8 +147,8 @@ defmodule Web.ProposedChangeLive do
             disabled={row.status != :proposed}
           />
         </:col>
-        <:col :let={row} label="Member">
-          <label for={"select-#{row.id}"}>{row.member && row.member.name}</label>
+        <:col :let={row} label={if @tags?, do: "Activity", else: "Member"}>
+          <label for={"select-#{row.id}"}>{subject(row)}</label>
         </:col>
         <:col :let={row} label="Change">
           {describe(row, @change_set, @current_team.timezone)}
@@ -192,11 +197,27 @@ defmodule Web.ProposedChangeLive do
           do: "New times#{times}",
           else: "#{String.capitalize(old)} to #{status}#{times}"
 
+      :set_activity_tags ->
+        tags_change(row.new_value)
+
       :delete_attendance ->
         old_times = times(row.old_value["starts_at"], row.old_value["ends_at"], tz)
         "Remove: #{status(row.old_value["status"], change_set)}#{old_times}"
     end
   end
+
+  defp tags_change(new_value) do
+    [
+      for(title <- new_value["titles"] || [], do: "Add #{title}"),
+      for(title <- new_value["removed_titles"] || [], do: "Remove #{title}")
+    ]
+    |> Enum.concat()
+    |> Enum.join(". ")
+  end
+
+  # Who or what a line changes: a member, or an activity for a tags line (#595).
+  defp subject(%{action: :set_activity_tags} = row), do: row.new_value["activity_title"]
+  defp subject(row), do: row.member && row.member.name
 
   defp status(nil, _change_set), do: "not listed"
 

@@ -31,7 +31,13 @@ new kind of write is a new row action there, not a new call from a page or an op
   attended or absent after. It names a row by its attendance id, so a member's second
   row is reachable (#519), and it can take a row off (`delete_attendance`). Sending
   checks that row is still there as proposed, then deletes it from the copy at once,
-  since the sync finds deletes on an untouched activity only one month per round.
+  since the sync finds deletes on an untouched activity only one month per round. An
+  agent's set never changes a published activity: D4H locks its attendance and tags, and
+  takes SAR Duty's draft but refuses to publish it again (live, 2026-10-26, #603). An
+  agent's tags set (`ProposeActivityTags`) covers up to 50 draft activities, each with its
+  own `set_activity_tags` row; sending reads every activity's tags and published flag
+  first, and skips one that changed or was published since. The copy takes the new tags
+  at once.
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or
