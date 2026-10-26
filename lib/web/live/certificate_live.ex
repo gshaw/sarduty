@@ -381,6 +381,30 @@ defmodule Web.CertificateLive do
   defp certificate_file(assigns) do
     ~H"""
     <div id="certificate-file">
+      <%!-- A photo the camera held sideways turns before it goes to D4H. Above the
+        photo, the buttons stay put as it turns. --%>
+      <.form_actions :if={
+        @certificate.status == :waiting and @certificate.content_type == "image/jpeg"
+      }>
+        <.button
+          id="certificate-rotate-left"
+          icon="sd-rotate-left"
+          phx-click="rotate"
+          phx-value-direction="left"
+          phx-disable-with="Rotating…"
+        >
+          Rotate left
+        </.button>
+        <.button
+          id="certificate-rotate-right"
+          icon="sd-rotate-right"
+          phx-click="rotate"
+          phx-value-direction="right"
+          phx-disable-with="Rotating…"
+        >
+          Rotate right
+        </.button>
+      </.form_actions>
       <div class="cert-view">
         <a :if={@certificate.content_type != "application/pdf"} href={@src} target="_blank">
           <img
@@ -426,8 +450,10 @@ defmodule Web.CertificateLive do
     if MemberQualificationAward.expired?(award, now), do: text, else: "Until #{text}"
   end
 
+  # A new address each time the file changes, so a turned photo loads again.
   defp file_path(team, %Certificate{status: :waiting} = certificate, _award),
-    do: ~p"/teams/#{team}/certificates/#{certificate.id}/file"
+    do:
+      ~p"/teams/#{team}/certificates/#{certificate.id}/file?#{[v: DateTime.to_unix(certificate.updated_at, :millisecond)]}"
 
   defp file_path(
          team,
@@ -475,6 +501,30 @@ defmodule Web.CertificateLive do
         |> put_flash(:error, text)
         |> load(certificate.id)
         |> then(&{:noreply, &1})
+    end
+  end
+
+  def handle_event("rotate", %{"direction" => direction}, socket)
+      when direction in ["left", "right"] do
+    %{current_team: team, certificate: certificate} = socket.assigns
+
+    case SaveCertificate.rotate(team, certificate, String.to_existing_atom(direction)) do
+      {:ok, turned} ->
+        {:noreply,
+         assign(socket,
+           certificate: %{
+             certificate
+             | file_size: turned.file_size,
+               updated_at: turned.updated_at
+           }
+         )}
+
+      {:error, :decided} ->
+        {:noreply, decided(socket)}
+
+      {:error, _reason} ->
+        {:noreply,
+         put_flash(socket, :error, "SAR Duty cannot rotate this file. Open the page again.")}
     end
   end
 

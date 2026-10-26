@@ -106,7 +106,12 @@
 
   /* Busy: while a phx-disable-with button waits, LiveView gives it its loading class, so it
      spins beside what it is doing (#567). The spinner is .spinner's, in messages.css. */
-  .btn[phx-disable-with]:is(.phx-click-loading, .phx-submit-loading)::before { content: ""; flex: none; }
+  .btn[phx-disable-with]:is(.phx-click-loading, .phx-submit-loading)::before { content: ""; flex: none; mask: none; background: none; }
+
+  /* An icon the button draws itself (<.button icon>), so phx-disable-with, which puts back
+     only the text, keeps it. While busy, the spinner above takes its place. */
+  .btn-icon::before { content: ""; flex: none; width: 20px; height: 20px; background-color: currentColor; mask: var(--btn-icon) no-repeat; }
+  .btn-sm.btn-icon::before { width: 16px; height: 16px; }
 
   /* Copy button: a small icon after a value, with Copied beside it after a copy. On a
      touch screen its tap area grows to 44px without moving the text. See

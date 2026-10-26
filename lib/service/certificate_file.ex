@@ -46,6 +46,17 @@ defmodule Service.CertificateFile do
 
   defp prepare(:unknown, _bytes, _file_name), do: {:error, "Select a photo or a PDF."}
 
+  @doc """
+  A kept photo turned a quarter, `:left` or `:right`, for one the camera held sideways.
+  `{:ok, jpeg}`, or `{:error, reason}`.
+  """
+  def rotate(jpeg, direction) when direction in [:left, :right] do
+    with {:ok, image} <- Image.from_binary(jpeg),
+         {:ok, turned} <- Image.rotate(image, if(direction == :right, do: 90, else: -90)) do
+      Image.write(turned, :memory, suffix: ".jpg", quality: 85, strip_metadata: true)
+    end
+  end
+
   @doc "What the file is, from its first bytes: `:pdf`, `:image`, `:heic`, or `:unknown`."
   def type(<<"%PDF-", _rest::binary>>), do: :pdf
   def type(<<0xFF, 0xD8, 0xFF, _rest::binary>>), do: :image

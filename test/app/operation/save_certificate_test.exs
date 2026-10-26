@@ -69,4 +69,27 @@ defmodule App.Operation.SaveCertificateTest do
     assert SaveCertificate.delete_own(ctx.member, certificate) == :ok
     assert Repo.aggregate(Certificate, :count) == 0
   end
+
+  test "a team admin turns a waiting photo, never a PDF or a decided one", ctx do
+    photo =
+      certificate_fixture(ctx.member, ctx.qualification, %{
+        file_name: "scan.jpg",
+        content_type: "image/jpeg"
+      })
+
+    CertificateFile.put!(photo, 40 |> Image.new!(30) |> Image.write!(:memory, suffix: ".jpg"))
+
+    assert {:ok, turned} = SaveCertificate.rotate(ctx.team, photo, :right)
+    assert turned.file_size == byte_size(CertificateFile.bytes(photo))
+    image = photo |> CertificateFile.bytes() |> Image.from_binary!()
+    assert {Image.width(image), Image.height(image)} == {30, 40}
+
+    pdf = certificate_fixture(ctx.member, ctx.qualification)
+    assert SaveCertificate.rotate(ctx.team, pdf, :left) == {:error, :not_a_photo}
+
+    {:ok, _declined} =
+      SaveCertificate.decline(ctx.team, photo, "Wrong one", ctx.user, DateTime.utc_now())
+
+    assert SaveCertificate.rotate(ctx.team, photo, :left) == {:error, :decided}
+  end
 end

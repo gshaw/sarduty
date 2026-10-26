@@ -60,11 +60,16 @@ defmodule Web.Components.Core do
   shows a spinner until the event answers. Web.SlowButtonTest fails without it. See
   /styles/button#slow.
 
+  `icon` leads with one of the app's own icons, such as `icon="sd-rotate-left"`. The
+  button draws it itself, so phx-disable-with, which puts back only the text, keeps it,
+  and the spinner takes its place while it waits.
+
   ## Examples
 
       <.button variant={:success}>Save</.button>
       <.button variant={:danger} size={:sm} phx-click="delete">Delete</.button>
       <.button phx-click="email" phx-disable-with="Sending…">Email letter</.button>
+      <.button icon="sd-rotate-left" phx-click="rotate">Rotate left</.button>
       <.button navigate={~p"/login"}>Log in</.button>
   """
   attr :type, :string, default: nil
@@ -77,36 +82,55 @@ defmodule Web.Components.Core do
   attr :navigate, :string, default: nil
   attr :href, :string, default: nil
   attr :class, :string, default: nil
+  attr :icon, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value method)
 
   slot :inner_block, required: true
 
   def button(assigns) do
-    assigns = assign(assigns, :button_class, button_class(assigns))
+    assigns =
+      assign(assigns, button_class: button_class(assigns), icon_style: icon_style(assigns))
 
     if assigns.navigate || assigns.href do
       ~H"""
-      <.link navigate={@navigate} href={@href} class={@button_class} {@rest}>
+      <.link
+        navigate={@navigate}
+        href={@href}
+        class={@button_class}
+        style={@icon_style}
+        {@rest}
+      >
         {render_slot(@inner_block)}
       </.link>
       """
     else
       ~H"""
-      <button type={@type} class={["phx-submit-loading:opacity-75", @button_class]} {@rest}>
+      <button
+        type={@type}
+        class={["phx-submit-loading:opacity-75", @button_class]}
+        style={@icon_style}
+        {@rest}
+      >
         {render_slot(@inner_block)}
       </button>
       """
     end
   end
 
-  defp button_class(%{variant: variant, size: size, class: class}) do
+  defp button_class(%{variant: variant, size: size, class: class, icon: icon}) do
     [
       "btn",
       variant != :default && "btn-#{variant}",
       size != :md && "btn-#{size}",
+      icon && "btn-icon",
       class
     ]
   end
+
+  # The icon's variable, from assets/vendor/heroicons.js: 16px beside small text.
+  defp icon_style(%{icon: nil}), do: nil
+  defp icon_style(%{icon: "sd-" <> _ = icon, size: :sm}), do: "--btn-icon: var(--#{icon}-micro)"
+  defp icon_style(%{icon: "sd-" <> _ = icon}), do: "--btn-icon: var(--#{icon}-mini)"
 
   attr :class, :string, default: nil
   slot :inner_block, required: true
@@ -566,18 +590,24 @@ defmodule Web.Components.Core do
   16px, picked with the `-solid`, `-mini`, and `-micro` suffix. Each draws at its own
   size, so an icon needs no size class. It takes the text colour.
 
-  Icons are extracted from the `deps/heroicons` directory and bundled within
-  your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
+  `hero-` icons come from `deps/heroicons`, and `sd-` ones are the app's own, in
+  `assets/icons`, for what Heroicons has none of. The plugin in
+  `assets/vendor/heroicons.js` bundles both into app.css. Every icon in use is on the
+  style guide's Icons page.
 
   ## Examples
 
       <.icon name="hero-x-mark" />
       <.icon name="hero-chevron-right-micro" class="breadcrumb-separator" />
+      <.icon name="sd-rotate-left-mini" />
   """
   attr :name, :string, required: true
   attr :class, :any, default: nil
 
-  def icon(%{name: "hero-" <> _} = assigns) do
+  def icon(%{name: "hero-" <> _} = assigns), do: icon_span(assigns)
+  def icon(%{name: "sd-" <> _} = assigns), do: icon_span(assigns)
+
+  defp icon_span(assigns) do
     ~H"""
     <span class={[@name, @class]} />
     """

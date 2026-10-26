@@ -5,6 +5,7 @@ defmodule Web.CertificateLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.Certificate
+  alias App.Model.CertificateFile
   alias App.Model.MemberQualificationAward
   alias App.Repo
 
@@ -75,7 +76,8 @@ defmodule Web.CertificateLiveTest do
     stub_d4h()
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
     file = ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}/file"
-    assert has_element?(lv, "iframe#certificate-pdf[src='#{file}']")
+    assert has_element?(lv, "iframe#certificate-pdf[src^='#{file}?v=']")
+    refute has_element?(lv, "#certificate-rotate-left")
     refute has_element?(lv, "iframe[sandbox]")
     assert has_element?(lv, "#certificate-latest", "None")
 
@@ -185,6 +187,35 @@ defmodule Web.CertificateLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
     assert has_element?(lv, "#certificate-file-gone")
     refute has_element?(lv, "#accept-form")
+  end
+
+  test "a team admin turns a sideways photo before accepting it", ctx do
+    photo =
+      certificate_fixture(ctx.member, ctx.qualification, %{
+        file_name: "scan.jpg",
+        content_type: "image/jpeg"
+      })
+
+    CertificateFile.put!(photo, 40 |> Image.new!(30) |> Image.write!(:memory, suffix: ".jpg"))
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{photo.id}")
+    src = image_src(lv)
+
+    lv |> element("#certificate-rotate-left") |> render_click()
+
+    image = photo |> CertificateFile.bytes() |> Image.from_binary!()
+    assert {Image.width(image), Image.height(image)} == {30, 40}
+    refute image_src(lv) == src
+
+    # Decided since the page opened: it shows the decision, saying so.
+    photo |> Ecto.Changeset.change(status: :declined) |> Repo.update!()
+    lv |> element("#certificate-rotate-right") |> render_click()
+    assert render(lv) =~ "Another team admin has decided this certificate."
+    refute has_element?(lv, "#certificate-rotate-right")
+  end
+
+  defp image_src(lv) do
+    [_match, src] = Regex.run(~r/src="([^"]+)"/, lv |> element("#certificate-image") |> render())
+    src
   end
 
   test "the file is served sandboxed, and only through its team", ctx do
