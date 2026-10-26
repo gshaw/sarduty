@@ -258,7 +258,8 @@ defmodule Web.ActivityLive do
     <div :if={@activity.address}>
       <dt>Address</dt>
       <dd>
-        {@activity.address}<.copy_button
+        <.copy_button
+          text={@activity.address}
           id="activity-copy-address"
           value={@activity.address}
           label="Copy address"
@@ -274,7 +275,8 @@ defmodule Web.ActivityLive do
     <div :if={Activity.pin(@activity)}>
       <dt>Latitude and longitude</dt>
       <dd>
-        {@activity.coordinate}<.copy_button
+        <.copy_button
+          text={@activity.coordinate}
           id="activity-copy-coordinate"
           value={@activity.coordinate}
           label="Copy latitude and longitude"

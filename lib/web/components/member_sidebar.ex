@@ -124,7 +124,9 @@ defmodule Web.Components.MemberSidebar do
     ~H"""
     <dt>Email</dt>
     <dd>
-      <.a href={"mailto:#{@member.email}"}>{@member.email}</.a><.copy_button
+      <.copy_button
+        text={@member.email}
+        href={"mailto:#{@member.email}"}
         id="member-copy-email"
         value={@member.email}
         label="Copy email"
@@ -132,7 +134,8 @@ defmodule Web.Components.MemberSidebar do
     </dd>
     <dt>Phone</dt>
     <dd id="member-phone">
-      {Service.Phone.format(@member.phone)}<.copy_button
+      <.copy_button
+        text={Service.Phone.format(@member.phone)}
         id="member-copy-phone"
         value={Service.Phone.format(@member.phone)}
         label="Copy phone number"
@@ -141,7 +144,8 @@ defmodule Web.Components.MemberSidebar do
     </dd>
     <dt>Address</dt>
     <dd>
-      {@member.address}<.copy_button
+      <.copy_button
+        text={@member.address}
         id="member-copy-address"
         value={OpenInMaps.one_line(@member.address)}
         label="Copy address"
@@ -195,7 +199,8 @@ defmodule Web.Components.MemberSidebar do
       <%= if shown?(@contact) do %>
         {contact_name(@contact)}
         <span :for={{phone, i} <- Enum.with_index(phones(@contact))} class="block">
-          {Service.Phone.format(phone)}<.copy_button
+          <.copy_button
+            text={Service.Phone.format(phone)}
             id={"#{@id}-copy-#{i}"}
             value={Service.Phone.format(phone)}
             label="Copy phone number"
