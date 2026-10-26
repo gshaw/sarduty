@@ -4,12 +4,12 @@ defmodule App.MCP.ToolsTest do
   alias App.MCP.Tool.ListActivities
   alias App.MCP.Tools
 
-  test "every tool has a unique name, and only the proposing tool writes" do
+  test "every tool has a unique name, and only the proposing tools write" do
     names = Enum.map(Tools.definitions(), & &1["name"])
     assert names == Enum.uniq(names)
 
     writes = for t <- Tools.definitions(), !t["annotations"]["readOnlyHint"], do: t["name"]
-    assert writes == ["propose_attendance_changes"]
+    assert writes == ["propose_attendance_changes", "propose_activity_tags"]
   end
 
   # An agent may propose a change set, never apply one (#216).

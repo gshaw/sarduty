@@ -6,6 +6,7 @@ defmodule App.Operation.ApplyProposedChangeSet do
   alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
+  alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.ApplyChangeSet
   alias App.Repo
@@ -38,11 +39,24 @@ defmodule App.Operation.ApplyProposedChangeSet do
     case ApplyChangeSet.call(team, change_set, user, now) do
       {:ok, rows} ->
         drop_removed_rows(team, rows)
+        copy_tags(team, rows)
         {:ok, rows}
 
       {:error, _reason} = error ->
         Enum.each(skipped, &ChangeSetRow.reset!/1)
         error
+    end
+  end
+
+  # An activity's new tags show before the next refresh, as on its Change tags page. A
+  # tag the copy has no title for yet waits for the refresh.
+  defp copy_tags(team, rows) do
+    titles = team.id |> Tag.get_all() |> Map.new(&{&1.d4h_tag_id, &1.title})
+
+    for %{action: :set_activity_tags, status: :applied} = row <- rows,
+        activity = Repo.get_by(Activity, team_id: team.id, d4h_activity_id: row.d4h_record_id) do
+      tags = row.new_value["tag_ids"] |> Enum.flat_map(&List.wrap(titles[&1])) |> Enum.sort()
+      activity |> Ecto.Changeset.change(tags: tags) |> Repo.update!()
     end
   end
 

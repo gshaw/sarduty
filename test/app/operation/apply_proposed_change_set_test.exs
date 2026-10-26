@@ -5,6 +5,7 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
 
   alias App.Model.ChangeSet
   alias App.Operation.ApplyProposedChangeSet
+  alias App.Operation.ProposeActivityTags
   alias App.Operation.ProposeAttendanceChanges
 
   setup do
@@ -162,5 +163,39 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
     assert applied.status == :applied
     assert_received {:d4h_delete, 502}
     assert App.Repo.all(App.Model.Attendance) == []
+  end
+
+  describe "tags on several activities" do
+    test "reads each activity again, skips one published since, and copies the new tags", ctx do
+      tag_fixture(ctx.team, "Primary Hours")
+      draft = activity_fixture(ctx.team, %{title: "Truck night", tags: []})
+      later = activity_fixture(ctx.team, %{title: "AGM", tags: []})
+      requests = for a <- [draft, later], do: %{"activity_id" => a.id, "add" => ["Primary Hours"]}
+
+      {:ok, change_set, []} = ProposeActivityTags.call(ctx.team, ctx.user, requests, "Hours tags")
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+
+        case conn.method do
+          "GET" ->
+            Req.Test.json(conn, %{"tags" => [], "published" => path =~ "#{later.d4h_activity_id}"})
+
+          "POST" ->
+            Req.Test.json(conn, %{"id" => 1})
+        end
+      end)
+
+      change_set = ChangeSet.find!(ctx.team, change_set.id)
+      ids = Enum.map(change_set.rows, & &1.id)
+
+      {:ok, [sent, skipped]} =
+        ApplyProposedChangeSet.call(ctx.team, change_set, ctx.user, ids, DateTime.utc_now())
+
+      assert sent.status == :applied
+      assert skipped.error == "Tags cannot be changed once the activity is published."
+      assert App.Repo.reload!(draft).tags == ["Primary Hours"]
+      assert App.Repo.reload!(later).tags == []
+    end
   end
 end
