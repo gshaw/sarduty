@@ -38,7 +38,6 @@ defmodule Web.Components.TeamSettingsTabs do
         Chore categories
       </:tab>
       <:tab
-        :if={@team.mcp_enabled}
         navigate={~p"/teams/#{@team}/settings/mcp"}
         current={@current == :mcp}
       >
