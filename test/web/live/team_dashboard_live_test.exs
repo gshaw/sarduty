@@ -293,7 +293,7 @@ defmodule Web.TeamDashboardLiveTest do
 
     assert has_element?(list, "#activity_collection", "Untagged")
     assert has_element?(list, "#activity_collection", "No tags")
-    assert has_element?(list, "#activity-#{no_tags.id}-tags-in-d4h a", "Open D4H activity")
+    assert has_element?(list, "#activity-#{no_tags.id}-tags-locked a", "Change activity")
     refute has_element?(list, "#activity_collection", "Primary")
     refute has_element?(list, "#activity_collection", "BBQ")
     refute has_element?(list, "#activity_collection", "Draft")

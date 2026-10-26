@@ -73,9 +73,9 @@
 - **D4H v3 API**: [lib/app/adapter/d4h.ex](lib/app/adapter/d4h.ex). Each team has its own
   API host (region) and bearer token. Almost everything reads. Every write is a change
   set, applied by `App.Operation.ApplyChangeSet`: attendance from the door, group
-  membership adds and removes, equipment on an activity, and a Records team's edits. See
-  [docs/change-sets.md](docs/change-sets.md). How the local copy is kept fresh is in
-  [docs/d4h-sync.md](docs/d4h-sync.md).
+  membership adds and removes, equipment on an activity, adding and changing activities,
+  and a Records team's edits. See [docs/change-sets.md](docs/change-sets.md). How the
+  local copy is kept fresh is in [docs/d4h-sync.md](docs/d4h-sync.md).
 - **SAR Duty Records**: teams without D4H keep their records in a separate app,
   `records.sarduty.com`, that serves D4H's API. The adapter calls it like a D4H region;
   `D4H.records?/1` says which a team uses. See [docs/records.md](docs/records.md).

@@ -121,7 +121,7 @@ a reply or a ticked box, skip the message.
 ("Delete endorsement") and "Cancel".
 
 **Warnings.** The consequence first, then what to do: "Attendance cannot be changed once
-the activity is published. Unpublish it in D4H first."
+the activity is published. Unpublish it with Change activity first."
 
 **Empty states.** Say why it is empty and what to do: "No tax credit letters for 2025 yet.
 Create one from the member list." Not "No results".

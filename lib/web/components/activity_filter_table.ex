@@ -8,7 +8,6 @@ defmodule Web.Components.ActivityFilterTable do
   import Web.Components.StatSwitch
   import Web.Components.Table
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Team
   alias App.ViewModel.ActivityFilterViewModel
@@ -105,14 +104,14 @@ defmodule Web.Components.ActivityFilterTable do
           {activity_summary(record)}
         </div>
         <.activity_tags activity={record} hours_tags={@hours_tags} />
-        <%!-- Needs attention links here, and D4H refuses tags on a published activity (#358). --%>
+        <%!-- Needs attention links here, and a published activity is locked (#358, #585). --%>
         <div
-          :if={@untagged? and D4H.tags_locked?(@team, record)}
-          id={"activity-#{record.id}-tags-in-d4h"}
+          :if={@untagged? and Activity.locked?(record)}
+          id={"activity-#{record.id}-tags-locked"}
           class="hint"
         >
-          Published, so set its hours tag in {D4H.service_name(@team)}.
-          <.a external={true} href={D4H.activity_url(@team, record)}>Open {D4H.service_name(@team)} activity</.a>
+          Published, so unpublish it to set its hours tag.
+          <.a navigate={~p"/teams/#{@team}/activities/#{record.id}/edit"}>Change activity</.a>
         </div>
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">

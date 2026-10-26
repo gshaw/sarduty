@@ -371,19 +371,19 @@ defmodule Web.ActivityLive do
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
             >Send attendance</.a>
           </li>
-          <li :if={D4H.records?(@activity.team)}>
+          <li>
             <.a
               id="activity-edit"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
-            >Change or delete</.a>
+            >{if D4H.records?(@activity.team), do: "Change or delete", else: "Change activity"}</.a>
           </li>
           <%!-- D4H refuses tags on a published activity (#358). --%>
-          <li :if={!D4H.records?(@activity.team) and D4H.tags_locked?(@activity.team, @activity)}>
-            <div id="activity-tags-in-d4h" class="hint">
-              Published, so change its tags in {D4H.service_name(@activity.team)}.
+          <li :if={Activity.locked?(@activity)}>
+            <div id="activity-tags-locked" class="hint">
+              Published, so unpublish it to change its tags.
             </div>
           </li>
-          <li :if={!D4H.tags_locked?(@activity.team, @activity)}>
+          <li :if={!Activity.locked?(@activity)}>
             <.a
               id="activity-change-tags"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}

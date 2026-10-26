@@ -33,7 +33,7 @@ defmodule App.Operation.ChangeActivityTags do
       {:ok, %{published?: published?} = now} ->
         activity = copy_published(activity, published?)
 
-        if D4H.tags_locked?(team, activity),
+        if Activity.locked?(activity),
           do: :published,
           else: {:ok, now.tag_ids |> Enum.uniq() |> Enum.sort()}
 

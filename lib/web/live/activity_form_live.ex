@@ -7,12 +7,10 @@ defmodule Web.ActivityFormLive do
   alias App.Operation.SaveActivity
   alias App.ViewModel.ActivityFormViewModel
 
-  # Adding and changing activities of a team on SAR Duty Records (docs/records.md). A D4H team
-  # changes its activities in D4H, so it has no such page.
+  # Adding and changing activities (docs/records.md, #585). D4H cannot delete an activity,
+  # so only a Records team deletes one here.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    unless D4H.records?(team), do: raise(Web.Status.NotFound)
-
     activity = if id = params["id"], do: Activity.find!(team, id)
     if activity && activity.deleted_at, do: raise(Web.Status.NotFound)
     form = ActivityFormViewModel.from_activity(activity, team)
@@ -20,7 +18,11 @@ defmodule Web.ActivityFormLive do
     socket =
       socket
       |> assign(page_title: if(activity, do: "Change #{activity.title}", else: "Add activity"))
-      |> assign(activity: activity, form_data: form)
+      |> assign(activity: activity, form_data: form, records?: D4H.records?(team))
+      |> assign(
+        description_locked?: ActivityFormViewModel.description_locked?(activity, team),
+        published_locked?: activity != nil and Activity.locked?(activity)
+      )
       |> assign_form(ActivityFormViewModel.changeset(form))
 
     {:ok, socket}
@@ -41,32 +43,49 @@ defmodule Web.ActivityFormLive do
 
     <.form for={@form} id="activity-form" phx-change="validate" phx-submit="save" class="measure">
       <.error_summary form={@form} />
-      <.input
-        :if={!@activity}
-        field={@form[:kind]}
-        type="select"
-        label="Kind"
-        options={ActivityFormViewModel.kinds()}
-      />
-      <.input field={@form[:title]} label="Title" />
-      <%!-- Side by side only where a date and time fit in half the width. --%>
-      <div class="grid md:grid-cols-2 gap-x-6">
-        <.input field={@form[:starts_at]} type="datetime-local" label="Start" />
-        <.input field={@form[:ends_at]} type="datetime-local" label="Finish" />
-      </div>
-      <.input field={@form[:place]} label="Address (optional)">
-        An address or a place name, like Victoria Park, Truro.
-      </.input>
-      <.input
-        field={@form[:hours]}
-        type="select"
-        label="Tax credit hours"
-        options={ActivityFormViewModel.hours()}
-      >
-        Which hours the activity counts for on tax credit letters.
-      </.input>
-      <.input field={@form[:tracking_number]} label="Tracking number (optional)" />
-      <.input field={@form[:description]} type="textarea" rows="5" label="Description (optional)" />
+      <.warning_text :if={@published_locked?} id="activity-published-locked" class="mb-6">
+        A published activity cannot be changed. Untick Published and save first.
+      </.warning_text>
+      <%!-- A disabled fieldset sends none of its fields. --%>
+      <fieldset disabled={@published_locked?}>
+        <.input
+          :if={!@activity}
+          field={@form[:kind]}
+          type="select"
+          label="Kind"
+          options={ActivityFormViewModel.kinds()}
+        />
+        <.input field={@form[:title]} label="Title" />
+        <%!-- Side by side only where a date and time fit in half the width. --%>
+        <div class="grid md:grid-cols-2 gap-x-6">
+          <.input field={@form[:starts_at]} type="datetime-local" label="Start" />
+          <.input field={@form[:ends_at]} type="datetime-local" label="Finish" />
+        </div>
+        <.input field={@form[:place]} label="Address (optional)">
+          An address or a place name, like Victoria Park, Truro.
+        </.input>
+        <.input
+          field={@form[:hours]}
+          type="select"
+          label="Tax credit hours"
+          options={ActivityFormViewModel.hours()}
+        >
+          Which hours the activity counts for on tax credit letters.
+        </.input>
+        <.input field={@form[:tracking_number]} label="Tracking number (optional)" />
+        <div :if={@description_locked?} id="activity-description-locked" class="mb-6">
+          <.label>Description</.label>
+          <.hint>Change the description in {@service}. It has formatting this form would lose.</.hint>
+          <.markdown content={@activity.description} />
+        </div>
+        <.input
+          :if={!@description_locked?}
+          field={@form[:description]}
+          type="textarea"
+          rows="5"
+          label="Description (optional)"
+        />
+      </fieldset>
       <.input field={@form[:published]} type="checkbox" label="Published">
         Attendance cannot be changed once the activity is published.
       </.input>
@@ -77,7 +96,15 @@ defmodule Web.ActivityFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@activity} id="activity-delete" class="mt-8 measure">
+    <section :if={@activity && !@records?} id="activity-delete-elsewhere" class="mt-8 measure">
+      <h2 class="heading">Delete the activity</h2>
+      <p>Delete it in {@service}. {@service} does not let SAR Duty delete activities.</p>
+      <p>
+        <.a external={true} href={D4H.activity_url(@current_team, @activity)}>Open {@service} activity</.a>
+      </p>
+    </section>
+
+    <section :if={@activity && @records?} id="activity-delete" class="mt-8 measure">
       <h2 class="heading">Delete the activity</h2>
       <p>
         It leaves every list and letter. Take attendance stops taking scans for it.

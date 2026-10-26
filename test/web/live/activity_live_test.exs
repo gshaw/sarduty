@@ -23,7 +23,7 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-map circle")
     refute has_element?(lv, "#deleted-in-d4h")
     assert has_element?(lv, "#activity-change-tags")
-    refute has_element?(lv, "#activity-tags-in-d4h")
+    refute has_element?(lv, "#activity-tags-locked")
   end
 
   test "a chore activity's kind is Chores (#575)", %{conn: conn} do
@@ -222,7 +222,7 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(
                lv,
                "#members-published",
-               "Published, so nobody can be added. Unpublish it in D4H first."
+               "Published, so nobody can be added. Unpublish it with Change activity first."
              )
     end
   end

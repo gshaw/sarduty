@@ -52,7 +52,14 @@ defmodule Web.ActivityFormLiveTest do
     assert_received {:records, "POST", "/incidents", body}
     assert body["referenceDescription"] == "Missing hiker"
     assert body["startsAt"] == "2026-10-09T01:30:00Z"
-    assert body["address"]["street"] == "Murrin Park"
+
+    assert body["address"] == %{
+             "street" => "Murrin Park",
+             "town" => "",
+             "region" => "",
+             "postcode" => "",
+             "country" => ""
+           }
 
     assert_received {:records, "POST", "/incidents/88/tags", %{"tagIds" => [1]}}
     assert_received {:records, "POST", "/incidents/88/publish", %{"published" => false}}
@@ -125,18 +132,116 @@ defmodule Web.ActivityFormLiveTest do
     end
   end
 
-  test "a D4H team has no such page and no add button", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    conn = log_in_user(conn, user)
-    activity = activity_fixture(team)
+  describe "a D4H team (#585)" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "d4h_key"}})
+      %{conn: log_in_user(conn, user), team: team}
+    end
 
-    {:ok, list, _html} = live(conn, ~p"/teams/#{team}/activities")
-    refute has_element?(list, "#activity-add")
+    # D4H's writes, in the order they were made.
+    defp writes do
+      receive do
+        {:records, method, path, body} -> [{method, path, body} | writes()]
+      after
+        0 -> []
+      end
+    end
 
-    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
-    refute has_element?(page, "#activity-edit")
+    test "a new activity is a draft with no one's attendance and an HTML description",
+         %{conn: conn, team: team} do
+      stub()
+      {:ok, list, _html} = live(conn, ~p"/teams/#{team}/activities")
+      assert has_element?(list, "#activity-add")
 
-    assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/activities/new") end
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      lv
+      |> form("#activity-form",
+        form: %{
+          title: "SAR Duty test",
+          starts_at: "2026-12-12T09:00",
+          ends_at: "2026-12-12T12:00",
+          description: "Bring a headlamp.\n\nMap & compass too."
+        }
+      )
+      |> render_submit()
+
+      assert [{"POST", "/exercises", body} | _rest] = writes()
+      assert body["fullTeam"] == false
+      assert body["shared"] == false
+      assert body["description"] == "<p>Bring a headlamp.</p><p>Map &amp; compass too.</p>"
+      assert [%ChangeSetRow{action: :create_activity, status: :applied}] = edit_rows(team)
+    end
+
+    test "a published activity only unpublishes, and there is no delete",
+         %{conn: conn, team: team} do
+      stub()
+
+      activity =
+        activity_fixture(team, %{
+          title: "Practice",
+          d4h_activity_id: 88,
+          is_published: true,
+          description: "<p>Bring a headlamp.</p>"
+        })
+
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      assert has_element?(page, "#activity-actions #activity-edit", "Change activity")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+      refute has_element?(lv, "#activity-delete")
+      assert has_element?(lv, "#activity-delete-elsewhere", "Delete it in D4H.")
+      assert has_element?(lv, "#activity-published-locked")
+      assert has_element?(lv, "#activity-form fieldset[disabled] #form_title")
+      assert has_element?(lv, "#form_description", "Bring a headlamp.")
+
+      lv |> form("#activity-form", form: %{published: false}) |> render_submit()
+
+      assert [{"POST", "/exercises/88/publish", %{"published" => false}} | _sync] = writes()
+    end
+
+    # D4H answers 409 to publishing an activity that has not happened (Andrew, 2026-10-25).
+    test "only a finished activity is published", %{conn: conn, team: team} do
+      stub()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+      later = DateTime.utc_now() |> DateTime.add(2, :day) |> Calendar.strftime("%Y-%m-%dT%H:%M")
+      ended = DateTime.utc_now() |> DateTime.add(-2, :day) |> Calendar.strftime("%Y-%m-%dT%H:%M")
+
+      started =
+        DateTime.utc_now() |> DateTime.add(-3, :day) |> Calendar.strftime("%Y-%m-%dT%H:%M")
+
+      lv
+      |> form("#activity-form",
+        form: %{title: "Practice", starts_at: started, ends_at: later, published: true}
+      )
+      |> render_submit()
+
+      assert has_element?(lv, "#activity-form .error-summary", "Publish it once it has finished.")
+      assert writes() == []
+
+      lv
+      |> form("#activity-form",
+        form: %{title: "Practice", starts_at: started, ends_at: ended, published: true}
+      )
+      |> render_submit()
+
+      assert {"POST", "/exercises/88/publish", %{"published" => true}} in writes()
+    end
+
+    test "a description with formatting is shown and never sent", %{conn: conn, team: team} do
+      stub()
+      html = ~s(<p>See <a href="https://example.com/map">the map</a>.</p>)
+      activity = activity_fixture(team, %{d4h_activity_id: 88, description: html})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+      assert has_element?(lv, "#activity-description-locked a", "the map")
+      refute has_element?(lv, "#form_description")
+
+      lv |> form("#activity-form", form: %{title: "Rope practice"}) |> render_submit()
+
+      assert [{"PATCH", "/exercises/88", body} | _rest] = writes()
+      assert body == %{"referenceDescription" => "Rope practice"}
+    end
   end
 
   test "another team's activity 404s", %{conn: conn, team: team} do

@@ -120,24 +120,15 @@ defmodule Web.ActivityTagsLiveTest do
     assert Repo.get!(Activity, activity.id).is_published
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
-    assert has_element?(lv, "#activity-tags-in-d4h", "Published, so change its tags in D4H.")
+
+    assert has_element?(
+             lv,
+             "#activity-tags-locked",
+             "Published, so unpublish it to change its tags."
+           )
+
     refute has_element?(lv, "#activity-change-tags")
     assert has_element?(lv, "#activity-apply-template")
     assert has_element?(lv, "#activity-equipment-add")
-  end
-
-  test "a published activity on SAR Duty Records keeps the form", %{conn: conn} do
-    %{user: user, team: team} = records_team_with_user_fixture(%{d4h_access_key: "team-key"})
-    activity = activity_fixture(team, %{is_published: true})
-
-    Req.Test.stub(App.Adapter.D4H, fn conn ->
-      Req.Test.json(conn, %{"id" => activity.d4h_activity_id, "tags" => [], "published" => true})
-    end)
-
-    conn = log_in_user(conn, user)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/tags")
-
-    assert has_element?(lv, "#activity-tags-form")
-    refute has_element?(lv, "#tags-published")
   end
 end

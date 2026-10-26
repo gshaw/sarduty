@@ -200,8 +200,9 @@ defmodule App.Adapter.D4HTest do
       assert D4H.error_text(:d4h, timeout) == "D4H did not answer. Try again."
     end
 
-    test "a Records team unpublishes in SAR Duty, not in Records" do
-      assert D4H.unpublish_text(:d4h) == "Unpublish it in D4H first."
+    test "every team unpublishes in SAR Duty" do
+      assert D4H.unpublish_text(:d4h) == "Unpublish it with Change activity first."
+      refute D4H.unpublish_text(:d4h) =~ "D4H"
       refute D4H.unpublish_text(:records) =~ "Records"
     end
   end

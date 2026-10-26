@@ -132,12 +132,11 @@ defmodule Web.ActivityAttendanceLive do
 
   defp error_text(error, team), do: D4H.error_text(team, error)
 
-  # Names the service: the reader goes there to unpublish. Published attendance is final,
-  # so the review clears it from Needs attention.
+  # Published attendance is final, so the review clears it from Needs attention.
   defp published_text(team),
     do:
       "Nothing to send: the activity is published, so its attendance is final. " <>
-        "To change it, unpublish it in #{D4H.service_name(team)} first."
+        D4H.unpublish_text(team)
 
   defp load_no_shows(socket),
     do: assign(socket, no_shows: NoShow.get_all(socket.assigns.activity))
