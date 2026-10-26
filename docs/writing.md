@@ -160,7 +160,8 @@ member who signed up "attending".
 - **Members who are not invited** see nothing about invitations. Never "Not invited".
 - **On Take attendance**, members who signed up and have not arrived are "Yet to arrive".
 - **Adding and emailing.** A team admin adds members to an activity; adding sends nothing.
-  Email N members emails those with no reply.
+  Email members lists who gets an email and why the rest do not; it emails only
+  members with no reply.
 
 ## Glossary
 

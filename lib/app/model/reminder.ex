@@ -11,7 +11,8 @@ defmodule App.Model.Reminder do
   alias App.Repo
 
   # A reminder emailed to a member about an activity they haven't replied to (#444).
-  # Round 1, then round 2 (Ask again), at most one each per member and activity. A send's
+  # Round 1, then round 2 (the second and last), at most one each per member and
+  # activity. One send can mix them (#608). A send's
   # rows share their `sent_at`, so the rows of one batch are those with its time. Queued
   # waits for its job, App.Worker.SendReminderWorker. Failed is Cloudflare refusing it
   # every time, or the activity starting first, with why in `error`.

@@ -222,6 +222,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/equipment", ActivityEquipmentLive
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive
       live "/teams/:subdomain/activities/:id/members", ActivityAddMembersLive
+      live "/teams/:subdomain/activities/:id/email", ActivityEmailMembersLive
       live "/teams/:subdomain/activities/:id/tags", ActivityTagsLive
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new

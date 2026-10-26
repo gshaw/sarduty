@@ -36,21 +36,4 @@ defmodule App.ViewData.ActivityRemindersTest do
     reminders = [reminder(1, 2, @now), reminder(1, 1, @first)]
     assert %{1 => %Reminder{round: 2}} = ActivityReminders.latest(reminders)
   end
-
-  test "round 1 comes before Ask again" do
-    rows = [row(1, "requested"), row(2, "requested")]
-
-    assert {1, %{send: [%{id: 2}]}} =
-             ActivityReminders.next_round(rows, [reminder(1, 1, @first)], @now)
-
-    assert {2, %{send: [%{id: 1}, %{id: 2}]}} =
-             ActivityReminders.next_round(
-               rows,
-               [reminder(1, 1, @first), reminder(2, 1, @first)],
-               @now
-             )
-
-    done = for id <- [1, 2], round <- [1, 2], do: reminder(id, round, @first)
-    assert ActivityReminders.next_round(rows, done, @now) == nil
-  end
 end

@@ -81,8 +81,8 @@ defmodule Web.ActivityLive do
     |> assign_reminders(members)
   end
 
-  # Reminders a team admin sends (#444): each member's latest, the last batch, and the
-  # round they can send now, before the start.
+  # Reminders a team admin sends (#444): each member's latest, the last batch, and
+  # Email members while anyone would get one, before the start (#608).
   defp assign_reminders(socket, members) do
     %{activity: activity, current_team: team, coming?: coming?, now: now} = socket.assigns
     reminders = Reminder.for_activity(activity)
@@ -92,9 +92,9 @@ defmodule Web.ActivityLive do
       reminded: ActivityReminders.latest(reminders),
       batch: batch,
       batch_sender: batch && sender_name(team, batch.sent_by_user, now),
-      next_round:
+      email_members?:
         socket.assigns.team_admin? && coming? && !activity.deleted_at &&
-          ActivityReminders.next_round(members, reminders, now)
+          SendReminders.plan(members, reminders, now).send != []
     )
   end
 
@@ -106,19 +106,6 @@ defmodule Web.ActivityLive do
       nil -> user.email
     end
   end
-
-  def handle_event("remind", %{"round" => round}, socket) when round in ["1", "2"] do
-    %{current_team: team, activity: activity, current_user: user} = socket.assigns
-    now = DateTime.utc_now()
-
-    case SendReminders.call(team, activity, user, String.to_integer(round), now) do
-      {:ok, _reminders} -> {:noreply, socket |> assign(now: now) |> assign_people()}
-      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  # A stale page can send a round that no longer exists.
-  def handle_event("remind", _params, socket), do: {:noreply, socket}
 
   # The view's word in the URL, the same before and after the start, as a D4H status.
   @views %{
@@ -239,7 +226,7 @@ defmodule Web.ActivityLive do
           reminded={@reminded}
           batch={@batch}
           batch_sender={@batch_sender}
-          next_round={@next_round}
+          email_members?={@email_members?}
           adding={Activity.adding(@activity, @team_admin?, @now)}
         />
         <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
@@ -436,7 +423,7 @@ defmodule Web.ActivityLive do
   attr :reminded, :map, default: %{}, doc: "each member's latest reminder, by member id"
   attr :batch, :map, default: nil, doc: "the last reminders sent"
   attr :batch_sender, :string, default: nil
-  attr :next_round, :any, default: nil, doc: "{round, plan} a team admin can send now"
+  attr :email_members?, :boolean, default: false, doc: "whether anyone would get a reminder"
   attr :adding, :atom, default: nil, doc: "Activity.adding/3: :open, :published, or nil"
 
   # Who the activity invites, as counts that filter one table (#444). Before the start:
@@ -461,7 +448,7 @@ defmodule Web.ActivityLive do
         <:note :if={@batch}>
           <span id="members-batch">{batch_text(@batch, @batch_sender, @timezone)}</span>
         </:note>
-        <:action :if={@adding == :open or @next_round}>
+        <:action :if={@adding == :open or @email_members?}>
           <.button
             :if={@adding == :open}
             id="members-add"
@@ -469,7 +456,11 @@ defmodule Web.ActivityLive do
           >
             Add members
           </.button>
-          <.reminders_button :if={@next_round} activity={@activity} next_round={@next_round} />
+          <.a
+            :if={@email_members?}
+            id="members-email"
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/email"}
+          >Email members</.a>
         </:action>
       </.heading_row>
       <%!-- From the copy, which can be 10 minutes old; the send refuses it too. --%>
@@ -577,60 +568,6 @@ defmodule Web.ActivityLive do
     </section>
     """
   end
-
-  attr :activity, :map, required: true
-  attr :next_round, :any, required: true
-
-  # Email N members, or Email again (N) for round 2, after the browser's own confirm: an
-  # email can't be taken back. It names who it skips and why.
-  defp reminders_button(%{next_round: {round, plan}} = assigns) do
-    assigns = assign(assigns, round: round, plan: plan, count: length(plan.send))
-
-    ~H"""
-    <.button
-      id="members-remind"
-      phx-click="remind"
-      phx-value-round={@round}
-      phx-disable-with="Sending…"
-      data-confirm={reminders_confirm(@round, @plan)}
-    >
-      {if @round == 1,
-        do: Format.count(@count, one: "Email 1 member", many: "Email %d members"),
-        else: "Email again (#{Format.number(@count)})"}
-    </.button>
-    """
-  end
-
-  defp reminders_confirm(round, plan) do
-    [confirm_ask(round, length(plan.send)), confirm_skipped(plan.skipped)]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join("\n\n")
-  end
-
-  defp confirm_ask(1, count) do
-    Format.count(count,
-      one: "Email 1 member who has not replied?",
-      many: "Email %d members who have not replied?"
-    ) <>
-      " Each gets one email from you with I'll be there and Can't make it." <>
-      " Replies to the email come to you."
-  end
-
-  defp confirm_ask(2, count) do
-    Format.count(count, one: "Email 1 member again?", many: "Email %d members again?") <>
-      " They have not replied since their first reminder." <>
-      " Each gets one more email from you, the last for this activity."
-  end
-
-  defp confirm_skipped([]), do: nil
-
-  defp confirm_skipped(skipped) do
-    names = skipped |> Enum.map(&skipped_text/1) |> Format.or_list()
-    "Not sent to #{names}."
-  end
-
-  defp skipped_text({member, :no_email}), do: "#{member.name} (no email)"
-  defp skipped_text({member, :reminders_off}), do: "#{member.name} (reminders off)"
 
   # "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since"
   # While none has gone yet: "4 sending Oct 26, 18:02 by Alex Chen".

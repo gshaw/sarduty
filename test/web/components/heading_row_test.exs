@@ -13,7 +13,7 @@ defmodule Web.Components.HeadingRowTest do
       <.heading_row>
         <h2 class="heading">Members</h2>
         <:note>4 sent</:note>
-        <:action><button>Email 1 member</button></:action>
+        <:action><button>Add members</button></:action>
       </.heading_row>
       """)
 

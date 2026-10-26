@@ -1,0 +1,238 @@
+defmodule Web.ActivityEmailMembersLive do
+  use Web, :live_view_app_layout
+
+  alias App.Mailer.ReminderMailer
+  alias App.Model.Activity
+  alias App.Model.Reminder
+  alias App.Operation.SendReminders
+  alias App.ViewData.ActivityMembers
+  alias Service.Format
+
+  # Email members (#608): who gets a reminder email, which one, and why everyone else
+  # on the activity gets none, then the email itself and one send. Every row starts
+  # checked; unchecking a member leaves them out. SendReminders.plan/3 decides, and the
+  # preview is ReminderMailer's own HTML. Only before the start, on an activity that
+  # isn't deleted.
+  def mount(%{"id" => id}, _session, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+    activity = Web.ActivityLive.fetch_activity(team, id)
+    now = DateTime.utc_now()
+
+    if activity.deleted_at || not DateTime.before?(now, activity.started_at) do
+      {:ok, leave(socket, activity)}
+    else
+      plan =
+        activity
+        |> ActivityMembers.load()
+        |> SendReminders.plan(Reminder.for_activity(activity), now)
+
+      sender = SendReminders.sender(team, user, now)
+
+      {:ok,
+       assign(socket,
+         page_title: "Email members",
+         activity: activity,
+         plan: plan,
+         selected: MapSet.new(plan.send, & &1.member.id),
+         sender: sender,
+         preview: ReminderMailer.preview(activity, team, sender)
+       )}
+    end
+  end
+
+  # A stale visitor goes back to the activity, as Add members sends them.
+  defp leave(socket, %Activity{deleted_at: %DateTime{}} = activity),
+    do: Web.ActivityLive.leave_deleted(socket, activity)
+
+  defp leave(socket, activity) do
+    socket
+    |> put_flash(:error, SendReminders.error_text(:started))
+    |> push_navigate(to: activity_path(socket, activity))
+  end
+
+  def handle_event("select", params, socket),
+    do: {:noreply, assign(socket, :selected, params |> selected_ids() |> MapSet.new())}
+
+  # The batch note on the activity says what went, so there's no flash.
+  def handle_event("send", params, socket) do
+    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+
+    case SendReminders.call(team, activity, user, selected_ids(params), DateTime.utc_now()) do
+      {:ok, _reminders} ->
+        {:noreply, push_navigate(socket, to: activity_path(socket, activity))}
+
+      {:error, :none_selected} ->
+        {:noreply, put_flash(socket, :error, SendReminders.error_text(:none_selected))}
+
+      {:error, :deleted} ->
+        {:noreply, Web.ActivityLive.leave_deleted(socket, activity)}
+
+      {:error, :started} ->
+        {:noreply, leave(socket, activity)}
+    end
+  end
+
+  # Swoosh's test adapter tells each process a reminder came from, this one included.
+  def handle_info({:email, _email}, socket), do: {:noreply, socket}
+
+  # Ids come from the browser; call/5 sends only to members its own plan has.
+  defp selected_ids(params) do
+    params
+    |> Map.get("member_ids", [])
+    |> Enum.flat_map(fn id ->
+      case Integer.parse(id) do
+        {id, ""} -> [id]
+        _other -> []
+      end
+    end)
+  end
+
+  defp activity_path(socket, activity),
+    do: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}"
+
+  def render(assigns) do
+    ~H"""
+    <.breadcrumbs>
+      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
+      <:item label={@activity.ref_id} path={~p"/teams/#{@current_team}/activities/#{@activity.id}"} />
+      <:item label="Email members" />
+    </.breadcrumbs>
+    <h1 class="title">Email members</h1>
+    <p class="lead">
+      {@activity.title} · {Format.datetime_medium(@activity.started_at, @current_team.timezone)}
+    </p>
+
+    <.form for={%{}} id="email-form" phx-change="select" phx-submit="send">
+      <section id="email-to">
+        <h2 class="subheading">Who gets it</h2>
+        <p class="hint mb-3">Members with no reply. Each gets at most 2 emails for an activity.</p>
+        <p :if={@plan.send == []} id="email-nobody">Nobody to email now.</p>
+        <.table
+          :if={@plan.send != []}
+          id="email-to-table"
+          rows={@plan.send}
+          row_id={&"email-to-#{&1.member.id}"}
+          class="table-striped w-fit"
+        >
+          <:col :let={email} label="" class="w-px" select_all>
+            <input
+              type="checkbox"
+              id={"email-select-#{email.member.id}"}
+              name="member_ids[]"
+              value={email.member.id}
+              checked={MapSet.member?(@selected, email.member.id)}
+            />
+          </:col>
+          <:col :let={email} label="Name" class="whitespace-nowrap">
+            <label for={"email-select-#{email.member.id}"}>{email.member.name}</label>
+          </:col>
+          <:col :let={email} label="Email" class="whitespace-nowrap">
+            {which_email(email, @current_team.timezone)}
+          </:col>
+        </.table>
+      </section>
+
+      <.left_out plan={@plan} service={@service} />
+
+      <section id="email-preview-section" class="mt-8">
+        <h2 class="subheading">What they get</h2>
+        <p class="hint mb-3">
+          From {@current_team.name}. Replies come to you at {@sender.email}.
+        </p>
+        <.email_preview subject={@preview.subject} html={@preview.html} />
+      </section>
+
+      <.form_actions class="mt-8">
+        <.button
+          :if={@plan.send != []}
+          id="email-send"
+          variant={:primary}
+          disabled={MapSet.size(@selected) == 0}
+          phx-disable-with="Sending…"
+        >
+          {Format.count(MapSet.size(@selected), one: "Send 1 email", many: "Send %d emails")}
+        </.button>
+        <.button id="email-cancel" navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>
+          Cancel
+        </.button>
+      </.form_actions>
+    </.form>
+    """
+  end
+
+  defp which_email(%{round: 1}, _timezone), do: "First"
+
+  defp which_email(%{round: 2, first: first}, timezone),
+    do: "Second and last, first sent #{Format.month_day(first.sent_at, timezone)}"
+
+  attr :plan, :map, required: true
+  attr :service, :string, required: true
+
+  # Everyone else on the activity, a line per reason: a count of who replied, and the
+  # names of members with no reply who get nothing.
+  defp left_out(assigns) do
+    assigns =
+      assign(assigns,
+        replied: assigns.plan.replied,
+        reasons: Enum.group_by(assigns.plan.left_out, &elem(&1, 1), &elem(&1, 0))
+      )
+
+    ~H"""
+    <section
+      :if={@replied != [] or @reasons != %{}}
+      id="email-left-out"
+      class="mt-8"
+    >
+      <h2 class="subheading">Who doesn't get it</h2>
+      <ul class="list-disc pl-6 space-y-1">
+        <li :if={@replied != []} id="left-out-replied">
+          Replied already, so no email: {replied_text(@replied)}.
+        </li>
+        <li
+          :for={reason <- [:had_both, :too_soon, :reminders_off, :no_email]}
+          :if={@reasons[reason]}
+          id={"left-out-#{reason}"}
+        >
+          {reason_text(reason, @service)}: {names(@reasons[reason])}.
+        </li>
+      </ul>
+    </section>
+    """
+  end
+
+  defp replied_text(replied) do
+    counts = ActivityMembers.counts(replied)
+
+    [
+      counts.attending > 0 &&
+        Format.count(counts.attending, one: "%d signed up", many: "%d signed up"),
+      counts.absent > 0 &&
+        Format.count(counts.absent, one: "%d can't make it", many: "%d can't make it")
+    ]
+    |> Enum.filter(& &1)
+    |> Format.and_list()
+  end
+
+  defp reason_text(:had_both, _service), do: "Had both emails already"
+  defp reason_text(:too_soon, _service), do: "Had their first email less than a day ago"
+  defp reason_text(:reminders_off, _service), do: "Turned off invitation reminders"
+  defp reason_text(:no_email, service), do: "No email in #{service}"
+
+  defp names(members), do: members |> Enum.map(& &1.name) |> Format.and_list()
+
+  attr :subject, :string, required: true
+  attr :html, :string, required: true
+
+  # The email as members get it, from the mailer's own HTML. Inert, so its links,
+  # which go nowhere here, can't be selected.
+  defp email_preview(assigns) do
+    ~H"""
+    <div id="email-preview" class="email-preview">
+      <p class="email-preview-subject">
+        <span class="hint">Subject</span> {@subject}
+      </p>
+      <div class="email-preview-body" inert>{Phoenix.HTML.raw(@html)}</div>
+    </div>
+    """
+  end
+end

@@ -134,25 +134,26 @@ defmodule Web.ActivityLiveTest do
       }
     end
 
-    test "a team admin sends them, after a confirm that names who it skips",
+    test "Email members opens its own page, and the batch note shows what went (#608)",
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
-      assert has_element?(lv, "#members-remind", "Email 2 members")
-
       assert has_element?(
                lv,
-               ~s{#members-remind[data-confirm*="Email 2 members who have not replied?"]}
+               ~s{#members-email[href="/teams/#{team.subdomain}/activities/#{activity.id}/email"]},
+               "Email members"
              )
 
-      assert has_element?(lv, ~s{#members-remind[data-confirm*="Wren Adams (no email)"]})
+      {:ok, lv, _html} =
+        lv |> element("#members-email") |> render_click() |> follow_redirect(conn)
 
-      lv |> element("#members-remind") |> render_click()
+      {:ok, lv, _html} =
+        lv |> form("#email-form") |> render_submit() |> follow_redirect(conn)
 
       assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
       assert_received {:email, %{to: [{"Frankie Moore", _}]}}
       refute_received {:email, _}
-      refute has_element?(lv, "#members-remind")
+      refute has_element?(lv, "#members-email")
       assert has_element?(lv, "#members-batch", "2 sent")
       assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
 
@@ -398,7 +399,7 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(lv, "#members-batch", "0 sent")
       assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
-      refute has_element?(lv, "#members-remind")
+      refute has_element?(lv, "#members-email")
     end
 
     test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do

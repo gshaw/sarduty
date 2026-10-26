@@ -1,0 +1,10 @@
+/* A reminder email as members get it, on Email members (#608). The body is the
+   mailer's own HTML with its inline colours, made for a white page, so it keeps the
+   light scheme in dark mode too. */
+.email-preview { max-width: 640px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.email-preview-subject { margin: 0; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-subtle); background: var(--surface-alt); }
+.email-preview-subject .hint { margin-right: var(--sp-2); }
+.email-preview-body { color-scheme: light; padding: var(--sp-6); background: var(--paper); color: var(--text); }
+.email-preview-body a { color: var(--link); text-decoration: underline; }
+/* Mail apps make a heading bold; the app's reset does not. */
+.email-preview-body h1 { font-weight: 700; line-height: 1.25; }

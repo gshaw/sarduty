@@ -32,13 +32,29 @@ defmodule App.Mailer.ReminderMailer do
     |> to({member.name, member.email})
     |> from({team.name, "noreply@sarduty.com"})
     |> reply_to({sender.name || "", sender.email})
-    |> subject("Will you be there? #{activity.title}")
+    |> subject(subject(activity))
     |> header("List-Unsubscribe", "<#{reminders_url}>")
     |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
     |> text_body(text(activity, team, from_name, reply_urls, activity_url, reminders_url))
     |> html_body(html(activity, team, from_name, reply_urls, activity_url, reminders_url))
     |> Mailer.deliver()
   end
+
+  @doc """
+  The email as Email members shows it (#608), from the same subject and HTML that
+  deliver/4 sends, as `%{subject:, html:}`. Its links go nowhere: each real one is
+  signed for its member.
+  """
+  def preview(%Activity{} = activity, %Team{} = team, sender) do
+    nowhere = %{yes: "#", no: "#"}
+
+    %{
+      subject: subject(activity),
+      html: html(activity, team, sender.name || sender.email, nowhere, "#", "#")
+    }
+  end
+
+  defp subject(activity), do: "Will you be there? #{activity.title}"
 
   defp url(path), do: Web.Endpoint.url() <> path
 
