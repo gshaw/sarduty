@@ -3,8 +3,8 @@ defmodule Web.TemplateCollectionLive do
 
   alias App.Model.Template
 
-  # Templates: named sets of items with default hours, tags, and groups to invite, added
-  # to an activity in one step (#271, #162).
+  # Templates: named sets of items with default hours, tags, and groups whose members they
+  # add, applied to an activity in one step (#271, #162).
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     {:ok, assign(socket, page_title: "Templates", templates: Template.get_all(team.id))}
@@ -24,7 +24,7 @@ defmodule Web.TemplateCollectionLive do
       </:action>
     </.heading_row>
     <p class="lead">
-      A template adds items, tags, and invites to an activity in one step. Apply one from the activity's page.
+      A template adds items, tags, and members to an activity in one step. Apply one from the activity's page.
     </p>
 
     <.table

@@ -138,7 +138,7 @@ defmodule Web.ActivityLiveTest do
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
-      assert has_element?(lv, "#members-remind", "Send 2 reminders")
+      assert has_element?(lv, "#members-remind", "Email 2 members")
 
       assert has_element?(
                lv,
@@ -184,6 +184,46 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(lv, "#members-batch", "1 sent")
       assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
+    end
+  end
+
+  describe "Add members (#564)" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      %{conn: log_in_user(conn, user), team: team}
+    end
+
+    test "beside Members before the start, with nobody on it yet", %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(48)})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(
+               lv,
+               ~s{#members-heading #members-add[href="/teams/#{team.subdomain}/activities/#{activity.id}/members"]},
+               "Add members"
+             )
+
+      assert has_element?(lv, "#members-empty", "Nobody has signed up yet.")
+    end
+
+    test "gone once the activity starts", %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(-1)})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      refute has_element?(lv, "#members-add")
+      refute has_element?(lv, "#members-published")
+    end
+
+    test "a published activity says why instead", %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(48), is_published: true})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      refute has_element?(lv, "#members-add")
+
+      assert has_element?(
+               lv,
+               "#members-published",
+               "Published, so nobody can be added. Unpublish it in D4H first."
+             )
     end
   end
 
@@ -292,6 +332,7 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
       assert has_element?(lv, "#member-row-#{member.id}", "Signed up")
+      refute has_element?(lv, "#members-add")
     end
 
     test "an invited member replies under the title; Change brings the buttons back",

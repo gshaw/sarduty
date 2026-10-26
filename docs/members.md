@@ -81,8 +81,9 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
   Members do not see check-ins, and the note is `redact: true`.
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
-These stay as they were, since a bot cannot attend or be invited, and skip members
-marked not a person with no rule: invites (`InviteGroups`), the home page's counts and
+These stay as they were, since a bot cannot attend or be added to an activity, and skip
+members marked not a person with no rule: Add members and a template's groups
+(`InviteMembers`), the home page's counts and
 charts, the missing details filter, and the member list on Take attendance.
 
 ## The attendance check
@@ -344,15 +345,23 @@ activity starts.
   ([InvitationRemindersLive](../lib/web/live/invitation_reminders_live.ex)), a page with
   one button that turns them back on too. A mail app's one-click unsubscribe posts to
   the same URL ([InvitationRemindersController](../lib/web/controllers/invitation_reminders_controller.ex)).
+- **Add members** (#564,
+  [ActivityAddMembersLive](../lib/web/live/activity_add_members_live.ex)): before the
+  start, a team admin adds members by name or by group from
+  `/teams/:subdomain/activities/:id/members`, beside Members. They show as No reply,
+  and adding emails nobody. A group leaves out members away on the activity's day, and
+  the page names them; adding one by name includes them. A published activity says so
+  in place of the button. D4H's own weekly briefing may still tell them.
 - **Reminders** ([SendReminders](../lib/app/operation/send_reminders.ex)): before the
-  start, a team admin sends "Send 4 reminders" beside Members, after the browser's own
+  start, a team admin sends "Email 4 members" beside Members, after the browser's own
   confirm, which names who it skips and why: "Not sent to Dana Clark (reminders off) or
   Eli Haddad (no email in D4H)." Reminders off shows only there. Each goes at once to a
   member with no reply, an email in D4H, and reminders on, from the team's name, with
   replies to the team admin ([ReminderMailer](../lib/app/mailer/reminder_mailer.ex)).
   Each is a row in `reminders`: who, when, by whom, its round, and sent or failed.
-  Round 2, "Ask again (3)", goes 24 hours after round 1 to members still with no reply.
-  At most two per member and activity; after that only newly invited members get one.
+  Round 2, "Email again (3)", goes 24 hours after round 1 to members still with no
+  reply. At most two per member and activity; after that only newly added members get
+  one.
   A No reply row's Replied cell reads "Reminded Oct 26", or "Reminder failed". Beside
   the button, the last batch: "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since".
 - **Members**, under the map, lists everyone the activity invites

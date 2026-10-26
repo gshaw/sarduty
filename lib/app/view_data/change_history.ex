@@ -257,10 +257,10 @@ defmodule App.ViewData.ChangeHistory do
       ) do
     case page do
       :member ->
-        "Invited to #{(row.change_set.activity && row.change_set.activity.title) || "an activity"}"
+        "Added to #{(row.change_set.activity && row.change_set.activity.title) || "an activity"}"
 
       :activity ->
-        "#{(row.member && row.member.name) || "A member"} invited"
+        "#{(row.member && row.member.name) || "A member"} added"
     end
   end
 
@@ -400,6 +400,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:member), do: "the member"
   def source_label(:equipment), do: "equipment"
   def source_label(:template), do: "template"
+  def source_label(:invite), do: "Add members"
   def source_label(:tags), do: "tags"
   def source_label(:chores), do: "chores"
   def source_label(:certificates), do: "certificates"

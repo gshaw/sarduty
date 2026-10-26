@@ -314,7 +314,7 @@ defmodule Web.EquipmentLiveTest do
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
-  test "a template gets groups to invite", ctx do
+  test "a template gets groups whose members it adds", ctx do
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
 
@@ -330,8 +330,9 @@ defmodule Web.EquipmentLiveTest do
     assert Enum.map(template.template_groups, & &1.group.title) == ["Search Managers"]
   end
 
-  test "a template's groups are invited to the activity in D4H", ctx do
-    activity = activity_fixture(ctx.team)
+  test "a template's groups' members are added to the activity in D4H", ctx do
+    starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+    activity = activity_fixture(ctx.team, %{started_at: starts})
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
     mike = member_fixture(ctx.team, %{name: "Mike"})
     signed_up = member_fixture(ctx.team, %{name: "Signed up"})
@@ -380,7 +381,44 @@ defmodule Web.EquipmentLiveTest do
     refute_received {:d4h_write, _json}
 
     assert %ChangeSet{source: :template} = Repo.get_by!(ChangeSet, activity_id: activity.id)
-    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    flash = assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    assert flash["info"] == "1 member added."
+
+    # The copy has Mike at once, as No reply.
+    assert Repo.get_by!(App.Model.Attendance, activity_id: activity.id, member_id: mike.id).status ==
+             "requested"
+  end
+
+  # A template still logs a truck's hours after an activity, but adds nobody.
+  test "after the start, a template's items go and its groups are left out", ctx do
+    activity = activity_fixture(ctx.team)
+    managers = group_fixture(ctx.team, %{title: "Search Managers"})
+    group_member_fixture(managers, member_fixture(ctx.team))
+    template = template_fixture(ctx.team, "Command response", [{ctx.radio, 90}], [], [managers])
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+      case conn.method do
+        "GET" ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        "POST" ->
+          json = Jason.decode!(body)
+          send(test_pid, {:d4h_write, json})
+          Req.Test.json(conn, %{"id" => System.unique_integer([:positive])})
+      end
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    lv |> form("#template-lines") |> render_submit()
+
+    assert_received {:d4h_write, %{"equipmentId" => _}}
+    refute_received {:d4h_write, %{"status" => "REQUESTED"}}
+    flash = assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    assert flash["info"] == "1 item added. Its groups were left out: the activity has started."
   end
 
   test "a template's items go to D4H as usages on the activity", ctx do

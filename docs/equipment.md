@@ -3,7 +3,7 @@
 <!-- cspell:ignore SFSAR -->
 
 Equipment in SAR Duty (#271): a copy of a team's D4H items and the items on each
-activity. Templates, which add items, tags, and invites in one step, are in
+activity. Templates, which add items, tags, and members in one step, are in
 [templates.md](templates.md). This first step adds equipment to activities. Moving items, check-out, and
 checklists come later.
 

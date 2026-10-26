@@ -109,6 +109,12 @@ defmodule Service.FormatTest do
     end
   end
 
+  test "and_list joins names, the last after and" do
+    assert Format.and_list(["Dana Clark"]) == "Dana Clark"
+    assert Format.and_list(["Dana Clark", "Eli Haddad"]) == "Dana Clark and Eli Haddad"
+    assert Format.and_list(["A", "B", "C"]) == "A, B, and C"
+  end
+
   test "or_list joins names, the last after or" do
     assert Format.or_list(["Dana Clark"]) == "Dana Clark"
     assert Format.or_list(["Dana Clark", "Eli Haddad"]) == "Dana Clark or Eli Haddad"

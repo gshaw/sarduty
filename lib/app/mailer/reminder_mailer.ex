@@ -54,7 +54,7 @@ defmodule App.Mailer.ReminderMailer do
   end
 
   defp footer(from_name),
-    do: "#{from_name}, a team admin, sent this reminder. Reply to this email to reach them."
+    do: "#{from_name}, a team admin, sent this email. Reply to this email to reach them."
 
   defp text(activity, team, from_name, reply_urls, activity_url, reminders_url) do
     """

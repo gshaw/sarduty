@@ -749,7 +749,7 @@ defmodule App.Adapter.D4H do
 
   @doc """
   Adds a row for a member D4H has no row for: "ATTENDING" for a walk-in, or "REQUESTED"
-  to invite them (#162).
+  to add them as No reply (#162, #564).
   """
   def create_attendance(
         context,

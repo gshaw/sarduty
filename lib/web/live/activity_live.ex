@@ -240,6 +240,7 @@ defmodule Web.ActivityLive do
           batch={@batch}
           batch_sender={@batch_sender}
           next_round={@next_round}
+          adding={Activity.adding(@activity, @team_admin?, @now)}
         />
         <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
       </main>
@@ -434,6 +435,7 @@ defmodule Web.ActivityLive do
   attr :batch, :map, default: nil, doc: "the last reminders sent"
   attr :batch_sender, :string, default: nil
   attr :next_round, :any, default: nil, doc: "{round, plan} a team admin can send now"
+  attr :adding, :atom, default: nil, doc: "Activity.adding/3: :open, :published, or nil"
 
   # Who the activity invites, as counts that filter one table (#444). Before the start:
   # how each replied and when, New for the last 24 hours. From the start: D4H's
@@ -457,11 +459,22 @@ defmodule Web.ActivityLive do
         <:note :if={@batch}>
           <span id="members-batch">{batch_text(@batch, @batch_sender, @timezone)}</span>
         </:note>
-        <:action :if={@next_round}>
-          <.reminders_button activity={@activity} next_round={@next_round} />
+        <:action :if={@adding == :open or @next_round}>
+          <.button
+            :if={@adding == :open}
+            id="members-add"
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members"}
+          >
+            Add members
+          </.button>
+          <.reminders_button :if={@next_round} activity={@activity} next_round={@next_round} />
         </:action>
       </.heading_row>
-      <p :if={@members == []} id="members-empty" class="hint">
+      <%!-- From the copy, which can be 10 minutes old; the send refuses it too. --%>
+      <p :if={@adding == :published} id="members-published" class="hint mb-4">
+        Published, so nobody can be added. {D4H.unpublish_text(@activity.team)}
+      </p>
+      <p :if={@members == [] and @adding != :published} id="members-empty" class="hint">
         {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}
       </p>
       <.stat_switch
@@ -566,7 +579,7 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :next_round, :any, required: true
 
-  # Send N reminders, or Ask again (N) for round 2, after the browser's own confirm: an
+  # Email N members, or Email again (N) for round 2, after the browser's own confirm: an
   # email can't be taken back. It names who it skips and why.
   defp reminders_button(%{next_round: {round, plan}} = assigns) do
     assigns = assign(assigns, round: round, plan: plan, count: length(plan.send))
@@ -580,8 +593,8 @@ defmodule Web.ActivityLive do
       data-confirm={reminders_confirm(@round, @plan)}
     >
       {if @round == 1,
-        do: Format.count(@count, one: "Send 1 reminder", many: "Send %d reminders"),
-        else: "Ask again (#{Format.number(@count)})"}
+        do: Format.count(@count, one: "Email 1 member", many: "Email %d members"),
+        else: "Email again (#{Format.number(@count)})"}
     </.button>
     """
   end
@@ -602,7 +615,7 @@ defmodule Web.ActivityLive do
   end
 
   defp confirm_ask(2, count) do
-    Format.count(count, one: "Ask 1 member again?", many: "Ask %d members again?") <>
+    Format.count(count, one: "Email 1 member again?", many: "Email %d members again?") <>
       " They have not replied since their first reminder." <>
       " Each gets one more email from you, the last for this activity."
   end

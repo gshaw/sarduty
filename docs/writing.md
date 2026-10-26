@@ -137,7 +137,7 @@ dot: "Avery Chen · Standing", "Training night · Take attendance". The browser 
 
 ## Invitations and attendance
 
-D4H keeps an attendance row for each member invited to an activity. Name its status with
+D4H keeps an attendance row for each member added to an activity. Name its status with
 these words, which change when the activity starts:
 
 | D4H status | Before it starts | Once it starts |
@@ -159,6 +159,8 @@ member who signed up "attending".
   message and no thank-you line. Replies close when the activity starts.
 - **Members who are not invited** see nothing about invitations. Never "Not invited".
 - **On Take attendance**, members who signed up and have not arrived are "Yet to arrive".
+- **Adding and emailing.** A team admin adds members to an activity; adding sends nothing.
+  Email N members emails those with no reply.
 
 ## Glossary
 
@@ -208,7 +210,7 @@ and must not be used for it.
 | accepted, declined                  | approved, rejected, counted                    | A team admin's answer on a chore or a certificate. "Approved" is D4H's word for activities.          |
 | equipment                           | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
 | item                                | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
-| template                            | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups to invite, applied to an activity in one step.       |
+| template                            | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups whose members it adds, applied to an activity.       |
 | mileage report                      | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
 | ID card                             | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
 | verify                              | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
@@ -232,10 +234,11 @@ and must not be used for it.
 | away period                         | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                             | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
 | signed up for                       | registered, going, coming, attending, RSVP     | A member's yes to an activity that hasn't started: Attending in D4H. Hours count once it starts.     |
-| invite                              | request, ask, call out                         | Asking a member to come to an activity. They show as "No reply" until they answer.                   |
+| add (to an activity)                | invite, request                                | Putting a member on an activity, as No reply, so they can reply. SAR Duty emails nobody.             |
+| invitation                          | request                                        | What a member on an activity sees and replies to: Will you be there?                                 |
 | reply                               | RSVP, response, answer                         | A member's answer to an invitation: "I'll be there" or "Can't make it".                              |
 | can't make it                       | absent, declined, can't go, not going          | A member's no to an activity that hasn't started: Absent in D4H.                                     |
-| no reply                            | unconfirmed, pending, requested                | Invited, with no answer yet: Requested in D4H.                                                       |
+| no reply                            | unconfirmed, pending, requested                | On an activity, with no answer yet: Requested in D4H.                                                |
 | absent                              | can't make it, missing                         | D4H's status for a member who did not come to an activity that has started.                          |
 | log in, log out                     | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
 | sign up                             | register, create account, signup (as a verb)   | Making a new account.                                                                                |

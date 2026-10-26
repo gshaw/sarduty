@@ -21,9 +21,11 @@ defmodule App.Model.ChangeSet do
     belongs_to :proposed_by_user, User
     belongs_to :applied_by_user, User
     # :edit is a team admin changing one record of a team on SAR Duty Records
-    # (docs/records.md), or a group or who is in it on any team (#546). :member is a member changing their own details (#156).
-    # :equipment adds or removes items on an activity (#271). :template invites a template's groups
-    # to an activity (#162). :tags sets an activity's tags from its tags page (#323).
+    # (docs/records.md), or a group or who is in it on any team (#546). :member is a
+    # member changing their own details (#156). :equipment adds or removes items on an
+    # activity (#271). :template adds a template's groups to an activity (#162), and
+    # :invite the members a team admin picks on its Add members page (#564). :tags sets
+    # an activity's tags from its tags page (#323).
     # :attendance_import is only on old rows: the page that made them is gone (#424).
     # :chores sends a team admin's accepted chores as a D4H event (#341). :certificates
     # adds a member's certificate to D4H, as an award with the file on it (#493).
@@ -38,6 +40,7 @@ defmodule App.Model.ChangeSet do
         :member,
         :equipment,
         :template,
+        :invite,
         :tags,
         :chores,
         :certificates,
