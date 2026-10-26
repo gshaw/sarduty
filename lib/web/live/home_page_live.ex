@@ -96,15 +96,14 @@ defmodule Web.HomePageLive do
 
       <section class="home-section" id="home-coming">
         <div class="home-wrap home-measure">
-          <h2>Coming next</h2>
+          <h2>In active development</h2>
           <p class="home-lead">
-            We build SAR Duty with the teams that use it. Here is what we are working on now.
+            SAR Duty grows with the teams that use it. To get involved, email Andrew Wallwork or
+            Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
           </p>
-          <ul class="home-coming">
-            <li :for={{title, text} <- next()}>
-              <strong>{title}.</strong> {text}
-            </li>
-          </ul>
+          <p class="home-lead">
+            The code is open: <a href="https://github.com/gshaw/sarduty">SAR Duty on GitHub</a>.
+          </p>
         </div>
       </section>
 
@@ -137,17 +136,6 @@ defmodule Web.HomePageLive do
       {"Your membership",
        "Each member sees their year: their hours, their qualifications, their ID card, and what they signed up for."},
       {"Change history", "SAR Duty keeps a history of every change to a member or an activity."}
-    ]
-  end
-
-  # Planned, from the open issues. Things a team would notice, not the plumbing.
-  defp next do
-    [
-      {"People needed", "Say how many members an activity needs, and see \"6 signed up of 10\"."},
-      {"Calendar feed", "Each member's activities in their own calendar app."},
-      {"Checklists", "Scan a sticker on a truck to run its pre-trip check."},
-      {"Home safe", "Members say when they are on the way and when they get home."},
-      {"Automatic groups", "Groups that keep themselves in step with their rules."}
     ]
   end
 
