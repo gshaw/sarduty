@@ -86,12 +86,14 @@ defmodule Web.MeActivitiesLive do
     |> ActivityMap.build({520, 380}, padding: 24)
   end
 
+  # Other only when the year has some: most teams tag everything primary or secondary.
   defp bars(hours, other) do
     for {label, minutes} <- [
           {"Primary", hours.primary_minutes},
           {"Secondary", hours.secondary_minutes},
           {"Other", other}
         ],
+        label != "Other" or minutes > 0,
         do: %{label: label, value: minutes, text: Format.duration(minutes)}
   end
 
