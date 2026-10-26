@@ -17,7 +17,10 @@ defmodule App.Operation.ProposeAttendanceChangesTest do
   @sam %Member{id: 11, d4h_member_id: 111, name: "Sam Ortiz"}
   @members %{10 => @mei, 11 => @sam}
 
+  @now ~U[2026-10-10 00:00:00Z]
+
   @sam_absent %Attendance{
+    id: 1011,
     member_id: 11,
     d4h_attendance_id: 5011,
     status: "absent",
@@ -25,8 +28,8 @@ defmodule App.Operation.ProposeAttendanceChangesTest do
     finished_at: ~U[2026-10-03 04:00:00Z]
   }
 
-  defp plan(requests, attendances \\ [@sam_absent]),
-    do: ProposeAttendanceChanges.plan(@activity, attendances, @members, requests)
+  defp plan(requests, attendances \\ [@sam_absent], now \\ @now),
+    do: ProposeAttendanceChanges.plan(@activity, attendances, @members, requests, now)
 
   test "a member with no row is added with the activity's times" do
     {[row], []} = plan([%{"member_id" => 10, "status" => "attended", "reason" => "Sheet row 3"}])
@@ -81,9 +84,9 @@ defmodule App.Operation.ProposeAttendanceChangesTest do
 
     assert problems == [
              "Sam Ortiz is already absent. Nothing to change.",
-             "Mei Chen is already absent. Nothing to change.",
+             "Mei Chen has no row on this activity to mark absent.",
              "No member 99 on this team.",
-             "Status must be attended or absent, not \"maybe\".",
+             "The activity has started. Give attended, absent, or remove, not \"maybe\".",
              "Times must be ISO 8601 with a time zone, not \"7pm\"."
            ]
   end
@@ -111,5 +114,48 @@ defmodule App.Operation.ProposeAttendanceChangesTest do
       ])
 
     assert problem =~ "The end must be after the start"
+  end
+
+  test "a row named by its attendance id, even a member's second" do
+    second = %Attendance{@sam_absent | id: 1012, d4h_attendance_id: 5012, status: "attending"}
+
+    {[row], []} = plan([%{"attendance_id" => 1012, "status" => "absent"}], [@sam_absent, second])
+    assert row.d4h_record_id == 5012
+
+    {[], [problem]} = plan([%{"member_id" => 11, "status" => "attended"}], [@sam_absent, second])
+    assert problem =~ "has 2 rows on this activity"
+  end
+
+  test "remove takes a row off, and remembers what it was" do
+    {[row], []} = plan([%{"attendance_id" => 1011, "status" => "remove"}])
+
+    assert row.action == :delete_attendance
+    assert row.d4h_record_id == 5011
+    assert row.old_value["status"] == "absent"
+
+    {[], [problem]} = plan([%{"member_id" => 10, "status" => "remove"}])
+    assert problem == "Mei Chen has no row on this activity to remove."
+  end
+
+  test "before the start, the statuses are the reply words" do
+    before = ~U[2026-10-01 00:00:00Z]
+
+    {[added, signed_up], []} =
+      plan(
+        [
+          %{"member_id" => 10, "status" => "no_reply"},
+          %{"member_id" => 11, "status" => "signed_up"}
+        ],
+        [@sam_absent],
+        before
+      )
+
+    assert added.action == :create_attendance
+    assert added.new_value["status"] == "REQUESTED"
+    assert signed_up.action == :update_attendance
+    assert signed_up.new_value["status"] == "ATTENDING"
+
+    {[], [problem]} = plan([%{"member_id" => 10, "status" => "attended"}], [], before)
+    assert problem =~ "has not started"
   end
 end

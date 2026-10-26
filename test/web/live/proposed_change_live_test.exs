@@ -18,10 +18,17 @@ defmodule Web.ProposedChangeLiveTest do
         user,
         activity.id,
         [%{"member_id" => mei.id, "status" => "attended", "reason" => "Sheet row 3"}],
-        "Sign-in sheet for Rope rescue"
+        "Sign-in sheet for Rope rescue",
+        DateTime.utc_now()
       )
 
-    %{conn: log_in_user(conn, user), team: team, change_set: change_set}
+    %{
+      conn: log_in_user(conn, user),
+      team: team,
+      user: user,
+      activity: activity,
+      change_set: change_set
+    }
   end
 
   test "lists sets waiting for review", ctx do
@@ -63,5 +70,31 @@ defmodule Web.ProposedChangeLiveTest do
     lv |> element("#discard") |> render_click()
 
     assert ChangeSet.count_waiting(ctx.team.id) == 0
+  end
+
+  test "a remove and a change of status read in the glossary's words", ctx do
+    sam = member_fixture(ctx.team, %{name: "Sam Ortiz"})
+    pat = member_fixture(ctx.team, %{name: "Pat Lee"})
+    row = attendance_fixture(ctx.activity, sam, %{status: "absent"})
+    attendance_fixture(ctx.activity, pat, %{status: "absent"})
+
+    {:ok, change_set, []} =
+      ProposeAttendanceChanges.call(
+        ctx.team,
+        ctx.user,
+        ctx.activity.id,
+        [
+          %{"attendance_id" => row.id, "status" => "remove"},
+          %{"member_id" => pat.id, "status" => "attended"}
+        ],
+        "Fixes",
+        DateTime.utc_now()
+      )
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/proposed-changes/#{change_set.id}")
+    [remove, change] = change_set.rows
+
+    assert has_element?(lv, "#row-#{remove.id}", "Remove: absent")
+    assert has_element?(lv, "#row-#{change.id}", "Absent to attended")
   end
 end

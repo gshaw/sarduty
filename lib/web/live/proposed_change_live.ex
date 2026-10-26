@@ -2,6 +2,7 @@ defmodule Web.ProposedChangeLive do
   use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
+  alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Operation.ApplyProposedChangeSet
 
@@ -145,7 +146,7 @@ defmodule Web.ProposedChangeLive do
           <label for={"select-#{row.id}"}>{row.member && row.member.name}</label>
         </:col>
         <:col :let={row} label="Change">
-          {describe(row, @current_team.timezone)}
+          {describe(row, @change_set, @current_team.timezone)}
           <div :if={row.reason} class="hint">{row.reason}</div>
         </:col>
         <:col :let={row} :if={!ChangeSet.waiting?(@change_set)} label="Result">
@@ -175,21 +176,43 @@ defmodule Web.ProposedChangeLive do
     """
   end
 
-  defp describe(row, tz) do
-    status = status(row.new_value["status"])
+  # One change in the glossary's words, which change when the activity starts (#595).
+  defp describe(row, change_set, tz) do
+    status = status(row.new_value["status"], change_set)
     times = times(row.new_value["starts_at"], row.new_value["ends_at"], tz)
 
     case row.action do
-      :create_attendance -> "Add as #{status}#{times}"
-      :update_attendance -> "#{status(row.old_value["status"])} to #{status}#{times}"
+      :create_attendance ->
+        "Add as #{status}#{times}"
+
+      :update_attendance ->
+        old = status(row.old_value["status"], change_set)
+
+        if old == status,
+          do: "New times#{times}",
+          else: "#{String.capitalize(old)} to #{status}#{times}"
+
+      :delete_attendance ->
+        old_times = times(row.old_value["starts_at"], row.old_value["ends_at"], tz)
+        "Remove: #{status(row.old_value["status"], change_set)}#{old_times}"
     end
   end
 
-  defp status(nil), do: "not listed"
+  defp status(nil, _change_set), do: "not listed"
 
-  defp status(status) do
-    case String.downcase(status) do
-      "attending" -> "attended"
+  defp status(status, change_set) do
+    started_at = change_set.activity && change_set.activity.started_at
+    row = %{status: String.downcase(status), started_at: nil}
+
+    case Attendance.status_word(
+           row,
+           %{started_at: started_at || DateTime.utc_now()},
+           DateTime.utc_now()
+         ) do
+      :signed_up -> "signed up"
+      :cant_make_it -> "can't make it"
+      :no_reply -> "no reply"
+      word when is_atom(word) -> Atom.to_string(word)
       other -> other
     end
   end

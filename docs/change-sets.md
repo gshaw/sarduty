@@ -26,7 +26,12 @@ new kind of write is a new row action there, not a new call from a page or an op
   ([ApplyProposedChangeSet](../lib/app/operation/apply_proposed_change_set.ex)). Cleared
   rows are recorded as skipped, "Not selected". A set can be discarded instead. An agent
   can never apply a set, and it can't propose group or award changes yet: group rules
-  own their groups, and awards wait on #174's step 4.
+  own their groups, and awards wait on #174's step 4. Its statuses use the glossary's
+  words (#595): no reply, signed up, or can't make it before the activity starts, and
+  attended or absent after. It names a row by its attendance id, so a member's second
+  row is reachable (#519), and it can take a row off (`delete_attendance`). Sending
+  checks that row is still there as proposed, then deletes it from the copy at once,
+  since the sync finds deletes on an untouched activity only one month per round.
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or
