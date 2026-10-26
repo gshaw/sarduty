@@ -539,6 +539,19 @@ defmodule App.DataFixtures do
     activity
   end
 
+  @doc """
+  `team`'s chore event for `activity`'s D4H id, which makes it a chore activity (#575)
+  when the activity is the team's own.
+  """
+  def chore_event_fixture(%Team{} = team, %Activity{} = activity) do
+    Repo.insert!(%ChoreEvent{
+      team_id: team.id,
+      chore_category_id: chore_category_fixture(team).id,
+      month: Date.beginning_of_month(DateTime.to_date(activity.started_at)),
+      d4h_activity_id: activity.d4h_activity_id
+    })
+  end
+
   @doc "A certificate the member sent (#493), waiting, with a small PDF as its file."
   def certificate_fixture(%Member{} = member, %Qualification{} = qualification, attrs \\ %{}) do
     certificate =

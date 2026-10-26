@@ -18,10 +18,18 @@ defmodule App.Operation.CountTaxCreditHoursTest do
         started_at: started_at,
         finished_at: finished_at,
         duration_in_minutes: duration,
-        tags: tags
+        tags: tags,
+        chore: false
       },
       attrs
     )
+  end
+
+  # A chore row of `hours`, from 00:00 on October 1 in Vancouver, as BuildChoreEvent
+  # sends every chore row.
+  defp chore(hours, tags \\ @primary) do
+    start = ~U[2026-10-01 07:00:00Z]
+    row(start, DateTime.add(start, hours * 3600), tags, %{chore: true})
   end
 
   defp hours(rows, year \\ 2025, member_id \\ 1) do
@@ -199,5 +207,55 @@ defmodule App.Operation.CountTaxCreditHoursTest do
 
     assert minutes(rows, 2025) == {240, 0}
     assert minutes(rows, 2026) == {0, 0}
+  end
+
+  describe "chores (#584)" do
+    test "chores in two categories in one month both count in full" do
+      # Both start at 00:00 on October 1, so on a timeline the shorter would vanish.
+      assert minutes([chore(45), chore(10)], 2026) == {55 * 60, 0}
+    end
+
+    test "a hand-made tracker that runs into a month's chores counts beside them" do
+      # 00:00 September 30 to 12:00 October 1 in Vancouver: 36 hours, 12 of them on
+      # October 1, where the chores start.
+      tracker = row(~U[2026-09-30 07:00:00Z], ~U[2026-10-01 19:00:00Z], @primary)
+
+      assert minutes([tracker, chore(45)], 2026) == {81 * 60, 0}
+    end
+
+    test "a chore counts beside an activity at the same time" do
+      training = row(~U[2026-10-01 07:00:00Z], ~U[2026-10-01 10:00:00Z], @primary)
+
+      assert minutes([training, chore(4)], 2026) == {7 * 60, 0}
+    end
+
+    test "a secondary chore keeps its hours beside a primary activity" do
+      training = row(~U[2026-10-01 07:00:00Z], ~U[2026-10-01 10:00:00Z], @primary)
+
+      assert minutes([training, chore(4, @secondary)], 2026) == {3 * 60, 4 * 60}
+    end
+
+    test "a chore with no times counts D4H's duration" do
+      untimed =
+        row(~U[2026-10-01 07:00:00Z], nil, @primary, %{chore: true, duration_in_minutes: 90})
+
+      assert minutes([untimed, chore(2)], 2026) == {90 + 2 * 60, 0}
+    end
+
+    test "rows on a team's own zero-length activity still merge" do
+      # Not a chore event, so its made-up time can't be told from a real one.
+      start = ~U[2026-10-01 07:00:00Z]
+      tracker = row(start, DateTime.add(start, 10 * 3600), @primary)
+      training = row(start, DateTime.add(start, 4 * 3600), @primary)
+
+      assert minutes([tracker, training], 2026) == {10 * 60, 0}
+    end
+
+    test "activities that overlap still count once beside chores" do
+      training = row(~U[2026-10-03 01:00:00Z], ~U[2026-10-03 04:00:00Z], @primary)
+      callout = row(~U[2026-10-03 03:00:00Z], ~U[2026-10-03 06:00:00Z], @primary)
+
+      assert minutes([training, callout, chore(2)], 2026) == {5 * 60 + 2 * 60, 0}
+    end
   end
 end

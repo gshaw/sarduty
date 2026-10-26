@@ -21,7 +21,8 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
       started_at: started_at,
       finished_at: finished_at,
       duration_in_minutes: 0,
-      tags: tags
+      tags: tags,
+      chore: false
     }
   end
 
