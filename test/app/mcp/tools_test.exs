@@ -9,7 +9,7 @@ defmodule App.MCP.ToolsTest do
     assert names == Enum.uniq(names)
 
     writes = for t <- Tools.definitions(), !t["annotations"]["readOnlyHint"], do: t["name"]
-    assert writes == ["propose_attendance_changes", "propose_activity_tags"]
+    assert writes == ["propose_attendance_changes", "propose_activity_tags", "propose_chores"]
   end
 
   # An agent may propose a change set, never apply one (#216).
@@ -19,6 +19,8 @@ defmodule App.MCP.ToolsTest do
       refute source =~ "ApplyChangeSet", "#{path} mentions ApplyChangeSet"
       refute source =~ "ApplyProposedChangeSet", "#{path} mentions ApplyProposedChangeSet"
       refute source =~ "Adapter.D4H", "#{path} mentions the D4H adapter"
+      refute source =~ "SendChores", "#{path} mentions SendChores"
+      refute source =~ "SaveChore.", "#{path} mentions SaveChore"
     end
   end
 

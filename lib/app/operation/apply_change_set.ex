@@ -38,6 +38,9 @@ defmodule App.Operation.ApplyChangeSet do
     :delete_equipment_item
   ]
 
+  # SAR Duty's own rows, which its caller applies: a chore an agent proposes (#595).
+  @sar_duty_rows [:add_chore]
+
   # A whiteboard note (#515) is changed as it was on the page; nothing is read first.
   @whiteboard [:create_whiteboard_note, :update_whiteboard_note, :delete_whiteboard_note]
 
@@ -73,7 +76,7 @@ defmodule App.Operation.ApplyChangeSet do
   defp apply_rows(team, d4h, change_set, current, now, opts) do
     {rows, _created} =
       change_set.rows
-      |> Enum.filter(&(&1.status in [:proposed, :failed]))
+      |> Enum.filter(&(&1.status in [:proposed, :failed] and &1.action not in @sar_duty_rows))
       |> Enum.map_reduce(created(change_set.rows), fn row, created ->
         row = with_created(row, created)
 

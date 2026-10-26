@@ -16,12 +16,14 @@ defmodule Web.ProposedChangeLive do
 
   defp load(socket, id) do
     change_set = ChangeSet.find!(socket.assigns.current_team, id)
-    waiting = for row <- change_set.rows, row.status == :proposed, do: row.id
+    # A chore that matches one logged already starts cleared, with why (#595).
+    waiting = for row <- change_set.rows, row.status == :proposed, !check(row), do: row.id
 
     assign(socket,
       page_title: change_set.summary || "Attendance changes",
       change_set: change_set,
       tags?: Enum.any?(change_set.rows, &(&1.action == :set_activity_tags)),
+      chores?: Enum.any?(change_set.rows, &(&1.action == :add_chore)),
       selected: MapSet.new(waiting)
     )
   end
@@ -36,14 +38,7 @@ defmodule Web.ProposedChangeLive do
 
     case ApplyProposedChangeSet.call(team, change_set, user, selected_ids(params), now) do
       {:ok, rows} ->
-        applied = Enum.count(rows, &(&1.status == :applied))
-        not_sent = length(rows) - applied
-        kind = if not_sent == 0, do: :info, else: :error
-
-        message =
-          "Sent #{count_changes(applied)}." <>
-            if(not_sent > 0, do: " #{count_changes(not_sent)} did not go through.", else: "")
-
+        {kind, message} = sent_flash(rows)
         {:noreply, socket |> put_flash(kind, message) |> load(change_set.id)}
 
       {:error, reason} ->
@@ -71,6 +66,22 @@ defmodule Web.ProposedChangeLive do
         _ -> []
       end
     end)
+  end
+
+  defp sent_flash(rows) do
+    applied = Enum.count(rows, &(&1.status == :applied))
+    not_sent = length(rows) - applied
+    kind = if not_sent == 0, do: :info, else: :error
+
+    done =
+      if Enum.any?(rows, &(&1.action == :add_chore)),
+        do: "Accepted #{count_chores(applied)}.",
+        else: "Sent #{count_changes(applied)}."
+
+    message =
+      done <> if(not_sent > 0, do: " #{count_changes(not_sent)} did not go through.", else: "")
+
+    {kind, message}
   end
 
   defp count_changes(n), do: Service.Format.count(n, one: "%d change", many: "%d changes")
@@ -121,7 +132,11 @@ defmodule Web.ProposedChangeLive do
       </div>
     </dl>
 
-    <p :if={ChangeSet.waiting?(@change_set) and not @tags?} class="lead">
+    <p :if={ChangeSet.waiting?(@change_set) and @chores?} class="lead">
+      Accepting a chore counts it and sends it. Each chore category gets one activity a month.
+      Clear the box next to any chore you do not want.
+    </p>
+    <p :if={ChangeSet.waiting?(@change_set) and not @tags? and not @chores?} class="lead">
       Clear the box next to any change you do not want. SAR Duty checks the attendance again
       before it sends, and skips a change if someone changed that attendance first.
     </p>
@@ -153,6 +168,9 @@ defmodule Web.ProposedChangeLive do
         <:col :let={row} label="Change">
           {describe(row, @change_set, @current_team.timezone)}
           <div :if={row.reason} class="hint">{row.reason}</div>
+          <.warning_text :if={check(row) && ChangeSet.waiting?(@change_set)}>
+            {check(row)}
+          </.warning_text>
         </:col>
         <:col :let={row} :if={!ChangeSet.waiting?(@change_set)} label="Result">
           {result(row)}
@@ -166,7 +184,9 @@ defmodule Web.ProposedChangeLive do
           disabled={MapSet.size(@selected) == 0 || is_nil(@current_team.d4h_access_key)}
           phx-disable-with="Sending…"
         >
-          Send {count_changes(MapSet.size(@selected))}
+          {if @chores?,
+            do: "Accept #{count_chores(MapSet.size(@selected))}",
+            else: "Send #{count_changes(MapSet.size(@selected))}"}
         </.button>
         <.button
           id="discard"
@@ -197,6 +217,11 @@ defmodule Web.ProposedChangeLive do
           do: "New times#{times}",
           else: "#{String.capitalize(old)} to #{status}#{times}"
 
+      :add_chore ->
+        v = row.new_value
+        date = v["date"] |> Date.from_iso8601!() |> Service.Format.date_short()
+        "#{v["category"]}, #{date}, #{Service.Format.duration(v["minutes"])}: #{v["description"]}"
+
       :set_activity_tags ->
         tags_change(row.new_value)
 
@@ -205,6 +230,11 @@ defmodule Web.ProposedChangeLive do
         "Remove: #{status(row.old_value["status"], change_set)}#{old_times}"
     end
   end
+
+  defp check(%{action: :add_chore, new_value: %{"check" => check}}), do: check
+  defp check(_row), do: nil
+
+  defp count_chores(n), do: Service.Format.count(n, one: "%d chore", many: "%d chores")
 
   defp tags_change(new_value) do
     [

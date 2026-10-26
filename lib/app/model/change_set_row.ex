@@ -53,7 +53,10 @@ defmodule App.Model.ChangeSetRow do
         :delete_equipment_item,
         :create_whiteboard_note,
         :update_whiteboard_note,
-        :delete_whiteboard_note
+        :delete_whiteboard_note,
+        # SAR Duty's own row, not a D4H write: a chore an AI agent proposes (#595).
+        # ApplyProposedChangeSet makes the chore; the chore send takes it to D4H.
+        :add_chore
       ]
 
     field :d4h_record_id, :integer

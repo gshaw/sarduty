@@ -4,9 +4,12 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
   import App.DataFixtures
 
   alias App.Model.ChangeSet
+  alias App.Model.Chore
+  alias App.Model.ChoreEvent
   alias App.Operation.ApplyProposedChangeSet
   alias App.Operation.ProposeActivityTags
   alias App.Operation.ProposeAttendanceChanges
+  alias App.Operation.ProposeChores
 
   setup do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})
@@ -196,6 +199,54 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
       assert skipped.error == "Tags cannot be changed once the activity is published."
       assert App.Repo.reload!(draft).tags == ["Primary Hours"]
       assert App.Repo.reload!(later).tags == []
+    end
+  end
+
+  describe "chores" do
+    test "the ticked chores are added, accepted by the team admin, and sent", ctx do
+      team =
+        ctx.team
+        |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
+        |> App.Repo.update!()
+
+      category = chore_category_fixture(team, %{title: "Office admin"})
+      today = Service.Period.today(DateTime.utc_now(), team.timezone)
+
+      chore =
+        &%{
+          "member_id" => &1.id,
+          "chore_category_id" => category.id,
+          "date" => Date.to_iso8601(today),
+          "minutes" => 60,
+          "description" => "Radios"
+        }
+
+      {:ok, change_set, [], []} =
+        ProposeChores.call(
+          team,
+          ctx.user,
+          [chore.(ctx.mei), chore.(ctx.sam)],
+          "Work party",
+          DateTime.utc_now()
+        )
+
+      # The chore send can't reach D4H here; the chores wait to send, as on the Chores page.
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 503, ""))
+      change_set = ChangeSet.find!(team, change_set.id)
+      [mei_row, sam_row] = change_set.rows
+
+      {:ok, rows} =
+        ApplyProposedChangeSet.call(team, change_set, ctx.user, [mei_row.id], DateTime.utc_now())
+
+      assert [%{action: :add_chore, status: :applied}] = rows
+      [added] = App.Repo.all(Chore)
+
+      assert {added.member_id, added.status, added.decided_by_user_id} ==
+               {ctx.mei.id, :accepted, ctx.user.id}
+
+      assert added.change_set_row_id == mei_row.id
+      assert App.Repo.reload!(sam_row).status == :skipped
+      assert ChoreEvent.count_to_send(team.id) == 1
     end
   end
 end

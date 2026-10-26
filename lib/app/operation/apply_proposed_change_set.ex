@@ -6,9 +6,13 @@ defmodule App.Operation.ApplyProposedChangeSet do
   alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
+  alias App.Model.Chore
+  alias App.Model.ChoreCategory
+  alias App.Model.ChoreEvent
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.ApplyChangeSet
+  alias App.Operation.SendChores
   alias App.Repo
 
   # A team admin applies an agent's change set (#216), with the rows they ticked. The
@@ -40,12 +44,59 @@ defmodule App.Operation.ApplyProposedChangeSet do
       {:ok, rows} ->
         drop_removed_rows(team, rows)
         copy_tags(team, rows)
-        {:ok, rows}
+        {:ok, rows ++ add_chores(team, change_set, user, now)}
 
       {:error, _reason} = error ->
         Enum.each(skipped, &ChangeSetRow.reset!/1)
         error
     end
+  end
+
+  # The ticked chores an agent proposed (#595) become chores, accepted by this team admin,
+  # then go to D4H like any accepted chore. ApplyChangeSet leaves these rows alone: they
+  # are SAR Duty's own.
+  defp add_chores(team, change_set, user, now) do
+    rows =
+      for row <- Repo.preload(change_set, :rows, force: true).rows,
+          row.action == :add_chore and row.status == :proposed,
+          do: row
+
+    if rows == [] do
+      []
+    else
+      today = Service.Period.today(now, team.timezone)
+      open = team.id |> ChoreCategory.get_open() |> Enum.map(& &1.id)
+
+      {:ok, recorded} =
+        Repo.transaction(fn ->
+          recorded = Enum.map(rows, &add_chore(team, &1, {open, today}, user, now))
+          :ok = ChoreEvent.place!(team.id)
+          recorded
+        end)
+
+      if Enum.any?(recorded, &(&1.status == :applied)), do: SendChores.call(team, user, now)
+      recorded
+    end
+  end
+
+  defp add_chore(team, row, {open, today}, user, now) do
+    params = Map.take(row.new_value, ~w(date minutes chore_category_id description))
+
+    inserted =
+      %Chore{team_id: team.id, member_id: row.member_id, change_set_row_id: row.id}
+      |> Chore.build_changeset(params, open, today, :team_admin)
+      |> Ecto.Changeset.change(status: :accepted, decided_by_user_id: user.id, decided_at: now)
+      |> Repo.insert()
+
+    case inserted do
+      {:ok, _chore} -> ChangeSetRow.record!(row, {:applied, nil}, now)
+      {:error, changeset} -> ChangeSetRow.record!(row, {:skipped, first_error(changeset)}, now)
+    end
+  end
+
+  defp first_error(changeset) do
+    {_field, {message, _opts}} = hd(changeset.errors)
+    "#{message}. Propose it again."
   end
 
   # An activity's new tags show before the next refresh, as on its Change tags page. A
