@@ -100,6 +100,8 @@ defmodule Web do
     quote do
       use Phoenix.LiveView, layout: unquote(layout)
 
+      on_mount Web.StaticChanged
+
       @doc false
       def __team_access__, do: unquote(access)
 

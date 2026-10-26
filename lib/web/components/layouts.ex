@@ -35,7 +35,7 @@ defmodule Web.Layouts do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} />
     <main role="main" class="under-site-bar mb-8">
-      <.flash_group flash={@flash} />
+      <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
       {@inner_content}
     </main>
     <.site_footer current_user={@current_user} />
@@ -82,7 +82,7 @@ defmodule Web.Layouts do
             team={@current_team}
             team_admin?={@team_admin?}
           />
-          <.flash_group flash={@flash} />
+          <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
           {@inner_content}
         </main>
       </div>
@@ -94,7 +94,7 @@ defmodule Web.Layouts do
           team={@current_team}
           team_admin?={@team_admin?}
         />
-        <.flash_group flash={@flash} />
+        <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
         {@inner_content}
       </main>
     <% end %>
@@ -155,7 +155,7 @@ defmodule Web.Layouts do
       </div>
     </header>
     <main role="main" class="max-w-md mx-auto px-4 pt-6 pb-8">
-      <.flash_group flash={@flash} />
+      <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
       {@inner_content}
     </main>
     <footer id="verify-footer" class="max-w-md mx-auto px-4 pb-8 text-center text-xs text-text-muted">
@@ -182,7 +182,7 @@ defmodule Web.Layouts do
     ~H"""
     <.main_nav_bar {nav_assigns(assigns)} size={@size} />
     <main role="main" class={["m-auto px-2 pt-16 mb-8", column_width(@size)]}>
-      <.flash_group flash={@flash} />
+      <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
       {@inner_content}
     </main>
     <.dev_footer size={@size} />
@@ -564,11 +564,23 @@ defmodule Web.Layouts do
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
 
+  attr :static_changed_url, :string,
+    default: nil,
+    doc: "the page to reload when SAR Duty changed since it loaded, from Web.StaticChanged"
+
   def flash_group(assigns) do
     ~H"""
     <div id={@id} class="toasts">
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
+      <.flash
+        :if={@static_changed_url}
+        id="static-changed"
+        kind={:info}
+        title="SAR Duty has a new version"
+      >
+        <.a id="static-changed-reload" href={@static_changed_url}>Reload this page</.a> to use it.
+      </.flash>
       <.flash
         id="client-error"
         kind={:error}
