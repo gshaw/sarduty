@@ -50,7 +50,7 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   end
 
   test "rejects a key D4H doesn't recognize" do
-    changeset = check({:error, "Unable to determine team ID"})
+    changeset = check({:error, :refused})
 
     assert {"Paste the key again. D4H refused this one.", _} =
              changeset.errors[:new_d4h_access_key]

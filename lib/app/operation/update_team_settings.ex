@@ -15,7 +15,8 @@ defmodule App.Operation.UpdateTeamSettings do
 
     changeset =
       if changeset.valid? and new_key do
-        check_new_key(changeset, team, fetch_whoami(team, new_key), DateTime.utc_now())
+        whoami = D4H.fetch_whoami(access_key: new_key, api_host: team.d4h_api_host)
+        check_new_key(changeset, team, whoami, DateTime.utc_now())
       else
         changeset
       end
@@ -57,7 +58,7 @@ defmodule App.Operation.UpdateTeamSettings do
     )
   end
 
-  def check_new_key(changeset, team, {:error, _reason}, _now) do
+  def check_new_key(changeset, team, {:error, :refused}, _now) do
     add_error(
       changeset,
       :new_d4h_access_key,
@@ -71,11 +72,5 @@ defmodule App.Operation.UpdateTeamSettings do
       user_id: user && user.id,
       data: %{sar_duty_account: Team.key_owner_is_sar_duty?(team)}
     )
-  end
-
-  defp fetch_whoami(team, access_key) do
-    D4H.fetch_whoami(access_key: access_key, api_host: team.d4h_api_host)
-  rescue
-    Req.TransportError -> {:error, :unreachable}
   end
 end

@@ -49,6 +49,30 @@ defmodule App.Adapter.D4HTest do
     end
   end
 
+  describe "fetch_whoami (#537)" do
+    defp whoami, do: D4H.fetch_whoami(access_key: "key", api_host: "api.ca.d4h.org")
+
+    test "a 401, a 403, or no team is a refused key" do
+      for status <- [401, 403] do
+        Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, status, ""))
+        assert whoami() == {:error, :refused}
+      end
+
+      Req.Test.stub(App.Adapter.D4H, &Req.Test.json(&1, %{"members" => []}))
+      assert whoami() == {:error, :refused}
+    end
+
+    test "an outage is D4H not answering, not a bad key" do
+      for status <- [500, 503] do
+        Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, status, ""))
+        assert whoami() == {:error, :unreachable}
+      end
+
+      Req.Test.stub(App.Adapter.D4H, &Req.Test.transport_error(&1, :timeout))
+      assert whoami() == {:error, :unreachable}
+    end
+  end
+
   test "a team with no profile image has no logo to fetch" do
     Req.Test.stub(App.Adapter.D4H, fn conn ->
       assert conn.request_path == "/v3/team/1/documents"
