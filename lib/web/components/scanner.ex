@@ -4,7 +4,8 @@ defmodule Web.Components.Scanner do
   while it scans, with Stop scanning and Switch camera under it, and the Sound switch. The
   QRScanner hook (assets/js/qr_scanner.js) sends each read to the LiveView as a "scanned"
   event. With `reader={:barcode}` it reads
-  equipment barcodes instead. See /styles/qr-scanner.
+  equipment barcodes instead. Each start swaps the video below for a new one the hook
+  makes, which an iPhone draws. See /styles/qr-scanner.
   """
   use Phoenix.Component
 

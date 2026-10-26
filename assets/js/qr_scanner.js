@@ -72,12 +72,33 @@ export const QRScanner = {
     } finally {
       this.starting = false
     }
+    this.freshVideo()
     this.video.srcObject = this.stream
     this.video.style.transform = this.facing === "user" ? "scaleX(-1)" : ""
-    await this.video.play()
+    try {
+      await this.video.play()
+    } catch (_error) {
+      this.stop()
+      this.pushEvent("scan_failed", {})
+      return
+    }
     this.state.dataset.scanning = "true"
     this.showFlip()
     this.tick()
+  },
+
+  // Each start plays into a new video made here. Come from another page and LiveView
+  // builds the page's video in a <template>, and an iPhone then plays the camera into it
+  // without drawing the picture. And a video that played one camera keeps its size when
+  // Switch camera gives it the other, so the picture no longer fills the width
+  // (2026-10-26).
+  freshVideo() {
+    const video = document.createElement("video")
+    video.className = this.video.className
+    video.muted = true
+    video.playsInline = true
+    this.video.replaceWith(video)
+    this.video = video
   },
 
   // Cameras are listed only once the page may use one, so this runs after the first.
