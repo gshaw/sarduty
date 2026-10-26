@@ -205,6 +205,18 @@ defmodule Web.CertificateLiveTest do
     image = photo |> CertificateFile.bytes() |> Image.from_binary!()
     assert {Image.width(image), Image.height(image)} == {30, 40}
     refute image_src(lv) == src
+
+    # Decided since the page opened: it opens again, saying so.
+    photo |> Ecto.Changeset.change(status: :declined) |> Repo.update!()
+    path = ~p"/teams/#{ctx.team}/certificates/#{photo.id}"
+
+    {:ok, lv, _html} =
+      lv
+      |> element("#certificate-rotate-right")
+      |> render_click()
+      |> follow_redirect(ctx.conn, path)
+
+    assert render(lv) =~ "Another team admin has decided this certificate."
   end
 
   defp image_src(lv) do

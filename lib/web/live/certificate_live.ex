@@ -396,7 +396,8 @@ defmodule Web.CertificateLive do
           title={"#{@certificate.member.name}'s certificate"}
         ></iframe>
       </div>
-      <%!-- A photo the camera held sideways turns before it goes to D4H. --%>
+      <%!-- A photo the camera held sideways turns before it goes to D4H.
+        cspell:ignore uturn -- Heroicons' arrow-uturn icons; it has no rotate icon --%>
       <.form_actions
         :if={@certificate.status == :waiting and @certificate.content_type == "image/jpeg"}
         class="mt-3"
@@ -405,17 +406,15 @@ defmodule Web.CertificateLive do
           id="certificate-rotate-left"
           phx-click="rotate"
           phx-value-direction="left"
-          phx-disable-with="Rotating…"
         >
-          Rotate left
+          <.icon name="hero-arrow-uturn-left-mini" /> Rotate left
         </.button>
         <.button
           id="certificate-rotate-right"
           phx-click="rotate"
           phx-value-direction="right"
-          phx-disable-with="Rotating…"
         >
-          Rotate right
+          <.icon name="hero-arrow-uturn-right-mini" /> Rotate right
         </.button>
       </.form_actions>
       <p class="action mt-2">
@@ -517,8 +516,13 @@ defmodule Web.CertificateLive do
            }
          )}
 
+      # The page opens again rather than reading D4H here, so the buttons need no
+      # phx-disable-with, which would drop their icons (LiveView restores only text).
       {:error, :decided} ->
-        {:noreply, decided(socket)}
+        socket
+        |> put_flash(:error, "Another team admin has decided this certificate.")
+        |> push_navigate(to: ~p"/teams/#{team}/certificates/#{certificate.id}")
+        |> then(&{:noreply, &1})
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "SAR Duty cannot turn this file.")}
