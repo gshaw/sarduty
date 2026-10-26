@@ -76,19 +76,11 @@ that title.
   follows. The description is HTML in D4H: the form edits paragraphs and line breaks as
   text ([Service.DescriptionText](../lib/service/description_text.ex)) and sends one only
   when it changed. A description with other HTML, such as links or lists, is shown read
-  only, so SAR Duty never flattens it.
+  only, so SAR Duty never flattens it. `reference` is D4H's to give out, so the form
+  leaves it alone. The place goes in `address.street` with the other parts empty, since
+  SAR Duty shows them joined; D4H answers 400 to a null part (tried on South Fraser,
+  2026-10-25).
 
-Records follows D4H's rules where they make sense, not where D4H's API lacks a write
-such as delete (Gerry, 2026-10-25). Both answer 409 here, and the form says so first:
-
-- **A published activity is locked.** Only its published flag changes; its details, tags,
-  and attendance do not. The form greys out every field but Published.
-- **Only an activity that has happened is published.** D4H answers "Activity cannot be
-  marked ready for approval or published" before its finish (Andrew, 2026-10-25), so the
-  form refuses Published until then.
-  `reference` is D4H's to give out, so the form leaves it alone. The place goes in
-  `address.street` with the other parts empty, since SAR Duty shows them joined; D4H
-  answers 400 to a null part (tried on South Fraser, 2026-10-25).
 - **Qualifications and groups**: add, rename, delete. A qualification's awards change on
   the member's Qualifications tab, and groups on every team as for a D4H team. `DELETE` on
   qualifications and awards is Records' own; groups and group members use D4H's own
@@ -102,6 +94,15 @@ such as delete (Gerry, 2026-10-25). Both answer 409 here, and the form says so f
 - **Whiteboard notes** (#515): Records serves D4H's `/whiteboard` in its shape, so the
   Dashboard card and the Whiteboard page work as for a D4H team. It is always on, and
   the Whiteboard page's Archived list is the only place a Records team sees old notes.
+
+Records follows D4H's rules where they make sense, not where D4H's API lacks a write
+such as delete (Gerry, 2026-10-25). Both answer 409 here, and the form says so first:
+
+- **A published activity is locked.** Only its published flag changes; its details, tags,
+  and attendance do not. The form greys out every field but Published.
+- **Only an activity that has happened is published.** D4H answers "Activity cannot be
+  marked ready for approval or published" before its finish (Andrew, 2026-10-25), so the
+  form refuses Published until then.
 
 Every Records-only write: `POST /members`, `permission` on a member, `PUT` and `DELETE`
 on `/members/<id>/image`, `DELETE` on

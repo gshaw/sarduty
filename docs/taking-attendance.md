@@ -170,7 +170,7 @@ checkboxes. Sending reads D4H again, plans again, and sends the kept changes as 
   `REQUESTED` only means invited: D4H gives every invited member that row until they
   reply, so a requested row with no scan is left alone.
 - **A published activity is refused.** D4H's published flag is read live, not from the
-  copy, and the page says to unpublish it in D4H first.
+  copy, and the page says to unpublish it with Change activity first.
 - **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity
   or a row was deleted or changed, so the page says so before D4H's own text. An
   activity the sync has marked deleted (#160) is refused before D4H is read.

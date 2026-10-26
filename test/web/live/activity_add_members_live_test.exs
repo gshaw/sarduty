@@ -106,7 +106,9 @@ defmodule Web.ActivityAddMembersLiveTest do
 
     assert {:error, {:live_redirect, %{to: to, flash: flash}}} = live(ctx.conn, path(ctx))
     assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"
-    assert flash["error"] == "Published, so nobody can be added. Unpublish it in D4H first."
+
+    assert flash["error"] ==
+             "Published, so nobody can be added. Unpublish it with Change activity first."
   end
 
   test "a started activity sends the visitor back", ctx do

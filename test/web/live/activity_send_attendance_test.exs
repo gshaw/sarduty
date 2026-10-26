@@ -232,7 +232,7 @@ defmodule Web.ActivitySendAttendanceTest do
     lv = open(ctx)
     lv |> element("#review") |> render_click()
 
-    assert has_element?(lv, "#published", "unpublish it in D4H first")
+    assert has_element?(lv, "#published", "Unpublish it with Change activity first.")
     refute has_element?(lv, "#send-form")
     assert Repo.reload!(ctx.activity).attendance_sent_at
   end

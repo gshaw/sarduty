@@ -67,12 +67,12 @@ defmodule App.Adapter.D4H do
     do: "#{service_name(team_or_host)} did not answer. Try again."
 
   @doc """
-  Where to unpublish an activity, so attendance can change. A team on SAR Duty Records
-  does it on the activity's Change or delete page in SAR Duty, not in Records.
+  Where to unpublish an activity, so attendance can change: on its page in SAR Duty, with
+  the button that page shows the team (#585).
   """
   def unpublish_text(team_or_host) do
     case service(team_or_host) do
-      :d4h -> "Unpublish it in D4H first."
+      :d4h -> "Unpublish it with Change activity first."
       :records -> "Unpublish it with Change or delete on the activity's page first."
     end
   end

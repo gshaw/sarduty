@@ -45,9 +45,7 @@ defmodule Web.ServiceNameTest do
     {"lib/web/controllers/style_guide_html/pages/toast.html.heex", "D4H refused the change"} =>
       "an error toast that says who refused",
     {"lib/web/controllers/style_guide_html/pages/row_link.html.heex", "in D4H."} =>
-      "Needs attention as a D4H team reads it, which sends the reader there",
-    {"lib/web/controllers/style_guide_html/pages/warning_text.html.heex",
-     "Unpublish it in D4H first."} => "a warning that sends the reader to D4H"
+      "Needs attention as a D4H team reads it, which sends the reader there"
   }
 
   test "text names D4H only through the team's service name" do

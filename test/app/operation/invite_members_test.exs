@@ -175,7 +175,7 @@ defmodule App.Operation.InviteMembersTest do
                InviteMembers.call(ctx.team, published, picks, ctx.user, :invite, ctx.now)
 
       assert InviteMembers.error_text(ctx.team, :published) ==
-               "Nobody was added. Attendance cannot be changed once the activity is published. Unpublish it in D4H first."
+               "Nobody was added. Attendance cannot be changed once the activity is published. Unpublish it with Change activity first."
 
       assert Repo.all(ChangeSet) == []
     end
