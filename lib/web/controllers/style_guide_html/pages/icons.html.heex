@@ -1,12 +1,15 @@
 <.shell current={:icons}>
   <h1>Icons</h1>
   <p class="lead">
-    Heroicons, the set the app already uses. A small, fixed list: an icon helps people find or
-    recognize something, and never replaces the words.
+    Heroicons, and a few of the app's own where Heroicons has none. An icon helps people find
+    or recognize something, and never replaces the words.
   </p>
 
   <h2>The set</h2>
-  <p>Use only these. To use a new icon, add it to this list with its use first.</p>
+  <p>
+    Every icon the app uses, with its use. A new one goes on this list; a test fails until it
+    does.
+  </p>
   <.table id="icon-set" rows={icons()}>
     <:col :let={{_name, micro, _mini, _outline, _use}} label="16" class="w-px">
       <.icon name={micro} />
@@ -45,6 +48,7 @@
         Open in D4H <.icon name="hero-arrow-top-right-on-square-micro" />
       </.button>
       <.button><.icon name="hero-arrow-path-mini" /> Refresh</.button>
+      <.button icon="sd-rotate-right">Rotate right</.button>
       <.button size={:sm} href="#">
         <.icon name="hero-arrow-down-tray-micro" /> Download PDF
       </.button>
@@ -57,6 +61,14 @@
       An icon sits beside words. The only icon without words is the close or remove ×, and it has an <code>aria-label</code>.
     </li>
     <li>At most one icon per button. It leads, except the external-link icon, which trails.</li>
+    <li>
+      A button that says what it is doing while it waits takes its icon as <code>icon="sd-…"</code>, and draws it itself: LiveView puts back only the text, so an
+      icon inside it would go. The spinner takes the icon's place while it waits.
+    </li>
+    <li>
+      Heroicons first. When none fits, draw one in Heroicons' style in <code>assets/icons</code>: 24 outline, and 20 and 16 solid, in Heroicons' folders. The
+      app picks it up as <code>sd-</code> and its file name.
+    </li>
     <li>
       Only the uses listed above. No icons beside headings, in table cells, or for decoration.
     </li>

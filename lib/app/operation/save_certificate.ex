@@ -101,11 +101,10 @@ defmodule App.Operation.SaveCertificate do
 
   defp rotate_now(team, certificate, direction) do
     with {:ok, current} <- waiting_photo(team, certificate),
-         {:ok, turned} <- current |> CertificateFile.bytes() |> turn(direction),
+         bytes = CertificateFile.bytes(current),
+         {:ok, turned} <- Service.CertificateFile.rotate(bytes, direction),
          do: transaction(fn -> put_turned(current, turned) end)
   end
-
-  defp turn(bytes, direction), do: Service.CertificateFile.rotate(bytes, direction)
 
   defp put_turned(current, turned) do
     CertificateFile.put!(current, turned)

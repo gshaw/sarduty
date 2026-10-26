@@ -382,25 +382,27 @@ defmodule Web.CertificateLive do
     ~H"""
     <div id="certificate-file">
       <%!-- A photo the camera held sideways turns before it goes to D4H. Above the
-        photo, the buttons stay put as it turns.
-        cspell:ignore uturn -- Heroicons' arrow-uturn icons; it has no rotate icon --%>
-      <.form_actions
-        :if={@certificate.status == :waiting and @certificate.content_type == "image/jpeg"}
-        class="mb-2"
-      >
+        photo, the buttons stay put as it turns. --%>
+      <.form_actions :if={
+        @certificate.status == :waiting and @certificate.content_type == "image/jpeg"
+      }>
         <.button
           id="certificate-rotate-left"
+          icon="sd-rotate-left"
           phx-click="rotate"
           phx-value-direction="left"
+          phx-disable-with="Rotating…"
         >
-          <.icon name="hero-arrow-uturn-left-mini" /> Rotate left
+          Rotate left
         </.button>
         <.button
           id="certificate-rotate-right"
+          icon="sd-rotate-right"
           phx-click="rotate"
           phx-value-direction="right"
+          phx-disable-with="Rotating…"
         >
-          <.icon name="hero-arrow-uturn-right-mini" /> Rotate right
+          Rotate right
         </.button>
       </.form_actions>
       <div class="cert-view">
@@ -517,16 +519,12 @@ defmodule Web.CertificateLive do
            }
          )}
 
-      # The page opens again rather than reading D4H here, so the buttons need no
-      # phx-disable-with, which would drop their icons (LiveView restores only text).
       {:error, :decided} ->
-        socket
-        |> put_flash(:error, "Another team admin has decided this certificate.")
-        |> push_navigate(to: ~p"/teams/#{team}/certificates/#{certificate.id}")
-        |> then(&{:noreply, &1})
+        {:noreply, decided(socket)}
 
       {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "SAR Duty cannot turn this file.")}
+        {:noreply,
+         put_flash(socket, :error, "SAR Duty cannot rotate this file. Open the page again.")}
     end
   end
 

@@ -250,7 +250,29 @@ defmodule Web.StyleGuideHTML do
        "A member arrived, on Take attendance"},
       {"arrow-left-start-on-rectangle", "hero-arrow-left-start-on-rectangle-micro",
        "hero-arrow-left-start-on-rectangle-mini", "hero-arrow-left-start-on-rectangle",
-       "A member left, on Take attendance"}
+       "A member left, on Take attendance"},
+      {"magnifying-glass", "hero-magnifying-glass-micro", "hero-magnifying-glass-mini",
+       "hero-magnifying-glass", "Search, in the top bar and a filter bar"},
+      {"funnel", "hero-funnel-micro", "hero-funnel-mini", "hero-funnel",
+       "Filters, on a filter bar"},
+      {"arrow-up-tray", "hero-arrow-up-tray-micro", "hero-arrow-up-tray-mini",
+       "hero-arrow-up-tray", "Drop a file, in a file drop"},
+      {"document", "hero-document-micro", "hero-document-mini", "hero-document",
+       "A file in a file drop that is not a photo"},
+      {"calendar-days", "hero-calendar-days-micro", "hero-calendar-days-mini",
+       "hero-calendar-days", "Add to calendar"},
+      {"clock", "hero-clock-micro", "hero-clock-mini", "hero-clock", "Hours milestones"},
+      {"cake", "hero-cake-micro", "hero-cake-mini", "hero-cake", "Years milestones"},
+      {"lifebuoy", "hero-lifebuoy-micro", "hero-lifebuoy-mini", "hero-lifebuoy",
+       "Incidents milestones"},
+      {"shield-check", "hero-shield-check-micro", "hero-shield-check-mini", "hero-shield-check",
+       "SAR Duty admin, in the team switcher"},
+      {"building-office-2", "hero-building-office-2-micro", "hero-building-office-2-mini",
+       "hero-building-office-2", "An organization, in the team switcher"},
+      {"sd-rotate-left", "sd-rotate-left-micro", "sd-rotate-left-mini", "sd-rotate-left",
+       "Rotate left, a certificate photo"},
+      {"sd-rotate-right", "sd-rotate-right-micro", "sd-rotate-right-mini", "sd-rotate-right",
+       "Rotate right, a certificate photo"}
     ]
   end
 

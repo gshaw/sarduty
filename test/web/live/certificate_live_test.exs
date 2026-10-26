@@ -206,17 +206,11 @@ defmodule Web.CertificateLiveTest do
     assert {Image.width(image), Image.height(image)} == {30, 40}
     refute image_src(lv) == src
 
-    # Decided since the page opened: it opens again, saying so.
+    # Decided since the page opened: it shows the decision, saying so.
     photo |> Ecto.Changeset.change(status: :declined) |> Repo.update!()
-    path = ~p"/teams/#{ctx.team}/certificates/#{photo.id}"
-
-    {:ok, lv, _html} =
-      lv
-      |> element("#certificate-rotate-right")
-      |> render_click()
-      |> follow_redirect(ctx.conn, path)
-
+    lv |> element("#certificate-rotate-right") |> render_click()
     assert render(lv) =~ "Another team admin has decided this certificate."
+    refute has_element?(lv, "#certificate-rotate-right")
   end
 
   defp image_src(lv) do

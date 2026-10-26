@@ -70,6 +70,20 @@ defmodule Web.StyleGuideControllerTest do
     end
   end
 
+  test "the Icons page lists every icon the app uses" do
+    listed = for {name, _micro, _mini, _outline, _use} <- StyleGuideHTML.icons(), do: name
+
+    # An icon name in quotes, such as "hero-clock-micro" or "sd-rotate-left".
+    used =
+      for path <- Path.wildcard("lib/**/*.{ex,heex}"),
+          [_match, prefix, name] <-
+            Regex.scan(~r/"(hero-|sd-)([a-z0-9-]+?)(?:-mini|-micro|-solid)?"/, File.read!(path)),
+          uniq: true,
+          do: if(prefix == "sd-", do: prefix <> name, else: name)
+
+    assert used -- listed == [], "Add these to StyleGuideHTML.icons/0: #{inspect(used -- listed)}"
+  end
+
   test "the Values page shows every Service.Format function", %{conn: conn} do
     shown =
       for {_section, _about, rows} <- StyleGuideHTML.values(), {name, _, _} <- rows, do: name
