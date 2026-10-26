@@ -14,6 +14,13 @@ defmodule App.Model.Activity do
   @hours_kinds [:primary, :secondary, :other]
 
   @doc """
+  Whether the activity is locked: published, so only its published flag changes. D4H
+  answers 409 "Resources cannot be updated once they have been published" (#358), and
+  SAR Duty Records follows it (#585).
+  """
+  def locked?(%{is_published: published?}), do: published? == true
+
+  @doc """
   The D4H tags that say which hours an activity counts for, as `%{primary: tag,
   secondary: tag, other: tag}`. Other is for activities that count for no hours, and is
   nil when nobody names one. A team's organization names each tag (#289); a team names

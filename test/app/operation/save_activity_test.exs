@@ -1,6 +1,7 @@
 defmodule App.Operation.SaveActivityTest do
   use ExUnit.Case, async: true
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Organization
   alias App.Model.Team
@@ -87,5 +88,78 @@ defmodule App.Operation.SaveActivityTest do
     activity = %{activity() | started_at: ~U[2026-10-01 21:00:42Z]}
     form = ActivityFormViewModel.from_activity(activity, @team)
     assert SaveActivity.plan(activity, form, @tag_ids, @team) == :unchanged
+  end
+
+  describe "on a D4H team (#585)" do
+    test "a new activity adds no one's attendance and sends its description as HTML" do
+      form = %ActivityFormViewModel{
+        title: "Practice",
+        description: "Bring a headlamp.\nAnd a map.",
+        starts_at: ~N[2026-10-08 18:00:00],
+        ends_at: ~N[2026-10-08 20:00:00]
+      }
+
+      row = SaveActivity.plan(nil, form, @tag_ids, @team)
+
+      assert row.new_value["full_team"] == false
+      assert row.new_value["shared"] == false
+      assert row.new_value["description"] == "<p>Bring a headlamp.<br>And a map.</p>"
+    end
+
+    test "an untouched description is not sent, and a changed one goes as HTML" do
+      activity = %{activity() | description: "<p>Bring a headlamp.</p>"}
+      form = ActivityFormViewModel.from_activity(activity, @team)
+      assert form.description == "Bring a headlamp."
+      assert SaveActivity.plan(activity, form, @tag_ids, @team) == :unchanged
+
+      row =
+        SaveActivity.plan(activity, %{form | description: "Bring 2 headlamps."}, @tag_ids, @team)
+
+      assert row.new_value == %{"description" => "<p>Bring 2 headlamps.</p>"}
+      assert row.old_value["description"] == "<p>Bring a headlamp.</p>"
+    end
+
+    test "a description with formatting is left out" do
+      activity = %{activity() | description: ~s(<ul><li>Headlamp</li></ul>)}
+      assert ActivityFormViewModel.description_locked?(activity, @team)
+      form = ActivityFormViewModel.from_activity(activity, @team)
+
+      row =
+        SaveActivity.plan(
+          activity,
+          %{form | description: "Headlamp", title: "Nav"},
+          @tag_ids,
+          @team
+        )
+
+      assert row.new_value == %{"title" => "Nav"}
+    end
+
+    test "a published activity changes only its published flag" do
+      activity = %{activity() | is_published: true}
+      form = ActivityFormViewModel.from_activity(activity, @team)
+      changed = %{form | hours: "secondary", title: "Nav"}
+      assert SaveActivity.plan(activity, changed, @tag_ids, @team) == :unchanged
+
+      row = SaveActivity.plan(activity, %{changed | published: false}, @tag_ids, @team)
+      assert row.new_value == %{"published" => false}
+    end
+
+    test "a Records team's description is its text" do
+      team = %Team{timezone: @tz, d4h_api_host: D4H.records_host()}
+      activity = %{activity() | description: "<ul><li>Headlamp</li></ul>"}
+      refute ActivityFormViewModel.description_locked?(activity, team)
+      form = ActivityFormViewModel.from_activity(activity, team)
+
+      row =
+        SaveActivity.plan(
+          activity,
+          %{form | description: "Headlamp", hours: "none"},
+          @tag_ids,
+          team
+        )
+
+      assert row.new_value == %{"description" => "Headlamp", "tag_ids" => [3]}
+    end
   end
 end

@@ -1,6 +1,7 @@
 defmodule App.ViewModel.ActivityFormViewModel do
   use App, :view_model
 
+  alias App.Adapter.D4H
   alias App.Field
   alias App.Model.Activity
   alias App.Model.Team
@@ -9,7 +10,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
   @kinds [{"Exercise", "exercise"}, {"Incident", "incident"}, {"Event", "event"}]
   @hours [{"Primary", "primary"}, {"Secondary", "secondary"}, {"Neither", "none"}]
 
-  # Adding or changing an activity of a team on SAR Duty Records. Times are on the team's wall clock.
+  # Adding or changing an activity. Times are on the team's wall clock. A D4H team's
+  # description is HTML, edited here as text (Service.DescriptionText).
   @primary_key false
   embedded_schema do
     field :kind, :string, default: "exercise"
@@ -35,7 +37,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
     %__MODULE__{
       kind: activity.activity_kind,
       title: activity.title,
-      description: activity.description,
+      description: description(activity, team),
       place: activity.address,
       tracking_number: activity.tracking_number,
       starts_at: local(activity.started_at, timezone),
@@ -43,6 +45,24 @@ defmodule App.ViewModel.ActivityFormViewModel do
       hours: hours_of(activity.tags, Activity.hours_tags(team)),
       published: activity.is_published == true
     }
+  end
+
+  @doc """
+  Whether the form leaves the activity's description alone: on a D4H team, one with
+  formatting the form's text would lose.
+  """
+  def description_locked?(nil, _team), do: false
+
+  def description_locked?(%Activity{description: description}, team),
+    do: !D4H.records?(team) and Service.DescriptionText.to_text(description) == :formatted
+
+  defp description(activity, team) do
+    with false <- D4H.records?(team),
+         {:ok, text} <- Service.DescriptionText.to_text(activity.description) do
+      text
+    else
+      _records_or_formatted -> activity.description
+    end
   end
 
   defp hours_of(tags, hours_tags) do
@@ -96,6 +116,26 @@ defmodule App.ViewModel.ActivityFormViewModel do
       else: changeset
   end
 
+  @doc """
+  The form's values, or its errors, on save. `finished_by:` is the team's wall clock now,
+  since D4H and Records publish only an activity that has happened.
+  """
   # :insert, not :validate, so a failed save shows the error summary.
-  def validate(form, params), do: form |> changeset(params) |> apply_action(:insert)
+  def validate(form, params, opts \\ []) do
+    form
+    |> changeset(params)
+    |> validate_finished_to_publish(opts[:finished_by])
+    |> apply_action(:insert)
+  end
+
+  defp validate_finished_to_publish(changeset, nil), do: changeset
+
+  defp validate_finished_to_publish(changeset, now) do
+    ends_at = get_field(changeset, :ends_at)
+
+    if (get_change(changeset, :published) == true and ends_at) &&
+         NaiveDateTime.after?(ends_at, now),
+       do: add_error(changeset, :published, "Publish it once it has finished."),
+       else: changeset
+  end
 end

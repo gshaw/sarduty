@@ -1,11 +1,18 @@
 defmodule App.Operation.SaveActivity do
   @moduledoc """
-  A team admin adds an activity to a team on SAR Duty Records, or changes its details
-  (docs/records.md). plan/4 turns the form into a change set row; call/5 applies it
-  through App.Operation.ApplyEdit and returns the activity as the sync copied it.
+  A team admin adds an activity, or changes its details (docs/records.md, #585). plan/4
+  turns the form into a change set row; call/5 applies it through App.Operation.ApplyEdit
+  and returns the activity as the sync copied it.
 
   The hours choice sets the activity's tags: the team's primary or secondary hours tag
-  (`Activity.hours_tags/1`), or neither, keeping any other tags it has.
+  (`Activity.hours_tags/1`), or neither, keeping any other tags it has. On every team, as
+  D4H does: a published activity is locked, so only its published flag changes, and only
+  an activity that has finished is published. On a D4H team:
+
+  - A new activity has `full_team` and `shared` false, as a chore event does (#341), so
+    D4H adds no one's attendance. Records ignores them.
+  - The description goes as HTML (Service.DescriptionText), and only when it changed. One
+    with formatting the form would lose is left out.
   """
 
   alias App.Accounts.User
@@ -24,7 +31,7 @@ defmodule App.Operation.SaveActivity do
   def call(%Team{} = team, activity, params, %User{} = user, now) do
     form = ActivityFormViewModel.from_activity(activity, team)
 
-    with {:ok, values} <- ActivityFormViewModel.validate(form, params) do
+    with {:ok, values} <- ActivityFormViewModel.validate(form, params, finished_by(team, now)) do
       tag_ids =
         team
         |> D4H.build_context_from_team()
@@ -36,6 +43,13 @@ defmodule App.Operation.SaveActivity do
         row -> apply_row(team, user, activity, row, now)
       end
     end
+  end
+
+  # D4H, and Records with it, refuses to publish an activity that has not happened (409),
+  # so the form says so.
+  defp finished_by(team, now) do
+    {date, time} = Service.Convert.utc_to_local(now, team.timezone)
+    [finished_by: NaiveDateTime.new!(date, time)]
   end
 
   defp apply_row(team, user, activity, row, now) do
@@ -51,7 +65,12 @@ defmodule App.Operation.SaveActivity do
   """
   def plan(nil, %ActivityFormViewModel{} = values, tag_ids, %Team{} = team) do
     hours_tag_ids = tag_ids_for(values.hours, [], tag_ids, Activity.hours_tags(team))
-    new = values |> fields(team.timezone) |> Map.put("tag_ids", hours_tag_ids)
+
+    new =
+      values
+      |> fields(team.timezone)
+      |> Map.merge(%{"tag_ids" => hours_tag_ids, "full_team" => false, "shared" => false})
+      |> Map.update!("description", &description_out(&1, team))
 
     %ChangeSetRow{
       action: :create_activity,
@@ -61,35 +80,63 @@ defmodule App.Operation.SaveActivity do
   end
 
   def plan(%Activity{} = activity, %ActivityFormViewModel{} = values, tag_ids, %Team{} = team) do
-    timezone = team.timezone
     form = ActivityFormViewModel.from_activity(activity, team)
-    old = fields(form, timezone)
-    new = values |> fields(timezone) |> Map.reject(fn {key, value} -> old[key] == value end)
+    old = fields(form, team.timezone)
 
     new =
-      if values.hours == form.hours do
-        new
-      else
-        hours_tags = Activity.hours_tags(team)
+      values
+      |> fields(team.timezone)
+      |> Map.reject(fn {key, value} -> old[key] == value end)
+      |> drop_locked_description(activity, team)
+      |> put_hours(values.hours != form.hours, activity, values, tag_ids, team)
+      |> unless_locked(activity)
 
-        Map.put(
-          new,
-          "tag_ids",
-          tag_ids_for(values.hours, activity.tags || [], tag_ids, hours_tags)
-        )
-      end
-
-    if new == %{} do
-      :unchanged
-    else
-      %ChangeSetRow{
-        action: :update_activity,
-        d4h_record_id: activity.d4h_activity_id,
-        old_value: old |> Map.take(Map.keys(new)) |> Map.put("kind", activity.activity_kind),
-        new_value: new
-      }
-    end
+    if new == %{}, do: :unchanged, else: update_row(activity, old, new, team)
   end
+
+  defp update_row(activity, old, new, team) do
+    old = old |> Map.take(Map.keys(new)) |> Map.put("kind", activity.activity_kind)
+    {old, new} = description_html(old, new, activity, team)
+
+    %ChangeSetRow{
+      action: :update_activity,
+      d4h_record_id: activity.d4h_activity_id,
+      old_value: old,
+      new_value: new
+    }
+  end
+
+  # Only the published flag changes on a locked activity.
+  defp unless_locked(new, activity) do
+    if Activity.locked?(activity),
+      do: Map.take(new, ["published"]),
+      else: new
+  end
+
+  defp drop_locked_description(new, activity, team) do
+    if ActivityFormViewModel.description_locked?(activity, team),
+      do: Map.delete(new, "description"),
+      else: new
+  end
+
+  defp put_hours(new, false = _changed?, _activity, _values, _tag_ids, _team), do: new
+
+  defp put_hours(new, true, activity, values, tag_ids, team) do
+    hours_tags = Activity.hours_tags(team)
+    Map.put(new, "tag_ids", tag_ids_for(values.hours, activity.tags || [], tag_ids, hours_tags))
+  end
+
+  # On a D4H team the change goes as HTML, and the old value is the HTML D4H had.
+  defp description_html(old, new, activity, team) do
+    if Map.has_key?(new, "description") and !D4H.records?(team),
+      do:
+        {Map.put(old, "description", activity.description),
+         Map.update!(new, "description", &description_out(&1, team))},
+      else: {old, new}
+  end
+
+  defp description_out(text, team),
+    do: if(D4H.records?(team), do: text, else: Service.DescriptionText.to_html(text))
 
   defp fields(values, timezone) do
     %{

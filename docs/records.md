@@ -40,15 +40,16 @@ like a D4H key. Existing D4H teams need no change.
 
 ## Editing records
 
-D4H teams change their records in D4H. A Records team has nowhere else to do it, so
-SAR Duty shows editing screens for Records teams; a D4H team gets a 404 and no buttons.
-Groups are the exception: every team adds, renames, and deletes them and changes who is in
-them ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Each change is a change
-set of one row, source `:edit`, applied at once by
-[App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex) through `ApplyChangeSet`,
-then the sync copies it back, except a group's, whose copy is written from the answer. The
-row names only the fields that changed, with their old values, so it shows in the record's
-history. ApplyEdit refuses a D4H team every row but a group's.
+D4H teams change most of their records in D4H. A Records team has nowhere else to do
+it, so SAR Duty shows editing screens for Records teams; a D4H team gets a 404 and no
+buttons. Two exceptions: every team adds, renames, and deletes groups and changes who is
+in them ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), and a D4H team adds
+and changes activities (#585). Each change is a change set of one row, source `:edit`,
+applied at once by [App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex) through
+`ApplyChangeSet`, then the sync copies it back, except a group's, whose copy is written
+from the answer. The row names only the fields that changed, with their old values, so it
+shows in the record's history. ApplyEdit refuses a D4H team every row but a group's and
+an activity's create and update.
 
 Records refuses a bad write with a 400 whose `title` says what is wrong; the page shows
 that title.
@@ -69,6 +70,25 @@ that title.
   hours choice sets the team's primary or secondary hours tag and keeps any others. A
   new activity keeps its id even if its tags or published flag fail, so a retry never
   makes a second one. Times are on the team's clock, to the minute.
+- **Activities on a D4H team** (#585): add and change, never delete, since D4H's API has
+  no delete; the form sends the team admin to D4H for it. A new one has `fullTeam` and
+  `shared` false, as a chore event does, so D4H adds no one's attendance; Add members
+  follows. The description is HTML in D4H: the form edits paragraphs and line breaks as
+  text ([Service.DescriptionText](../lib/service/description_text.ex)) and sends one only
+  when it changed. A description with other HTML, such as links or lists, is shown read
+  only, so SAR Duty never flattens it.
+
+Records follows D4H's rules where they make sense, not where D4H's API lacks a write
+such as delete (Gerry, 2026-10-25). Both answer 409 here, and the form says so first:
+
+- **A published activity is locked.** Only its published flag changes; its details, tags,
+  and attendance do not. The form greys out every field but Published.
+- **Only an activity that has happened is published.** D4H answers "Activity cannot be
+  marked ready for approval or published" before its finish (Andrew, 2026-10-25), so the
+  form refuses Published until then.
+  `reference` is D4H's to give out, so the form leaves it alone. The place goes in
+  `address.street` with the other parts empty, since SAR Duty shows them joined; D4H
+  answers 400 to a null part (tried on South Fraser, 2026-10-25).
 - **Qualifications and groups**: add, rename, delete. A qualification's awards change on
   the member's Qualifications tab, and groups on every team as for a D4H team. `DELETE` on
   qualifications and awards is Records' own; groups and group members use D4H's own

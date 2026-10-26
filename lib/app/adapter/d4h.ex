@@ -39,13 +39,6 @@ defmodule App.Adapter.D4H do
 
   def records?(team_or_host), do: service(team_or_host) == :records
 
-  @doc """
-  Whether the service refuses changes to the activity's tags. D4H answers 409
-  "Resources cannot be updated once they have been published" (#358); SAR Duty Records
-  takes them.
-  """
-  def tags_locked?(team, %{is_published: published?}), do: published? == true and !records?(team)
-
   @doc ~s(The service's name in text people read: "D4H" or "SAR Duty Records".)
   def service_name(team_or_host) do
     case service(team_or_host) do
@@ -788,8 +781,8 @@ defmodule App.Adapter.D4H do
     end
   end
 
-  # Editing records, for a team on SAR Duty Records (docs/records.md). ApplyChangeSet
-  # calls these for a change set of source :edit. `attrs` have SAR Duty's names, with
+  # Editing records (docs/records.md). ApplyChangeSet calls these for a change set of
+  # source :edit, and activities for chores too. `attrs` have SAR Duty's names, with
   # string keys and times as ISO 8601 strings, as change set rows store them; only the
   # keys given are sent. Some are Records' own, and D4H would refuse them.
 
@@ -859,12 +852,20 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc """
+  Changes an activity, then its tags and published flag when `attrs` name them. With no
+  details to change there is no PATCH, since D4H locks a published activity.
+  """
   def update_activity(context, kind, d4h_activity_id, attrs)
       when kind in ["event", "exercise", "incident"] do
     url = "/#{kind}s/#{d4h_activity_id}"
+    json = activity_json(attrs)
 
     with {:ok, _activity} <-
-           write(context, :patch, url, activity_json(attrs), &D4H.Activity.build/1) do
+           if(json == %{},
+             do: {:ok, nil},
+             else: write(context, :patch, url, json, &D4H.Activity.build/1)
+           ) do
       finish_activity(context, kind, d4h_activity_id, attrs)
     end
   end
@@ -1129,9 +1130,17 @@ defmodule App.Adapter.D4H do
   defp activity_json(attrs) do
     json = rename(attrs, @activity_fields)
 
+    # The place is the whole address, so the other parts are emptied. D4H refuses null in
+    # them (400 "malformed"), so empty is "".
     if Map.has_key?(attrs, "place"),
       do:
-        Map.put(json, "address", %{street: attrs["place"], town: nil, region: nil, country: nil}),
+        Map.put(json, "address", %{
+          street: attrs["place"] || "",
+          town: "",
+          region: "",
+          postcode: "",
+          country: ""
+        }),
       else: json
   end
 
