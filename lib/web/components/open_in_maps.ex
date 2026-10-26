@@ -10,6 +10,8 @@ defmodule Web.Components.OpenInMaps do
   """
   use Phoenix.Component
 
+  import Web.Components.A, only: [a: 1]
+
   attr :id, :string, required: true
   attr :app, :string, default: "google", doc: "the account's maps_app"
   attr :coordinate, :string, default: nil, doc: "latitude and longitude, as \"49.6,-123.2\""
@@ -23,7 +25,7 @@ defmodule Web.Components.OpenInMaps do
 
     ~H"""
     <p :if={@url} class={["mb-0", @class]}>
-      <.link id={@id} href={@url} target="_blank" class="link">Open in {app_name(@app)}</.link>
+      <.a id={@id} href={@url} external>Open in {app_name(@app)}</.a>
     </p>
     """
   end
