@@ -5,6 +5,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   alias App.Field
   alias App.Model.Activity
+  alias App.Model.ChoreEvent
   alias App.Repo
 
   @primary_key false
@@ -18,13 +19,15 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :sort, :string
   end
 
-  # The page's stat switch, in the order D4H lists them.
+  # The page's stat switch: D4H's kinds in the order D4H lists them, then chores, SAR
+  # Duty's own (#575). All is D4H's kinds, so a month's chore activities never crowd it.
   def activity_kinds,
     do: [
       {"All", "all"},
       {"Incidents", "incident"},
       {"Exercises", "exercise"},
-      {"Events", "event"}
+      {"Events", "event"},
+      {"Chores", "chores"}
     ]
 
   # "draft": attendance can still change in D4H, so a team admin checks it (#205).
@@ -89,23 +92,35 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(q: filter_options.q)
     |> scope(activity: filter_options.activity)
     |> scope(sort: filter_options.sort)
+    |> select_merge([chores: c], %{chore_minutes: c.minutes})
     |> Repo.paginate(page: filter_options.page)
   end
 
   @doc """
   The stat switch's counts: how many activities of each kind the other filters keep,
-  before the search, with All's under "all".
+  before the search, with All's under "all" and chore activities under "chores".
   """
   def kind_counts(team, member, filter_options) do
     counts =
       team
       |> filtered(member, filter_options)
-      |> group_by([r], r.activity_kind)
-      |> select([r], {r.activity_kind, count(r.id)})
+      |> group_by([r, chores: c], selected_as(:kind))
+      |> select([r, chores: c], {
+        selected_as(
+          fragment(
+            "CASE WHEN ? IS NULL THEN ? ELSE 'chores' END",
+            c.d4h_activity_id,
+            r.activity_kind
+          ),
+          :kind
+        ),
+        count(r.id)
+      })
       |> Repo.all()
       |> Map.new()
 
-    Map.put(counts, "all", counts |> Map.values() |> Enum.sum())
+    all = counts |> Map.delete("chores") |> Map.values() |> Enum.sum()
+    Map.put(counts, "all", all)
   end
 
   # Every filter but the kind and the search.
@@ -114,6 +129,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> Activity.scope(team_id: team.id)
     |> Activity.not_deleted()
     |> scope(member: member)
+    |> join(:left, [r], c in subquery(ChoreEvent.totals(team.id)),
+      as: :chores,
+      on: c.d4h_activity_id == r.d4h_activity_id
+    )
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
     |> scope(hours: filter_options.hours, team: team)
@@ -189,8 +208,11 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, when: year, timezone: timezone) when is_binary(year),
     do: Activity.started_in(q, year, timezone)
 
-  defp scope(q, activity: "all"), do: q
-  defp scope(q, activity: activity), do: where(q, [r], r.activity_kind == ^activity)
+  defp scope(q, activity: "all"), do: where(q, [chores: c], is_nil(c.d4h_activity_id))
+  defp scope(q, activity: "chores"), do: where(q, [chores: c], not is_nil(c.d4h_activity_id))
+
+  defp scope(q, activity: activity),
+    do: where(q, [r, chores: c], r.activity_kind == ^activity and is_nil(c.d4h_activity_id))
 
   defp scope(q, status: "draft"), do: where(q, [r], r.is_published == false)
   defp scope(q, status: "published"), do: where(q, [r], r.is_published == true)
@@ -206,14 +228,23 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)
 
-  defp scope(q, sort: "hours-"),
-    do:
-      order_by(q, [r], desc: fragment("JULIANDAY(?) - JULIANDAY(?)", r.started_at, r.finished_at))
-
-  defp scope(q, sort: "hours"),
-    do:
-      order_by(q, [r], asc: fragment("JULIANDAY(?) - JULIANDAY(?)", r.started_at, r.finished_at))
+  # A chore activity lasts no time, so it sorts by its members' total (#575).
+  defp scope(q, sort: "hours-"), do: order_by(q, ^[desc: duration_days()])
+  defp scope(q, sort: "hours"), do: order_by(q, ^[asc: duration_days()])
 
   defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.ref_id)
   defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.ref_id)
+
+  # Kept as JULIANDAY(start) - JULIANDAY(finish), as the sort has always been.
+  defp duration_days,
+    do:
+      dynamic(
+        [r, chores: c],
+        fragment(
+          "COALESCE(? / -1440.0, JULIANDAY(?) - JULIANDAY(?))",
+          c.minutes,
+          r.started_at,
+          r.finished_at
+        )
+      )
 end

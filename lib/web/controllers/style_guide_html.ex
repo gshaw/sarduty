@@ -313,13 +313,13 @@ defmodule Web.StyleGuideHTML do
         kind: :kinds,
         look: "Solid, the kind's colour",
         means: "The kind of activity, shown on its own, such as beside a title.",
-        examples: "Only these three words"
+        examples: "Incident, Exercise, Event, and Chores for a chore activity"
       },
       %{
         kind: :markers,
         look: "Marker",
         means: "The kind of activity in a table column, where every row has one.",
-        examples: "Only these three words"
+        examples: "The same four words"
       }
     ]
   end

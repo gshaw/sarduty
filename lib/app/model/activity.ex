@@ -144,8 +144,18 @@ defmodule App.Model.Activity do
     field :deleted_at, :utc_datetime
     # SAR Duty's own, never D4H's: see mark_attendance_sent/2.
     field :attendance_sent_at, :utc_datetime_usec
+    # The members' accepted chore minutes on a chore activity (#575), nil on any other.
+    # Set where it is read, from ChoreEvent.totals/1 or put_chore_minutes/1.
+    field :chore_minutes, :integer, virtual: true
     timestamps(type: :utc_datetime_usec)
   end
+
+  @doc """
+  The kind SAR Duty shows: "chores" for a chore activity (#575), else D4H's kind. D4H
+  holds a chore activity as an event.
+  """
+  def shown_kind(%{chore_minutes: minutes}) when is_integer(minutes), do: "chores"
+  def shown_kind(%{activity_kind: kind}), do: kind
 
   def build_new_changeset(params \\ %{}), do: build_changeset(%Activity{}, params)
 

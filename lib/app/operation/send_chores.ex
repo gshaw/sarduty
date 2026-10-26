@@ -158,7 +158,7 @@ defmodule App.Operation.SendChores do
     case ApplyChangeSet.call(team, change_set, user, now) do
       {:ok, rows} ->
         id = (state && state.d4h_activity_id) || created_id(rows)
-        outcome = outcome(rows)
+        outcome = outcome(team, rows)
         ChoreEvent.record_send!(event, id, outcome, now)
         if match?({:failed, _error}, outcome), do: :failed, else: :sent
 
@@ -178,7 +178,7 @@ defmodule App.Operation.SendChores do
   How a send went, from its rows: `:sent`; `{:sent, note}` when only publishing failed,
   so the event stays a draft; or `{:failed, error}` with the first row's error.
   """
-  def outcome(rows) do
+  def outcome(team, rows) do
     case Enum.reject(rows, &(&1.status == :applied)) do
       [] ->
         :sent
@@ -186,7 +186,7 @@ defmodule App.Operation.SendChores do
       not_sent ->
         cond do
           Enum.all?(not_sent, &publish?/1) ->
-            {:sent, draft(hd(not_sent))}
+            {:sent, draft(team, hd(not_sent))}
 
           row = Enum.find(not_sent, &(&1.action == :set_activity_tags)) ->
             {:failed, untagged(row)}
@@ -199,8 +199,20 @@ defmodule App.Operation.SendChores do
 
   defp untagged(row), do: "#{@untagged} #{row.error}"
 
-  defp draft(%{error: nil}), do: @draft
-  defp draft(row), do: "#{@draft} #{row.error}"
+  defp draft(_team, %{error: nil}), do: @draft
+
+  # South Fraser's 409 came from a D4H setting: its organization forced an approval
+  # message, and the team's own was off (2026-10-25, #575).
+  defp draft(team, row) do
+    if row.error =~ "cannot be marked ready for approval or published",
+      do: "#{@draft} #{row.error} #{approval_fix(team)}",
+      else: "#{@draft} #{row.error}"
+  end
+
+  defp approval_fix(team) do
+    name = D4H.service_name(team)
+    "Turn on the approval message in #{name}'s admin settings, then publish it in #{name}."
+  end
 
   # A team on SAR Duty Records has no tags page: its hours tags come with the team.
   defp add_tag(team) do

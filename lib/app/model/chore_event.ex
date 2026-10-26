@@ -143,6 +143,25 @@ defmodule App.Model.ChoreEvent do
     :ok
   end
 
+  @doc """
+  The team's chore activities (#575): one row per D4H activity, `%{d4h_activity_id:,
+  minutes:}`, with the minutes of its accepted chores. An event emptied by declines
+  counts 0.
+  """
+  def totals(team_id) do
+    ChoreEvent
+    |> where([e], e.team_id == ^team_id and not is_nil(e.d4h_activity_id))
+    |> join(:left, [e], c in Chore, on: c.chore_event_id == e.id and c.status == :accepted)
+    |> group_by([e], e.d4h_activity_id)
+    |> select([e, c], %{d4h_activity_id: e.d4h_activity_id, minutes: coalesce(sum(c.minutes), 0)})
+  end
+
+  @doc "The activity with `chore_minutes` set when it is one of the team's chore activities."
+  def put_chore_minutes(%Activity{team_id: team_id, d4h_activity_id: d4h_id} = activity) do
+    total = team_id |> totals() |> where([e], e.d4h_activity_id == ^d4h_id) |> Repo.one()
+    %{activity | chore_minutes: total && total.minutes}
+  end
+
   @doc "One of the team's events, with its chore category and tags."
   def find!(%Team{} = team, id) do
     ChoreEvent

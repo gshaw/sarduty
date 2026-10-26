@@ -66,8 +66,8 @@ defmodule Web.Components.D4H do
   def activity_badges(assigns) do
     ~H"""
     <span class="badges">
-      <.badge kind={activity_kind_badge(@activity.activity_kind)} title="Activity kind">
-        {String.capitalize(@activity.activity_kind)}
+      <.badge kind={activity_kind_badge(Activity.shown_kind(@activity))} title="Activity kind">
+        {String.capitalize(Activity.shown_kind(@activity))}
       </.badge>
       <.badge :if={!@activity.is_published}>Draft</.badge>
       <.badge :if={@activity.deleted_at} kind={:danger}>Deleted</.badge>
@@ -84,8 +84,8 @@ defmodule Web.Components.D4H do
   # The kind as a marker in D4H's colour, for lists where every row has one.
   def activity_kind_mark(assigns) do
     ~H"""
-    <span class={["marker", "marker-#{@activity.activity_kind}", @class]}>
-      {String.capitalize(@activity.activity_kind)}
+    <span class={["marker", "marker-#{Activity.shown_kind(@activity)}", @class]}>
+      {String.capitalize(Activity.shown_kind(@activity))}
     </span>
     """
   end
@@ -110,5 +110,6 @@ defmodule Web.Components.D4H do
   defp activity_kind_badge("incident"), do: :incident
   defp activity_kind_badge("exercise"), do: :exercise
   defp activity_kind_badge("event"), do: :event
+  defp activity_kind_badge("chores"), do: :chores
   defp activity_kind_badge(_kind), do: :default
 end
