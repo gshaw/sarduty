@@ -94,8 +94,8 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
   (#02228, 2026-10-17 and 2026-10-21) while D4H's own Approve button worked. BCSARA, the
   organization, had set a forced approval message long ago, and South Fraser's own
   approval message setting, in D4H's admin area, was off. Turning it on fixed the
-  publish (2026-10-25, #575). Another BCSARA team that turns on chores may need the
-  same.
+  publish (2026-10-25). Another BCSARA team that turns on chores may need the same, so
+  on that 409 the note says to turn the setting on (#575).
 - **Nothing locks an event.** D4H's `approved` flag mirrors `published` on every team seen
   (#358), so the first version, which stopped sending an approved event, stopped at the
   first published one.
@@ -113,6 +113,13 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
   warning when a chore activity is out of date in D4H; the waiting count shows beside
   Chores in the side navigation. For a member, a declined chore under For you to do until
   they delete it.
+- **Activities**: chore activities are their own kind, Chores, though D4H holds them as
+  events (#575). A Chores tile beside Events lists them, with each one's members' total as
+  its duration, since the activity lasts no time. All and Events leave them out, so the
+  month's chore activities, all on the 1st, never fill the top of Current. The tile
+  shows on a team with chores on, or one with chore activities in the view. The
+  activity's page says Chores too. SAR Duty knows them by its chore events
+  (`ChoreEvent.totals/1`), never by tag: each category picks its own tags.
 - **Your membership**: the member's 5 latest chores, with New chore and a link to all of
   them (#406).
 - **The year page** needs nothing of its own: a sent chore's activity carries its

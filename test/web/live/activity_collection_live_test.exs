@@ -27,6 +27,35 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection", "NO MIT Training")
   end
 
+  test "chore activities have their own tile, with their members' total (#575)", %{conn: conn} do
+    %{user: user, team: team} =
+      user_with_team_fixture(%{team: %{member_logins: true, chores_enabled: true}})
+
+    activity_fixture(team, %{title: "Board meeting", activity_kind: "event"})
+    chore_activity_fixture(team, [90, 30])
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+
+    assert has_element?(lv, "#activity-view-event", "1")
+    assert has_element?(lv, "#activity-view-chores", "1")
+    refute has_element?(lv, "#activity_collection", "Chores: Equipment maintenance")
+
+    lv |> element("#activity-view-chores") |> render_click()
+
+    assert has_element?(lv, "#activity_collection", "Chores: Equipment maintenance")
+    assert has_element?(lv, "#activity_collection", "2 hours")
+    refute has_element?(lv, "#activity_collection", "Board meeting")
+  end
+
+  test "a team without chores has no Chores tile", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+
+    assert has_element?(lv, "#activity-view-event")
+    refute has_element?(lv, "#activity-view-chores")
+  end
+
   test "Current shows a week either side of today, oldest first", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     now = DateTime.utc_now() |> DateTime.truncate(:second)

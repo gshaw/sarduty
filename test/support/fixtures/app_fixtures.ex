@@ -7,6 +7,7 @@ defmodule App.DataFixtures do
   alias App.Model.CertificateFile
   alias App.Model.Chore
   alias App.Model.ChoreCategory
+  alias App.Model.ChoreEvent
   alias App.Model.Endorsement
   alias App.Model.EndorsementQualification
   alias App.Model.EquipmentItem
@@ -496,6 +497,46 @@ defmodule App.DataFixtures do
     }
     |> Map.merge(attrs)
     |> Repo.insert!()
+  end
+
+  @doc """
+  A chore activity (#575): a D4H event that lasts no time, SAR Duty's chore event for it,
+  and an accepted chore of `minutes` for each entry, each by a new member. `attrs` go on
+  the activity.
+  """
+  def chore_activity_fixture(%Team{} = team, minutes, attrs \\ %{}) do
+    category = chore_category_fixture(team)
+    start = DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
+
+    activity =
+      activity_fixture(
+        team,
+        Map.merge(
+          %{
+            title: "Chores: Equipment maintenance",
+            activity_kind: "event",
+            started_at: start,
+            finished_at: start
+          },
+          attrs
+        )
+      )
+
+    event =
+      Repo.insert!(%ChoreEvent{
+        team_id: team.id,
+        chore_category_id: category.id,
+        month: Date.beginning_of_month(DateTime.to_date(start)),
+        d4h_activity_id: activity.d4h_activity_id
+      })
+
+    for m <- minutes do
+      team
+      |> member_fixture()
+      |> chore_fixture(category, %{minutes: m, status: :accepted, chore_event_id: event.id})
+    end
+
+    activity
   end
 
   @doc "A certificate the member sent (#493), waiting, with a small PDF as its file."

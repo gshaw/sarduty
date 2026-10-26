@@ -17,7 +17,7 @@
 
   <h2>Kinds</h2>
   <p>
-    Five status tags, the three activity kinds as a tag or a marker, and an outlined tag for an activity's own tags.
+    Five status tags, the activity kinds as a tag or a marker, and an outlined tag for an activity's own tags.
   </p>
   <.table id="tag-kinds" rows={tag_kinds()}>
     <:col :let={t} label="Tag" class="whitespace-nowrap">
@@ -25,6 +25,7 @@
         <.badge kind={:incident}>Incident</.badge>
         <.badge kind={:exercise}>Exercise</.badge>
         <.badge kind={:event}>Event</.badge>
+        <.badge kind={:chores}>Chores</.badge>
       </span>
       <span :if={t.kind == :markers} class="badges">
         <.activity_kind activity={
@@ -35,6 +36,9 @@
         } />
         <.activity_kind activity={
           %{activity_kind: "event", is_published: true, tracking_number: nil}
+        } />
+        <.activity_kind activity={
+          %{activity_kind: "event", chore_minutes: 90, is_published: true, tracking_number: nil}
         } />
       </span>
       <.badge :if={t.kind not in [:kinds, :markers]} kind={t.kind}>{t.sample}</.badge>

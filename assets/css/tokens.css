@@ -65,6 +65,7 @@
   --incident: light-dark(#2453a6, #3366c0); /* D4H incident */
   --exercise: light-dark(#b4500b, #b8560f); /* D4H exercise */
   --event: light-dark(#5b3ea6, #6a4cc0); /* D4H event */
+  --chores: light-dark(#56606b, #6b7682); /* SAR Duty's chore activities, a D4H event (#575) */
 
   /* group: Charts */
   --shade-1: light-dark(#dbe7f5, #172b45); /* Heat cells: a little; the current tab or stat switch count */

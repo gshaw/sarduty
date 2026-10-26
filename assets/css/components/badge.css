@@ -19,10 +19,11 @@
   .badge-success { --c: var(--success-text); }
   .badge-warning { background: var(--warning); color: var(--on-warning); }
   .badge-danger { background: var(--danger); color: var(--on-fill); }
-  .badge-incident, .badge-exercise, .badge-event { color: var(--on-fill); }
+  .badge-incident, .badge-exercise, .badge-event, .badge-chores { color: var(--on-fill); }
   .badge-incident { background: var(--incident); }
   .badge-exercise { background: var(--exercise); }
   .badge-event { background: var(--event); }
+  .badge-chores { background: var(--chores); }
 
   .badge-outline {
     background: none;
@@ -55,6 +56,7 @@
   .marker-incident { --c: var(--incident); }
   .marker-exercise { --c: var(--exercise); }
   .marker-event { --c: var(--event); }
+  .marker-chores { --c: var(--chores); }
 
   /* A reply, and once the activity starts its attendance (#444): signed up or attended,
      can't make it or absent, and a hollow square for no reply. */

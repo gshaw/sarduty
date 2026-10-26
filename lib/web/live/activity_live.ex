@@ -10,6 +10,7 @@ defmodule Web.ActivityLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChoreEvent
   alias App.Model.Coordinate
   alias App.Model.EquipmentUsage
   alias App.Model.Member
@@ -722,6 +723,7 @@ defmodule Web.ActivityLive do
   def fetch_activity(team, activity_id) do
     team
     |> Activity.find!(activity_id)
+    |> ChoreEvent.put_chore_minutes()
     |> Repo.preload(:team)
   end
 

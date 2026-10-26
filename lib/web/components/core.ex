@@ -164,6 +164,7 @@ defmodule Web.Components.Core do
       :incident,
       :exercise,
       :event,
+      :chores,
       :outline
     ]
 

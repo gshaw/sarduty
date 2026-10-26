@@ -10,6 +10,7 @@ defmodule Web.Components.ActivityFilterTable do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Team
   alias App.ViewModel.ActivityFilterViewModel
 
   attr :form, :map, required: true
@@ -23,7 +24,7 @@ defmodule Web.Components.ActivityFilterTable do
     ~H"""
     <.stat_switch id="activity-switch" label="Kind">
       <:view
-        :for={{label, kind} <- ActivityFilterViewModel.activity_kinds()}
+        :for={{label, kind} <- kinds(@team, @kind_counts)}
         id={"activity-view-#{kind}"}
         patch={@path_fn.(activity: kind, page: nil)}
         current={@form[:activity].value == kind}
@@ -138,13 +139,26 @@ defmodule Web.Components.ActivityFilterTable do
         <span :if={activity_hours_type(record, @hours_tags)} class="text-text-muted">
           {activity_hours_type(record, @hours_tags)}
         </span>
-        {Service.Format.duration(
-          Service.Convert.duration_to_minutes(record.started_at, record.finished_at)
-        )}
+        {Service.Format.duration(duration_minutes(record))}
       </:col>
     </.table>
     """
   end
+
+  # Chores only on a team that logs them, or once had chore activities in this view.
+  defp kinds(team, kind_counts) do
+    chores? = Team.chores?(team) or Map.get(kind_counts, "chores", 0) > 0
+
+    Enum.filter(ActivityFilterViewModel.activity_kinds(), fn {_, kind} ->
+      kind != "chores" or chores?
+    end)
+  end
+
+  # A chore activity lasts no time: its duration is its members' chores (#575).
+  defp duration_minutes(%{chore_minutes: minutes}) when is_integer(minutes), do: minutes
+
+  defp duration_minutes(activity),
+    do: Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at)
 
   def activity_summary(activity) do
     case activity.description do
