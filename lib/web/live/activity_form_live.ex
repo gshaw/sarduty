@@ -24,7 +24,8 @@ defmodule Web.ActivityFormLive do
       socket
       |> assign(page_title: if(activity, do: "Change #{activity.title}", else: "Add activity"))
       |> assign(activity: activity, form_data: form, records?: D4H.records?(team))
-      |> assign(params: %{}, places: [], place_session: FindPlace.new_session())
+      |> assign(params: %{}, past: [], places: [], place_session: FindPlace.new_session())
+      |> assign(past_places: FindPlace.past_places(team, DateTime.utc_now()))
       |> assign(
         description_locked?: ActivityFormViewModel.description_locked?(activity, team),
         published_locked?: activity != nil and Activity.locked?(activity)
@@ -67,7 +68,13 @@ defmodule Web.ActivityFormLive do
           <.input field={@form[:starts_at]} type="datetime-local" label="Start" />
           <.input field={@form[:ends_at]} type="datetime-local" label="Finish" />
         </div>
-        <.place_field form={@form} places={@places} kind={@form[:kind].value} />
+        <.place_field
+          form={@form}
+          past={@past}
+          places={@places}
+          kind={@form[:kind].value}
+          timezone={@current_team.timezone}
+        />
         <.input
           field={@form[:hours]}
           type="select"
@@ -127,11 +134,13 @@ defmodule Web.ActivityFormLive do
     """
   end
 
-  # The place: the address text, a list of places that match it, and the pin of the one
-  # picked or the latitude and longitude pasted (#610).
+  # The place: the address text, a list of places that match it (the team's own, then
+  # Mapbox's), and the pin of the one picked or the latitude and longitude pasted (#610).
   attr :form, :any, required: true
+  attr :past, :list, required: true
   attr :places, :list, required: true
   attr :kind, :string, required: true
+  attr :timezone, :string, required: true
 
   defp place_field(assigns) do
     field = assigns.form[:place]
@@ -142,6 +151,7 @@ defmodule Web.ActivityFormLive do
         field: field,
         errors: if(used_input?(field), do: Enum.map(field.errors, &translate_error/1), else: []),
         pin: pin,
+        open?: assigns.past != [] or assigns.places != [],
         map: pin && place_map(pin, assigns.kind, field.value)
       )
 
@@ -149,10 +159,16 @@ defmodule Web.ActivityFormLive do
     <div class={["mb-6", @errors != [] && "field-error"]}>
       <.label for={@field.id}>Address (optional)</.label>
       <.hint>
-        Type an address or a place name, like Victoria Park, Truro, and pick a match. Or paste a latitude and longitude.
+        Pick a place your team has used, or type an address or a place name, like Victoria Park, Truro, and pick a match. Or paste a latitude and longitude.
       </.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <div class="place-field">
+      <%!-- On the box and its list, so the click that focuses the box keeps the list open. --%>
+      <div
+        class="place-field"
+        phx-click-away={@open? && "close_places"}
+        phx-window-keydown={@open? && "close_places"}
+        phx-key="Escape"
+      >
         <input
           type="text"
           name={@field.name}
@@ -161,18 +177,27 @@ defmodule Web.ActivityFormLive do
           class={@errors != [] && "is-invalid"}
           autocomplete="off"
           phx-debounce="300"
+          phx-focus="show_past"
           aria-controls="activity-places"
-          aria-expanded={to_string(@places != [])}
+          aria-expanded={to_string(@open?)}
         />
         <ul
-          :if={@places != []}
+          :if={@open?}
           id="activity-places"
           class="place-list"
           aria-label="Places that match"
-          phx-click-away="close_places"
-          phx-window-keydown="close_places"
-          phx-key="Escape"
         >
+          <li :for={{place, i} <- Enum.with_index(@past)}>
+            <button type="button" id={"activity-past-#{i}"} phx-click="pick_past" phx-value-i={i}>
+              <span class="place-name">{place.text}</span>
+              <span class="place-detail">
+                {Service.Format.count(place.count, one: "1 activity", many: "%d activities")}, last {Service.Format.date_long(
+                  place.last_at,
+                  @timezone
+                )}
+              </span>
+            </button>
+          </li>
           <li :for={{place, i} <- Enum.with_index(@places)}>
             <button
               type="button"
@@ -227,9 +252,33 @@ defmodule Web.ActivityFormLive do
       else: {:noreply, socket}
   end
 
+  # The team's own places, with no Mapbox call, so the usual ones are a tap away.
+  def handle_event("show_past", _params, socket) do
+    %{past_places: past_places, form: form} = socket.assigns
+    {:noreply, assign(socket, past: FindPlace.match_past(past_places, form[:place].value))}
+  end
+
+  def handle_event("pick_past", %{"i" => i}, socket) do
+    %{past: past, params: params} = socket.assigns
+
+    case Integer.parse(i) do
+      {i, ""} when i in 0..(length(past) - 1)//1 ->
+        place = Enum.at(past, i)
+
+        params =
+          Map.merge(params, %{"place" => place.text, "coordinate" => place.coordinate || ""})
+
+        socket = assign(socket, past: [], places: [], place_session: FindPlace.new_session())
+        {:noreply, socket |> assign(params: params) |> validate(params)}
+
+      _other ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("pick_place", %{"id" => id}, socket) do
     %{params: params, place_session: session} = socket.assigns
-    socket = assign(socket, places: [], place_session: FindPlace.new_session())
+    socket = assign(socket, past: [], places: [], place_session: FindPlace.new_session())
 
     case FindPlace.pick(id, session) do
       {:ok, %{place: place, coordinate: coordinate}} ->
@@ -256,7 +305,8 @@ defmodule Web.ActivityFormLive do
     {:noreply, socket |> assign(params: params) |> validate(params)}
   end
 
-  def handle_event("close_places", _params, socket), do: {:noreply, assign(socket, places: [])}
+  def handle_event("close_places", _params, socket),
+    do: {:noreply, assign(socket, past: [], places: [])}
 
   def handle_event("save", %{"form" => params}, socket) do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
@@ -309,15 +359,29 @@ defmodule Web.ActivityFormLive do
     assign_form(socket, changeset)
   end
 
-  # Places that match the text, unless it is a latitude and longitude. The latest search
-  # wins when one is still running.
+  # Places that match the text, unless it is a latitude and longitude: the team's own at
+  # once, and Mapbox's from 3 characters. The latest search wins when one is still running.
   defp find_places(socket, text) do
-    %{current_team: team, place_session: session} = socket.assigns
+    %{current_team: team, place_session: session, past_places: past_places} = socket.assigns
 
-    if Coordinate.parse(text),
-      do: assign(socket, places: []),
-      else: start_async(socket, :places, fn -> FindPlace.suggest(team, text, session) end)
+    cond do
+      Coordinate.parse(text) ->
+        socket |> cancel_async(:places) |> assign(past: [], places: [])
+
+      short?(text) ->
+        socket
+        |> cancel_async(:places)
+        |> assign(past: FindPlace.match_past(past_places, text), places: [])
+
+      true ->
+        socket
+        |> assign(past: FindPlace.match_past(past_places, text))
+        |> start_async(:places, fn -> FindPlace.suggest(team, text, session) end)
+    end
   end
+
+  defp short?(nil), do: true
+  defp short?(text), do: text |> String.trim() |> String.length() < 3
 
   defp assign_form(socket, changeset), do: assign(socket, :form, to_form(changeset, as: "form"))
 end

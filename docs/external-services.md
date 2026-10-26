@@ -25,10 +25,11 @@ D4H doesn't have. See [records.md](records.md).
 
 [lib/app/adapter/mapbox.ex](../lib/app/adapter/mapbox.ex). Geocodes member addresses and
 gets driving distances for the mileage report, and draws the static maps on the team home
-and activity pages. The activity form's place suggests places from the Search Box API as
-an admin types, through the server (#610,
-[App.Operation.FindPlace](../lib/app/operation/find_place.ex)). Search Box bills per session, typing that ends in one pick, so the form keeps one
-session token until a pick. The token is a query parameter, and it never reaches a browser: map
+and activity pages. The activity form's place lists the team's own past places first,
+from our database, then places from the Search Box API once an admin types 3 characters,
+through the server (#610, [App.Operation.FindPlace](../lib/app/operation/find_place.ex)).
+Search Box bills per session, typing that ends in one pick, so the form keeps one session
+token until a pick, and picking a past place makes no Mapbox call. The token is a query parameter, and it never reaches a browser: map
 images come from `/maps/<key>` ([Web.MapImage](../lib/web/map_image.ex)), where the key
 is a Mapbox path the app signed. The server adds the token, fetches the image, and passes
 on Mapbox's cache header. Since every call comes from the server, the token can't have URL

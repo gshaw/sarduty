@@ -241,6 +241,60 @@ defmodule Web.ActivityFormLiveTest do
       assert body == %{"location" => %{"latitude" => 0, "longitude" => 0}}
     end
 
+    defp past_activities(team) do
+      for _ <- 1..3,
+          do: activity_fixture(team, %{address: "Hall, Surrey", coordinate: "49.1,-122.8"})
+
+      for _ <- 1..2,
+          do: activity_fixture(team, %{address: "Park, Langley", coordinate: "49.2,-122.6"})
+
+      activity_fixture(team, %{address: "Pond, Surrey", coordinate: nil})
+    end
+
+    test "the box lists the team's usual places, with no Mapbox search",
+         %{conn: conn, team: team} do
+      stub()
+      past_activities(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      lv |> element("#form_place") |> render_focus()
+
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#activity-past-0", "3 activities")
+      assert has_element?(lv, "#activity-past-1", "Park, Langley")
+      refute has_element?(lv, "#activity-past-2")
+
+      lv |> element("#activity-past-0") |> render_click()
+
+      refute has_element?(lv, "#activity-places")
+      assert has_element?(lv, "#activity-pin", "49.10000, -122.80000")
+      assert lv |> element("#form_place") |> render() =~ ~s(value="Hall, Surrey")
+      refute_received {:mapbox, _path, _query}
+    end
+
+    test "typing lists the team's places that match, then Mapbox's",
+         %{conn: conn, team: team} do
+      stub()
+      stub_mapbox()
+      past_activities(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      type_place(lv, "su")
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#activity-past-1", "Pond, Surrey")
+      refute_received {:mapbox, _path, _query}
+
+      type_place(lv, "surrey")
+      render_async(lv)
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#activity-place-0", "Campbell Valley Regional Park")
+
+      lv |> element("#activity-past-1") |> render_click()
+
+      refute has_element?(lv, "#activity-pin")
+      assert lv |> element("#form_place") |> render() =~ ~s(value="Pond, Surrey")
+    end
+
     test "a Mapbox failure lists nothing", %{conn: conn, team: team} do
       Req.Test.stub(App.Adapter.Mapbox, &Plug.Conn.send_resp(&1, 401, "{}"))
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
