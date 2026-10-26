@@ -67,6 +67,11 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   `no_reply`, `signed_up`, `cant_make_it` before, `attended` and `absent` after. A chore
   activity's kind is `chores`, as on the Activities page. `list_members` gives each
   member's standing, never an away period's reason or dates (#366).
+- **Hours, chores, and what is waiting.** `tax_credit_hours` counts with
+  `CountTaxCreditHours`, as the letter does, so it can be lower than
+  `attendance_summary`, which adds rows up. `list_chores` gives what a member wrote they
+  did as `what_they_did`, never a decline's reason. `needs_attention` gives every item the
+  team home lists for a team admin, without the page's limit.
 - **Allowlisted fields.** Each tool builds explicit maps and lists every key it may
   return in `fields/0`; a test fails on any other key. Never email, phone, an address,
   an emergency contact, coordinates, an activity's description, letter text, or a key.

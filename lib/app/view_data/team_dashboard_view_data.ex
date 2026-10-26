@@ -49,6 +49,15 @@ defmodule App.ViewData.TeamDashboardViewData do
     }
   end
 
+  @doc """
+  Every Needs attention item a team admin would see, without the page's limit: for an
+  agent's needs_attention tool (#595).
+  """
+  def attention_items(%Team{} = team, now \\ DateTime.utc_now()) do
+    refresh_result = refresh_result_value(team, refresh_job_active?(team))
+    team |> attention_rows(refresh_result, now) |> TeamAttention.items(now, :all)
+  end
+
   defp attention(team, refresh_result, now, true),
     do: team |> attention_rows(refresh_result, now) |> TeamAttention.items(now)
 
