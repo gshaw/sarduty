@@ -106,7 +106,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     >
       <:header_row>
         <th colspan="2"></th>
-        <th colspan="3" class="text-center">SARVAC hours</th>
+        <th colspan="3" class="text-center">Tax credit hours</th>
         <th></th>
       </:header_row>
       <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>

@@ -16,7 +16,7 @@ defmodule App.Mailer.TaxCreditLetterMailerTest do
     assert team |> letter() |> TaxCreditLetterMailer.body() == """
            Attached is your 2025 tax credit letter from South Fraser Search and Rescue.
 
-           Claim the Search and Rescue Volunteers Tax Credit (SRVTC) on line 31240 of your tax return. Keep this letter in case the CRA asks for it.
+           Claim the search and rescue volunteers amount on line 31240 of your tax return. Keep this letter in case the CRA asks for it.
 
            Questions about your hours? Contact Andrew Smith at andrew@example.com.
            """

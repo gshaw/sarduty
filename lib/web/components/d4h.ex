@@ -48,7 +48,7 @@ defmodule Web.Components.D4H do
   end
 
   @doc """
-  Which SARVAC hours an activity counts for, from its D4H tags and the team's
+  Which tax credit hours an activity counts for, from its D4H tags and the team's
   `Activity.hours_tags/1`: Primary, Secondary, None for the other tag (#323), or nil.
   """
   def activity_hours_type(activity, hours_tags) do

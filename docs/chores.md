@@ -11,7 +11,7 @@ log chores checked under Member logins in team settings; every team starts with 
 
 A member picks a chore category when they log a chore
 ([ChoreCategory](../lib/app/model/chore_category.ex)). A team admin sets them up under
-Settings, Chore categories: a name, which SARVAC hours the chores count for (primary or
+Settings, Chore categories: a name, which tax credit hours the chores count for (primary or
 secondary), and other D4H tags, picked as on an activity's Change tags page.
 
 - **The hours are a kind, not a tag title.** The event gets the team's primary or

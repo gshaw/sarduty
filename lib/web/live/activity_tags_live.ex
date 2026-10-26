@@ -184,7 +184,7 @@ defmodule Web.ActivityTagsLive do
             id="activity-hours"
             name="hours"
             type="select"
-            label="SARVAC hours"
+            label="Tax credit hours"
             value={@hours}
             options={hours_options(@hours_tags)}
           >

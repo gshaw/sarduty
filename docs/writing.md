@@ -52,7 +52,7 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
    "Can't make it". Positive contractions such as "you'll" and "it's" are fine anywhere.
 8. **Use sentence case everywhere.** Headings, page titles, buttons, labels, tabs, and
    menu items: "Create letter", "Tax credit letters", "Change password". Proper nouns keep
-   their capitals: D4H, SAR Duty, SARVAC, Apple Wallet.
+   their capitals: D4H, SAR Duty, CRA, Apple Wallet.
 9. **Write numbers as digits**, including one to nine: "3 changes", "1 member". Use
    `Service.Format.count/2` so the noun agrees with the number.
 10. **Every value people read comes from a `Service.Format` function.** Never write a
@@ -165,81 +165,85 @@ member who signed up "attending".
 Use the term in the first column. The second column lists words that mean the same thing
 and must not be used for it.
 
-| Use                            | Not                                            | Meaning                                                                                              |
-| ------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| SAR Duty                       | SARDuty, Sar Duty, the app, the system         | This service.                                                                                        |
-| D4H                            | d4h, D4H Decisions, D4H Technologies           | The team's system of record.                                                                         |
-| SAR Duty Records               | the store, hosted D4H, Records app             | Where a team without D4H keeps its records. "Records" alone only after the full name on the page.    |
-| team                           | unit, group, chapter                           | A search and rescue team using SAR Duty.                                                             |
-| member                         | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
-| account                        | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
-| your membership                | member area, your details, profile, my page    | A member's own page on one team: their activities, qualifications, ID card, letters, and details.    |
-| account settings               | your settings, profile, preferences            | The page for your own login and settings, the same on every team, such as your maps app.             |
-| team settings                  | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Member logins, and more.               |
-| team admin                     | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
-| Owner, Editor                  | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |
-| SAR Duty admin                 | superuser, staff, admin (alone, on team pages) | A person who runs SAR Duty and can open every team.                                                  |
-| organization                   | association, parent, society                   | An association of teams, such as BCSARA, with its own space in SAR Duty.                             |
-| organization admin             | org admin, association admin, administrator    | Someone a SAR Duty admin lets into an organization's space. They see team totals, never people.      |
-| organization settings          | settings (alone, in the menu), org settings    | An organization's settings: General, Organization admins, and Hours tags.                            |
-| member logins                  | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
-| activity                       | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
-| incident                       | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
-| exercise                       | training, practice, drill                      | An activity for training.                                                                            |
-| event                          | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
-| attendance                     | participation, roll call                       | Which members attended an activity, and for how long.                                                |
-| attended                       | present, participated                          | A member's state on an activity's attendance.                                                        |
-| published                      | locked, closed, finalized                      | An activity out of draft in D4H. D4H does not let SAR Duty change its tags.                          |
-| qualification                  | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
-| award                          | held qualification, grant, cert                | One member's hold on a qualification, from its start to its expiry if any. A renewal is a new award. |
-| certificate                    | proof, card, qualification                     | Proof of a course, on paper, in a photo, or as a PDF. A team admin records it in D4H as an award.    |
-| group                          | team, squad, list, role                        | A D4H group of members.                                                                              |
-| group rule                     | requirement, policy, criteria                  | One thing a member must meet to be in a group: in or not in groups or endorsements, or a standing.   |
-| endorsement                    | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
-| primary hours, secondary hours | main hours, other hours, type 1, type 2        | Hours as SARVAC counts them for the tax credit.                                                      |
-| tax credit letter              | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
-| category                       | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type, and not a chore category.                |
-| chore                          | task, job, duty, volunteer hours               | Time a member gives the team outside activities, such as fixing equipment, logged by them.           |
-| chore category                 | chore type, chore kind                         | What a chore counts as, such as Equipment maintenance. It gets one D4H activity a month.             |
-| accepted, declined             | approved, rejected, counted                    | A team admin's answer on a chore or a certificate. "Approved" is D4H's word for activities.          |
-| equipment                      | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
-| item                           | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
-| template                       | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups to invite, applied to an activity in one step.       |
-| mileage report                 | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
-| ID card                        | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
-| verify                         | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
-| access key                     | token, API key                                 | The D4H access key or Records access key. Alone when the page does not need to say which.            |
-| D4H access key                 | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
-| Records access key             | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
-| MCP token                      | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
-| refresh                        | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
-| send                           | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
-| whiteboard                     | notice board, bulletin board, announcements    | D4H's board of short notes for everyone on the team.                                                 |
-| note                           | post (as a noun), message, announcement        | One item on the whiteboard: up to 140 characters, with an optional link.                             |
-| post                           | publish, share, add                            | Putting a note on the whiteboard.                                                                    |
-| archive                        | take down, remove, hide                        | Taking a note off the whiteboard. It stays under Archived, and D4H or SAR Duty Records keeps it.     |
-| delete (a note)                | remove, erase                                  | Taking a note away for good, archived or not. Neither SAR Duty nor D4H keeps it.                     |
-| Take attendance                | sign-in, check-in, kiosk, door page            | The page where anyone logged in to the team scans members arriving at and leaving one activity.      |
-| arrived, left                  | signed in, signed out, checked in, checked out | A member's scans. "Arriving" and "Leaving" are the modes on the scanner, Take attendance.            |
-| check-in, checked in           | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan: that is "arrived".                   |
-| standing                       | status, availability, state                    | Active, Away, Not a person, or Retired. "Status" is D4H's member status.                             |
-| retired                        | departed, left the team, former, inactive      | A member no longer on the team: D4H retired them or no longer lists them. D4H's own word.            |
-| not retired                    | current (as a filter)                          | The Standing filter's default: Active, Away, and Not a person. All adds the retired.                 |
-| away period                    | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
-| no-show                        | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
-| signed up for                  | registered, going, coming, attending, RSVP     | A member's yes to an activity that hasn't started: Attending in D4H. Hours count once it starts.     |
-| invite                         | request, ask, call out                         | Asking a member to come to an activity. They show as "No reply" until they answer.                   |
-| reply                          | RSVP, response, answer                         | A member's answer to an invitation: "I'll be there" or "Can't make it".                              |
-| can't make it                  | absent, declined, can't go, not going          | A member's no to an activity that hasn't started: Absent in D4H.                                     |
-| no reply                       | unconfirmed, pending, requested                | Invited, with no answer yet: Requested in D4H.                                                       |
-| absent                         | can't make it, missing                         | D4H's status for a member who did not come to an activity that has started.                          |
-| log in, log out                | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
-| sign up                        | register, create account, signup (as a verb)   | Making a new account.                                                                                |
-| email                          | e-mail, mail, email address (as a label)       | The label is "Email".                                                                                |
-| time zone                      | timezone, TZ                                   | Two words in text and labels.                                                                        |
-| latitude, longitude            | lat, lng, long, coordinates                    | Spelled out in labels.                                                                               |
-| km                             | KMs, kms, kilometres                           | Distances, after a number with a space: "42 km".                                                     |
-| select                         | click, tap, press, choose, pick                | What the reader does to a button, link, or option.                                                   |
+<!-- cspell:ignore SRVA -- CRA's short name for line 31240, listed below as a word not to use -->
+
+| Use                                 | Not                                            | Meaning                                                                                              |
+| ----------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| SAR Duty                            | SARDuty, Sar Duty, the app, the system         | This service.                                                                                        |
+| D4H                                 | d4h, D4H Decisions, D4H Technologies           | The team's system of record.                                                                         |
+| SAR Duty Records                    | the store, hosted D4H, Records app             | Where a team without D4H keeps its records. "Records" alone only after the full name on the page.    |
+| team                                | unit, group, chapter                           | A search and rescue team using SAR Duty.                                                             |
+| member                              | user, responder, volunteer, person, personnel  | A person on the team's D4H roster.                                                                   |
+| account                             | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
+| your membership                     | member area, your details, profile, my page    | A member's own page on one team: their activities, qualifications, ID card, letters, and details.    |
+| account settings                    | your settings, profile, preferences            | The page for your own login and settings, the same on every team, such as your maps app.             |
+| team settings                       | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Member logins, and more.               |
+| team admin                          | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
+| Owner, Editor                       | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |
+| SAR Duty admin                      | superuser, staff, admin (alone, on team pages) | A person who runs SAR Duty and can open every team.                                                  |
+| organization                        | association, parent, society                   | An association of teams, such as BCSARA, with its own space in SAR Duty.                             |
+| organization admin                  | org admin, association admin, administrator    | Someone a SAR Duty admin lets into an organization's space. They see team totals, never people.      |
+| organization settings               | settings (alone, in the menu), org settings    | An organization's settings: General, Organization admins, and Hours tags.                            |
+| member logins                       | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
+| activity                            | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
+| incident                            | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
+| exercise                            | training, practice, drill                      | An activity for training.                                                                            |
+| event                               | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
+| attendance                          | participation, roll call                       | Which members attended an activity, and for how long.                                                |
+| attended                            | present, participated                          | A member's state on an activity's attendance.                                                        |
+| published                           | locked, closed, finalized                      | An activity out of draft in D4H. D4H does not let SAR Duty change its tags.                          |
+| qualification                       | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
+| award                               | held qualification, grant, cert                | One member's hold on a qualification, from its start to its expiry if any. A renewal is a new award. |
+| certificate                         | proof, card, qualification                     | Proof of a course, on paper, in a photo, or as a PDF. A team admin records it in D4H as an award.    |
+| group                               | team, squad, list, role                        | A D4H group of members.                                                                              |
+| group rule                          | requirement, policy, criteria                  | One thing a member must meet to be in a group: in or not in groups or endorsements, or a standing.   |
+| endorsement                         | clause, credential, rating, skill set          | A name and the qualifications that earn it, such as First Aid. Holding any one of them earns it.     |
+| tax credit hours                    | SARVAC hours, SRVA hours, SRVTC hours          | Which hours an activity or chore counts for on a tax credit letter: primary, secondary, or none.     |
+| primary hours, secondary hours      | main hours, other hours, type 1, type 2        | The two kinds of hours a tax credit letter lists, set by D4H hours tags.                             |
+| tax credit letter                   | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
+| search and rescue volunteers amount | SARVAC credit, SRVTC, SRVA                     | CRA's name for what the letter supports, on line 31240. Write it lowercase, as CRA does.             |
+| category                            | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type, and not a chore category.                |
+| chore                               | task, job, duty, volunteer hours               | Time a member gives the team outside activities, such as fixing equipment, logged by them.           |
+| chore category                      | chore type, chore kind                         | What a chore counts as, such as Equipment maintenance. It gets one D4H activity a month.             |
+| accepted, declined                  | approved, rejected, counted                    | A team admin's answer on a chore or a certificate. "Approved" is D4H's word for activities.          |
+| equipment                           | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
+| item                                | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
+| template                            | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups to invite, applied to an activity in one step.       |
+| mileage report                      | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
+| ID card                             | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
+| verify                              | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
+| access key                          | token, API key                                 | The D4H access key or Records access key. Alone when the page does not need to say which.            |
+| D4H access key                      | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
+| Records access key                  | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
+| MCP token                           | API key, access key, agent key                 | A team admin's own token that lets their AI agent read the team's data in SAR Duty.                  |
+| refresh                             | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
+| send                                | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
+| whiteboard                          | notice board, bulletin board, announcements    | D4H's board of short notes for everyone on the team.                                                 |
+| note                                | post (as a noun), message, announcement        | One item on the whiteboard: up to 140 characters, with an optional link.                             |
+| post                                | publish, share, add                            | Putting a note on the whiteboard.                                                                    |
+| archive                             | take down, remove, hide                        | Taking a note off the whiteboard. It stays under Archived, and D4H or SAR Duty Records keeps it.     |
+| delete (a note)                     | remove, erase                                  | Taking a note away for good, archived or not. Neither SAR Duty nor D4H keeps it.                     |
+| Take attendance                     | sign-in, check-in, kiosk, door page            | The page where anyone logged in to the team scans members arriving at and leaving one activity.      |
+| arrived, left                       | signed in, signed out, checked in, checked out | A member's scans. "Arriving" and "Leaving" are the modes on the scanner, Take attendance.            |
+| check-in, checked in                | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan: that is "arrived".                   |
+| standing                            | status, availability, state                    | Active, Away, Not a person, or Retired. "Status" is D4H's member status.                             |
+| retired                             | departed, left the team, former, inactive      | A member no longer on the team: D4H retired them or no longer lists them. D4H's own word.            |
+| not retired                         | current (as a filter)                          | The Standing filter's default: Active, Away, and Not a person. All adds the retired.                 |
+| away period                         | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
+| no-show                             | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
+| signed up for                       | registered, going, coming, attending, RSVP     | A member's yes to an activity that hasn't started: Attending in D4H. Hours count once it starts.     |
+| invite                              | request, ask, call out                         | Asking a member to come to an activity. They show as "No reply" until they answer.                   |
+| reply                               | RSVP, response, answer                         | A member's answer to an invitation: "I'll be there" or "Can't make it".                              |
+| can't make it                       | absent, declined, can't go, not going          | A member's no to an activity that hasn't started: Absent in D4H.                                     |
+| no reply                            | unconfirmed, pending, requested                | Invited, with no answer yet: Requested in D4H.                                                       |
+| absent                              | can't make it, missing                         | D4H's status for a member who did not come to an activity that has started.                          |
+| log in, log out                     | sign in, sign out, login (as a verb), logon    | Starting and ending a session. "Log in" is the verb and the button.                                  |
+| sign up                             | register, create account, signup (as a verb)   | Making a new account.                                                                                |
+| email                               | e-mail, mail, email address (as a label)       | The label is "Email".                                                                                |
+| time zone                           | timezone, TZ                                   | Two words in text and labels.                                                                        |
+| latitude, longitude                 | lat, lng, long, coordinates                    | Spelled out in labels.                                                                               |
+| km                                  | KMs, kms, kilometres                           | Distances, after a number with a space: "42 km".                                                     |
+| select                              | click, tap, press, choose, pick                | What the reader does to a button, link, or option.                                                   |
 
 ## Words to avoid
 

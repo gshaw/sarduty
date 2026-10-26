@@ -62,7 +62,7 @@ that title.
   `GET /members/<id>/image`, as for any team, so ID cards and pages need nothing new.
   After a change, the member's Apple Wallet pass is nudged to fetch the new photo.
 - **Activities**: add, change, delete. `DELETE /<kind>s/<id>` is Records' own; it marks
-  the activity deleted as D4H does, and SAR Duty marks its copy at once. The SARVAC
+  the activity deleted as D4H does, and SAR Duty marks its copy at once. The tax credit
   hours choice sets the team's primary or secondary hours tag and keeps any others. A
   new activity keeps its id even if its tags or published flag fail, so a retry never
   makes a second one. Times are on the team's clock, to the minute.

@@ -60,7 +60,7 @@ defmodule Web.ActivityFormLive do
       <.input
         field={@form[:hours]}
         type="select"
-        label="SARVAC hours"
+        label="Tax credit hours"
         options={ActivityFormViewModel.hours()}
       >
         Which hours the activity counts for on tax credit letters.

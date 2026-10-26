@@ -323,7 +323,7 @@ defmodule Web.ActivityLive do
       <dd>{format_activity_duration(@activity)}</dd>
 
       <div :if={hours_type = activity_hours_type(@activity, @hours_tags)}>
-        <dt>SARVAC hours</dt>
+        <dt>Tax credit hours</dt>
         <dd>{hours_type}</dd>
       </div>
 

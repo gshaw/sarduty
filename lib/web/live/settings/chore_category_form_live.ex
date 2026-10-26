@@ -82,7 +82,7 @@ defmodule Web.Settings.ChoreCategoryFormLive do
           <.input
             field={@form[:hours]}
             type="select"
-            label="SARVAC hours"
+            label="Tax credit hours"
             prompt="Select hours"
             options={hours_options()}
           >
