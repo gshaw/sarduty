@@ -23,7 +23,8 @@ defmodule App.MCP.Tool.ProposeAttendanceChanges do
       "at any time. Give optional start and end times as ISO 8601 with an offset; a row " <>
       "added without times gets the activity's. Give a short reason per change, such as " <>
       "the sheet row, and a one-line summary. Returns the link for the team admin and any " <>
-      "changes left out, with why. Published, deleted, and chore activities cannot change."
+      "changes left out, with why. A published activity is made a draft for the change, " <>
+      "then published again. Deleted and chore activities cannot change."
   end
 
   @impl App.MCP.Tool

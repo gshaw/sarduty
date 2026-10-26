@@ -16,14 +16,22 @@ defmodule Web.ProposedChangeLive do
 
   defp load(socket, id) do
     change_set = ChangeSet.find!(socket.assigns.current_team, id)
-    waiting = for row <- change_set.rows, row.status == :proposed, do: row.id
+    {publish_rows, lines} = Enum.split_with(change_set.rows, &(&1.action == :publish_activity))
+    waiting = for row <- lines, row.status == :proposed, do: row.id
 
     assign(socket,
       page_title: change_set.summary || "Attendance changes",
       change_set: change_set,
+      lines: lines,
+      makes_draft?: Enum.any?(publish_rows, &(&1.new_value["published"] == false)),
+      not_published: Enum.find(publish_rows, &not_published?/1),
       selected: MapSet.new(waiting)
     )
   end
+
+  # The publish again at the end of a set (#595) that D4H refused.
+  defp not_published?(row),
+    do: row.new_value["published"] == true and row.status == :failed
 
   def handle_event("select", params, socket) do
     {:noreply, assign(socket, :selected, params |> selected_ids() |> MapSet.new())}
@@ -35,14 +43,7 @@ defmodule Web.ProposedChangeLive do
 
     case ApplyProposedChangeSet.call(team, change_set, user, selected_ids(params), now) do
       {:ok, rows} ->
-        applied = Enum.count(rows, &(&1.status == :applied))
-        not_sent = length(rows) - applied
-        kind = if not_sent == 0, do: :info, else: :error
-
-        message =
-          "Sent #{count_changes(applied)}." <>
-            if(not_sent > 0, do: " #{count_changes(not_sent)} did not go through.", else: "")
-
+        {kind, message} = sent_flash(rows)
         {:noreply, socket |> put_flash(kind, message) |> load(change_set.id)}
 
       {:error, reason} ->
@@ -73,6 +74,26 @@ defmodule Web.ProposedChangeLive do
   end
 
   defp count_changes(n), do: Service.Format.count(n, one: "%d change", many: "%d changes")
+
+  # The changes the team admin ticked, without the draft and publish rows around them.
+  defp sent_flash(rows) do
+    rows = Enum.reject(rows, &(&1.action == :publish_activity))
+    applied = Enum.count(rows, &(&1.status == :applied))
+    not_sent = length(rows) - applied
+    kind = if not_sent == 0, do: :info, else: :error
+
+    message =
+      "Sent #{count_changes(applied)}." <>
+        if(not_sent > 0, do: " #{count_changes(not_sent)} did not go through.", else: "")
+
+    {kind, message}
+  end
+
+  defp publish_text(team) do
+    if D4H.records?(team),
+      do: "Publish it with Change or delete on the activity's page.",
+      else: "Publish it with Change activity."
+  end
 
   defp error_text(:decided, _team), do: "These changes were already sent or discarded."
   defp error_text(:none_selected, _team), do: "Select at least 1 change to send."
@@ -120,6 +141,20 @@ defmodule Web.ProposedChangeLive do
       </div>
     </dl>
 
+    <.warning_text :if={ChangeSet.waiting?(@change_set) and @makes_draft?} class="mb-4">
+      {@change_set.activity.title} is published. Sending makes it a draft, changes it, and publishes it again.
+    </.warning_text>
+
+    <.banner
+      :if={@not_published}
+      kind={:warning}
+      title="Left as a draft"
+      id="not-published"
+      class="mb-4"
+    >
+      <p>{@not_published.error} {publish_text(@current_team)}</p>
+    </.banner>
+
     <p :if={ChangeSet.waiting?(@change_set)} class="lead">
       Clear the box next to any change you do not want. SAR Duty checks the attendance again
       before it sends, and skips a change if someone changed that attendance first.
@@ -128,7 +163,7 @@ defmodule Web.ProposedChangeLive do
     <.form for={%{}} id="review-form" phx-change="select" phx-submit="send">
       <.table
         id="proposed-rows"
-        rows={@change_set.rows}
+        rows={@lines}
         row_id={&"row-#{&1.id}"}
         class="table-striped table-stack"
       >

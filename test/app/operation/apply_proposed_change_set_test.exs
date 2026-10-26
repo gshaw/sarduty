@@ -51,22 +51,41 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
       {:ok, body, conn} = Plug.Conn.read_body(conn)
       path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
 
-      case {conn.method, path} do
-        {"GET", "/exercises/" <> _} ->
-          Req.Test.json(conn, %{"published" => published})
-
-        {"GET", "/attendance"} ->
-          Req.Test.json(conn, %{"results" => [sam_row], "totalSize" => 1})
-
-        {"DELETE", "/attendance/502"} ->
-          send(test_pid, {:d4h_delete, 502})
-          Plug.Conn.send_resp(conn, 204, "")
-
-        {"PATCH", "/attendance/502"} ->
-          send(test_pid, {:d4h_write, Jason.decode!(body)})
-          Req.Test.json(conn, %{sam_row | "status" => "ATTENDING"})
-      end
+      respond(conn, {conn.method, path}, body, %{
+        ctx: ctx,
+        pid: test_pid,
+        row: sam_row,
+        published: published
+      })
     end)
+  end
+
+  # D4H's answers, one clause per call the sends make. `s` holds the test's pid, the
+  # activity, Sam's row, and whether D4H says the activity is published.
+  defp respond(conn, {"GET", "/exercises/" <> _id}, _body, s),
+    do: Req.Test.json(conn, %{"published" => s.published})
+
+  defp respond(conn, {"GET", "/attendance"}, _body, s),
+    do: Req.Test.json(conn, %{"results" => [s.row], "totalSize" => 1})
+
+  defp respond(conn, {"POST", "/exercises/" <> rest}, body, s) do
+    send(s.pid, {:d4h_publish, rest, Jason.decode!(body)["published"]})
+    Req.Test.json(conn, %{"id" => s.ctx.activity.d4h_activity_id})
+  end
+
+  defp respond(conn, {"POST", "/attendance"}, body, s) do
+    send(s.pid, {:d4h_create, Jason.decode!(body)})
+    Req.Test.json(conn, %{s.row | "id" => 503, "status" => "ATTENDING"})
+  end
+
+  defp respond(conn, {"DELETE", "/attendance/502"}, _body, s) do
+    send(s.pid, {:d4h_delete, 502})
+    Plug.Conn.send_resp(conn, 204, "")
+  end
+
+  defp respond(conn, {"PATCH", "/attendance/502"}, body, s) do
+    send(s.pid, {:d4h_write, Jason.decode!(body)})
+    Req.Test.json(conn, %{s.row | "status" => "ATTENDING"})
   end
 
   test "an agent's set waits; nothing is sent to D4H until a team admin applies it", ctx do
@@ -162,5 +181,43 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
     assert applied.status == :applied
     assert_received {:d4h_delete, 502}
     assert App.Repo.all(App.Model.Attendance) == []
+  end
+
+  describe "a published activity" do
+    setup ctx do
+      activity = ctx.activity |> Ecto.Changeset.change(is_published: true) |> App.Repo.update!()
+      %{activity: activity}
+    end
+
+    test "is made a draft, changed, and published again", ctx do
+      change_set = propose(ctx)
+      assert [%{action: :publish_activity} | _rows] = change_set.rows
+      stub_d4h(ctx, true)
+      lines = for row <- change_set.rows, row.action != :publish_activity, do: row.id
+
+      {:ok, rows} =
+        ApplyProposedChangeSet.call(ctx.team, change_set, ctx.user, lines, DateTime.utc_now())
+
+      assert Enum.all?(rows, &(&1.status == :applied)),
+             inspect(Enum.map(rows, &{&1.action, &1.error}))
+
+      assert_received {:d4h_publish, _path, false}
+      assert_received {:d4h_write, _body}
+      assert_received {:d4h_publish, _path, true}
+    end
+
+    test "found a draft when sending, it stays a draft", ctx do
+      change_set = propose(ctx)
+      stub_d4h(ctx, false)
+      lines = for row <- change_set.rows, row.action != :publish_activity, do: row.id
+
+      {:ok, rows} =
+        ApplyProposedChangeSet.call(ctx.team, change_set, ctx.user, lines, DateTime.utc_now())
+
+      [draft | _rest] = rows
+      assert draft.status == :skipped
+      assert List.last(rows).error == "Left as it was, a draft."
+      refute_received {:d4h_publish, _path, _published}
+    end
   end
 end

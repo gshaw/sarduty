@@ -62,7 +62,8 @@ defmodule App.Operation.ApplyChangeSet do
     with :ok <- check_team(team),
          d4h = D4H.build_context_from_team(team),
          {:ok, current} <- read_current(d4h, change_set) do
-      rows = apply_rows(team, d4h, change_set, current, now, opts)
+      {current, published?} = published_state(current)
+      rows = apply_rows(team, d4h, change_set, {current, published?}, now, opts)
       ChangeSet.mark_applied!(change_set, user, now)
       {:ok, rows}
     end
@@ -70,22 +71,49 @@ defmodule App.Operation.ApplyChangeSet do
 
   # Rows go in order, so one can use the activity (#341) or the award (#493) an earlier
   # row created.
-  defp apply_rows(team, d4h, change_set, current, now, opts) do
+  defp apply_rows(team, d4h, change_set, {current, published?}, now, opts) do
     {rows, _created} =
       change_set.rows
       |> Enum.filter(&(&1.status in [:proposed, :failed]))
-      |> Enum.map_reduce(created(change_set.rows), fn row, created ->
-        row = with_created(row, created)
+      |> Enum.map_reduce(
+        change_set.rows |> created() |> Map.put(:published?, published?),
+        fn row, created ->
+          row = with_created(row, created)
 
-        result =
-          d4h |> apply_row(row, change_set.source, current, opts) |> failure_text(row, team)
+          result =
+            if agent_publish?(row, change_set.source),
+              do: d4h |> agent_publish(row, created) |> failure_text(row, team),
+              else:
+                d4h |> apply_row(row, change_set.source, current, opts) |> failure_text(row, team)
 
-        recorded = ChangeSetRow.record!(row, result, now)
-        {recorded, created(recorded, created)}
-      end)
+          recorded = ChangeSetRow.record!(row, result, now)
+          {recorded, created(recorded, created)}
+        end
+      )
 
     rows
   end
+
+  # An agent's set on a published activity starts by making it a draft and ends by
+  # publishing it again (#595), since D4H locks a published activity's attendance and
+  # tags. Each applies only when needed: the draft when D4H says published now, and the
+  # publish again only after that draft was made.
+  defp agent_publish?(%ChangeSetRow{action: :publish_activity}, :agent), do: true
+  defp agent_publish?(_row, _source), do: false
+
+  defp agent_publish(d4h, %ChangeSetRow{new_value: %{"published" => false}} = row, created) do
+    if created.published?, do: write(d4h, row), else: {:skipped, "It was a draft already."}
+  end
+
+  defp agent_publish(d4h, %ChangeSetRow{new_value: %{"published" => true}} = row, created) do
+    if created[:unpublished],
+      do: write(d4h, row),
+      else: {:skipped, "Left as it was, a draft."}
+  end
+
+  # D4H's published flag, read with an agent's attendance, comes back beside it.
+  defp published_state({:published, current}), do: {current, true}
+  defp published_state(current), do: {current, false}
 
   # What the set created on an earlier apply, for its rows that failed then.
   defp created(rows), do: Enum.reduce(rows, %{}, &created/2)
@@ -95,6 +123,16 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp created(%ChangeSetRow{action: :award_qualification, status: :applied} = row, created),
     do: Map.put(created, :award, row.d4h_record_id)
+
+  defp created(
+         %ChangeSetRow{
+           action: :publish_activity,
+           status: :applied,
+           new_value: %{"published" => false}
+         },
+         created
+       ),
+       do: Map.put(created, :unpublished, true)
 
   defp created(_row, created), do: created
 
@@ -153,13 +191,35 @@ defmodule App.Operation.ApplyChangeSet do
     end
   end
 
-  defp read_current(d4h, %ChangeSet{activity: activity}) do
+  defp read_current(d4h, %ChangeSet{activity: activity} = change_set) do
     case D4H.fetch_activity_published(d4h, activity.d4h_activity_id, activity.activity_kind) do
-      {:ok, false} -> D4H.fetch_attendance_infos(d4h, activity.d4h_activity_id)
-      {:ok, true} -> {:error, :published}
-      error -> error
+      {:ok, false} ->
+        D4H.fetch_attendance_infos(d4h, activity.d4h_activity_id)
+
+      {:ok, true} ->
+        if makes_draft?(change_set),
+          do: published_attendance(d4h, activity),
+          else: {:error, :published}
+
+      error ->
+        error
     end
   end
+
+  defp published_attendance(d4h, activity) do
+    with {:ok, current} <- D4H.fetch_attendance_infos(d4h, activity.d4h_activity_id),
+         do: {:ok, {:published, current}}
+  end
+
+  # An agent's set that makes its activity a draft first (#595).
+  defp makes_draft?(%ChangeSet{source: :agent, rows: rows}),
+    do:
+      Enum.any?(
+        rows,
+        &match?(%{action: :publish_activity, new_value: %{"published" => false}}, &1)
+      )
+
+  defp makes_draft?(_change_set), do: false
 
   defp apply_row(d4h, row, source, current, opts) do
     case check(row, current, source) do

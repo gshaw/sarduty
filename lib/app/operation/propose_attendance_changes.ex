@@ -42,6 +42,8 @@ defmodule App.Operation.ProposeAttendanceChanges do
           {:error, problems}
 
         {rows, problems} ->
+          rows = around_publish(activity, rows)
+
           change_set =
             ChangeSet.propose!(
               %ChangeSet{
@@ -59,6 +61,26 @@ defmodule App.Operation.ProposeAttendanceChanges do
     end
   end
 
+  @doc """
+  The rows, between a row that makes a published activity a draft and one that publishes
+  it again (#595): D4H locks a published activity's attendance. Sending reads D4H again,
+  and makes the draft only when it is published then.
+  """
+  def around_publish(%Activity{is_published: true} = activity, rows),
+    do: Enum.concat([[publish_row(activity, false)], rows, [publish_row(activity, true)]])
+
+  def around_publish(%Activity{}, rows), do: rows
+
+  defp publish_row(activity, published) do
+    %ChangeSetRow{
+      action: :publish_activity,
+      d4h_record_id: activity.d4h_activity_id,
+      old_value: %{"kind" => activity.activity_kind},
+      new_value: %{"published" => published},
+      reason: if(published, do: "Publish it again", else: "Make it a draft for the change")
+    }
+  end
+
   defp find_activity(team, id) do
     case Repo.get_by(Activity, id: id, team_id: team.id) do
       nil ->
@@ -66,9 +88,6 @@ defmodule App.Operation.ProposeAttendanceChanges do
 
       %Activity{deleted_at: %DateTime{}} ->
         {:error, ["The activity is deleted."]}
-
-      %Activity{is_published: true} ->
-        {:error, ["The activity is published."]}
 
       activity ->
         if ChoreEvent.put_chore_minutes(activity).chore_minutes,

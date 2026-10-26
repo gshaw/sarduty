@@ -32,6 +32,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   row is reachable (#519), and it can take a row off (`delete_attendance`). Sending
   checks that row is still there as proposed, then deletes it from the copy at once,
   since the sync finds deletes on an untouched activity only one month per round.
+  An agent's set can change a published activity: it starts with a row that makes the
+  activity a draft and ends with one that publishes it again, as a chore send does. The
+  draft row applies only when D4H says published as the set is sent, and the publish row
+  only when that draft was made. The team admin never ticks either; they go with any
+  change. A refused publish leaves the activity a draft, and the page says so.
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or

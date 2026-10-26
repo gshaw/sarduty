@@ -68,7 +68,8 @@ defmodule Web.ProposedChangeCollectionLive do
         <.a navigate={~p"/teams/#{@current_team}/proposed-changes/#{set.id}"}>{set.summary ||
           "Attendance changes"}</.a>
         <div class="hint">
-          {set.activity && set.activity.title} · {Service.Format.count(length(set.rows),
+          {set.activity && set.activity.title} · {Service.Format.count(
+            Enum.count(set.rows, &(&1.action != :publish_activity)),
             one: "%d change",
             many: "%d changes"
           )}

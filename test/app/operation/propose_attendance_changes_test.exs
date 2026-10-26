@@ -158,4 +158,16 @@ defmodule App.Operation.ProposeAttendanceChangesTest do
     {[], [problem]} = plan([%{"member_id" => 10, "status" => "attended"}], [], before)
     assert problem =~ "has not started"
   end
+
+  test "a published activity's changes go between a draft and a publish" do
+    {[change], []} = plan([%{"member_id" => 10, "status" => "attended"}])
+    published = %Activity{@activity | is_published: true, activity_kind: "exercise"}
+
+    assert [draft, ^change, publish] =
+             ProposeAttendanceChanges.around_publish(published, [change])
+
+    assert {draft.action, draft.new_value} == {:publish_activity, %{"published" => false}}
+    assert {publish.d4h_record_id, publish.new_value} == {900, %{"published" => true}}
+    assert ProposeAttendanceChanges.around_publish(@activity, [change]) == [change]
+  end
 end

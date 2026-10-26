@@ -20,11 +20,18 @@ defmodule App.Operation.ApplyProposedChangeSet do
   """
   def call(%Team{} = team, %ChangeSet{} = change_set, %User{} = user, selected_row_ids, now) do
     selected = MapSet.new(selected_row_ids)
-    {ticked, unticked} = Enum.split_with(change_set.rows, &MapSet.member?(selected, &1.id))
+
+    # Making a published activity a draft and publishing it again go with any change
+    # (#595); a team admin never ticks them.
+    {ticked, unticked} =
+      Enum.split_with(
+        change_set.rows,
+        &(MapSet.member?(selected, &1.id) or &1.action == :publish_activity)
+      )
 
     cond do
       not ChangeSet.waiting?(change_set) -> {:error, :decided}
-      ticked == [] -> {:error, :none_selected}
+      Enum.all?(ticked, &(&1.action == :publish_activity)) -> {:error, :none_selected}
       true -> apply_ticked(team, change_set, user, unticked, now)
     end
   end
