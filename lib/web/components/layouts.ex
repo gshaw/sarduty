@@ -380,7 +380,7 @@ defmodule Web.Layouts do
           >
             <summary aria-label={"#{@bar_area.name}, switch team"}>
               <span class="site-bar-area-name">{@bar_area[:short_name] || @bar_area.name}</span>
-              <.icon name="hero-chevron-down-micro" class="group-open:rotate-180" />
+              <.icon name="chevron-down" size={:sm} class="group-open:rotate-180" />
             </summary>
             <nav class="site-bar-phone-panel" aria-label="Switch team">
               <.switch_menu rows={@switch_rows} id_prefix="phone-switch-" />
@@ -401,7 +401,7 @@ defmodule Web.Layouts do
           kind={:custom}
           navigate={~p"/login"}
           class="site-bar-login"
-        ><.icon name="hero-arrow-right-end-on-rectangle" /> Log in</.a>
+        ><.icon name="log-in" size={:lg} /> Log in</.a>
       <% end %>
       <.site_bar_phone_menu
         :if={@sections != []}
@@ -436,7 +436,7 @@ defmodule Web.Layouts do
     <details id="team-switcher" name="site-bar" class="site-bar-menu team-switcher relative">
       <summary id="nav-area" aria-label={"#{@name}, switch team"}>
         <span class="truncate">{@name}</span>
-        <.icon name="hero-chevron-down-micro" />
+        <.icon name="chevron-down" size={:sm} />
       </summary>
       <div class="menu" role="menu">
         <.switch_menu rows={@rows} id_prefix="switch-" />
@@ -487,8 +487,8 @@ defmodule Web.Layouts do
       aria-current={@row.current && "page"}
       class={["nav-link", @row.kind == :admin && "switch-admin"]}
     >
-      <.icon :if={@row.kind == :admin} name="hero-shield-check-micro" />
-      <.icon :if={@row.kind == :org} name="hero-building-office-2-micro" />
+      <.icon :if={@row.kind == :admin} name="shield-check" size={:sm} />
+      <.icon :if={@row.kind == :org} name="building-complex" size={:sm} />
       {@row.label}
     </.link>
     """

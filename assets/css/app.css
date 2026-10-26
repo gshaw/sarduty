@@ -4,7 +4,7 @@
 @source "../js";
 @source "../../lib/web";
 
-@plugin "../vendor/heroicons";
+@plugin "../vendor/icons";
 
 @plugin "@tailwindcss/typography";
 

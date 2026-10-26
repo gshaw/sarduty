@@ -67,7 +67,7 @@ defmodule Web.Components.FileDrop do
             class="file-drop-thumb"
           />
           <span :if={!String.starts_with?(entry.client_type, "image/")} class="file-drop-doc">
-            <.icon name="hero-document" class="size-12" />
+            <.icon name="file" size={:lg} class="size-12" />
           </span>
           <div>
             <span class="block">{entry.client_name}</span>
@@ -83,7 +83,7 @@ defmodule Web.Components.FileDrop do
         <%!-- The icon's classes are utilities, which win over component CSS, so the span
           is what hides and colours it. --%>
         <span class="file-drop-icon" aria-hidden="true">
-          <.icon name="hero-arrow-up-tray" class="size-8" />
+          <.icon name="upload" size={:lg} class="size-8" />
         </span>
         <span class="file-drop-text">Drop {@kinds} here, or paste one.</span>
         <.live_file_input upload={@upload} />

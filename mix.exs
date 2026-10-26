@@ -62,13 +62,6 @@ defmodule App.MixProject do
       {:req, "~> 0.5"},
       {:swoosh, "~> 1.20"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.2.0",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tzdata, "~> 1.1"}

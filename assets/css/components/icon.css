@@ -1,0 +1,8 @@
+/* An icon (<.icon>), in the text colour. The icons plugin sets --icon from the icon's
+   class, such as .icon-x. 20px beside body text, 16px (icon-sm) beside small text, and
+   24px (icon-lg) on its own line. See /styles/icons. */
+@layer components {
+  .icon { display: inline-block; flex: none; width: 20px; height: 20px; vertical-align: middle; background-color: currentColor; mask: var(--icon) no-repeat center / 100% 100%; -webkit-mask: var(--icon) no-repeat center / 100% 100%; }
+  .icon-sm { width: 16px; height: 16px; }
+  .icon-lg { width: 24px; height: 24px; }
+}

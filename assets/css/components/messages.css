@@ -98,5 +98,5 @@
   }
 }
 
-/* The band's icon at 32px. Outside the layer: the icon plugin's own size is a utility. */
-.band > .band-icon { flex: none; width: 32px; height: 32px; mask-size: 100%; -webkit-mask-size: 100%; }
+/* The band's icon at 32px. */
+.band > .band-icon { width: 32px; height: 32px; }

@@ -24,10 +24,7 @@ defmodule Web.Components.A do
     ~H"""
     <.link class={@link_class} target="_blank" {@rest}><span class="link-text">{render_slot(
       @inner_block
-    )}</span><.icon
-      name="hero-arrow-top-right-on-square-micro"
-      class="link-icon"
-    /></.link>
+    )}</span><.icon name="external-link" size={:sm} class="link-icon" /></.link>
     """
   end
 

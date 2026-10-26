@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# The app's icons are Lucide's, one 24px SVG each in assets/icons, copied in by hand
+# rather than pulled in as a dependency. See /styles/icons.
+#
+#   bin/icons add NAME...   copy icons from Lucide's latest release (or replace ours)
+#   bin/icons check         list icons Lucide has redrawn, renamed, or removed since we
+#                           copied them, and write a page that shows old beside new
+#
+# Each file starts with the release it came from. An icon we changed ourselves says so on
+# a second line, <!-- sd: what changed -->, so check flags it rather than suggesting a copy
+# that would undo the change. One we drew ourselves starts with <!-- sd: what it is -->
+# and no release, and check leaves it alone.
+# cspell:ignore esac
+set -euo pipefail
+
+dir="$(cd "$(dirname "$0")/.." && pwd)/assets/icons"
+raw="https://raw.githubusercontent.com/lucide-icons/lucide"
+
+latest() {
+  curl -fsS https://api.github.com/repos/lucide-icons/lucide/releases/latest |
+    sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p'
+}
+
+# The drawing without the header comments, so a new release header alone is no change.
+body() { grep -v '^<!--' | tr -s ' \n' ' '; }
+
+add() {
+  local tag svg
+  tag="$(latest)"
+  for name in "$@"; do
+    if ! svg="$(curl -fsS "$raw/$tag/icons/$name.svg" 2>/dev/null)"; then
+      echo "$name: not in Lucide $tag. Search https://lucide.dev/icons/?search=$name" >&2
+      exit 1
+    fi
+    printf '<!-- @license lucide %s - ISC, see LICENSE -->\n%s\n' "$tag" "$svg" >"$dir/$name.svg"
+    echo "$name: Lucide $tag"
+  done
+}
+
+check() {
+  local tag page found=0
+  tag="$(latest)"
+  page="$(mktemp -t icons-check).html"
+  echo "<!doctype html><title>Icons vs Lucide $tag</title><table>" >"$page"
+
+  for file in "$dir"/*.svg; do
+    local name upstream ours note
+    name="$(basename "$file" .svg)"
+    ours="$(sed -n 's/.*@license lucide \([^ ]*\) .*/\1/p' "$file")"
+    [ -n "$ours" ] || continue
+    if ! upstream="$(curl -fsS "$raw/$tag/icons/$name.svg" 2>/dev/null)"; then
+      echo "$name: gone from Lucide $tag, renamed or removed. https://lucide.dev/icons/?search=$name"
+      found=1
+      continue
+    fi
+    [ "$(body <"$file")" = "$(echo "$upstream" | body)" ] && continue
+
+    note=""
+    if grep -q '^<!-- sd:' "$file"; then
+      # Ours differs because we changed it. Only a change on Lucide's side is news.
+      [ "$ours" = "$tag" ] && continue
+      [ "$(curl -fsS "$raw/$ours/icons/$name.svg" | body)" = "$(echo "$upstream" | body)" ] && continue
+      note=" We changed it too: $(sed -n 's/^<!-- sd: *\(.*\) -->/\1/p' "$file")"
+    fi
+    echo "$name: Lucide redrew it after $ours.$note"
+    printf '<tr><th>%s</th><td><img width=48 src="file://%s"></td><td><img width=48 src="%s"></td></tr>\n' \
+      "$name" "$file" "$raw/$tag/icons/$name.svg" >>"$page"
+    found=1
+  done
+
+  echo "</table>" >>"$page"
+  if [ "$found" = 0 ]; then
+    rm "$page"
+    echo "All $(find "$dir" -name '*.svg' | wc -l | tr -d ' ') icons match Lucide $tag."
+  else
+    echo "Ours beside Lucide's: $page. Update one with bin/icons add NAME."
+  fi
+}
+
+case "${1:-}" in
+  add) shift; [ $# -gt 0 ] || { echo "usage: bin/icons add NAME..." >&2; exit 2; }; add "$@" ;;
+  check) check ;;
+  *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
+esac

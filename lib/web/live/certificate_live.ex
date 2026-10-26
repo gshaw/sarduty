@@ -388,7 +388,7 @@ defmodule Web.CertificateLive do
       }>
         <.button
           id="certificate-rotate-left"
-          icon="sd-rotate-left"
+          icon="rotate-ccw-square"
           phx-click="rotate"
           phx-value-direction="left"
           phx-disable-with="Rotating…"
@@ -397,7 +397,7 @@ defmodule Web.CertificateLive do
         </.button>
         <.button
           id="certificate-rotate-right"
-          icon="sd-rotate-right"
+          icon="rotate-cw-square"
           phx-click="rotate"
           phx-value-direction="right"
           phx-disable-with="Rotating…"

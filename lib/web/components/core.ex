@@ -9,6 +9,12 @@ defmodule Web.Components.Core do
 
   alias Phoenix.LiveView.JS
 
+  # The icons in assets/icons, so <.icon> and <.button icon> refuse any other name: a
+  # written-out name when it compiles, a worked-out one when it renders.
+  @icon_files "../../../assets/icons/*.svg" |> Path.expand(__DIR__) |> Path.wildcard()
+  for file <- @icon_files, do: @external_resource(file)
+  @icon_names Enum.map(@icon_files, &Path.basename(&1, ".svg"))
+
   @doc """
   Renders flash notices.
 
@@ -37,16 +43,13 @@ defmodule Web.Components.Core do
       class={["toast", @kind == :error && "toast-error"]}
       {@rest}
     >
-      <.icon
-        name={if @kind == :error, do: "hero-exclamation-circle-mini", else: "hero-check-circle-mini"}
-        class="toast-icon"
-      />
+      <.icon name={if @kind == :error, do: "circle-alert", else: "circle-check"} class="toast-icon" />
       <div class="toast-body">
         <span :if={@title} class="toast-title">{@title}</span>
         {msg}
       </div>
       <button type="button" class="toast-close" aria-label={gettext("Close")}>
-        <.icon name="hero-x-mark-mini" />
+        <.icon name="x" />
       </button>
     </div>
     """
@@ -60,8 +63,8 @@ defmodule Web.Components.Core do
   shows a spinner until the event answers. Web.SlowButtonTest fails without it. See
   /styles/button#slow.
 
-  `icon` leads with one of the app's own icons, such as `icon="sd-rotate-left"`. The
-  button draws it itself, so phx-disable-with, which puts back only the text, keeps it,
+  `icon` leads with an icon, such as `icon="rotate-ccw-square"`. The button draws it
+  itself, so phx-disable-with, which puts back only the text, keeps it,
   and the spinner takes its place while it waits.
 
   ## Examples
@@ -69,7 +72,7 @@ defmodule Web.Components.Core do
       <.button variant={:success}>Save</.button>
       <.button variant={:danger} size={:sm} phx-click="delete">Delete</.button>
       <.button phx-click="email" phx-disable-with="Sending…">Email letter</.button>
-      <.button icon="sd-rotate-left" phx-click="rotate">Rotate left</.button>
+      <.button icon="rotate-ccw-square" phx-click="rotate">Rotate left</.button>
       <.button navigate={~p"/login"}>Log in</.button>
   """
   attr :type, :string, default: nil
@@ -82,7 +85,7 @@ defmodule Web.Components.Core do
   attr :navigate, :string, default: nil
   attr :href, :string, default: nil
   attr :class, :string, default: nil
-  attr :icon, :string, default: nil
+  attr :icon, :string, default: nil, values: [nil | @icon_names]
   attr :rest, :global, include: ~w(disabled form name value method)
 
   slot :inner_block, required: true
@@ -127,10 +130,9 @@ defmodule Web.Components.Core do
     ]
   end
 
-  # The icon's variable, from assets/vendor/heroicons.js: 16px beside small text.
+  # The icon's variable, from assets/vendor/icons.js. btn.css sizes it to the button.
   defp icon_style(%{icon: nil}), do: nil
-  defp icon_style(%{icon: "sd-" <> _ = icon, size: :sm}), do: "--btn-icon: var(--#{icon}-micro)"
-  defp icon_style(%{icon: "sd-" <> _ = icon}), do: "--btn-icon: var(--#{icon}-mini)"
+  defp icon_style(%{icon: icon}), do: "--btn-icon: var(--icon-#{icon})"
 
   attr :class, :string, default: nil
   slot :inner_block, required: true
@@ -517,9 +519,9 @@ defmodule Web.Components.Core do
             {@rest}
           />
           <button type="button" id={"#{@id}-clear"} class="combobox-clear" aria-label="Clear">
-            <.icon name="hero-x-mark-mini" />
+            <.icon name="x" />
           </button>
-          <.icon name="hero-chevron-down-mini" class="combobox-chevron" />
+          <.icon name="chevron-down" class="combobox-chevron" />
         </div>
         <ul id={"#{@id}-listbox"} role="listbox" class="combobox-list" hidden></ul>
       </div>
@@ -584,32 +586,27 @@ defmodule Web.Components.Core do
   end
 
   @doc """
-  Renders a [Heroicon](https://heroicons.com).
+  Renders an icon: one of [Lucide](https://lucide.dev)'s, copied into `assets/icons` by
+  `bin/icons`. It takes the text colour.
 
-  Heroicons come in four styles: outline and solid at 24px, mini at 20px, and micro at
-  16px, picked with the `-solid`, `-mini`, and `-micro` suffix. Each draws at its own
-  size, so an icon needs no size class. It takes the text colour.
-
-  `hero-` icons come from `deps/heroicons`, and `sd-` ones are the app's own, in
-  `assets/icons`, for what Heroicons has none of. The plugin in
-  `assets/vendor/heroicons.js` bundles both into app.css. Every icon in use is on the
-  style guide's Icons page.
+  `size` is `:sm` (16px) beside small text, `:md` (20px) beside body text, and `:lg`
+  (24px) on its own line. Lines are 1.5px at every size. The plugin in
+  `assets/vendor/icons.js` builds a class for each file, and `.icon` in
+  `components/icon.css` draws it. Every icon is on the style guide's Icons page.
 
   ## Examples
 
-      <.icon name="hero-x-mark" />
-      <.icon name="hero-chevron-right-micro" class="breadcrumb-separator" />
-      <.icon name="sd-rotate-left-mini" />
+      <.icon name="x" size={:lg} />
+      <.icon name="chevron-right" size={:sm} class="breadcrumb-separator" />
+      <.icon name="rotate-ccw-square" />
   """
-  attr :name, :string, required: true
+  attr :name, :string, required: true, values: @icon_names
+  attr :size, :atom, default: :md, values: [:sm, :md, :lg]
   attr :class, :any, default: nil
 
-  def icon(%{name: "hero-" <> _} = assigns), do: icon_span(assigns)
-  def icon(%{name: "sd-" <> _} = assigns), do: icon_span(assigns)
-
-  defp icon_span(assigns) do
+  def icon(%{name: name} = assigns) when name in @icon_names do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={["icon", "icon-#{@name}", @size != :md && "icon-#{@size}", @class]} />
     """
   end
 

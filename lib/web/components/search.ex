@@ -59,7 +59,7 @@ defmodule Web.Components.Search do
         class="site-bar-search"
         aria-label="Search"
       >
-        <.icon name="hero-magnifying-glass-mini" />
+        <.icon name="search" />
       </button>
       <div class="site-search-dim" phx-click={close(@id)}></div>
       <div class="site-search-box">
@@ -72,7 +72,7 @@ defmodule Web.Components.Search do
           phx-target={@target}
         >
           <label class="site-bar-search-field">
-            <.icon name="hero-magnifying-glass-mini" />
+            <.icon name="search" />
             <input
               id={"#{@id}-input"}
               name="q"
@@ -96,7 +96,7 @@ defmodule Web.Components.Search do
               class="site-search-clear"
               aria-label="Clear search"
             >
-              <.icon name="hero-x-mark-mini" />
+              <.icon name="x" />
             </button>
             <kbd class="site-search-key" aria-hidden="true">/</kbd>
           </label>

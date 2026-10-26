@@ -70,18 +70,24 @@ defmodule Web.StyleGuideControllerTest do
     end
   end
 
-  test "the Icons page lists every icon the app uses" do
-    listed = for {name, _micro, _mini, _outline, _use} <- StyleGuideHTML.icons(), do: name
+  test "the Icons page lists every icon in assets/icons, and the app uses each one" do
+    files = for path <- Path.wildcard("assets/icons/*.svg"), do: Path.basename(path, ".svg")
+    listed = for {name, _use} <- StyleGuideHTML.icons(), do: name
 
-    # An icon name in quotes, such as "hero-clock-micro" or "sd-rotate-left".
-    used =
+    assert Enum.sort(listed) == Enum.sort(files),
+           "StyleGuideHTML.icons/0 lists one row per file in assets/icons"
+
+    # <.icon> refuses a name with no file. This is the other way: a file nothing uses, found
+    # as its name in quotes on a line that mentions an icon.
+    lines =
       for path <- Path.wildcard("lib/**/*.{ex,heex}"),
-          [_match, prefix, name] <-
-            Regex.scan(~r/"(hero-|sd-)([a-z0-9-]+?)(?:-mini|-micro|-solid)?"/, File.read!(path)),
-          uniq: true,
-          do: if(prefix == "sd-", do: prefix <> name, else: name)
+          not String.contains?(path, "style_guide"),
+          line <- path |> File.read!() |> String.split("\n"),
+          line =~ "icon",
+          do: line
 
-    assert used -- listed == [], "Add these to StyleGuideHTML.icons/0: #{inspect(used -- listed)}"
+    unused = Enum.reject(files, fn name -> Enum.any?(lines, &(&1 =~ ~s("#{name}"))) end)
+    assert unused == [], "Nothing uses these; delete them from assets/icons: #{inspect(unused)}"
   end
 
   test "the Values page shows every Service.Format function", %{conn: conn} do

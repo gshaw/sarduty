@@ -4,11 +4,13 @@ defmodule Web.Components.StatSwitch do
   """
   use Phoenix.Component
 
+  import Web.Components.Core, only: [icon: 1]
+
   @doc """
   Renders a row of counts over a list, each on a grey tile with what it counts, the current one
   light blue with a bar at its foot. All comes first. A view's `marker` puts a coloured square before its label,
   as the rows show it: `marker="incident"` is `.marker-incident`. An `icon` puts an icon
-  there instead, such as `icon="hero-clock-micro"`.
+  there instead, such as `icon="clock"`.
 
   ## Examples
 
@@ -46,7 +48,7 @@ defmodule Web.Components.StatSwitch do
             {render_slot(view)}
           </span>
           <span :if={view[:icon]} class="icon-label">
-            <span class={view.icon} aria-hidden="true" />{render_slot(view)}
+            <.icon name={view.icon} size={:sm} />{render_slot(view)}
           </span>
           <span :if={!view[:marker] && !view[:icon]}>{render_slot(view)}</span>
         </span>

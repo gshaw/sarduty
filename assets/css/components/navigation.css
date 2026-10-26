@@ -55,7 +55,7 @@
   }
   .phone-team-switcher > summary::-webkit-details-marker { display: none; }
   .phone-team-switcher > summary:hover { background: rgb(255 255 255 / 0.1); }
-  .phone-team-switcher > summary .hero-chevron-down-micro { flex: none; }
+  .phone-team-switcher > summary .icon-chevron-down { flex: none; }
 
   .site-bar-menu > summary {
     display: inline-flex;
@@ -175,7 +175,7 @@
 
   /* SAR Duty admin in the switcher: below the teams, with a shield, so it is not a team. */
   :is(.menu, .site-bar-phone-panel) a.switch-admin { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); }
-  .menu a.switch-admin .hero-shield-check-micro { color: var(--text-muted); }
+  .menu a.switch-admin .icon-shield-check { color: var(--text-muted); }
 
   /* The compact bar, below 1024px and on narrow pages at every width (compact-bar, in
      app.css). Three columns, the outer two the same width, keep the name centred whether

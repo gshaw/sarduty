@@ -16,6 +16,9 @@ a year behind turns a routine update into a migration project.
    `Dockerfile` names the Elixir, Erlang, and Debian versions production is built with.
    Check that the Elixir and Erlang versions match `.mise.toml` — a mismatch means CI tests
    one runtime and production runs another. Note the pinned Litestream version too.
+4. **Icons.** Run `bin/icons check`. It lists the icons in `assets/icons` that Lucide has
+   redrawn, renamed, or removed since we copied them, and writes a page with ours beside
+   Lucide's.
 
 ## Update
 
@@ -36,6 +39,9 @@ a year behind turns a routine update into a migration project.
   changelog says "breaking". List them with a one-line summary of what the upgrade would
   involve, and suggest an issue.
 - **Anything retired** by `mix hex.audit`, with the suggested replacement.
+- **Icons `bin/icons check` lists.** A changed icon changes how the app looks, so show the
+  page and let me pick which to copy with `bin/icons add NAME`. A renamed one needs its
+  new name in `lib/` too.
 - **Deploying.** Never run `fly deploy`. Say that the change needs a deploy to reach
   production.
 

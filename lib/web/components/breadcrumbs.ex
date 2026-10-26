@@ -16,7 +16,7 @@ defmodule Web.Components.Breadcrumbs do
     ~H"""
     <ol :if={Enum.any?(@item, &Map.get(&1, :path))} class="breadcrumbs">
       <li :for={{item, i} <- Enum.with_index(@item)}>
-        <.icon :if={i > 0} name="hero-chevron-right-micro" class="breadcrumb-separator" />
+        <.icon :if={i > 0} name="chevron-right" size={:sm} class="breadcrumb-separator" />
         <%= if Map.get(item, :path) do %>
           <.a kind={:custom} navigate={item.path}>{item.label}</.a>
         <% else %>

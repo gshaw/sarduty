@@ -33,9 +33,9 @@
   <div class="demo">
     <.stat_switch label="Kind">
       <:view patch="#" current={true} count={52}>Milestones</:view>
-      <:view patch="#" count={9} icon="hero-clock-micro">Hours</:view>
-      <:view patch="#" count={27} icon="hero-cake-micro">Years</:view>
-      <:view patch="#" count={16} icon="hero-lifebuoy-micro">Incidents</:view>
+      <:view patch="#" count={9} icon="clock">Hours</:view>
+      <:view patch="#" count={27} icon="cake">Years</:view>
+      <:view patch="#" count={16} icon="life-buoy">Incidents</:view>
     </.stat_switch>
   </div>
 
@@ -105,7 +105,7 @@
     and a <code>.marker-…</code>
     class that sets <code>--c</code>, in <code>badge.css</code>
     beside the <a href={page_path(:tag)}>tags</a>. An <code>icon</code>
-    such as <code>icon="hero-clock-micro"</code>
+    such as <code>icon="clock"</code>
     puts an icon there instead; the rows show the same one in an <code>.icon-label</code>.
   </p>
 </.shell>

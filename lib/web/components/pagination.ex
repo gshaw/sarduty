@@ -11,18 +11,24 @@ defmodule Web.Components.Pagination do
     ~H"""
     <nav :if={@paginated.total_pages > 1} class={["pagination", @class]} aria-label="Pages">
       <%= if @paginated.page_number > 1 do %>
-        <.a kind={:custom} navigate={@path_fn.(page: @paginated.page_number - 1)} class="link"><.icon name="hero-chevron-left-micro" />Previous</.a>
+        <.a kind={:custom} navigate={@path_fn.(page: @paginated.page_number - 1)} class="link"><.icon
+          name="chevron-left"
+          size={:sm}
+        />Previous</.a>
       <% else %>
         <span class="pagination-disabled">
-          <.icon name="hero-chevron-left-micro" />Previous
+          <.icon name="chevron-left" size={:sm} />Previous
         </span>
       <% end %>
       <span>Page {@paginated.page_number} of {@paginated.total_pages}</span>
       <%= if @paginated.page_number < @paginated.total_pages do %>
-        <.a kind={:custom} navigate={@path_fn.(page: @paginated.page_number + 1)} class="link">Next<.icon name="hero-chevron-right-micro" /></.a>
+        <.a kind={:custom} navigate={@path_fn.(page: @paginated.page_number + 1)} class="link">Next<.icon
+          name="chevron-right"
+          size={:sm}
+        /></.a>
       <% else %>
         <span class="pagination-disabled">
-          Next<.icon name="hero-chevron-right-micro" />
+          Next<.icon name="chevron-right" size={:sm} />
         </span>
       <% end %>
     </nav>

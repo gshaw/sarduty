@@ -1,43 +1,38 @@
 <.shell current={:icons}>
   <h1>Icons</h1>
   <p class="lead">
-    Heroicons, and a few of the app's own where Heroicons has none. An icon helps people find
+    Lucide's outline icons, with 1.5px lines at every size. An icon helps people find
     or recognize something, and never replaces the words.
   </p>
 
   <h2>The set</h2>
   <p>
-    Every icon the app uses, with its use. A new one goes on this list; a test fails until it
-    does.
+    Every icon the app uses, with its use. Each is a file in <code>assets/icons</code>, and a test fails until it is on this list.
   </p>
   <.table id="icon-set" rows={icons()}>
-    <:col :let={{_name, micro, _mini, _outline, _use}} label="16" class="w-px">
-      <.icon name={micro} />
+    <:col :let={{name, _use}} label="16" class="w-px">
+      <.icon name={name} size={:sm} />
     </:col>
-    <:col :let={{_name, _micro, mini, _outline, _use}} label="20" class="w-px">
-      <.icon name={mini} />
+    <:col :let={{name, _use}} label="20" class="w-px">
+      <.icon name={name} />
     </:col>
-    <:col :let={{_name, _micro, _mini, outline, _use}} label="24" class="w-px">
-      <.icon name={outline} />
+    <:col :let={{name, _use}} label="24" class="w-px">
+      <.icon name={name} size={:lg} />
     </:col>
-    <:col
-      :let={{name, _micro, _mini, _outline, _use}}
-      label="Name"
-      class="w-px mono whitespace-nowrap"
-    >
+    <:col :let={{name, _use}} label="Name" class="w-px mono whitespace-nowrap">
       {name}
     </:col>
-    <:col :let={{_name, _micro, _mini, _outline, use}} label="Use">{use}</:col>
+    <:col :let={{_name, use}} label="Use">{use}</:col>
   </.table>
 
   <h2>Sizes</h2>
   <ul>
     <li>
-      <strong>16, solid</strong>: beside sm text: breadcrumbs, back links, pagination, small buttons, chips.
+      <strong>16</strong>, <code>size=&lbrace;:sm&rbrace;</code>: beside sm text: breadcrumbs, back links, pagination, small buttons, chips.
     </li>
-    <li><strong>20, solid</strong>: beside md text: buttons, banner titles, toasts.</li>
+    <li><strong>20</strong>, the default: beside md text: buttons, banner titles, toasts.</li>
     <li>
-      <strong>24, outline</strong>: on its own line, such as warning text. A band draws it at 32.
+      <strong>24</strong>, <code>size=&lbrace;:lg&rbrace;</code>: on its own line, such as warning text. A band draws it at 32.
     </li>
   </ul>
 
@@ -45,13 +40,10 @@
   <div class="demo">
     <.form_actions>
       <.button href="#">
-        Open in D4H <.icon name="hero-arrow-top-right-on-square-micro" />
+        Open in D4H <.icon name="external-link" size={:sm} />
       </.button>
-      <.button><.icon name="hero-arrow-path-mini" /> Refresh</.button>
-      <.button icon="sd-rotate-right">Rotate right</.button>
-      <.button size={:sm} href="#">
-        <.icon name="hero-arrow-down-tray-micro" /> Download PDF
-      </.button>
+      <.button icon="rotate-ccw-square">Rotate left</.button>
+      <.button icon="rotate-cw-square">Rotate right</.button>
     </.form_actions>
   </div>
 
@@ -62,21 +54,26 @@
     </li>
     <li>At most one icon per button. It leads, except the external-link icon, which trails.</li>
     <li>
-      A button that says what it is doing while it waits takes its icon as <code>icon="sd-…"</code>, and draws it itself: LiveView puts back only the text, so an
+      A button that says what it is doing while it waits takes its icon as <code>icon="…"</code>, and draws it itself: LiveView puts back only the text, so an
       icon inside it would go. The spinner takes the icon's place while it waits.
     </li>
     <li>
-      Heroicons first. When none fits, draw one in Heroicons' style in <code>assets/icons</code>: 24 outline, and 20 and 16 solid, in Heroicons' folders. The
-      app picks it up as <code>sd-</code> and its file name.
+      A new icon comes from <a href="https://lucide.dev/icons/">Lucide</a>:
+      <code>bin/icons add NAME</code>
+      copies it into <code>assets/icons</code>, and it goes on this list. When none fits, draw one on Lucide's 24px grid with 2px lines, and say so on its first line, <code>&lt;!-- sd: what it is --&gt;</code>.
+    </li>
+    <li>
+      <code>bin/icons check</code>
+      lists the icons Lucide has changed since we copied them. The monthly dependency review runs it.
     </li>
     <li>
       Only the uses listed above. No icons beside headings, in table cells, or for decoration.
     </li>
     <li>Icons take the text colour. Banners and toasts colour theirs to match.</li>
     <li>
-      In the app: <code>&lt;.icon name="hero-chevron-left-micro" /&gt;</code>
-      for 16, <code>-mini</code>
-      for 20, and no suffix for 24. Each draws at its own size, so it needs no size class.
+      In the app: <code>&lt;.icon name="chevron-left" size=&lbrace;:sm&rbrace; /&gt;</code>. A name with no file in
+      <code>assets/icons</code>
+      fails to compile.
     </li>
   </ul>
 </.shell>
