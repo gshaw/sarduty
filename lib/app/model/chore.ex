@@ -3,6 +3,7 @@ defmodule App.Model.Chore do
 
   alias App.Accounts.User
   alias App.Field.TrimmedString
+  alias App.Model.ChangeSetRow
   alias App.Model.Chore
   alias App.Model.ChoreCategory
   alias App.Model.ChoreEvent
@@ -20,6 +21,8 @@ defmodule App.Model.Chore do
     belongs_to :decided_by_user, User
     # While accepted, the D4H event of its chore category and month (App.Model.ChoreEvent).
     belongs_to :chore_event, ChoreEvent
+    # The AI agent's proposal it came from, when a team admin accepted one (#595).
+    belongs_to :change_set_row, ChangeSetRow
     field :date, :date
     field :minutes, :integer
     # What the member did, in their words. A team admin reads it, and so does anyone who

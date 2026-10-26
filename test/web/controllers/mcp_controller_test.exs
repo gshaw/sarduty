@@ -351,7 +351,8 @@ defmodule Web.MCPControllerTest do
       assert Enum.map(tools, & &1["name"]) ==
                ~w(get_team needs_attention list_members attendance_summary tax_credit_hours
                   list_activities list_attendance list_qualifications list_chores member_history
-                  activity_history propose_attendance_changes propose_activity_tags)
+                  activity_history propose_attendance_changes propose_activity_tags
+                  propose_chores)
 
       read_only = for t <- tools, t["annotations"]["readOnlyHint"], do: t["name"]
       refute "propose_attendance_changes" in read_only

@@ -206,7 +206,7 @@ and must not be used for it.
 | tax credit letter                   | TCL, tax letter, tax receipt, certificate      | The PDF letter a member gives the CRA. Say "letter" alone only after the full term on the same page. |
 | search and rescue volunteers amount | SARVAC credit, SRVTC, SRVA                     | CRA's name for what the letter supports, on line 31240. Write it lowercase, as CRA does.             |
 | category                            | kind, type                                     | D4H's grouping of items, such as Radio. Not an item's type, and not a chore category.                |
-| chore                               | task, job, duty, volunteer hours               | Time a member gives the team outside activities, such as fixing equipment, logged by them.           |
+| chore                               | task, job, duty, volunteer hours               | Time a member gives the team outside activities, such as fixing equipment.                           |
 | chore category                      | chore type, chore kind                         | What a chore counts as, such as Equipment maintenance. It gets one D4H activity a month.             |
 | accepted, declined                  | approved, rejected, counted                    | A team admin's answer on a chore or a certificate. "Approved" is D4H's word for activities.          |
 | equipment                           | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |

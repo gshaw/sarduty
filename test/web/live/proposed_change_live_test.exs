@@ -5,7 +5,9 @@ defmodule Web.ProposedChangeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.ChangeSet
+  alias App.Model.Chore
   alias App.Operation.ProposeAttendanceChanges
+  alias App.Operation.ProposeChores
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -96,5 +98,44 @@ defmodule Web.ProposedChangeLiveTest do
 
     assert has_element?(lv, "#row-#{remove.id}", "Remove: absent")
     assert has_element?(lv, "#row-#{change.id}", "Absent to attended")
+  end
+
+  test "proposed chores are accepted, and one matching a logged chore starts cleared", ctx do
+    team =
+      ctx.team
+      |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
+      |> App.Repo.update!()
+
+    category = chore_category_fixture(team, %{title: "Office admin"})
+    mei = member_fixture(team, %{name: "Ana Diaz"})
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+
+    App.Repo.insert!(%Chore{
+      team_id: team.id,
+      member_id: mei.id,
+      chore_category_id: category.id,
+      date: today,
+      minutes: 60,
+      description: "Radios",
+      status: :accepted
+    })
+
+    chore = %{
+      "member_id" => mei.id,
+      "chore_category_id" => category.id,
+      "date" => Date.to_iso8601(today),
+      "minutes" => 60,
+      "description" => "Radios"
+    }
+
+    {:ok, change_set, [], [_check]} =
+      ProposeChores.call(team, ctx.user, [chore], "Work party", DateTime.utc_now())
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/proposed-changes/#{change_set.id}")
+    [row] = change_set.rows
+
+    assert has_element?(lv, "#row-#{row.id}", "already has 1 hour of Office admin")
+    refute has_element?(lv, "#select-#{row.id}[checked]")
+    assert has_element?(lv, "#send", "Accept 0 chores")
   end
 end

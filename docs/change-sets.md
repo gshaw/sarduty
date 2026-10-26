@@ -37,7 +37,9 @@ new kind of write is a new row action there, not a new call from a page or an op
   agent's tags set (`ProposeActivityTags`) covers up to 50 draft activities, each with its
   own `set_activity_tags` row; sending reads every activity's tags and published flag
   first, and skips one that changed or was published since. The copy takes the new tags
-  at once.
+  at once. An agent's chores are `add_chore` rows, SAR Duty's own and not D4H writes:
+  `ApplyChangeSet` leaves them to `ApplyProposedChangeSet`, which makes the ticked ones
+  accepted chores and runs the chore send ([chores.md](chores.md)).
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or

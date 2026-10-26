@@ -19,7 +19,8 @@ defmodule App.MCP.Tools do
     App.MCP.Tool.MemberHistory,
     App.MCP.Tool.ActivityHistory,
     App.MCP.Tool.ProposeAttendanceChanges,
-    App.MCP.Tool.ProposeActivityTags
+    App.MCP.Tool.ProposeActivityTags,
+    App.MCP.Tool.ProposeChores
   ]
 
   def all, do: @tools
