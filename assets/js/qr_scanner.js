@@ -41,15 +41,7 @@ export const QRScanner = {
     // Start loading the reader now so a tap on Scan doesn't wait for it.
     this.reader = this.el.dataset.reader in READERS ? this.el.dataset.reader : "qr"
     this.decoder = READERS[this.reader]()
-    // A fresh video made here, in place of the page's. Come from another page and LiveView
-    // builds the page's video in a <template>, and an iPhone then plays the camera into
-    // it without ever drawing the picture, until a reload (2026-10-26).
-    const pageVideo = this.el.querySelector("video")
-    this.video = document.createElement("video")
-    this.video.className = pageVideo.className
-    this.video.muted = true
-    this.video.playsInline = true
-    pageVideo.replaceWith(this.video)
+    this.video = this.el.querySelector("video")
     this.canvas = document.createElement("canvas")
     this.state = this.el.querySelector("[data-scan-state]")
     this.el.querySelector("[data-scan-start]").addEventListener("click", () => this.start())
@@ -80,6 +72,7 @@ export const QRScanner = {
     } finally {
       this.starting = false
     }
+    this.freshVideo()
     this.video.srcObject = this.stream
     this.video.style.transform = this.facing === "user" ? "scaleX(-1)" : ""
     try {
@@ -92,6 +85,20 @@ export const QRScanner = {
     this.state.dataset.scanning = "true"
     this.showFlip()
     this.tick()
+  },
+
+  // Each start plays into a new video made here. Come from another page and LiveView
+  // builds the page's video in a <template>, and an iPhone then plays the camera into it
+  // without drawing the picture. And a video that played one camera keeps its size when
+  // Switch camera gives it the other, so the picture no longer fills the width
+  // (2026-10-26).
+  freshVideo() {
+    const video = document.createElement("video")
+    video.className = this.video.className
+    video.muted = true
+    video.playsInline = true
+    this.video.replaceWith(video)
+    this.video = video
   },
 
   // Cameras are listed only once the page may use one, so this runs after the first.
