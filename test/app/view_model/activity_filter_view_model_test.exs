@@ -26,8 +26,10 @@ defmodule App.ViewModel.ActivityFilterViewModelTest do
       %{team: team, chores: chores}
     end
 
-    test "are their own kind, left out of All and Events", %{team: team} do
-      assert team |> titles(%{}) |> Enum.sort() == ["Board meeting", "Rope rescue night"]
+    test "are their own kind, in All but not Events", %{team: team} do
+      assert team |> titles(%{}) |> Enum.sort() ==
+               ["Board meeting", "Chores: Equipment maintenance", "Rope rescue night"]
+
       assert titles(team, %{"activity" => "event"}) == ["Board meeting"]
       assert titles(team, %{"activity" => "chores"}) == ["Chores: Equipment maintenance"]
     end
@@ -52,9 +54,9 @@ defmodule App.ViewModel.ActivityFilterViewModelTest do
       assert meeting.chore_minutes == nil
     end
 
-    test "count apart from D4H's kinds", %{team: team} do
+    test "count apart from D4H's kinds, and in All", %{team: team} do
       assert ActivityFilterViewModel.kind_counts(team, nil, options(%{})) ==
-               %{"all" => 2, "event" => 1, "exercise" => 1, "chores" => 1}
+               %{"all" => 3, "event" => 1, "exercise" => 1, "chores" => 1}
     end
 
     test "sort by their members' total", %{team: team} do

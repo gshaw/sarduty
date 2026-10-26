@@ -115,9 +115,8 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
   they delete it.
 - **Activities**: chore activities are their own kind, Chores, though D4H holds them as
   events (#575). A Chores tile beside Events lists them, with each one's members' total as
-  its duration, since the activity lasts no time. All and Events leave them out, so the
-  month's chore activities, all on the 1st, never fill the top of Current. The tile
-  shows on a team with chores on, or one with chore activities in the view. The
+  its duration, since the activity lasts no time. All includes them; Events leaves them
+  out. The tile shows on a team with chores on, or one with chore activities in the view. The
   activity's page says Chores too. SAR Duty knows them by its chore events
   (`ChoreEvent.totals/1`), never by tag: each category picks its own tags.
 - **Your membership**: the member's 5 latest chores, with New chore and a link to all of
