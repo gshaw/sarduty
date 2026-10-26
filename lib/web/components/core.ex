@@ -437,7 +437,7 @@ defmodule Web.Components.Core do
     """
   end
 
-  # Text with bold, italics, links, and lists, saved as HTML (#598). Trix draws the editor
+  # Text with bold, italics, links, and lists, saved as HTML (#599). Trix draws the editor
   # from the hidden input; LiveView leaves it alone. The link box's inputs stay disabled,
   # so the form never sends them, until Trix opens it. See /styles/rich-text.
   def input(%{type: "rich_text"} = assigns) do

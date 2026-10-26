@@ -1,7 +1,7 @@
 defmodule Service.DescriptionHTML do
   @moduledoc """
   An activity's description as the activity form edits it: HTML with only paragraphs,
-  line breaks, bold, italics, links, and lists, the way chore events are written (#598).
+  line breaks, bold, italics, links, and lists, the way chore events are written (#599).
   Pasted colours, fonts, and sizes are dropped, so every description reads alike. A
   description with things the editor can't hold, such as a table, an image, or a
   heading, is not `editable?/1`, so the form never flattens it.

@@ -74,7 +74,7 @@ that title.
   no delete; the form sends the team admin to D4H for it. A new one has `fullTeam` and
   `shared` false, as a chore event does, so D4H adds no one's attendance; Add members
   follows. The description is HTML in D4H and in Records. The form edits it in Trix
-  with bold, italics, links, and lists, the way chore events are written (#598).
+  with bold, italics, links, and lists, the way chore events are written (#599).
   [Service.DescriptionHTML](../lib/service/description_html.ex) drops everything else,
   such as pasted colours and fonts, and the form sends one only when it changed. A
   description with things the editor can't hold, such as a table, a picture, or a rule,

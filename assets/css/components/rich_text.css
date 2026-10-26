@@ -1,4 +1,4 @@
-/* The rich text input (<.input type="rich_text">, #598): Trix's editor under a toolbar of
+/* The rich text input (<.input type="rich_text">, #599): Trix's editor under a toolbar of
    five buttons, in one box drawn like a text area. Trix's own stylesheet isn't loaded;
    this is all of it. See /styles/rich-text. */
 @layer components {
