@@ -95,15 +95,17 @@ defmodule Web.HomePageLive do
       </section>
 
       <section class="home-section" id="home-coming">
-        <div class="home-wrap home-measure">
-          <h2>In active development</h2>
-          <p class="home-lead">
-            SAR Duty grows with the teams that use it. To get involved, email Andrew Wallwork or
-            Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
-          </p>
-          <p class="home-lead">
-            The code is open: <a href="https://github.com/gshaw/sarduty">SAR Duty on GitHub</a>.
-          </p>
+        <div class="home-wrap">
+          <div class="home-measure">
+            <h2>In active development</h2>
+            <p class="home-lead">
+              SAR Duty grows with the teams that use it. To get involved, email Andrew Wallwork or
+              Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
+            </p>
+            <p class="home-lead">
+              The code is open: <a href="https://github.com/gshaw/sarduty">SAR Duty on GitHub</a>.
+            </p>
+          </div>
         </div>
       </section>
 
