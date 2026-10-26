@@ -4,6 +4,11 @@ defmodule Web.MemberCollectionLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.ChangeSet
+  alias App.Model.GroupMember
+  alias App.Model.GroupMembershipChange
+  alias App.Repo
+
   test "renders members collection", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
@@ -568,5 +573,220 @@ defmodule Web.MemberCollectionLiveTest do
         assert has_element?(lv, "select[name='form[standing]'] option[value=#{value}]") == shown?
       end
     end
+  end
+
+  describe "adding and removing many members from a group (#547)" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      team = team |> Ecto.Changeset.change(d4h_access_key: "key") |> Repo.update!()
+      trainees = group_fixture(team, %{title: "Trainees"})
+      avery = member_fixture(team, %{name: "Avery Chen", d4h_member_id: 501})
+      quinn = member_fixture(team, %{name: "Quinn Laval", d4h_member_id: 502})
+      robin = member_fixture(team, %{name: "Robin Tse", d4h_member_id: 503})
+      stub_d4h()
+
+      %{
+        conn: log_in_user(conn, user),
+        team: team,
+        user: user,
+        trainees: trainees,
+        avery: avery,
+        quinn: quinn,
+        robin: robin
+      }
+    end
+
+    test "ticks members, adds them, and skips the one in the group already", ctx do
+      group_member_fixture(ctx.trainees, ctx.robin)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      assert has_element?(lv, "#member_collection-select-all")
+      assert has_element?(lv, "#member-group-id-select option", "Trainees")
+      ids = [ctx.avery.id, ctx.quinn.id, ctx.robin.id]
+      submit(lv, "add", ctx.trainees.id, ids)
+
+      assert_received {:d4h, "POST", "/member-group-memberships", %{"memberId" => 501}}
+      assert_received {:d4h, "POST", "/member-group-memberships", %{"memberId" => 502}}
+      refute_received {:d4h, "POST", _path, %{"memberId" => 503}}
+      refute_received {:d4h, "GET", _path, _body}
+
+      assert has_element?(
+               lv,
+               "#flash-info",
+               "2 members added to Trainees. 1 was in Trainees already."
+             )
+
+      refute has_element?(lv, "#member_collection tbody input[checked]")
+
+      in_group = GroupMember.member_ids(ctx.team.id, ctx.trainees.id)
+      assert in_group == MapSet.new(ids)
+
+      # One set, with the group on it, so History names it.
+      assert [change_set] = Repo.all(ChangeSet)
+      assert %{source: :edit, group_id: group_id} = change_set
+      assert group_id == ctx.trainees.id
+
+      changes = GroupMembershipChange.recent_for_group(ctx.trainees)
+      assert length(changes) == 2
+      assert Enum.all?(changes, &(&1.action == :add and &1.user_id == ctx.user.id))
+    end
+
+    test "removes ticked members after a confirm naming them", ctx do
+      avery_in = group_member_fixture(ctx.trainees, ctx.avery)
+      quinn_in = group_member_fixture(ctx.trainees, ctx.quinn)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      refute has_element?(lv, "#member-group-remove[data-confirm]")
+      ids = [ctx.avery.id, ctx.quinn.id, ctx.robin.id]
+
+      lv
+      |> form("#member-group-form", %{group_id: ctx.trainees.id, member_ids: ids})
+      |> render_change()
+
+      assert has_element?(
+               lv,
+               ~s(#member-group-remove[data-confirm="Remove Avery Chen, Quinn Laval, and Robin Tse from Trainees?"])
+             )
+
+      submit(lv, "remove", ctx.trainees.id, ids)
+
+      for group_member <- [avery_in, quinn_in] do
+        path = "/member-group-memberships/#{group_member.d4h_group_membership_id}"
+        assert_received {:d4h, "DELETE", ^path, nil}
+      end
+
+      assert has_element?(
+               lv,
+               "#flash-info",
+               "2 members removed from Trainees. 1 was not in Trainees."
+             )
+
+      assert GroupMember.member_ids(ctx.team.id, ctx.trainees.id) == MapSet.new()
+    end
+
+    test "more than 5 ticked members are counted in the confirm", ctx do
+      more = for i <- 1..3, do: member_fixture(ctx.team, %{name: "Extra #{i}"})
+      ids = Enum.map([ctx.avery, ctx.quinn, ctx.robin | more], & &1.id)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      lv
+      |> form("#member-group-form", %{group_id: ctx.trainees.id, member_ids: ids})
+      |> render_change()
+
+      assert has_element?(
+               lv,
+               ~s(#member-group-remove[data-confirm="Remove 6 members from Trainees?"])
+             )
+    end
+
+    test "names each member the service refuses, and adds the rest", ctx do
+      refused = member_fixture(ctx.team, %{name: "Sky Refused", d4h_member_id: 666})
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      submit(lv, "add", ctx.trainees.id, [ctx.avery.id, refused.id])
+
+      assert has_element?(lv, "#flash-info", "1 member added to Trainees.")
+      assert has_element?(lv, "#group-not-changed", "1 member not added to Trainees")
+      assert has_element?(lv, "#not-changed-#{refused.id}", "Sky Refused")
+      assert GroupMember.member_ids(ctx.team.id, ctx.trainees.id) == MapSet.new([ctx.avery.id])
+
+      assert [%{error: error}] =
+               ctx.trainees |> GroupMembershipChange.recent_for_group() |> Enum.filter(& &1.error)
+
+      assert error =~ "D4H"
+    end
+
+    test "asks for a group and for members", ctx do
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      submit(lv, "add", "", [ctx.avery.id])
+      assert has_element?(lv, "#flash-error", "Select a group.")
+
+      submit(lv, "add", ctx.trainees.id, [])
+      assert has_element?(lv, "#flash-error", "Select members.")
+      refute_received {:d4h, _method, _path, _body}
+    end
+
+    test "a group with rules is not listed, and refused when its id is sent", ctx do
+      callout = group_fixture(ctx.team, %{title: "Callout"})
+      group_rule_fixture(callout, ctx.trainees)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      refute has_element?(lv, "#member-group-id-select option", "Callout")
+
+      send_set_group(lv, callout.id, [ctx.avery.id])
+
+      assert has_element?(lv, "#flash-error", "Callout has rules, which decide who is in it.")
+      refute_received {:d4h, _method, _path, _body}
+    end
+
+    test "another team's group and members are refused", ctx do
+      other = team_fixture()
+      other_group = group_fixture(other)
+      stranger = member_fixture(other)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      send_set_group(lv, other_group.id, [ctx.avery.id])
+      assert has_element?(lv, "#flash-error", "Select a group.")
+
+      send_set_group(lv, ctx.trainees.id, [stranger.id])
+      assert has_element?(lv, "#flash-error", "Select members.")
+      refute_received {:d4h, _method, _path, _body}
+    end
+
+    test "a member gets no boxes or buttons, and their events are refused" do
+      %{team: team, user: user} = member_with_login_fixture()
+      group = group_fixture(team, %{title: "Trainees"})
+      avery = member_fixture(team, %{name: "Avery Chen"})
+      {:ok, lv, _html} = build_conn() |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+      assert has_element?(lv, "#member_collection", "Avery Chen")
+      refute has_element?(lv, "#member-group-form")
+      refute has_element?(lv, "#member_collection-select-all")
+
+      send_set_group(lv, group.id, [avery.id])
+
+      refute_received {:d4h, _method, _path, _body}
+      assert GroupMember.member_ids(team.id, group.id) == MapSet.new()
+    end
+  end
+
+  defp submit(lv, action, group_id, member_ids) do
+    lv
+    |> form("#member-group-form", %{group_id: group_id, member_ids: member_ids})
+    |> render_submit(%{"do" => action})
+  end
+
+  # The event as a browser could send it, with ids the form doesn't offer.
+  defp send_set_group(lv, group_id, member_ids) do
+    render_submit(lv, "set-group", %{
+      "do" => "add",
+      "group_id" => "#{group_id}",
+      "member_ids" => Enum.map(member_ids, &"#{&1}")
+    })
+  end
+
+  # D4H's answer to each write, sent to the test. Member 666 is refused.
+  defp stub_d4h do
+    test = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      body = if body != "", do: Jason.decode!(body)
+      send(test, {:d4h, conn.method, path, body})
+
+      case {conn.method, body} do
+        {"POST", %{"memberId" => 666}} ->
+          conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"title" => "Bad Request"})
+
+        {"POST", _body} ->
+          id = System.unique_integer([:positive])
+          Req.Test.json(conn, %{"id" => id, "member" => %{"id" => 1}, "group" => %{"id" => 1}})
+
+        _other ->
+          Req.Test.json(conn, %{})
+      end
+    end)
   end
 end

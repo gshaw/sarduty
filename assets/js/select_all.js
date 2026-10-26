@@ -5,7 +5,13 @@ export const SelectAll = {
   mounted() {
     this.table = this.el.closest("table")
     this.el.addEventListener("click", () => {
-      for (const box of this.boxes()) box.checked = this.el.checked
+      const boxes = [...this.boxes()]
+      for (const box of boxes) box.checked = this.el.checked
+      // Boxes that join a form outside the table (form="…") need the event from one of
+      // them, since this box's own event reaches no form (#547).
+      if (boxes[0] && boxes[0].form && boxes[0].form !== this.el.form) {
+        boxes[0].dispatchEvent(new Event("input", {bubbles: true}))
+      }
     })
     this.table.addEventListener("change", () => this.sync())
     // A LiveView patch can replace rows or change which are checked.

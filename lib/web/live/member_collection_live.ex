@@ -1,28 +1,56 @@
 defmodule Web.MemberCollectionLive do
+  # A member gets the list but not the group form: "select" and "set-group" are not in
+  # view_events (#547).
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.FilterBar
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
+  alias App.Model.Group
   alias App.Model.Member
+  alias App.Model.Team
+  alias App.Operation.SetGroupMembers
   alias App.ViewModel.MemberFilterViewModel
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Members")}
+    groups = groups(socket.assigns)
+
+    socket =
+      socket
+      |> assign(:page_title, "Members")
+      |> assign(groups: groups, group_form?: groups != [], group_id: nil, not_changed: nil)
+
+    {:ok, socket}
   end
+
+  # Only groups without rules: rules decide who is in the rest.
+  defp groups(%{team_admin?: true, current_team: team}) do
+    organization_name = Team.organization_name(team) || "Your organization"
+
+    for group <- Group.get_kept_by_hand(team.id),
+        do: {Group.label(group, organization_name), group.id}
+  end
+
+  defp groups(_assigns), do: []
 
   def handle_params(params, _uri, socket) do
     case MemberFilterViewModel.validate(params, socket.assigns.team_admin?) do
       {:ok, filter_options, changeset} ->
-        {:noreply, assign_list(socket, filter_options, changeset)}
+        socket =
+          socket
+          |> assign(:form, to_form(changeset, as: "form"))
+          |> assign(:not_changed, nil)
+          |> assign_list(filter_options)
+
+        {:noreply, socket}
 
       {:error, _} ->
         raise Web.Status.NotFound
     end
   end
 
-  defp assign_list(socket, filter_options, changeset) do
+  defp assign_list(socket, filter_options) do
     %{current_team: current_team, team_admin?: team_admin?} = socket.assigns
     now = DateTime.utc_now()
     today = Service.Period.today(now, current_team.timezone)
@@ -43,7 +71,7 @@ defmodule Web.MemberCollectionLive do
       MemberFilterViewModel.standing_counts(current_team, filter_options, team_admin?, now)
     )
     |> assign(:path_fn, build_path_fn(current_team, filter_options))
-    |> assign(:form, to_form(changeset, as: "form"))
+    |> assign(:selected, MapSet.new())
   end
 
   def render(assigns) do
@@ -133,6 +161,50 @@ defmodule Web.MemberCollectionLive do
       end of an away period, and a check-in.
     </p>
 
+    <.banner
+      :if={@not_changed}
+      kind={:danger}
+      title={@not_changed.title}
+      id="group-not-changed"
+      class="mb-4"
+    >
+      <ul>
+        <li :for={{member, text} <- @not_changed.failed} id={"not-changed-#{member.id}"}>
+          {member.name}: {text}
+        </li>
+      </ul>
+    </.banner>
+
+    <%!-- Team admins only. Apart from the filter bar's form, as forms cannot nest; the
+    tick boxes join it with their form attribute. --%>
+    <.form
+      :if={@group_form? and @paginated.entries != []}
+      for={%{}}
+      id="member-group-form"
+      phx-change="select"
+      phx-submit="set-group"
+      class="flex flex-wrap items-center gap-2 mb-4"
+    >
+      <.combobox
+        id="member-group-id"
+        name="group_id"
+        value={@group_id}
+        options={@groups}
+        aria-label="Group"
+      />
+      <.button id="member-group-add" name="do" value="add" phx-disable-with="Adding…">
+        Add to group
+      </.button>
+      <.button
+        id="member-group-remove"
+        name="do"
+        value="remove"
+        phx-disable-with="Removing…"
+        data-confirm={remove_confirm(@selected, @paginated.entries, @group_id, @groups)}
+      >
+        Remove from group
+      </.button>
+    </.form>
     <.table
       id="member_collection"
       rows={@paginated.entries}
@@ -140,6 +212,17 @@ defmodule Web.MemberCollectionLive do
       path_fn={@path_fn}
       class="table-striped"
     >
+      <:col :let={record} :if={@group_form?} label="" class="w-px" select_all>
+        <input
+          type="checkbox"
+          id={"select-#{record.member.id}"}
+          name="member_ids[]"
+          form="member-group-form"
+          value={record.member.id}
+          checked={MapSet.member?(@selected, record.member.id)}
+          aria-label={record.member.name}
+        />
+      </:col>
       <:col :let={record} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
@@ -299,6 +382,34 @@ defmodule Web.MemberCollectionLive do
   defp missing_label(:mobile_phone), do: "Mobile phone"
   defp missing_label(:email), do: "Email"
 
+  def handle_event("select", params, socket) do
+    selected = params |> ids() |> MapSet.new()
+    {:noreply, assign(socket, selected: selected, group_id: parse_id(params["group_id"]))}
+  end
+
+  # The ticked rows of this page. The ids come from the browser; SetGroupMembers looks
+  # each one up through the team.
+  def handle_event("set-group", %{"do" => action} = params, socket)
+      when action in ["add", "remove"] do
+    %{current_team: team, current_user: user} = socket.assigns
+    action = Map.fetch!(%{"add" => :add, "remove" => :remove}, action)
+    group_id = parse_id(params["group_id"])
+
+    case SetGroupMembers.call(team, action, group_id, ids(params), user, DateTime.utc_now()) do
+      {:ok, result} ->
+        socket =
+          socket
+          |> assign(:group_id, group_id)
+          |> assign(:not_changed, not_changed(action, result))
+          |> assign_list(socket.assigns.filter_options)
+
+        {:noreply, put_result_flash(socket, action, result)}
+
+      {:error, text} ->
+        {:noreply, socket |> assign(:group_id, group_id) |> put_flash(:error, text)}
+    end
+  end
+
   def handle_event("change", %{"form" => form_params}, socket) do
     case MemberFilterViewModel.validate(form_params, socket.assigns.team_admin?) do
       {:ok, filter_options, _changeset} ->
@@ -309,6 +420,64 @@ defmodule Web.MemberCollectionLive do
         raise Web.Status.NotFound
     end
   end
+
+  # No confirm without a group and ticks: the click gets "Select a group" or "Select
+  # members" instead.
+  defp remove_confirm(selected, entries, group_id, groups) do
+    group = Enum.find_value(groups, fn {label, id} -> id == group_id && label end)
+    names = for %{member: m} <- entries, MapSet.member?(selected, m.id), do: m.name
+
+    cond do
+      is_nil(group) or names == [] -> nil
+      length(names) <= 5 -> "Remove #{Service.Format.and_list(names)} from #{group}?"
+      true -> "Remove #{count_members(length(names))} from #{group}?"
+    end
+  end
+
+  defp count_members(n), do: Service.Format.count(n, one: "%d member", many: "%d members")
+
+  defp put_result_flash(socket, _action, %{done: [], skipped: []}), do: clear_flash(socket)
+
+  defp put_result_flash(socket, action, %{group: group, done: done, skipped: skipped}) do
+    {verb, skip} =
+      case action do
+        :add -> {"added to", "in #{group.title} already"}
+        :remove -> {"removed from", "not in #{group.title}"}
+      end
+
+    text =
+      "#{count_members(length(done))} #{verb} #{group.title}." <>
+        if skipped == [],
+          do: "",
+          else:
+            " #{Service.Format.count(length(skipped), one: "%d was", many: "%d were")} #{skip}."
+
+    put_flash(socket, :info, text)
+  end
+
+  defp not_changed(_action, %{failed: []}), do: nil
+
+  defp not_changed(action, %{group: group, failed: failed}) do
+    verb = if action == :add, do: "added to", else: "removed from"
+    %{title: "#{count_members(length(failed))} not #{verb} #{group.title}", failed: failed}
+  end
+
+  defp ids(params) do
+    params
+    |> Map.get("member_ids", [])
+    |> List.wrap()
+    |> Enum.map(&parse_id/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp parse_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {id, ""} -> id
+      _ -> nil
+    end
+  end
+
+  defp parse_id(_id), do: nil
 
   def build_paginated_content(team, filter_options) do
     MemberFilterViewModel.build_paginated_content(team, filter_options)

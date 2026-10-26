@@ -23,7 +23,8 @@ defmodule App.Model.GroupMembershipChange do
 
   def insert!(%GroupMembershipChange{} = change), do: Repo.insert!(change)
 
-  def recent_for_group(%Group{} = group, limit \\ 10) do
+  # 50 so a page of the Members list changed at once shows every row (#547).
+  def recent_for_group(%Group{} = group, limit \\ 50) do
     GroupMembershipChange
     |> where([c], c.team_id == ^group.team_id and c.d4h_group_id == ^group.d4h_group_id)
     |> order_by([c], desc: c.inserted_at, desc: c.id)

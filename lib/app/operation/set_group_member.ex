@@ -7,8 +7,6 @@ defmodule App.Operation.SetGroupMember do
   Review changes, so it is refused here.
   """
 
-  import Ecto.Query
-
   alias App.Accounts.User
   alias App.Model.ChangeSetRow
   alias App.Model.Group
@@ -73,14 +71,8 @@ defmodule App.Operation.SetGroupMember do
     end
   end
 
-  defp check_kept_by_hand(group) do
-    ruled =
-      GroupRule
-      |> where([r], r.team_id == ^group.team_id and r.d4h_group_id == ^group.d4h_group_id)
-      |> Repo.exists?()
-
-    if ruled, do: {:error, "Its rules decide who is in it."}, else: :ok
-  end
+  defp check_kept_by_hand(group),
+    do: if(GroupRule.ruled?(group), do: {:error, "Its rules decide who is in it."}, else: :ok)
 
   defp log(result, team, member_id, d4h_group_id, action, user) do
     GroupMembershipChange.insert!(%GroupMembershipChange{

@@ -74,6 +74,17 @@ on the page or in SaveTitledRecord. Adding and removing members is fine: the tea
 can, and the membership belongs to the team (checked live 2026-10-25). Their titles carry
 the organization's short name, "Aircraft · BCSARA".
 
+**Many at once (#547).** On the Members list a team admin ticks members, picks a group
+kept by hand, and adds them to it or removes them from it: filter by whatever picks them
+to add, or by the group itself to remove. It acts on the ticked rows of the page shown.
+[SetGroupMembers](../lib/app/operation/set_group_members.ex) sends one change set, source
+`edit` with the group on it, so History reads "Added to the Trainees group". It skips
+members already in the group, or not in it, writes the local copy from each row that went
+through, and logs every row, so Recent changes lists each one. A row the service refuses
+doesn't stop the rest; the page names each member it refused. A group with rules is
+refused there too. Members open the list but never get the boxes, and the page refuses
+their group events.
+
 ## Storage
 
 - A [GroupRule](../lib/app/model/group_rule.ex) is `team_id`, `d4h_group_id` (the group it
