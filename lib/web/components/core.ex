@@ -438,8 +438,9 @@ defmodule Web.Components.Core do
   end
 
   # Text with bold, italics, links, and lists, saved as HTML (#599). Trix draws the editor
-  # from the hidden input; LiveView leaves it alone. The link box's inputs stay disabled,
-  # so the form never sends them, until Trix opens it. See /styles/rich-text.
+  # from the hidden input; LiveView leaves it alone. The link box opens under the selected
+  # text; its inputs stay disabled, so the form never sends them, until Trix opens it. See
+  # /styles/rich-text.
   def input(%{type: "rich_text"} = assigns) do
     ~H"""
     <div class={["mb-6", @errors != [] && "field-error"]}>
@@ -473,21 +474,30 @@ defmodule Web.Components.Core do
           </div>
           <div data-trix-dialogs>
             <div class="rich-text-dialog" data-trix-dialog="href" data-trix-dialog-attribute="href">
-              <input
-                type="url"
-                name="href"
-                class="input-sm"
-                placeholder="https://"
-                aria-label="Web address"
-                data-trix-input
-                data-trix-validate-href
-                required
-                disabled
-              />
-              <.button type="button" size={:sm} data-trix-method="setAttribute">Add link</.button>
-              <.button type="button" size={:sm} data-trix-method="removeAttribute">
-                Remove link
-              </.button>
+              <div class="rich-text-dialog-row">
+                <input
+                  type="url"
+                  name="href"
+                  class="input-sm"
+                  placeholder="https://"
+                  aria-label="Link"
+                  autocomplete="off"
+                  data-1p-ignore
+                  data-trix-input
+                  data-trix-validate-href
+                  required
+                  disabled
+                />
+                <.button type="button" size={:sm} data-trix-method="setAttribute">Add link</.button>
+                <.button
+                  type="button"
+                  size={:sm}
+                  class="rich-text-remove-link"
+                  data-trix-method="removeAttribute"
+                >
+                  Remove link
+                </.button>
+              </div>
             </div>
           </div>
         </trix-toolbar>
