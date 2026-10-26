@@ -89,9 +89,9 @@
     line-height: var(--lh-md);
   }
   /* Body text's spacing, not the plugin's article spacing: half a line between
-     paragraphs and lists, and list items close together. */
+     paragraphs and lists, and list items one line apart, like .list. */
   .prose :is(p, ul, ol) { margin-block: var(--sp-3); }
-  .prose li { margin-block: var(--sp-1); }
+  .prose li { margin-block: 0; }
   .prose > :first-child { margin-top: 0; }
   .prose > :last-child { margin-bottom: 0; }
 }
