@@ -5,16 +5,18 @@ defmodule Web.GroupCollectionLive do
 
   import Web.Components.FilterBar
 
-  alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRule
+  alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
   alias App.Repo
   alias Service.StringHelpers
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Groups")}
+    # The organization's groups name it, so an admin can tell where one came from.
+    organization_name = Team.organization_name(socket.assigns.current_team) || "Your organization"
+    {:ok, assign(socket, page_title: "Groups", organization_name: organization_name)}
   end
 
   def handle_params(params, _uri, socket) do
@@ -45,7 +47,6 @@ defmodule Web.GroupCollectionLive do
       <h1 class="title">{@page_title}</h1>
       <:action>
         <.button
-          :if={D4H.records?(@current_team)}
           id="group-add"
           navigate={~p"/teams/#{@current_team}/groups/new"}
         >
@@ -73,6 +74,7 @@ defmodule Web.GroupCollectionLive do
     >
       <:col :let={g} label="Group">
         <.a navigate={~p"/teams/#{@current_team}/groups/#{g.group.id}"}>{g.group.title}</.a>
+        <span :if={g.group.organization_owned} class="hint">· {@organization_name}</span>
       </:col>
       <:col :let={g} label="Rules" class="w-px whitespace-nowrap">
         <.rules_status status={g.rules} />
@@ -83,7 +85,7 @@ defmodule Web.GroupCollectionLive do
     </.table>
 
     <.empty_state :if={@all_count == 0} id="no-groups" title="No groups yet">
-      Groups come in with each refresh.
+      Add one, or refresh to bring in the team's groups.
     </.empty_state>
     <.empty_state
       :if={@all_count > 0 and @groups == []}

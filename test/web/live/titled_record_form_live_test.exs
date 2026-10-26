@@ -1,11 +1,15 @@
 defmodule Web.TitledRecordFormLiveTest do
   # Qualifications and groups of a team on SAR Duty Records (docs/records.md), and a
-  # member's awards and groups on their tabs.
+  # member's awards and groups on their tabs. A D4H team gets the group pages (#546).
   use Web.ConnCase
 
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Group
+  alias App.Model.GroupMember
+  alias App.Model.GroupRule
+  alias App.Operation.SaveTitledRecord
   alias App.RecordsStub
   alias App.Repo
 
@@ -168,31 +172,106 @@ defmodule Web.TitledRecordFormLiveTest do
     assert has_element?(tab, "#award-form .error-summary", "Enter the day it starts.")
   end
 
-  test "a group is added, joined, left, and deleted", %{conn: conn, team: team, member: member} do
+  test "a group is added, joined, left, and deleted, its copy written each time",
+       %{conn: conn, team: team, member: member} do
     stub()
-    add(conn, team, "groups", "Rope Team")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/groups/new")
+    lv |> form("#titled-record-form", form: %{title: "Rope Team"}) |> render_submit()
     assert_received {:records, "POST", "/member-groups", %{"title" => "Rope Team"}}
 
-    group = group_fixture(team, %{title: "Rope Team", d4h_group_id: 99})
+    group = Repo.get_by!(Group, team_id: team.id, d4h_group_id: 99)
+    assert %{title: "Rope Team", organization_owned: false} = group
+    assert_redirect(lv, ~p"/teams/#{team}/groups/#{group.id}")
+
     {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/groups")
     tab |> form("#add-group-form", %{group_id: group.id}) |> render_submit()
 
     assert_received {:records, "POST", "/member-group-memberships", body}
     assert body == %{"groupId" => 99, "memberId" => member.d4h_member_id}
+    group_member = Repo.get_by!(GroupMember, group_id: group.id, member_id: member.id)
+    assert group_member.d4h_group_membership_id == 400
 
-    group_member = group_member_fixture(group, member)
-    {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/groups")
     tab |> element("#remove-group-#{group_member.id}") |> render_click()
+    assert_received {:records, "DELETE", "/member-group-memberships/400", nil}
+    refute Repo.get(GroupMember, group_member.id)
 
-    path = "/member-group-memberships/#{group_member.d4h_group_membership_id}"
-    assert_received {:records, "DELETE", ^path, nil}
-
-    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}")
-    assert has_element?(page, "#group-actions #group-edit")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}/edit")
+    edit |> form("#titled-record-form", form: %{title: "Rope Rescue"}) |> render_submit()
+    assert_received {:records, "PATCH", "/member-groups/99", %{"title" => "Rope Rescue"}}
+    assert Repo.get!(Group, group.id).title == "Rope Rescue"
 
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}/edit")
     edit |> element("#record-delete-button") |> render_click()
     assert_received {:records, "DELETE", "/member-groups/99", nil}
+    refute Repo.get(Group, group.id)
+    refute_received {:records, "GET", _path, _body}
+  end
+
+  test "a group's title is refused when another group uses it, in any case",
+       %{conn: conn, team: team} do
+    group_fixture(team, %{title: "Aircraft", organization_owned: true})
+    rope = group_fixture(team, %{title: "Rope Team"})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/groups/new")
+    lv |> form("#titled-record-form", form: %{title: "aircraft"}) |> render_submit()
+
+    assert has_element?(
+             lv,
+             "#titled-record-form .error-summary",
+             "Enter a title no other group uses."
+           )
+
+    refute_received {:records, _method, _path, _body}
+
+    # Its own title in another case is a rename.
+    stub()
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/groups/#{rope.id}/edit")
+    lv |> form("#titled-record-form", form: %{title: "Rope team"}) |> render_submit()
+    assert_received {:records, "PATCH", _path, %{"title" => "Rope team"}}
+  end
+
+  test "deleting a group names what stops, and takes its own rules",
+       %{conn: conn, team: team, member: member} do
+    stub()
+    ground = group_fixture(team, %{title: "Ground Search Team"})
+    group_member_fixture(ground, member)
+    group_rule_fixture(ground, group_fixture(team, %{title: "GSAR"}))
+    callout = group_fixture(team, %{title: "Callout"})
+    group_rule_fixture(callout, ground)
+    template_fixture(team, "Truck 1", [], [], [ground])
+    team |> Ecto.Changeset.change(watch_d4h_group_id: ground.d4h_group_id) |> Repo.update!()
+
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{ground.id}/edit")
+
+    text =
+      "Its 1 member leaves it. The rules of Callout stop working until you change them. " <>
+        "The template Truck 1 stops adding its members. " <>
+        "The attendance check stops until you select another group."
+
+    assert has_element?(edit, "#record-delete p", text)
+
+    assert edit |> element("#record-delete-button") |> render() =~
+             ~s(data-confirm="Delete Ground Search Team? #{text}")
+
+    edit |> element("#record-delete-button") |> render_click()
+    refute Repo.get(Group, ground.id)
+    assert [%{d4h_group_id: d4h_group_id}] = GroupRule.get_all(team.id)
+    assert d4h_group_id == callout.d4h_group_id
+  end
+
+  test "the organization's group is never renamed or deleted", %{team: team} do
+    organization_fixture([team], %{short_name: "BCSARA"})
+    team = Repo.reload!(team)
+    group = group_fixture(team, %{title: "Aircraft", organization_owned: true})
+    user = App.AccountsFixtures.user_fixture()
+    now = DateTime.utc_now()
+    text = "Only BCSARA can rename or delete it."
+
+    assert {:error, ^text} =
+             SaveTitledRecord.save(team, :group, group, %{"title" => "Planes"}, user, now)
+
+    assert {:error, ^text} = SaveTitledRecord.delete(team, :group, group, user, now)
+    refute_received {:records, _method, _path, _body}
   end
 
   test "a title is needed", %{conn: conn, team: team} do
@@ -201,7 +280,7 @@ defmodule Web.TitledRecordFormLiveTest do
     assert has_element?(lv, "#titled-record-form .error-summary", "Enter a title.")
   end
 
-  test "a D4H team has no such pages, buttons, or tab forms", %{conn: conn} do
+  test "a D4H team changes its groups here, and its qualifications in D4H", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     conn = log_in_user(conn, user)
     member = member_fixture(team)
@@ -211,13 +290,13 @@ defmodule Web.TitledRecordFormLiveTest do
     {:ok, list, _html} = live(conn, ~p"/teams/#{team}/qualifications")
     refute has_element?(list, "#qualification-add")
     {:ok, list, _html} = live(conn, ~p"/teams/#{team}/groups")
-    refute has_element?(list, "#group-add")
+    assert has_element?(list, "#group-add")
     {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/qualifications")
     refute has_element?(tab, "#award-form")
     {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/groups")
-    refute has_element?(tab, "#add-group-form")
+    assert has_element?(tab, "#add-group-form")
 
-    assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/groups/new") end
+    assert {:ok, _lv, _html} = live(conn, ~p"/teams/#{team}/groups/new")
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/qualifications/new") end
   end
 end

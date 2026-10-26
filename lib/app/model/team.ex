@@ -281,6 +281,14 @@ defmodule App.Model.Team do
   def certificates?(%Team{member_logins: logins, certificates_enabled: certificates}),
     do: logins and certificates
 
+  @doc "The short name of the team's organization, else its name. Nil without one."
+  def organization_name(%Team{} = team) do
+    case Repo.preload(team, :organization).organization do
+      nil -> nil
+      organization -> organization.short_name || organization.name
+    end
+  end
+
   def get(id), do: Repo.get(Team, id)
   def get!(id), do: Repo.get!(Team, id)
   def get_by(params), do: Repo.get_by(Team, params)

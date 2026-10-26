@@ -9,8 +9,11 @@ defmodule Web.GroupLive do
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
   alias App.Model.GroupRule
+  alias App.Model.Member
+  alias App.Model.Team
   alias App.Operation.AddGroupRule
   alias App.Operation.BuildGroupRulePreview
+  alias App.Operation.SetGroupMember
   alias App.Repo
   alias App.ViewData.GroupRules
 
@@ -21,17 +24,69 @@ defmodule Web.GroupLive do
   def handle_params(params, _uri, socket) do
     current_team = socket.assigns.current_team
     group = find_group(params["id"], current_team.id)
-    members = list_members_for_group(group)
 
     socket =
       socket
       |> assign(:page_title, group.title)
       |> assign(:group, group)
-      |> assign(:members, members)
-      |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
+      |> assign(:organization_name, Team.organization_name(current_team))
+      |> load_members()
       |> reload()
 
     {:noreply, socket}
+  end
+
+  defp load_members(socket) do
+    %{group: group, current_team: team} = socket.assigns
+    members = list_members_for_group(group)
+    in_group = MapSet.new(members, & &1.member_id)
+
+    others =
+      Member
+      |> Member.scope(team_id: team.id)
+      |> Member.current_query(DateTime.utc_now())
+      |> order_by([m], asc: m.name)
+      |> Repo.all()
+      |> Enum.reject(&(&1.id in in_group))
+
+    socket
+    |> assign(:members, members)
+    |> assign(:other_members, others)
+    |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
+  end
+
+  # A group without rules is a list kept by hand. The ids come from the browser, so each
+  # is looked up in the lists this page loaded through the current team. No flash: the
+  # table and Recent changes show it.
+  def handle_event("add-member", %{"member_id" => id}, socket) do
+    %{current_team: team, current_user: user, group: group} = socket.assigns
+
+    case Enum.find(socket.assigns.other_members, &(Integer.to_string(&1.id) == id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "Select a member.")}
+
+      member ->
+        case SetGroupMember.add(team, member, group, user, DateTime.utc_now()) do
+          :ok -> {:noreply, socket |> clear_flash() |> load_members()}
+          {:error, text} -> {:noreply, socket |> load_members() |> put_flash(:error, text)}
+        end
+    end
+  end
+
+  def handle_event("remove-member", %{"id" => id}, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    case Enum.find(socket.assigns.members, &(Integer.to_string(&1.id) == id)) do
+      # Gone already, say from another tab.
+      nil ->
+        {:noreply, load_members(socket)}
+
+      group_member ->
+        case SetGroupMember.remove(team, group_member, user, DateTime.utc_now()) do
+          :ok -> {:noreply, socket |> clear_flash() |> load_members()}
+          {:error, text} -> {:noreply, socket |> load_members() |> put_flash(:error, text)}
+        end
+    end
   end
 
   def handle_event("edit-rules", _params, socket) do
@@ -79,7 +134,12 @@ defmodule Web.GroupLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content group={@group} members={@members} team={@current_team} />
+        <.sidebar_content
+          group={@group}
+          members={@members}
+          team={@current_team}
+          organization_name={@organization_name}
+        />
       </aside>
       <main class="content-2/3">
         <h2 class="subheading">Group rules</h2>
@@ -103,8 +163,15 @@ defmodule Web.GroupLive do
           team={@current_team}
           group={@group}
         />
+        <.main_content
+          members={@members}
+          other_members={@other_members}
+          ruled?={@rules != []}
+          used_by={@used_by}
+          group={@group}
+          team={@current_team}
+        />
         <.recent_changes changes={@recent_changes} team={@current_team} />
-        <.main_content members={@members} team={@current_team} />
       </main>
     </div>
     """
@@ -116,7 +183,7 @@ defmodule Web.GroupLive do
       <dt>Actions</dt>
       <dd>
         <ul id="group-actions" class="action-list">
-          <li :if={D4H.records?(@team)}>
+          <li :if={!@group.organization_owned}>
             <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
@@ -126,6 +193,15 @@ defmodule Web.GroupLive do
           </li>
         </ul>
       </dd>
+      <%= if @group.organization_owned do %>
+        <dt>Belongs to</dt>
+        <dd id="group-organization">
+          {@organization_name || "Your organization"}
+          <span class="hint block">
+            Only {@organization_name || "your organization"} can rename or delete it.
+          </span>
+        </dd>
+      <% end %>
       <dt>Members</dt>
       <dd>{length(@members)}</dd>
     </dl>
@@ -248,7 +324,7 @@ defmodule Web.GroupLive do
         <:col :let={change} label="Change">
           <span class={change.error && "text-danger-text"}>{change_verb(change)}</span>
           <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}/qualifications"}>{change.member.name}</.a>
-          · {change.reason}
+          <span :if={change.reason}>· {change.reason}</span>
           <span :if={change.user}>· by {change.user.email}</span>
           <div :if={change.error} class="text-sm text-danger-text">{change.error}</div>
         </:col>
@@ -285,19 +361,72 @@ defmodule Web.GroupLive do
   defp main_content(assigns) do
     ~H"""
     <h2 class="subheading mt-4">Members ({length(@members)})</h2>
+    <p :if={@ruled?} id="members-by-rules" class="hint">Its rules decide who is in it.</p>
+    <p :if={!@ruled? and @used_by != []} id="used-by" class="hint">
+      The rules of <.used_by_links groups={@used_by} team={@team} /> use this group.
+    </p>
+    <form
+      :if={!@ruled? and @other_members != []}
+      id="add-member-form"
+      phx-submit="add-member"
+      class="flex flex-wrap items-center gap-2 mb-4"
+    >
+      <.combobox
+        id="add-member-id"
+        name="member_id"
+        value=""
+        options={Enum.map(@other_members, &{&1.name, &1.id})}
+        aria-label="Member"
+      />
+      <.button id="add-member" phx-disable-with="Adding…">Add to group</.button>
+    </form>
     <.table
       :if={@members != []}
       id="group_members"
       rows={@members}
+      row_id={&"group-member-#{&1.id}"}
       class="table-striped"
     >
       <:col :let={gm} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>{gm.member.name}</.a>
       </:col>
+      <:col :let={gm} :if={!@ruled?} label="" align="right">
+        <.button
+          id={"remove-member-#{gm.id}"}
+          size={:sm}
+          phx-click="remove-member"
+          phx-disable-with="Removing…"
+          phx-value-id={gm.id}
+          data-confirm={"Remove #{gm.member.name} from #{@group.title}?"}
+        >
+          Remove
+        </.button>
+      </:col>
     </.table>
-    <p :if={@members == []} class="text-text-muted">No members in this group.</p>
+    <p :if={@members == []} id="no-members" class="text-text-muted">
+      {if @ruled?, do: "Nobody is in this group.", else: "Nobody is in this group. Add a member."}
+    </p>
     """
   end
+
+  # "Callout", "Callout and MIT Callout", or "A, B, and C", each a link.
+  defp used_by_links(assigns) do
+    count = length(assigns.groups)
+
+    assigns =
+      assign(assigns, :items, Enum.with_index(assigns.groups, &{&1, separator(&2, count)}))
+
+    ~H"""
+    <%= for {group, separator} <- @items do %>
+      {separator}<.a navigate={~p"/teams/#{@team}/groups/#{group.id}"}>{group.title}</.a>
+    <% end %>
+    """
+  end
+
+  defp separator(0, _count), do: ""
+  defp separator(1, 2), do: " and "
+  defp separator(i, count) when i == count - 1, do: ", and "
+  defp separator(_i, _count), do: ", "
 
   defp change_verb(%{action: :add, error: nil}), do: "Added"
   defp change_verb(%{action: :remove, error: nil}), do: "Removed"
@@ -314,12 +443,22 @@ defmodule Web.GroupLive do
     socket
     |> assign(:context, context)
     |> assign(:rules, rules)
+    |> assign(:used_by, used_by(context, group))
     |> assign(:flip_warning, flip_warning)
     |> assign(:named_rules, Enum.map(rules, &GroupRules.named(&1, context)))
     |> assign(:referenced, GroupRules.referenced_groups(rules, context))
     |> assign(:editor_rows, editor_rows(rules, context, team, group, flip_warning))
     |> assign(:options, rule_options(context, group, rules))
     |> assign(:preview, BuildGroupRulePreview.preview(context, team, group))
+  end
+
+  # The groups whose rules name this one.
+  defp used_by(context, group) do
+    context.rules
+    |> GroupRule.used_by(group.d4h_group_id)
+    |> Enum.map(&context.groups[&1])
+    |> Enum.reject(&is_nil/1)
+    |> Enum.sort_by(& &1.title)
   end
 
   defp flip_warnings(context, group) do

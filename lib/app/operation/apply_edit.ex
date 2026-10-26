@@ -1,8 +1,13 @@
 defmodule App.Operation.ApplyEdit do
   @moduledoc """
-  One change a team admin makes to a record of a team on SAR Duty Records
-  (docs/records.md): a change set of one row, source `:edit`, applied at once like the
-  door's. Then the sync copies what changed, so the page that follows shows it.
+  One change a team admin makes to a record: a change set of one row, source `:edit`,
+  applied at once like the door's. A team on SAR Duty Records changes any record this way
+  (docs/records.md). A D4H team changes only its groups and who is in them (#546); every
+  other record it changes in D4H.
+
+  After a group row the caller writes the local copy, as group rules do, and the next
+  sync confirms it. After any other row the sync copies what changed, so the page that
+  follows shows it.
 
   `{:ok, d4h_record_id}`, or `{:error, text}` to show the person.
   """
@@ -17,11 +22,20 @@ defmodule App.Operation.ApplyEdit do
 
   require Logger
 
+  # D4H takes these writes too (tested on South Fraser, 2026-10-24). A sync after each
+  # would fetch every group's members, seconds per click, and overlap the 10-minute sync.
+  @group_actions [
+    :create_group,
+    :update_group,
+    :delete_group,
+    :add_group_member,
+    :remove_group_member
+  ]
+
   def call(team, user, row, now, opts \\ [])
 
-  # D4H has no such writes, and its teams change records in D4H.
   def call(%Team{} = team, %User{} = user, %ChangeSetRow{} = row, now, opts) do
-    if D4H.records?(team),
+    if D4H.records?(team) or row.action in @group_actions,
       do: apply_row(team, user, row, now, opts),
       else: {:error, "Change this in #{D4H.service_name(team)}."}
   end
@@ -41,7 +55,7 @@ defmodule App.Operation.ApplyEdit do
 
     case ApplyChangeSet.call(team, change_set, user, now, Keyword.take(opts, [:photo, :document])) do
       {:ok, [%ChangeSetRow{status: :applied} = applied]} ->
-        sync(team)
+        if applied.action not in @group_actions, do: sync(team)
         {:ok, applied.d4h_record_id}
 
       {:ok, [%ChangeSetRow{error: error}]} ->

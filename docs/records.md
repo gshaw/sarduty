@@ -41,11 +41,14 @@ like a D4H key. Existing D4H teams need no change.
 ## Editing records
 
 D4H teams change their records in D4H. A Records team has nowhere else to do it, so
-SAR Duty shows editing screens for Records teams only; a D4H team gets a 404 and no
-buttons. Each change is a change set of one row, source `:edit`, applied at once by
+SAR Duty shows editing screens for Records teams; a D4H team gets a 404 and no buttons.
+Groups are the exception: every team adds, renames, and deletes them and changes who is in
+them ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Each change is a change
+set of one row, source `:edit`, applied at once by
 [App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex) through `ApplyChangeSet`,
-then the sync copies it back. The row names only the fields that changed, with their old
-values, so it shows in the record's history. ApplyEdit refuses a D4H team.
+then the sync copies it back, except a group's, whose copy is written from the answer. The
+row names only the fields that changed, with their old values, so it shows in the record's
+history. ApplyEdit refuses a D4H team every row but a group's.
 
 Records refuses a bad write with a 400 whose `title` says what is wrong; the page shows
 that title.
@@ -66,8 +69,8 @@ that title.
   hours choice sets the team's primary or secondary hours tag and keeps any others. A
   new activity keeps its id even if its tags or published flag fail, so a retry never
   makes a second one. Times are on the team's clock, to the minute.
-- **Qualifications and groups**: add, rename, delete. A qualification's awards and a
-  member's groups change on the member's Qualifications and Groups tabs. `DELETE` on
+- **Qualifications and groups**: add, rename, delete. A qualification's awards change on
+  the member's Qualifications tab, and groups on every team as for a D4H team. `DELETE` on
   qualifications and awards is Records' own; groups and group members use D4H's own
   endpoints. Deleting a qualification takes its awards with it, and a group its members.
 

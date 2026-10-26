@@ -9,6 +9,15 @@ defmodule Service.Format do
     String.replace(template, "%d", number(n))
   end
 
+  @doc ~s(Names in a sentence, the last after "and": "Callout and MIT Callout", "A, B, and C".)
+  def and_list([one]), do: one
+  def and_list([first, second]), do: "#{first} and #{second}"
+
+  def and_list([_, _, _ | _] = items) do
+    {rest, [last]} = Enum.split(items, -1)
+    Enum.join(rest, ", ") <> ", and " <> last
+  end
+
   @doc ~s(Names in a sentence, the last after "or": "Dana Clark or Eli Haddad", "A, B, or C".)
   def or_list([one]), do: one
   def or_list([first, second]), do: "#{first} or #{second}"

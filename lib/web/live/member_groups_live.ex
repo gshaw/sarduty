@@ -7,10 +7,11 @@ defmodule Web.MemberGroupsLive do
   import Web.Components.MemberPage
   import Web.Components.MemberSidebar, only: [load_sidebar: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
+  alias App.Model.GroupRule
   alias App.Model.Member
+  alias App.Model.Team
   alias App.Operation.SetGroupMember
   alias App.Repo
 
@@ -24,17 +25,18 @@ defmodule Web.MemberGroupsLive do
     socket =
       socket
       |> assign(:page_title, "#{member.name} · Groups")
-      |> assign(:records?, D4H.records?(socket.assigns.current_team))
+      |> assign(:ruled_ids, ruled_ids(socket.assigns.current_team))
+      |> assign(:organization_name, organization_name(socket.assigns.current_team))
       |> assign_member(member)
       |> load_sidebar()
 
     {:noreply, socket}
   end
 
-  # Adding to and removing from groups, for a team on SAR Duty Records (docs/records.md).
+  # A team admin adds to and removes from the groups kept by hand (#546); a group with
+  # rules follows them. No flash: the list shows it.
   def handle_event("add-group", %{"group_id" => group_id}, socket) do
     %{current_team: team, current_user: user, member: member} = socket.assigns
-    true = socket.assigns.records?
 
     case Enum.find(socket.assigns.other_groups, &(Integer.to_string(&1.id) == group_id)) do
       nil ->
@@ -42,43 +44,49 @@ defmodule Web.MemberGroupsLive do
 
       group ->
         case SetGroupMember.add(team, member, group, user, DateTime.utc_now()) do
-          :ok -> {:noreply, reload(socket, "Added to #{group.title}.")}
-          {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+          :ok -> {:noreply, reload(socket)}
+          {:error, text} -> {:noreply, socket |> reload() |> put_flash(:error, text)}
         end
     end
   end
 
   def handle_event("remove-group", %{"id" => id}, socket) do
     %{current_team: team, current_user: user, member: member} = socket.assigns
-    true = socket.assigns.records?
     group_member = Enum.find(member.group_members, &(Integer.to_string(&1.id) == id))
 
     # Gone already, say from another tab.
     result =
       if group_member,
         do: SetGroupMember.remove(team, group_member, user, DateTime.utc_now()),
-        else: :gone
+        else: :ok
 
     case result do
-      :ok -> {:noreply, reload(socket, "Removed from #{group_member.group.title}.")}
-      :gone -> {:noreply, reload(socket, "#{member.name} left that group already.")}
-      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+      :ok -> {:noreply, reload(socket)}
+      {:error, text} -> {:noreply, socket |> reload() |> put_flash(:error, text)}
     end
   end
 
-  defp reload(socket, text) do
+  defp reload(socket) do
     member = find_member(socket.assigns.current_team, socket.assigns.member.id)
-    socket |> put_flash(:info, text) |> assign_member(member)
+    socket |> clear_flash() |> assign_member(member)
   end
 
   defp assign_member(socket, member) do
     in_groups = MapSet.new(member.group_members, & &1.group_id)
+    ruled_ids = socket.assigns.ruled_ids
 
     others =
-      socket.assigns.current_team.id |> Group.get_all() |> Enum.reject(&(&1.id in in_groups))
+      socket.assigns.current_team.id
+      |> Group.get_all()
+      |> Enum.reject(&(&1.id in in_groups or &1.d4h_group_id in ruled_ids))
 
     assign(socket, member: member, other_groups: others)
   end
+
+  defp ruled_ids(team),
+    do: team.id |> GroupRule.ruled_d4h_group_ids_query() |> Repo.all() |> MapSet.new()
+
+  defp organization_name(team), do: Team.organization_name(team) || "Your organization"
 
   def render(assigns) do
     ~H"""
@@ -92,26 +100,26 @@ defmodule Web.MemberGroupsLive do
       maps_app={@current_user.maps_app}
       team_admin?={@team_admin?}
     >
-      <.groups_content member={@member} records?={@records?} team_admin?={@team_admin?} />
+      <.groups_content
+        member={@member}
+        ruled_ids={@ruled_ids}
+        organization_name={@organization_name}
+        team_admin?={@team_admin?}
+      />
       <form
-        :if={@team_admin? and @records? and @other_groups != []}
+        :if={@team_admin? and @other_groups != []}
         id="add-group-form"
         phx-submit="add-group"
-        class="mt-8 measure"
+        class="flex flex-wrap items-center gap-2 mt-4"
       >
-        <h2 class="heading">Add to a group</h2>
-        <.input
-          name="group_id"
+        <.combobox
           id="add-group-id"
-          type="combobox"
-          label="Group"
+          name="group_id"
           value=""
-          prompt="Select a group"
-          options={Enum.map(@other_groups, &{&1.title, &1.id})}
+          options={Enum.map(@other_groups, &{group_label(&1, @organization_name), &1.id})}
+          aria-label="Group"
         />
-        <.form_actions>
-          <.button variant={:success} phx-disable-with="Adding…">Add to group</.button>
-        </.form_actions>
+        <.button id="add-group" phx-disable-with="Adding…">Add to group</.button>
       </form>
     </.member_page>
     """
@@ -129,17 +137,19 @@ defmodule Web.MemberGroupsLive do
       <:col :let={gm} label="Group">
         <.a :if={@team_admin?} navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>{gm.group.title}</.a>
         <span :if={!@team_admin?}>{gm.group.title}</span>
+        <span :if={gm.group.organization_owned} class="hint">· {@organization_name}</span>
       </:col>
-      <:col :let={gm} :if={@team_admin? and @records?} label="" class="w-px whitespace-nowrap">
+      <%!-- No confirm: a member has few groups, so who to add back is plain. --%>
+      <:col :let={gm} :if={@team_admin?} label="" class="w-px whitespace-nowrap" align="right">
+        <span :if={gm.group.d4h_group_id in @ruled_ids} class="hint">By its rules</span>
         <.button
+          :if={gm.group.d4h_group_id not in @ruled_ids}
           id={"remove-group-#{gm.id}"}
           type="button"
-          variant={:link}
           size={:sm}
           phx-click="remove-group"
           phx-disable-with="Removing…"
           phx-value-id={gm.id}
-          data-confirm={"Remove #{@member.name} from #{gm.group.title}?"}
         >
           Remove
         </.button>
@@ -150,6 +160,11 @@ defmodule Web.MemberGroupsLive do
     </p>
     """
   end
+
+  defp group_label(%Group{organization_owned: true} = group, organization_name),
+    do: "#{group.title} · #{organization_name}"
+
+  defp group_label(group, _organization_name), do: group.title
 
   defp find_member(team, member_id) do
     group_members_query =
