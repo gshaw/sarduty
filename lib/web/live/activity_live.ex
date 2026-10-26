@@ -437,7 +437,8 @@ defmodule Web.ActivityLive do
 
   # Who the activity invites, as counts that filter one table (#444). Before the start:
   # how each replied and when, New for the last 24 hours. From the start: D4H's
-  # attendance, with each member's times. A column every row would repeat goes.
+  # attendance, with each member's times. A part keeps the columns, but drops times and
+  # reply dates that no row in it has.
   def members_section(assigns) do
     rows = ActivityMembers.only(assigns.members, assigns.view)
 
@@ -501,7 +502,6 @@ defmodule Web.ActivityLive do
         </:col>
         <:col
           :let={row}
-          :if={@view == nil}
           label={if @started?, do: "Attendance", else: "Reply"}
           class="whitespace-nowrap"
         >

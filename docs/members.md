@@ -37,9 +37,11 @@ Standing, Period, and Group sit in the filter bar's row. Details and Attended wa
 behind **More filters** until one is on, so the row doesn't wrap and a link such as
 the home item's still shows every filter it sets.
 
-No column chooser. A column shows only when it says something: Standing when some
-current member is not active (or the filter goes past Current), Retired when the
-Standing filter can show retired members, Missing with Details: Missing. ID hides on narrow screens.
+No column chooser. A filter changes the rows, not the columns (2026-10-25), so Standing
+shows when some current member is not active, whatever the filter. Two columns come
+with a filter: Retired when the Standing filter can show retired members, since no
+other row has a date, and Missing with Details: Missing, since it says why each row
+matched. ID hides on narrow screens.
 
 ## Standing
 
@@ -359,8 +361,10 @@ activity starts.
   each count a filter, `?view=signed-up` and so on. Then one table, by reply and then
   name: Name, Reply with its marker, Replied with New for the last 24 hours, and ID.
   Once it starts, Attendance, Start, Finish, and Duration replace Reply and Replied.
-  Start shows a date only when it isn't the activity's day. A column every row would
-  repeat goes when one part is showing.
+  Start shows a date only when it isn't the activity's day. Each part keeps the
+  columns, even Reply or Attendance, which then repeats on every row (2026-10-25).
+  Start, Finish, and Duration go when no row in the part attended, and Replied when
+  no row in it replied or was reminded.
 
 ### View as member
 

@@ -136,7 +136,7 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection", "Already published")
   end
 
-  test "the kind switch counts each kind under the other filters and drops the Kind column",
+  test "the kind switch counts each kind under the other filters and keeps the Kind column",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
@@ -162,7 +162,8 @@ defmodule Web.ActivityCollectionLiveTest do
     assert has_element?(lv, "#activity_collection", "Rope night")
     refute has_element?(lv, "#activity_collection", "Missing hiker")
     refute has_element?(lv, "#activity_collection", "Old drill")
-    refute has_element?(lv, "thead th", "Kind")
+    # A filter changes the rows, not the columns.
+    assert has_element?(lv, "thead th", "Kind")
   end
 
   test "Enter in the search box filters the list (#333)", %{conn: conn} do

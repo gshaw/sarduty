@@ -31,10 +31,7 @@ defmodule Web.MemberCollectionLive do
     |> assign(Map.take(filter_options, [:sort, :details, :attended]))
     |> assign(:filter_options, filter_options)
     |> assign(now: now, today: today)
-    |> assign(
-      :standing?,
-      standing_column?(current_team, filter_options, team_admin?, today, now)
-    )
+    |> assign(:standing?, standing_column?(current_team, team_admin?, today, now))
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
     |> assign(
       :standing_tile?,
@@ -236,17 +233,13 @@ defmodule Web.MemberCollectionLive do
     """
   end
 
-  # Shown only when some current member is not active, or the filter goes past Not retired.
+  # Shown only when some current member is not active, whatever the filter shows.
   # A member never sees Away (#440), so their list shows it only for Not a person: Retired
   # has its own column.
-  defp standing_column?(team, _filter_options, false = _team_admin?, _today, now),
+  defp standing_column?(team, false = _team_admin?, _today, now),
     do: Member.any_not_a_person?(team, now)
 
-  defp standing_column?(_team, %{standing: standing}, _team_admin?, _today, _now)
-       when standing not in [nil, "current"],
-       do: true
-
-  defp standing_column?(team, _filter_options, _team_admin?, today, now),
+  defp standing_column?(team, _team_admin?, today, now),
     do: Member.any_not_active?(team, today, now)
 
   # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.

@@ -38,7 +38,7 @@ defmodule Web.ProposedChangeLiveTest do
     assert has_element?(lv, "#none-in-view")
 
     lv |> element("#proposed-view-discarded") |> render_click()
-    assert has_element?(lv, "#proposed-#{ctx.change_set.id}")
+    assert has_element?(lv, "#proposed-#{ctx.change_set.id}", "Discarded")
 
     lv |> element("#proposed-view-all") |> render_click()
     assert has_element?(lv, "#proposed-#{ctx.change_set.id}", "Discarded")

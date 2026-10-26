@@ -425,7 +425,7 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=signed-up")
       assert row_ids(html) == Enum.map([avery, member], &"member-row-#{&1.id}")
       assert has_element?(lv, "#members-view-signed-up[aria-current=page]")
-      refute has_element?(lv, "#activity-members th", "Reply")
+      assert has_element?(lv, "#activity-members th", "Reply")
       assert has_element?(lv, "#activity-members th", "Replied")
 
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
