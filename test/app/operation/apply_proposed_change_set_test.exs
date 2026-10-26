@@ -23,7 +23,14 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
     ]
 
     {:ok, change_set, []} =
-      ProposeAttendanceChanges.call(ctx.team, ctx.user, ctx.activity.id, requests, "Sheet")
+      ProposeAttendanceChanges.call(
+        ctx.team,
+        ctx.user,
+        ctx.activity.id,
+        requests,
+        "Sheet",
+        DateTime.utc_now()
+      )
 
     ChangeSet.find!(ctx.team, change_set.id)
   end
@@ -50,6 +57,10 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
 
         {"GET", "/attendance"} ->
           Req.Test.json(conn, %{"results" => [sam_row], "totalSize" => 1})
+
+        {"DELETE", "/attendance/502"} ->
+          send(test_pid, {:d4h_delete, 502})
+          Plug.Conn.send_resp(conn, 204, "")
 
         {"PATCH", "/attendance/502"} ->
           send(test_pid, {:d4h_write, Jason.decode!(body)})
@@ -117,7 +128,39 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
   test "another team's activity can't be proposed to", ctx do
     other = activity_fixture(team_fixture())
 
-    assert ProposeAttendanceChanges.call(ctx.team, ctx.user, other.id, [], nil) ==
+    assert ProposeAttendanceChanges.call(
+             ctx.team,
+             ctx.user,
+             other.id,
+             [],
+             nil,
+             DateTime.utc_now()
+           ) ==
              {:error, ["No activity #{other.id} on this team."]}
+  end
+
+  test "a remove takes the row off D4H, and out of SAR Duty's copy at once", ctx do
+    [row] = App.Repo.all(App.Model.Attendance)
+
+    {:ok, change_set, []} =
+      ProposeAttendanceChanges.call(
+        ctx.team,
+        ctx.user,
+        ctx.activity.id,
+        [%{"attendance_id" => row.id, "status" => "remove", "reason" => "Duplicate"}],
+        "Duplicates",
+        DateTime.utc_now()
+      )
+
+    change_set = ChangeSet.find!(ctx.team, change_set.id)
+    stub_d4h(ctx, false)
+    ids = Enum.map(change_set.rows, & &1.id)
+
+    {:ok, [applied]} =
+      ApplyProposedChangeSet.call(ctx.team, change_set, ctx.user, ids, DateTime.utc_now())
+
+    assert applied.status == :applied
+    assert_received {:d4h_delete, 502}
+    assert App.Repo.all(App.Model.Attendance) == []
   end
 end
