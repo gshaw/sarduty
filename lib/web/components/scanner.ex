@@ -34,7 +34,14 @@ defmodule Web.Components.Scanner do
       <div data-scan-state class="group">
         <video class="hidden group-data-scanning:block w-full rounded" playsinline muted></video>
         <div class="group-data-scanning:hidden">
-          <.button type="button" variant={@variant} size={:lg} class="w-full" data-scan-start>
+          <.button
+            type="button"
+            variant={@variant}
+            size={:lg}
+            icon="scan-line"
+            class="w-full"
+            data-scan-start
+          >
             {@label}
           </.button>
         </div>

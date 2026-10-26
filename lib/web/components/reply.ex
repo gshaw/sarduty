@@ -118,7 +118,7 @@ defmodule Web.Components.Reply do
       </div>
       <p :if={@state != :ask} class="reply-row">
         <span :if={@state == :yes} id={"#{@id}-state"} class="reply-state is-yes">
-          <.icon name="circle-check" /> Signed up
+          <.icon name="circle-check" size={@size} /> Signed up
         </span>
         <span :if={@state == :no} id={"#{@id}-state"} class="reply-state">Can't make it</span>
         <.button
@@ -147,7 +147,7 @@ defmodule Web.Components.Reply do
           size={@size}
           href={@calendar_href}
         >
-          <.icon name="calendar-days" /> Add to calendar
+          <.icon name="calendar-plus" size={@size} /> Add to calendar
         </.button>
       </p>
     </div>
