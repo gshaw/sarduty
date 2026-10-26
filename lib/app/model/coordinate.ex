@@ -37,6 +37,99 @@ defmodule App.Model.Coordinate do
 
   def build(_lat, _lng), do: nil
 
+  @doc """
+  The `{lat, lng}` in text a person pasted, or nil when it isn't one (#610). Takes
+  decimals ("49.01732, -122.65634"), hemispheres ("49.0173 N 122.6563 W"), degrees and
+  minutes, degrees, minutes, and seconds (49°01'02.4"N 122°39'22.8"W), and a Google or
+  Apple Maps link with the decimals in it.
+  """
+  def parse(text) when is_binary(text) do
+    if text =~ ~r/https?:/i, do: parse_link(text), else: parse_text(text)
+  end
+
+  def parse(_text), do: nil
+
+  # The first decimal pair in the link: Google's /@lat,lng,zoom or ?q=, Apple's ?ll=.
+  defp parse_link(text) do
+    case Regex.run(~r/(-?\d{1,2}\.\d+)\s*(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i, text) do
+      [_match, lat, lng] -> checked({String.to_float(lat), String.to_float(lng)})
+      nil -> nil
+    end
+  end
+
+  # cspell:ignore NSEW -- the four hemisphere letters, as a regex class
+  # Degrees, then minutes and seconds if given.
+  @numbers ~S"(-?\d+(?:\.\d+)?)(?:\s+(\d+(?:\.\d+)?))?(?:\s+(\d+(?:\.\d+)?))?"
+  # "N 49 01.04 W 122 39.38", or "49 01.04 N 122 39.38 W" and "49.0173, -122.6563".
+  @leading Regex.compile!("^([NSEW])\\s*#{@numbers}\\s*,?\\s*([NSEW])\\s*#{@numbers}$")
+  @trailing Regex.compile!("^#{@numbers}\\s*([NSEW]?)\\s*(?:,|\\s)\\s*#{@numbers}\\s*([NSEW]?)$")
+
+  defp parse_text(text) do
+    text = text |> String.upcase() |> String.replace(~r/[°º'"′″’”]/u, " ") |> String.trim()
+
+    with [a, b] <- halves(text),
+         # Plain whole numbers, like "12 34", are not a coordinate.
+         true <- Enum.any?([a, b], &precise?/1),
+         {:ok, a_degrees} <- degrees(a),
+         {:ok, b_degrees} <- degrees(b) do
+      oriented({a.hemisphere, a_degrees}, {b.hemisphere, b_degrees})
+    else
+      _not_a_coordinate -> nil
+    end
+  end
+
+  # Latitude first, unless the hemispheres say longitude came first.
+  defp oriented({h, a}, {k, b}) when h in ["", "N", "S"] and k in ["", "E", "W"],
+    do: checked({a, b})
+
+  defp oriented({h, a}, {k, b}) when h in ["E", "W"] and k in ["N", "S"], do: checked({b, a})
+  defp oriented(_a, _b), do: nil
+
+  # Each half's hemisphere and numbers. Regex.run leaves off groups at the end that
+  # matched nothing, so they are put back as "".
+  defp halves(text) do
+    cond do
+      groups = Regex.run(@leading, text, capture: :all_but_first) ->
+        [h, d, m, s, k, e, n, t] = pad(groups)
+        [half(h, [d, m, s]), half(k, [e, n, t])]
+
+      groups = Regex.run(@trailing, text, capture: :all_but_first) ->
+        [d, m, s, h, e, n, t, k] = pad(groups)
+        [half(h, [d, m, s]), half(k, [e, n, t])]
+
+      true ->
+        nil
+    end
+  end
+
+  defp pad(groups), do: groups ++ List.duplicate("", 8 - length(groups))
+
+  defp half(hemisphere, numbers),
+    do: %{hemisphere: hemisphere, numbers: Enum.reject(numbers, &(&1 == ""))}
+
+  defp precise?(%{hemisphere: h, numbers: numbers}),
+    do: h != "" or length(numbers) > 1 or Enum.any?(numbers, &(&1 =~ "."))
+
+  # Signed by its hemisphere or a minus. Minutes and seconds are under 60.
+  defp degrees(%{hemisphere: hemisphere, numbers: numbers}) do
+    [degrees, minutes, seconds] =
+      numbers |> Enum.map(&to_number/1) |> Enum.concat([0, 0]) |> Enum.take(3)
+
+    sign = if degrees < 0 or hemisphere in ["S", "W"], do: -1, else: 1
+
+    if minutes < 60 and seconds < 60,
+      do: {:ok, sign * (abs(degrees) + minutes / 60 + seconds / 3600)},
+      else: :error
+  end
+
+  defp to_number(text) do
+    {number, ""} = Float.parse(text)
+    number
+  end
+
+  defp checked({lat, lng}) when abs(lat) <= 90 and abs(lng) <= 180, do: build(lat, lng)
+  defp checked(_coordinate), do: nil
+
   def build_mapbox({lat, lng}), do: "#{lng},#{lat}"
 
   def to_string({lat, lng}, precision) do

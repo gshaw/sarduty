@@ -1,4 +1,6 @@
 defmodule App.Adapter.Mapbox do
+  alias App.Model.Coordinate
+
   def build_context(%{mapbox_access_token: access_token}) do
     Req.new(
       base_url: "https://api.mapbox.com/",
@@ -84,6 +86,71 @@ defmodule App.Adapter.Mapbox do
     else
       {:error, "Unknown (#{response.status})", response}
     end
+  end
+
+  # Search Box (#610) bills a session: suggestions while a person types, then the one they
+  # pick. Calls with the same session token make one session. Categories and brands are
+  # left out, since they name many places, not one.
+  @place_types "poi,address,street,place,locality,neighborhood,postcode"
+
+  @doc """
+  Up to 5 places matching `text`, nearest `near` (`{lat, lng}` or nil) first:
+  `{:ok, [%{id: "dXJu…", name: "Campbell Valley Regional Park", detail: "20285 8 Ave,
+  Langley, V2Z 1V5, Canada"}]}`, or `{:error, reason}`.
+  """
+  def suggest_places(context, text, session_token, near) do
+    params =
+      [q: text, session_token: session_token, limit: 5, language: "en", types: @place_types] ++
+        if(near, do: [proximity: build_proximity(near)], else: [])
+
+    case Req.get(context, url: "search/searchbox/v1/suggest", params: params, retry: false) do
+      {:ok, %{status: 200, body: %{"suggestions" => suggestions}}} ->
+        {:ok, Enum.map(suggestions, &build_suggestion/1)}
+
+      {:ok, %{status: status}} ->
+        {:error, status}
+
+      {:error, _exception} ->
+        {:error, :unreachable}
+    end
+  end
+
+  defp build_suggestion(suggestion) do
+    %{
+      id: suggestion["mapbox_id"],
+      name: suggestion["name"],
+      detail: suggestion["full_address"] || suggestion["place_formatted"]
+    }
+  end
+
+  defp build_proximity({lat, lng}), do: "#{lng},#{lat}"
+
+  @doc """
+  The place a person picked from `suggest_places/4`: `{:ok, %{name: "…", address: "20285
+  8 Ave, Langley, V2Z 1V5, Canada", country: "Canada", coordinate: {lat, lng}}}`.
+  """
+  def retrieve_place(context, id, session_token) do
+    url = "search/searchbox/v1/retrieve/#{URI.encode(id, &URI.char_unreserved?/1)}"
+
+    case Req.get(context, url: url, params: [session_token: session_token], retry: false) do
+      {:ok, %{status: 200, body: %{"features" => [feature | _]}}} ->
+        {:ok, build_place(feature)}
+
+      {:ok, %{status: status}} ->
+        {:error, status}
+
+      {:error, _exception} ->
+        {:error, :unreachable}
+    end
+  end
+
+  defp build_place(%{"geometry" => %{"coordinates" => [lng, lat]}, "properties" => properties}) do
+    %{
+      name: properties["name"],
+      address: properties["full_address"] || properties["place_formatted"],
+      country: get_in(properties, ["context", "country", "name"]),
+      coordinate: Coordinate.build(lat, lng)
+    }
   end
 
   def fetch_driving_info(context, {from_lat, from_lng}, {to_lat, to_lng}) do

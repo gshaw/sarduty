@@ -25,7 +25,10 @@ D4H doesn't have. See [records.md](records.md).
 
 [lib/app/adapter/mapbox.ex](../lib/app/adapter/mapbox.ex). Geocodes member addresses and
 gets driving distances for the mileage report, and draws the static maps on the team home
-and activity pages. The token is a query parameter, and it never reaches a browser: map
+and activity pages. The activity form's place suggests places from the Search Box API as
+an admin types, through the server (#610,
+[App.Operation.FindPlace](../lib/app/operation/find_place.ex)). Search Box bills per session, typing that ends in one pick, so the form keeps one
+session token until a pick. The token is a query parameter, and it never reaches a browser: map
 images come from `/maps/<key>` ([Web.MapImage](../lib/web/map_image.ex)), where the key
 is a Mapbox path the app signed. The server adds the token, fetches the image, and passes
 on Mapbox's cache header. Since every call comes from the server, the token can't have URL
@@ -34,7 +37,7 @@ mileage report and the map proxy alike.
 
 - `MAPBOX_ACCESS_TOKEN` — read with `fetch_env!` in **every** environment, so the app,
   the tests, and migrations won't start without it. `dummy` is fine locally unless you are
-  testing mileage.
+  testing mileage or place search; without a real token the form lists no places.
 
 ## Mail
 
