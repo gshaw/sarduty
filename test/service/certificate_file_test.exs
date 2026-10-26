@@ -63,6 +63,34 @@ defmodule Service.CertificateFileTest do
              40 |> png_fixture(30) |> CertificateFile.prepare("scan.png")
   end
 
+  test "a photo turns a quarter left or right" do
+    # 40 × 20, white in the top-left corner.
+    image = Image.new!(40, 20, color: :black)
+
+    {:ok, jpeg} =
+      image
+      |> Image.Draw.rect!(0, 0, 10, 10, color: :white)
+      |> Image.write(:memory, suffix: ".jpg")
+
+    {:ok, right} = CertificateFile.rotate(jpeg, :right)
+    {:ok, left} = CertificateFile.rotate(jpeg, :left)
+
+    assert white_corner(right) == {20, 40, :top_right}
+    assert white_corner(left) == {20, 40, :bottom_left}
+  end
+
+  defp white_corner(jpeg) do
+    image = Image.from_binary!(jpeg)
+    {width, height} = {Image.width(image), Image.height(image)}
+
+    corner =
+      Enum.find([top_right: {width - 3, 2}, bottom_left: {2, height - 3}], fn {_name, {x, y}} ->
+        hd(Image.get_pixel!(image, x, y)) > 200
+      end)
+
+    {width, height, elem(corner, 0)}
+  end
+
   test "anything else, or too big, is refused" do
     assert {:error, "Select a photo or a PDF."} = CertificateFile.prepare("<svg/>", "x.pdf")
 

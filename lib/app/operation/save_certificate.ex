@@ -1,8 +1,8 @@
 defmodule App.Operation.SaveCertificate do
   @moduledoc """
   A member sends a certificate (#493), changes or deletes it while it waits, or deletes
-  it once declined; a team admin declines one with a reason the member sees. Accepting is
-  App.Operation.AcceptCertificate. Nothing here calls D4H.
+  it once declined; a team admin declines one with a reason the member sees, or turns its
+  photo. Accepting is App.Operation.AcceptCertificate. Nothing here calls D4H.
 
   Each change reads the certificate again in its transaction, since a team admin may have
   decided it since the page loaded it. Each also waits for an accept that is sending it
@@ -85,6 +85,42 @@ defmodule App.Operation.SaveCertificate do
         _decided -> {:error, :decided}
       end
     end)
+  end
+
+  @doc """
+  A team admin turns a waiting certificate's photo a quarter, `:left` or `:right`, so it
+  goes to D4H the right way up. `{:ok, certificate}`, `{:error, :decided}`, or
+  `{:error, :not_a_photo}` for a PDF.
+  """
+  def rotate(%Team{} = team, %Certificate{team_id: team_id} = certificate, direction)
+      when team_id == team.id do
+    # Turned under the lock but outside a transaction, which would hold SQLite's write
+    # lock while the photo decodes (#385).
+    locked(certificate, fn -> rotate_now(team, certificate, direction) end)
+  end
+
+  defp rotate_now(team, certificate, direction) do
+    with {:ok, current} <- waiting_photo(team, certificate),
+         {:ok, turned} <- current |> CertificateFile.bytes() |> turn(direction),
+         do: transaction(fn -> put_turned(current, turned) end)
+  end
+
+  defp turn(bytes, direction), do: Service.CertificateFile.rotate(bytes, direction)
+
+  defp put_turned(current, turned) do
+    CertificateFile.put!(current, turned)
+
+    current
+    |> Ecto.Changeset.change(file_size: byte_size(turned), updated_at: DateTime.utc_now())
+    |> Repo.update()
+  end
+
+  defp waiting_photo(team, certificate) do
+    case Repo.get_by(Certificate, id: certificate.id, team_id: team.id) do
+      %Certificate{status: :waiting, content_type: "image/jpeg"} = current -> {:ok, current}
+      %Certificate{status: :waiting} -> {:error, :not_a_photo}
+      _decided -> {:error, :decided}
+    end
   end
 
   @doc """
