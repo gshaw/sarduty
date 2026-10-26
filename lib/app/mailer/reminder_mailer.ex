@@ -9,7 +9,8 @@ defmodule App.Mailer.ReminderMailer do
   alias Web.ReplyLinks
 
   # The two buttons, in SAR Duty's success and secondary colours. Mail apps drop
-  # stylesheets, so they're inline.
+  # stylesheets, so they're inline. Text sets no colour, so a mail app in dark mode
+  # keeps it readable; a fixed grey turned dark on dark. Each button carries its own.
   @button "display:inline-block;padding:10px 16px;margin:0 8px 8px 0;border-radius:4px;font-weight:700;text-decoration:none;"
   @yes @button <> "background:#00703c;color:#ffffff;"
   @no @button <> "background:#f3f2f1;color:#0b0c0c;box-shadow:inset 0 -2px 0 #b1b4b6;"
@@ -99,14 +100,14 @@ defmodule App.Mailer.ReminderMailer do
 
   defp html(activity, team, from_name, reply_urls, activity_url, reminders_url) do
     """
-    <p style="color:#505a5f;margin:0 0 4px">#{escape(team.name)}</p>
+    <p style="font-size:14px;margin:0 0 4px">#{escape(team.name)}</p>
     <h1 style="font-size:24px;margin:0 0 8px">#{escape(activity.title)}</h1>
     #{Enum.map_join(facts(activity, team), "\n", &"<p style=\"margin:0\">#{escape(&1)}</p>")}
     <p style="margin:24px 0 12px"><strong>Will you be there?</strong></p>
     <p style="margin:0"><a href="#{escape(reply_urls.yes)}" style="#{@yes}">I'll be there</a><a href="#{escape(reply_urls.no)}" style="#{@no}">Can't make it</a></p>
-    <p style="margin:16px 0 0"><a href="#{escape(activity_url)}">Open activity</a> <span style="color:#505a5f">(log in)</span></p>
+    <p style="margin:16px 0 0"><a href="#{escape(activity_url)}">Open activity</a> (log in)</p>
     <hr style="border:0;border-top:1px solid #b1b4b6;margin:32px 0 16px">
-    <p style="color:#505a5f;font-size:14px;margin:0 0 8px">#{escape(footer(from_name))}</p>
+    <p style="font-size:14px;margin:0 0 8px">#{escape(footer(from_name))}</p>
     <p style="font-size:14px;margin:0"><a href="#{escape(reminders_url)}">Turn off invitation reminders</a></p>
     """
   end

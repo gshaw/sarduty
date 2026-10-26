@@ -21,17 +21,16 @@ defmodule App.Operation.SendRemindersTest do
   defp row(member, status \\ "requested"),
     do: %Attendance{member_id: member.id, member: member, status: status}
 
-  defp reminder(member, round, sent_at),
-    do: %Reminder{member_id: member.id, round: round, sent_at: sent_at, status: :sent}
+  defp reminder(member, sent_at, status \\ :sent),
+    do: %Reminder{member_id: member.id, sent_at: sent_at, status: status}
 
   defp now, do: DateTime.utc_now()
 
-  # Who gets which email, as {name, round}.
-  defp emails(plan), do: Enum.map(plan.send, &{&1.member.name, &1.round})
+  defp names(plan), do: Enum.map(plan.send, & &1.member.name)
   defp left_out(plan), do: Enum.map(plan.left_out, fn {m, reason} -> {m.name, reason} end)
 
-  describe "plan/3" do
-    test "a first email goes to each member with no reply; the rest are named with why" do
+  describe "plan/2" do
+    test "each member with no reply can get one; the rest are named with why" do
       rows = [
         row(member(1, "Cameron Ruiz")),
         row(member(2, "Dana Clark", %{invitation_reminders: false})),
@@ -40,9 +39,9 @@ defmodule App.Operation.SendRemindersTest do
         row(member(5, "Quinn Laval"), "absent")
       ]
 
-      plan = SendReminders.plan(rows, [], @now)
+      plan = SendReminders.plan(rows, [])
 
-      assert emails(plan) == [{"Cameron Ruiz", 1}]
+      assert names(plan) == ["Cameron Ruiz"]
       assert left_out(plan) == [{"Dana Clark", :reminders_off}, {"Eli Haddad", :no_email}]
 
       assert Enum.map(plan.replied, &{&1.member.name, &1.status}) ==
@@ -52,37 +51,30 @@ defmodule App.Operation.SendRemindersTest do
     test "a member with a second row that has a reply has replied (#519)" do
       cameron = member(1, "Cameron Ruiz")
       rows = [row(cameron), row(cameron, "attending"), row(member(5, "Wren Adams"))]
-      plan = SendReminders.plan(rows, [], @now)
+      plan = SendReminders.plan(rows, [])
 
-      assert emails(plan) == [{"Wren Adams", 1}]
+      assert names(plan) == ["Wren Adams"]
       assert [%{member: %{name: "Cameron Ruiz"}, status: "attending"}] = plan.replied
     end
 
-    test "one send mixes first and second emails, a day apart, at most 2 each" do
+    test "emailed before has no limit, and lists each email that didn't fail, oldest first" do
       cameron = member(1, "Cameron Ruiz")
-      frankie = member(2, "Frankie Moore")
-      jordan = member(3, "Jordan Lee")
-      harper = member(4, "Harper Nguyen")
-      day_ago = DateTime.add(@now, -24, :hour)
-      rows = Enum.map([cameron, frankie, jordan, harper], &row/1)
+      first = DateTime.add(@now, -3, :day)
+      second = DateTime.add(@now, -1, :hour)
 
       reminders = [
-        reminder(cameron, 1, day_ago),
-        reminder(frankie, 1, DateTime.add(@now, -23, :hour)),
-        reminder(harper, 1, DateTime.add(@now, -3, :day)),
-        reminder(harper, 2, day_ago)
+        reminder(cameron, second),
+        reminder(cameron, DateTime.add(@now, -2, :day), :failed),
+        reminder(cameron, first)
       ]
 
-      plan = SendReminders.plan(rows, reminders, @now)
-
-      assert emails(plan) == [{"Cameron Ruiz", 2}, {"Jordan Lee", 1}]
-      assert [%{first: %Reminder{sent_at: ^day_ago}}, %{first: nil}] = plan.send
-      assert left_out(plan) == [{"Frankie Moore", :too_soon}, {"Harper Nguyen", :had_both}]
+      assert %{send: [%{emailed: [%{sent_at: ^first}, %{sent_at: ^second}]}]} =
+               SendReminders.plan([row(cameron)], reminders)
     end
 
-    test "a member who turned reminders off after their first gets no second" do
+    test "a member who turned reminders off after an email gets no more" do
       dana = member(2, "Dana Clark", %{invitation_reminders: false})
-      plan = SendReminders.plan([row(dana)], [reminder(dana, 1, ~U[2026-10-20 18:00:00Z])], @now)
+      plan = SendReminders.plan([row(dana)], [reminder(dana, ~U[2026-10-20 18:00:00Z])])
 
       assert plan.send == []
       assert left_out(plan) == [{"Dana Clark", :reminders_off}]
@@ -102,7 +94,7 @@ defmodule App.Operation.SendRemindersTest do
     end
 
     test "emails each member at once, from the team, with replies to the team admin", ctx do
-      assert {:ok, [%Reminder{status: :queued, round: 1} = reminder]} =
+      assert {:ok, [%Reminder{status: :queued} = reminder]} =
                SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], now())
 
       # Its job ran as it was queued, since Oban runs inline in tests.
@@ -123,11 +115,11 @@ defmodule App.Operation.SendRemindersTest do
         assert email.html_body =~ "I'll be there"
       end)
 
-      # Sending again reaches nobody: the second waits a day.
-      assert {:ok, []} =
+      # A team admin can send another whenever they choose.
+      assert {:ok, [_again]} =
                SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], now())
 
-      refute_email_sent()
+      assert_email_sent(to: [{"Cameron Ruiz", "cameron@example.com"}])
     end
 
     test "only to the members picked, and only those the plan has", ctx do
@@ -149,19 +141,9 @@ defmodule App.Operation.SendRemindersTest do
       refute_email_sent()
     end
 
-    test "a second email goes with a first in one send, as one batch", ctx do
+    test "one send is one batch", ctx do
       frankie = member_fixture(ctx.team, %{name: "Frankie Moore", email: "frankie@example.com"})
       attendance_fixture(ctx.activity, frankie, %{status: "requested"})
-      day_ago = DateTime.add(now(), -25, :hour)
-
-      Repo.insert!(%Reminder{
-        team_id: ctx.team.id,
-        activity_id: ctx.activity.id,
-        member_id: ctx.cameron.id,
-        sent_at: day_ago,
-        round: 1,
-        status: :sent
-      })
 
       assert {:ok, reminders} =
                SendReminders.call(
@@ -172,8 +154,8 @@ defmodule App.Operation.SendRemindersTest do
                  now()
                )
 
-      assert reminders |> Enum.map(&{&1.member_id, &1.round}) |> Enum.sort() ==
-               Enum.sort([{ctx.cameron.id, 2}, {frankie.id, 1}])
+      assert reminders |> Enum.map(& &1.member_id) |> Enum.sort() ==
+               Enum.sort([ctx.cameron.id, frankie.id])
 
       assert reminders |> Enum.map(& &1.sent_at) |> Enum.uniq() |> length() == 1
     end

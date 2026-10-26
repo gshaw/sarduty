@@ -1,15 +1,14 @@
 defmodule App.Operation.SendReminders do
   @moduledoc """
   A team admin emails reminders to members who haven't replied to an activity (#444),
-  from Email members (#608), before it starts. Each member gets at most 2: the first,
-  then the second and last 24 hours or more after it. One send mixes them, member by
-  member. Members who replied get none, and the page says why each other member gets
-  none either.
+  from Email members (#608), before it starts. Each send goes to the members they leave
+  checked; the page shows when each was emailed before, and the team admin decides.
+  Members who replied get none, and the page says why each other member gets none
+  either.
 
-  plan/3 says who gets which email and why the rest get none, pure. call/5 records a
-  queued row per reminder with its job, in one transaction, so two team admins sending
-  at once can't send twice. App.Worker.SendReminderWorker then sends each with
-  deliver/3, retrying a refusal.
+  plan/2 says who can get one and why the rest can't, pure. call/5 records a queued row
+  per reminder with its job, in one transaction. App.Worker.SendReminderWorker then
+  sends each with deliver/3, retrying a refusal.
   """
   import Ecto.Query
 
@@ -23,25 +22,22 @@ defmodule App.Operation.SendReminders do
   alias App.Repo
   alias App.Worker.SendReminderWorker
 
-  @wait 24 * 60 * 60
-
   @doc """
-  Who gets which email now, from the activity's rows of any status (with their members)
-  and its `reminders` so far. Each list is by name:
+  Who can get a reminder now, from the activity's rows of any status (with their
+  members) and its `reminders` so far. Each list is by name:
 
-    * `send`: `%{member:, round: 1 | 2, first: nil | reminder}`, `first` being the
-      member's first reminder for a second.
+    * `send`: `%{member:, emailed: [reminder]}`, with the member's reminders that
+      didn't fail, oldest first.
     * `replied`: the rows of members who answered, so get none.
-    * `left_out`: `{member, reason}` for the others with no reply: `:had_both`,
-      `:no_email`, `:reminders_off`, or `:too_soon`, a first less than 24 hours ago.
+    * `left_out`: `{member, :no_email | :reminders_off}` for the others with no reply.
   """
-  def plan(rows, reminders, %DateTime{} = now) do
-    by_member = Enum.group_by(reminders, & &1.member_id)
+  def plan(rows, reminders) do
+    by_member = reminders |> Enum.reject(&(&1.status == :failed)) |> Enum.group_by(& &1.member_id)
     {no_reply, replied} = by_reply(rows)
 
     {send, left_out} =
       no_reply
-      |> Enum.map(&email(&1.member, Map.get(by_member, &1.member_id, []), now))
+      |> Enum.map(&email(&1.member, Map.get(by_member, &1.member_id, [])))
       |> Enum.split_with(&is_map/1)
 
     %{send: send, replied: replied, left_out: left_out}
@@ -56,23 +52,18 @@ defmodule App.Operation.SendReminders do
     |> Enum.split_with(&(&1.status == "requested"))
   end
 
-  # A member's next email, or why they get none.
-  defp email(member, reminders, now) do
-    first = Enum.find(reminders, &(&1.round == 1))
+  defp email(%Member{email: email} = member, _emailed) when email in [nil, ""],
+    do: {member, :no_email}
 
-    cond do
-      Enum.any?(reminders, &(&1.round == 2)) -> {member, :had_both}
-      member.email in [nil, ""] -> {member, :no_email}
-      not member.invitation_reminders -> {member, :reminders_off}
-      first == nil -> %{member: member, round: 1, first: nil}
-      DateTime.diff(now, first.sent_at) < @wait -> {member, :too_soon}
-      true -> %{member: member, round: 2, first: first}
-    end
-  end
+  defp email(%Member{invitation_reminders: false} = member, _emailed),
+    do: {member, :reminders_off}
+
+  defp email(member, emailed),
+    do: %{member: member, emailed: Enum.sort_by(emailed, & &1.sent_at, DateTime)}
 
   @doc """
-  Queues the emails plan/3 has for the members in `member_ids`, from `user`, each its own
-  round. Ids the plan doesn't have are ignored. `{:ok, reminders}`, each queued, or
+  Queues a reminder for each member in `member_ids` that plan/2 has, from `user`. Ids the
+  plan doesn't have are ignored. `{:ok, reminders}`, each queued, or
   `{:error, reason}`: `:none_selected`, `:deleted`, or `:started`.
   """
   def call(
@@ -101,12 +92,11 @@ defmodule App.Operation.SendReminders do
   end
 
   defp queue_picked(activity, user, ids, now) do
-    %{send: emails} = plan(invited_rows(activity), Reminder.for_activity(activity), now)
+    %{send: emails} = plan(invited_rows(activity), Reminder.for_activity(activity))
 
     for email <- emails,
         MapSet.member?(ids, email.member.id),
-        reminder <- queue(activity, email, user, now),
-        do: reminder
+        do: queue(activity, email.member, user, now)
   end
 
   @doc "What a call/5 error says."
@@ -124,30 +114,24 @@ defmodule App.Operation.SendReminders do
   end
 
   # The row and its job commit together, or neither does.
-  defp queue(activity, %{member: member, round: round}, user, now) do
-    {:ok, queued} =
+  defp queue(activity, member, user, now) do
+    {:ok, reminder} =
       Repo.transaction(fn ->
-        case activity |> row(member, user, round, now) |> Reminder.insert() do
-          nil ->
-            []
-
-          reminder ->
-            SendReminderWorker.enqueue(reminder)
-            [reminder]
-        end
+        reminder = activity |> row(member, user, now) |> Repo.insert!()
+        SendReminderWorker.enqueue(reminder)
+        reminder
       end)
 
-    queued
+    reminder
   end
 
-  defp row(activity, member, user, round, now) do
+  defp row(activity, member, user, now) do
     %Reminder{
       team_id: activity.team_id,
       activity_id: activity.id,
       member_id: member.id,
       sent_by_user_id: user.id,
       sent_at: now,
-      round: round,
       status: :queued
     }
   end

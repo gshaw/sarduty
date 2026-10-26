@@ -3,6 +3,7 @@ defmodule Web.ActivityEmailMembersLiveTest do
 
   import Phoenix.LiveViewTest
   import App.DataFixtures
+  import Ecto.Query
 
   alias App.Model.Member
   alias App.Model.Reminder
@@ -41,13 +42,12 @@ defmodule Web.ActivityEmailMembersLiveTest do
     attendance_fixture(activity, avery, %{status: "attending"})
     attendance_fixture(activity, quinn, %{status: "absent"})
 
-    # Cameron had a first email 2 days ago, so a second is due.
+    # Cameron was emailed 2 days ago.
     Repo.insert!(%Reminder{
       team_id: team.id,
       activity_id: activity.id,
       member_id: cameron.id,
       sent_at: DateTime.add(DateTime.utc_now(), -2, :day),
-      round: 1,
       status: :sent
     })
 
@@ -67,8 +67,8 @@ defmodule Web.ActivityEmailMembersLiveTest do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
     assert has_element?(lv, "h1", "Email members")
-    assert has_element?(lv, "#email-to-#{ctx.cameron.id}", "Second and last, first sent ")
-    assert has_element?(lv, "#email-to-#{ctx.jordan.id}", "First")
+    assert has_element?(lv, "#email-to-#{ctx.cameron.id} td", "Oct ")
+    refute has_element?(lv, "#email-to-#{ctx.jordan.id} td", "Oct ")
     assert has_element?(lv, "#email-select-#{ctx.jordan.id}[checked]")
     assert has_element?(lv, "#email-send", "Send 2 emails")
 
@@ -89,7 +89,7 @@ defmodule Web.ActivityEmailMembersLiveTest do
     refute render(lv) =~ "/replies/"
   end
 
-  test "sends only to the members still checked, each their own email", ctx do
+  test "sends only to the members still checked", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
     lv |> form("#email-form") |> render_change(%{"member_ids" => ["#{ctx.cameron.id}"]})
@@ -103,8 +103,8 @@ defmodule Web.ActivityEmailMembersLiveTest do
     assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
     refute_received {:email, _}
 
-    assert %Reminder{round: 2, status: :sent} =
-             Repo.get_by!(Reminder, member_id: ctx.cameron.id, round: 2)
+    assert [%Reminder{status: :sent}, %Reminder{status: :sent}] =
+             Reminder |> where(member_id: ^ctx.cameron.id) |> Repo.all()
   end
 
   test "with nobody checked, the send button is off", ctx do

@@ -8,11 +8,11 @@ defmodule Web.ActivityEmailMembersLive do
   alias App.ViewData.ActivityMembers
   alias Service.Format
 
-  # Email members (#608): who gets a reminder email, which one, and why everyone else
-  # on the activity gets none, then the email itself and one send. Every row starts
-  # checked; unchecking a member leaves them out. SendReminders.plan/3 decides, and the
-  # preview is ReminderMailer's own HTML. Only before the start, on an activity that
-  # isn't deleted.
+  # Email members (#608): who gets a reminder email, when each was emailed before, and
+  # why everyone else on the activity gets none, then the email itself and one send.
+  # Every row starts checked; unchecking a member leaves them out. SendReminders.plan/2
+  # decides, and the preview is ReminderMailer's own HTML. Only before the start, on an
+  # activity that isn't deleted.
   def mount(%{"id" => id}, _session, socket) do
     %{current_team: team, current_user: user} = socket.assigns
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -24,7 +24,7 @@ defmodule Web.ActivityEmailMembersLive do
       plan =
         activity
         |> ActivityMembers.load()
-        |> SendReminders.plan(Reminder.for_activity(activity), now)
+        |> SendReminders.plan(Reminder.for_activity(activity))
 
       sender = SendReminders.sender(team, user, now)
 
@@ -105,7 +105,7 @@ defmodule Web.ActivityEmailMembersLive do
     <.form for={%{}} id="email-form" phx-change="select" phx-submit="send">
       <section id="email-to">
         <h2 class="subheading">Who gets it</h2>
-        <p class="hint mb-3">Members with no reply. Each gets at most 2 emails for an activity.</p>
+        <p class="hint mb-3">Members with no reply. Uncheck anyone you emailed recently.</p>
         <p :if={@plan.send == []} id="email-nobody">Nobody to email now.</p>
         <.table
           :if={@plan.send != []}
@@ -126,8 +126,8 @@ defmodule Web.ActivityEmailMembersLive do
           <:col :let={email} label="Name" class="whitespace-nowrap">
             <label for={"email-select-#{email.member.id}"}>{email.member.name}</label>
           </:col>
-          <:col :let={email} label="Email" class="whitespace-nowrap">
-            {which_email(email, @current_team.timezone)}
+          <:col :let={email} label="Emailed before">
+            {emailed_text(email.emailed, @current_team.timezone)}
           </:col>
         </.table>
       </section>
@@ -160,10 +160,11 @@ defmodule Web.ActivityEmailMembersLive do
     """
   end
 
-  defp which_email(%{round: 1}, _timezone), do: "First"
+  # "Oct 22 and Oct 24", or empty for a member never emailed.
+  defp emailed_text([], _timezone), do: nil
 
-  defp which_email(%{round: 2, first: first}, timezone),
-    do: "Second and last, first sent #{Format.month_day(first.sent_at, timezone)}"
+  defp emailed_text(emailed, timezone),
+    do: emailed |> Enum.map(&Format.month_day(&1.sent_at, timezone)) |> Format.and_list()
 
   attr :plan, :map, required: true
   attr :service, :string, required: true
@@ -189,7 +190,7 @@ defmodule Web.ActivityEmailMembersLive do
           Replied already, so no email: {replied_text(@replied)}.
         </li>
         <li
-          :for={reason <- [:had_both, :too_soon, :reminders_off, :no_email]}
+          :for={reason <- [:reminders_off, :no_email]}
           :if={@reasons[reason]}
           id={"left-out-#{reason}"}
         >
@@ -213,8 +214,6 @@ defmodule Web.ActivityEmailMembersLive do
     |> Format.and_list()
   end
 
-  defp reason_text(:had_both, _service), do: "Had both emails already"
-  defp reason_text(:too_soon, _service), do: "Had their first email less than a day ago"
   defp reason_text(:reminders_off, _service), do: "Turned off invitation reminders"
   defp reason_text(:no_email, service), do: "No email in #{service}"
 

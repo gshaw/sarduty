@@ -10,19 +10,17 @@ defmodule App.Model.Reminder do
   alias App.Model.Team
   alias App.Repo
 
-  # A reminder emailed to a member about an activity they haven't replied to (#444).
-  # Round 1, then round 2 (the second and last), at most one each per member and
-  # activity. One send can mix them (#608). A send's
-  # rows share their `sent_at`, so the rows of one batch are those with its time. Queued
-  # waits for its job, App.Worker.SendReminderWorker. Failed is Cloudflare refusing it
-  # every time, or the activity starting first, with why in `error`.
+  # A reminder emailed to a member about an activity they haven't replied to (#444). A
+  # team admin sends as many as they choose (#608). A send's rows share their `sent_at`,
+  # so the rows of one batch are those with its time. Queued waits for its job,
+  # App.Worker.SendReminderWorker. Failed is Cloudflare refusing it every time, or the
+  # activity starting first, with why in `error`.
   schema "reminders" do
     belongs_to :team, Team
     belongs_to :activity, Activity
     belongs_to :member, Member
     belongs_to :sent_by_user, User
     field :sent_at, :utc_datetime_usec
-    field :round, :integer
     field :status, Ecto.Enum, values: [:queued, :sent, :failed]
     field :error, :string
     timestamps(type: :utc_datetime_usec)
@@ -35,20 +33,6 @@ defmodule App.Model.Reminder do
     |> order_by([r], asc: r.sent_at, asc: r.id)
     |> preload(:sent_by_user)
     |> Repo.all()
-  end
-
-  @doc """
-  Records a reminder about to go out. `nil` when the member has that round already,
-  such as when two team admins send at once: then it isn't sent again.
-  """
-  def insert(%Reminder{} = reminder) do
-    case Repo.insert(reminder,
-           on_conflict: :nothing,
-           conflict_target: [:activity_id, :member_id, :round]
-         ) do
-      {:ok, %Reminder{id: nil}} -> nil
-      {:ok, reminder} -> reminder
-    end
   end
 
   @doc """
