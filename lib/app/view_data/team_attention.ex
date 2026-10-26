@@ -11,12 +11,13 @@ defmodule App.ViewData.TeamAttention do
   @max_items 7
 
   @doc """
-  The items to show, at most #{@max_items}. Each is a map with `key`, `level`
+  The items to show, at most `limit`: #{@max_items} for the page, or `:all` for an agent
+  (#595). Each is a map with `key`, `level`
   (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
   `action`, the text of its link. The letters and untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`. `service`
   is where the team's records live, `:d4h` or `:records` (D4H.service/1).
   """
-  def items(rows, now) do
+  def items(rows, now, limit \\ @max_items) do
     this_year = Service.YearRange.year_in(now, rows.timezone)
 
     [
@@ -36,8 +37,11 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&(&1.level != :warning))
-    |> Enum.take(@max_items)
+    |> take(limit)
   end
+
+  defp take(items, :all), do: items
+  defp take(items, limit), do: Enum.take(items, limit)
 
   defp refresh_item(%{state: :failed, message: message}, service) do
     %{
