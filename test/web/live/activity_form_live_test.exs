@@ -249,6 +249,16 @@ defmodule Web.ActivityFormLiveTest do
           do: activity_fixture(team, %{address: "Park, Langley", coordinate: "49.2,-122.6"})
 
       activity_fixture(team, %{address: "Pond, Surrey", coordinate: nil})
+
+      # Still to come, so not counted.
+      soon = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
+      activity_fixture(team, %{
+        address: "Hall, Surrey",
+        coordinate: "49.1,-122.8",
+        started_at: soon,
+        finished_at: DateTime.add(soon, 3600)
+      })
     end
 
     test "the box lists the team's usual places, with no Mapbox search",
@@ -293,6 +303,28 @@ defmodule Web.ActivityFormLiveTest do
 
       refute has_element?(lv, "#activity-pin")
       assert lv |> element("#form_place") |> render() =~ ~s(value="Pond, Surrey")
+    end
+
+    test "the x empties the box and its pin, and lists the team's places again",
+         %{conn: conn, team: team} do
+      stub()
+      past_activities(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+      lv |> element("#form_place") |> render_focus()
+      lv |> element("#activity-past-0") |> render_click()
+      assert has_element?(lv, "#activity-pin")
+      assert has_element?(lv, "#activity-place-clear")
+
+      # What the x's sarduty:clear does in the browser.
+      lv
+      |> form("#activity-form")
+      |> render_change(%{
+        "form" => %{"place" => "", "coordinate" => ""},
+        "_target" => ["form", "place"]
+      })
+
+      refute has_element?(lv, "#activity-pin")
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
     end
 
     test "a Mapbox failure lists nothing", %{conn: conn, team: team} do

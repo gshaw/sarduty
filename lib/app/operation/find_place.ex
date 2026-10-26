@@ -18,10 +18,13 @@ defmodule App.Operation.FindPlace do
   @past_shown 3
   @same_spot_m 150
 
-  @doc "The places the team's activities used in the last #{@past_years} years, rank/1 order."
+  @doc """
+  The places the team's activities used in the last #{@past_years} years, up to `now`, in
+  rank/1 order. Activities still to come are left out, so a place's last use is past.
+  """
   def past_places(%Team{} = team, %DateTime{} = now) do
     team
-    |> Activity.places(DateTime.add(now, -@past_years * 365, :day))
+    |> Activity.places(DateTime.add(now, -@past_years * 365, :day), now)
     |> rank()
   end
 

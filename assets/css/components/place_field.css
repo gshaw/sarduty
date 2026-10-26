@@ -2,6 +2,25 @@
    the text box as the combobox lists its options. Each is a button, so Tab reaches it. */
 @layer components {
   .place-field { position: relative; }
+  .place-input { position: relative; }
+  /* The x clears the box, once it has text. */
+  .place-input:has(input:not(:placeholder-shown)) input { padding-right: var(--sp-12); }
+  .place-clear {
+    position: absolute;
+    right: var(--sp-2);
+    top: 50%;
+    translate: 0 -50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--text-muted);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .place-clear:hover { color: var(--text); }
+  .place-input:has(input:placeholder-shown, input:disabled) .place-clear { display: none; }
   .place-list {
     position: absolute;
     z-index: 20;

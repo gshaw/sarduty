@@ -169,18 +169,35 @@ defmodule Web.ActivityFormLive do
         phx-window-keydown={@open? && "close_places"}
         phx-key="Escape"
       >
-        <input
-          type="text"
-          name={@field.name}
-          id={@field.id}
-          value={@field.value}
-          class={@errors != [] && "is-invalid"}
-          autocomplete="off"
-          phx-debounce="300"
-          phx-focus="show_past"
-          aria-controls="activity-places"
-          aria-expanded={to_string(@open?)}
-        />
+        <div class="place-input">
+          <input
+            type="text"
+            name={@field.name}
+            id={@field.id}
+            value={@field.value}
+            class={@errors != [] && "is-invalid"}
+            autocomplete="off"
+            placeholder=" "
+            phx-debounce="300"
+            phx-focus="show_past"
+            aria-controls="activity-places"
+            aria-expanded={to_string(@open?)}
+          />
+          <button
+            type="button"
+            id="activity-place-clear"
+            class="place-clear"
+            aria-label="Clear the address"
+            phx-click={
+              JS.dispatch("sarduty:clear",
+                to: "##{@field.id}",
+                detail: %{also: "##{@form[:coordinate].id}"}
+              )
+            }
+          >
+            <.icon name="hero-x-mark-mini" />
+          </button>
+        </div>
         <ul
           :if={@open?}
           id="activity-places"
