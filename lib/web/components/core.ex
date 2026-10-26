@@ -320,7 +320,7 @@ defmodule Web.Components.Core do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color combobox date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week)
+               range radio rich_text search select tel text textarea time url week)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -437,6 +437,83 @@ defmodule Web.Components.Core do
     """
   end
 
+  # Text with bold, italics, links, and lists, saved as HTML (#599). Trix draws the editor
+  # from the hidden input; LiveView leaves it alone. The link box opens under the selected
+  # text; its inputs stay disabled, so the form never sends them, until Trix opens it. See
+  # /styles/rich-text.
+  def input(%{type: "rich_text"} = assigns) do
+    ~H"""
+    <div class={["mb-6", @errors != [] && "field-error"]}>
+      <.label :if={@label != nil} for={"#{@id}-editor"}>{@label}</.label>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <div
+        id={"#{@id}-rich-text"}
+        class={["rich-text", @errors != [] && "is-invalid", @class]}
+        phx-hook="RichText"
+        phx-update="ignore"
+      >
+        <input type="hidden" id={@id} name={@name} value={@value} />
+        <trix-toolbar id={"#{@id}-toolbar"} class="rich-text-toolbar">
+          <div class="rich-text-buttons">
+            <.rich_text_button attribute="bold" key="b" icon="bold" title="Bold" />
+            <.rich_text_button attribute="italic" key="i" icon="italic" title="Italic" />
+            <.rich_text_button
+              attribute="href"
+              action="link"
+              key="k"
+              icon="link"
+              title="Link"
+            />
+            <.rich_text_button attribute="bullet" icon="list" title="Bulleted list" />
+            <.rich_text_button
+              attribute="number"
+              icon="list-ordered"
+              title="Numbered list"
+            />
+          </div>
+          <div data-trix-dialogs>
+            <div class="rich-text-dialog" data-trix-dialog="href" data-trix-dialog-attribute="href">
+              <div class="rich-text-dialog-row">
+                <input
+                  type="url"
+                  name="href"
+                  class="input-sm"
+                  placeholder="https://"
+                  aria-label="Link"
+                  autocomplete="off"
+                  data-1p-ignore
+                  data-trix-input
+                  data-trix-validate-href
+                  required
+                  disabled
+                />
+                <.button type="button" size={:sm} data-trix-method="setAttribute">Add link</.button>
+                <.button
+                  type="button"
+                  size={:sm}
+                  class="rich-text-remove-link"
+                  data-trix-method="removeAttribute"
+                >
+                  Remove link
+                </.button>
+              </div>
+            </div>
+          </div>
+        </trix-toolbar>
+        <trix-editor
+          id={"#{@id}-editor"}
+          input={@id}
+          toolbar={"#{@id}-toolbar"}
+          class="rich-text-editor prose"
+          {@rest}
+        >
+        </trix-editor>
+      </div>
+    </div>
+    """
+  end
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -453,6 +530,30 @@ defmodule Web.Components.Core do
         {@rest}
       />
     </div>
+    """
+  end
+
+  attr :attribute, :string, required: true
+  attr :action, :string, default: nil
+  attr :key, :string, default: nil
+  attr :icon, :string, required: true, values: @icon_names
+  attr :title, :string, required: true
+
+  # Trix's own buttons: it reads the data attributes and marks the active one.
+  defp rich_text_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="rich-text-button"
+      data-trix-attribute={@attribute}
+      data-trix-action={@action}
+      data-trix-key={@key}
+      title={@title}
+      aria-label={@title}
+      tabindex="-1"
+    >
+      <.icon name={@icon} />
+    </button>
     """
   end
 

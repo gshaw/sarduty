@@ -73,10 +73,12 @@ that title.
 - **Activities on a D4H team** (#585): add and change, never delete, since D4H's API has
   no delete; the form sends the team admin to D4H for it. A new one has `fullTeam` and
   `shared` false, as a chore event does, so D4H adds no one's attendance; Add members
-  follows. The description is HTML in D4H: the form edits paragraphs and line breaks as
-  text ([Service.DescriptionText](../lib/service/description_text.ex)) and sends one only
-  when it changed. A description with other HTML, such as links or lists, is shown read
-  only, so SAR Duty never flattens it. `reference` is D4H's to give out, so the form
+  follows. The description is HTML in D4H and in Records. The form edits it in Trix
+  with bold, italics, links, and lists, the way chore events are written (#599).
+  [Service.DescriptionHTML](../lib/service/description_html.ex) drops everything else,
+  such as pasted colours and fonts, and the form sends one only when it changed. A
+  description with things the editor can't hold, such as a table, a picture, or a rule,
+  is shown read only, so SAR Duty never flattens it. `reference` is D4H's to give out, so the form
   leaves it alone. The place goes in `address.street` with the other parts empty, since
   SAR Duty shows them joined; D4H answers 400 to a null part (tried on South Fraser,
   2026-10-25).

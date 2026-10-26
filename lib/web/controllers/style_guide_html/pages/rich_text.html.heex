@@ -1,0 +1,54 @@
+<.shell current={:rich_text}>
+  <h1>Rich text</h1>
+  <p class="lead">Text with bold, italics, links, and lists.</p>
+
+  <div class="demo">
+    <form class="measure" onsubmit="return false">
+      <.input
+        type="rich_text"
+        id="rich-text-demo"
+        name="description"
+        label="Description (optional)"
+        value={
+          ~s(<p>Swiftwater refresher at <strong>Derby Reach</strong>.</p><p>Bring:</p><ul><li>Drysuit and PFD</li><li>Throw bag</li></ul><p>Map: <a href="https://example.com/derby-reach">Derby Reach</a></p>)
+        }
+      />
+    </form>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Text that people read as a page, such as an activity's description, where a list or a link helps. It's the way chore events are written.
+  </p>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>A short note or a reason. Use a text area.</li>
+    <li>Anything SAR Duty reads back, such as a name or a number. Use a text input.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>Five buttons: bold, italic, link, bulleted list, and numbered list. Nothing else.</li>
+    <li>⌘B, ⌘I, and ⌘K do bold, italic, and link. Ctrl on Windows.</li>
+    <li>
+      Link opens a box under the selected text for its web address. Enter adds it and Esc closes the box. On a link, the box shows its address and Remove link.
+    </li>
+    <li>A web address pasted over selected text links that text.</li>
+    <li>
+      A paste keeps what the buttons make and drops colours, fonts, sizes, headings, and pictures.
+    </li>
+    <li>
+      The server cleans the HTML again on save (<code>Service.DescriptionHTML</code>), so a description reads the same whatever made it.
+    </li>
+    <li>
+      Text with things the editor can't keep, such as a table or a picture, is shown read only instead.
+    </li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.input type="rich_text" field=&#123;@form[:description]&#125; label="…" /&gt;</code>
+    sends the HTML as the field's value. Trix draws the editor and loads only on a page with one. A hidden input holds the value. LiveViewTest won't change a hidden input, so a test passes the HTML to <code>render_submit/2</code>.
+  </p>
+</.shell>

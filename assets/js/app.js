@@ -30,13 +30,14 @@ import {Combobox} from "./combobox"
 import {FileDrop} from "./file_drop"
 import {SelectAll} from "./select_all"
 import {ScannerInput} from "./scanner_input"
+import {RichText} from "./rich_text"
 import {Search} from "./search"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, Combobox, FileDrop, QRScanner, ScannerInput, Search, SelectAll, SoundSwitch},
+  hooks: {...colocatedHooks, Combobox, FileDrop, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch},
 })
 
 listenForScanSounds()
