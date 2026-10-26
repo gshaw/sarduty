@@ -49,7 +49,7 @@ anything is decoded; anything else is refused.
   while the header alone does not (Chrome 155, 2026-10-23).
 - **A sideways photo turns.** EXIF turns a photo the way the camera held it, but a
   landscape certificate shot with the phone upright has nothing to say so. While it
-  waits, the team admin's page has Rotate left and Rotate right under a photo, which turn
+  waits, the team admin's page has Rotate left and Rotate right above a photo, which turn
   the kept JPEG (`SaveCertificate.rotate/3`), so it goes to D4H the right way up. A PDF
   has none: the browser's viewer turns it.
 - **Never in MCP output.**

@@ -381,26 +381,12 @@ defmodule Web.CertificateLive do
   defp certificate_file(assigns) do
     ~H"""
     <div id="certificate-file">
-      <div class="cert-view">
-        <a :if={@certificate.content_type != "application/pdf"} href={@src} target="_blank">
-          <img
-            id="certificate-image"
-            src={@src}
-            alt={"#{@certificate.member.name}'s certificate"}
-          />
-        </a>
-        <iframe
-          :if={@certificate.content_type == "application/pdf"}
-          id="certificate-pdf"
-          src={@src}
-          title={"#{@certificate.member.name}'s certificate"}
-        ></iframe>
-      </div>
-      <%!-- A photo the camera held sideways turns before it goes to D4H.
+      <%!-- A photo the camera held sideways turns before it goes to D4H. Above the
+        photo, the buttons stay put as it turns.
         cspell:ignore uturn -- Heroicons' arrow-uturn icons; it has no rotate icon --%>
       <.form_actions
         :if={@certificate.status == :waiting and @certificate.content_type == "image/jpeg"}
-        class="mt-3"
+        class="mb-2"
       >
         <.button
           id="certificate-rotate-left"
@@ -417,6 +403,21 @@ defmodule Web.CertificateLive do
           <.icon name="hero-arrow-uturn-right-mini" /> Rotate right
         </.button>
       </.form_actions>
+      <div class="cert-view">
+        <a :if={@certificate.content_type != "application/pdf"} href={@src} target="_blank">
+          <img
+            id="certificate-image"
+            src={@src}
+            alt={"#{@certificate.member.name}'s certificate"}
+          />
+        </a>
+        <iframe
+          :if={@certificate.content_type == "application/pdf"}
+          id="certificate-pdf"
+          src={@src}
+          title={"#{@certificate.member.name}'s certificate"}
+        ></iframe>
+      </div>
       <p class="action mt-2">
         <.a id="certificate-open" href={@src} target="_blank">Open certificate</.a>
         <span class="hint">
