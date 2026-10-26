@@ -23,6 +23,7 @@ words:
   - UNRETIRE # D4H's retire endpoint's direction, in the adapter and its tests
   - eqrcode # the Hex package that encodes the QR code on tax credit letters
   - zxing # zxing-wasm, the vendored barcode reader for equipment, in its JS and docs
+  - trix # Trix, 37signals' rich text editor, vendored for activity descriptions (#598)
   - VCALENDAR # iCalendar's (RFC 5545) wrapper, in Service.Calendar and its test
   - VEVENT # iCalendar's event block, in Service.Calendar and its test
   - DTEND # iCalendar's end time, in Service.Calendar and its test

@@ -8,12 +8,10 @@ defmodule App.Operation.SaveActivity do
   (`Activity.hours_tags/1`), or neither, keeping any other tags it has. The place goes as
   the address text and, when it has a pin, the location (#610). On every team, as
   D4H does: a published activity is locked, so only its published flag changes, and only
-  an activity that has finished is published. On a D4H team:
-
-  - A new activity has `full_team` and `shared` false, as a chore event does (#341), so
-    D4H adds no one's attendance. Records ignores them.
-  - The description goes as HTML (Service.DescriptionText), and only when it changed. One
-    with formatting the form would lose is left out.
+  an activity that has finished is published. The description goes as HTML
+  (Service.DescriptionHTML), and only when it changed; one the editor can't hold is left
+  out. On a D4H team, a new activity has `full_team` and `shared` false, as a chore event
+  does (#341), so D4H adds no one's attendance. Records ignores them.
   """
 
   alias App.Accounts.User
@@ -71,7 +69,6 @@ defmodule App.Operation.SaveActivity do
       values
       |> fields(team.timezone)
       |> Map.merge(%{"tag_ids" => hours_tag_ids, "full_team" => false, "shared" => false})
-      |> Map.update!("description", &description_out(&1, team))
       |> Map.reject(fn {key, value} -> key == "location" and is_nil(value) end)
 
     %ChangeSetRow{
@@ -89,16 +86,20 @@ defmodule App.Operation.SaveActivity do
       values
       |> fields(team.timezone)
       |> Map.reject(fn {key, value} -> old[key] == value end)
-      |> drop_locked_description(activity, team)
+      |> drop_locked_description(activity)
       |> put_hours(values.hours != form.hours, activity, values, tag_ids, team)
       |> unless_locked(activity)
 
-    if new == %{}, do: :unchanged, else: update_row(activity, old, new, team)
+    if new == %{}, do: :unchanged, else: update_row(activity, old, new)
   end
 
-  defp update_row(activity, old, new, team) do
-    old = old |> Map.take(Map.keys(new)) |> Map.put("kind", activity.activity_kind)
-    {old, new} = description_html(old, new, activity, team)
+  # The old description is the one the store had, before cleaning.
+  defp update_row(activity, old, new) do
+    old =
+      old
+      |> Map.take(Map.keys(new))
+      |> Map.put("kind", activity.activity_kind)
+      |> Map.replace("description", activity.description)
 
     %ChangeSetRow{
       action: :update_activity,
@@ -115,8 +116,8 @@ defmodule App.Operation.SaveActivity do
       else: new
   end
 
-  defp drop_locked_description(new, activity, team) do
-    if ActivityFormViewModel.description_locked?(activity, team),
+  defp drop_locked_description(new, activity) do
+    if ActivityFormViewModel.description_locked?(activity),
       do: Map.delete(new, "description"),
       else: new
   end
@@ -128,22 +129,10 @@ defmodule App.Operation.SaveActivity do
     Map.put(new, "tag_ids", tag_ids_for(values.hours, activity.tags || [], tag_ids, hours_tags))
   end
 
-  # On a D4H team the change goes as HTML, and the old value is the HTML D4H had.
-  defp description_html(old, new, activity, team) do
-    if Map.has_key?(new, "description") and !D4H.records?(team),
-      do:
-        {Map.put(old, "description", activity.description),
-         Map.update!(new, "description", &description_out(&1, team))},
-      else: {old, new}
-  end
-
-  defp description_out(text, team),
-    do: if(D4H.records?(team), do: text, else: Service.DescriptionText.to_html(text))
-
   defp fields(values, timezone) do
     %{
       "title" => values.title,
-      "description" => values.description,
+      "description" => Service.DescriptionHTML.clean(values.description),
       "place" => values.place,
       "location" => values.coordinate,
       "tracking_number" => values.tracking_number,

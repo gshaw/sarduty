@@ -353,7 +353,7 @@ defmodule Web.ActivityFormLiveTest do
       end
     end
 
-    test "a new activity is a draft with no one's attendance and an HTML description",
+    test "a new activity is a draft with no one's attendance and a cleaned description",
          %{conn: conn, team: team} do
       stub()
       {:ok, list, _html} = live(conn, ~p"/teams/#{team}/activities")
@@ -361,21 +361,28 @@ defmodule Web.ActivityFormLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
 
+      # As Trix writes it: a blank line in a div, and a list. The editor's input is hidden,
+      # so the test sends it with the submit.
+      description =
+        ~s(<div>Bring a <strong style="color: red">headlamp</strong>.<br><br>Map &amp; compass too.</div><ul><li>Rope</li></ul>)
+
       lv
       |> form("#activity-form",
         form: %{
           title: "SAR Duty test",
           starts_at: "2026-12-12T09:00",
-          ends_at: "2026-12-12T12:00",
-          description: "Bring a headlamp.\n\nMap & compass too."
+          ends_at: "2026-12-12T12:00"
         }
       )
-      |> render_submit()
+      |> render_submit(%{form: %{description: description}})
 
       assert [{"POST", "/exercises", body} | _rest] = writes()
       assert body["fullTeam"] == false
       assert body["shared"] == false
-      assert body["description"] == "<p>Bring a headlamp.</p><p>Map &amp; compass too.</p>"
+
+      assert body["description"] ==
+               "<p>Bring a <strong>headlamp</strong>.</p><p>Map &amp; compass too.</p><ul><li>Rope</li></ul>"
+
       assert [%ChangeSetRow{action: :create_activity, status: :applied}] = edit_rows(team)
     end
 
@@ -399,7 +406,7 @@ defmodule Web.ActivityFormLiveTest do
       assert has_element?(lv, "#activity-delete-elsewhere", "Delete it in D4H.")
       assert has_element?(lv, "#activity-published-locked")
       assert has_element?(lv, "#activity-form fieldset[disabled] #form_title")
-      assert has_element?(lv, "#form_description", "Bring a headlamp.")
+      assert has_element?(lv, ~s(#form_description[value="<p>Bring a headlamp.</p>"]))
 
       lv |> form("#activity-form", form: %{published: false}) |> render_submit()
 
@@ -434,9 +441,33 @@ defmodule Web.ActivityFormLiveTest do
       assert {"POST", "/exercises/88/publish", %{"published" => true}} in writes()
     end
 
-    test "a description with formatting is shown and never sent", %{conn: conn, team: team} do
+    test "a description with a link and a list is in the editor", %{conn: conn, team: team} do
       stub()
-      html = ~s(<p>See <a href="https://example.com/map">the map</a>.</p>)
+
+      html =
+        ~s(<p>See <a href="https://example.com/map">the map</a>.</p>\n<ul>\n<li>Rope</li>\n</ul>)
+
+      activity = activity_fixture(team, %{d4h_activity_id: 88, description: html})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+      refute has_element?(lv, "#activity-description-locked")
+      assert has_element?(lv, "#form_description-rich-text trix-editor[input=form_description]")
+
+      cleaned =
+        ~s(<p>See <a href="https://example.com/map">the map</a>.</p><ul><li>Rope</li></ul>)
+
+      assert has_element?(lv, "#form_description[value='#{cleaned}']")
+
+      lv |> form("#activity-form", form: %{title: "Rope practice"}) |> render_submit()
+
+      assert [{"PATCH", "/exercises/88", body} | _rest] = writes()
+      assert body == %{"referenceDescription" => "Rope practice"}
+    end
+
+    test "a description the editor can't hold is shown and never sent",
+         %{conn: conn, team: team} do
+      stub()
+      html = ~s(<p>See <a href="https://example.com/map">the map</a>.</p><hr><p>Rope</p>)
       activity = activity_fixture(team, %{d4h_activity_id: 88, description: html})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")

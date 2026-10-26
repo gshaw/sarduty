@@ -27,7 +27,7 @@ defmodule Web.ActivityFormLive do
       |> assign(params: %{}, past: [], places: [], place_session: FindPlace.new_session())
       |> assign(past_places: FindPlace.past_places(team, DateTime.utc_now()))
       |> assign(
-        description_locked?: ActivityFormViewModel.description_locked?(activity, team),
+        description_locked?: ActivityFormViewModel.description_locked?(activity),
         published_locked?: activity != nil and Activity.locked?(activity)
       )
       |> assign_form(ActivityFormViewModel.changeset(form))
@@ -86,14 +86,15 @@ defmodule Web.ActivityFormLive do
         <.input field={@form[:tracking_number]} label="Tracking number (optional)" />
         <div :if={@description_locked?} id="activity-description-locked" class="mb-6">
           <.label>Description</.label>
-          <.hint>Change the description in {@service}. It has formatting this form would lose.</.hint>
+          <.hint>
+            Change the description in {@service}. It has things this form cannot keep, such as a table or a picture.
+          </.hint>
           <.markdown content={@activity.description} />
         </div>
         <.input
           :if={!@description_locked?}
           field={@form[:description]}
-          type="textarea"
-          rows="5"
+          type="rich_text"
           label="Description (optional)"
         />
       </fieldset>

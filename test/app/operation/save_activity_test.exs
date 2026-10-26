@@ -122,10 +122,10 @@ defmodule App.Operation.SaveActivityTest do
   end
 
   describe "on a D4H team (#585)" do
-    test "a new activity adds no one's attendance and sends its description as HTML" do
+    test "a new activity adds no one's attendance and sends its description cleaned" do
       form = %ActivityFormViewModel{
         title: "Practice",
-        description: "Bring a headlamp.\nAnd a map.",
+        description: ~s(<div>Bring a <b style="color: red">headlamp</b>.<br><br>And a map.</div>),
         starts_at: ~N[2026-10-08 18:00:00],
         ends_at: ~N[2026-10-08 20:00:00]
       }
@@ -134,31 +134,43 @@ defmodule App.Operation.SaveActivityTest do
 
       assert row.new_value["full_team"] == false
       assert row.new_value["shared"] == false
-      assert row.new_value["description"] == "<p>Bring a headlamp.<br>And a map.</p>"
+
+      assert row.new_value["description"] ==
+               "<p>Bring a <strong>headlamp</strong>.</p><p>And a map.</p>"
     end
 
-    test "an untouched description is not sent, and a changed one goes as HTML" do
-      activity = %{activity() | description: "<p>Bring a headlamp.</p>"}
+    test "an untouched description is not sent, and a changed one goes with the old HTML" do
+      activity = %{
+        activity()
+        | description: "<p>Bring a headlamp.</p>\n<ul>\n<li>Map</li>\n</ul>"
+      }
+
       form = ActivityFormViewModel.from_activity(activity, @team)
-      assert form.description == "Bring a headlamp."
+      assert form.description == "<p>Bring a headlamp.</p><ul><li>Map</li></ul>"
       assert SaveActivity.plan(activity, form, @tag_ids, @team) == :unchanged
 
-      row =
-        SaveActivity.plan(activity, %{form | description: "Bring 2 headlamps."}, @tag_ids, @team)
+      # Trix writes paragraphs as a div with a blank line.
+      trix = "<div>Bring a headlamp.<br><br></div><ul><li>Map</li></ul>"
 
-      assert row.new_value == %{"description" => "<p>Bring 2 headlamps.</p>"}
-      assert row.old_value["description"] == "<p>Bring a headlamp.</p>"
+      assert SaveActivity.plan(activity, %{form | description: trix}, @tag_ids, @team) ==
+               :unchanged
+
+      changed = "<div>Bring 2 headlamps.</div><ul><li>Map</li></ul>"
+      row = SaveActivity.plan(activity, %{form | description: changed}, @tag_ids, @team)
+
+      assert row.new_value == %{"description" => "<p>Bring 2 headlamps.</p><ul><li>Map</li></ul>"}
+      assert row.old_value["description"] == activity.description
     end
 
-    test "a description with formatting is left out" do
-      activity = %{activity() | description: ~s(<ul><li>Headlamp</li></ul>)}
-      assert ActivityFormViewModel.description_locked?(activity, @team)
+    test "a description the editor can't hold is left out" do
+      activity = %{activity() | description: "<p>Rope</p><hr><p>Knots</p>"}
+      assert ActivityFormViewModel.description_locked?(activity)
       form = ActivityFormViewModel.from_activity(activity, @team)
 
       row =
         SaveActivity.plan(
           activity,
-          %{form | description: "Headlamp", title: "Nav"},
+          %{form | description: "<p>Rope</p>", title: "Nav"},
           @tag_ids,
           @team
         )
@@ -176,21 +188,22 @@ defmodule App.Operation.SaveActivityTest do
       assert row.new_value == %{"published" => false}
     end
 
-    test "a Records team's description is its text" do
+    test "a Records team's plain text description is the same paragraphs as HTML" do
       team = %Team{timezone: @tz, d4h_api_host: D4H.records_host()}
-      activity = %{activity() | description: "<ul><li>Headlamp</li></ul>"}
-      refute ActivityFormViewModel.description_locked?(activity, team)
+      activity = %{activity() | description: "Meet at the hall.\n\nBring a headlamp."}
       form = ActivityFormViewModel.from_activity(activity, team)
+      assert form.description == "<p>Meet at the hall.</p><p>Bring a headlamp.</p>"
+      assert SaveActivity.plan(activity, form, @tag_ids, team) == :unchanged
 
       row =
         SaveActivity.plan(
           activity,
-          %{form | description: "Headlamp", hours: "none"},
+          %{form | description: "<ul><li>Headlamp</li></ul>", hours: "none"},
           @tag_ids,
           team
         )
 
-      assert row.new_value == %{"description" => "Headlamp", "tag_ids" => [3]}
+      assert row.new_value == %{"description" => "<ul><li>Headlamp</li></ul>", "tag_ids" => [3]}
     end
   end
 end

@@ -92,6 +92,7 @@ defmodule Web.StyleGuideHTML do
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:reply, "Reply", "A member's answer to an invitation."},
+         {:rich_text, "Rich text", "Text with bold, italics, links, and lists."},
          {:row_link, "Row link", "A list row that goes to one place."},
          {:search, "Search", "Find a team's records and pages from the top bar."},
          {:side_nav, "Side navigation", "An area's pages, down the left of each page in it."},
@@ -240,7 +241,12 @@ defmodule Web.StyleGuideHTML do
       {"building-complex", "An organization, in the team switcher"},
       {"scan-line", "Start scanning, on the QR scanner"},
       {"rotate-ccw-square", "Rotate left, a certificate photo"},
-      {"rotate-cw-square", "Rotate right, a certificate photo"}
+      {"rotate-cw-square", "Rotate right, a certificate photo"},
+      {"bold", "Bold, in rich text"},
+      {"italic", "Italic, in rich text"},
+      {"link", "Link, in rich text"},
+      {"list", "Bulleted list, in rich text"},
+      {"list-ordered", "Numbered list, in rich text"}
     ]
   end
 

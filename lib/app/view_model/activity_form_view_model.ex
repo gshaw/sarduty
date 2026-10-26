@@ -1,7 +1,6 @@
 defmodule App.ViewModel.ActivityFormViewModel do
   use App, :view_model
 
-  alias App.Adapter.D4H
   alias App.Field
   alias App.Model.Activity
   alias App.Model.Coordinate
@@ -11,8 +10,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
   @kinds [{"Exercise", "exercise"}, {"Incident", "incident"}, {"Event", "event"}]
   @hours [{"Primary", "primary"}, {"Secondary", "secondary"}, {"Neither", "none"}]
 
-  # Adding or changing an activity. Times are on the team's wall clock. A D4H team's
-  # description is HTML, edited here as text (Service.DescriptionText).
+  # Adding or changing an activity. Times are on the team's wall clock. The description is
+  # HTML, cleaned to what the editor makes (Service.DescriptionHTML).
   @primary_key false
   embedded_schema do
     field :kind, :string, default: "exercise"
@@ -40,7 +39,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
     %__MODULE__{
       kind: activity.activity_kind,
       title: activity.title,
-      description: description(activity, team),
+      description: description(activity),
       place: activity.address,
       coordinate: coordinate(Activity.pin(activity)),
       tracking_number: activity.tracking_number,
@@ -52,21 +51,18 @@ defmodule App.ViewModel.ActivityFormViewModel do
   end
 
   @doc """
-  Whether the form leaves the activity's description alone: on a D4H team, one with
-  formatting the form's text would lose.
+  Whether the form leaves the activity's description alone: one with things the editor
+  can't hold, such as a table or an image.
   """
-  def description_locked?(nil, _team), do: false
+  def description_locked?(nil), do: false
 
-  def description_locked?(%Activity{description: description}, team),
-    do: !D4H.records?(team) and Service.DescriptionText.to_text(description) == :formatted
+  def description_locked?(%Activity{description: description}),
+    do: !Service.DescriptionHTML.editable?(description)
 
-  defp description(activity, team) do
-    with false <- D4H.records?(team),
-         {:ok, text} <- Service.DescriptionText.to_text(activity.description) do
-      text
-    else
-      _records_or_formatted -> activity.description
-    end
+  defp description(%Activity{description: description} = activity) do
+    if description_locked?(activity),
+      do: description,
+      else: Service.DescriptionHTML.clean(description)
   end
 
   # As put_coordinate/1 writes it, so an untouched pin is unchanged.

@@ -12,6 +12,7 @@
 @import "./media";
 @import "./messages";
 @import "./navigation";
+@import "./rich_text";
 @import "./row_link";
 @import "./search";
 @import "./table";
