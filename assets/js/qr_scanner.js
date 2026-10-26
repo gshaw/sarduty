@@ -41,7 +41,15 @@ export const QRScanner = {
     // Start loading the reader now so a tap on Scan doesn't wait for it.
     this.reader = this.el.dataset.reader in READERS ? this.el.dataset.reader : "qr"
     this.decoder = READERS[this.reader]()
-    this.video = this.el.querySelector("video")
+    // A fresh video made here, in place of the page's. Come from another page and LiveView
+    // builds the page's video in a <template>, and an iPhone then plays the camera into
+    // it without ever drawing the picture, until a reload (2026-10-26).
+    const pageVideo = this.el.querySelector("video")
+    this.video = document.createElement("video")
+    this.video.className = pageVideo.className
+    this.video.muted = true
+    this.video.playsInline = true
+    pageVideo.replaceWith(this.video)
     this.canvas = document.createElement("canvas")
     this.state = this.el.querySelector("[data-scan-state]")
     this.el.querySelector("[data-scan-start]").addEventListener("click", () => this.start())
@@ -74,7 +82,13 @@ export const QRScanner = {
     }
     this.video.srcObject = this.stream
     this.video.style.transform = this.facing === "user" ? "scaleX(-1)" : ""
-    await this.video.play()
+    try {
+      await this.video.play()
+    } catch (_error) {
+      this.stop()
+      this.pushEvent("scan_failed", {})
+      return
+    }
     this.state.dataset.scanning = "true"
     this.showFlip()
     this.tick()
