@@ -244,7 +244,13 @@
   .side-nav a[aria-current="page"] { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
   /* An open section: its pages are listed below it, as in the style guide. */
   .side-nav a.is-open { font-weight: 700; box-shadow: inset 4px 0 var(--primary); }
-  @media (pointer: coarse) { .side-nav a { min-height: 44px; } }
+  /* On a touch screen the 44px links make a team admin's nav taller than an iPad in
+     landscape, and there the nav's own scroll couldn't be reached (#618). On touch it
+     scrolls with the page instead. */
+  @media (pointer: coarse) {
+    .side-nav { position: static; max-height: none; overflow-y: visible; }
+    .side-nav a { min-height: 44px; }
+  }
   @media (width < 64rem) {
     .with-side-nav { display: block; }
     .side-nav { display: none; }
