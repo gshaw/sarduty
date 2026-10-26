@@ -21,63 +21,63 @@ defmodule App.Operation.SendRemindersTest do
   defp row(member, status \\ "requested"),
     do: %Attendance{member_id: member.id, member: member, status: status}
 
-  defp reminder(member, round, sent_at),
-    do: %Reminder{member_id: member.id, round: round, sent_at: sent_at, status: :sent}
+  defp reminder(member, sent_at, status \\ :sent),
+    do: %Reminder{member_id: member.id, sent_at: sent_at, status: status}
 
-  defp names(members), do: Enum.map(members, & &1.name)
+  defp now, do: DateTime.utc_now()
 
-  describe "plan/4" do
-    test "round 1 goes to members with no reply, and names who it skips and why" do
-      dana = member(2, "Dana Clark", %{invitation_reminders: false})
-      eli = member(3, "Eli Haddad", %{email: nil})
+  defp names(plan), do: Enum.map(plan.send, & &1.member.name)
+  defp left_out(plan), do: Enum.map(plan.left_out, fn {m, reason} -> {m.name, reason} end)
 
+  describe "plan/2" do
+    test "each member with no reply can get one; the rest are named with why" do
       rows = [
         row(member(1, "Cameron Ruiz")),
-        row(dana),
-        row(eli),
-        row(member(4, "Avery Chen"), "attending")
+        row(member(2, "Dana Clark", %{invitation_reminders: false})),
+        row(member(3, "Eli Haddad", %{email: nil})),
+        row(member(4, "Avery Chen"), "attending"),
+        row(member(5, "Quinn Laval"), "absent")
       ]
 
-      plan = SendReminders.plan(rows, [], 1, @now)
+      plan = SendReminders.plan(rows, [])
 
-      assert names(plan.send) == ["Cameron Ruiz"]
+      assert names(plan) == ["Cameron Ruiz"]
+      assert left_out(plan) == [{"Dana Clark", :reminders_off}, {"Eli Haddad", :no_email}]
 
-      assert [{%{name: "Dana Clark"}, :reminders_off}, {%{name: "Eli Haddad"}, :no_email}] =
-               plan.skipped
+      assert Enum.map(plan.replied, &{&1.member.name, &1.status}) ==
+               [{"Avery Chen", "attending"}, {"Quinn Laval", "absent"}]
     end
 
     test "a member with a second row that has a reply has replied (#519)" do
       cameron = member(1, "Cameron Ruiz")
       rows = [row(cameron), row(cameron, "attending"), row(member(5, "Wren Adams"))]
+      plan = SendReminders.plan(rows, [])
 
-      assert names(SendReminders.plan(rows, [], 1, @now).send) == ["Wren Adams"]
+      assert names(plan) == ["Wren Adams"]
+      assert [%{member: %{name: "Cameron Ruiz"}, status: "attending"}] = plan.replied
     end
 
-    test "one round 1 per member: a later send goes only to the newly invited" do
+    test "emailed before has no limit, and lists each email that didn't fail, oldest first" do
       cameron = member(1, "Cameron Ruiz")
-      rows = [row(cameron), row(member(5, "Wren Adams"))]
+      first = DateTime.add(@now, -3, :day)
+      second = DateTime.add(@now, -1, :hour)
 
-      plan = SendReminders.plan(rows, [reminder(cameron, 1, @now)], 1, @now)
-
-      assert names(plan.send) == ["Wren Adams"]
-    end
-
-    test "round 2 goes 24 hours after round 1, to members still with no reply, once" do
-      cameron = member(1, "Cameron Ruiz")
-      frankie = member(2, "Frankie Moore")
-      rows = [row(cameron), row(frankie), row(member(3, "Quinn Laval"), "absent")]
-      day_ago = DateTime.add(@now, -24, :hour)
-
-      first = [
-        reminder(cameron, 1, day_ago),
-        reminder(frankie, 1, DateTime.add(@now, -23, :hour))
+      reminders = [
+        reminder(cameron, second),
+        reminder(cameron, DateTime.add(@now, -2, :day), :failed),
+        reminder(cameron, first)
       ]
 
-      assert names(SendReminders.plan(rows, first, 2, @now).send) == ["Cameron Ruiz"]
-      assert SendReminders.plan(rows, [], 2, @now).send == []
+      assert %{send: [%{emailed: [%{sent_at: ^first}, %{sent_at: ^second}]}]} =
+               SendReminders.plan([row(cameron)], reminders)
+    end
 
-      both = [reminder(cameron, 2, @now) | first]
-      assert SendReminders.plan(rows, both, 2, DateTime.add(@now, 2, :day)).send == [frankie]
+    test "a member who turned reminders off after an email gets no more" do
+      dana = member(2, "Dana Clark", %{invitation_reminders: false})
+      plan = SendReminders.plan([row(dana)], [reminder(dana, ~U[2026-10-20 18:00:00Z])])
+
+      assert plan.send == []
+      assert left_out(plan) == [{"Dana Clark", :reminders_off}]
     end
   end
 
@@ -94,8 +94,8 @@ defmodule App.Operation.SendRemindersTest do
     end
 
     test "emails each member at once, from the team, with replies to the team admin", ctx do
-      assert {:ok, [%Reminder{status: :queued, round: 1} = reminder]} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, 1, DateTime.utc_now())
+      assert {:ok, [%Reminder{status: :queued} = reminder]} =
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], now())
 
       # Its job ran as it was queued, since Oban runs inline in tests.
       assert Repo.reload!(reminder).status == :sent
@@ -115,9 +115,54 @@ defmodule App.Operation.SendRemindersTest do
         assert email.html_body =~ "I'll be there"
       end)
 
-      # Sending again reaches nobody new.
-      assert {:ok, []} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, 1, DateTime.utc_now())
+      # A team admin can send another whenever they choose.
+      assert {:ok, [_again]} =
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], now())
+
+      assert_email_sent(to: [{"Cameron Ruiz", "cameron@example.com"}])
+    end
+
+    test "only to the members picked, and only those the plan has", ctx do
+      frankie = member_fixture(ctx.team, %{name: "Frankie Moore", email: "frankie@example.com"})
+      attendance_fixture(ctx.activity, frankie, %{status: "requested"})
+      other_team_member = member_fixture(team_fixture(), %{name: "Riley Stone"})
+
+      assert {:ok, [%Reminder{} = reminder]} =
+               SendReminders.call(
+                 ctx.team,
+                 ctx.activity,
+                 ctx.user,
+                 [frankie.id, other_team_member.id, ctx.admin.id],
+                 now()
+               )
+
+      assert reminder.member_id == frankie.id
+      assert_email_sent(to: [{"Frankie Moore", "frankie@example.com"}])
+      refute_email_sent()
+    end
+
+    test "one send is one batch", ctx do
+      frankie = member_fixture(ctx.team, %{name: "Frankie Moore", email: "frankie@example.com"})
+      attendance_fixture(ctx.activity, frankie, %{status: "requested"})
+
+      assert {:ok, reminders} =
+               SendReminders.call(
+                 ctx.team,
+                 ctx.activity,
+                 ctx.user,
+                 [ctx.cameron.id, frankie.id],
+                 now()
+               )
+
+      assert reminders |> Enum.map(& &1.member_id) |> Enum.sort() ==
+               Enum.sort([ctx.cameron.id, frankie.id])
+
+      assert reminders |> Enum.map(& &1.sent_at) |> Enum.uniq() |> length() == 1
+    end
+
+    test "nobody picked sends nothing", ctx do
+      assert {:error, :none_selected} =
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [], now())
 
       refute_email_sent()
     end
@@ -125,8 +170,8 @@ defmodule App.Operation.SendRemindersTest do
     test "nothing goes once the activity has started", ctx do
       started = DateTime.add(ctx.activity.started_at, 1, :hour)
 
-      assert {:error, "Reminders closed when the activity started."} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, 1, started)
+      assert {:error, :started} =
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], started)
 
       refute_email_sent()
     end

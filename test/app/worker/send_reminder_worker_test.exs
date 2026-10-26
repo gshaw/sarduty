@@ -20,7 +20,6 @@ defmodule App.Worker.SendReminderWorkerTest do
         member_id: member.id,
         sent_by_user_id: user.id,
         sent_at: DateTime.utc_now(),
-        round: 1,
         status: :queued
       })
 

@@ -14,14 +14,14 @@ defmodule App.ViewData.ActivityRemindersTest do
 
   defp row(id, status), do: %Attendance{member_id: id, member: member(id), status: status}
 
-  defp reminder(id, round, sent_at, status \\ :sent),
-    do: %Reminder{member_id: id, round: round, sent_at: sent_at, status: status}
+  defp reminder(id, sent_at, status \\ :sent),
+    do: %Reminder{member_id: id, sent_at: sent_at, status: status}
 
   test "the last batch counts its members who replied since" do
     reminders = [
-      reminder(1, 1, @first),
-      reminder(2, 1, @first),
-      reminder(3, 1, @first, :failed)
+      reminder(1, @first),
+      reminder(2, @first),
+      reminder(3, @first, :failed)
     ]
 
     rows = [row(1, "attending"), row(2, "requested"), row(3, "requested")]
@@ -32,25 +32,8 @@ defmodule App.ViewData.ActivityRemindersTest do
     assert ActivityReminders.last_batch([], rows) == nil
   end
 
-  test "a member's latest reminder is their last round" do
-    reminders = [reminder(1, 2, @now), reminder(1, 1, @first)]
-    assert %{1 => %Reminder{round: 2}} = ActivityReminders.latest(reminders)
-  end
-
-  test "round 1 comes before Ask again" do
-    rows = [row(1, "requested"), row(2, "requested")]
-
-    assert {1, %{send: [%{id: 2}]}} =
-             ActivityReminders.next_round(rows, [reminder(1, 1, @first)], @now)
-
-    assert {2, %{send: [%{id: 1}, %{id: 2}]}} =
-             ActivityReminders.next_round(
-               rows,
-               [reminder(1, 1, @first), reminder(2, 1, @first)],
-               @now
-             )
-
-    done = for id <- [1, 2], round <- [1, 2], do: reminder(id, round, @first)
-    assert ActivityReminders.next_round(rows, done, @now) == nil
+  test "a member's latest reminder is their last one sent" do
+    reminders = [reminder(1, @now), reminder(1, @first)]
+    assert %{1 => %Reminder{sent_at: @now}} = ActivityReminders.latest(reminders)
   end
 end
