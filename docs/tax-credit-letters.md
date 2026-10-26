@@ -5,7 +5,7 @@ Anyone holding one can verify it on the verify site: the letter's QR code opens
 `verify.sarduty.com/letters/SRVTC-K7Q4M2XA`
 ([VerifyLetterLive](../lib/web/live/verify_letter_live.ex)), or they type the reference
 number at `verify.sarduty.com/letters`. Issue #207 has the design. How hours are
-counted is in #191, #192, and #584, and #592 explains it publicly for anyone who asks.
+counted is in #191, #192, and #584, and #594 explains it publicly for anyone who asks.
 
 ## What must stay true
 
@@ -15,7 +15,7 @@ counted is in #191, #192, and #584, and #592 explains it publicly for anyone who
   secondary (#191). Chore rows never go on it: each one starts at 00:00 on the 1st, a
   made-up time, so they are added up (#584). SAR Duty knows them by its chore events,
   never by tag. A team's own bulk-hour activities count like any activity. A change to
-  these rules changes #592 too, the public explanation.
+  these rules changes #594 too, the public explanation.
 
 - **The check page is the real protection, not the PDF.** The PDF is locked print-only
   ([Service.PDFLock](../lib/service/pdf_lock.ex), AES-256 with no open password), but

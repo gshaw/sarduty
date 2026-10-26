@@ -124,5 +124,5 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
 - **The tax credit letter and the year page** add chore rows up and never put them on
   the timeline where overlapping time counts once (#584): every chore row starts at
   00:00 on the 1st, so a member's categories would overlap each other. A sent chore's
-  activity carries its category's hours tag, which says primary or secondary. #592
+  activity carries its category's hours tag, which says primary or secondary. #594
   explains the count publicly.

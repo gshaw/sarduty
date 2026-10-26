@@ -3,7 +3,7 @@ defmodule App.Operation.CountTaxCreditHours do
   Primary and secondary hours for tax credit letters, counted from each member's own
   attendance rows (#191, #584). The letter and the letter list both count with `count/4`,
   so they always agree. Which tags count comes from `Activity.hours_tags/1`. The public
-  explanation of these rules is #592.
+  explanation of these rules is #594.
   """
 
   import Ecto.Query
