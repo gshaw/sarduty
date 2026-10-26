@@ -116,6 +116,7 @@
   /* Copy button: a small icon after a value, with Copied beside it after a copy. On a
      touch screen its tap area grows to 44px without moving the text. See
      /styles/copy-button. */
+  .copy-tail { white-space: nowrap; }
   .copy-button { display: inline-flex; vertical-align: -2px; margin-left: var(--sp-1); padding: 2px; border: 0; border-radius: var(--radius); background: none; color: var(--text-muted); cursor: pointer; }
   @media (hover: hover) { .copy-button:hover { background: var(--surface-alt); color: var(--text); } }
   @media (pointer: coarse) { .copy-button { padding: 14px; margin: -12px -12px -12px -8px; } }
@@ -125,7 +126,7 @@
   /* In a code block's top-right corner, with Copied to its left. */
   .code-block-copy { position: relative; }
   .code-block-copy > .code-block { padding-right: var(--sp-12); }
-  .code-block-copy > .copy-button { position: absolute; top: var(--sp-2); right: var(--sp-2); margin: 0; }
+  .code-block-copy .copy-button { position: absolute; top: var(--sp-2); right: var(--sp-2); margin: 0; }
   .code-block-copy > .copy-status { position: absolute; top: var(--sp-2); right: var(--sp-8); margin: 0; padding-inline: var(--sp-1); line-height: var(--lh-md); background: var(--surface-alt); }
 
   /* Buttons that wrap on a narrow screen keep a gap between rows. */

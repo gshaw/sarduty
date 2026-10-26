@@ -6,7 +6,8 @@
     <dl>
       <dt>Latitude and longitude</dt>
       <dd>
-        49.64310,-123.20890<.copy_button
+        <.copy_button
+          text="49.64310,-123.20890"
           id="copy-button-demo"
           value="49.64310,-123.20890"
           label="Copy latitude and longitude"
@@ -38,7 +39,10 @@
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.copy_button id="…" value=&#123;…&#125; label="Copy address" /&gt;</code>, straight after the value with no space. It shows Copied beside it for 2 seconds. The label is for screen readers and the tooltip. On a touch screen its tap area is 44px.
+    <code>&lt;.copy_button text=&#123;…&#125; id="…" value=&#123;…&#125; label="Copy address" /&gt;</code>
+    shows the text, then the button. The text's last word and the button stay on one line, so the button never wraps alone. Add
+    <code>href</code>
+    to make the text a link, such as an email. It shows Copied beside it for 2 seconds. The label is for screen readers and the tooltip. On a touch screen its tap area is 44px.
   </p>
   <p>
     <code>&lt;.copy_code_block id="…" value=&#123;…&#125; label="Copy token" /&gt;</code>

@@ -36,4 +36,42 @@ defmodule Web.Components.CopyButtonTest do
 
     assert String.trim(html) == ""
   end
+
+  test "copy_button/1 keeps the text's last word on the button's line" do
+    assigns = %{}
+
+    document =
+      ~H"""
+      <.copy_button text="5756 142 St, Surrey" id="addr" value="5756 142 St" label="Copy address" />
+      """
+      |> rendered_to_string()
+      |> LazyHTML.from_fragment()
+
+    assert document |> LazyHTML.text() |> String.trim() == "5756 142 St, Surrey"
+    tail = LazyHTML.query(document, ".copy-tail")
+    assert LazyHTML.text(tail) == "Surrey"
+    assert tail |> LazyHTML.query("button#addr") |> Enum.count() == 1
+  end
+
+  test "copy_button/1 links the text with href, kept whole" do
+    assigns = %{}
+
+    document =
+      ~H"""
+      <.copy_button
+        text="a@example.com"
+        href="mailto:a@example.com"
+        id="e"
+        value="a@example.com"
+        label="Copy email"
+      />
+      """
+      |> rendered_to_string()
+      |> LazyHTML.from_fragment()
+
+    assert document
+           |> LazyHTML.query(~s(.copy-tail a[href="mailto:a@example.com"]))
+           |> LazyHTML.text() ==
+             "a@example.com"
+  end
 end
