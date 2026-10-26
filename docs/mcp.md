@@ -1,18 +1,19 @@
 # MCP endpoint
 
-A team's managers can connect their own AI agent to SAR Duty, which reads a few
-allowlisted views of the team's data (#28). The one write is a proposal of attendance
-changes, which waits for a team admin to send it. It is a trial: an admin
-turns it on per team, starting with South Fraser. The use case that shaped the tools is
-a quarterly check of each member's hours by activity tag against the team's attendance
-policy. The policy lives in the agent's prompt, not in SAR Duty.
+A team's team admins can connect their own AI agent to SAR Duty, which reads
+allowlisted views of the team's data (#28). Its writes are proposals of attendance
+changes, tags, and chores, which wait for a team admin to send them. A team admin turns
+it on in team settings. The first use case was a quarterly check of each member's hours
+by activity tag against the team's attendance policy; #595 widened the tools to general
+work, such as sign-in sheets, hours tags before letter season, and chores. A policy lives
+in the agent's prompt, not in SAR Duty.
 
 ## Who gets in
 
-- **The switch.** `teams.mcp_enabled`, set only by a SAR Duty admin on the team's admin
-  page, `/admin/teams/:id`
-  ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)). Turning it off revokes every token
-  on the team, so turning it back on wakes none of them.
+- **The switch.** `teams.mcp_enabled`, which a team admin turns on and off on the team's
+  MCP tokens page in team settings (#595), and a SAR Duty admin on the team's admin page,
+  `/admin/teams/:id` ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)). Turning it off
+  revokes every token on the team, so turning it back on wakes none of them.
 - **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, which
   exists only while the switch is on. Creating one takes a checked box promising to use it
   only with an AI service set not to train on the manager's data; the
@@ -51,11 +52,12 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 [App.MCP.Tools](../lib/app/mcp/tools.ex). Adding a tool is a module with the
 [App.MCP.Tool](../lib/app/mcp/tool.ex) behaviour and a line in that list.
 
-- **Read-only, except for proposals.** No tool writes to D4H. One tool,
-  `propose_attendance_changes` (#216), saves a change set that waits for a team admin
-  under "Proposed changes". It implements `call_as/4`, which also gets the token's user,
-  and `read_only?/0` returning false, so `tools/list` drops its `readOnlyHint`. A test
-  fails if anything in `lib/app/mcp/` mentions `ApplyChangeSet` or the D4H adapter. See
+- **Read-only, except for proposals.** No tool writes to D4H. Three tools save a change
+  set that waits for a team admin under "Proposed changes": `propose_attendance_changes`
+  (#216), `propose_activity_tags`, and `propose_chores` (#595). They implement
+  `call_as/4`, which also gets the token's user, and `read_only?/0` returning false, so
+  `tools/list` drops their `readOnlyHint`. A test fails if anything in `lib/app/mcp/`
+  mentions `ApplyChangeSet`, the D4H adapter, `SendChores`, or `SaveChore`. See
   [change-sets.md](change-sets.md).
 - **History.** `member_history` and `activity_history` return the same entries as the
   history pages ([change-history.md](change-history.md)), without the account email of
@@ -100,5 +102,5 @@ claude.ai and ChatGPT connectors need OAuth, which SAR Duty doesn't offer yet.
 
 ## Not yet
 
-OAuth, a contacts scope, telling other managers when a token is created, paging, rate
-limits, and more teams.
+OAuth, a contacts scope, telling other managers when a token is created, paging, and
+rate limits.

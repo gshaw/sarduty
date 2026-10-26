@@ -89,13 +89,6 @@ defmodule Web.Settings.TeamLive do
             organization admins or a SAR Duty admin turn them on.
           </span>
         </li>
-        <li :if={!@current_team.mcp_enabled} id="settings-mcp-off" class="py-2">
-          MCP tokens
-          <span class="hint block">
-            Let your AI agent read the team's data. A trial, so ask a SAR Duty admin
-            to turn it on for your team.
-          </span>
-        </li>
       </ul>
 
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">

@@ -9,12 +9,12 @@ defmodule Web.Settings.MCPLive do
   alias App.Model.Team
   alias App.Operation.CreateMCPToken
   alias App.Operation.RevokeMCPToken
+  alias App.Operation.SetTeamMCP
 
-  # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp. Only on a team an admin
-  # turned MCP on for; anywhere else the page doesn't exist.
+  # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp. A team admin turns MCP
+  # on and off here (#595); tokens show only while it is on.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.mcp_enabled, do: raise(Web.Status.NotFound)
 
     can_create = Team.managed_by?(team, socket.assigns.current_user.email, DateTime.utc_now())
 
@@ -59,6 +59,9 @@ defmodule Web.Settings.MCPLive do
     end
   end
 
+  def handle_event("turn-on", _params, socket), do: set_mcp(socket, true)
+  def handle_event("turn-off", _params, socket), do: set_mcp(socket, false)
+
   def handle_event("revoke", %{"id" => id}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
 
@@ -83,12 +86,13 @@ defmodule Web.Settings.MCPLive do
     <div class="measure">
       <p>
         An MCP token lets your AI agent, such as Claude Code, read {@current_team.name}'s data
-        in SAR Duty. It can read members, groups, attendance hours, activities,
-        qualifications, and change history.
+        in SAR Duty. It can read members, groups, activities and their attendance, hours,
+        chores, qualifications, and change history.
       </p>
       <p>
-        Agents cannot change your team's records. They can propose attendance changes, and nothing happens
-        until a team admin sends them from Proposed changes. Agents never see email, phone
+        Agents cannot change your team's records. They can propose attendance changes, tags on
+        activities, and chores. Nothing happens until a team admin sends them from Proposed
+        changes. Agents never see email, phone
         numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
       <p id="no-training" class="font-semibold">
@@ -100,98 +104,140 @@ defmodule Web.Settings.MCPLive do
         Editor access in {@service}.
       </p>
 
-      <div :if={@new_token} id="new-token" class="callout mb-4">
-        <p class="font-semibold">Copy your token now. SAR Duty shows it only once.</p>
-        <.copy_code_block id="new-token-value" value={@new_token} label="Copy token" />
-        <p>
-          To set it up, paste this into your AI agent. It has the token, so treat it like a
-          password.
-        </p>
-        <.copy_code_block
-          id="setup-prompt"
-          value={setup_prompt(@endpoint_url, @new_token)}
-          label="Copy setup prompt"
-        />
+      <div :if={!@current_team.mcp_enabled} id="mcp-off">
+        <p>MCP is off for {@current_team.name}, so no agent can connect.</p>
+        <.form_actions :if={@can_create}>
+          <.button id="turn-on" type="button" variant={:success} phx-click="turn-on">
+            Turn on MCP
+          </.button>
+        </.form_actions>
       </div>
 
-      <.form
-        :if={@can_create}
-        for={@form}
-        id="new-token-form"
-        phx-submit="create"
-        class="mt-4"
-      >
-        <.input field={@form[:name]} label="Name">
-          Where you use the token, like "Claude Code on my laptop".
-        </.input>
-        <.input
-          field={@form[:no_training]}
-          type="checkbox"
-          label="I'll use this token only with an AI service set not to train on my data"
+      <div :if={@current_team.mcp_enabled} id="mcp-on">
+        <div :if={@new_token} id="new-token" class="callout mb-4">
+          <p class="font-semibold">Copy your token now. SAR Duty shows it only once.</p>
+          <.copy_code_block id="new-token-value" value={@new_token} label="Copy token" />
+          <p>
+            To set it up, paste this into your AI agent. It has the token, so treat it like a
+            password.
+          </p>
+          <.copy_code_block
+            id="setup-prompt"
+            value={setup_prompt(@endpoint_url, @new_token)}
+            label="Copy setup prompt"
+          />
+        </div>
+
+        <.form
+          :if={@can_create}
+          for={@form}
+          id="new-token-form"
+          phx-submit="create"
+          class="mt-4"
         >
-          In Claude, turn off "Help improve Claude". In ChatGPT, turn off "Improve the model
-          for everyone". Work and API accounts often do not train by default. Check yours.
-        </.input>
-        <.form_actions>
-          <.button variant={:success}>Create token</.button>
-        </.form_actions>
-      </.form>
-      <p :if={!@can_create} id="cannot-create" class="text-text-muted">
-        Only members with Owner or Editor access in {@service} can create a token.
-      </p>
-
-      <h2 class="heading mt-8">Tokens</h2>
-      <.empty_state :if={@tokens == []} id="no-tokens" title="No tokens yet">
-        Create one above.
-      </.empty_state>
-      <.table :if={@tokens != []} id="tokens" rows={@tokens} row_id={&"token-#{&1.id}"}>
-        <:col :let={token} label="Name">{token.name}</:col>
-        <:col :let={token} label="Owner">{token.user.email}</:col>
-        <:col :let={token} label="Created" class="whitespace-nowrap">
-          {Service.Format.date_long(token.inserted_at, @current_team.timezone)}
-        </:col>
-        <:col :let={token} label="Last used" class="whitespace-nowrap">
-          {last_used(token, @current_team.timezone)}
-        </:col>
-        <:col :let={token} label="">
-          <.button
-            id={"revoke-token-#{token.id}"}
-            type="button"
-            size={:sm}
-            variant={:danger}
-            phx-click="revoke"
-            phx-value-id={token.id}
-            data-confirm={"Revoke the token #{token.name}? Agents that use it stop working right away."}
+          <.input field={@form[:name]} label="Name">
+            Where you use the token, like "Claude Code on my laptop".
+          </.input>
+          <.input
+            field={@form[:no_training]}
+            type="checkbox"
+            label="I'll use this token only with an AI service set not to train on my data"
           >
-            Revoke token
-          </.button>
-        </:col>
-      </.table>
+            In Claude, turn off "Help improve Claude". In ChatGPT, turn off "Improve the model
+            for everyone". Work and API accounts often do not train by default. Check yours.
+          </.input>
+          <.form_actions>
+            <.button variant={:success}>Create token</.button>
+          </.form_actions>
+        </.form>
+        <p :if={!@can_create} id="cannot-create" class="text-text-muted">
+          Only members with Owner or Editor access in {@service} can create a token.
+        </p>
 
-      <h2 class="heading mt-8">Connect an agent</h2>
-      <p>
-        Agents connect with the token in a header. The claude.ai and ChatGPT connectors cannot
-        send one yet.
-      </p>
-      <h3 class="subheading mt-4">Claude Code</h3>
-      <p>Run this in a terminal:</p>
-      <.copy_code_block
-        id="claude-code-command"
-        value={claude_code_command(@endpoint_url, @new_token)}
-        label="Copy command"
-      />
-      <h3 class="subheading mt-4">Claude Desktop</h3>
-      <p>
-        Add this to <code>claude_desktop_config.json</code>, then restart Claude Desktop. It
-        needs Node.js, and uses <code>mcp-remote</code> to send the token.
-      </p>
-      <.copy_code_block
-        id="claude-desktop-config"
-        value={claude_desktop_config(@endpoint_url, @new_token)}
-        label="Copy config"
-      />
+        <h2 class="heading mt-8">Tokens</h2>
+        <.empty_state :if={@tokens == []} id="no-tokens" title="No tokens yet">
+          Create one above.
+        </.empty_state>
+        <.table :if={@tokens != []} id="tokens" rows={@tokens} row_id={&"token-#{&1.id}"}>
+          <:col :let={token} label="Name">{token.name}</:col>
+          <:col :let={token} label="Owner">{token.user.email}</:col>
+          <:col :let={token} label="Created" class="whitespace-nowrap">
+            {Service.Format.date_long(token.inserted_at, @current_team.timezone)}
+          </:col>
+          <:col :let={token} label="Last used" class="whitespace-nowrap">
+            {last_used(token, @current_team.timezone)}
+          </:col>
+          <:col :let={token} label="">
+            <.button
+              id={"revoke-token-#{token.id}"}
+              type="button"
+              size={:sm}
+              variant={:danger}
+              phx-click="revoke"
+              phx-value-id={token.id}
+              data-confirm={"Revoke the token #{token.name}? Agents that use it stop working right away."}
+            >
+              Revoke token
+            </.button>
+          </:col>
+        </.table>
+
+        <h2 class="heading mt-8">Connect an agent</h2>
+        <p>
+          Agents connect with the token in a header. The claude.ai and ChatGPT connectors cannot
+          send one yet.
+        </p>
+        <h3 class="subheading mt-4">Claude Code</h3>
+        <p>Run this in a terminal:</p>
+        <.copy_code_block
+          id="claude-code-command"
+          value={claude_code_command(@endpoint_url, @new_token)}
+          label="Copy command"
+        />
+        <h3 class="subheading mt-4">Claude Desktop</h3>
+        <p>
+          Add this to <code>claude_desktop_config.json</code>, then restart Claude Desktop. It
+          needs Node.js, and uses <code>mcp-remote</code> to send the token.
+        </p>
+        <.copy_code_block
+          id="claude-desktop-config"
+          value={claude_desktop_config(@endpoint_url, @new_token)}
+          label="Copy config"
+        />
+
+        <h2 class="heading mt-8">Turn off MCP</h2>
+        <p>Turning MCP off revokes every token. Agents stop working right away.</p>
+        <.form_actions :if={@can_create}>
+          <.button
+            id="turn-off"
+            type="button"
+            variant={:danger}
+            phx-click="turn-off"
+            data-confirm="Turn off MCP? Every token is revoked, and agents stop working right away."
+          >
+            Turn off MCP
+          </.button>
+        </.form_actions>
+      </div>
     </div>
     """
+  end
+
+  defp set_mcp(socket, enabled) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    case SetTeamMCP.call(team, enabled, user) do
+      {:ok, team} ->
+        {:noreply, socket |> assign(current_team: team, new_token: nil) |> assign_tokens()}
+
+      {:error, :not_allowed} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Only members with Owner or Editor access in #{socket.assigns.service} can turn MCP on or off."
+         )}
+    end
   end
 
   defp last_used(%MCPToken{last_used_at: nil}, _timezone), do: "Never"
