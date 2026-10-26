@@ -72,7 +72,7 @@ defmodule Web.MilestoneCollectionLive do
         patch={@path_fn.(kind: if(kind == "", do: nil, else: kind), page: nil)}
         current={(@filter_options.kind || "") == kind}
         count={Map.get(@kind_counts, kind, 0)}
-        icon={kind != "" && MilestoneList.icon_name(String.to_existing_atom(kind), :micro)}
+        icon={kind != "" && MilestoneList.icon_name(String.to_existing_atom(kind))}
       >
         {label}
       </:view>
@@ -120,7 +120,8 @@ defmodule Web.MilestoneCollectionLive do
       <:col :let={milestone} label="Milestone" class="whitespace-nowrap">
         <span class="icon-label">
           <.icon
-            name={MilestoneList.icon_name(milestone.kind, :micro)}
+            name={MilestoneList.icon_name(milestone.kind)}
+            size={:sm}
             class="text-text-muted max-md:hidden"
           />
           {MilestoneList.title(milestone)}

@@ -37,8 +37,8 @@ defmodule Web.Components.NavBar do
         id="phone-menu-button"
         aria-label={if @waiting?, do: "Menu, something waits", else: "Menu"}
       >
-        <.icon name="hero-bars-3" class="group-open:hidden" />
-        <.icon name="hero-x-mark" class="hidden group-open:inline-block" />
+        <.icon name="menu" size={:lg} class="group-open:hidden" />
+        <.icon name="x" size={:lg} class="hidden group-open:inline-block" />
         <span>Menu</span>
         <span :if={@waiting?} id="phone-menu-dot" class="menu-dot" aria-hidden="true"></span>
       </summary>

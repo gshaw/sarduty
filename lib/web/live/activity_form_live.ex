@@ -195,7 +195,7 @@ defmodule Web.ActivityFormLive do
               )
             }
           >
-            <.icon name="hero-x-mark-mini" />
+            <.icon name="x" />
           </button>
         </div>
         <ul

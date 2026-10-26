@@ -37,7 +37,7 @@ defmodule Web.Components.CopyButton do
       aria-label={@label}
       title={@label}
       phx-click={JS.dispatch("sarduty:copy", detail: %{status: "##{@id}-status"})}
-    ><.icon name="hero-document-duplicate-micro" /></button></span><span
+    ><.icon name="copy" size={:sm} /></button></span><span
       id={"#{@id}-status"}
       class="copy-status"
       aria-live="polite"

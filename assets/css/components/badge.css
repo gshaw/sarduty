@@ -48,7 +48,7 @@
 
   /* An icon then the word: a milestone's kind, in a column and on its stat switch count. */
   .icon-label { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
-  .icon-label > [class*="hero-"] { align-self: center; flex: none; }
+  .icon-label > .icon { align-self: center; }
 
   /* Draft and the tracking number under the marker start where its word does. */
   .marker-more { margin-top: var(--sp-1); padding-left: calc(10px + 6px); }

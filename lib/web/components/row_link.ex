@@ -11,7 +11,7 @@ defmodule Web.Components.RowLink do
     ~H"""
     <.link navigate={@navigate} class="row-link" {@rest}>
       <span class="row-link-body">{render_slot(@inner_block)}</span>
-      <.icon name="hero-chevron-right-micro" class="row-link-chevron" />
+      <.icon name="chevron-right" size={:sm} class="row-link-chevron" />
     </.link>
     """
   end

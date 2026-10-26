@@ -36,7 +36,7 @@ defmodule Web.Components.Messages do
       {@rest}
     >
       <div class="banner-title">
-        <.icon name={kind_icon_mini(@kind)} />{@title}
+        <.icon name={kind_icon(@kind)} />{@title}
       </div>
       <div class="banner-body">
         {render_slot(@inner_block)}
@@ -60,7 +60,7 @@ defmodule Web.Components.Messages do
   def warning_text(assigns) do
     ~H"""
     <div class={["warning-text", @class]} {@rest}>
-      <.icon name="hero-exclamation-triangle" />
+      <.icon name="triangle-alert" size={:lg} />
       <span>{render_slot(@inner_block)}</span>
     </div>
     """
@@ -135,7 +135,7 @@ defmodule Web.Components.Messages do
   """
   attr :kind, :atom, required: true, values: [:info, :success, :warning, :danger]
   attr :title, :string, required: true
-  attr :icon, :string, default: nil, doc: "an outline icon in place of the kind's"
+  attr :icon, :string, default: nil, doc: "an icon in place of the kind's"
   attr :class, :any, default: nil
   attr :rest, :global
 
@@ -153,13 +153,8 @@ defmodule Web.Components.Messages do
     """
   end
 
-  defp kind_icon(:success), do: "hero-check-circle"
-  defp kind_icon(:info), do: "hero-information-circle"
-  defp kind_icon(:warning), do: "hero-exclamation-triangle"
-  defp kind_icon(:danger), do: "hero-exclamation-circle"
-
-  defp kind_icon_mini(:success), do: "hero-check-circle-mini"
-  defp kind_icon_mini(:info), do: "hero-information-circle-mini"
-  defp kind_icon_mini(:warning), do: "hero-exclamation-triangle-mini"
-  defp kind_icon_mini(:danger), do: "hero-exclamation-circle-mini"
+  defp kind_icon(:success), do: "circle-check"
+  defp kind_icon(:info), do: "info"
+  defp kind_icon(:warning), do: "triangle-alert"
+  defp kind_icon(:danger), do: "circle-alert"
 end

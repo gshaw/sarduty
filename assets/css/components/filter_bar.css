@@ -40,7 +40,7 @@
   .filter-menu.is-more { display: none; }
   .filter-bar.is-more-open .filter-menu.is-more { display: inline-flex; }
   .filter-bar-more { min-height: 36px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
-  .filter-bar-more[aria-expanded="true"] .hero-chevron-down-mini { rotate: 180deg; }
+  .filter-bar-more[aria-expanded="true"] .icon-chevron-down { rotate: 180deg; }
 
   .filter-bar-count { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--primary); color: var(--on-fill); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
 

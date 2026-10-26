@@ -337,9 +337,9 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp message_kind(:left), do: :info
   defp message_kind(:error), do: :danger
 
-  defp message_icon(:arrived), do: "hero-arrow-right-end-on-rectangle"
-  defp message_icon(:left), do: "hero-arrow-left-start-on-rectangle"
-  defp message_icon(:error), do: "hero-exclamation-circle"
+  defp message_icon(:arrived), do: "log-in"
+  defp message_icon(:left), do: "log-out"
+  defp message_icon(:error), do: "circle-alert"
 
   def render(assigns) do
     ~H"""

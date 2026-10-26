@@ -81,7 +81,7 @@ The rules that are easy to break:
 - **New shared UI** → a function component in `lib/web/components/`: `core.ex` for the
   pieces every page uses, or its own module. Every LiveView layout imports the same shared
   modules (`live_view/1` in `lib/web.ex`); a component only one or two pages use is
-  imported by those pages. Icons are `<.icon name="hero-…">`. Styling is the design system at
+  imported by those pages. Icons are `<.icon name="…">`, Lucide's, copied in with `bin/icons`. Styling is the design system at
   `/styles`: components and classes first, Tailwind utilities on its scale for one-off
   layout (AGENTS.md has the rules).
 - **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,

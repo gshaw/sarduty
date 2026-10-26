@@ -93,7 +93,7 @@ defmodule Web.Components.FilterBar do
     <.filter_form for={@for} id={@id} class="filter-bar" {@rest}>
       <input :for={field <- @hidden} type="hidden" name={field.name} value={field.value} />
       <div :for={search <- @search} class="filter-bar-search">
-        <.icon name="hero-magnifying-glass-mini" class="filter-bar-search-icon" />
+        <.icon name="search" class="filter-bar-search-icon" />
         <input
           type="search"
           id={search.field.id}
@@ -112,7 +112,7 @@ defmodule Web.Components.FilterBar do
         aria-expanded="false"
         phx-click={@toggle |> JS.toggle_attribute({"aria-expanded", "true", "false"})}
       >
-        <.icon name="hero-funnel-mini" />Filters
+        <.icon name="funnel" />Filters
         <span :if={@on != []} class="filter-bar-count">{length(@on)}</span>
       </button>
       <div :if={@filters != []} id={"#{@id}-menus"} class="filter-bar-menus">
@@ -128,7 +128,7 @@ defmodule Web.Components.FilterBar do
             |> JS.toggle_attribute({"aria-expanded", "true", "false"})
           }
         >
-          More filters <.icon name="hero-chevron-down-mini" />
+          More filters <.icon name="chevron-down" />
         </button>
         <div class="filter-bar-done">
           <.link :if={@clear?} patch={@clear} class="link">Clear filters</.link>
@@ -155,7 +155,7 @@ defmodule Web.Components.FilterBar do
       >
         <span class="text-text-muted">{filter.label}</span>
         {option_label(filter)}
-        <.icon name="hero-x-mark-micro" />
+        <.icon name="x" size={:sm} />
       </.link>
     </div>
 

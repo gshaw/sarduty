@@ -57,7 +57,7 @@
   /* The magnifying glass, below 1024px only. */
   .site-bar-search { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; color: #fff; border-radius: var(--radius); cursor: pointer; }
   .site-bar-search:hover { background: rgb(255 255 255 / 0.1); }
-  .site-bar-search .hero-magnifying-glass-mini { width: 24px; height: 24px; }
+  .site-bar-search .icon-search { width: 24px; height: 24px; }
 
   .site-search-cancel { display: none; }
   .site-search-dim, .site-search-panel { display: none; }
