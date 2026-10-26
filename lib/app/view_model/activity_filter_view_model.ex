@@ -20,7 +20,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   end
 
   # The page's stat switch: D4H's kinds in the order D4H lists them, then chores, SAR
-  # Duty's own (#575). All is D4H's kinds, so a month's chore activities never crowd it.
+  # Duty's own (#575). All is every activity, chores too.
   def activity_kinds,
     do: [
       {"All", "all"},
@@ -98,7 +98,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   @doc """
   The stat switch's counts: how many activities of each kind the other filters keep,
-  before the search, with All's under "all" and chore activities under "chores".
+  before the search, with every activity under "all" and chore activities under "chores".
   """
   def kind_counts(team, member, filter_options) do
     counts =
@@ -119,8 +119,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
       |> Repo.all()
       |> Map.new()
 
-    all = counts |> Map.delete("chores") |> Map.values() |> Enum.sum()
-    Map.put(counts, "all", all)
+    Map.put(counts, "all", counts |> Map.values() |> Enum.sum())
   end
 
   # Every filter but the kind and the search.
@@ -208,7 +207,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, when: year, timezone: timezone) when is_binary(year),
     do: Activity.started_in(q, year, timezone)
 
-  defp scope(q, activity: "all"), do: where(q, [chores: c], is_nil(c.d4h_activity_id))
+  defp scope(q, activity: "all"), do: q
   defp scope(q, activity: "chores"), do: where(q, [chores: c], not is_nil(c.d4h_activity_id))
 
   defp scope(q, activity: activity),

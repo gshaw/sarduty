@@ -37,8 +37,9 @@ defmodule Web.ActivityCollectionLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
 
     assert has_element?(lv, "#activity-view-event", "1")
+    assert has_element?(lv, "#activity-view-all", "2")
     assert has_element?(lv, "#activity-view-chores", "1")
-    refute has_element?(lv, "#activity_collection", "Chores: Equipment maintenance")
+    assert has_element?(lv, "#activity_collection", "Chores: Equipment maintenance")
 
     lv |> element("#activity-view-chores") |> render_click()
 
