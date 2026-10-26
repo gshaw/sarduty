@@ -3,6 +3,7 @@ defmodule App.ViewData.MemberRecords do
 
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChoreEvent
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
   alias App.Operation.BuildGroupRulePreview
@@ -42,7 +43,11 @@ defmodule App.ViewData.MemberRecords do
     |> Enum.sort(:desc)
   end
 
-  @doc "The member's attended rows that started in `year`, newest first, with the activity."
+  @doc """
+  The member's attended rows that started in `year`, newest first, with the activity. A
+  chore activity has its `chore_minutes` (#575), so the year's hours add its rows up as
+  the letter does (#584).
+  """
   def attendances(%Member{} = member, year, now) do
     member
     |> attended_query(now)
@@ -50,6 +55,14 @@ defmodule App.ViewData.MemberRecords do
     |> order_by([at], desc: at.started_at)
     |> preload([activity: ac], activity: ac)
     |> Repo.all()
+    |> put_chore_minutes(member.team_id)
+  end
+
+  defp put_chore_minutes(rows, team_id) do
+    minutes =
+      team_id |> ChoreEvent.totals() |> Repo.all() |> Map.new(&{&1.d4h_activity_id, &1.minutes})
+
+    Enum.map(rows, &put_in(&1.activity.chore_minutes, minutes[&1.activity.d4h_activity_id]))
   end
 
   @doc "Every row the member attended, newest first, with the activity."

@@ -109,6 +109,33 @@ defmodule Web.MeActivitiesLiveTest do
     assert has_element?(lv, "#hours-bars li", "Other")
   end
 
+  test "adds up the member's chores, as the letter does (#584)",
+       %{conn: conn, team: team, member: member, year: year} do
+    # Two chore categories in one month: both rows start at 00:00 on the 1st.
+    started = (year - 1) |> Date.new!(10, 1) |> DateTime.new!(~T[07:00:00], "Etc/UTC")
+
+    for hours <- [3, 2] do
+      activity =
+        activity_fixture(team, %{
+          title: "Chores",
+          activity_kind: "event",
+          started_at: started,
+          finished_at: started
+        })
+
+      chore_event_fixture(team, activity)
+
+      attendance_fixture(activity, member, %{
+        started_at: started,
+        finished_at: DateTime.add(started, hours * 3600)
+      })
+    end
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities?year=#{year - 1}")
+
+    assert has_element?(lv, "#hours-bars li", "5 hours")
+  end
+
   test "the year's numbers against the same days of last year, and hours by month",
        %{conn: conn, team: team, member: member, year: year, mid_year: mid_year} do
     incident =

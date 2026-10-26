@@ -3,6 +3,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
   import App.DataFixtures
 
+  alias App.Model.Activity
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   setup do
@@ -24,6 +25,18 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
         attrs
       )
     )
+  end
+
+  # A row of `minutes` on a chore activity (#575), from its start, as BuildChoreEvent sends
+  # every chore row.
+  defp attend_chore(team, member, started_at, minutes) do
+    attendance =
+      attend(team, member, started_at, minutes, %{
+        activity: %{activity_kind: "event", finished_at: started_at}
+      })
+
+    chore_event_fixture(team, Repo.get!(Activity, attendance.activity_id))
+    attendance
   end
 
   defp find_all(team, year, filter \\ "any", sort \\ "total", now \\ DateTime.utc_now()) do
@@ -104,6 +117,24 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
     assert [%{tax_credit_letter_id: id, tax_credit_letter_ref_id: ref_id}] = find_all(team, 2025)
     assert {id, ref_id} == {letter.id, letter.ref_id}
+  end
+
+  describe "chores (#584)" do
+    test "adds up a member's chores, though every chore row starts at 00:00 on the 1st",
+         %{team: team, member: member} do
+      attend_chore(team, member, ~U[2025-10-01 07:00:00Z], 600)
+      attend_chore(team, member, ~U[2025-10-01 07:00:00Z], 240)
+
+      assert [%{primary_minutes: 840, total_minutes: 840}] = find_all(team, 2025)
+    end
+
+    test "only the team's own chore events make a row a chore", %{team: team, member: member} do
+      tracker = attend(team, member, ~U[2025-10-01 07:00:00Z], 600)
+      attend(team, member, ~U[2025-10-01 07:00:00Z], 240)
+      chore_event_fixture(team_fixture(), Repo.get!(Activity, tracker.activity_id))
+
+      assert [%{primary_minutes: 600}] = find_all(team, 2025)
+    end
   end
 
   test "marks a current letter whose hours changed", %{team: team, member: member} do

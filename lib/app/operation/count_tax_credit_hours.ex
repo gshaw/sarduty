@@ -1,14 +1,16 @@
 defmodule App.Operation.CountTaxCreditHours do
   @moduledoc """
   Primary and secondary hours for tax credit letters, counted from each member's own
-  attendance rows (#191). The letter and the letter list both count with `count/4`, so
-  they always agree. Which tags count comes from `Activity.hours_tags/1`.
+  attendance rows (#191, #584). The letter and the letter list both count with `count/4`,
+  so they always agree. Which tags count comes from `Activity.hours_tags/1`. The public
+  explanation of these rules is #592.
   """
 
   import Ecto.Query
 
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChoreEvent
   alias App.Model.Team
   alias App.Repo
 
@@ -25,7 +27,8 @@ defmodule App.Operation.CountTaxCreditHours do
 
   @doc """
   Hours by member id. Each row is a map with `member_id`, `started_at`, `finished_at`,
-  `duration_in_minutes`, and its activity's `tags`. `hours_tags` is the team's
+  `duration_in_minutes`, its activity's `tags`, and `chore`, true when its activity is
+  one of the team's chore activities (`ChoreEvent.totals/1`). `hours_tags` is the team's
   `Activity.hours_tags/1`.
 
   - Rows count only when they started in `year` in `timezone`, and their activity has
@@ -34,6 +37,9 @@ defmodule App.Operation.CountTaxCreditHours do
     the fallback when a time is missing.
   - Overlapping rows for one member count once. Where primary and secondary overlap,
     the overlap is primary.
+  - Chore rows are added up and never merged (#584). A chore has a date but no time of
+    day, so every chore row starts at 00:00 on the 1st (`BuildChoreEvent`), where it
+    would overlap the member's other chores and anything else that day.
   """
   def count(rows, year, timezone, hours_tags) do
     {start, finish} = Service.YearRange.bounds(year, timezone)
@@ -55,14 +61,13 @@ defmodule App.Operation.CountTaxCreditHours do
 
   defp count_member(rows) do
     {timed, untimed} = Enum.split_with(rows, &timed?/1)
+    {chores, timed} = Enum.split_with(timed, & &1.chore)
 
     primary = timed |> intervals(:primary) |> merge()
     secondary = timed |> intervals(:secondary) |> merge() |> subtract(primary)
 
-    primary_minutes = seconds_to_minutes(length_of(primary)) + duration_sum(untimed, :primary)
-
-    secondary_minutes =
-      seconds_to_minutes(length_of(secondary)) + duration_sum(untimed, :secondary)
+    primary_minutes = minutes(primary, chores, untimed, :primary)
+    secondary_minutes = minutes(secondary, chores, untimed, :secondary)
 
     %{
       primary_minutes: primary_minutes,
@@ -70,6 +75,12 @@ defmodule App.Operation.CountTaxCreditHours do
       total_minutes: primary_minutes + secondary_minutes
     }
   end
+
+  # A kind's merged time, with its chores and its rows without times added on.
+  defp minutes(merged, chores, untimed, kind),
+    do:
+      seconds_to_minutes(length_of(merged) + length_of(intervals(chores, kind))) +
+        duration_sum(untimed, kind)
 
   defp timed?(row), do: not is_nil(row.started_at) and not is_nil(row.finished_at)
 
@@ -124,7 +135,7 @@ defmodule App.Operation.CountTaxCreditHours do
 
   @doc """
   The rows `count/4` takes: attended by `now` (Attendance.attended/2) and started in
-  `year`.
+  `year`, each with `chore` set from the team's chore events.
   """
   def load_rows(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()) do
     now
@@ -134,12 +145,18 @@ defmodule App.Operation.CountTaxCreditHours do
     |> where([at, ..., m], m.team_id == ^team.id)
     |> scope_members(member_ids)
     |> Attendance.started_in(year, team.timezone)
-    |> select([at, activity: ac], %{
+    |> join(:left, [activity: ac], c in subquery(ChoreEvent.totals(team.id)),
+      as: :chores,
+      on: c.d4h_activity_id == ac.d4h_activity_id
+    )
+    |> select([at, activity: ac, chores: c], %{
       member_id: at.member_id,
       started_at: at.started_at,
       finished_at: at.finished_at,
       duration_in_minutes: at.duration_in_minutes,
-      tags: ac.tags
+      tags: ac.tags,
+      # Typed, or SQLite's 0 for false would be truthy in Elixir.
+      chore: type(fragment("? IS NOT NULL", c.d4h_activity_id), :boolean)
     })
     |> Repo.all()
   end
