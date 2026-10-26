@@ -111,7 +111,7 @@ defmodule App.Operation.SendRemindersTest do
         assert email.text_body =~ ~r{/replies/\S+\?reply=no}
         assert email.html_body =~ "?reply=yes"
         assert email.html_body =~ "?reply=no"
-        assert email.text_body =~ "Alex Chen, a team admin, sent this reminder."
+        assert email.text_body =~ "Alex Chen, a team admin, sent this email."
         assert email.html_body =~ "I'll be there"
       end)
 

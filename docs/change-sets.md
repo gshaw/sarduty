@@ -53,9 +53,13 @@ new kind of write is a new row action there, not a new call from a page or an op
   and other tags from its "Change tags" page, as one `set_activity_tags` row with the whole
   list, applied at once. On D4H the page offers the form only for a draft: D4H refuses
   tags on a published activity with a 409 (#358). SAR Duty Records takes them.
-- **A template's groups are invited as a set** (source `template`, #162): one
-  `create_attendance` row per member, with status `REQUESTED` rather than `ATTENDING`,
-  applied at once.
+- **Adding members to an activity is a set** (#564): one `create_attendance` row per
+  member, with status `REQUESTED` rather than `ATTENDING`, applied at once by
+  [InviteMembers](../lib/app/operation/invite_members.ex). Its source is `invite` from
+  the activity's Add members page, which history names "Add members", and `template`
+  for a template's groups (#162). It refuses an activity that has started or that the
+  copy says is published. Then it writes the rows D4H took to the copy, as
+  `ReplyToActivity` does, so the page shows them before the next refresh.
 - **Chores are a set per event** (source `chores`, #341): a team admin's decision on a
   chore makes or rebuilds its chore category's D4H event for the month. A new event's
   set creates the activity, then its attendance: those rows say `created_in_set` and get

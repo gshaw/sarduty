@@ -2,7 +2,7 @@ defmodule Web.TemplateFormLive do
   use Web, :live_view_app_layout
 
   import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1]
-  import Web.ActivityTemplateLive, only: [tags_to_add: 1, groups_to_invite: 1]
+  import Web.ActivityTemplateLive, only: [tags_to_add: 1, groups_to_add: 1]
 
   alias App.Model.EquipmentItem
   alias App.Model.Group
@@ -13,8 +13,8 @@ defmodule Web.TemplateFormLive do
   alias Web.ActivityTemplateLive
 
   # Adding and changing a template: its name, its items with their usual hours (#271), its
-  # tags, and the groups it invites (#162). Tags and groups come from the sync's copy of
-  # the team's D4H records.
+  # tags, and the groups whose members it adds (#162). Tags and groups come from the sync's
+  # copy of the team's D4H records.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     template = if id = params["id"], do: Template.find!(team, id)
@@ -119,13 +119,13 @@ defmodule Web.TemplateFormLive do
             Find tags to add.
           </p>
 
-          <h2 class="heading mt-8">Invite · {length(@groups)}</h2>
+          <h2 class="heading mt-8">Groups · {length(@groups)}</h2>
           <p class="hint mb-4">
-            Applying the template invites each member of these groups to the activity.
+            Applying the template adds each member of these groups to the activity, as No reply.
           </p>
-          <.groups_to_invite :if={@groups != []} id="template-groups" groups={@groups} />
+          <.groups_to_add :if={@groups != []} id="template-groups" groups={@groups} />
           <p :if={@groups == []} id="template-no-groups" class="hint mb-4">
-            Add groups to invite.
+            Add groups whose members the template adds.
           </p>
 
           <.form_actions>

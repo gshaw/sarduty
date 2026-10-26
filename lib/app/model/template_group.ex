@@ -4,7 +4,7 @@ defmodule App.Model.TemplateGroup do
   alias App.Model.Group
   alias App.Model.Template
 
-  # One group a template invites to an activity (#162).
+  # One group whose members a template adds to an activity (#162).
   schema "template_groups" do
     belongs_to :template, Template
     belongs_to :group, Group

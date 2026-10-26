@@ -9,8 +9,8 @@ defmodule App.Model.Template do
   alias App.Model.TemplateTag
   alias App.Repo
 
-  # A named set of equipment items, each with default hours, tags, and groups to invite,
-  # that a team admin adds to an activity in one step (#271, #162). Templates are SAR Duty's
+  # A named set of equipment items, each with default hours, tags, and groups whose
+  # members it adds, that a team admin applies to an activity in one step (#271, #162). Templates are SAR Duty's
   # own; D4H never sees them.
   schema "templates" do
     belongs_to :team, Team
@@ -49,7 +49,7 @@ defmodule App.Model.Template do
   def tags(%Template{template_tags: template_tags}),
     do: template_tags |> Enum.map(& &1.tag) |> Enum.sort_by(&String.downcase(&1.title))
 
-  @doc "The groups the template invites, by title."
+  @doc "The groups whose members the template adds, by title."
   def groups(%Template{template_groups: template_groups}),
     do: template_groups |> Enum.map(& &1.group) |> Enum.sort_by(&String.downcase(&1.title))
 end

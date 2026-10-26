@@ -244,6 +244,24 @@ defmodule App.Model.Activity do
   def take_attendance?(%Activity{} = activity, false, now), do: attendance_window?(activity, now)
 
   @doc """
+  Whether a team admin can add members to the activity now (#564): `:open` before the
+  start on one neither deleted nor published, `:published` for a published one, and nil
+  otherwise. Read from the copy, so InviteMembers checks again when it sends.
+  """
+  def adding(%Activity{} = activity, team_admin?, %DateTime{} = now) do
+    cond do
+      !team_admin? or activity.deleted_at != nil or not DateTime.before?(now, activity.started_at) ->
+        nil
+
+      activity.is_published ->
+        :published
+
+      true ->
+        :open
+    end
+  end
+
+  @doc """
   Records that the activity's attendance is sent as of `at`, the time of a team admin's
   review: its send went through, or it had nothing to send (SendAttendanceToD4H). Needs
   attention lists the scans after it (#475). It never moves back, so a send from an older

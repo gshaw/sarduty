@@ -7,12 +7,12 @@ defmodule Web.ActivityTemplateLive do
   alias App.Model.EquipmentUsage
   alias App.Model.Template
   alias App.Operation.ChangeActivityEquipment
-  alias App.Operation.InviteGroups
+  alias App.Operation.InviteMembers
   alias Web.ActivityEquipmentLive
 
   # Applying templates to an activity (#162). Each template adds its items, with hours to
-  # check, its tags, and its groups to invite to one list. Sending writes the items and
-  # tags to D4H as equipment usages and the activity's tags, then sends the invites.
+  # check, its tags, and its groups to one list. Sending writes the items and tags to D4H
+  # as equipment usages and the activity's tags, then adds the groups' members (#564).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -96,11 +96,11 @@ defmodule Web.ActivityTemplateLive do
               <.tags_to_add id="template-tags-table" tags={@tags} />
             </div>
             <div :if={@groups != []} id="template-groups" class="mt-4">
-              <h3 class="subheading">Invite</h3>
+              <h3 class="subheading">Groups</h3>
               <p class="hint mb-2">
-                SAR Duty invites each member of these groups who is not on the activity.
+                SAR Duty adds each member of these groups who is not on the activity, as No reply. Nobody is emailed.
               </p>
-              <.groups_to_invite id="template-groups-table" groups={@groups} />
+              <.groups_to_add id="template-groups-table" groups={@groups} />
             </div>
             <.form_actions>
               <.button id="template-send" variant={:success} phx-disable-with="Adding…">
@@ -149,8 +149,8 @@ defmodule Web.ActivityTemplateLive do
   attr :id, :string, required: true
   attr :groups, :list, required: true
 
-  @doc "Groups about to be invited, each with a remove button. Shared with the template form."
-  def groups_to_invite(assigns) do
+  @doc "Groups whose members are about to be added, each with a remove button. Shared with the template form."
+  def groups_to_add(assigns) do
     ~H"""
     <.table id={@id} rows={@groups} row_id={&"group-#{&1.id}"} class="table-striped">
       <:col :let={group} label="Group">{group.title}</:col>
@@ -198,20 +198,26 @@ defmodule Web.ActivityTemplateLive do
     do: (groups ++ new) |> Enum.uniq_by(& &1.id) |> Enum.sort_by(&String.downcase(&1.title))
 
   @doc """
-  What the invites did: "8 members invited.", then how many didn't go and why. No rows
-  means everyone was on the activity already.
+  What adding the groups' members did, from InviteMembers.call/6's result: "8 members
+  added.", then the rows that did not go and why, then how many were away on `day`. No
+  rows and nobody away means everyone was on the activity already.
   """
-  def invite_text([]), do: "Everyone in those groups is on the activity already."
+  def invite_text(%{rows: [], away: []}, _day),
+    do: "Everyone in those groups is on the activity already."
 
-  def invite_text(rows) do
-    {applied, other} = Enum.split_with(rows, &(&1.status == :applied))
+  def invite_text(%{rows: rows, away: away}, day),
+    do: (InviteMembers.result_lines(rows) ++ away_text(away, day)) |> Enum.join(" ")
 
-    not_invited =
-      other
-      |> Enum.group_by(& &1.error)
-      |> Enum.map(fn {error, rows} -> "#{count_members(length(rows))} not invited: #{error}" end)
+  defp away_text([], _day), do: []
 
-    Enum.join(["#{count_members(length(applied))} invited." | not_invited], " ")
+  defp away_text(away, day) do
+    away
+    |> length()
+    |> Service.Format.count(
+      one: "1 member away on #{day} was left out.",
+      many: "%d members away on #{day} were left out."
+    )
+    |> List.wrap()
   end
 
   def handle_event("add-template", %{"id" => id}, socket) do
@@ -288,13 +294,21 @@ defmodule Web.ActivityTemplateLive do
     do: {ActivityEquipmentLive.flash_kind(rows), ActivityEquipmentLive.result_text(rows, "added")}
 
   defp invite(team, activity, groups, user, now, rows) do
-    {kind, text} =
-      case InviteGroups.call(team, activity, groups, user, now) do
-        {:ok, invites} ->
-          {ActivityEquipmentLive.flash_kind(rows ++ invites), invite_text(invites)}
+    picks = InviteMembers.group_picks(team, groups, now)
 
-        {:error, text} ->
-          {:error, text}
+    {kind, text} =
+      case InviteMembers.call(team, activity, picks, user, :template, now) do
+        {:ok, result} ->
+          day = Service.Format.month_day(activity.started_at, team.timezone)
+          {ActivityEquipmentLive.flash_kind(rows ++ result.rows), invite_text(result, day)}
+
+        # A template still logs equipment after an activity, but adds nobody.
+        {:error, :started} ->
+          {ActivityEquipmentLive.flash_kind(rows),
+           "Its groups were left out: the activity has started."}
+
+        {:error, reason} ->
+          {:error, InviteMembers.error_text(team, reason)}
       end
 
     if rows == [],
@@ -305,5 +319,4 @@ defmodule Web.ActivityTemplateLive do
   defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
   defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")
   defp count_groups(n), do: Service.Format.count(n, one: "%d group", many: "%d groups")
-  defp count_members(n), do: Service.Format.count(n, one: "%d member", many: "%d members")
 end
