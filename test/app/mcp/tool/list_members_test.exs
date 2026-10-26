@@ -26,7 +26,12 @@ defmodule App.MCP.Tool.ListMembersTest do
     ]
 
     [alex, sam] =
-      ListMembers.build(members, [{2, "Rope"}, {2, "Provisional"}], "America/Vancouver")
+      ListMembers.build(
+        members,
+        [{2, "Rope"}, {2, "Provisional"}],
+        %{1 => :retired, 2 => {:away, %{reason: "Parental leave", ends_on: ~D[2027-03-01]}}},
+        "America/Vancouver"
+      )
 
     assert alex["groups"] == []
     assert alex["left_at"] == "2025-06-30T00:00:00-07:00"
@@ -34,5 +39,17 @@ defmodule App.MCP.Tool.ListMembersTest do
     assert sam["joined_at"] == "2024-03-01T00:00:00-08:00"
     assert sam["left_at"] == nil
     refute Map.has_key?(sam, "email")
+    assert alex["standing"] == "retired"
+  end
+
+  test "an away member is away, with no reason or dates" do
+    member = %{id: 1, name: "Sam", position: nil, joined_at: nil, left_at: nil, d4h_status: nil}
+    period = %{reason: "Parental leave", ends_on: ~D[2027-03-01]}
+
+    [sam] = ListMembers.build([member], [], %{1 => {:away, period}}, "Etc/UTC")
+
+    assert sam["standing"] == "away"
+    refute inspect(sam) =~ "Parental"
+    refute inspect(sam) =~ "2027"
   end
 end

@@ -11,6 +11,7 @@ defmodule App.MCP.Tools do
     App.MCP.Tool.ListMembers,
     App.MCP.Tool.AttendanceSummary,
     App.MCP.Tool.ListActivities,
+    App.MCP.Tool.ListAttendance,
     App.MCP.Tool.ListQualifications,
     App.MCP.Tool.MemberHistory,
     App.MCP.Tool.ActivityHistory,

@@ -190,6 +190,22 @@ defmodule App.Model.Attendance do
   def attended(query \\ Attendance, %DateTime{} = now),
     do: query |> attending() |> where([r], r.started_at <= ^now)
 
+  @doc """
+  A row's status in the glossary's words (docs/writing.md), which change when the
+  activity starts: `:attended` or `:signed_up` as attended/2 and signed_up/2 count them,
+  by the row's start; `:absent`, or `:cant_make_it` before the activity starts; and
+  `:no_reply` for requested. Any other status is kept as D4H's word. Pure.
+  """
+  def status_word(%{status: "attending"} = row, %{started_at: activity_start}, now),
+    do:
+      if(DateTime.after?(row.started_at || activity_start, now), do: :signed_up, else: :attended)
+
+  def status_word(%{status: "absent"}, %{started_at: activity_start}, now),
+    do: if(DateTime.after?(activity_start, now), do: :cant_make_it, else: :absent)
+
+  def status_word(%{status: "requested"}, _activity, _now), do: :no_reply
+  def status_word(%{status: other}, _activity, _now), do: other
+
   @doc "Sign-ups for coming activities: attending rows that start after `now`."
   def signed_up(query \\ Attendance, %DateTime{} = now),
     do: query |> attending() |> where([r], r.started_at > ^now)
