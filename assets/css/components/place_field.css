@@ -1,0 +1,49 @@
+/* The activity form's place (#610): the places that match what was typed, listed under
+   the text box as the combobox lists its options. Each is a button, so Tab reaches it. */
+@layer components {
+  .place-field { position: relative; }
+  .place-input { position: relative; }
+  /* The x clears the box, once it has text. */
+  .place-input:has(input:not(:placeholder-shown)) input { padding-right: var(--sp-12); }
+  .place-clear {
+    position: absolute;
+    right: var(--sp-2);
+    top: 50%;
+    translate: 0 -50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--text-muted);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  .place-clear:hover { color: var(--text); }
+  .place-input:has(input:placeholder-shown, input:disabled) .place-clear { display: none; }
+  .place-list {
+    position: absolute;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    top: 100%;
+    background: var(--bg);
+    border: var(--border-width) solid var(--text);
+    border-top: 0;
+    box-shadow: 0 8px 16px rgb(0 0 0 / 0.15);
+  }
+  .place-list > li { border-bottom: 1px solid var(--border-subtle); }
+  .place-list > li:last-child { border-bottom: 0; }
+  .place-list button {
+    display: block;
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3);
+    text-align: left;
+    cursor: pointer;
+  }
+  .place-list button:hover,
+  .place-list button:focus-visible { background: var(--primary); color: var(--on-fill); outline: none; }
+  .place-name { display: block; font-weight: 600; }
+  .place-detail { display: block; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  .place-list button:is(:hover, :focus-visible) .place-detail { color: inherit; }
+}

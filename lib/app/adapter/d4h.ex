@@ -1,5 +1,6 @@
 defmodule App.Adapter.D4H do
   alias App.Adapter.D4H
+  alias App.Model.Coordinate
   alias App.Model.Event
   alias App.Model.Team
 
@@ -1133,19 +1134,33 @@ defmodule App.Adapter.D4H do
   defp activity_json(attrs) do
     json = rename(attrs, @activity_fields)
 
-    # The place is the whole address, so the other parts are emptied. D4H refuses null in
-    # them (400 "malformed"), so empty is "".
-    if Map.has_key?(attrs, "place"),
-      do:
-        Map.put(json, "address", %{
-          street: attrs["place"] || "",
-          town: "",
-          region: "",
-          postcode: "",
-          country: ""
-        }),
-      else: json
+    json
+    |> put_activity_address(attrs)
+    |> put_activity_location(attrs)
   end
+
+  # The place is the whole address, so the other parts are emptied. D4H refuses null in
+  # them (400 "malformed"), so empty is "".
+  defp put_activity_address(json, %{"place" => place}),
+    do:
+      Map.put(json, "address", %{
+        street: place || "",
+        town: "",
+        region: "",
+        postcode: "",
+        country: ""
+      })
+
+  defp put_activity_address(json, _attrs), do: json
+
+  # The pin, "lat,lng" (#610). D4H takes no null location, so no pin is 0,0, which the
+  # sync reads as none (Activity.pin/1).
+  defp put_activity_location(json, %{"location" => location}) do
+    {lat, lng} = Coordinate.build(location) || {0, 0}
+    Map.put(json, "location", %{latitude: lat, longitude: lng})
+  end
+
+  defp put_activity_location(json, _attrs), do: json
 
   @doc """
   Sets a member's photo to `bytes`, a JPEG, PNG, or WebP. PUT on the image is Records'

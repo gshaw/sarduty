@@ -64,6 +64,20 @@ window.addEventListener("sarduty:copy", async event => {
   status.copiedTimer = setTimeout(() => { status.textContent = "" }, 2000)
 })
 
+// A button with JS.dispatch("sarduty:clear", to: "#input") empties the input, and the
+// inputs in detail: %{also: "#a, #b"}, puts the cursor back, then sends the input event
+// so the form's phx-change runs. LiveView keeps a focused input's value, so the server
+// can't clear it. Focus comes first: an input's phx-focus shares its phx-debounce timer,
+// so a focus after the input event would drop the change.
+window.addEventListener("sarduty:clear", event => {
+  const input = event.target
+  const also = event.detail?.also ? document.querySelectorAll(event.detail.also) : []
+  for (const other of also) other.value = ""
+  input.value = ""
+  input.focus()
+  input.dispatchEvent(new Event("input", {bubbles: true}))
+})
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

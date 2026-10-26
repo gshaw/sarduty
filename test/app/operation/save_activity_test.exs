@@ -46,6 +46,37 @@ defmodule App.Operation.SaveActivityTest do
     assert row.new_value["tag_ids"] == [1]
   end
 
+  test "a new activity sends its pin, and none when it has none (#610)" do
+    form = %ActivityFormViewModel{
+      title: "Night navigation",
+      starts_at: ~N[2026-10-08 18:30:00],
+      ends_at: ~N[2026-10-08 23:00:00],
+      coordinate: "45.36531,-63.27972"
+    }
+
+    assert SaveActivity.plan(nil, form, @tag_ids, @team).new_value["location"] ==
+             "45.36531,-63.27972"
+
+    refute Map.has_key?(
+             SaveActivity.plan(nil, %{form | coordinate: nil}, @tag_ids, @team).new_value,
+             "location"
+           )
+  end
+
+  test "a moved or removed pin is a change of location (#610)" do
+    activity = %{activity() | coordinate: "49.1,-123.1"}
+    values = struct(ActivityFormViewModel.from_activity(activity, @team), %{})
+
+    assert SaveActivity.plan(activity, values, @tag_ids, @team) == :unchanged
+
+    moved = SaveActivity.plan(activity, %{values | coordinate: "49.2,-123.1"}, @tag_ids, @team)
+    assert moved.new_value == %{"location" => "49.2,-123.1"}
+    assert moved.old_value["location"] == "49.10000,-123.10000"
+
+    removed = SaveActivity.plan(activity, %{values | coordinate: nil}, @tag_ids, @team)
+    assert removed.new_value == %{"location" => nil}
+  end
+
   test "an unchanged form changes nothing" do
     assert SaveActivity.plan(activity(), values(%{}), @tag_ids, @team) == :unchanged
   end

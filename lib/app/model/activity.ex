@@ -335,6 +335,21 @@ defmodule App.Model.Activity do
     |> where([r], r.finished_at <= ^now)
   end
 
+  @doc """
+  The address, pin, and start of each of the team's activities with an address that
+  started between `since` and `now`, for the places the activity form suggests (#610).
+  """
+  def places(%Team{} = team, %DateTime{} = since, %DateTime{} = now) do
+    Activity
+    |> where([a], a.team_id == ^team.id)
+    |> not_deleted()
+    |> where([a], a.started_at >= ^DateTime.truncate(since, :second))
+    |> where([a], a.started_at <= ^DateTime.truncate(now, :second))
+    |> where([a], not is_nil(a.address) and a.address != "")
+    |> select([a], %{address: a.address, coordinate: a.coordinate, started_at: a.started_at})
+    |> Repo.all()
+  end
+
   @doc "Rows that started in `year` in `timezone`."
   def started_in(query, year, timezone) do
     {start, finish} = Service.YearRange.bounds(year, timezone)

@@ -5,7 +5,8 @@ defmodule App.Operation.SaveActivity do
   and returns the activity as the sync copied it.
 
   The hours choice sets the activity's tags: the team's primary or secondary hours tag
-  (`Activity.hours_tags/1`), or neither, keeping any other tags it has. On every team, as
+  (`Activity.hours_tags/1`), or neither, keeping any other tags it has. The place goes as
+  the address text and, when it has a pin, the location (#610). On every team, as
   D4H does: a published activity is locked, so only its published flag changes, and only
   an activity that has finished is published. On a D4H team:
 
@@ -71,6 +72,7 @@ defmodule App.Operation.SaveActivity do
       |> fields(team.timezone)
       |> Map.merge(%{"tag_ids" => hours_tag_ids, "full_team" => false, "shared" => false})
       |> Map.update!("description", &description_out(&1, team))
+      |> Map.reject(fn {key, value} -> key == "location" and is_nil(value) end)
 
     %ChangeSetRow{
       action: :create_activity,
@@ -143,6 +145,7 @@ defmodule App.Operation.SaveActivity do
       "title" => values.title,
       "description" => values.description,
       "place" => values.place,
+      "location" => values.coordinate,
       "tracking_number" => values.tracking_number,
       "started_at" => utc(values.starts_at, timezone),
       "finished_at" => utc(values.ends_at, timezone),

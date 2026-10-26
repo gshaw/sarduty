@@ -132,6 +132,212 @@ defmodule Web.ActivityFormLiveTest do
     end
   end
 
+  describe "the place (#610)" do
+    defp stub_mapbox do
+      test = self()
+
+      Req.Test.stub(App.Adapter.Mapbox, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+        send(test, {:mapbox, conn.request_path, conn.query_params})
+
+        case conn.request_path do
+          "/search/searchbox/v1/suggest" ->
+            Req.Test.json(conn, %{
+              "suggestions" => [
+                %{
+                  "name" => "Campbell Valley Regional Park",
+                  "mapbox_id" => "park-1",
+                  "full_address" => "20285 8 Ave, Langley, V2Z 1V5, Canada"
+                }
+              ]
+            })
+
+          "/search/searchbox/v1/retrieve/park-1" ->
+            Req.Test.json(conn, %{
+              "type" => "FeatureCollection",
+              "features" => [
+                %{
+                  "geometry" => %{"type" => "Point", "coordinates" => [-122.656341, 49.017322]},
+                  "properties" => %{
+                    "name" => "Campbell Valley Regional Park",
+                    "full_address" => "20285 8 Ave, Langley, V2Z 1V5, Canada",
+                    "context" => %{"country" => %{"name" => "Canada"}}
+                  }
+                }
+              ]
+            })
+        end
+      end)
+    end
+
+    defp type_place(lv, text) do
+      lv
+      |> form("#activity-form", form: %{place: text})
+      |> render_change(%{"_target" => ["form", "place"]})
+    end
+
+    test "typing lists places, and the one picked is the address and the pin",
+         %{conn: conn, team: team} do
+      stub()
+      stub_mapbox()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      type_place(lv, "campbell valley")
+      render_async(lv)
+
+      assert_received {:mapbox, "/search/searchbox/v1/suggest", %{"q" => "campbell valley"} = q}
+      assert q["session_token"]
+      assert has_element?(lv, "#activity-place-0", "Campbell Valley Regional Park")
+
+      lv |> element("#activity-place-0") |> render_click()
+
+      assert_received {:mapbox, "/search/searchbox/v1/retrieve/park-1", retrieve}
+      assert retrieve["session_token"] == q["session_token"]
+      refute has_element?(lv, "#activity-places")
+      assert has_element?(lv, "#activity-pin", "49.01732, -122.65634")
+
+      lv
+      |> form("#activity-form",
+        form: %{
+          title: "Night navigation",
+          starts_at: "2026-10-08T18:30",
+          ends_at: "2026-10-08T21:00"
+        }
+      )
+      |> render_submit()
+
+      assert_received {:records, "POST", "/exercises", body}
+
+      assert body["address"]["street"] ==
+               "Campbell Valley Regional Park, 20285 8 Ave, Langley, V2Z 1V5"
+
+      assert body["location"] == %{"latitude" => 49.01732, "longitude" => -122.65634}
+    end
+
+    test "a pasted latitude and longitude is the pin, with no search",
+         %{conn: conn, team: team} do
+      stub()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      type_place(lv, ~s(45°21'55.1"N 63°16'47.0"W))
+
+      refute has_element?(lv, "#activity-places")
+      assert has_element?(lv, "#activity-pin", "45.36531, -63.27972")
+      refute_received {:mapbox, _path, _query}
+    end
+
+    test "removing the pin sends no location, as 0,0", %{conn: conn, team: team} do
+      stub()
+      activity = activity_fixture(team, %{d4h_activity_id: 88, coordinate: "49.1,-123.1"})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+
+      assert has_element?(lv, "#activity-pin", "49.10000, -123.10000")
+      lv |> element("#activity-pin-remove") |> render_click()
+      refute has_element?(lv, "#activity-pin")
+
+      lv |> form("#activity-form") |> render_submit()
+
+      assert_received {:records, "PATCH", "/exercises/88", body}
+      assert body == %{"location" => %{"latitude" => 0, "longitude" => 0}}
+    end
+
+    defp past_activities(team) do
+      for _ <- 1..3,
+          do: activity_fixture(team, %{address: "Hall, Surrey", coordinate: "49.1,-122.8"})
+
+      for _ <- 1..2,
+          do: activity_fixture(team, %{address: "Park, Langley", coordinate: "49.2,-122.6"})
+
+      activity_fixture(team, %{address: "Pond, Surrey", coordinate: nil})
+
+      # Still to come, so not counted.
+      soon = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+
+      activity_fixture(team, %{
+        address: "Hall, Surrey",
+        coordinate: "49.1,-122.8",
+        started_at: soon,
+        finished_at: DateTime.add(soon, 3600)
+      })
+    end
+
+    test "the box lists the team's usual places, with no Mapbox search",
+         %{conn: conn, team: team} do
+      stub()
+      past_activities(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      lv |> element("#form_place") |> render_focus()
+
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#activity-past-0", "3 activities")
+      assert has_element?(lv, "#activity-past-1", "Park, Langley")
+      refute has_element?(lv, "#activity-past-2")
+
+      lv |> element("#activity-past-0") |> render_click()
+
+      refute has_element?(lv, "#activity-places")
+      assert has_element?(lv, "#activity-pin", "49.10000, -122.80000")
+      assert lv |> element("#form_place") |> render() =~ ~s(value="Hall, Surrey")
+      refute_received {:mapbox, _path, _query}
+    end
+
+    test "typing lists the team's places that match, then Mapbox's",
+         %{conn: conn, team: team} do
+      stub()
+      stub_mapbox()
+      past_activities(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      type_place(lv, "su")
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#activity-past-1", "Pond, Surrey")
+      refute_received {:mapbox, _path, _query}
+
+      type_place(lv, "surrey")
+      render_async(lv)
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#activity-place-0", "Campbell Valley Regional Park")
+
+      lv |> element("#activity-past-1") |> render_click()
+
+      refute has_element?(lv, "#activity-pin")
+      assert lv |> element("#form_place") |> render() =~ ~s(value="Pond, Surrey")
+    end
+
+    test "the x empties the box and its pin, and lists the team's places again",
+         %{conn: conn, team: team} do
+      stub()
+      past_activities(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+      lv |> element("#form_place") |> render_focus()
+      lv |> element("#activity-past-0") |> render_click()
+      assert has_element?(lv, "#activity-pin")
+      assert has_element?(lv, "#activity-place-clear")
+
+      # What the x's sarduty:clear does in the browser.
+      lv
+      |> form("#activity-form")
+      |> render_change(%{
+        "form" => %{"place" => "", "coordinate" => ""},
+        "_target" => ["form", "place"]
+      })
+
+      refute has_element?(lv, "#activity-pin")
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey")
+    end
+
+    test "a Mapbox failure lists nothing", %{conn: conn, team: team} do
+      Req.Test.stub(App.Adapter.Mapbox, &Plug.Conn.send_resp(&1, 401, "{}"))
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      type_place(lv, "campbell valley")
+      render_async(lv)
+
+      refute has_element?(lv, "#activity-places")
+    end
+  end
+
   describe "a D4H team (#585)" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "d4h_key"}})

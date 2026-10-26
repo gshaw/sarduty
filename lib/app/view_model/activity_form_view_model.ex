@@ -4,6 +4,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
   alias App.Adapter.D4H
   alias App.Field
   alias App.Model.Activity
+  alias App.Model.Coordinate
   alias App.Model.Team
   alias App.Validate
 
@@ -18,6 +19,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
     field :title, Field.TrimmedString
     field :description, Field.TrimmedString
     field :place, Field.TrimmedString
+    # The place's pin, "lat,lng" as the sync stores it, or nil (#610).
+    field :coordinate, :string
     field :tracking_number, Field.TrimmedString
     field :starts_at, :naive_datetime
     field :ends_at, :naive_datetime
@@ -39,6 +42,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
       title: activity.title,
       description: description(activity, team),
       place: activity.address,
+      coordinate: coordinate(Activity.pin(activity)),
       tracking_number: activity.tracking_number,
       starts_at: local(activity.started_at, timezone),
       ends_at: local(activity.finished_at, timezone),
@@ -65,6 +69,11 @@ defmodule App.ViewModel.ActivityFormViewModel do
     end
   end
 
+  # As put_coordinate/1 writes it, so an untouched pin is unchanged.
+  defp coordinate(text) do
+    if pin = Coordinate.build(text), do: Coordinate.to_string(pin, 5)
+  end
+
   defp hours_of(tags, hours_tags) do
     case Activity.counts_as(tags, hours_tags) do
       :primary -> "primary"
@@ -88,6 +97,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
       :title,
       :description,
       :place,
+      :coordinate,
       :tracking_number,
       :starts_at,
       :ends_at,
@@ -101,10 +111,19 @@ defmodule App.ViewModel.ActivityFormViewModel do
     |> validate_inclusion(:hours, Enum.map(@hours, &elem(&1, 1)))
     |> validate_length(:title, max: 100)
     |> validate_length(:place, max: 100)
+    |> put_coordinate()
     |> validate_length(:tracking_number, max: 50)
     |> validate_length(:description, max: 10_000)
     |> validate_ends_after_starts()
     |> Validate.in_field_order(@fields)
+  end
+
+  # A pasted latitude and longitude is the pin. Otherwise the pin is the one picked, kept
+  # in the stored form, or none.
+  defp put_coordinate(changeset) do
+    pasted = changeset |> get_field(:place) |> Coordinate.parse()
+    pin = pasted || changeset |> get_field(:coordinate) |> Coordinate.build()
+    put_change(changeset, :coordinate, pin && Coordinate.to_string(pin, 5))
   end
 
   defp validate_ends_after_starts(changeset) do
