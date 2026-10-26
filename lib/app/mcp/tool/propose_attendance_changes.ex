@@ -15,13 +15,15 @@ defmodule App.MCP.Tool.ProposeAttendanceChanges do
 
   @impl App.MCP.Tool
   def description do
-    "Proposes attendance changes for one activity, such as from a paper sign-in sheet. " <>
-      "Nothing changes in D4H: a team admin reviews the proposal in SAR Duty and sends " <>
-      "it or discards it. Give each member's SAR Duty id (from list_members), status " <>
-      "attended or absent, and optional start and end times as ISO 8601 with an offset. " <>
-      "A member added without times gets the activity's. Give a short reason per change, " <>
-      "such as the sheet row, and a one-line summary. Returns the link for the team admin " <>
-      "and any changes left out, with why. Published or deleted activities cannot change."
+    "Proposes attendance changes for one activity, such as from a paper sign-in sheet, " <>
+      "members to add, or a duplicate row. Nothing changes until a team admin sends it in " <>
+      "SAR Duty. Name a row by its attendance_id from list_attendance, or give a member_id " <>
+      "to add one. Before the activity starts, status is no_reply, signed_up, or " <>
+      "cant_make_it. Once it starts, status is attended or absent. remove takes a row off " <>
+      "at any time. Give optional start and end times as ISO 8601 with an offset; a row " <>
+      "added without times gets the activity's. Give a short reason per change, such as " <>
+      "the sheet row, and a one-line summary. Returns the link for the team admin and any " <>
+      "changes left out, with why. Published, deleted, and chore activities cannot change."
   end
 
   @impl App.MCP.Tool
@@ -40,13 +42,17 @@ defmodule App.MCP.Tool.ProposeAttendanceChanges do
           "items" => %{
             "type" => "object",
             "properties" => %{
+              "attendance_id" => %{"type" => "integer"},
               "member_id" => %{"type" => "integer"},
-              "status" => %{"type" => "string", "enum" => ["attended", "absent"]},
+              "status" => %{
+                "type" => "string",
+                "enum" => ~w(no_reply signed_up cant_make_it attended absent remove)
+              },
               "starts_at" => %{"type" => "string", "format" => "date-time"},
               "ends_at" => %{"type" => "string", "format" => "date-time"},
               "reason" => %{"type" => "string"}
             },
-            "required" => ["member_id", "status"]
+            "required" => ["status"]
           }
         }
       },
@@ -61,7 +67,7 @@ defmodule App.MCP.Tool.ProposeAttendanceChanges do
   def read_only?, do: false
 
   @impl App.MCP.Tool
-  def call_as(%Team{} = team, user, args, _now) do
+  def call_as(%Team{} = team, user, args, now) do
     changes = args["changes"]
 
     cond do
@@ -75,14 +81,14 @@ defmodule App.MCP.Tool.ProposeAttendanceChanges do
         {:error, "Give each change as an object."}
 
       true ->
-        propose(team, user, args["activity_id"], changes, args["summary"])
+        propose(team, user, args["activity_id"], changes, args["summary"], now)
     end
   end
 
-  defp propose(team, user, activity_id, changes, summary) do
+  defp propose(team, user, activity_id, changes, summary, now) do
     summary = if is_binary(summary), do: summary
 
-    case ProposeAttendanceChanges.call(team, user, activity_id, changes, summary) do
+    case ProposeAttendanceChanges.call(team, user, activity_id, changes, summary, now) do
       {:ok, change_set, problems} ->
         output = %{
           "change_set_id" => change_set.id,

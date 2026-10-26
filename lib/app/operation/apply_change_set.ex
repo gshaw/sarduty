@@ -240,6 +240,19 @@ defmodule App.Operation.ApplyChangeSet do
     end
   end
 
+  # An agent's remove (#595): the row must be there as it was proposed.
+  def check(%ChangeSetRow{action: :delete_attendance} = row, current) when is_list(current) do
+    case Enum.find(current, &(&1.d4h_attendance_id == row.d4h_record_id)) do
+      nil ->
+        {:skipped, "The attendance row is off the activity already."}
+
+      info ->
+        if info.status == row.old_value["status"],
+          do: :ok,
+          else: {:skipped, "This changed since you reviewed it. Review again."}
+    end
+  end
+
   def check(%ChangeSetRow{action: :create_attendance} = row, current) do
     if Enum.any?(current, &(&1.d4h_member_id == row.new_value["d4h_member_id"])),
       do: {:skipped, "This member has attendance now. Review again."},
