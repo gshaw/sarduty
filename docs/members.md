@@ -235,7 +235,7 @@ Activities.
 - **Hours in the year** (#576), the main column: bars for primary, secondary, and other
   hours, then hours by month, stacked by incident, exercise, and event. Primary and
   secondary count as the letter does (`CountTaxCreditHours`), so they match it. Other is
-  the time on activities with neither hours tag.
+  the time on activities with neither hours tag, shown only when the year has some.
 - **That year's letter**, beside the hours, as Your membership shows it. For the current
   year it says the letter comes once a team admin makes it, after the year ends. A past
   year with no letter shows nothing. On a phone it comes first.

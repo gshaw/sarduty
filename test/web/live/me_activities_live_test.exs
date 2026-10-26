@@ -106,6 +106,7 @@ defmodule Web.MeActivitiesLiveTest do
     assert has_element?(lv, "#hours-bars li", "3 hours")
     assert has_element?(lv, "#attendance tr", "Board meeting")
     assert has_element?(lv, "#attendance td", "Other")
+    assert has_element?(lv, "#hours-bars li", "Other")
   end
 
   test "the year's numbers against the same days of last year, and hours by month",
@@ -142,6 +143,9 @@ defmodule Web.MeActivitiesLiveTest do
     assert has_element?(lv, "#stat-activities", "1 fewer than this time last year")
     assert has_element?(lv, "#stat-incidents", "1 more than this time last year")
     assert has_element?(lv, "#hours-by-month-chart")
+    # Every activity has an hours tag, so no Other bar.
+    assert has_element?(lv, "#hours-bars li", "Primary")
+    refute has_element?(lv, "#hours-bars li", "Other")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/activities?year=#{year - 1}")
     assert has_element?(lv, "#stat-activities", "2 more than in #{year - 2}")

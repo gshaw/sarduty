@@ -34,6 +34,8 @@
   #coming-up-list .dash-row-when { flex-direction: row; gap: var(--sp-2); width: auto; }
 
   .chart-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  /* An odd row's first stat, the one people check, takes the full width (#576). */
+  .chart-stats > :first-child:nth-last-child(odd) { grid-column: 1 / -1; }
 }
 
 /* The whiteboard strip under Next up (#515): one grey box, a line a note, each with a
