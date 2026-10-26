@@ -13,6 +13,13 @@ defmodule Web.HomePageLiveTest do
     assert has_element?(lv, ~s(#start-end a[href="/signup"]))
   end
 
+  test "the page lists what SAR Duty does and what comes next", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/")
+
+    assert has_element?(lv, "#home-more h3", "Equipment")
+    assert has_element?(lv, "#home-coming h2", "Coming next")
+  end
+
   test "the page links to where a tax credit letter is verified", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 

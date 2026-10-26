@@ -32,8 +32,8 @@ defmodule Web.HomePageLive do
           <div>
             <h1 id="home-title">Less paperwork for search and rescue teams</h1>
             <p class="home-lead">
-              SAR Duty works from your team's D4H data. It does the jobs D4H does not, so team
-              admins spend less time at a desk.
+              SAR Duty builds on your team's D4H records with tools made for volunteer teams: tax
+              credit letters, ID cards on members' phones, attendance at the door, and more.
             </p>
             <.start id="start-top" current_user={@current_user} teams={@teams} members={@members} />
           </div>
@@ -50,7 +50,7 @@ defmodule Web.HomePageLive do
             <div>
               <h2>Tax credit letters</h2>
               <p>
-                Make each member's tax credit letter from their D4H attendance, and email it to them.
+                Make each member's tax credit letter from the hours they gave, and email it to them.
               </p>
               <p>
                 Anyone can verify a letter at <a href={Web.VerifyHost.url() <> "/letters"}>verify.sarduty.com/letters</a>, so the
@@ -72,10 +72,39 @@ defmodule Web.HomePageLive do
           <div class="home-feature">
             <div>
               <h2>Attendance at the door</h2>
-              <p>Record who arrives and leaves on a phone, then send the attendance to D4H.</p>
+              <p>
+                Scan members as they arrive and leave, on a phone or an iPad at the hall. A team
+                admin checks the attendance and sends it in one step.
+              </p>
             </div>
             <HomeMockups.door />
           </div>
+        </div>
+      </section>
+
+      <section class="home-section is-alt" id="home-more">
+        <div class="home-wrap">
+          <h2>Everything a team admin keeps track of</h2>
+          <ul class="home-grid">
+            <li :for={{title, text} <- more()}>
+              <h3>{title}</h3>
+              <p>{text}</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="home-section" id="home-coming">
+        <div class="home-wrap home-measure">
+          <h2>Coming next</h2>
+          <p class="home-lead">
+            We build SAR Duty with the teams that use it. Here is what we are working on now.
+          </p>
+          <ul class="home-coming">
+            <li :for={{title, text} <- next()}>
+              <strong>{title}.</strong> {text}
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -86,6 +115,40 @@ defmodule Web.HomePageLive do
       </section>
     </div>
     """
+  end
+
+  # What has shipped, beyond the 3 pictures above. One line each, for what the reader gets.
+  defp more do
+    [
+      {"Activities and replies",
+       "Add exercises and events, put members on them, and see who signed up. Members reply from the email without logging in."},
+      {"Members",
+       "See each member's standing, hours, and last activity. Find who has not attended in a while."},
+      {"Groups",
+       "Write rules from qualifications and standing, then add or remove the members who fit them."},
+      {"Qualifications and certificates",
+       "See which awards expire soon. Members send in a certificate, and a team admin accepts it."},
+      {"Equipment",
+       "Know who holds each item, scan kits onto an activity, and see what retired members still hold."},
+      {"Chores",
+       "Members log the time they give outside activities, such as fixing a truck. It counts toward their tax credit letter."},
+      {"Mileage report",
+       "Driving distances from each member's home to an activity, worked out for you."},
+      {"Your membership",
+       "Each member sees their year: their hours, their qualifications, their ID card, and what they signed up for."},
+      {"Change history", "SAR Duty keeps a history of every change to a member or an activity."}
+    ]
+  end
+
+  # Planned, from the open issues. Things a team would notice, not the plumbing.
+  defp next do
+    [
+      {"People needed", "Say how many members an activity needs, and see \"6 signed up of 10\"."},
+      {"Calendar feed", "Each member's activities in their own calendar app."},
+      {"Checklists", "Scan a sticker on a truck to run its pre-trip check."},
+      {"Home safe", "Members say when they are on the way and when they get home."},
+      {"Automatic groups", "Groups that keep themselves in step with their rules."}
+    ]
   end
 
   attr :id, :string, required: true
@@ -101,9 +164,9 @@ defmodule Web.HomePageLive do
     <div id={@id} class="home-start">
       <%= cond do %>
         <% @current_user == nil -> %>
-          <p class="home-start-title">Is your team on D4H?</p>
+          <p class="home-start-title">Start with your team</p>
           <p>
-            Sign up with your D4H access key. You need Owner or Editor access to the team in D4H.
+            Sign up with your team's D4H access key. You need Owner or Editor access in D4H.
           </p>
           <div class="home-cta">
             <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
