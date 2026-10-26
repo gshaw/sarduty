@@ -200,7 +200,8 @@ defmodule Web.MCPControllerTest do
 
       history_calls = [
         {"member_history", %{"member_id" => member.id}},
-        {"activity_history", %{"activity_id" => activity.id}}
+        {"activity_history", %{"activity_id" => activity.id}},
+        {"list_attendance", %{"activity_id" => activity.id}}
       ]
 
       for {name, args} <- tool_calls() ++ history_calls do
@@ -348,12 +349,12 @@ defmodule Web.MCPControllerTest do
       tools = json_response(conn, 200)["result"]["tools"]
 
       assert Enum.map(tools, & &1["name"]) ==
-               ~w(get_team list_members attendance_summary list_activities list_qualifications
-                  member_history activity_history propose_attendance_changes)
+               ~w(get_team list_members attendance_summary list_activities list_attendance
+                  list_qualifications member_history activity_history propose_attendance_changes)
 
       read_only = for t <- tools, t["annotations"]["readOnlyHint"], do: t["name"]
       refute "propose_attendance_changes" in read_only
-      assert length(read_only) == 7
+      assert length(read_only) == 8
     end
 
     test "notifications/initialized gets 202 and no body", %{conn: conn, team: team} = ctx do

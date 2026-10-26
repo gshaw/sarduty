@@ -61,6 +61,12 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   history pages ([change-history.md](change-history.md)), without the account email of
   whoever sent a change, and without standing changes: an away period's reason and dates
   are personal (#366).
+- **General tools, not one per job** (#595). An agent combines them: `get_team` first,
+  then lists of members, activities, an activity's attendance (`list_attendance`), and
+  hours. Statuses use the glossary's words, which change when the activity starts:
+  `no_reply`, `signed_up`, `cant_make_it` before, `attended` and `absent` after. A chore
+  activity's kind is `chores`, as on the Activities page. `list_members` gives each
+  member's standing, never an away period's reason or dates (#366).
 - **Allowlisted fields.** Each tool builds explicit maps and lists every key it may
   return in `fields/0`; a test fails on any other key. Never email, phone, an address,
   an emergency contact, coordinates, an activity's description, letter text, or a key.
