@@ -89,13 +89,13 @@ defmodule App.Operation.SignUpTeam do
       {:ok, whoami} ->
         {:ok, whoami}
 
-      {:error, _reason} ->
+      {:error, :refused} ->
         {:error, {:access_key, key_refused(view_model.api_host)}}
+
+      {:error, :unreachable} ->
+        name = D4H.service_name(view_model.api_host)
+        {:error, {:access_key, "#{name} did not answer. Try again in a few minutes."}}
     end
-  rescue
-    Req.TransportError ->
-      name = D4H.service_name(view_model.api_host)
-      {:error, {:access_key, "#{name} did not answer. Try again in a few minutes."}}
   end
 
   defp key_refused(api_host) do

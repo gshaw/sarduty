@@ -184,13 +184,11 @@ defmodule App.Adapter.D4H do
   # config/test.exs routes every request to `Req.Test`, so no test reaches D4H.
   defp test_options, do: Application.get_env(:sarduty, App.Adapter.D4H, [])
 
-  def determine_team_id(access_key: access_key, api_host: api_host) do
-    case fetch_whoami(access_key: access_key, api_host: api_host) do
-      {:ok, whoami} -> {:ok, whoami.d4h_team_id}
-      error -> error
-    end
-  end
-
+  @doc """
+  Who the key belongs to. `{:error, :refused}` when D4H turns the key down (401, 403, or
+  no team), and `{:error, :unreachable}` for anything else, so a good key isn't blamed
+  for an outage.
+  """
   def fetch_whoami(access_key: access_key, api_host: api_host) do
     context =
       [
@@ -202,13 +200,18 @@ defmodule App.Adapter.D4H do
       |> Req.new()
       |> report_rate_limits()
 
-    response = Req.get!(context, url: "/whoami")
+    case Req.get(context, url: "/whoami", retry: false) do
+      {:ok, %{status: 200, body: body}} when is_map(body) ->
+        case D4H.WhoAmI.build(body) do
+          %D4H.WhoAmI{} = whoami -> {:ok, whoami}
+          _ -> {:error, :refused}
+        end
 
-    with 200 <- response.status,
-         %D4H.WhoAmI{} = whoami <- D4H.WhoAmI.build(response.body) do
-      {:ok, whoami}
-    else
-      _ -> {:error, "Unable to determine team ID"}
+      {:ok, %{status: status}} when status in [401, 403] ->
+        {:error, :refused}
+
+      _ ->
+        {:error, :unreachable}
     end
   end
 
