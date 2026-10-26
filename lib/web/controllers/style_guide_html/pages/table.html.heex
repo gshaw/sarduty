@@ -58,6 +58,33 @@
     </li>
   </ul>
 
+  <h2>Columns and filters</h2>
+  <p>
+    A table keeps its columns when a filter, a tile, or the search changes. Filters change
+    rows, not columns, so the reader keeps their place.
+  </p>
+  <ul>
+    <li>
+      Keep a column that says the same thing on every row, such as Kind under Exercises. It
+      shows the filter took.
+    </li>
+    <li>
+      Hide a column when the viewer may not see its data, such as contact details for a
+      member, or an action they cannot take.
+    </li>
+    <li>
+      Hide a column when no row in the view can have a value, such as Retired under Not
+      retired.
+    </li>
+    <li>
+      A column that says why a row matched comes with its filter, such as Missing with
+      Details: Missing.
+    </li>
+  </ul>
+  <p>
+    A column that hides needs a reason in <code>Web.TableColumnsTest</code>.
+  </p>
+
   <h2>Wrapping cells</h2>
   <p>Long text wraps; the other cells stay on its first line.</p>
   <.table id="sample-wrapping" rows={rule_preview()} class="table-striped">

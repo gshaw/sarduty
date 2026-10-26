@@ -74,7 +74,7 @@ defmodule Web.ProposedChangeCollectionLive do
           )}
         </div>
       </:col>
-      <:col :let={set} :if={@view == "all"} label="Status" class="w-px whitespace-nowrap">
+      <:col :let={set} label="Status" class="w-px whitespace-nowrap">
         {status(set)}
       </:col>
     </.table>

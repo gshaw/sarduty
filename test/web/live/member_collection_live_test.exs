@@ -274,7 +274,7 @@ defmodule Web.MemberCollectionLiveTest do
            )
   end
 
-  test "the Standing column shows only once a current member is not active (#367)",
+  test "the Standing column shows only once a current member is not active, under any filter",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member_fixture(team)
@@ -283,6 +283,12 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
     assert has_element?(lv, "#member-view-current[aria-current=page]")
+    refute has_element?(lv, "table th", "Standing")
+
+    # A filter changes the rows, not the columns.
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=retired")
+
     refute has_element?(lv, "table th", "Standing")
 
     member_fixture(team, %{not_a_person: true})
@@ -297,14 +303,20 @@ defmodule Web.MemberCollectionLiveTest do
     current = member_fixture(team, %{name: "Cara Current"})
     left = member_fixture(team, %{name: "Lee Left", left_at: ~U[2025-06-01 00:00:00Z]})
     retired = member_fixture(team, %{name: "Rae Retired", d4h_status: "RETIRED"})
-    leaving = member_fixture(team, %{left_at: DateTime.add(DateTime.utc_now(), 30, :day)})
+    # Not a person, so the team has a current member who isn't active and shows Standing.
+    leaving =
+      member_fixture(team, %{
+        not_a_person: true,
+        left_at: DateTime.add(DateTime.utc_now(), 30, :day)
+      })
+
     gone_bot = member_fixture(team, %{not_a_person: true, left_at: ~U[2025-06-01 00:00:00Z]})
     everyone = [current, left, retired, leaving, gone_bot]
 
     for {standing, shown} <- [
           {"current", [current, leaving]},
           {"retired", [left, retired, gone_bot]},
-          {"not_a_person", []},
+          {"not_a_person", [leaving]},
           {"all", everyone}
         ] do
       {:ok, lv, _html} =
@@ -328,6 +340,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#standing-#{left.id}", "Retired")
     assert has_element?(lv, "#standing-#{gone_bot.id}", "Retired")
     assert has_element?(lv, "#standing-#{current.id}", "Active")
+    assert has_element?(lv, "#standing-#{leaving.id}", "Not a person")
 
     {:ok, _lv, html} =
       live(

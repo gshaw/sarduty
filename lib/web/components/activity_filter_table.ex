@@ -74,7 +74,6 @@ defmodule Web.Components.ActivityFilterTable do
       path_fn={@path_fn}
       team={@team}
       untagged?={@form[:hours].value == "untagged"}
-      kind?={@form[:activity].value == "all"}
     />
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
@@ -87,7 +86,6 @@ defmodule Web.Components.ActivityFilterTable do
   attr :path_fn, :any, required: true
   attr :team, :map, required: true
   attr :untagged?, :boolean, default: false, doc: "listing activities with no hours tag"
-  attr :kind?, :boolean, default: true, doc: "whether rows can differ in kind, so show it"
 
   # The activity list's table, without its filters. The style guide shows it with made-up rows.
   def activity_table(assigns) do
@@ -117,7 +115,7 @@ defmodule Web.Components.ActivityFilterTable do
           <.a external={true} href={D4H.activity_url(@team, record)}>Open {D4H.service_name(@team)} activity</.a>
         </div>
       </:col>
-      <:col :let={record} :if={@kind?} label="Kind" class="w-1/12">
+      <:col :let={record} label="Kind" class="w-1/12">
         <.activity_kind activity={record} />
       </:col>
       <:col
