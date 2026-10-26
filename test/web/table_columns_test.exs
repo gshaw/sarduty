@@ -4,6 +4,10 @@ defmodule Web.TableColumnsTest do
   # A filter changes a table's rows, not its columns (/styles/table). A column with :if
   # needs its reason here: the viewer may not see it, or no row in the view has a value.
   @hidden %{
+    {"lib/web/live/group_live.ex", "!@ruled?"} =>
+      "Remove buttons: a group with rules has its members picked by the rules",
+    {"lib/web/live/member_collection_live.ex", "@group_form?"} =>
+      "checkboxes add members to a group, for team admins on a team with groups to add to",
     {"lib/web/components/equipment.ex", "@where?"} =>
       "nothing the member holds is inside a kit, so every Where is blank",
     {"lib/web/live/activity_live.ex",
@@ -23,8 +27,8 @@ defmodule Web.TableColumnsTest do
       "Missing says why a row matched Details: Missing",
     {"lib/web/live/member_collection_live.ex", "@retired?"} =>
       "only retired members have a Retired date",
-    {"lib/web/live/member_groups_live.ex", "@team_admin? and @records?"} =>
-      "Remove buttons, for a Records team's admins only",
+    {"lib/web/live/member_groups_live.ex", "@team_admin?"} =>
+      "Remove buttons, for team admins only",
     {"lib/web/live/member_qualifications_live.ex", "@team_admin? and @records?"} =>
       "Edit buttons, for a Records team's admins only",
     {"lib/web/live/org/admins_live.ex", "@sar_duty_admin?"} =>
