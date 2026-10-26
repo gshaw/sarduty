@@ -46,11 +46,12 @@
 
 /* Margins inside the editor, in the utilities layer with .prose's own so they win. */
 @layer utilities {
+  /* Trix holds each paragraph in a div; spaced like .prose's p, the editor reads as the
+     page does. */
+  .rich-text-editor > div { margin-block: var(--sp-3); }
   .rich-text-editor > :first-child { margin-top: 0; }
   .rich-text-editor > :last-child { margin-bottom: 0; }
-  /* In the editor a blank line spaces paragraphs, so a list gets one line after it. */
-  .rich-text-editor :is(ul, ol) { margin-block: 0 1lh; }
-  /* Trix reads a paragraph's margins in a hidden copy of the editor and turns each into a
-     blank line. Only the bottom one counts, so two paragraphs get one blank line between. */
-  .rich-text-editor[data-trix-internal] p { margin-top: 0; }
+  /* Trix reads margins in a hidden copy of the editor and turns each into a blank line,
+     which would add to the spacing above. */
+  .rich-text-editor[data-trix-internal] * { margin-block: 0; }
 }

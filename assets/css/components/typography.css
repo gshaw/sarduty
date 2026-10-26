@@ -86,5 +86,12 @@
     --tw-prose-pre-bg: var(--surface-alt);
     --tw-prose-th-borders: var(--border);
     --tw-prose-td-borders: var(--border-subtle);
+    line-height: var(--lh-md);
   }
+  /* Body text's spacing, not the plugin's article spacing: half a line between
+     paragraphs and lists, and list items close together. */
+  .prose :is(p, ul, ol) { margin-block: var(--sp-3); }
+  .prose li { margin-block: var(--sp-1); }
+  .prose > :first-child { margin-top: 0; }
+  .prose > :last-child { margin-bottom: 0; }
 }
