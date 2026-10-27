@@ -80,8 +80,8 @@ defmodule App.Operation.FindPlace do
   end
 
   @doc """
-  Names each place with the nearest bookmark within #{@same_spot_m} m: its title, without
-  a leading `!`. A bookmark names the most used place near it only, and keeps that
+  Names each place with the nearest bookmark within #{@same_spot_m} m: its title, as the
+  team wrote it. A bookmark names the most used place near it only, and keeps that
   place's text and pin. The bookmarks that name no place follow, A to Z, with no uses,
   so typing finds them by title.
   """
@@ -101,7 +101,7 @@ defmodule App.Operation.FindPlace do
 
   defp build_bookmark(%LocationBookmark{} = bookmark) do
     pin = bookmark |> Activity.pin() |> Coordinate.build()
-    name = LocationBookmark.name(bookmark)
+    name = bookmark.title
     address = String.slice(bookmark.address || "", 0, 100)
 
     %{

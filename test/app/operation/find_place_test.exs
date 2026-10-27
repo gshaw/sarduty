@@ -113,7 +113,7 @@ defmodule App.Operation.FindPlaceTest do
         ])
 
       bookmarks = [
-        bookmark("!Base", "17543 20 Ave, Surrey", "49.03890,-122.73734"),
+        bookmark("Base", "17543 20 Ave, Surrey", "49.03890,-122.73734"),
         bookmark("Base yard", "17550 20 Ave, Surrey", "49.04000,-122.73734")
       ]
 

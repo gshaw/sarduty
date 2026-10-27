@@ -321,15 +321,15 @@ defmodule Web.ActivityFormLiveTest do
       stub()
       stub_mapbox()
       past_activities(team)
-      bookmark(team, "! Hall", "17543 20 Ave, Surrey", "49.10050,-122.80050")
+      bookmark(team, "!!!! Hall", "17543 20 Ave, Surrey", "49.10050,-122.80050")
       bookmark(team, "Office", "123 Main St, Surrey", "49.19000,-122.85000")
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
 
       lv |> element("#form_place") |> render_focus()
-      assert has_element?(lv, "#activity-past-0 .place-name", "Hall")
+      # As the team wrote it, the ! they sort with in D4H too.
+      assert has_element?(lv, "#activity-past-0 .place-name", "!!!! Hall")
       assert has_element?(lv, "#activity-past-0", "Hall, Surrey · Saved place")
       assert has_element?(lv, "#activity-past-0", "3 activities")
-      refute has_element?(lv, "#activity-past-0", "!")
 
       type_place(lv, "office")
       assert has_element?(lv, "#activity-past-0 .place-name", "Office")

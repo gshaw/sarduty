@@ -24,11 +24,4 @@ defmodule App.Model.LocationBookmark do
     |> order_by([b], asc: b.title, asc: b.id)
     |> Repo.all()
   end
-
-  @doc """
-  The title to show. Teams start a title with `!` to sort it to the top of D4H's list,
-  so that is left off.
-  """
-  def name(%LocationBookmark{title: title}),
-    do: title |> String.trim_leading("!") |> String.trim_leading()
 end
