@@ -133,7 +133,7 @@ defmodule Web.Settings.PlaceLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/places")
       assert has_element?(lv, "#places-in-service", "location bookmarks")
-      refute has_element?(lv, "#places-in-service a")
+      assert lv |> element("#places-in-service-link") |> render() =~ "/team/settings/locations"
       assert has_element?(lv, "#place-#{place.id}", "Office")
       assert has_element?(lv, "#place-#{place.id}", "None")
       refute has_element?(lv, "#place-add")
