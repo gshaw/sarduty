@@ -54,7 +54,7 @@ defmodule Web.EquipmentCollectionLive do
     show =
       if params["show"] in EquipmentList.show_values(), do: params["show"], else: default_show
 
-    held = held_in(socket.assigns.current_team, place, socket.assigns.rows, now)
+    held = held_in(socket.assigns.current_team, place, now)
     narrowed = EquipmentList.narrow(socket.assigns.rows, place, category, held)
     rows = EquipmentList.filter(narrowed, show, q, now)
 
@@ -67,6 +67,7 @@ defmodule Web.EquipmentCollectionLive do
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
         held_place?: EquipmentList.held_place?(place),
+        by_holder?: EquipmentList.by_holder?(place),
         groups: groups(rows, place, held),
         form:
           to_form(
@@ -118,17 +119,13 @@ defmodule Web.EquipmentCollectionLive do
     end)
   end
 
-  # What a held place lists, item id to its holder's name: a member, looked up through
-  # the team, or the retiring members. None for any other place, or another team's member.
-  defp held_in(team, "retiring", rows, now) do
-    names = rows |> Enum.filter(& &1.holder_id) |> Map.new(&{&1.holder_id, &1.holder})
+  # What a held place lists, keyed by item id: what retiring members hold, or what a
+  # member holds, looked up through the team, to their name. None for any other place,
+  # or another team's member.
+  defp held_in(team, "retiring", now),
+    do: EquipmentItem.holders(team, Standing.retiring_member_ids_query(team, now))
 
-    team
-    |> EquipmentItem.holders(Standing.retiring_member_ids_query(team, now))
-    |> Map.new(fn {item_id, member_id} -> {item_id, names[member_id]} end)
-  end
-
-  defp held_in(team, place, _rows, _now) do
+  defp held_in(team, place, _now) do
     holder = EquipmentList.member_id(place) && Member.find(team, EquipmentList.member_id(place))
 
     if holder,
@@ -136,11 +133,14 @@ defmodule Web.EquipmentCollectionLive do
       else: %{}
   end
 
-  # A held place is a group per holder, under their name; other places group by place.
+  # Several members' items group by member, in one table; one member's under their name;
+  # anything else by place.
   defp groups(rows, place, held) do
-    if EquipmentList.held_place?(place),
-      do: EquipmentList.group_held(rows, held),
-      else: EquipmentList.group(rows)
+    cond do
+      EquipmentList.by_holder?(place) -> EquipmentList.group_by_holder(rows)
+      EquipmentList.held_place?(place) -> EquipmentList.group_held(rows, held)
+      true -> EquipmentList.group(rows)
+    end
   end
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
@@ -229,8 +229,33 @@ defmodule Web.EquipmentCollectionLive do
       />
     </div>
 
+    <%!-- Several members' items: one table, so the columns line up, a title row each. --%>
+    <.table
+      :if={!@browsing and @by_holder? and @groups != []}
+      id="equipment-holders"
+      groups={
+        for {id, name, rows} <- @groups,
+            do: %{id: "member-#{id}", title: "#{name} · #{length(rows)}", rows: rows}
+      }
+      row_id={&"item-#{&1.item.id}"}
+      class="table-striped"
+    >
+      <:col :let={row} label="Item">
+        <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
+        <.status_badge item={row.item} />
+      </:col>
+      <:col :let={row} label="Where">{row.inside}</:col>
+      <:col :let={row} label="Category">{row.item.kind}</:col>
+      <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
+      <:col :let={row} label="Expires" align="right" class="w-px whitespace-nowrap">
+        <span :if={row.item.expires_at}>
+          {Service.Format.date_short(row.item.expires_at, @current_team.timezone)}
+        </span>
+      </:col>
+    </.table>
+
     <section
-      :for={{place, rows} <- if(@browsing, do: [], else: @groups)}
+      :for={{place, rows} <- if(@browsing or @by_holder?, do: [], else: @groups)}
       id={"place-#{slug(place)}"}
       class="mb-8"
     >
