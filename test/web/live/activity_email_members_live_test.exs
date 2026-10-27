@@ -89,6 +89,26 @@ defmodule Web.ActivityEmailMembersLiveTest do
     refute render(lv) =~ "/replies/"
   end
 
+  test "the preview shows the message as it's typed, and the email carries it", ctx do
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
+    refute has_element?(lv, "#email-preview", "Bring your rope kit.")
+
+    lv
+    |> form("#email-form")
+    |> render_change(%{"member_ids" => ["#{ctx.jordan.id}"], "message" => "Bring your rope kit."})
+
+    assert has_element?(lv, "#email-preview", "Bring your rope kit.")
+    assert has_element?(lv, "#email-message", "Bring your rope kit.")
+    assert has_element?(lv, "#email-send", "Send 1 email")
+
+    lv
+    |> form("#email-form")
+    |> render_submit(%{"member_ids" => ["#{ctx.jordan.id}"], "message" => "Bring your rope kit."})
+
+    assert_received {:email, %{to: [{"Jordan Lee", _}], text_body: text}}
+    assert text =~ "Bring your rope kit."
+  end
+
   test "sends only to the members still checked", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
@@ -111,7 +131,7 @@ defmodule Web.ActivityEmailMembersLiveTest do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
     # What the form sends once select all unchecks every box.
-    render_change(lv, "select", %{})
+    render_change(lv, "change", %{})
     assert has_element?(lv, "#email-send[disabled]", "Send 0 emails")
   end
 

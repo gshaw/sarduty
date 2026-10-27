@@ -360,12 +360,15 @@ activity starts.
   were emailed before. Unchecking a member leaves them out. Then who gets none and why,
   a line each: replied already (a count of signed up and can't make it), turned off
   invitation reminders, or no email in D4H. Then the email itself, from the mailer's own
-  HTML, and Send 3 emails. Members who replied never get one. There is no limit per
+  HTML, and Send 3 emails. A message (optional, up to 300 characters, #609) adds the team
+  admin's own words under the date and place; the preview shows it as they type, at a
+  phone's width, so they see whether it pushes the buttons off the first screen. Each
+  send starts with no message, so an old one never goes out again by mistake. Members who replied never get one. There is no limit per
   member: the team admin sees each member's past emails and decides (2026-10-26; #444
   had a cap of 2, a day apart). Each goes at once, from the team's name, with replies to
   the team admin ([ReminderMailer](../lib/app/mailer/reminder_mailer.ex)). Its text sets
   no colour, so a mail app in dark mode keeps it readable. Each is a row in `reminders`:
-  who, when, by whom, and sent or failed. A No reply row's Replied cell reads "Reminded
+  who, when, by whom, the message, and sent or failed. A No reply row's Replied cell reads "Reminded
   Oct 26", or "Reminder failed". Beside the Members heading, the last batch: "4 sent Oct
   26, 18:02 by Alex Chen · 2 replied since".
 - **Members**, under the map, lists everyone the activity invites
