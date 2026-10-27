@@ -24,7 +24,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   opens it under "Proposed changes" (`/teams/:subdomain/proposed-changes`, also on the
   team home's "Needs attention"), clears the rows they don't want, and sends it
   ([ApplyProposedChangeSet](../lib/app/operation/apply_proposed_change_set.ex)). Cleared
-  rows are recorded as skipped, "Not selected". A set can be discarded instead. An agent
+  rows are recorded as skipped, "Not selected". A set can be discarded instead. The
+  review page is headed for what the set changes (Attendance changes, Activity tag
+  changes, or Chores to add, `ChangeSet.proposal_title/1`), with the agent's summary
+  below as its note: an agent's words alone did not say a set would add chores
+  (2026-10-26). An agent
   can never apply a set, and it can't propose group or award changes yet: group rules
   own their groups, and awards wait on #174's step 4. Its statuses use the glossary's
   words (#595): no reply, signed up, or can't make it before the activity starts, and

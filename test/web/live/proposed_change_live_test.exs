@@ -36,6 +36,7 @@ defmodule Web.ProposedChangeLiveTest do
   test "lists sets waiting for review", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/proposed-changes")
     assert has_element?(lv, "#proposed-view-waiting[aria-current]", "1")
+    assert has_element?(lv, "#proposed-#{ctx.change_set.id}", "Attendance changes")
     assert has_element?(lv, "#proposed-#{ctx.change_set.id}", "Sign-in sheet for Rope rescue")
   end
 
@@ -100,7 +101,8 @@ defmodule Web.ProposedChangeLiveTest do
     assert has_element?(lv, "#row-#{change.id}", "Absent to attended")
   end
 
-  test "proposed chores are accepted, and one matching a logged chore starts cleared", ctx do
+  test "proposed chores say they add chores, and one matching a logged chore starts cleared",
+       ctx do
     team =
       ctx.team
       |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
@@ -134,6 +136,11 @@ defmodule Web.ProposedChangeLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/proposed-changes/#{change_set.id}")
     [row] = change_set.rows
 
+    assert has_element?(lv, "h1", "Chores to add")
+    assert has_element?(lv, "#change-set-details", "Work party")
+    assert has_element?(lv, "#what-happens", "Adds 1 chore to the Chores page")
+    assert has_element?(lv, "#row-#{row.id}", "Office admin")
+    assert has_element?(lv, "#row-#{row.id}", "Radios")
     assert has_element?(lv, "#row-#{row.id}", "already has 1 hour of Office admin")
     refute has_element?(lv, "#select-#{row.id}[checked]")
     assert has_element?(lv, "#send", "Add 0 chores")
