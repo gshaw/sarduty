@@ -38,8 +38,8 @@ defmodule Web.ProposedChangeCollectionLive do
 
     <h1 class="title">Proposed changes</h1>
     <p class="lead">
-      An AI agent connected to SAR Duty can propose attendance changes. Nothing changes until a
-      team admin reviews them and sends them.
+      An AI agent connected to SAR Duty can propose attendance changes, activity tags, and
+      chores. Nothing changes until a team admin reviews them here.
     </p>
 
     <.stat_switch :if={@change_sets != []} id="proposed-switch" label="Proposed changes">
@@ -65,13 +65,13 @@ defmodule Web.ProposedChangeCollectionLive do
         {Service.Format.month_day_time(set.inserted_at, @current_team.timezone)}
       </:col>
       <:col :let={set} label="Changes">
-        <.a navigate={~p"/teams/#{@current_team}/proposed-changes/#{set.id}"}>{set.summary ||
-          "Attendance changes"}</.a>
+        <.a navigate={~p"/teams/#{@current_team}/proposed-changes/#{set.id}"}>{ChangeSet.proposal_title(
+          set
+        )}</.a>
         <div class="hint">
-          {set.activity && set.activity.title} · {Service.Format.count(length(set.rows),
-            one: "%d change",
-            many: "%d changes"
-          )}
+          {[ChangeSet.proposal_count(set), set.activity && set.activity.title, set.summary]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join(" · ")}
         </div>
       </:col>
       <:col :let={set} label="Status" class="w-px whitespace-nowrap">
