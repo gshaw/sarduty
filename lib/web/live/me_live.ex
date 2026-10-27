@@ -20,12 +20,14 @@ defmodule Web.MeLive do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.Operation.SaveCertificate
+  alias App.Operation.SaveChore
   alias App.ViewData.EquipmentList
   alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberYear
   alias Service.Format
   alias Web.CertificateText
+  alias Web.ChoreText
   alias Web.Components.MemberSidebar
   alias Web.QualificationText
 
@@ -251,9 +253,20 @@ defmodule Web.MeLive do
         <:col :let={chore} label="What you did">
           {chore.description}
           <span class="hint block">{chore.chore_category.title}</span>
+          <span :if={chore.status == :declined} class="hint block mt-1">
+            {ChoreText.declined(chore, @team.timezone)}
+          </span>
         </:col>
         <:col :let={chore} label="" class="w-px whitespace-nowrap">
           <.status_badge chore={chore} />
+          <.a
+            :if={chore.status == :declined}
+            id={"chore-delete-#{chore.id}"}
+            href="#"
+            phx-click="delete-chore"
+            phx-value-id={chore.id}
+            data-confirm={"Delete #{chore.description}?"}
+          >Delete</.a>
         </:col>
         <:col :let={chore} label="Time" align="right" class="w-px whitespace-nowrap">
           {Format.duration(chore.minutes)}
@@ -523,6 +536,22 @@ defmodule Web.MeLive do
       end
 
     {:noreply, assign(socket, :certificates, sent_certificates(member))}
+  end
+
+  def handle_event("delete-chore", %{"id" => id}, socket) do
+    member = socket.assigns.member
+    chore = Chore.find_for_member!(member, id)
+
+    socket =
+      case SaveChore.delete_own(member, chore) do
+        :ok ->
+          put_flash(socket, :info, "Deleted #{chore.description}.")
+
+        {:error, :decided} ->
+          put_flash(socket, :error, "This chore cannot be deleted. A team admin has accepted it.")
+      end
+
+    {:noreply, assign(socket, :chores, latest_chores(member))}
   end
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
