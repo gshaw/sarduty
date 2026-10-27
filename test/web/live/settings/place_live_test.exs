@@ -86,8 +86,7 @@ defmodule Web.Settings.PlaceLiveTest do
       RecordsStub.stub(fn _method, _path, _body -> {200, hall} end)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/places")
-      assert has_element?(lv, "#place-#{place.id}", "Hall")
-      refute has_element?(lv, "#place-#{place.id}", "!")
+      assert has_element?(lv, "#place-#{place.id}", "!Hall")
       assert has_element?(lv, "#place-#{place.id}", "49.03879, -122.73734")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/places/#{place.id}")
@@ -108,7 +107,7 @@ defmodule Web.Settings.PlaceLiveTest do
         |> render_click()
         |> follow_redirect(conn, ~p"/teams/#{team}/settings/places")
 
-      assert html =~ "Deleted Hall."
+      assert html =~ "Deleted !Hall."
       assert_received {:records, "DELETE", "/location-bookmarks/41", nil}
       refute Repo.get(LocationBookmark, place.id)
     end

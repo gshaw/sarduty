@@ -34,7 +34,7 @@ defmodule Web.Settings.PlaceFormLive do
     ~H"""
     <.breadcrumbs>
       <:item label="Places" path={~p"/teams/#{@current_team}/settings/places"} />
-      <:item label={if @place, do: LocationBookmark.name(@place), else: @page_title} />
+      <:item label={if @place, do: @place.title, else: @page_title} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
@@ -65,7 +65,7 @@ defmodule Web.Settings.PlaceFormLive do
             variant={:danger}
             phx-click="delete"
             phx-disable-with="Deleting…"
-            data-confirm={"Delete #{LocationBookmark.name(@place)}? Activities keep their address and pin."}
+            data-confirm={"Delete #{@place.title}? Activities keep their address and pin."}
           >
             Delete place
           </.button>
@@ -94,7 +94,7 @@ defmodule Web.Settings.PlaceFormLive do
     %{current_team: team, current_user: user, place: place} = socket.assigns
 
     case SaveLocationBookmark.delete(team, place, user, DateTime.utc_now()) do
-      :ok -> {:noreply, done(socket, "Deleted #{LocationBookmark.name(place)}.")}
+      :ok -> {:noreply, done(socket, "Deleted #{place.title}.")}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
     end
   end

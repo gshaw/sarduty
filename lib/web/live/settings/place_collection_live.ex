@@ -54,10 +54,8 @@ defmodule Web.Settings.PlaceCollectionLive do
       class="table-striped table-stack"
     >
       <:col :let={place} label="Name" class="stack-title">
-        <.a :if={@records?} navigate={~p"/teams/#{@current_team}/settings/places/#{place.id}"}>{LocationBookmark.name(
-          place
-        )}</.a>
-        <span :if={!@records?}>{LocationBookmark.name(place)}</span>
+        <.a :if={@records?} navigate={~p"/teams/#{@current_team}/settings/places/#{place.id}"}>{place.title}</.a>
+        <span :if={!@records?}>{place.title}</span>
       </:col>
       <:col :let={place} label="Address">{place.address}</:col>
       <:col :let={place} label="Latitude and longitude">
