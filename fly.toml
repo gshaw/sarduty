@@ -29,6 +29,15 @@ type = "connections"
 hard_limit = 1000
 soft_limit = 1000
 
+# Web.Health: 200 when the database answers (#106). Migrations run at boot, before the
+# app listens, so the grace period covers them too. fly deploy waits for it to pass.
+[[http_service.checks]]
+method = "GET"
+path = "/health"
+interval = "15s"
+timeout = "5s"
+grace_period = "60s"
+
 # Litestream's metrics (addr in litestream.yml), such as litestream_checkpoint_seconds (#416).
 [metrics]
 port = 9090

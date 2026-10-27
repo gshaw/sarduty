@@ -62,6 +62,21 @@ For a PR with a migration:
   only if you have to, with `App.Release.rollback(App.Repo, <previous version>)` through
   `bin/sarduty eval`. The other order leaves the new code reading a column that is gone.
 
+## Health check
+
+`GET /health` returns 200 `ok` when the database answers `SELECT 1`, and 503 when it
+doesn't ([Web.Health](../lib/web/health.ex), #106). It runs first in `Web.Endpoint`, so
+it answers on any host, sets no cookie, and stays out of the request log and Honeybadger
+Insights. `force_ssl` leaves it alone (`config/prod.exs`): Fly calls it on the machine
+over plain HTTP.
+
+Fly checks it every 15 s with a 5 s timeout (`[[http_service.checks]]` in
+[fly.toml](../fly.toml)), after a 60 s grace period that covers boot and the migrations
+it runs. `fly deploy` waits for the check to pass and reports a failed deploy when it
+doesn't; it doesn't roll back. `fly checks list` shows the current state. Healthchecks.io,
+through the sync's ping every 10 minutes, still alerts when the app or Oban is down
+([d4h-sync.md](d4h-sync.md#monitoring)).
+
 ## Database and backups
 
 - **Litestream** replicates the database continuously to Cloudflare R2
