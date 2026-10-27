@@ -75,7 +75,7 @@ defmodule Web.ProposedChangeLive do
 
     done =
       if Enum.any?(rows, &(&1.action == :add_chore)),
-        do: "Accepted #{count_chores(applied)}.",
+        do: "Added #{count_chores(applied)} to accept on the Chores page.",
         else: "Sent #{count_changes(applied)}."
 
     message =
@@ -133,7 +133,7 @@ defmodule Web.ProposedChangeLive do
     </dl>
 
     <p :if={ChangeSet.waiting?(@change_set) and @chores?} class="lead">
-      Accepting a chore counts it and sends it. Each chore category gets one activity a month.
+      Adding a chore puts it on the Chores page to accept, as if the member had logged it.
       Clear the box next to any chore you do not want.
     </p>
     <p :if={ChangeSet.waiting?(@change_set) and not @tags? and not @chores?} class="lead">
@@ -182,10 +182,10 @@ defmodule Web.ProposedChangeLive do
           id="send"
           variant={:primary}
           disabled={MapSet.size(@selected) == 0 || is_nil(@current_team.d4h_access_key)}
-          phx-disable-with="Sending…"
+          phx-disable-with={if @chores?, do: "Adding…", else: "Sending…"}
         >
           {if @chores?,
-            do: "Accept #{count_chores(MapSet.size(@selected))}",
+            do: "Add #{count_chores(MapSet.size(@selected))}",
             else: "Send #{count_changes(MapSet.size(@selected))}"}
         </.button>
         <.button

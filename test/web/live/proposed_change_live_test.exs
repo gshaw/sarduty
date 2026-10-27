@@ -136,6 +136,6 @@ defmodule Web.ProposedChangeLiveTest do
 
     assert has_element?(lv, "#row-#{row.id}", "already has 1 hour of Office admin")
     refute has_element?(lv, "#select-#{row.id}[checked]")
-    assert has_element?(lv, "#send", "Accept 0 chores")
+    assert has_element?(lv, "#send", "Add 0 chores")
   end
 end

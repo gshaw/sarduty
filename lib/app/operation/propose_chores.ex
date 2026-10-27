@@ -2,8 +2,9 @@ defmodule App.Operation.ProposeChores do
   @moduledoc """
   An AI agent's chores for members, saved as one change set that waits for a team admin
   (#595). Each chore is an `add_chore` row: SAR Duty's own, not a D4H write. Accepting the
-  set makes the chores, accepted by that team admin, and the chore send takes them to D4H
-  (ApplyProposedChangeSet). Members never see a proposed chore.
+  set makes them waiting chores, as if each member had logged them, for another team
+  admin to accept on the Chores page (ApplyProposedChangeSet). Members never see a
+  proposed chore until then.
 
   plan/5 decides the rows, pure; call/5 reads and saves.
   """

@@ -8,11 +8,9 @@ defmodule App.Operation.ApplyProposedChangeSet do
   alias App.Model.ChangeSetRow
   alias App.Model.Chore
   alias App.Model.ChoreCategory
-  alias App.Model.ChoreEvent
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.ApplyChangeSet
-  alias App.Operation.SendChores
   alias App.Repo
 
   # A team admin applies an agent's change set (#216), with the rows they ticked. The
@@ -44,7 +42,7 @@ defmodule App.Operation.ApplyProposedChangeSet do
       {:ok, rows} ->
         drop_removed_rows(team, rows)
         copy_tags(team, rows)
-        {:ok, rows ++ add_chores(team, change_set, user, now)}
+        {:ok, rows ++ add_chores(team, change_set, now)}
 
       {:error, _reason} = error ->
         Enum.each(skipped, &ChangeSetRow.reset!/1)
@@ -52,10 +50,11 @@ defmodule App.Operation.ApplyProposedChangeSet do
     end
   end
 
-  # The ticked chores an agent proposed (#595) become chores, accepted by this team admin,
-  # then go to D4H like any accepted chore. ApplyChangeSet leaves these rows alone: they
-  # are SAR Duty's own.
-  defp add_chores(team, change_set, user, now) do
+  # The ticked chores an agent proposed (#595) become waiting chores, as if each member
+  # had logged their own. Another team admin accepts them on the Chores page, so nobody
+  # accepts their own chore by sending an agent's set. ApplyChangeSet leaves these rows
+  # alone: they are SAR Duty's own.
+  defp add_chores(team, change_set, now) do
     rows =
       for row <- Repo.preload(change_set, :rows, force: true).rows,
           row.action == :add_chore and row.status == :proposed,
@@ -68,24 +67,18 @@ defmodule App.Operation.ApplyProposedChangeSet do
       open = team.id |> ChoreCategory.get_open() |> Enum.map(& &1.id)
 
       {:ok, recorded} =
-        Repo.transaction(fn ->
-          recorded = Enum.map(rows, &add_chore(team, &1, {open, today}, user, now))
-          :ok = ChoreEvent.place!(team.id)
-          recorded
-        end)
+        Repo.transaction(fn -> Enum.map(rows, &add_chore(team, &1, {open, today}, now)) end)
 
-      if Enum.any?(recorded, &(&1.status == :applied)), do: SendChores.call(team, user, now)
       recorded
     end
   end
 
-  defp add_chore(team, row, {open, today}, user, now) do
+  defp add_chore(team, row, {open, today}, now) do
     params = Map.take(row.new_value, ~w(date minutes chore_category_id description))
 
     inserted =
       %Chore{team_id: team.id, member_id: row.member_id, change_set_row_id: row.id}
       |> Chore.build_changeset(params, open, today, :team_admin)
-      |> Ecto.Changeset.change(status: :accepted, decided_by_user_id: user.id, decided_at: now)
       |> Repo.insert()
 
     case inserted do

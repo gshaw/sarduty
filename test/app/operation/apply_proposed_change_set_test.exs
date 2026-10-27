@@ -203,7 +203,7 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
   end
 
   describe "chores" do
-    test "the ticked chores are added, accepted by the team admin, and sent", ctx do
+    test "the ticked chores are added as waiting, for another team admin to accept", ctx do
       team =
         ctx.team
         |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
@@ -230,8 +230,6 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
           DateTime.utc_now()
         )
 
-      # The chore send can't reach D4H here; the chores wait to send, as on the Chores page.
-      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 503, ""))
       change_set = ChangeSet.find!(team, change_set.id)
       [mei_row, sam_row] = change_set.rows
 
@@ -242,11 +240,11 @@ defmodule App.Operation.ApplyProposedChangeSetTest do
       [added] = App.Repo.all(Chore)
 
       assert {added.member_id, added.status, added.decided_by_user_id} ==
-               {ctx.mei.id, :accepted, ctx.user.id}
+               {ctx.mei.id, :waiting, nil}
 
       assert added.change_set_row_id == mei_row.id
       assert App.Repo.reload!(sam_row).status == :skipped
-      assert ChoreEvent.count_to_send(team.id) == 1
+      assert ChoreEvent.count_to_send(team.id) == 0
     end
   end
 end
