@@ -14,7 +14,8 @@ defmodule App.Model.Reminder do
   # team admin sends as many as they choose (#608). A send's rows share their `sent_at`,
   # so the rows of one batch are those with its time. Queued waits for its job,
   # App.Worker.SendReminderWorker. Failed is Cloudflare refusing it every time, or the
-  # activity starting first, with why in `error`.
+  # activity starting first, with why in `error`. `message` is the team admin's own words
+  # at the top of the email, or nil (#609).
   schema "reminders" do
     belongs_to :team, Team
     belongs_to :activity, Activity
@@ -23,6 +24,7 @@ defmodule App.Model.Reminder do
     field :sent_at, :utc_datetime_usec
     field :status, Ecto.Enum, values: [:queued, :sent, :failed]
     field :error, :string
+    field :message, :string, redact: true
     timestamps(type: :utc_datetime_usec)
   end
 

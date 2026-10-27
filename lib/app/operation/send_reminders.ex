@@ -1,12 +1,15 @@
 defmodule App.Operation.SendReminders do
   @moduledoc """
   A team admin emails reminders to members who haven't replied to an activity (#444),
-  from Email members (#608), before it starts. Each send goes to the members they leave
+  from Send reminders (#608), before it starts. Each send goes to the members they leave
   checked; the page shows when each was emailed before, and the team admin decides.
   Members who replied get none, and the page says why each other member gets none
   either.
 
-  plan/2 says who can get one and why the rest can't, pure. call/5 records a queued row
+  A send can carry a message, the team admin's own words at the top of the email, up to
+  300 characters (#609).
+
+  plan/2 says who can get one and why the rest can't, pure. call/6 records a queued row
   per reminder with its job, in one transaction. App.Worker.SendReminderWorker then
   sends each with deliver/3, retrying a refusal.
   """
@@ -20,6 +23,7 @@ defmodule App.Operation.SendReminders do
   alias App.Model.Reminder
   alias App.Model.Team
   alias App.Repo
+  alias App.Validate.Message
   alias App.Worker.SendReminderWorker
 
   @doc """
@@ -62,19 +66,22 @@ defmodule App.Operation.SendReminders do
     do: %{member: member, emailed: Enum.sort_by(emailed, & &1.sent_at, DateTime)}
 
   @doc """
-  Queues a reminder for each member in `member_ids` that plan/2 has, from `user`. Ids the
-  plan doesn't have are ignored. `{:ok, reminders}`, each queued, or
-  `{:error, reason}`: `:none_selected`, `:deleted`, or `:started`.
+  Queues a reminder for each member in `member_ids` that plan/2 has, from `user`, with
+  `message` (see App.Validate.Message). Ids the plan doesn't have are ignored. `{:ok, reminders}`,
+  each queued, or `{:error, reason}`: `:none_selected`, `:message_too_long`,
+  `:deleted`, or `:started`.
   """
   def call(
         %Team{} = team,
         %Activity{team_id: team_id} = activity,
         %User{} = user,
         member_ids,
+        message,
         now
       )
       when team_id == team.id do
     ids = MapSet.new(member_ids)
+    message = Message.normalize(message)
 
     cond do
       activity.deleted_at ->
@@ -86,21 +93,27 @@ defmodule App.Operation.SendReminders do
       MapSet.size(ids) == 0 ->
         {:error, :none_selected}
 
+      not Message.fits?(message) ->
+        {:error, :message_too_long}
+
       true ->
-        {:ok, queue_picked(activity, user, ids, now)}
+        {:ok, queue_picked(activity, user, ids, message, now)}
     end
   end
 
-  defp queue_picked(activity, user, ids, now) do
+  defp queue_picked(activity, user, ids, message, now) do
     %{send: emails} = plan(invited_rows(activity), Reminder.for_activity(activity))
 
     for email <- emails,
         MapSet.member?(ids, email.member.id),
-        do: queue(activity, email.member, user, now)
+        do: queue(activity, email.member, user, message, now)
   end
 
-  @doc "What a call/5 error says."
+  @doc "What a call/6 error says."
   def error_text(:none_selected), do: "Select at least 1 member to email."
+
+  def error_text(:message_too_long), do: Message.error_text()
+
   def error_text(:deleted), do: "This activity is deleted. Nothing can be sent to it."
   def error_text(:started), do: "Reminders closed when the activity started."
 
@@ -114,10 +127,10 @@ defmodule App.Operation.SendReminders do
   end
 
   # The row and its job commit together, or neither does.
-  defp queue(activity, member, user, now) do
+  defp queue(activity, member, user, message, now) do
     {:ok, reminder} =
       Repo.transaction(fn ->
-        reminder = activity |> row(member, user, now) |> Repo.insert!()
+        reminder = activity |> row(member, user, message, now) |> Repo.insert!()
         SendReminderWorker.enqueue(reminder)
         reminder
       end)
@@ -125,14 +138,15 @@ defmodule App.Operation.SendReminders do
     reminder
   end
 
-  defp row(activity, member, user, now) do
+  defp row(activity, member, user, message, now) do
     %Reminder{
       team_id: activity.team_id,
       activity_id: activity.id,
       member_id: member.id,
       sent_by_user_id: user.id,
       sent_at: now,
-      status: :queued
+      status: :queued,
+      message: message
     }
   end
 
@@ -162,7 +176,13 @@ defmodule App.Operation.SendReminders do
   defp send_email(%Reminder{team: team} = reminder, last?, now) do
     sender = sender(team, reminder.sent_by_user, now)
 
-    case ReminderMailer.deliver(reminder.member, reminder.activity, team, sender) do
+    case ReminderMailer.deliver(
+           reminder.member,
+           reminder.activity,
+           team,
+           sender,
+           reminder.message
+         ) do
       {:ok, _sent} ->
         reminder |> Reminder.sent!() |> broadcast()
         :ok

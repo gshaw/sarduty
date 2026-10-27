@@ -81,7 +81,7 @@ defmodule App.Operation.SendRemindersTest do
     end
   end
 
-  describe "call/5" do
+  describe "call/6" do
     setup do
       %{user: user, team: team} = user_with_team_fixture(%{team: %{name: "Coast Range SAR"}})
       admin = Repo.get_by!(Member, team_id: team.id, email: user.email)
@@ -95,7 +95,7 @@ defmodule App.Operation.SendRemindersTest do
 
     test "emails each member at once, from the team, with replies to the team admin", ctx do
       assert {:ok, [%Reminder{status: :queued} = reminder]} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], now())
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], nil, now())
 
       # Its job ran as it was queued, since Oban runs inline in tests.
       assert Repo.reload!(reminder).status == :sent
@@ -112,12 +112,13 @@ defmodule App.Operation.SendRemindersTest do
         assert email.html_body =~ "?reply=yes"
         assert email.html_body =~ "?reply=no"
         assert email.text_body =~ "Alex Chen, a team admin, sent this email."
+        refute email.html_body =~ "<br>"
         assert email.html_body =~ "I'll be there"
       end)
 
       # A team admin can send another whenever they choose.
       assert {:ok, [_again]} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], now())
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], nil, now())
 
       assert_email_sent(to: [{"Cameron Ruiz", "cameron@example.com"}])
     end
@@ -133,6 +134,7 @@ defmodule App.Operation.SendRemindersTest do
                  ctx.activity,
                  ctx.user,
                  [frankie.id, other_team_member.id, ctx.admin.id],
+                 nil,
                  now()
                )
 
@@ -151,6 +153,7 @@ defmodule App.Operation.SendRemindersTest do
                  ctx.activity,
                  ctx.user,
                  [ctx.cameron.id, frankie.id],
+                 nil,
                  now()
                )
 
@@ -160,9 +163,69 @@ defmodule App.Operation.SendRemindersTest do
       assert reminders |> Enum.map(& &1.sent_at) |> Enum.uniq() |> length() == 1
     end
 
+    test "carries the team admin's message, escaped, with its line breaks", ctx do
+      message = "  Bring your rope kit.\r\nPark by the <hall> & the gate.\n"
+
+      assert {:ok, [reminder]} =
+               SendReminders.call(
+                 ctx.team,
+                 ctx.activity,
+                 ctx.user,
+                 [ctx.cameron.id],
+                 message,
+                 now()
+               )
+
+      assert Repo.reload!(reminder).message ==
+               "Bring your rope kit.\nPark by the <hall> & the gate."
+
+      assert_email_sent(fn email ->
+        assert email.text_body =~ "Bring your rope kit.\nPark by the <hall> & the gate."
+
+        assert email.html_body =~
+                 "Bring your rope kit.<br>Park by the &lt;hall&gt; &amp; the gate."
+      end)
+    end
+
+    test "a blank message is none", ctx do
+      assert {:ok, [reminder]} =
+               SendReminders.call(
+                 ctx.team,
+                 ctx.activity,
+                 ctx.user,
+                 [ctx.cameron.id],
+                 " \n ",
+                 now()
+               )
+
+      assert Repo.reload!(reminder).message == nil
+    end
+
+    test "a message over 300 characters sends nothing", ctx do
+      long = String.duplicate("a", 301)
+
+      assert {:error, :message_too_long} =
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], long, now())
+
+      assert SendReminders.error_text(:message_too_long) ==
+               "Message must be 300 characters or fewer."
+
+      refute_email_sent()
+
+      assert {:ok, [_]} =
+               SendReminders.call(
+                 ctx.team,
+                 ctx.activity,
+                 ctx.user,
+                 [ctx.cameron.id],
+                 String.duplicate("é", 300),
+                 now()
+               )
+    end
+
     test "nobody picked sends nothing", ctx do
       assert {:error, :none_selected} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, [], now())
+               SendReminders.call(ctx.team, ctx.activity, ctx.user, [], nil, now())
 
       refute_email_sent()
     end
@@ -171,7 +234,14 @@ defmodule App.Operation.SendRemindersTest do
       started = DateTime.add(ctx.activity.started_at, 1, :hour)
 
       assert {:error, :started} =
-               SendReminders.call(ctx.team, ctx.activity, ctx.user, [ctx.cameron.id], started)
+               SendReminders.call(
+                 ctx.team,
+                 ctx.activity,
+                 ctx.user,
+                 [ctx.cameron.id],
+                 nil,
+                 started
+               )
 
       refute_email_sent()
     end

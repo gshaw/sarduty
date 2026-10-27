@@ -1,17 +1,19 @@
-defmodule Web.ActivityEmailMembersLive do
+defmodule Web.ActivitySendRemindersLive do
   use Web, :live_view_app_layout
 
   alias App.Mailer.ReminderMailer
   alias App.Model.Activity
   alias App.Model.Reminder
   alias App.Operation.SendReminders
+  alias App.Validate.Message
   alias App.ViewData.ActivityMembers
   alias Service.Format
 
-  # Email members (#608): who gets a reminder email, when each was emailed before, and
+  # Send reminders (#608): who gets a reminder email, when each was emailed before, and
   # why everyone else on the activity gets none, then the email itself and one send.
   # Every row starts checked; unchecking a member leaves them out. SendReminders.plan/2
-  # decides, and the preview is ReminderMailer's own HTML. Only before the start, on an
+  # decides, and the preview is ReminderMailer's own HTML, with the team admin's message
+  # as they type it (#609). Only before the start, on an
   # activity that isn't deleted.
   def mount(%{"id" => id}, _session, socket) do
     %{current_team: team, current_user: user} = socket.assigns
@@ -30,12 +32,13 @@ defmodule Web.ActivityEmailMembersLive do
 
       {:ok,
        assign(socket,
-         page_title: "Email members",
+         page_title: "Send reminders",
          activity: activity,
          plan: plan,
          selected: MapSet.new(plan.send, & &1.member.id),
          sender: sender,
-         preview: ReminderMailer.preview(activity, team, sender)
+         message: "",
+         preview: ReminderMailer.preview(activity, team, sender, nil)
        )}
     end
   end
@@ -50,19 +53,31 @@ defmodule Web.ActivityEmailMembersLive do
     |> push_navigate(to: activity_path(socket, activity))
   end
 
-  def handle_event("select", params, socket),
-    do: {:noreply, assign(socket, :selected, params |> selected_ids() |> MapSet.new())}
+  def handle_event("change", params, socket) do
+    %{current_team: team, activity: activity, sender: sender} = socket.assigns
+    message = Map.get(params, "message", "")
+
+    {:noreply,
+     assign(socket,
+       selected: params |> selected_ids() |> MapSet.new(),
+       message: message,
+       preview: ReminderMailer.preview(activity, team, sender, Message.normalize(message))
+     )}
+  end
 
   # The batch note on the activity says what went, so there's no flash.
   def handle_event("send", params, socket) do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
 
-    case SendReminders.call(team, activity, user, selected_ids(params), DateTime.utc_now()) do
+    ids = selected_ids(params)
+    message = Map.get(params, "message")
+
+    case SendReminders.call(team, activity, user, ids, message, DateTime.utc_now()) do
       {:ok, _reminders} ->
         {:noreply, push_navigate(socket, to: activity_path(socket, activity))}
 
-      {:error, :none_selected} ->
-        {:noreply, put_flash(socket, :error, SendReminders.error_text(:none_selected))}
+      {:error, reason} when reason in [:none_selected, :message_too_long] ->
+        {:noreply, put_flash(socket, :error, SendReminders.error_text(reason))}
 
       {:error, :deleted} ->
         {:noreply, Web.ActivityLive.leave_deleted(socket, activity)}
@@ -75,7 +90,7 @@ defmodule Web.ActivityEmailMembersLive do
   # Swoosh's test adapter tells each process a reminder came from, this one included.
   def handle_info({:email, _email}, socket), do: {:noreply, socket}
 
-  # Ids come from the browser; call/5 sends only to members its own plan has.
+  # Ids come from the browser; call/6 sends only to members its own plan has.
   defp selected_ids(params) do
     params
     |> Map.get("member_ids", [])
@@ -95,14 +110,14 @@ defmodule Web.ActivityEmailMembersLive do
     <.breadcrumbs>
       <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
       <:item label={@activity.ref_id} path={~p"/teams/#{@current_team}/activities/#{@activity.id}"} />
-      <:item label="Email members" />
+      <:item label="Send reminders" />
     </.breadcrumbs>
-    <h1 class="title">Email members</h1>
+    <h1 class="title">Send reminders</h1>
     <p class="lead">
       {@activity.title} · {Format.datetime_medium(@activity.started_at, @current_team.timezone)}
     </p>
 
-    <.form for={%{}} id="email-form" phx-change="select" phx-submit="send">
+    <.form for={%{}} id="email-form" phx-change="change" phx-submit="send">
       <section id="email-to">
         <h2 class="subheading">Who gets it</h2>
         <p class="hint mb-3">Members with no reply. Uncheck anyone you emailed recently.</p>
@@ -139,6 +154,20 @@ defmodule Web.ActivityEmailMembersLive do
         <p class="hint mb-3">
           From {@current_team.name}. Replies come to you at {@sender.email}.
         </p>
+        <div class="measure">
+          <.input
+            id="email-message"
+            name="message"
+            type="textarea"
+            label="Message (optional)"
+            value={@message}
+            rows="4"
+            maxlength={Message.max_length()}
+            phx-debounce="300"
+          >
+            Your own words, under the date and place. Up to {Message.limit_text()}.
+          </.input>
+        </div>
         <.email_preview subject={@preview.subject} html={@preview.html} />
       </section>
 

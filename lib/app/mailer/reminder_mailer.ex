@@ -21,13 +21,15 @@ defmodule App.Mailer.ReminderMailer do
   `reply_to` field, not a header. Each button opens the reply page with its answer
   selected, which changes nothing until the member sends it (#488). It carries a
   one-click unsubscribe, which turns off the member's invitation reminders. `sender` is
-  `%{name:, email:}`.
+  `%{name:, email:}`. `message` is the team admin's own words under the activity, or nil
+  (#609).
   """
-  def deliver(%Member{} = member, %Activity{} = activity, %Team{} = team, sender) do
+  def deliver(%Member{} = member, %Activity{} = activity, %Team{} = team, sender, message) do
     reply_urls = reply_urls(member, activity)
     reminders_url = url(ReplyLinks.reminders_path(member))
     activity_url = url("/teams/#{team.subdomain}/activities/#{activity.id}")
     from_name = sender.name || sender.email
+    links = {reply_urls, activity_url, reminders_url}
 
     new()
     |> to({member.name, member.email})
@@ -36,22 +38,22 @@ defmodule App.Mailer.ReminderMailer do
     |> subject(subject(activity))
     |> header("List-Unsubscribe", "<#{reminders_url}>")
     |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
-    |> text_body(text(activity, team, from_name, reply_urls, activity_url, reminders_url))
-    |> html_body(html(activity, team, from_name, reply_urls, activity_url, reminders_url))
+    |> text_body(text(activity, team, from_name, message, links))
+    |> html_body(html(activity, team, from_name, message, links))
     |> Mailer.deliver()
   end
 
   @doc """
-  The email as Email members shows it (#608), from the same subject and HTML that
-  deliver/4 sends, as `%{subject:, html:}`. Its links go nowhere: each real one is
-  signed for its member.
+  The email as Send reminders shows it (#608), from the same subject and HTML that
+  deliver/5 sends, message included, as `%{subject:, html:}`. Its links go nowhere:
+  each real one is signed for its member.
   """
-  def preview(%Activity{} = activity, %Team{} = team, sender) do
-    nowhere = %{yes: "#", no: "#"}
+  def preview(%Activity{} = activity, %Team{} = team, sender, message) do
+    nowhere = {%{yes: "#", no: "#"}, "#", "#"}
 
     %{
       subject: subject(activity),
-      html: html(activity, team, sender.name || sender.email, nowhere, "#", "#")
+      html: html(activity, team, sender.name || sender.email, message, nowhere)
     }
   end
 
@@ -73,13 +75,13 @@ defmodule App.Mailer.ReminderMailer do
   defp footer(from_name),
     do: "#{from_name}, a team admin, sent this email. Reply to this email to reach them."
 
-  defp text(activity, team, from_name, reply_urls, activity_url, reminders_url) do
+  defp text(activity, team, from_name, message, {reply_urls, activity_url, reminders_url}) do
     """
     #{team.name}
 
     #{activity.title}
     #{Enum.join(facts(activity, team), "\n")}
-
+    #{if message, do: "\n" <> message <> "\n"}
     Will you be there?
 
     I'll be there:
@@ -98,11 +100,12 @@ defmodule App.Mailer.ReminderMailer do
     """
   end
 
-  defp html(activity, team, from_name, reply_urls, activity_url, reminders_url) do
+  defp html(activity, team, from_name, message, {reply_urls, activity_url, reminders_url}) do
     """
     <p style="font-size:14px;margin:0 0 4px">#{escape(team.name)}</p>
     <h1 style="font-size:24px;margin:0 0 8px">#{escape(activity.title)}</h1>
     #{Enum.map_join(facts(activity, team), "\n", &"<p style=\"margin:0\">#{escape(&1)}</p>")}
+    #{message_html(message)}
     <p style="margin:24px 0 12px"><strong>Will you be there?</strong></p>
     <p style="margin:0"><a href="#{escape(reply_urls.yes)}" style="#{@yes}">I'll be there</a><a href="#{escape(reply_urls.no)}" style="#{@no}">Can't make it</a></p>
     <p style="margin:16px 0 0"><a href="#{escape(activity_url)}">Open activity</a> (log in)</p>
@@ -110,6 +113,15 @@ defmodule App.Mailer.ReminderMailer do
     <p style="font-size:14px;margin:0 0 8px">#{escape(footer(from_name))}</p>
     <p style="font-size:14px;margin:0"><a href="#{escape(reminders_url)}">Turn off invitation reminders</a></p>
     """
+  end
+
+  # Plain text, escaped, its line breaks kept. Some mail apps drop white-space, so each
+  # line break is a <br>.
+  defp message_html(nil), do: ""
+
+  defp message_html(message) do
+    lines = message |> String.split("\n") |> Enum.map_join("<br>", &escape/1)
+    ~s(<p style="margin:24px 0 0">#{lines}</p>)
   end
 
   defp escape(string), do: string |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()

@@ -134,18 +134,18 @@ defmodule Web.ActivityLiveTest do
       }
     end
 
-    test "Email members opens its own page, and the batch note shows what went (#608)",
+    test "Send reminders opens its own page, and the batch note shows what went (#608)",
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
       assert has_element?(
                lv,
-               ~s{#activity-email-members[href="/teams/#{team.subdomain}/activities/#{activity.id}/email"]},
-               "Email members"
+               ~s{#activity-send-reminders[href="/teams/#{team.subdomain}/activities/#{activity.id}/reminders"]},
+               "Send reminders"
              )
 
       {:ok, lv, _html} =
-        lv |> element("#activity-email-members") |> render_click() |> follow_redirect(conn)
+        lv |> element("#activity-send-reminders") |> render_click() |> follow_redirect(conn)
 
       {:ok, lv, _html} =
         lv |> form("#email-form") |> render_submit() |> follow_redirect(conn)
@@ -396,7 +396,7 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(lv, "#members-batch", "0 sent")
       assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
-      refute has_element?(lv, "#activity-email-members")
+      refute has_element?(lv, "#activity-send-reminders")
     end
 
     test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do
