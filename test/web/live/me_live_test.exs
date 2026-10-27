@@ -158,7 +158,7 @@ defmodule Web.MeLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
     end
 
-    test "the 5 latest chores, a New chore link, and a link to the rest",
+    test "the 5 latest chores, a New chore link, a link to the rest, and deleting a declined one",
          %{conn: conn, team: team, member: member} do
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#no-chores")
@@ -182,9 +182,15 @@ defmodule Web.MeLiveTest do
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#chores-list-#{declined.id}", "Slept at the hall")
       assert has_element?(lv, "#chores-list-#{declined.id} .badge", "Declined")
+      assert has_element?(lv, "#chores-list-#{declined.id}", "Not a chore.")
+      refute has_element?(lv, "#chore-delete-#{hd(chores).id}")
       assert has_element?(lv, "#chores-list-#{hd(chores).id}")
       refute has_element?(lv, "#chores-list-#{List.last(chores).id}")
       assert has_element?(lv, ".action #all-chores")
+
+      lv |> element("#chore-delete-#{declined.id}") |> render_click()
+      refute has_element?(lv, "#chores-list-#{declined.id}")
+      assert has_element?(lv, "#chores-list-#{List.last(chores).id}")
     end
 
     test "qualifications soonest first, with the days left on one expiring soon and none with no end",
