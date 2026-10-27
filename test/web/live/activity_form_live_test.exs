@@ -6,6 +6,7 @@ defmodule Web.ActivityFormLiveTest do
 
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
+  alias App.Model.LocationBookmark
   alias App.RecordsStub
   alias App.Repo
 
@@ -303,6 +304,41 @@ defmodule Web.ActivityFormLiveTest do
 
       refute has_element?(lv, "#activity-pin")
       assert lv |> element("#form_place") |> render() =~ ~s(value="Pond, Surrey")
+    end
+
+    defp bookmark(team, title, address, coordinate) do
+      Repo.insert!(%LocationBookmark{
+        team_id: team.id,
+        d4h_location_bookmark_id: System.unique_integer([:positive]),
+        title: title,
+        address: address,
+        coordinate: coordinate
+      })
+    end
+
+    test "a bookmark names the place near it, and typing finds one no activity used (#614)",
+         %{conn: conn, team: team} do
+      stub()
+      stub_mapbox()
+      past_activities(team)
+      bookmark(team, "!!!! Hall", "17543 20 Ave, Surrey", "49.10050,-122.80050")
+      bookmark(team, "Office", "123 Main St, Surrey", "49.19000,-122.85000")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      lv |> element("#form_place") |> render_focus()
+      # As the team wrote it, the ! they sort with in D4H too.
+      assert has_element?(lv, "#activity-past-0 .place-name", "!!!! Hall")
+      assert has_element?(lv, "#activity-past-0", "Hall, Surrey · Saved place")
+      assert has_element?(lv, "#activity-past-0", "3 activities")
+
+      type_place(lv, "office")
+      assert has_element?(lv, "#activity-past-0 .place-name", "Office")
+      assert has_element?(lv, "#activity-past-0", "123 Main St, Surrey · Saved place")
+      refute has_element?(lv, "#activity-past-0", "activities")
+
+      lv |> element("#activity-past-0") |> render_click()
+      assert has_element?(lv, "#activity-pin", "49.19000, -122.85000")
+      assert lv |> element("#form_place") |> render() =~ ~s(value="123 Main St, Surrey")
     end
 
     test "the x empties the box and its pin, and lists the team's places again",

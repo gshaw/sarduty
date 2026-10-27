@@ -37,6 +37,15 @@ defmodule App.Adapter.D4H.Parse do
   def team_id(%{"resourceType" => "Team", "id" => id}), do: id
   def team_id(%{}), do: nil
 
+  @doc "D4H's address parts as one line, the street first and the postcode left out."
+  def address(%{} = record) do
+    [record["street"], record["town"], record["region"], record["country"]]
+    |> Enum.reject(fn str -> is_nil(str) or String.match?(str, ~r/^\s*$/) end)
+    |> Enum.join(", ")
+  end
+
+  def address(_record), do: ""
+
   def coordinate(%{"coordinates" => [lng, lat]}) do
     Coordinate.build(lat, lng)
   end

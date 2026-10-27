@@ -212,6 +212,7 @@ and must not be used for it.
 | equipment                           | gear, assets, inventory                        | What a team owns and logs in D4H: vehicles, radios, supplies.                                        |
 | item                                | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
 | template                            | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups whose members it adds, applied to an activity.       |
+| saved place                         | favourite, location, pin                       | A place a team named, with its address and pin. A D4H team's are its D4H location bookmarks.         |
 | mileage report                      | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
 | ID card                             | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
 | verify                              | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |

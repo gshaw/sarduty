@@ -6,6 +6,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   alias App.Adapter.D4H
   alias App.Model.Attendance
   alias App.Model.Event
+  alias App.Model.LocationBookmark
   alias App.Model.Team
   alias App.Model.WhiteboardNote
   alias App.Operation.SyncD4HChanges
@@ -14,7 +15,8 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   @newest "2026-10-05T12:00:00Z"
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
-            member-group-memberships equipment equipment-usages whiteboard)
+            member-group-memberships equipment equipment-usages whiteboard
+            location-bookmarks)
 
   defp head(total, newest \\ @newest),
     do: %{"results" => [%{"updatedAt" => newest}], "totalSize" => total}
@@ -31,7 +33,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   defp list_name(conn), do: conn.path_info |> List.last()
 
-  test "when nothing changed, a sync makes the 14 list checks and reads the open years" do
+  test "when nothing changed, a sync makes the 15 list checks and reads the open years" do
     check_unchanged_sync(synced_team())
   end
 
@@ -58,7 +60,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 
-    requests = for _ <- 1..17, do: assert_receive({:d4h, _list, _params})
+    requests = for _ <- 1..18, do: assert_receive({:d4h, _list, _params})
     open_years = for {:d4h, list, %{"starts_after" => _}} <- requests, do: list
     assert Enum.sort(open_years) == ~w(events exercises incidents)
     refute_received {:d4h, _, _}
@@ -334,6 +336,54 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
       assert_received {:whiteboard, _head}
       assert_received {:whiteboard, _read}
       refute_received {:whiteboard, _}
+    end
+  end
+
+  describe "location bookmarks (#614)" do
+    defp location_bookmark(id, title, archived_at),
+      do: %{
+        "id" => id,
+        "title" => title,
+        "address" => %{"street" => "#{id} Main St", "town" => "Surrey"},
+        "location" => %{"type" => "Point", "coordinates" => [-122.8, 49.1]},
+        "owner" => %{"resourceType" => "Team", "id" => 1},
+        "archivedAt" => archived_at,
+        "updatedAt" => "2026-10-21T09:00:00Z"
+      }
+
+    test "a moved head reads the team's own bookmarks and keeps the live ones" do
+      team = synced_team()
+      test = self()
+
+      bookmarks = [
+        location_bookmark(1, "Office", nil),
+        location_bookmark(2, "Old base", "2026-01-01T00:00:00Z")
+      ]
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+
+        cond do
+          conn.query_params["starts_after"] ->
+            Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+          list_name(conn) == "location-bookmarks" ->
+            send(test, {:bookmarks, conn.query_params})
+            Req.Test.json(conn, %{"results" => bookmarks, "totalSize" => 2})
+
+          true ->
+            Req.Test.json(conn, head(10))
+        end
+      end)
+
+      assert perform(team) == :ok
+      assert_received {:bookmarks, %{"size" => "1", "exclude_org_data" => "true"}}
+      assert_received {:bookmarks, %{"size" => "1000", "exclude_org_data" => "true"}}
+
+      assert [%LocationBookmark{title: "Office", address: "1 Main St, Surrey"} = b] =
+               LocationBookmark.get_all(team)
+
+      assert b.coordinate == "49.10000,-122.80000"
     end
   end
 end

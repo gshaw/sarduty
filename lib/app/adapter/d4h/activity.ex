@@ -29,7 +29,7 @@ defmodule App.Adapter.D4H.Activity do
       title: build_title(record["referenceDescription"], record["id"]),
       # Note: description in v3 is HTML
       description: record["description"],
-      address: build_address(record["address"]),
+      address: Parse.address(record["address"]),
       coordinate: Parse.coordinate(record["location"]),
       started_at: Parse.datetime(record["startsAt"]),
       finished_at: Parse.datetime(record["endsAt"]),
@@ -41,15 +41,4 @@ defmodule App.Adapter.D4H.Activity do
   defp build_title(nil, activity_id), do: "Untitled Activity #{activity_id}"
   defp build_title("", activity_id), do: "Untitled Activity #{activity_id}"
   defp build_title(description, _), do: String.slice(description, 0, 50)
-
-  defp build_address(record) do
-    [
-      record["street"],
-      record["town"],
-      record["region"],
-      record["country"]
-    ]
-    |> Enum.reject(fn str -> is_nil(str) or String.match?(str, ~r/^\s*$/) end)
-    |> Enum.join(", ")
-  end
 end

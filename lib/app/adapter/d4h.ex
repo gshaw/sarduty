@@ -396,6 +396,17 @@ defmodule App.Adapter.D4H do
     fetch_all(context, "/tags", &D4H.Tag.build/1)
   end
 
+  # The team names its own places, so its organization's bookmarks are left out (#614).
+  @location_bookmarks [exclude_org_data: true]
+
+  @doc "The team's own location bookmarks (#614), archived ones too."
+  def fetch_location_bookmarks(context) do
+    fetch_all(context, "/location-bookmarks", &D4H.LocationBookmark.build/1, @location_bookmarks)
+  end
+
+  @doc "The params that leave out the organization's bookmarks, for the sync's list head."
+  def location_bookmark_params, do: @location_bookmarks
+
   @doc """
   Every equipment item, with its kind and location titles (#271). D4H answers 403 for
   a team without its equipment module, which raises D4H.Error like any failure.
@@ -432,9 +443,9 @@ defmodule App.Adapter.D4H do
     error in D4H.Error -> if error.status == 403, do: :off, else: reraise(error, __STACKTRACE__)
   end
 
-  defp fetch_all(context, url, build) do
+  defp fetch_all(context, url, build, params \\ []) do
     context
-    |> reduce_pages(url, build, [], &[&1 | &2])
+    |> reduce_pages(url, build, [], &[&1 | &2], params)
     |> Enum.reverse()
     |> Enum.concat()
   end

@@ -74,6 +74,7 @@ defmodule Web.ActivityFormLive do
           places={@places}
           kind={@form[:kind].value}
           timezone={@current_team.timezone}
+          bookmark_source={if @records?, do: "Saved place", else: "#{@service} bookmark"}
         />
         <.input
           field={@form[:hours]}
@@ -142,6 +143,8 @@ defmodule Web.ActivityFormLive do
   attr :places, :list, required: true
   attr :kind, :string, required: true
   attr :timezone, :string, required: true
+  # Where a named place's name comes from, and so where to change it (#614).
+  attr :bookmark_source, :string, required: true
 
   defp place_field(assigns) do
     field = assigns.form[:place]
@@ -207,8 +210,11 @@ defmodule Web.ActivityFormLive do
         >
           <li :for={{place, i} <- Enum.with_index(@past)}>
             <button type="button" id={"activity-past-#{i}"} phx-click="pick_past" phx-value-i={i}>
-              <span class="place-name">{place.text}</span>
-              <span class="place-detail">
+              <span class="place-name">{place.name || place.text}</span>
+              <span :if={place.name} class="place-detail">
+                {named_detail(place, @bookmark_source)}
+              </span>
+              <span :if={place.count > 0} class="place-detail">
                 {Service.Format.count(place.count, one: "1 activity", many: "%d activities")}, last {Service.Format.date_long(
                   place.last_at,
                   @timezone
@@ -253,6 +259,10 @@ defmodule Web.ActivityFormLive do
     </div>
     """
   end
+
+  # A bookmark with no address fills the box with its name, so it isn't said twice.
+  defp named_detail(%{text: name, name: name}, source), do: source
+  defp named_detail(%{text: text}, source), do: "#{text} · #{source}"
 
   @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
 

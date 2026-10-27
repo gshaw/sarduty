@@ -73,6 +73,7 @@ defmodule App.Operation.RefreshD4HData do
       progress = refresh_groups(d4h, team, progress)
       progress = refresh_equipment(d4h, team, progress)
       progress = refresh_whiteboard(d4h, team, progress)
+      progress = refresh_location_bookmarks(d4h, team, progress)
       RefreshD4HData.Progress.complete(progress)
     end)
 
@@ -180,6 +181,12 @@ defmodule App.Operation.RefreshD4HData do
   defp refresh_whiteboard(d4h, team, progress) do
     progress = RefreshD4HData.Progress.update_stage(progress, "Whiteboard")
     RefreshD4HData.UpsertWhiteboardNotes.call(d4h, team)
+    RefreshD4HData.Progress.finish_stage(progress)
+  end
+
+  defp refresh_location_bookmarks(d4h, team, progress) do
+    progress = RefreshD4HData.Progress.update_stage(progress, "Location bookmarks")
+    RefreshD4HData.UpsertLocationBookmarks.call(d4h, team)
     RefreshD4HData.Progress.finish_stage(progress)
   end
 
