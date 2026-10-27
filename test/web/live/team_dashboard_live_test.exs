@@ -149,6 +149,7 @@ defmodule Web.TeamDashboardLiveTest do
     activity_fixture(team, at(-24 * 40, %{is_published: false}))
     member_fixture(team, %{phone: nil})
     member_fixture(team, %{email: nil})
+    member_fixture(team, %{address: nil})
     member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
     member_fixture(team, %{phone: nil, email: nil, not_a_person: true})
 
@@ -168,7 +169,7 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(
              lv,
              "#attention-missing_details",
-             "2 members have no email or mobile phone"
+             "3 members have no email, mobile phone, or address"
            )
 
     assert has_element?(

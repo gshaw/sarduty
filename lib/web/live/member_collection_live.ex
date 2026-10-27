@@ -381,6 +381,7 @@ defmodule Web.MemberCollectionLive do
 
   defp missing_label(:mobile_phone), do: "Mobile phone"
   defp missing_label(:email), do: "Email"
+  defp missing_label(:address), do: "Address"
 
   def handle_event("select", params, socket) do
     selected = params |> ids() |> MapSet.new()
