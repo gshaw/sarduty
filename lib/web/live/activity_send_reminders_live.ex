@@ -1,14 +1,15 @@
-defmodule Web.ActivityEmailMembersLive do
+defmodule Web.ActivitySendRemindersLive do
   use Web, :live_view_app_layout
 
   alias App.Mailer.ReminderMailer
   alias App.Model.Activity
   alias App.Model.Reminder
   alias App.Operation.SendReminders
+  alias App.Validate.Message
   alias App.ViewData.ActivityMembers
   alias Service.Format
 
-  # Email members (#608): who gets a reminder email, when each was emailed before, and
+  # Send reminders (#608): who gets a reminder email, when each was emailed before, and
   # why everyone else on the activity gets none, then the email itself and one send.
   # Every row starts checked; unchecking a member leaves them out. SendReminders.plan/2
   # decides, and the preview is ReminderMailer's own HTML, with the team admin's message
@@ -31,7 +32,7 @@ defmodule Web.ActivityEmailMembersLive do
 
       {:ok,
        assign(socket,
-         page_title: "Email members",
+         page_title: "Send reminders",
          activity: activity,
          plan: plan,
          selected: MapSet.new(plan.send, & &1.member.id),
@@ -60,7 +61,7 @@ defmodule Web.ActivityEmailMembersLive do
      assign(socket,
        selected: params |> selected_ids() |> MapSet.new(),
        message: message,
-       preview: ReminderMailer.preview(activity, team, sender, SendReminders.message(message))
+       preview: ReminderMailer.preview(activity, team, sender, Message.normalize(message))
      )}
   end
 
@@ -109,9 +110,9 @@ defmodule Web.ActivityEmailMembersLive do
     <.breadcrumbs>
       <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
       <:item label={@activity.ref_id} path={~p"/teams/#{@current_team}/activities/#{@activity.id}"} />
-      <:item label="Email members" />
+      <:item label="Send reminders" />
     </.breadcrumbs>
-    <h1 class="title">Email members</h1>
+    <h1 class="title">Send reminders</h1>
     <p class="lead">
       {@activity.title} · {Format.datetime_medium(@activity.started_at, @current_team.timezone)}
     </p>
@@ -161,14 +162,10 @@ defmodule Web.ActivityEmailMembersLive do
             label="Message (optional)"
             value={@message}
             rows="4"
-            maxlength={SendReminders.message_max()}
+            maxlength={Message.max_length()}
             phx-debounce="300"
           >
-            Your own words, under the date and place. Up to {Format.count(
-              SendReminders.message_max(),
-              one: "%d character",
-              many: "%d characters"
-            )}.
+            Your own words, under the date and place. Up to {Message.limit_text()}.
           </.input>
         </div>
         <.email_preview subject={@preview.subject} html={@preview.html} />

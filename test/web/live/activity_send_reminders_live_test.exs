@@ -1,4 +1,4 @@
-defmodule Web.ActivityEmailMembersLiveTest do
+defmodule Web.ActivitySendRemindersLiveTest do
   use Web.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -61,12 +61,12 @@ defmodule Web.ActivityEmailMembersLiveTest do
     }
   end
 
-  defp path(ctx), do: ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/email"
+  defp path(ctx), do: ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/reminders"
 
   test "names who gets which email, and why everyone else gets none", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
-    assert has_element?(lv, "h1", "Email members")
+    assert has_element?(lv, "h1", "Send reminders")
     assert has_element?(lv, "#email-to-#{ctx.cameron.id} td", "Oct ")
     refute has_element?(lv, "#email-to-#{ctx.jordan.id} td", "Oct ")
     assert has_element?(lv, "#email-select-#{ctx.jordan.id}[checked]")

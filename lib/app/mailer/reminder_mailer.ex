@@ -44,7 +44,7 @@ defmodule App.Mailer.ReminderMailer do
   end
 
   @doc """
-  The email as Email members shows it (#608), from the same subject and HTML that
+  The email as Send reminders shows it (#608), from the same subject and HTML that
   deliver/5 sends, message included, as `%{subject:, html:}`. Its links go nowhere:
   each real one is signed for its member.
   """

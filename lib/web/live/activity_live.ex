@@ -82,7 +82,7 @@ defmodule Web.ActivityLive do
   end
 
   # Reminders a team admin sends (#444): each member's latest, the last batch, and
-  # Email members while anyone has no reply, before the start (#608). Its page names
+  # Send reminders while anyone has no reply, before the start (#608). Its page names
   # anyone it can't email, and why.
   defp assign_reminders(socket, members) do
     %{activity: activity, current_team: team, coming?: coming?, now: now} = socket.assigns
@@ -93,7 +93,7 @@ defmodule Web.ActivityLive do
       reminded: ActivityReminders.latest(reminders),
       batch: batch,
       batch_sender: batch && sender_name(team, batch.sent_by_user, now),
-      email_members?:
+      send_reminders?:
         socket.assigns.team_admin? && coming? && !activity.deleted_at &&
           Enum.any?(members, &(&1.status == "requested"))
     )
@@ -212,7 +212,7 @@ defmodule Web.ActivityLive do
           attendances={@attendances}
           attendance_count={@attendance_count}
           team_admin?={@team_admin?}
-          email_members?={@email_members?}
+          send_reminders?={@send_reminders?}
         />
       </aside>
       <main class="content-2/3">
@@ -286,7 +286,7 @@ defmodule Web.ActivityLive do
   attr :attendances, :list, required: true
   attr :attendance_count, :integer, required: true
   attr :team_admin?, :boolean, default: false
-  attr :email_members?, :boolean, default: false, doc: "whether anyone has no reply yet"
+  attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
 
   def sidebar_content(assigns) do
     ~H"""
@@ -356,11 +356,11 @@ defmodule Web.ActivityLive do
       <dt :if={@team_admin? and !@activity.deleted_at}>Actions</dt>
       <dd :if={@team_admin? and !@activity.deleted_at}>
         <ul id="activity-actions" class="action-list">
-          <li :if={@email_members?}>
+          <li :if={@send_reminders?}>
             <.a
-              id="activity-email-members"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/email"}
-            >Email members</.a>
+              id="activity-send-reminders"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/reminders"}
+            >Send reminders</.a>
           </li>
           <li>
             <.a

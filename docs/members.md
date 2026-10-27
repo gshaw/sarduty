@@ -353,9 +353,9 @@ activity starts.
   day, and the page names them; adding one by name includes them. A published activity
   says so in place of the link. D4H's own weekly briefing may still tell them.
 - **Reminders** ([SendReminders](../lib/app/operation/send_reminders.ex)): before the
-  start, a team admin opens Email members from the activity's Actions, a page at
-  `/teams/:subdomain/activities/:id/email`
-  ([ActivityEmailMembersLive](../lib/web/live/activity_email_members_live.ex), #608). It
+  start, a team admin opens Send reminders from the activity's Actions, a page at
+  `/teams/:subdomain/activities/:id/reminders`
+  ([ActivitySendRemindersLive](../lib/web/live/activity_send_reminders_live.ex), #608). It
   lists each member with no reply who can get an email, all checked, with the dates they
   were emailed before. Unchecking a member leaves them out. Then who gets none and why,
   a line each: replied already (a count of signed up and can't make it), turned off

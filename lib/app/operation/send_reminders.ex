@@ -1,7 +1,7 @@
 defmodule App.Operation.SendReminders do
   @moduledoc """
   A team admin emails reminders to members who haven't replied to an activity (#444),
-  from Email members (#608), before it starts. Each send goes to the members they leave
+  from Send reminders (#608), before it starts. Each send goes to the members they leave
   checked; the page shows when each was emailed before, and the team admin decides.
   Members who replied get none, and the page says why each other member gets none
   either.
@@ -23,10 +23,8 @@ defmodule App.Operation.SendReminders do
   alias App.Model.Reminder
   alias App.Model.Team
   alias App.Repo
+  alias App.Validate.Message
   alias App.Worker.SendReminderWorker
-  alias Service.Format
-
-  @message_max 300
 
   @doc """
   Who can get a reminder now, from the activity's rows of any status (with their
@@ -67,25 +65,9 @@ defmodule App.Operation.SendReminders do
   defp email(member, emailed),
     do: %{member: member, emailed: Enum.sort_by(emailed, & &1.sent_at, DateTime)}
 
-  @doc "The most characters a message can have."
-  def message_max, do: @message_max
-
-  @doc """
-  A message as it goes: trimmed, with Windows line breaks made plain, or nil when it's
-  empty.
-  """
-  def message(nil), do: nil
-
-  def message(text) do
-    case text |> String.replace("\r\n", "\n") |> String.trim() do
-      "" -> nil
-      message -> message
-    end
-  end
-
   @doc """
   Queues a reminder for each member in `member_ids` that plan/2 has, from `user`, with
-  `message` (see message/1). Ids the plan doesn't have are ignored. `{:ok, reminders}`,
+  `message` (see App.Validate.Message). Ids the plan doesn't have are ignored. `{:ok, reminders}`,
   each queued, or `{:error, reason}`: `:none_selected`, `:message_too_long`,
   `:deleted`, or `:started`.
   """
@@ -99,7 +81,7 @@ defmodule App.Operation.SendReminders do
       )
       when team_id == team.id do
     ids = MapSet.new(member_ids)
-    message = message(message)
+    message = Message.normalize(message)
 
     cond do
       activity.deleted_at ->
@@ -111,7 +93,7 @@ defmodule App.Operation.SendReminders do
       MapSet.size(ids) == 0 ->
         {:error, :none_selected}
 
-      message && String.length(message) > @message_max ->
+      not Message.fits?(message) ->
         {:error, :message_too_long}
 
       true ->
@@ -130,11 +112,7 @@ defmodule App.Operation.SendReminders do
   @doc "What a call/6 error says."
   def error_text(:none_selected), do: "Select at least 1 member to email."
 
-  def error_text(:message_too_long),
-    do:
-      "Message must be " <>
-        Format.count(@message_max, one: "%d character", many: "%d characters") <>
-        " or fewer."
+  def error_text(:message_too_long), do: Message.error_text()
 
   def error_text(:deleted), do: "This activity is deleted. Nothing can be sent to it."
   def error_text(:started), do: "Reminders closed when the activity started."

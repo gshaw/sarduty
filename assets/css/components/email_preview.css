@@ -1,4 +1,4 @@
-/* A reminder email as members get it, on Email members (#608): the mailer's own HTML.
+/* A reminder email as members get it, on Send reminders (#608): the mailer's own HTML.
    Its text has no colour of its own, so it follows the page, light or dark, as a mail
    app does. It is a phone's width, with a phone mail app's margin, so a team admin sees
    whether their message pushes the buttons below the first screen (#609). */
