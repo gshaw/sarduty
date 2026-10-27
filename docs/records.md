@@ -96,6 +96,10 @@ that title.
 - **Whiteboard notes** (#515): Records serves D4H's `/whiteboard` in its shape, so the
   Dashboard card and the Whiteboard page work as for a D4H team. It is always on, and
   the Whiteboard page's Archived list is the only place a Records team sees old notes.
+- **Places** (#614): Records serves D4H's `/location-bookmarks`, and a team admin adds,
+  changes, and deletes them under Team settings, Places. The sync copies them as it does
+  a D4H team's bookmarks, which name places in the activity form. A place past activities
+  used can be deleted; each activity keeps its own address and pin.
 
 Records follows D4H's rules where they make sense, not where D4H's API lacks a write
 such as delete (Gerry, 2026-10-25). Both answer 409 here, and the form says so first:
@@ -110,7 +114,8 @@ Every Records-only write: `POST /members`, `permission` on a member, `PUT` and `
 on `/members/<id>/image`, `DELETE` on
 `/events`, `/exercises`, and `/incidents`, `DELETE /member-qualifications/<id>`,
 `DELETE /member-qualification-awards/<id>`, and `type` and every field but status and
-barcode on `/equipment`. The guard test in
+barcode on `/equipment`, and `POST`, `PATCH`, and `DELETE` on `/location-bookmarks`,
+where D4H's API only reads. The guard test in
 `test/app/operation/apply_change_set_test.exs` lists every write function, so only
 `ApplyChangeSet` calls them.
 

@@ -1006,6 +1006,48 @@ defmodule App.Adapter.D4H do
       write(context, :delete, "/member-groups/#{d4h_group_id}", nil, fn _body -> d4h_group_id end)
 
   @doc """
+  Adds a location bookmark (#614). `attrs` has string keys: `title`, `place`, the
+  address as one line, and `location`, "lat,lng" or nil for no pin. Writes are Records'
+  own: D4H's API only reads bookmarks.
+  """
+  def create_location_bookmark(context, attrs),
+    do:
+      write(
+        context,
+        :post,
+        "/location-bookmarks",
+        location_bookmark_json(attrs),
+        &D4H.LocationBookmark.build/1
+      )
+
+  @doc "Changes the bookmark's title, address, and pin. Records' own."
+  def update_location_bookmark(context, d4h_location_bookmark_id, attrs) do
+    url = "/location-bookmarks/#{d4h_location_bookmark_id}"
+    write(context, :patch, url, location_bookmark_json(attrs), &D4H.LocationBookmark.build/1)
+  end
+
+  @doc "Deletes a bookmark. Records' own. Activities keep their address and pin."
+  def delete_location_bookmark(context, d4h_location_bookmark_id) do
+    url = "/location-bookmarks/#{d4h_location_bookmark_id}"
+    write(context, :delete, url, nil, fn _body -> d4h_location_bookmark_id end)
+  end
+
+  # The address is one line, as an activity's place is.
+  defp location_bookmark_json(attrs) do
+    location =
+      case Coordinate.build(attrs["location"]) do
+        {lat, lng} -> %{latitude: lat, longitude: lng}
+        nil -> nil
+      end
+
+    %{
+      title: attrs["title"],
+      address: %{street: attrs["place"] || "", town: "", region: "", country: ""},
+      location: location
+    }
+  end
+
+  @doc """
   Posts a note to the team's whiteboard (#515). `attrs` has string keys: `text`, `url`
   (nil for none), `important`, and `archived_at` (a DateTime or ISO 8601 time).
   """

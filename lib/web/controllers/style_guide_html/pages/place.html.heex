@@ -1,0 +1,59 @@
+<.shell current={:place}>
+  <h1>Place</h1>
+  <p class="lead">An address box that finds places and takes a pin.</p>
+
+  <h2>Before typing</h2>
+  <p>
+    Focus shows the team's 3 most used places. One within 150 m of a saved place shows its name, and where the name comes from, so people know where to change it.
+  </p>
+  <div class="demo">
+    <form class="measure" onsubmit="return false">
+      <.place_field
+        id="place-demo"
+        field={place_form()[:place]}
+        coordinate={place_form()[:coordinate]}
+        past={sample_past_places()}
+        places={sample_mapbox_places()}
+        timezone="America/Vancouver"
+        bookmark_source={"#{App.Adapter.D4H.service_name(sample_team())} bookmark"}
+      />
+    </form>
+  </div>
+
+  <h3>A place picked</h3>
+  <p>The address goes in the box and its pin on a map, which Remove pin takes away.</p>
+  <div class="demo">
+    <form class="measure" onsubmit="return false">
+      <.place_field
+        id="place-demo-picked"
+        field={place_form(%{"place" => "17543 20 Ave, Surrey"})[:place]}
+        coordinate={place_form(%{"coordinate" => "49.03879,-122.73734"})[:coordinate]}
+        timezone="America/Vancouver"
+        bookmark_source={"#{App.Adapter.D4H.service_name(sample_team())} bookmark"}
+      />
+    </form>
+  </div>
+
+  <h2>When to use it</h2>
+  <ul>
+    <li>
+      Every form that takes a place or a pin: an activity's Address, and a saved place in Team settings, Places.
+    </li>
+    <li>
+      Typing lists the team's places that hold every word, names included, then Mapbox's from 3 characters. Mapbox bills a session per pick, so the team's places come first and cost nothing.
+    </li>
+    <li>
+      A pasted latitude and longitude is the pin, in decimals, degrees and minutes, or a Google or Apple Maps link.
+    </li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>
+    <code>&lt;.place_field&gt;</code>
+    from <code>Web.Components.Place</code>
+    is the markup. In a LiveView form, <code>Web.Components.PlaceBox</code>
+    runs it: the form passes each change to the address with <code>PlaceBox.typed/2</code>
+    and takes a pick as <code>{"{PlaceBox, values}"}</code>
+    in <code>handle_info/2</code>.
+  </p>
+</.shell>

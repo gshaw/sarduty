@@ -30,6 +30,9 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/chores/:id/edit",
     "/teams/:subdomain/me/chores/:id/edit",
     "/teams/:subdomain/whiteboard/:id/edit",
+    # Places change here only on a SAR Duty Records team, which this team isn't.
+    # Web.Settings.PlaceLiveTest covers another Records team's place.
+    "/teams/:subdomain/settings/places/:id",
     # Certificates (#493): this team has them on, so these find the record through it.
     "/teams/:subdomain/certificates/:id",
     "/teams/:subdomain/certificates/:id/file",
@@ -89,6 +92,7 @@ defmodule Web.TeamScopingTest do
       chore: chore_fixture(member, chore_category_fixture(other_team)),
       endorsement: endorsement,
       whiteboard_note: whiteboard_note_fixture(other_team),
+      place: location_bookmark_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
       certificate: certificate_fixture(member, qualification_fixture(other_team))
@@ -218,6 +222,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/settings/chore-categories/:id", s, o),
     do: ~p"/teams/#{s}/settings/chore-categories/#{o.chore_category.id}"
+
+  defp path_for("/teams/:subdomain/settings/places/:id", s, o),
+    do: ~p"/teams/#{s}/settings/places/#{o.place.id}"
 
   defp path_for("/teams/:subdomain/chores/:id", s, o), do: ~p"/teams/#{s}/chores/#{o.chore.id}"
 

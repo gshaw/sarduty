@@ -54,6 +54,9 @@ defmodule App.Model.ChangeSetRow do
         :create_whiteboard_note,
         :update_whiteboard_note,
         :delete_whiteboard_note,
+        :create_location_bookmark,
+        :update_location_bookmark,
+        :delete_location_bookmark,
         # Only on old rows: a chore an AI agent proposed (#595), before the MCP became
         # read-only (#627). Nothing applies one now.
         :add_chore

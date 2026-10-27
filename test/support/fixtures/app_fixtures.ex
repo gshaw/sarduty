@@ -104,6 +104,19 @@ defmodule App.DataFixtures do
     |> Repo.insert!()
   end
 
+  @doc "A copy of one of the team's location bookmarks (#614), the sync's row."
+  def location_bookmark_fixture(%Team{} = team, attrs \\ %{}) do
+    %App.Model.LocationBookmark{
+      team_id: team.id,
+      d4h_location_bookmark_id: System.unique_integer([:positive]),
+      title: "Hall",
+      address: "17543 20 Ave, Surrey",
+      coordinate: "49.03879,-122.73734"
+    }
+    |> struct!(attrs)
+    |> Repo.insert!()
+  end
+
   @doc "A team with member logins on (#156), so its current members may log in."
   def member_logins_team_fixture(attrs \\ %{}) do
     # Chores (#341) and certificates (#493) need their own settings too; tests of them

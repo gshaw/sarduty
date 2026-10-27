@@ -35,7 +35,10 @@ defmodule App.Operation.ApplyChangeSet do
     :delete_group,
     :create_equipment_item,
     :update_equipment_item,
-    :delete_equipment_item
+    :delete_equipment_item,
+    :create_location_bookmark,
+    :update_location_bookmark,
+    :delete_location_bookmark
   ]
 
   # A whiteboard note (#515) is changed as it was on the page; nothing is read first.
@@ -478,6 +481,21 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :delete_whiteboard_note} = row),
     do: d4h |> D4H.delete_whiteboard_note(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :create_location_bookmark, new_value: new_value}),
+    do:
+      d4h
+      |> D4H.create_location_bookmark(new_value)
+      |> record_result(& &1.d4h_location_bookmark_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_location_bookmark} = row) do
+    d4h
+    |> D4H.update_location_bookmark(row.d4h_record_id, row.new_value)
+    |> record_result(& &1.d4h_location_bookmark_id)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_location_bookmark} = row),
+    do: d4h |> D4H.delete_location_bookmark(row.d4h_record_id) |> record_result(& &1)
 
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}

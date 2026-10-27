@@ -18,6 +18,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Pagination
   import Web.Components.PersonHead
   import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Place, only: [place_field: 1]
   import Web.Components.Reply, only: [reply: 1]
   import Web.Components.RowLink
   import Web.Components.Search, only: [search_box: 1]
@@ -90,6 +91,7 @@ defmodule Web.StyleGuideHTML do
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},
+         {:place, "Place", "An address box that finds places and takes a pin."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:reply, "Reply", "A member's answer to an invitation."},
          {:rich_text, "Rich text", "Text with bold, italics, links, and lists."},
@@ -432,4 +434,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate sample_member(), to: SampleData
   defdelegate sample_search_groups(), to: SampleData
   defdelegate sample_search_recent(), to: SampleData
+  defdelegate place_form(values \\ %{}), to: SampleData
+  defdelegate sample_past_places(), to: SampleData
+  defdelegate sample_mapbox_places(), to: SampleData
 end
