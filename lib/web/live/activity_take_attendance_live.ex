@@ -16,6 +16,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   alias App.Model.AttendanceScan
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.Standing
   alias App.Operation.BuildYetToArrive
   alias App.Operation.RecordAttendanceScan
   alias App.Repo
@@ -48,10 +49,12 @@ defmodule Web.ActivityTakeAttendanceLive do
       Process.send_after(self(), :tick, @tick_ms)
     end
 
+    retiring = Standing.retiring_ids(activity.team)
+
     members =
       activity.team_id
       |> Member.get_all()
-      |> Enum.filter(&(Member.current?(&1, now) and not &1.not_a_person))
+      |> Enum.filter(&(Member.current?(&1, now) and Member.counted?(&1, retiring)))
 
     socket
     |> assign(

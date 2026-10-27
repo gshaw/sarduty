@@ -11,7 +11,7 @@ defmodule Web.Components.MemberSidebar do
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.Member
-  alias App.Model.MemberAwayPeriod
+  alias App.Model.Standing
   alias App.ViewData.MemberMilestones
   alias Service.Format
   alias Web.Components.MilestoneList
@@ -25,11 +25,11 @@ defmodule Web.Components.MemberSidebar do
   """
   def load_sidebar(socket) do
     %{member: member, team_admin?: team_admin?} = socket.assigns
-    standing = MemberAwayPeriod.standing_today(member, member.team.timezone)
+    standing = Standing.today(member, member.team)
 
     Phoenix.Component.assign(socket,
       last_attended_at: Member.last_attended_at(member),
-      standing: MemberAwayPeriod.visible_standing(standing, team_admin?),
+      standing: Standing.visible(standing, team_admin?),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
       equipment: EquipmentItem.held_by(member.team, member)
     )

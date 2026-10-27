@@ -87,6 +87,50 @@ defmodule App.Model.EquipmentItem do
     |> Repo.all()
   end
 
+  @doc """
+  How many items each member in `member_ids_query` holds, counted as held_by/2 counts
+  them, in one query for many members (#514). `%{member_id => count}`, without the
+  members who hold nothing.
+  """
+  def held_counts(%Team{} = team, member_ids_query) do
+    held = union(held_roots(team, member_ids_query), ^held_inside_by_member(team))
+
+    "held"
+    |> from()
+    |> group_by([h], h.member_id)
+    |> select([h], {h.member_id, count(h.id, :distinct)})
+    |> recursive_ctes(true)
+    |> with_cte("held", as: ^held)
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  # The items each member holds directly, at depth 0, with the member.
+  defp held_roots(team, member_ids_query) do
+    from i in EquipmentItem,
+      where: i.team_id == ^team.id and i.member_id in subquery(member_ids_query),
+      select: %{
+        id: i.id,
+        d4h_equipment_id: i.d4h_equipment_id,
+        member_id: i.member_id,
+        depth: fragment("0")
+      }
+  end
+
+  # held_inside/1, carrying the member who holds the kit.
+  defp held_inside_by_member(team) do
+    from i in EquipmentItem,
+      join: h in "held",
+      on: i.d4h_container_id == h.d4h_equipment_id,
+      where: i.team_id == ^team.id and h.depth < @max_depth,
+      select: %{
+        id: i.id,
+        d4h_equipment_id: i.d4h_equipment_id,
+        member_id: h.member_id,
+        depth: h.depth + 1
+      }
+  end
+
   # The member's own items, at depth 0.
   defp held_directly(team, member) do
     from i in EquipmentItem,

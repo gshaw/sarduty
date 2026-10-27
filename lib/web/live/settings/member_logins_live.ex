@@ -56,11 +56,13 @@ defmodule Web.Settings.MemberLoginsLive do
     <.team_settings_tabs team={@current_team} current={:member_logins} />
     <div class="measure">
       <p class="lead">
-        Let your members log in to get their own ID card and tax credit letters.
+        Let your members log in to see their year, their ID card, and their tax credit
+        letters.
       </p>
       <p>
-        Each member sees only their own ID card and letters. They log in with the email or
-        mobile number your team has for them.
+        Members log in with the email or mobile number your team has in {@service}. They
+        see the Dashboard, the members list, and Your membership, and reply to activities.
+        Contact details stay with team admins, apart from their own.
       </p>
       <p class="mb-6">Retired members cannot log in.</p>
       <.form for={@form} id="member-logins-form" phx-submit="save">

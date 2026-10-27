@@ -103,6 +103,24 @@ defmodule App.Operation.InviteMembersTest do
     assert plan.away == []
   end
 
+  test "a group's retiring members never reach the picks (#514)" do
+    team = team_fixture()
+    leavers = group_fixture(team)
+    callout = group_fixture(team)
+    retiring = member_fixture(team)
+    staying = member_fixture(team)
+    for member <- [retiring, staying], do: group_member_fixture(callout, member)
+    group_member_fixture(leavers, retiring)
+
+    team =
+      team
+      |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+      |> App.Repo.update!()
+
+    assert [{_group, %Member{id: id}}] = InviteMembers.group_picks(team, [callout], @now)
+    assert id == staying.id
+  end
+
   describe "call/6" do
     setup do
       %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})

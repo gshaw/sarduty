@@ -44,14 +44,15 @@ defmodule App.ViewModel.MemberFilterViewModelTest do
   end
 
   test "a member's Standing switch and menu offer everything but Active and Away" do
-    assert MemberFilterViewModel.standing_switch(false) ==
+    assert MemberFilterViewModel.standing_switch(false, true) ==
              [
                {"Not retired", "current"},
+               {"Retiring", "retiring"},
                {"Not a person", "not_a_person"},
                {"Retired", "retired"}
              ]
 
-    assert MemberFilterViewModel.standing_kinds("all", false) ==
+    assert MemberFilterViewModel.standing_kinds("all", false, false) ==
              [
                {"Not retired", "current"},
                {"Not a person", "not_a_person"},
@@ -59,7 +60,12 @@ defmodule App.ViewModel.MemberFilterViewModelTest do
                {"All", "all"}
              ]
 
-    refute MemberFilterViewModel.switch_standing?("active", false)
-    assert MemberFilterViewModel.switch_standing?("active", true)
+    refute MemberFilterViewModel.switch_standing?("active", false, true)
+    assert MemberFilterViewModel.switch_standing?("active", true, true)
+  end
+
+  test "Retiring shows only for a team with a Retiring group (#514)" do
+    refute true |> MemberFilterViewModel.standing_switch(false) |> List.keymember?("retiring", 1)
+    assert true |> MemberFilterViewModel.standing_switch(true) |> List.keymember?("retiring", 1)
   end
 end

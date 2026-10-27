@@ -66,7 +66,7 @@ defmodule Web.GroupRuleLive do
       rows: Enum.map(rule.references, &row(&1, context, team)),
       options:
         if(rule.kind == :standing,
-          do: GroupRules.standing_options(targets),
+          do: GroupRules.standing_options(targets, team.retiring_d4h_group_id != nil),
           else: GroupRules.options(context, group.d4h_group_id, targets)
         ),
       last_confirm:

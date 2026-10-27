@@ -36,12 +36,12 @@ defmodule Web.TeamManagersLive do
   def render(assigns) do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:managers} />
-    <p :if={!D4H.records?(@current_team)} class="max-w-3xl">
+    <p :if={!D4H.records?(@current_team)} class="measure">
       These people can log in to SAR Duty for {@current_team.name}. They are the members with
       Owner or Editor access in {@service}. Members who are retired or have left cannot log in.
       To add or remove someone, change their access in {@service}. SAR Duty follows within 10 minutes.
     </p>
-    <p :if={D4H.records?(@current_team)} class="max-w-3xl">
+    <p :if={D4H.records?(@current_team)} class="measure">
       These people can log in to SAR Duty for {@current_team.name}. They are the members who
       are team admins. Members who are retired or have left cannot log in. To add or remove
       someone, change Team admin on their Change details page.
@@ -53,7 +53,7 @@ defmodule Web.TeamManagersLive do
       login_emails={@login_emails}
     />
 
-    <section :if={@organization} id="organization-admins" class="mt-8 max-w-3xl">
+    <section :if={@organization} id="organization-admins" class="mt-8 measure">
       <h2 class="heading">{@organization.short_name}'s organization admins</h2>
       <p>
         They keep {@organization.name}'s settings and hours tags, and can turn your ID cards on or
@@ -65,7 +65,7 @@ defmodule Web.TeamManagersLive do
       </ul>
     </section>
 
-    <section id="sar-duty-admins" class="mt-8 max-w-3xl">
+    <section id="sar-duty-admins" class="mt-8 measure">
       <h2 class="heading">SAR Duty admins</h2>
       <p>
         They run SAR Duty and can open every team. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.

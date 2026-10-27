@@ -6,6 +6,7 @@ defmodule Web.ActivitySendRemindersLive do
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.Reminder
+  alias App.Model.Standing
   alias App.Operation.SendReminders
   alias App.Validate.Message
   alias App.ViewData.ActivityMembers
@@ -27,7 +28,7 @@ defmodule Web.ActivitySendRemindersLive do
       plan =
         activity
         |> ActivityMembers.load()
-        |> SendReminders.plan(Reminder.for_activity(activity))
+        |> SendReminders.plan(Reminder.for_activity(activity), Standing.retiring_ids(team))
 
       sender = SendReminders.sender(team, user, now)
 
@@ -225,7 +226,7 @@ defmodule Web.ActivitySendRemindersLive do
           Replied already, so no email: {replied_text(@replied)}.
         </li>
         <li
-          :for={reason <- [:reminders_off, :no_email]}
+          :for={reason <- [:retiring, :reminders_off, :no_email]}
           :if={@reasons[reason]}
           id={"left-out-#{reason}"}
         >
@@ -249,6 +250,7 @@ defmodule Web.ActivitySendRemindersLive do
     |> Format.and_list()
   end
 
+  defp reason_text(:retiring, _service), do: "Retiring"
   defp reason_text(:reminders_off, _service), do: "Turned off invitation reminders"
   defp reason_text(:no_email, service), do: "No email in #{service}"
 

@@ -46,29 +46,6 @@ defmodule App.Model.MemberAwayPeriod do
     do: not Date.after?(period.starts_on, today) and not Date.before?(period.ends_on, today)
 
   @doc """
-  The member's standing on `today` (#366): `:retired`, `:not_a_person`, `{:away, period}`
-  for the current away period that ends last, or `:active`. Retired comes from D4H, as
-  of `now` (not Member.current?/2), and wins over the rest; not a person wins over an away
-  period. Active is never stored: it is the absence of the others.
-  """
-  def standing(member, periods, %Date{} = today, now) do
-    cond do
-      not Member.current?(member, now) -> :retired
-      member.not_a_person -> :not_a_person
-      true -> away_or_active(periods, today)
-    end
-  end
-
-  defp away_or_active(periods, today) do
-    case periods
-         |> Enum.filter(&current?(&1, today))
-         |> Enum.max_by(& &1.ends_on, Date, fn -> nil end) do
-      nil -> :active
-      period -> {:away, period}
-    end
-  end
-
-  @doc """
   The day an early end makes the last day away: yesterday, so the member is active from
   today. Only a period that started before today and hasn't ended can end early; delete
   one that hasn't started.
@@ -83,7 +60,8 @@ defmodule App.Model.MemberAwayPeriod do
 
   @doc """
   Each of the team's members away on `today`, as rows of `member_id` and `away_until`,
-  the last day of the current away period that ends last: the away part of `standing/4`.
+  the last day of the current away period that ends last: the away part of
+  App.Model.Standing.
   """
   def away_query(%Team{} = team, %Date{} = today) do
     from p in MemberAwayPeriod,
@@ -100,29 +78,9 @@ defmodule App.Model.MemberAwayPeriod do
     |> Repo.all()
   end
 
-  @doc ~s{The standing as text: "Active", "Away until March 1, 2027 (Parental leave)", "Not a person", or "Retired".}
-  def describe_standing(:active), do: "Active"
-  def describe_standing(:not_a_person), do: "Not a person"
-  def describe_standing(:retired), do: "Retired"
-
-  def describe_standing({:away, period}),
-    do: "Away until #{Service.Format.date_long(period.ends_on)} (#{period.reason})"
-
   @doc "Every away period of the team's members."
   def get_all_for_team(team_id),
     do: MemberAwayPeriod |> where([p], p.team_id == ^team_id) |> Repo.all()
-
-  @doc """
-  A standing as `team_admin?` sees it (#440). To a member, someone away is active: away
-  periods are team admins' own records, and away is often leave. Every other standing
-  shows as it is. Every page that shows another member's standing passes it through here.
-  """
-  def visible_standing({:away, _period}, false = _team_admin?), do: :active
-  def visible_standing(standing, _team_admin?), do: standing
-
-  @doc "The member's standing today in the team's time zone."
-  def standing_today(%Member{} = member, timezone, now \\ DateTime.utc_now()),
-    do: standing(member, for_member(member), Service.Period.today(now, timezone), now)
 
   def find!(%Team{} = team, id), do: Repo.get_by!(MemberAwayPeriod, id: id, team_id: team.id)
 

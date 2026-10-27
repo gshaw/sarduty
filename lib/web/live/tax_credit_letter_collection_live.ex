@@ -168,7 +168,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       </span>
       <.warning_text :if={!@team.signature} id="send-all-unsigned" class="w-full">
         These letters go out unsigned. Add the signer's signature in
-        <.a navigate={~p"/teams/#{@team}/settings"}>team settings</.a>
+        <.a navigate={~p"/teams/#{@team}/settings/letters"}>team settings</.a>
         first.
       </.warning_text>
     </div>

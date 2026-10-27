@@ -22,15 +22,19 @@ defmodule App.ViewData.GroupRules do
   def name({:endorsement, id}, context), do: context.endorsements[id].name
   def name({:standing, standing}, _context), do: standing_label(standing)
 
-  @standings [active: "Active", away: "Away", not_a_person: "Not a person"]
+  @standings [active: "Active", away: "Away", retiring: "Retiring", not_a_person: "Not a person"]
 
   @doc "A standing's name in a rule (#366)."
   def standing_label(standing), do: Keyword.fetch!(@standings, standing)
 
-  @doc "Pure. The menu's standings for a Standing rule, leaving out `taken`."
-  def standing_options(taken \\ []) do
+  @doc """
+  Pure. The menu's standings for a Standing rule, leaving out `taken`. Retiring only for
+  a team with a Retiring group (#514).
+  """
+  def standing_options(taken, retiring?) do
     for {standing, label} <- @standings,
         {:standing, standing} not in taken,
+        standing != :retiring or retiring?,
         do: {label, "standing:#{standing}"}
   end
 

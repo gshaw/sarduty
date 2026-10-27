@@ -19,7 +19,7 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
   open the same list.
 - **Standing** filters by [standing](#standing): Not retired (the default, `current`),
-  Active, Away, Not a person, Retired, or All. It was Current until 2026-10-20, which
+  Active, Away, Retiring (with a Retiring group), Not a person, Retired, or All. It was Current until 2026-10-20, which
   people mixed up with Active. It replaced Status, and old
   `status=` links are not kept (decided 2026-10-19). Its column says "Away until Mar 1"
   and sorts by that day, with retired members last.
@@ -46,11 +46,26 @@ matched. ID hides on narrow screens.
 ## Standing
 
 A member's **standing** says whether the team expects them to show up now (#366):
-**Active**, **Away** for a dated period such as leave, **Not a person**, or **Retired**.
-Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
+**Active**, **Away** for a dated period such as leave, **Retiring**, **Not a person**,
+or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
+2026-10-19, Retiring 2026-10-27 (#514).
 
-- **SAR Duty owns it.** Nothing about it goes to D4H. Teams on D4H and on SAR Duty
-  Records work the same.
+- **One home.** [Standing](../lib/app/model/standing.ex) holds the order, Retired, Not a
+  person, Retiring, Away, Active, where the first that applies wins. `Standing.of/5`
+  works it out for one member and `Standing.dynamic/1` in SQL for a list, and a test
+  runs every mix through both. Nothing else copies the order.
+- **Retiring is read from a D4H group; SAR Duty owns the rest.** Away periods and Not a
+  person never go to D4H. Teams on D4H and on SAR Duty Records work the same.
+- **Retiring** (#514) is a current member in the team's **Retiring group**, picked in
+  Settings → Members (`teams.retiring_d4h_group_id`). D4H refuses to retire a member who
+  holds the team's equipment, so a member who leaves stays current until every item is
+  back. Read from `group_members`, never stored, and no job. SAR Duty leaves retiring
+  members out of what Not a person leaves out (below), and out of reminders too. They
+  still log in: `Member.people_query/1` decides logins and stays as it was, and
+  `Member.counted_query/2` is the narrowing beside it. The Retiring group can't have
+  group rules, since "Standing is Active" on it would take out every member, and
+  settings offer only groups without them. If D4H deletes the group, nobody is
+  Retiring and Needs attention says so until a team admin picks another.
 - **Retired comes from D4H**: D4H marks the member Retired, or gives them a leave date
   that has passed, or stops listing them. The same test as `Member.current_query/2`. It is read, never stored or set, and wins over
   the rest. A retired member gets no away periods. Group rules and the attendance check
@@ -65,9 +80,12 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 - **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
   an away period. **Active** is the absence of the others and is never stored.
 - The member's **Standing** tab lists away periods, past ones too, with a form to add one
-  and buttons to end one today or delete it. Any team admin can. The header on every
-  member tab badges a standing other than Active: amber for Away until a date, grey for
-  Retired and Not a person. Each change goes in the member's history, from
+  and buttons to end one today or delete it. Any team admin can. With a Retiring group it
+  has **Mark as retiring** or **Remove from Leavers** (the group's own name), one
+  `add_group_member` or `remove_group_member` row through `SetGroupMember`, as the
+  Groups tab sends, and the line "Avery Chen holds 3 items. Retire them in D4H once
+  every item is back." The header on every member tab badges a standing other than
+  Active: amber for Away until a date and Retiring, grey for Retired and Not a person. Each change goes in the member's history, from
   `member_standing_changes`, which keeps the reason and dates.
 - A member away sees the same Away badge on Your membership, as a reminder. Members never
   see the reason, which is `redact: true`. Nobody else who logs in as a member sees an
@@ -82,15 +100,18 @@ Decided 2026-10-18; the issue has the reasons. Retired was added 2026-10-19.
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
 These stay as they were, since a bot cannot attend or be added to an activity, and skip
-members marked not a person with no rule: Add members and a template's groups
-(`InviteMembers`), the home page's counts and
-charts, the missing details filter, and the member list on Take attendance.
+members marked not a person or retiring with no rule (`Member.counted_query/2`): Add
+members and a template's groups (`InviteMembers`), the home page's counts and charts,
+the missing details filter, and the member list on Take attendance. Send reminders names
+retiring members under "Who doesn't get it". Needs attention counts retiring members
+apart: "2 retiring members hold 5 items", and "1 retiring member holds no items", whose
+hint, "Retire them in D4H.", is what stops a member staying Retiring for good.
 
 ## The attendance check
 
 Needs attention lists members who have not attended in a while, so someone can check in
-with them (#247, #366). It is three choices on **Settings → General**, decided
-2026-10-18: no settings page of its own and no live summary.
+with them (#247, #366). It is three choices on **Settings → Members**, beside the
+Retiring group, decided 2026-10-18: no live summary.
 
 - **Members who have not attended**: Off, 30, 60, 90, 180 days, or 1 year
   (`teams.not_seen_days`).

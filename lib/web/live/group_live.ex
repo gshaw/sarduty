@@ -143,8 +143,11 @@ defmodule Web.GroupLive do
       </aside>
       <main class="content-2/3">
         <h2 class="subheading">Group rules</h2>
+        <p :if={retiring_group?(@current_team, @group)} id="retiring-group" class="card">
+          Members of this group are retiring. It cannot have group rules.
+        </p>
         <.rule_summary
-          :if={!@editing}
+          :if={!@editing and !retiring_group?(@current_team, @group)}
           rules={@named_rules}
           referenced={@referenced}
           team={@current_team}
@@ -176,6 +179,10 @@ defmodule Web.GroupLive do
     </div>
     """
   end
+
+  # The team's Retiring group (#514) can't have rules: "Standing is Active" on it would
+  # take out every member. Settings offer only groups without rules for it.
+  defp retiring_group?(team, group), do: team.retiring_d4h_group_id == group.d4h_group_id
 
   defp sidebar_content(assigns) do
     ~H"""
@@ -448,8 +455,13 @@ defmodule Web.GroupLive do
     |> assign(:named_rules, Enum.map(rules, &GroupRules.named(&1, context)))
     |> assign(:referenced, GroupRules.referenced_groups(rules, context))
     |> assign(:editor_rows, editor_rows(rules, context, team, group, flip_warning))
-    |> assign(:options, rule_options(context, group, rules))
     |> assign(:preview, BuildGroupRulePreview.preview(context, team, group))
+    |> assign_options()
+  end
+
+  defp assign_options(socket) do
+    %{context: context, current_team: team, group: group} = socket.assigns
+    assign(socket, :options, rule_options(context, team, group))
   end
 
   # The groups whose rules name this one.
@@ -469,8 +481,10 @@ defmodule Web.GroupLive do
   end
 
   # The add menu: groups and endorsements, then the standings no Standing rule has yet.
-  defp rule_options(context, group, rules) do
-    standings = {"Standing", rules |> standing_taken() |> GroupRules.standing_options()}
+  defp rule_options(context, team, group) do
+    rules = Map.get(context.rules, group.d4h_group_id, [])
+    retiring? = Team.retiring?(team)
+    standings = {"Standing", rules |> standing_taken() |> GroupRules.standing_options(retiring?)}
 
     context
     |> GroupRules.options(group.d4h_group_id)

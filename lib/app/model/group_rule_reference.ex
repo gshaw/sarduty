@@ -14,7 +14,7 @@ defmodule App.Model.GroupRuleReference do
     belongs_to :group_rule, GroupRule
     belongs_to :endorsement, Endorsement
     field :d4h_group_id, :integer
-    field :standing, Ecto.Enum, values: [:active, :away, :not_a_person]
+    field :standing, Ecto.Enum, values: [:active, :away, :retiring, :not_a_person]
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -26,7 +26,7 @@ defmodule App.Model.GroupRuleReference do
     do: insert!(%GroupRuleReference{group_rule_id: rule.id, endorsement_id: endorsement.id})
 
   def add!(%GroupRule{kind: :standing} = rule, standing)
-      when standing in [:active, :away, :not_a_person],
+      when standing in [:active, :away, :retiring, :not_a_person],
       do: insert!(%GroupRuleReference{group_rule_id: rule.id, standing: standing})
 
   defp insert!(reference), do: Repo.insert!(reference, on_conflict: :nothing)

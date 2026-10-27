@@ -182,14 +182,14 @@ and must not be used for it.
 | account                             | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
 | your membership                     | member area, your details, profile, my page    | A member's own page on one team: their activities, qualifications, ID card, letters, and details.    |
 | account settings                    | your settings, profile, preferences            | The page for your own login and settings, the same on every team, such as your maps app.             |
-| team settings                       | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Member logins, and more.               |
+| team settings                       | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Members, and more.                     |
 | team admin                          | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
 | Owner, Editor                       | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |
 | SAR Duty admin                      | superuser, staff, admin (alone, on team pages) | A person who runs SAR Duty and can open every team.                                                  |
 | organization                        | association, parent, society                   | An association of teams, such as BCSARA, with its own space in SAR Duty.                             |
 | organization admin                  | org admin, association admin, administrator    | Someone a SAR Duty admin lets into an organization's space. They see team totals, never people.      |
 | organization settings               | settings (alone, in the menu), org settings    | An organization's settings: General, Organization admins, and Hours tags.                            |
-| member logins                       | member portal, self-service, member access     | A team's setting that lets current members log in for their own ID card and tax credit letters.      |
+| member logins                       | member portal, self-service, member access     | A team setting that lets current members log in to see their year, ID card, and letters.             |
 | activity                            | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |
 | incident                            | callout, call-out, mission, search, task       | An activity responding to a call.                                                                    |
 | exercise                            | training, practice, drill                      | An activity for training.                                                                            |
@@ -234,9 +234,10 @@ and must not be used for it.
 | Take attendance                     | sign-in, check-in, kiosk, door page            | The page where anyone logged in to the team scans members arriving at and leaving one activity.      |
 | arrived, left                       | signed in, signed out, checked in, checked out | A member's scans. "Arriving" and "Leaving" are the modes on the scanner, Take attendance.            |
 | check-in, checked in                | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan: that is "arrived".                   |
-| standing                            | status, availability, state                    | Active, Away, Not a person, or Retired. "Status" is D4H's member status.                             |
+| standing                            | status, availability, state                    | Active, Away, Retiring, Not a person, or Retired. "Status" is D4H's member status.                   |
 | retired                             | departed, left the team, former, inactive      | A member no longer on the team: D4H retired them or no longer lists them. D4H's own word.            |
-| not retired                         | current (as a filter)                          | The Standing filter's default: Active, Away, and Not a person. All adds the retired.                 |
+| retiring                            | departing, outgoing, on the way out            | A member the team is about to retire, in its Retiring group, such as while they return equipment.    |
+| not retired                         | current (as a filter)                          | The Standing filter's default: Active, Away, Retiring, and Not a person. All adds the retired.       |
 | away period                         | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                             | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
 | signed up for                       | registered, going, coming, attending, RSVP     | A member's yes to an activity that hasn't started: Attending in D4H. Hours count once it starts.     |

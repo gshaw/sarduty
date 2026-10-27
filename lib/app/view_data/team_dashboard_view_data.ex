@@ -13,10 +13,12 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
+  alias App.Model.Standing
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
@@ -72,6 +74,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       expiring_count: count_expiring(team, now),
       missing_details_count: count_missing_details(team, now),
       not_seen: not_seen_row(team, now),
+      retiring: retiring_row(team, now),
       group_change_count: count_group_changes(team, now),
       chore_count: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0),
       certificate_count:
@@ -206,7 +209,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
-    |> Member.people_query()
+    |> Member.counted_query(team)
     |> Member.missing_details_query()
     |> Repo.aggregate(:count)
   end
@@ -229,6 +232,34 @@ defmodule App.ViewData.TeamDashboardViewData do
           params: params,
           count: MemberFilterViewModel.count(team, params, now)
         }
+    end
+  end
+
+  # Retiring members (#514), counted apart by whether they still hold the team's items.
+  # Nil for a team with no Retiring group.
+  defp retiring_row(%Team{retiring_d4h_group_id: nil}, _now), do: nil
+
+  defp retiring_row(%Team{retiring_d4h_group_id: id} = team, now) do
+    if Group.get_by(team_id: team.id, d4h_group_id: id) do
+      ids =
+        Member
+        |> where(
+          [m],
+          m.team_id == ^team.id and m.id in subquery(Standing.retiring_ids_query(team))
+        )
+        |> Member.current_query(now)
+        |> Member.people_query()
+        |> select([m], m.id)
+
+      counts = EquipmentItem.held_counts(team, ids)
+
+      %{
+        holding: map_size(counts),
+        items: counts |> Map.values() |> Enum.sum(),
+        clear: length(Repo.all(ids)) - map_size(counts)
+      }
+    else
+      %{missing_group: true}
     end
   end
 
@@ -366,7 +397,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
-    |> Member.people_query()
+    |> Member.counted_query(team)
     |> select([m], %{id: m.id, joined_at: m.joined_at})
     |> Repo.all()
   end

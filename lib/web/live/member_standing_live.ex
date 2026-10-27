@@ -3,23 +3,29 @@ defmodule Web.MemberStandingLive do
 
   import Web.Components.MemberPage
 
+  alias App.Adapter.D4H
   alias App.Model.EquipmentItem
+  alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
+  alias App.Model.Standing
   alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
   alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
+  alias App.Operation.SetGroupMember
   alias App.Repo
   alias App.ViewData.MemberMilestones
   alias Web.Components.NotAPersonSwitch
-  alias Web.Components.Standing
 
-  # A member's standing (#366): Active, away for a dated period, or not a person, and the
-  # team's check-ins with them. SAR Duty's own data, never sent to D4H, and members don't
-  # see it.
+  # A member's standing (#366): Active, away for a dated period, retiring, or not a
+  # person, and the team's check-ins with them. Away periods, check-ins, and Not a person
+  # are SAR Duty's own, never sent. Retiring is the team's Retiring group (#514), so
+  # marking a member retiring adds them to it, through SetGroupMember like the Groups
+  # tab. Members don't see this page.
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
@@ -128,6 +134,33 @@ defmodule Web.MemberStandingLive do
     {:noreply, socket |> put_flash(:info, message) |> load_standing()}
   end
 
+  # No flash: the badge and the line change on the page.
+  def handle_event("mark-retiring", _params, socket) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+
+    case SetGroupMember.add(team, member, socket.assigns.retiring_group, user, DateTime.utc_now()) do
+      :ok -> {:noreply, socket |> clear_flash() |> load_standing()}
+      {:error, text} -> {:noreply, socket |> load_standing() |> put_flash(:error, text)}
+    end
+  end
+
+  def handle_event("unmark-retiring", _params, socket) do
+    %{current_team: team, current_user: user, member: member, retiring_group: group} =
+      socket.assigns
+
+    case GroupMember.get_by(group_id: group.id, member_id: member.id) do
+      # Gone already, say from another tab.
+      nil ->
+        {:noreply, load_standing(socket)}
+
+      group_member ->
+        case SetGroupMember.remove(team, group_member, user, DateTime.utc_now()) do
+          :ok -> {:noreply, socket |> clear_flash() |> load_standing()}
+          {:error, text} -> {:noreply, socket |> load_standing() |> put_flash(:error, text)}
+        end
+    end
+  end
+
   def handle_info({:not_a_person_changed, not_a_person}, socket) do
     member = %{socket.assigns.member | not_a_person: not_a_person}
     {:noreply, socket |> assign(:member, member) |> load_standing()}
@@ -135,15 +168,20 @@ defmodule Web.MemberStandingLive do
 
   defp load_standing(socket) do
     member = socket.assigns.member
+    team = member.team
     now = DateTime.utc_now()
-    today = Service.Period.today(now, member.team.timezone)
+    today = Service.Period.today(now, team.timezone)
     periods = MemberAwayPeriod.for_member(member)
+    retiring? = team |> Standing.retiring_ids() |> MapSet.member?(member.id)
 
     assign(socket,
       today: today,
       periods: periods,
       check_ins: MemberCheckIn.for_member(member),
-      standing: MemberAwayPeriod.standing(member, periods, today, now),
+      standing: Standing.of(member, periods, retiring?, today, now),
+      retiring_group:
+        team.retiring_d4h_group_id &&
+          Group.get_by(team_id: team.id, d4h_group_id: team.retiring_d4h_group_id),
       # An away period moves the years on the team, so they load with it.
       milestones: MemberMilestones.for_member(member, now)
     )
@@ -180,11 +218,45 @@ defmodule Web.MemberStandingLive do
       <section id="standing">
         <h2 class="heading">Standing</h2>
         <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
-        <p class="hint">
-          Active unless the member is away or not a person. SAR Duty keeps it, and
-          nothing here is sent. A member away sees when they're back on Your
-          membership, never the reason.
+        <p :if={@standing == :retiring} id="retiring-items">
+          {held_text(@member, @equipment)}
+          <%= if D4H.records?(@current_team) do %>
+            <.a navigate={~p"/teams/#{@current_team}/members/#{@member.id}/edit"}>Retire them</.a>
+          <% else %>
+            {retire_text(@equipment, @service)}
+          <% end %>
         </p>
+        <p class="hint">
+          Active unless the member is away, retiring, or not a person. A member away sees
+          when they're back on Your membership, never the reason.
+          <span :if={@retiring_group}>
+            Retiring members are in your {@retiring_group.title} group in {@service}. SAR Duty
+            leaves them out of counts, invites, reminders, and Take attendance until they
+            are retired.
+          </span>
+        </p>
+        <.form_actions :if={@retiring_group && @standing not in [:retired, :not_a_person]}>
+          <.button
+            :if={@standing != :retiring}
+            id="mark-retiring"
+            type="button"
+            phx-click="mark-retiring"
+            phx-disable-with="Marking as retiring…"
+            data-confirm={"Add #{@member.name} to #{@retiring_group.title}? SAR Duty leaves them out of counts, invites, reminders, and Take attendance until they are retired."}
+          >
+            Mark as retiring
+          </.button>
+          <.button
+            :if={@standing == :retiring}
+            id="unmark-retiring"
+            type="button"
+            phx-click="unmark-retiring"
+            phx-disable-with="Removing…"
+            data-confirm={"Remove #{@member.name} from #{@retiring_group.title}? SAR Duty counts them again."}
+          >
+            Remove from {@retiring_group.title}
+          </.button>
+        </.form_actions>
       </section>
 
       <section id="away-periods" class="mt-8">
@@ -328,6 +400,19 @@ defmodule Web.MemberStandingLive do
     </.member_page>
     """
   end
+
+  # "Avery Chen holds 3 items." The Equipment tab lists them.
+  defp held_text(member, equipment) do
+    items = equipment |> length() |> Service.Format.count(one: "%d item", many: "%d items")
+
+    if equipment == [],
+      do: "#{member.name} holds no items.",
+      else: "#{member.name} holds #{items}."
+  end
+
+  # D4H refuses to retire a member who holds the team's items (#490), so it waits for them.
+  defp retire_text([], service), do: "Retire them in #{service}."
+  defp retire_text(_equipment, service), do: "Retire them in #{service} once every item is back."
 
   # "away period from Sep 8, 2026 (Parental leave)", for a confirmation that names it.
   defp period_name(period),

@@ -791,4 +791,39 @@ defmodule Web.MemberCollectionLiveTest do
       end
     end)
   end
+
+  test "Retiring: a filter, a tile, and a standing, only with a Retiring group (#514)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    leavers = group_fixture(team, %{title: "Leavers"})
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    retiring = member_fixture(team, %{name: "Avery Retiring"})
+    group_member_fixture(leavers, retiring)
+    # Retiring wins over an away period.
+    away_period_fixture(retiring, Date.add(today, -3), Date.add(today, 30))
+    active = member_fixture(team, %{name: "Aaron Active"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+    refute has_element?(lv, "#member-view-retiring")
+
+    team
+    |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+    |> App.Repo.update!()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+    assert has_element?(lv, "#member-view-retiring", "1")
+    assert has_element?(lv, "#standing-#{retiring.id}", "Retiring")
+    assert has_element?(lv, "#standing-#{active.id}", "Active")
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=retiring")
+
+    assert has_element?(lv, "#last-attended-#{retiring.id}")
+    refute has_element?(lv, "#last-attended-#{active.id}")
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=away")
+
+    refute has_element?(lv, "#last-attended-#{retiring.id}")
+  end
 end
