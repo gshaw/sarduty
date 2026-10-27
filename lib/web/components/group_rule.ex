@@ -90,8 +90,8 @@ defmodule Web.Components.GroupRule do
 
   @doc """
   The rules as one sentence, with each name in bold: "Members of GSAR or MIT Callout who
-  are active." or "Members must hold GSAR and First Aid." Names come from users, so
-  each is escaped.
+  are active.", "Members must hold GSAR and First Aid.", or "Members who are active."
+  Names come from users, so each is escaped.
   """
   def rule_sentence(rules) do
     case Enum.reject(rules, &(&1.names == [])) do
@@ -104,8 +104,15 @@ defmodule Web.Components.GroupRule do
           else: must([first | rest])
 
       rules ->
-        must(rules)
+        must_or_who(rules)
     end
+  end
+
+  # With no In rule, "Members who are active." (#418).
+  defp must_or_who(rules) do
+    if Enum.any?(rules, &(&1.kind == :in)),
+      do: must(rules),
+      else: raw(["Members", rules |> Enum.sort_by(&(&1.kind != :standing)) |> who(), "."])
   end
 
   defp must(rules), do: raw(["Members must ", rules |> phrases(&must_phrase/1) |> all(), "."])

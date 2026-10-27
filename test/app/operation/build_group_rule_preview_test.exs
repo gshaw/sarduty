@@ -205,8 +205,21 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
       assert plan(context([in_rule([{:group, @gsar}])], opts)).add == MapSet.new([10])
     end
 
-    test "a Standing rule alone would add every active member, so it needs an In rule" do
-      assert problems(context([standing([:active])])) == [:no_in_rule]
+    test "a Standing rule alone plans every current member with that standing (#418)" do
+      standings = %{11 => away(~D[2027-03-01]), 12 => :not_a_person}
+      members = [member(10), member(11), member(12), member(13, ~U[2026-01-01 00:00:00Z])]
+
+      opts = [
+        members: members,
+        lists: %{@callout => [11, 13]},
+        override: %{standings: Map.put(standings, 13, :retired)}
+      ]
+
+      ctx = context([standing([:active])], opts)
+
+      assert problems(ctx) == []
+      assert plan(ctx).add == MapSet.new([10])
+      assert plan(ctx).remove |> Map.keys() |> Enum.sort() == [11, 13]
     end
 
     test "the reason names the standing" do
@@ -410,7 +423,7 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
       assert problems(context([])) == [:no_rules]
 
       only_not_in = context([not_in([{:group, @loa}])], lists: %{@callout => [10]})
-      assert problems(only_not_in) == [:no_in_rule]
+      assert problems(only_not_in) == [:only_not_in]
       assert plan(only_not_in) == %{add: MapSet.new(), remove: %{}, expiring: %{}}
     end
 
