@@ -144,6 +144,12 @@ defmodule Web.ActivityLiveTest do
                "Send reminders"
              )
 
+      assert has_element?(
+               lv,
+               ~s{#activity-send-update[href="/teams/#{team.subdomain}/activities/#{activity.id}/updates"]},
+               "Send an update"
+             )
+
       {:ok, lv, _html} =
         lv |> element("#activity-send-reminders") |> render_click() |> follow_redirect(conn)
 

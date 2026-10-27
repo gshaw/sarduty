@@ -18,6 +18,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/templates",
     "/teams/:subdomain/activities/:id/members",
     "/teams/:subdomain/activities/:id/reminders",
+    "/teams/:subdomain/activities/:id/updates",
     "/teams/:subdomain/activities/:id/tags",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/edit",
@@ -204,6 +205,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id/reminders", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/reminders"
+
+  defp path_for("/teams/:subdomain/activities/:id/updates", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/updates"
 
   defp path_for("/teams/:subdomain/activities/:id/tags", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/tags"

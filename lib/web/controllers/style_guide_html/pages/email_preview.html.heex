@@ -1,0 +1,28 @@
+<.shell current={:email_preview}>
+  <h1>Email preview</h1>
+  <p class="lead">An email as members get it, before it's sent.</p>
+
+  <div class="demo">
+    <.email_preview
+      id="email-preview-demo"
+      subject={sample_update_email().subject}
+      html={sample_update_email().html}
+    />
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    On a page that sends an email a team admin writes or picks, such as Send reminders and Send an update, above the send button. It shows the email as it goes, message and all, so nobody sends what they haven't read.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    For an email SAR Duty sends by itself, such as a login code. Nobody chooses to send those.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.email_preview subject=&#123;…&#125; html=&#123;…&#125; /&gt;</code>
+    takes the subject and HTML from the mailer's own preview function, such as <code>ActivityMailer.update_preview/5</code>, so it can't drift from what's sent. Its links go nowhere, and it is inert. It is a phone's width, 375px, so the sender sees whether the email's buttons fit on the first screen. Its text has no colour of its own, so it follows the page, light or dark, as a mail app does.
+  </p>
+</.shell>

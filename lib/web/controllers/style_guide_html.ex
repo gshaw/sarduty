@@ -8,6 +8,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Chart
   import Web.Components.CopyButton
   import Web.Components.D4H
+  import Web.Components.EmailPreview
   import Web.Components.FileDrop
   import Web.Components.FilterBar
   import Web.Components.GroupRule
@@ -26,6 +27,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.StatSwitch
   import Web.Components.Table
 
+  alias App.Mailer.ActivityMailer
   alias Web.StyleGuideHTML.SampleData
 
   # Pages take a suffix, so the Button page doesn't clash with <.button>.
@@ -78,6 +80,7 @@ defmodule Web.StyleGuideHTML do
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
          {:copy_button, "Copy button", "Copies the value before it."},
          {:detail_list, "Detail list", "Key facts about one record."},
+         {:email_preview, "Email preview", "An email as members get it, before it's sent."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
          {:file_drop, "File drop", "Drop, paste, or select a file to upload."},
@@ -395,6 +398,18 @@ defmodule Web.StyleGuideHTML do
   defdelegate chart_map(), to: SampleData
 
   defdelegate letters(), to: SampleData
+
+  # An update as Send an update shows it, from the mailer's own HTML.
+  def sample_update_email do
+    ActivityMailer.update_preview(
+      SampleData.panel_activity(),
+      SampleData.sample_team(),
+      %{name: "Avery Chen", email: "avery@example.com"},
+      "Bring your harness and helmet. We meet at the Murrin Park lot, not the hall.",
+      :signed_up
+    )
+  end
+
   defdelegate panel_activity(), to: SampleData
   defdelegate panel_now(), to: SampleData
   defdelegate panel_counts(), to: SampleData

@@ -16,7 +16,7 @@ defmodule App.Operation.SendReminders do
   import Ecto.Query
 
   alias App.Accounts.User
-  alias App.Mailer.ReminderMailer
+  alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
@@ -176,7 +176,7 @@ defmodule App.Operation.SendReminders do
   defp send_email(%Reminder{team: team} = reminder, last?, now) do
     sender = sender(team, reminder.sent_by_user, now)
 
-    case ReminderMailer.deliver(
+    case ActivityMailer.deliver_reminder(
            reminder.member,
            reminder.activity,
            team,
