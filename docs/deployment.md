@@ -81,7 +81,9 @@ through the sync's ping every 10 minutes, still alerts when the app or Oban is d
 
 - **Litestream** replicates the database continuously to Cloudflare R2
   ([litestream.yml](../litestream.yml)). `bin/server` restores from the replica when the
-  database file is missing, then runs `litestream replicate` in the background.
+  database file is missing, then runs `litestream replicate -exec`, which starts the app
+  as its child. At a deploy Litestream passes Fly's SIGTERM to the app, waits for it to
+  stop, then syncs the last writes before it exits; if the app stops, so does Litestream.
   `App.Repo` waits up to 30 s for SQLite's write lock. Litestream's metrics, such as
   `litestream_sync_seconds`, are in Fly's metrics; a sync that takes 1 s is Litestream
   waiting for the lock. The lock errors of #416 were exqlite's: before 0.42, a connection
