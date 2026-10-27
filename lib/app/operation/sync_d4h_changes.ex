@@ -17,7 +17,8 @@ defmodule App.Operation.SyncD4HChanges do
 
   The whiteboard (#515) is the 14th list. A team with its module off answers 403, which
   reads as an empty list here, never as a rejected key. While the team's whiteboard is
-  off, the sync skips it and the nightly refresh tries again.
+  off, the sync skips it and the nightly refresh tries again. Location bookmarks (#614)
+  are the 15th.
   """
 
   import Ecto.Query
@@ -37,6 +38,7 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Operation.RefreshD4HData.UpsertEquipmentUsages
   alias App.Operation.RefreshD4HData.UpsertGroupMemberships
   alias App.Operation.RefreshD4HData.UpsertGroups
+  alias App.Operation.RefreshD4HData.UpsertLocationBookmarks
   alias App.Operation.RefreshD4HData.UpsertMembers
   alias App.Operation.RefreshD4HData.UpsertQualificationAwards
   alias App.Operation.RefreshD4HData.UpsertQualifications
@@ -48,7 +50,8 @@ defmodule App.Operation.SyncD4HChanges do
 
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
-            member-group-memberships equipment equipment-usages whiteboard)
+            member-group-memberships equipment equipment-usages whiteboard
+            location-bookmarks)
 
   # A D4H team may not have the equipment module (#271).
   @equipment_lists ~w(equipment equipment-usages)
@@ -61,7 +64,7 @@ defmodule App.Operation.SyncD4HChanges do
   # aren't skipped.
   @small_lists ~w(members member-qualifications member-qualification-awards award-documents
                   member-groups member-group-memberships equipment equipment-usages
-                  whiteboard)
+                  whiteboard location-bookmarks)
 
   # Rows that were skipped for an unknown parent come in once the parent does.
   @dependents %{
@@ -225,6 +228,9 @@ defmodule App.Operation.SyncD4HChanges do
   defp fetch_head(d4h, "award-documents"),
     do: D4H.fetch_list_head(d4h, "/documents", D4H.award_documents_params())
 
+  defp fetch_head(d4h, "location-bookmarks"),
+    do: D4H.fetch_list_head(d4h, "/location-bookmarks", D4H.location_bookmark_params())
+
   defp fetch_head(d4h, list), do: D4H.fetch_list_head(d4h, "/" <> list)
 
   @doc """
@@ -382,6 +388,9 @@ defmodule App.Operation.SyncD4HChanges do
     do: UpsertEquipmentUsages.call(d4h, team, progress)
 
   defp fetch_list("whiteboard", d4h, team, _progress), do: UpsertWhiteboardNotes.call(d4h, team)
+
+  defp fetch_list("location-bookmarks", d4h, team, _progress),
+    do: UpsertLocationBookmarks.call(d4h, team)
 
   # D4H ids of the activities saved or marked deleted whose attendance is worth checking.
   defp sync_activities(_d4h, _team, activities, _now) when activities == %{}, do: MapSet.new()

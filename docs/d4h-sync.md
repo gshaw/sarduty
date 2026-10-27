@@ -20,10 +20,10 @@ refresh once a night as the safety net (#163).
   first 401 or 403 stops the syncs until a new key is saved in team settings or a nightly
   refresh gets past the key.
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
-- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 14 lists for
+- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 15 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
   change. If none moved since the last look (`teams.d4h_sync_state`), only the open
-  years' read below follows: 14 small requests and 3 pages.
+  years' read below follows: 15 small requests and 3 pages.
 - Every sync reads the open years' activities whole (#358): this year's, and last
   year's too from January to April ([Service.Period](../lib/service/period.ex)). D4H
   doesn't change an activity's `updatedAt` when its tags change, so the heads never see a
@@ -32,7 +32,7 @@ refresh once a night as the safety net (#163).
   SAR Duty Records changes `updatedAt` with tags, so the heads already see its edits, but
   it takes the same read so both services stay on one path.
 - A small list that moved (members, qualifications, awards, award certificates, groups,
-  memberships, equipment items and usages, whiteboard notes) is fetched whole through the full refresh's own stage, along
+  memberships, equipment items and usages, whiteboard notes, location bookmarks) is fetched whole through the full refresh's own stage, along
   with the lists that point at it, so rows skipped for an unknown parent come in. Their
   stale-row deletes and the member departure rule keep working. Equipment usages come
   after activities, so a new activity's usages aren't skipped.
@@ -154,6 +154,7 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 8. Equipment items, then equipment usages ([equipment.md](equipment.md)). A team without
    D4H's equipment module gets a 403 and has none.
 9. Whiteboard notes; see [Whiteboard](#whiteboard).
+10. Location bookmarks; see [Location bookmarks](#location-bookmarks).
 
 Order matters: attendance needs members and activities, awards need qualifications,
 memberships need groups. A row whose parent is unknown locally is skipped.
@@ -190,6 +191,19 @@ and the Whiteboard page, are copied to `whiteboard_notes` by
   it is asked. While it is off, the sync skips the whiteboard and the nightly refresh
   tries again, so a team that turns the module on gets its notes the next night.
 - SAR Duty Records serves the whiteboard in D4H's shape, always on.
+
+## Location bookmarks
+
+The team's named places (#614), which name places in the activity form's Address list,
+are copied to `location_bookmarks` by
+[UpsertLocationBookmarks](../lib/app/operation/refresh_d4h_data/upsert_location_bookmarks.ex).
+
+- The sync's 15th list head. Every read, the head's too, sends `exclude_org_data=true`:
+  a team names its own places, and its organization's bookmarks are left out.
+- When the head moved, the sync reads every bookmark and replaces the team's copy in
+  one transaction, keyed by D4H id. Archived bookmarks and ones D4H no longer has go.
+- D4H's API only reads bookmarks; a D4H team changes them in D4H. SAR Duty Records
+  serves them in D4H's shape.
 
 ## Where the copy drifts
 

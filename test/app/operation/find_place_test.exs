@@ -1,6 +1,7 @@
 defmodule App.Operation.FindPlaceTest do
   use ExUnit.Case, async: true
 
+  alias App.Model.LocationBookmark
   alias App.Operation.FindPlace
 
   test "a place's text is its name and address, without the country" do
@@ -96,6 +97,50 @@ defmodule App.Operation.FindPlaceTest do
 
       assert places |> FindPlace.match_past("SURREY") |> Enum.map(& &1.text) ==
                ["Pond, Surrey", "Hall, Surrey", "Dam, Surrey"]
+    end
+  end
+
+  describe "name/2 (#614)" do
+    defp bookmark(title, address, coordinate),
+      do: %LocationBookmark{title: title, address: address, coordinate: coordinate}
+
+    test "the nearest bookmark within 150 m names the most used place near it" do
+      places =
+        FindPlace.rank([
+          row("17543 20 Ave", "49.03879,-122.73734", 1),
+          row("17543 20 Ave", "49.03879,-122.73734", 2),
+          row("Fraser Hwy", "49.04050,-122.73734", 3)
+        ])
+
+      bookmarks = [
+        bookmark("!Base", "17543 20 Ave, Surrey", "49.03890,-122.73734"),
+        bookmark("Base yard", "17550 20 Ave, Surrey", "49.04000,-122.73734")
+      ]
+
+      assert [base, yard] = FindPlace.name(places, bookmarks)
+      assert {base.name, base.text, base.count} == {"Base", "17543 20 Ave", 2}
+      assert {yard.name, yard.text, yard.count} == {"Base yard", "Fraser Hwy", 1}
+    end
+
+    test "a bookmark 200 m away names nothing, and follows with no uses" do
+      places = FindPlace.rank([row("Hall", "49.10000,-122.80000", 1)])
+      bookmarks = [bookmark("Office", "", "49.10180,-122.80000"), bookmark("Annex", "", nil)]
+
+      assert [hall, annex, office] = FindPlace.name(places, bookmarks)
+      assert hall.name == nil
+      assert {annex.name, annex.text, annex.pin, annex.count} == {"Annex", "Annex", nil, 0}
+      assert {office.coordinate, office.count} == {"49.10180,-122.80000", 0}
+    end
+
+    test "typing matches a bookmark's title, and before typing it shows only if used" do
+      places =
+        [row("Hall", "49.1,-122.8", 1)]
+        |> FindPlace.rank()
+        |> FindPlace.name([bookmark("Office", "123 Main St", "49.2,-122.8")])
+
+      assert FindPlace.match_past(places, "") == []
+      assert [%{name: "Office"}] = FindPlace.match_past(places, "office")
+      assert [%{name: "Office"}] = FindPlace.match_past(places, "main")
     end
   end
 end

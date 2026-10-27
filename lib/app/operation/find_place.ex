@@ -6,12 +6,14 @@ defmodule App.Operation.FindPlace do
   nothing, so the field still takes what was typed.
 
   The team's own places cost nothing, so they show before any typing. Mapbox bills a
-  session, so it is asked only once a person types.
+  session, so it is asked only once a person types. The team's location bookmarks (#614)
+  name its places, and typing finds a bookmark by its title even when no activity used it.
   """
 
   alias App.Adapter.Mapbox
   alias App.Model.Activity
   alias App.Model.Coordinate
+  alias App.Model.LocationBookmark
   alias App.Model.Team
 
   @past_years 2
@@ -20,12 +22,14 @@ defmodule App.Operation.FindPlace do
 
   @doc """
   The places the team's activities used in the last #{@past_years} years, up to `now`, in
-  rank/1 order. Activities still to come are left out, so a place's last use is past.
+  rank/1 order, named by the team's bookmarks (name/2). Activities still to come are left
+  out, so a place's last use is past.
   """
   def past_places(%Team{} = team, %DateTime{} = now) do
     team
     |> Activity.places(DateTime.add(now, -@past_years * 365, :day), now)
     |> rank()
+    |> name(LocationBookmark.get_all(team))
   end
 
   @doc """
@@ -53,7 +57,8 @@ defmodule App.Operation.FindPlace do
       pin: pin,
       coordinate: pin && Coordinate.to_string(pin, 5),
       count: length(rows),
-      last_at: latest.started_at
+      last_at: latest.started_at,
+      name: nil
     }
   end
 
@@ -74,28 +79,73 @@ defmodule App.Operation.FindPlace do
     end
   end
 
-  # Flat-earth distance, close enough at this scale.
-  defp near?({lat1, lng1}, {lat2, lng2}) do
-    dy = (lat2 - lat1) * 111_320
-    dx = (lng2 - lng1) * 111_320 * :math.cos(lat1 * :math.pi() / 180)
-    dx * dx + dy * dy <= @same_spot_m * @same_spot_m
+  @doc """
+  Names each place with the nearest bookmark within #{@same_spot_m} m: its title, without
+  a leading `!`. A bookmark names the most used place near it only, and keeps that
+  place's text and pin. The bookmarks that name no place follow, A to Z, with no uses,
+  so typing finds them by title.
+  """
+  def name(places, bookmarks) do
+    bookmarks = Enum.map(bookmarks, &build_bookmark/1)
+
+    {named, unused} =
+      Enum.map_reduce(places, bookmarks, fn place, unused ->
+        case nearest(unused, place.pin) do
+          nil -> {place, unused}
+          bookmark -> {%{place | name: bookmark.name}, List.delete(unused, bookmark)}
+        end
+      end)
+
+    named ++ Enum.sort_by(unused, &String.downcase(&1.name))
   end
+
+  defp build_bookmark(%LocationBookmark{} = bookmark) do
+    pin = bookmark |> Activity.pin() |> Coordinate.build()
+    name = LocationBookmark.name(bookmark)
+    address = String.slice(bookmark.address || "", 0, 100)
+
+    %{
+      text: if(address == "", do: name, else: address),
+      pin: pin,
+      coordinate: pin && Coordinate.to_string(pin, 5),
+      count: 0,
+      last_at: nil,
+      name: name
+    }
+  end
+
+  defp nearest(bookmarks, pin) do
+    bookmarks
+    |> Enum.filter(&near?(&1.pin, pin))
+    |> Enum.min_by(&distance_squared(&1.pin, pin), fn -> nil end)
+  end
+
+  defp near?({_, _} = pin, {_, _} = other),
+    do: distance_squared(pin, other) <= @same_spot_m * @same_spot_m
 
   defp near?(_pin, _other), do: false
 
+  # Flat-earth distance in metres, squared, close enough at this scale.
+  defp distance_squared({lat1, lng1}, {lat2, lng2}) do
+    dy = (lat2 - lat1) * 111_320
+    dx = (lng2 - lng1) * 111_320 * :math.cos(lat1 * :math.pi() / 180)
+    dx * dx + dy * dy
+  end
+
   @doc """
   The team's places to show for `text`: before any typing, the #{@past_shown} most used
-  that were used more than once; after, the #{@past_shown} that hold every word typed.
+  that were used more than once; after, the #{@past_shown} whose name and text hold every
+  word typed.
   """
   def match_past(places, text) do
     case (text || "") |> String.downcase() |> String.split() do
       [] -> places |> Enum.filter(&(&1.count > 1)) |> Enum.take(@past_shown)
-      words -> places |> Enum.filter(&holds_all?(&1.text, words)) |> Enum.take(@past_shown)
+      words -> places |> Enum.filter(&holds_all?(&1, words)) |> Enum.take(@past_shown)
     end
   end
 
-  defp holds_all?(text, words) do
-    text = String.downcase(text)
+  defp holds_all?(place, words) do
+    text = String.downcase("#{place.name} #{place.text}")
     Enum.all?(words, &String.contains?(text, &1))
   end
 
