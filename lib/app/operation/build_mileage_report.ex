@@ -2,18 +2,24 @@ defmodule App.Operation.BuildMileageReport do
   @moduledoc """
   The mileage report for one activity: each attending member's round trip by car from
   home to the activity and to the yard. call/3 reads D4H and asks Mapbox for each
-  route; build/3 does the arithmetic.
+  route; build/3 does the arithmetic. call/3 returns `{:error, D4H.Error}` when D4H
+  refuses the key or has no such activity.
   """
 
   alias App.Adapter.D4H
   alias App.Adapter.Mapbox
 
   def call(d4h, activity_id, activity_kind) do
-    {:ok, team} = D4H.fetch_team(d4h)
-    activity = D4H.fetch_activity(d4h, activity_id, activity_kind)
-    team_members = D4H.fetch_team_members(d4h)
-    attendance_records = D4H.fetch_activity_attendance(d4h, activity_id, team_members)
+    with {:ok, team} <- D4H.fetch_team(d4h),
+         {:ok, activity} <- D4H.fetch_activity(d4h, activity_id, activity_kind),
+         team_members = D4H.fetch_team_members(d4h),
+         {:ok, attendance_records} <-
+           D4H.fetch_activity_attendance(d4h, activity_id, team_members) do
+      {:ok, report(attendance_records, activity.coordinate, team.coordinate)}
+    end
+  end
 
+  defp report(attendance_records, activity_coordinate, yard_coordinate) do
     mapbox = Mapbox.build_context()
 
     routes =
@@ -21,11 +27,11 @@ defmodule App.Operation.BuildMileageReport do
       |> attending()
       |> Task.async_stream(fn record ->
         {record.member.d4h_member_id,
-         member_routes(mapbox, record.member.address, activity.coordinate, team.coordinate)}
+         member_routes(mapbox, record.member.address, activity_coordinate, yard_coordinate)}
       end)
       |> Map.new(fn {:ok, route} -> route end)
 
-    build(attendance_records, routes, drive(mapbox, team.coordinate, activity.coordinate))
+    build(attendance_records, routes, drive(mapbox, yard_coordinate, activity_coordinate))
   end
 
   @doc """

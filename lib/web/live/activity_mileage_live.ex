@@ -20,8 +20,14 @@ defmodule Web.ActivityMileageLive do
   end
 
   defp load(socket, activity) do
-    d4h = D4H.build_context_from_team(socket.assigns.current_team)
-    {:ok, team} = D4H.fetch_team(d4h)
+    current_team = socket.assigns.current_team
+    d4h = D4H.build_context_from_team(current_team)
+
+    {team, load_error} =
+      case D4H.fetch_team(d4h) do
+        {:ok, team} -> {team, nil}
+        {:error, error} -> {nil, D4H.error_text(current_team, error)}
+      end
 
     socket =
       assign(
@@ -29,6 +35,7 @@ defmodule Web.ActivityMileageLive do
         page_title: "#{activity.title} · Mileage report",
         mileage_report: nil,
         team: team,
+        load_error: load_error,
         activity: activity
       )
 
@@ -47,7 +54,10 @@ defmodule Web.ActivityMileageLive do
     </.breadcrumbs>
 
     <h1 class="title">{@activity.title}</h1>
-    <%= if @activity.coordinate do %>
+    <.banner :if={@load_error} kind={:danger} title="Mileage report not available" id="load-error">
+      <p>{@load_error}</p>
+    </.banner>
+    <%= if @team && @activity.coordinate do %>
       <dl>
         <dt>Activity latitude and longitude</dt>
         <dd>{Service.Format.coordinate(Coordinate.build(@activity.coordinate), 5)}</dd>
@@ -57,7 +67,8 @@ defmodule Web.ActivityMileageLive do
       <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
         <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
       </p>
-    <% else %>
+    <% end %>
+    <%= if @team && !@activity.coordinate do %>
       <%!-- A Records team's activity form takes an address, not a location, so a Records
            team has nowhere to add one. --%>
       <p>
@@ -71,7 +82,9 @@ defmodule Web.ActivityMileageLive do
         <:loading>
           <.spinner>Calculating driving distances…</.spinner>
         </:loading>
-        <:failed :let={_reason}>The mileage report did not load. Generate it again.</:failed>
+        <:failed :let={reason}>
+          <p id="report-error">{failed_text(@current_team, reason)}</p>
+        </:failed>
 
         <p :if={report.yard_to_activity_km}>
           Yard to activity round trip: {Service.Format.km(report.yard_to_activity_km)}, {Service.Format.duration(
@@ -135,10 +148,16 @@ defmodule Web.ActivityMileageLive do
       |> assign(mileage_report: nil)
       |> assign_async(:mileage_report, fn ->
         d4h = D4H.build_context_from_team(current_team)
-        report = BuildMileageReport.call(d4h, d4h_activity_id, activity_kind)
-        {:ok, %{mileage_report: report}}
+
+        case BuildMileageReport.call(d4h, d4h_activity_id, activity_kind) do
+          {:ok, report} -> {:ok, %{mileage_report: report}}
+          {:error, error} -> {:error, D4H.error_text(current_team, error)}
+        end
       end)
 
     {:noreply, socket}
   end
+
+  defp failed_text(_team, {:error, text}) when is_binary(text), do: text
+  defp failed_text(_team, _reason), do: "The mileage report did not load. Generate it again."
 end
