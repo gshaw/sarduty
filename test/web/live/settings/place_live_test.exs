@@ -24,7 +24,11 @@ defmodule Web.Settings.PlaceLiveTest do
       %{conn: log_in_user(conn, user), team: team}
     end
 
-    test "a team admin adds a place with a pasted pin", %{conn: conn, team: team} do
+    test "a team admin adds a place from one the team's activities used",
+         %{conn: conn, team: team} do
+      for _ <- 1..2,
+          do: activity_fixture(team, %{address: "Hall, Surrey", coordinate: "49.1,-122.8"})
+
       hall = bookmark_json(41, "Hall")
       RecordsStub.stub(fn _method, _path, _body -> {200, hall} end)
 
@@ -33,36 +37,46 @@ defmodule Web.Settings.PlaceLiveTest do
       assert has_element?(lv, "#no-places")
       {:ok, lv, _html} = lv |> element("#place-add") |> render_click() |> follow_redirect(conn)
 
-      html =
-        lv
-        |> form("#place-form", place: %{title: "Hall", place: "", pin: "nowhere"})
-        |> render_submit()
-
-      assert html =~ "Enter a latitude and longitude"
+      html = lv |> form("#place-form", place: %{title: " "}) |> render_submit()
+      assert html =~ "Enter a name."
       refute_received {:records, _, _, _}
+
+      # The same address box as an activity's.
+      lv |> element("#place_place") |> render_focus()
+      assert has_element?(lv, "#place-past-0", "Hall, Surrey")
+      assert has_element?(lv, "#place-past-0", "2 activities")
+      lv |> element("#place-past-0") |> render_click()
+      assert has_element?(lv, "#place-pin", "49.10000, -122.80000")
 
       {:ok, _lv, html} =
         lv
-        |> form("#place-form",
-          place: %{title: " Hall ", place: "12 Main St, Surrey", pin: "49°06'N 122°48'W"}
-        )
+        |> form("#place-form", place: %{title: " Hall "})
         |> render_submit()
         |> follow_redirect(conn, ~p"/teams/#{team}/settings/places")
 
       assert html =~ "Saved Hall."
-
       assert_received {:records, "POST", "/location-bookmarks", body}
 
       assert body == %{
                "title" => "Hall",
                "address" => %{
-                 "street" => "12 Main St, Surrey",
+                 "street" => "Hall, Surrey",
                  "town" => "",
                  "region" => "",
                  "country" => ""
                },
                "location" => %{"latitude" => 49.1, "longitude" => -122.8}
              }
+    end
+
+    test "a pasted latitude and longitude is the pin", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/places/new")
+
+      lv
+      |> form("#place-form", place: %{place: "49°06'N 122°48'W"})
+      |> render_change(%{"_target" => ["place", "place"]})
+
+      assert has_element?(lv, "#place-pin", "49.10000, -122.80000")
     end
 
     test "a team admin moves a place, then deletes it", %{conn: conn, team: team} do
@@ -78,9 +92,9 @@ defmodule Web.Settings.PlaceLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/places/#{place.id}")
 
-      lv
-      |> form("#place-form", place: %{pin: ""})
-      |> render_submit()
+      lv |> element("#place-pin-remove") |> render_click()
+      refute has_element?(lv, "#place-pin")
+      lv |> form("#place-form") |> render_submit()
 
       assert_received {:records, "PATCH", "/location-bookmarks/41", body}
       assert body["title"] == "!Hall"

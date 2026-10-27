@@ -28,7 +28,9 @@ defmodule Web.SlowButtonTest do
   # Slow events sent by something other than a button in the same file.
   @not_buttons %{
     # Sent by the reply buttons in Web.Components.Reply, which this test reads too.
-    {Web.Components.ReplyControl, "reply"} => "lib/web/components/reply.ex"
+    {Web.Components.ReplyControl, "reply"} => "lib/web/components/reply.ex",
+    # Sent by the Mapbox places in Web.Components.Place, which this test reads too.
+    {Web.Components.PlaceBox, "pick_place"} => "lib/web/components/place.ex"
   }
 
   test "every button that sends a slow event says what it is doing" do

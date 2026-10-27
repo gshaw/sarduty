@@ -605,4 +605,35 @@ defmodule Web.StyleGuideHTML.SampleData do
     |> Enum.map(fn {lat, lng, kind, title} -> %{lat: lat, lng: lng, kind: kind, tip: title} end)
     |> ActivityMap.build({720, 400}, padding: 48)
   end
+
+  @doc "A sample address box's form, with these values."
+  def place_form(values \\ %{}) do
+    %{"place" => "", "coordinate" => ""}
+    |> Map.merge(values)
+    |> Phoenix.Component.to_form(as: "demo")
+  end
+
+  @doc "The team's places a sample address box lists before typing."
+  def sample_past_places do
+    [
+      %{
+        text: "17543 20 Ave, Surrey",
+        name: "Base",
+        coordinate: "49.03879,-122.73734",
+        count: 57,
+        last_at: ~U[2026-10-20 02:00:00Z]
+      },
+      %{
+        text: "Campbell Valley Regional Park, Langley",
+        name: nil,
+        coordinate: "49.01732,-122.65634",
+        count: 9,
+        last_at: ~U[2026-09-14 16:00:00Z]
+      }
+    ]
+  end
+
+  @doc "A place Mapbox's Search Box suggests."
+  def sample_mapbox_places,
+    do: [%{id: "sample", name: "Base Camp Coffee", detail: "Langley, British Columbia"}]
 end
