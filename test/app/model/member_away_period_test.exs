@@ -4,7 +4,6 @@ defmodule App.Model.MemberAwayPeriodTest do
   alias App.Model.MemberAwayPeriod
 
   @today ~D[2026-10-18]
-  @now ~U[2026-10-18 18:00:00Z]
 
   defp period(starts_on, ends_on), do: %MemberAwayPeriod{starts_on: starts_on, ends_on: ends_on}
 
