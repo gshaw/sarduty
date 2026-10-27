@@ -1,10 +1,11 @@
-# Litestream expands ${VAR} from the environment; all three are Fly secrets.
+# Litestream expands ${VAR} from the environment: DATABASE_PATH from fly.toml, the
+# rest Fly secrets.
 # Metrics on :9090 for Fly to scrape ([metrics] in fly.toml), so checkpoint times show in
 # Fly's Grafana and its metrics API (#416).
 addr: ":9090"
 
 dbs:
-  - path: /mnt/sarduty/sarduty.db
+  - path: ${DATABASE_PATH}
     replica:
       type: s3
       bucket: sarduty-db

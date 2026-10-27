@@ -1,14 +1,13 @@
 #!/bin/sh
 set -eu
 
-# Restore database from Litestream if it doesn't exist
-if [ ! -f /mnt/sarduty/sarduty.db ]; then
-  litestream restore -if-replica-exists -config /app/litestream.yml /mnt/sarduty/sarduty.db
+# Restore the database from the replica when the volume has none
+if [ ! -f "$DATABASE_PATH" ]; then
+  litestream restore -if-replica-exists -config /app/litestream.yml "$DATABASE_PATH"
 fi
 
-# Start Litestream in the background
-litestream replicate -config /app/litestream.yml &
-
-# Start Phoenix
+# Litestream runs the app as its child: it passes Fly's SIGTERM on, waits for the app
+# to stop, then syncs the last writes to R2 before it exits.
 cd -P -- "$(dirname -- "$0")"
-PHX_SERVER=true exec ./sarduty start
+export PHX_SERVER=true
+exec litestream replicate -config /app/litestream.yml -exec "./sarduty start"
