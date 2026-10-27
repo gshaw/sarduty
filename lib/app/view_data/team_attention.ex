@@ -202,7 +202,7 @@ defmodule App.ViewData.TeamAttention do
       level: :info,
       title: "#{who} #{Format.count(items, one: "%d item", many: "%d items")}",
       detail: nil,
-      action: "Show members"
+      action: "Show items"
     }
   end
 

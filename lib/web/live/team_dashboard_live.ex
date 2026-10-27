@@ -432,8 +432,11 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :retiring_missing}), do: ~p"/teams/#{team}/settings/members"
 
-  defp attention_path(team, %{key: key}) when key in [:retiring, :retiring_clear],
-    do: ~p"/teams/#{team}/members?standing=retiring"
+  defp attention_path(team, %{key: :retiring}),
+    do: ~p"/teams/#{team}/equipment?place=retiring"
+
+  defp attention_path(team, %{key: :retiring_clear}),
+    do: ~p"/teams/#{team}/members?standing=retiring&items=none"
 
   defp attention_path(team, %{key: :group_changes}), do: ~p"/teams/#{team}/groups"
 

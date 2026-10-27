@@ -241,16 +241,7 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   defp retiring_row(%Team{retiring_d4h_group_id: id} = team, now) do
     if Group.get_by(team_id: team.id, d4h_group_id: id) do
-      ids =
-        Member
-        |> where(
-          [m],
-          m.team_id == ^team.id and m.id in subquery(Standing.retiring_ids_query(team))
-        )
-        |> Member.current_query(now)
-        |> Member.people_query()
-        |> select([m], m.id)
-
+      ids = Standing.retiring_member_ids_query(team, now)
       counts = EquipmentItem.held_counts(team, ids)
 
       %{

@@ -19,7 +19,8 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   or a year (`when=2026`, the default this year). It replaced Year, so old year links
   open the same list.
 - **Standing** filters by [standing](#standing): Not retired (the default, `current`),
-  Active, Away, Retiring (with a Retiring group), Not a person, Retired, or All. It was Current until 2026-10-20, which
+  Active, Away, Retiring (with a Retiring group), Retired, Not a person, or All: a
+  member's path, then Not a person, which is no step on it. It was Current until 2026-10-20, which
   people mixed up with Active. It replaced Status, and old
   `status=` links are not kept (decided 2026-10-19). Its column says "Away until Mar 1"
   and sorts by that day, with retired members last.
@@ -66,6 +67,10 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   group rules, since "Standing is Active" on it would take out every member, and
   settings offer only groups without them. If D4H deletes the group, nobody is
   Retiring and Needs attention says so until a team admin picks another.
+- **Items** (`items=held` or `none`, behind More filters, team admins only) keeps the
+  members who hold any of the team's equipment, retired items too, or those who hold
+  none. Needs attention's "2 retiring members hold no items" opens
+  `standing=retiring&items=none`, the members to retire now.
 - **Retired comes from D4H**: D4H marks the member Retired, or gives them a leave date
   that has passed, or stops listing them. The same test as `Member.current_query/2`. It is read, never stored or set, and wins over
   the rest. A retired member gets no away periods. Group rules and the attendance check

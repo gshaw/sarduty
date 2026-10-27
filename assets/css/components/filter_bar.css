@@ -39,7 +39,7 @@
   /* Wide screens: less common menus wait behind More filters until one is on (more). */
   .filter-menu.is-more { display: none; }
   .filter-bar.is-more-open .filter-menu.is-more { display: inline-flex; }
-  .filter-bar-more { min-height: 36px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .filter-bar-more, .table-actions .btn { min-height: 36px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
   .filter-bar-more[aria-expanded="true"] .icon-chevron-down { rotate: 180deg; }
 
   .filter-bar-count { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--primary); color: var(--on-fill); font-size: var(--fs-xs); line-height: var(--lh-xs); text-align: center; }
@@ -74,6 +74,13 @@
   @media (width < 40rem) and (pointer: coarse) {
     .filter-bar-chips .chip { min-height: 44px; }
   }
+
+  /* Actions on a list's ticked rows, such as Add to group: sized like the bar above. A
+     touch screen still gets 44px buttons. */
+  .table-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+  .table-actions .combobox { width: 14rem; }
+  .table-actions .combobox-input input { min-height: 36px; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  @media (pointer: coarse) { .table-actions :is(.btn, .combobox-input input) { min-height: 44px; } }
 
   /* The line under the bar: the count and Clear filters, and which rows a page shows. */
   .table-summary {

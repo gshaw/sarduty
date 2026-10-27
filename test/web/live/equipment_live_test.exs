@@ -61,10 +61,10 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#equipment-view-all[aria-current]")
   end
 
-  test "the Place chip removes the place and keeps the search (#350)", ctx do
+  test "the Where chip removes the place and keeps the search (#350)", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=Yard&q=radio")
 
-    assert has_element?(lv, "#equipment-filter .filter-menu.is-on", "Place")
+    assert has_element?(lv, "#equipment-filter .filter-menu.is-on", "Where")
     lv |> element(".filter-bar-chips a", "Yard") |> render_click()
 
     path = assert_patch(lv)
@@ -73,7 +73,7 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#item-#{ctx.radio.id}")
   end
 
-  test "Place takes a member: their items under their name, with no Where (#490)", ctx do
+  test "Where takes a member: their items under their name, with no Where column (#490)", ctx do
     sam = member_fixture(ctx.team, %{name: "Sam Rivera"})
     gps = equipment_item_fixture(ctx.team, %{title: "GPS 5", member_id: sam.id})
     equipment_item_fixture(ctx.team, %{title: "Pager 31", member_id: sam.id})
@@ -82,13 +82,57 @@ defmodule Web.EquipmentLiveTest do
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=member-#{sam.id}")
 
-    assert has_element?(lv, ~s{#form_place-select option[value="member-#{sam.id}"]}, "Sam Rivera")
+    assert has_element?(
+             lv,
+             ~s{#form_place-select option[value="member-#{sam.id}"]},
+             "With Sam Rivera"
+           )
+
     assert has_element?(lv, ~s{#form_place-select option[value="With members"]})
     assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 2")
     assert has_element?(lv, "#equipment-sam-rivera-#{gps.id}", "GPS 5")
     refute has_element?(lv, "#place-sam-rivera th", "Where")
     refute has_element?(lv, "#place-with-members")
     refute has_element?(lv, "td", "Radio 22")
+  end
+
+  test "Where takes retiring members: a group for each who holds something (#514)", ctx do
+    leavers = group_fixture(ctx.team, %{title: "Leavers"})
+
+    team =
+      ctx.team
+      |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+      |> App.Repo.update!()
+
+    sam = member_fixture(team, %{name: "Sam Rivera"})
+    ty = member_fixture(team, %{name: "Ty Wong"})
+    staying = member_fixture(team, %{name: "Al Staying"})
+    for member <- [sam, ty], do: group_member_fixture(leavers, member)
+    kit = equipment_item_fixture(team, %{title: "First aid kit 6", member_id: sam.id})
+
+    splint =
+      equipment_item_fixture(team, %{title: "Splint", d4h_container_id: kit.d4h_equipment_id})
+
+    gps = equipment_item_fixture(team, %{title: "GPS 5", member_id: ty.id, status: "retired"})
+    equipment_item_fixture(team, %{title: "Radio 22", member_id: staying.id})
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/equipment?place=retiring")
+
+    assert has_element?(
+             lv,
+             ~s{#form_place-select option[value="retiring"]},
+             "With retiring members"
+           )
+
+    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 2")
+    assert has_element?(lv, "#equipment-sam-rivera-#{splint.id}", "Splint")
+    assert has_element?(lv, "#equipment-ty-wong-#{gps.id}", "GPS 5")
+    refute has_element?(lv, "td", "Radio 22")
+  end
+
+  test "Where offers retiring members only with a Retiring group", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
+    refute has_element?(lv, ~s{#form_place-select option[value="retiring"]})
   end
 
   test "the browse page keeps one With members row", ctx do
