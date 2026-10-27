@@ -37,8 +37,6 @@ defmodule Web.Search do
   def not_searched,
     do: %{
       Web.TaxCreditLetterLive => "A letter holds personal text; find the member instead.",
-      Web.ProposedChangeLive =>
-        "A proposal has no name of its own; its list is in the side navigation.",
       Web.Settings.ChoreCategoryFormLive => "A setting, found from Team settings."
     }
 

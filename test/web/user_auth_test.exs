@@ -251,7 +251,7 @@ defmodule Web.UserAuthTest do
       assert socket.assigns.current_team.id == team.id
       assert socket.assigns.current_member.id == member.id
       refute socket.assigns.team_admin?
-      assert socket.assigns.proposed_change_count == 0
+      assert socket.assigns.chore_count == 0
       refute Accounts.get_user!(user.id).last_seen_at
     end
 

@@ -1,9 +1,8 @@
 # MCP endpoint
 
 A team's team admins can connect their own AI agent to SAR Duty, which reads
-allowlisted views of the team's data (#28). Its writes are proposals of attendance
-changes, tags, and chores, which wait for a team admin to send them. A team admin turns
-it on in team settings. The first use case was a quarterly check of each member's hours
+allowlisted views of the team's data (#28). It only reads (#627). A team admin turns it
+on in team settings. The first use case was a quarterly check of each member's hours
 by activity tag against the team's attendance policy; #595 widened the tools to general
 work, such as sign-in sheets, hours tags before letter season, and chores. A policy lives
 in the agent's prompt, not in SAR Duty.
@@ -52,13 +51,14 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 [App.MCP.Tools](../lib/app/mcp/tools.ex). Adding a tool is a module with the
 [App.MCP.Tool](../lib/app/mcp/tool.ex) behaviour and a line in that list.
 
-- **Read-only, except for proposals.** No tool writes to D4H. Three tools save a change
-  set that waits for a team admin under "Proposed changes": `propose_attendance_changes`
-  (#216), `propose_activity_tags`, and `propose_chores` (#595). They implement
-  `call_as/4`, which also gets the token's user, and `read_only?/0` returning false, so
-  `tools/list` drops their `readOnlyHint`. A test fails if anything in `lib/app/mcp/`
-  mentions `ApplyChangeSet`, the D4H adapter, `SendChores`, or `SaveChore`. See
-  [change-sets.md](change-sets.md).
+- **Read-only** (#627). Every tool's `readOnlyHint` is true, and a test fails if anything
+  in `lib/app/mcp/` mentions `ChangeSet`, a `Repo` write, the D4H adapter, `SendChores`,
+  or `SaveChore`. Until 2026-10-26, three `propose_` tools saved change sets that waited
+  for a team admin under Proposed changes (#216, #595). They came out: each kind needed
+  its own wording, checks, and failures, chores needed a second approval, and with more
+  kinds the queue would be approved without being read. Writes, if they come back, start
+  from a real case and a page that does the job, which an agent can link to pre-filled;
+  a person does the write there.
 - **History.** `member_history` and `activity_history` return the same entries as the
   history pages ([change-history.md](change-history.md)), without the account email of
   whoever sent a change, and without standing changes: an away period's reason and dates

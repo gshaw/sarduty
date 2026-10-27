@@ -6,7 +6,6 @@ defmodule Web.MCPControllerTest do
 
   alias App.AccountsFixtures
   alias App.MCP.Tools
-  alias App.Model.ChangeSet
   alias App.Model.D4HChange
   alias App.Model.MCPCall
   alias App.Model.MCPToken
@@ -283,50 +282,6 @@ defmodule Web.MCPControllerTest do
     end
   end
 
-  describe "proposing changes" do
-    test "saves a proposal for a team admin and never calls D4H", ctx do
-      activity = activity_fixture(ctx.team, %{title: "Rope rescue"})
-      member = member_fixture(ctx.team, %{name: "Mei Chen"})
-
-      # No Req.Test stub: a call to D4H would fail the test.
-      {result, text} =
-        call_tool(ctx.conn, ctx.token, ctx.team, "propose_attendance_changes", %{
-          "activity_id" => activity.id,
-          "summary" => "Sign-in sheet",
-          "changes" => [
-            %{"member_id" => member.id, "status" => "attended", "reason" => "Row 1"},
-            %{"member_id" => 999_999, "status" => "attended"}
-          ]
-        })
-
-      refute result["isError"]
-      output = Jason.decode!(text)
-      assert output["proposed"] == 1
-      assert output["left_out"] == ["No member 999999 on this team."]
-      assert output["review_url"] =~ "/teams/#{ctx.team.subdomain}/proposed-changes/"
-
-      [change_set] = ChangeSet.get_waiting(ctx.team.id)
-      assert change_set.source == :agent
-      assert change_set.proposed_by_user_id == ctx.user.id
-      assert change_set.applied_at == nil
-    end
-
-    test "can't propose for another team's activity", ctx do
-      other = activity_fixture(team_fixture())
-
-      {result, text} =
-        call_tool(ctx.conn, ctx.token, ctx.team, "propose_attendance_changes", %{
-          "activity_id" => other.id,
-          "summary" => "x",
-          "changes" => [%{"member_id" => 1, "status" => "attended"}]
-        })
-
-      assert result["isError"]
-      assert text =~ "No activity #{other.id} on this team."
-      assert ChangeSet.count_waiting(ctx.team.id) == 0
-    end
-  end
-
   describe "the protocol" do
     test "initialize offers tools and agrees on a version", %{conn: conn, team: team} = ctx do
       conn =
@@ -344,20 +299,16 @@ defmodule Web.MCPControllerTest do
       assert json_response(conn, 200)["result"]["protocolVersion"] == "2025-11-25"
     end
 
-    test "tools/list lists the tools, and marks the one that proposes", ctx do
+    test "tools/list lists the tools, every one read-only", ctx do
       conn = rpc(ctx.conn, ctx.token, ctx.team.subdomain, "tools/list")
       tools = json_response(conn, 200)["result"]["tools"]
 
       assert Enum.map(tools, & &1["name"]) ==
                ~w(get_team needs_attention list_members attendance_summary tax_credit_hours
                   list_activities list_attendance list_qualifications list_chores member_history
-                  activity_history propose_attendance_changes propose_activity_tags
-                  propose_chores)
+                  activity_history)
 
-      read_only = for t <- tools, t["annotations"]["readOnlyHint"], do: t["name"]
-      refute "propose_attendance_changes" in read_only
-      refute "propose_activity_tags" in read_only
-      assert length(read_only) == 11
+      assert Enum.all?(tools, & &1["annotations"]["readOnlyHint"])
     end
 
     test "notifications/initialized gets 202 and no body", %{conn: conn, team: team} = ctx do

@@ -247,8 +247,6 @@ defmodule Web.Router do
       live "/teams/:subdomain/groups/:id/edit", TitledRecordFormLive, :edit_group
       live "/teams/:subdomain/groups/:id/review", GroupReviewLive
       live "/teams/:subdomain/groups/:id/rules/:rule_id", GroupRuleLive
-      live "/teams/:subdomain/proposed-changes", ProposedChangeCollectionLive
-      live "/teams/:subdomain/proposed-changes/:id", ProposedChangeLive
       live "/teams/:subdomain/qualifications", QualificationCollectionLive
       live "/teams/:subdomain/endorsements", EndorsementCollectionLive
       live "/teams/:subdomain/endorsements/new", EndorsementFormLive, :new

@@ -42,15 +42,9 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
   reason the member sees, in any status, and links its D4H activity.
-- **An AI agent can propose chores** for members through the MCP (#595), such as from
-  a work party's sign-in sheet. They wait under Proposed changes, where a team admin
-  adds them in one step, and members never see them before that. A proposed chore
-  matching one logged already starts cleared. Adding makes each a waiting chore, as if
-  the member had logged it, for a team admin to accept on the Chores page. Every chore
-  waits for that second step: an admin who has an agent propose their own chores should
-  not be the one who accepts them (2026-10-26). Until then, adding accepted and sent
-  them at once. The chore keeps its proposal row (`chores.change_set_row_id`), and its
-  page says it was proposed by an AI agent.
+- **AI agents proposed chores** through the MCP from #595 until it became read-only
+  (#627, 2026-10-26). A chore added that way keeps its proposal row
+  (`chores.change_set_row_id`), and its page says it was proposed by an AI agent.
 - **The Chores page splits chores by status**, Waiting, Accepted, and Declined, opening
   on Waiting. Accepted lists each D4H activity, newest month first, with its chores
   under it, so every chore stays one click from its page. Before this, an accepted chore

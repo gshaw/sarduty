@@ -4,8 +4,6 @@ defmodule App.MCP.Tools do
   App.MCP.Tool behaviour and a line here.
   """
 
-  alias App.MCP.Tool
-
   @tools [
     App.MCP.Tool.GetTeam,
     App.MCP.Tool.NeedsAttention,
@@ -17,10 +15,7 @@ defmodule App.MCP.Tools do
     App.MCP.Tool.ListQualifications,
     App.MCP.Tool.ListChores,
     App.MCP.Tool.MemberHistory,
-    App.MCP.Tool.ActivityHistory,
-    App.MCP.Tool.ProposeAttendanceChanges,
-    App.MCP.Tool.ProposeActivityTags,
-    App.MCP.Tool.ProposeChores
+    App.MCP.Tool.ActivityHistory
   ]
 
   def all, do: @tools
@@ -37,7 +32,7 @@ defmodule App.MCP.Tools do
         "description" => tool.description(),
         "inputSchema" => tool.input_schema(),
         "annotations" => %{
-          "readOnlyHint" => Tool.read_only?(tool),
+          "readOnlyHint" => true,
           "destructiveHint" => false,
           "openWorldHint" => false
         }

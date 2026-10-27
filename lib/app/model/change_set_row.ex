@@ -54,8 +54,8 @@ defmodule App.Model.ChangeSetRow do
         :create_whiteboard_note,
         :update_whiteboard_note,
         :delete_whiteboard_note,
-        # SAR Duty's own row, not a D4H write: a chore an AI agent proposes (#595).
-        # ApplyProposedChangeSet makes the chore; the chore send takes it to D4H.
+        # Only on old rows: a chore an AI agent proposed (#595), before the MCP became
+        # read-only (#627). Nothing applies one now.
         :add_chore
       ]
 

@@ -296,7 +296,7 @@ hidden data makes people suspicious).
   to members. A team admin also sees one D4H has deleted, under a banner; a member gets
   a 404. D4H's `published` means locked, not visible, so it plays no part.
 - **The list** is the team admin's: the same filters, columns, tags, hours, Draft, and
-  default. Team admins also get Add activity and the Templates and Proposed changes tabs.
+  default. Team admins also get Add activity and the Templates tab.
 - **An activity's page** is the team admin's: under the title, the day and time and the
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
   reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,

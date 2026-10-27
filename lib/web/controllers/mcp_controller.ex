@@ -126,9 +126,8 @@ defmodule Web.MCPController do
        "serverInfo" => %{"name" => "sarduty", "title" => "SAR Duty", "version" => "1.0.0"},
        "instructions" =>
          "Data for #{team.name}, copied from #{service} by SAR Duty, up to 10 minutes " <>
-           "behind. Times are in #{team.timezone}. Start with get_team. Tools only read, " <>
-           "except propose_ tools, which save a proposal that a team admin reviews and " <>
-           "sends in SAR Duty. Nothing here changes #{service} by itself."
+           "behind. Times are in #{team.timezone}. Start with get_team. Tools only read: " <>
+           "nothing here changes SAR Duty or #{service}."
      }}
   end
 

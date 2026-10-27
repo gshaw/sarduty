@@ -10,7 +10,7 @@ defmodule Web.ActivityCollectionLive do
   end
 
   # Members open it too (#406) and get the same list, filters, and default as a team
-  # admin. Team admins also get Add activity and the Templates and Proposed changes tabs.
+  # admin. Team admins also get Add activity and the Templates tab.
   def handle_params(params, _uri, socket) do
     case ActivityFilterViewModel.validate(params) do
       # credo:disable-for-next-line

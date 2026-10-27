@@ -11,7 +11,6 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
   alias App.Model.Certificate
-  alias App.Model.ChangeSet
   alias App.Model.Chore
   alias App.Model.ChoreEvent
   alias App.Model.Group
@@ -74,7 +73,6 @@ defmodule App.ViewData.TeamDashboardViewData do
       missing_details_count: count_missing_details(team, now),
       not_seen: not_seen_row(team, now),
       group_change_count: count_group_changes(team, now),
-      proposed_change_count: ChangeSet.count_waiting(team.id),
       chore_count: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0),
       certificate_count:
         if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0),

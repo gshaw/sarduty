@@ -5,7 +5,6 @@ defmodule Web.TeamScopingTest do
 
   import App.DataFixtures
 
-  alias App.Model.ChangeSet
   alias App.Repo
 
   @templates [
@@ -54,7 +53,6 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/groups/:id/edit",
     "/teams/:subdomain/groups/:id/review",
     "/teams/:subdomain/groups/:id/rules/:rule_id",
-    "/teams/:subdomain/proposed-changes/:id",
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/qualifications/:id/edit",
     "/teams/:subdomain/tax-credit-letters/:id",
@@ -93,12 +91,7 @@ defmodule Web.TeamScopingTest do
       whiteboard_note: whiteboard_note_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
-      certificate: certificate_fixture(member, qualification_fixture(other_team)),
-      change_set:
-        ChangeSet.propose!(
-          %ChangeSet{team_id: other_team.id, source: :agent},
-          []
-        )
+      certificate: certificate_fixture(member, qualification_fixture(other_team))
     }
 
     %{conn: log_in_user(conn, user), team: team, other: other}
@@ -273,9 +266,6 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/groups/:id/review", s, o),
     do: ~p"/teams/#{s}/groups/#{o.group.id}/review"
-
-  defp path_for("/teams/:subdomain/proposed-changes/:id", s, o),
-    do: ~p"/teams/#{s}/proposed-changes/#{o.change_set.id}"
 
   defp path_for("/teams/:subdomain/qualifications/:id", s, o),
     do: ~p"/teams/#{s}/qualifications/#{o.qualification.id}"

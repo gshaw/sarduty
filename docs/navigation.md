@@ -48,7 +48,7 @@ is left out, and so is its divider.
 | ------- | -------------------------------------------------------- | ----------- |
 | 1       | Dashboard, Whiteboard                                    | everyone    |
 | 2       | Activities, Take attendance                              | everyone    |
-| 2       | Templates, Proposed changes                              | team admins |
+| 2       | Templates                                                | team admins |
 | 3       | Members, Milestones                                      | everyone    |
 | 3       | Groups, Qualifications, Endorsements, Tax credit letters | team admins |
 | 4       | Equipment, Chores                                        | team admins |
@@ -66,11 +66,12 @@ is left out, and so is its divider.
   (#475). Not only while an activity is on: links that come and go with the clock make
   the menu harder to learn. It opens `/teams/:subdomain/take-attendance`, which goes
   straight to the scanner when one activity is on.
-- **Templates and Proposed changes are links of their own**, after Activities, so a team
-  admin finds them without opening Activities first. Proposed changes shows only when the
-  team has MCP on, or something waits. It counts the AI agent change sets that wait for a
-  team admin in an amber tag (`ChangeSet.count_waiting/1`, assigned by the team pages'
-  hook), and on a phone the Menu button gets an amber dot while any link has a count.
+- **Templates is a link of its own**, after Activities, so a team admin finds it without
+  opening Activities first. Proposed changes sat beside it until the MCP became read-only
+  (#627).
+- **Counts.** Chores and Certificates count what waits for a team admin in an amber tag
+  (assigned by the team pages' hook), and on a phone the Menu button gets an amber dot
+  while any link has a count.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)):
   General, Team admins, Member logins, Hours tags, and MCP tokens once a SAR Duty admin

@@ -20,7 +20,6 @@ defmodule App.ViewData.TeamAttentionTest do
         missing_details_count: 0,
         not_seen: nil,
         group_change_count: 0,
-        proposed_change_count: 0,
         chore_count: 0,
         certificate_count: 0,
         chores_to_send: 0,
@@ -196,18 +195,16 @@ defmodule App.ViewData.TeamAttentionTest do
         expiring_count: 1,
         missing_details_count: 1,
         group_change_count: 1,
-        proposed_change_count: 1,
         letters: %{year: 2025, count: 1}
       }
 
-    assert everything |> items(@march) |> length() == 7
+    assert everything |> items(@march) |> length() == 6
   end
 
   test "a team on SAR Duty Records hears about Records, not D4H" do
     attrs = %{
       service: :records,
       refresh: %{state: :key_rejected},
-      proposed_change_count: 2,
       missing_details_count: 3,
       draft_count: 2,
       expiring_count: 1

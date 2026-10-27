@@ -14,8 +14,8 @@ defmodule App.MCP.Tool.NeedsAttention do
   @impl App.MCP.Tool
   def description do
     "What needs a team admin's attention now, as the team home lists it. Each item has a " <>
-      "key, level (warning or info), title, and detail. Keys include proposed_changes, " <>
-      "chores, attendance_to_send, untagged, drafts, expiring, not_seen, and letters. " <>
+      "key, level (warning or info), title, and detail. Keys include chores, " <>
+      "attendance_to_send, untagged, drafts, expiring, not_seen, and letters. " <>
       "untagged and letters items give their year, and attendance_to_send gives the oldest " <>
       "activity's id. An empty list means nothing is waiting. Start here to find work."
   end

@@ -17,8 +17,8 @@ defmodule Web.Admin.MCPLive do
     <h1 class="title">MCP calls</h1>
     <p class="mb-4 max-w-3xl">
       Every tool call agents made. A SAR Duty admin turns MCP on or off on each team's page.
-      Agents read members, attendance hours, activities, qualifications, and change history,
-      and can propose attendance changes for a team admin to send. See <code>docs/mcp.md</code>.
+      Agents only read: members, attendance hours, activities, qualifications, chores, and
+      change history. See <code>docs/mcp.md</code>.
     </p>
     <.table id="mcp-calls" rows={@calls} row_id={&"mcp-call-#{&1.id}"} class="table-striped">
       <:col :let={call} label="When (UTC)" class="whitespace-nowrap">
