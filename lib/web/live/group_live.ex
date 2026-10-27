@@ -18,7 +18,7 @@ defmodule Web.GroupLive do
   alias App.ViewData.GroupRules
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :editing, false)}
+    {:ok, assign(socket, editing: false, rule_kind: :in)}
   end
 
   def handle_params(params, _uri, socket) do
@@ -104,9 +104,13 @@ defmodule Web.GroupLive do
 
   def handle_event("add-rule", %{"kind" => kind, "target" => value}, socket) do
     %{group: group, current_team: team} = socket.assigns
-    kind = Map.fetch!(%{"in" => :in, "not_in" => :not_in, "standing" => :standing}, kind)
-    {:noreply, add_rule(socket, kind, GroupRules.find_target!(team.id, value), group)}
+    target = GroupRules.find_target!(team.id, value)
+    {:noreply, add_rule(socket, rule_kind(kind), target, group)}
   end
+
+  # The second menu follows the first: groups and endorsements, or standings.
+  def handle_event("rule-kind", %{"kind" => kind}, socket),
+    do: {:noreply, socket |> assign(:rule_kind, rule_kind(kind)) |> assign_options()}
 
   def handle_event("add-standing-active", _params, socket),
     do: {:noreply, add_rule(socket, :standing, {:standing, :active}, socket.assigns.group)}
@@ -115,6 +119,9 @@ defmodule Web.GroupLive do
     socket.assigns.group |> GroupRule.find!(id) |> GroupRule.delete!()
     {:noreply, reload(socket)}
   end
+
+  defp rule_kind(kind),
+    do: Map.fetch!(%{"in" => :in, "not_in" => :not_in, "standing" => :standing}, kind)
 
   defp add_rule(socket, kind, target, group) do
     case AddGroupRule.call(group, kind, target) do
@@ -156,6 +163,7 @@ defmodule Web.GroupLive do
           :if={@editing}
           rows={@editor_rows}
           options={@options}
+          kind={@rule_kind}
           new_path={~p"/teams/#{@current_team}/endorsements/new?group_id=#{@group.id}"}
           add_confirm={@rules == [] && @flip_warning[:first_rule]}
           suggest_standing={GroupRules.suggest_standing?(@rules)}
@@ -460,8 +468,8 @@ defmodule Web.GroupLive do
   end
 
   defp assign_options(socket) do
-    %{context: context, current_team: team, group: group} = socket.assigns
-    assign(socket, :options, rule_options(context, team, group))
+    %{context: context, current_team: team, group: group, rule_kind: kind} = socket.assigns
+    assign(socket, :options, rule_options(kind, context, team, group))
   end
 
   # The groups whose rules name this one.
@@ -480,17 +488,15 @@ defmodule Web.GroupLive do
         do: {change, warning}
   end
 
-  # The add menu: groups and endorsements, then the standings no Standing rule has yet.
-  defp rule_options(context, team, group) do
+  # The add menu for the kind picked: the standings no Standing rule has yet, or groups
+  # and endorsements.
+  defp rule_options(:standing, context, team, group) do
     rules = Map.get(context.rules, group.d4h_group_id, [])
-    retiring? = Team.retiring?(team)
-    standings = {"Standing", rules |> standing_taken() |> GroupRules.standing_options(retiring?)}
-
-    context
-    |> GroupRules.options(group.d4h_group_id)
-    |> Enum.concat([standings])
-    |> Enum.reject(&(elem(&1, 1) == []))
+    rules |> standing_taken() |> GroupRules.standing_options(Team.retiring?(team))
   end
+
+  defp rule_options(_kind, context, _team, group),
+    do: GroupRules.options(context, group.d4h_group_id)
 
   defp standing_taken(rules),
     do: for(%{kind: :standing, targets: targets} <- rules, target <- targets, do: target)
