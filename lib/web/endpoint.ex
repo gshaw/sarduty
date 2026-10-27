@@ -16,6 +16,9 @@ defmodule Web.Endpoint do
     websocket: [connect_info: [:user_agent, session: @session_options]],
     longpoll: [connect_info: [:user_agent, session: @session_options]]
 
+  # Fly's check, before anything that logs, reads the session, or checks the host.
+  plug Web.Health
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest
