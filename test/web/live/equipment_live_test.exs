@@ -124,10 +124,21 @@ defmodule Web.EquipmentLiveTest do
              "With retiring members"
            )
 
-    assert has_element?(lv, "#place-sam-rivera h2", "Sam Rivera · 2")
-    assert has_element?(lv, "#equipment-sam-rivera-#{splint.id}", "Splint")
-    assert has_element?(lv, "#equipment-ty-wong-#{gps.id}", "GPS 5")
+    assert has_element?(lv, "#equipment-holders-member-#{sam.id} th", "Sam Rivera · 2")
+    assert has_element?(lv, "#equipment-holders-member-#{sam.id} #item-#{splint.id}", "Splint")
+    assert has_element?(lv, "#equipment-holders-member-#{ty.id} #item-#{gps.id}", "GPS 5")
     refute has_element?(lv, "td", "Radio 22")
+  end
+
+  test "With members is one table, a group per member (#514)", ctx do
+    sam = member_fixture(ctx.team, %{name: "Sam Rivera"})
+    gps = equipment_item_fixture(ctx.team, %{title: "GPS 5", member_id: sam.id})
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=With+members")
+
+    assert has_element?(lv, "#equipment-holders-member-#{sam.id} th", "Sam Rivera · 1")
+    assert has_element?(lv, "#equipment-holders-member-#{sam.id} #item-#{gps.id}")
+    refute has_element?(lv, "#item-#{ctx.radio.id}")
   end
 
   test "Where offers retiring members only with a Retiring group", ctx do

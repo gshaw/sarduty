@@ -135,12 +135,12 @@ defmodule App.ViewData.EquipmentListTest do
     assert [_yard, {"With members", _}, {"With retiring members", "retiring"} | _rest] =
              EquipmentList.place_options(rows, true)
 
-    held = %{9 => "Ty Wong", 5 => "Sam Ortiz"}
+    held = %{9 => 2, 5 => 9}
 
-    assert [{"Sam Ortiz", [%{item: %{id: 5}}]}, {"Ty Wong", [%{item: %{id: 9}}]}] =
+    assert [{9, "Sam Ortiz", [%{item: %{id: 5}}]}, {2, "Ty Wong", [%{item: %{id: 9}}]}] =
              rows
              |> EquipmentList.narrow("retiring", "", held)
-             |> EquipmentList.group_held(held)
+             |> EquipmentList.group_by_holder()
   end
 
   test "a member who holds nothing, or a bad member id, keeps no rows" do

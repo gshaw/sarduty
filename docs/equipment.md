@@ -95,8 +95,8 @@ D4H can put an item's location at a member, and the copy keeps it as
   browse page's Where table keeps one With members row, not one per member. There is no
   Member filter: it would conflict with Where.
 - **With retiring members** (`?place=retiring`, #514) follows With members on a team
-  with a Retiring group: a section per retiring member who holds something, as a member
-  place shows one. Needs attention's "6 retiring members hold 16 items" opens it, and
+  with a Retiring group. It and With members are one table with a title row per member
+  ("Sam Rivera · 3"), so the columns line up across members. Needs attention's "6 retiring members hold 16 items" opens it, and
   `EquipmentItem.holders/2` counts as the line does.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.

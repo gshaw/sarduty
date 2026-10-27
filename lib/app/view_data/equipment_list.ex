@@ -99,8 +99,8 @@ defmodule App.ViewData.EquipmentList do
 
   @doc """
   The rows in `place` with `category`. An empty one keeps every row. A held place keeps
-  the rows whose item ids are keys of `held`, item id to holder's name, so another
-  team's member, or one who holds nothing, keeps none, like an unknown place.
+  the rows whose item ids are keys of `held`, so another team's member, or one who
+  holds nothing, keeps none, like an unknown place.
   """
   def narrow(rows, place, category, held \\ %{}) do
     in_place? = in_place_fn(place, held)
@@ -203,8 +203,8 @@ defmodule App.ViewData.EquipmentList do
   end
 
   @doc """
-  A held place's rows, a group per holder by name: `held` maps an item's id to its
-  holder's name, as narrow/4 takes it.
+  A member place's rows, under the member's name: `held` maps an item's id to it, as
+  narrow/4 takes it.
   """
   def group_held(rows, held) do
     rows
@@ -249,6 +249,22 @@ defmodule App.ViewData.EquipmentList do
     |> Enum.sort_by(fn {place, _rows} -> {place_order(place), place} end)
     |> Enum.map(fn {place, rows} ->
       {place, Enum.sort_by(rows, &{&1.holder || "", &1.path, &1.item.id})}
+    end)
+  end
+
+  @doc "Whether `place` lists several members' items, a group per member: With members, and With retiring members."
+  def by_holder?(place), do: place in [@with_members, @retiring]
+
+  @doc """
+  Rows as a group per member who holds them, by name, as `{member_id, name, rows}`, each
+  kit's contents right after it.
+  """
+  def group_by_holder(rows) do
+    rows
+    |> Enum.group_by(&{&1.holder, &1.holder_id})
+    |> Enum.sort_by(&elem(&1, 0))
+    |> Enum.map(fn {{name, id}, rows} ->
+      {id, name, Enum.sort_by(rows, &{&1.path, &1.item.id})}
     end)
   end
 
