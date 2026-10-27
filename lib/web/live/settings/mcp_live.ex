@@ -90,10 +90,8 @@ defmodule Web.Settings.MCPLive do
         chores, qualifications, and change history.
       </p>
       <p>
-        Agents cannot change your team's records. They can propose attendance changes, tags on
-        activities, and chores. Nothing happens until a team admin sends them from Proposed
-        changes. Agents never see email, phone
-        numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
+        Agents only read: they cannot change anything in SAR Duty or {@service}. They never see
+        email, phone numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
       <p id="no-training" class="font-semibold">
         Use a token only with an AI service set not to train on your data. The token gives

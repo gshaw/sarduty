@@ -29,7 +29,7 @@ defmodule Web.Components.NavBar do
 
   # Below 1024px the area's pages move behind this button, on the left of the bar. The
   # panel opens under the bar, and live navigation renders the page again, which closes it.
-  # An amber dot says a link inside has something waiting, such as proposed changes.
+  # An amber dot says a link inside has something waiting, such as chores to accept.
   def site_bar_phone_menu(assigns) do
     ~H"""
     <details id="phone-menu" name="site-bar" class="site-bar-phone group">

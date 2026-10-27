@@ -4,7 +4,6 @@ defmodule App.Operation.CallMCPTool do
   (#28). Every call is logged, an unknown tool or a failed one included.
   """
 
-  alias App.MCP.Tool
   alias App.MCP.Tools
   alias App.Model.MCPCall
   alias App.Model.MCPToken
@@ -30,7 +29,7 @@ defmodule App.Operation.CallMCPTool do
     logged_args = Tools.loggable_arguments(tool, args)
 
     try do
-      Tool.run(tool, token.team, token.user, args, now)
+      tool.call(token.team, args, now)
     rescue
       exception ->
         record!(token, name, logged_args, started, error: "Crashed")

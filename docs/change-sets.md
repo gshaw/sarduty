@@ -2,7 +2,7 @@
 
 Every write SAR Duty makes to D4H is a change set (#174, step 1). A change set is a list
 of D4H edits with what proposed them (`source`: the door, which is
-[Take attendance](taking-attendance.md), a group rule, or an AI agent,
+[Take attendance](taking-attendance.md), a group rule, or a team admin's edit,
 among others), one row per D4H record, and D4H's answer for each row. They live in
 `change_sets` and `change_set_rows`
 ([ChangeSet](../lib/app/model/change_set.ex),
@@ -17,33 +17,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   the set to `ApplyChangeSet.call/4`. Take attendance and group rules propose and apply in one
   click, since each has its own review page first. Old sets from the removed Import
   attendance page keep their source, `attendance_import` (#424).
-- **An AI agent's set waits** (#216). An agent connected through MCP proposes attendance
-  changes for one activity
-  ([ProposeAttendanceChanges](../lib/app/operation/propose_attendance_changes.ex)), as
-  source `agent` with its own one-line `summary`. Nothing reaches D4H until a team admin
-  opens it under "Proposed changes" (`/teams/:subdomain/proposed-changes`, also on the
-  team home's "Needs attention"), clears the rows they don't want, and sends it
-  ([ApplyProposedChangeSet](../lib/app/operation/apply_proposed_change_set.ex)). Cleared
-  rows are recorded as skipped, "Not selected". A set can be discarded instead. The
-  review page is headed for what the set changes (Attendance changes, Activity tag
-  changes, or Chores to add, `ChangeSet.proposal_title/1`), with the agent's summary
-  below as its note: an agent's words alone did not say a set would add chores
-  (2026-10-26). An agent
-  can never apply a set, and it can't propose group or award changes yet: group rules
-  own their groups, and awards wait on #174's step 4. Its statuses use the glossary's
-  words (#595): no reply, signed up, or can't make it before the activity starts, and
-  attended or absent after. It names a row by its attendance id, so a member's second
-  row is reachable (#519), and it can take a row off (`delete_attendance`). Sending
-  checks that row is still there as proposed, then deletes it from the copy at once,
-  since the sync finds deletes on an untouched activity only one month per round. An
-  agent's set never changes a published activity: D4H locks its attendance and tags, and
-  takes SAR Duty's draft but refuses to publish it again (live, 2026-10-26, #603). An
-  agent's tags set (`ProposeActivityTags`) covers up to 50 draft activities, each with its
-  own `set_activity_tags` row; sending reads every activity's tags and published flag
-  first, and skips one that changed or was published since. The copy takes the new tags
-  at once. An agent's chores are `add_chore` rows, SAR Duty's own and not D4H writes:
-  `ApplyChangeSet` leaves them to `ApplyProposedChangeSet`, which makes the ticked ones
-  waiting chores for a team admin to accept on the Chores page ([chores.md](chores.md)).
+- **AI agents' sets are old rows only** (#627). Until 2026-10-26 an agent connected
+  through MCP proposed attendance changes, activity tags, and chores as source `agent`,
+  and they waited under Proposed changes for a team admin to send (#216, #595). The MCP
+  is read-only now and that page is gone; the source and the `add_chore` action stay for
+  the rows already saved. See [mcp.md](mcp.md).
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or

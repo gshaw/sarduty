@@ -165,8 +165,8 @@ defmodule Web.StyleGuideHTML.SampleData do
     ]
   end
 
-  # Squamish's space on its activities, for a team admin who is a member, with 2 proposed
-  # changes waiting.
+  # Squamish's space on its activities, for a team admin who is a member, with 2 chores
+  # waiting.
   def sample_nav_area, do: Web.Navigation.area("/teams/squamish/activities", sample_team())
 
   def sample_nav_sections,
@@ -174,7 +174,7 @@ defmodule Web.StyleGuideHTML.SampleData do
       Web.Navigation.sections(sample_nav_area(), "/teams/squamish/activities",
         team_admin?: true,
         member?: true,
-        proposed_changes: 2
+        chores: 2
       )
 
   # Search results for "rope" on Squamish, as Web.Search.run/3 returns them, best first.

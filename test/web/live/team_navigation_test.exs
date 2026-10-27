@@ -4,7 +4,6 @@ defmodule Web.TeamNavigationTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Model.ChangeSet
   alias App.Repo
 
   setup %{conn: conn} do
@@ -76,19 +75,12 @@ defmodule Web.TeamNavigationTest do
     refute has_element?(lv, "#switch-admin")
   end
 
-  test "Proposed changes is in the menu with its count, and a dot on the phone menu",
+  test "Templates is in the menu, with no dot on the phone menu when nothing waits",
        %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
     assert has_element?(lv, ~s{#side-nav-templates[href="/teams/#{team.subdomain}/templates"]})
-    refute has_element?(lv, "#side-nav-proposed-changes")
     refute has_element?(lv, "#phone-menu-dot")
     refute has_element?(lv, ".tabs")
-
-    ChangeSet.propose!(%ChangeSet{team_id: team.id, source: :agent}, [])
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/proposed-changes")
-    assert has_element?(lv, "#side-nav-proposed-changes[aria-current=page] .badge", "1")
-    refute has_element?(lv, "#side-nav-activities .badge")
-    assert has_element?(lv, "#phone-menu-dot")
   end
 
   test "Team settings' pages are tabs under one title", %{conn: conn, team: team} do

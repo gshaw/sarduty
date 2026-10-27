@@ -54,22 +54,21 @@ defmodule Web.Navigation do
   `%{key:, label:, path:, current:, count:}`; the one for `path` is current.
 
   On a team: `team_admin?` when you manage it, `member?` when you log in as one of its
-  members, and what waits for a team admin: `proposed_changes`, AI agent change sets,
-  `chores`, members' chores, and `certificates`, members' certificates.
+  members, and what waits for a team admin: `chores`, members' chores, and
+  `certificates`, members' certificates.
   """
   def sections(area, path, opts \\ [])
 
   def sections(%{kind: :team, team: team}, path, opts) do
     team_admin? = Keyword.get(opts, :team_admin?, false)
     member? = Keyword.get(opts, :member?, false)
-    proposed_changes = Keyword.get(opts, :proposed_changes, 0)
     chores = Keyword.get(opts, :chores, 0)
     certificates = Keyword.get(opts, :certificates, 0)
 
     team_sections =
       cond do
         team_admin? ->
-          team_admin_sections(team, proposed_changes, chores, certificates)
+          team_admin_sections(team, chores, certificates)
 
         member? ->
           [
@@ -120,10 +119,10 @@ defmodule Web.Navigation do
 
   def sections(_area, _path, _opts), do: []
 
-  defp team_admin_sections(team, proposed_changes, chores, certificates) do
+  defp team_admin_sections(team, chores, certificates) do
     [
       dashboard_links(team),
-      activity_links(team, proposed_changes),
+      activity_links(team),
       people_links(team, certificates),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team, chores)],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
@@ -131,19 +130,12 @@ defmodule Web.Navigation do
   end
 
   # Activities' pages for team admins, each its own link so Templates is easy to find.
-  # Proposed changes come from AI agents through MCP, a trial most teams don't have: the
-  # link shows only when the team has it, or something waits there, with the count.
-  defp activity_links(team, proposed_changes) do
-    proposed =
-      link("proposed-changes", "Proposed changes", ~p"/teams/#{team}/proposed-changes",
-        count: proposed_changes
-      )
-
+  defp activity_links(team) do
     [
       activities_link(team),
       take_attendance_link(team),
       link("templates", "Templates", ~p"/teams/#{team}/templates")
-    ] ++ if(team.mcp_enabled or proposed_changes > 0, do: [proposed], else: [])
+    ]
   end
 
   # The Whiteboard page is where notes are posted and read in full (#515); the Dashboard

@@ -27,7 +27,6 @@ defmodule App.ViewData.TeamAttention do
       missing_details_item(rows.missing_details_count, rows.service),
       not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
-      proposed_changes_item(rows.proposed_change_count),
       certificates_item(rows.certificate_count),
       chores_item(rows.chore_count),
       chores_to_send_item(rows.chores_to_send),
@@ -194,19 +193,6 @@ defmodule App.ViewData.TeamAttention do
         ),
       detail: nil,
       action: "Review changes"
-    }
-  end
-
-  defp proposed_changes_item(0), do: nil
-
-  # An AI agent's change sets wait for a team admin (#216).
-  defp proposed_changes_item(count) do
-    %{
-      key: :proposed_changes,
-      level: :info,
-      title: Format.count(count, one: "%d proposed change", many: "%d proposed changes"),
-      detail: "An AI agent proposed them. Nothing changes until you send them.",
-      action: "Review proposed changes"
     }
   end
 
