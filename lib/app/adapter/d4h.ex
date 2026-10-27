@@ -307,7 +307,7 @@ defmodule App.Adapter.D4H do
     if response.status == 200 do
       {:ok, D4H.Team.build(response.body)}
     else
-      {:error, response}
+      {:error, D4H.Error.exception(response)}
     end
   end
 
@@ -325,35 +325,44 @@ defmodule App.Adapter.D4H do
     reduce_pages(context, "/#{kind}", &D4H.Activity.build(&1, tag_index), acc, fun)
   end
 
-  def fetch_activity(context, activity_id, "event") do
-    response = Req.get!(context, url: "/events/#{activity_id}")
+  @doc """
+  One activity, as `{:ok, D4H.Activity}`, or `{:error, D4H.Error}` when D4H refuses the
+  key or has no such activity (#33).
+  """
+  def fetch_activity(context, activity_id, "event"),
+    do: get_activity(context, "/events/#{activity_id}")
 
-    response.body
-    |> D4H.Activity.build()
+  def fetch_activity(context, activity_id, "incident"),
+    do: get_activity(context, "/incidents/#{activity_id}")
+
+  def fetch_activity(context, activity_id, "exercise"),
+    do: get_activity(context, "/exercises/#{activity_id}")
+
+  defp get_activity(context, url) do
+    case Req.get!(context, url: url) do
+      %{status: 200, body: body} when is_map(body) -> {:ok, D4H.Activity.build(body)}
+      response -> {:error, D4H.Error.exception(response)}
+    end
   end
 
-  def fetch_activity(context, activity_id, "incident") do
-    response = Req.get!(context, url: "/incidents/#{activity_id}")
-
-    response.body
-    |> D4H.Activity.build()
-  end
-
-  def fetch_activity(context, activity_id, "exercise") do
-    response = Req.get!(context, url: "/exercises/#{activity_id}")
-
-    response.body
-    |> D4H.Activity.build()
-  end
-
-  # One page, sized past any activity's attendance; D4H's spec gives no default size.
+  @doc """
+  The activity's attendance, sorted by name, or `{:error, D4H.Error}` (#33). One page,
+  sized past any activity's attendance; D4H's spec gives no default size.
+  """
   def fetch_activity_attendance(context, activity_id, team_members) do
     response =
       Req.get!(context, url: "/attendance", params: [activity_id: activity_id, size: 1000])
 
-    response.body["results"]
-    |> Enum.map(&D4H.Attendance.build(&1, team_members))
-    |> Enum.sort(&(&1.member.name < &2.member.name))
+    case response do
+      %{status: 200, body: %{"results" => results}} when is_list(results) ->
+        {:ok,
+         results
+         |> Enum.map(&D4H.Attendance.build(&1, team_members))
+         |> Enum.sort(&(&1.member.name < &2.member.name))}
+
+      response ->
+        {:error, D4H.Error.exception(response)}
+    end
   end
 
   def fetch_qualifications(context) do

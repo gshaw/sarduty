@@ -207,6 +207,55 @@ defmodule App.Adapter.D4HTest do
     end
   end
 
+  describe "one activity and its attendance (#33)" do
+    defp refuse(conn, status, title),
+      do: conn |> Plug.Conn.put_status(status) |> Req.Test.json(%{"title" => title})
+
+    test "fetches an activity" do
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        assert conn.request_path == "/v3/team/1/exercises/7"
+
+        Req.Test.json(conn, %{
+          "id" => 7,
+          "owner" => %{"resourceType" => "Team", "id" => 1},
+          "startsAt" => "2026-10-01T18:00:00Z",
+          "endsAt" => "2026-10-01T21:00:00Z",
+          "tags" => []
+        })
+      end)
+
+      assert {:ok, %D4H.Activity{d4h_activity_id: 7}} =
+               D4H.fetch_activity(context(), 7, "exercise")
+    end
+
+    test "an activity D4H has not got, or a refused key, is an error" do
+      for {status, title} <- [{404, "Not Found"}, {401, "Unauthorized"}],
+          kind <- ["event", "incident", "exercise"] do
+        Req.Test.stub(App.Adapter.D4H, &refuse(&1, status, title))
+
+        assert {:error, %D4H.Error{status: ^status} = error} =
+                 D4H.fetch_activity(context(), 7, kind)
+
+        assert Exception.message(error) == "#{title} (#{status})"
+      end
+    end
+
+    test "fetches an activity's attendance" do
+      Req.Test.stub(App.Adapter.D4H, &Req.Test.json(&1, %{"results" => [], "totalSize" => 0}))
+
+      assert D4H.fetch_activity_attendance(context(), 7, []) == {:ok, []}
+    end
+
+    test "attendance D4H has not got, or a refused key, is an error" do
+      for {status, title} <- [{404, "Not Found"}, {401, "Unauthorized"}] do
+        Req.Test.stub(App.Adapter.D4H, &refuse(&1, status, title))
+
+        assert {:error, %D4H.Error{status: ^status}} =
+                 D4H.fetch_activity_attendance(context(), 7, [])
+      end
+    end
+  end
+
   describe "lists" do
     # Tags on `page` of a list of `total`, 1000 to a page, numbered from 0.
     defp tag_page(conn, total, short_by \\ 0) do
