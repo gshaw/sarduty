@@ -42,8 +42,7 @@ defmodule Web.Settings.PlaceCollectionLive do
     </.heading_row>
 
     <p :if={!@records?} id="places-in-service" class="measure mb-6">
-      These are your team's location bookmarks in {@service}. {@service} does not let SAR Duty change them, so add or change them there: Team Settings, then Maps, then Location Bookmarks. SAR Duty follows within 10 minutes.
-      <.a external={true} href={D4H.build_url(@current_team, "/dashboard")}>Open {@service}</.a>
+      These are your team's location bookmarks in {@service}. {@service} does not let SAR Duty change them, so add or change them in {@service}. SAR Duty follows within 10 minutes.
     </p>
 
     <.table

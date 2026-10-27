@@ -132,7 +132,8 @@ defmodule Web.Settings.PlaceLiveTest do
       place = location_bookmark_fixture(team, %{title: "Office", coordinate: nil})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/places")
-      assert has_element?(lv, "#places-in-service", "Location Bookmarks")
+      assert has_element?(lv, "#places-in-service", "location bookmarks")
+      refute has_element?(lv, "#places-in-service a")
       assert has_element?(lv, "#place-#{place.id}", "Office")
       assert has_element?(lv, "#place-#{place.id}", "None")
       refute has_element?(lv, "#place-add")
