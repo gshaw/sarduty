@@ -488,8 +488,7 @@ defmodule Web.StyleGuideHTML.SampleData do
   def rule_options,
     do: [
       {"Groups", [{"Rope Rescue", "group:3"}, {"Swiftwater Team", "group:4"}]},
-      {"Endorsements", [{"First Aid", "endorsement:1"}, {"Swiftwater 1", "endorsement:2"}]},
-      {"Standing", [{"Away", "standing:away"}, {"Not a person", "standing:not_a_person"}]}
+      {"Endorsements", [{"First Aid", "endorsement:1"}, {"Swiftwater 1", "endorsement:2"}]}
     ]
 
   # Team settings' Tax credit letters tab after a failed save: the app's own changeset,

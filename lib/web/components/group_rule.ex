@@ -16,7 +16,8 @@ defmodule Web.Components.GroupRule do
   import Web.Components.Table, only: [table: 1]
 
   attr :rows, :list, required: true
-  attr :options, :list, required: true
+  attr :options, :list, required: true, doc: "the second menu's, for `kind` only"
+  attr :kind, :atom, default: :in, values: [:in, :not_in, :standing]
   attr :new_path, :string, required: true
   attr :add_confirm, :string, default: nil
   attr :suggest_standing, :boolean, default: false, doc: "suggest Standing is Active (#366)"
@@ -44,18 +45,23 @@ defmodule Web.Components.GroupRule do
       </:col>
     </.table>
 
-    <form id="add-rule-form" phx-submit="add-rule" class="flex flex-wrap items-center gap-2 mt-4">
+    <form
+      id="add-rule-form"
+      phx-change="rule-kind"
+      phx-submit="add-rule"
+      class="flex flex-wrap items-center gap-2 mt-4"
+    >
       <select name="kind" class="input-sm" aria-label="Kind of rule">
-        <option value="in">In</option>
-        <option value="not_in">Not in</option>
-        <option value="standing">Standing is</option>
+        <option :for={kind <- [:in, :not_in, :standing]} value={kind} selected={kind == @kind}>
+          {kind_label(kind)}
+        </option>
       </select>
       <.combobox
         id="rule-target"
         name="target"
         size={:sm}
         options={@options}
-        aria-label="Group, endorsement, or standing"
+        aria-label={if @kind == :standing, do: "Standing", else: "Group or endorsement"}
       />
       <.button id="add-rule" size={:sm} data-confirm={@add_confirm}>Add rule</.button>
       <.a navigate={@new_path}>New endorsement</.a>

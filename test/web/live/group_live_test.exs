@@ -150,10 +150,17 @@ defmodule Web.GroupLiveTest do
     refute has_element?(lv, "#would-add-#{on_leave.id}")
   end
 
-  test "a standing joins the group's Standing rule, and only goes in one", ctx do
+  test "the menu follows the rule kind, and a standing joins the Standing rule", ctx do
     group_rule_fixture(ctx.group, ctx.endorsement)
     lv = ctx.lv
     lv |> element("#edit-rules") |> render_click()
+
+    assert has_element?(lv, "#add-rule-form option", "First Aid")
+    refute has_element?(lv, "#add-rule-form option[value='standing:active']")
+
+    lv |> form("#add-rule-form", %{"kind" => "standing"}) |> render_change()
+    assert has_element?(lv, "#add-rule-form option[value='standing:active']")
+    refute has_element?(lv, "#add-rule-form option", "First Aid")
 
     lv
     |> form("#add-rule-form", %{"kind" => "standing", "target" => "standing:active"})
@@ -168,8 +175,8 @@ defmodule Web.GroupLiveTest do
 
     html =
       lv
-      |> form("#add-rule-form", %{"kind" => "in", "target" => "standing:not_a_person"})
-      |> render_submit()
+      |> element("#add-rule-form")
+      |> render_submit(%{"kind" => "in", "target" => "standing:not_a_person"})
 
     assert html =~ "Select a group or endorsement for an In or Not in rule."
     assert length(GroupRule.get_all(ctx.team.id)) == 2
