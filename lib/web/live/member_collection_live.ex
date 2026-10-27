@@ -163,6 +163,14 @@ defmodule Web.MemberCollectionLive do
         options={MemberFilterViewModel.attended_kinds()}
         default="all"
       />
+      <:filter
+        :if={@team_admin?}
+        field={@form[:items]}
+        label="Items"
+        more
+        options={MemberFilterViewModel.items_kinds()}
+        default="all"
+      />
     </.filter_bar>
     <p :if={@attended not in [nil, "all"]} id="attended-hint" class="hint">
       Attended counts from the latest of a member's last activity, the day they joined, the
@@ -191,7 +199,7 @@ defmodule Web.MemberCollectionLive do
       id="member-group-form"
       phx-change="select"
       phx-submit="set-group"
-      class="flex flex-wrap items-center gap-2 mb-4"
+      class="table-actions"
     >
       <.combobox
         id="member-group-id"

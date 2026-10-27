@@ -85,14 +85,19 @@ D4H can put an item's location at a member, and the copy keeps it as
   count, "58 items", followed and was dropped because it repeated the tab (2026-10-24).
 - **Your membership** shows the table under Qualifications, with no links, so a member
   knows what to bring back. The sidebar is for short things.
-- **Equipment, Place** lists the D4H locations, With members, and No location, then each
-  member who holds something, by name. It is a combobox, since a team has dozens of
-  holders. The URL takes the member's local id, `?place=member-12`, never the name, since
-  two members can share one. The section heading names the member ("Sam Rivera · 12")
-  over the same table, here with the stat switch and the search. It opens on All, not In
-  service, so its count is the tab's. The browse page's Place table keeps one With
-  members row, not one per member. There is no Member filter: it would conflict with
-  Place.
+- **Equipment, Where** lists the D4H locations, With members, and No location, then each
+  member who holds something, as "With Sam Rivera". It was Place until 2026-10-27, a
+  word the glossary gives saved places. It is a combobox, since a team has dozens of
+  holders. The URL keeps `place=` so old links work, and takes the member's local id,
+  `?place=member-12`, never the name, since two members can share one. The section
+  heading names the member ("Sam Rivera · 12") over the same table, here with the stat
+  switch and the search. It opens on All, not In service, so its count is the tab's. The
+  browse page's Where table keeps one With members row, not one per member. There is no
+  Member filter: it would conflict with Where.
+- **With retiring members** (`?place=retiring`, #514) follows With members on a team
+  with a Retiring group: a section per retiring member who holds something, as a member
+  place shows one. Needs attention's "6 retiring members hold 16 items" opens it, and
+  `EquipmentItem.holders/2` counts as the line does.
 - `place=member-<id>` for another team's member, or for a member who holds nothing,
   lists nothing, like an unknown place.
 - **D4H won't retire a member who holds items** (2026-10-23): "Before a member is

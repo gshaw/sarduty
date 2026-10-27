@@ -658,7 +658,12 @@ defmodule Web.TeamDashboardLiveTest do
 
       assert has_element?(
                lv,
-               ~s{#attention-retiring a[href="/teams/#{team.subdomain}/members?standing=retiring"]}
+               ~s{#attention-retiring a[href="/teams/#{team.subdomain}/equipment?place=retiring"]}
+             )
+
+      assert has_element?(
+               lv,
+               ~s{#attention-retiring_clear a[href="/teams/#{team.subdomain}/members?standing=retiring&items=none"]}
              )
     end
 

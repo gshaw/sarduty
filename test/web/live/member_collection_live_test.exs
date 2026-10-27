@@ -826,4 +826,23 @@ defmodule Web.MemberCollectionLiveTest do
 
     refute has_element?(lv, "#last-attended-#{retiring.id}")
   end
+
+  test "Items: who holds some of the team's equipment, and who holds none (#514)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    holding = member_fixture(team, %{name: "Holly Holding"})
+    clear = member_fixture(team, %{name: "Clara Clear"})
+    equipment_item_fixture(team, %{member_id: holding.id, status: "retired"})
+    other_team = team_fixture()
+    equipment_item_fixture(other_team, %{member_id: member_fixture(other_team).id})
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?items=held")
+    assert has_element?(lv, "#last-attended-#{holding.id}")
+    refute has_element?(lv, "#last-attended-#{clear.id}")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?items=none")
+    assert has_element?(lv, "#last-attended-#{clear.id}")
+    refute has_element?(lv, "#last-attended-#{holding.id}")
+  end
 end

@@ -5,6 +5,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   alias App.Field
   alias App.Model.Attendance
+  alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Member
@@ -22,6 +23,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :when, :string
     field :details, :string
     field :attended, :string
+    field :items, :string
     field :standing, :string
     field :group, :integer
     field :activity_tag, :string
@@ -31,6 +33,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   # "missing": current members with no mobile phone or no email (#205).
   def details_kinds, do: [{"All", "all"}, {"Missing", "missing"}]
+
+  # Whether a member holds any of the team's items (#514): who to ask for equipment back
+  # before they retire, and who can retire now.
+  def items_kinds, do: [{"Any", "all"}, {"Holds some", "held"}, {"Holds none", "none"}]
 
   # Members not at an activity in this many days (#247): every time frame the team
   # setting offers.
@@ -44,8 +50,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
     {"Active", "active"},
     {"Away", "away"},
     {"Retiring", "retiring"},
-    {"Not a person", "not_a_person"},
-    {"Retired", "retired"}
+    {"Retired", "retired"},
+    {"Not a person", "not_a_person"}
   ]
 
   # What a member's list offers (#440): every standing but Away, which is team admins'
@@ -53,15 +59,15 @@ defmodule App.ViewModel.MemberFilterViewModel do
   # who is away.
   @member_standings [
     {"Retiring", "retiring"},
-    {"Not a person", "not_a_person"},
-    {"Retired", "retired"}
+    {"Retired", "retired"},
+    {"Not a person", "not_a_person"}
   ]
 
   @doc """
   The Standing filter (#366): Not retired, the default, is every member but the retired,
   and All adds them. Its value stays `"current"`. The attendance check can watch several standings, as
   `"active,away"`; that value gets an option of its own, "Active or away", when it's the
-  one shown. A member gets Not retired, Retiring, Not a person, Retired, and All. Retiring
+  one shown. A member gets Not retired, Retiring, Retired, Not a person, and All. Retiring
   shows only when the team has a Retiring group (#514).
   """
   def standing_kinds(current, team_admin?, retiring?) do
@@ -142,7 +148,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   @doc """
   Checks the list's `params`. A member's (#440) first lose what only team admins' records
-  answer: the Attended and Details filters, the standings `standing_kinds/3` doesn't offer
+  answer: the Attended, Details, and Items filters, the standings `standing_kinds/3` doesn't offer
   them, and the Standing sort. Everything else reads the result, so the list, the
   switch's counts, and the form show members nothing more, whatever the URL says.
   """
@@ -161,7 +167,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     member_values = nil |> standing_kinds(false, true) |> Enum.map(&elem(&1, 1))
 
     params
-    |> Map.drop(["attended", "details"])
+    |> Map.drop(["attended", "details", "items"])
     |> Map.reject(fn
       {"standing", value} -> value not in member_values
       {"sort", value} -> is_binary(value) and String.starts_with?(value, "standing")
@@ -187,7 +193,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   @doc """
   The Standing switch's parts (#469): Not retired first, as the list opens, then each
   standing. No All: Not retired and Retired add up to it. A member's are Not retired,
-  Retiring, Not a person, and Retired (#440). Retiring only with a Retiring group (#514).
+  Retiring, Retired, and Not a person (#440). Retiring only with a Retiring group (#514).
   """
   def standing_switch(team_admin?, retiring?),
     do: [{"Not retired", "current"} | standings_for(team_admin?, retiring?)]
@@ -231,6 +237,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(when: filter_options.when, timezone: team.timezone, now: now)
     |> scope(details: filter_options.details, team: team)
     |> scope(attended: filter_options.attended, team: team, now: now)
+    |> scope(items: filter_options.items, team: team)
     |> scope(group: filter_options.group, team: team)
     |> Standing.join(team, Service.Period.today(now, team.timezone))
     |> scope(standing: filter_options.standing, now: now)
@@ -241,6 +248,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       when: current_year(),
       details: "all",
       attended: "all",
+      items: "all",
       standing: "current",
       sort: "name"
     }
@@ -255,6 +263,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       :when,
       :details,
       :attended,
+      :items,
       :standing,
       :group,
       :activity_tag,
@@ -265,6 +274,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> Field.truncate(:activity_tag, max_length: 100)
     |> validate_kind(:details, details_kinds())
     |> validate_kind(:attended, attended_kinds())
+    |> validate_kind(:items, items_kinds())
     |> validate_standing()
     |> App.Validate.Period.call(:when)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
@@ -405,6 +415,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, attended: days, team: team, now: now),
     do: Member.not_seen_query(q, team, String.to_integer(days), now)
+
+  defp scope(q, items: "held", team: team),
+    do: where(q, [m], m.id in subquery(EquipmentItem.holder_ids_query(team)))
+
+  defp scope(q, items: "none", team: team),
+    do: where(q, [m], m.id not in subquery(EquipmentItem.holder_ids_query(team)))
+
+  defp scope(q, items: _all, team: _team), do: q
 
   defp scope(q, group: nil, team: _team), do: q
 

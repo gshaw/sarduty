@@ -101,7 +101,7 @@ defmodule App.ViewData.EquipmentListTest do
     assert ids.("No location", "No category") == [7]
   end
 
-  test "a member is a place: Place lists them after the places, by their local id (#490)" do
+  test "a member is a place: Where lists them after the places, by their local id (#490)" do
     rows =
       EquipmentList.rows([
         item(9, "Radio 22", member_id: 2, member: %Member{name: "Ty Wong"}) | items()
@@ -111,17 +111,36 @@ defmodule App.ViewData.EquipmentListTest do
              {"Yard", "Yard"},
              {"With members", "With members"},
              {"No location", "No location"},
-             {"Sam Ortiz", "member-9"},
-             {"Ty Wong", "member-2"}
+             {"With Sam Ortiz", "member-9"},
+             {"With Ty Wong", "member-2"}
            ]
 
-    held = MapSet.new([5, 4])
+    held = %{5 => "Sam Ortiz", 4 => "Sam Ortiz"}
     assert rows |> EquipmentList.narrow("member-9", "", held) |> Enum.map(& &1.item.id) == [4, 5]
+
+    held = %{5 => "Sam Ortiz"}
 
     assert [{"Sam Ortiz", [%{item: %{id: 5}}]}] =
              rows
-             |> EquipmentList.narrow("member-9", "", MapSet.new([5]))
-             |> EquipmentList.group_held("Sam Ortiz")
+             |> EquipmentList.narrow("member-9", "", held)
+             |> EquipmentList.group_held(held)
+  end
+
+  test "retiring members are a place after With members, a group per holder (#514)" do
+    rows =
+      EquipmentList.rows([
+        item(9, "Radio 22", member_id: 2, member: %Member{name: "Ty Wong"}) | items()
+      ])
+
+    assert [_yard, {"With members", _}, {"With retiring members", "retiring"} | _rest] =
+             EquipmentList.place_options(rows, true)
+
+    held = %{9 => "Ty Wong", 5 => "Sam Ortiz"}
+
+    assert [{"Sam Ortiz", [%{item: %{id: 5}}]}, {"Ty Wong", [%{item: %{id: 9}}]}] =
+             rows
+             |> EquipmentList.narrow("retiring", "", held)
+             |> EquipmentList.group_held(held)
   end
 
   test "a member who holds nothing, or a bad member id, keeps no rows" do
@@ -130,11 +149,11 @@ defmodule App.ViewData.EquipmentListTest do
     for place <- ["member-3", "member-9x", "member-"] do
       narrowed = EquipmentList.narrow(rows, place, "")
       assert narrowed == []
-      assert EquipmentList.group_held(narrowed, "Anyone") == []
+      assert EquipmentList.group_held(narrowed, %{}) == []
     end
   end
 
-  test "Place lists a member who holds only retired items: the team may want them back" do
+  test "Where lists a member who holds only retired items: the team may want them back" do
     rows =
       EquipmentList.rows([
         item(9, "Old radio", member_id: 2, member: %Member{name: "Ty Wong"}, status: "retired")
@@ -142,7 +161,7 @@ defmodule App.ViewData.EquipmentListTest do
 
     assert EquipmentList.place_options(rows) == [
              {"With members", "With members"},
-             {"Ty Wong", "member-2"}
+             {"With Ty Wong", "member-2"}
            ]
   end
 

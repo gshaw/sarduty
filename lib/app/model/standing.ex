@@ -84,6 +84,19 @@ defmodule App.Model.Standing do
       where: g.team_id == ^team.id and g.d4h_group_id == ^team.retiring_d4h_group_id
   end
 
+  @doc """
+  The ids of the team's members whose standing is Retiring, as a query: current on `now`,
+  people, and in the Retiring group. The Dashboard's counts and Equipment's "With
+  retiring members" read this, so they agree.
+  """
+  def retiring_member_ids_query(%Team{} = team, now) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.id in subquery(retiring_ids_query(team)))
+    |> Member.current_query(now)
+    |> Member.people_query()
+    |> select([m], m.id)
+  end
+
   @doc "retiring_ids_query/1 as a set."
   def retiring_ids(%Team{} = team),
     do: team |> retiring_ids_query() |> Repo.all() |> MapSet.new()

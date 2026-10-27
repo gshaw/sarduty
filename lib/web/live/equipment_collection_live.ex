@@ -10,13 +10,16 @@ defmodule Web.EquipmentCollectionLive do
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.Member
+  alias App.Model.Standing
+  alias App.Model.Team
   alias App.ViewData.EquipmentList
 
   # The team's equipment, copied from D4H or SAR Duty Records (#271). It opens on the
   # places and categories, with counts; picking one, searching, or another filter lists
   # items, grouped by where they are. A Records team adds items here. On a phone,
-  # scanning a barcode opens its item. Place takes a member too, `?place=member-<id>`
-  # (#490), and opens on All, as the member's sidebar and Equipment tab count.
+  # scanning a barcode opens its item. Where takes a member too, `?place=member-<id>`
+  # (#490), or retiring members, `?place=retiring` (#514), and opens on All, as the
+  # member's sidebar and Equipment tab count.
   def mount(_params, _session, socket) do
     rows = socket.assigns.current_team.id |> EquipmentItem.get_all() |> EquipmentList.rows()
     in_service = EquipmentList.filter(rows, "in-service", "", DateTime.utc_now())
@@ -27,7 +30,8 @@ defmodule Web.EquipmentCollectionLive do
         rows: rows,
         places: EquipmentList.places(in_service),
         categories: EquipmentList.categories(in_service),
-        place_options: EquipmentList.place_options(rows),
+        place_options:
+          EquipmentList.place_options(rows, Team.retiring?(socket.assigns.current_team)),
         category_options: [
           {"All", ""} | rows |> EquipmentList.categories() |> Enum.map(&elem(&1, 0))
         ],
@@ -44,13 +48,13 @@ defmodule Web.EquipmentCollectionLive do
     category = params["category"] || ""
     now = DateTime.utc_now()
 
-    # A member place opens on All: retired items are still with the member (#490).
-    default_show = if EquipmentList.member_id(place), do: "all", else: "in-service"
+    # A held place opens on All: retired items are still with the member (#490).
+    default_show = if EquipmentList.held_place?(place), do: "all", else: "in-service"
 
     show =
       if params["show"] in EquipmentList.show_values(), do: params["show"], else: default_show
 
-    {holder, held} = held_in(socket.assigns.current_team, place)
+    held = held_in(socket.assigns.current_team, place, socket.assigns.rows, now)
     narrowed = EquipmentList.narrow(socket.assigns.rows, place, category, held)
     rows = EquipmentList.filter(narrowed, show, q, now)
 
@@ -62,8 +66,8 @@ defmodule Web.EquipmentCollectionLive do
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
         count: length(rows),
-        member_place?: EquipmentList.member_id(place) != nil,
-        groups: groups(rows, place, holder),
+        held_place?: EquipmentList.held_place?(place),
+        groups: groups(rows, place, held),
         form:
           to_form(
             # The default stays out of the URL, so a new place opens on its own default.
@@ -114,23 +118,29 @@ defmodule Web.EquipmentCollectionLive do
     end)
   end
 
-  # The member a member place names, looked up through the team, and the ids of what they
-  # hold. Nil and none for any other place, or a member of another team.
-  defp held_in(team, place) do
+  # What a held place lists, item id to its holder's name: a member, looked up through
+  # the team, or the retiring members. None for any other place, or another team's member.
+  defp held_in(team, "retiring", rows, now) do
+    names = rows |> Enum.filter(& &1.holder_id) |> Map.new(&{&1.holder_id, &1.holder})
+
+    team
+    |> EquipmentItem.holders(Standing.retiring_member_ids_query(team, now))
+    |> Map.new(fn {item_id, member_id} -> {item_id, names[member_id]} end)
+  end
+
+  defp held_in(team, place, _rows, _now) do
     holder = EquipmentList.member_id(place) && Member.find(team, EquipmentList.member_id(place))
 
     if holder,
-      do: {holder, team |> EquipmentItem.held_by(holder) |> MapSet.new(& &1.id)},
-      else: {nil, MapSet.new()}
+      do: team |> EquipmentItem.held_by(holder) |> Map.new(&{&1.id, holder.name}),
+      else: %{}
   end
 
-  # A member place is one group under their name; an unknown member's lists nothing.
-  defp groups(rows, place, holder) do
-    cond do
-      holder -> EquipmentList.group_held(rows, holder.name)
-      EquipmentList.member_id(place) -> []
-      true -> EquipmentList.group(rows)
-    end
+  # A held place is a group per holder, under their name; other places group by place.
+  defp groups(rows, place, held) do
+    if EquipmentList.held_place?(place),
+      do: EquipmentList.group_held(rows, held),
+      else: EquipmentList.group(rows)
   end
 
   defp filter_path(team, params), do: ~p"/teams/#{team}/equipment?#{params}"
@@ -187,7 +197,7 @@ defmodule Web.EquipmentCollectionLive do
       <:search field={@form[:q]} placeholder="Name, barcode, or serial" />
       <:filter
         field={@form[:place]}
-        label="Place"
+        label="Where"
         type="combobox"
         options={@place_options}
         default=""
@@ -207,7 +217,7 @@ defmodule Web.EquipmentCollectionLive do
     >
       <.count_table
         id="equipment-places"
-        label="Place"
+        label="Where"
         counts={@places}
         path={&filter_path(@current_team, place: &1)}
       />
@@ -227,13 +237,13 @@ defmodule Web.EquipmentCollectionLive do
       <h2 class="heading">{place} · {length(rows)}</h2>
       <%!-- A member's items, as their Equipment tab shows them. --%>
       <.held_table
-        :if={@member_place?}
+        :if={@held_place?}
         id={"equipment-#{slug(place)}"}
         rows={rows}
         team={@current_team}
       />
       <.table
-        :if={!@member_place?}
+        :if={!@held_place?}
         id={"equipment-#{slug(place)}"}
         rows={rows}
         row_id={&"item-#{&1.item.id}"}

@@ -26,6 +26,10 @@
         default="all"
       />
     </.filter_bar>
+    <div class="table-actions">
+      <.button type="button">Add to group</.button>
+      <.button type="button">Remove from group</.button>
+    </div>
     <.activity_table
       id="sample-activities"
       rows={activities()}
@@ -43,6 +47,10 @@
       sits above the table: a search box and a menu per filter. A menu that filters something turns blue.
     </li>
     <li>The line under it has the count and Clear filters, and which rows the page shows.</li>
+    <li>
+      Actions on ticked rows, such as Add to group, go in a <code>.table-actions</code>
+      row under it, sized like the bar: 36px, small text, 44px on a touch screen.
+    </li>
     <li>The column headers sort the table.</li>
     <li><a href={page_path(:pagination)}>Pagination</a> goes under the table, 50 rows a page.</li>
   </ul>

@@ -48,15 +48,15 @@ defmodule App.ViewModel.MemberFilterViewModelTest do
              [
                {"Not retired", "current"},
                {"Retiring", "retiring"},
-               {"Not a person", "not_a_person"},
-               {"Retired", "retired"}
+               {"Retired", "retired"},
+               {"Not a person", "not_a_person"}
              ]
 
     assert MemberFilterViewModel.standing_kinds("all", false, false) ==
              [
                {"Not retired", "current"},
-               {"Not a person", "not_a_person"},
                {"Retired", "retired"},
+               {"Not a person", "not_a_person"},
                {"All", "all"}
              ]
 

@@ -93,16 +93,45 @@ defmodule App.Model.EquipmentItem do
   members who hold nothing.
   """
   def held_counts(%Team{} = team, member_ids_query) do
+    team
+    |> held_by_members(member_ids_query)
+    |> group_by([h], h.member_id)
+    |> select([h], {h.member_id, count(h.id, :distinct)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  The items the members in `member_ids_query` hold, counted as held_counts/2 counts them:
+  `%{item_id => member_id}`. Equipment's "With retiring members" reads this.
+  """
+  def holders(%Team{} = team, member_ids_query) do
+    team
+    |> held_by_members(member_ids_query)
+    |> distinct(true)
+    |> select([h], {h.id, h.member_id})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  The ids of the team's members who hold anything, as a query: what held_counts/2 counts
+  starts from an item D4H locates with the member, retired items too.
+  """
+  def holder_ids_query(%Team{} = team) do
+    from i in EquipmentItem,
+      where: i.team_id == ^team.id and not is_nil(i.member_id),
+      distinct: true,
+      select: i.member_id
+  end
+
+  defp held_by_members(team, member_ids_query) do
     held = union(held_roots(team, member_ids_query), ^held_inside_by_member(team))
 
     "held"
     |> from()
-    |> group_by([h], h.member_id)
-    |> select([h], {h.member_id, count(h.id, :distinct)})
     |> recursive_ctes(true)
     |> with_cte("held", as: ^held)
-    |> Repo.all()
-    |> Map.new()
   end
 
   # The items each member holds directly, at depth 0, with the member.

@@ -5,9 +5,10 @@ defmodule App.ViewData.EquipmentList do
   outermost item is (a D4H location, "With members", or "No location"), and `inside` is
   the chain of items holding it, such as "SOUTH FRASER 2 › 02 DRAWER #1".
 
-  A member is a place too, as in D4H (#490): the Place filter takes `"member-<id>"`, the
-  member's local id, and keeps the rows `EquipmentItem.held_by/2` finds. The browse
-  page's Place table keeps one "With members" row.
+  A member is a place too, as in D4H (#490): the Where filter takes `"member-<id>"`, the
+  member's local id, and keeps the rows `EquipmentItem.held_by/2` finds. `"retiring"`
+  keeps what retiring members hold, from `EquipmentItem.holders/2` (#514). The browse
+  page's Where table keeps one "With members" row.
 
   Pure: items in, rows out. Items need their `member` preloaded.
   """
@@ -16,11 +17,12 @@ defmodule App.ViewData.EquipmentList do
 
   @with_members "With members"
   @no_location "No location"
+  @retiring "retiring"
   @no_category "No category"
 
   @max_depth EquipmentItem.max_depth()
 
-  # The page's stat switch. Who holds an item is the Place filter's "With members".
+  # The page's stat switch. Who holds an item is the Where filter's "With members".
   def shows,
     do: [
       {"All", "all"},
@@ -96,11 +98,11 @@ defmodule App.ViewData.EquipmentList do
   end
 
   @doc """
-  The rows in `place` with `category`. An empty one keeps every row. A member place
-  keeps the rows whose item ids are in `held`, from `EquipmentItem.held_by/2`, so
-  another team's member, or one who holds nothing, keeps none, like an unknown place.
+  The rows in `place` with `category`. An empty one keeps every row. A held place keeps
+  the rows whose item ids are keys of `held`, item id to holder's name, so another
+  team's member, or one who holds nothing, keeps none, like an unknown place.
   """
-  def narrow(rows, place, category, held \\ MapSet.new()) do
+  def narrow(rows, place, category, held \\ %{}) do
     in_place? = in_place_fn(place, held)
     Enum.filter(rows, &(in_place?.(&1) and (category == "" or category(&1.item) == category)))
   end
@@ -108,11 +110,20 @@ defmodule App.ViewData.EquipmentList do
   defp in_place_fn("", _held), do: fn _row -> true end
 
   defp in_place_fn(place, held) do
-    case member_id(place) do
-      nil -> &(&1.place == place)
-      _id -> &MapSet.member?(held, &1.item.id)
-    end
+    if held_place?(place),
+      do: &Map.has_key?(held, &1.item.id),
+      else: &(&1.place == place)
   end
+
+  @doc "The Where filter's value for what retiring members hold (#514)."
+  def retiring_place, do: @retiring
+
+  @doc """
+  Whether `place` is a member, or retiring members: items listed under who holds them,
+  retired ones too, as a member's Equipment tab lists them.
+  """
+  def held_place?(@retiring), do: true
+  def held_place?(place), do: member_id(place) != nil
 
   @doc "The member's id in a member place, `\"member-12\"`, or nil for any other place."
   def member_id("member-" <> id) do
@@ -124,15 +135,25 @@ defmodule App.ViewData.EquipmentList do
 
   def member_id(_place), do: nil
 
-  @doc "A member's place, for the Place filter: `\"member-12\"`."
+  @doc "A member's place, for the Where filter: `\"member-12\"`."
   def member_place(member_id), do: "member-#{member_id}"
 
   @doc """
-  The Place filter's choices, as `{label, value}`: the places in `rows`, in group order,
-  then each member who holds something, by name.
+  The Where filter's choices, as `{label, value}`: the places in `rows`, in group order,
+  with "With retiring members" after "With members" when `retiring?`, then each member
+  who holds something, by name.
   """
-  def place_options(rows) do
-    rows |> places() |> Enum.map(&{elem(&1, 0), elem(&1, 0)}) |> Enum.concat(holders(rows))
+  def place_options(rows, retiring? \\ false) do
+    rows
+    |> places()
+    |> Enum.flat_map(fn
+      {@with_members, _count} when retiring? ->
+        [{@with_members, @with_members}, {"With retiring members", @retiring}]
+
+      {place, _count} ->
+        [{place, place}]
+    end)
+    |> Enum.concat(holders(rows))
   end
 
   defp holders(rows) do
@@ -140,7 +161,7 @@ defmodule App.ViewData.EquipmentList do
     |> Enum.filter(& &1.holder_id)
     |> Enum.uniq_by(& &1.holder_id)
     |> Enum.sort_by(&{&1.holder, &1.holder_id})
-    |> Enum.map(&{&1.holder, member_place(&1.holder_id)})
+    |> Enum.map(&{"With #{&1.holder}", member_place(&1.holder_id)})
   end
 
   @doc """
@@ -181,9 +202,16 @@ defmodule App.ViewData.EquipmentList do
     |> sort_groups()
   end
 
-  @doc "A member place's rows as one group named after the member, or none."
-  def group_held([], _name), do: []
-  def group_held(rows, name), do: sort_groups([{name, rows}])
+  @doc """
+  A held place's rows, a group per holder by name: `held` maps an item's id to its
+  holder's name, as narrow/4 takes it.
+  """
+  def group_held(rows, held) do
+    rows
+    |> Enum.group_by(&Map.fetch!(held, &1.item.id))
+    |> Enum.sort_by(&elem(&1, 0))
+    |> Enum.map(fn {name, rows} -> {name, Enum.sort_by(rows, &{&1.path, &1.item.id})} end)
+  end
 
   @doc """
   The items a member holds, from `EquipmentItem.held_by/2`, as `%{item, inside}` with
