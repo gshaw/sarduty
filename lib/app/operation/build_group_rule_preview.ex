@@ -132,7 +132,8 @@ defmodule App.Operation.BuildGroupRulePreview do
   Pure. Why the group's rules can't plan changes, or `[]` when they can. Each of these
   would otherwise add every member or remove them all:
 
-  - `:no_rules`, or `:no_in_rule` when every rule is Not in.
+  - `:no_rules`, or `:only_not_in` when every rule is Not in. Standing rules alone are
+    fine (#418): "Standing is Active" means every current member who is active.
   - `:empty_rule`, a rule with no groups or endorsements.
   - `{:empty_endorsement, name}`: nothing earns it.
   - `{:missing_qualification, name}`: it names a qualification D4H no longer has.
@@ -148,7 +149,7 @@ defmodule App.Operation.BuildGroupRulePreview do
 
     cond do
       rules == [] -> [:no_rules]
-      not Enum.any?(rules, &(&1.kind == :in)) -> [:no_in_rule]
+      Enum.all?(rules, &(&1.kind == :not_in)) -> [:only_not_in]
       true -> Enum.flat_map(rules, &check_rule(&1, context, [g | stack]))
     end
   end
@@ -454,8 +455,8 @@ defmodule App.Operation.BuildGroupRulePreview do
   @doc "A problem from `problems/2` as a sentence for the group page."
   def describe_problem(:no_rules), do: "It has no rules."
 
-  def describe_problem(:no_in_rule),
-    do: "It has only Not in rules, which would add every member. Add an In rule."
+  def describe_problem(:only_not_in),
+    do: "It has only Not in rules, which would add every member. Add an In or Standing rule."
 
   def describe_problem(:empty_rule),
     do: "A rule has no groups or endorsements. Add one or remove the rule."

@@ -39,6 +39,20 @@ member the day their leave starts and adding them back the day after it ends. A 
 admin still reviews and sends those changes; D4H never changes on its own. A team that
 keeps an LOA group in D4H can go on using `Not in: LOA`.
 
+**A Standing rule can stand alone** (#418). A group of everyone who can be called out is
+one rule:
+
+```text
+Active members           Standing is: Active
+```
+
+Its page reads "Members who are active". The first review adds most of the team; after
+that, each review adds joiners and people back from leave, and removes people who retire
+or go on leave. Retired members are never added, so it is never everyone ever. A
+template that invites it invites the whole team (#307), on D4H and on Records alike, and
+automatic mode (#419, not built yet) will keep it current. Only Not in rules are still refused: "Not in
+LOA" meant as "take out people on leave" would add every member.
+
 This replaced two features: the endorsements a group's rule required (#320) and the group
 a group started from (#327). A recurring requirement, such as 20 hours of rope practice a
 year, is an expiring D4H qualification awarded each year (#15), and a group requires both
@@ -181,7 +195,7 @@ needs. The home page's item counts the 60-day view, so its count and the list ma
 changes. The group page says why. Each would otherwise add every member or remove them
 all, and a broken reference must stop the plan, not leave nobody out:
 
-- No rules, or no In rule. Not in and Standing rules alone would add every member.
+- No rules, or only Not in rules. "Not in LOA" alone would add every member.
 - A rule with no groups or endorsements left.
 - An endorsement with no qualifications, or one naming a deleted qualification.
 - A deleted group, or one whose own rules have a problem.

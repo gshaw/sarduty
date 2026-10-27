@@ -134,6 +134,21 @@ defmodule Web.GroupLiveTest do
     assert has_element?(lv, "#would-remove-#{on_leave.id}", "Away until")
   end
 
+  test "an Active members group needs only Standing is Active (#418)", ctx do
+    today = Service.Period.today(DateTime.utc_now(), ctx.team.timezone)
+    active = member_fixture(ctx.team, %{name: "Active Member"})
+    on_leave = member_fixture(ctx.team, %{name: "On Leave"})
+    away_period_fixture(on_leave, Date.add(today, -1), Date.add(today, 30))
+    GroupRule.add!(ctx.group, :standing, :active)
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+    assert has_element?(lv, "#rule-sentence", "Members who are active.")
+    refute has_element?(lv, "#rule-broken")
+    assert has_element?(lv, "#would-add-#{active.id}")
+    refute has_element?(lv, "#would-add-#{on_leave.id}")
+  end
+
   test "a standing joins the group's Standing rule, and only goes in one", ctx do
     group_rule_fixture(ctx.group, ctx.endorsement)
     lv = ctx.lv
