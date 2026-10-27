@@ -1,7 +1,9 @@
 defmodule Web.ActivitySendRemindersLive do
   use Web, :live_view_app_layout
 
-  alias App.Mailer.ReminderMailer
+  import Web.Components.EmailPreview
+
+  alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.Reminder
   alias App.Operation.SendReminders
@@ -12,9 +14,8 @@ defmodule Web.ActivitySendRemindersLive do
   # Send reminders (#608): who gets a reminder email, when each was emailed before, and
   # why everyone else on the activity gets none, then the email itself and one send.
   # Every row starts checked; unchecking a member leaves them out. SendReminders.plan/2
-  # decides, and the preview is ReminderMailer's own HTML, with the team admin's message
-  # as they type it (#609). Only before the start, on an
-  # activity that isn't deleted.
+  # decides, and the preview is ActivityMailer's own HTML, with the team admin's message
+  # as they type it (#609). Only before the start, on an activity that isn't deleted.
   def mount(%{"id" => id}, _session, socket) do
     %{current_team: team, current_user: user} = socket.assigns
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -38,7 +39,7 @@ defmodule Web.ActivitySendRemindersLive do
          selected: MapSet.new(plan.send, & &1.member.id),
          sender: sender,
          message: "",
-         preview: ReminderMailer.preview(activity, team, sender, nil)
+         preview: ActivityMailer.reminder_preview(activity, team, sender, nil)
        )}
     end
   end
@@ -61,7 +62,8 @@ defmodule Web.ActivitySendRemindersLive do
      assign(socket,
        selected: params |> selected_ids() |> MapSet.new(),
        message: message,
-       preview: ReminderMailer.preview(activity, team, sender, Message.normalize(message))
+       preview:
+         ActivityMailer.reminder_preview(activity, team, sender, Message.normalize(message))
      )}
   end
 
@@ -166,6 +168,10 @@ defmodule Web.ActivitySendRemindersLive do
             phx-debounce="300"
           >
             Your own words, under the date and place. Up to {Message.limit_text()}.
+            Members who replied don't get this. To tell everyone on the activity something, <.a
+              id="reminders-update-link"
+              navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}/updates"}
+            >send an update</.a>.
           </.input>
         </div>
         <.email_preview subject={@preview.subject} html={@preview.html} />
@@ -247,20 +253,4 @@ defmodule Web.ActivitySendRemindersLive do
   defp reason_text(:no_email, service), do: "No email in #{service}"
 
   defp names(members), do: members |> Enum.map(& &1.name) |> Format.and_list()
-
-  attr :subject, :string, required: true
-  attr :html, :string, required: true
-
-  # The email as members get it, from the mailer's own HTML. Inert, so its links,
-  # which go nowhere here, can't be selected.
-  defp email_preview(assigns) do
-    ~H"""
-    <div id="email-preview" class="email-preview">
-      <p class="email-preview-subject">
-        <span class="hint">Subject</span> {@subject}
-      </p>
-      <div class="email-preview-body" inert>{Phoenix.HTML.raw(@html)}</div>
-    </div>
-    """
-  end
 end

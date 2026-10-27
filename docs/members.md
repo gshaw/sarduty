@@ -366,11 +366,27 @@ activity starts.
   send starts with no message, so an old one never goes out again by mistake. Members who replied never get one. There is no limit per
   member: the team admin sees each member's past emails and decides (2026-10-26; #444
   had a cap of 2, a day apart). Each goes at once, from the team's name, with replies to
-  the team admin ([ReminderMailer](../lib/app/mailer/reminder_mailer.ex)). Its text sets
+  the team admin ([ActivityMailer](../lib/app/mailer/activity_mailer.ex)). Its text sets
   no colour, so a mail app in dark mode keeps it readable. Each is a row in `reminders`:
   who, when, by whom, the message, and sent or failed. A No reply row's Replied cell reads "Reminded
   Oct 26", or "Reminder failed". Beside the Members heading, the last batch: "4 sent Oct
-  26, 18:02 by Alex Chen · 2 replied since".
+  26, 18:02 by Alex Chen · 2 replied since". The message's hint says members who
+  replied don't get it, and links to Send an update.
+- **Updates** ([SendActivityUpdate](../lib/app/operation/send_activity_update.ex), #609):
+  before the start, a team admin opens Send an update from the activity's Actions,
+  `/teams/:subdomain/activities/:id/updates`
+  ([ActivitySendUpdateLive](../lib/web/live/activity_send_update_live.ex)), to tell
+  everyone on the activity something, such as a new meeting place. The message is
+  required, up to 300 characters. Every member with an email starts checked, in a table
+  per reply (Signed up, Can't make it, No reply), each with select all. Each email ends
+  with where the member stands, read when it goes: "You're signed up." or "You said you
+  can't make it." with Change your reply, or the reply buttons for a member with no
+  reply. A member with no reply who turned invitation reminders off gets no buttons,
+  only Open activity, so it stays an update and not an invitation. Updates ignore that
+  setting otherwise, and carry no unsubscribe. The preview shows one ending at a time.
+  Earlier updates are listed at the top with their message, sender, and count. Each is
+  a row in `activity_updates`. Asking only members with no reply is Send reminders,
+  which the page links to.
 - **Members**, under the map, lists everyone the activity invites
   ([ActivityMembers](../lib/app/view_data/activity_members.ex)): a stat switch of All,
   Signed up, Can't make it, and No reply (Attended, Absent, and No reply once it starts),

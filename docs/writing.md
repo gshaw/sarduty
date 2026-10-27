@@ -161,8 +161,9 @@ member who signed up "attending".
 - **On Take attendance**, members who signed up and have not arrived are "Yet to arrive".
 - **Adding and emailing.** A team admin adds members to an activity; adding sends nothing.
   Send reminders lists who gets an email and why the rest do not; it emails only
-  members with no reply. Its message is the team admin's own words, plain text, up to 300
-  characters.
+  members with no reply. Send an update emails everyone on the activity the team
+  admin's message, whatever their reply. A message is the team admin's own words, plain
+  text, up to 300 characters.
 
 ## Glossary
 
@@ -225,7 +226,8 @@ and must not be used for it.
 | send                                | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
 | whiteboard                          | notice board, bulletin board, announcements    | D4H's board of short notes for everyone on the team.                                                 |
 | note                                | post (as a noun), message, announcement        | One item on the whiteboard: up to 140 characters, with an optional link.                             |
-| message (on a reminder email)       | note, comment, personal note                   | A team admin's own words in a reminder email, up to 300 characters. Not a whiteboard note.           |
+| message (in an email)               | note, comment, personal note                   | A team admin's own words in a reminder or an update, up to 300 characters. Not a whiteboard note.    |
+| update                              | announcement, notice, broadcast, news          | An email from a team admin to everyone on an activity, whatever their reply.                         |
 | post                                | publish, share, add                            | Putting a note on the whiteboard.                                                                    |
 | archive                             | take down, remove, hide                        | Taking a note off the whiteboard. It stays under Archived, and D4H or SAR Duty Records keeps it.     |
 | delete (a note)                     | remove, erase                                  | Taking a note away for good, archived or not. Neither SAR Duty nor D4H keeps it.                     |

@@ -71,6 +71,9 @@ header, and any header not on its allowlist fails the whole send. They carry
 `List-Unsubscribe` and `List-Unsubscribe-Post`, which it allows, for a mail app's
 one-click unsubscribe. Each is its own job, `SendReminderWorker`, so a refusal is tried
 again over about an hour, and the page shows a reminder that never went as failed.
+Updates about an activity (#609) go the same way, through `SendActivityUpdateWorker`,
+with no unsubscribe headers: they are a team admin writing to the people on their
+activity.
 
 Emailing a tax credit letter waits for Cloudflare's answer, so the page says when it
 didn't send (#155). Sending every eligible member's letter at once runs as an Oban job

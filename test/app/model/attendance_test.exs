@@ -143,7 +143,9 @@ defmodule App.Model.AttendanceTest do
     "lib/web/live/activity_attendance_live.ex" => "a label",
     "lib/app/operation/build_chore_event.ex" => "a D4H row's own status, to leave a row alone",
     "lib/web/components/reply.ex" => "a member's own reply, before the start",
-    "lib/app/view_data/activity_members.ex" => "one activity's replies, sign-ups included"
+    "lib/app/view_data/activity_members.ex" => "one activity's replies, sign-ups included",
+    "lib/app/mailer/activity_mailer.ex" => "how an update ends, from a reply before the start",
+    "lib/web/live/activity_send_update_live.ex" => "a label"
   }
 
   test "only Attendance says what attended means" do

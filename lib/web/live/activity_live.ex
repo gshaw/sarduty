@@ -95,7 +95,8 @@ defmodule Web.ActivityLive do
       batch_sender: batch && sender_name(team, batch.sent_by_user, now),
       send_reminders?:
         socket.assigns.team_admin? && coming? && !activity.deleted_at &&
-          Enum.any?(members, &(&1.status == "requested"))
+          Enum.any?(members, &(&1.status == "requested")),
+      send_update?: socket.assigns.team_admin? && coming? && !activity.deleted_at && members != []
     )
   end
 
@@ -213,6 +214,7 @@ defmodule Web.ActivityLive do
           attendance_count={@attendance_count}
           team_admin?={@team_admin?}
           send_reminders?={@send_reminders?}
+          send_update?={@send_update?}
         />
       </aside>
       <main class="content-2/3">
@@ -287,6 +289,7 @@ defmodule Web.ActivityLive do
   attr :attendance_count, :integer, required: true
   attr :team_admin?, :boolean, default: false
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
+  attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
 
   def sidebar_content(assigns) do
     ~H"""
@@ -361,6 +364,12 @@ defmodule Web.ActivityLive do
               id="activity-send-reminders"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/reminders"}
             >Send reminders</.a>
+          </li>
+          <li :if={@send_update?}>
+            <.a
+              id="activity-send-update"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/updates"}
+            >Send an update</.a>
           </li>
           <li>
             <.a
