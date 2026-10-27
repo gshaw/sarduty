@@ -124,8 +124,8 @@ defmodule App.ViewData.TeamAttention do
       level: :info,
       title:
         Format.count(count,
-          one: "%d member has no email or mobile phone",
-          many: "%d members have no email or mobile phone"
+          one: "%d member has no email, mobile phone, or address",
+          many: "%d members have no email, mobile phone, or address"
         ),
       detail: missing_details_where(service),
       action: "Show members"

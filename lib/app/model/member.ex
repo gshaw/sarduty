@@ -83,11 +83,19 @@ defmodule App.Model.Member do
   def first_name(%{name: name}), do: name |> String.split(" ", parts: 2) |> hd()
 
   @doc """
-  What the member lacks that login and emailed letters need, in the order the members
-  page shows it: `:mobile_phone`, `:email`.
+  What the member lacks that login, emailed letters, tax credit letters, and the mileage
+  report need, in the order the members page shows it: `:mobile_phone`, `:email`,
+  `:address` (#213).
   """
   def missing_details(%{} = member) do
-    Enum.filter([blank?(member.phone) && :mobile_phone, blank?(member.email) && :email], & &1)
+    Enum.filter(
+      [
+        blank?(member.phone) && :mobile_phone,
+        blank?(member.email) && :email,
+        blank?(member.address) && :address
+      ],
+      & &1
+    )
   end
 
   defp blank?(value), do: value in [nil, ""]
@@ -97,7 +105,8 @@ defmodule App.Model.Member do
     where(
       query,
       [m],
-      is_nil(m.phone) or m.phone == "" or is_nil(m.email) or m.email == ""
+      is_nil(m.phone) or m.phone == "" or is_nil(m.email) or m.email == "" or
+        is_nil(m.address) or m.address == ""
     )
   end
 
@@ -270,7 +279,7 @@ defmodule App.Model.Member do
   def looks_like_not_a_person?(%Member{not_a_person: true}, _attended?), do: false
 
   def looks_like_not_a_person?(%Member{} = member, attended?),
-    do: missing_details(member) == [:mobile_phone, :email] and not attended?
+    do: blank?(member.phone) and blank?(member.email) and not attended?
 
   @doc "Whether the member attended any activity by `now`."
   def attended?(%Member{id: id}, now \\ DateTime.utc_now()) do

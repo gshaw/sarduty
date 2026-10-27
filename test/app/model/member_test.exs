@@ -24,10 +24,30 @@ defmodule App.Model.MemberTest do
     assert Repo.reload!(member).joined_at == nil
   end
 
-  test "missing details are a mobile phone and an email, blank or not there" do
-    assert Member.missing_details(%{phone: "604-555-0100", email: "a@example.com"}) == []
-    assert Member.missing_details(%{phone: nil, email: ""}) == [:mobile_phone, :email]
-    assert Member.missing_details(%{phone: "", email: "a@example.com"}) == [:mobile_phone]
+  test "missing details are a mobile phone, an email, and an address, blank or not there" do
+    complete = %{phone: "604-555-0100", email: "a@example.com", address: "123 Main St"}
+
+    assert Member.missing_details(complete) == []
+
+    assert Member.missing_details(%{phone: nil, email: "", address: nil}) ==
+             [:mobile_phone, :email, :address]
+
+    assert Member.missing_details(%{complete | phone: ""}) == [:mobile_phone]
+    assert Member.missing_details(%{complete | address: ""}) == [:address]
+  end
+
+  test "the missing details query finds the members missing_details/1 does (#213)" do
+    team = team_fixture()
+    member_fixture(team)
+
+    missing =
+      for attrs <- [%{phone: ""}, %{email: nil}, %{address: nil}, %{address: ""}],
+          do: member_fixture(team, attrs)
+
+    found = Member |> where(team_id: ^team.id) |> Member.missing_details_query() |> Repo.all()
+
+    assert found |> Enum.map(& &1.id) |> Enum.sort() ==
+             missing |> Enum.map(& &1.id) |> Enum.sort()
   end
 
   test "looks like not a person with no email, no mobile phone, and no attendance" do
@@ -37,6 +57,7 @@ defmodule App.Model.MemberTest do
     refute Member.looks_like_not_a_person?(bot, true)
     refute Member.looks_like_not_a_person?(%{bot | not_a_person: true}, false)
     refute Member.looks_like_not_a_person?(%{bot | email: "a@example.com"}, false)
+    assert Member.looks_like_not_a_person?(%{bot | address: "123 Main St"}, false)
   end
 
   describe "not_seen_query/4" do
