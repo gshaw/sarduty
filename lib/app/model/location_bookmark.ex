@@ -24,4 +24,7 @@ defmodule App.Model.LocationBookmark do
     |> order_by([b], asc: b.title, asc: b.id)
     |> Repo.all()
   end
+
+  @doc "One of the team's bookmarks, by local id."
+  def find!(%Team{} = team, id), do: Repo.get_by!(LocationBookmark, id: id, team_id: team.id)
 end

@@ -9,7 +9,7 @@ defmodule Web.Components.TeamSettingsTabs do
 
   attr :current, :atom,
     required: true,
-    values: [:general, :managers, :member_logins, :hours_tags, :chore_categories, :mcp]
+    values: [:general, :managers, :member_logins, :hours_tags, :places, :chore_categories, :mcp]
 
   def team_settings_tabs(assigns) do
     ~H"""
@@ -29,6 +29,9 @@ defmodule Web.Components.TeamSettingsTabs do
       </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/hours-tags"} current={@current == :hours_tags}>
         Hours tags
+      </:tab>
+      <:tab navigate={~p"/teams/#{@team}/settings/places"} current={@current == :places}>
+        Places
       </:tab>
       <:tab
         :if={App.Model.Team.chores?(@team)}

@@ -269,6 +269,9 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/managers", TeamManagersLive
       live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
+      live "/teams/:subdomain/settings/places", Settings.PlaceCollectionLive
+      live "/teams/:subdomain/settings/places/new", Settings.PlaceFormLive, :new
+      live "/teams/:subdomain/settings/places/:id", Settings.PlaceFormLive, :edit
       live "/teams/:subdomain/settings/chore-categories", Settings.ChoreCategoryCollectionLive
       live "/teams/:subdomain/settings/chore-categories/new", Settings.ChoreCategoryFormLive, :new
 
