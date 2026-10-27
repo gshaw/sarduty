@@ -5,6 +5,7 @@ defmodule Web.ActivityAddMembersLive do
   alias App.Model.Activity
   alias App.Model.Group
   alias App.Model.Member
+  alias App.Model.Standing
   alias App.Operation.InviteMembers
   alias Service.Format
 
@@ -53,12 +54,14 @@ defmodule Web.ActivityAddMembersLive do
     |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}")
   end
 
-  # Who the name picker offers: current members who are people, A to Z.
-  defp people(team, now),
-    do:
-      team.id
-      |> Member.get_all()
-      |> Enum.filter(&(Member.current?(&1, now) and not &1.not_a_person))
+  # Who the name picker offers: current members SAR Duty counts, A to Z.
+  defp people(team, now) do
+    retiring = Standing.retiring_ids(team)
+
+    team.id
+    |> Member.get_all()
+    |> Enum.filter(&(Member.current?(&1, now) and Member.counted?(&1, retiring)))
+  end
 
   defp assign_plan(socket, now) do
     %{activity: activity, picks: picks, on_activity: on_activity, away: away} = socket.assigns

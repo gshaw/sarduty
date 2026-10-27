@@ -492,24 +492,19 @@ defmodule Web.StyleGuideHTML.SampleData do
       {"Standing", [{"Away", "standing:away"}, {"Not a person", "standing:not_a_person"}]}
     ]
 
-  # Team settings after a failed save: the app's own changeset, with a blank name and an
-  # email that isn't one.
+  # Team settings' Tax credit letters tab after a failed save: the app's own changeset,
+  # with a phone number too long and an email that isn't one.
   def settings_form do
-    team = %{
-      sample_team()
-      | lat: 49.70161,
-        lng: -123.15583,
-        mailing_address: "PO Box 123\nSquamish BC V8B 0A1"
-    }
+    team = %{sample_team() | mailing_address: "PO Box 123\nSquamish BC V8B 0A1"}
 
     params = %{
-      "name" => "",
       "authorized_by_name" => "Avery Chen",
+      "authorized_by_phone" => "604 555 0100, or 604 555 0101 after 6 pm",
       "authorized_by_email" => "avery at example"
     }
 
     team
-    |> Team.build_settings_changeset(params)
+    |> Team.build_letters_changeset(params)
     |> Map.put(:action, :update)
     |> Phoenix.Component.to_form(as: "form", id: "settings")
   end

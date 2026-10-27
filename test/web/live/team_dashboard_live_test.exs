@@ -246,7 +246,7 @@ defmodule Web.TeamDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#attention-watch_missing a[href="/teams/#{team.subdomain}/settings"]}
+             ~s{#attention-watch_missing a[href="/teams/#{team.subdomain}/settings/members"]}
            )
   end
 
@@ -628,6 +628,52 @@ defmodule Web.TeamDashboardLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       refute has_element?(lv, "#whiteboard")
+    end
+  end
+
+  describe "Retiring members (#514)" do
+    test "are left out of missing details and counted apart by the items they hold",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      leavers = group_fixture(team, %{title: "Leavers"})
+
+      team =
+        team
+        |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+        |> App.Repo.update!()
+
+      holding = member_fixture(team, %{phone: nil})
+      clear = member_fixture(team)
+      gone = member_fixture(team, %{left_at: ~U[2025-01-01 00:00:00Z]})
+      for member <- [holding, clear, gone], do: group_member_fixture(leavers, member)
+      kit = equipment_item_fixture(team, %{member_id: holding.id})
+      equipment_item_fixture(team, %{d4h_container_id: kit.d4h_equipment_id})
+
+      {:ok, lv, _html} = open(conn, user, team)
+
+      refute has_element?(lv, "#attention-missing_details")
+      assert has_element?(lv, "#attention-retiring", "1 retiring member holds 2 items")
+      assert has_element?(lv, "#attention-retiring_clear", "1 retiring member holds no items")
+      assert has_element?(lv, "#attention-retiring_clear", "Retire them in D4H.")
+
+      assert has_element?(
+               lv,
+               ~s{#attention-retiring a[href="/teams/#{team.subdomain}/members?standing=retiring"]}
+             )
+    end
+
+    test "a deleted Retiring group warns and links to settings", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      team = team |> Ecto.Changeset.change(retiring_d4h_group_id: 424_242) |> App.Repo.update!()
+
+      {:ok, lv, _html} = open(conn, user, team)
+
+      assert has_element?(lv, "#attention-retiring_missing", "The Retiring group was deleted")
+
+      assert has_element?(
+               lv,
+               ~s{#attention-retiring_missing a[href="/teams/#{team.subdomain}/settings/members"]}
+             )
     end
   end
 end

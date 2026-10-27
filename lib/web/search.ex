@@ -12,7 +12,7 @@ defmodule Web.Search do
     router: Web.Router,
     statics: Web.static_paths()
 
-  alias App.Model.MemberAwayPeriod
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.ViewData.Search
   alias Web.UserAuth
@@ -160,7 +160,7 @@ defmodule Web.Search do
     hit = Map.put_new(hit, :path, hit_path(kind, team, hit.id))
 
     if kind == :member,
-      do: Map.update!(hit, :standing, &MemberAwayPeriod.visible_standing(&1, team_admin?)),
+      do: Map.update!(hit, :standing, &Standing.visible(&1, team_admin?)),
       else: hit
   end
 

@@ -41,7 +41,7 @@ defmodule App.Model.Team do
     # newest change, and how long syncs have been failing. App.Operation.SyncD4HChanges.
     field :d4h_synced_at, :utc_datetime_usec
     field :d4h_sync_state, :map
-    # The MCP trial's switch (#28). Set only by App.Operation.SetTeamMCP from /admin/mcp.
+    # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from team settings.
     field :mcp_enabled, :boolean, default: false
     # Lets current members log in for their own ID card and tax credit letters (#156).
     # Set only by App.Operation.SetTeamMemberLogins from the team's settings.
@@ -69,6 +69,8 @@ defmodule App.Model.Team do
     # The attendance check watches one group (nil for all members) and these standings (#366).
     field :watch_d4h_group_id, :integer
     field :watch_standings, {:array, :string}, default: ["active"]
+    # The D4H group whose current members are Retiring (#514), nil for none.
+    field :retiring_d4h_group_id, :integer
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
     timestamps(type: :utc_datetime_usec)
@@ -127,40 +129,67 @@ defmodule App.Model.Team do
       end)
   end
 
-  @watch_standings ~w(active away not_a_person)
+  @doc "Whether the team has a Retiring group (#514)."
+  def retiring?(%Team{retiring_d4h_group_id: id}), do: id != nil
 
-  @doc "The standings the attendance check can watch, as choices."
-  def watch_standing_kinds,
-    do: [{"Active", "active"}, {"Away", "away"}, {"Not a person", "not_a_person"}]
+  @doc """
+  The standings the attendance check can watch, as choices. Retiring only for a team
+  with a Retiring group (#514).
+  """
+  def watch_standing_kinds(%Team{} = team) do
+    Enum.reject(
+      [
+        {"Active", "active"},
+        {"Away", "away"},
+        {"Retiring", "retiring"},
+        {"Not a person", "not_a_person"}
+      ],
+      &(elem(&1, 1) == "retiring" and not retiring?(team))
+    )
+  end
 
-  # Only what a team manager may edit. d4h_team_id and the saved key are not
-  # castable here; UpdateTeamSettings sets the key after checking it with D4H.
+  @watch_standings ~w(active away retiring not_a_person)
+
+  # Settings' General tab. d4h_team_id and the saved key are not castable here;
+  # UpdateTeamSettings sets the key after checking it with D4H.
   def build_settings_changeset(data, params \\ %{}) do
     data
-    |> cast(drop_blank_standings(params), [
-      :name,
+    |> cast(params, [:name, :new_d4h_access_key])
+    |> validate_required([:name])
+    |> Validate.name(:name)
+    |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
+  end
+
+  @doc "Settings' Tax credit letters tab: the mailing address and who signs."
+  def build_letters_changeset(data, params \\ %{}) do
+    data
+    |> cast(params, [
       :mailing_address,
       :authorized_by_name,
       :authorized_by_title,
       :authorized_by_phone,
-      :authorized_by_email,
-      :not_seen_days,
-      :watch_d4h_group_id,
-      :watch_standings,
-      :new_d4h_access_key
+      :authorized_by_email
     ])
-    |> validate_required([:name])
-    |> validate_inclusion(:not_seen_days, [0 | @not_seen_days])
-    |> validate_subset(:watch_standings, @watch_standings)
-    |> validate_length(:watch_standings, min: 1, message: "Select at least one standing.")
-    |> not_seen_off()
-    |> Validate.name(:name)
     |> Validate.address(:mailing_address)
     |> validate_length(:authorized_by_name, max: 250)
     |> validate_length(:authorized_by_title, max: 100)
     |> validate_length(:authorized_by_phone, max: 30)
     |> Validate.email(:authorized_by_email)
-    |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
+  end
+
+  @doc "Settings' Members tab: the Retiring group and the attendance check (#514, #366)."
+  def build_members_changeset(data, params \\ %{}) do
+    data
+    |> cast(drop_blank_standings(params), [
+      :retiring_d4h_group_id,
+      :not_seen_days,
+      :watch_d4h_group_id,
+      :watch_standings
+    ])
+    |> validate_inclusion(:not_seen_days, [0 | @not_seen_days])
+    |> validate_subset(:watch_standings, @watch_standings)
+    |> validate_length(:watch_standings, min: 1, message: "Select at least one standing.")
+    |> not_seen_off()
   end
 
   # The form sends a blank first so unticking every box still sends the field.

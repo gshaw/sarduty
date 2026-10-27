@@ -6,9 +6,9 @@ defmodule App.Operation.BuildGroupRulePreview do
   alias App.Model.GroupMember
   alias App.Model.GroupRule
   alias App.Model.Member
-  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
 
@@ -30,12 +30,12 @@ defmodule App.Operation.BuildGroupRulePreview do
   # - `awards_by_member`: each member id with their awards for those qualifications.
   # - `members`: the team's members, each with `id`, `left_at`, and `d4h_status`.
   # - `standings`: each member id with their standing today (#366), from
-  #   `MemberAwayPeriod.standing/4`. A member missing from it is active. A retired
-  #   member's is `:retired`, which no Standing rule offers, so it never meets one.
+  #   `Standing.of/5`. A member missing from it is active. A retired member's is
+  #   `:retired`, which no Standing rule offers, so it never meets one.
   #
-  # A Standing rule is met by having any of its standings, `{:standing, :active}`,
-  # `{:away, _}`, or `{:standing, :not_a_person}`. Standing is worked out for today, so
-  # the preview changes the day leave starts or ends.
+  # A Standing rule is met by having any of its standings: `{:standing, :active}`,
+  # `{:away, _}`, `{:standing, :retiring}`, or `{:standing, :not_a_person}`. Standing is
+  # worked out for today, so the preview changes the day leave starts or ends.
 
   @doc "The team's context for `plan/3`."
   def load(%Team{} = team, now \\ DateTime.utc_now()) do
@@ -55,13 +55,7 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   defp members_and_standings(team, now) do
     members = list_team_members(team.id)
-    today = Service.Period.today(now, team.timezone)
-    periods = team.id |> MemberAwayPeriod.get_all_for_team() |> Enum.group_by(& &1.member_id)
-
-    standings =
-      Map.new(members, fn m ->
-        {m.id, MemberAwayPeriod.standing(m, Map.get(periods, m.id, []), today, now)}
-      end)
+    standings = Standing.by_member(team, members, now)
 
     {Enum.map(members, &Map.take(&1, [:id, :left_at, :d4h_status])), standings}
   end
@@ -294,7 +288,7 @@ defmodule App.Operation.BuildGroupRulePreview do
     statuses =
       Map.new(context.members, fn m ->
         actual = standing_of(context, m.id)
-        {m.id, if(standing_kind(actual) == standing, do: {:met, nil}, else: {:unmet, []})}
+        {m.id, if(Standing.kind(actual) == standing, do: {:met, nil}, else: {:unmet, []})}
       end)
 
     {statuses, memo}
@@ -355,9 +349,6 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   defp standing_of(context, member_id),
     do: context |> Map.get(:standings, %{}) |> Map.get(member_id, :active)
-
-  defp standing_kind({:away, _period}), do: :away
-  defp standing_kind(standing), do: standing
 
   defp none_of(targets, context) do
     {:none_of, for({:group, g} <- targets, do: context.groups[g].title),
@@ -434,7 +425,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   def describe({:in, title}, _titles, _timezone), do: "In #{title}"
 
   def describe({:standing, standing}, _titles, _timezone),
-    do: MemberAwayPeriod.describe_standing(standing)
+    do: Standing.text(standing)
 
   def describe({:holds, name}, _titles, _timezone), do: "Holds #{name}"
 

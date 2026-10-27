@@ -21,7 +21,7 @@ defmodule App.Model.GroupRule do
 
   @doc """
   A new rule on `group` with one group or endorsement in it, or for `:standing`, one
-  standing: `:active`, `:away`, or `:not_a_person`.
+  standing: `:active`, `:away`, `:retiring`, or `:not_a_person`.
   """
   def add!(%Group{} = group, kind, target) when kind in [:in, :not_in, :standing] do
     Repo.transaction(fn ->

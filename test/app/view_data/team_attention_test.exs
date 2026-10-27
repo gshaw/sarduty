@@ -19,6 +19,7 @@ defmodule App.ViewData.TeamAttentionTest do
         expiring_count: 0,
         missing_details_count: 0,
         not_seen: nil,
+        retiring: nil,
         group_change_count: 0,
         chore_count: 0,
         certificate_count: 0,

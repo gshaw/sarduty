@@ -9,6 +9,7 @@ defmodule Web.GroupLiveTest do
   alias App.Model.GroupMembershipChange
   alias App.Model.GroupRule
   alias App.Model.GroupRuleReference
+  alias App.Operation.AddGroupRule
   alias App.Repo
 
   # The crash tests below log the LiveView's exit.
@@ -409,5 +410,23 @@ defmodule Web.GroupLiveTest do
   defp crash(lv, event, params) do
     Process.flag(:trap_exit, true)
     assert {{%Ecto.NoResultsError{}, _stack}, _call} = catch_exit(render_click(lv, event, params))
+  end
+
+  test "the Retiring group cannot have rules (#514)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    leavers = group_fixture(team, %{title: "Leavers"})
+
+    team
+    |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+    |> App.Repo.update!()
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/groups/#{leavers.id}")
+
+    assert has_element?(lv, "#retiring-group", "It cannot have group rules.")
+    refute has_element?(lv, "#edit-rules")
+
+    assert {:error, "Members of this group are retiring. It cannot have group rules."} =
+             AddGroupRule.call(leavers, :standing, {:standing, :active})
   end
 end

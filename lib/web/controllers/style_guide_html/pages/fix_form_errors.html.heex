@@ -1,15 +1,9 @@
 <.shell current={:fix_form_errors}>
   <h1>Fix form errors</h1>
-  <p class="lead">Team settings after a failed save.</p>
+  <p class="lead">Team settings' Tax credit letters tab after a failed save.</p>
 
   <.form :let={f} for={settings_form()} class="example measure" onsubmit="return false">
     <.error_summary form={f} />
-    <.input field={f[:name]} label="Name" />
-    <div class="grid grid-cols-2 gap-x-6">
-      <.input field={f[:lat]} label="Latitude" readonly />
-      <.input field={f[:lng]} label="Longitude" readonly />
-    </div>
-    <.input field={f[:timezone]} label="Time zone" readonly />
     <.input field={f[:mailing_address]} label="Mailing address" type="textarea" rows="3" />
     <.input
       field={f[:authorized_by_name]}
@@ -20,12 +14,12 @@
       The full name of your team president, or someone in a similar role. The CRA uses this during
       tax audits.
     </.input>
-    <.input field={f[:authorized_by_email]} label="Signer's email (optional)" type="email" />
+    <div class="grid md:grid-cols-2 gap-x-6">
+      <.input field={f[:authorized_by_phone]} label="Signer's phone (optional)" />
+      <.input field={f[:authorized_by_email]} label="Signer's email (optional)" type="email" />
+    </div>
     <.form_actions>
       <.button variant={:success}>Save settings</.button>
-      <:trailing>
-        <.button type="button">Refresh</.button>
-      </:trailing>
     </.form_actions>
   </.form>
 
@@ -36,9 +30,8 @@
       at the top links to each field with a problem.
     </li>
     <li>Each field shows its own error, in the same words, above the input.</li>
-    <li>What comes in with a refresh is read-only.</li>
   </ul>
   <p class="spec">
-    The same components as the team settings page, given a made-up changeset that failed to save.
+    The same components as the Tax credit letters tab, given a made-up changeset that failed to save.
   </p>
 </.shell>

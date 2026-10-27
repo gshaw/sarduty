@@ -29,7 +29,7 @@ defmodule App.Operation.SendRemindersTest do
   defp names(plan), do: Enum.map(plan.send, & &1.member.name)
   defp left_out(plan), do: Enum.map(plan.left_out, fn {m, reason} -> {m.name, reason} end)
 
-  describe "plan/2" do
+  describe "plan/3" do
     test "each member with no reply can get one; the rest are named with why" do
       rows = [
         row(member(1, "Cameron Ruiz")),
@@ -39,7 +39,7 @@ defmodule App.Operation.SendRemindersTest do
         row(member(5, "Quinn Laval"), "absent")
       ]
 
-      plan = SendReminders.plan(rows, [])
+      plan = SendReminders.plan(rows, [], MapSet.new())
 
       assert names(plan) == ["Cameron Ruiz"]
       assert left_out(plan) == [{"Dana Clark", :reminders_off}, {"Eli Haddad", :no_email}]
@@ -48,10 +48,18 @@ defmodule App.Operation.SendRemindersTest do
                [{"Avery Chen", "attending"}, {"Quinn Laval", "absent"}]
     end
 
+    test "a retiring member gets none, whatever their email (#514)" do
+      rows = [row(member(1, "Cameron Ruiz")), row(member(2, "Avery Chen", %{email: nil}))]
+      plan = SendReminders.plan(rows, [], MapSet.new([1, 2]))
+
+      assert names(plan) == []
+      assert left_out(plan) == [{"Avery Chen", :retiring}, {"Cameron Ruiz", :retiring}]
+    end
+
     test "a member with a second row that has a reply has replied (#519)" do
       cameron = member(1, "Cameron Ruiz")
       rows = [row(cameron), row(cameron, "attending"), row(member(5, "Wren Adams"))]
-      plan = SendReminders.plan(rows, [])
+      plan = SendReminders.plan(rows, [], MapSet.new())
 
       assert names(plan) == ["Wren Adams"]
       assert [%{member: %{name: "Cameron Ruiz"}, status: "attending"}] = plan.replied
@@ -69,12 +77,14 @@ defmodule App.Operation.SendRemindersTest do
       ]
 
       assert %{send: [%{emailed: [%{sent_at: ^first}, %{sent_at: ^second}]}]} =
-               SendReminders.plan([row(cameron)], reminders)
+               SendReminders.plan([row(cameron)], reminders, MapSet.new())
     end
 
     test "a member who turned reminders off after an email gets no more" do
       dana = member(2, "Dana Clark", %{invitation_reminders: false})
-      plan = SendReminders.plan([row(dana)], [reminder(dana, ~U[2026-10-20 18:00:00Z])])
+
+      plan =
+        SendReminders.plan([row(dana)], [reminder(dana, ~U[2026-10-20 18:00:00Z])], MapSet.new())
 
       assert plan.send == []
       assert left_out(plan) == [{"Dana Clark", :reminders_off}]

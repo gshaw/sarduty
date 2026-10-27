@@ -9,6 +9,8 @@ defmodule Web.MemberCollectionLive do
   alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.Member
+  alias App.Model.MemberAwayPeriod
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Operation.SetGroupMembers
   alias App.ViewModel.MemberFilterViewModel
@@ -54,17 +56,17 @@ defmodule Web.MemberCollectionLive do
     %{current_team: current_team, team_admin?: team_admin?} = socket.assigns
     now = DateTime.utc_now()
     today = Service.Period.today(now, current_team.timezone)
+    retiring? = Team.retiring?(current_team)
+
+    tile? =
+      MemberFilterViewModel.switch_standing?(filter_options.standing, team_admin?, retiring?)
 
     socket
     |> assign(Map.take(filter_options, [:sort, :details, :attended]))
-    |> assign(:filter_options, filter_options)
-    |> assign(now: now, today: today)
+    |> assign(filter_options: filter_options, now: now, today: today, retiring?: retiring?)
     |> assign(:standing?, standing_column?(current_team, team_admin?, today, now))
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
-    |> assign(
-      :standing_tile?,
-      MemberFilterViewModel.switch_standing?(filter_options.standing, team_admin?)
-    )
+    |> assign(:standing_tile?, tile?)
     |> assign(:paginated, build_paginated_content(current_team, filter_options))
     |> assign(
       :standing_counts,
@@ -90,7 +92,7 @@ defmodule Web.MemberCollectionLive do
     </.heading_row>
     <.stat_switch id="member-switch" label="Standing">
       <:view
-        :for={{label, standing} <- MemberFilterViewModel.standing_switch(@team_admin?)}
+        :for={{label, standing} <- MemberFilterViewModel.standing_switch(@team_admin?, @retiring?)}
         id={"member-view-#{standing}"}
         patch={@path_fn.(standing: standing, page: nil)}
         current={@filter_options.standing == standing}
@@ -114,7 +116,13 @@ defmodule Web.MemberCollectionLive do
         :if={!@standing_tile?}
         field={@form[:standing]}
         label="Standing"
-        options={MemberFilterViewModel.standing_kinds(@form[:standing].value, @team_admin?)}
+        options={
+          MemberFilterViewModel.standing_kinds(
+            @form[:standing].value,
+            @team_admin?,
+            @retiring?
+          )
+        }
         default="current"
       />
       <:filter
@@ -316,29 +324,24 @@ defmodule Web.MemberCollectionLive do
     """
   end
 
-  # Shown only when some current member is not active, whatever the filter shows.
-  # A member never sees Away (#440), so their list shows it only for Not a person: Retired
-  # has its own column.
-  defp standing_column?(team, false = _team_admin?, _today, now),
-    do: Member.any_not_a_person?(team, now)
+  # Shown only when some current member is not active, whatever the filter shows. A member
+  # never sees Away (#440), so their list shows it only for Retiring or Not a person:
+  # Retired has its own column.
+  defp standing_column?(team, team_admin?, today, now),
+    do: Member.any_not_active?(team, today, now, team_admin?)
 
-  defp standing_column?(team, _team_admin?, today, now),
-    do: Member.any_not_active?(team, today, now)
-
-  # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
+  # The row has the away period's last day only, which is all the column shows.
   defp standing_text(record, team_admin?, today, now) do
-    cond do
-      not Member.current?(record.member, now) ->
-        "Retired"
+    away =
+      if record.away_until,
+        do: [%MemberAwayPeriod{starts_on: today, ends_on: record.away_until}],
+        else: []
 
-      record.member.not_a_person ->
-        "Not a person"
-
-      team_admin? and record.away_until ->
-        "Away until #{Service.Format.day_in_year(record.away_until, today)}"
-
-      true ->
-        "Active"
+    case record.member
+         |> Standing.of(away, record.retiring?, today, now)
+         |> Standing.visible(team_admin?) do
+      {:away, period} -> "Away until #{Service.Format.day_in_year(period.ends_on, today)}"
+      standing -> Standing.text(standing)
     end
   end
 

@@ -12,7 +12,8 @@ A group's rules are a list, and a member must meet every one (#334). Each rule i
 - **Not in any of**: the member is in none of its groups and holds none of its
   endorsements.
 - **Standing is any of**: the member's [standing](members.md#standing) today is one of
-  Active, Away, or Not a person (#366).
+  Active, Away, Retiring (on a team with a Retiring group, #514), or Not a person (#366).
+  The Retiring group itself can't have rules.
 
 No nesting. **A group's members** are whoever meets its rules when it has rules, and its
 D4H members when it has none. So "In GSAR Qualified Callout" follows that group's rules,
@@ -177,7 +178,8 @@ one into a sentence in the team's time zone:
 - Several: "Not in GSAR Qualified Callout or MIT Callout", or "No First Aid 16 hours or
   MIT Callout Approval on record".
 - Not in: "In LOA", or "Holds First Aid 16 hours".
-- Standing: the standing, "Away until March 1, 2027 (Parental leave)" or "Not a person".
+- Standing: the standing, "Away until March 1, 2027 (Parental leave)", "Retiring", or
+  "Not a person".
 
 **Expiring** lists members who qualify now but won't within 60 days (D4H's default
 reminder). It comes from endorsements, including those reached through smart groups. An

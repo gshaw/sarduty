@@ -123,7 +123,7 @@ defmodule Web.MemberFormLive do
     </section>
 
     <section :if={@member} id="member-retire" class="mt-8 measure">
-      <h2 class="heading">Retiring</h2>
+      <h2 class="heading">Retirement</h2>
       <%= if @member.d4h_status == "RETIRED" do %>
         <p>
           {@member.name} retired on {Service.Format.date_long(@member.left_at, @current_team.timezone)}.

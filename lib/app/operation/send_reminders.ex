@@ -21,6 +21,7 @@ defmodule App.Operation.SendReminders do
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.Reminder
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
   alias App.Validate.Message
@@ -28,20 +29,22 @@ defmodule App.Operation.SendReminders do
 
   @doc """
   Who can get a reminder now, from the activity's rows of any status (with their
-  members) and its `reminders` so far. Each list is by name:
+  members), its `reminders` so far, and the team's `retiring` member ids (#514). Each
+  list is by name:
 
     * `send`: `%{member:, emailed: [reminder]}`, with the member's reminders that
       didn't fail, oldest first.
     * `replied`: the rows of members who answered, so get none.
-    * `left_out`: `{member, :no_email | :reminders_off}` for the others with no reply.
+    * `left_out`: `{member, :retiring | :no_email | :reminders_off}` for the others with
+      no reply. A member invited before they were marked retiring gets none.
   """
-  def plan(rows, reminders) do
+  def plan(rows, reminders, retiring) do
     by_member = reminders |> Enum.reject(&(&1.status == :failed)) |> Enum.group_by(& &1.member_id)
     {no_reply, replied} = by_reply(rows)
 
     {send, left_out} =
       no_reply
-      |> Enum.map(&email(&1.member, Map.get(by_member, &1.member_id, [])))
+      |> Enum.map(&email(&1.member, Map.get(by_member, &1.member_id, []), retiring))
       |> Enum.split_with(&is_map/1)
 
     %{send: send, replied: replied, left_out: left_out}
@@ -56,14 +59,14 @@ defmodule App.Operation.SendReminders do
     |> Enum.split_with(&(&1.status == "requested"))
   end
 
-  defp email(%Member{email: email} = member, _emailed) when email in [nil, ""],
-    do: {member, :no_email}
-
-  defp email(%Member{invitation_reminders: false} = member, _emailed),
-    do: {member, :reminders_off}
-
-  defp email(member, emailed),
-    do: %{member: member, emailed: Enum.sort_by(emailed, & &1.sent_at, DateTime)}
+  defp email(member, emailed, retiring) do
+    cond do
+      MapSet.member?(retiring, member.id) -> {member, :retiring}
+      member.email in [nil, ""] -> {member, :no_email}
+      member.invitation_reminders == false -> {member, :reminders_off}
+      true -> %{member: member, emailed: Enum.sort_by(emailed, & &1.sent_at, DateTime)}
+    end
+  end
 
   @doc """
   Queues a reminder for each member in `member_ids` that plan/2 has, from `user`, with
@@ -97,12 +100,13 @@ defmodule App.Operation.SendReminders do
         {:error, :message_too_long}
 
       true ->
-        {:ok, queue_picked(activity, user, ids, message, now)}
+        {:ok, queue_picked(team, activity, user, ids, message, now)}
     end
   end
 
-  defp queue_picked(activity, user, ids, message, now) do
-    %{send: emails} = plan(invited_rows(activity), Reminder.for_activity(activity))
+  defp queue_picked(team, activity, user, ids, message, now) do
+    retiring = Standing.retiring_ids(team)
+    %{send: emails} = plan(invited_rows(activity), Reminder.for_activity(activity), retiring)
 
     for email <- emails,
         MapSet.member?(ids, email.member.id),

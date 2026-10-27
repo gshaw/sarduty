@@ -19,6 +19,7 @@ defmodule App.ViewData.Search do
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.Qualification
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Model.Template
   alias App.Repo
@@ -335,8 +336,11 @@ defmodule App.ViewData.Search do
       |> Repo.all()
       |> Map.new(&{&1.member_id, &1.away_until})
 
+    retiring = Standing.retiring_ids(team)
+
     Enum.map(hits, fn hit ->
-      Map.put(hit, :standing, standing(hit, Map.get(away, hit.id), now))
+      retiring? = MapSet.member?(retiring, hit.id)
+      Map.put(hit, :standing, standing(hit, Map.get(away, hit.id), retiring?, today, now))
     end)
   end
 
@@ -345,13 +349,13 @@ defmodule App.ViewData.Search do
 
   defp describe(_kind, hits, _team, _now), do: hits
 
-  # MemberAwayPeriod.standing/4 with the away period's last day only.
-  defp standing(hit, away_until, now) do
-    cond do
-      not Member.current?(hit, now) -> :retired
-      hit.not_a_person -> :not_a_person
-      away_until -> {:away, away_until}
-      true -> :active
+  # Standing.of/5 with the away period's last day only, which is all a hit shows.
+  defp standing(hit, away_until, retiring?, today, now) do
+    away = if away_until, do: [%MemberAwayPeriod{starts_on: today, ends_on: away_until}], else: []
+
+    case Standing.of(hit, away, retiring?, today, now) do
+      {:away, period} -> {:away, period.ends_on}
+      standing -> standing
     end
   end
 end

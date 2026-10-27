@@ -32,12 +32,16 @@ defmodule App.ViewData.TeamAttention do
       chores_to_send_item(rows.chores_to_send),
       attendance_to_send_item(rows.attendance_to_send)
     ]
-    |> Enum.concat(Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service)))
+    |> Enum.concat(retiring_items(rows))
+    |> Enum.concat(untagged_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&(&1.level != :warning))
     |> take(limit)
   end
+
+  defp untagged_items(rows, this_year),
+    do: Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service))
 
   defp take(items, :all), do: items
   defp take(items, limit), do: Enum.take(items, limit)
@@ -168,6 +172,61 @@ defmodule App.ViewData.TeamAttention do
       params: params
     }
   end
+
+  # Retiring members (#514). The line for those who hold nothing says what comes next, so
+  # nobody stays Retiring for good.
+  defp retiring_items(%{retiring: retiring, service: service}),
+    do: [
+      retiring_missing_item(retiring),
+      retiring_holding_item(retiring),
+      retiring_clear_item(retiring, service)
+    ]
+
+  defp retiring_missing_item(%{missing_group: true}) do
+    %{
+      key: :retiring_missing,
+      level: :warning,
+      title: "The Retiring group was deleted",
+      detail: "Select another in team settings.",
+      action: "Open team settings"
+    }
+  end
+
+  defp retiring_missing_item(_none_or_counts), do: nil
+
+  defp retiring_holding_item(%{holding: count, items: items}) when count > 0 do
+    who = Format.count(count, one: "%d retiring member holds", many: "%d retiring members hold")
+
+    %{
+      key: :retiring,
+      level: :info,
+      title: "#{who} #{Format.count(items, one: "%d item", many: "%d items")}",
+      detail: nil,
+      action: "Show members"
+    }
+  end
+
+  defp retiring_holding_item(_none_or_missing), do: nil
+
+  defp retiring_clear_item(%{clear: count}, service) when count > 0 do
+    %{
+      key: :retiring_clear,
+      level: :info,
+      title:
+        Format.count(count,
+          one: "%d retiring member holds no items",
+          many: "%d retiring members hold no items"
+        ),
+      detail: retire_them(service),
+      action: "Show members"
+    }
+  end
+
+  defp retiring_clear_item(_none_or_missing, _service), do: nil
+
+  @doc ~s{What to do with a retiring member who holds nothing: "Retire them in D4H." On a Records team, members retire on their Change member page in SAR Duty.}
+  def retire_them(:records), do: "Retire them."
+  def retire_them(service), do: "Retire them in #{D4H.service_name(service)}."
 
   @doc ~s(How `not_seen_days` reads in text: "90 days", or "a year".)
   def period(365), do: "a year"

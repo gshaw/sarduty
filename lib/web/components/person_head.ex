@@ -12,7 +12,7 @@ defmodule Web.Components.PersonHead do
   attr :class, :string, default: nil
   attr :name, :string, required: true
   attr :photo, :string, required: true, doc: "the photo's path; a 404 leaves the initials"
-  attr :standing, :any, default: :active, doc: "from MemberAwayPeriod.standing_today/3"
+  attr :standing, :any, default: :active, doc: "from App.Model.Standing.today/3"
   attr :facts, :list, default: [], doc: "short strings for the line under the name"
   slot :actions, doc: "buttons on the right"
 

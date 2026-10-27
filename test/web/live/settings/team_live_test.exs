@@ -6,7 +6,6 @@ defmodule Web.Settings.TeamLiveTest do
 
   alias App.Model.Event
   alias App.Model.Team
-  alias App.Repo
 
   @secret "SECRET-TEAM-PAT-123"
 
@@ -37,65 +36,6 @@ defmodule Web.Settings.TeamLiveTest do
     assert has_element?(lv, "#form_new_d4h_access_key")
     refute has_element?(lv, "#form_new_d4h_access_key[value]")
     assert has_element?(lv, "#team-key-status", "Key saved August 1, 2026")
-  end
-
-  test "saves the time frame for members who have not attended, or turns it off",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    assert team.not_seen_days == 90
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/settings")
-
-    lv |> form("#team_settings_form", form: %{not_seen_days: "180"}) |> render_submit()
-    assert Team.get!(team.id).not_seen_days == 180
-
-    lv |> form("#team_settings_form", form: %{not_seen_days: "0"}) |> render_submit()
-    assert Team.get!(team.id).not_seen_days == nil
-  end
-
-  test "saves the watched group and standings for the attendance check (#366)",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    callout = group_fixture(team, %{title: "Callout"})
-    assert team.watch_standings == ["active"]
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-
-    assert has_element?(lv, "#watch-standing-active[checked]")
-
-    lv
-    |> form("#team_settings_form",
-      form: %{watch_d4h_group_id: callout.d4h_group_id, watch_standings: ["", "active", "away"]}
-    )
-    |> render_submit()
-
-    saved = Team.get!(team.id)
-    assert saved.watch_d4h_group_id == callout.d4h_group_id
-    assert saved.watch_standings == ["active", "away"]
-
-    html =
-      lv
-      |> form("#team_settings_form", form: %{watch_d4h_group_id: "", watch_standings: [""]})
-      |> render_submit()
-
-    assert html =~ "Select at least one standing."
-    assert Team.get!(team.id).watch_standings == ["active", "away"]
-  end
-
-  test "keeps a watched group D4H dropped, named as gone", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    team |> Ecto.Changeset.change(watch_d4h_group_id: 424_242) |> App.Repo.update!()
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-
-    assert has_element?(
-             lv,
-             "select[name='form[watch_d4h_group_id]'] option[selected][value='424242']",
-             "A deleted group"
-           )
   end
 
   test "says when no team key is saved", %{conn: conn} do
@@ -201,50 +141,6 @@ defmodule Web.Settings.TeamLiveTest do
 
     assert_error_sent 404, fn ->
       conn |> log_in_user(user) |> get(~p"/teams/#{other}/settings")
-    end
-  end
-
-  describe "the signer's signature" do
-    setup %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      %{conn: log_in_user(conn, user), team: team}
-    end
-
-    defp upload(lv, bytes, name \\ "signature.png") do
-      lv
-      |> file_input("#team_settings_form", :signature, [
-        %{name: name, content: bytes, type: "image/png"}
-      ])
-      |> render_upload(name)
-
-      lv |> form("#team_settings_form") |> render_submit()
-    end
-
-    test "uploads as a PNG, shows a preview, and removes", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-      refute has_element?(lv, "#signature-preview")
-
-      upload(lv, png_fixture(1800, 400))
-
-      assert has_element?(lv, "#signature-preview")
-      signature = Repo.get!(Team, team.id).signature
-      assert {:ok, image} = Image.from_binary(signature)
-      # Scaled down to fit 900 pixels.
-      assert Image.width(image) == 900
-
-      lv |> element("#remove-signature") |> render_click()
-
-      refute has_element?(lv, "#signature-preview")
-      assert Repo.get!(Team, team.id).signature == nil
-    end
-
-    test "a file that is not an image is not saved", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-
-      upload(lv, "not an image")
-
-      assert has_element?(lv, "#team-signature", "Use a PNG or JPEG image of the signature.")
-      assert Repo.get!(Team, team.id).signature == nil
     end
   end
 end

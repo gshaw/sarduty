@@ -7,6 +7,7 @@ defmodule App.Model.Member do
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
   alias App.Model.MemberQualificationAward
+  alias App.Model.Standing
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
@@ -148,35 +149,41 @@ defmodule App.Model.Member do
   end
 
   @doc """
-  Whether any current member of the team is not active on `today` (#367): away or not a
-  person. The members list shows its Standing column only then.
+  Whether any current member of the team is not active on `today` (#367), as
+  `team_admin?` sees them (#440): a member never sees Away. The members list shows its
+  Standing column only then.
   """
-  def any_not_active?(%Team{} = team, %Date{} = today, now) do
-    away =
-      from(row in subquery(MemberAwayPeriod.away_query(team, today)),
-        select: row.member_id
-      )
+  def any_not_active?(%Team{} = team, %Date{} = today, now, team_admin?) do
+    hidden = if team_admin?, do: ["active", "retired"], else: ["active", "away", "retired"]
+    standing = Standing.dynamic(now)
 
     Member
     |> where([m], m.team_id == ^team.id)
-    |> current_query(now)
-    |> where([m], m.not_a_person or m.id in subquery(away))
+    |> Standing.join(team, today)
+    |> where(^dynamic(^standing not in ^hidden))
     |> Repo.exists?()
   end
 
   @doc """
-  Whether any current member of the team is not a person (#440). A member's members
-  list, which never shows Away, shows its Standing column only then.
+  Narrows `query` to people, leaving out members a team admin marked not a person. Logins
+  and team admins read this, so retiring members stay in: see counted_query/2.
   """
-  def any_not_a_person?(%Team{} = team, now) do
-    Member
-    |> where([m], m.team_id == ^team.id and m.not_a_person)
-    |> current_query(now)
-    |> Repo.exists?()
+  def people_query(query), do: where(query, [m], not m.not_a_person)
+
+  @doc """
+  Narrows `query` to the members SAR Duty counts (#514): people_query/1, and not in the
+  team's Retiring group. The Dashboard's counts, Missing details, Add members, and Take
+  attendance read this.
+  """
+  def counted_query(query, %Team{} = team) do
+    query
+    |> people_query()
+    |> where([m], m.id not in subquery(Standing.retiring_ids_query(team)))
   end
 
-  @doc "Narrows `query` to people, leaving out members a team admin marked not a person."
-  def people_query(query), do: where(query, [m], not m.not_a_person)
+  @doc "Pure. counted_query/2 for one current member, given the team's retiring ids."
+  def counted?(%Member{} = member, retiring_ids),
+    do: not member.not_a_person and not MapSet.member?(retiring_ids, member.id)
 
   @doc """
   Narrows `query` to the current members of `team` whose attendance clock is older than

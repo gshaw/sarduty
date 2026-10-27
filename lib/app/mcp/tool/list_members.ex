@@ -11,7 +11,7 @@ defmodule App.MCP.Tool.ListMembers do
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Member
-  alias App.Model.MemberAwayPeriod
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
 
@@ -22,7 +22,7 @@ defmodule App.MCP.Tool.ListMembers do
   def description do
     "Every member of the team, including those who left: id, name, position, the D4H " <>
       "groups they are in, when they joined and left, their D4H status, and their " <>
-      "standing today: active, away, not_a_person, or retired. Position and groups are " <>
+      "standing today: active, away, retiring, not_a_person, or retired. Position and groups are " <>
       "where a team records categories such as MIT or Provisional. No email, phone, or " <>
       "address, and never why or until when a member is away."
   end
@@ -36,14 +36,7 @@ defmodule App.MCP.Tool.ListMembers do
   @impl App.MCP.Tool
   def call(%Team{} = team, _args, now) do
     members = load_members(team)
-    today = Service.Period.today(now, team.timezone)
-    periods = team.id |> MemberAwayPeriod.get_all_for_team() |> Enum.group_by(& &1.member_id)
-
-    standings =
-      Map.new(members, fn member ->
-        standing = MemberAwayPeriod.standing(member, Map.get(periods, member.id, []), today, now)
-        {member.id, standing}
-      end)
+    standings = Standing.by_member(team, members, now)
 
     output = build(members, load_group_names(team), standings, team.timezone)
     {:ok, output, length(output)}
@@ -51,7 +44,7 @@ defmodule App.MCP.Tool.ListMembers do
 
   @doc """
   The output for `members`, by name. `group_names` are `{member_id, group title}` pairs,
-  and `standings` each member's `MemberAwayPeriod.standing/4` by id.
+  and `standings` each member's `Standing.of/5` by id.
   """
   def build(members, group_names, standings, timezone) do
     groups =

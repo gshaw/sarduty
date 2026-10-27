@@ -13,8 +13,8 @@ defmodule Web.MeLive do
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.EquipmentItem
-  alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
+  alias App.Model.Standing
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.BuildApplePass
@@ -48,7 +48,7 @@ defmodule Web.MeLive do
       |> assign(:page_title, member.name)
       |> assign(member: member, team: team, now: now)
       |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
-      |> assign(:standing, MemberAwayPeriod.standing_today(member, team.timezone, now))
+      |> assign(:standing, Standing.today(member, team, now))
       |> assign_years(attended)
       |> assign(:chores, latest_chores(member))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))

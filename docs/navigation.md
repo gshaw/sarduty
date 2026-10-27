@@ -73,9 +73,12 @@ is left out, and so is its divider.
   (assigned by the team pages' hook), and on a phone the Menu button gets an amber dot
   while any link has a count.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
-  the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)):
-  General, Team admins, Member logins, Hours tags, and MCP tokens once a SAR Duty admin
-  turns MCP on. Until then, General says how to get it. The URLs did not change.
+  the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)),
+  one topic each, in pairs (2026-10-27, #514): General (the team and its key) and Team
+  admins; Members (the Retiring group and the attendance check) and Member logins; Tax
+  credit letters (address and signer) and Hours tags; Places and Chore categories; then
+  MCP tokens. General held the letters and the attendance check until then, one long form
+  with four topics.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
 - **Chores shares Equipment's section** (2026-10-22): most chores are equipment upkeep,

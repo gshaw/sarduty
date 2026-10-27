@@ -4,7 +4,8 @@ defmodule App.Operation.AddGroupRule do
   of `kind` (`:in`, `:not_in`, or `:standing`), or to an existing rule. A standing joins
   the group's Standing rule if it has one, since two would need a member to have both. A
   group that would make a loop is left out. `{:error, message}` when the target doesn't
-  fit the rule's kind.
+  fit the rule's kind, or the group is the team's Retiring group (#514), whose rules would
+  take its members out.
 
   The group and rule come looked up through the team, and the target from
   `App.ViewData.GroupRules.find_target!/2`.
@@ -13,16 +14,25 @@ defmodule App.Operation.AddGroupRule do
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.GroupRuleReference
+  alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
+  alias App.Repo
 
   def call(%Group{} = group, kind_or_rule, target) do
     kind = if is_struct(kind_or_rule, GroupRule), do: kind_or_rule.kind, else: kind_or_rule
     rules = GroupRule.get_all(group.team_id)
 
-    with :ok <- fits(kind, target) do
+    with :ok <- not_retiring(group),
+         :ok <- fits(kind, target) do
       unless loop?(rules, group, target), do: add(group, kind_or_rule, target, rules)
       :ok
     end
+  end
+
+  defp not_retiring(group) do
+    if Repo.get!(Team, group.team_id).retiring_d4h_group_id == group.d4h_group_id,
+      do: {:error, "Members of this group are retiring. It cannot have group rules."},
+      else: :ok
   end
 
   defp fits(:standing, {:standing, _standing}), do: :ok

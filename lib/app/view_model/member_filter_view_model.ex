@@ -10,6 +10,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
+  alias App.Model.Standing
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Repo
@@ -42,6 +43,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   @standings [
     {"Active", "active"},
     {"Away", "away"},
+    {"Retiring", "retiring"},
     {"Not a person", "not_a_person"},
     {"Retired", "retired"}
   ]
@@ -49,15 +51,20 @@ defmodule App.ViewModel.MemberFilterViewModel do
   # What a member's list offers (#440): every standing but Away, which is team admins'
   # own record and often leave. No Active either: Not retired minus Active would name
   # who is away.
-  @member_standings [{"Not a person", "not_a_person"}, {"Retired", "retired"}]
+  @member_standings [
+    {"Retiring", "retiring"},
+    {"Not a person", "not_a_person"},
+    {"Retired", "retired"}
+  ]
 
   @doc """
   The Standing filter (#366): Not retired, the default, is every member but the retired,
   and All adds them. Its value stays `"current"`. The attendance check can watch several standings, as
   `"active,away"`; that value gets an option of its own, "Active or away", when it's the
-  one shown. A member gets Not retired, Not a person, Retired, and All.
+  one shown. A member gets Not retired, Retiring, Not a person, Retired, and All. Retiring
+  shows only when the team has a Retiring group (#514).
   """
-  def standing_kinds(current, team_admin?) do
+  def standing_kinds(current, team_admin?, retiring?) do
     combined =
       case standings(current) do
         [_, _ | _] = several -> [{several |> Enum.map(&label/1) |> or_list(), current}]
@@ -66,14 +73,16 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
     Enum.concat([
       [{"Not retired", "current"}],
-      standings_for(team_admin?),
+      standings_for(team_admin?, retiring?),
       combined,
       [{"All", "all"}]
     ])
   end
 
-  defp standings_for(true), do: @standings
-  defp standings_for(false), do: @member_standings
+  defp standings_for(team_admin?, retiring?) do
+    standings = if team_admin?, do: @standings, else: @member_standings
+    if retiring?, do: standings, else: List.keydelete(standings, "retiring", 1)
+  end
 
   @doc "Whether the Standing filter `value` can show retired members."
   def shows_retired?(value), do: value == "all" or "retired" in standings(value)
@@ -133,7 +142,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   @doc """
   Checks the list's `params`. A member's (#440) first lose what only team admins' records
-  answer: the Attended and Details filters, the standings `standing_kinds/2` doesn't offer
+  answer: the Attended and Details filters, the standings `standing_kinds/3` doesn't offer
   them, and the Standing sort. Everything else reads the result, so the list, the
   switch's counts, and the form show members nothing more, whatever the URL says.
   """
@@ -149,7 +158,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp viewer_params(params, true), do: params
 
   defp viewer_params(params, false) do
-    member_values = nil |> standing_kinds(false) |> Enum.map(&elem(&1, 1))
+    member_values = nil |> standing_kinds(false, true) |> Enum.map(&elem(&1, 1))
 
     params
     |> Map.drop(["attended", "details"])
@@ -177,25 +186,26 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   @doc """
   The Standing switch's parts (#469): Not retired first, as the list opens, then each
-  standing. No All: Not retired and Retired add up to it. A member's are Not retired, Not
-  a person, and Retired (#440).
+  standing. No All: Not retired and Retired add up to it. A member's are Not retired,
+  Retiring, Not a person, and Retired (#440). Retiring only with a Retiring group (#514).
   """
-  def standing_switch(team_admin?), do: [{"Not retired", "current"} | standings_for(team_admin?)]
+  def standing_switch(team_admin?, retiring?),
+    do: [{"Not retired", "current"} | standings_for(team_admin?, retiring?)]
 
   @doc """
   Whether the switch has a part for `value`. All, and the attendance check's
   `"active,away"`, don't, so the list shows them as the Standing menu.
   """
-  def switch_standing?(value, team_admin?),
-    do: team_admin? |> standing_switch() |> List.keymember?(value, 1)
+  def switch_standing?(value, team_admin?, retiring?),
+    do: team_admin? |> standing_switch(retiring?) |> List.keymember?(value, 1)
 
   @doc """
-  How many members each standing in `standing_switch/1` has, before the search and after
+  How many members each standing in `standing_switch/2` has, before the search and after
   every other filter, keyed by value.
   """
   def standing_counts(team, filter_options, team_admin?, now \\ DateTime.utc_now()) do
     team_admin?
-    |> standing_switch()
+    |> standing_switch(Team.retiring?(team))
     |> Map.new(fn {_label, standing} ->
       options = %{filter_options | q: nil, standing: standing}
       {standing, team |> filter_query(options, now) |> Repo.count_entries()}
@@ -219,10 +229,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: team.timezone, now: now)
-    |> scope(details: filter_options.details)
+    |> scope(details: filter_options.details, team: team)
     |> scope(attended: filter_options.attended, team: team, now: now)
     |> scope(group: filter_options.group, team: team)
-    |> join_away(team, now)
+    |> Standing.join(team, Service.Period.today(now, team.timezone))
     |> scope(standing: filter_options.standing, now: now)
   end
 
@@ -270,26 +280,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
       else: add_error(changeset, :standing, "is invalid")
   end
 
-  # Retired wins over the rest, then not a person, as MemberAwayPeriod.standing/4.
-  defp or_standing("active", acc, current),
-    do:
-      dynamic(
-        [m, away: w],
-        ^acc or (^current and not m.not_a_person and is_nil(w.away_until))
-      )
-
-  defp or_standing("away", acc, current),
-    do:
-      dynamic(
-        [m, away: w],
-        ^acc or (^current and not m.not_a_person and not is_nil(w.away_until))
-      )
-
-  defp or_standing("not_a_person", acc, current),
-    do: dynamic([m], ^acc or (^current and m.not_a_person))
-
-  defp or_standing("retired", acc, current), do: dynamic(^acc or not (^current))
-
   defp validate_kind(changeset, field, kinds),
     do: validate_inclusion(changeset, field, Enum.map(kinds, &elem(&1, 1)))
 
@@ -330,19 +320,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
-  defp join_away(query, team, now) do
-    today = Service.Period.today(now, team.timezone)
-
-    from(
-      m in query,
-      left_join: w in subquery(MemberAwayPeriod.away_query(team, today)),
-      as: :away,
-      on: m.id == w.member_id
-    )
-  end
-
-  # Where each member's attendance clock starts (#366): their latest check-in, and the
-  # end of their latest away period that has started.
   defp join_clock(query, team, now) do
     today = Service.Period.today(now, team.timezone)
 
@@ -365,13 +342,22 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp select_member_with_attendance(query) do
     from(
-      [m, summary: a, last_attended: l, away: w, last_away: la, last_check_in: lc] in query,
+      [
+        m,
+        summary: a,
+        last_attended: l,
+        away: w,
+        retiring: rt,
+        last_away: la,
+        last_check_in: lc
+      ] in query,
       select: %{
         member: m,
         activity_count: fragment("? as activity_count", coalesce(a.activity_count, 0)),
         total_minutes: fragment("? as total_minutes", coalesce(a.total_minutes, 0)),
         last_attended_at: type(l.last_attended_at, :utc_datetime),
         away_until: type(w.away_until, :date),
+        retiring?: not is_nil(rt.member_id),
         away_ends_on: type(la.ends_on, :date),
         checked_in_on: type(lc.checked_in_on, :date)
       }
@@ -405,14 +391,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
   end
 
-  defp scope(q, details: "missing"),
+  defp scope(q, details: "missing", team: team),
     do:
       q
       |> Member.current_query(DateTime.utc_now())
-      |> Member.people_query()
+      |> Member.counted_query(team)
       |> Member.missing_details_query()
 
-  defp scope(q, details: _all), do: q
+  defp scope(q, details: _all, team: _team), do: q
 
   defp scope(q, attended: nil, team: _team, now: _now), do: q
   defp scope(q, attended: "all", team: _team, now: _now), do: q
@@ -431,9 +417,8 @@ defmodule App.ViewModel.MemberFilterViewModel do
     do: Member.current_query(q, now)
 
   defp scope(q, standing: value, now: now) do
-    current = Member.current_dynamic(now)
-    condition = value |> standings() |> Enum.reduce(false, &or_standing(&1, &2, current))
-    where(q, ^condition)
+    standing = Standing.dynamic(now)
+    where(q, ^dynamic(^standing in ^standings(value)))
   end
 
   defp scope(q, sort: "name"), do: order_by(q, [r], asc: r.name)
@@ -452,27 +437,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "activities"),
     do: order_by(q, [r], asc: fragment("activity_count"), asc: r.name)
 
-  # By the day an away member is back, soonest first going up; everyone else after, and
-  # retired members last either way. Retired and not a person win over an away period,
-  # as in the Standing column, so a retired member sorts by no date.
-  defp scope(q, sort: "standing"),
-    do:
-      order_by(q, [r, away: w],
-        asc_nulls_last:
-          fragment("CASE WHEN ? THEN NULL ELSE ? END", r.not_a_person, w.away_until),
-        desc: r.not_a_person,
-        asc: r.name
-      )
-
-  defp scope(q, sort: "standing-"),
-    do:
-      order_by(q, [r, away: w],
-        desc_nulls_last:
-          fragment("CASE WHEN ? THEN NULL ELSE ? END", r.not_a_person, w.away_until),
-        desc: r.not_a_person,
-        asc: r.name
-      )
-
   # Never attended comes first going up: the members furthest from their last activity.
   defp scope(q, sort: "attended"),
     do: order_by(q, [r, last_attended: l], asc_nulls_first: l.last_attended_at, asc: r.name)
@@ -480,11 +444,26 @@ defmodule App.ViewModel.MemberFilterViewModel do
   defp scope(q, sort: "attended-"),
     do: order_by(q, [r, last_attended: l], desc_nulls_last: l.last_attended_at, asc: r.name)
 
-  defp sort(q, "standing" <> _ = sort, now) do
-    q
-    |> order_by(^[asc: dynamic(not (^Member.current_dynamic(now)))])
-    |> scope(sort: sort)
-  end
+  # Members who are not active first, either way: away by the day they are back, soonest
+  # first going up, then retiring, then not a person. Active, then retired, last.
+  defp sort(q, "standing", now),
+    do: order_by(q, ^[asc: standing_rank(now), asc: away_until(), asc: dynamic([m], m.name)])
+
+  defp sort(q, "standing-", now),
+    do: order_by(q, ^[asc: standing_rank(now), desc: away_until(), asc: dynamic([m], m.name)])
 
   defp sort(q, sort, _now), do: scope(q, sort: sort)
+
+  defp standing_rank(now) do
+    standing = Standing.dynamic(now)
+
+    dynamic(
+      fragment(
+        "CASE ? WHEN 'away' THEN 0 WHEN 'retiring' THEN 1 WHEN 'not_a_person' THEN 2 WHEN 'active' THEN 3 ELSE 4 END",
+        ^standing
+      )
+    )
+  end
+
+  defp away_until, do: dynamic([away: w], w.away_until)
 end

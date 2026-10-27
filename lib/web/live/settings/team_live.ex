@@ -1,17 +1,15 @@
 defmodule Web.Settings.TeamLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.FileDrop
   import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
-  alias App.Model.Group
   alias App.Model.Team
-  alias App.Operation.SaveTeamSignature
   alias App.Operation.UpdateTeamSettings
   alias App.Repo
 
-  # The team comes from the URL, /teams/:subdomain/settings (#153).
+  # Settings' General tab (#153): the team itself, from D4H, and the key SAR Duty uses.
+  # The team comes from the URL, /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -20,42 +18,18 @@ defmodule Web.Settings.TeamLive do
       |> assign(page_title: "Team settings")
       |> assign(organization: team |> Repo.preload(:organization) |> Map.get(:organization))
       |> assign_form(Team.build_settings_changeset(team))
-      |> assign(watch_groups: watch_groups(team))
-      |> assign(signature_error: nil)
-      |> allow_upload(:signature,
-        accept: ~w(.png .jpg .jpeg),
-        max_entries: 1,
-        max_file_size: 5_000_000
-      )
 
     {:ok, socket}
-  end
-
-  # A watched group D4H dropped stays chosen, named as gone, so saving other settings
-  # never switches the check to all members quietly (#366).
-  defp watch_groups(team) do
-    groups = team.id |> Group.get_all() |> Enum.map(&{&1.title, &1.d4h_group_id})
-
-    case team.watch_d4h_group_id do
-      nil ->
-        groups
-
-      id ->
-        if List.keymember?(groups, id, 1),
-          do: groups,
-          else: [{"A deleted group", id} | groups]
-    end
   end
 
   def render(assigns) do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:general} />
     <div class="measure">
-      <%!-- The tabs list the other settings. MCP tokens shows there only once a SAR Duty
-      admin turns it on, and ID cards are on Endorsements, so say how to get them. A team
-      in an organization (#512) says who its organization admins are. --%>
+      <%!-- ID cards are on Endorsements, so say how to get them while they're off. A team in
+      an organization (#512) says who its organization admins are. --%>
       <ul
-        :if={@organization != nil or !@current_team.id_cards_enabled or !@current_team.mcp_enabled}
+        :if={@organization != nil or !@current_team.id_cards_enabled}
         class="row-links mb-4"
       >
         <li :if={@organization} id="settings-organization" class="py-2">
@@ -98,90 +72,10 @@ defmodule Web.Settings.TeamLive do
           <.input field={@form[:lat]} readonly label="Latitude" />
           <.input field={@form[:lng]} readonly label="Longitude" />
         </div>
-        <.input field={@form[:timezone]} label="Time zone" readonly />
-        <.input field={@form[:mailing_address]} label="Mailing address" type="textarea" rows="6" />
-        <.input
-          field={@form[:authorized_by_name]}
-          label="Tax credit letters authorized by"
-          type="textarea"
-          rows="6"
-        >
-          The full name of your team president, or someone in a similar role. The CRA uses
-          this during tax audits.
+        <.input field={@form[:timezone]} label="Time zone" readonly>
+          The place and time zone come from {@service}. Refresh copies them and the name
+          again.
         </.input>
-        <.input field={@form[:authorized_by_title]} label="Signer's title (optional)">
-          Printed under the name on tax credit letters, like President.
-        </.input>
-        <div class="grid md:grid-cols-2 gap-x-6">
-          <.input field={@form[:authorized_by_phone]} label="Signer's phone (optional)" />
-          <.input
-            field={@form[:authorized_by_email]}
-            label="Signer's email (optional)"
-            type="email"
-          />
-        </div>
-        <.file_drop
-          id="team-signature"
-          upload={@uploads.signature}
-          label="Signer's signature (optional)"
-          kinds="a PNG or JPEG"
-          errors={if @signature_error, do: [@signature_error], else: []}
-        >
-          A PNG or JPEG of the signature, on white or transparent. New tax credit letters
-          print it above the signer's name. Letters already made keep theirs.
-          <:current :if={@current_team.signature}>
-            <div class="flex flex-wrap items-center gap-4">
-              <img
-                id="signature-preview"
-                src={Web.ImageData.png_data_url(@current_team.signature)}
-                class="h-16 max-w-xs border border-border-subtle bg-paper p-1"
-                alt="The signer's signature"
-              />
-              <.button
-                id="remove-signature"
-                type="button"
-                phx-click="remove_signature"
-                data-confirm="Remove the signature? New tax credit letters go out unsigned until you add one."
-              >
-                Remove signature
-              </.button>
-            </div>
-          </:current>
-        </.file_drop>
-        <.input
-          field={@form[:not_seen_days]}
-          type="select"
-          label="Members who have not attended"
-          options={Team.not_seen_days_kinds()}
-        >
-          Needs attention lists the members you watch who have not attended an activity in
-          this long, so someone can check in with them.
-        </.input>
-        <.input
-          field={@form[:watch_d4h_group_id]}
-          type="select"
-          label="Watch"
-          options={[{"All members", ""} | @watch_groups]}
-        >
-          All current members, or one group. For anything more, such as Callout without a
-          subgroup, make a group with group rules.
-        </.input>
-        <fieldset id="watch-standings">
-          <legend>Standing</legend>
-          <.hint>Watch members with these standings.</.hint>
-          <input type="hidden" name="form[watch_standings][]" value="" />
-          <label :for={{label, value} <- Team.watch_standing_kinds()} class="choice">
-            <input
-              type="checkbox"
-              id={"watch-standing-#{value}"}
-              name="form[watch_standings][]"
-              value={value}
-              checked={value in (@form[:watch_standings].value || [])}
-            />
-            {label}
-          </label>
-          <.error :for={{message, _opts} <- @form[:watch_standings].errors}>{message}</.error>
-        </fieldset>
         <.input
           field={@form[:new_d4h_access_key]}
           label={D4H.key_name(@current_team)}
@@ -263,43 +157,21 @@ defmodule Web.Settings.TeamLive do
   end
 
   def handle_event("save", %{"form" => form_params}, socket) do
-    signature = consume_signature(socket)
+    %{current_team: team, current_user: user} = socket.assigns
 
-    with {:ok, team} <-
-           UpdateTeamSettings.call(
-             socket.assigns.current_team,
-             form_params,
-             socket.assigns.current_user
-           ),
-         {:ok, team} <- save_signature(team, signature) do
-      socket =
-        socket
-        |> assign(current_team: team, signature_error: nil)
-        |> assign_form(Team.build_settings_changeset(team))
-        |> put_flash(:info, "Team settings saved.")
+    case UpdateTeamSettings.call(team, form_params, user) do
+      {:ok, team} ->
+        socket =
+          socket
+          |> assign(current_team: team)
+          |> assign_form(Team.build_settings_changeset(team))
+          |> put_flash(:info, "Team settings saved.")
 
-      {:noreply, socket}
-    else
-      {:error, :image} ->
-        {:noreply, assign(socket, signature_error: "Use a PNG or JPEG image of the signature.")}
+        {:noreply, socket}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
-  end
-
-  def handle_event("cancel-upload", %{"ref" => ref}, socket),
-    do: {:noreply, cancel_upload(socket, :signature, ref)}
-
-  def handle_event("remove_signature", _params, socket) do
-    {:ok, team} = SaveTeamSignature.call(socket.assigns.current_team, nil)
-
-    socket =
-      socket
-      |> assign(current_team: team)
-      |> put_flash(:info, "Signature removed.")
-
-    {:noreply, socket}
   end
 
   def handle_event("refresh", _params, socket) do
@@ -330,17 +202,4 @@ defmodule Web.Settings.TeamLive do
         {:noreply, assign_form(socket, changeset)}
     end
   end
-
-  defp consume_signature(socket) do
-    case consume_uploaded_entries(socket, :signature, fn %{path: path}, _entry ->
-           {:ok, File.read!(path)}
-         end) do
-      [bytes] -> bytes
-      [] -> nil
-    end
-  end
-
-  # No upload keeps the saved signature; only the remove button clears it.
-  defp save_signature(team, nil), do: {:ok, team}
-  defp save_signature(team, bytes), do: SaveTeamSignature.call(team, bytes)
 end

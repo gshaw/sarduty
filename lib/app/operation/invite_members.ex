@@ -36,7 +36,8 @@ defmodule App.Operation.InviteMembers do
   `%{add: picks, on_activity: members, away: members}`. A member picked twice goes once,
   with the first reason. Anyone on the activity is left out, since D4H would add a
   second row, and so is anyone away who only came from a group. Retired members and
-  members marked not a person are left out and not named. Both lists go A to Z.
+  members marked not a person are left out and not named; retiring members never reach
+  the picks (Member.counted_query/2). Both lists go A to Z.
   """
   def plan(%Activity{}, picks, %{on_activity: on_activity, away: away, now: now}) do
     on_activity = MapSet.new(on_activity)
@@ -165,7 +166,7 @@ defmodule App.Operation.InviteMembers do
     |> join(:inner, [m], gm in GroupMember, on: gm.member_id == m.id)
     |> where([m, gm], m.team_id == ^team.id and gm.group_id in ^ids)
     |> Member.current_query(now)
-    |> Member.people_query()
+    |> Member.counted_query(team)
     |> order_by([m], asc: m.name)
     |> select([m, gm], {gm.group_id, m})
     |> Repo.all()

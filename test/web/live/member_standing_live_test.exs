@@ -4,6 +4,7 @@ defmodule Web.MemberStandingLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.GroupMember
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
   alias App.Model.MemberStandingChange
@@ -312,5 +313,97 @@ defmodule Web.MemberStandingLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
     refute has_element?(lv, "#not-a-person-suggestion")
+  end
+
+  describe "Retiring (#514)" do
+    setup do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "key"}})
+      leavers = group_fixture(team, %{title: "Leavers"})
+
+      team =
+        team
+        |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+        |> Repo.update!()
+
+      test = self()
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        send(test, {:d4h, conn.method, conn.request_path})
+
+        case conn.method do
+          "POST" ->
+            Req.Test.json(conn, %{"id" => 400, "member" => %{"id" => 1}, "group" => %{"id" => 1}})
+
+          _delete ->
+            Req.Test.json(conn, %{})
+        end
+      end)
+
+      %{user: user, team: team, leavers: leavers}
+    end
+
+    test "Mark as retiring adds the member to the team's group, and Remove takes them out",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      member = member_fixture(team, %{name: "Avery Chen"})
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+      assert has_element?(lv, "#mark-retiring[data-confirm*='Add Avery Chen to Leavers?']")
+      lv |> element("#mark-retiring") |> render_click()
+
+      assert_received {:d4h, "POST", _path}
+      assert has_element?(lv, "#standing-now", "Retiring")
+      assert has_element?(lv, "#member-head-standing", "Retiring")
+      assert has_element?(lv, "#retiring-items", "Avery Chen holds no items. Retire them in D4H.")
+      assert GroupMember.get_by(group_id: leavers.id, member_id: member.id)
+
+      lv |> element("#unmark-retiring", "Remove from Leavers") |> render_click()
+
+      assert_received {:d4h, "DELETE", _path}
+      assert has_element?(lv, "#standing-now", "Active")
+      refute GroupMember.get_by(group_id: leavers.id, member_id: member.id)
+    end
+
+    test "says how many items a retiring member holds", %{
+      conn: conn,
+      user: user,
+      team: team,
+      leavers: leavers
+    } do
+      member = member_fixture(team, %{name: "Avery Chen"})
+      group_member_fixture(leavers, member)
+      for _ <- 1..3, do: equipment_item_fixture(team, %{member_id: member.id})
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+      assert has_element?(
+               lv,
+               "#retiring-items",
+               "Avery Chen holds 3 items. Retire them in D4H once every item is back."
+             )
+    end
+
+    test "no buttons without a Retiring group, or for a member not a person", %{
+      conn: conn,
+      user: user,
+      team: team
+    } do
+      bot = member_fixture(team, %{not_a_person: true})
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{bot.id}/standing")
+
+      refute has_element?(lv, "#mark-retiring")
+
+      team |> Ecto.Changeset.change(retiring_d4h_group_id: nil) |> Repo.update!()
+      member = member_fixture(team)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+      refute has_element?(lv, "#mark-retiring")
+    end
   end
 end
