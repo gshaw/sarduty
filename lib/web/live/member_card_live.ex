@@ -228,7 +228,7 @@ defmodule Web.MemberCardLive do
   defp apple_status(0, _card, _timezone), do: nil
 
   defp apple_status(phones, card, timezone) do
-    on = "On #{Service.Format.count(phones, one: "1 phone", many: "%d phones")}"
+    on = "In Apple Wallet on #{Service.Format.count(phones, one: "1 phone", many: "%d phones")}"
 
     case card.pass_fetched_at do
       nil ->
