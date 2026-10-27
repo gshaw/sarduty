@@ -80,6 +80,38 @@ defmodule App.Model.ChangeSet do
     |> Repo.preload([:activity, :proposed_by_user, :applied_by_user, rows: :member])
   end
 
+  @doc """
+  What an agent's set changes, from its rows: `:chores`, `:activity_tags`, or
+  `:attendance`. Each propose tool makes one kind (#595).
+  """
+  def proposal_kind(%ChangeSet{rows: rows}) do
+    cond do
+      Enum.any?(rows, &(&1.action == :add_chore)) -> :chores
+      Enum.any?(rows, &(&1.action == :set_activity_tags)) -> :activity_tags
+      true -> :attendance
+    end
+  end
+
+  @doc "The heading for an agent's set, named for what it changes, never the agent's words."
+  def proposal_title(%ChangeSet{} = change_set) do
+    case proposal_kind(change_set) do
+      :chores -> "Chores to add"
+      :activity_tags -> "Activity tag changes"
+      :attendance -> "Attendance changes"
+    end
+  end
+
+  @doc "How many things the set changes, in its kind's words: chores, activities, or changes."
+  def proposal_count(%ChangeSet{rows: rows} = change_set) do
+    n = length(rows)
+
+    case proposal_kind(change_set) do
+      :chores -> Service.Format.count(n, one: "%d chore", many: "%d chores")
+      :activity_tags -> Service.Format.count(n, one: "%d activity", many: "%d activities")
+      :attendance -> Service.Format.count(n, one: "%d change", many: "%d changes")
+    end
+  end
+
   @doc "Whether the set waits for a team admin: an agent's, neither applied nor discarded."
   def waiting?(%ChangeSet{source: :agent, applied_at: nil, discarded_at: nil}), do: true
   def waiting?(%ChangeSet{}), do: false

@@ -37,6 +37,8 @@ defmodule Web.TableColumnsTest do
       "checkboxes pick what to send, so only while it waits",
     {"lib/web/live/proposed_change_live.ex", "!ChangeSet.waiting?(@change_set)"} =>
       "a result exists only once it is sent",
+    {"lib/web/live/proposed_change_live.ex", "@kind == :chores"} =>
+      "a chore's date, category, and time; a set holds one kind of change",
     {"lib/web/live/whiteboard_live.ex", "@team_admin?"} => "note actions, for team admins only"
   }
 

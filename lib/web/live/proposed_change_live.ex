@@ -20,10 +20,9 @@ defmodule Web.ProposedChangeLive do
     waiting = for row <- change_set.rows, row.status == :proposed, !check(row), do: row.id
 
     assign(socket,
-      page_title: change_set.summary || "Attendance changes",
+      page_title: ChangeSet.proposal_title(change_set),
       change_set: change_set,
-      tags?: Enum.any?(change_set.rows, &(&1.action == :set_activity_tags)),
-      chores?: Enum.any?(change_set.rows, &(&1.action == :add_chore)),
+      kind: ChangeSet.proposal_kind(change_set),
       selected: MapSet.new(waiting)
     )
   end
@@ -103,8 +102,12 @@ defmodule Web.ProposedChangeLive do
       <:item label={"#{@change_set.id}"} />
     </.breadcrumbs>
 
-    <h1 class="title">{@change_set.summary || "Attendance changes"}</h1>
+    <h1 class="title">{ChangeSet.proposal_title(@change_set)}</h1>
     <dl id="change-set-details" class="mb-4">
+      <div :if={@change_set.summary}>
+        <dt>Agent's note</dt>
+        <dd>{@change_set.summary}</dd>
+      </div>
       <div :if={@change_set.activity}>
         <dt>Activity</dt>
         <dd>
@@ -132,17 +135,24 @@ defmodule Web.ProposedChangeLive do
       </div>
     </dl>
 
-    <p :if={ChangeSet.waiting?(@change_set) and @chores?} class="lead">
-      Adding a chore puts it on the Chores page to accept, as if the member had logged it.
-      Clear the box next to any chore you do not want.
+    <p :if={ChangeSet.waiting?(@change_set) and @kind == :chores} id="what-happens" class="lead">
+      Adds {ChangeSet.proposal_count(@change_set)} to the Chores page, as if each member had
+      logged their own. A team admin accepts them there before they count. Clear the box
+      next to any chore you do not want.
     </p>
-    <p :if={ChangeSet.waiting?(@change_set) and not @tags? and not @chores?} class="lead">
-      Clear the box next to any change you do not want. SAR Duty checks the attendance again
-      before it sends, and skips a change if someone changed that attendance first.
+    <p :if={ChangeSet.waiting?(@change_set) and @kind == :attendance} id="what-happens" class="lead">
+      Sending changes the activity's attendance. Clear the box next to any change you do not
+      want. SAR Duty checks the attendance again before it sends, and skips a change if
+      someone changed that attendance first.
     </p>
-    <p :if={ChangeSet.waiting?(@change_set) and @tags?} class="lead">
-      Clear the box next to any change you do not want. SAR Duty checks each activity's tags
-      again before it sends, and skips one that someone changed or published first.
+    <p
+      :if={ChangeSet.waiting?(@change_set) and @kind == :activity_tags}
+      id="what-happens"
+      class="lead"
+    >
+      Sending changes the tags on {ChangeSet.proposal_count(@change_set)}. Clear the
+      box next to any change you do not want. SAR Duty checks each activity's tags again
+      before it sends, and skips one that someone changed or published first.
     </p>
 
     <.form for={%{}} id="review-form" phx-change="select" phx-submit="send">
@@ -162,11 +172,22 @@ defmodule Web.ProposedChangeLive do
             disabled={row.status != :proposed}
           />
         </:col>
-        <:col :let={row} label={if @tags?, do: "Activity", else: "Member"}>
+        <:col :let={row} label={if @kind == :activity_tags, do: "Activity", else: "Member"}>
           <label for={"select-#{row.id}"}>{subject(row)}</label>
         </:col>
-        <:col :let={row} label="Change">
-          {describe(row, @change_set, @current_team.timezone)}
+        <:col :let={row} :if={@kind == :chores} label="Date" class="whitespace-nowrap">
+          {row.new_value["date"] |> Date.from_iso8601!() |> Service.Format.date_short()}
+        </:col>
+        <:col :let={row} :if={@kind == :chores} label="Chore category">
+          {row.new_value["category"]}
+        </:col>
+        <:col :let={row} :if={@kind == :chores} label="Time" class="whitespace-nowrap">
+          {Service.Format.duration(row.new_value["minutes"])}
+        </:col>
+        <:col :let={row} label={if @kind == :chores, do: "What they did", else: "Change"}>
+          {if @kind == :chores,
+            do: row.new_value["description"],
+            else: describe(row, @change_set, @current_team.timezone)}
           <div :if={row.reason} class="hint">{row.reason}</div>
           <.warning_text :if={check(row) && ChangeSet.waiting?(@change_set)}>
             {check(row)}
@@ -182,9 +203,9 @@ defmodule Web.ProposedChangeLive do
           id="send"
           variant={:primary}
           disabled={MapSet.size(@selected) == 0 || is_nil(@current_team.d4h_access_key)}
-          phx-disable-with={if @chores?, do: "Adding…", else: "Sending…"}
+          phx-disable-with={if @kind == :chores, do: "Adding…", else: "Sending…"}
         >
-          {if @chores?,
+          {if @kind == :chores,
             do: "Add #{count_chores(MapSet.size(@selected))}",
             else: "Send #{count_changes(MapSet.size(@selected))}"}
         </.button>
@@ -216,11 +237,6 @@ defmodule Web.ProposedChangeLive do
         if old == status,
           do: "New times#{times}",
           else: "#{String.capitalize(old)} to #{status}#{times}"
-
-      :add_chore ->
-        v = row.new_value
-        date = v["date"] |> Date.from_iso8601!() |> Service.Format.date_short()
-        "#{v["category"]}, #{date}, #{Service.Format.duration(v["minutes"])}: #{v["description"]}"
 
       :set_activity_tags ->
         tags_change(row.new_value)
@@ -280,8 +296,10 @@ defmodule Web.ProposedChangeLive do
     Service.Format.month_day_time(datetime, tz)
   end
 
+  defp result(%{status: :applied, action: :add_chore}), do: "Added, waiting on the Chores page"
   defp result(%{status: :applied}), do: "Sent"
   defp result(%{status: :skipped, error: error}), do: "Skipped. #{error}"
   defp result(%{status: :failed, error: error}), do: "Did not go through. #{error}"
+  defp result(%{status: :proposed, action: :add_chore}), do: "Not added"
   defp result(%{status: :proposed}), do: "Not sent"
 end
