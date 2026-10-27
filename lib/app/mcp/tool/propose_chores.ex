@@ -1,7 +1,7 @@
 defmodule App.MCP.Tool.ProposeChores do
   @moduledoc """
   Drafts chores for members as one change set that waits for a team admin (#595). Nothing
-  is added until a person accepts them in SAR Duty; accepting sends them.
+  is added until a person accepts them in SAR Duty; then they wait on the Chores page.
   """
   @behaviour App.MCP.Tool
 
@@ -17,7 +17,7 @@ defmodule App.MCP.Tool.ProposeChores do
   def description do
     "Proposes chores for members, such as from a work party's sign-in sheet or a board " <>
       "meeting's minutes. Nothing is added until a team admin accepts them in SAR Duty. " <>
-      "Accepting sends them. For each chore, give the member id, chore category id (from " <>
+      "Then they wait on the Chores page, for a team admin to accept, as if the member had logged them. For each chore, give the member id, chore category id (from " <>
       "get_team), date, minutes, what they did, and a short reason. The date is YYYY-MM-DD " <>
       "and not in the future, minutes are 1 to 1440, and what they did is up to 200 " <>
       "characters. Give a one-line summary too. Returns the link for the team admin, " <>

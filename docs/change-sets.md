@@ -39,7 +39,7 @@ new kind of write is a new row action there, not a new call from a page or an op
   first, and skips one that changed or was published since. The copy takes the new tags
   at once. An agent's chores are `add_chore` rows, SAR Duty's own and not D4H writes:
   `ApplyChangeSet` leaves them to `ApplyProposedChangeSet`, which makes the ticked ones
-  accepted chores and runs the chore send ([chores.md](chores.md)).
+  waiting chores for a team admin to accept on the Chores page ([chores.md](chores.md)).
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or

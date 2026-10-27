@@ -44,10 +44,13 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
   reason the member sees, in any status, and links its D4H activity.
 - **An AI agent can propose chores** for members through the MCP (#595), such as from
   a work party's sign-in sheet. They wait under Proposed changes, where a team admin
-  accepts them in one step, and members never see them before that. A proposed chore
-  matching one logged already starts cleared. Accepting makes each chore, accepted by
-  that team admin, and sends it as any decision does. The chore keeps its proposal row
-  (`chores.change_set_row_id`), and its page says it was proposed by an AI agent.
+  adds them in one step, and members never see them before that. A proposed chore
+  matching one logged already starts cleared. Adding makes each a waiting chore, as if
+  the member had logged it, for a team admin to accept on the Chores page. Every chore
+  waits for that second step: an admin who has an agent propose their own chores should
+  not be the one who accepts them (2026-10-26). Until then, adding accepted and sent
+  them at once. The chore keeps its proposal row (`chores.change_set_row_id`), and its
+  page says it was proposed by an AI agent.
 - **The Chores page splits chores by status**, Waiting, Accepted, and Declined, opening
   on Waiting. Accepted lists each D4H activity, newest month first, with its chores
   under it, so every chore stays one click from its page. Before this, an accepted chore
