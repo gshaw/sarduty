@@ -77,8 +77,10 @@ defmodule Web.ProposedChangeLive do
         do: "Added #{count_chores(applied)} to accept on the Chores page.",
         else: "Sent #{count_changes(applied)}."
 
-    message =
-      done <> if(not_sent > 0, do: " #{count_changes(not_sent)} did not go through.", else: "")
+    count =
+      if Enum.any?(rows, &(&1.action == :add_chore)), do: &count_chores/1, else: &count_changes/1
+
+    message = done <> if(not_sent > 0, do: " #{count.(not_sent)} did not go through.", else: "")
 
     {kind, message}
   end
@@ -102,7 +104,7 @@ defmodule Web.ProposedChangeLive do
       <:item label={"#{@change_set.id}"} />
     </.breadcrumbs>
 
-    <h1 class="title">{ChangeSet.proposal_title(@change_set)}</h1>
+    <h1 class="title">{@page_title}</h1>
     <dl id="change-set-details" class="mb-4">
       <div :if={@change_set.summary}>
         <dt>Agent's note</dt>
@@ -136,9 +138,9 @@ defmodule Web.ProposedChangeLive do
     </dl>
 
     <p :if={ChangeSet.waiting?(@change_set) and @kind == :chores} id="what-happens" class="lead">
-      Adds {ChangeSet.proposal_count(@change_set)} to the Chores page, as if each member had
-      logged their own. A team admin accepts them there before they count. Clear the box
-      next to any chore you do not want.
+      Adds these chores to the Chores page, as if each member had logged their own. A team
+      admin accepts them there before they count. Clear the box next to any chore you do not
+      want.
     </p>
     <p :if={ChangeSet.waiting?(@change_set) and @kind == :attendance} id="what-happens" class="lead">
       Sending changes the activity's attendance. Clear the box next to any change you do not
@@ -150,9 +152,9 @@ defmodule Web.ProposedChangeLive do
       id="what-happens"
       class="lead"
     >
-      Sending changes the tags on {ChangeSet.proposal_count(@change_set)}. Clear the
-      box next to any change you do not want. SAR Duty checks each activity's tags again
-      before it sends, and skips one that someone changed or published first.
+      Sending changes the tags on these activities. Clear the box next to any change you do
+      not want. SAR Duty checks each activity's tags again before it sends, and skips one
+      that someone changed or published first.
     </p>
 
     <.form for={%{}} id="review-form" phx-change="select" phx-submit="send">
@@ -162,7 +164,13 @@ defmodule Web.ProposedChangeLive do
         row_id={&"row-#{&1.id}"}
         class="table-striped table-stack"
       >
-        <:col :let={row} :if={ChangeSet.waiting?(@change_set)} label="" class="w-px" select_all>
+        <:col
+          :let={row}
+          :if={ChangeSet.waiting?(@change_set)}
+          label=""
+          class="w-px stack-check"
+          select_all
+        >
           <input
             type="checkbox"
             id={"select-#{row.id}"}
@@ -172,7 +180,11 @@ defmodule Web.ProposedChangeLive do
             disabled={row.status != :proposed}
           />
         </:col>
-        <:col :let={row} label={if @kind == :activity_tags, do: "Activity", else: "Member"}>
+        <:col
+          :let={row}
+          label={if @kind == :activity_tags, do: "Activity", else: "Member"}
+          class="stack-title"
+        >
           <label for={"select-#{row.id}"}>{subject(row)}</label>
         </:col>
         <:col :let={row} :if={@kind == :chores} label="Date" class="whitespace-nowrap">
@@ -181,10 +193,14 @@ defmodule Web.ProposedChangeLive do
         <:col :let={row} :if={@kind == :chores} label="Chore category">
           {row.new_value["category"]}
         </:col>
-        <:col :let={row} :if={@kind == :chores} label="Time" class="whitespace-nowrap">
+        <:col :let={row} :if={@kind == :chores} label="Time" class="whitespace-nowrap" align="right">
           {Service.Format.duration(row.new_value["minutes"])}
         </:col>
-        <:col :let={row} label={if @kind == :chores, do: "What they did", else: "Change"}>
+        <:col
+          :let={row}
+          label={if @kind == :chores, do: "What they did", else: "Change"}
+          class="stack-full"
+        >
           {if @kind == :chores,
             do: row.new_value["description"],
             else: describe(row, @change_set, @current_team.timezone)}

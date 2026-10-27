@@ -138,7 +138,7 @@ defmodule Web.ProposedChangeLiveTest do
 
     assert has_element?(lv, "h1", "Chores to add")
     assert has_element?(lv, "#change-set-details", "Work party")
-    assert has_element?(lv, "#what-happens", "Adds 1 chore to the Chores page")
+    assert has_element?(lv, "#what-happens", "Adds these chores to the Chores page")
     assert has_element?(lv, "#row-#{row.id}", "Office admin")
     assert has_element?(lv, "#row-#{row.id}", "Radios")
     assert has_element?(lv, "#row-#{row.id}", "already has 1 hour of Office admin")
