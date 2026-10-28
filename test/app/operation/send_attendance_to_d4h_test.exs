@@ -69,10 +69,22 @@ defmodule App.Operation.SendAttendanceToD4HTest do
     assert plan([], [row(sam, "attending")], [sam]) == %{}
   end
 
-  test "an invite nobody replied to is left alone" do
+  test "a member who never replied and didn't arrive is marked absent, not a no-show" do
     [mei, jo] = [member(1, "Mei"), member(4, "Jo")]
-    changes = plan([time(mei)], [row(jo, "requested")], [mei, jo])
-    assert Map.keys(changes) == ["Mei"]
+
+    assert %{"Jo" => %{action: :absent, selected: true} = change} =
+             plan([time(mei)], [row(jo, "requested")], [mei, jo])
+
+    assert change.notes == [:no_reply_without_scan]
+    refute SendAttendanceToD4H.no_show?(change)
+
+    assert %{reason: "No reply, did not arrive", new_value: %{"status" => "ABSENT"}} =
+             SendAttendanceToD4H.change_set_row(%Activity{}, change)
+  end
+
+  test "with no scans nobody who never replied is marked absent" do
+    jo = member(4, "Jo")
+    assert plan([], [row(jo, "requested")], [jo]) == %{}
   end
 
   test "an absent row with no scan is left alone" do

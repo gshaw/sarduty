@@ -27,10 +27,11 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   - `:update`: mark the member's row attending with the door's times.
   - `:create`: add a row for a member D4H has none for, as a walk-in.
-  - `:absent`: mark a member who signed up (attending) and has no scans absent, checked,
-    with a note: D4H's attending also means marked there by hand. With no scans at all
-    the door wasn't used, so nobody is offered. A requested row is an invite nobody
-    replied to, so it's left alone.
+  - `:absent`: mark a member who signed up (attending) or never replied (requested) and
+    has no scans absent, checked, with a note: D4H's attending also means marked there
+    by hand. Only a sign-up is a no-show (`no_show?/1`); a member who never replied never
+    said they'd come (#649). With no scans at all the door wasn't used, so nobody is
+    offered.
   - `:unchanged`: D4H already has these times.
   - `:blocked`: the times can't be sent until they're fixed at the door.
   """
@@ -57,11 +58,15 @@ defmodule App.Operation.SendAttendanceToD4H do
     members_by_d4h_id = Map.new(members, &{&1.d4h_member_id, &1})
 
     for row <- rows,
-        row.status == "attending",
+        note = absent_note(row.status),
         member <- List.wrap(members_by_d4h_id[row.d4h_member_id]) do
-      change(member, :absent, row, selected: true, notes: [:signed_up_without_scan])
+      change(member, :absent, row, selected: true, notes: [note])
     end
   end
+
+  defp absent_note("attending"), do: :signed_up_without_scan
+  defp absent_note("requested"), do: :no_reply_without_scan
+  defp absent_note(_status), do: nil
 
   defp sort_key(change), do: {action_order(change.action), String.downcase(change.member.name)}
 
@@ -273,5 +278,6 @@ defmodule App.Operation.SendAttendanceToD4H do
 
   defp reason(%{action: :update}), do: "Arrived"
   defp reason(%{action: :create}), do: "Arrived, not signed up"
+  defp reason(%{action: :absent, status: "requested"}), do: "No reply, did not arrive"
   defp reason(%{action: :absent}), do: "Signed up, did not arrive"
 end

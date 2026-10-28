@@ -265,7 +265,8 @@ defmodule Web.ActivityAttendanceLive do
     <div id="send-start">
       <p>
         Review the changes before SAR Duty makes them. Members who arrived are marked attended
-        with their times. Members who signed up but did not arrive are marked absent.
+        with their times. Members who signed up or did not reply, and did not arrive, are
+        marked absent.
       </p>
       <.button
         id="review"
@@ -408,7 +409,10 @@ defmodule Web.ActivityAttendanceLive do
   end
 
   defp note_class(:left_before_arriving), do: "text-danger-text"
-  defp note_class(:signed_up_without_scan), do: "font-semibold"
+
+  defp note_class(note) when note in [:signed_up_without_scan, :no_reply_without_scan],
+    do: "font-semibold"
+
   defp note_class(_note), do: "text-text-muted"
 
   defp note_text(:no_arrival), do: "No arrival scan. Uses the start time."
@@ -418,4 +422,5 @@ defmodule Web.ActivityAttendanceLive do
     do: "Left before arriving. Fix the times in Take attendance."
 
   defp note_text(:signed_up_without_scan), do: "Signed up, but no scan. Uncheck if they came."
+  defp note_text(:no_reply_without_scan), do: "No reply, no scan. Uncheck if they came."
 end
