@@ -3,9 +3,9 @@ defmodule Web.TaxCreditLetterLive do
 
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
+  alias App.Operation.DeleteTaxCreditLetter
   alias App.Operation.EmailTaxCreditLetter
   alias App.Operation.ReplaceTaxCreditLetter
-  alias App.Repo
 
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -59,11 +59,7 @@ defmodule Web.TaxCreditLetterLive do
       </.button>
       <.button id="email-letter" variant={:warning} phx-click="email" phx-disable-with="Sending…">Email letter</.button>
       <:trailing>
-        <.button
-          variant={:danger}
-          phx-click="destroy"
-          data-confirm={"Delete letter #{@letter.ref_id}? The member may already have it. A new letter gets a new reference number."}
-        >
+        <.button id="delete-letter" variant={:danger} phx-click="destroy" {delete_confirm(@letter)}>
           Delete letter
         </.button>
       </:trailing>
@@ -80,13 +76,13 @@ defmodule Web.TaxCreditLetterLive do
         This letter says {format_minutes(TaxCreditLetter.total_minutes(@letter))}.
         Attendance now adds up to {format_minutes(@hours.total_minutes)}.
         Replace the letter to use the new hours. It gets a new reference number and is not emailed.
-        The old reference number still verifies, with the old hours.
+        Only the new letter verifies.
       </p>
       <.button
         id="replace-letter"
         variant={:warning}
         phx-click="replace"
-        data-confirm={"Replace letter #{@letter.ref_id} with #{format_minutes(@hours.total_minutes)}? It gets a new reference number and is not emailed."}
+        {replace_confirm(@letter, @hours)}
       >
         Replace letter
       </.button>
@@ -133,6 +129,26 @@ defmodule Web.TaxCreditLetterLive do
     """
   end
 
+  # Both stop the letter's reference number verifying, so each asks for the box ticked.
+  defp replace_confirm(letter, hours) do
+    %{
+      "data-confirm" =>
+        "Replace letter #{letter.ref_id} with #{format_minutes(hours.total_minutes)}? It gets a new reference number and is not emailed.",
+      "data-confirm-warning" => "The member needs the new letter.",
+      "data-confirm-check" => "I understand #{letter.ref_id} no longer verifies.",
+      "data-confirm-button" => "Replace letter"
+    }
+  end
+
+  defp delete_confirm(letter) do
+    %{
+      "data-confirm" => "Delete letter #{letter.ref_id}? The member may already have it.",
+      "data-confirm-warning" => "A new letter gets a new reference number.",
+      "data-confirm-check" => "I understand #{letter.ref_id} no longer verifies.",
+      "data-confirm-button" => "Delete letter"
+    }
+  end
+
   def handle_event("email", _unsigned_params, socket) do
     {:noreply, put_email_flash(socket, socket.assigns.letter)}
   end
@@ -159,7 +175,7 @@ defmodule Web.TaxCreditLetterLive do
 
   def handle_event("destroy", _unsigned_params, socket) do
     tax_credit_letter = socket.assigns.letter
-    Repo.delete!(tax_credit_letter)
+    DeleteTaxCreditLetter.call(tax_credit_letter)
 
     socket =
       socket

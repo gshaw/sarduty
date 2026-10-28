@@ -28,11 +28,11 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   characters from `Service.Random.token/1`, about 2 million, never checked for
   duplicates. The page asks for the member's last name before it shows one. The unique
   index on `ref_id` covers only the 8-character numbers for the same reason.
-- **A letter that's out keeps verifying.** Replace gives the letter a new reference
-  number and saves the old number, hours, and certified date in
-  `replaced_tax_credit_letters`. The old number shows "This letter was replaced" with the
-  hours it said, so a paper copy already handed in still matches. Delete removes a
-  letter and its replaced numbers; its confirm warns that the member may have it.
+- **Only the current letter verifies.** Replace gives the letter a new reference number,
+  and Delete ([DeleteTaxCreditLetter](../lib/app/operation/delete_tax_credit_letter.ex))
+  removes it. Either way the old number is not found, so an old paper copy can't pass for
+  the hours the team stands behind now. Both ask for a ticked box, since the member may
+  already have the letter.
 - **Letters stay off the ID card pages.** `/letters` is its own page on the verify host,
   so it gets the host's isolation (no login cookie), its miss limit
   ([Web.VerifyLimit](../lib/web/verify_limit.ex), shared with cards), and an

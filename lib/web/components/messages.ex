@@ -162,8 +162,8 @@ defmodule Web.Components.Messages do
     otherwise. Red when the button is, blue otherwise.
   - `data-confirm-list`: what's lost, as a JSON array of sentences.
   - `data-confirm-warning`: a bold last line, such as "D4H can't bring it back."
-  - `data-confirm-check`: a check box the action waits on. Only for a delete that takes
-    other things with it.
+  - `data-confirm-check`: a check box the action waits on. Only for a change that takes
+    other things with it, or stops a tax credit letter verifying.
   - `data-confirm-type`, with `data-confirm-type-label`: text to type before the action
     turns on, matched ignoring case and spaces.
   - `data-confirm-alt` and `data-confirm-alt-href`: a link that's a better way out than

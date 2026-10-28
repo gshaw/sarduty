@@ -5,6 +5,7 @@ defmodule Web.VerifyLetterLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.TaxCreditLetter
+  alias App.Operation.DeleteTaxCreditLetter
   alias App.Operation.ReplaceTaxCreditLetter
 
   # Like the ID card check: matched by host, with a client IP of its own per test.
@@ -90,18 +91,30 @@ defmodule Web.VerifyLetterLiveTest do
   end
 
   describe "a replaced letter" do
-    test "its old reference number shows the hours it said, marked replaced",
+    test "its old reference number is not found, so only the new one verifies",
          %{conn: conn, team: team, member: member} do
       letter = member |> letter() |> App.Repo.preload(member: :team)
       replaced = ReplaceTaxCreditLetter.call(team, letter)
 
-      {:ok, lv, _html} = live(conn, ~p"/letters/#{letter.ref_id}")
-      assert has_element?(lv, "#result-replaced", "This tax credit letter was replaced")
-      assert has_element?(lv, "#result-hours", "230h 30m")
+      {:ok, lv, html} = live(conn, ~p"/letters/#{letter.ref_id}")
+      assert has_element?(lv, "#result-not-found")
+      refute html =~ "Mercer"
 
       {:ok, lv, _html} = live(conn, ~p"/letters/#{replaced.ref_id}")
       assert has_element?(lv, "#result-issued")
       assert has_element?(lv, "#result-hours", "0 hours")
+    end
+  end
+
+  test "a deleted letter's reference number is not found",
+       %{conn: conn, team: team, member: member} do
+    letter = member |> letter() |> App.Repo.preload(member: :team)
+    replaced = ReplaceTaxCreditLetter.call(team, letter)
+    DeleteTaxCreditLetter.call(replaced)
+
+    for ref_id <- [letter.ref_id, replaced.ref_id] do
+      {:ok, lv, _html} = live(conn, ~p"/letters/#{ref_id}")
+      assert has_element?(lv, "#result-not-found")
     end
   end
 

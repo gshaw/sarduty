@@ -5,7 +5,6 @@ defmodule Web.TaxCreditLetterLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
-  alias App.Model.ReplacedTaxCreditLetter
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
@@ -86,6 +85,11 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert has_element?(lv, "#hours-changed", "This letter says 1 hour")
       assert has_element?(lv, "#hours-changed", "Attendance now adds up to 1h 30m")
 
+      assert has_element?(
+               lv,
+               ~s(#replace-letter[data-confirm-check="I understand #{letter.ref_id} no longer verifies."])
+             )
+
       lv |> element("#replace-letter") |> render_click()
 
       refute has_element?(lv, "#hours-changed")
@@ -98,9 +102,27 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert replaced.letter_content =~ "Primary Hours: 1h 30m\n"
       assert replaced.letter_content =~ "Reference: #{replaced.ref_id}"
 
-      old = Repo.get_by!(ReplacedTaxCreditLetter, tax_credit_letter_id: letter.id)
-      assert {old.ref_id, old.primary_minutes} == {letter.ref_id, 60}
       assert_no_email_sent()
+    end
+
+    test "deletes the letter once the box is ticked", %{
+      conn: conn,
+      user: user,
+      team: team,
+      member: member
+    } do
+      letter = tax_credit_letter_fixture(member, %{year: 2025})
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
+
+      assert has_element?(
+               lv,
+               ~s(#delete-letter[data-confirm-check="I understand #{letter.ref_id} no longer verifies."])
+             )
+
+      assert {:error, {:redirect, _}} = lv |> element("#delete-letter") |> render_click()
+      refute Repo.get(TaxCreditLetter, letter.id)
     end
 
     test "an older letter shows both numbers with no warning",
