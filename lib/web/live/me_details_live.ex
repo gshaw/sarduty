@@ -1,7 +1,10 @@
 defmodule Web.MeDetailsLive do
   use Web, {:live_view_app_layout, access: :member, view_events: ["validate"]}
 
+  import Web.Components.CustomFields
+
   alias App.Accounts
+  alias App.Model.CustomField
   alias App.Model.Member
   alias App.Operation.ChangeOwnPhone
   alias App.Operation.SaveOwnDetails
@@ -25,6 +28,7 @@ defmodule Web.MeDetailsLive do
     socket =
       socket
       |> assign(:page_title, "Contact details")
+      |> assign(:field_rows, own_field_rows(member))
       |> assign(:client_ip, session["client_ip"])
       |> assign(:text_login?, Accounts.text_login?())
       |> assign(:phone_form, to_form(%{"phone" => ""}, as: "phone"))
@@ -144,6 +148,15 @@ defmodule Web.MeDetailsLive do
     end
   end
 
+  # The member fields the team copies that D4H lets a member see (#681), read only.
+  defp own_field_rows(member) do
+    team = member.team
+
+    team.id
+    |> CustomField.copied_member_fields(:self)
+    |> CustomField.rows(member.custom_values, team.timezone)
+  end
+
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
@@ -208,6 +221,8 @@ defmodule Web.MeDetailsLive do
       <p id="email-note" class="hint mt-8">
         Your email is {@member.email || "not set"}. Ask a team admin to change it.
       </p>
+
+      <.custom_fields id="own-fields" title="Member fields" rows={@field_rows} />
     </div>
     """
   end

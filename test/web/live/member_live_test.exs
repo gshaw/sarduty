@@ -322,4 +322,23 @@ defmodule Web.MemberLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
     refute has_element?(lv, "#this-is-you")
   end
+
+  test "a team admin sees the member fields the team copies (#681)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 630,
+      target: "member",
+      title: "Radio Call Sign",
+      copy_values: true
+    })
+
+    custom_field_fixture(team, %{d4h_custom_field_id: 631, target: "member", title: "Not copied"})
+    member = member_fixture(team, %{custom_values: %{"630" => "SF 12"}})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "#member-fields-630", "SF 12")
+    refute has_element?(lv, "#member-fields-631")
+  end
 end

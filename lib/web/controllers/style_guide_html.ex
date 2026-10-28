@@ -7,6 +7,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
   import Web.Components.CopyButton
+  import Web.Components.CustomFields
   import Web.Components.D4H
   import Web.Components.EmailPreview
   import Web.Components.FileDrop
@@ -393,6 +394,7 @@ defmodule Web.StyleGuideHTML do
   def token_class(token), do: "bg-" <> token
 
   defdelegate chart_columns(), to: SampleData
+  defdelegate custom_field_rows(), to: SampleData
   defdelegate chart_hours(), to: SampleData
   defdelegate chart_days(), to: SampleData
   defdelegate chart_week(), to: SampleData

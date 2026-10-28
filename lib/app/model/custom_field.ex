@@ -65,6 +65,19 @@ defmodule App.Model.CustomField do
     team_id |> get_all("member") |> Enum.reject(& &1.restricted)
   end
 
+  @doc """
+  The member fields the team copies, in order: all of them for a team admin, and for
+  the member themself the ones D4H lets a member see (#681).
+  """
+  def copied_member_fields(team_id, viewer) when viewer in [:team_admin, :self] do
+    team_id
+    |> get_all("member")
+    |> Enum.filter(
+      &(&1.copy_values and not &1.restricted and
+          (viewer == :team_admin or &1.member_privacy in ~w(viewable editable)))
+    )
+  end
+
   @doc "The D4H ids, as strings, of the member fields the team copies."
   def copied_member_ids(team_id) do
     CustomField
@@ -107,6 +120,29 @@ defmodule App.Model.CustomField do
       do: "#{value} #{units}"
 
   def display(%CustomField{}, value, _timezone), do: to_string(value)
+
+  @doc """
+  What a record's page shows, from the target's live `fields` in order and the record's
+  `values`: each field with a value, and each required one without, as
+  `%{field:, text:, missing?:}`. RESTRICTED fields are left out unless
+  `restricted: true`, and required ones only marked missing with `missing: true`.
+  """
+  def rows(fields, values, timezone, opts \\ []) do
+    values = values || %{}
+    restricted? = Keyword.get(opts, :restricted, false)
+    missing? = Keyword.get(opts, :missing, false)
+
+    Enum.flat_map(fields, fn field ->
+      value = values[Integer.to_string(field.d4h_custom_field_id)]
+
+      cond do
+        field.restricted and not restricted? -> []
+        value != nil -> [%{field: field, text: display(field, value, timezone), missing?: false}]
+        missing? and field.required -> [%{field: field, text: nil, missing?: true}]
+        true -> []
+      end
+    end)
+  end
 
   @doc """
   A record's values as `%{"title" => text}` for the fields in `ids`, for history. A

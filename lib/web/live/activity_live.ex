@@ -3,6 +3,7 @@ defmodule Web.ActivityLive do
 
   import Web.Components.ActivityMap
   import Web.Components.CopyButton
+  import Web.Components.CustomFields
   import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
   import Web.Components.StatSwitch
@@ -12,6 +13,7 @@ defmodule Web.ActivityLive do
   alias App.Model.Attendance
   alias App.Model.ChoreEvent
   alias App.Model.Coordinate
+  alias App.Model.CustomField
   alias App.Model.EquipmentUsage
   alias App.Model.Member
   alias App.Model.Reminder
@@ -56,6 +58,7 @@ defmodule Web.ActivityLive do
         hours_tags: Activity.hours_tags(team),
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),
+        field_rows: field_rows(team, activity, team_admin?),
         replier: Reply.replier(socket.assigns, now),
         members_view: view_status(params["view"])
       )
@@ -162,6 +165,17 @@ defmodule Web.ActivityLive do
     end
   end
 
+  # The activity's D4H custom fields (#681). RESTRICTED ones, and required ones left
+  # empty, show to team admins only.
+  defp field_rows(team, activity, team_admin?) do
+    team.id
+    |> CustomField.get_all(activity.activity_kind)
+    |> CustomField.rows(activity.custom_values, team.timezone,
+      restricted: team_admin?,
+      missing: team_admin?
+    )
+  end
+
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
@@ -219,6 +233,11 @@ defmodule Web.ActivityLive do
       </aside>
       <main class="content-2/3">
         <.main_content activity={@activity} hours_tags={@hours_tags} map={@map} />
+        <.custom_fields
+          id="activity-fields"
+          title={"#{String.capitalize(@activity.activity_kind)} fields"}
+          rows={@field_rows}
+        />
         <.members_section
           activity={@activity}
           members={@members}
