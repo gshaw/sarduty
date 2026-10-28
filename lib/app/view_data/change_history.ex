@@ -377,9 +377,19 @@ defmodule App.ViewData.ChangeHistory do
              :update_group,
              :create_equipment_item,
              :update_equipment_item,
-             :delete_equipment_item
+             :delete_equipment_item,
+             :create_whiteboard_note,
+             :update_whiteboard_note,
+             :delete_whiteboard_note,
+             :create_location_bookmark,
+             :update_location_bookmark,
+             :delete_location_bookmark
            ],
       do: "Changed in SAR Duty"
+
+  # Only on old rows, from before the MCP became read-only (#627).
+  def describe_row(%ChangeSetRow{action: :add_chore} = row, _page),
+    do: "#{row.new_value["category"] || "A"} chore added in SAR Duty"
 
   # "Deleted MIT 2026: 14 members; rules: In MIT Applicants, Not in LOA" (#651). Rows
   # from before kept only the title.

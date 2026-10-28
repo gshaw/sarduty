@@ -93,6 +93,27 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert row.(%{"title" => "Old group"}) == "Deleted Old group"
   end
 
+  # A member's history page crashed on an agent's chore row (2026-10-28).
+  test "every row action has a sentence" do
+    for action <- Ecto.Enum.values(ChangeSetRow, :action) do
+      row = %ChangeSetRow{
+        action: action,
+        old_value: %{},
+        new_value: %{},
+        member: nil,
+        change_set: %App.Model.ChangeSet{source: :edit, activity: nil, group: nil}
+      }
+
+      assert is_binary(ChangeHistory.describe_row(row, :member))
+      assert is_binary(ChangeHistory.describe_row(row, :activity))
+    end
+
+    assert ChangeHistory.describe_row(
+             %ChangeSetRow{action: :add_chore, new_value: %{"category" => "Administrative Work"}},
+             :member
+           ) == "Administrative Work chore added in SAR Duty"
+  end
+
   # Sent before the start, so never "attended" (#444).
   test "a member's reply reads in the reply words" do
     reply = fn status, page ->
