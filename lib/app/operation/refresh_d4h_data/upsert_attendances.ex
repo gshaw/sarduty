@@ -5,6 +5,7 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.NoShow
   alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.StaleRows
@@ -100,8 +101,16 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
         do: Attendance.update!(attendance, params),
         else: Attendance.insert!(params)
 
+    clear_no_show(attendance, saved)
     RecordD4HChanges.record(:attendance, attendance, saved)
   end
+
+  # A no-show changed to attending in D4H or Records is no longer one (#648).
+  defp clear_no_show(%Attendance{status: old}, %Attendance{status: "attending"} = saved)
+       when old != "attending",
+       do: NoShow.clear(saved.activity_id, saved.member_id)
+
+  defp clear_no_show(_attendance, _saved), do: :ok
 
   defp delete_stale_attendances(team_id, synced_d4h_ids) do
     count = team_id |> team_attendances() |> delete_stale(synced_d4h_ids)

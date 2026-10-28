@@ -18,16 +18,7 @@ defmodule Web.ActivitySendAttendanceTest do
     lena = member_fixture(team, %{name: "Lena Park"})
     sam = member_fixture(team, %{name: "Sam Ortiz"})
 
-    for member <- [mei, lena] do
-      AttendanceScan.insert!(%AttendanceScan{
-        team_id: team.id,
-        activity_id: activity.id,
-        member_id: member.id,
-        kind: "arrived",
-        method: "name",
-        scanned_at: DateTime.utc_now()
-      })
-    end
+    for member <- [mei, lena], do: scan!(%{team: team, activity: activity}, member)
 
     %{
       conn: log_in_user(conn, user),
@@ -38,6 +29,17 @@ defmodule Web.ActivitySendAttendanceTest do
       lena: lena,
       sam: sam
     }
+  end
+
+  defp scan!(ctx, member) do
+    AttendanceScan.insert!(%AttendanceScan{
+      team_id: ctx.team.id,
+      activity_id: ctx.activity.id,
+      member_id: member.id,
+      kind: "arrived",
+      method: "name",
+      scanned_at: DateTime.utc_now()
+    })
   end
 
   defp row(ctx, id, member, status) do
@@ -123,6 +125,20 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(lv, "#no-show-#{no_show.id}", "Sam Ortiz")
   end
 
+  test "a no-show who arrives late and is sent attended is no longer a no-show", ctx do
+    NoShow.record!(ctx.activity, ctx.sam)
+    scan!(ctx, ctx.sam)
+    stub_d4h(ctx, rows: [row(ctx, 503, ctx.sam, "ABSENT")])
+    lv = open(ctx)
+
+    lv |> element("#review") |> render_click()
+    lv |> form("#send-form") |> render_submit(%{"keys" => ["member-#{ctx.sam.id}"]})
+
+    assert_received {:d4h_write, "PATCH", "/attendance/503", %{"status" => "ATTENDING"}}
+    assert NoShow.get_all(ctx.activity) == []
+    refute has_element?(lv, "#no-shows")
+  end
+
   test "a team admin marks a no-show followed up, and can undo it", ctx do
     no_show = NoShow.record!(ctx.activity, ctx.sam)
     lv = open(ctx)
@@ -203,15 +219,7 @@ defmodule Web.ActivitySendAttendanceTest do
 
     walk_in = member_fixture(ctx.team, %{name: "Ava Singh"})
 
-    scan =
-      AttendanceScan.insert!(%AttendanceScan{
-        team_id: ctx.team.id,
-        activity_id: ctx.activity.id,
-        member_id: walk_in.id,
-        kind: "arrived",
-        method: "name",
-        scanned_at: DateTime.utc_now()
-      })
+    scan = scan!(ctx, walk_in)
 
     lv |> form("#send-form") |> render_submit(%{"keys" => all_keys(ctx)})
 

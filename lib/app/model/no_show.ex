@@ -10,6 +10,7 @@ defmodule App.Model.NoShow do
 
   # A member who signed up for an activity and did not arrive, marked absent in D4H from
   # the door's attendance. A team admin checks they're OK, then ticks it followed up.
+  # Cleared when they turn out attended after all.
   schema "no_shows" do
     belongs_to :team, Team
     belongs_to :activity, Activity
@@ -27,6 +28,16 @@ defmodule App.Model.NoShow do
       on_conflict: :nothing,
       conflict_target: [:activity_id, :member_id]
     )
+  end
+
+  @doc """
+  Clears the member's no-show on the activity, once they're attended there after all:
+  sent from the door, or changed in D4H or Records and seen by the sync (#648).
+  """
+  def clear(activity_id, member_id) do
+    NoShow
+    |> where([n], n.activity_id == ^activity_id and n.member_id == ^member_id)
+    |> Repo.delete_all()
   end
 
   @doc "The activity's no-shows with their members, by name."

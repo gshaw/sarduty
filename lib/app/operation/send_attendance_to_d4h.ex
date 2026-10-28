@@ -211,8 +211,15 @@ defmodule App.Operation.SendAttendanceToD4H do
     end
   end
 
+  # Local attendance waits for the sync, so the send itself records a no-show, and
+  # clears one when the member arrived late and was sent attended (#648).
   defp result(activity, change, %ChangeSetRow{status: :applied}) do
-    if no_show?(change), do: NoShow.record!(activity, change.member)
+    cond do
+      no_show?(change) -> NoShow.record!(activity, change.member)
+      change.action in [:update, :create] -> NoShow.clear(activity.id, change.member.id)
+      true -> :ok
+    end
+
     {change, :ok}
   end
 

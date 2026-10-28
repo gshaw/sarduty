@@ -3,7 +3,9 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendancesTest do
 
   import App.DataFixtures
 
+  alias App.Adapter.D4H.AttendanceInfo
   alias App.Model.Attendance
+  alias App.Model.NoShow
   alias App.Operation.RefreshD4HData.UpsertAttendances
 
   # Letter hours come from these rows, so a delete must never reach another team's.
@@ -62,5 +64,38 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendancesTest do
     refute Repo.get(Attendance, gone.id)
     assert Repo.get(Attendance, elsewhere.id)
     assert Repo.get(Attendance, their_row.id)
+  end
+
+  describe "a no-show" do
+    setup %{ours: ours, activity: activity} do
+      member = member_fixture(ours)
+      row = attendance_fixture(activity, member, %{status: "absent"})
+      NoShow.record!(activity, member)
+      %{member: member, row: row}
+    end
+
+    defp upsert(ctx, status) do
+      ctx.ours.id
+      |> UpsertAttendances.build_context()
+      |> UpsertAttendances.upsert(%AttendanceInfo{
+        d4h_attendance_id: ctx.row.d4h_attendance_id,
+        d4h_activity_id: ctx.activity.d4h_activity_id,
+        d4h_member_id: ctx.member.d4h_member_id,
+        started_at: ctx.row.started_at,
+        finished_at: ctx.row.finished_at,
+        duration_in_minutes: 60,
+        status: status
+      })
+    end
+
+    test "is cleared when D4H changes them to attending", ctx do
+      upsert(ctx, "attending")
+      assert NoShow.get_all(ctx.activity) == []
+    end
+
+    test "stays while D4H has them absent", ctx do
+      upsert(ctx, "absent")
+      assert [_no_show] = NoShow.get_all(ctx.activity)
+    end
   end
 end
