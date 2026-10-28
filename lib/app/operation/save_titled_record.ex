@@ -16,12 +16,15 @@ defmodule App.Operation.SaveTitledRecord do
   alias App.Accounts.User
   alias App.Model.ChangeSetRow
   alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.GroupRule
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Operation.ApplyEdit
+  alias App.Operation.BuildGroupRulePreview
   alias App.Operation.RefreshD4HData.UpsertGroups
   alias App.Repo
+  alias App.ViewData.GroupRules
   alias App.ViewModel.TitleFormViewModel
 
   @kinds %{
@@ -122,7 +125,7 @@ defmodule App.Operation.SaveTitledRecord do
     row = %ChangeSetRow{
       action: actions.delete,
       d4h_record_id: Map.fetch!(record, d4h_id),
-      old_value: %{"title" => record.title},
+      old_value: snapshot(team, record),
       new_value: %{}
     }
 
@@ -131,6 +134,29 @@ defmodule App.Operation.SaveTitledRecord do
       delete_local(record)
     end
   end
+
+  # A deleted group keeps its members' names and its rules in the row's old value, so a
+  # mistaken delete can be rebuilt by hand (#651). D4H can't restore a group.
+  defp snapshot(team, %Group{} = group) do
+    context = BuildGroupRulePreview.load(team)
+
+    members =
+      GroupMember
+      |> join(:inner, [gm], m in assoc(gm, :member))
+      |> where([gm, m], gm.group_id == ^group.id and m.team_id == ^team.id)
+      |> order_by([gm, m], asc: m.name)
+      |> select([gm, m], m.name)
+      |> Repo.all()
+
+    rules =
+      context.rules
+      |> Map.get(group.d4h_group_id, [])
+      |> Enum.map(&GroupRules.text(&1, context))
+
+    %{"title" => group.title, "members" => members, "rules" => rules}
+  end
+
+  defp snapshot(_team, record), do: %{"title" => record.title}
 
   # Its own rules go with it. Rules of other groups that name it break until changed.
   defp delete_local(%Group{} = group) do

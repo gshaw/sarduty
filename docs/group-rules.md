@@ -79,8 +79,9 @@ and [SetGroupMember](../lib/app/operation/set_group_member.ex) refuses it too.
   their pending changes.
 - Two groups can't share a title, in any case, counting the organization's.
 - Deleting a group deletes its own rules. Its confirm names what else stops: its members,
-  the rules of groups that name it, the templates that add its members, and the attendance
-  check.
+  its rules, the rules of groups that name it, the templates that add its members, and
+  the attendance check. A group with members asks for a ticked box, and the delete row
+  keeps its members and rules ([change-history.md](change-history.md#what-gets-history)).
 
 **The organization's groups.** A team's list in D4H includes its organization's groups,
 `owner.resourceType == "Organisation"`, kept as `groups.organization_owned`. Renaming or

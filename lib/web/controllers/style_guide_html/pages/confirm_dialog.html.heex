@@ -2,33 +2,188 @@
   <h1>Confirm dialog</h1>
   <p class="lead">A question before a change that can't be undone.</p>
 
-  <div class="demo">
-    <.button
-      variant={:danger}
-      data-confirm="Delete First Aid? It comes off ID cards and the rules of Callout."
-    >
-      Delete endorsement
-    </.button>
-  </div>
-
   <h2>When to use</h2>
   <p>Before a delete or a send that can't be undone.</p>
 
   <h2>When not to use</h2>
   <p>A change that can be undone, or one the person reviews on the page first.</p>
 
+  <h2 id="simple">Simple</h2>
+  <p>
+    Most deletes and sends. The question names the thing; the sentences after it say what happens.
+    The action button names the action: red for a delete, blue otherwise.
+  </p>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-delete"
+      open
+      question="Delete the endorsement First Aid?"
+      body="It comes off ID cards and out of Callout's rules."
+      action="Delete endorsement"
+      variant={:danger}
+    />
+    <.confirm_dialog
+      id="confirm-example-send"
+      open
+      question="Send 22 changes to D4H?"
+      body="Members who arrived are marked attended with their times. 3 who signed up and didn't arrive are marked absent."
+      action="Send changes"
+    />
+    <div>
+      <.button
+        id="confirm-try-simple"
+        variant={:danger}
+        data-confirm="Delete the endorsement First Aid? It comes off ID cards and out of Callout's rules."
+        data-confirm-button="Delete endorsement"
+      >
+        Delete endorsement
+      </.button>
+    </div>
+  </div>
+
+  <h3>A better way out</h3>
+  <p>
+    A third button when there's a better way out than going ahead, such as a link to fix the cause. At most one red button.
+  </p>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-alt"
+      open
+      question="Retire Sam Lee?"
+      body="They still hold 2 items: Radio 14 and Helmet 3. D4H won't retire a member who holds equipment."
+      alt="Open their equipment"
+      alt_href="#simple"
+      action="Retire when returned"
+      variant={:default}
+    />
+    <div>
+      <.button
+        id="confirm-try-alt"
+        data-confirm="Retire Sam Lee? They still hold 2 items: Radio 14 and Helmet 3. D4H won't retire a member who holds equipment."
+        data-confirm-button="Retire when returned"
+        data-confirm-alt="Open their equipment"
+        data-confirm-alt-href="#simple"
+      >
+        Retire
+      </.button>
+    </div>
+  </div>
+
+  <h2 id="check-box">Check box</h2>
+  <p>
+    Only where a delete takes other things with it: a group with members, an activity with
+    attendance, a qualification someone holds. The dialog lists what's lost and ends with
+    "D4H can't bring it back." The action stays grey until the box is ticked.
+  </p>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-check"
+      open
+      question="Delete the group MIT 2026?"
+      list={[
+        "14 members leave it.",
+        "Its 2 rules are deleted.",
+        "Rope Rescue Callout's rules name it, and stop until you fix them."
+      ]}
+      warning="D4H can't bring it back."
+      check="I understand 14 members and its rules are lost."
+      action="Delete group"
+      variant={:danger}
+    />
+    <.confirm_dialog
+      id="confirm-example-checked"
+      open
+      question="Delete the group MIT 2026?"
+      list={[
+        "14 members leave it.",
+        "Its 2 rules are deleted.",
+        "Rope Rescue Callout's rules name it, and stop until you fix them."
+      ]}
+      warning="D4H can't bring it back."
+      check="I understand 14 members and its rules are lost."
+      checked
+      action="Delete group"
+      variant={:danger}
+    />
+    <div>
+      <.button
+        id="confirm-try-check"
+        variant={:danger}
+        data-confirm="Delete the group MIT 2026?"
+        data-confirm-list={Jason.encode!(["14 members leave it.", "Its 2 rules are deleted."])}
+        data-confirm-warning="D4H can't bring it back."
+        data-confirm-check="I understand 14 members and its rules are lost."
+        data-confirm-button="Delete group"
+      >
+        Delete group
+      </.button>
+    </div>
+  </div>
+
+  <h2 id="type-to-confirm">Type to confirm</h2>
+  <p>
+    Built, and used nowhere yet. Only for something that wipes a team's data. The action
+    turns on once the text matches, ignoring case and spaces, with no error while typing.
+  </p>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-type"
+      open
+      question="Delete Coast Range SAR from SAR Duty?"
+      body="Its tax credit letters, scans, chores, check-ins, and group rules are deleted. Nothing in D4H changes."
+      warning="SAR Duty can't bring it back."
+      type="Coast Range SAR"
+      type_label="Type the team's name to confirm"
+      typed="Coast Ra"
+      action="Delete team"
+      variant={:danger}
+    />
+    <.confirm_dialog
+      id="confirm-example-typed"
+      open
+      question="Delete Coast Range SAR from SAR Duty?"
+      body="Its tax credit letters, scans, chores, check-ins, and group rules are deleted. Nothing in D4H changes."
+      warning="SAR Duty can't bring it back."
+      type="Coast Range SAR"
+      type_label="Type the team's name to confirm"
+      typed="coast range sar"
+      action="Delete team"
+      variant={:danger}
+    />
+    <div>
+      <.button
+        id="confirm-try-type"
+        variant={:danger}
+        data-confirm="Delete Coast Range SAR from SAR Duty? Its tax credit letters, scans, chores, check-ins, and group rules are deleted. Nothing in D4H changes."
+        data-confirm-warning="SAR Duty can't bring it back."
+        data-confirm-type="Coast Range SAR"
+        data-confirm-type-label="Type the team's name to confirm"
+        data-confirm-button="Delete team"
+      >
+        Delete team
+      </.button>
+    </div>
+  </div>
+
   <h2>How it works</h2>
   <ul>
-    <li>The question names the thing and says what happens.</li>
-    <li>The browser shows its own dialog, with OK and Cancel.</li>
+    <li>Cancel has the focus, so Enter by reflex does nothing. Escape cancels.</li>
+    <li>On a phone the buttons stack full width, the action on top.</li>
+    <li>
+      It is our own dialog, not the browser's: some phone browsers never show <code>window.confirm</code>, so the button did nothing.
+    </li>
   </ul>
 
-  <script>
-    document.querySelectorAll("[data-confirm]").forEach(function (button) {
-      button.addEventListener("click", function () { window.confirm(button.dataset.confirm); });
-    });
-  </script>
-
   <h2>In the app</h2>
-  <p><code>data-confirm="…"</code> on the button.</p>
+  <p>
+    <code>data-confirm="…"</code>
+    on the button, with <code>data-confirm-button</code>
+    naming the action. A check box adds <code>data-confirm-list</code>, <code>data-confirm-warning</code>, and <code>data-confirm-check</code>; type to confirm adds
+    <code>data-confirm-type</code>
+    and <code>data-confirm-type-label</code>; a better way out adds <code>data-confirm-alt</code>
+    and <code>data-confirm-alt-href</code>. The root layout renders
+    <code>&lt;.confirm_dialog /&gt;</code>
+    once, and <code>assets/js/confirm_dialog.js</code>
+    fills it in and opens it.
+  </p>
 </.shell>

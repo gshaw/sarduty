@@ -49,6 +49,7 @@
       </:menu_foot>
     </Web.Layouts.main_nav_bar>
     {@inner_content}
+    <Web.Components.Messages.confirm_dialog />
     <script>
       // iOS Safari only applies :active, the pressed look, when a touch listener exists.
       document.addEventListener("touchstart", function () {}, { passive: true });

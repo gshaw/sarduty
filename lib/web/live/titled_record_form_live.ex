@@ -7,6 +7,7 @@ defmodule Web.TitledRecordFormLive do
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRule
+  alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Template
   alias App.Operation.BuildGroupRulePreview
@@ -36,7 +37,7 @@ defmodule Web.TitledRecordFormLive do
     socket =
       socket
       |> assign(kind: kind, record: record, form_data: form)
-      |> assign(:delete_text, record && delete_text(kind, team, record))
+      |> assign_delete(kind, team, record)
       |> assign(page_title: page_title(kind, record))
       |> assign_form(TitleFormViewModel.changeset(form, %{}, 200))
 
@@ -78,7 +79,7 @@ defmodule Web.TitledRecordFormLive do
         type="button"
         variant={:danger}
         phx-click="delete"
-        data-confirm={"Delete #{@record.title}? #{@delete_text}"}
+        {@delete_confirm}
       >
         Delete {@kind}
       </.button>
@@ -97,46 +98,99 @@ defmodule Web.TitledRecordFormLive do
 
   defp record_path(team, :group, record), do: ~p"/teams/#{team}/groups/#{record.id}"
 
-  defp delete_text(:qualification, _team, _record), do: "Every member who holds it loses it."
+  defp assign_delete(socket, _kind, _team, nil), do: socket
+
+  defp assign_delete(socket, kind, team, record) do
+    %{items: items, lost: lost} = delete_facts(kind, team, record)
+
+    assign(socket,
+      delete_text: Enum.join(items, " "),
+      delete_confirm: delete_confirm(team, kind, record, items, lost)
+    )
+  end
+
+  # A delete that takes members with it asks for the box ticked (#651).
+  defp delete_confirm(_team, kind, record, items, nil),
+    do: %{
+      "data-confirm" => "Delete #{record.title}? #{Enum.join(items, " ")}",
+      "data-confirm-button" => "Delete #{kind}"
+    }
+
+  defp delete_confirm(team, kind, record, items, lost),
+    do: %{
+      "data-confirm" => "Delete the #{kind} #{record.title}?",
+      "data-confirm-list" => Jason.encode!(items),
+      "data-confirm-warning" => "#{D4H.service_name(team)} can't bring it back.",
+      "data-confirm-check" => "I understand #{lost}.",
+      "data-confirm-button" => "Delete #{kind}"
+    }
+
+  # What a delete takes with it, as sentences, and what's lost when it takes members.
+  defp delete_facts(:qualification, _team, qualification) do
+    case MemberQualificationAward.holder_count(qualification) do
+      0 ->
+        %{items: ["Nobody holds it."], lost: nil}
+
+      count ->
+        holders = Service.Format.count(count, one: "%d member loses", many: "%d members lose")
+        %{items: ["#{holders} it."], lost: "#{holders} it"}
+    end
+  end
 
   # What else stops: the groups whose rules name it, the templates that add its members,
   # and the attendance check.
-  defp delete_text(:group, team, group) do
+  defp delete_facts(:group, team, group) do
     count = GroupMember |> where(group_id: ^group.id) |> Repo.aggregate(:count)
     context = BuildGroupRulePreview.load(team)
+    own_rules = Map.get(context.rules, group.d4h_group_id, [])
 
-    rules =
-      context.rules
-      |> GroupRule.used_by(group.d4h_group_id)
-      |> Enum.map(&context.groups[&1])
+    rules = naming_groups(context, group)
+    templates = template_titles(team, group)
+    leave = Service.Format.count(count, one: "%d member leaves", many: "%d members leave")
+
+    items =
+      [
+        if(count == 0, do: "Nobody is in it.", else: "Its #{leave} it."),
+        if(own_rules != [],
+          do:
+            "Its #{Service.Format.count(length(own_rules), one: "rule is", many: "%d rules are")} deleted."
+        ),
+        if(rules != [],
+          do: "The rules of #{Service.Format.and_list(rules)} stop working until you change them."
+        ),
+        templates_text(templates),
+        if(team.watch_d4h_group_id == group.d4h_group_id,
+          do: "The attendance check stops until you select another group."
+        )
+      ]
       |> Enum.reject(&is_nil/1)
-      |> Enum.map(& &1.title)
-      |> Enum.sort()
 
-    templates =
-      Template
-      |> join(:inner, [t], tg in assoc(t, :template_groups))
-      |> where([t, tg], t.team_id == ^team.id and tg.group_id == ^group.id)
-      |> order_by([t], asc: t.title)
-      |> select([t], t.title)
-      |> Repo.all()
+    %{items: items, lost: group_lost(count, own_rules, leave)}
+  end
 
-    [
-      if(count == 0,
-        do: "Nobody is in it.",
-        else:
-          "Its #{Service.Format.count(count, one: "%d member leaves", many: "%d members leave")} it."
-      ),
-      if(rules != [],
-        do: "The rules of #{Service.Format.and_list(rules)} stop working until you change them."
-      ),
-      templates_text(templates),
-      if(team.watch_d4h_group_id == group.d4h_group_id,
-        do: "The attendance check stops until you select another group."
-      )
-    ]
+  defp group_lost(0, _own_rules, _leave), do: nil
+  defp group_lost(_count, [], leave), do: "#{leave} it"
+
+  defp group_lost(count, _own_rules, _leave),
+    do:
+      "#{Service.Format.count(count, one: "%d member", many: "%d members")} and its rules are lost"
+
+  defp naming_groups(context, group) do
+    context.rules
+    |> GroupRule.used_by(group.d4h_group_id)
+    |> Enum.map(&context.groups[&1])
     |> Enum.reject(&is_nil/1)
-    |> Enum.join(" ")
+    |> Enum.map(& &1.title)
+    |> Enum.sort()
+  end
+
+  defp template_titles(team, group) do
+    Template
+    |> join(:inner, [t], tg in assoc(t, :template_groups))
+    |> where([t, tg], t.team_id == ^team.id and tg.group_id == ^group.id)
+    |> order_by([t], asc: t.title)
+    |> select([t], t.title)
+    |> Repo.all()
   end
 
   defp templates_text([]), do: nil

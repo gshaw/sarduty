@@ -1,9 +1,13 @@
 // The style guide's own script. Its pages are not LiveViews, so hooks that the examples
 // need are mounted here by hand.
 import {Combobox} from "./combobox"
+import {listenForConfirms} from "./confirm_dialog"
 import {RichText} from "./rich_text"
 // The top bar's Log out is a DELETE link, which phoenix_html sends.
 import "phoenix_html"
+
+// The Confirm dialog page's examples ask as the app does.
+listenForConfirms()
 
 for (const [name, Hook] of Object.entries({Combobox, RichText})) {
   document.querySelectorAll(`[phx-hook=${name}]`).forEach(el => {

@@ -18,6 +18,8 @@ defmodule Web.ServiceNameTest do
     "lib/web/components/home_mockups.ex" => "design mockups, not the app",
     "lib/web/controllers/style_guide_html/pages/colour.html.heex" =>
       "the activity colours are D4H's own, and the page says so",
+    "lib/web/controllers/style_guide_html/pages/confirm_dialog.html.heex" =>
+      "made-up questions as a D4H team reads them, as in #651's mockup",
     "lib/web/live/admin/" => "SAR Duty admin pages may use internals",
     "lib/web/live/admin_dashboard_live.ex" => "a SAR Duty admin page",
     "lib/web/live/home_page_live.ex" => "a public page about D4H itself",

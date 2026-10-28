@@ -6,6 +6,7 @@ defmodule Web.TitledRecordFormLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.ChangeSetRow
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRule
@@ -243,20 +244,62 @@ defmodule Web.TitledRecordFormLiveTest do
 
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{ground.id}/edit")
 
-    text =
-      "Its 1 member leaves it. The rules of Callout stop working until you change them. " <>
-        "The template Truck 1 stops adding its members. " <>
-        "The attendance check stops until you select another group."
+    items = [
+      "Its 1 member leaves it.",
+      "Its rule is deleted.",
+      "The rules of Callout stop working until you change them.",
+      "The template Truck 1 stops adding its members.",
+      "The attendance check stops until you select another group."
+    ]
 
-    assert has_element?(edit, "#record-delete p", text)
+    assert has_element?(edit, "#record-delete p", Enum.join(items, " "))
 
-    assert edit |> element("#record-delete-button") |> render() =~
-             ~s(data-confirm="Delete Ground Search Team? #{text}")
+    # It takes a member with it, so the dialog asks for the box ticked (#651).
+    button = edit |> element("#record-delete-button") |> render()
+    assert button =~ ~s(data-confirm="Delete the group Ground Search Team?")
+
+    assert button
+           |> Floki.parse_fragment!()
+           |> Floki.attribute("data-confirm-list")
+           |> hd()
+           |> Jason.decode!() == items
+
+    assert button =~ ~s(data-confirm-check="I understand 1 member and its rules are lost.")
+    assert button =~ ~s(data-confirm-warning="SAR Duty Records can&#39;t bring it back.")
 
     edit |> element("#record-delete-button") |> render_click()
     refute Repo.get(Group, ground.id)
     assert [%{d4h_group_id: d4h_group_id}] = GroupRule.get_all(team.id)
     assert d4h_group_id == callout.d4h_group_id
+
+    # The delete row keeps who was in it and its rules, to rebuild it by hand.
+    row = Repo.get_by!(ChangeSetRow, action: :delete_group, team_id: team.id)
+    name = member.name
+
+    assert %{"title" => "Ground Search Team", "members" => [^name], "rules" => ["In GSAR"]} =
+             row.old_value
+  end
+
+  test "deleting a qualification someone holds asks for the box ticked",
+       %{conn: conn, team: team, member: member} do
+    qualification = qualification_fixture(team, %{title: "Swiftwater"})
+    qualification_award_fixture(qualification, member)
+
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
+    button = edit |> element("#record-delete-button") |> render()
+
+    assert button =~ ~s(data-confirm-check="I understand 1 member loses it.")
+    assert has_element?(edit, "#record-delete p", "1 member loses it.")
+  end
+
+  test "deleting a group nobody is in asks a simple question", %{conn: conn, team: team} do
+    empty = group_fixture(team, %{title: "Swiftwater"})
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{empty.id}/edit")
+    button = edit |> element("#record-delete-button") |> render()
+
+    assert button =~ ~s(data-confirm="Delete Swiftwater? Nobody is in it.")
+    assert button =~ ~s(data-confirm-button="Delete group")
+    refute button =~ "data-confirm-check"
   end
 
   test "the organization's group is never renamed or deleted", %{team: team} do

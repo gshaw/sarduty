@@ -146,6 +146,16 @@ defmodule App.Model.MemberQualificationAward do
 
   def get_by(params), do: Repo.get_by(MemberQualificationAward, params)
 
+  @doc "How many members hold the qualification, for the warning before deleting it."
+  def holder_count(%Qualification{} = qualification) do
+    MemberQualificationAward
+    |> where([a], a.qualification_id == ^qualification.id)
+    |> join(:inner, [a], m in assoc(a, :member))
+    |> where([a, m], m.team_id == ^qualification.team_id)
+    |> select([a], count(a.member_id, :distinct))
+    |> Repo.one()
+  end
+
   @doc """
   The member's latest award of each qualification they hold or held, by qualification
   id: what a certificate's page compares with and fills its expiry from.
