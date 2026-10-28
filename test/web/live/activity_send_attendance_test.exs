@@ -125,6 +125,21 @@ defmodule Web.ActivitySendAttendanceTest do
     assert has_element?(lv, "#no-show-#{no_show.id}", "Sam Ortiz")
   end
 
+  test "a member who never replied is sent absent and is not a no-show", ctx do
+    jo = member_fixture(ctx.team, %{name: "Jo Banks"})
+    stub_d4h(ctx, rows: [row(ctx, 501, ctx.mei, "REQUESTED"), row(ctx, 504, jo, "REQUESTED")])
+    lv = open(ctx)
+
+    lv |> element("#review") |> render_click()
+    assert has_element?(lv, "#change-member-#{jo.id}", "No reply, no scan.")
+    assert has_element?(lv, "#select-member-#{jo.id}[checked]")
+
+    lv |> form("#send-form") |> render_submit(%{"keys" => ["member-#{jo.id}"]})
+
+    assert_received {:d4h_write, "PATCH", "/attendance/504", %{"status" => "ABSENT"}}
+    assert NoShow.get_all(ctx.activity) == []
+  end
+
   test "a no-show who arrives late and is sent attended is no longer a no-show", ctx do
     NoShow.record!(ctx.activity, ctx.sam)
     scan!(ctx, ctx.sam)

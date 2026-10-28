@@ -167,8 +167,10 @@ checkboxes. Sending reads D4H again, plans again, and sends the kept changes as 
   up is D4H's `ATTENDING`, which also means someone marked the member there by hand, so
   the admin unchecks anyone who came. With no scans at all Take attendance wasn't used, and
   nothing is offered.
-  `REQUESTED` only means invited: D4H gives every invited member that row until they
-  reply, so a requested row with no scan is left alone.
+- **No reply and did not arrive means absent too** (#649), checked by default, with its
+  own note and its own change set reason, "No reply, did not arrive". `REQUESTED` means
+  invited: D4H gives every invited member that row until they reply. They never said
+  they'd come, so they are not no-shows.
 - **A published activity is refused.** D4H's published flag is read live, not from the
   copy, and the page says to unpublish it with Change activity first.
 - **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity
@@ -180,7 +182,7 @@ checkboxes. Sending reads D4H again, plans again, and sends the kept changes as 
 ## No-shows
 
 When a send marks a member absent who had signed up (D4H's `ATTENDING`), SAR Duty
-records a no-show ([NoShow](../lib/app/model/no_show.ex)). The Attendance page lists
+records a no-show; a member who never replied isn't one ([NoShow](../lib/app/model/no_show.ex)). The Attendance page lists
 them with phone and email, and a team admin ticks each one followed up once they know the
 member is OK. Sending again doesn't add a second row.
 
