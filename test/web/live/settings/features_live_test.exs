@@ -114,18 +114,17 @@ defmodule Web.Settings.FeaturesLiveTest do
     end
   end
 
-  test "MCP and ID cards show as on or off, with no switch, since SAR Duty turns them on",
+  test "ID cards show as on or off, and MCP only once on, with no switch: SAR Duty turns them on",
        %{conn: conn, team: team} do
     {:ok, lv, _html} = open(conn, team)
     assert has_element?(lv, "#feature-id-cards .badge", "On")
     refute has_element?(lv, "#feature-id-cards input")
-    assert has_element?(lv, "#feature-mcp .badge", "Off")
-    refute has_element?(lv, "#feature-mcp input")
-    refute has_element?(lv, "#feature-mcp a")
+    refute has_element?(lv, "#feature-mcp")
 
     team |> Ecto.Changeset.change(mcp_enabled: true) |> Repo.update!()
     {:ok, lv, _html} = open(conn, team)
     assert has_element?(lv, "#feature-mcp .badge", "On")
+    refute has_element?(lv, "#feature-mcp input")
     assert has_element?(lv, "#feature-mcp a[href='/teams/#{team.subdomain}/settings/mcp']")
   end
 end

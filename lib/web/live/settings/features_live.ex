@@ -9,7 +9,8 @@ defmodule Web.Settings.FeaturesLive do
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
   # flipped. Chores and certificates need member logins, so they sit under it. MCP and ID
   # cards are SAR Duty's to turn on, from /admin/teams/:id (App.Operation.SetTeamMCP,
-  # App.Operation.SetTeamIdCards), so they show only as on or off.
+  # App.Operation.SetTeamIdCards), so they show only as on or off. A team asks for ID
+  # cards; MCP isn't offered, so it shows only once on.
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Team settings · Features", reading_whiteboard?: false)}
   end
@@ -138,13 +139,14 @@ defmodule Web.Settings.FeaturesLive do
           </span>
         </.switch>
 
-        <.set_by_sar_duty id="feature-mcp" label="MCP" on?={@current_team.mcp_enabled}>
+        <.set_by_sar_duty
+          :if={@current_team.mcp_enabled}
+          id="feature-mcp"
+          label="MCP"
+          on?={true}
+        >
           Team admins connect an AI agent, such as Claude Code, that reads your team's data.
-          SAR Duty turns MCP on. Email support@sarduty.com to ask.
-          <.a
-            :if={@current_team.mcp_enabled}
-            navigate={~p"/teams/#{@current_team}/settings/mcp"}
-          >MCP tokens</.a>
+          <.a navigate={~p"/teams/#{@current_team}/settings/mcp"}>MCP tokens</.a>
         </.set_by_sar_duty>
 
         <.set_by_sar_duty id="feature-id-cards" label="ID cards" on?={@current_team.id_cards_enabled}>

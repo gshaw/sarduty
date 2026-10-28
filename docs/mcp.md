@@ -12,14 +12,14 @@ in the agent's prompt, not in SAR Duty.
 - **The switch.** `teams.mcp_enabled`, which only a SAR Duty admin turns on and off, on
   the team's admin page, `/admin/teams/:id`
   ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)), as with ID cards (2026-10-28):
-  an agent reads the team's people, so SAR Duty checks the team first. Team settings'
-  Features tab shows it as on or off. Turning it off revokes every token on the team, so
+  an agent reads the team's people, so SAR Duty checks the team first. Unlike ID cards,
+  it isn't offered: a team sees MCP only once it is on, as a row on team settings'
+  Features tab and the MCP tokens tab. Turning it off revokes every token on the team, so
   turning it back on wakes none of them.
-- **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, whose
-  tab shows only while the switch is on. Creating one takes a checked box promising to use it
+- **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, which
+  is not found while the switch is off. Creating one takes a checked box promising to use it
   only with an AI service set not to train on the manager's data; the
-  `mcp_token_created` event records it. While the switch is off, that page says to
-  ask SAR Duty. The token shows once; the database keeps its
+  `mcp_token_created` event records it. The token shows once; the database keeps its
   SHA-256 hash ([MCPToken](../lib/app/model/mcp_token.ex)). It belongs to a user and a
   team. An admin who doesn't manage the team can't create one, but anyone who can open
   the page can revoke any of the team's tokens.
