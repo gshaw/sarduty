@@ -1,4 +1,4 @@
-defmodule Web.MeChoresLiveTest do
+defmodule Web.ChoreCollectionLiveTest do
   use Web.ConnCase
 
   import App.DataFixtures
@@ -15,11 +15,11 @@ defmodule Web.MeChoresLiveTest do
 
   test "a member logs a chore, and it waits for a team admin", ctx do
     %{conn: conn, team: team, member: member, category: category} = ctx
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
     assert has_element?(lv, "#no-chores")
-    assert has_element?(lv, "#side-nav-me[aria-current=page]")
+    assert has_element?(lv, "#side-nav-chores[aria-current=page]")
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores/new")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     today = Service.Period.today(DateTime.utc_now(), team.timezone)
 
     {:ok, lv, _html} =
@@ -43,7 +43,7 @@ defmodule Web.MeChoresLiveTest do
   end
 
   test "a chore older than 60 days is refused", %{conn: conn, team: team, category: category} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores/new")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     old = team.timezone |> then(&Service.Period.today(DateTime.utc_now(), &1)) |> Date.add(-61)
 
     html =
@@ -61,12 +61,12 @@ defmodule Web.MeChoresLiveTest do
     waiting = chore_fixture(member, category)
     accepted = chore_fixture(member, category, %{status: :accepted, description: "Rope check"})
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
     assert has_element?(lv, "#chore-change-#{waiting.id}")
     refute has_element?(lv, "#chore-change-#{accepted.id}")
     refute has_element?(lv, "#chore-#{accepted.id}", "Waiting")
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores/#{waiting.id}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{waiting.id}/edit")
 
     lv
     |> form("#chore-form", chore: %{minutes: "45"})
@@ -75,7 +75,7 @@ defmodule Web.MeChoresLiveTest do
     assert Repo.get!(Chore, waiting.id).minutes == 45
 
     assert_raise Web.Status.NotFound, fn ->
-      live(conn, ~p"/teams/#{team}/me/chores/#{accepted.id}/edit")
+      live(conn, ~p"/teams/#{team}/chores/#{accepted.id}/edit")
     end
   end
 
@@ -86,8 +86,8 @@ defmodule Web.MeChoresLiveTest do
     declined =
       chore_fixture(member, category, %{status: :declined, decided_at: DateTime.utc_now()})
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/me/chores/#{waiting.id}/edit")
-    {:ok, list, _html} = live(conn, ~p"/teams/#{team}/me/chores")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/chores/#{waiting.id}/edit")
+    {:ok, list, _html} = live(conn, ~p"/teams/#{team}/chores")
 
     for chore <- [waiting, declined],
         do: chore |> Ecto.Changeset.change(status: :accepted) |> Repo.update!()
@@ -117,7 +117,7 @@ defmodule Web.MeChoresLiveTest do
         decline_reason: "Log the generator check instead."
       })
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
     assert has_element?(lv, "#chore-#{declined.id}", "Declined")
     assert has_element?(lv, "#chore-#{declined.id}", "Log the generator check instead.")
 
@@ -129,13 +129,25 @@ defmodule Web.MeChoresLiveTest do
     other = chore_fixture(member_fixture(team), category)
 
     assert_raise Ecto.NoResultsError, fn ->
-      live(conn, ~p"/teams/#{team}/me/chores/#{other.id}/edit")
+      live(conn, ~p"/teams/#{team}/chores/#{other.id}/edit")
     end
   end
 
   test "an archived category is not offered", %{conn: conn, team: team} do
     chore_category_fixture(team, %{title: "Old category", archived_at: DateTime.utc_now()})
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/chores/new")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     refute render(lv) =~ "Old category"
+  end
+
+  test "a member gets only Yours, with no team views", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+    refute has_element?(lv, "#chores-switch")
+    refute has_element?(lv, "#accept-form")
+
+    for view <- ~w(waiting accepted declined) do
+      assert_raise Web.Status.NotFound, fn ->
+        live(conn, ~p"/teams/#{team}/chores?view=#{view}")
+      end
+    end
   end
 end

@@ -143,18 +143,18 @@ defmodule Web.ViewAsControllerTest do
       chore = chore_fixture(sam, chore_category_fixture(team))
       conn = view_as(conn, team, sam)
 
-      lv = open(conn, ~p"/teams/#{team}/me/chores")
+      lv = open(conn, ~p"/teams/#{team}/chores")
       render_click(lv, "delete", %{"id" => "#{chore.id}"})
       assert has_element?(lv, "#flash-error", "so nothing is saved")
 
-      lv = open(conn, ~p"/teams/#{team}/me/chores/#{chore.id}/edit")
+      lv = open(conn, ~p"/teams/#{team}/chores/#{chore.id}/edit")
       assert has_element?(lv, "#chore-save[disabled]")
       assert has_element?(lv, "#chore-delete[disabled]")
       render_click(lv, "delete", %{})
       lv |> form("#chore-form") |> render_submit()
       assert has_element?(lv, "#flash-error", "so nothing is saved")
 
-      lv = open(conn, ~p"/teams/#{team}/me/chores/new")
+      lv = open(conn, ~p"/teams/#{team}/chores/new")
       lv |> form("#chore-form") |> render_submit()
 
       assert [%{id: id}] = Repo.all(App.Model.Chore)

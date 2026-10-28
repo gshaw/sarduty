@@ -40,7 +40,19 @@ defmodule Web.CertificateCollectionLive do
     assigns = assign(assigns, views: @views)
 
     ~H"""
-    <h1 class="title">Certificates</h1>
+    <.heading_row>
+      <h1 class="title">Certificates</h1>
+      <%!-- A team admin who is a member sends their own from here too (#645). --%>
+      <:action :if={@current_member}>
+        <.button
+          id="certificate-add"
+          variant={:success}
+          navigate={~p"/teams/#{@current_team}/me/certificates/new"}
+        >
+          Add a certificate
+        </.button>
+      </:action>
+    </.heading_row>
     <p class="lead measure">
       Members send a certificate. Accepting one records the award and attaches the certificate.
     </p>

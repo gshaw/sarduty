@@ -24,12 +24,11 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/equipment/:id/edit",
     "/teams/:subdomain/templates/:id",
     # Chore pages need member logins, which this team lacks. Web.ChoreLiveTest,
-    # Web.MeChoresLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
+    # Web.ChoreCollectionLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
     # records with them on.
     "/teams/:subdomain/settings/chore-categories/:id",
     "/teams/:subdomain/chores/:id",
     "/teams/:subdomain/chores/:id/edit",
-    "/teams/:subdomain/me/chores/:id/edit",
     "/teams/:subdomain/whiteboard/:id/edit",
     # Places change here only on a SAR Duty Records team, which this team isn't.
     # Web.Settings.PlaceLiveTest covers another Records team's place.
@@ -234,9 +233,6 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/chores/:id/edit", s, o),
     do: ~p"/teams/#{s}/chores/#{o.chore.id}/edit"
-
-  defp path_for("/teams/:subdomain/me/chores/:id/edit", s, o),
-    do: ~p"/teams/#{s}/me/chores/#{o.chore.id}/edit"
 
   defp path_for("/teams/:subdomain/certificates/:id", s, o),
     do: ~p"/teams/#{s}/certificates/#{o.certificate.id}"

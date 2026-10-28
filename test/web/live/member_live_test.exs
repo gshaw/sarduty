@@ -302,4 +302,24 @@ defmodule Web.MemberLiveTest do
 
     assert has_element?(lv, "#attendance_collection", "River day")
   end
+
+  # A team admin's own page is the team admin's view; their member side is Your
+  # membership (#645).
+  test "a team admin on their own page is told it's them, with a link to Your membership",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    team = team |> Ecto.Changeset.change(member_logins: true) |> App.Repo.update!()
+    me = App.Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    other = member_fixture(team)
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{me.id}")
+    assert has_element?(lv, ~s{#this-is-you a[href="/teams/#{team.subdomain}/me"]})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{me.id}/qualifications")
+    assert has_element?(lv, "#this-is-you")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{other.id}")
+    refute has_element?(lv, "#this-is-you")
+  end
 end

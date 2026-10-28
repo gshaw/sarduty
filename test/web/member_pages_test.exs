@@ -71,14 +71,14 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/members/#{avery.id}/qualifications",
       "/teams/#{s}/members/#{avery.id}/groups",
       "/teams/#{s}/milestones",
+      "/teams/#{s}/chores",
+      "/teams/#{s}/chores/new",
+      "/teams/#{s}/chores/#{chore.id}/edit",
       "/teams/#{s}/whiteboard",
       "/teams/#{s}/me",
       "/teams/#{s}/me/activities",
       "/teams/#{s}/me/certificates/new",
       "/teams/#{s}/me/certificates/#{certificate.id}/edit",
-      "/teams/#{s}/me/chores",
-      "/teams/#{s}/me/chores/new",
-      "/teams/#{s}/me/chores/#{chore.id}/edit",
       "/teams/#{s}/me/details"
     ]
 

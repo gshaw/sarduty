@@ -584,7 +584,7 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <li id="to-do-declined-chores" class="py-3">
       <.a
-        navigate={~p"/teams/#{@team}/me/chores"}
+        navigate={Web.ChoreCollectionLive.view_path(@team, :yours)}
         class="font-semibold"
       >{Format.count(length(@item.chores),
         one: "Your chore was declined",

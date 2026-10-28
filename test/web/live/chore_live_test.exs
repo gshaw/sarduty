@@ -258,4 +258,45 @@ defmodule Web.ChoreLiveTest do
 
     assert_raise Ecto.NoResultsError, fn -> live(conn, ~p"/teams/#{team}/chores/#{chore.id}") end
   end
+
+  # Linda's case (#645): a team admin who is also a member looks under Chores to log one.
+  test "a team admin who is a member logs their own chore from Chores", ctx do
+    %{conn: conn, team: team, category: category} = ctx
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+    assert has_element?(lv, "#chores-view-yours")
+    assert has_element?(lv, ~s{#chore-log[href="/teams/#{team.subdomain}/chores/new"]})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+
+    {:ok, lv, _html} =
+      lv
+      |> form("#chore-form",
+        chore: %{
+          date: Date.to_iso8601(today),
+          minutes: "30",
+          chore_category_id: category.id,
+          description: "Grant report"
+        }
+      )
+      |> render_submit()
+      |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=yours")
+
+    [chore] = Repo.all(Chore)
+    assert chore.status == :waiting
+    assert has_element?(lv, "#chore-#{chore.id}", "Grant report")
+    assert has_element?(lv, "#chores-view-yours[aria-current]")
+  end
+
+  test "a SAR Duty admin who isn't on the team gets no Yours and no Log a chore", ctx do
+    %{conn: conn, team: team} = ctx
+    admin = App.AccountsFixtures.user_fixture() |> make_admin()
+    conn = log_in_user(conn, admin)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+    assert has_element?(lv, "#chores-view-waiting")
+    refute has_element?(lv, "#chores-view-yours")
+    refute has_element?(lv, "#chore-log")
+    assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/chores/new") end
+  end
 end

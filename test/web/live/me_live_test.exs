@@ -169,39 +169,27 @@ defmodule Web.MeLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me?year=x") end
     end
 
-    test "the 5 latest chores, a New chore link, a link to the rest, and deleting a declined one",
+    test "a line about this year's chores, linking Chores, where they're logged (#645)",
          %{conn: conn, team: team, member: member} do
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#no-chores")
-      assert has_element?(lv, ~s{#chore-log[href="/teams/#{team.subdomain}/me/chores/new"]})
+      assert has_element?(lv, ~s{#chore-log[href="/teams/#{team.subdomain}/chores/new"]})
+      refute has_element?(lv, "#all-chores")
 
       category = chore_category_fixture(team)
       today = Service.Period.today(DateTime.utc_now(), team.timezone)
-
-      chores =
-        for days <- 1..5, do: chore_fixture(member, category, %{date: Date.add(today, -days)})
-
-      declined =
-        chore_fixture(member, category, %{
-          status: :declined,
-          date: today,
-          description: "Slept at the hall",
-          decline_reason: "Not a chore.",
-          decided_at: DateTime.utc_now()
-        })
+      chore_fixture(member, category, %{status: :accepted, date: today, minutes: 90})
+      chore_fixture(member, category, %{date: today, minutes: 45})
 
       lv = open(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#chores-list-#{declined.id}", "Slept at the hall")
-      assert has_element?(lv, "#chores-list-#{declined.id} .badge", "Declined")
-      assert has_element?(lv, "#chores-list-#{declined.id}", "Not a chore.")
-      refute has_element?(lv, "#chore-delete-#{hd(chores).id}")
-      assert has_element?(lv, "#chores-list-#{hd(chores).id}")
-      refute has_element?(lv, "#chores-list-#{List.last(chores).id}")
-      assert has_element?(lv, ".action #all-chores")
 
-      lv |> element("#chore-delete-#{declined.id}") |> render_click()
-      refute has_element?(lv, "#chores-list-#{declined.id}")
-      assert has_element?(lv, "#chores-list-#{List.last(chores).id}")
+      assert has_element?(
+               lv,
+               "#chores-summary",
+               "1h 30m accepted in #{today.year}, 45 min waiting for a team admin."
+             )
+
+      assert has_element?(lv, ~s{#all-chores[href="/teams/#{team.subdomain}/chores?view=yours"]})
     end
 
     test "qualifications soonest first, with the days left on one expiring soon and none with no end",

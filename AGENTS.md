@@ -28,6 +28,9 @@
   switcher on it, a side navigation lists its pages in sections, and an avatar opens the
   account menu. A new page in the side navigation is a line in
   [Web.Navigation](lib/web/navigation.ex); see [docs/navigation.md](docs/navigation.md).
+  A new feature gets one home for team admins and members alike, never a copy on Your
+  membership; [Where a feature goes](docs/navigation.md#where-a-feature-goes) has the
+  rules.
 - **Search**: the top bar's search reads the live tables, so new data needs nothing. A new
   team page for one record (`/teams/:subdomain/…/:id`) needs a kind in
   [Web.Search](lib/web/search.ex) or a reason in its `not_searched/0`; a test fails until

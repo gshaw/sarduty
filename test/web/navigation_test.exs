@@ -105,7 +105,7 @@ defmodule Web.NavigationTest do
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
-    test "chores show a team admin with member logins and chores on, with a count while some wait" do
+    test "chores show with member logins and chores on, with a count for team admins while some wait" do
       refute "chores" in ("/teams/squamish"
                           |> team_sections([team_admin?: true, chores: 3], %{
                             @team
@@ -119,10 +119,12 @@ defmodule Web.NavigationTest do
       assert [%{count: 3}] = for(links <- sections, link <- links, link.key == "chores", do: link)
       assert ["equipment", "chores"] in keys(sections)
 
-      refute "chores" in ("/teams/squamish"
-                          |> team_sections([member?: true], team)
-                          |> keys()
-                          |> List.flatten())
+      # Members log theirs on the same page (#645), in a section of its own, with no count.
+      sections = team_sections("/teams/squamish", [member?: true, chores: 3], team)
+      assert ["chores"] in keys(sections)
+
+      assert [%{count: nil}] =
+               for(links <- sections, link <- links, link.key == "chores", do: link)
     end
 
     test "Whiteboard follows Dashboard while the team has the module on" do

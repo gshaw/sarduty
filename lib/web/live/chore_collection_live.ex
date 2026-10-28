@@ -1,6 +1,8 @@
 defmodule Web.ChoreCollectionLive do
-  use Web, :live_view_app_layout
+  use Web, {:live_view_app_layout, access: :team, member_events: ["delete"]}
 
+  import Web.ChoreText, only: [status_badge: 1]
+  import Web.Components.Chart, only: [stat: 1]
   import Web.Components.StatSwitch
 
   alias App.Model.Chore
@@ -8,31 +10,41 @@ defmodule Web.ChoreCollectionLive do
   alias App.Model.Team
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
+  alias App.ViewData.MemberChores
   alias Service.Format
   alias Web.ChoreText
 
-  # The team's chores (#341), /teams/:subdomain/chores, by status. Waiting chores to accept,
-  # with the Review changes pattern: every row starts selected, and a cleared row stays.
-  # Accepting sends them to D4H, onto each chore category's activity for the month, and
-  # Accepted lists them under those activities. Every chore opens its own page, to change
-  # or decline it.
-  @views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
+  # Chores (#341), /teams/:subdomain/chores: one page for everyone on the team (#645).
+  # Anyone who is a member logs chores here and sees their own, Yours, with what a team
+  # admin decided; a member changes one only while it waits. Team admins also get the
+  # team's chores by status. Waiting chores to accept, with the Review changes pattern:
+  # every row starts selected, and a cleared row stays. Accepting sends them to D4H, onto
+  # each chore category's activity for the month, and Accepted lists them under those
+  # activities. Every chore opens its own page, to change or decline it.
+  @team_views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
 
   def mount(_params, _session, socket) do
-    team = socket.assigns.current_team
+    %{current_team: team, current_member: member, team_admin?: team_admin?} = socket.assigns
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
+
+    views =
+      if(team_admin?, do: @team_views, else: []) ++
+        if(member, do: [yours: "Yours"], else: [])
 
     socket
     |> assign(
       page_title: "Chores",
+      views: views,
       today: Service.Period.today(DateTime.utc_now(), team.timezone)
     )
     |> then(&{:ok, &1})
   end
 
+  # A team admin opens on Waiting, a member on Yours.
   def handle_params(params, _uri, socket) do
-    wanted = params["view"] || "waiting"
-    view = @views |> Keyword.keys() |> Enum.find(&(Atom.to_string(&1) == wanted))
+    [{first, _label} | _views] = views = socket.assigns.views
+    wanted = params["view"] || Atom.to_string(first)
+    view = views |> Keyword.keys() |> Enum.find(&(Atom.to_string(&1) == wanted))
     if !view, do: raise(Web.Status.NotFound)
 
     socket
@@ -41,9 +53,12 @@ defmodule Web.ChoreCollectionLive do
     |> then(&{:noreply, &1})
   end
 
-  @doc "The Chores page showing chores in `status`."
+  @doc "The Chores page showing chores in `status`, or `:yours`, the member's own."
   def view_path(team, :waiting), do: ~p"/teams/#{team}/chores"
-  def view_path(team, status), do: ~p"/teams/#{team}/chores?#{[view: status]}"
+  def view_path(team, view), do: ~p"/teams/#{team}/chores?#{[view: view]}"
+
+  defp load(%{assigns: %{team_admin?: false}} = socket),
+    do: socket |> assign(counts: %{}, to_send: 0) |> load_yours()
 
   defp load(socket) do
     team_id = socket.assigns.current_team.id
@@ -55,8 +70,25 @@ defmodule Web.ChoreCollectionLive do
       to_send: ChoreEvent.count_to_send(team_id),
       chore_count: counts.waiting
     )
+    |> load_yours()
     |> load_view(socket.assigns.view, team_id)
   end
+
+  # The member's own chores, for the Yours tile's count and its view.
+  defp load_yours(%{assigns: %{current_member: nil}} = socket), do: socket
+
+  defp load_yours(socket) do
+    %{current_member: member, today: today, counts: counts} = socket.assigns
+    chores = Chore.get_all_for_member(member)
+
+    assign(socket,
+      counts: Map.put(counts, :yours, length(chores)),
+      months: MemberChores.months(chores),
+      stats: MemberChores.stats(chores, today.year)
+    )
+  end
+
+  defp load_view(socket, :yours, _team_id), do: socket
 
   defp load_view(socket, :waiting, team_id) do
     waiting = Chore.get_all_for_team(team_id, :waiting)
@@ -85,12 +117,20 @@ defmodule Web.ChoreCollectionLive do
   end
 
   def render(assigns) do
-    assigns = assign(assigns, views: @views)
-
     ~H"""
-    <h1 class="title">Chores</h1>
-    <p class="lead measure">
+    <.heading_row>
+      <h1 class="title">Chores</h1>
+      <:action :if={@current_member}>
+        <.button id="chore-log" variant={:success} navigate={~p"/teams/#{@current_team}/chores/new"}>
+          Log a chore
+        </.button>
+      </:action>
+    </.heading_row>
+    <p :if={@team_admin?} class="lead measure">
       Accepting a chore counts it and sends it. Each chore category gets one activity a month.
+    </p>
+    <p :if={!@team_admin?} class="lead measure">
+      Time you give the team outside activities, such as fixing equipment or admin. A team admin accepts each chore before it counts.
     </p>
 
     <.banner :if={@to_send > 0} kind={:warning} title="Changes not sent" id="chores-to-send">
@@ -111,7 +151,7 @@ defmodule Web.ChoreCollectionLive do
       </.button>
     </.banner>
 
-    <.stat_switch id="chores-switch" label="Chores">
+    <.stat_switch :if={length(@views) > 1} id="chores-switch" label="Chores">
       <:view
         :for={{view, label} <- @views}
         id={"chores-view-#{view}"}
@@ -209,7 +249,97 @@ defmodule Web.ChoreCollectionLive do
           today={@today}
           current_team={@current_team}
         />
+      <% :yours -> %>
+        <.yours
+          months={@months}
+          stats={@stats}
+          today={@today}
+          team={@current_team}
+          team_admin?={@team_admin?}
+        />
     <% end %>
+    """
+  end
+
+  attr :months, :list, required: true
+  attr :stats, :map, required: true
+  attr :today, :any, required: true
+  attr :team, :map, required: true
+  attr :team_admin?, :boolean, required: true
+
+  # The member's own chores by the month they were done, with what a team admin decided.
+  # A team admin changes their own from its page, as any chore; a member only while it waits.
+  defp yours(assigns) do
+    ~H"""
+    <.empty_state :if={@months == []} id="no-chores" title="No chores yet">
+      Log a chore after you do one. It counts once a team admin accepts it.
+    </.empty_state>
+
+    <div :if={@months != []} id="chore-stats" class="chart-stats">
+      <.stat
+        id="stat-accepted-hours"
+        value={Format.duration(@stats.accepted_minutes)}
+        label={"Accepted in #{@today.year}"}
+      />
+      <.stat
+        id="stat-accepted-count"
+        value={Format.number(@stats.accepted_count)}
+        label={"Chores accepted in #{@today.year}"}
+      />
+      <.stat
+        id="stat-waiting"
+        value={Format.duration(@stats.waiting_minutes)}
+        label="Waiting for a team admin"
+      />
+    </div>
+
+    <section :for={month <- @months} id={"chores-#{Date.to_iso8601(month.month)}"} class="mt-8">
+      <.heading_row>
+        <h2 class="subheading">{Format.month_year_long(month.month)}</h2>
+        <:note>{ChoreText.summary(month)}</:note>
+      </.heading_row>
+      <.table
+        id={"chores-table-#{Date.to_iso8601(month.month)}"}
+        rows={month.chores}
+        row_id={&"chore-#{&1.id}"}
+        class="table-striped table-stack"
+      >
+        <:col :let={chore} label="Date" class="w-1/12 whitespace-nowrap">
+          {Format.day_in_year(chore.date, @today)}
+        </:col>
+        <:col :let={chore} label="What you did" class="stack-title">
+          <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/chores/#{chore.id}"}>{chore.description}</.a>
+          <span :if={!@team_admin?}>{chore.description}</span>
+          <span class="hint block">{chore.chore_category.title}</span>
+          <span :if={chore.status == :declined} class="hint block mt-1">
+            {ChoreText.declined(chore, @team.timezone)}
+          </span>
+        </:col>
+        <:col :let={chore} label="Time" class="w-1/12 whitespace-nowrap" align="right">
+          {Format.duration(chore.minutes)}
+        </:col>
+        <:col :let={chore} label="" class="stack-optional w-px whitespace-nowrap">
+          <.status_badge chore={chore} />
+          <.a
+            :if={!@team_admin? and Chore.member_can_change?(chore)}
+            id={"chore-change-#{chore.id}"}
+            navigate={~p"/teams/#{@team}/chores/#{chore.id}/edit"}
+          >Change</.a>
+          <.a
+            :if={chore.status == :declined}
+            id={"chore-delete-#{chore.id}"}
+            href="#"
+            phx-click="delete"
+            phx-value-id={chore.id}
+            data-confirm={"Delete #{chore.description}?"}
+          >Delete</.a>
+        </:col>
+      </.table>
+    </section>
+
+    <p :if={@months != [] and !@team_admin?} class="hint mt-4">
+      To change an accepted chore, ask a team admin.
+    </p>
     """
   end
 
@@ -276,6 +406,22 @@ defmodule Web.ChoreCollectionLive do
         |> load()
         |> then(&{:noreply, &1})
     end
+  end
+
+  def handle_event("delete", %{"id" => id}, socket) do
+    member = socket.assigns.current_member
+    chore = Chore.find_for_member!(member, id)
+
+    socket =
+      case SaveChore.delete_own(member, chore) do
+        :ok ->
+          put_flash(socket, :info, "Deleted #{chore.description}.")
+
+        {:error, :decided} ->
+          put_flash(socket, :error, "This chore cannot be deleted. A team admin has accepted it.")
+      end
+
+    {:noreply, load(socket)}
   end
 
   def handle_event("send-changes", _params, socket) do

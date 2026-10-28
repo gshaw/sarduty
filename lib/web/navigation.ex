@@ -74,7 +74,8 @@ defmodule Web.Navigation do
           [
             dashboard_links(team),
             [activities_link(team), take_attendance_link(team)],
-            member_links(team)
+            member_links(team),
+            chore_links(team, 0)
           ]
 
         true ->
@@ -155,9 +156,10 @@ defmodule Web.Navigation do
   defp take_attendance_link(team),
     do: link("take-attendance", "Take attendance", ~p"/teams/#{team}/take-attendance")
 
-  # Members log chores, so the page shows with member logins and chores on. It shares
+  # Chores is one page for everyone (#645): members log theirs there, and team admins
+  # accept them. It shows with member logins and chores on. For team admins it shares
   # Equipment's section: chores are mostly equipment upkeep, and a section of one link
-  # looked lost.
+  # looked lost. Only team admins get the count.
   defp chore_links(team, count) do
     if Team.chores?(team),
       do: [link("chores", "Chores", ~p"/teams/#{team}/chores", count: count)],

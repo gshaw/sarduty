@@ -7,7 +7,6 @@ defmodule Web.MeLive do
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.PersonHead
-  import Web.ChoreText, only: [status_badge: 1]
 
   alias App.Model.Activity
   alias App.Model.Certificate
@@ -20,14 +19,13 @@ defmodule Web.MeLive do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.Operation.SaveCertificate
-  alias App.Operation.SaveChore
   alias App.ViewData.EquipmentList
+  alias App.ViewData.MemberChores
   alias App.ViewData.MemberMilestones
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberYear
   alias Service.Format
   alias Web.CertificateText
-  alias Web.ChoreText
   alias Web.Components.MemberSidebar
   alias Web.QualificationText
 
@@ -52,7 +50,7 @@ defmodule Web.MeLive do
       |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
       |> assign(:standing, Standing.today(member, team, now))
       |> assign_years(attended)
-      |> assign(:chores, latest_chores(member))
+      |> assign(:chores, chore_stats(member, now))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:certificates, sent_certificates(member))
       |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
@@ -97,9 +95,15 @@ defmodule Web.MeLive do
   defp sent_certificates(member),
     do: if(Team.certificates?(member.team), do: Certificate.get_open_for_member(member))
 
-  # A member's latest chores (#341), on a team with chores on. Nil hides the section.
-  defp latest_chores(member),
-    do: if(Team.chores?(member.team), do: Chore.get_all_for_member(member, limit: 5))
+  # A line about the member's chores this year (#341), on a team with chores on; the
+  # chores themselves are on Chores, one page for everyone (#645). Nil hides the section.
+  defp chore_stats(member, now) do
+    if Team.chores?(member.team) do
+      year = Service.YearRange.year_in(now, member.team.timezone)
+      chores = Chore.get_all_for_member(member)
+      %{any?: chores != [], year: year, stats: MemberChores.stats(chores, year)}
+    end
+  end
 
   def render(assigns) do
     ~H"""
@@ -235,7 +239,7 @@ defmodule Web.MeLive do
   end
 
   attr :team, :map, required: true
-  attr :chores, :list, required: true
+  attr :chores, :map, required: true
 
   defp chores(assigns) do
     ~H"""
@@ -243,43 +247,26 @@ defmodule Web.MeLive do
       <.heading_row>
         <h2 class="heading">Chores</h2>
         <:action>
-          <.a id="chore-log" navigate={~p"/teams/#{@team}/me/chores/new"}>New chore</.a>
+          <.a id="chore-log" navigate={~p"/teams/#{@team}/chores/new"}>Log a chore</.a>
         </:action>
       </.heading_row>
-      <.empty_state :if={@chores == []} id="no-chores" title="No chores yet">
+      <p :if={!@chores.any?} id="no-chores">
         Log a chore after you do one, such as fixing equipment or admin. It counts once a team admin accepts it.
-      </.empty_state>
-      <.table :if={@chores != []} id="chores-list" rows={@chores} row_id={&"chores-list-#{&1.id}"}>
-        <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
-          {Format.date_short(chore.date)}
-        </:col>
-        <:col :let={chore} label="What you did">
-          {chore.description}
-          <span class="hint block">{chore.chore_category.title}</span>
-          <span :if={chore.status == :declined} class="hint block mt-1">
-            {ChoreText.declined(chore, @team.timezone)}
-          </span>
-        </:col>
-        <:col :let={chore} label="" class="w-px whitespace-nowrap">
-          <.status_badge chore={chore} />
-          <.a
-            :if={chore.status == :declined}
-            id={"chore-delete-#{chore.id}"}
-            href="#"
-            phx-click="delete-chore"
-            phx-value-id={chore.id}
-            data-confirm={"Delete #{chore.description}?"}
-          >Delete</.a>
-        </:col>
-        <:col :let={chore} label="Time" align="right" class="w-px whitespace-nowrap">
-          {Format.duration(chore.minutes)}
-        </:col>
-      </.table>
-      <p :if={@chores != []} class="action mt-2">
-        <.a id="all-chores" navigate={~p"/teams/#{@team}/me/chores"}>All your chores</.a>
+      </p>
+      <p :if={@chores.any?} id="chores-summary">{chores_summary(@chores)}</p>
+      <p :if={@chores.any?} class="action mt-2">
+        <.a id="all-chores" navigate={Web.ChoreCollectionLive.view_path(@team, :yours)}>Your chores</.a>
       </p>
     </section>
     """
+  end
+
+  defp chores_summary(%{year: year, stats: stats}) do
+    accepted = "#{Format.duration(stats.accepted_minutes)} accepted in #{year}"
+
+    if stats.waiting_minutes > 0,
+      do: "#{accepted}, #{Format.duration(stats.waiting_minutes)} waiting for a team admin.",
+      else: "#{accepted}."
   end
 
   attr :team, :map, required: true
@@ -543,22 +530,6 @@ defmodule Web.MeLive do
       end
 
     {:noreply, assign(socket, :certificates, sent_certificates(member))}
-  end
-
-  def handle_event("delete-chore", %{"id" => id}, socket) do
-    member = socket.assigns.member
-    chore = Chore.find_for_member!(member, id)
-
-    socket =
-      case SaveChore.delete_own(member, chore) do
-        :ok ->
-          put_flash(socket, :info, "Deleted #{chore.description}.")
-
-        {:error, :decided} ->
-          put_flash(socket, :error, "This chore cannot be deleted. A team admin has accepted it.")
-      end
-
-    {:noreply, assign(socket, :chores, latest_chores(member))}
   end
 
   defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"

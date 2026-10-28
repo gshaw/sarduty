@@ -7,6 +7,7 @@ defmodule Web.Components.MemberPage do
   """
   use Web, :function_component
 
+  import Web.Components.A
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
@@ -18,6 +19,11 @@ defmodule Web.Components.MemberPage do
   attr :equipment, :list, required: true, doc: "from load_sidebar/1"
   attr :maps_app, :string, required: true, doc: "the account's maps_app"
   attr :team_admin?, :boolean, default: false
+
+  attr :current_member, :any,
+    default: nil,
+    doc: "the member logged in; on their own page a team admin is sent to Your membership"
+
   slot :inner_block, required: true
 
   def member_page(assigns) do
@@ -28,6 +34,20 @@ defmodule Web.Components.MemberPage do
       standing={@standing}
       team_admin?={@team_admin?}
     />
+    <%!-- A team admin on their own page gets the team admin's view. What they do as a
+    member is on Your membership (#645). Members are sent there by own_page. --%>
+    <.banner
+      :if={@team_admin? and @current_member != nil and @current_member.id == @member.id}
+      class="mb-6"
+      id="this-is-you"
+      title="This is you"
+    >
+      <p>
+        Log chores, add certificates, and add your ID card to Wallet on <.a navigate={
+          ~p"/teams/#{@member.team}/me"
+        }>Your membership</.a>.
+      </p>
+    </.banner>
     <.member_tabs
       member={@member}
       active_tab={@tab}

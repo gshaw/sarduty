@@ -51,14 +51,15 @@ is left out, and so is its divider.
 | 2       | Templates                                                | team admins |
 | 3       | Members, Milestones                                      | everyone    |
 | 3       | Groups, Qualifications, Endorsements, Tax credit letters | team admins |
-| 4       | Equipment, Chores                                        | team admins |
+| 4       | Equipment                                                | team admins |
+| 4       | Chores                                                   | everyone    |
 | 5       | Team settings                                            | team admins |
 | 6       | Your membership                                          | members     |
 
 - A team admin who is a member sees all six. A SAR Duty admin who opened a team from
   Admin and is not a member there sees 1 to 5. A member sees Dashboard and Whiteboard,
-  Activities and Take attendance, Members and Milestones, and Your membership, each in its
-  own section (#440).
+  Activities and Take attendance, Members and Milestones, Chores, and Your membership,
+  each in its own section (#440, #645).
 - **Whiteboard follows Dashboard** while the team has D4H's whiteboard on (#515). The
   Dashboard shows a line or 2 of its notes; the page has them all, and team admins post
   from it.
@@ -81,14 +82,46 @@ is left out, and so is its divider.
   with four topics.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
-- **Chores shares Equipment's section** (2026-10-22): most chores are equipment upkeep,
-  and a section of one link looked lost. Chores shows only with member logins and chores
-  on (#463).
+- **Chores shares Equipment's section** for team admins (2026-10-22): most chores are
+  equipment upkeep, and a section of one link looked lost. Members get it in a section of
+  its own (#645). Chores shows only with member logins and chores on (#463), and only team
+  admins get its count.
 - **Milestones sits right after Members** (2026-10-23): every current member's
   milestones. It's about members themselves, as Members is; Groups, Qualifications, and
   Endorsements set up what members hold. Members open both (#440).
-- Later pages already have homes: Checklists in Equipment's section, and Documents and a
-  team ID cards page after Tax credit letters.
+- Later pages already have homes: Checks in Equipment's section, for everyone, and
+  Documents and a team ID cards page after Tax credit letters.
+
+## Where a feature goes
+
+Decided 2026-10-27 (#645). A feature members use had two homes: a team admin's page and a
+section on Your membership. A team admin who is also a member looked for Log a chore under
+Chores, and it was on Your membership. Every feature on the roadmap would have added
+another pair. So a feature gets one home, picked by these rules in order.
+
+1. **About one activity, item, or member? A part of that page.** It adds no link to the
+   side navigation. Travel and home safe (#261) go on the activity, in place of its
+   Mileage report. Off call (#646) goes in the header of Your membership and in a filter
+   on Members. A check (#407) runs from the item's page, which its sticker opens.
+2. **A list people open on their own? One link and one URL, for everyone.** Members open
+   it on Yours, their own rows, with their button. Team admins also get the team's views.
+   Chores is the first, `/teams/:subdomain/chores`; Checks (#407) is next. No copy of it
+   under `/me`.
+3. **About you? Your membership.** Who you are, your year, what you hold, your letters,
+   and how to reach you. A feature's list never gets a section there, at most a line that
+   links to the feature's Yours view, as Chores has.
+4. **Needs you now? For you to do, on the Dashboard.** A check due, a declined chore, a
+   letter to download. Only an urgent state gets a strip on every page, such as a trip
+   home in progress (#261). Off call lasts days, so it stays on the Dashboard and in your
+   header.
+5. **No wrong door.** Where someone looks for an action, it is there. A team admin's queue
+   has the member's button too: Log a chore on Chores, Add a certificate on Certificates.
+   A team admin on their own member page gets the team admin's view, with a banner that
+   sends them to Your membership.
+
+Admin-only links get no mark in the side navigation. With one home per feature, a page
+shows your part beside the team's, so there is nothing to mark. The options weighed, with
+mockups, are on #645.
 
 ## The top bar
 
