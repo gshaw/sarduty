@@ -41,9 +41,8 @@ The rules that are easy to break:
 - **Only adapters know about upstream.** A D4H URL, query parameter, or JSON field name
   outside `lib/app/adapter/` is a bug.
 - **LiveViews don't perform side effects directly.** A `handle_event` calls an Operation;
-  the Operation talks to D4H, Mapbox, or the mailer. `ActivityMileageLive` and
-  `Settings.TeamLive` predate this rule and call the D4H
-  adapter directly.
+  the Operation talks to D4H, Mapbox, or the mailer. `ActivityMileageLive` predates
+  this rule and calls the D4H adapter directly.
 - **Every team query is scoped by `team_id`**, including joins, and a record is found
   through the current team before it is changed or deleted.
 - **Local ids and D4H ids never mix.** Foreign keys are local; `d4h_*_id` columns hold

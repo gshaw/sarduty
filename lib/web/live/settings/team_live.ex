@@ -5,6 +5,7 @@ defmodule Web.Settings.TeamLive do
 
   alias App.Adapter.D4H
   alias App.Model.Team
+  alias App.Operation.RefreshTeamDetails
   alias App.Operation.UpdateTeamSettings
   alias App.Repo
 
@@ -175,20 +176,7 @@ defmodule Web.Settings.TeamLive do
   end
 
   def handle_event("refresh", _params, socket) do
-    d4h = D4H.build_context_from_team(socket.assigns.current_team)
-    {:ok, d4h_team} = D4H.fetch_team(d4h)
-    team = socket.assigns.current_team
-    # A team with no place on its record keeps the one it has.
-    {lat, lng} = d4h_team.coordinate || {team.lat, team.lng}
-
-    params = %{
-      name: d4h_team.name,
-      lat: lat,
-      lng: lng,
-      timezone: d4h_team.timezone
-    }
-
-    case Team.update(socket.assigns.current_team, params) do
+    case RefreshTeamDetails.call(socket.assigns.current_team) do
       {:ok, team} ->
         socket =
           socket
@@ -197,6 +185,9 @@ defmodule Web.Settings.TeamLive do
           |> put_flash(:info, "Team refreshed.")
 
         {:noreply, socket}
+
+      {:error, text} when is_binary(text) ->
+        {:noreply, put_flash(socket, :error, text)}
 
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
