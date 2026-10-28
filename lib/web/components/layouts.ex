@@ -314,7 +314,8 @@ defmodule Web.Layouts do
     doc: "the Menu's links on a page outside every area, such as the style guide's"
 
   slot :search,
-    doc: "the search, before the avatar (#473): a field on a desktop, an icon below 1024px"
+    doc:
+      "the search, before the avatar or Log in (#473): a field on a desktop, an icon below 1024px"
 
   slot :menu_foot, doc: "after the Menu's links, such as the style guide's theme switch"
 
@@ -393,13 +394,11 @@ defmodule Web.Layouts do
           <.account_menu person={@person} />
         </div>
       <% else %>
-        <.a
-          :if={!login_page?(@current_path)}
-          id="nav-login"
-          kind={:custom}
-          navigate={~p"/login"}
-          class="site-bar-login"
-        ><.icon name="log-in" size={:lg} /> Log in</.a>
+        <div :if={@search != []} class="site-bar-end">
+          {render_slot(@search)}
+          <.login_link :if={!login_page?(@current_path)} />
+        </div>
+        <.login_link :if={@search == [] and !login_page?(@current_path)} />
       <% end %>
       <.site_bar_phone_menu
         :if={@sections != []}
@@ -412,6 +411,19 @@ defmodule Web.Layouts do
         {render_slot(@menu_foot)}
       </.site_bar_phone_menu>
     </.site_bar>
+    """
+  end
+
+  # Log in, when nobody is. After the search, on a page that has one logged out, such as
+  # the style guide.
+  defp login_link(assigns) do
+    ~H"""
+    <.a
+      id="nav-login"
+      kind={:custom}
+      navigate={~p"/login"}
+      class="site-bar-login"
+    ><.icon name="log-in" size={:lg} /> Log in</.a>
     """
   end
 

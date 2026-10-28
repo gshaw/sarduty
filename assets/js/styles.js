@@ -3,8 +3,20 @@
 import {Combobox} from "./combobox"
 import {listenForConfirms} from "./confirm_dialog"
 import {RichText} from "./rich_text"
+import {Search} from "./search"
 // The top bar's Log out is a DELETE link, which phoenix_html sends.
 import "phoenix_html"
+import {Socket} from "phoenix"
+import {LiveSocket} from "phoenix_live_view"
+
+// The top bar's search is the one LiveView here (Web.StyleGuideSearchLive), with the app's
+// Search hook, so it looks and works as the app's does.
+const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+new LiveSocket("/live", Socket, {
+  longPollFallbackMs: 2500,
+  params: {_csrf_token: csrfToken},
+  hooks: {Search},
+}).connect()
 
 // The Confirm dialog page's examples ask as the app does.
 listenForConfirms()

@@ -62,3 +62,31 @@ Every team page for one record, `/teams/:subdomain/…/:id`, must be a kind in
 To add a kind: its candidates and fields in `App.ViewData.Search`, its page in
 `live_views/0`, its path in `hit_path/3`, and an "All …" list in `more_path/3` if the list
 takes `?q=`.
+
+## The style guide's search
+
+`/styles` has the same search in its top bar, logged in or not, finding the guide's pages
+and their sections instead of a team's records.
+[Web.StyleGuideSearch](../lib/web/style_guide_search.ex) builds its index; nobody writes
+it.
+
+- **Pages** come from `Web.StyleGuideHTML.groups/0`, the list behind the side
+  navigation, and a test fails when a template in `style_guide_html/pages/` is missing
+  from it.
+- **Text** is each page rendered from its template, as the browser gets it, split at
+  every `h2` and `h3` outside an example (`.demo` or `.example`). An entry is the page
+  title, the section's heading, and its text, including what the examples print. Nothing
+  is copied, so the index says what the pages say.
+- **Built** on the first search and kept in `:persistent_term` until the next deploy,
+  which is when the pages change. Development builds it on every search, so an edit shows
+  at once. A build takes about 50 ms, and 120 ms the first time after a boot; a search
+  takes 1 to 3 ms.
+- **Ranking:** a page title first, then a section heading, then the text, each word
+  matching where a word starts. A result opens its section with a text fragment
+  (`/styles/phone#:~:text=When%20not%20to%20use`), so headings need no ids; when the
+  heading's words show earlier on the page, the words after it are added to pick the
+  right one. A browser without text fragments opens the page at the top.
+- **Wiring:** the guide's pages are controller-rendered, so its frame `live_render`s
+  `Web.StyleGuideSearchLive`, and `assets/js/styles.js` connects it with the app's
+  `Search` hook. The results are `Web.Components.Search`'s markup, the team search's.
+  Recent picks are kept in the browser under `sarduty:styles-search-recent`.

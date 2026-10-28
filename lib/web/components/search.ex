@@ -3,7 +3,8 @@ defmodule Web.Components.Search do
   The top bar's search (#473): a field on a desktop, opening a panel under it, and a
   magnifying glass below 1024px, opening a sheet over the page with the keyboard up. Both
   are this markup; the CSS decides which shows. Web.Components.SearchBox runs it on team
-  pages. See /styles/search and docs/search.md.
+  pages, and Web.StyleGuideSearchLive in the style guide, with its own results. See
+  /styles/search and docs/search.md.
   """
   use Phoenix.Component
 
@@ -30,8 +31,8 @@ defmodule Web.Components.Search do
   attr :id, :string, default: "search"
   attr :query, :string, default: ""
   attr :groups, :list, default: [], doc: "from Web.Search.run/3"
-  attr :kinds, :list, required: true, doc: "what this person can find, for the hint"
-  attr :team, :map, required: true
+  attr :kinds, :list, default: [], doc: "what this person can find, for the hint"
+  attr :team, :map, default: nil
   attr :target, :any, default: nil, doc: "the LiveComponent the form's events go to"
   attr :recent, :list, default: [], doc: "from Web.Search.recent/3, shown before typing"
 
@@ -42,6 +43,21 @@ defmodule Web.Components.Search do
   attr :open, :boolean,
     default: false,
     doc: "drawn open, as the style guide shows it; in the app the hook opens it"
+
+  # A search of something other than a team's records, such as the style guide's, says
+  # what it finds with these. A group may name itself with `heading`, and a hit may carry
+  # a `snippet`, the text it matched.
+  attr :placeholder, :string, default: "Search members, activities…"
+  attr :hint, :string, default: nil, doc: "before typing; by default, from kinds"
+  attr :none_help, :list, default: nil, doc: "paragraphs under Nothing matches"
+
+  attr :live_links, :boolean,
+    default: true,
+    doc: "results open with live navigation; false on pages that aren't LiveViews"
+
+  attr :word_starts, :boolean,
+    default: false,
+    doc: "bold where a word starts, for a search that matches only there"
 
   def search_box(assigns) do
     ~H"""
@@ -78,7 +94,7 @@ defmodule Web.Components.Search do
               name="q"
               type="search"
               value={@query}
-              placeholder="Search members, activities…"
+              placeholder={@placeholder}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
@@ -112,6 +128,10 @@ defmodule Web.Components.Search do
             recent={@recent}
             kinds={@kinds}
             team={@team}
+            hint={@hint}
+            none_help={@none_help}
+            live_links={@live_links}
+            word_starts={@word_starts}
           />
           <p
             :if={@groups != [] or (@recent != [] and @query in [nil, ""])}
@@ -140,6 +160,10 @@ defmodule Web.Components.Search do
   attr :recent, :list, required: true
   attr :kinds, :list, required: true
   attr :team, :map, required: true
+  attr :hint, :string, required: true
+  attr :none_help, :list, required: true
+  attr :live_links, :boolean, required: true
+  attr :word_starts, :boolean, required: true
 
   # Before typing: the recent picks, then what search finds. After: the results.
   defp search_results(assigns) do
@@ -161,7 +185,7 @@ defmodule Web.Components.Search do
         role="group"
         aria-labelledby={"#{@id}-heading-#{group.kind}"}
       >
-        <h2 id={"#{@id}-heading-#{group.kind}"}>{Map.fetch!(kind_names(), group.kind)}</h2>
+        <h2 id={"#{@id}-heading-#{group.kind}"}>{group_heading(group)}</h2>
         <.hit
           :for={hit <- group.hits}
           id={"#{@id}-hit-#{hit.kind}-#{hit.id}"}
@@ -169,6 +193,8 @@ defmodule Web.Components.Search do
           hit={hit}
           terms={@terms}
           team={@team}
+          live_links={@live_links}
+          word_starts={@word_starts}
         />
         <.link
           :if={group.more_path}
@@ -181,22 +207,29 @@ defmodule Web.Components.Search do
       </section>
     </div>
     <p :if={@terms == []} id={"#{@id}-hint"} class="site-search-hint">
-      {hint(@kinds)}
+      {@hint || hint(@kinds)}
     </p>
     <div :if={@terms != [] and @groups == []} id={"#{@id}-none"} class="site-search-none">
       <h2>Nothing matches “{@query}”</h2>
-      <p>
-        Search looks at names, ID numbers, barcodes, and serial numbers. Check the spelling, or try fewer words.
-      </p>
-      <p>
-        SAR Duty refreshes every 10 minutes, so something just added may not be here yet.
-      </p>
+      <%= if @none_help do %>
+        <p :for={help <- @none_help}>{help}</p>
+      <% else %>
+        <p>
+          Search looks at names, ID numbers, barcodes, and serial numbers. Check the spelling, or try fewer words.
+        </p>
+        <p>
+          SAR Duty refreshes every 10 minutes, so something just added may not be here yet.
+        </p>
+      <% end %>
     </div>
     """
   end
 
   @doc "Each kind's heading."
   def kind_names, do: @kind_names
+
+  defp group_heading(%{heading: heading}), do: heading
+  defp group_heading(group), do: Map.fetch!(@kind_names, group.kind)
 
   # The list filters by the whole search as typed, so its All link only matches what search
   # found when the search is one word.
@@ -210,12 +243,15 @@ defmodule Web.Components.Search do
   attr :hit, :map, required: true
   attr :terms, :list, required: true
   attr :team, :map, required: true
+  attr :live_links, :boolean, required: true
+  attr :word_starts, :boolean, required: true
 
   defp hit(assigns) do
     ~H"""
     <.link
       id={@id}
-      navigate={@hit.path}
+      navigate={if @live_links, do: @hit.path}
+      href={if !@live_links, do: @hit.path}
       class="site-search-hit"
       role="option"
       aria-selected="false"
@@ -223,8 +259,8 @@ defmodule Web.Components.Search do
     >
       <span :if={@kind == :member} class="avatar">{Web.Navigation.initials(@hit.title)}</span>
       <span class="site-search-text">
-        <span class="site-search-title">{bold_terms(@hit.title, @terms)}</span>
-        <.hit_line kind={@kind} hit={@hit} team={@team} />
+        <span class="site-search-title">{bold_terms(@hit.title, @terms, @word_starts)}</span>
+        <.hit_line kind={@kind} hit={@hit} team={@team} terms={@terms} word_starts={@word_starts} />
       </span>
     </.link>
     """
@@ -233,6 +269,16 @@ defmodule Web.Components.Search do
   attr :kind, :atom, required: true
   attr :hit, :map, required: true
   attr :team, :map, required: true
+  attr :terms, :list, required: true
+  attr :word_starts, :boolean, required: true
+
+  defp hit_line(%{hit: %{snippet: _snippet}} = assigns) do
+    ~H"""
+    <span :if={@hit.snippet not in [nil, ""]} class="site-search-line">
+      {bold_terms(@hit.snippet, @terms, @word_starts)}
+    </span>
+    """
+  end
 
   defp hit_line(%{kind: :activity} = assigns) do
     ~H"""
@@ -289,14 +335,15 @@ defmodule Web.Components.Search do
 
   @doc """
   Pure. The title in pieces, `{bold?, text}`, with the first place each word typed appears
-  in bold. A title whose lowercase changes its length stays plain.
+  in bold, or with `word_starts?` the first place it starts a word. A title whose lowercase
+  changes its length stays plain.
   """
-  def highlight(title, terms) do
+  def highlight(title, terms, word_starts? \\ false) do
     lower = String.downcase(title)
 
     if byte_size(lower) == byte_size(title) do
       terms
-      |> Enum.flat_map(&first_match(lower, &1))
+      |> Enum.flat_map(&first_match(lower, &1, word_starts?))
       |> merge_ranges()
       |> pieces(title)
     else
@@ -304,20 +351,29 @@ defmodule Web.Components.Search do
     end
   end
 
-  # highlight/2 as HTML, every piece escaped. Built here, not in the template, so the
+  # highlight/3 as HTML, every piece escaped. Built here, not in the template, so the
   # formatter can't put spaces between the pieces.
-  defp bold_terms(title, terms) do
+  defp bold_terms(title, terms, word_starts?) do
     {:safe,
-     for {bold?, text} <- highlight(title, terms) do
+     for {bold?, text} <- highlight(title, terms, word_starts?) do
        {:safe, escaped} = Phoenix.HTML.html_escape(text)
        if bold?, do: ["<b>", escaped, "</b>"], else: escaped
      end}
   end
 
-  defp first_match(lower, term) do
+  defp first_match(lower, term, false) do
     case :binary.match(lower, term) do
       {start, length} -> [{start, start + length}]
       :nomatch -> []
+    end
+  end
+
+  defp first_match(lower, term, true) do
+    for {start, length} <- :binary.matches(lower, term),
+        App.ViewData.Search.starts_word_at?(lower, start),
+        reduce: [] do
+      [] -> [{start, start + length}]
+      found -> found
     end
   end
 
