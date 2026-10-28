@@ -241,7 +241,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> Member.scope(team_id: team.id)
     |> scope(q: filter_options.q)
     |> scope(when: filter_options.when, timezone: team.timezone, now: now)
-    |> scope(details: filter_options.details, team: team)
+    |> scope(details: filter_options.details)
     |> scope(attended: filter_options.attended, team: team, now: now)
     |> scope(items: filter_options.items, team: team)
     |> scope(access: filter_options.access)
@@ -284,7 +284,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> validate_kind(:details, details_kinds())
     |> validate_kind(:attended, attended_kinds())
     |> validate_kind(:items, items_kinds())
-    |> validate_inclusion(:access, ["all", "some", "none"])
+    |> validate_kind(:access, access_kinds(nil))
     |> validate_standing()
     |> App.Validate.Period.call(:when)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
@@ -411,14 +411,14 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
   end
 
-  defp scope(q, details: "missing", team: team),
+  defp scope(q, details: "missing"),
     do:
       q
       |> Member.current_query(DateTime.utc_now())
-      |> Member.counted_query(team)
+      |> Member.counted_query()
       |> Member.missing_details_query()
 
-  defp scope(q, details: _all, team: _team), do: q
+  defp scope(q, details: _all), do: q
 
   defp scope(q, attended: nil, team: _team, now: _now), do: q
   defp scope(q, attended: "all", team: _team, now: _now), do: q

@@ -213,8 +213,7 @@ fi
 - **A retiring member is no longer a member.** Someone in the team's Retiring group
   can't log in, isn't a team admin, and is left out of counts, invites, reminders, and
   email. A new query that counts, contacts, or lets members in uses
-  `Member.counted_query/2` for one team or `Member.not_retiring_query/1` across teams.
-  See [Retiring](docs/members.md#retiring).
+  `Member.counted_query/1`, and one for team admins `Member.managers_query/2`. See [Retiring](docs/members.md#retiring).
 - **D4H ids live in `d4h_*_id` columns.** Foreign keys are local ids. Route params are
   local ids; D4H calls take the `d4h_*_id`.
 - **Scope every team query, including joins and deletes.** Filter the member's or

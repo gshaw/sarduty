@@ -194,6 +194,14 @@ defmodule App.AccountsTest do
       assert [%{email: "staying@example.com"}] = Member.get_managers(team, @now)
     end
 
+    test "an Owner marked not a person manages the team no longer (#683)" do
+      team = team_fixture()
+      manager_fixture(team, %{email: "truck@example.com", not_a_person: true})
+
+      assert Team.get_managed_by("truck@example.com", @now) == []
+      assert Member.get_managers(team, @now) == []
+    end
+
     test "another team's Retiring group with the same D4H id cuts nothing" do
       north = team_fixture()
       south = team_fixture()

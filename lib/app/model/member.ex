@@ -165,23 +165,20 @@ defmodule App.Model.Member do
   end
 
   @doc """
-  Narrows `query` to people, leaving out members a team admin marked not a person. Logins
-  and team admins read this, so retiring members stay in: see counted_query/2.
+  Narrows `query` to people, leaving out members a team admin marked not a person. Most
+  queries want counted_query/1, which leaves out retiring members too.
   """
   def people_query(query), do: where(query, [m], not m.not_a_person)
 
   @doc """
-  Narrows `query` to the members SAR Duty counts (#514): people_query/1, and not in the
-  team's Retiring group. The Dashboard's counts, Missing details, Add members, and Take
-  attendance read this.
+  Narrows `query` to the members SAR Duty counts (#514): people_query/1, and not in their
+  team's Retiring group. A retiring member is no longer a member, so the Dashboard's
+  counts, Missing details, Add members, Take attendance, organization totals, and every
+  login read this.
   """
-  def counted_query(query, %Team{} = team) do
-    query
-    |> people_query()
-    |> where([m], m.id not in subquery(Standing.retiring_ids_query(team)))
-  end
+  def counted_query(query), do: query |> people_query() |> not_retiring_query()
 
-  @doc "Pure. counted_query/2 for one current member, given the team's retiring ids."
+  @doc "Pure. counted_query/1 for one current member, given the team's retiring ids."
   def counted?(%Member{} = member, retiring_ids),
     do: not member.not_a_person and not MapSet.member?(retiring_ids, member.id)
 
@@ -335,15 +332,14 @@ defmodule App.Model.Member do
     |> join(:inner, [m], t in assoc(m, :team))
     |> where([m, t], t.member_logins and fragment("lower(?)", m.email) == ^email)
     |> current_query(now)
-    |> people_query()
-    |> not_retiring_query()
+    |> counted_query()
     |> preload([m, t], team: t)
   end
 
   @doc """
-  Narrows `query` to members not in their team's Retiring group (#514). Logins, team
-  admin and member alike, read it: someone on their way out loses access the moment a
-  team admin marks them retiring, not weeks later when D4H retires them.
+  Narrows `query` to members not in their team's Retiring group (#514), on any team. Read
+  through counted_query/1: someone on their way out loses access on their next page once
+  a team admin marks them retiring, not weeks later when D4H retires them.
   """
   def not_retiring_query(query),
     do: where(query, [m], m.id not in subquery(Standing.all_retiring_ids_query()))
@@ -403,20 +399,33 @@ defmodule App.Model.Member do
     do: not is_nil(permission) and permission != @no_access
 
   @doc """
-  The team's managers, by name: the people who log in as its team admins. Members marked
-  not a person or retiring are left out, and so is a team key from a "SAR Duty" account. A team key from a person's account leaves them in,
-  since they manage the team too.
+  Narrows `query` to the members who log in as their team's team admins: the one bar for
+  logins (Team.get_managed_by/2), Team admins, and an organization's team admin emails.
+  A D4H Owner or Editor, current on `now`, and counted_query/1, so not marked not a
+  person or retiring. A team key from a "SAR Duty" account is left out; a team key from a
+  person's account leaves them in, since they manage the team too.
   """
-  def get_managers(%Team{} = team, now) do
-    key_account = if Team.key_owner_is_sar_duty?(team), do: team.d4h_access_key_member_id
+  def managers_query(query, now) do
+    query
+    |> where([m], m.d4h_permission in @manager_permissions)
+    |> current_query(now)
+    |> counted_query()
+    |> join(:inner, [m], t in Team, as: :manager_team, on: t.id == m.team_id)
+    |> where(
+      [m, manager_team: t],
+      is_nil(t.d4h_access_key_member_id) or t.d4h_access_key_member_id != m.d4h_member_id or
+        is_nil(t.d4h_access_key_owner) or
+        not like(fragment("lower(replace(?, ' ', ''))", t.d4h_access_key_owner), "%sarduty%")
+    )
+  end
 
+  @doc "The team's managers (managers_query/2), by name."
+  def get_managers(%Team{} = team, now) do
     Member
-    |> where([m], m.team_id == ^team.id and m.d4h_permission in @manager_permissions)
-    |> people_query()
-    |> not_retiring_query()
+    |> where([m], m.team_id == ^team.id)
+    |> managers_query(now)
     |> order_by([m], asc: m.name)
     |> Repo.all()
-    |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != key_account))
   end
 
   @doc """

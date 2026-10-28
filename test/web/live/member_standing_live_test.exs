@@ -15,6 +15,7 @@ defmodule Web.MemberStandingLiveTest do
   alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
+  alias App.Operation.SetGroupMembers
   alias App.Repo
 
   defp today(team), do: Service.Period.today(DateTime.utc_now(), team.timezone)
@@ -405,6 +406,30 @@ defmodule Web.MemberStandingLiveTest do
 
       assert lv |> element("#mark-retiring") |> render_click() =~
                "Make another member a team admin first."
+
+      refute_received {:d4h, _method, _path}
+      refute GroupMember.get_by(group_id: leavers.id, member_id: me.id)
+    end
+
+    test "the Groups tab and adding from Members refuse the only team admin too",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      me = Member.get_by(team_id: team.id, email: user.email)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{me.id}/groups")
+
+      assert lv |> form("#add-group-form", group_id: leavers.id) |> render_submit() =~
+               "Make another member a team admin first."
+
+      assert SetGroupMembers.call(
+               team,
+               :add,
+               leavers.id,
+               [me.id],
+               user,
+               DateTime.utc_now()
+             ) ==
+               {:error, "Make another member a team admin first."}
 
       refute_received {:d4h, _method, _path}
       refute GroupMember.get_by(group_id: leavers.id, member_id: me.id)

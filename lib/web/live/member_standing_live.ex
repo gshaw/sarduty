@@ -17,7 +17,6 @@ defmodule Web.MemberStandingLive do
   alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
-  alias App.Operation.SaveMember
   alias App.Operation.SetGroupMember
   alias App.Repo
   alias App.ViewData.MemberMilestones
@@ -139,16 +138,10 @@ defmodule Web.MemberStandingLive do
   # No flash: the badge and the line change on the page.
   def handle_event("mark-retiring", _params, socket) do
     %{current_team: team, current_user: user, member: member} = socket.assigns
-    now = DateTime.utc_now()
 
-    # A retiring member can't log in, so the team's only team admin would lock it out.
-    if SaveMember.last_admin?(team, member, now) do
-      {:noreply, put_flash(socket, :error, "Make another member a team admin first.")}
-    else
-      case SetGroupMember.add(team, member, socket.assigns.retiring_group, user, now) do
-        :ok -> {:noreply, socket |> clear_flash() |> load_standing()}
-        {:error, text} -> {:noreply, socket |> load_standing() |> put_flash(:error, text)}
-      end
+    case SetGroupMember.add(team, member, socket.assigns.retiring_group, user, DateTime.utc_now()) do
+      :ok -> {:noreply, socket |> clear_flash() |> load_standing()}
+      {:error, text} -> {:noreply, socket |> load_standing() |> put_flash(:error, text)}
     end
   end
 

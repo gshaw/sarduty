@@ -99,7 +99,7 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
 These stay as they were, since a bot cannot attend or be added to an activity, and skip
-members marked not a person or retiring with no rule (`Member.counted_query/2`): Add
+members marked not a person or retiring with no rule (`Member.counted_query/1`): Add
 members and a template's groups (`InviteMembers`), the home page's counts and charts,
 the missing details filter, and the member list on Take attendance. Retiring members
 skip more than that; see [Retiring](#retiring).
@@ -116,28 +116,31 @@ refuses to retire a member who does. It can last weeks. Decided 2026-10-27 (#514
 contacts, invites, or lets members in skips them (Andrew, 2026-10-28). Only the pages a
 team admin uses to finish retiring them still show them.
 
-| Skips retiring members                                                                              | Through                                                                            |
-| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Logging in as a team admin or a member, and MCP tokens                                              | `Member.not_retiring_query/1` in `Team.get_managed_by/2` and `Member.get_logins/2` |
-| Team admins, the last team admin check, and team admin email                                        | `Member.get_managers/2` and `TeamSummary.team_admin_emails/2`                      |
-| An organization's member totals                                                                     | `TeamSummary.member_counts/2`                                                      |
-| Dashboard counts and charts, Missing details, Add members, a template's groups, and Take attendance | `Member.counted_query/2`                                                           |
-| Reminders                                                                                           | Send reminders names them under "Who doesn't get it"                               |
+| Skips retiring members                                                                                                               | Through                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Logging in as a team admin, MCP tokens, Team admins, the last team admin check, and team admin email                                 | `Member.managers_query/2`                            |
+| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`    |
+| Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                             |
+| Reminders                                                                                                                            | Send reminders names them under "Who doesn't get it" |
 
 Still shown: the Members list (the Retiring tile, and Not retired, its default), their
 member page and history, Equipment's With retiring members, and Needs attention. Group
 rules leave them in a group unless a rule on its page says "Standing is …" (above).
 
 **A new query that counts, contacts, invites, or lets members in skips retiring
-members.** Use `Member.counted_query/2` for one team, or `Member.not_retiring_query/1`
-across teams. Don't read `group_members` for it yourself.
+members.** Use `Member.counted_query/1`, or `Member.managers_query/2` for team admins.
+Don't read `group_members` for it yourself. A manager marked not a person doesn't log
+in as a team admin either: one bar for logins, Team admins, and team admin email
+(2026-10-28, #683).
 
 **The steps, in order.** Needs attention and the member's Standing tab lead a team
 admin through them.
 
 1. **Mark as retiring** on the Standing tab: one `add_group_member` row through
-   `SetGroupMember`. SAR Duty access ends at once, since access is checked on every page
-   load, so do it before telling them. Your membership's list of the items they hold
+   `SetGroupMember`. SAR Duty access ends on their next page, since access is checked on
+   every page load, so do it before telling them. The team's only team admin is refused,
+   from any page that adds to the Retiring group, since nobody could log in as team admin
+   after. Your membership's list of the items they hold
    doesn't justify the access.
 2. **Set their access to No access in D4H.** SAR Duty can't: D4H sets access only in
    its web app (a Records team can, on Change member). Until it's done, two red notices
