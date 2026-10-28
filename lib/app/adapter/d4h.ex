@@ -1231,6 +1231,7 @@ defmodule App.Adapter.D4H do
     |> put_tracking_number()
     |> put_activity_address(attrs)
     |> put_activity_location(attrs)
+    |> put_custom_values(attrs)
   end
 
   # D4H won't publish an activity whose tracking number is null: it answers 409 "cannot
@@ -1239,6 +1240,20 @@ defmodule App.Adapter.D4H do
     do: Map.put(json, "trackingNumber", "")
 
   defp put_tracking_number(json), do: json
+
+  # Custom field values (#681), a map of D4H field id to a string, a list of option ids,
+  # or nil to clear it. D4H keeps the fields a write leaves out, and takes nil, not [],
+  # to clear a choice (tested 2026-10-28).
+  defp put_custom_values(json, %{"custom_values" => values}) when map_size(values) > 0 do
+    list =
+      values
+      |> Enum.sort()
+      |> Enum.map(fn {id, value} -> %{id: String.to_integer(id), value: value} end)
+
+    Map.put(json, "customFieldValues", list)
+  end
+
+  defp put_custom_values(json, _attrs), do: json
 
   # The place is the whole address, so the other parts are emptied. D4H refuses null in
   # them (400 "malformed"), so empty is "".
