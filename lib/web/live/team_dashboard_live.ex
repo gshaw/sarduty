@@ -147,7 +147,7 @@ defmodule Web.TeamDashboardLive do
         <img
           :if={@has_logo}
           id="team-logo"
-          src={~p"/teams/#{@current_team}/logo?shape=square"}
+          src={~p"/teams/#{@current_team}/logo?shape=fit"}
           class="team-head-logo"
           alt="Team logo"
         />
