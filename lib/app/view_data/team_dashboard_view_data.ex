@@ -71,6 +71,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       service: D4H.service(team),
       refresh: refresh_row(team, refresh_result),
       draft_count: count_recent_drafts(team, now),
+      missing_fields_count: count_missing_fields(team, now),
       expiring_days: BuildGroupRulePreview.expiring_days(),
       expiring_count: count_expiring(team, now),
       missing_details_count: count_missing_details(team, now),
@@ -206,6 +207,16 @@ defmodule App.ViewData.TeamDashboardViewData do
     |> where([a], a.team_id == ^team.id and a.is_published == false)
     |> Activity.not_deleted()
     |> Activity.finished_recently(now)
+    |> Repo.aggregate(:count)
+  end
+
+  # Finished drafts with a required custom field left empty (#681): D4H won't publish
+  # them until it's filled in.
+  defp count_missing_fields(team, now) do
+    Activity
+    |> where([a], a.team_id == ^team.id and a.is_published == false and a.finished_at < ^now)
+    |> Activity.not_deleted()
+    |> Activity.missing_required_fields()
     |> Repo.aggregate(:count)
   end
 

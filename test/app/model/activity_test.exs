@@ -130,4 +130,33 @@ defmodule App.Model.ActivityTest do
     assert copies == [],
            "Use Activity.started?/2 or open?/2, not a started_at comparison, in: #{inspect(copies)}"
   end
+
+  describe "missing_required_fields/1 (#681)" do
+    test "finds activities with a required field of their kind left empty" do
+      team = team_fixture()
+      custom_field_fixture(team, %{d4h_custom_field_id: 1, required: true})
+      custom_field_fixture(team, %{d4h_custom_field_id: 2})
+
+      custom_field_fixture(team, %{
+        d4h_custom_field_id: 3,
+        required: true,
+        archived_at: ~U[2026-01-01 00:00:00Z]
+      })
+
+      custom_field_fixture(team, %{d4h_custom_field_id: 4, target: "event", required: true})
+
+      missing = activity_fixture(team, %{activity_kind: "incident", custom_values: %{"2" => "x"}})
+      filled = activity_fixture(team, %{activity_kind: "incident", custom_values: %{"1" => [5]}})
+      _not_copied = activity_fixture(team, %{activity_kind: "incident"})
+      _exercise = activity_fixture(team, %{activity_kind: "exercise", custom_values: %{}})
+
+      _other_team =
+        activity_fixture(team_fixture(), %{activity_kind: "incident", custom_values: %{}})
+
+      ids = Activity |> Activity.missing_required_fields() |> Repo.all() |> Enum.map(& &1.id)
+
+      assert ids == [missing.id]
+      refute filled.id in ids
+    end
+  end
 end

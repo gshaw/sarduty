@@ -15,6 +15,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     field :when, :string
     field :status, :string
     field :hours, :string
+    field :fields, :string
     field :page, :integer
     field :sort, :string
   end
@@ -35,6 +36,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   # "untagged": none of the team's hours tags, so it counts for no hours by mistake (#323).
   def hours_kinds, do: [{"All", "all"}, {"No hours tag", "untagged"}]
+
+  # "missing": a required custom field of the activity's kind is empty (#681).
+  def fields_kinds, do: [{"All", "all"}, {"Missing", "missing"}]
 
   def when_kinds(team),
     do: [
@@ -135,6 +139,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     |> scope(when: filter_options.when, timezone: team.timezone)
     |> scope(status: filter_options.status)
     |> scope(hours: filter_options.hours, team: team)
+    |> scope(fields: filter_options.fields)
   end
 
   defp build_new do
@@ -143,6 +148,7 @@ defmodule App.ViewModel.ActivityFilterViewModel do
       activity: "all",
       status: "all",
       hours: "all",
+      fields: "all",
       sort: "date-"
     }
   end
@@ -151,11 +157,12 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp build_changeset(data, params) do
     data
-    |> cast(params, [:q, :activity, :when, :status, :hours, :page, :sort])
+    |> cast(params, [:q, :activity, :when, :status, :hours, :fields, :page, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> validate_option(:activity, activity_kinds())
     |> validate_option(:status, status_kinds())
     |> validate_option(:hours, hours_kinds())
+    |> validate_option(:fields, fields_kinds())
     |> validate_format(:when, ~r/\A(all|current|recent|past|future|\d{4})\z/)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
     |> validate_number(:page, greater_than_or_equal_to: 1)
@@ -221,6 +228,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     do: Activity.without_hours_tag(q, Activity.hours_tags(team))
 
   defp scope(q, hours: _all, team: _team), do: q
+
+  defp scope(q, fields: "missing"), do: Activity.missing_required_fields(q)
+  defp scope(q, fields: _all), do: q
 
   # defp scope(q, tag: tag), do: where(q, [r], ^tag in r.tags)
 

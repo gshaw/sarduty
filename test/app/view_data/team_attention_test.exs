@@ -15,6 +15,7 @@ defmodule App.ViewData.TeamAttentionTest do
         service: :d4h,
         refresh: %{state: :ok, message: nil},
         draft_count: 0,
+        missing_fields_count: 0,
         expiring_days: 60,
         expiring_count: 0,
         missing_details_count: 0,
@@ -246,5 +247,16 @@ defmodule App.ViewData.TeamAttentionTest do
 
     assert [%{title: "SAR Duty cannot refresh from SAR Duty Records"} | _] =
              items(attrs, @october)
+  end
+
+  test "drafts missing required fields (#681)" do
+    assert [item] = items(%{missing_fields_count: 2}, @october)
+    assert item.key == :missing_fields
+    assert item.level == :warning
+    assert item.title == "2 draft activities are missing required fields"
+    assert item.detail == "D4H won't publish them until they're filled in."
+
+    assert [%{title: "1 draft activity is missing required fields"}] =
+             items(%{missing_fields_count: 1}, @october)
   end
 end

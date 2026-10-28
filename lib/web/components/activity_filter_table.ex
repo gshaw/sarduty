@@ -8,6 +8,7 @@ defmodule Web.Components.ActivityFilterTable do
   import Web.Components.StatSwitch
   import Web.Components.Table
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Team
   alias App.ViewModel.ActivityFilterViewModel
@@ -63,6 +64,13 @@ defmodule Web.Components.ActivityFilterTable do
         field={@form[:hours]}
         label="Hours tag"
         options={ActivityFilterViewModel.hours_kinds()}
+        default="all"
+      />
+      <:filter
+        :if={!D4H.records?(@team)}
+        field={@form[:fields]}
+        label="Required fields"
+        options={ActivityFilterViewModel.fields_kinds()}
         default="all"
       />
     </.filter_bar>
