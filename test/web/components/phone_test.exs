@@ -30,4 +30,43 @@ defmodule Web.Components.PhoneTest do
 
     assert String.trim(html) == ""
   end
+
+  test "phone/1 shows the number formatted, with a copy button, and Call and Text when asked" do
+    assigns = %{}
+
+    document =
+      ~H"""
+      <.phone id="kim" phone="6045551234" call_and_text />
+      """
+      |> rendered_to_string()
+      |> LazyHTML.from_fragment()
+
+    assert document |> LazyHTML.query(~s(#kim-copy[value="604-555-1234"])) |> Enum.count() == 1
+    assert document |> LazyHTML.text() =~ "604-555-1234"
+    assert document |> LazyHTML.query("#kim-call") |> Enum.count() == 1
+
+    plain =
+      ~H"""
+      <.phone id="kim" phone="6045551234" />
+      """
+      |> rendered_to_string()
+      |> LazyHTML.from_fragment()
+
+    assert plain |> LazyHTML.query("#kim-call") |> Enum.count() == 0
+  end
+
+  test "phone/1 shows the missing hint, or nothing, without a number" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <.phone id="kim" phone={nil} missing="No mobile number" />
+      """)
+
+    assert html =~ "No mobile number"
+    refute html =~ "copy"
+
+    blank = rendered_to_string(~H|<.phone id="kim" phone=" " />|)
+    assert String.trim(blank) == ""
+  end
 end

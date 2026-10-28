@@ -4,9 +4,10 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.A
   import Web.Components.Breadcrumbs
   import Web.Components.CopyButton
+  import Web.Components.Email
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
-  import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Phone
 
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
@@ -124,23 +125,11 @@ defmodule Web.Components.MemberSidebar do
     ~H"""
     <dt>Email</dt>
     <dd>
-      <.copy_button
-        text={@member.email}
-        href={"mailto:#{@member.email}"}
-        id="member-copy-email"
-        value={@member.email}
-        label="Copy email"
-      />
+      <.email id="member-copy-email" email={@member.email} />
     </dd>
     <dt>Phone</dt>
     <dd id="member-phone">
-      <.copy_button
-        text={Service.Phone.format(@member.phone)}
-        id="member-copy-phone"
-        value={Service.Phone.format(@member.phone)}
-        label="Copy phone number"
-      />
-      <.call_and_text id="member-phone" phone={@member.phone} class="mt-2" />
+      <.phone id="member-phone" phone={@member.phone} call_and_text class="mt-2" />
     </dd>
     <dt>Address</dt>
     <dd>
@@ -199,12 +188,7 @@ defmodule Web.Components.MemberSidebar do
       <%= if shown?(@contact) do %>
         {contact_name(@contact)}
         <span :for={{phone, i} <- Enum.with_index(phones(@contact))} class="block">
-          <.copy_button
-            text={Service.Phone.format(phone)}
-            id={"#{@id}-copy-#{i}"}
-            value={Service.Phone.format(phone)}
-            label="Copy phone number"
-          />
+          <.phone id={"#{@id}-#{i}"} phone={phone} />
         </span>
         <.call_and_text
           :if={present?(@contact["primary_phone"])}

@@ -5,6 +5,7 @@ defmodule Web.Components.TeamManagers do
   """
   use Web, :function_component
 
+  import Web.Components.Email
   import Web.Components.Table
 
   alias App.Model.Member
@@ -25,7 +26,9 @@ defmodule Web.Components.TeamManagers do
       <.table :if={@rows != []} id={@id} rows={@rows} row_id={& &1.id} class="table-striped">
         <:col :let={row} label="Team admin">
           <div :if={row.name}>{row.name}</div>
-          <div class={["break-all", row.name && "text-sm text-text-muted"]}>{row.email}</div>
+          <div class={[row.name && "text-sm"]}>
+            <.email id={"#{row.id}-email"} email={row.email} />
+          </div>
         </:col>
         <:col :let={row} label="Access">
           <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">

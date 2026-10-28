@@ -1,0 +1,32 @@
+<.shell current={:email}>
+  <h1>Email</h1>
+  <p class="lead">An email address to reach someone by, with a copy button.</p>
+
+  <div class="demo max-w-sm">
+    <dl>
+      <dt>Email</dt>
+      <dd><.email id="email-demo" email="sam.rivera@example.com" /></dd>
+    </dl>
+    <ul class="mt-4">
+      <li><.email id="email-demo-1" email="president@example.org" /></li>
+      <li><.email id="email-demo-2" email="training.officer@example.org" /></li>
+    </ul>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Any address people use to reach someone: a member's details, team admins, organization admins, SAR Duty admins, tax credit letters, and no-shows.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    An address that says who did something, such as "Decided by", or one inside a sentence or a message. Your own address, such as in the account menu. Write those as text.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.email id="…" email=&#123;member.email&#125; /&gt;</code>
+    shows the address as a <code>mailto:</code>
+    link, then a copy button, and breaks a long address anywhere. With no address it shows nothing, or the hint in <code>missing</code>.
+  </p>
+</.shell>

@@ -7,7 +7,7 @@ defmodule Web.Components.YetToArrive do
   """
   use Phoenix.Component
 
-  import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Phone, only: [call_and_text: 1, phone: 1]
 
   attr :id, :string, default: "yet-to-arrive"
   attr :yet_to_arrive, :map, required: true, doc: "from App.Operation.BuildYetToArrive"
@@ -28,10 +28,9 @@ defmodule Web.Components.YetToArrive do
         >
           <span>
             <span class="font-semibold">{member.name}</span>
-            <span :if={@contacts? and Service.Phone.format(member.phone)} class="block hint">
-              {Service.Phone.format(member.phone)}
+            <span :if={@contacts?} class="block hint">
+              <.phone id={"#{@id}-#{member.id}"} phone={member.phone} missing="No mobile number" />
             </span>
-            <span :if={@contacts? and !Service.Phone.format(member.phone)} class="block hint">No mobile number</span>
           </span>
           <.call_and_text :if={@contacts?} id={"#{@id}-#{member.id}"} phone={member.phone} />
         </li>

@@ -23,7 +23,9 @@ defmodule Web.Admin.AdminCollectionLive do
       admin from a production console. See <code>docs/deployment.md</code>.
     </p>
     <.table id="admins" rows={@admins} row_id={&"admin-#{&1.id}"} class="table-striped">
-      <:col :let={admin} label="Email">{admin.email}</:col>
+      <:col :let={admin} label="Email">
+        <.email id={"admin-#{admin.id}-email"} email={admin.email} />
+      </:col>
       <:col :let={admin} label="Last team">
         <%= if team = @teams[admin.last_team_id] do %>
           <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>

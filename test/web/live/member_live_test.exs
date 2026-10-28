@@ -24,7 +24,7 @@ defmodule Web.MemberLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
 
     assert has_element?(lv, "#member-phone", "604-555-1234")
-    assert has_element?(lv, ~s|#member-copy-phone[value="604-555-1234"]|)
+    assert has_element?(lv, ~s|#member-phone-copy[value="604-555-1234"]|)
     assert has_element?(lv, ~s|#member-copy-email[value="#{member.email}"]|)
     assert has_element?(lv, ~s|#member-phone-call[href="tel:+16045551234"]|)
     assert has_element?(lv, ~s|#member-phone-text[href="sms:+16045551234"]|)
@@ -49,7 +49,7 @@ defmodule Web.MemberLiveTest do
 
     assert has_element?(lv, "#member-emergency", "Sam Rivera (Partner)")
     assert has_element?(lv, "#member-emergency", "604-555-0101")
-    assert has_element?(lv, ~s|#member-emergency-copy-0[value="604-555-0100"]|)
+    assert has_element?(lv, ~s|#member-emergency-0-copy[value="604-555-0100"]|)
     assert has_element?(lv, ~s|#member-emergency-call[href="tel:+16045550100"]|)
     refute has_element?(lv, "#member-emergency-2")
   end

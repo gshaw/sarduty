@@ -61,7 +61,9 @@ defmodule Web.Settings.TeamAdminsLive do
       </p>
       <p :if={@organization_admins == []} class="hint">None yet.</p>
       <ul :if={@organization_admins != []} id="organization-admin-emails">
-        <li :for={email <- @organization_admins} class="break-all">{email}</li>
+        <li :for={{email, i} <- Enum.with_index(@organization_admins)}>
+          <.email id={"organization-admin-#{i}-email"} email={email} />
+        </li>
       </ul>
     </section>
 
@@ -71,7 +73,9 @@ defmodule Web.Settings.TeamAdminsLive do
         They run SAR Duty and can open every team. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
       </p>
       <ul id="sar-duty-admin-emails">
-        <li :for={email <- @sar_duty_admins} class="break-all">{email}</li>
+        <li :for={{email, i} <- Enum.with_index(@sar_duty_admins)}>
+          <.email id={"sar-duty-admin-#{i}-email"} email={email} />
+        </li>
       </ul>
     </section>
     """

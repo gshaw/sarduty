@@ -100,7 +100,7 @@ defmodule Web.TaxCreditLetterLive do
             <.a navigate={
               ~p"/teams/#{@current_team}/members/#{@letter.member.id}?when=#{@letter.year}"
             }>{@letter.member.name}</.a>
-            <br />{@letter.member.email}
+            <br /><.email id="letter-member-email" email={@letter.member.email} />
           </dd>
           <dt>Created</dt>
           <dd>{Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}</dd>
