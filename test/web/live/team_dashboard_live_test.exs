@@ -8,7 +8,6 @@ defmodule Web.TeamDashboardLiveTest do
   alias App.Model.AttendanceScan
   alias App.Model.Team
   alias App.Repo
-  alias App.ViewData.TeamDashboardViewData
 
   defp open(conn, user, team), do: conn |> log_in_user(user) |> live(~p"/teams/#{team}")
 
@@ -687,34 +686,30 @@ defmodule Web.TeamDashboardLiveTest do
         |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
         |> App.Repo.update!()
 
-      [editor, member, none, unknown] =
-        for {name, permission} <- [
-              {"Eve Editor", 1},
-              {"Max Member", 2},
-              {"Nia None", 4},
-              {"Uma", nil}
-            ] do
-          retiring = member_fixture(team, %{name: name, d4h_permission: permission})
-          group_member_fixture(leavers, retiring)
-          retiring
-        end
+      for permission <- [1, 2, 4, nil],
+          do: group_member_fixture(leavers, member_fixture(team, %{d4h_permission: permission}))
 
       member_fixture(team, %{d4h_permission: 2})
 
       {:ok, lv, _html} = open(conn, user, team)
 
-      assert has_element?(lv, "#retiring-access", "2 retiring members can still log in to D4H")
-      assert has_element?(lv, "#retiring-access", "Set their access to No access in D4H.")
-      assert has_element?(lv, "#retiring-access-#{editor.id}", "Eve Editor · Editor")
-      assert has_element?(lv, "#retiring-access-#{member.id}", "Max Member · Member")
-      refute has_element?(lv, "#retiring-access-#{none.id}")
-      refute has_element?(lv, "#retiring-access-#{unknown.id}")
-      refute has_element?(lv, "#attention-retiring_access")
+      # Red, and above every warning, such as the attendance check's.
+      assert has_element?(
+               lv,
+               "#needs-attention-list li:first-child#attention-retiring_access.is-danger",
+               "2 retiring members can still log in to D4H"
+             )
 
-      assert [%{title: "2 retiring members can still log in to D4H"}] =
-               team
-               |> TeamDashboardViewData.attention_items()
-               |> Enum.filter(&(&1.key == :retiring_access))
+      assert has_element?(
+               lv,
+               "#attention-retiring_access",
+               "Set their access to No access in D4H."
+             )
+
+      assert has_element?(
+               lv,
+               ~s{#attention-retiring_access a[href="/teams/#{team.subdomain}/members?standing=retiring&access=some"]}
+             )
     end
 
     test "a deleted Retiring group warns and links to settings", %{conn: conn} do

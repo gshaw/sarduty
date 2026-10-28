@@ -71,12 +71,12 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   marking them retiring is the step that cuts access, so do it before telling them. Your
   membership's list of the items they hold doesn't justify the access. SAR Duty can't
   take away their D4H access, since D4H sets access only in its web app; the
-  confirmation says to. Until a team admin does, a red banner says so, decided
-  2026-10-28 as too big for a Needs attention line: on the Dashboard, "2 retiring
-  members can still log in to D4H" with each name, access, and an Open D4H member link,
-  and on every tab of that member's page. Access is the synced permission, anything but
-  No access; a member whose permission D4H didn't send isn't counted. An agent's
-  needs_attention list has it as a line, since it has no banner.
+  confirmation says to. Until a team admin does, two red notices say so, decided
+  2026-10-28. Needs attention's one danger item, red and first in the list: "2 retiring
+  members can still log in to D4H", opening `standing=retiring&access=some`. And a red
+  banner on every tab of that member's page, with an Open D4H member link. Access is the
+  synced permission, anything but No access; a member whose permission D4H didn't send
+  isn't counted.
 - **Access** (`access=some` or `none`, behind More filters, team admins only) keeps the
   members D4H lets log in, or those with No access.
 - **Items** (`items=held` or `none`, behind More filters, team admins only) keeps the

@@ -12,7 +12,6 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Attendance
   alias App.Model.Certificate
   alias App.Model.Chore
-  alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -21,7 +20,6 @@ defmodule Web.TeamDashboardLive do
   alias App.Operation.BuildGooglePass
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
-  alias App.ViewData.TeamAttention
   alias App.ViewData.TeamDashboardCharts
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
@@ -166,12 +164,6 @@ defmodule Web.TeamDashboardLive do
         />
       </:line>
     </.person_head>
-
-    <.retiring_access_banner
-      :if={@team_admin? and @view_data.retiring_access != []}
-      team={@current_team}
-      members={@view_data.retiring_access}
-    />
 
     <.next_up_card
       :if={@view_data.next_up}
@@ -390,50 +382,6 @@ defmodule Web.TeamDashboardLive do
         />
       </div>
     </div>
-    """
-  end
-
-  # Retiring members D4H still lets log in (#514). A banner, not a Needs attention line:
-  # until a team admin takes their access away in D4H, they still reach everything D4H
-  # shows them, and SAR Duty can't do it for them.
-  attr :team, :map, required: true
-  attr :members, :list, required: true
-
-  defp retiring_access_banner(assigns) do
-    assigns = assign(assigns, :service, D4H.service_name(assigns.team))
-
-    ~H"""
-    <.banner
-      kind={:danger}
-      id="retiring-access"
-      class="mb-6"
-      title={
-        Format.count(length(@members),
-          one: "%d retiring member can still log in to #{@service}",
-          many: "%d retiring members can still log in to #{@service}"
-        )
-      }
-    >
-      <p>
-        They can't log in to SAR Duty, but {@service} still lets them in. {TeamAttention.no_access(
-          D4H.service(@team)
-        )}
-      </p>
-      <ul>
-        <li :for={member <- @members} id={"retiring-access-#{member.id}"}>
-          {member.name} · {Member.permission_label(member.d4h_permission)} ·
-          <.a
-            :if={!D4H.records?(@team)}
-            external={true}
-            href={D4H.member_url(member)}
-          >Open {@service} member</.a>
-          <.a
-            :if={D4H.records?(@team)}
-            navigate={~p"/teams/#{@team}/members/#{member.id}/edit"}
-          >Change member</.a>
-        </li>
-      </ul>
-    </.banner>
     """
   end
 
