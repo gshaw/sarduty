@@ -47,7 +47,7 @@ defmodule Web.Settings.TeamLive do
               <span class="hint block">
                 Its organization admins set your hours tags and can turn your ID cards on or
                 off.
-                <.a navigate={~p"/teams/#{@current_team}/settings/managers"}>See who they are</.a>
+                <.a navigate={~p"/teams/#{@current_team}/settings/team-admins"}>See who they are</.a>
               </span>
             </div>
           </div>

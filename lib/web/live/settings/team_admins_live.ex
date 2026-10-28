@@ -1,4 +1,4 @@
-defmodule Web.TeamManagersLive do
+defmodule Web.Settings.TeamAdminsLive do
   use Web, :live_view_app_layout
 
   import Web.Components.TeamSettingsTabs
@@ -35,7 +35,7 @@ defmodule Web.TeamManagersLive do
 
   def render(assigns) do
     ~H"""
-    <.team_settings_tabs team={@current_team} current={:managers} />
+    <.team_settings_tabs team={@current_team} current={:team_admins} />
     <p :if={!D4H.records?(@current_team)} class="measure">
       These people can log in to SAR Duty for {@current_team.name}. They are the members with
       Owner or Editor access in {@service}. Members who are retired or have left cannot log in.
