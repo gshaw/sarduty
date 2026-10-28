@@ -1,12 +1,12 @@
 defmodule Web.Components.Messages do
   @moduledoc """
-  What a page tells people: banners, warning text, empty states, the error summary, and
-  the result band. Toasts are `Web.Components.Core.flash/1`. Their CSS is
+  What a page tells people: banners, warning text, empty states, the error summary, the
+  result band, and the confirm dialog. Toasts are `Web.Components.Core.flash/1`. Their CSS is
   assets/css/components/messages.css; the style guide at /styles shows each one.
   """
   use Phoenix.Component
 
-  import Web.Components.Core, only: [icon: 1, translate_error: 1]
+  import Web.Components.Core, only: [button: 1, icon: 1, translate_error: 1]
 
   @doc """
   Renders a banner: something true about the page until it changes.
@@ -152,6 +152,89 @@ defmodule Web.Components.Messages do
     </div>
     """
   end
+
+  @doc """
+  Renders the dialog a `data-confirm` button asks in (#651). The root layout renders one,
+  empty, and assets/js/confirm_dialog.js fills it from the button that asked:
+
+  - `data-confirm`: the question, then any sentences after it as the body.
+  - `data-confirm-button`: the action, such as "Delete group". The button's own text
+    otherwise. Red when the button is, blue otherwise.
+  - `data-confirm-list`: what's lost, as a JSON array of sentences.
+  - `data-confirm-warning`: a bold last line, such as "D4H can't bring it back."
+  - `data-confirm-check`: a check box the action waits on. Only for a delete that takes
+    other things with it.
+  - `data-confirm-type`, with `data-confirm-type-label`: text to type before the action
+    turns on, matched ignoring case and spaces.
+  - `data-confirm-alt` and `data-confirm-alt-href`: a link that's a better way out than
+    going ahead.
+
+  Cancel has the focus, so Enter by reflex does nothing. The style guide renders each
+  state with `open`, in place on the page.
+  """
+  attr :id, :string, default: "confirm-dialog"
+  attr :open, :boolean, default: false, doc: "shown in place, for the style guide"
+  attr :question, :string, default: nil
+  attr :body, :string, default: nil
+  attr :list, :list, default: []
+  attr :warning, :string, default: nil
+  attr :check, :string, default: nil
+  attr :checked, :boolean, default: false
+  attr :type, :string, default: nil
+  attr :type_label, :string, default: "Type this to confirm"
+  attr :typed, :string, default: nil
+  attr :action, :string, default: nil
+  attr :variant, :atom, default: :primary, values: [:primary, :danger, :default]
+  attr :alt, :string, default: nil
+  attr :alt_href, :string, default: nil
+
+  def confirm_dialog(assigns) do
+    assigns = assign(assigns, :locked, confirm_locked?(assigns))
+
+    ~H"""
+    <dialog
+      id={@id}
+      class="confirm-dialog"
+      open={@open}
+      aria-labelledby={"#{@id}-question"}
+      data-confirm-dialog
+    >
+      <form method="dialog">
+        <h2 id={"#{@id}-question"} class="confirm-dialog-question">{@question}</h2>
+        <p data-part="body" hidden={!@body}>{@body}</p>
+        <ul data-part="list" hidden={@list == []}>
+          <li :for={item <- @list}>{item}</li>
+        </ul>
+        <p data-part="warning" class="confirm-dialog-warning" hidden={!@warning}>{@warning}</p>
+        <label data-part="check" class="confirm-dialog-check" hidden={!@check}>
+          <input type="checkbox" checked={@checked} />
+          <span>{@check}</span>
+        </label>
+        <div data-part="type" class="confirm-dialog-type" hidden={!@type}>
+          <label for={"#{@id}-typed"}>{@type_label}</label>
+          <code>{@type}</code>
+          <input id={"#{@id}-typed"} type="text" autocomplete="off" value={@typed} />
+        </div>
+        <div class="confirm-dialog-actions">
+          <.button data-part="alt" variant={:primary} href={@alt_href || "#"} hidden={!@alt}>
+            {@alt}
+          </.button>
+          <.button variant={@variant} value="confirm" disabled={@locked}>{@action}</.button>
+          <.button value="cancel">Cancel</.button>
+        </div>
+      </form>
+    </dialog>
+    """
+  end
+
+  # The JS does the same as the person ticks or types.
+  defp confirm_locked?(assigns) do
+    (assigns.check != nil and not assigns.checked) or
+      (assigns.type != nil and typed_key(assigns.typed) != typed_key(assigns.type))
+  end
+
+  defp typed_key(nil), do: ""
+  defp typed_key(text), do: text |> String.downcase() |> String.replace(~r/\s+/, "")
 
   defp kind_icon(:success), do: "circle-check"
   defp kind_icon(:info), do: "info"

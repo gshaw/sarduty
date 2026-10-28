@@ -90,9 +90,7 @@ defmodule Web.Components.GroupRule do
     """
   end
 
-  def kind_label(:in), do: "In"
-  def kind_label(:not_in), do: "Not in"
-  def kind_label(:standing), do: "Standing is"
+  defdelegate kind_label(kind), to: App.ViewData.GroupRules
 
   @doc """
   The rules as one sentence, with each name in bold: "Members of GSAR or MIT Callout who

@@ -1,5 +1,5 @@
 /* Toasts (LiveView flash), banners, warning text, empty states, the error summary, the
-   result band, and the spinner (Web.Components.Messages and Core). See /styles/components. */
+   result band, the confirm dialog, and the spinner (Web.Components.Messages and Core). See /styles/components. */
 @layer components {
   .toasts {
     position: fixed;
@@ -45,6 +45,47 @@
 
   @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
   @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+  /* The data-confirm question (#651), in place of the browser's: confirm_dialog.js. */
+  .confirm-dialog {
+    margin: auto;
+    width: min(480px, calc(100vw - 32px));
+    padding: var(--sp-6);
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  }
+  .confirm-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+  /* The style guide shows each state in place, open but not modal. */
+  .confirm-dialog:not(:modal) { position: static; margin: 0; }
+  .confirm-dialog [hidden] { display: none; }
+  .confirm-dialog-question { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin: 0 0 var(--sp-2); }
+  .confirm-dialog p, .confirm-dialog ul { margin: 0 0 var(--sp-4); }
+  .confirm-dialog ul { list-style: disc; padding-left: var(--sp-6); }
+  .confirm-dialog-warning { font-weight: 700; }
+  .confirm-dialog-check {
+    display: flex;
+    gap: var(--sp-3);
+    align-items: center;
+    margin-bottom: var(--sp-6);
+    padding: var(--sp-3) var(--sp-4);
+    background: color-mix(in srgb, var(--danger) 10%, var(--bg));
+    border-left: 4px solid var(--danger);
+    cursor: pointer;
+  }
+  .confirm-dialog-check input { width: 24px; height: 24px; flex: none; }
+  .confirm-dialog-type { display: grid; gap: var(--sp-1); justify-items: start; margin-bottom: var(--sp-6); }
+  .confirm-dialog-type label { font-weight: 700; }
+  .confirm-dialog-type input { width: 100%; }
+  .confirm-dialog-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  /* Grey, not a faded red, until the box is ticked or the text matches. */
+  .confirm-dialog-actions .btn:disabled { opacity: 1; --btn-bg: var(--surface-alt); --btn-fg: var(--text-muted); box-shadow: none; }
+  @media (max-width: 640px) {
+    .confirm-dialog-actions { flex-direction: column; }
+    .confirm-dialog-actions .btn { width: 100%; justify-content: center; }
+  }
 
   .banner { --c: var(--info); border: 4px solid var(--c); margin-bottom: var(--sp-6); }
   .banner-title { display: flex; align-items: center; gap: var(--sp-2); background: var(--c); color: var(--on-fill); font-weight: 600; padding: 2px var(--sp-4) var(--sp-1); }

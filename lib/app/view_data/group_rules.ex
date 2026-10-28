@@ -11,6 +11,15 @@ defmodule App.ViewData.GroupRules do
   def named(rule, context),
     do: %{kind: rule.kind, names: Enum.map(rule.targets, &{elem(&1, 0), name(&1, context)})}
 
+  @doc ~S|Pure. The rule as words: "In MIT Applicants or GSAR", "Not in LOA".|
+  def text(rule, context),
+    do: "#{kind_label(rule.kind)} #{Enum.map_join(rule.targets, " or ", &name(&1, context))}"
+
+  @doc "A rule's kind as its editor names it."
+  def kind_label(:in), do: "In"
+  def kind_label(:not_in), do: "Not in"
+  def kind_label(:standing), do: "Standing is"
+
   @doc "Pure. The name of a group or endorsement in a rule."
   def name({:group, g}, context) do
     case context.groups[g] do

@@ -107,10 +107,24 @@ defmodule Web.ActivityFormLiveTest do
     assert_received {:records, "POST", "/exercises/88/tags", %{"tagIds" => [2]}}
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+    refute lv |> element("#activity-delete-button") |> render() =~ "data-confirm-check"
     lv |> element("#activity-delete-button") |> render_click()
 
     assert_received {:records, "DELETE", "/exercises/88", nil}
     assert Repo.reload!(activity).deleted_at
+  end
+
+  test "deleting an activity with attendance asks for the box ticked (#651)",
+       %{conn: conn, team: team} do
+    started = DateTime.utc_now() |> DateTime.add(-7200, :second) |> DateTime.truncate(:second)
+    activity = activity_fixture(team, %{started_at: started})
+    attendance_fixture(activity, member_fixture(team))
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+    button = lv |> element("#activity-delete-button") |> render()
+
+    assert button =~ ~s(data-confirm-check="I understand the attendance for 1 member is lost.")
+    assert button =~ "Its attendance for 1 member stops counting."
   end
 
   test "a finish before the start is refused, in the summary too", %{conn: conn, team: team} do

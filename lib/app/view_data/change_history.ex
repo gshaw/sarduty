@@ -375,12 +375,28 @@ defmodule App.ViewData.ChangeHistory do
              :delete_qualification,
              :create_group,
              :update_group,
-             :delete_group,
              :create_equipment_item,
              :update_equipment_item,
              :delete_equipment_item
            ],
       do: "Changed in SAR Duty"
+
+  # "Deleted MIT 2026: 14 members; rules: In MIT Applicants, Not in LOA" (#651). Rows
+  # from before kept only the title.
+  def describe_row(
+        %ChangeSetRow{action: :delete_group, old_value: %{"members" => members} = old},
+        _page
+      ) do
+    count = members |> length() |> Service.Format.count(one: "%d member", many: "%d members")
+
+    case old["rules"] || [] do
+      [] -> "Deleted #{old["title"]}: #{count}"
+      rules -> "Deleted #{old["title"]}: #{count}; rules: #{Enum.join(rules, ", ")}"
+    end
+  end
+
+  def describe_row(%ChangeSetRow{action: :delete_group} = row, _page),
+    do: "Deleted #{row.old_value["title"]}"
 
   def describe_row(%ChangeSetRow{action: :add_group_member} = row, _page),
     do: "Added to the #{row_group(row)} group"

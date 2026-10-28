@@ -206,6 +206,17 @@ defmodule App.Model.Attendance do
   def status_word(%{status: "requested"}, _activity, _now), do: :no_reply
   def status_word(%{status: other}, _activity, _now), do: other
 
+  @doc "How many members attended the activity by `now`."
+  def attended_count(%Activity{} = activity, %DateTime{} = now) do
+    Attendance
+    |> where([r], r.activity_id == ^activity.id)
+    |> attended(now)
+    |> join(:inner, [r], m in assoc(r, :member))
+    |> where([r, m], m.team_id == ^activity.team_id)
+    |> select([r], count(r.member_id, :distinct))
+    |> Repo.one()
+  end
+
   @doc "Sign-ups for coming activities: attending rows that start after `now`."
   def signed_up(query \\ Attendance, %DateTime{} = now),
     do: query |> attending() |> where([r], r.started_at > ^now)

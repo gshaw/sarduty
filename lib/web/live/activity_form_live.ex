@@ -3,6 +3,7 @@ defmodule Web.ActivityFormLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Attendance
   alias App.Operation.DeleteActivity
   alias App.Operation.SaveActivity
   alias App.ViewModel.ActivityFormViewModel
@@ -21,6 +22,7 @@ defmodule Web.ActivityFormLive do
       |> assign(page_title: if(activity, do: "Change #{activity.title}", else: "Add activity"))
       |> assign(activity: activity, form_data: form, records?: D4H.records?(team))
       |> assign(params: %{})
+      |> assign(delete_confirm: activity && delete_confirm(team, activity))
       |> assign(
         description_locked?: ActivityFormViewModel.description_locked?(activity),
         published_locked?: activity != nil and Activity.locked?(activity)
@@ -124,12 +126,38 @@ defmodule Web.ActivityFormLive do
         type="button"
         variant={:danger}
         phx-click="delete"
-        data-confirm={"Delete #{@activity.title}? Its attendance stops counting."}
+        {@delete_confirm}
       >
         Delete activity
       </.button>
     </section>
     """
+  end
+
+  # An activity with attendance asks for the box ticked (#651).
+  defp delete_confirm(team, activity) do
+    case Attendance.attended_count(activity, DateTime.utc_now()) do
+      0 ->
+        %{
+          "data-confirm" => "Delete #{activity.title}?",
+          "data-confirm-button" => "Delete activity"
+        }
+
+      count ->
+        members = Service.Format.count(count, one: "%d member", many: "%d members")
+
+        %{
+          "data-confirm" => "Delete the activity #{activity.title}?",
+          "data-confirm-list" =>
+            Jason.encode!([
+              "Its attendance for #{members} stops counting.",
+              "It leaves every list and letter."
+            ]),
+          "data-confirm-warning" => "#{D4H.service_name(team)} can't bring it back.",
+          "data-confirm-check" => "I understand the attendance for #{members} is lost.",
+          "data-confirm-button" => "Delete activity"
+        }
+    end
   end
 
   @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}

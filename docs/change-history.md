@@ -16,6 +16,22 @@ from D4H on Oct 3". It merges these sources, newest first
   ("Oct 9, 10:00 to 10:10") and "Someone outside SAR Duty". D4H's API has a `createdBy` on some
   records but no `updatedBy` and no audit log (checked in its spec, 2026-10-07).
 
+## What gets history
+
+One rule (#651): history shows what changed in D4H, from change sets and what the
+refresh saw, and changes to a member's standing. SAR Duty-only records that are cheap to
+make again get none.
+
+- **A deleted group keeps a snapshot.** Its delete row's `old_value` holds its members'
+  names and its rules as words, and `ChangeHistory.describe_row/2` prints "Deleted MIT
+  2026: 14 members; rules: In MIT Applicants, Not in LOA". A mistaken delete can be
+  rebuilt by hand. No new table and no new source.
+- **Group rule edits aren't logged.** The snapshot covers the delete that loses work.
+- **A no-show's Remove is a plain delete**, with no entry (#650).
+- **No undo, no trash, no delayed delete.** D4H can't restore what it deletes, so none of
+  these could bring the record back. A delete that takes other things with it asks for a
+  ticked box instead: the confirm dialog at `/styles/confirm-dialog`.
+
 ## How changes are recorded
 
 The upsert stages in `lib/app/operation/refresh_d4h_data/` already compare each D4H row

@@ -73,6 +73,26 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert row.(%{"name" => "Jane"}) == "Details changed in SAR Duty"
   end
 
+  test "a deleted group's row names its members and rules (#651)" do
+    row = fn old_value ->
+      ChangeHistory.describe_row(
+        %ChangeSetRow{action: :delete_group, old_value: old_value},
+        :member
+      )
+    end
+
+    assert row.(%{
+             "title" => "MIT 2026",
+             "members" => ["Alex Rivera", "Bo Tanaka"],
+             "rules" => ["In MIT Applicants", "Not in LOA"]
+           }) == "Deleted MIT 2026: 2 members; rules: In MIT Applicants, Not in LOA"
+
+    assert row.(%{"title" => "Swiftwater", "members" => [], "rules" => []}) ==
+             "Deleted Swiftwater: 0 members"
+
+    assert row.(%{"title" => "Old group"}) == "Deleted Old group"
+  end
+
   # Sent before the start, so never "attended" (#444).
   test "a member's reply reads in the reply words" do
     reply = fn status, page ->
