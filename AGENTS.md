@@ -234,6 +234,9 @@ fi
   states, the error summary, and the result band are components; `.hint`,
   `.lead`, `.action`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
   classes. Utilities on the scale are for one-off layout only.
+- **An email or phone number people use to reach someone is `<.email>` or `<.phone>`**,
+  with its copy button (and `call_and_text` where they may call now). One that says who
+  did something, or sits in a sentence, is text.
 - **Space groups things, not boxes.** A `.card` is for tiles in a grid, such as a
   dashboard, or a result set apart from its page. Never a sidebar's sections, and never
   two topics in one box. See `/styles/card`.

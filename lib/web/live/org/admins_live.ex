@@ -58,7 +58,7 @@ defmodule Web.Org.AdminsLive do
       class="table-striped"
     >
       <:col :let={admin} label="Email">
-        <div class="break-all">{admin.email}</div>
+        <div><.email id={"organization-admin-#{admin.id}-email"} email={admin.email} /></div>
         <.hint :if={admin.reason}>{admin.reason}</.hint>
       </:col>
       <:col :let={admin} label="Last seen" class="whitespace-nowrap max-md:hidden">

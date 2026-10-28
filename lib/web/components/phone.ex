@@ -1,12 +1,45 @@
 defmodule Web.Components.Phone do
   @moduledoc """
-  A member's phone number to read, and Call and Text buttons for it on touch screens
-  (#300). A desktop gets the number alone: tel: and sms: links there often open nothing.
-  See /styles/call-and-text.
+  A phone number to reach someone by, with a copy button, and Call and Text buttons for
+  it on touch screens (#300). A desktop gets no buttons: tel: and sms: links there often
+  open nothing. See /styles/phone.
   """
   use Phoenix.Component
 
   import Web.Components.Core, only: [button: 1]
+  import Web.Components.CopyButton, only: [copy_button: 1]
+
+  attr :id, :string,
+    required: true,
+    doc: "the copy button's is <id>-copy, the buttons' <id>-call and <id>-text"
+
+  attr :phone, :string, default: nil, doc: "the number as D4H has it"
+  attr :call_and_text, :boolean, default: false, doc: "Call and Text buttons under it"
+  attr :missing, :string, default: nil, doc: "shown, as a hint, when there's no number"
+  attr :class, :any, default: nil, doc: "for the Call and Text buttons"
+
+  attr :touch_only, :boolean,
+    default: true,
+    doc: "false shows the buttons everywhere, for /styles"
+
+  def phone(assigns) do
+    assigns = assign(assigns, :shown, Service.Phone.format(assigns.phone))
+
+    ~H"""
+    <%= if @shown do %>
+      <.copy_button id={"#{@id}-copy"} text={@shown} value={@shown} label="Copy phone number" />
+      <.call_and_text
+        :if={@call_and_text}
+        id={@id}
+        phone={@phone}
+        touch_only={@touch_only}
+        class={@class}
+      />
+    <% else %>
+      <span :if={@missing} class="hint">{@missing}</span>
+    <% end %>
+    """
+  end
 
   attr :id, :string, required: true, doc: "the buttons' ids are <id>-call and <id>-text"
   attr :phone, :string, default: nil, doc: "the number as D4H has it"

@@ -111,7 +111,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         }>{record.member.name}</.a>
       </:col>
       <:col :let={record} label="Email">
-        {record.member.email}
+        <.email id={"letter-member-#{record.member.id}-email"} email={record.member.email} />
       </:col>
 
       <:col

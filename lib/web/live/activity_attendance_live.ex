@@ -1,7 +1,7 @@
 defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Phone, only: [phone: 1]
   import Web.Components.YetToArrive
 
   alias App.Adapter.D4H
@@ -229,18 +229,16 @@ defmodule Web.ActivityAttendanceLive do
     >
       <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
       <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
-        <span :if={Service.Phone.format(no_show.member.phone)}>{Service.Phone.format(
-          no_show.member.phone
-        )}</span>
-        <span :if={!Service.Phone.format(no_show.member.phone)} class="hint">No mobile number</span>
-        <.call_and_text
+        <.phone
           id={"no-show-#{no_show.id}"}
           phone={no_show.member.phone}
+          call_and_text
+          missing="No mobile number"
           class="mt-1"
         />
       </:col>
       <:col :let={no_show} label="Email" class="stack-full stack-optional break-all">
-        <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>{no_show.member.email}</.a>
+        <.email id={"no-show-#{no_show.id}-email"} email={no_show.member.email} />
       </:col>
       <:col :let={no_show} label="Followed up" class="stack-full">
         <div :if={no_show.followed_up_at} id={"followed-up-#{no_show.id}"}>

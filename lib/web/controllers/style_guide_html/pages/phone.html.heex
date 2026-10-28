@@ -1,0 +1,45 @@
+<.shell current={:phone}>
+  <h1>Phone</h1>
+  <p class="lead">A phone number with a copy button, and Call and Text buttons.</p>
+
+  <div class="demo max-w-sm">
+    <dl>
+      <dt>Phone</dt>
+      <dd>
+        <.phone
+          id="phone-demo"
+          phone="6045551234"
+          call_and_text
+          touch_only={false}
+          class="mt-2"
+        />
+      </dd>
+      <dt>Emergency contact</dt>
+      <dd>
+        Robin Park (Partner)<br />
+        <.phone id="phone-demo-contact" phone="604-555-0100" />
+      </dd>
+    </dl>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Any phone number people use to reach someone: a member's details, an emergency contact, yet to arrive, and no-shows. Add Call and Text where someone may want to reach them now.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    Your own number, such as on Your membership: there's no one to reach. Show it with <code>Service.Phone.format/1</code>.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.phone id="…" phone=&#123;member.phone&#125; /&gt;</code>
+    shows the number as <code>Service.Phone.format/1</code>
+    writes it, then a copy button. Add <code>call_and_text</code>
+    for Call and Text buttons under it. They show only on a touch screen, because a desktop often has no app for
+    <code>tel:</code>
+    and <code>sms:</code>
+    links. The example above shows them everywhere with <code>touch_only=&#123;false&#125;</code>. With no number it shows nothing, or the hint in <code>missing</code>, such as "No mobile number".
+  </p>
+</.shell>

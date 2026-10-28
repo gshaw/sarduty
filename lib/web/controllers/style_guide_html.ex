@@ -18,7 +18,8 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.OpenInMaps
   import Web.Components.Pagination
   import Web.Components.PersonHead
-  import Web.Components.Phone, only: [call_and_text: 1]
+  import Web.Components.Email
+  import Web.Components.Phone, only: [phone: 1]
   import Web.Components.Place, only: [place_field: 1]
   import Web.Components.Reply, only: [reply: 1]
   import Web.Components.RowLink
@@ -72,7 +73,6 @@ defmodule Web.StyleGuideHTML do
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
          {:button, "Button", "Kinds, sizes, states, and rows of buttons."},
-         {:call_and_text, "Call and text", "Call and Text buttons by a phone number."},
          {:callout, "Callout", "Advice set apart beside a form field."},
          {:card, "Card", "A box for one topic: on a dashboard, or under a result."},
          {:chart, "Chart", "Columns, lines, a calendar, a week grid, and a bar list."},
@@ -80,6 +80,7 @@ defmodule Web.StyleGuideHTML do
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
          {:copy_button, "Copy button", "Copies the value before it."},
          {:detail_list, "Detail list", "Key facts about one record."},
+         {:email, "Email", "An email address to reach someone by, with a copy button."},
          {:email_preview, "Email preview", "An email as members get it, before it's sent."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
@@ -94,6 +95,7 @@ defmodule Web.StyleGuideHTML do
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},
+         {:phone, "Phone", "A phone number with a copy button, and Call and Text buttons."},
          {:place, "Place", "An address box that finds places and takes a pin."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:reply, "Reply", "A member's answer to an invitation."},
