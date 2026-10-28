@@ -82,8 +82,7 @@ defmodule Web.Navigation do
           []
       end
 
-    member_sections =
-      if member?, do: [[link("me", "Your membership", ~p"/teams/#{team}/me")]], else: []
+    member_sections = if member?, do: [[me_link(team, team_admin?)]], else: []
 
     (team_sections ++ member_sections)
     |> Enum.reject(&(&1 == []))
@@ -194,6 +193,17 @@ defmodule Web.Navigation do
       else: []
   end
 
+  # Your membership. A member's certificate form is under /certificates (#645), a page
+  # members have no link to, so for them Your membership is current there too, as its
+  # breadcrumbs say.
+  defp me_link(team, true), do: link("me", "Your membership", ~p"/teams/#{team}/me")
+
+  defp me_link(team, false),
+    do:
+      link("me", "Your membership", ~p"/teams/#{team}/me",
+        also: [~p"/teams/#{team}/certificates"]
+      )
+
   defp link(key, label, path, opts \\ []) do
     count = opts[:count]
 
@@ -201,6 +211,7 @@ defmodule Web.Navigation do
       key: key,
       label: label,
       path: path,
+      also: Keyword.get(opts, :also, []),
       exact: Keyword.get(opts, :exact, false),
       count: if(count && count > 0, do: count),
       current: false
@@ -218,8 +229,8 @@ defmodule Web.Navigation do
   defp current?(_link, nil), do: false
   defp current?(%{exact: true, path: path}, current), do: current == path
 
-  defp current?(%{path: path}, current),
-    do: current == path or String.starts_with?(current, path <> "/")
+  defp current?(%{path: path, also: also}, current),
+    do: Enum.any?([path | also], &(current == &1 or String.starts_with?(current, &1 <> "/")))
 
   @doc """
   The area the bar names on a page outside every area (home, terms, privacy) when logged

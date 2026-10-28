@@ -12,9 +12,6 @@ defmodule Web.TemplateCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs>
-      <:item label="Templates" />
-    </.breadcrumbs>
     <.heading_row>
       <h1 class="title">{@page_title}</h1>
       <:action>

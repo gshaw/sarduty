@@ -73,10 +73,6 @@ defmodule Web.WhiteboardLive do
     assigns = assign(assigns, views: @views)
 
     ~H"""
-    <.breadcrumbs>
-      <:item label="Dashboard" path={~p"/teams/#{@current_team}"} />
-      <:item label="Whiteboard" />
-    </.breadcrumbs>
     <.heading_row>
       <h1 class="title">Whiteboard</h1>
       <:action :if={@team_admin?}>

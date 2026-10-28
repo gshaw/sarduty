@@ -59,7 +59,7 @@ defmodule Web.WhiteboardNoteFormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Dashboard" path={~p"/teams/#{@current_team}"} />
+      <:item label="Whiteboard" path={~p"/teams/#{@current_team}/whiteboard"} />
       <:item label={@page_title} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>

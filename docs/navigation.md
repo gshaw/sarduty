@@ -152,6 +152,11 @@ mockups, are on #645.
 - A side navigation link is current on its page and every page under it. An area's
   first page (Dashboard, Teams) is current only on itself.
 - Breadcrumbs start at the section, never the team, and a section's own page has none.
+  The section is the side navigation link that is current. A member's certificate form
+  is under `/certificates`, which members have no link to, so for them it sits under
+  Your membership, and that link is current there; a team admin's sits under
+  Certificates (#645). Audited 2026-10-28: Whiteboard, Templates, Endorsements, and Tax
+  credit letters are sections of their own, so their pages have no trail.
   A record's tabs sit under its title, above both columns.
 - Below 1024px the side navigation hides (#471). The Menu button moves to the left of the
   bar, the logo sits over the area's name in the middle, and your avatar stays on the

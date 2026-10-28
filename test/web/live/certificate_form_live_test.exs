@@ -31,6 +31,9 @@ defmodule Web.CertificateFormLiveTest do
              "Standard First Aid"
            )
 
+    # A member has no Certificates page: the form sits under Your membership (#645).
+    assert has_element?(lv, ~s{.breadcrumbs a[href="/teams/#{team.subdomain}/me"]})
+    assert has_element?(lv, "#side-nav-me[aria-current=page]")
     assert has_element?(lv, "input[type=file][accept='image/*,application/pdf']")
     refute has_element?(lv, "input[type=file][capture]")
 

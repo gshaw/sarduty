@@ -35,9 +35,6 @@ defmodule Web.EndorsementCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs>
-      <:item label="Endorsements" />
-    </.breadcrumbs>
     <.heading_row>
       <h1 class="title">{@page_title}</h1>
       <:action>

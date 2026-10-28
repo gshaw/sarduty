@@ -321,6 +321,12 @@ defmodule Web.CertificateLiveTest do
              ~s{#certificate-add[href="/teams/#{ctx.team.subdomain}/certificates/new"]}
            )
 
+    # A team admin's form sits under Certificates, as their side navigation does.
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/new")
+    assert has_element?(lv, ~s{.breadcrumbs a[href="/teams/#{ctx.team.subdomain}/certificates"]})
+    assert has_element?(lv, "#side-nav-certificates[aria-current=page]")
+    refute has_element?(lv, "#side-nav-me[aria-current=page]")
+
     admin = App.AccountsFixtures.user_fixture() |> make_admin()
     admin_conn = log_in_user(build_conn(), admin)
     {:ok, lv, _html} = live(admin_conn, ~p"/teams/#{ctx.team}/certificates")

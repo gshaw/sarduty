@@ -51,6 +51,7 @@ defmodule Web.Settings.ChoreCategoryFormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
+      <:item label="Team settings" path={~p"/teams/#{@current_team}/settings"} />
       <:item label="Chore categories" path={~p"/teams/#{@current_team}/settings/chore-categories"} />
       <:item label={if @category, do: @category.title, else: @page_title} />
     </.breadcrumbs>
