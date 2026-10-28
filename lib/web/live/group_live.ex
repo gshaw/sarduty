@@ -195,6 +195,13 @@ defmodule Web.GroupLive do
     |> Enum.reject(&(&1.id in in_group))
   end
 
+  # Everyone in the Retiring group is retiring because they are in it; the badge says nothing.
+  defp shown_standing(:retiring, team, group) do
+    if retiring_group?(team, group), do: :active, else: :retiring
+  end
+
+  defp shown_standing(standing, _team, _group), do: standing
+
   defp retired_count(facts), do: Enum.count(facts.standing, &(elem(&1, 1) == :retired))
 
   defp last_attended(nil, _team), do: "Never"
@@ -350,7 +357,7 @@ defmodule Web.GroupLive do
         </:col>
         <:col :let={change} label="Change">
           <span class={change.error && "text-danger-text"}>{change_verb(change)}</span>
-          <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}/qualifications"}>{change.member.name}</.a>
+          <.a navigate={~p"/teams/#{@team}/members/#{change.member.id}"}>{change.member.name}</.a>
           <span :if={change.reason}>· {change.reason}</span>
           <span :if={change.user}>· by {change.user.email}</span>
           <div :if={change.error} class="text-sm text-danger-text">{change.error}</div>
@@ -424,7 +431,7 @@ defmodule Web.GroupLive do
         <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>{gm.member.name}</.a>
         <.standing_badge
           id={"group-member-standing-#{gm.member.id}"}
-          standing={@facts.standing[gm.member.id]}
+          standing={shown_standing(@facts.standing[gm.member.id], @team, @group)}
         />
       </:col>
       <:col :let={gm} label="Role">{gm.member.position}</:col>
