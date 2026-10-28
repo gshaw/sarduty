@@ -3,6 +3,7 @@ defmodule Web.GroupLive do
 
   import Ecto.Query
   import Web.Components.GroupRule
+  import Web.Components.Standing, only: [standing_badge: 1]
 
   alias App.Adapter.D4H
   alias App.Model.Group
@@ -15,6 +16,7 @@ defmodule Web.GroupLive do
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.SetGroupMember
   alias App.Repo
+  alias App.ViewData.GroupMemberFacts
   alias App.ViewData.GroupRules
 
   def mount(_params, _session, socket) do
@@ -39,19 +41,12 @@ defmodule Web.GroupLive do
   defp load_members(socket) do
     %{group: group, current_team: team} = socket.assigns
     members = list_members_for_group(group)
-    in_group = MapSet.new(members, & &1.member_id)
-
-    others =
-      Member
-      |> Member.scope(team_id: team.id)
-      |> Member.current_query(DateTime.utc_now())
-      |> order_by([m], asc: m.name)
-      |> Repo.all()
-      |> Enum.reject(&(&1.id in in_group))
+    now = DateTime.utc_now()
 
     socket
     |> assign(:members, members)
-    |> assign(:other_members, others)
+    |> assign(:facts, GroupMemberFacts.load(team, Enum.map(members, & &1.member), now))
+    |> assign(:other_members, other_members(team, members, now))
     |> assign(:recent_changes, GroupMembershipChange.recent_for_group(group))
   end
 
@@ -176,6 +171,7 @@ defmodule Web.GroupLive do
         />
         <.main_content
           members={@members}
+          facts={@facts}
           other_members={@other_members}
           ruled?={@rules != []}
           used_by={@used_by}
@@ -187,6 +183,22 @@ defmodule Web.GroupLive do
     </div>
     """
   end
+
+  defp other_members(team, members, now) do
+    in_group = MapSet.new(members, & &1.member_id)
+
+    Member
+    |> Member.scope(team_id: team.id)
+    |> Member.current_query(now)
+    |> order_by([m], asc: m.name)
+    |> Repo.all()
+    |> Enum.reject(&(&1.id in in_group))
+  end
+
+  defp retired_count(facts), do: Enum.count(facts.standing, &(elem(&1, 1) == :retired))
+
+  defp last_attended(nil, _team), do: "Never"
+  defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
 
   # The team's Retiring group (#514) can't have rules: "Standing is Active" on it would
   # take out every member. Settings offer only groups without rules for it.
@@ -376,6 +388,12 @@ defmodule Web.GroupLive do
   defp main_content(assigns) do
     ~H"""
     <h2 class="subheading mt-4">Members ({length(@members)})</h2>
+    <p :if={retired_count(@facts) > 0} id="members-retired" class="hint">
+      {Service.Format.count(length(@members) - retired_count(@facts),
+        one: "%d not retired",
+        many: "%d not retired"
+      )} · {Service.Format.count(retired_count(@facts), one: "%d retired", many: "%d retired")}
+    </p>
     <p :if={@ruled?} id="members-by-rules" class="hint">Its rules decide who is in it.</p>
     <p :if={!@ruled? and @used_by != []} id="used-by" class="hint">
       The rules of <.used_by_links groups={@used_by} team={@team} /> use this group.
@@ -404,6 +422,16 @@ defmodule Web.GroupLive do
     >
       <:col :let={gm} label="Member">
         <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>{gm.member.name}</.a>
+        <.standing_badge
+          id={"group-member-standing-#{gm.member.id}"}
+          standing={@facts.standing[gm.member.id]}
+        />
+      </:col>
+      <:col :let={gm} label="Role">{gm.member.position}</:col>
+      <:col :let={gm} label="Last attended" class="whitespace-nowrap">
+        <span id={"group-member-attended-#{gm.member.id}"}>
+          {last_attended(@facts.last_attended[gm.member.id], @team)}
+        </span>
       </:col>
       <:col :let={gm} :if={!@ruled?} label="" align="right">
         <.button

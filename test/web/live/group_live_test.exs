@@ -306,6 +306,24 @@ defmodule Web.GroupLiveTest do
     assert has_element?(lv, "#would-remove-#{member.id}", "No First Aid on record")
   end
 
+  test "the members table shows standing, role, and last attended", ctx do
+    avery = member_fixture(ctx.team, %{name: "Avery Chen", position: "Team Leader"})
+    sam = member_fixture(ctx.team, %{name: "Sam Hale", d4h_status: "RETIRED"})
+    activity = activity_fixture(ctx.team, %{started_at: ~U[2026-03-01 18:00:00Z]})
+    attendance_fixture(activity, avery)
+    group_member_fixture(ctx.group, avery)
+    group_member_fixture(ctx.group, sam)
+
+    {:ok, lv, _html} = live(ctx.conn, ctx.path)
+
+    assert has_element?(lv, "#members-retired", "1 not retired · 1 retired")
+    assert has_element?(lv, "#group-member-standing-#{sam.id}", "Retired")
+    refute has_element?(lv, "#group-member-standing-#{avery.id}")
+    assert has_element?(lv, "#group_members", "Team Leader")
+    assert has_element?(lv, "#group-member-attended-#{avery.id}", "Mar 1, 2026")
+    assert has_element?(lv, "#group-member-attended-#{sam.id}", "Never")
+  end
+
   # A miss raises and takes the LiveView down, as a 404 would on a page load.
   describe "a group kept by hand (#546)" do
     setup ctx do
