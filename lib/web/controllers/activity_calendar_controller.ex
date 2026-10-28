@@ -1,12 +1,11 @@
 defmodule Web.ActivityCalendarController do
   use Web, :controller
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias Web.ReplyLinks
 
   # Add to calendar (#389, #406): an .ics file for any of the team's activities that D4H
-  # still has, for anyone on the team.
+  # still has, for anyone on the team. Its link opens the activity in SAR Duty, never D4H.
   def show(conn, %{"id" => id}) do
     team = conn.assigns.current_team
 
@@ -40,7 +39,7 @@ defmodule Web.ActivityCalendarController do
           starts_at: activity.started_at,
           ends_at: activity.finished_at,
           location: activity.address,
-          url: if(!D4H.records?(team), do: D4H.activity_url(team, activity))
+          url: Web.Endpoint.url() <> ~p"/teams/#{team}/activities/#{activity.id}"
         },
         DateTime.utc_now()
       )
