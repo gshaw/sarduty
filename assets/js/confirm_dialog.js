@@ -9,6 +9,12 @@ export function listenForConfirms() {
   if (!dialog?.showModal) return
   let pending = null
 
+  // Whether the dialog was opened with a mouse or a finger, not a key.
+  let pointer = false
+  window.addEventListener("pointerdown", () => { pointer = true }, true)
+  window.addEventListener("keydown", () => { pointer = false }, true)
+  dialog.addEventListener("keydown", () => { delete dialog.dataset.pointer })
+
   window.addEventListener("phoenix.link.click", event => {
     const button = event.target
     const message = button.getAttribute?.("data-confirm")
@@ -17,6 +23,7 @@ export function listenForConfirms() {
     event.stopPropagation()
     if (button === pending) return
     event.preventDefault()
+    dialog.toggleAttribute("data-pointer", pointer)
     ask(dialog, button, message)
   }, true)
 
@@ -92,6 +99,8 @@ function ask(dialog, button, message) {
   confirm.textContent = data("button") || button.textContent.replace(/\s+/g, " ").trim()
   lock(dialog)
 
+  // Cancel takes focus, so Return cancels, as Apple's alerts do for a delete. Opened
+  // with a mouse or a finger it keeps its own look until a key is pressed (messages.css).
   dialog.showModal()
   ;(type.hidden ? dialog.querySelector("button[value=cancel]") : type.querySelector("input")).focus()
 }
