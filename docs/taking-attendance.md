@@ -182,9 +182,10 @@ checkboxes. Sending reads D4H again, plans again, and sends the kept changes as 
 ## No-shows
 
 When a send marks a member absent who had signed up (D4H's `ATTENDING`), SAR Duty
-records a no-show; a member who never replied isn't one ([NoShow](../lib/app/model/no_show.ex)). The Attendance page lists
-them with phone and email, and a team admin ticks each one followed up once they know the
-member is OK. Sending again doesn't add a second row.
+records a no-show; a member who never replied isn't one
+([NoShow](../lib/app/model/no_show.ex)). The Attendance page lists them with phone and
+email, and a team admin ticks each one followed up once they know the member is OK.
+Sending again doesn't add a second row.
 
 A member who turns out attended after all stops being a no-show (#648): a later send
 from the door that marks them attended clears it at once, and the sync clears it when
