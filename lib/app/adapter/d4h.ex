@@ -117,6 +117,11 @@ defmodule App.Adapter.D4H do
     build_url(team, "/team/equipment/view/#{item.d4h_equipment_id}")
   end
 
+  # D4H's web app calls qualifications courses.
+  def qualification_url(team, qualification) do
+    build_url(team, "/team/courses/view/#{qualification.d4h_qualification_id}")
+  end
+
   def determine_region(api_host) do
     regions()
     |> Enum.find(fn {_key, val} -> val == api_host end)

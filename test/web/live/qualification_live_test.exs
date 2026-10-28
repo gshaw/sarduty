@@ -42,6 +42,19 @@ defmodule Web.QualificationLiveTest do
     assert has_element?(lv, "#all_awards tr.is-muted", "Bob Expired")
   end
 
+  test "Open D4H qualification links to the qualification's course page", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    qualification = qualification_fixture(team, %{title: "Drivers Abstract"})
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
+
+    href = "/team/courses/view/#{qualification.d4h_qualification_id}"
+    assert has_element?(lv, ~s|#qualification-d4h[href$="#{href}"]|)
+  end
+
   test "search finds members in the view (#350)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     qualification = qualification_fixture(team)
