@@ -122,11 +122,13 @@ defmodule App.ViewModel.ActivityFormViewModel do
     put_change(changeset, :coordinate, pin && Coordinate.to_string(pin, 5))
   end
 
+  # A finish at the start is fine: chore events last no time (#487), and D4H and Records
+  # take them.
   defp validate_ends_after_starts(changeset) do
     starts_at = get_field(changeset, :starts_at)
     ends_at = get_field(changeset, :ends_at)
 
-    if starts_at && ends_at && NaiveDateTime.compare(ends_at, starts_at) != :gt,
+    if starts_at && ends_at && NaiveDateTime.before?(ends_at, starts_at),
       do: add_error(changeset, :ends_at, "Enter a finish after the start."),
       else: changeset
   end
