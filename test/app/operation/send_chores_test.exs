@@ -310,7 +310,7 @@ defmodule App.Operation.SendChoresTest do
              needs_send: false,
              send_note:
                "Left as a draft. D4H refused it: Activity cannot be marked ready for approval or published (409) " <>
-                 "Turn on the approval message in D4H's admin settings, then publish it in D4H."
+                 "Approve it in D4H."
            } = event
   end
 

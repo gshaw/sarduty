@@ -201,17 +201,12 @@ defmodule App.Operation.SendChores do
 
   defp draft(_team, %{error: nil}), do: @draft
 
-  # South Fraser's 409 came from a D4H setting: its organization forced an approval
-  # message, and the team's own was off (2026-10-25, #575).
+  # D4H's approval step refuses some of South Fraser's publishes from the API, while its
+  # own Approve button works (2026-10-28). No setting fixes it, so the note says to approve.
   defp draft(team, row) do
     if row.error =~ "cannot be marked ready for approval or published",
-      do: "#{@draft} #{row.error} #{approval_fix(team)}",
+      do: "#{@draft} #{row.error} Approve it in #{D4H.service_name(team)}.",
       else: "#{@draft} #{row.error}"
-  end
-
-  defp approval_fix(team) do
-    name = D4H.service_name(team)
-    "Turn on the approval message in #{name}'s admin settings, then publish it in #{name}."
   end
 
   # A team on SAR Duty Records has no tags page: its hours tags come with the team.

@@ -102,9 +102,12 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
 - **Why South Fraser's publish failed.** D4H answered 409 to every publish from the API
   (#02228, 2026-10-17 and 2026-10-21) while D4H's own Approve button worked. BCSARA, the
   organization, had set a forced approval message long ago, and South Fraser's own
-  approval message setting, in D4H's admin area, was off. Turning it on fixed the
-  publish (2026-10-25). Another BCSARA team that turns on chores may need the same, so
-  on that 409 the note says to turn the setting on (#575).
+  approval message setting, in D4H's admin area, was off. Turning it on (2026-10-25)
+  let most chore events publish, but not all: 3 sends on 2026-10-27 and 2026-10-28 got
+  the same 409, and Andrew approved each in D4H. The test event #02228 never publishes
+  from the API. The approval call that might stand in, `POST …/approval`, answers 403
+  without D4H's approval module, which South Fraser lacks. So on that 409 the note says
+  to approve it in D4H.
 - **Nothing locks an event.** D4H's `approved` flag mirrors `published` on every team seen
   (#358), so the first version, which stopped sending an approved event, stopped at the
   first published one.
