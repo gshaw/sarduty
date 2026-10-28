@@ -28,6 +28,18 @@ defmodule Web.TeamControllerTest do
       assert square != round
     end
 
+    test "?shape=fit keeps the logo's own shape, with no padding", %{team: team} do
+      team_logo_fixture(team, png_fixture(800, 504))
+
+      image =
+        build_conn()
+        |> get(~p"/teams/#{team}/logo?shape=fit")
+        |> response(200)
+        |> Image.from_binary!()
+
+      assert {Image.width(image), Image.height(image)} == {480, 302}
+    end
+
     test "sends SAR Duty's logo when the team has none", %{team: team} do
       conn = get(build_conn(), ~p"/teams/#{team}/logo")
       assert response(conn, 200)

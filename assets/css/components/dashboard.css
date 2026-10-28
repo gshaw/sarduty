@@ -3,9 +3,15 @@
    .card-grid. */
 
 /* The team's logo leads its name, as a member's photo does (person_head), square
-   rather than round; its initials stand in until the team saves one. */
-.team-head-logo { width: 64px; height: 64px; flex: none; object-fit: contain; border: 1px solid var(--border-subtle); border-radius: var(--radius); background: var(--paper); }
-.team-head-logo.is-initials { display: grid; place-items: center; border: 0; background: var(--shade-1); color: var(--primary); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; }
+   rather than round; its initials stand in until the team saves one. The logo is a
+   transparent PNG, so it sits on the page in light and dark with no box. It stays
+   beside the name at every width; a long name wraps instead. */
+.team-head { flex-wrap: nowrap; }
+.team-head-logo { width: 64px; height: 64px; flex: none; }
+/* The logo comes unpadded (?shape=fit): its height is set and its width follows, up to
+   twice as wide, so a tall or wide logo leaves no blank margin beside the name. */
+img.team-head-logo { width: auto; max-width: 128px; object-fit: contain; }
+.team-head-logo.is-initials { display: grid; place-items: center; border-radius: var(--radius); background: var(--shade-1); color: var(--primary); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; }
 
 /* Coming up: a row per activity, its title the link, so a row can hold the reply's
    buttons (#444). On a touch screen the title's tap target grows without moving it. */
@@ -25,8 +31,16 @@
 .attention-mark { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex: none; background: var(--info); }
 .is-warning .attention-mark { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent); }
 
-/* Phones: the stats sit two to a row. */
+/* Phones: the team head shrinks, and the stats sit two to a row. */
 @media (width < 40rem) {
+  /* The logo and name share a row; the line under them takes the full width. */
+  .team-head { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--sp-2) var(--sp-3); }
+  .team-head > .min-w-0 { display: contents; }
+  .team-head .person-head-title + p { grid-column: 1 / -1; margin-top: 0; }
+  .team-head-logo { width: 48px; height: 48px; }
+  img.team-head-logo { width: auto; max-width: 96px; }
+  .team-head .title { font-size: var(--fs-xl); line-height: var(--lh-xl); }
+
   /* Coming up: the day and time go on one line above the title, which gets the full width. */
   #coming-up-list .dash-row { flex-direction: column; gap: 0; }
   #coming-up-list .dash-row-when { flex-direction: row; gap: var(--sp-2); width: auto; }
@@ -51,6 +65,14 @@
 
 /* Phones: 2 lines a note, and the link is its icon alone, a finger-sized target. */
 @media (width < 40rem) {
+  /* The logo and name share a row; the line under them takes the full width. */
+  .team-head { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--sp-2) var(--sp-3); }
+  .team-head > .min-w-0 { display: contents; }
+  .team-head .person-head-title + p { grid-column: 1 / -1; margin-top: 0; }
+  .team-head-logo { width: 48px; height: 48px; }
+  img.team-head-logo { width: auto; max-width: 96px; }
+  .team-head .title { font-size: var(--fs-xl); line-height: var(--lh-xl); }
+
   .whiteboard-note { align-items: center; gap: var(--sp-1); padding-right: 0; }
   .whiteboard-text { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .whiteboard-note.is-open .whiteboard-text { display: block; }
