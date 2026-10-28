@@ -1,4 +1,4 @@
-defmodule Web.Settings.LettersLive do
+defmodule Web.Settings.TaxCreditLettersLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FileDrop
@@ -8,7 +8,7 @@ defmodule Web.Settings.LettersLive do
   alias App.Operation.SaveTeamLetterSettings
   alias App.Operation.SaveTeamSignature
 
-  # Settings' Tax credit letters tab, /teams/:subdomain/settings/letters: what every
+  # Settings' Tax credit letters tab, /teams/:subdomain/settings/tax-credit-letters: what every
   # letter prints about the team and who signs it. Hours tags, which decide the hours,
   # are their own tab.
   def mount(_params, _session, socket) do
@@ -78,7 +78,7 @@ defmodule Web.Settings.LettersLive do
 
   def render(assigns) do
     ~H"""
-    <.team_settings_tabs team={@current_team} current={:letters} />
+    <.team_settings_tabs team={@current_team} current={:tax_credit_letters} />
     <div class="measure">
       <p class="lead">What every tax credit letter prints about your team, and who signs it.</p>
       <p class="mb-6">Letters already made keep what they printed.</p>

@@ -1,4 +1,4 @@
-defmodule Web.TeamManagersLiveTest do
+defmodule Web.Settings.TeamAdminsLiveTest do
   use Web.ConnCase
 
   import App.DataFixtures
@@ -12,7 +12,7 @@ defmodule Web.TeamManagersLiveTest do
     _member = manager_fixture(team, %{name: "Mo Member", d4h_permission: 2})
     grant = TeamLoginGrant.grant!(team, "office@example.com", "role address")
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
 
     assert has_element?(lv, "#manager-#{editor.id}", "Editor")
     refute has_element?(lv, "#team-managers", "Mo Member")
@@ -25,7 +25,7 @@ defmodule Web.TeamManagersLiveTest do
 
     _sar_duty = manager_fixture(team, %{name: "SAR Duty", d4h_member_id: 900})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
 
     refute has_element?(lv, "#team-managers", "SAR Duty")
   end
@@ -34,7 +34,7 @@ defmodule Web.TeamManagersLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     _bot = manager_fixture(team, %{name: "Roster Bot", not_a_person: true})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
 
     refute has_element?(lv, "#team-managers", "Roster Bot")
   end
@@ -45,7 +45,7 @@ defmodule Web.TeamManagersLiveTest do
 
     kim = manager_fixture(team, %{name: "Kim Lee", d4h_member_id: 901})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/managers")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
 
     assert has_element?(lv, "#manager-#{kim.id}", "Kim Lee")
   end

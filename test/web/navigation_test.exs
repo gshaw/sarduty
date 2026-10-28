@@ -161,7 +161,7 @@ defmodule Web.NavigationTest do
                "take-attendance"
              ]
 
-      assert current(team_sections("/teams/squamish/settings/managers", opts)) == ["settings"]
+      assert current(team_sections("/teams/squamish/settings/team-admins", opts)) == ["settings"]
       assert current(team_sections("/teams/squamish/me/details", opts)) == ["me"]
       assert current(team_sections("/teams/squamish/members-x", opts)) == []
     end

@@ -7,9 +7,13 @@ enforces the top-level list and the held URLs.
 ## Rules
 
 - **Plural kebab-case nouns**: `/members`, `/tax-credit-letters`.
+- **A URL says what its page says**, in the glossary's words ([writing.md](writing.md)):
+  `/settings/team-admins` for the Team admins tab, not `managers`, and
+  `/settings/tax-credit-letters`, not `letters`. Both moved on 2026-10-28 with no
+  redirects.
 - **Local ids, never D4H ids**: `/members/42`. D4H ids stay in `d4h_*_id` columns.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
-  (`/teams/:subdomain/settings`, `/settings/managers`). The URL names
+  (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
 - **One URL per thing, for everyone on the team** (#406). A team admin and a member open
   the same `/teams/:subdomain/…` page; their role decides what it shows.

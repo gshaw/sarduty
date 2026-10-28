@@ -270,10 +270,10 @@ defmodule Web.Router do
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive
-      live "/teams/:subdomain/settings/managers", TeamManagersLive
+      live "/teams/:subdomain/settings/team-admins", Settings.TeamAdminsLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
       live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
-      live "/teams/:subdomain/settings/letters", Settings.LettersLive
+      live "/teams/:subdomain/settings/tax-credit-letters", Settings.TaxCreditLettersLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
       live "/teams/:subdomain/settings/places", Settings.PlaceCollectionLive
       live "/teams/:subdomain/settings/places/new", Settings.PlaceFormLive, :new

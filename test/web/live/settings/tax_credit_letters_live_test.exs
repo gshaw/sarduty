@@ -1,4 +1,4 @@
-defmodule Web.Settings.LettersLiveTest do
+defmodule Web.Settings.TaxCreditLettersLiveTest do
   use Web.ConnCase, async: true
 
   import App.DataFixtures
@@ -10,7 +10,8 @@ defmodule Web.Settings.LettersLiveTest do
   test "saves the signer's details, trimmed", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/letters")
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/tax-credit-letters")
 
     assert lv
            |> form("#letter-settings-form",
@@ -26,7 +27,8 @@ defmodule Web.Settings.LettersLiveTest do
   test "the signer's email must look like one", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/letters")
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/tax-credit-letters")
 
     assert lv
            |> form("#letter-settings-form", form: %{authorized_by_email: "president"})
@@ -50,7 +52,7 @@ defmodule Web.Settings.LettersLiveTest do
     end
 
     test "uploads as a PNG, shows a preview, and removes", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/letters")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/tax-credit-letters")
       refute has_element?(lv, "#signature-preview")
 
       upload(lv, png_fixture(1800, 400))
@@ -68,7 +70,7 @@ defmodule Web.Settings.LettersLiveTest do
     end
 
     test "a file that is not an image is not saved", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/letters")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/tax-credit-letters")
 
       upload(lv, "not an image")
 

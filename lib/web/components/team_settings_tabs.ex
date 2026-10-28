@@ -11,10 +11,10 @@ defmodule Web.Components.TeamSettingsTabs do
     required: true,
     values: [
       :general,
-      :managers,
+      :team_admins,
       :members,
       :member_logins,
-      :letters,
+      :tax_credit_letters,
       :hours_tags,
       :places,
       :chore_categories,
@@ -28,7 +28,7 @@ defmodule Web.Components.TeamSettingsTabs do
       <:tab navigate={~p"/teams/#{@team}/settings"} current={@current == :general}>
         General
       </:tab>
-      <:tab navigate={~p"/teams/#{@team}/settings/managers"} current={@current == :managers}>
+      <:tab navigate={~p"/teams/#{@team}/settings/team-admins"} current={@current == :team_admins}>
         Team admins
       </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/members"} current={@current == :members}>
@@ -40,7 +40,10 @@ defmodule Web.Components.TeamSettingsTabs do
       >
         Member logins
       </:tab>
-      <:tab navigate={~p"/teams/#{@team}/settings/letters"} current={@current == :letters}>
+      <:tab
+        navigate={~p"/teams/#{@team}/settings/tax-credit-letters"}
+        current={@current == :tax_credit_letters}
+      >
         Tax credit letters
       </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/hours-tags"} current={@current == :hours_tags}>
