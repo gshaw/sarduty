@@ -20,8 +20,8 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **AI agents' sets are old rows only** (#627). Until 2026-10-26 an agent connected
   through MCP proposed attendance changes, activity tags, and chores as source `agent`,
   and they waited under Proposed changes for a team admin to send (#216, #595). The MCP
-  is read-only now and that page is gone; the source and the `add_chore` action stay for
-  the rows already saved. See [mcp.md](mcp.md).
+  is read-only now and that page is gone; the `agent` source stays for the rows already
+  saved. Their chore proposals were deleted (2026-10-28). See [mcp.md](mcp.md).
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), or a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)). Adding or
