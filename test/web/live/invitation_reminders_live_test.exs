@@ -46,4 +46,33 @@ defmodule Web.InvitationRemindersLiveTest do
     assert %Member{invitation_reminders: false} = Repo.reload(member)
     assert build_conn() |> post("/reminders/made-up") |> response(404)
   end
+
+  describe "logged in" do
+    # A team admin of 2 teams, who last opened the other one.
+    setup %{conn: conn, member: member} do
+      other = team_fixture(%{name: "Alpine SAR"})
+      manager_fixture(Repo.preload(member, :team).team, %{email: "alex@example.com"})
+      manager_fixture(other, %{email: "alex@example.com"})
+      user = App.AccountsFixtures.user_fixture(%{email: "alex@example.com"})
+      user = user |> Ecto.Changeset.change(last_team_id: other.id) |> Repo.update!()
+      %{conn: log_in_user(conn, user)}
+    end
+
+    test "the bar names the link's team, and account settings need no login",
+         %{conn: conn, member: member} do
+      {:ok, lv, _html} = live(conn, ReplyLinks.reminders_path(member))
+      assert has_element?(lv, "#nav-area", "Coast Range SAR")
+
+      lv |> element("#reminders-off") |> render_click()
+      assert has_element?(lv, "#reminders-account", "Open account settings")
+      refute has_element?(lv, "#reminders-account + .hint")
+    end
+
+    test "a bad link opens account settings, not Log in", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/reminders/made-up")
+
+      assert has_element?(lv, ~s{#reminders-account[href="/account"]}, "Open account settings")
+      refute has_element?(lv, "#reminders-login")
+    end
+  end
 end

@@ -169,4 +169,43 @@ defmodule Web.ReplyLinkLiveTest do
 
     refute_received {:d4h_write, _id, _body}
   end
+
+  describe "logged in" do
+    # A team admin of 2 teams, who last opened the other one.
+    setup %{conn: conn, team: team} do
+      other = team_fixture(%{name: "Alpine SAR"})
+      manager_fixture(team, %{email: "alex@example.com"})
+      manager_fixture(other, %{email: "alex@example.com"})
+      user = App.AccountsFixtures.user_fixture(%{email: "alex@example.com"})
+      user = user |> Ecto.Changeset.change(last_team_id: other.id) |> Repo.update!()
+      %{conn: log_in_user(conn, user)}
+    end
+
+    test "the bar names the link's team, and Open activity needs no login",
+         %{conn: conn, member: member, activity: activity} do
+      {:ok, lv, _html} = live(conn, ReplyLinks.reply_path(member, activity, :yes))
+
+      assert has_element?(lv, "#nav-area", "Coast Range SAR")
+      assert has_element?(lv, "#reply-link-open", "Open activity")
+      refute has_element?(lv, "#reply-link-open + .hint")
+    end
+
+    test "on a team they don't open, the bar stays theirs and there is no Open activity",
+         %{conn: conn} do
+      team = team_fixture(%{name: "Pemberton SAR"})
+      member = member_fixture(team)
+      activity = activity_fixture(team, %{started_at: DateTime.add(DateTime.utc_now(), 1, :day)})
+      {:ok, lv, _html} = live(conn, ReplyLinks.reply_path(member, activity))
+
+      assert has_element?(lv, "#nav-area", "Alpine SAR")
+      refute has_element?(lv, "#reply-link-open")
+    end
+
+    test "a bad link opens activities, not Log in", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, "/replies/made-up")
+
+      assert has_element?(lv, "#reply-link-activities", "Open activities")
+      refute has_element?(lv, "#reply-link-login")
+    end
+  end
 end

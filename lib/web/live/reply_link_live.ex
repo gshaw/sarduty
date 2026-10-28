@@ -6,23 +6,28 @@ defmodule Web.ReplyLinkLive do
   alias App.Model.Attendance
   alias Service.Format
   alias Web.Components.Reply
+  alias Web.Navigation
   alias Web.ReplyLinks
 
   # The page a reminder's buttons open (#444): no login, only the link's token, for one
   # member and one activity. Opening it changes nothing, since some mail apps open every
   # link. It's a form with the email's answer selected (#488), posted to
   # Web.ReplyLinkController, so Send reply works before the page connects. It takes
-  # replies until the activity starts, and always offers the activity's own page, which
-  # needs a login.
+  # replies until the activity starts, and offers the activity's own page, which needs a
+  # login. Logged in to the link's team, the bar names it.
   def mount(%{"token" => token}, _session, socket) do
     socket =
       case ReplyLinks.find_reply(token) do
         {member, activity} ->
+          opens_team? = Navigation.opens_team?(socket.assigns, activity.team)
+
           assign(socket,
             page_title: activity.title,
             token: token,
             activity: activity,
             team: activity.team,
+            opens_team?: opens_team?,
+            current_team: if(opens_team?, do: activity.team, else: socket.assigns.current_team),
             invitation: Attendance.invitation(activity, member),
             now: DateTime.utc_now()
           )
@@ -69,15 +74,29 @@ defmodule Web.ReplyLinkLive do
   defp answer_param(nil), do: nil
   defp answer_param(answer), do: Atom.to_string(answer)
 
+  # A bad link names no team: the one logging in lands on, else the one they're a member of.
+  defp activities_team(%{current_team: nil, member_logins: [member | _rest]}), do: member.team
+  defp activities_team(assigns), do: assigns.current_team
+
   defp activity_path(team, activity), do: ~p"/teams/#{team}/activities/#{activity.id}"
 
   def render(%{activity: nil} = assigns) do
     ~H"""
     <h1 class="title">This link does not work</h1>
-    <p>Log in to reply to the activity.</p>
-    <p>
-      <.a id="reply-link-login" navigate={~p"/login"}>Log in</.a>
-    </p>
+    <%= if @current_user do %>
+      <p>Reply from the activity's page in SAR Duty.</p>
+      <p :if={activities_team(assigns)}>
+        <.a
+          id="reply-link-activities"
+          navigate={~p"/teams/#{activities_team(assigns)}/activities"}
+        >Open activities</.a>
+      </p>
+    <% else %>
+      <p>Log in to reply to the activity.</p>
+      <p>
+        <.a id="reply-link-login" navigate={~p"/login"}>Log in</.a>
+      </p>
+    <% end %>
     """
   end
 
@@ -144,9 +163,9 @@ defmodule Web.ReplyLinkLive do
       Replies closed when it started.
     </p>
 
-    <p :if={!@activity.deleted_at} class="mt-6 mb-0">
+    <p :if={!@activity.deleted_at and (!@current_user or @opens_team?)} class="mt-6 mb-0">
       <.a id="reply-link-open" href={activity_path(@team, @activity)}>Open activity</.a>
-      <span class="hint">(log in)</span>
+      <span :if={!@current_user} class="hint">(log in)</span>
     </p>
     """
   end
