@@ -288,16 +288,17 @@ The team's Dashboard, `/teams/:subdomain`
 - **Members see the team admin's page without its controls**: Next up, the team's next
   activity, with a maps link and how many signed up; Coming up, the team's next
   activities, each linked from its title; the team's year; and **For you to do**. The
-  refresh line says when SAR Duty last refreshed, with Open D4H.
+  line under the team's name says when SAR Duty last refreshed, with Open D4H.
 - **Replies** (#444): a member replies to an activity they're invited to from Next up and
   Coming up, until it starts. A team admin replies as their own member row, found by
   email, on a team with member logins off too. See [Replies](#replies).
 - **Take attendance** on Next up: team admins at any time, and members from 2 hours
   before the activity starts until 2 hours after it ends (#475,
   [taking-attendance.md](taking-attendance.md)).
-- **Team admins also get** Needs attention and Refresh now. Needs attention says when
-  there's attendance to send: members take it on their own, so nothing else would tell
-  them (#475, [taking-attendance.md](taking-attendance.md)).
+- **Team admins also get** Needs attention and Refresh now, which goes while a refresh
+  runs. Needs attention says when there's attendance to send: members take it on their
+  own, so nothing else would tell them (#475,
+  [taking-attendance.md](taking-attendance.md)).
   A team admin who is a member sees both For you to do and Needs attention, one above
   the other. A member's page doesn't work out Needs attention at all.
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:

@@ -50,11 +50,13 @@ defmodule Web.TeamDashboardLiveTest do
     assert html =~ team.name
   end
 
-  test "shows the team logo only once one is saved", %{conn: conn} do
+  test "shows the team's initials until it saves a logo", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    {:ok, team} = Team.update(team, %{name: "Coast Range SAR"})
 
     {:ok, lv, _html} = open(conn, user, team)
     refute has_element?(lv, "#team-logo")
+    assert has_element?(lv, "#team-initials", "CR")
 
     team_logo_fixture(team)
 
@@ -75,18 +77,26 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#attention-refresh", "No access key. Save one in team settings.")
   end
 
-  test "the refresh line keeps its links while a refresh runs", %{conn: conn} do
+  test "Refresh now goes while a refresh runs", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = open(conn, user, team)
     assert has_element?(lv, "#d4h-updated")
-    assert has_element?(lv, "#refresh-now:not([disabled])")
+    assert has_element?(lv, "#refresh-now")
 
     {:ok, team} = Team.update(team, %{d4h_refresh_result: "Refreshing"})
     {:ok, lv, _html} = open(conn, user, team)
 
     assert has_element?(lv, "#refreshing", "Refreshing…")
-    assert has_element?(lv, "#refresh-now[disabled]")
+    refute has_element?(lv, "#d4h-updated")
+    refute has_element?(lv, "#refresh-now")
+  end
+
+  test "Open D4H sits in the line under the team's name", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#team-head-facts #open-d4h[target=_blank]", "Open D4H")
   end
 
   test "an empty team has nothing coming up and nothing to do", %{conn: conn} do
@@ -356,7 +366,7 @@ defmodule Web.TeamDashboardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 
       assert has_element?(lv, "#d4h-updated")
-      assert has_element?(lv, "#refresh-status + p a", "Open D4H")
+      assert has_element?(lv, "#open-d4h", "Open D4H")
       refute has_element?(lv, "#refresh-now")
       refute has_element?(lv, "#needs-attention")
       assert has_element?(lv, "#next-up", "Rope practice")
