@@ -75,10 +75,10 @@ is left out, and so is its divider.
   while any link has a count.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)),
-  one topic each, in pairs (2026-10-27, #514): General (the team and its key) and Team
-  admins; Members (the Retiring group and the attendance check) and Features; Tax
-  credit letters (address and signer) and Hours tags; Places and Chore categories; then
-  MCP tokens. General held the letters and the attendance check until then, one long form
+  one topic each (2026-10-27, #514): General (the team and its key), Team admins, and
+  Features; Members (the Retiring group and the attendance check); Tax credit letters
+  (address and signer) and Hours tags; Places and Chore categories; then MCP tokens.
+  Features comes before the tabs it decides on (2026-10-28). General held the letters and the attendance check until then, one long form
   with four topics.
 - **Features is where a team turns things on** (2026-10-28): member logins, with chores
   and certificates under them, and the whiteboard, one switch each that saves when
