@@ -10,15 +10,25 @@ defmodule Web.QualificationCollectionLive do
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.QualificationFilterViewModel
   alias Service.StringHelpers
 
-  @views ["all", "expiring"]
+  @views ["all", "organization", "team", "expiring"]
 
+  # `?view=organization` and `team` split the list by owner (#652), shown only when the
+  # team has an organization that owns some.
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Qualifications")}
+    organization_name = Team.organization_name(socket.assigns.current_team)
+
+    {:ok,
+     assign(socket,
+       page_title: "Qualifications",
+       organization_name: organization_name || "Your organization",
+       has_organization?: organization_name != nil
+     )}
   end
 
   # `?view=expiring` lists each current member's qualifications that run out within the
@@ -41,27 +51,44 @@ defmodule Web.QualificationCollectionLive do
     now = DateTime.utc_now()
     until = DateTime.add(now, filter_options.within, :day)
     qualifications = list_qualifications_with_counts(current_team)
+    in_view = owner_view(view, qualifications)
     expiring = MemberQualificationAward.expiring(current_team.id, now, until)
-    matching = Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q))
+    matching = Enum.filter(in_view, &StringHelpers.matches?(&1.title, q))
     expiring_matching = filter_expiring(expiring, current_team, filter_options)
 
-    assign(socket,
+    socket
+    |> assign_owner_counts(qualifications)
+    |> assign(
       filter_options: filter_options,
       view: view,
       q: q,
       form: to_form(changeset, as: "form"),
-      all_count: length(qualifications),
       expiring_count: length(expiring),
       qualifications: matching,
       expiring: expiring_matching,
       repeats:
         if(view == :expiring,
           do: length(expiring_matching) == length(expiring),
-          else: length(matching) == length(qualifications)
+          else: length(matching) == length(in_view)
         ),
       shown_count: length(if view == :expiring, do: expiring_matching, else: matching)
     )
   end
+
+  defp assign_owner_counts(socket, qualifications) do
+    owned = owner_view(:organization, qualifications)
+
+    assign(socket,
+      all_count: length(qualifications),
+      organization_count: length(owned),
+      team_count: length(qualifications) - length(owned),
+      split?: socket.assigns.has_organization? and owned != []
+    )
+  end
+
+  defp owner_view(:organization, all), do: Enum.filter(all, & &1.organization_owned)
+  defp owner_view(:team, all), do: Enum.reject(all, & &1.organization_owned)
+  defp owner_view(_view, all), do: all
 
   defp filter_expiring(expiring, team, filter_options) do
     q = filter_options.q || ""
@@ -88,11 +115,11 @@ defmodule Web.QualificationCollectionLive do
     end
   end
 
-  defp count_text(:all, count),
-    do: Service.Format.count(count, one: "%d qualification", many: "%d qualifications")
-
   defp count_text(:expiring, count),
     do: Service.Format.count(count, one: "%d award expiring", many: "%d awards expiring")
+
+  defp count_text(_view, count),
+    do: Service.Format.count(count, one: "%d qualification", many: "%d qualifications")
 
   defp qualifications_path(team, filter_options, changes \\ []) do
     params =
@@ -125,7 +152,25 @@ defmodule Web.QualificationCollectionLive do
         current={@view == :all}
         count={@all_count}
       >
-        Qualifications
+        All
+      </:view>
+      <:view
+        :if={@split?}
+        id="qualifications-organization-link"
+        patch={qualifications_path(@current_team, @filter_options, view: "organization")}
+        current={@view == :organization}
+        count={@organization_count}
+      >
+        {@organization_name}
+      </:view>
+      <:view
+        :if={@split?}
+        id="qualifications-team-link"
+        patch={qualifications_path(@current_team, @filter_options, view: "team")}
+        current={@view == :team}
+        count={@team_count}
+      >
+        {@current_team.name}
       </:view>
       <:view
         id="qualifications-expiring-link"
@@ -172,7 +217,7 @@ defmodule Web.QualificationCollectionLive do
     />
 
     <.table
-      :if={@view == :all and @qualifications != []}
+      :if={@view != :expiring and @qualifications != []}
       id="qualification_collection"
       rows={@qualifications}
       row_id={&"qualification-#{&1.id}"}
@@ -180,6 +225,9 @@ defmodule Web.QualificationCollectionLive do
     >
       <:col :let={q} label="Qualification">
         <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
+        <span :if={q.organization_owned and @view != :organization} class="hint">
+          · {@organization_name}
+        </span>
       </:col>
       <:col :let={q} label="Active" class="w-px whitespace-nowrap" align="right">
         {q.active_count}
@@ -200,11 +248,11 @@ defmodule Web.QualificationCollectionLive do
       Qualifications come in with each refresh.
     </.empty_state>
     <.empty_state
-      :if={@view == :all and @all_count > 0 and @qualifications == []}
+      :if={@view != :expiring and @all_count > 0 and @qualifications == []}
       id="no-matching-qualifications"
-      title="No qualifications match"
+      title={if @q == "", do: "No qualifications of its own", else: "No qualifications match"}
     >
-      Change the search.
+      {if @q == "", do: "Each one is #{@organization_name}'s.", else: "Change the search."}
     </.empty_state>
     <.empty_state
       :if={@view == :expiring and @expiring_count > 0 and @expiring == []}
@@ -271,7 +319,13 @@ defmodule Web.QualificationCollectionLive do
         |> Map.get(q.id, [])
         |> MemberQualificationAward.split_by_member(now)
 
-      %{id: q.id, title: q.title, active_count: length(active), expired_count: length(expired)}
+      %{
+        id: q.id,
+        title: q.title,
+        organization_owned: q.organization_owned,
+        active_count: length(active),
+        expired_count: length(expired)
+      }
     end)
   end
 end

@@ -26,6 +26,19 @@ defmodule Web.MemberQualificationsLiveTest do
     %{first_aid: first_aid, old: old, latest: latest}
   end
 
+  test "the organization's qualification names it (#652)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    organization_fixture([team], %{short_name: "BCSARA"})
+    member = member_fixture(team)
+    gsar = qualification_fixture(team, %{title: "GSAR Team Member", organization_owned: true})
+    qualification_award_fixture(gsar, member)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/qualifications")
+
+    assert has_element?(lv, "#member-qualifications-#{gsar.id}", "GSAR Team Member · BCSARA")
+  end
+
   test "a team admin sees the member's qualifications, with each earlier award",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()

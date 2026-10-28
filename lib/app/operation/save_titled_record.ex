@@ -7,8 +7,8 @@ defmodule App.Operation.SaveTitledRecord do
 
   A group's local copy is written here from the service's answer, as group rules do, and
   the next sync confirms it. Two groups can't share a title in any case, counting the
-  organization's, and the organization's groups are never renamed or deleted: that might
-  change them for every team in it.
+  organization's, and the organization's groups and qualifications are never renamed or
+  deleted: that might change them for every team in it.
   """
 
   import Ecto.Query
@@ -84,7 +84,7 @@ defmodule App.Operation.SaveTitledRecord do
     end)
   end
 
-  defp check_owner(team, %Group{organization_owned: true}),
+  defp check_owner(team, %{organization_owned: true}),
     do:
       {:error,
        "Only #{Team.organization_name(team) || "your organization"} can rename or delete it."}

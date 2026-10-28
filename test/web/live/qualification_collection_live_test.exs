@@ -19,6 +19,41 @@ defmodule Web.QualificationCollectionLiveTest do
     assert html =~ "First Aid"
   end
 
+  test "the organization's qualifications name it (#652)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    organization_fixture([team], %{short_name: "BCSARA"})
+    owned = qualification_fixture(team, %{title: "GSAR Team Member", organization_owned: true})
+    own = qualification_fixture(team, %{title: "Driver Truck"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications")
+
+    assert has_element?(lv, "#qualification-#{owned.id}", "GSAR Team Member · BCSARA")
+    refute has_element?(lv, "#qualification-#{own.id}", "BCSARA")
+
+    # Tiles split them by owner. The organization's own list leaves out its name.
+    lv |> element("#qualifications-organization-link") |> render_click()
+    assert_patch(lv, ~p"/teams/#{team}/qualifications?view=organization")
+    assert has_element?(lv, "#qualification-#{owned.id}")
+    refute has_element?(lv, "#qualification-#{owned.id}", "BCSARA")
+    refute has_element?(lv, "#qualification-#{own.id}")
+
+    lv |> element("#qualifications-team-link") |> render_click()
+    assert has_element?(lv, "#qualification-#{own.id}")
+    refute has_element?(lv, "#qualification-#{owned.id}")
+  end
+
+  test "a team whose organization owns none has no owner tiles (#652)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    organization_fixture([team], %{short_name: "BCSARA"})
+    qualification_fixture(team, %{title: "Driver Truck"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications")
+
+    assert has_element?(lv, "#qualifications-all-link", "All")
+    refute has_element?(lv, "#qualifications-organization-link")
+    refute has_element?(lv, "#qualifications-team-link")
+  end
+
   test "renders empty qualifications page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
