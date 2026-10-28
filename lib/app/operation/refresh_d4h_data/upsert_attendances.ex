@@ -105,7 +105,11 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendances do
     RecordD4HChanges.record(:attendance, attendance, saved)
   end
 
-  # A no-show changed to attending in D4H or Records is no longer one (#648).
+  # A no-show changed to attending in D4H or Records, or given a new attending row
+  # there, is no longer one (#648). D4H accepts a second row for a member.
+  defp clear_no_show(nil, %Attendance{status: "attending"} = saved),
+    do: NoShow.clear(saved.activity_id, saved.member_id)
+
   defp clear_no_show(%Attendance{status: old}, %Attendance{status: "attending"} = saved)
        when old != "attending",
        do: NoShow.clear(saved.activity_id, saved.member_id)

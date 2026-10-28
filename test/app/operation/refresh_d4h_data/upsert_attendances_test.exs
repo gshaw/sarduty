@@ -93,6 +93,22 @@ defmodule App.Operation.RefreshD4HData.UpsertAttendancesTest do
       assert NoShow.get_all(ctx.activity) == []
     end
 
+    test "is cleared by a new attending row for them", ctx do
+      ctx.ours.id
+      |> UpsertAttendances.build_context()
+      |> UpsertAttendances.upsert(%AttendanceInfo{
+        d4h_attendance_id: System.unique_integer([:positive]),
+        d4h_activity_id: ctx.activity.d4h_activity_id,
+        d4h_member_id: ctx.member.d4h_member_id,
+        started_at: ctx.row.started_at,
+        finished_at: ctx.row.finished_at,
+        duration_in_minutes: 60,
+        status: "attending"
+      })
+
+      assert NoShow.get_all(ctx.activity) == []
+    end
+
     test "stays while D4H has them absent", ctx do
       upsert(ctx, "absent")
       assert [_no_show] = NoShow.get_all(ctx.activity)
