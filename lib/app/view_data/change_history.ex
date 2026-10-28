@@ -404,6 +404,12 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :remove_group_member} = row, _page),
     do: "Removed from the #{row_group(row)} group"
 
+  # Only on old rows: a chore an AI agent proposed (#595), before the MCP became read-only.
+  def describe_row(%ChangeSetRow{action: :add_chore, new_value: v}, _page) do
+    date = v["date"] |> Date.from_iso8601!() |> Service.Format.date_short()
+    "#{v["category"]} chore added for #{date}, #{Service.Format.duration(v["minutes"])}"
+  end
+
   defp row_group(%ChangeSetRow{change_set: %{group: %{title: title}}}), do: title
   defp row_group(_row), do: "deleted"
 

@@ -268,6 +268,21 @@ defmodule Web.MCPControllerTest do
       assert text =~ "Give from as a date"
     end
 
+    # Production, 2026-10-28: an agent sent `activity: "02241"` and got a 500.
+    test "a tool given a wrong or missing id says what to fix", %{conn: conn, team: team} = ctx do
+      for {tool, args} <- [
+            {"activity_history", %{"activity" => "02241"}},
+            {"activity_history", %{"activity_id" => "29841"}},
+            {"list_attendance", %{}},
+            {"member_history", %{"member" => 1}},
+            {"list_chores", %{"from" => "2026-01-01", "to" => "2026-01-31", "member_id" => "1"}}
+          ] do
+        {result, text} = call_tool(conn, ctx.token, team, tool, args)
+        assert result["isError"], tool
+        assert text =~ "as a number, SAR Duty's id from list_", tool
+      end
+    end
+
     test "every call is logged with its tool, arguments, and rows", ctx do
       %{conn: conn, team: team, token: token, user: user} = ctx
       args = %{"from" => "2026-01-01", "to" => "2026-01-31", "tag" => "Rope", "junk" => "x"}

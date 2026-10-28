@@ -6,6 +6,7 @@ defmodule App.MCP.Tool.MemberHistory do
   """
   @behaviour App.MCP.Tool
 
+  alias App.MCP.Args
   alias App.MCP.Tool.HistoryOutput
   alias App.Model.Member
   alias App.Model.Team
@@ -40,13 +41,17 @@ defmodule App.MCP.Tool.MemberHistory do
 
   @impl App.MCP.Tool
   def call(%Team{} = team, args, _now) do
-    case Repo.get_by(Member, id: args["member_id"], team_id: team.id) do
-      %Member{} = member ->
-        entries = team |> ChangeHistory.for_member(member) |> HistoryOutput.build(team.timezone)
-        {:ok, entries, length(entries)}
+    with {:ok, id} <- Args.id(args, "member_id", "list_members") do
+      case Repo.get_by(Member, id: id, team_id: team.id) do
+        %Member{} = member ->
+          entries =
+            team |> ChangeHistory.for_member(member) |> HistoryOutput.build(team.timezone)
 
-      nil ->
-        {:error, "No member #{inspect(args["member_id"])} on this team."}
+          {:ok, entries, length(entries)}
+
+        nil ->
+          {:error, "No member #{id} on this team."}
+      end
     end
   end
 end

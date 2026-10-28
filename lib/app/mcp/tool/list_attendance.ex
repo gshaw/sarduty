@@ -8,6 +8,7 @@ defmodule App.MCP.Tool.ListAttendance do
 
   import Ecto.Query
 
+  alias App.MCP.Args
   alias App.MCP.Output
   alias App.Model.Activity
   alias App.Model.Attendance
@@ -49,18 +50,20 @@ defmodule App.MCP.Tool.ListAttendance do
 
   @impl App.MCP.Tool
   def call(%Team{} = team, args, now) do
-    case Repo.get_by(Activity, id: args["activity_id"], team_id: team.id) do
-      %Activity{deleted_at: nil} = activity ->
-        activity = ChoreEvent.put_chore_minutes(activity)
-        rows = load_rows(team, activity)
-        output = build(activity, rows, Activity.hours_tags(team), team.timezone, now)
-        {:ok, output, length(output["rows"])}
+    with {:ok, id} <- Args.id(args, "activity_id", "list_activities") do
+      case Repo.get_by(Activity, id: id, team_id: team.id) do
+        %Activity{deleted_at: nil} = activity ->
+          activity = ChoreEvent.put_chore_minutes(activity)
+          rows = load_rows(team, activity)
+          output = build(activity, rows, Activity.hours_tags(team), team.timezone, now)
+          {:ok, output, length(output["rows"])}
 
-      %Activity{} ->
-        {:error, "Activity #{args["activity_id"]} was deleted in D4H, so it has no attendance."}
+        %Activity{} ->
+          {:error, "Activity #{id} was deleted in D4H, so it has no attendance."}
 
-      nil ->
-        {:error, "No activity #{inspect(args["activity_id"])} on this team."}
+        nil ->
+          {:error, "No activity #{id} on this team."}
+      end
     end
   end
 

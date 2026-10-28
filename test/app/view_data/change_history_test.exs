@@ -116,6 +116,24 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert reply.("ABSENT", :member) == "Can't make it to Training night"
   end
 
+  # An agent's chore proposal (#595) from before the MCP became read-only (#627).
+  test "an old chore row names its category, date, and time" do
+    row = %ChangeSetRow{
+      action: :add_chore,
+      member_id: 23,
+      new_value: %{
+        "category" => "Governance / Board",
+        "date" => "2026-10-26",
+        "minutes" => 90,
+        "description" => "Board meeting"
+      },
+      change_set: %App.Model.ChangeSet{source: :agent, activity: nil}
+    }
+
+    assert ChangeHistory.describe_row(row, :member) ==
+             "Governance / Board chore added for Oct 26, 2026, 1h 30m"
+  end
+
   test "D4H access changes use D4H's names" do
     assert describe_change(%{
              record_kind: :member,
