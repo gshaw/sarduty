@@ -30,7 +30,8 @@ defmodule App.ViewData.TeamAttention do
       certificates_item(rows.certificate_count),
       chores_item(rows.chore_count),
       chores_to_send_item(rows.chores_to_send),
-      attendance_to_send_item(rows.attendance_to_send)
+      attendance_to_send_item(rows.attendance_to_send),
+      no_shows_item(rows.no_shows)
     ]
     |> Enum.concat(retiring_items(rows))
     |> Enum.concat(untagged_items(rows, this_year))
@@ -325,6 +326,37 @@ defmodule App.ViewData.TeamAttention do
         detail: "The oldest is #{oldest.title}."
     }
   end
+
+  @doc """
+  No-shows nobody has followed up, from activities that started in the last week (#650),
+  from `NoShow.to_follow_up/3`, oldest first. The item opens the only activity, or the
+  oldest.
+  """
+  def no_shows_item([]), do: nil
+
+  def no_shows_item([activity]) do
+    %{
+      key: :no_shows,
+      level: :info,
+      activity_id: activity.id,
+      title: "#{no_shows_count(activity.count)} to follow up: #{activity.title}",
+      detail: "Check each one is OK, then mark them followed up.",
+      action: "Follow up"
+    }
+  end
+
+  def no_shows_item([oldest | _rest] = activities) do
+    total = activities |> Enum.map(& &1.count) |> Enum.sum()
+    from = activities |> length() |> Format.count(one: "%d activity", many: "%d activities")
+
+    %{
+      no_shows_item([oldest])
+      | title: "#{no_shows_count(total)} to follow up from #{from}",
+        detail: "The oldest is #{oldest.title}."
+    }
+  end
+
+  defp no_shows_count(count), do: Format.count(count, one: "%d no-show", many: "%d no-shows")
 
   defp untagged_item(%{count: 0}, _this_year, _service), do: nil
 

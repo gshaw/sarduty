@@ -17,6 +17,8 @@ defmodule App.Model.NoShow do
     belongs_to :member, Member
     belongs_to :followed_up_by_user, User
     field :followed_up_at, :utc_datetime_usec
+    # What they heard, set with the tick (#650).
+    field :note, :string
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -51,7 +53,10 @@ defmodule App.Model.NoShow do
     |> Repo.all()
   end
 
-  @doc "Ticks or unticks a no-show, found through the team. Nil when it isn't the team's."
+  @doc """
+  Marks a no-show followed up by `user` at `now` with an optional `note`, or not with
+  `nil`, found through the team. Nil when it isn't the team's.
+  """
   def set_followed_up(%Team{} = team, id, followed_up, %User{} = user, now) do
     case Repo.get_by(NoShow, id: id, team_id: team.id) do
       nil ->
@@ -59,11 +64,57 @@ defmodule App.Model.NoShow do
 
       no_show ->
         changes =
-          if followed_up,
-            do: [followed_up_at: now, followed_up_by_user_id: user.id],
-            else: [followed_up_at: nil, followed_up_by_user_id: nil]
+          case followed_up do
+            {:note, note} -> [followed_up_at: now, followed_up_by_user_id: user.id, note: note]
+            nil -> [followed_up_at: nil, followed_up_by_user_id: nil, note: nil]
+          end
 
-        no_show |> change(changes) |> Repo.update!()
+        no_show |> change(changes) |> Repo.update!() |> Repo.preload(:followed_up_by_user)
     end
+  end
+
+  @doc """
+  Deletes a no-show that wasn't one, found through the team (#650): no history, as the
+  history rule in docs/change-history.md says. Nil when it isn't the team's.
+  """
+  def remove(%Team{} = team, id) do
+    case Repo.get_by(NoShow, id: id, team_id: team.id) do
+      nil -> nil
+      no_show -> Repo.delete!(no_show)
+    end
+  end
+
+  @doc """
+  Activities that started from `since` to `now` with no-shows nobody has followed up, as
+  `%{id:, title:, count:}`, oldest first (#650).
+  """
+  def to_follow_up(%Team{} = team, since, now) do
+    NoShow
+    |> where([n], n.team_id == ^team.id and is_nil(n.followed_up_at))
+    |> at_activities(team.id, since, now)
+    |> group_by([n, a], a.id)
+    |> order_by([n, a], asc: a.started_at, asc: a.id)
+    |> select([n, a], %{id: a.id, title: a.title, count: count(n.id)})
+    |> Repo.all()
+  end
+
+  @doc "The member's no-shows at activities that started in `year`, newest first (#650)."
+  def for_member(%Member{} = member, year, timezone) do
+    {start, finish} = Service.YearRange.bounds(year, timezone)
+
+    NoShow
+    |> where([n], n.team_id == ^member.team_id and n.member_id == ^member.id)
+    |> at_activities(member.team_id, start, DateTime.add(finish, -1, :second))
+    |> order_by([n, a], desc: a.started_at, desc: n.id)
+    |> preload([n, a], activity: a, followed_up_by_user: [])
+    |> Repo.all()
+  end
+
+  # The team's activities not deleted that started from `from` to `to`, joined as `a`.
+  defp at_activities(query, team_id, from, to) do
+    query
+    |> join(:inner, [n], a in assoc(n, :activity))
+    |> where([n, a], a.team_id == ^team_id and is_nil(a.deleted_at))
+    |> where([n, a], a.started_at >= ^from and a.started_at <= ^to)
   end
 end

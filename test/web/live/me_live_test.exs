@@ -6,6 +6,7 @@ defmodule Web.MeLiveTest do
 
   alias App.AccountsFixtures
   alias App.Model.MemberCard
+  alias App.Model.NoShow
   alias App.Operation.SetTeamMemberLogins
   alias App.Repo
 
@@ -50,6 +51,16 @@ defmodule Web.MeLiveTest do
   end
 
   describe "Your membership" do
+    # A running tally reads as a scolding, and counts members who said they were sick.
+    test "never shows the member's no-shows (#650)", %{conn: conn, team: team, member: member} do
+      team |> activity_fixture(%{title: "MIT training"}) |> NoShow.record!(member)
+      lv = open(conn, ~p"/teams/#{team}/me")
+
+      refute has_element?(lv, "#no-shows")
+      refute has_element?(lv, "#no-show-count")
+      refute render(lv) =~ ~r/no-show/i
+    end
+
     test "is the member's own page in the team's space", %{conn: conn, team: team, member: member} do
       lv = open(conn, ~p"/teams/#{team}/me")
 

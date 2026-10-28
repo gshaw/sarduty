@@ -63,10 +63,22 @@ defmodule Web.ActivityAttendanceLive do
     end
   end
 
-  # `done` is the state the click asks for, since a checkbox's click carries no state.
-  def handle_event("follow-up", %{"id" => id, "done" => done}, socket) do
+  # Followed up, with what they heard if anything (#650).
+  def handle_event("follow-up", %{"id" => id} = params, socket) do
     %{current_team: team, current_user: user} = socket.assigns
-    FollowUpNoShow.call(team, id, done == "true", user, DateTime.utc_now())
+    FollowUpNoShow.call(team, id, {:note, params["note"]}, user, DateTime.utc_now())
+    {:noreply, load_no_shows(socket)}
+  end
+
+  def handle_event("undo-follow-up", %{"id" => id}, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+    FollowUpNoShow.call(team, id, nil, user, DateTime.utc_now())
+    {:noreply, load_no_shows(socket)}
+  end
+
+  # For a member who wasn't a no-show: they told someone, or signed up by mistake.
+  def handle_event("remove-no-show", %{"id" => id}, socket) do
+    FollowUpNoShow.remove(socket.assigns.current_team, id)
     {:noreply, load_no_shows(socket)}
   end
 
@@ -138,6 +150,12 @@ defmodule Web.ActivityAttendanceLive do
       "Nothing to send: the activity is published, so its attendance is final. " <>
         D4H.unpublish_text(team)
 
+  # "Followed up by sam@example.com, Oct 26, 19:05"
+  defp followed_up_text(no_show, timezone) do
+    by = if no_show.followed_up_by_user, do: " by #{no_show.followed_up_by_user.email}"
+    "Followed up#{by}, #{Service.Format.month_day_time(no_show.followed_up_at, timezone)}"
+  end
+
   defp load_no_shows(socket),
     do: assign(socket, no_shows: NoShow.get_all(socket.assigns.activity))
 
@@ -200,7 +218,8 @@ defmodule Web.ActivityAttendanceLive do
     ~H"""
     <p>
       These members signed up and did not arrive. Check that each one is OK, then mark them
-      followed up.
+      followed up. Remove anyone who was not a no-show: they told someone, or signed up by
+      mistake.
     </p>
     <.table
       id="no-show-list"
@@ -224,19 +243,51 @@ defmodule Web.ActivityAttendanceLive do
         <.a :if={no_show.member.email} href={"mailto:#{no_show.member.email}"}>{no_show.member.email}</.a>
       </:col>
       <:col :let={no_show} label="Followed up" class="stack-full">
-        <label class="flex items-center gap-2 whitespace-nowrap min-h-6">
-          <input
-            type="checkbox"
-            id={"follow-up-#{no_show.id}"}
-            phx-click="follow-up"
+        <div :if={no_show.followed_up_at} id={"followed-up-#{no_show.id}"}>
+          <p :if={no_show.note} class="mb-0">{no_show.note}</p>
+          <p class="hint mb-1">
+            {followed_up_text(no_show, @activity.team.timezone)}
+          </p>
+          <.button
+            id={"undo-follow-up-#{no_show.id}"}
+            size={:sm}
+            phx-click="undo-follow-up"
             phx-value-id={no_show.id}
-            phx-value-done={to_string(no_show.followed_up_at == nil)}
-            checked={no_show.followed_up_at != nil}
+          >
+            Undo
+          </.button>
+        </div>
+        <form
+          :if={!no_show.followed_up_at}
+          id={"follow-up-form-#{no_show.id}"}
+          phx-submit="follow-up"
+          phx-value-id={no_show.id}
+          class="flex flex-wrap items-center gap-2"
+        >
+          <input
+            type="text"
+            name="note"
+            class="input-sm"
+            size="28"
+            maxlength="200"
+            aria-label={"What you heard from #{no_show.member.name} (optional)"}
+            placeholder="What you heard (optional)"
           />
-          <span :if={no_show.followed_up_at} class="hint">
-            {Service.Format.month_day_time(no_show.followed_up_at, @activity.team.timezone)}
-          </span>
-        </label>
+          <.button id={"follow-up-#{no_show.id}"} size={:sm}>Mark followed up</.button>
+        </form>
+      </:col>
+      <:col :let={no_show} label="" class="w-px whitespace-nowrap">
+        <.button
+          id={"remove-no-show-#{no_show.id}"}
+          size={:sm}
+          variant={:danger}
+          phx-click="remove-no-show"
+          phx-value-id={no_show.id}
+          data-confirm={"Remove #{no_show.member.name} from No-shows? Do this when they were not a no-show. They stop counting on their Standing tab."}
+          data-confirm-button="Remove"
+        >
+          Remove
+        </.button>
       </:col>
     </.table>
     """

@@ -10,6 +10,7 @@ defmodule Web.MemberStandingLive do
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
+  alias App.Model.NoShow
   alias App.Model.Standing
   alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
@@ -173,9 +174,12 @@ defmodule Web.MemberStandingLive do
     today = Service.Period.today(now, team.timezone)
     periods = MemberAwayPeriod.for_member(member)
     retiring? = team |> Standing.retiring_ids() |> MapSet.member?(member.id)
+    year = Service.YearRange.year_in(now, team.timezone)
 
     assign(socket,
       today: today,
+      year: year,
+      no_shows: NoShow.for_member(member, year, team.timezone),
       periods: periods,
       check_ins: MemberCheckIn.for_member(member),
       standing: Standing.of(member, periods, retiring?, today, now),
@@ -389,6 +393,36 @@ defmodule Web.MemberStandingLive do
         </.form>
       </section>
 
+      <%!-- Team admins only: Your membership never shows a tally (#650). --%>
+      <section id="no-shows" class="mt-8">
+        <h2 class="heading">No-shows</h2>
+        <p class="hint">
+          Activities {@member.name} signed up for and did not arrive at. Following one up
+          does not restart their attendance clock.
+        </p>
+        <p id="no-show-count">
+          {Service.Format.count(length(@no_shows), one: "%d no-show", many: "%d no-shows")} in {@year}.
+        </p>
+        <.table
+          :if={@no_shows != []}
+          id="no-show-list"
+          rows={@no_shows}
+          row_id={&"no-show-#{&1.id}"}
+          class="table-striped"
+        >
+          <:col :let={no_show} label="Activity">
+            <.a navigate={~p"/teams/#{@current_team}/activities/#{no_show.activity.id}/attendance"}>{no_show.activity.title}</.a>
+          </:col>
+          <:col :let={no_show} label="Day" class="w-px whitespace-nowrap">
+            {Service.Format.date_short(no_show.activity.started_at, @member.team.timezone)}
+          </:col>
+          <:col :let={no_show} label="Followed up">
+            {no_show.note}
+            <div class="text-text-muted">{no_show_followed_up(no_show, @member.team.timezone)}</div>
+          </:col>
+        </.table>
+      </section>
+
       <section id="not-a-person-section" class="mt-8">
         <.live_component
           module={NotAPersonSwitch}
@@ -417,6 +451,13 @@ defmodule Web.MemberStandingLive do
   # "away period from Sep 8, 2026 (Parental leave)", for a confirmation that names it.
   defp period_name(period),
     do: "away period from #{Service.Format.date_short(period.starts_on)} (#{period.reason})"
+
+  defp no_show_followed_up(%{followed_up_at: nil}, _timezone), do: "Not followed up"
+
+  defp no_show_followed_up(no_show, timezone) do
+    by = if no_show.followed_up_by_user, do: " by #{no_show.followed_up_by_user.email}"
+    "Followed up#{by}, #{Service.Format.date_short(no_show.followed_up_at, timezone)}"
+  end
 
   defp check_in_by(%{user: %{email: email}}), do: "Recorded by #{email}"
   defp check_in_by(_check_in), do: "Recorded by a team admin"

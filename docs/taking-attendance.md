@@ -184,8 +184,23 @@ checkboxes. Sending reads D4H again, plans again, and sends the kept changes as 
 When a send marks a member absent who had signed up (D4H's `ATTENDING`), SAR Duty
 records a no-show; a member who never replied isn't one
 ([NoShow](../lib/app/model/no_show.ex)). The Attendance page lists them with phone and
-email, and a team admin ticks each one followed up once they know the member is OK.
-Sending again doesn't add a second row.
+email, and a team admin marks each one followed up once they know the member is OK, with
+what they heard if anything ("sick, told the trainer"). The page shows who did it and
+when. Sending again doesn't add a second row.
+
+Following up (#650):
+
+- **Needs attention** lists no-shows nobody followed up from activities that started in
+  the last 7 days, and opens the only activity or the oldest. Older ones drop off, so
+  nobody ticks a box just to clear the line.
+- **Remove** deletes a no-show that wasn't one: they told someone, or signed up by
+  mistake. A plain delete, with no history
+  ([change-history.md](change-history.md#what-gets-history)). Sending again doesn't bring
+  it back: D4H has the member absent, so the plan offers nothing for them.
+- **The member's Standing tab** counts their no-shows this year and lists each, for team
+  admins only. Removed ones don't count. Your membership never shows them.
+- A follow-up is not a check-in: it never restarts the attendance clock. And nothing
+  clears a no-show because the member came to a later activity.
 
 A member who turns out attended after all stops being a no-show (#648): a later send
 from the door that marks them attended clears it at once, and the sync clears it when

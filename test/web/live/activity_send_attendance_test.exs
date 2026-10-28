@@ -154,27 +154,56 @@ defmodule Web.ActivitySendAttendanceTest do
     refute has_element?(lv, "#no-shows")
   end
 
-  test "a team admin marks a no-show followed up, and can undo it", ctx do
+  test "a team admin marks a no-show followed up with what they heard, and can undo it",
+       ctx do
     no_show = NoShow.record!(ctx.activity, ctx.sam)
     lv = open(ctx)
 
-    lv |> element("#follow-up-#{no_show.id}") |> render_click()
-    assert Repo.reload(no_show).followed_up_at
-    assert Repo.reload(no_show).followed_up_by_user_id == ctx.user.id
-    assert has_element?(lv, "#follow-up-#{no_show.id}[checked]")
+    lv
+    |> form("#follow-up-form-#{no_show.id}", %{note: "  sick, told the trainer "})
+    |> render_submit()
 
-    lv |> element("#follow-up-#{no_show.id}") |> render_click()
-    refute Repo.reload(no_show).followed_up_at
+    assert %{note: "sick, told the trainer"} = followed = Repo.reload(no_show)
+    assert followed.followed_up_at
+    assert followed.followed_up_by_user_id == ctx.user.id
+    assert has_element?(lv, "#followed-up-#{no_show.id}", "sick, told the trainer")
+    assert has_element?(lv, "#followed-up-#{no_show.id}", "Followed up by #{ctx.user.email}")
+
+    lv |> element("#undo-follow-up-#{no_show.id}") |> render_click()
+    assert %{followed_up_at: nil, note: nil} = Repo.reload(no_show)
+    assert has_element?(lv, "#follow-up-form-#{no_show.id}")
   end
 
-  test "another team's no-show can't be changed", ctx do
+  test "the note is optional", ctx do
+    no_show = NoShow.record!(ctx.activity, ctx.sam)
+    lv = open(ctx)
+
+    lv |> form("#follow-up-form-#{no_show.id}", %{note: " "}) |> render_submit()
+    assert %{note: nil, followed_up_at: %DateTime{}} = Repo.reload(no_show)
+  end
+
+  test "a team admin removes a member who wasn't a no-show", ctx do
+    no_show = NoShow.record!(ctx.activity, ctx.sam)
+    lv = open(ctx)
+
+    assert lv |> element("#remove-no-show-#{no_show.id}") |> render() =~
+             ~s(data-confirm-button="Remove")
+
+    lv |> element("#remove-no-show-#{no_show.id}") |> render_click()
+    refute Repo.reload(no_show)
+    refute has_element?(lv, "#no-shows")
+  end
+
+  test "another team's no-show can't be changed or removed", ctx do
     other_team = team_fixture()
     other_activity = activity_fixture(other_team)
     other = NoShow.record!(other_activity, member_fixture(other_team))
     lv = open(ctx)
 
-    render_click(lv, "follow-up", %{"id" => other.id, "done" => "true"})
+    render_submit(lv, "follow-up", %{"id" => other.id, "note" => "ok"})
     refute Repo.reload(other).followed_up_at
+    render_click(lv, "remove-no-show", %{"id" => other.id})
+    assert Repo.reload(other)
   end
 
   test "sending twice records a no-show once", ctx do
