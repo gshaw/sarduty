@@ -47,7 +47,7 @@ defmodule Web.CertificateCollectionLive do
         <.button
           id="certificate-add"
           variant={:success}
-          navigate={~p"/teams/#{@current_team}/me/certificates/new"}
+          navigate={~p"/teams/#{@current_team}/certificates/new"}
         >
           Add a certificate
         </.button>

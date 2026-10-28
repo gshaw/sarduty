@@ -77,8 +77,8 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/whiteboard",
       "/teams/#{s}/me",
       "/teams/#{s}/me/activities",
-      "/teams/#{s}/me/certificates/new",
-      "/teams/#{s}/me/certificates/#{certificate.id}/edit",
+      "/teams/#{s}/certificates/new",
+      "/teams/#{s}/certificates/#{certificate.id}/edit",
       "/teams/#{s}/me/details"
     ]
 

@@ -1,5 +1,9 @@
-defmodule Web.MeCertificateFormLive do
-  use Web, {:live_view_app_layout, access: :member, view_events: ["validate", "cancel-upload"]}
+defmodule Web.CertificateFormLive do
+  use Web,
+      {:live_view_app_layout,
+       access: :team,
+       view_events: ["validate", "cancel-upload"],
+       member_events: ["save", "delete"]}
 
   import Web.Components.FileDrop
 
@@ -13,12 +17,14 @@ defmodule Web.MeCertificateFormLive do
   alias Web.CertificateText
 
   # A member sends a certificate (#493), or changes one while it waits:
-  # /teams/:subdomain/me/certificates/new, with `?qualification=<id>` to start on one,
-  # and /me/certificates/:id/edit. The file comes first; the qualification is optional,
-  # since a team admin picks it from the certificate when the member is not sure. The
-  # expiry fills in from the qualification (Web.CertificateExpiry).
+  # /teams/:subdomain/certificates/new, with `?qualification=<id>` to start on one, and
+  # /certificates/:id/edit. The same URLs for a team admin who is a member, from
+  # Certificates (#645); anyone else is not found. The file comes first; the qualification
+  # is optional, since a team admin picks it from the certificate when the member is not
+  # sure. The expiry fills in from the qualification (Web.CertificateExpiry).
   def mount(params, _session, socket) do
     member = socket.assigns.current_member
+    if !member, do: raise(Web.Status.NotFound)
     if !Team.certificates?(member.team), do: raise(Web.Status.NotFound)
     certificate = if id = params["id"], do: Certificate.find_for_member!(member, id)
     if certificate && !Certificate.member_can_change?(certificate), do: raise(Web.Status.NotFound)
@@ -107,7 +113,7 @@ defmodule Web.MeCertificateFormLive do
         <:current :if={@certificate && @uploads.certificate.entries == []}>
           <p id="certificate-sent-file" class="hint mb-0">
             Sent: <.a
-              href={~p"/teams/#{@member.team}/me/certificates/#{@certificate.id}/file"}
+              href={~p"/teams/#{@member.team}/certificates/#{@certificate.id}/file"}
               target="_blank"
             >{@certificate.file_name}</.a>, {Format.file_size(@certificate.file_size)}. Select a file to send another.
           </p>

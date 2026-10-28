@@ -551,8 +551,7 @@ defmodule Web.TeamDashboardLive do
       <.a
         navigate={
           if @certificates?,
-            do:
-              ~p"/teams/#{@team}/me/certificates/new?#{[qualification: @item.award.qualification_id]}",
+            do: ~p"/teams/#{@team}/certificates/new?#{[qualification: @item.award.qualification_id]}",
             else: ~p"/teams/#{@team}/me"
         }
         class="font-semibold"

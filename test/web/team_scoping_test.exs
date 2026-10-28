@@ -36,9 +36,8 @@ defmodule Web.TeamScopingTest do
     # Certificates (#493): this team has them on, so these find the record through it.
     "/teams/:subdomain/certificates/:id",
     "/teams/:subdomain/certificates/:id/file",
-    # A member's own certificate. Web.MeCertificateFormLiveTest covers another member's.
-    "/teams/:subdomain/me/certificates/:id/edit",
-    "/teams/:subdomain/me/certificates/:id/file",
+    # A member's own certificate. Web.CertificateFormLiveTest covers another member's.
+    "/teams/:subdomain/certificates/:id/edit",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -240,11 +239,8 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/certificates/:id/file", s, o),
     do: ~p"/teams/#{s}/certificates/#{o.certificate.id}/file"
 
-  defp path_for("/teams/:subdomain/me/certificates/:id/edit", s, o),
-    do: ~p"/teams/#{s}/me/certificates/#{o.certificate.id}/edit"
-
-  defp path_for("/teams/:subdomain/me/certificates/:id/file", s, o),
-    do: ~p"/teams/#{s}/me/certificates/#{o.certificate.id}/file"
+  defp path_for("/teams/:subdomain/certificates/:id/edit", s, o),
+    do: ~p"/teams/#{s}/certificates/#{o.certificate.id}/edit"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

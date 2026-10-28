@@ -9,9 +9,13 @@ team starts with it off.
 ## Sending
 
 A member sends one from Your membership, Add a certificate:
-`/teams/:subdomain/me/certificates/new`
-([MeCertificateFormLive](../lib/web/live/me_certificate_form_live.ex),
-[SaveCertificate](../lib/app/operation/save_certificate.ex)).
+`/teams/:subdomain/certificates/new`
+([CertificateFormLive](../lib/web/live/certificate_form_live.ex),
+[SaveCertificate](../lib/app/operation/save_certificate.ex)). A team admin who is a member
+gets the same button on Certificates (#645). The form and the file have one URL each for
+everyone: `/certificates/:id/edit` for the member's own while it waits, and
+`/certificates/:id/file`, which gives a team admin any of the team's and anyone else only
+their own. They were under `/me` until 2026-10-28, gone with no redirects.
 
 - **The file first**, then the qualification, the dates, and a note.
 - **The qualification is optional.** A team has over 100, and members are not always

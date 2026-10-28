@@ -290,7 +290,7 @@ defmodule Web.MeLive do
       <.heading_row>
         <h2 class="heading">Qualifications</h2>
         <:action :if={@certificates}>
-          <.a id="certificate-add" navigate={~p"/teams/#{@team}/me/certificates/new"}>Add a certificate</.a>
+          <.a id="certificate-add" navigate={~p"/teams/#{@team}/certificates/new"}>Add a certificate</.a>
         </:action>
       </.heading_row>
       <.empty_state :if={@rows == []} id="no-qualifications" title="No qualifications yet">
@@ -352,7 +352,7 @@ defmodule Web.MeLive do
     <%= if @certificate.status == :waiting and Certificate.member_can_change?(@certificate) do %>
       <.a
         id={"certificate-edit-#{@certificate.id}"}
-        navigate={~p"/teams/#{@team}/me/certificates/#{@certificate.id}/edit"}
+        navigate={~p"/teams/#{@team}/certificates/#{@certificate.id}/edit"}
       >{CertificateText.title(@certificate)}</.a>
     <% else %>
       {CertificateText.title(@certificate)}

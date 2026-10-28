@@ -318,11 +318,16 @@ defmodule Web.CertificateLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#certificate-add[href="/teams/#{ctx.team.subdomain}/me/certificates/new"]}
+             ~s{#certificate-add[href="/teams/#{ctx.team.subdomain}/certificates/new"]}
            )
 
     admin = App.AccountsFixtures.user_fixture() |> make_admin()
-    {:ok, lv, _html} = live(log_in_user(build_conn(), admin), ~p"/teams/#{ctx.team}/certificates")
+    admin_conn = log_in_user(build_conn(), admin)
+    {:ok, lv, _html} = live(admin_conn, ~p"/teams/#{ctx.team}/certificates")
     refute has_element?(lv, "#certificate-add")
+
+    assert_raise Web.Status.NotFound, fn ->
+      live(admin_conn, ~p"/teams/#{ctx.team}/certificates/new")
+    end
   end
 end
