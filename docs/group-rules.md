@@ -87,7 +87,7 @@ and [SetGroupMember](../lib/app/operation/set_group_member.ex) refuses it too.
 deleting one might change it for every team in the organization, so SAR Duty never does,
 on the page or in SaveTitledRecord. Adding and removing members is fine: the team's key
 can, and the membership belongs to the team (checked live 2026-10-25). Their titles carry
-the organization's short name, "Aircraft · BCSARA".
+the organization's short name, "Aircraft · BCSARA". Qualifications work the same way.
 
 **Many at once (#547).** On the Members list a team admin ticks members, picks a group
 kept by hand, and adds them to it or removes them from it: filter by whatever picks them
@@ -233,4 +233,5 @@ reason, all ticked, and how old the data is, with a button to refresh from D4H.
   the last ten.
 
 The groups list shows which groups have rules, and how many changes are pending or that
-a rule is broken. Automatic mode, stage 4 of #20, should go through the same operation.
+a rule is broken. Its Out of step tile keeps the groups with either (#652), and two
+tiles split the list into the organization's groups and the team's own. Automatic mode, stage 4 of #20, should go through the same operation.
