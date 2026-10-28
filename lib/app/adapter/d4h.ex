@@ -864,7 +864,13 @@ defmodule App.Adapter.D4H do
   """
   def create_activity(context, kind, attrs) when kind in ["event", "exercise", "incident"] do
     with {:ok, activity} <-
-           write(context, :post, "/#{kind}s", activity_json(attrs), &D4H.Activity.build/1) do
+           write(
+             context,
+             :post,
+             "/#{kind}s",
+             attrs |> Map.put_new("tracking_number", nil) |> activity_json(),
+             &D4H.Activity.build/1
+           ) do
       # The activity exists now, so this answers with it whatever its tags and published
       # flag do: a failed create would be tried again and make a second one.
       case finish_activity(context, kind, activity.d4h_activity_id, attrs) do
@@ -1202,9 +1208,17 @@ defmodule App.Adapter.D4H do
     json = rename(attrs, @activity_fields)
 
     json
+    |> put_tracking_number()
     |> put_activity_address(attrs)
     |> put_activity_location(attrs)
   end
+
+  # D4H won't publish an activity whose tracking number is null: it answers 409 "cannot
+  # be marked ready for approval or published" (South Fraser, 2026-10-28). So none is "".
+  defp put_tracking_number(%{"trackingNumber" => nil} = json),
+    do: Map.put(json, "trackingNumber", "")
+
+  defp put_tracking_number(json), do: json
 
   # The place is the whole address, so the other parts are emptied. D4H refuses null in
   # them (400 "malformed"), so empty is "".

@@ -54,6 +54,7 @@ defmodule App.Operation.BuildChoreEventTest do
              "title" => "Chores: Equipment maintenance, October 2026",
              "started_at" => @start,
              "finished_at" => @start,
+             "tracking_number" => "",
              "full_team" => false
            } = create.new_value
 
