@@ -61,7 +61,9 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   Settings → Members (`teams.retiring_d4h_group_id`). D4H refuses to retire a member who
   holds the team's equipment, so a member who leaves stays current until every item is
   back. Read from `group_members`, never stored, and no job. SAR Duty leaves retiring
-  members out of what Not a person leaves out (below), and out of reminders too. The
+  members out of what Not a person leaves out (below), out of reminders, an
+  organization's member totals, and team admin email: once retiring, they no longer
+  count as a member (Andrew, 2026-10-28). The
   Retiring group can't have group rules, since "Standing is Active" on it would take
   out every member, and settings offer only groups without them. If D4H deletes the
   group, nobody is Retiring and Needs attention says so until a team admin picks

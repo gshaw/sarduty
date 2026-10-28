@@ -41,6 +41,7 @@ defmodule App.ViewData.TeamSummary do
     |> where([m], m.team_id in ^ids and m.d4h_permission in [0, 1] and not is_nil(m.email))
     |> Member.people_query()
     |> Member.current_query(now)
+    |> Member.not_retiring_query()
     |> select([m], {m.team_id, m.d4h_member_id, m.email})
     |> Repo.all()
     |> Enum.reject(fn {team_id, d4h_id, _email} -> key_members[team_id] == d4h_id end)
@@ -128,7 +129,10 @@ defmodule App.ViewData.TeamSummary do
     end)
   end
 
-  @doc "Each team's current members who are people. `%{team_id => count}`."
+  @doc """
+  Each team's current members who are people and not retiring (#514), as the team's own
+  Dashboard counts them. `%{team_id => count}`.
+  """
   def member_counts(teams, now) do
     ids = Enum.map(teams, & &1.id)
 
@@ -136,6 +140,7 @@ defmodule App.ViewData.TeamSummary do
     |> where([m], m.team_id in ^ids)
     |> Member.current_query(now)
     |> Member.people_query()
+    |> Member.not_retiring_query()
     |> group_by([m], m.team_id)
     |> select([m], {m.team_id, count(m.id)})
     |> Repo.all()
