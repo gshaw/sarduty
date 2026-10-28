@@ -547,7 +547,12 @@ defmodule Web.ActivityLiveTest do
       activity = activity_fixture(team, %{title: "Rope practice", started_at: hours_from_now(48)})
       conn = get(conn, ~p"/teams/#{team}/activities/#{activity.id}/calendar")
 
-      assert response(conn, 200) =~ "SUMMARY:Rope practice"
+      ics = response(conn, 200)
+      assert ics =~ "SUMMARY:Rope practice"
+
+      assert ics =~
+               "URL:#{Web.Endpoint.url()}/teams/#{team.subdomain}/activities/#{activity.id}\r\n"
+
       assert [content_type] = get_resp_header(conn, "content-type")
       assert content_type =~ "text/calendar"
     end
