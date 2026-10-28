@@ -142,7 +142,7 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <.person_head id="team-head" class="mb-6" name={@current_team.name}>
+    <.person_head id="team-head" class="team-head mb-6" name={@current_team.name}>
       <:picture>
         <img
           :if={@has_logo}
@@ -238,7 +238,7 @@ defmodule Web.TeamDashboardLive do
         Refresh now
       </.button>
     </span>
-    <span :if={!D4H.records?(@team)}>
+    <span :if={!D4H.records?(@team)} class="whitespace-nowrap">
       <span aria-hidden="true">·</span>
       <.a id="open-d4h" external={true} href={D4H.build_url(@team, "/dashboard")}>Open {D4H.service_name(
         @team
