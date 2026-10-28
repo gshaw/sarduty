@@ -59,6 +59,19 @@ defmodule Web.NavigationTest do
     end
   end
 
+  describe "opens_team?/2" do
+    test "a team admin, a member who logs in, or a SAR Duty admin; never logged out" do
+      user = %User{is_admin: false}
+      assigns = %{current_user: user, managed_teams: [], member_logins: []}
+
+      assert Navigation.opens_team?(%{assigns | managed_teams: [@team]}, @team)
+      assert Navigation.opens_team?(%{assigns | member_logins: [%Member{team_id: 1}]}, @team)
+      assert Navigation.opens_team?(%{assigns | current_user: %User{is_admin: true}}, @team)
+      refute Navigation.opens_team?(%{assigns | managed_teams: [@pemberton]}, @team)
+      refute Navigation.opens_team?(%{assigns | current_user: nil}, @team)
+    end
+  end
+
   describe "sections/3" do
     test "a member sees Dashboard, Activities and Take attendance, Members and Milestones, and Your membership" do
       sections = team_sections("/teams/squamish/me", member?: true, chores: 2)

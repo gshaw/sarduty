@@ -254,6 +254,20 @@ defmodule Web.Navigation do
     end
   end
 
+  @doc """
+  Whether the person logged in opens `team`'s pages: a SAR Duty admin, one of its team
+  admins, or a member who logs in there. Takes the assigns every page's hook sets. A
+  reminder's link (#444) names its team in the bar when they do, not the team they last
+  opened.
+  """
+  def opens_team?(%{current_user: nil}, _team), do: false
+
+  def opens_team?(assigns, team) do
+    assigns.current_user.is_admin or
+      Enum.any?(assigns.managed_teams, &(&1.id == team.id)) or
+      Enum.any?(assigns.member_logins, &(&1.team_id == team.id))
+  end
+
   defp team_area(team), do: %{kind: :team, name: team.name, team: team}
 
   # `team: nil`, since the layout reads the area's team.
