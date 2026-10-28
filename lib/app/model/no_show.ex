@@ -104,17 +104,17 @@ defmodule App.Model.NoShow do
 
     NoShow
     |> where([n], n.team_id == ^member.team_id and n.member_id == ^member.id)
-    |> at_activities(member.team_id, start, DateTime.add(finish, -1, :second))
+    |> at_activities(member.team_id, start, finish)
     |> order_by([n, a], desc: a.started_at, desc: n.id)
     |> preload([n, a], activity: a, followed_up_by_user: [])
     |> Repo.all()
   end
 
-  # The team's activities not deleted that started from `from` to `to`, joined as `a`.
+  # The team's activities not deleted that started from `from` until `to`, joined as `a`.
   defp at_activities(query, team_id, from, to) do
     query
     |> join(:inner, [n], a in assoc(n, :activity))
     |> where([n, a], a.team_id == ^team_id and is_nil(a.deleted_at))
-    |> where([n, a], a.started_at >= ^from and a.started_at <= ^to)
+    |> where([n, a], a.started_at >= ^from and a.started_at < ^to)
   end
 end
