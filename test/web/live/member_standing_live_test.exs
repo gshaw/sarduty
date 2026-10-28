@@ -410,6 +410,24 @@ defmodule Web.MemberStandingLiveTest do
       refute GroupMember.get_by(group_id: leavers.id, member_id: me.id)
     end
 
+    test "a retiring member D4H still lets in gets a banner on every tab",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      editor = member_fixture(team, %{name: "Eve Editor", d4h_permission: 1})
+      none = member_fixture(team, %{name: "Nia None", d4h_permission: 4})
+      group_member_fixture(leavers, editor)
+      group_member_fixture(leavers, none)
+      conn = log_in_user(conn, user)
+
+      for tab <- ["standing", "groups"] do
+        {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{editor.id}/#{tab}")
+        assert has_element?(lv, "#retiring-access", "Eve Editor can still log in to D4H")
+        assert has_element?(lv, "#retiring-access", "access is still Editor")
+      end
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{none.id}/standing")
+      refute has_element?(lv, "#retiring-access")
+    end
+
     test "says how many items a retiring member holds", %{
       conn: conn,
       user: user,

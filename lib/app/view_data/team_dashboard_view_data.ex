@@ -35,20 +35,38 @@ defmodule App.ViewData.TeamDashboardViewData do
   @coming_up_count 5
 
   @doc """
-  The top half as of `now`. `attention?: false` leaves out Needs attention, which only
-  team admins see, so a member's Dashboard doesn't count what nobody will read.
+  The top half as of `now`. `attention?: false` leaves out Needs attention and the
+  retiring members D4H still lets log in, which only team admins see, so a member's
+  Dashboard doesn't count what nobody will read.
   """
   def build(%Team{} = team, now \\ DateTime.utc_now(), opts \\ []) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
     {next_up, coming_up} = team |> agenda_activities(now) |> agenda(now)
+    attention? = Keyword.get(opts, :attention?, true)
 
     %{
       refreshed_at: team.d4h_refreshed_at,
       refresh_result: refresh_result,
       next_up: next_up,
       coming_up: coming_up,
-      attention: attention(team, refresh_result, now, Keyword.get(opts, :attention?, true))
+      attention: attention(team, refresh_result, now, attention?),
+      retiring_access: if(attention?, do: retiring_access(team, now), else: [])
     }
+  end
+
+  @doc """
+  The team's retiring members D4H still lets log in (#514), by name, with their team.
+  The Dashboard shows them in a banner of their own, not a Needs attention line: SAR
+  Duty can't take away D4H access, and until a team admin does, they still reach
+  everything D4H shows them.
+  """
+  def retiring_access(%Team{} = team, now) do
+    Member
+    |> where([m], m.id in subquery(Standing.retiring_member_ids_query(team, now)))
+    |> Member.d4h_access_query(true)
+    |> order_by([m], asc: m.name)
+    |> preload(:team)
+    |> Repo.all()
   end
 
   @doc """
@@ -57,8 +75,18 @@ defmodule App.ViewData.TeamDashboardViewData do
   """
   def attention_items(%Team{} = team, now \\ DateTime.utc_now()) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
-    team |> attention_rows(refresh_result, now) |> TeamAttention.items(now, :all)
+
+    team
+    |> attention_rows(refresh_result, now)
+    |> Map.update!(:retiring, &with_access_count(&1, team, now))
+    |> TeamAttention.items(now, :all)
   end
+
+  # An agent has no banner, so its list counts them too.
+  defp with_access_count(%{holding: _counts} = row, team, now),
+    do: Map.put(row, :d4h_access, length(retiring_access(team, now)))
+
+  defp with_access_count(none_or_missing, _team, _now), do: none_or_missing
 
   defp attention(team, refresh_result, now, true),
     do: team |> attention_rows(refresh_result, now) |> TeamAttention.items(now)
@@ -244,8 +272,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     end
   end
 
-  # Retiring members (#514), counted apart by whether they still hold the team's items,
-  # and those D4H still lets log in.
+  # Retiring members (#514), counted apart by whether they still hold the team's items.
   # Nil for a team with no Retiring group.
   defp retiring_row(%Team{retiring_d4h_group_id: nil}, _now), do: nil
 
@@ -257,12 +284,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       %{
         holding: map_size(counts),
         items: counts |> Map.values() |> Enum.sum(),
-        clear: length(Repo.all(ids)) - map_size(counts),
-        d4h_access:
-          Member
-          |> where([m], m.id in subquery(ids))
-          |> Member.d4h_access_query(true)
-          |> Repo.aggregate(:count)
+        clear: length(Repo.all(ids)) - map_size(counts)
       }
     else
       %{missing_group: true}

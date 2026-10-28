@@ -196,7 +196,8 @@ defmodule App.ViewData.TeamAttention do
 
   defp retiring_missing_item(_none_or_counts), do: nil
 
-  # SAR Duty shuts a retiring member out of itself, but only a team admin can in D4H.
+  # SAR Duty shuts a retiring member out of itself, but only a team admin can in D4H. Only
+  # an agent's list has `d4h_access`: the Dashboard shows a banner instead.
   defp retiring_access_item(%{d4h_access: count}, service) when count > 0 do
     name = D4H.service_name(service)
 
@@ -208,15 +209,16 @@ defmodule App.ViewData.TeamAttention do
           one: "%d retiring member can still log in to #{name}",
           many: "%d retiring members can still log in to #{name}"
         ),
-      detail: access_where(service),
+      detail: no_access(service),
       action: "Show members"
     }
   end
 
   defp retiring_access_item(_none_or_missing, _service), do: nil
 
-  defp access_where(:records), do: "Set their access to No access on each member's page."
-  defp access_where(service), do: "Set their access to No access in #{D4H.service_name(service)}."
+  @doc ~s{Where a team admin takes a retiring member's access away: "Set their access to No access in D4H."}
+  def no_access(:records), do: "Set their access to No access on their Change member page."
+  def no_access(service), do: "Set their access to No access in #{D4H.service_name(service)}."
 
   defp retiring_holding_item(%{holding: count, items: items}) when count > 0 do
     who = Format.count(count, one: "%d retiring member holds", many: "%d retiring members hold")

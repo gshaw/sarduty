@@ -398,6 +398,10 @@ defmodule App.Model.Member do
 
   def d4h_access_query(query, false), do: where(query, [m], m.d4h_permission == @no_access)
 
+  @doc "Pure. d4h_access_query/2's `true` for one member."
+  def d4h_access?(%{d4h_permission: permission}),
+    do: not is_nil(permission) and permission != @no_access
+
   @doc """
   The team's managers, by name: the people who log in as its team admins. Members marked
   not a person or retiring are left out, and so is a team key from a "SAR Duty" account. A team key from a person's account leaves them in,
