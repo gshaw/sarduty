@@ -61,7 +61,8 @@
   reaches a team when their email matches a member D4H makes an Owner or Editor
   (`Team.get_managed_by/2`). Admins reach every team. On a team with member logins on,
   any current member logs in to the team's Dashboard and their own page, Your
-  membership, `/teams/:subdomain/me` (`Member.get_logins/2`). Organization admins log in
+  membership, `/teams/:subdomain/me` (`Member.get_logins/2`). A member in the team's
+  Retiring group gets neither ([Retiring](docs/members.md#retiring)). Organization admins log in
   with their email alone, like a login grant, and reach only their organization's space,
   `/orgs/:slug`, which shows each team's totals and never its people
   (`App.Model.OrganizationAdmin`; see [docs/organizations.md](docs/organizations.md)).
@@ -209,6 +210,10 @@ fi
   or years; start from `Attendance.attended(now)`, or `signed_up(now)` for what's
   coming. A test fails if a new file filters on it. When a rule like this is copied
   into many queries, give it one home and a test before changing it.
+- **A retiring member is no longer a member.** Someone in the team's Retiring group
+  can't log in, isn't a team admin, and is left out of counts, invites, reminders, and
+  email. A new query that counts, contacts, or lets members in uses
+  `Member.counted_query/1`, and one for team admins `Member.managers_query/2`. See [Retiring](docs/members.md#retiring).
 - **D4H ids live in `d4h_*_id` columns.** Foreign keys are local ids. Route params are
   local ids; D4H calls take the `d4h_*_id`.
 - **Scope every team query, including joins and deletes.** Filter the member's or

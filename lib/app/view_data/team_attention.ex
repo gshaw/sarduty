@@ -13,7 +13,7 @@ defmodule App.ViewData.TeamAttention do
   @doc """
   The items to show, at most `limit`: #{@max_items} for the page, or `:all` for an agent
   (#595). Each is a map with `key`, `level`
-  (`:warning` or `:info`), `title`, `detail` (where the fix happens, or nil), and
+  (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail` (where the fix happens, or nil), and
   `action`, the text of its link. The letters and untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`. `service`
   is where the team's records live, `:d4h` or `:records` (D4H.service/1).
   """
@@ -37,9 +37,14 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat(untagged_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.reject(&is_nil/1)
-    |> Enum.sort_by(&(&1.level != :warning))
+    |> Enum.sort_by(&level_order/1)
     |> take(limit)
   end
+
+  # Stable, so items keep their order within a level.
+  defp level_order(%{level: :danger}), do: 0
+  defp level_order(%{level: :warning}), do: 1
+  defp level_order(%{level: :info}), do: 2
 
   defp untagged_items(rows, this_year),
     do: Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service))
@@ -179,6 +184,7 @@ defmodule App.ViewData.TeamAttention do
   defp retiring_items(%{retiring: retiring, service: service}),
     do: [
       retiring_missing_item(retiring),
+      retiring_access_item(retiring, service),
       retiring_holding_item(retiring),
       retiring_clear_item(retiring, service)
     ]
@@ -194,6 +200,31 @@ defmodule App.ViewData.TeamAttention do
   end
 
   defp retiring_missing_item(_none_or_counts), do: nil
+
+  # SAR Duty shuts a retiring member out of itself, but only a team admin can in D4H.
+  # Danger, the one red item, first in the list: until then they still reach everything
+  # D4H shows them.
+  defp retiring_access_item(%{d4h_access: count}, service) when count > 0 do
+    name = D4H.service_name(service)
+
+    %{
+      key: :retiring_access,
+      level: :danger,
+      title:
+        Format.count(count,
+          one: "%d retiring member can still log in to #{name}",
+          many: "%d retiring members can still log in to #{name}"
+        ),
+      detail: no_access(service),
+      action: "Show members"
+    }
+  end
+
+  defp retiring_access_item(_none_or_missing, _service), do: nil
+
+  @doc ~s{Where a team admin takes a retiring member's access away: "Set their access to No access in D4H."}
+  def no_access(:records), do: "Set their access to No access on their Change member page."
+  def no_access(service), do: "Set their access to No access in #{D4H.service_name(service)}."
 
   defp retiring_holding_item(%{holding: count, items: items}) when count > 0 do
     who = Format.count(count, one: "%d retiring member holds", many: "%d retiring members hold")

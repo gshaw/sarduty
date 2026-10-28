@@ -6,7 +6,9 @@ defmodule App.Model.Standing do
   - Retired comes from D4H, as of `now` (Member.current?/2).
   - Not a person is a team admin's switch in SAR Duty.
   - Retiring is membership of the team's Retiring group, a D4H group named in team
-    settings. Never stored: read from `group_members` when needed.
+    settings. Never stored: read from `group_members` when needed. A retiring member is
+    no longer a member: they can't log in and nothing counts or contacts them
+    (docs/members.md, Retiring).
   - Away is a current away period, a team admin's record in SAR Duty.
   - Active is the absence of the rest.
 
@@ -95,6 +97,19 @@ defmodule App.Model.Standing do
     |> Member.current_query(now)
     |> Member.people_query()
     |> select([m], m.id)
+  end
+
+  @doc """
+  The ids of members in their own team's Retiring group, on every team. Logins read it:
+  a retiring member can't log in, as a team admin or a member.
+  """
+  def all_retiring_ids_query do
+    from gm in GroupMember,
+      join: g in Group,
+      on: g.id == gm.group_id,
+      join: t in Team,
+      on: t.id == g.team_id and g.d4h_group_id == t.retiring_d4h_group_id,
+      select: gm.member_id
   end
 
   @doc "retiring_ids_query/1 as a set."

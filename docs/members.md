@@ -57,16 +57,10 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   runs every mix through both. Nothing else copies the order.
 - **Retiring is read from a D4H group; SAR Duty owns the rest.** Away periods and Not a
   person never go to D4H. Teams on D4H and on SAR Duty Records work the same.
-- **Retiring** (#514) is a current member in the team's **Retiring group**, picked in
-  Settings → Members (`teams.retiring_d4h_group_id`). D4H refuses to retire a member who
-  holds the team's equipment, so a member who leaves stays current until every item is
-  back. Read from `group_members`, never stored, and no job. SAR Duty leaves retiring
-  members out of what Not a person leaves out (below), and out of reminders too. They
-  still log in: `Member.people_query/1` decides logins and stays as it was, and
-  `Member.counted_query/2` is the narrowing beside it. The Retiring group can't have
-  group rules, since "Standing is Active" on it would take out every member, and
-  settings offer only groups without them. If D4H deletes the group, nobody is
-  Retiring and Needs attention says so until a team admin picks another.
+- **Retiring** (#514) is a current member in the team's Retiring group. They no longer
+  count as a member: see [Retiring](#retiring).
+- **Access** (`access=some` or `none`, behind More filters, team admins only) keeps the
+  members D4H lets log in, or those with No access.
 - **Items** (`items=held` or `none`, behind More filters, team admins only) keeps the
   members who hold any of the team's equipment, retired items too, or those who hold
   none. Needs attention's "2 retiring members hold no items" opens
@@ -105,12 +99,68 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
 
 Nothing leaves a group or a list for standing unless a rule written on its page says so.
 These stay as they were, since a bot cannot attend or be added to an activity, and skip
-members marked not a person or retiring with no rule (`Member.counted_query/2`): Add
+members marked not a person or retiring with no rule (`Member.counted_query/1`): Add
 members and a template's groups (`InviteMembers`), the home page's counts and charts,
-the missing details filter, and the member list on Take attendance. Send reminders names
-retiring members under "Who doesn't get it". Needs attention counts retiring members
-apart: "2 retiring members hold 5 items", and "1 retiring member holds no items", whose
-hint, "Retire them in D4H.", is what stops a member staying Retiring for good.
+the missing details filter, and the member list on Take attendance. Retiring members
+skip more than that; see [Retiring](#retiring).
+
+### Retiring
+
+A retiring member is on their way out. A team admin has put them in the team's
+**Retiring group**, picked in Settings → Members (`teams.retiring_d4h_group_id`), and
+D4H hasn't retired them yet, usually because they still hold the team's items: D4H
+refuses to retire a member who does. It can last weeks. Decided 2026-10-27 (#514) and
+2026-10-28 (#683).
+
+**The rule: a retiring member is no longer a member.** Everything that counts,
+contacts, invites, or lets members in skips them (Andrew, 2026-10-28). Only the pages a
+team admin uses to finish retiring them still show them.
+
+| Skips retiring members                                                                                                               | Through                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Logging in as a team admin, MCP tokens, Team admins, the last team admin check, and team admin email                                 | `Member.managers_query/2`                            |
+| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`    |
+| Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                             |
+| Reminders                                                                                                                            | Send reminders names them under "Who doesn't get it" |
+
+Still shown: the Members list (the Retiring tile, and Not retired, its default), their
+member page and history, Equipment's With retiring members, and Needs attention. Group
+rules leave them in a group unless a rule on its page says "Standing is …" (above).
+
+**A new query that counts, contacts, invites, or lets members in skips retiring
+members.** Use `Member.counted_query/1`, or `Member.managers_query/2` for team admins.
+Don't read `group_members` for it yourself. A manager marked not a person doesn't log
+in as a team admin either: one bar for logins, Team admins, and team admin email
+(2026-10-28, #683).
+
+**The steps, in order.** Needs attention and the member's Standing tab lead a team
+admin through them.
+
+1. **Mark as retiring** on the Standing tab: one `add_group_member` row through
+   `SetGroupMember`. SAR Duty access ends on their next page, since access is checked on
+   every page load, so do it before telling them. The team's only team admin is refused,
+   from any page that adds to the Retiring group, since nobody could log in as team admin
+   after. Your membership's list of the items they hold
+   doesn't justify the access.
+2. **Set their access to No access in D4H.** SAR Duty can't: D4H sets access only in
+   its web app (a Records team can, on Change member). Until it's done, two red notices
+   say so. Needs attention's one danger item, red and first in the list: "2 retiring
+   members can still log in to D4H", opening `standing=retiring&access=some`. And a red
+   banner on every tab of that member's page, with an Open D4H member link. Access is
+   the synced `d4h_permission`, anything but No access (`Member.d4h_access?/1`); a
+   member whose permission D4H didn't send isn't counted.
+3. **Get the items back.** Needs attention's "1 retiring member holds 3 items" opens
+   Equipment's With retiring members.
+4. **Retire them in D4H.** Needs attention's "2 retiring members hold no items" opens
+   `standing=retiring&items=none`, and its hint, "Retire them in D4H.", is what stops a
+   member staying Retiring for good. D4H sets No access when it retires someone, and
+   they become Retired.
+
+**Guards.** Mark as retiring refuses the team's only team admin, who would lock the team
+out. The Retiring group can't have group rules, since "Standing is Active" on it would
+take out every member, and settings offer only groups without them. If D4H deletes the
+group, nobody is Retiring and Needs attention says so until a team admin picks another.
+Retiring is read from `group_members`, never stored, and no job.
 
 ## The attendance check
 

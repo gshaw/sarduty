@@ -218,7 +218,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
-    |> Member.counted_query(team)
+    |> Member.counted_query()
     |> Member.missing_details_query()
     |> Repo.aggregate(:count)
   end
@@ -244,7 +244,8 @@ defmodule App.ViewData.TeamDashboardViewData do
     end
   end
 
-  # Retiring members (#514), counted apart by whether they still hold the team's items.
+  # Retiring members (#514), counted apart by whether they still hold the team's items,
+  # and those D4H still lets log in.
   # Nil for a team with no Retiring group.
   defp retiring_row(%Team{retiring_d4h_group_id: nil}, _now), do: nil
 
@@ -256,7 +257,12 @@ defmodule App.ViewData.TeamDashboardViewData do
       %{
         holding: map_size(counts),
         items: counts |> Map.values() |> Enum.sum(),
-        clear: length(Repo.all(ids)) - map_size(counts)
+        clear: length(Repo.all(ids)) - map_size(counts),
+        d4h_access:
+          Member
+          |> where([m], m.id in subquery(ids))
+          |> Member.d4h_access_query(true)
+          |> Repo.aggregate(:count)
       }
     else
       %{missing_group: true}
@@ -397,7 +403,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
-    |> Member.counted_query(team)
+    |> Member.counted_query()
     |> select([m], %{id: m.id, joined_at: m.joined_at})
     |> Repo.all()
   end

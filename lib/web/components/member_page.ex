@@ -11,6 +11,10 @@ defmodule Web.Components.MemberPage do
   import Web.Components.MemberSidebar
   import Web.Components.MemberTabs
 
+  alias App.Adapter.D4H
+  alias App.Model.Member
+  alias App.ViewData.TeamAttention
+
   attr :member, :map, required: true
   attr :tab, :atom, required: true, doc: "the current tab, as Web.Components.MemberTabs"
   attr :last_attended_at, :any, required: true, doc: "from load_sidebar/1"
@@ -33,6 +37,10 @@ defmodule Web.Components.MemberPage do
       last_attended_at={@last_attended_at}
       standing={@standing}
       team_admin?={@team_admin?}
+    />
+    <.retiring_access_banner
+      :if={@team_admin? and @standing == :retiring and Member.d4h_access?(@member)}
+      member={@member}
     />
     <%!-- A team admin on their own page gets the team admin's view. What they do as a
     member is on Your membership (#645). Members are sent there by own_page. --%>
@@ -67,6 +75,35 @@ defmodule Web.Components.MemberPage do
         {render_slot(@inner_block)}
       </main>
     </div>
+    """
+  end
+
+  # SAR Duty shuts a retiring member out of itself, but only a team admin can take away
+  # their access in the team's records (#514).
+  attr :member, :map, required: true
+
+  defp retiring_access_banner(assigns) do
+    assigns = assign(assigns, :service, D4H.service_name(assigns.member.team))
+
+    ~H"""
+    <.banner
+      kind={:danger}
+      class="mb-6"
+      id="retiring-access"
+      title={"#{@member.name} can still log in to #{@service}"}
+    >
+      <p>
+        They're retiring and can't log in to SAR Duty, but their {@service} access is still {Member.permission_label(
+          @member.d4h_permission
+        )}. {TeamAttention.no_access(D4H.service(@member.team))}
+      </p>
+      <p :if={!D4H.records?(@member.team)}>
+        <.a external={true} href={D4H.member_url(@member)}>Open {@service} member</.a>
+      </p>
+      <p :if={D4H.records?(@member.team)}>
+        <.a navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change member</.a>
+      </p>
+    </.banner>
     """
   end
 

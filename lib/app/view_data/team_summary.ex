@@ -35,16 +35,12 @@ defmodule App.ViewData.TeamSummary do
 
   defp manager_emails(teams, now) do
     ids = Enum.map(teams, & &1.id)
-    key_members = Map.new(teams, &{&1.id, key_account(&1)})
 
     Member
-    |> where([m], m.team_id in ^ids and m.d4h_permission in [0, 1] and not is_nil(m.email))
-    |> Member.people_query()
-    |> Member.current_query(now)
-    |> select([m], {m.team_id, m.d4h_member_id, m.email})
+    |> where([m], m.team_id in ^ids and not is_nil(m.email))
+    |> Member.managers_query(now)
+    |> select([m], {m.team_id, m.email})
     |> Repo.all()
-    |> Enum.reject(fn {team_id, d4h_id, _email} -> key_members[team_id] == d4h_id end)
-    |> Enum.map(fn {team_id, _d4h_id, email} -> {team_id, email} end)
   end
 
   defp grant_emails(ids) do
@@ -53,11 +49,6 @@ defmodule App.ViewData.TeamSummary do
     |> select([g], {g.team_id, g.email})
     |> Repo.all()
   end
-
-  # The team key's own member never counts when it's a SAR Duty account, as in
-  # Member.get_managers/2.
-  defp key_account(team),
-    do: if(Team.key_owner_is_sar_duty?(team), do: team.d4h_access_key_member_id)
 
   @doc """
   Everyone who reaches one team as a team admin, one row per email, A to Z, for its
@@ -128,14 +119,17 @@ defmodule App.ViewData.TeamSummary do
     end)
   end
 
-  @doc "Each team's current members who are people. `%{team_id => count}`."
+  @doc """
+  Each team's current members who are people and not retiring (#514), as the team's own
+  Dashboard counts them. `%{team_id => count}`.
+  """
   def member_counts(teams, now) do
     ids = Enum.map(teams, & &1.id)
 
     Member
     |> where([m], m.team_id in ^ids)
     |> Member.current_query(now)
-    |> Member.people_query()
+    |> Member.counted_query()
     |> group_by([m], m.team_id)
     |> select([m], {m.team_id, count(m.id)})
     |> Repo.all()

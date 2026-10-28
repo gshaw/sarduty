@@ -5,6 +5,7 @@ defmodule Web.MemberStandingLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.GroupMember
+  alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
   alias App.Model.MemberStandingChange
@@ -14,6 +15,7 @@ defmodule Web.MemberStandingLiveTest do
   alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
+  alias App.Operation.SetGroupMembers
   alias App.Repo
 
   defp today(team), do: Service.Period.today(DateTime.utc_now(), team.timezone)
@@ -391,6 +393,64 @@ defmodule Web.MemberStandingLiveTest do
       assert_received {:d4h, "DELETE", _path}
       assert has_element?(lv, "#standing-now", "Active")
       refute GroupMember.get_by(group_id: leavers.id, member_id: member.id)
+    end
+
+    test "Mark as retiring refuses the team's only team admin, who would be locked out",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      me = Member.get_by(team_id: team.id, email: user.email)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{me.id}/standing")
+
+      assert has_element?(lv, "#mark-retiring[data-confirm*='log in to SAR Duty']")
+
+      assert lv |> element("#mark-retiring") |> render_click() =~
+               "Make another member a team admin first."
+
+      refute_received {:d4h, _method, _path}
+      refute GroupMember.get_by(group_id: leavers.id, member_id: me.id)
+    end
+
+    test "the Groups tab and adding from Members refuse the only team admin too",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      me = Member.get_by(team_id: team.id, email: user.email)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{me.id}/groups")
+
+      assert lv |> form("#add-group-form", group_id: leavers.id) |> render_submit() =~
+               "Make another member a team admin first."
+
+      assert SetGroupMembers.call(
+               team,
+               :add,
+               leavers.id,
+               [me.id],
+               user,
+               DateTime.utc_now()
+             ) ==
+               {:error, "Make another member a team admin first."}
+
+      refute_received {:d4h, _method, _path}
+      refute GroupMember.get_by(group_id: leavers.id, member_id: me.id)
+    end
+
+    test "a retiring member D4H still lets in gets a banner on every tab",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      editor = member_fixture(team, %{name: "Eve Editor", d4h_permission: 1})
+      none = member_fixture(team, %{name: "Nia None", d4h_permission: 4})
+      group_member_fixture(leavers, editor)
+      group_member_fixture(leavers, none)
+      conn = log_in_user(conn, user)
+
+      for tab <- ["standing", "groups"] do
+        {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{editor.id}/#{tab}")
+        assert has_element?(lv, "#retiring-access", "Eve Editor can still log in to D4H")
+        assert has_element?(lv, "#retiring-access", "access is still Editor")
+      end
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{none.id}/standing")
+      refute has_element?(lv, "#retiring-access")
     end
 
     test "says how many items a retiring member holds", %{

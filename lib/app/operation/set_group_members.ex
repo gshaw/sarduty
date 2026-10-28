@@ -19,6 +19,7 @@ defmodule App.Operation.SetGroupMembers do
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.ApplyChangeSet
+  alias App.Operation.SetGroupMember
   alias App.Repo
 
   @doc """
@@ -30,6 +31,7 @@ defmodule App.Operation.SetGroupMembers do
       when action in [:add, :remove] do
     with {:ok, group} <- find_group(team, group_id),
          {:ok, members} <- find_members(team, member_ids),
+         :ok <- check_adding(team, action, group, members, now),
          do: apply_plan(team, group, user, plan(action, members, group_members(group)), now)
   end
 
@@ -64,6 +66,11 @@ defmodule App.Operation.SetGroupMembers do
 
     %{action: action, changes: changes, skipped: Enum.map(skipped, & &1.member)}
   end
+
+  defp check_adding(team, :add, group, members, now),
+    do: SetGroupMember.check_keeps_a_team_admin(team, group, members, now)
+
+  defp check_adding(_team, :remove, _group, _members, _now), do: :ok
 
   defp find_group(team, id) do
     case id && Repo.get_by(Group, id: id, team_id: team.id) do

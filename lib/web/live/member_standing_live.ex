@@ -235,9 +235,9 @@ defmodule Web.MemberStandingLive do
           Active unless the member is away, retiring, or not a person. A member away sees
           when they're back on Your membership, never the reason.
           <span :if={@retiring_group}>
-            Retiring members are in your {@retiring_group.title} group in {@service}. SAR Duty
-            leaves them out of counts, invites, reminders, and Take attendance until they
-            are retired.
+            Retiring members are in your {@retiring_group.title} group in {@service}. They
+            can't log in to SAR Duty, and it leaves them out of counts, invites, reminders,
+            and Take attendance.
           </span>
         </p>
         <.form_actions :if={@retiring_group && @standing not in [:retired, :not_a_person]}>
@@ -247,7 +247,7 @@ defmodule Web.MemberStandingLive do
             type="button"
             phx-click="mark-retiring"
             phx-disable-with="Marking as retiring…"
-            data-confirm={"Add #{@member.name} to #{@retiring_group.title}? SAR Duty leaves them out of counts, invites, reminders, and Take attendance until they are retired."}
+            data-confirm={"Add #{@member.name} to #{@retiring_group.title}? They can't log in to SAR Duty from now on. Take away their #{@service} access too."}
           >
             Mark as retiring
           </.button>
@@ -257,7 +257,7 @@ defmodule Web.MemberStandingLive do
             type="button"
             phx-click="unmark-retiring"
             phx-disable-with="Removing…"
-            data-confirm={"Remove #{@member.name} from #{@retiring_group.title}? SAR Duty counts them again."}
+            data-confirm={"Remove #{@member.name} from #{@retiring_group.title}? They can log in to SAR Duty again, and SAR Duty counts them again."}
           >
             Remove from {@retiring_group.title}
           </.button>

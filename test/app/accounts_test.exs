@@ -123,6 +123,17 @@ defmodule App.AccountsTest do
       refute Accounts.may_log_in?("bot@example.com", @now)
     end
 
+    test "a member in their team's Retiring group may not (#514)" do
+      team = member_logins_team_fixture()
+      leavers = group_fixture(team)
+      team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+      retiring = member_fixture(team, %{email: "retiring@example.com"})
+      group_member_fixture(leavers, retiring)
+
+      refute Accounts.may_log_in?("retiring@example.com", @now)
+      assert Member.get_logins("retiring@example.com", @now) == []
+    end
+
     test "two members on one team with the same email match neither" do
       team = member_logins_team_fixture()
       member_fixture(team, %{email: "family@example.com"})
@@ -162,6 +173,50 @@ defmodule App.AccountsTest do
 
       managed = "sam@example.com" |> Team.get_managed_by(@now) |> Enum.map(& &1.id)
       assert managed == [north.id, south.id]
+    end
+  end
+
+  describe "Retiring (#514)" do
+    test "an Owner in their team's Retiring group manages it no longer" do
+      team = team_fixture()
+      leavers = group_fixture(team)
+      other = group_fixture(team)
+      team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+      retiring = manager_fixture(team, %{email: "retiring@example.com"})
+      staying = manager_fixture(team, %{email: "staying@example.com"})
+      group_member_fixture(leavers, retiring)
+      group_member_fixture(other, staying)
+
+      refute Accounts.may_log_in?("retiring@example.com", @now)
+      assert Team.get_managed_by("retiring@example.com", @now) == []
+      assert [%{id: id}] = Team.get_managed_by("staying@example.com", @now)
+      assert id == team.id
+      assert [%{email: "staying@example.com"}] = Member.get_managers(team, @now)
+    end
+
+    test "an Owner marked not a person manages the team no longer (#683)" do
+      team = team_fixture()
+      manager_fixture(team, %{email: "truck@example.com", not_a_person: true})
+
+      assert Team.get_managed_by("truck@example.com", @now) == []
+      assert Member.get_managers(team, @now) == []
+    end
+
+    test "another team's Retiring group with the same D4H id cuts nothing" do
+      north = team_fixture()
+      south = team_fixture()
+      leavers = group_fixture(north)
+      south_group = group_fixture(south, %{d4h_group_id: leavers.d4h_group_id})
+
+      north
+      |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+      |> Repo.update!()
+
+      member = manager_fixture(south, %{email: "south@example.com"})
+      group_member_fixture(south_group, member)
+
+      assert [%{id: id}] = Team.get_managed_by("south@example.com", @now)
+      assert id == south.id
     end
   end
 

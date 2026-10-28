@@ -4,7 +4,8 @@ defmodule App.Operation.SetGroupMember do
   actions group rules use, one row at a time, applied through App.Operation.ApplyEdit.
   Then the local copy changes at once, as group rules do, and the change is logged with
   the group's recent changes, without a reason. A group with rules changes only through
-  Review changes, so it is refused here.
+  Review changes, so it is refused here, and so is putting the team's only team admin in
+  its Retiring group.
   """
 
   alias App.Accounts.User
@@ -27,18 +28,21 @@ defmodule App.Operation.SetGroupMember do
         now
       )
       when team_id == team.id do
-    row = %ChangeSetRow{
+    with :ok <- check_kept_by_hand(group),
+         :ok <- check_keeps_a_team_admin(team, group, [member], now) do
+      result = ApplyEdit.call(team, user, add_row(group, member), now, group_id: group.id)
+      with {:ok, d4h_id} <- result, do: save_local(group, member, d4h_id)
+      log(result, team, member.id, group.d4h_group_id, :add, user)
+    end
+  end
+
+  defp add_row(group, member) do
+    %ChangeSetRow{
       action: :add_group_member,
       member_id: member.id,
       old_value: %{},
       new_value: %{"d4h_group_id" => group.d4h_group_id, "d4h_member_id" => member.d4h_member_id}
     }
-
-    with :ok <- check_kept_by_hand(group) do
-      result = ApplyEdit.call(team, user, row, now, group_id: group.id)
-      with {:ok, d4h_id} <- result, do: save_local(group, member, d4h_id)
-      log(result, team, member.id, group.d4h_group_id, :add, user)
-    end
   end
 
   def remove(%Team{} = team, %GroupMember{} = group_member, %User{} = user, now) do
@@ -68,6 +72,26 @@ defmodule App.Operation.SetGroupMember do
     case GroupMember.get_by(group_id: group.id, member_id: member.id) do
       nil -> GroupMember.insert!(params)
       group_member -> GroupMember.update!(group_member, params)
+    end
+  end
+
+  @doc """
+  `{:error, text}` when adding `members` to the team's Retiring group would leave it no
+  team admin (#514), since a retiring member can't log in. Else `:ok`.
+  """
+  def check_keeps_a_team_admin(%Team{} = team, %Group{} = group, members, now) do
+    if group.d4h_group_id == team.retiring_d4h_group_id and
+         all_managers?(team, members, now),
+       do: {:error, "Make another member a team admin first."},
+       else: :ok
+  end
+
+  defp all_managers?(team, members, now) do
+    ids = MapSet.new(members, & &1.id)
+
+    case Member.get_managers(team, now) do
+      [] -> false
+      managers -> Enum.all?(managers, &MapSet.member?(ids, &1.id))
     end
   end
 
