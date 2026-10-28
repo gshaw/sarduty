@@ -152,6 +152,11 @@ fi
   to reproduce**, **Expected**, **Actual** — before any diagnosis. State the observable
   failure first; analysis and a proposed fix go after. Tracking and enhancement issues do
   not use this shape.
+- **Bug fix PRs** get the `bug` label when they only fix a bug, and their body opens with
+  the observable failure. A PR that mixes a fix with other work gets no label. Open an
+  issue only when the fix doesn't ship in the same sitting (a reported bug, one that
+  needs a repro, or one that can't be fixed now); it uses the bug report shape, and the
+  PR closes it with `Fixes #N`.
 - **Issue and PR bodies are not hard-wrapped.** One line per paragraph and let GitHub
   reflow — unlike the Markdown in this repo, which is wrapped. Numbered reproduction steps
   stay one step per line.
