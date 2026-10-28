@@ -183,3 +183,9 @@ When a send marks a member absent who had signed up (D4H's `ATTENDING`), SAR Dut
 records a no-show ([NoShow](../lib/app/model/no_show.ex)). The Attendance page lists
 them with phone and email, and a team admin ticks each one followed up once they know the
 member is OK. Sending again doesn't add a second row.
+
+A member who turns out attended after all stops being a no-show (#648): a later send
+from the door that marks them attended clears it at once, and the sync clears it when
+their row changes from absent to attending in D4H or Records, or when a new attending
+row for them appears there. The send clears it itself because the local copy only
+changes at the next sync.
