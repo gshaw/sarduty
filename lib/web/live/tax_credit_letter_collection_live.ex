@@ -39,10 +39,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   def render(assigns) do
     ~H"""
-    <.breadcrumbs>
-      <:item label={@page_title} />
-    </.breadcrumbs>
-
     <h1 class="title">{@page_title}</h1>
 
     <.sent_banner :if={@sent} sent={@sent} />

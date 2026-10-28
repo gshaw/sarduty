@@ -38,7 +38,7 @@ defmodule Web.ActivityFormLive do
       <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
       <:item
         :if={@activity}
-        label={@activity.title}
+        label={@activity.ref_id}
         path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
       />
       <:item label={if @activity, do: "Change", else: "Add activity"} />

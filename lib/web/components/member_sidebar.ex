@@ -47,7 +47,7 @@ defmodule Web.Components.MemberSidebar do
   def member_head(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Members" path={~p"/teams/#{@member.team}/members/"} />
+      <:item label="Members" path={~p"/teams/#{@member.team}/members"} />
       <:item label={@member.name} />
     </.breadcrumbs>
     <.person_head

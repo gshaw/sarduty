@@ -33,6 +33,7 @@ defmodule Web.Settings.PlaceFormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
+      <:item label="Team settings" path={~p"/teams/#{@current_team}/settings"} />
       <:item label="Places" path={~p"/teams/#{@current_team}/settings/places"} />
       <:item label={if @place, do: @place.title, else: @page_title} />
     </.breadcrumbs>

@@ -181,7 +181,7 @@ defmodule Web.TeamNavigationTest do
 
     assert has_element?(
              lv,
-             ~s{.breadcrumbs a[href="/teams/#{team.subdomain}/members/"]},
+             ~s{.breadcrumbs a[href="/teams/#{team.subdomain}/members"]},
              "Members"
            )
 

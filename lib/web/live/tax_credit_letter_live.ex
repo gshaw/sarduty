@@ -43,7 +43,7 @@ defmodule Web.TaxCreditLetterLive do
     ~H"""
     <.breadcrumbs>
       <:item
-        label={"#{@letter.year} tax credit letters"}
+        label="Tax credit letters"
         path={~p"/teams/#{@current_team}/tax-credit-letters?year=#{@letter.year}"}
       />
       <:item label={@letter.ref_id} />

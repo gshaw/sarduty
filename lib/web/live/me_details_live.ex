@@ -146,6 +146,10 @@ defmodule Web.MeDetailsLive do
 
   def render(assigns) do
     ~H"""
+    <.breadcrumbs>
+      <:item label="Your membership" path={~p"/teams/#{@current_member.team}/me"} />
+      <:item label="Contact details" />
+    </.breadcrumbs>
     <div class="measure">
       <h1 class="title">Contact details</h1>
       <p class="lead">

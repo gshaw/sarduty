@@ -24,8 +24,7 @@ defmodule Web.CertificateFormLive do
   # sure. The expiry fills in from the qualification (Web.CertificateExpiry).
   def mount(params, _session, socket) do
     member = socket.assigns.current_member
-    if !member, do: raise(Web.Status.NotFound)
-    if !Team.certificates?(member.team), do: raise(Web.Status.NotFound)
+    if !member or !Team.certificates?(member.team), do: raise(Web.Status.NotFound)
     certificate = if id = params["id"], do: Certificate.find_for_member!(member, id)
     if certificate && !Certificate.member_can_change?(certificate), do: raise(Web.Status.NotFound)
 
@@ -34,8 +33,8 @@ defmodule Web.CertificateFormLive do
 
     socket
     |> assign(member: member, certificate: certificate, latest: latest)
-    |> assign(qualifications: qualifications)
-    |> assign(options: options(qualifications, latest))
+    |> assign_parent()
+    |> assign(qualifications: qualifications, options: options(qualifications, latest))
     |> assign(page_title: if(certificate, do: "Change certificate", else: "Add a certificate"))
     |> assign(expiry: CertificateExpiry.new(certificate))
     |> allow_upload(:certificate,
@@ -46,6 +45,15 @@ defmodule Web.CertificateFormLive do
     |> start(certificate, params["qualification"], qualifications)
     |> then(&{:ok, &1})
   end
+
+  # Where the form sits, for its breadcrumbs and where it goes back to: Certificates for a
+  # team admin, whose side navigation has it, else Your membership, where a member's
+  # certificates show.
+  defp assign_parent(%{assigns: %{current_team: team, team_admin?: team_admin?}} = socket),
+    do: assign(socket, :parent, parent(team, team_admin?))
+
+  defp parent(team, true), do: {"Certificates", ~p"/teams/#{team}/certificates"}
+  defp parent(team, false), do: {"Your membership", ~p"/teams/#{team}/me"}
 
   defp start(socket, nil, qualification_id, qualifications) do
     id = Enum.find_value(qualifications, &(to_string(&1.id) == qualification_id && &1.id))
@@ -85,7 +93,7 @@ defmodule Web.CertificateFormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Your membership" path={~p"/teams/#{@member.team}/me"} />
+      <:item label={elem(@parent, 0)} path={elem(@parent, 1)} />
       <:item label={@page_title} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
@@ -157,7 +165,7 @@ defmodule Web.CertificateFormLive do
         >
           {if @certificate, do: "Save certificate", else: "Send certificate"}
         </.button>
-        <.button navigate={~p"/teams/#{@member.team}/me"}>Cancel</.button>
+        <.button navigate={elem(@parent, 1)}>Cancel</.button>
         <:trailing :if={@certificate}>
           <.button
             id="certificate-delete"
@@ -210,7 +218,7 @@ defmodule Web.CertificateFormLive do
       :ok ->
         socket
         |> put_flash(:info, "Deleted your certificate.")
-        |> push_navigate(to: ~p"/teams/#{member.team}/me")
+        |> push_navigate(to: elem(socket.assigns.parent, 1))
         |> then(&{:noreply, &1})
 
       {:error, :decided} ->
@@ -241,7 +249,7 @@ defmodule Web.CertificateFormLive do
             else: "Sent your certificate. A team admin looks at it next."
           )
         )
-        |> push_navigate(to: ~p"/teams/#{member.team}/me")
+        |> push_navigate(to: elem(socket.assigns.parent, 1))
         |> then(&{:noreply, &1})
 
       {:error, :decided} ->
@@ -259,6 +267,6 @@ defmodule Web.CertificateFormLive do
       :error,
       "This certificate cannot change. A team admin has decided it since you opened it."
     )
-    |> push_navigate(to: ~p"/teams/#{socket.assigns.member.team}/me")
+    |> push_navigate(to: elem(socket.assigns.parent, 1))
   end
 end
