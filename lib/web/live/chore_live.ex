@@ -62,8 +62,7 @@ defmodule Web.ChoreLive do
       <dd>{@chore.chore_category.title}</dd>
       <dt>Logged</dt>
       <dd>
-        {Format.datetime_short(@chore.inserted_at, @current_team.timezone)}{if @chore.change_set_row_id,
-          do: ", proposed by an AI agent"}
+        {Format.datetime_short(@chore.inserted_at, @current_team.timezone)}
       </dd>
       <dt>Status</dt>
       <dd id="chore-status">
