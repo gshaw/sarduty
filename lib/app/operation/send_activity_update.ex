@@ -81,7 +81,7 @@ defmodule App.Operation.SendActivityUpdate do
 
     cond do
       activity.deleted_at -> {:error, :deleted}
-      not DateTime.before?(now, activity.started_at) -> {:error, :started}
+      Activity.started?(activity, now) -> {:error, :started}
       message == nil -> {:error, :no_message}
       not Message.fits?(message) -> {:error, :message_too_long}
       MapSet.size(ids) == 0 -> {:error, :none_selected}
@@ -145,7 +145,7 @@ defmodule App.Operation.SendActivityUpdate do
     invitation = Attendance.invitation(activity, member)
 
     cond do
-      activity.deleted_at || not DateTime.before?(now, activity.started_at) ->
+      not Activity.open?(activity, now) ->
         ActivityUpdate.fail!(update, "The activity started before it went.")
         {:cancel, "the activity started"}
 

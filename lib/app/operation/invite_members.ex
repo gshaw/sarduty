@@ -113,7 +113,7 @@ defmodule App.Operation.InviteMembers do
       when team_id == team.id and source in [:invite, :template] do
     cond do
       activity.deleted_at -> {:error, :deleted}
-      not DateTime.before?(now, activity.started_at) -> {:error, :started}
+      Activity.started?(activity, now) -> {:error, :started}
       activity.is_published -> {:error, :published}
       true -> add(team, activity, scope(team, picks), user, source, now)
     end

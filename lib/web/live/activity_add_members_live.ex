@@ -45,9 +45,9 @@ defmodule Web.ActivityAddMembersLive do
 
   defp leave(socket, activity, now) do
     text =
-      if DateTime.before?(now, activity.started_at),
-        do: "Published, so nobody can be added. #{D4H.unpublish_text(activity.team)}",
-        else: "The activity has started, so nobody can be added."
+      if Activity.started?(activity, now),
+        do: "The activity has started, so nobody can be added.",
+        else: "Published, so nobody can be added. #{D4H.unpublish_text(activity.team)}"
 
     socket
     |> put_flash(:error, text)

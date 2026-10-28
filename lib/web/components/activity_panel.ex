@@ -7,6 +7,7 @@ defmodule Web.Components.ActivityPanel do
   """
   use Web, :function_component
 
+  alias App.Model.Activity
   alias Service.Format
   alias Web.Components.Reply
 
@@ -39,7 +40,7 @@ defmodule Web.Components.ActivityPanel do
       <div class="min-w-0">
         {render_slot(@inner_block)}
         <p :if={@counts} id={"#{@id}-counts"} class="activity-panel-counts">
-          {Reply.counts_text(@counts, started?(@activity, @now))}
+          {Reply.counts_text(@counts, Activity.started?(@activity, @now))}
         </p>
         <div :if={@reply != []} class="activity-panel-reply">{render_slot(@reply)}</div>
       </div>
@@ -54,7 +55,4 @@ defmodule Web.Components.ActivityPanel do
     </section>
     """
   end
-
-  @doc "Whether the activity has started by `now`: the counts switch to D4H's words."
-  def started?(activity, now), do: not DateTime.after?(activity.started_at, now)
 end

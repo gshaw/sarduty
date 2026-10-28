@@ -12,6 +12,19 @@ defmodule App.Model.ActivityTest do
   # 19:00–21:00 UTC.
   @evening %Activity{started_at: ~U[2026-10-10 19:00:00Z], finished_at: ~U[2026-10-10 21:00:00Z]}
 
+  describe "open?/2" do
+    test "an activity is open until it starts" do
+      assert Activity.open?(@evening, ~U[2026-10-10 18:59:59Z])
+      refute Activity.open?(@evening, ~U[2026-10-10 19:00:00Z])
+      assert Activity.started?(@evening, ~U[2026-10-10 19:00:00Z])
+    end
+
+    test "a deleted activity is never open" do
+      deleted = %{@evening | deleted_at: ~U[2026-10-01 12:00:00Z]}
+      refute Activity.open?(deleted, ~U[2026-10-05 12:00:00Z])
+    end
+  end
+
   describe "take_attendance?/3" do
     test "a member takes attendance from 2 hours before the start to 2 hours after the end" do
       refute Activity.take_attendance?(@evening, false, ~U[2026-10-10 16:59:59Z])
@@ -104,5 +117,17 @@ defmodule App.Model.ActivityTest do
     assert Activity.counts_as(["Secondary Hours"], @defaults) == :secondary
     assert Activity.counts_as(["Training"], @defaults) == nil
     assert Activity.counts_as(nil, @defaults) == nil
+  end
+
+  test "only Activity says whether an activity has started" do
+    copies =
+      for path <- Path.wildcard("lib/**/*.{ex,exs,heex}"),
+          path != "lib/app/model/activity.ex",
+          File.read!(path) =~
+            ~r/DateTime\.before\?\(now, [\w.]*started_at\)|DateTime\.after\?\([\w.]*started_at, now\)/,
+          do: path
+
+    assert copies == [],
+           "Use Activity.started?/2 or open?/2, not a started_at comparison, in: #{inspect(copies)}"
   end
 end

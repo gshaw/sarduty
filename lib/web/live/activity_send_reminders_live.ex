@@ -22,9 +22,7 @@ defmodule Web.ActivitySendRemindersLive do
     activity = Web.ActivityLive.fetch_activity(team, id)
     now = DateTime.utc_now()
 
-    if activity.deleted_at || not DateTime.before?(now, activity.started_at) do
-      {:ok, leave(socket, activity)}
-    else
+    if Activity.open?(activity, now) do
       plan =
         activity
         |> ActivityMembers.load()
@@ -42,6 +40,8 @@ defmodule Web.ActivitySendRemindersLive do
          message: "",
          preview: ActivityMailer.reminder_preview(activity, team, sender, nil)
        )}
+    else
+      {:ok, leave(socket, activity)}
     end
   end
 

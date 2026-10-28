@@ -51,7 +51,7 @@ defmodule App.Operation.ReplyToActivity do
       when reply in [:yes, :no] do
     cond do
       activity.deleted_at -> {:error, :deleted}
-      not DateTime.before?(now, activity.started_at) -> {:error, :started}
+      Activity.started?(activity, now) -> {:error, :started}
       attendance == nil -> {:error, :not_invited}
       true -> {:ok, row(activity, attendance, reply)}
     end

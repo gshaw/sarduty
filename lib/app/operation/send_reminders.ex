@@ -90,7 +90,7 @@ defmodule App.Operation.SendReminders do
       activity.deleted_at ->
         {:error, :deleted}
 
-      not DateTime.before?(now, activity.started_at) ->
+      Activity.started?(activity, now) ->
         {:error, :started}
 
       MapSet.size(ids) == 0 ->
@@ -169,11 +169,11 @@ defmodule App.Operation.SendReminders do
   end
 
   defp deliver_queued(%Reminder{activity: activity} = reminder, last?, now) do
-    if activity.deleted_at || not DateTime.before?(now, activity.started_at) do
+    if Activity.open?(activity, now) do
+      send_email(reminder, last?, now)
+    else
       reminder |> Reminder.fail!("The activity started before it went.") |> broadcast()
       {:cancel, "the activity started"}
-    else
-      send_email(reminder, last?, now)
     end
   end
 

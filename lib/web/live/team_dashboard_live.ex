@@ -26,7 +26,6 @@ defmodule Web.TeamDashboardLive do
   alias App.Worker.SyncTeamChangesWorker
   alias Service.Format
   alias Web.Components.ActivityMap
-  alias Web.Components.ActivityPanel
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
   alias Web.WhiteboardText
@@ -314,7 +313,7 @@ defmodule Web.TeamDashboardLive do
 
   # "Murrin Park · in 3 hours · 6 signed up", without the place when D4H has none.
   defp where_and_when(activity, counts, now) do
-    started? = ActivityPanel.started?(activity, now)
+    started? = Activity.started?(activity, now)
 
     [
       activity.address,

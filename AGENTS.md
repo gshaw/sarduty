@@ -194,6 +194,9 @@ fi
 - **New side effects go in an Operation**, not a LiveView `handle_event`. Some older
   LiveViews call the D4H adapter directly (`ActivityMileageLive`, `Settings.TeamLive`);
   don't copy that.
+- **Every rule has one home**: the operation every entry point calls, as a pure
+  function, or the model when many places share it. A page asks that function, never
+  its own copy. See [Where rules live](docs/README.md#where-rules-live).
 - **Background work follows [docs/jobs.md](docs/jobs.md).** A job when nobody waits for
   the answer or a retry would fix it; inline when the person needs it or it writes to
   D4H. Args are ids, never structs or personal data. Insert the job in the same

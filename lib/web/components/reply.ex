@@ -7,6 +7,7 @@ defmodule Web.Components.Reply do
   """
   use Web, :function_component
 
+  alias App.Model.Activity
   alias App.Model.Member
 
   @doc """
@@ -24,7 +25,7 @@ defmodule Web.Components.Reply do
   def open?(nil, _activity, _now), do: false
 
   def open?(_invitation, activity, now),
-    do: activity.deleted_at == nil and DateTime.before?(now, activity.started_at)
+    do: Activity.open?(activity, now)
 
   @doc """
   The member's reply as the control shows it: `:ask` for the buttons, else `:yes` or
