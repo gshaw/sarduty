@@ -429,6 +429,8 @@ defmodule Web.ActivityFormLiveTest do
       assert [{"POST", "/exercises", body} | _rest] = writes()
       assert body["fullTeam"] == false
       assert body["shared"] == false
+      # D4H won't publish one whose tracking number is null.
+      assert body["trackingNumber"] == ""
 
       assert body["description"] ==
                "<p>Bring a <strong>headlamp</strong>.</p><p>Map &amp; compass too.</p><ul><li>Rope</li></ul>"

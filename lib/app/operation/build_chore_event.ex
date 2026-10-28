@@ -172,7 +172,9 @@ defmodule App.Operation.BuildChoreEvent do
       "title" => ChoreEventText.title(event.category, event.month),
       "started_at" => iso(starts_at),
       "description" => ChoreEventText.description(chores),
-      "finished_at" => iso(starts_at)
+      "finished_at" => iso(starts_at),
+      # None, but sent: D4H won't publish one whose tracking number is null.
+      "tracking_number" => ""
     }
   end
 

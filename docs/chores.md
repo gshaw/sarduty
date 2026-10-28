@@ -104,10 +104,10 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
   organization, had set a forced approval message long ago, and South Fraser's own
   approval message setting, in D4H's admin area, was off. Turning it on (2026-10-25)
   let most chore events publish, but not all: 3 sends on 2026-10-27 and 2026-10-28 got
-  the same 409, and Andrew approved each in D4H. The test event #02228 never publishes
-  from the API. The approval call that might stand in, `POST …/approval`, answers 403
-  without D4H's approval module, which South Fraser lacks. So on that 409 the note says
-  to approve it in D4H.
+  the same 409. Those events' tracking number was null, and D4H won't publish an
+  activity whose tracking number is null; "" publishes (2026-10-28, on #02251). So SAR
+  Duty sends "" for none, and every chore send sets it. For any other cause of that
+  409, the note says to approve it in D4H.
 - **Nothing locks an event.** D4H's `approved` flag mirrors `published` on every team seen
   (#358), so the first version, which stopped sending an approved event, stopped at the
   first published one.

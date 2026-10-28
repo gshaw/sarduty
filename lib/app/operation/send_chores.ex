@@ -201,8 +201,8 @@ defmodule App.Operation.SendChores do
 
   defp draft(_team, %{error: nil}), do: @draft
 
-  # D4H's approval step refuses some of South Fraser's publishes from the API, while its
-  # own Approve button works (2026-10-28). No setting fixes it, so the note says to approve.
+  # D4H's 409 names no reason. A null tracking number was one (2026-10-28), and the
+  # adapter now sends "", so for anything else the note says to approve it in D4H.
   defp draft(team, row) do
     if row.error =~ "cannot be marked ready for approval or published",
       do: "#{@draft} #{row.error} Approve it in #{D4H.service_name(team)}.",
