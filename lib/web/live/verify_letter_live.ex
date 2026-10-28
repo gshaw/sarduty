@@ -3,15 +3,14 @@ defmodule Web.VerifyLetterLive do
 
   import Web.Components.Verify
 
-  alias App.Model.ReplacedTaxCreditLetter
   alias App.Model.TaxCreditLetter
   alias Service.Format
   alias Web.VerifyLimit
 
   # Public, on the verify site (Web.VerifyHost), beside the ID card check. A letter's QR
   # code opens /letters/<reference number>. It shows the hours the team issued, so a
-  # reader can compare them with the paper. A replaced letter still verifies, marked as
-  # replaced, with the hours it said. An old reference number (before #207) was easy to
+  # reader can compare them with the paper. Only a team's current letter verifies: one it
+  # replaced or deleted is not found. An old reference number (before #207) was easy to
   # guess, so it shows nothing until the reader also gives the member's last name.
   # Misses share the ID card check's per-IP limit.
   def mount(_params, session, socket) do
@@ -70,16 +69,11 @@ defmodule Web.VerifyLetterLive do
   defp look_up(nil), do: %{status: :not_found}
 
   defp look_up(parsed) do
-    found(
-      TaxCreditLetter.find_by_ref_id(parsed) || ReplacedTaxCreditLetter.find_by_ref_id(parsed)
-    )
+    parsed |> TaxCreditLetter.find_by_ref_id() |> found()
   end
 
   defp look_up(parsed, last_name) do
-    found(
-      TaxCreditLetter.find_by_ref_id(parsed, last_name) ||
-        ReplacedTaxCreditLetter.find_by_ref_id(parsed, last_name)
-    )
+    parsed |> TaxCreditLetter.find_by_ref_id(last_name) |> found()
   end
 
   defp found(%TaxCreditLetter{} = letter) do
@@ -92,20 +86,6 @@ defmodule Web.VerifyLetterLive do
       certified_at: letter.inserted_at,
       primary_minutes: letter.primary_minutes,
       secondary_minutes: letter.secondary_minutes
-    }
-  end
-
-  defp found(%ReplacedTaxCreditLetter{tax_credit_letter: letter} = replaced) do
-    %{
-      status: :replaced,
-      ref_id: replaced.ref_id,
-      member: letter.member,
-      team: letter.member.team,
-      year: letter.year,
-      certified_at: replaced.certified_at,
-      replaced_at: replaced.inserted_at,
-      primary_minutes: replaced.primary_minutes,
-      secondary_minutes: replaced.secondary_minutes
     }
   end
 
@@ -187,7 +167,8 @@ defmodule Web.VerifyLetterLive do
         Check the number and try again
       </.band>
       <.panel>
-        Reference numbers start with SRVTC, at the bottom of the letter.
+        Reference numbers start with SRVTC, at the bottom of the letter. Only a team's
+        current letter verifies.
       </.panel>
     </div>
     """
@@ -195,16 +176,9 @@ defmodule Web.VerifyLetterLive do
 
   defp result(assigns) do
     ~H"""
-    <div id={"result-#{@result.status}"}>
-      <.band :if={@result.status == :issued} kind={:success} title="Issued by the team">
+    <div id="result-issued">
+      <.band kind={:success} title="Issued by the team">
         Verified just now
-      </.band>
-      <.band
-        :if={@result.status == :replaced}
-        kind={:warning}
-        title="This tax credit letter was replaced"
-      >
-        Replaced on {Format.date_long(@result.replaced_at, @result.team.timezone)}
       </.band>
 
       <.panel>
@@ -241,12 +215,8 @@ defmodule Web.VerifyLetterLive do
         </p>
       </.panel>
 
-      <p :if={@result.status == :issued} id="result-check" class="callout mt-4 text-sm">
+      <p id="result-check" class="callout mt-4 text-sm">
         <b>Compare these hours with the paper letter.</b> If they are not the same, contact the team.
-      </p>
-      <p :if={@result.status == :replaced} id="result-check" class="callout mt-4 text-sm">
-        <b>These hours are from the old letter.</b>
-        The team issued a new letter with a new reference number. Ask the member for it.
       </p>
 
       <.contact team={@result.team} />
