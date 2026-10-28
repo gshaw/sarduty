@@ -115,4 +115,50 @@ defmodule Web.Settings.MembersLiveTest do
              )
     end
   end
+
+  describe "member fields (#681)" do
+    alias App.Adapter.D4H
+    alias App.Model.CustomField
+    alias App.Operation.RefreshD4HData.UpsertCustomFields
+
+    defp member_field(id, title, restricted),
+      do: %D4H.CustomField{
+        d4h_custom_field_id: id,
+        title: title,
+        target: "member",
+        field_type: "text",
+        restricted: restricted
+      }
+
+    test "offers unrestricted member fields and saves the picked ones", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      UpsertCustomFields.save(
+        team.id,
+        [member_field(630, "Radio Call Sign", false), member_field(855, "Date of Birth", true)],
+        DateTime.utc_now()
+      )
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/members")
+
+      assert has_element?(lv, "#member-field-630")
+      refute has_element?(lv, "#member-field-855")
+      assert has_element?(lv, "#restricted-member-fields", "1 restricted field isn't offered.")
+
+      lv |> form("#member-fields-form", %{"fields" => ["", "630"]}) |> render_submit()
+
+      assert has_element?(lv, "#member-field-630[checked]")
+
+      assert [%{d4h_custom_field_id: 630}] =
+               team.id |> CustomField.get_all("member") |> Enum.filter(& &1.copy_values)
+    end
+
+    test "says when D4H has no member fields", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/members")
+
+      assert has_element?(lv, "#no-member-fields")
+      refute has_element?(lv, "#member-fields-form")
+    end
+  end
 end

@@ -23,7 +23,8 @@ defmodule App.Adapter.D4H.Member do
             joined_at: nil,
             left_at: nil,
             permission: nil,
-            status: nil
+            status: nil,
+            custom_values: %{}
 
   def build(record) do
     %__MODULE__{
@@ -40,7 +41,8 @@ defmodule App.Adapter.D4H.Member do
       joined_at: Parse.optional_datetime(record["startsAt"]),
       left_at: Parse.optional_datetime(record["endsAt"]),
       permission: record["permission"],
-      status: record["status"]
+      status: record["status"],
+      custom_values: Parse.custom_values(record["customFieldValues"])
     }
   end
 

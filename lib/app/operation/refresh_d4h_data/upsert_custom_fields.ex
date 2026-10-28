@@ -31,7 +31,8 @@ defmodule App.Operation.RefreshD4HData.UpsertCustomFields do
     |> Enum.chunk_every(100)
     |> Enum.each(
       &Repo.insert_all(CustomField, &1,
-        on_conflict: {:replace_all_except, [:id, :team_id, :d4h_custom_field_id, :inserted_at]},
+        on_conflict:
+          {:replace_all_except, [:id, :team_id, :d4h_custom_field_id, :copy_values, :inserted_at]},
         conflict_target: [:team_id, :d4h_custom_field_id]
       )
     )

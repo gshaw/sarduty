@@ -35,6 +35,9 @@ defmodule App.Model.Member do
     # D4H's access level: 0 OWNER, 1 EDITOR, 2 MEMBER, 3 MEMBER_PLUS, 4 NO_ACCESS.
     field :d4h_permission, :integer
     field :d4h_status, :string
+    # Values of the member fields the team copies (#681), by D4H field id: see
+    # App.Model.CustomField. Nil until copied.
+    field :custom_values, :map, redact: true
     # Set by a team admin in SAR Duty, never from D4H, so build_changeset/2 leaves it out.
     field :not_a_person, :boolean, default: false
     # Whether team admins can email reminders to reply (#444). Set by the member in SAR
@@ -65,7 +68,8 @@ defmodule App.Model.Member do
       :joined_at,
       :left_at,
       :d4h_permission,
-      :d4h_status
+      :d4h_status,
+      :custom_values
     ])
     |> unique_constraint([:team_id, :d4h_member_id])
     |> validate_required([:team_id, :d4h_member_id, :name])
