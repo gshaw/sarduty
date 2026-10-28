@@ -67,6 +67,7 @@ defmodule App.Operation.RefreshD4HData do
 
     RecordD4HChanges.recording(team, started_at, fn ->
       progress = refresh_team_data(d4h, team, progress)
+      progress = refresh_custom_fields(d4h, team, progress)
       {tag_index, progress} = refresh_members_and_tags(d4h, team, progress)
       progress = refresh_all_activities(d4h, team, tag_index, progress)
       progress = refresh_qualifications(d4h, team, progress)
@@ -111,6 +112,12 @@ defmodule App.Operation.RefreshD4HData do
   defp refresh_team_data(d4h, team, progress) do
     progress = RefreshD4HData.Progress.update_stage(progress, "Team logo")
     save_team_logo(d4h, team)
+    RefreshD4HData.Progress.finish_stage(progress)
+  end
+
+  defp refresh_custom_fields(d4h, team, progress) do
+    progress = RefreshD4HData.Progress.update_stage(progress, "Custom fields")
+    RefreshD4HData.UpsertCustomFields.call(d4h, team)
     RefreshD4HData.Progress.finish_stage(progress)
   end
 

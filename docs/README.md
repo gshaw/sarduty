@@ -121,6 +121,7 @@ have decided since the page loaded, stays in `call`.
 - [equipment.md](equipment.md) — equipment from D4H, and adding equipment to an activity.
 - [chores.md](chores.md) — chores: members log them, team admins accept them, and SAR Duty sends them to D4H.
 - [certificates.md](certificates.md) — certificates: members send them, team admins accept them into D4H as awards.
+- [custom-fields.md](custom-fields.md) — D4H's custom fields: what is copied, how fresh it is, and why restricted fields never reach an organisation.
 - [templates.md](templates.md) — templates: items, tags, and groups whose members they add, applied to an activity in one step.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.

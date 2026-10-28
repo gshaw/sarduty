@@ -65,6 +65,15 @@ phones pick up the new back of the pass in a minute or so.
 The card's QR code and "how to check" text still say `verify.sarduty.com`. That changes
 only when the organization has its own host.
 
+## What an organization never sees
+
+A team's D4H field marked RESTRICTED is the team's alone: D4H keeps it from rolling up
+to the organization (#681). Nothing an organization sees in SAR Duty may read one: its
+space, its reports, or an organization's MCP when there is one. A report across an
+organization's teams uses the organization's own fields, such as BCSARA's Agency File #,
+which mean the same thing on every team. As organization features grow, check each new
+one against this. See [custom-fields.md](custom-fields.md#restricted-fields-and-organisations).
+
 ## Giving an organization its own verify host
 
 Not built yet. When an organization wants `verify.bcsara.com`:

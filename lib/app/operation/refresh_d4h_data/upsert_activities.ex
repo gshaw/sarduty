@@ -140,7 +140,8 @@ defmodule App.Operation.RefreshD4HData.UpsertActivities do
       hours_kind: nil,
       started_at: d4h_activity.started_at,
       finished_at: d4h_activity.finished_at,
-      tags: d4h_activity.tags
+      tags: d4h_activity.tags,
+      custom_values: d4h_activity.custom_values
     }
 
     activity = Activity.get_by(team_id: team_id, d4h_activity_id: d4h_activity.d4h_activity_id)

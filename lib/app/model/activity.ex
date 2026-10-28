@@ -146,6 +146,9 @@ defmodule App.Model.Activity do
     field :started_at, :utc_datetime
     field :finished_at, :utc_datetime
     field :tags, {:array, :string}
+    # D4H custom field values by D4H field id (#681): see App.Model.CustomField. Nil
+    # until the first refresh after they were added copies them.
+    field :custom_values, :map
     # Set by the refresh when D4H stops listing the activity. Deleted activities are kept
     # for their attendance scans, and left out of every list.
     field :deleted_at, :utc_datetime
@@ -184,7 +187,8 @@ defmodule App.Model.Activity do
       :hours_kind,
       :started_at,
       :finished_at,
-      :tags
+      :tags,
+      :custom_values
     ])
     |> validate_required([
       :team_id,

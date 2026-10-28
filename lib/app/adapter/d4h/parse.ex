@@ -67,4 +67,18 @@ defmodule App.Adapter.D4H.Parse do
 
   def optional_datetime(nil), do: nil
   def optional_datetime(value), do: datetime(value)
+
+  @doc """
+  A record's custom field values (#681) as a map of the D4H field id, a string, to its
+  value: a string, or a list of option ids for a choice field. Empty values are left
+  out, so a field D4H clears drops out of the map.
+  """
+  def custom_values(values) when is_list(values) do
+    for %{"customField" => %{"id" => id}, "value" => value} <- values,
+        value not in [nil, "", []],
+        into: %{},
+        do: {Integer.to_string(id), value}
+  end
+
+  def custom_values(_values), do: %{}
 end
