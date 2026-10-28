@@ -4,6 +4,9 @@
   .photo { width: 192px; height: 192px; border-radius: var(--radius); background: var(--bg); object-fit: cover; }
   .photo-sm { width: 112px; height: 112px; border: 1px solid var(--border-subtle); }
   .logo-md { width: 56px; height: 56px; flex: none; }
+  /* A QR code to scan from a screen, on white in dark mode too, so a camera reads it. */
+  .qr-code { width: 160px; padding: var(--sp-2); background: var(--paper); border-radius: var(--radius); }
+  .qr-code svg { display: block; width: 100%; height: auto; }
 
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }

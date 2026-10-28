@@ -150,6 +150,26 @@ defmodule Web.TakeAttendanceLiveTest do
            )
   end
 
+  test "sits in the app layout, its side navigation link current", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
+    assert has_element?(lv, "#side-nav-take-attendance[aria-current=page]")
+  end
+
+  test "Open on the iPad: a QR code and the address to copy", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/take-attendance")
+    url = Web.Endpoint.url() <> "/teams/#{team.subdomain}/take-attendance"
+
+    assert has_element?(lv, "#open-on-ipad .qr-code svg")
+    assert has_element?(lv, ~s{#open-on-ipad #ipad-address[value="#{url}"]})
+    assert has_element?(lv, "#open-on-ipad", "/teams/#{team.subdomain}/take-attendance")
+  end
+
+  test "the scanner stays a narrow page", %{conn: conn, team: team} do
+    rope = at(team, -1)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{rope.id}/take-attendance")
+    refute has_element?(lv, "#side-nav")
+  end
+
   describe "for a member" do
     test "opens it on a team with member logins" do
       %{team: team, user: user} = member_with_login_fixture()

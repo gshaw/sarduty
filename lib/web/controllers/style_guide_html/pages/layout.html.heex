@@ -67,7 +67,7 @@
 
   <h2 id="narrow-pages">Narrow pages</h2>
   <p>
-    A page for one task done with a phone or iPad in hand, such as logging in, taking attendance, or scanning kit, is one column, centred, at every width. A big screen adds margin, not width. There is no side navigation, and the
+    A page for one task done with a phone or iPad in hand, such as logging in, an activity's scanner, or scanning kit, is one column, centred, at every width. A big screen adds margin, not width. There is no side navigation, and the
     <a href={page_path(:top_bar)}>top bar</a>
     is the compact one at every width, with its ends lined up with the column.
   </p>
@@ -78,13 +78,13 @@
     </li>
     <li>
       <strong>Tool, 48rem (768px):</strong>
-      a hand-held tool with a list, such as Take attendance or a scanner.
+      a hand-held tool with a list, such as an activity's Take attendance scanner.
     </li>
     <li>
       The team's name is in the bar, never in the page. Logged out, the bar has nothing on the left or right. Logged in, Menu holds the area's pages, so the page is never a dead end. There is no search: the page is for one task, and Menu is the way out.
     </li>
     <li>
-      A page people move between stays in its area with side navigation, even when they mostly open it on a phone, such as Your membership.
+      A page people move between stays in its area with side navigation, even when they mostly open it on a phone, such as Your membership. So does a list that leads to the task: Take attendance lists the activities in the app layout, and the scanner a row opens is the narrow page.
     </li>
   </ul>
   <div class="demo" style="padding: 0">
@@ -106,7 +106,7 @@
       current_path="/teams/squamish/activities"
     />
     <div class={["m-auto px-2 py-6", Web.Layouts.column_width(:tool)]}>
-      <h1 class="title">Take attendance</h1>
+      <h1 class="title">Training night</h1>
       <p class="mb-0">Scan each member's ID card as they arrive.</p>
     </div>
   </div>
