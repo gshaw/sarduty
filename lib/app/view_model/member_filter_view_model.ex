@@ -24,6 +24,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     field :details, :string
     field :attended, :string
     field :items, :string
+    field :access, :string
     field :standing, :string
     field :group, :integer
     field :activity_tag, :string
@@ -37,6 +38,11 @@ defmodule App.ViewModel.MemberFilterViewModel do
   # Whether a member holds any of the team's items (#514): who to ask for equipment back
   # before they retire, and who can retire now.
   def items_kinds, do: [{"Any", "all"}, {"Holds some", "held"}, {"Holds none", "none"}]
+
+  # Whether D4H lets a member log in (#514), for retiring members who still can. Members
+  # whose access D4H didn't send are in neither.
+  def access_kinds(service),
+    do: [{"Any", "all"}, {"Can log in to #{service}", "some"}, {"No access", "none"}]
 
   # Members not at an activity in this many days (#247): every time frame the team
   # setting offers.
@@ -167,7 +173,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     member_values = nil |> standing_kinds(false, true) |> Enum.map(&elem(&1, 1))
 
     params
-    |> Map.drop(["attended", "details", "items"])
+    |> Map.drop(["attended", "details", "items", "access"])
     |> Map.reject(fn
       {"standing", value} -> value not in member_values
       {"sort", value} -> is_binary(value) and String.starts_with?(value, "standing")
@@ -238,6 +244,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> scope(details: filter_options.details, team: team)
     |> scope(attended: filter_options.attended, team: team, now: now)
     |> scope(items: filter_options.items, team: team)
+    |> scope(access: filter_options.access)
     |> scope(group: filter_options.group, team: team)
     |> Standing.join(team, Service.Period.today(now, team.timezone))
     |> scope(standing: filter_options.standing, now: now)
@@ -249,6 +256,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       details: "all",
       attended: "all",
       items: "all",
+      access: "all",
       standing: "current",
       sort: "name"
     }
@@ -264,6 +272,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
       :details,
       :attended,
       :items,
+      :access,
       :standing,
       :group,
       :activity_tag,
@@ -275,6 +284,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> validate_kind(:details, details_kinds())
     |> validate_kind(:attended, attended_kinds())
     |> validate_kind(:items, items_kinds())
+    |> validate_inclusion(:access, ["all", "some", "none"])
     |> validate_standing()
     |> App.Validate.Period.call(:when)
     |> validate_inclusion(:sort, Map.values(sort_kinds()))
@@ -423,6 +433,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
     do: where(q, [m], m.id not in subquery(EquipmentItem.holder_ids_query(team)))
 
   defp scope(q, items: _all, team: _team), do: q
+
+  defp scope(q, access: "some"), do: Member.d4h_access_query(q, true)
+  defp scope(q, access: "none"), do: Member.d4h_access_query(q, false)
+  defp scope(q, access: _all), do: q
 
   defp scope(q, group: nil, team: _team), do: q
 

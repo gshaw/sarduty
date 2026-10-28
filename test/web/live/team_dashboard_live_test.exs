@@ -677,6 +677,40 @@ defmodule Web.TeamDashboardLiveTest do
              )
     end
 
+    test "warns of retiring members D4H still lets log in", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      leavers = group_fixture(team, %{title: "Leavers"})
+
+      team =
+        team
+        |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+        |> App.Repo.update!()
+
+      for permission <- [1, 2, 4, nil],
+          do: group_member_fixture(leavers, member_fixture(team, %{d4h_permission: permission}))
+
+      member_fixture(team, %{d4h_permission: 2})
+
+      {:ok, lv, _html} = open(conn, user, team)
+
+      assert has_element?(
+               lv,
+               "#attention-retiring_access",
+               "2 retiring members can still log in to D4H"
+             )
+
+      assert has_element?(
+               lv,
+               "#attention-retiring_access",
+               "Set their access to No access in D4H."
+             )
+
+      assert has_element?(
+               lv,
+               ~s{#attention-retiring_access a[href="/teams/#{team.subdomain}/members?standing=retiring&access=some"]}
+             )
+    end
+
     test "a deleted Retiring group warns and links to settings", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       team = team |> Ecto.Changeset.change(retiring_d4h_group_id: 424_242) |> App.Repo.update!()

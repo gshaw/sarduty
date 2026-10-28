@@ -297,6 +297,7 @@ defmodule App.Model.Member do
   end
 
   @manager_permissions [0, 1]
+  @no_access 4
 
   @doc """
   Whether D4H makes this member one of the team's managers (#57): an OWNER or EDITOR who
@@ -307,7 +308,7 @@ defmodule App.Model.Member do
 
   @doc """
   The members this email logs in as (#156): one per team with member logins on, where a
-  current member with this email isn't marked not a person. A team where two such
+  current member with this email isn't marked not a person or retiring. A team where two such
   members share the email is left out, since SAR Duty can't tell whose card to show.
   With the team, by team name.
   """
@@ -335,8 +336,17 @@ defmodule App.Model.Member do
     |> where([m, t], t.member_logins and fragment("lower(?)", m.email) == ^email)
     |> current_query(now)
     |> people_query()
+    |> not_retiring_query()
     |> preload([m, t], team: t)
   end
+
+  @doc """
+  Narrows `query` to members not in their team's Retiring group (#514). Logins, team
+  admin and member alike, read it: someone on their way out loses access the moment a
+  team admin marks them retiring, not weeks later when D4H retires them.
+  """
+  def not_retiring_query(query),
+    do: where(query, [m], m.id not in subquery(Standing.all_retiring_ids_query()))
 
   @doc """
   Whether this email is a current member on some team, whatever their permission: not
@@ -379,8 +389,18 @@ defmodule App.Model.Member do
   def permission_label(_), do: "Unknown"
 
   @doc """
-  The team's managers, by name. Members marked not a person are left out, and so is a
-  team key from a "SAR Duty" account. A team key from a person's account leaves them in,
+  Narrows `query` to members who can log in to D4H, `true`, or who can't, `false`: a
+  known permission other than No access. A member whose permission D4H didn't send is
+  in neither.
+  """
+  def d4h_access_query(query, true),
+    do: where(query, [m], not is_nil(m.d4h_permission) and m.d4h_permission != @no_access)
+
+  def d4h_access_query(query, false), do: where(query, [m], m.d4h_permission == @no_access)
+
+  @doc """
+  The team's managers, by name: the people who log in as its team admins. Members marked
+  not a person or retiring are left out, and so is a team key from a "SAR Duty" account. A team key from a person's account leaves them in,
   since they manage the team too.
   """
   def get_managers(%Team{} = team, now) do
@@ -389,6 +409,7 @@ defmodule App.Model.Member do
     Member
     |> where([m], m.team_id == ^team.id and m.d4h_permission in @manager_permissions)
     |> people_query()
+    |> not_retiring_query()
     |> order_by([m], asc: m.name)
     |> Repo.all()
     |> Enum.filter(&(manager?(&1, now) and &1.d4h_member_id != key_account))

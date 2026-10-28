@@ -61,12 +61,22 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   Settings → Members (`teams.retiring_d4h_group_id`). D4H refuses to retire a member who
   holds the team's equipment, so a member who leaves stays current until every item is
   back. Read from `group_members`, never stored, and no job. SAR Duty leaves retiring
-  members out of what Not a person leaves out (below), and out of reminders too. They
-  still log in: `Member.people_query/1` decides logins and stays as it was, and
-  `Member.counted_query/2` is the narrowing beside it. The Retiring group can't have
-  group rules, since "Standing is Active" on it would take out every member, and
-  settings offer only groups without them. If D4H deletes the group, nobody is
-  Retiring and Needs attention says so until a team admin picks another.
+  members out of what Not a person leaves out (below), and out of reminders too. The
+  Retiring group can't have group rules, since "Standing is Active" on it would take
+  out every member, and settings offer only groups without them. If D4H deletes the
+  group, nobody is Retiring and Needs attention says so until a team admin picks
+  another.
+- **Retiring members can't log in**, as a team admin or a member, decided 2026-10-28
+  (`Member.not_retiring_query/1`). Retiring can last weeks while items come back, and
+  marking them retiring is the step that cuts access, so do it before telling them. Your
+  membership's list of the items they hold doesn't justify the access. SAR Duty can't
+  take away their D4H access, since D4H sets access only in its web app; the
+  confirmation says to. Needs attention warns while any stays: "2 retiring members can
+  still log in to D4H", from the synced permission (anything but No access), opening
+  `standing=retiring&access=some`. A member whose permission D4H didn't send isn't
+  counted.
+- **Access** (`access=some` or `none`, behind More filters, team admins only) keeps the
+  members D4H lets log in, or those with No access.
 - **Items** (`items=held` or `none`, behind More filters, team admins only) keeps the
   members who hold any of the team's equipment, retired items too, or those who hold
   none. Needs attention's "2 retiring members hold no items" opens

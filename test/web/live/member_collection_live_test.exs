@@ -845,4 +845,22 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#last-attended-#{clear.id}")
     refute has_element?(lv, "#last-attended-#{holding.id}")
   end
+
+  test "Access: who D4H lets log in, and who has No access (#514)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    can = member_fixture(team, %{name: "Cam Can", d4h_permission: 2})
+    cannot = member_fixture(team, %{name: "Nell None", d4h_permission: 4})
+    unknown = member_fixture(team, %{name: "Una Unknown", d4h_permission: nil})
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?access=some")
+    assert has_element?(lv, "#last-attended-#{can.id}")
+    refute has_element?(lv, "#last-attended-#{cannot.id}")
+    refute has_element?(lv, "#last-attended-#{unknown.id}")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?access=none")
+    assert has_element?(lv, "#last-attended-#{cannot.id}")
+    refute has_element?(lv, "#last-attended-#{can.id}")
+    refute has_element?(lv, "#last-attended-#{unknown.id}")
+  end
 end

@@ -171,6 +171,14 @@ defmodule Web.MemberCollectionLive do
         options={MemberFilterViewModel.items_kinds()}
         default="all"
       />
+      <:filter
+        :if={@team_admin?}
+        field={@form[:access]}
+        label="Access"
+        more
+        options={MemberFilterViewModel.access_kinds(D4H.service_name(@current_team))}
+        default="all"
+      />
     </.filter_bar>
     <p :if={@attended not in [nil, "all"]} id="attended-hint" class="hint">
       Attended counts from the latest of a member's last activity, the day they joined, the

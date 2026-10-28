@@ -97,6 +97,19 @@ defmodule App.Model.Standing do
     |> select([m], m.id)
   end
 
+  @doc """
+  The ids of members in their own team's Retiring group, on every team. Logins read it:
+  a retiring member can't log in, as a team admin or a member.
+  """
+  def all_retiring_ids_query do
+    from gm in GroupMember,
+      join: g in Group,
+      on: g.id == gm.group_id,
+      join: t in Team,
+      on: t.id == g.team_id and g.d4h_group_id == t.retiring_d4h_group_id,
+      select: gm.member_id
+  end
+
   @doc "retiring_ids_query/1 as a set."
   def retiring_ids(%Team{} = team),
     do: team |> retiring_ids_query() |> Repo.all() |> MapSet.new()

@@ -17,6 +17,7 @@ defmodule Web.MemberStandingLive do
   alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
+  alias App.Operation.SaveMember
   alias App.Operation.SetGroupMember
   alias App.Repo
   alias App.ViewData.MemberMilestones
@@ -138,10 +139,16 @@ defmodule Web.MemberStandingLive do
   # No flash: the badge and the line change on the page.
   def handle_event("mark-retiring", _params, socket) do
     %{current_team: team, current_user: user, member: member} = socket.assigns
+    now = DateTime.utc_now()
 
-    case SetGroupMember.add(team, member, socket.assigns.retiring_group, user, DateTime.utc_now()) do
-      :ok -> {:noreply, socket |> clear_flash() |> load_standing()}
-      {:error, text} -> {:noreply, socket |> load_standing() |> put_flash(:error, text)}
+    # A retiring member can't log in, so the team's only team admin would lock it out.
+    if SaveMember.last_admin?(team, member, now) do
+      {:noreply, put_flash(socket, :error, "Make another member a team admin first.")}
+    else
+      case SetGroupMember.add(team, member, socket.assigns.retiring_group, user, now) do
+        :ok -> {:noreply, socket |> clear_flash() |> load_standing()}
+        {:error, text} -> {:noreply, socket |> load_standing() |> put_flash(:error, text)}
+      end
     end
   end
 
@@ -235,9 +242,9 @@ defmodule Web.MemberStandingLive do
           Active unless the member is away, retiring, or not a person. A member away sees
           when they're back on Your membership, never the reason.
           <span :if={@retiring_group}>
-            Retiring members are in your {@retiring_group.title} group in {@service}. SAR Duty
-            leaves them out of counts, invites, reminders, and Take attendance until they
-            are retired.
+            Retiring members are in your {@retiring_group.title} group in {@service}. They
+            can't log in to SAR Duty, and it leaves them out of counts, invites, reminders,
+            and Take attendance.
           </span>
         </p>
         <.form_actions :if={@retiring_group && @standing not in [:retired, :not_a_person]}>
@@ -247,7 +254,7 @@ defmodule Web.MemberStandingLive do
             type="button"
             phx-click="mark-retiring"
             phx-disable-with="Marking as retiring…"
-            data-confirm={"Add #{@member.name} to #{@retiring_group.title}? SAR Duty leaves them out of counts, invites, reminders, and Take attendance until they are retired."}
+            data-confirm={"Add #{@member.name} to #{@retiring_group.title}? They can't log in to SAR Duty from now on. Take away their #{@service} access too."}
           >
             Mark as retiring
           </.button>
@@ -257,7 +264,7 @@ defmodule Web.MemberStandingLive do
             type="button"
             phx-click="unmark-retiring"
             phx-disable-with="Removing…"
-            data-confirm={"Remove #{@member.name} from #{@retiring_group.title}? SAR Duty counts them again."}
+            data-confirm={"Remove #{@member.name} from #{@retiring_group.title}? They can log in to SAR Duty again, and SAR Duty counts them again."}
           >
             Remove from {@retiring_group.title}
           </.button>

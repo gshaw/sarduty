@@ -253,7 +253,7 @@ defmodule App.Model.Team do
 
   @doc """
   The teams this email manages: it matches a member who is a D4H Owner or Editor, isn't
-  retired, and hasn't left (App.Model.Member.manager?/2). The team key's own member never
+  retired, hasn't left (App.Model.Member.manager?/2), and isn't retiring (#514). The team key's own member never
   counts when it's a "SAR Duty" account; a person whose own key is the team key still
   manages the team. Teams an admin let the email into (App.Model.TeamLoginGrant) count
   too. By name.
@@ -298,6 +298,7 @@ defmodule App.Model.Team do
     Member
     |> where([m], fragment("lower(?)", m.email) == ^email and m.d4h_permission in [0, 1])
     |> Member.current_query(now)
+    |> Member.not_retiring_query()
     |> select([m], %{team_id: m.team_id, d4h_member_id: m.d4h_member_id})
   end
 

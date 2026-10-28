@@ -439,6 +439,9 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :retiring}),
     do: ~p"/teams/#{team}/equipment?place=retiring"
 
+  defp attention_path(team, %{key: :retiring_access}),
+    do: ~p"/teams/#{team}/members?standing=retiring&access=some"
+
   defp attention_path(team, %{key: :retiring_clear}),
     do: ~p"/teams/#{team}/members?standing=retiring&items=none"
 

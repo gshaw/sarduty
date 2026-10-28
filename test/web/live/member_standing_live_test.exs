@@ -5,6 +5,7 @@ defmodule Web.MemberStandingLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.GroupMember
+  alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
   alias App.Model.MemberStandingChange
@@ -391,6 +392,22 @@ defmodule Web.MemberStandingLiveTest do
       assert_received {:d4h, "DELETE", _path}
       assert has_element?(lv, "#standing-now", "Active")
       refute GroupMember.get_by(group_id: leavers.id, member_id: member.id)
+    end
+
+    test "Mark as retiring refuses the team's only team admin, who would be locked out",
+         %{conn: conn, user: user, team: team, leavers: leavers} do
+      me = Member.get_by(team_id: team.id, email: user.email)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{me.id}/standing")
+
+      assert has_element?(lv, "#mark-retiring[data-confirm*='log in to SAR Duty']")
+
+      assert lv |> element("#mark-retiring") |> render_click() =~
+               "Make another member a team admin first."
+
+      refute_received {:d4h, _method, _path}
+      refute GroupMember.get_by(group_id: leavers.id, member_id: me.id)
     end
 
     test "says how many items a retiring member holds", %{

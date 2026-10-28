@@ -179,6 +179,7 @@ defmodule App.ViewData.TeamAttention do
   defp retiring_items(%{retiring: retiring, service: service}),
     do: [
       retiring_missing_item(retiring),
+      retiring_access_item(retiring, service),
       retiring_holding_item(retiring),
       retiring_clear_item(retiring, service)
     ]
@@ -194,6 +195,28 @@ defmodule App.ViewData.TeamAttention do
   end
 
   defp retiring_missing_item(_none_or_counts), do: nil
+
+  # SAR Duty shuts a retiring member out of itself, but only a team admin can in D4H.
+  defp retiring_access_item(%{d4h_access: count}, service) when count > 0 do
+    name = D4H.service_name(service)
+
+    %{
+      key: :retiring_access,
+      level: :warning,
+      title:
+        Format.count(count,
+          one: "%d retiring member can still log in to #{name}",
+          many: "%d retiring members can still log in to #{name}"
+        ),
+      detail: access_where(service),
+      action: "Show members"
+    }
+  end
+
+  defp retiring_access_item(_none_or_missing, _service), do: nil
+
+  defp access_where(:records), do: "Set their access to No access on each member's page."
+  defp access_where(service), do: "Set their access to No access in #{D4H.service_name(service)}."
 
   defp retiring_holding_item(%{holding: count, items: items}) when count > 0 do
     who = Format.count(count, one: "%d retiring member holds", many: "%d retiring members hold")
