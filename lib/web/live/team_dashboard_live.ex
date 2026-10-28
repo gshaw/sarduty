@@ -551,8 +551,7 @@ defmodule Web.TeamDashboardLive do
       <.a
         navigate={
           if @certificates?,
-            do:
-              ~p"/teams/#{@team}/me/certificates/new?#{[qualification: @item.award.qualification_id]}",
+            do: ~p"/teams/#{@team}/certificates/new?#{[qualification: @item.award.qualification_id]}",
             else: ~p"/teams/#{@team}/me"
         }
         class="font-semibold"
@@ -584,7 +583,7 @@ defmodule Web.TeamDashboardLive do
     ~H"""
     <li id="to-do-declined-chores" class="py-3">
       <.a
-        navigate={~p"/teams/#{@team}/me/chores"}
+        navigate={Web.ChoreCollectionLive.view_path(@team, :yours)}
         class="font-semibold"
       >{Format.count(length(@item.chores),
         one: "Your chore was declined",

@@ -1,4 +1,4 @@
-defmodule Web.MeCertificateFormLiveTest do
+defmodule Web.CertificateFormLiveTest do
   use Web.ConnCase
 
   import App.DataFixtures
@@ -23,7 +23,7 @@ defmodule Web.MeCertificateFormLiveTest do
     assert has_element?(lv, "#certificate-add")
 
     {:ok, lv, _html} =
-      live(conn, ~p"/teams/#{team}/me/certificates/new?#{[qualification: qualification.id]}")
+      live(conn, ~p"/teams/#{team}/certificates/new?#{[qualification: qualification.id]}")
 
     assert has_element?(
              lv,
@@ -69,7 +69,7 @@ defmodule Web.MeCertificateFormLiveTest do
   end
 
   test "a member not sure of the qualification leaves it blank and writes a note", ctx do
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/new")
     assert has_element?(lv, "#certificate_qualification_id[placeholder='Type to search']")
 
     lv
@@ -95,7 +95,7 @@ defmodule Web.MeCertificateFormLiveTest do
   end
 
   test "a certificate needs its file", ctx do
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/new")
 
     html =
       lv
@@ -109,7 +109,7 @@ defmodule Web.MeCertificateFormLiveTest do
   end
 
   test "a missing file shows beside the other mistakes, not after them", ctx do
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/new")
     lv |> form("#certificate-form", certificate: %{starts_on: ""}) |> render_submit()
 
     assert has_element?(lv, ~s(#certificate-errors a[href="#certificate_file_name"]))
@@ -139,13 +139,13 @@ defmodule Web.MeCertificateFormLiveTest do
     certificate = certificate_fixture(ctx.member, ctx.qualification, %{d4h_award_id: 300})
 
     assert_raise Web.Status.NotFound, fn ->
-      live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/#{certificate.id}/edit")
+      live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{certificate.id}/edit")
     end
 
     ctx.team |> Ecto.Changeset.change(certificates_enabled: false) |> Repo.update!()
 
     assert_raise Web.Status.NotFound, fn ->
-      live(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/new")
+      live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/new")
     end
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/me")
@@ -154,7 +154,7 @@ defmodule Web.MeCertificateFormLiveTest do
 
   test "the member's own file, and only theirs", ctx do
     certificate = certificate_fixture(ctx.member, ctx.qualification)
-    conn = get(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/#{certificate.id}/file")
+    conn = get(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{certificate.id}/file")
     assert conn.resp_body == "%PDF-1.7\n"
     assert get_resp_header(conn, "content-security-policy") == ["sandbox"]
     # It changes and goes, so no browser keeps it.
@@ -163,7 +163,7 @@ defmodule Web.MeCertificateFormLiveTest do
     other = certificate_fixture(member_fixture(ctx.team), ctx.qualification)
 
     assert_error_sent 404, fn ->
-      get(ctx.conn, ~p"/teams/#{ctx.team}/me/certificates/#{other.id}/file")
+      get(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{other.id}/file")
     end
   end
 end

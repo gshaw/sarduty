@@ -311,4 +311,23 @@ defmodule Web.CertificateLiveTest do
     refute has_element?(lv, "#accept-form")
     assert has_element?(lv, "#decline-form")
   end
+
+  # A team admin who is also a member sends their own from the page they manage (#645).
+  test "a team admin who is a member adds their own certificate from Certificates", ctx do
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates")
+
+    assert has_element?(
+             lv,
+             ~s{#certificate-add[href="/teams/#{ctx.team.subdomain}/certificates/new"]}
+           )
+
+    admin = App.AccountsFixtures.user_fixture() |> make_admin()
+    admin_conn = log_in_user(build_conn(), admin)
+    {:ok, lv, _html} = live(admin_conn, ~p"/teams/#{ctx.team}/certificates")
+    refute has_element?(lv, "#certificate-add")
+
+    assert_raise Web.Status.NotFound, fn ->
+      live(admin_conn, ~p"/teams/#{ctx.team}/certificates/new")
+    end
+  end
 end

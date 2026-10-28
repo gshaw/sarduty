@@ -257,13 +257,16 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
+      live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive
+      live "/teams/:subdomain/certificates/:id/edit", CertificateFormLive, :edit
       live "/teams/:subdomain/chores", ChoreCollectionLive
+      live "/teams/:subdomain/chores/new", ChoreFormLive, :new
       live "/teams/:subdomain/whiteboard", WhiteboardLive
       live "/teams/:subdomain/whiteboard/new", WhiteboardNoteFormLive, :new
       live "/teams/:subdomain/whiteboard/:id/edit", WhiteboardNoteFormLive, :edit
       live "/teams/:subdomain/chores/:id", ChoreLive
-      live "/teams/:subdomain/chores/:id/edit", ChoreFormLive
+      live "/teams/:subdomain/chores/:id/edit", ChoreFormLive, :edit
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive
@@ -285,11 +288,6 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
-      live "/teams/:subdomain/me/chores", MeChoresLive
-      live "/teams/:subdomain/me/chores/new", MeChoreFormLive, :new
-      live "/teams/:subdomain/me/chores/:id/edit", MeChoreFormLive, :edit
-      live "/teams/:subdomain/me/certificates/new", MeCertificateFormLive, :new
-      live "/teams/:subdomain/me/certificates/:id/edit", MeCertificateFormLive, :edit
       live "/teams/:subdomain/me/details", MeDetailsLive
     end
 
@@ -301,7 +299,6 @@ defmodule Web.Router do
       get "/card/google-wallet", MeController, :google_pass
       get "/tax-credit-letters/:id/pdf", MeController, :tax_credit_letter
       get "/qualifications/:id/certificate", MeController, :certificate
-      get "/certificates/:id/file", MeController, :sent_certificate
     end
 
     # Team routes members reach too, like a LiveView with access: :team.
@@ -310,13 +307,13 @@ defmodule Web.Router do
 
       get "/activities/:id/calendar", ActivityCalendarController, :show
       get "/members/:id/image", MemberController, :image
+      get "/certificates/:id/file", CertificateController, :file
     end
 
     scope "/teams/:subdomain" do
       pipe_through :require_authorized_team_subdomain
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
-      get "/certificates/:id/file", CertificateController, :file
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete

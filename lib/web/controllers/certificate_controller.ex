@@ -4,11 +4,18 @@ defmodule Web.CertificateController do
   alias App.Model.Certificate
   alias App.Model.Team
 
-  # A member's sent certificate (#493) for a team admin, looked up through the team,
-  # while SAR Duty keeps its file.
+  # A sent certificate's file (#493), while SAR Duty keeps it: one URL for everyone
+  # (#645). A team admin gets any of the team's; anyone else only their own, so a team
+  # admin viewing as a member gets the member's.
   def file(conn, %{"id" => id}) do
-    team = conn.assigns.current_team
+    %{current_team: team, current_member: member, team_admin?: team_admin?} = conn.assigns
     if !Team.certificates?(team), do: raise(Web.Status.NotFound)
-    Web.CertificateResponse.send_sent(conn, Certificate.find!(team, id))
+
+    certificate =
+      if team_admin?,
+        do: Certificate.find!(team, id),
+        else: Certificate.find_for_member!(member, id)
+
+    Web.CertificateResponse.send_sent(conn, certificate)
   end
 end

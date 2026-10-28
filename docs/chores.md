@@ -1,8 +1,8 @@
 # Chores
 
 Chores are time members give the team outside activities, such as fixing equipment or
-board work (#341, closes #11). A member logs each one from Your membership, and a team
-admin accepts or declines it. Accepting sends it to D4H, on its chore category's
+board work (#341, closes #11). A member logs each one on Chores, the page team admins
+accept or decline it on (#645). Accepting sends it to D4H, on its chore category's
 activity for the month. They exist only on a team with member logins on and Let members
 log chores checked under Member logins in team settings; every team starts with it off
 (#463).
@@ -25,7 +25,7 @@ secondary), and other D4H tags, picked as on an activity's Change tags page.
 
 ## Logging and deciding
 
-A member logs a chore at `/teams/:subdomain/me/chores`: a date, minutes, a chore
+A member logs a chore at `/teams/:subdomain/chores/new`: a date, minutes, a chore
 category, and what they did ([Chore](../lib/app/model/chore.ex),
 [SaveChore](../lib/app/operation/save_chore.ex)).
 
@@ -45,7 +45,15 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
 - **AI agents proposed chores** through the MCP from #595 until it became read-only
   (#627, 2026-10-26). A chore added that way keeps its proposal row
   (`chores.change_set_row_id`), and its page says it was proposed by an AI agent.
-- **The Chores page splits chores by status**, Waiting, Accepted, and Declined, opening
+- **Chores is one page for everyone** (#645), as [Where a feature goes](navigation.md#where-a-feature-goes)
+  says. Anyone who is a member gets Log a chore and Yours, their own chores by month with
+  what a team admin decided. A member opens on Yours and gets nothing else. Before this,
+  a member's chores were at `/me/chores`, and a team admin who is also a member looked
+  for Log a chore on Chores and didn't find it. Your membership keeps one line: the
+  year's accepted time, what waits, and a link to Yours.
+- **The form is one page**, `/chores/new` and `/chores/:id/edit`. A team admin changes
+  any chore there; a member changes their own while it waits, and deletes it.
+- **Team admins also get the chores by status**, Waiting, Accepted, and Declined, opening
   on Waiting. Accepted lists each D4H activity, newest month first, with its chores
   under it, so every chore stays one click from its page. Before this, an accepted chore
   showed only in its activity's totals and had no way back to its page (2026-10-23).

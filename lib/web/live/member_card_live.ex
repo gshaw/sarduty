@@ -98,6 +98,7 @@ defmodule Web.MemberCardLive do
   def render(assigns) do
     ~H"""
     <.member_page
+      current_member={@current_member}
       member={@member}
       tab={:card}
       last_attended_at={@last_attended_at}

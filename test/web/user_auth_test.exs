@@ -308,7 +308,7 @@ defmodule Web.UserAuthTest do
       assert UserAuth.view_events(Web.TeamDashboardLive) == []
       assert UserAuth.view_events(Web.MemberCollectionLive) == ["change"]
       assert UserAuth.view_events(Web.MemberQualificationsLive) == []
-      assert UserAuth.view_events(Web.MeChoreFormLive) == ["validate"]
+      assert UserAuth.view_events(Web.ChoreFormLive) == ["validate"]
     end
   end
 

@@ -91,6 +91,7 @@ defmodule Web.MemberGroupsLive do
   def render(assigns) do
     ~H"""
     <.member_page
+      current_member={@current_member}
       member={@member}
       tab={:groups}
       last_attended_at={@last_attended_at}

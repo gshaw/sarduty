@@ -24,12 +24,11 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/equipment/:id/edit",
     "/teams/:subdomain/templates/:id",
     # Chore pages need member logins, which this team lacks. Web.ChoreLiveTest,
-    # Web.MeChoresLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
+    # Web.ChoreCollectionLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
     # records with them on.
     "/teams/:subdomain/settings/chore-categories/:id",
     "/teams/:subdomain/chores/:id",
     "/teams/:subdomain/chores/:id/edit",
-    "/teams/:subdomain/me/chores/:id/edit",
     "/teams/:subdomain/whiteboard/:id/edit",
     # Places change here only on a SAR Duty Records team, which this team isn't.
     # Web.Settings.PlaceLiveTest covers another Records team's place.
@@ -37,9 +36,8 @@ defmodule Web.TeamScopingTest do
     # Certificates (#493): this team has them on, so these find the record through it.
     "/teams/:subdomain/certificates/:id",
     "/teams/:subdomain/certificates/:id/file",
-    # A member's own certificate. Web.MeCertificateFormLiveTest covers another member's.
-    "/teams/:subdomain/me/certificates/:id/edit",
-    "/teams/:subdomain/me/certificates/:id/file",
+    # A member's own certificate. Web.CertificateFormLiveTest covers another member's.
+    "/teams/:subdomain/certificates/:id/edit",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -235,20 +233,14 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/chores/:id/edit", s, o),
     do: ~p"/teams/#{s}/chores/#{o.chore.id}/edit"
 
-  defp path_for("/teams/:subdomain/me/chores/:id/edit", s, o),
-    do: ~p"/teams/#{s}/me/chores/#{o.chore.id}/edit"
-
   defp path_for("/teams/:subdomain/certificates/:id", s, o),
     do: ~p"/teams/#{s}/certificates/#{o.certificate.id}"
 
   defp path_for("/teams/:subdomain/certificates/:id/file", s, o),
     do: ~p"/teams/#{s}/certificates/#{o.certificate.id}/file"
 
-  defp path_for("/teams/:subdomain/me/certificates/:id/edit", s, o),
-    do: ~p"/teams/#{s}/me/certificates/#{o.certificate.id}/edit"
-
-  defp path_for("/teams/:subdomain/me/certificates/:id/file", s, o),
-    do: ~p"/teams/#{s}/me/certificates/#{o.certificate.id}/file"
+  defp path_for("/teams/:subdomain/certificates/:id/edit", s, o),
+    do: ~p"/teams/#{s}/certificates/#{o.certificate.id}/edit"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

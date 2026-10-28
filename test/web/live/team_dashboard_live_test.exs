@@ -503,7 +503,7 @@ defmodule Web.TeamDashboardLiveTest do
       qualification_award_fixture(first_aid, member, %{ends_at: ends_at})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      form = ~p"/teams/#{team}/me/certificates/new?#{[qualification: first_aid.id]}"
+      form = ~p"/teams/#{team}/certificates/new?#{[qualification: first_aid.id]}"
 
       assert has_element?(
                lv,
