@@ -109,6 +109,19 @@ defmodule App.ViewData.Search do
   def terms(_query), do: []
 
   @doc """
+  Pure. Whether byte `at` of `lower` starts a word: the first byte, or after a character
+  that is not a letter or a digit.
+  """
+  def starts_word_at?(_lower, 0), do: true
+
+  def starts_word_at?(lower, at) do
+    # Up to 4 bytes back hold the character before whole.
+    from = max(at - 4, 0)
+    before = lower |> binary_part(from, at - from) |> String.last()
+    not String.match?(before, ~r/^[\p{L}\p{N}]$/u)
+  end
+
+  @doc """
   Pure. How well a record matches the search's `terms`, from its `title` and `keys`
   (D4H number, barcode, serial). The database has already checked that every word is in
   one of them.

@@ -132,7 +132,7 @@ defmodule Web.Components.SearchBoxTest do
     refute has_element?(lv, "#search")
   end
 
-  describe "highlight/2" do
+  describe "highlight/3" do
     test "bolds where each word first appears" do
       assert Search.highlight("Navigation day, Alice Lake", ["alice", "lake"]) ==
                [{false, "Navigation day, "}, {true, "Alice"}, {false, " "}, {true, "Lake"}]
@@ -145,6 +145,14 @@ defmodule Web.Components.SearchBoxTest do
              ]
 
       assert Search.highlight("Rope", ["02193"]) == [{false, "Rope"}]
+    end
+
+    test "with word starts, bolds where a word starts" do
+      assert Search.highlight("Button › When to use", ["to"], true) ==
+               [{false, "Button › When "}, {true, "to"}, {false, " use"}]
+
+      assert Search.highlight("“Turn off”", ["turn"], true) ==
+               [{false, "“"}, {true, "Turn"}, {false, " off”"}]
     end
   end
 end
