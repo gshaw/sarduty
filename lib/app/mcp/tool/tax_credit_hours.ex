@@ -32,7 +32,10 @@ defmodule App.MCP.Tool.TaxCreditHours do
       "type" => "object",
       "properties" => %{
         "year" => %{"type" => "integer", "description" => "The tax year, such as 2026"},
-        "member_id" => %{"type" => "integer", "description" => "SAR Duty's member id"}
+        "member_id" => %{
+          "type" => "integer",
+          "description" => "SAR Duty's member id, from list_members"
+        }
       },
       "required" => ["year"]
     }
@@ -67,9 +70,9 @@ defmodule App.MCP.Tool.TaxCreditHours do
   defp member_ids(_team, nil), do: {:ok, nil}
 
   defp member_ids(team, id) do
-    if is_integer(id) and Repo.get_by(Member, id: id, team_id: team.id),
+    if Repo.get_by(Member, id: id, team_id: team.id),
       do: {:ok, [id]},
-      else: {:error, "No member #{inspect(id)} on this team."}
+      else: {:error, "No member #{id} on this team."}
   end
 
   @doc """

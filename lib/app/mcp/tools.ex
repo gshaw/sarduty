@@ -41,6 +41,31 @@ defmodule App.MCP.Tools do
   end
 
   @doc """
+  `:ok`, or `{:error, message}` when an argument the tool's input schema calls an
+  integer is not a whole number, or is required and missing. Ids come from agents, and
+  a nil or a string one raised in the tool (2026-10-28). A string such as D4H's "02241"
+  is refused, not read as 2241. Tools check dates and the rest themselves.
+  """
+  def check_arguments(tool, args) do
+    schema = tool.input_schema()
+    required = Map.get(schema, "required", [])
+
+    schema
+    |> Map.get("properties", %{})
+    |> Enum.filter(fn {_key, property} -> property["type"] == "integer" end)
+    |> Enum.sort()
+    |> Enum.find_value(:ok, fn {key, property} ->
+      value = Map.get(args, key)
+
+      cond do
+        is_integer(value) -> nil
+        value == nil and key not in required -> nil
+        true -> {:error, "Give #{key} as a number. #{property["description"]}."}
+      end
+    end)
+  end
+
+  @doc """
   The arguments a tool's input schema declares, for the call log. Anything else the
   agent sent is dropped, and long strings are cut.
   """

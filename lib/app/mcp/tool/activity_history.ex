@@ -26,7 +26,10 @@ defmodule App.MCP.Tool.ActivityHistory do
     %{
       "type" => "object",
       "properties" => %{
-        "activity_id" => %{"type" => "integer", "description" => "SAR Duty's activity id"}
+        "activity_id" => %{
+          "type" => "integer",
+          "description" => "SAR Duty's activity id, from list_activities"
+        }
       },
       "required" => ["activity_id"]
     }

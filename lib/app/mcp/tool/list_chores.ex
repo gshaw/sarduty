@@ -37,7 +37,10 @@ defmodule App.MCP.Tool.ListChores do
         "from" => %{"type" => "string", "format" => "date", "description" => "First day"},
         "to" => %{"type" => "string", "format" => "date", "description" => "Last day"},
         "status" => %{"type" => "string", "enum" => Map.keys(@statuses)},
-        "member_id" => %{"type" => "integer", "description" => "SAR Duty's member id"}
+        "member_id" => %{
+          "type" => "integer",
+          "description" => "SAR Duty's member id, from list_members"
+        }
       },
       "required" => ["from", "to"]
     }

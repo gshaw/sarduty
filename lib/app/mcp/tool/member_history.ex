@@ -29,7 +29,10 @@ defmodule App.MCP.Tool.MemberHistory do
     %{
       "type" => "object",
       "properties" => %{
-        "member_id" => %{"type" => "integer", "description" => "SAR Duty's member id"}
+        "member_id" => %{
+          "type" => "integer",
+          "description" => "SAR Duty's member id, from list_members"
+        }
       },
       "required" => ["member_id"]
     }

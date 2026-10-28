@@ -1,7 +1,9 @@
 defmodule App.MCP.ToolsTest do
   use ExUnit.Case, async: true
 
+  alias App.MCP.Tool.ActivityHistory
   alias App.MCP.Tool.ListActivities
+  alias App.MCP.Tool.ListChores
   alias App.MCP.Tools
 
   test "every tool has a unique name" do
@@ -21,6 +23,21 @@ defmodule App.MCP.ToolsTest do
       refute source =~ "SendChores", "#{path} mentions SendChores"
       refute source =~ "SaveChore.", "#{path} mentions SaveChore"
     end
+  end
+
+  test "an integer argument must be a whole number, and there when required" do
+    assert Tools.check_arguments(ActivityHistory, %{"activity_id" => 29_841}) == :ok
+    assert Tools.check_arguments(ListChores, %{"from" => "2026-01-01"}) == :ok
+
+    message =
+      "Give activity_id as a number. SAR Duty's activity id, from list_activities."
+
+    for args <- [%{"activity_id" => "02241"}, %{"activity" => 29_841}, %{}] do
+      assert Tools.check_arguments(ActivityHistory, args) == {:error, message}
+    end
+
+    assert {:error, "Give member_id as a number." <> _} =
+             Tools.check_arguments(ListChores, %{"member_id" => "1"})
   end
 
   test "the call log keeps only declared arguments, cut short" do
