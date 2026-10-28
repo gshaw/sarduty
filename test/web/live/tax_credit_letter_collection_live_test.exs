@@ -145,6 +145,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
       assert has_element?(lv, "#send-all-unsigned")
+      assert has_element?(lv, ~s(#send-all-button[data-confirm$="They go out unsigned."]))
 
       {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
 

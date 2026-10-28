@@ -155,7 +155,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         id="send-all-button"
         variant={:success}
         phx-click="send_all"
-        data-confirm={send_all_confirm(@count, @year, @team)}
+        {send_all_confirm(@count, @year, @team)}
       >
         Send {Service.Format.count(@count, one: "%d letter", many: "%d letters")}
       </.button>
@@ -173,8 +173,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   defp send_all_confirm(count, year, team) do
     letters = Service.Format.count(count, one: "%d letter", many: "%d letters")
-    question = "Create and email #{letters} for #{year}?"
-    if team.signature, do: question, else: question <> " They go out unsigned."
+    unsigned = if team.signature, do: [], else: ["They go out unsigned."]
+
+    send_confirm(
+      count,
+      "Create and email #{letters} for #{year}?",
+      ["Each member shown with hours and no letter yet gets one." | unsigned]
+    )
   end
 
   defp sent_banner(assigns) do

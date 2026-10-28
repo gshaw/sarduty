@@ -75,6 +75,11 @@
     attendance, a qualification someone holds. The dialog lists what's lost and ends with
     "D4H can't bring it back." The action stays grey until the box is ticked.
   </p>
+  <p>
+    And an email to 10 or more members: reminders, an update, or tax credit letters. The box
+    names the count, so nobody emails the whole team by reflex. Fewer than 10 get a simple
+    confirm. <code>send_confirm/3</code> picks one.
+  </p>
   <div class="demo grid gap-6">
     <.confirm_dialog
       id="confirm-example-check"
@@ -116,6 +121,27 @@
         data-confirm-button="Delete group"
       >
         Delete group
+      </.button>
+    </div>
+  </div>
+
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-check-send"
+      open
+      question="Email 73 members about Training night?"
+      list={["Each gets a reminder to reply."]}
+      warning="Emails cannot be taken back."
+      check="I understand 73 members get this email."
+      action="Send 73 emails"
+    />
+    <div>
+      <.button
+        id="confirm-try-check-send"
+        variant={:primary}
+        {send_confirm(73, "Email 73 members about Training night?", ["Each gets a reminder to reply."])}
+      >
+        Send 73 emails
       </.button>
     </div>
   </div>

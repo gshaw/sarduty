@@ -68,6 +68,7 @@ defmodule Web.ActivitySendUpdateLiveTest do
     assert has_element?(lv, "#update-select-#{ctx.avery.id}[checked]")
     assert has_element?(lv, "#update-no-email", "Eli Haddad")
     assert has_element?(lv, "#update-send", "Send 4 emails")
+    assert has_element?(lv, ~s(#update-send[data-confirm^="Email 4 members about"]))
     assert has_element?(lv, "#update-reminders-link")
   end
 

@@ -71,6 +71,7 @@ defmodule Web.ActivitySendRemindersLiveTest do
     refute has_element?(lv, "#email-to-#{ctx.jordan.id} td", "Oct ")
     assert has_element?(lv, "#email-select-#{ctx.jordan.id}[checked]")
     assert has_element?(lv, "#email-send", "Send 2 emails")
+    assert has_element?(lv, ~s(#email-send[data-confirm^="Email 2 members about"]))
 
     assert has_element?(lv, "#left-out-replied", "1 signed up and 1 can't make it")
     assert has_element?(lv, "#left-out-reminders_off", "Dana Clark")

@@ -185,6 +185,11 @@ defmodule Web.ActivitySendRemindersLive do
           variant={:primary}
           disabled={MapSet.size(@selected) == 0}
           phx-disable-with="Sending…"
+          {send_confirm(
+            MapSet.size(@selected),
+            "Email #{members_text(MapSet.size(@selected))} about #{@activity.title}?",
+            ["Each gets a reminder to reply."]
+          )}
         >
           {Format.count(MapSet.size(@selected), one: "Send 1 email", many: "Send %d emails")}
         </.button>
@@ -195,6 +200,8 @@ defmodule Web.ActivitySendRemindersLive do
     </.form>
     """
   end
+
+  defp members_text(count), do: Format.count(count, one: "%d member", many: "%d members")
 
   # "Oct 22 and Oct 24", or empty for a member never emailed.
   defp emailed_text([], _timezone), do: nil

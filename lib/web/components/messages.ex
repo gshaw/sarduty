@@ -227,6 +227,28 @@ defmodule Web.Components.Messages do
     """
   end
 
+  @check_from 10
+
+  @doc """
+  The `data-confirm` attributes for a button that emails `count` members: the question
+  and `lines` as its body. From #{@check_from} members up, the lines are a list and the
+  send waits on a check box naming the count, so nobody emails the whole team by reflex.
+  """
+  def send_confirm(count, question, lines) do
+    if count < @check_from do
+      %{"data-confirm" => Enum.join([question | lines], " ")}
+    else
+      members = Service.Format.count(count, one: "%d member", many: "%d members")
+
+      %{
+        "data-confirm" => question,
+        "data-confirm-list" => Jason.encode!(lines),
+        "data-confirm-warning" => "Emails cannot be taken back.",
+        "data-confirm-check" => "I understand #{members} get this email."
+      }
+    end
+  end
+
   # The JS does the same as the person ticks or types.
   defp confirm_locked?(assigns) do
     (assigns.check != nil and not assigns.checked) or
