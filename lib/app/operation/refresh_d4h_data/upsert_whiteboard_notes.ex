@@ -2,11 +2,11 @@ defmodule App.Operation.RefreshD4HData.UpsertWhiteboardNotes do
   @moduledoc """
   Copies the team's whiteboard (#515): every note, in one transaction, keyed by D4H id
   so a note keeps its local id and a form open on it still works. Notes D4H no longer
-  has go. Runs in the full refresh every night, and in the sync when the whiteboard's
-  head moved.
+  has go. Runs while the team has the whiteboard turned on: in the full refresh every
+  night, in the sync when the whiteboard's head moved, and when a team admin turns it on.
 
-  A 403 means the team has the module off. It saves no notes and turns
-  `whiteboard_enabled` off, which hides the card and the pages. It never reaches the
+  A 403 means the team has the module off in D4H. It saves no notes and turns
+  `d4h_whiteboard` off, which hides the card and the pages. It never reaches the
   sync's rejected-key rescue, which would stop every sync for the team.
   """
 
@@ -19,7 +19,7 @@ defmodule App.Operation.RefreshD4HData.UpsertWhiteboardNotes do
 
   require Logger
 
-  @doc "Returns the team, with `whiteboard_enabled` as the read found it."
+  @doc "Returns the team, with `d4h_whiteboard` as the read found it."
   def call(d4h, %Team{} = team) do
     case D4H.fetch_whiteboard_notes(d4h) do
       {:ok, notes} ->
@@ -59,10 +59,10 @@ defmodule App.Operation.RefreshD4HData.UpsertWhiteboardNotes do
     :ok
   end
 
-  defp set_enabled(%Team{whiteboard_enabled: enabled} = team, enabled), do: team
+  defp set_enabled(%Team{d4h_whiteboard: enabled} = team, enabled), do: team
 
   defp set_enabled(team, enabled) do
-    Logger.info("Whiteboard #{if enabled, do: "on", else: "off"} for team #{team.id}")
-    team |> Ecto.Changeset.change(whiteboard_enabled: enabled) |> Repo.update!()
+    Logger.info("D4H whiteboard #{if enabled, do: "on", else: "off"} for team #{team.id}")
+    team |> Ecto.Changeset.change(d4h_whiteboard: enabled) |> Repo.update!()
   end
 end

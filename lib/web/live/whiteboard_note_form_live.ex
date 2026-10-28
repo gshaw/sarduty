@@ -2,6 +2,7 @@ defmodule Web.WhiteboardNoteFormLive do
   use Web, :live_view_app_layout
 
   alias App.Adapter.D4H
+  alias App.Model.Team
   alias App.Model.WhiteboardNote
   alias App.Operation.SaveWhiteboardNote
   alias App.ViewModel.WhiteboardNoteFormViewModel
@@ -11,7 +12,7 @@ defmodule Web.WhiteboardNoteFormLive do
   # app layout's, not narrow: it isn't done with a device in hand.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.whiteboard_enabled, do: raise(Web.Status.NotFound)
+    if !Team.whiteboard?(team), do: raise(Web.Status.NotFound)
     today = Service.Period.today(DateTime.utc_now(), team.timezone)
 
     {note, form} =

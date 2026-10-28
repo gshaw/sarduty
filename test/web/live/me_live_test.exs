@@ -7,7 +7,7 @@ defmodule Web.MeLiveTest do
   alias App.AccountsFixtures
   alias App.Model.MemberCard
   alias App.Model.NoShow
-  alias App.Operation.SetTeamMemberLogins
+  alias App.Operation.SetTeamFeature
   alias App.Repo
 
   setup %{conn: conn} do
@@ -405,7 +405,7 @@ defmodule Web.MeLiveTest do
 
     test "nobody reaches it once the team turns member logins off",
          %{conn: conn, team: team, user: user} do
-      {:ok, _team} = SetTeamMemberLogins.call(team, false, user)
+      {:ok, _team} = SetTeamFeature.call(team, :member_logins, false, user)
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/me") end
     end
 

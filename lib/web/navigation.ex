@@ -142,7 +142,7 @@ defmodule Web.Navigation do
   # shows a line or 2 of them.
   defp dashboard_links(team) do
     [link("dashboard", "Dashboard", ~p"/teams/#{team}", exact: true)] ++
-      if(team.whiteboard_enabled,
+      if(Team.whiteboard?(team),
         do: [link("whiteboard", "Whiteboard", ~p"/teams/#{team}/whiteboard")],
         else: []
       )

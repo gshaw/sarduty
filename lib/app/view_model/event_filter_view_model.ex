@@ -38,6 +38,8 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:mcp_token_revoked), do: "MCP token revoked"
   def label(:member_logins_turned_on), do: "Member logins turned on"
   def label(:member_logins_turned_off), do: "Member logins turned off"
+  def label(:feature_turned_on), do: "Feature turned on"
+  def label(:feature_turned_off), do: "Feature turned off"
   def label(:id_cards_turned_on), do: "ID cards turned on"
   def label(:id_cards_turned_off), do: "ID cards turned off"
   def label(:member_viewed_as), do: "Viewed as a member"

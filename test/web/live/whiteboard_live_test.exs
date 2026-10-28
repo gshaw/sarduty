@@ -49,12 +49,20 @@ defmodule Web.WhiteboardLiveTest do
       assert has_element?(lv, "#whiteboard-empty", "No archived notes")
     end
 
-    test "is not found with the module off", %{conn: conn} do
+    test "is not found while the team has it off, or D4H has the module off", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
-      team |> Ecto.Changeset.change(whiteboard_enabled: false) |> Repo.update!()
+      conn = log_in_user(conn, user)
 
-      assert_raise Web.Status.NotFound, fn ->
-        conn |> log_in_user(user) |> live(~p"/teams/#{team}/whiteboard")
+      for change <- [[whiteboard_enabled: false], [d4h_whiteboard: false]] do
+        team |> Ecto.Changeset.change(change) |> Repo.update!()
+
+        assert_raise Web.Status.NotFound, fn ->
+          live(conn, ~p"/teams/#{team}/whiteboard")
+        end
+
+        team
+        |> Ecto.Changeset.change(whiteboard_enabled: true, d4h_whiteboard: true)
+        |> Repo.update!()
       end
     end
   end

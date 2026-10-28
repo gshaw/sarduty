@@ -329,12 +329,20 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
       assert perform(team) == :ok
       team = Repo.reload(team)
       refute SyncD4HChanges.key_rejected?(team)
-      refute team.whiteboard_enabled
+      refute team.d4h_whiteboard
       assert SyncTeamChangesWorker.syncs?(team)
 
       assert perform(team) == :ok
       assert_received {:whiteboard, _head}
       assert_received {:whiteboard, _read}
+      refute_received {:whiteboard, _}
+    end
+
+    test "a team that turned the whiteboard off is never asked" do
+      team = synced_team(%{whiteboard_enabled: false})
+      stub_whiteboard(fn conn -> Req.Test.json(conn, head(10)) end)
+
+      assert perform(team) == :ok
       refute_received {:whiteboard, _}
     end
   end

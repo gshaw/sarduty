@@ -1,23 +1,25 @@
 # MCP endpoint
 
 A team's team admins can connect their own AI agent to SAR Duty, which reads
-allowlisted views of the team's data (#28). It only reads (#627). A team admin turns it
-on in team settings. The first use case was a quarterly check of each member's hours
+allowlisted views of the team's data (#28). It only reads (#627). A SAR Duty admin turns
+it on for a team. The first use case was a quarterly check of each member's hours
 by activity tag against the team's attendance policy; #595 widened the tools to general
 work, such as sign-in sheets, hours tags before letter season, and chores. A policy lives
 in the agent's prompt, not in SAR Duty.
 
 ## Who gets in
 
-- **The switch.** `teams.mcp_enabled`, which a team admin turns on and off on the team's
-  MCP tokens page in team settings (#595), and a SAR Duty admin on the team's admin page,
-  `/admin/teams/:id` ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)). Turning it off
-  revokes every token on the team, so turning it back on wakes none of them.
+- **The switch.** `teams.mcp_enabled`, which only a SAR Duty admin turns on and off, on
+  the team's admin page, `/admin/teams/:id`
+  ([SetTeamMCP](../lib/app/operation/set_team_mcp.ex)), as with ID cards (2026-10-28):
+  an agent reads the team's people, so SAR Duty checks the team first. Unlike ID cards,
+  it isn't offered: a team sees MCP only once it is on, as a row on team settings'
+  Features tab and the MCP tokens tab. Turning it off revokes every token on the team, so
+  turning it back on wakes none of them.
 - **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, which
-  exists only while the switch is on. Creating one takes a checked box promising to use it
+  is not found while the switch is off. Creating one takes a checked box promising to use it
   only with an AI service set not to train on the manager's data; the
-  `mcp_token_created` event records it. While the switch is off, team settings says to
-  ask a SAR Duty admin. The token shows once; the database keeps its
+  `mcp_token_created` event records it. The token shows once; the database keeps its
   SHA-256 hash ([MCPToken](../lib/app/model/mcp_token.ex)). It belongs to a user and a
   team. An admin who doesn't manage the team can't create one, but anyone who can open
   the page can revoke any of the team's tokens.

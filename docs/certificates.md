@@ -2,9 +2,8 @@
 
 A member sends a certificate, such as a renewed First Aid, and a team admin accepts it
 into D4H as an award with the file attached, or declines it with a reason the member
-sees (#493). They exist only on a team with member logins on
-and Let members send certificates checked under Member logins in team settings; every
-team starts with it off.
+sees (#493). They exist only on a team with member logins and
+certificates turned on, in team settings' Features tab; every team starts with both off.
 
 ## Sending
 

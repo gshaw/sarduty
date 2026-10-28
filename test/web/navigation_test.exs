@@ -7,7 +7,7 @@ defmodule Web.NavigationTest do
   alias App.Model.Team
   alias Web.Navigation
 
-  @team %Team{id: 1, name: "Squamish SAR", subdomain: "squamish"}
+  @team %Team{id: 1, name: "Squamish SAR", subdomain: "squamish", whiteboard_enabled: true}
   @pemberton %Team{id: 2, name: "Pemberton SAR", subdomain: "pemberton"}
   @wsara %Organization{id: 5, name: "Western SAR Association", short_name: "WSARA", slug: "wsara"}
   @nsara %Organization{
@@ -127,17 +127,18 @@ defmodule Web.NavigationTest do
                for(links <- sections, link <- links, link.key == "chores", do: link)
     end
 
-    test "Whiteboard follows Dashboard while the team has the module on" do
+    test "Whiteboard follows Dashboard once the team turns it on, while D4H has it on" do
+      path = "/teams/squamish/whiteboard"
+
       assert [["dashboard", "whiteboard"] | _rest] =
-               "/teams/squamish/whiteboard" |> team_sections(member?: true) |> keys()
+               path |> team_sections(member?: true) |> keys()
 
-      assert "/teams/squamish/whiteboard" |> team_sections(member?: true) |> current() ==
-               ["whiteboard"]
+      assert path |> team_sections(member?: true) |> current() == ["whiteboard"]
 
-      team = %{@team | whiteboard_enabled: false}
-
-      assert [["dashboard"] | _rest] =
-               "/teams/squamish" |> team_sections([team_admin?: true], team) |> keys()
+      for team <- [%{@team | whiteboard_enabled: false}, %{@team | d4h_whiteboard: false}] do
+        assert [["dashboard"] | _rest] =
+                 "/teams/squamish" |> team_sections([team_admin?: true], team) |> keys()
+      end
     end
 
     test "someone who is neither sees nothing" do

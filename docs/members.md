@@ -184,7 +184,7 @@ admin's member page, from one query and one component each (#308, #339, decided
 
 ## Member logins
 
-A team admin turns on member logins in **Team settings → Member logins**. Then every
+A team admin turns on member logins in **Team settings → Features**. Then every
 current member of the team can log in with the email or mobile number D4H has for them
 (#156). They open the same team space as its team admins, and see the pages marked for
 members ([navigation.md](navigation.md)). Their own pages are under

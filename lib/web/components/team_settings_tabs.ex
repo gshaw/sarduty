@@ -2,8 +2,9 @@ defmodule Web.Components.TeamSettingsTabs do
   use Web, :function_component
 
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
-  # title, a topic each, in pairs: the team, its members, its letters, its activities.
-  # Chore categories shows with chores on.
+  # title, a topic each: the team and what it has turned on, then its members, its
+  # letters, and its activities.
+  # Chore categories shows with chores on, and MCP tokens with MCP on.
 
   attr :team, :map, required: true
 
@@ -13,7 +14,7 @@ defmodule Web.Components.TeamSettingsTabs do
       :general,
       :team_admins,
       :members,
-      :member_logins,
+      :features,
       :tax_credit_letters,
       :hours_tags,
       :places,
@@ -31,14 +32,11 @@ defmodule Web.Components.TeamSettingsTabs do
       <:tab navigate={~p"/teams/#{@team}/settings/team-admins"} current={@current == :team_admins}>
         Team admins
       </:tab>
+      <:tab navigate={~p"/teams/#{@team}/settings/features"} current={@current == :features}>
+        Features
+      </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/members"} current={@current == :members}>
         Members
-      </:tab>
-      <:tab
-        navigate={~p"/teams/#{@team}/settings/member-logins"}
-        current={@current == :member_logins}
-      >
-        Member logins
       </:tab>
       <:tab
         navigate={~p"/teams/#{@team}/settings/tax-credit-letters"}
@@ -59,7 +57,11 @@ defmodule Web.Components.TeamSettingsTabs do
       >
         Chore categories
       </:tab>
-      <:tab navigate={~p"/teams/#{@team}/settings/mcp"} current={@current == :mcp}>
+      <:tab
+        :if={@team.mcp_enabled}
+        navigate={~p"/teams/#{@team}/settings/mcp"}
+        current={@current == :mcp}
+      >
         MCP tokens
       </:tab>
     </.tabs>

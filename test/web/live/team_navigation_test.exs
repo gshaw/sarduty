@@ -89,8 +89,9 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, "h1", "Team settings")
     assert has_element?(lv, ".tabs a[aria-current=page]", "Hours tags")
     assert has_element?(lv, "#side-nav-settings[aria-current=page]")
-    # A team admin turns MCP on from its tab, so the tab shows while it is off (#595).
-    assert has_element?(lv, ".tabs a", "MCP tokens")
+    # MCP tokens shows only while MCP is on, which a team admin turns on in Features.
+    assert has_element?(lv, ".tabs a", "Features")
+    refute has_element?(lv, ".tabs a", "MCP tokens")
   end
 
   test "SAR Duty admins get SAR Duty admin, and its pages down the left",
