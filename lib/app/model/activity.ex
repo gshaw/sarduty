@@ -222,6 +222,17 @@ defmodule App.Model.Activity do
 
   def deleted?(%Activity{deleted_at: deleted_at}), do: deleted_at != nil
 
+  @doc "Whether the activity has started by `now`. Pure."
+  def started?(%{started_at: started_at}, %DateTime{} = now),
+    do: not DateTime.before?(now, started_at)
+
+  @doc """
+  Whether the activity is still open by `now`: not deleted and not started. Members reply
+  and team admins add members and send reminders and updates only then. Pure.
+  """
+  def open?(%Activity{} = activity, %DateTime{} = now),
+    do: not deleted?(activity) and not started?(activity, now)
+
   @attendance_window_hours 2
 
   def attendance_window_hours, do: @attendance_window_hours
@@ -257,7 +268,7 @@ defmodule App.Model.Activity do
   """
   def adding(%Activity{} = activity, team_admin?, %DateTime{} = now) do
     cond do
-      !team_admin? or activity.deleted_at != nil or not DateTime.before?(now, activity.started_at) ->
+      !team_admin? or not open?(activity, now) ->
         nil
 
       activity.is_published ->

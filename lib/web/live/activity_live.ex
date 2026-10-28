@@ -52,7 +52,7 @@ defmodule Web.ActivityLive do
         page_title: activity.title,
         activity: activity,
         now: now,
-        coming?: DateTime.after?(activity.started_at, now),
+        coming?: not Activity.started?(activity, now),
         hours_tags: Activity.hours_tags(team),
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),

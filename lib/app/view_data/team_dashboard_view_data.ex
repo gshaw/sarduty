@@ -140,7 +140,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     coming_up =
       activities
       |> Enum.filter(fn activity ->
-        activity != next_up and DateTime.after?(activity.started_at, now) and
+        activity != next_up and not Activity.started?(activity, now) and
           DateTime.before?(activity.started_at, until)
       end)
       |> Enum.take(@coming_up_count)

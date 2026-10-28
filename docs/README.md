@@ -49,6 +49,30 @@ The rules that are easy to break:
 - **Local ids and D4H ids never mix.** Foreign keys are local; `d4h_*_id` columns hold
   D4H's ids and are what the adapter takes.
 
+## Where rules live
+
+A rule is code that decides what may happen or what is true: a guard, an eligibility
+check, or a value that gets saved or sent. Each rule has one home, so every page, job,
+and MCP tool that needs it gets the same answer.
+
+- **A rule about one action** lives in the operation every entry point calls, as a pure
+  function the tests call directly: `SetGroupMember.check_keeps_a_team_admin/4`,
+  `ReplyToActivity.plan/4`. A guard on one page alone is skipped by the others: the
+  last-admin check once sat only on the Standing tab, and the group pages and the bulk
+  add went around it (#683).
+- **A definition many places share** (attended, counted, current, open) lives on its
+  model as a query and a pure predicate: `Attendance.attended/2`, `Member.counted?/2`,
+  `Activity.open?/2`. A source test keeps copies out when one is easy to rewrite by hand.
+- **A page may ask the same function** to hide a button or explain a refusal, never its
+  own copy. The operation checks again when it runs.
+- **Views keep what to show and how**: wording, layout, and filtering rows already
+  loaded. Read bundles for a page go in view data, and a view data module may hold a
+  pure rule when only reading needs it, like `TeamAttention`, which the dashboard and
+  the MCP tool share.
+
+A guard that must read inside the write's transaction, like a chore a team admin may
+have decided since the page loaded, stays in `call`.
+
 ## Where do I put new code?
 
 - **New page** → a LiveView in `lib/web/live/`, with `use Web, :live_view_app_layout` for
