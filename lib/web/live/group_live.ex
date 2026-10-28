@@ -146,7 +146,9 @@ defmodule Web.GroupLive do
       <main class="content-2/3">
         <h2 class="subheading">Group rules</h2>
         <p :if={retiring_group?(@current_team, @group)} id="retiring-group" class="card">
-          Members of this group are retiring. It cannot have group rules.
+          Everyone in this group is shown as
+          <.standing_badge id="retiring-group-badge" standing={:retiring} /> across SAR Duty.
+          It cannot have group rules.
         </p>
         <.rule_summary
           :if={!@editing and !retiring_group?(@current_team, @group)}

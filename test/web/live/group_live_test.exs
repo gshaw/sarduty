@@ -457,7 +457,8 @@ defmodule Web.GroupLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/groups/#{leavers.id}")
 
-    assert has_element?(lv, "#retiring-group", "It cannot have group rules.")
+    assert has_element?(lv, "#retiring-group", "Everyone in this group is shown as")
+    assert has_element?(lv, "#retiring-group-badge", "Retiring")
     refute has_element?(lv, "#edit-rules")
     refute has_element?(lv, "#group-member-standing-#{leaving.id}")
 
