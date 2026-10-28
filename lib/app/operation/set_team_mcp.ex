@@ -1,8 +1,7 @@
 defmodule App.Operation.SetTeamMCP do
   @moduledoc """
-  Turns MCP on or off for a team (#28). A team admin does it on the team's MCP tokens page
-  in team settings (#595), and a SAR Duty admin on the team's admin page,
-  /admin/teams/:id (#513). Turning it off revokes every token on the team, so turning it
+  Turns MCP on or off for a team (#28). A team admin does it on team settings' Features
+  tab, and a SAR Duty admin on the team's admin page, /admin/teams/:id (#513). Turning it off revokes every token on the team, so turning it
   back on never wakes old tokens.
   """
 

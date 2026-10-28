@@ -94,8 +94,9 @@ that title.
   `POST /equipment-locations`.
 
 - **Whiteboard notes** (#515): Records serves D4H's `/whiteboard` in its shape, so the
-  Dashboard card and the Whiteboard page work as for a D4H team. It is always on, and
-  the Whiteboard page's Archived list is the only place a Records team sees old notes.
+  Dashboard card and the Whiteboard page work as for a D4H team. Records always
+  serves it, so it shows once the team turns it on in Features, and the Whiteboard page's
+  Archived list is the only place a Records team sees old notes.
 - **Places** (#614): Records serves D4H's `/location-bookmarks`, and a team admin adds,
   changes, and deletes them under Team settings, Places. The sync copies them as it does
   a D4H team's bookmarks, which name places in the activity form. A place past activities

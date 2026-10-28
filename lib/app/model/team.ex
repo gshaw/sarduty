@@ -41,23 +41,24 @@ defmodule App.Model.Team do
     # newest change, and how long syncs have been failing. App.Operation.SyncD4HChanges.
     field :d4h_synced_at, :utc_datetime_usec
     field :d4h_sync_state, :map
-    # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from team settings.
+    # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from team settings'
+    # Features tab or the team's admin page.
     field :mcp_enabled, :boolean, default: false
-    # Lets current members log in for their own ID card and tax credit letters (#156).
-    # Set only by App.Operation.SetTeamMemberLogins from the team's settings.
+    # The team's features: member logins (#156), and on a team with them on, chores
+    # (#341) and members sending certificates (#493). Set only by
+    # App.Operation.SetTeamFeature from team settings' Features tab.
     field :member_logins, :boolean, default: false
-    # Shows chores (#341) on a team with member logins on. Set with member logins.
     field :chores_enabled, :boolean, default: false
-    # Lets members send certificates (#493) on a team with member logins on. Set with
-    # member logins.
     field :certificates_enabled, :boolean, default: false
     # Whether the team may issue ID cards. Set only by App.Operation.SetTeamIdCards, which
     # checks who acts: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
     field :id_cards_enabled, :boolean, default: false
-    # False while D4H answers 403 for the team's whiteboard, with its module off (#515).
-    # Set only by the whiteboard's read in the sync and the full refresh.
-    field :whiteboard_enabled, :boolean, default: true
+    # The whiteboard (#515): whether the team turned it on, set by
+    # App.Operation.SetTeamFeature, and whether D4H answers for it, false while D4H
+    # answers 403 with its module off. Set only by the whiteboard's read.
+    field :whiteboard_enabled, :boolean, default: false
+    field :d4h_whiteboard, :boolean, default: true
     # The hours tags the team's organization leaves blank (#323); see
     # App.Model.Activity.hours_tags/1. Set on the team's hours tags settings page.
     field :primary_hours_tag, TrimmedString
@@ -309,6 +310,9 @@ defmodule App.Model.Team do
   """
   def certificates?(%Team{member_logins: logins, certificates_enabled: certificates}),
     do: logins and certificates
+
+  @doc "Whether the team shows its whiteboard (#515): turned on, and D4H answers for it."
+  def whiteboard?(%Team{whiteboard_enabled: enabled, d4h_whiteboard: d4h}), do: enabled and d4h
 
   @doc "The short name of the team's organization, else its name. Nil without one."
   def organization_name(%Team{} = team) do

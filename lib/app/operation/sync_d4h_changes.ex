@@ -176,7 +176,7 @@ defmodule App.Operation.SyncD4HChanges do
 
   def call(%Team{} = team, now) do
     d4h = D4H.build_context_from_team(team)
-    heads = fetch_heads(d4h, whiteboard?: team.whiteboard_enabled)
+    heads = fetch_heads(d4h, whiteboard?: Team.whiteboard?(team))
 
     changed =
       case plan(previous_heads(team), heads) do
@@ -387,7 +387,9 @@ defmodule App.Operation.SyncD4HChanges do
   defp fetch_list("equipment-usages", d4h, team, progress),
     do: UpsertEquipmentUsages.call(d4h, team, progress)
 
-  defp fetch_list("whiteboard", d4h, team, _progress), do: UpsertWhiteboardNotes.call(d4h, team)
+  # A head that moved only because the team turned the whiteboard off reads nothing.
+  defp fetch_list("whiteboard", d4h, team, _progress),
+    do: if(Team.whiteboard?(team), do: UpsertWhiteboardNotes.call(d4h, team))
 
   defp fetch_list("location-bookmarks", d4h, team, _progress),
     do: UpsertLocationBookmarks.call(d4h, team)

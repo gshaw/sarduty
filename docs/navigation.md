@@ -76,10 +76,15 @@ is left out, and so is its divider.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)),
   one topic each, in pairs (2026-10-27, #514): General (the team and its key) and Team
-  admins; Members (the Retiring group and the attendance check) and Member logins; Tax
+  admins; Members (the Retiring group and the attendance check) and Features; Tax
   credit letters (address and signer) and Hours tags; Places and Chore categories; then
   MCP tokens. General held the letters and the attendance check until then, one long form
   with four topics.
+- **Features is where a team turns things on** (2026-10-28): member logins, with chores
+  and certificates under them, the whiteboard, and MCP, one switch each that saves when
+  flipped. ID cards show as on or off; SAR Duty turns them on. A feature's own settings
+  are a tab that shows only while it is on: Chore categories, MCP tokens. A new feature a
+  team can go without gets a switch here, off on a new team.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
 - **Chores shares Equipment's section** for team admins (2026-10-22): most chores are

@@ -36,7 +36,9 @@ defmodule App.DataFixtures do
   # `id_cards_enabled: false` for a team an admin hasn't turned them on for.
   def team_fixture(attrs \\ %{}) do
     unique = System.unique_integer([:positive])
+    # On, like a team that uses them; each is off on a new team.
     {id_cards_enabled, attrs} = Map.pop(attrs, :id_cards_enabled, true)
+    {whiteboard_enabled, attrs} = Map.pop(attrs, :whiteboard_enabled, true)
 
     params =
       Map.merge(
@@ -55,7 +57,10 @@ defmodule App.DataFixtures do
 
     params
     |> Team.insert!()
-    |> Ecto.Changeset.change(id_cards_enabled: id_cards_enabled)
+    |> Ecto.Changeset.change(
+      id_cards_enabled: id_cards_enabled,
+      whiteboard_enabled: whiteboard_enabled
+    )
     |> Repo.update!()
   end
 

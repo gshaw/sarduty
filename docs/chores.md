@@ -3,9 +3,8 @@
 Chores are time members give the team outside activities, such as fixing equipment or
 board work (#341, closes #11). A member logs each one on Chores, the page team admins
 accept or decline it on (#645). Accepting sends it to D4H, on its chore category's
-activity for the month. They exist only on a team with member logins on and Let members
-log chores checked under Member logins in team settings; every team starts with it off
-(#463).
+activity for the month. They exist only on a team with member logins and chores turned on, in team settings'
+Features tab; every team starts with both off (#463).
 
 ## Chore categories
 

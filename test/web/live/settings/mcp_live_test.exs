@@ -21,24 +21,11 @@ defmodule Web.Settings.MCPLiveTest do
     team
   end
 
-  test "a team admin turns MCP on, and off again, which revokes every token", ctx do
+  test "says MCP is off, with the way to turn it on, and has no tab until it is on", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/settings/mcp")
-    assert has_element?(lv, "#mcp-off")
+    assert has_element?(lv, "#mcp-off a[href='/teams/#{ctx.team.subdomain}/settings/features']")
     refute has_element?(lv, "#new-token-form")
-
-    lv |> element("#turn-on") |> render_click()
-    assert has_element?(lv, "#new-token-form")
-    assert Repo.reload!(ctx.team).mcp_enabled
-
-    team = Repo.reload!(ctx.team)
-
-    {:ok, _token, _record} =
-      CreateMCPToken.call(team, ctx.user, %{"name" => "Laptop", "no_training" => "true"})
-
-    lv |> element("#turn-off") |> render_click()
-    assert has_element?(lv, "#mcp-off")
-    refute Repo.reload!(ctx.team).mcp_enabled
-    assert MCPToken.get_live_for_team(team) == []
+    refute has_element?(lv, ".tabs a", "MCP tokens")
   end
 
   test "a manager creates a token, sees it once, and revokes it", ctx do

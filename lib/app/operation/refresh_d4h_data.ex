@@ -176,8 +176,11 @@ defmodule App.Operation.RefreshD4HData do
     RefreshD4HData.Progress.finish_stage(progress)
   end
 
-  # Every night, even while the team's whiteboard is off, so a team that turns the module
-  # on in D4H gets its notes the next night (#515).
+  # Every night while the team has the whiteboard turned on, even while D4H has its
+  # module off, so a team that turns the module on in D4H gets its notes the next night
+  # (#515). A team that hasn't turned it on is never asked.
+  defp refresh_whiteboard(_d4h, %Team{whiteboard_enabled: false}, progress), do: progress
+
   defp refresh_whiteboard(d4h, team, progress) do
     progress = RefreshD4HData.Progress.update_stage(progress, "Whiteboard")
     RefreshD4HData.UpsertWhiteboardNotes.call(d4h, team)

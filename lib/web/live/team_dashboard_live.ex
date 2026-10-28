@@ -77,7 +77,7 @@ defmodule Web.TeamDashboardLive do
   end
 
   defp assign_notes(socket, team, now) do
-    notes = if team.whiteboard_enabled, do: WhiteboardNote.live(team, now), else: []
+    notes = if Team.whiteboard?(team), do: WhiteboardNote.live(team, now), else: []
     {shown, more} = WhiteboardNote.for_dashboard(notes)
     assign(socket, notes: shown, more_notes: more)
   end

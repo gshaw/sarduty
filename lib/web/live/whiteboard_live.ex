@@ -4,6 +4,7 @@ defmodule Web.WhiteboardLive do
   import Web.Components.Pagination
   import Web.Components.StatSwitch
 
+  alias App.Model.Team
   alias App.Model.WhiteboardNote
   alias Web.WhiteboardText
 
@@ -15,7 +16,7 @@ defmodule Web.WhiteboardLive do
 
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    if !team.whiteboard_enabled, do: raise(Web.Status.NotFound)
+    if !Team.whiteboard?(team), do: raise(Web.Status.NotFound)
 
     {:ok, assign(socket, page_title: "Whiteboard", org_name: WhiteboardText.org_name(team))}
   end

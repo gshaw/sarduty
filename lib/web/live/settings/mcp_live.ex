@@ -9,10 +9,9 @@ defmodule Web.Settings.MCPLive do
   alias App.Model.Team
   alias App.Operation.CreateMCPToken
   alias App.Operation.RevokeMCPToken
-  alias App.Operation.SetTeamMCP
 
   # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp. A team admin turns MCP
-  # on and off here (#595); tokens show only while it is on.
+  # on and off on the Features tab; tokens show only while it is on.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -59,9 +58,6 @@ defmodule Web.Settings.MCPLive do
     end
   end
 
-  def handle_event("turn-on", _params, socket), do: set_mcp(socket, true)
-  def handle_event("turn-off", _params, socket), do: set_mcp(socket, false)
-
   def handle_event("revoke", %{"id" => id}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
 
@@ -104,11 +100,9 @@ defmodule Web.Settings.MCPLive do
 
       <div :if={!@current_team.mcp_enabled} id="mcp-off">
         <p>MCP is off for {@current_team.name}, so no agent can connect.</p>
-        <.form_actions :if={@can_create}>
-          <.button id="turn-on" type="button" variant={:success} phx-click="turn-on">
-            Turn on MCP
-          </.button>
-        </.form_actions>
+        <p>
+          <.a navigate={~p"/teams/#{@current_team}/settings/features"}>Turn it on in Features</.a>
+        </p>
       </div>
 
       <div :if={@current_team.mcp_enabled} id="mcp-on">
@@ -202,40 +196,9 @@ defmodule Web.Settings.MCPLive do
           value={claude_desktop_config(@endpoint_url, @new_token)}
           label="Copy config"
         />
-
-        <h2 class="heading mt-8">Turn off MCP</h2>
-        <p>Turning MCP off revokes every token. Agents stop working right away.</p>
-        <.form_actions :if={@can_create}>
-          <.button
-            id="turn-off"
-            type="button"
-            variant={:danger}
-            phx-click="turn-off"
-            data-confirm="Turn off MCP? Every token is revoked, and agents stop working right away."
-          >
-            Turn off MCP
-          </.button>
-        </.form_actions>
       </div>
     </div>
     """
-  end
-
-  defp set_mcp(socket, enabled) do
-    %{current_team: team, current_user: user} = socket.assigns
-
-    case SetTeamMCP.call(team, enabled, user) do
-      {:ok, team} ->
-        {:noreply, socket |> assign(current_team: team, new_token: nil) |> assign_tokens()}
-
-      {:error, :not_allowed} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "Only members with Owner or Editor access in #{socket.assigns.service} can turn MCP on or off."
-         )}
-    end
   end
 
   defp last_used(%MCPToken{last_used_at: nil}, _timezone), do: "Never"

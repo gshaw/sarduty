@@ -272,7 +272,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/team-admins", Settings.TeamAdminsLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
-      live "/teams/:subdomain/settings/member-logins", Settings.MemberLoginsLive
+      live "/teams/:subdomain/settings/features", Settings.FeaturesLive
       live "/teams/:subdomain/settings/tax-credit-letters", Settings.TaxCreditLettersLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
       live "/teams/:subdomain/settings/places", Settings.PlaceCollectionLive
