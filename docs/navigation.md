@@ -81,8 +81,8 @@ is left out, and so is its divider.
   MCP tokens. General held the letters and the attendance check until then, one long form
   with four topics.
 - **Features is where a team turns things on** (2026-10-28): member logins, with chores
-  and certificates under them, the whiteboard, and MCP, one switch each that saves when
-  flipped. ID cards show as on or off; SAR Duty turns them on. A feature's own settings
+  and certificates under them, and the whiteboard, one switch each that saves when
+  flipped. MCP and ID cards show as on or off; SAR Duty turns them on. A feature's own settings
   are a tab that shows only while it is on: Chore categories, MCP tokens. A new feature a
   team can go without gets a switch here, off on a new team.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a

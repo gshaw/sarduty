@@ -21,9 +21,9 @@ defmodule Web.Settings.MCPLiveTest do
     team
   end
 
-  test "says MCP is off, with the way to turn it on, and has no tab until it is on", ctx do
+  test "says MCP is off, and who turns it on, and has no tab until it is on", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/settings/mcp")
-    assert has_element?(lv, "#mcp-off a[href='/teams/#{ctx.team.subdomain}/settings/features']")
+    assert has_element?(lv, "#mcp-off", "SAR Duty turns MCP on")
     refute has_element?(lv, "#new-token-form")
     refute has_element?(lv, ".tabs a", "MCP tokens")
   end

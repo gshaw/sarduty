@@ -1,8 +1,10 @@
 defmodule App.Operation.SetTeamMCP do
   @moduledoc """
-  Turns MCP on or off for a team (#28). A team admin does it on team settings' Features
-  tab, and a SAR Duty admin on the team's admin page, /admin/teams/:id (#513). Turning it off revokes every token on the team, so turning it
-  back on never wakes old tokens.
+  Turns MCP on or off for a team (#28). Only a SAR Duty admin does it, on the team's
+  admin page, /admin/teams/:id (#513), as with ID cards: an agent reads the team's
+  people, so SAR Duty checks the team first. Team settings' Features tab shows it as on
+  or off. Turning it off revokes every token on the team, so turning it back on never
+  wakes old tokens.
   """
 
   alias App.Accounts.User
@@ -11,14 +13,10 @@ defmodule App.Operation.SetTeamMCP do
   alias App.Model.Team
   alias App.Repo
 
-  @doc "`{:ok, team}`, or `{:error, :not_allowed}` for someone who isn't a team admin."
-  def call(%Team{} = team, enabled, %User{} = user, now \\ DateTime.utc_now())
-      when is_boolean(enabled) do
-    if allowed?(team, user, now), do: set(team, enabled, user), else: {:error, :not_allowed}
+  @doc "`{:ok, team}`, or `{:error, :not_allowed}` for someone who isn't a SAR Duty admin."
+  def call(%Team{} = team, enabled, %User{} = user) when is_boolean(enabled) do
+    if user.is_admin, do: set(team, enabled, user), else: {:error, :not_allowed}
   end
-
-  defp allowed?(_team, %User{is_admin: true}, _now), do: true
-  defp allowed?(team, user, now), do: Team.managed_by?(team, user.email, now)
 
   defp set(team, enabled, user) do
     Repo.transaction(fn ->

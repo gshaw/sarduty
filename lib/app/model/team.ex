@@ -41,8 +41,8 @@ defmodule App.Model.Team do
     # newest change, and how long syncs have been failing. App.Operation.SyncD4HChanges.
     field :d4h_synced_at, :utc_datetime_usec
     field :d4h_sync_state, :map
-    # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from team settings'
-    # Features tab or the team's admin page.
+    # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from the team's admin
+    # page.
     field :mcp_enabled, :boolean, default: false
     # The team's features: member logins (#156), and on a team with them on, chores
     # (#341) and members sending certificates (#493). Set only by

@@ -10,8 +10,8 @@ defmodule Web.Settings.MCPLive do
   alias App.Operation.CreateMCPToken
   alias App.Operation.RevokeMCPToken
 
-  # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp. A team admin turns MCP
-  # on and off on the Features tab; tokens show only while it is on.
+  # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp. A SAR Duty admin turns
+  # MCP on and off (App.Operation.SetTeamMCP); tokens show only while it is on.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -100,9 +100,7 @@ defmodule Web.Settings.MCPLive do
 
       <div :if={!@current_team.mcp_enabled} id="mcp-off">
         <p>MCP is off for {@current_team.name}, so no agent can connect.</p>
-        <p>
-          <.a navigate={~p"/teams/#{@current_team}/settings/features"}>Turn it on in Features</.a>
-        </p>
+        <p>SAR Duty turns MCP on. Email support@sarduty.com to ask.</p>
       </div>
 
       <div :if={@current_team.mcp_enabled} id="mcp-on">

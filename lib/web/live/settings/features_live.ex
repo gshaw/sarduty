@@ -5,32 +5,13 @@ defmodule Web.Settings.FeaturesLive do
 
   alias App.Model.Team
   alias App.Operation.SetTeamFeature
-  alias App.Operation.SetTeamMCP
 
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
-  # flipped. Chores and certificates need member logins, so they sit under it. ID cards
-  # are SAR Duty's to turn on (App.Operation.SetTeamIdCards), so they show only as on or
-  # off.
+  # flipped. Chores and certificates need member logins, so they sit under it. MCP and ID
+  # cards are SAR Duty's to turn on, from /admin/teams/:id (App.Operation.SetTeamMCP,
+  # App.Operation.SetTeamIdCards), so they show only as on or off.
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Team settings · Features", reading_whiteboard?: false)}
-  end
-
-  def handle_event("set", %{"feature" => "mcp"}, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
-    enabled = !team.mcp_enabled
-
-    case SetTeamMCP.call(team, enabled, user) do
-      {:ok, team} ->
-        {:noreply, socket |> assign(current_team: team) |> put_flash(:info, mcp_message(team))}
-
-      {:error, :not_allowed} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "Only members with Owner or Editor access in #{socket.assigns.service} can turn MCP on or off."
-         )}
-    end
   end
 
   def handle_event("set", %{"feature" => name}, socket) do
@@ -83,9 +64,6 @@ defmodule Web.Settings.FeaturesLive do
   defp message(_team, :certificates), do: "Certificates turned off."
   defp message(%{whiteboard_enabled: true}, :whiteboard), do: "Whiteboard turned on."
   defp message(_team, :whiteboard), do: "Whiteboard turned off."
-
-  defp mcp_message(%{mcp_enabled: true}), do: "MCP turned on."
-  defp mcp_message(_team), do: "MCP turned off. Every token is revoked."
 
   def render(assigns) do
     ~H"""
@@ -160,34 +138,38 @@ defmodule Web.Settings.FeaturesLive do
           </span>
         </.switch>
 
-        <.switch
-          id="feature-mcp"
-          label="MCP"
-          checked={@current_team.mcp_enabled}
-          phx-click="set"
-          phx-value-feature="mcp"
-          {turn_off_confirm(@current_team.mcp_enabled, "Turn off MCP?", "Every token is revoked, and agents stop working right away.", "Turn off MCP")}
-        >
+        <.set_by_sar_duty id="feature-mcp" label="MCP" on?={@current_team.mcp_enabled}>
           Team admins connect an AI agent, such as Claude Code, that reads your team's data.
+          SAR Duty turns MCP on. Email support@sarduty.com to ask.
           <.a
             :if={@current_team.mcp_enabled}
             navigate={~p"/teams/#{@current_team}/settings/mcp"}
           >MCP tokens</.a>
-        </.switch>
+        </.set_by_sar_duty>
 
-        <div id="feature-id-cards" class="switch-row">
-          <div class="grow">
-            <span class="block font-semibold">ID cards</span>
-            <span class="hint block">
-              Members add their ID card to Apple Wallet or Google Wallet. SAR Duty turns ID
-              cards on. Email support@sarduty.com to ask.
-            </span>
-          </div>
-          <.badge kind={if @current_team.id_cards_enabled, do: :success, else: :default}>
-            {if @current_team.id_cards_enabled, do: "On", else: "Off"}
-          </.badge>
-        </div>
+        <.set_by_sar_duty id="feature-id-cards" label="ID cards" on?={@current_team.id_cards_enabled}>
+          Members add their ID card to Apple Wallet or Google Wallet. SAR Duty turns ID cards
+          on. Email support@sarduty.com to ask.
+        </.set_by_sar_duty>
       </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :label, :string, required: true
+  attr :on?, :boolean, required: true
+  slot :inner_block, required: true
+
+  # A feature SAR Duty turns on: where a switch would be, whether it is on.
+  defp set_by_sar_duty(assigns) do
+    ~H"""
+    <div id={@id} class="switch-row">
+      <div class="grow">
+        <span class="block font-semibold">{@label}</span>
+        <span class="hint block">{render_slot(@inner_block)}</span>
+      </div>
+      <.badge kind={if @on?, do: :success, else: :default}>{if @on?, do: "On", else: "Off"}</.badge>
     </div>
     """
   end
@@ -198,7 +180,7 @@ defmodule Web.Settings.FeaturesLive do
     """
   end
 
-  # Turning off logs members out or revokes tokens, so it asks first. Turning on doesn't.
+  # Turning off logs members out, so it asks first. Turning on doesn't.
   defp turn_off_confirm(false, _question, _body, _button), do: %{}
 
   defp turn_off_confirm(true, question, body, button),

@@ -6,10 +6,8 @@ defmodule Web.Settings.FeaturesLiveTest do
 
   alias App.Accounts
   alias App.Model.Event
-  alias App.Model.MCPToken
   alias App.Model.Team
   alias App.Model.WhiteboardNote
-  alias App.Operation.CreateMCPToken
   alias App.Repo
 
   setup %{conn: conn} do
@@ -116,28 +114,18 @@ defmodule Web.Settings.FeaturesLiveTest do
     end
   end
 
-  test "MCP turns on here, and off again revokes every token",
-       %{conn: conn, team: team, user: user} do
-    {:ok, lv, _html} = open(conn, team)
-    refute has_element?(lv, ".tabs a", "MCP tokens")
-
-    flip(lv, "mcp")
-    team = Repo.reload!(team)
-    assert team.mcp_enabled
-    assert has_element?(lv, ".tabs a", "MCP tokens")
-    assert has_element?(lv, "#feature-mcp[data-confirm]")
-
-    {:ok, _token, _record} =
-      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
-
-    flip(lv, "mcp")
-    refute Repo.reload!(team).mcp_enabled
-    assert MCPToken.get_live_for_team(team) == []
-  end
-
-  test "ID cards show as on or off, with no switch", %{conn: conn, team: team} do
+  test "MCP and ID cards show as on or off, with no switch, since SAR Duty turns them on",
+       %{conn: conn, team: team} do
     {:ok, lv, _html} = open(conn, team)
     assert has_element?(lv, "#feature-id-cards .badge", "On")
     refute has_element?(lv, "#feature-id-cards input")
+    assert has_element?(lv, "#feature-mcp .badge", "Off")
+    refute has_element?(lv, "#feature-mcp input")
+    refute has_element?(lv, "#feature-mcp a")
+
+    team |> Ecto.Changeset.change(mcp_enabled: true) |> Repo.update!()
+    {:ok, lv, _html} = open(conn, team)
+    assert has_element?(lv, "#feature-mcp .badge", "On")
+    assert has_element?(lv, "#feature-mcp a[href='/teams/#{team.subdomain}/settings/mcp']")
   end
 end
