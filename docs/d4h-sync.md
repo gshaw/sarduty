@@ -149,7 +149,9 @@ process, **without a transaction** — a failure halfway leaves the earlier stag
 5. Attendance.
 6. Qualifications, then qualification awards, then which awards have a certificate: the
    documents D4H attaches to an award, by id only (#314). The file stays in D4H, and
-   SAR Duty fetches it when someone opens it. Records serves none yet.
+   SAR Duty fetches it when someone opens it. Records serves none yet. A team's list
+   includes its organization's qualifications, kept as `organization_owned` (#652) and
+   never renamed or deleted from SAR Duty, like its groups.
 7. Groups, then group memberships.
 8. Equipment items, then equipment usages ([equipment.md](equipment.md)). A team without
    D4H's equipment module gets a 403 and has none.

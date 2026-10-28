@@ -10,6 +10,7 @@ defmodule Web.QualificationLive do
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.QualificationFilterViewModel
@@ -18,7 +19,7 @@ defmodule Web.QualificationLive do
   @views ["active", "expired", "all"]
 
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, :organization_name, Team.organization_name(socket.assigns.current_team))}
   end
 
   # `group` keeps the awards of a group's members (#367).
@@ -114,6 +115,7 @@ defmodule Web.QualificationLive do
         <.sidebar_content
           qualification={@qualification}
           team={@current_team}
+          organization_name={@organization_name}
         />
       </aside>
       <main class="content-2/3">
@@ -140,7 +142,7 @@ defmodule Web.QualificationLive do
       <dt>Actions</dt>
       <dd>
         <ul id="qualification-actions" class="action-list">
-          <li :if={D4H.records?(@team)}>
+          <li :if={D4H.records?(@team) and !@qualification.organization_owned}>
             <.a
               id="qualification-edit"
               navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/edit"}
@@ -153,6 +155,15 @@ defmodule Web.QualificationLive do
           </li>
         </ul>
       </dd>
+      <%= if @qualification.organization_owned do %>
+        <dt>Belongs to</dt>
+        <dd id="qualification-organization">
+          {@organization_name || "Your organization"}
+          <span class="hint block">
+            Only {@organization_name || "your organization"} can rename or delete it.
+          </span>
+        </dd>
+      <% end %>
     </dl>
     """
   end

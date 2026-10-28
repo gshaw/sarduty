@@ -19,6 +19,18 @@ defmodule Web.QualificationCollectionLiveTest do
     assert html =~ "First Aid"
   end
 
+  test "the organization's qualifications name it (#652)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    organization_fixture([team], %{short_name: "BCSARA"})
+    owned = qualification_fixture(team, %{title: "GSAR Team Member", organization_owned: true})
+    own = qualification_fixture(team, %{title: "Driver Truck"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications")
+
+    assert has_element?(lv, "#qualification-#{owned.id}", "GSAR Team Member · BCSARA")
+    refute has_element?(lv, "#qualification-#{own.id}", "BCSARA")
+  end
+
   test "renders empty qualifications page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

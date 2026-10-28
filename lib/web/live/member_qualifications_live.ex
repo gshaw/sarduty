@@ -10,6 +10,7 @@ defmodule Web.MemberQualificationsLive do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.Qualification
+  alias App.Model.Team
   alias App.Operation.AwardQualification
   alias App.Repo
   alias App.ViewData.MemberRecords
@@ -32,6 +33,7 @@ defmodule Web.MemberQualificationsLive do
       |> assign_awards()
       |> load_sidebar()
       |> assign(:records?, D4H.records?(team))
+      |> assign(:organization_name, Team.organization_name(team) || "Your organization")
       |> assign(
         :qualifications,
         team.id |> Qualification.get_all() |> Enum.map(&{&1.title, &1.id})
@@ -137,6 +139,7 @@ defmodule Web.MemberQualificationsLive do
         awards={@awards}
         records?={@records?}
         team_admin?={@team_admin?}
+        organization_name={@organization_name}
       />
       <.award_form
         :if={@team_admin? and @records?}
@@ -167,6 +170,9 @@ defmodule Web.MemberQualificationsLive do
           navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}
         >{row.award.qualification.title}</.a>
         <span :if={!@team_admin?}>{row.award.qualification.title}</span>
+        <span :if={row.award.qualification.organization_owned} class="hint">
+          · {@organization_name}
+        </span>
         <span :if={@team_admin? and row.award.d4h_document_id} class="hint block">
           <.a
             id={"certificate-#{row.award.id}"}

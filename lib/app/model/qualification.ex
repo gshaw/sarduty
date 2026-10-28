@@ -15,6 +15,8 @@ defmodule App.Model.Qualification do
     # How long an award lasts, in months, as D4H suggests; nil when it never expires
     # (#493). A certificate's form fills in its expiry from it.
     field :expires_months_default, :integer
+    # BCSARA's, say, rather than the team's own (#652).
+    field :organization_owned, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -26,7 +28,8 @@ defmodule App.Model.Qualification do
       :team_id,
       :d4h_qualification_id,
       :title,
-      :expires_months_default
+      :expires_months_default,
+      :organization_owned
     ])
     |> validate_required([
       :team_id,

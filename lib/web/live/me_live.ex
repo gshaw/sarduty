@@ -48,7 +48,7 @@ defmodule Web.MeLive do
     socket =
       socket
       |> assign(:page_title, member.name)
-      |> assign(member: member, team: team, now: now)
+      |> assign(member: member, team: team, now: now, organization_name: organization_name(team))
       |> assign(:today, now |> DateTime.shift_zone!(team.timezone) |> DateTime.to_date())
       |> assign(:standing, Standing.today(member, team, now))
       |> assign_years(attended)
@@ -62,6 +62,8 @@ defmodule Web.MeLive do
 
     {:ok, socket}
   end
+
+  defp organization_name(team), do: Team.organization_name(team) || "Your organization"
 
   # When they last attended, for the header, and the years the menu offers.
   defp assign_years(socket, attended) do
@@ -125,6 +127,7 @@ defmodule Web.MeLive do
         <.chores :if={@chores} team={@team} chores={@chores} />
         <.qualifications
           team={@team}
+          organization_name={@organization_name}
           now={@now}
           qualifications={@qualifications}
           certificates={@certificates}
@@ -283,6 +286,7 @@ defmodule Web.MeLive do
   attr :now, :any, required: true
   attr :qualifications, :list, required: true
   attr :certificates, :list, default: nil
+  attr :organization_name, :string, required: true
 
   # Certificates the member sent (#493) sit at the top of the one table, so it reads the
   # same on a team on SAR Duty Records.
@@ -316,6 +320,9 @@ defmodule Web.MeLive do
           <.sent_certificate :if={row[:certificate]} team={@team} certificate={row.certificate} />
           <%= if row[:award] do %>
             {row.award.qualification.title}
+            <span :if={row.award.qualification.organization_owned} class="hint">
+              · {@organization_name}
+            </span>
             <span :if={row.award.d4h_document_id} class="hint block">
               <.a
                 id={"certificate-#{row.award.id}"}

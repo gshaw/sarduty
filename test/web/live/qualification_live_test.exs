@@ -76,6 +76,19 @@ defmodule Web.QualificationLiveTest do
     assert render(lv) =~ "No members have let it expire."
   end
 
+  test "the organization's qualification says who it belongs to (#652)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    organization_fixture([team], %{short_name: "BCSARA"})
+
+    qualification =
+      qualification_fixture(team, %{title: "GSAR Team Member", organization_owned: true})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/qualifications/#{qualification.id}")
+
+    assert has_element?(lv, "#qualification-organization", "Only BCSARA can rename or delete it.")
+  end
+
   test "the Group filter keeps the group's members only (#367)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     qualification = qualification_fixture(team)

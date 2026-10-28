@@ -77,6 +77,17 @@ defmodule Web.TitledRecordFormLiveTest do
     assert_received {:records, "DELETE", "/member-qualifications/99", nil}
   end
 
+  test "the organization's qualification can't be renamed or deleted (#652)",
+       %{conn: conn, team: team} do
+    qualification = qualification_fixture(team, %{title: "GSAR", organization_owned: true})
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}")
+    refute has_element?(page, "#qualification-edit")
+
+    assert_raise Web.Status.NotFound, fn ->
+      live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
+    end
+  end
+
   test "a qualification is awarded on a member's tab, and removed",
        %{conn: conn, team: team, member: member} do
     stub()

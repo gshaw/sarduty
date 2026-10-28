@@ -10,6 +10,7 @@ defmodule Web.QualificationCollectionLive do
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.QualificationFilterViewModel
@@ -18,7 +19,8 @@ defmodule Web.QualificationCollectionLive do
   @views ["all", "expiring"]
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Qualifications")}
+    organization_name = Team.organization_name(socket.assigns.current_team) || "Your organization"
+    {:ok, assign(socket, page_title: "Qualifications", organization_name: organization_name)}
   end
 
   # `?view=expiring` lists each current member's qualifications that run out within the
@@ -180,6 +182,7 @@ defmodule Web.QualificationCollectionLive do
     >
       <:col :let={q} label="Qualification">
         <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
+        <span :if={q.organization_owned} class="hint">· {@organization_name}</span>
       </:col>
       <:col :let={q} label="Active" class="w-px whitespace-nowrap" align="right">
         {q.active_count}
@@ -271,7 +274,13 @@ defmodule Web.QualificationCollectionLive do
         |> Map.get(q.id, [])
         |> MemberQualificationAward.split_by_member(now)
 
-      %{id: q.id, title: q.title, active_count: length(active), expired_count: length(expired)}
+      %{
+        id: q.id,
+        title: q.title,
+        organization_owned: q.organization_owned,
+        active_count: length(active),
+        expired_count: length(expired)
+      }
     end)
   end
 end
