@@ -5,7 +5,6 @@ defmodule App.MCP.Tool.ActivityHistory do
   """
   @behaviour App.MCP.Tool
 
-  alias App.MCP.Args
   alias App.MCP.Tool.HistoryOutput
   alias App.Model.Activity
   alias App.Model.Team
@@ -27,7 +26,10 @@ defmodule App.MCP.Tool.ActivityHistory do
     %{
       "type" => "object",
       "properties" => %{
-        "activity_id" => %{"type" => "integer", "description" => "SAR Duty's activity id"}
+        "activity_id" => %{
+          "type" => "integer",
+          "description" => "SAR Duty's activity id, from list_activities"
+        }
       },
       "required" => ["activity_id"]
     }
@@ -38,17 +40,15 @@ defmodule App.MCP.Tool.ActivityHistory do
 
   @impl App.MCP.Tool
   def call(%Team{} = team, args, _now) do
-    with {:ok, id} <- Args.id(args, "activity_id", "list_activities") do
-      case Repo.get_by(Activity, id: id, team_id: team.id) do
-        %Activity{} = activity ->
-          entries =
-            team |> ChangeHistory.for_activity(activity) |> HistoryOutput.build(team.timezone)
+    case Repo.get_by(Activity, id: args["activity_id"], team_id: team.id) do
+      %Activity{} = activity ->
+        entries =
+          team |> ChangeHistory.for_activity(activity) |> HistoryOutput.build(team.timezone)
 
-          {:ok, entries, length(entries)}
+        {:ok, entries, length(entries)}
 
-        nil ->
-          {:error, "No activity #{id} on this team."}
-      end
+      nil ->
+        {:error, "No activity #{inspect(args["activity_id"])} on this team."}
     end
   end
 end

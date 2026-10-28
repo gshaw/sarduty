@@ -275,11 +275,12 @@ defmodule Web.MCPControllerTest do
             {"activity_history", %{"activity_id" => "29841"}},
             {"list_attendance", %{}},
             {"member_history", %{"member" => 1}},
-            {"list_chores", %{"from" => "2026-01-01", "to" => "2026-01-31", "member_id" => "1"}}
+            {"list_chores", %{"from" => "2026-01-01", "to" => "2026-01-31", "member_id" => "1"}},
+            {"tax_credit_hours", %{"year" => 2026, "member_id" => "1"}}
           ] do
         {result, text} = call_tool(conn, ctx.token, team, tool, args)
         assert result["isError"], tool
-        assert text =~ "as a number, SAR Duty's id from list_", tool
+        assert text =~ ~r/Give \w+_id as a number\. SAR Duty's \w+ id, from list_/, tool
       end
     end
 

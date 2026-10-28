@@ -37,7 +37,10 @@ defmodule App.MCP.Tool.ListChores do
         "from" => %{"type" => "string", "format" => "date", "description" => "First day"},
         "to" => %{"type" => "string", "format" => "date", "description" => "Last day"},
         "status" => %{"type" => "string", "enum" => Map.keys(@statuses)},
-        "member_id" => %{"type" => "integer", "description" => "SAR Duty's member id"}
+        "member_id" => %{
+          "type" => "integer",
+          "description" => "SAR Duty's member id, from list_members"
+        }
       },
       "required" => ["from", "to"]
     }
@@ -52,9 +55,8 @@ defmodule App.MCP.Tool.ListChores do
   @impl App.MCP.Tool
   def call(%Team{} = team, args, _now) do
     with {:ok, from, to, _start, _finish} <- Args.date_range(args, team.timezone),
-         {:ok, status} <- status_arg(args),
-         {:ok, member_id} <- Args.optional_id(args, "member_id", "list_members") do
-      chores = load(team, from, to, status, member_id)
+         {:ok, status} <- status_arg(args) do
+      chores = load(team, from, to, status, args["member_id"])
       output = build(chores, activity_ids(team, chores))
       {:ok, output, length(output)}
     end
@@ -108,7 +110,7 @@ defmodule App.MCP.Tool.ListChores do
       Chore
       |> where([c], c.team_id == ^team.id and c.date >= ^from and c.date <= ^to)
       |> then(&if status, do: where(&1, [c], c.status == ^status), else: &1)
-      |> then(&if member_id, do: where(&1, [c], c.member_id == ^member_id), else: &1)
+      |> then(&if is_integer(member_id), do: where(&1, [c], c.member_id == ^member_id), else: &1)
       |> preload([:member, :chore_category, :chore_event])
       |> Repo.all()
     else

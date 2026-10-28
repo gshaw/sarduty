@@ -29,23 +29,6 @@ defmodule App.MCP.Args do
       else: :ok
   end
 
-  @doc """
-  SAR Duty's id in `args[key]`, a whole number, or an error that says where to get one.
-  An agent may send D4H's reference number as a string, such as "02241", or the wrong
-  key; neither is read as an id.
-  """
-  def id(args, key, from_tool) do
-    case Map.get(args, key) do
-      id when is_integer(id) -> {:ok, id}
-      _other -> {:error, "Give #{key} as a number, SAR Duty's id from #{from_tool}."}
-    end
-  end
-
-  @doc "Like `id/3`, but `{:ok, nil}` when the argument is missing."
-  def optional_id(args, key, from_tool) do
-    if Map.get(args, key) == nil, do: {:ok, nil}, else: id(args, key, from_tool)
-  end
-
   @doc "An optional string argument, trimmed, or nil when missing or blank."
   def optional_string(args, key) do
     case Map.get(args, key) do

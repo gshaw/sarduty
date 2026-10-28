@@ -35,21 +35,4 @@ defmodule App.MCP.ArgsTest do
     assert Args.optional_string(%{"tag" => 3}, "tag") == nil
     assert Args.optional_string(%{}, "tag") == nil
   end
-
-  test "an id is a whole number; a reference number, a string, or a wrong key is not" do
-    assert Args.id(%{"activity_id" => 29_841}, "activity_id", "list_activities") ==
-             {:ok, 29_841}
-
-    message = "Give activity_id as a number, SAR Duty's id from list_activities."
-
-    for args <- [%{"activity_id" => "02241"}, %{"activity" => 29_841}, %{}] do
-      assert Args.id(args, "activity_id", "list_activities") == {:error, message}
-    end
-  end
-
-  test "an optional id may be missing, but not wrong" do
-    assert Args.optional_id(%{}, "member_id", "list_members") == {:ok, nil}
-    assert Args.optional_id(%{"member_id" => 7}, "member_id", "list_members") == {:ok, 7}
-    assert {:error, _} = Args.optional_id(%{"member_id" => "7"}, "member_id", "list_members")
-  end
 end

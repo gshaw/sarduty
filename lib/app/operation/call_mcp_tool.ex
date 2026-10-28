@@ -29,7 +29,7 @@ defmodule App.Operation.CallMCPTool do
     logged_args = Tools.loggable_arguments(tool, args)
 
     try do
-      tool.call(token.team, args, now)
+      with :ok <- Tools.check_arguments(tool, args), do: tool.call(token.team, args, now)
     rescue
       exception ->
         record!(token, name, logged_args, started, error: "Crashed")
