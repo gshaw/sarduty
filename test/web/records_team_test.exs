@@ -55,9 +55,11 @@ defmodule Web.RecordsTeamTest do
     end
   end
 
-  test "the team home names Records", %{conn: conn, team: team} do
+  test "the team home says when it refreshed, not from where", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-    assert has_element?(lv, "#d4h-updated", "SAR Duty Records")
+    assert has_element?(lv, "#d4h-updated", "refreshed")
+    refute has_element?(lv, "#d4h-updated", "Records")
+    refute has_element?(lv, "#open-d4h")
     assert has_element?(lv, "#coming-up-empty", "No activities planned.")
   end
 

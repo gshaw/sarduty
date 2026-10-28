@@ -2,7 +2,8 @@ defmodule Web.Components.PersonHead do
   @moduledoc """
   A member's name at the top of their page: a round photo, or their initials when D4H has
   none, their standing when they aren't active, and one line of facts. The team member
-  page and Your membership both open with it. See /styles/person-head.
+  page and Your membership both open with it, and a team's Dashboard does too, with its
+  logo in place of the photo. See /styles/person-head.
   """
   use Web, :function_component
 
@@ -11,16 +12,19 @@ defmodule Web.Components.PersonHead do
   attr :id, :string, required: true
   attr :class, :string, default: nil
   attr :name, :string, required: true
-  attr :photo, :string, required: true, doc: "the photo's path; a 404 leaves the initials"
+  attr :photo, :string, default: nil, doc: "the photo's path; a 404 leaves the initials"
   attr :standing, :any, default: :active, doc: "from App.Model.Standing.today/3"
   attr :facts, :list, default: [], doc: "short strings for the line under the name"
+  slot :picture, doc: "in place of the photo, such as a team's logo"
+  slot :line, doc: "in place of the facts, when the line holds more than words"
   slot :actions, doc: "buttons on the right"
 
   def person_head(assigns) do
     ~H"""
     <div id={@id} class={["person-head", @class]}>
       <%!-- Ignored on update, so the photo a failed load removed stays gone. --%>
-      <span id={"#{@id}-avatar"} class="avatar avatar-lg" phx-update="ignore">
+      {render_slot(@picture)}
+      <span :if={@picture == []} id={"#{@id}-avatar"} class="avatar avatar-lg" phx-update="ignore">
         {Web.Navigation.initials(@name)}
         <img id={"#{@id}-photo"} src={@photo} alt="" onerror="this.remove()" />
       </span>
@@ -29,8 +33,8 @@ defmodule Web.Components.PersonHead do
           <h1 class="title mb-0">{@name}</h1>
           <.standing_badge id={"#{@id}-standing"} standing={@standing} />
         </div>
-        <p :if={@facts != []} id={"#{@id}-facts"} class="hint mt-1 mb-0">
-          {Enum.join(@facts, " · ")}
+        <p :if={@facts != [] or @line != []} id={"#{@id}-facts"} class="hint mt-1 mb-0">
+          {if @line != [], do: render_slot(@line), else: Enum.join(@facts, " · ")}
         </p>
       </div>
       <div :if={@actions != []} class="person-head-actions">{render_slot(@actions)}</div>

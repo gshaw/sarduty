@@ -25,9 +25,23 @@
     />
   </div>
 
+  <h3>A team</h3>
+  <div class="demo">
+    <.person_head id="person-head-team-demo" name="Coast Range SAR">
+      <:picture>
+        <span class="team-head-logo is-initials">CR</span>
+      </:picture>
+      <:line>
+        Refreshed 4 min ago ·
+        <.button type="button" variant={:link} size={:sm}>Refresh now</.button>
+      </:line>
+    </.person_head>
+  </div>
+
   <h2>When to use</h2>
   <p>
     The top of a member's own page: the team member page, on every tab, and Your membership.
+    A team's Dashboard opens with it too, its square logo in the photo's place.
   </p>
 
   <h2>When not to use</h2>
@@ -54,5 +68,6 @@
     <code>&lt;.person_head id name photo standing facts&gt;</code>
     with standing from <code>Standing.today/3</code>
     and facts from <code>PersonHead.facts/3</code>. Buttons go in <code>:actions</code>.
+    A team's logo goes in <code>:picture</code>, and a line with a button in <code>:line</code>.
   </p>
 </.shell>

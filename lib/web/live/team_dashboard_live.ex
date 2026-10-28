@@ -5,6 +5,7 @@ defmodule Web.TeamDashboardLive do
   import Web.Components.Chart
   import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
+  import Web.Components.PersonHead
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -141,24 +142,28 @@ defmodule Web.TeamDashboardLive do
 
   def render(assigns) do
     ~H"""
-    <div class="team-heading">
-      <div class="min-w-0">
-        <h1 class="title-hero mb-0">{@current_team.name}</h1>
+    <.person_head id="team-head" class="mb-6" name={@current_team.name}>
+      <:picture>
+        <img
+          :if={@has_logo}
+          id="team-logo"
+          src={~p"/teams/#{@current_team}/logo?shape=square"}
+          class="team-head-logo"
+          alt="Team logo"
+        />
+        <span :if={!@has_logo} id="team-initials" class="team-head-logo is-initials">
+          {team_initials(@current_team.name)}
+        </span>
+      </:picture>
+      <:line>
         <.refresh_line
           team={@current_team}
           view_data={@view_data}
           now={@now}
           team_admin?={@team_admin?}
         />
-      </div>
-      <img
-        :if={@has_logo}
-        id="team-logo"
-        src={~p"/teams/#{@current_team}/logo?shape=square"}
-        class="logo-lg"
-        alt="Team logo"
-      />
-    </div>
+      </:line>
+    </.person_head>
 
     <.next_up_card
       :if={@view_data.next_up}
@@ -216,40 +221,39 @@ defmodule Web.TeamDashboardLive do
   attr :now, :any, required: true
   attr :team_admin?, :boolean, required: true
 
-  # Two lines that keep their size while a refresh runs, so nothing under them moves: what
-  # SAR Duty last did, cut to one line, then the links, which stay put. Refresh now is
-  # disabled while a refresh runs rather than hidden. Only team admins refresh; everyone
-  # gets Open D4H.
+  # When SAR Duty last refreshed, Refresh now for team admins, and Open D4H for everyone
+  # on a D4H team. While a refresh runs, its progress takes the line and Refresh now
+  # goes, so nobody presses it twice.
   defp refresh_line(assigns) do
     assigns = assign(assigns, :refreshing?, refreshing?(assigns.view_data))
 
     ~H"""
-    <div class="hint mt-1">
-      <p id="refresh-status" class="mb-0 truncate">
-        <.spinner :if={@refreshing?} id="refreshing" class="text-link">
-          {refreshing_text(@view_data.refresh_result)}
-        </.spinner>
-        <span :if={!@refreshing?} id="d4h-updated">{refreshed_ago(@team, @now)}</span>
-      </p>
-      <p :if={@team_admin? or !D4H.records?(@team)} class="mb-0 flex items-center gap-3">
-        <.button
-          :if={@team_admin?}
-          id="refresh-now"
-          type="button"
-          variant={:link}
-          size={:sm}
-          phx-click="refresh"
-          disabled={@refreshing?}
-        >
-          Refresh now
-        </.button>
-        <span :if={@team_admin? and !D4H.records?(@team)} aria-hidden="true">·</span>
-        <.a :if={!D4H.records?(@team)} external={true} href={D4H.build_url(@team, "/dashboard")}>Open {D4H.service_name(
-          @team
-        )}</.a>
-      </p>
-    </div>
+    <.spinner :if={@refreshing?} id="refreshing" class="text-link">
+      {refreshing_text(@view_data.refresh_result)}
+    </.spinner>
+    <span :if={!@refreshing?} id="d4h-updated">{refreshed_ago(@team, @now)}</span>
+    <span :if={@team_admin? and !@refreshing?}>
+      <span aria-hidden="true">·</span>
+      <.button id="refresh-now" type="button" variant={:link} size={:sm} phx-click="refresh">
+        Refresh now
+      </.button>
+    </span>
+    <span :if={!D4H.records?(@team)}>
+      <span aria-hidden="true">·</span>
+      <.a id="open-d4h" external={true} href={D4H.build_url(@team, "/dashboard")}>Open {D4H.service_name(
+        @team
+      )}</.a>
+    </span>
     """
+  end
+
+  # "SF" for South Fraser SAR, in the logo's place until the team saves one.
+  defp team_initials(name) do
+    name
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
   end
 
   # The reply control's assigns for an activity, or nil when the replier can't reply to
