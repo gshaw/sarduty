@@ -236,7 +236,7 @@ and must not be used for it.
 | check-in, checked in                | contact, follow-up, call log                   | A team admin's record that they reached a member. Never a scan: that is "arrived".                   |
 | standing                            | status, availability, state                    | Active, Away, Retiring, Not a person, or Retired. "Status" is D4H's member status.                   |
 | retired                             | departed, left the team, former, inactive      | A member no longer on the team: D4H retired them or no longer lists them. D4H's own word.            |
-| retiring                            | departing, outgoing, on the way out            | A member the team is about to retire, in its Retiring group, such as while they return equipment.    |
+| retiring                            | departing, outgoing, on the way out            | In the team's Retiring group until D4H retires them, such as while items come back. Can't log in.    |
 | not retired                         | current (as a filter)                          | The Standing filter's default: Active, Away, Retiring, and Not a person. All adds the retired.       |
 | away period                         | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                             | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |

@@ -104,8 +104,8 @@ D4H can put an item's location at a member, and the copy keeps it as
   retired, all their issued equipment must be returned to the team's inventory." So the
   badge for a retired member with items, a With retired members place, and a Needs
   attention line on the team home were dropped (#494, closed). The member's Equipment tab
-  is the list to work from before retiring them. Whether SAR Duty needs a standing for
-  the weeks between leaving and retiring is open on #490.
+  is the list to work from before retiring them. The weeks between leaving and retiring
+  are the Retiring standing (#514); see [Retiring](members.md#retiring).
 
 ## Adding equipment to an activity
 

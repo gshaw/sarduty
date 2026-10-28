@@ -6,7 +6,9 @@ defmodule App.Model.Standing do
   - Retired comes from D4H, as of `now` (Member.current?/2).
   - Not a person is a team admin's switch in SAR Duty.
   - Retiring is membership of the team's Retiring group, a D4H group named in team
-    settings. Never stored: read from `group_members` when needed.
+    settings. Never stored: read from `group_members` when needed. A retiring member is
+    no longer a member: they can't log in and nothing counts or contacts them
+    (docs/members.md, Retiring).
   - Away is a current away period, a team admin's record in SAR Duty.
   - Active is the absence of the rest.
 
