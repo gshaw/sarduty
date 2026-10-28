@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Production's logs for a span of time. `fly logs` shows only the last 100 lines; Fly
+# keeps about 7 days, and its logs API returns them 100 at a time from a start time.
+# This pages through them with the read-only token. It is the API flyctl uses, which
+# Fly says isn't supported for outside use but is mostly stable.
+#
+#   bin/fly-logs FROM [TO] [PATTERN]
+#
+# FROM and TO are anything `date` reads, in local time unless they say otherwise:
+# "2026-10-28 10:00", "2026-10-28T17:00Z", "2 hours ago". TO defaults to an hour after
+# FROM. PATTERN is an extended grep pattern, matched without case.
+#
+#   bin/fly-logs "2026-10-28 10:00" "2026-10-28 10:15"
+#   bin/fly-logs "3 hours ago" now "error|warning"
+#   bin/fly-logs "2026-10-27 09:00" "2026-10-27 12:00" "assets/app-.*\.css"
+# cspell:ignore gdate elif (coreutils' date on macOS; bash)
+set -euo pipefail
+
+app=sarduty
+[ $# -ge 1 ] || { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+
+# GNU date takes -d; macOS needs gdate (coreutils) for phrases like "2 hours ago".
+date_cmd=$(command -v gdate || echo date)
+seconds() { "$date_cmd" -d "$1" +%s 2>/dev/null || { echo "Can't read the time: $1" >&2; exit 1; }; }
+
+from=$(seconds "$1")
+to=$([ $# -ge 2 ] && seconds "$2" || echo $((from + 3600)))
+pattern=${3:-}
+token=$(fnox get FLY_READONLY_TOKEN)
+cursor=$((from * 1000000000))
+end=$((to * 1000000000))
+
+while :; do
+  page=$(curl -fsS -H "Authorization: $token" \
+    "https://api.fly.io/api/v1/apps/$app/logs?next_token=$cursor")
+  lines=$(printf '%s' "$page" | jq -r --argjson end "$end" '
+    .data[].attributes
+    | select((.timestamp | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) * 1000000000 < $end)
+    | "\(.timestamp) \(.level) \(.message)"')
+  next=$(printf '%s' "$page" | jq -r '.meta.next_token // empty')
+
+  if [ -n "$pattern" ]; then
+    printf '%s\n' "$lines" | grep -iE -- "$pattern" || true
+  elif [ -n "$lines" ]; then
+    printf '%s\n' "$lines"
+  fi
+
+  count=$(printf '%s' "$page" | jq '.data | length')
+  # A short page is the newest there is; a cursor past TO is the end of the span.
+  [ "$count" -lt 100 ] || [ -z "$next" ] || [ "$next" -ge "$end" ] && break
+  cursor=$next
+done

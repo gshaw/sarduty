@@ -37,6 +37,11 @@ login: `FLY_ACCESS_TOKEN=$(fnox get FLY_SARDUTY_DEPLOY_TOKEN) fly deploy`, and
 make new ones with `fly tokens create deploy -a sarduty -x 4320h` (or `ssh`). Who reaches
 production, and how, is #517.
 
+**Logs go back about 7 days.** `fly logs` shows only the last 100 lines, so read a span
+with [bin/fly-logs](../bin/fly-logs), which pages through Fly's logs API with
+`FLY_READONLY_TOKEN`: `bin/fly-logs "2026-10-28 10:00" "2026-10-28 10:15" "error"`.
+Fly's Grafana at fly-metrics.net searches the same 7 days by hand.
+
 **Nothing in the build downloads through GitHub's release redirect with Erlang's
 `:httpc`.** Since OTP 29 it refuses that redirect's 10 KB of headers, so a build that
 compiles dependencies from scratch failed (#497). exqlite builds from the SQLite source
