@@ -12,8 +12,10 @@ the first design and the D4H test it rests on; #475 replaced its links with a lo
 ## The team's page
 
 `/teams/:subdomain/take-attendance`
-([TakeAttendanceLive](../lib/web/live/take_attendance_live.ex)) is for an iPad at the
-hall. Under a line saying what it's for, **Now** lists the activities taking attendance
+([TakeAttendanceLive](../lib/web/live/take_attendance_live.ex)) lists the activities to
+take attendance for. It is in the app layout, with the side navigation, so a click on
+it from a computer doesn't change the page around it; the scanner a row opens is the
+narrow page made for the hand. Under a line saying what it's for, **Now** lists the activities taking attendance
 now (`Activity.taking_attendance_now/2`), and **Coming up** the next 5 whose window opens
 later, within 14 days (`Activity.taking_attendance_later/2`). Every row opens that
 activity's scanner, which says when a member can start. It never opens a scanner by
@@ -25,6 +27,12 @@ address can't move ([urls.md](urls.md)). The scanner links back to it, Other act
 now, while another activity is taking attendance: one that overlaps, or tonight's when
 Safari kept last week's scanner open. Take attendance is in the side navigation for
 members and team admins, always.
+
+Beside the lists, **Open on the iPad** has a QR code of the page's address and the
+address with its copy button, so a team admin at a computer sets up the iPad at the
+door. It hides on a touch screen (`pointer-coarse:hidden`): there the device is already
+in hand. It replaced a dialog that opened in place of the page on a mouse click, which
+stopped a laptop at the door with a plug-in scanner every time (#670).
 
 Logged out, it goes to the login page as every team page does, and logging in comes back
 to it. When the page to come back to is a Take attendance page, the login pages say "Log

@@ -65,8 +65,8 @@ is left out, and so is its divider.
   from it.
 - **Take attendance is always there**, after Activities, for members and team admins
   (#475). Not only while an activity is on: links that come and go with the clock make
-  the menu harder to learn. It opens `/teams/:subdomain/take-attendance`, which goes
-  straight to the scanner when one activity is on.
+  the menu harder to learn. It opens `/teams/:subdomain/take-attendance` in the app
+  layout, like every page here; the scanner a row opens is a narrow page.
 - **Templates is a link of its own**, after Activities, so a team admin finds it without
   opening Activities first. Proposed changes sat beside it until the MCP became read-only
   (#627).

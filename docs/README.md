@@ -53,7 +53,8 @@ The rules that are easy to break:
 
 - **New page** → a LiveView in `lib/web/live/`, with `use Web, :live_view_app_layout` for
   team, member, and admin pages, `:live_view_narrow_layout` for one task done with a
-  phone or iPad in hand (logging in, taking attendance, scanning; see `/styles/layout`),
+  phone or iPad in hand (logging in, an activity's scanner, scanning kit; see
+  `/styles/layout`),
   or `:live_view_marketing_layout` for public pages. A page in the side navigation
   is a line in `Web.Navigation` ([navigation.md](navigation.md)). Add the route in `lib/web/router.ex`
   inside the `live_session` whose `on_mount` checks what the page needs (signed in, admin,
