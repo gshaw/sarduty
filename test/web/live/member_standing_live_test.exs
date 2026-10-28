@@ -8,6 +8,7 @@ defmodule Web.MemberStandingLiveTest do
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCheckIn
   alias App.Model.MemberStandingChange
+  alias App.Model.NoShow
   alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
   alias App.Operation.DeleteCheckIn
@@ -213,6 +214,33 @@ defmodule Web.MemberStandingLiveTest do
     assert EndAwayPeriod.call(team, period.id, user) == :gone
     assert Repo.reload(period)
     assert_raise Ecto.NoResultsError, fn -> AddAwayPeriod.call(team, other.id, user, %{}) end
+  end
+
+  test "this year's no-shows are counted and listed, with who followed up (#650)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    activity = activity_fixture(team, %{title: "MIT training"})
+    no_show = NoShow.record!(activity, member)
+
+    NoShow.set_followed_up(
+      team,
+      no_show.id,
+      {:note, "sick, told the trainer"},
+      user,
+      DateTime.utc_now()
+    )
+
+    team |> activity_fixture() |> NoShow.record!(member_fixture(team))
+    year = DateTime.utc_now() |> Service.YearRange.year_in(team.timezone)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    assert has_element?(lv, "#no-show-count", "1 no-show in #{year}.")
+    assert has_element?(lv, "#no-show-#{no_show.id}", "MIT training")
+    assert has_element?(lv, "#no-show-#{no_show.id}", "sick, told the trainer")
+    assert has_element?(lv, "#no-show-#{no_show.id}", "Followed up by #{user.email}")
   end
 
   test "a check-in lists the day, who recorded it, and what they heard", %{conn: conn} do

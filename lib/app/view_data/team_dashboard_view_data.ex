@@ -18,6 +18,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
+  alias App.Model.NoShow
   alias App.Model.Standing
   alias App.Model.Tag
   alias App.Model.Team
@@ -81,6 +82,7 @@ defmodule App.ViewData.TeamDashboardViewData do
         if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0),
       chores_to_send: chores_to_send(team),
       attendance_to_send: attendance_to_send(team, now),
+      no_shows: no_shows(team, now),
       untagged: untagged_rows(team, now),
       letters: letters_row(team, now)
     }
@@ -88,6 +90,13 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   defp chores_to_send(team),
     do: if(Team.chores?(team), do: ChoreEvent.count_to_send(team.id), else: 0)
+
+  # No-shows wait a week for a follow-up, then drop off (#650): following up is a habit
+  # for the week after, not a list to clear.
+  @no_show_days 7
+
+  defp no_shows(team, now),
+    do: NoShow.to_follow_up(team, DateTime.add(now, -@no_show_days, :day), now)
 
   @attendance_to_send_days 30
 

@@ -25,6 +25,7 @@ defmodule App.ViewData.TeamAttentionTest do
         certificate_count: 0,
         chores_to_send: 0,
         attendance_to_send: [],
+        no_shows: [],
         untagged: [],
         letters: nil
       },
@@ -83,6 +84,33 @@ defmodule App.ViewData.TeamAttentionTest do
       assert TeamAttention.attendance_to_send_item([]) == nil
       refute :attendance_to_send in keys(items(%{}, @october))
       assert :attendance_to_send in keys(items(%{attendance_to_send: [@rope]}, @october))
+    end
+  end
+
+  describe "no-shows to follow up (#650)" do
+    @mit %{id: 7, title: "MIT training", count: 3}
+    @rope_night %{id: 8, title: "Rope practice", count: 2}
+
+    test "one activity is named in the title and opens" do
+      item = TeamAttention.no_shows_item([@mit])
+
+      assert %{key: :no_shows, level: :info, activity_id: 7, action: "Follow up"} = item
+      assert item.title == "3 no-shows to follow up: MIT training"
+      assert item.detail == "Check each one is OK, then mark them followed up."
+    end
+
+    test "several are counted, and the oldest is named and opens" do
+      item = TeamAttention.no_shows_item([@mit, @rope_night])
+
+      assert item.title == "5 no-shows to follow up from 2 activities"
+      assert item.detail == "The oldest is MIT training."
+      assert item.activity_id == 7
+    end
+
+    test "none means no item" do
+      assert TeamAttention.no_shows_item([]) == nil
+      refute :no_shows in keys(items(%{}, @october))
+      assert :no_shows in keys(items(%{no_shows: [@mit]}, @october))
     end
   end
 
