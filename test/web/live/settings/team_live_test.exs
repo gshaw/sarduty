@@ -135,6 +135,38 @@ defmodule Web.Settings.TeamLiveTest do
     assert Team.get!(first.id).name == first.name
   end
 
+  describe "Refresh" do
+    test "takes the team's name and time zone from D4H", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        Req.Test.json(conn, %{
+          "id" => 1,
+          "title" => "Renamed SAR",
+          "timezone" => "America/Toronto"
+        })
+      end)
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+      assert render_click(lv, "refresh", %{}) =~ "Team refreshed."
+      assert %{name: "Renamed SAR", timezone: "America/Toronto"} = Team.get!(team.id)
+    end
+
+    test "says D4H refused, rather than crashing, when the key is turned down", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        conn |> Plug.Conn.put_status(401) |> Req.Test.json(%{"message" => "Unauthorized"})
+      end)
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+      assert render_click(lv, "refresh", %{}) =~ "D4H refused it"
+      assert Team.get!(team.id).name == team.name
+    end
+  end
+
   test "404s for a team the user doesn't manage", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
     other = team_fixture()

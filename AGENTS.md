@@ -192,8 +192,7 @@ fi
 - **One module per file**, named after the module in snake_case. Folders are snake_case
   too.
 - **New side effects go in an Operation**, not a LiveView `handle_event`. Some older
-  LiveViews call the D4H adapter directly (`ActivityMileageLive`, `Settings.TeamLive`);
-  don't copy that.
+  LiveViews call the D4H adapter directly (`ActivityMileageLive`); don't copy that.
 - **Every rule has one home**: the operation every entry point calls, as a pure
   function, or the model when many places share it. A page asks that function, never
   its own copy. See [Where rules live](docs/README.md#where-rules-live).

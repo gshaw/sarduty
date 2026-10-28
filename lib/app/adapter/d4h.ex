@@ -305,14 +305,17 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc """
+  The team's record: `{:ok, D4H.Team}`, `{:error, D4H.Error}` when D4H refuses, or
+  `{:error, Req.TransportError}` when it doesn't answer.
+  """
   def fetch_team(context) do
     d4h_team_id = Req.Request.get_private(context, :d4h_team_id)
-    response = Req.get!(context, url: "/teams/#{d4h_team_id}")
 
-    if response.status == 200 do
-      {:ok, D4H.Team.build(response.body)}
-    else
-      {:error, D4H.Error.exception(response)}
+    case Req.get(context, url: "/teams/#{d4h_team_id}") do
+      {:ok, %{status: 200} = response} -> {:ok, D4H.Team.build(response.body)}
+      {:ok, response} -> {:error, D4H.Error.exception(response)}
+      {:error, exception} -> {:error, exception}
     end
   end
 
