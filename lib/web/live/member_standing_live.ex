@@ -41,7 +41,7 @@ defmodule Web.MemberStandingLive do
      |> assign(:member, member)
      |> assign(:last_attended_at, Member.last_attended_at(member))
      |> assign(:equipment, EquipmentItem.held_by(member.team, member))
-     |> assign(:field_rows, MemberSidebar.field_rows(member, true))
+     |> assign(:fields?, MemberSidebar.fields?(member, true))
      |> load_standing()
      |> assign_new_form()}
   end
@@ -219,7 +219,7 @@ defmodule Web.MemberStandingLive do
       standing={@standing}
       milestones={@milestones}
       equipment={@equipment}
-      field_rows={@field_rows}
+      fields?={@fields?}
       maps_app={@current_user.maps_app}
       team_admin?={@team_admin?}
     >

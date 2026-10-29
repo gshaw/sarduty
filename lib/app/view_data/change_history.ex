@@ -372,6 +372,11 @@ defmodule App.ViewData.ChangeHistory do
 
   def describe_row(%ChangeSetRow{action: :create_activity}, _page), do: "Added in SAR Duty"
 
+  # Change fields (#705) sends the custom fields alone.
+  def describe_row(%ChangeSetRow{action: :update_activity, new_value: new}, _page)
+      when map_size(new) == 1 and is_map_key(new, "custom_values"),
+      do: "Fields changed in SAR Duty"
+
   def describe_row(%ChangeSetRow{action: :update_activity}, _page),
     do: "Details changed in SAR Duty"
 
@@ -489,5 +494,6 @@ defmodule App.ViewData.ChangeHistory do
     do: "Emergency contact"
 
   defp updated_part(key) when key in ~w(email phone address), do: "Contact details"
+  defp updated_part("custom_values"), do: "Fields"
   defp updated_part(_key), do: "Details"
 end

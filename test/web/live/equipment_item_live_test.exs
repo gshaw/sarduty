@@ -26,6 +26,7 @@ defmodule Web.EquipmentItemLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/fields")
     assert has_element?(lv, "#item-fields-603", "Orange dry bag")
     refute has_element?(lv, "#item-activities")
+    assert has_element?(lv, "#item-fields-change[href$='/equipment/#{item.id}/fields/edit']")
   end
 
   test "an item with no fields has no tabs", %{conn: conn} do

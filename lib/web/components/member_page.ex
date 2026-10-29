@@ -23,9 +23,9 @@ defmodule Web.Components.MemberPage do
   attr :equipment, :list, required: true, doc: "from load_sidebar/1"
   attr :maps_app, :string, required: true, doc: "the account's maps_app"
 
-  attr :field_rows, :list,
-    default: [],
-    doc: "the member fields, from load_sidebar/1; Fields shows when there are any"
+  attr :fields?, :boolean,
+    default: false,
+    doc: "from load_sidebar/1: whether a team admin gets the Fields tab"
 
   attr :team_admin?, :boolean, default: false
 
@@ -65,7 +65,7 @@ defmodule Web.Components.MemberPage do
       member={@member}
       active_tab={@tab}
       equipment={@equipment}
-      fields?={@field_rows != []}
+      fields?={@fields?}
       team_admin?={@team_admin?}
     />
     <div class="content-wrapper">

@@ -3,6 +3,8 @@ defmodule Web.Components.CustomFields do
 
   import Web.Components.Core
 
+  alias App.Model.CustomField
+
   # A record's D4H custom fields (#681), from App.Model.CustomField.rows/4: a table on the
   # record's Fields tab, or a detail list under a heading on a page with no tabs, such as
   # Your membership's Contact details. A required field with no value says Missing. The
@@ -50,10 +52,7 @@ defmodule Web.Components.CustomFields do
     <section id={@id}>
       <div :if={@missing != []} class="mb-8">
         <p id={"#{@id}-missing-count"} class="mb-4">
-          {Service.Format.count(length(@missing),
-            one: "%d of #{@required} needed to publish is empty.",
-            many: "%d of #{@required} needed to publish are empty."
-          )}
+          {missing_text({length(@missing), @required})}
         </p>
         <.fields_table id={"#{@id}-missing"} prefix={@id} rows={@missing} />
       </div>
@@ -83,5 +82,161 @@ defmodule Web.Components.CustomFields do
       </table>
     </div>
     """
+  end
+
+  attr :fields, :list, required: true
+  attr :values, :map, required: true, doc: "the record's custom_values, by D4H field id"
+
+  attr :publish?, :boolean,
+    default: false,
+    doc: "an activity's fields: a required one says it's needed to publish"
+
+  @doc """
+  A record's fields as inputs on its Change fields page (#705), each as its type's input,
+  named `fields[<D4H field id>]`. On an activity a required one says it's needed to
+  publish: D4H checks them only then.
+  """
+  def custom_field_inputs(assigns) do
+    ~H"""
+    <.custom_input
+      :for={field <- @fields}
+      field={field}
+      value={form_value(@values[Integer.to_string(field.d4h_custom_field_id)])}
+      publish?={@publish?}
+    />
+    """
+  end
+
+  # Option ids as the inputs send them back, as strings.
+  defp form_value(list) when is_list(list), do: Enum.map(list, &to_string/1)
+  defp form_value(value), do: value
+
+  @doc """
+  The count over a record's missing fields, from `{missing, required}`: "9 of 19 needed
+  to publish are empty."
+  """
+  def missing_text({missing, required}) do
+    Service.Format.count(missing,
+      one: "%d of #{required} needed to publish is empty.",
+      many: "%d of #{required} needed to publish are empty."
+    )
+  end
+
+  attr :field, CustomField, required: true
+  attr :value, :any, default: nil
+  attr :publish?, :boolean, required: true
+
+  defp custom_input(%{field: %{field_type: "multiple_choice"}} = assigns) do
+    assigns =
+      assign(assigns, id: input_id(assigns.field), name: input_name(assigns.field) <> "[]")
+
+    ~H"""
+    <fieldset id={@id} class="mb-6">
+      <legend>{@field.title}</legend>
+      <.hint :if={field_hint(@field, @publish?)}>{field_hint(@field, @publish?)}</.hint>
+      <input type="hidden" name={@name} value="" />
+      <label :for={{label, value} <- options(@field, @value)} class="choice">
+        <input
+          type="checkbox"
+          id={"#{@id}-#{value}"}
+          name={@name}
+          value={value}
+          checked={value in List.wrap(@value)}
+        />
+        {label}
+      </label>
+    </fieldset>
+    """
+  end
+
+  defp custom_input(%{field: %{field_type: "single_choice"}} = assigns) do
+    assigns =
+      assign(assigns,
+        id: input_id(assigns.field),
+        name: input_name(assigns.field),
+        options: options(assigns.field, assigns.value),
+        selected: assigns.value |> List.wrap() |> List.first()
+      )
+
+    ~H"""
+    <.input
+      id={@id}
+      name={@name}
+      type={if length(@options) > 10, do: "combobox", else: "select"}
+      label={@field.title}
+      prompt="None"
+      clearable
+      options={@options}
+      value={@selected}
+    >
+      {field_hint(@field, @publish?)}
+    </.input>
+    """
+  end
+
+  defp custom_input(assigns) do
+    assigns =
+      assign(assigns,
+        id: input_id(assigns.field),
+        name: input_name(assigns.field),
+        type: input_type(assigns.field.field_type),
+        shown: shown_value(assigns.field.field_type, assigns.value)
+      )
+
+    ~H"""
+    <.input
+      id={@id}
+      name={@name}
+      type={@type}
+      label={@field.title}
+      value={@shown}
+      rows={@type == "textarea" && "3"}
+      step={@type == "number" && "any"}
+    >
+      {field_hint(@field, @publish?)}
+    </.input>
+    """
+  end
+
+  defp input_id(field), do: "custom-field-#{field.d4h_custom_field_id}"
+  defp input_name(field), do: "fields[#{field.d4h_custom_field_id}]"
+
+  defp input_type("text_area"), do: "textarea"
+  defp input_type("number"), do: "number"
+  defp input_type("date"), do: "date"
+  defp input_type("time"), do: "time"
+  defp input_type(_text_or_datetime), do: "text"
+
+  defp shown_value("date", value) when is_binary(value), do: String.slice(value, 0, 10)
+  defp shown_value(_type, value), do: value
+
+  # D4H's hint, and on an activity, for a required field, that it's needed to publish.
+  # Many of D4H's hints have no full stop, so one goes before the second sentence.
+  defp field_hint(field, publish?) do
+    needed = if publish? and field.required, do: "Needed to publish."
+
+    hint = if field.hint not in [nil, ""], do: field.hint
+
+    case {hint, needed} do
+      {nil, nil} -> nil
+      {hint, nil} -> hint
+      {nil, needed} -> needed
+      {hint, needed} -> "#{full_stop(hint)} #{needed}"
+    end
+  end
+
+  defp full_stop(text) do
+    text = String.trim_trailing(text)
+    if String.ends_with?(text, [".", "!", "?"]), do: text, else: text <> "."
+  end
+
+  # The live options in D4H's order, and an archived one only while it is chosen.
+  defp options(field, value) do
+    chosen = value |> List.wrap() |> Enum.map(&to_string/1)
+
+    field.options
+    |> Enum.sort_by(& &1["ordering"])
+    |> Enum.filter(&(not &1["archived"] or to_string(&1["id"]) in chosen))
+    |> Enum.map(&{&1["label"], to_string(&1["id"])})
   end
 end

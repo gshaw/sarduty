@@ -2,6 +2,7 @@ defmodule App.Model.CustomField do
   use App, :model
 
   alias App.Field.TrimmedString
+  alias App.Model.Activity
   alias App.Model.CustomField
   alias App.Model.Team
   alias App.Repo
@@ -142,6 +143,24 @@ defmodule App.Model.CustomField do
         true -> []
       end
     end)
+  end
+
+  @doc """
+  For a team admin's forms, the count over an activity's missing fields, as on its Fields
+  tab: `{missing, required}` when its kind's `fields` flag some (a draft incident), or
+  nil.
+  """
+  def missing_count(fields, %{custom_values: values} = activity, timezone) do
+    rows =
+      rows(fields, values, timezone,
+        restricted: true,
+        missing: Activity.flag_missing_fields?(activity)
+      )
+
+    case Enum.count(rows, & &1.missing?) do
+      0 -> nil
+      missing -> {missing, Enum.count(fields, & &1.required)}
+    end
   end
 
   @doc """

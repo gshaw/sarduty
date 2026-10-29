@@ -347,6 +347,7 @@ defmodule Web.MemberLiveTest do
     assert has_element?(lv, "nav.tabs a[aria-current=page]", "Fields")
     assert has_element?(lv, "#member-fields-630", "SF 12")
     refute has_element?(lv, "#member-fields-631")
+    assert has_element?(lv, "#member-fields-change[href$='/members/#{member.id}/fields/edit']")
   end
 
   test "a member with no copied field has no Fields tab", %{conn: conn} do

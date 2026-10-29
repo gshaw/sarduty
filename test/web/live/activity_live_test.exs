@@ -669,6 +669,11 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#activity-fields-896", "Team only")
       refute has_element?(lv, "#activity-fields-577")
       refute has_element?(lv, "#members-switch")
+
+      assert has_element?(
+               lv,
+               ~s{#activity-fields-change[href="/teams/#{team.subdomain}/activities/#{activity.id}/fields/edit"]}
+             )
     end
 
     test "Missing shows only on a draft incident, where it stops D4H publishing it",
@@ -696,16 +701,22 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#activity-fields-420", "Lost")
       refute has_element?(lv, "#activity-fields-896")
       refute has_element?(lv, "#activity-fields-422")
+      refute has_element?(lv, "#activity-fields-change")
     end
 
-    test "an activity with no field to show has no Fields tab", %{conn: conn} do
+    test "with every field empty, a team admin gets the tab to fill one in", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       custom_field_fixture(team, %{d4h_custom_field_id: 577, title: "ASE#"})
       activity = activity_fixture(team, %{activity_kind: "incident", custom_values: %{}})
+      exercise = activity_fixture(team, %{activity_kind: "exercise"})
+      conn = log_in_user(conn, user)
 
-      {:ok, lv, _html} =
-        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields")
+      assert has_element?(lv, "#activity-fields", "No fields filled in.")
+      assert has_element?(lv, "#activity-fields-change")
 
+      # No exercise fields at all.
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{exercise.id}")
       assert has_element?(lv, "nav.tabs", "Equipment")
       refute has_element?(lv, "nav.tabs a[href$='/fields']")
     end

@@ -22,8 +22,9 @@ defmodule Web.Components.MemberSidebar do
   @doc """
   Assigns the header's `last_attended_at` and `standing`, as the viewer sees it, the
   sidebar's `milestones`, the `equipment` that decides whether the tabs show Equipment,
-  and for a team admin the member fields the team copies (#681), which decide whether
-  they show Fields (#705), for the socket's `member`. Call it when the member loads, not on every render: a form's change
+  and for a team admin the member fields the team copies (#681), and `fields?`, whether
+  the team copies any, which decides whether they show Fields (#705), for the socket's
+  `member`. Call it when the member loads, not on every render: a form's change
   events re-render.
   """
   def load_sidebar(socket) do
@@ -35,9 +36,19 @@ defmodule Web.Components.MemberSidebar do
       standing: Standing.visible(standing, team_admin?),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
       equipment: EquipmentItem.held_by(member.team, member),
-      field_rows: field_rows(member, team_admin?)
+      field_rows: field_rows(member, team_admin?),
+      fields?: fields?(member, team_admin?)
     )
   end
+
+  @doc """
+  Whether the Fields tab shows: to a team admin when the team copies member fields, so
+  they can fill one in with Change fields (#705).
+  """
+  def fields?(_member, false), do: false
+
+  def fields?(member, true),
+    do: CustomField.copied_member_fields(member.team_id, :team_admin) != []
 
   @doc "The member fields the Fields tab shows: team admins' alone (#681)."
   def field_rows(_member, false), do: []
