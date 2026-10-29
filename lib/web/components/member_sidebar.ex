@@ -103,6 +103,7 @@ defmodule Web.Components.MemberSidebar do
     doc: "the member's milestones, newest first, from load_sidebar/1"
 
   attr :team_admin?, :boolean, default: false, doc: "adds contact details and Actions"
+  attr :fields?, :boolean, default: false, doc: "from load_sidebar/1: adds Change fields"
 
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H. Members see the ID and
@@ -119,14 +120,16 @@ defmodule Web.Components.MemberSidebar do
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />
 
-      <.member_actions :if={@team_admin?} member={@member} />
+      <.member_actions :if={@team_admin?} member={@member} fields?={@fields?} />
     </dl>
     """
   end
 
   attr :member, :map, required: true
+  attr :fields?, :boolean, required: true
 
-  # A team on SAR Duty Records has no D4H to open, so it changes members here.
+  # A team on SAR Duty Records has no D4H to open, so it changes members here. Custom
+  # fields change here on every team that has them (#705).
   defp member_actions(assigns) do
     ~H"""
     <dt>Actions</dt>
@@ -134,6 +137,12 @@ defmodule Web.Components.MemberSidebar do
       <ul id="member-actions" class="action-list">
         <li :if={D4H.records?(@member.team)}>
           <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
+        </li>
+        <li :if={@fields?}>
+          <.a
+            id="member-actions-change-fields"
+            navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields/edit"}
+          >Change fields</.a>
         </li>
         <li :if={!D4H.records?(@member.team)}>
           <.a external={true} href={D4H.member_url(@member)}>Open in {D4H.service_name(@member.team)}</.a>

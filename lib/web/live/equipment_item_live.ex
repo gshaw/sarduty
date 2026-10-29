@@ -102,6 +102,12 @@ defmodule Web.EquipmentItemLive do
                   navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/delete"}
                 >Delete item</.a>
               </li>
+              <li :if={@fields?}>
+                <.a
+                  id="item-actions-change-fields"
+                  navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/fields/edit"}
+                >Change fields</.a>
+              </li>
               <li :if={!D4H.records?(@current_team)}>
                 <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open in {@service}</.a>
               </li>

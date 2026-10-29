@@ -74,6 +74,7 @@ defmodule Web.Components.MemberPage do
           member={@member}
           maps_app={@maps_app}
           milestones={@milestones}
+          fields?={@fields?}
           team_admin?={@team_admin?}
         />
       </aside>

@@ -22,6 +22,7 @@ defmodule Web.EquipmentItemLiveTest do
     refute has_element?(lv, "#item-fields")
     assert has_element?(lv, "#item-activities")
     assert has_element?(lv, "nav.tabs a[href$='/fields']", "Fields")
+    assert has_element?(lv, "#item-actions-change-fields[href$='/fields/edit']")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/fields")
     assert has_element?(lv, "#item-fields-603", "Orange dry bag")
@@ -37,5 +38,6 @@ defmodule Web.EquipmentItemLiveTest do
 
     assert has_element?(lv, "#item-activities")
     refute has_element?(lv, "nav.tabs")
+    refute has_element?(lv, "#item-actions-change-fields")
   end
 end

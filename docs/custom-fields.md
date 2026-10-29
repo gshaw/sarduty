@@ -77,7 +77,8 @@ fields D4H doesn't enforce.
 ## Changing them
 
 A record's fields have their own page, **Change fields**, `/fields/edit`, reached from
-Change fields at the foot of its Fields tab (decided 2026-10-29, #705). Before, Add
+Change fields in its Actions, after the record's own Change link, and at the foot of its
+Fields tab (decided 2026-10-29, #705). Before, Add
 activity and Change activity held every field of the kind, and a BC incident's ran the
 form six screens long, with the title, times, and address lost above them. Change
 activity now has a Fields section with the tab's count and the same link. Add activity

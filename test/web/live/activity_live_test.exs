@@ -654,6 +654,7 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
       refute has_element?(lv, "#activity-fields")
       assert has_element?(lv, "nav.tabs a[href$='/fields'] .badge", "1")
+      assert has_element?(lv, "#activity-actions-change-fields[href$='/fields/edit']")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields")
       assert has_element?(lv, "nav.tabs a[aria-current=page]", "Fields")
@@ -702,6 +703,7 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#activity-fields-896")
       refute has_element?(lv, "#activity-fields-422")
       refute has_element?(lv, "#activity-fields-change")
+      refute has_element?(lv, "#activity-actions-change-fields")
     end
 
     test "with every field empty, a team admin gets the tab to fill one in", %{conn: conn} do

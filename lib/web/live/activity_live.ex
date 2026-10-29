@@ -339,6 +339,7 @@ defmodule Web.ActivityLive do
         <.sidebar_end
           activity={@activity}
           team_admin?={@team_admin?}
+          change_fields?={@change_fields?}
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
         />
@@ -442,6 +443,7 @@ defmodule Web.ActivityLive do
 
   attr :activity, :map, required: true
   attr :team_admin?, :boolean, default: false
+  attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
 
@@ -465,6 +467,12 @@ defmodule Web.ActivityLive do
               id="activity-edit"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
             >Change activity</.a>
+          </li>
+          <li :if={@change_fields?}>
+            <.a
+              id="activity-actions-change-fields"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields/edit"}
+            >Change fields</.a>
           </li>
           <li :if={@admin_actions? and !@d4h?}>
             <.a
