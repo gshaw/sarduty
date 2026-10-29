@@ -15,7 +15,6 @@ defmodule Web.ChoreFormLive do
   # that has passed, waiting or decided; its status stays and saving sends its activity
   # to D4H. A member changes their own chore only while it waits, or deletes it.
   # `mode` is `:team_admin` or `:own`, decided once here from who opened the page.
-  # On a wide screen the categories sit beside the other fields, in .form-columns.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
@@ -77,22 +76,18 @@ defmodule Web.ChoreFormLive do
     <h1 class="title">Change chore</h1>
     <p class="lead">{@chore.member.name}</p>
 
-    <.form for={@form} id="chore-form" phx-change="validate" phx-submit="save">
+    <.form for={@form} id="chore-form" class="measure" phx-change="validate" phx-submit="save">
       <.error_summary form={@form} />
-      <div class="form-columns">
-        <.category_field field={@form[:chore_category_id]} categories={@categories} />
-        <div>
-          <.input field={@form[:description]} type="textarea" rows="3" label="What they did" />
-          <.date_field form={@form} today={@today} />
-          <.time_field form={@form} />
-          <.form_actions>
-            <.button id="chore-save" variant={:success} phx-disable-with="Sending…">
-              Save chore
-            </.button>
-            <.button navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}"}>Cancel</.button>
-          </.form_actions>
-        </div>
-      </div>
+      <.category_field field={@form[:chore_category_id]} categories={@categories} />
+      <.input field={@form[:description]} type="textarea" rows="3" label="What they did" />
+      <.date_field form={@form} today={@today} />
+      <.time_field form={@form} />
+      <.form_actions>
+        <.button id="chore-save" variant={:success} phx-disable-with="Sending…">
+          Save chore
+        </.button>
+        <.button navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}"}>Cancel</.button>
+      </.form_actions>
     </.form>
     """
   end
@@ -113,55 +108,52 @@ defmodule Web.ChoreFormLive do
       :if={@categories != []}
       for={@form}
       id="chore-form"
+      class="measure"
       phx-change="validate"
       phx-submit="save"
     >
       <.error_summary form={@form} />
-      <div class="form-columns">
-        <.category_field field={@form[:chore_category_id]} categories={@categories} />
-        <div>
-          <.input field={@form[:description]} type="textarea" rows="3" label="What you did">
-            A team admin reads this, and so does everyone who opens its activity.
-          </.input>
-          <.date_field form={@form} today={@today}>
-            In the last {Service.Format.days(Chore.window_days())}.
-          </.date_field>
-          <.time_field form={@form} />
-          <.form_actions>
-            <.button
-              id="chore-save"
-              variant={:success}
-              disabled={@viewing_as != nil}
-              phx-disable-with="Saving…"
-            >
-              {if @chore, do: "Save chore", else: "Log chore"}
-            </.button>
-            <.button
-              :if={!@chore}
-              id="chore-save-another"
-              name="another"
-              value="true"
-              disabled={@viewing_as != nil}
-              phx-disable-with="Saving…"
-            >
-              Log and add another
-            </.button>
-            <.button navigate={ChoreCollectionLive.view_path(@current_team, :yours)}>Cancel</.button>
-            <:trailing :if={@chore}>
-              <.button
-                id="chore-delete"
-                type="button"
-                variant={:danger}
-                disabled={@viewing_as != nil}
-                phx-click="delete"
-                data-confirm={"Delete #{@chore.description}?"}
-              >
-                Delete chore
-              </.button>
-            </:trailing>
-          </.form_actions>
-        </div>
-      </div>
+      <.category_field field={@form[:chore_category_id]} categories={@categories} />
+      <.input field={@form[:description]} type="textarea" rows="3" label="What you did">
+        A team admin reads this, and so does everyone who opens its activity.
+      </.input>
+      <.date_field form={@form} today={@today}>
+        In the last {Service.Format.days(Chore.window_days())}.
+      </.date_field>
+      <.time_field form={@form} />
+      <.form_actions>
+        <.button
+          id="chore-save"
+          variant={:success}
+          disabled={@viewing_as != nil}
+          phx-disable-with="Saving…"
+        >
+          {if @chore, do: "Save chore", else: "Log chore"}
+        </.button>
+        <.button
+          :if={!@chore}
+          id="chore-save-another"
+          name="another"
+          value="true"
+          disabled={@viewing_as != nil}
+          phx-disable-with="Saving…"
+        >
+          Log and add another
+        </.button>
+        <.button navigate={ChoreCollectionLive.view_path(@current_team, :yours)}>Cancel</.button>
+        <:trailing :if={@chore}>
+          <.button
+            id="chore-delete"
+            type="button"
+            variant={:danger}
+            disabled={@viewing_as != nil}
+            phx-click="delete"
+            data-confirm={"Delete #{@chore.description}?"}
+          >
+            Delete chore
+          </.button>
+        </:trailing>
+      </.form_actions>
     </.form>
     """
   end
