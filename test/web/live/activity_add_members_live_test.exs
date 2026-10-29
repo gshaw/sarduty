@@ -45,7 +45,7 @@ defmodule Web.ActivityAddMembersLiveTest do
     }
   end
 
-  defp path(ctx), do: ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members"
+  defp path(ctx), do: ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members/add"
 
   test "by group and by name, naming who the group left out", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
@@ -126,7 +126,7 @@ defmodule Web.ActivityAddMembersLiveTest do
     conn = log_in_user(build_conn(), user)
 
     assert_error_sent 404, fn ->
-      get(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
+      get(conn, ~p"/teams/#{team}/activities/#{activity.id}/members/add")
     end
   end
 end

@@ -213,15 +213,16 @@ defmodule Web.Router do
       # Teams print a QR code of this one (#475), so it can't move: docs/urls.md.
       live "/teams/:subdomain/take-attendance", TakeAttendanceLive
       live "/teams/:subdomain/activities/new", ActivityFormLive, :new
-      live "/teams/:subdomain/activities/:id", ActivityLive
+      live "/teams/:subdomain/activities/:id", ActivityLive, :members
       live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit
       live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
-      live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive
+      live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive, :history
       live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
-      live "/teams/:subdomain/activities/:id/equipment", ActivityEquipmentLive
+      live "/teams/:subdomain/activities/:id/equipment", ActivityLive, :equipment
+      live "/teams/:subdomain/activities/:id/equipment/add", ActivityEquipmentLive
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive
-      live "/teams/:subdomain/activities/:id/members", ActivityAddMembersLive
+      live "/teams/:subdomain/activities/:id/members/add", ActivityAddMembersLive
       live "/teams/:subdomain/activities/:id/reminders", ActivitySendRemindersLive
       live "/teams/:subdomain/activities/:id/updates", ActivitySendUpdateLive
       live "/teams/:subdomain/activities/:id/tags", ActivityTagsLive

@@ -250,7 +250,9 @@ defmodule Web.EquipmentLiveTest do
     equipment_item_fixture(ctx.team, %{title: "Old rope", barcode: "SF0001", status: "retired"})
     ctx.truck |> Ecto.Changeset.change(barcode: "TRUCK2") |> Repo.update!()
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment/add")
+
     scan = &(lv |> element("#equipment-scanner") |> render_hook("scanned", %{"code" => &1}))
 
     scan.("sf0119")
@@ -529,7 +531,7 @@ defmodule Web.EquipmentLiveTest do
     activity = activity_fixture(ctx.team)
     equipment_usage_fixture(activity, ctx.radio)
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
     assert has_element?(lv, "#activity-equipment-table", "Radio 7")
     assert has_element?(lv, "#activity-equipment-add")
   end
@@ -544,7 +546,9 @@ defmodule Web.EquipmentLiveTest do
     equipment_usage_fixture(earlier, ctx.phone, %{minutes: 60})
     activity = activity_fixture(ctx.team)
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment/add")
+
     lv |> element("#equipment-add-last") |> render_click()
 
     assert lv |> element("#hours-#{ctx.phone.id}") |> render() =~ ~s(value="1")

@@ -1,7 +1,10 @@
 # Change history
 
-Every member and activity has a history page (#174, step 3):
+Every member and activity has a History tab, for team admins only (#174, step 3):
 `/teams/:subdomain/members/:id/history` and `/teams/:subdomain/activities/:id/history`.
+An activity's is a tab beside Members and Equipment, with the activity's page around it
+([ActivityHistoryLive](../lib/web/live/activity_history_live.ex) keeps the team admin
+access; [ActivityLive](../lib/web/live/activity_live.ex) draws it).
 It answers "why did Jane drop out of the callout group?" with "her First Aid was removed
 from D4H on Oct 3". It merges these sources, newest first
 ([ChangeHistory](../lib/app/view_data/change_history.ex)):

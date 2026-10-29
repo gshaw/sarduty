@@ -2,6 +2,7 @@ defmodule Web.ActivityLive do
   use Web, {:live_view_app_layout, access: :team}
 
   import Web.Components.ActivityMap
+  import Web.Components.ChangeHistory
   import Web.Components.CopyButton
   import Web.Components.CustomFields
   import Web.Components.ActivityPanel
@@ -21,6 +22,7 @@ defmodule Web.ActivityLive do
   alias App.Repo
   alias App.ViewData.ActivityMembers
   alias App.ViewData.ActivityReminders
+  alias App.ViewData.ChangeHistory
   alias Service.Format
   alias Web.Components.ActivityMap
   alias Web.Components.Reply
@@ -36,23 +38,28 @@ defmodule Web.ActivityLive do
 
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
-  # until the start (#444). Under the map, Members lists who is invited and how they
-  # replied, filtered by `?view=`. Team admins also get Take attendance, its history,
-  # actions, and the links to member and equipment pages. A member never gets an
-  # activity D4H has deleted; a team admin sees it under a banner.
+  # until the start (#444). Under the description, tabs: Members lists who is invited
+  # and how they replied, filtered by `?view=`; Equipment what was used; and History,
+  # for team admins. Team admins also get Take attendance, Actions, and the links to
+  # member and equipment pages. A member never gets an activity D4H has deleted; a team
+  # admin sees it under a banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
 
     if activity.deleted_at && !team_admin?, do: raise(Web.Status.NotFound)
+    # The History tab is Web.ActivityHistoryLive's route, for team admins only.
+    tab = socket.assigns.live_action
 
     now = DateTime.utc_now()
 
     socket =
       socket
       |> assign(
-        page_title: activity.title,
+        page_title: page_title(activity, tab),
         activity: activity,
+        tab: tab,
+        entries: if(tab == :history, do: ChangeHistory.for_activity(team, activity), else: []),
         now: now,
         coming?: not Activity.started?(activity, now),
         hours_tags: Activity.hours_tags(team),
@@ -66,6 +73,10 @@ defmodule Web.ActivityLive do
 
     {:noreply, socket}
   end
+
+  defp page_title(activity, :members), do: activity.title
+  defp page_title(activity, :equipment), do: "#{activity.title} · Equipment"
+  defp page_title(activity, :history), do: "#{activity.title} · History"
 
   # Who is invited and how they replied, again after a reply.
   defp assign_people(socket) do
@@ -232,7 +243,30 @@ defmodule Web.ActivityLive do
       </aside>
       <main class="activity-columns-main">
         <.main_content activity={@activity} hours_tags={@hours_tags} map={@map} />
+        <%!-- Under the description, so the activity stays on screen on every tab. --%>
+        <.tabs label="Activity">
+          <:tab
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}"}
+            current={@tab == :members}
+          >
+            Members
+          </:tab>
+          <:tab
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
+            current={@tab == :equipment}
+          >
+            Equipment
+          </:tab>
+          <:tab
+            :if={@team_admin?}
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
+            current={@tab == :history}
+          >
+            History
+          </:tab>
+        </.tabs>
         <.members_section
+          :if={@tab == :members}
           activity={@activity}
           members={@members}
           counts={@counts}
@@ -245,7 +279,18 @@ defmodule Web.ActivityLive do
           batch_sender={@batch_sender}
           adding={Activity.adding(@activity, @team_admin?, @now)}
         />
-        <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
+        <.equipment_section
+          :if={@tab == :equipment}
+          activity={@activity}
+          usages={@usages}
+          team_admin?={@team_admin?}
+        />
+        <.change_history
+          :if={@tab == :history}
+          id="activity-history"
+          entries={@entries}
+          timezone={@current_team.timezone}
+        />
       </main>
       <aside id="activity-sidebar-end" class="activity-columns-end">
         <.sidebar_end
@@ -377,21 +422,6 @@ defmodule Web.ActivityLive do
       sidebar
     />
     <dl>
-      <%!-- Team admins only: the history can hold contact details and addresses. --%>
-      <div :if={@team_admin?}>
-        <dt>History</dt>
-        <dd>
-          <ul class="action-list">
-            <li>
-              <.a
-                id="activity-history-link"
-                navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
-              >Changes to this activity</.a>
-            </li>
-          </ul>
-        </dd>
-      </div>
-
       <dt :if={@admin_actions? or @d4h?}>Actions</dt>
       <dd :if={@admin_actions? or @d4h?}>
         <ul id="activity-actions" class="action-list">
@@ -501,13 +531,10 @@ defmodule Web.ActivityLive do
       )
 
     ~H"""
-    <section id="activity-members" class="mt-8">
-      <.heading_row id="members-heading">
-        <h2 class="heading">Members</h2>
-        <:note :if={@batch}>
-          <span id="members-batch">{batch_text(@batch, @batch_sender, @timezone)}</span>
-        </:note>
-      </.heading_row>
+    <section id="activity-members">
+      <p :if={@batch} id="members-batch" class="hint">
+        {batch_text(@batch, @batch_sender, @timezone)}
+      </p>
       <%!-- From the copy, which can be 10 minutes old; the send refuses it too. --%>
       <p :if={@adding == :published} id="members-published" class="hint mb-4">
         Published, so nobody can be added. {D4H.unpublish_text(@activity.team)}
@@ -518,7 +545,7 @@ defmodule Web.ActivityLive do
       <p :if={@adding == :open} class="action">
         <.a
           id="members-add"
-          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members"}
+          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members/add"}
         >Add members</.a>
       </p>
       <.stat_switch
@@ -675,20 +702,13 @@ defmodule Web.ActivityLive do
 
   def equipment_section(assigns) do
     ~H"""
-    <section id="activity-equipment" class="mt-8">
-      <.heading_row>
-        <h2 class="heading">Equipment · {length(@usages)}</h2>
-        <:action>
-          <.button
-            :if={@team_admin? and !@activity.deleted_at}
-            id="activity-equipment-add"
-            size={:sm}
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
-          >
-            Add equipment
-          </.button>
-        </:action>
-      </.heading_row>
+    <section id="activity-equipment">
+      <p :if={@team_admin? and !@activity.deleted_at} class="action">
+        <.a
+          id="activity-equipment-add"
+          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment/add"}
+        >Add equipment</.a>
+      </p>
       <.table
         :if={@usages != []}
         id="activity-equipment-table"

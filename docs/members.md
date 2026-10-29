@@ -379,11 +379,13 @@ hidden data makes people suspicious).
   reply" once it starts). The sidebar has Kind, the attendance total, Start with Add to
   calendar, Finish, Duration, tax credit hours, and the place with copy and the maps
   link; then the kind's custom fields; then Actions, with Open in D4H last. The main
-  column has the tags, the map, the description, Members, and the equipment. Take
+  column has the tags, the map, the description, then tabs: Members (`/activities/:id`),
+  Equipment (`/equipment`, with Add equipment at `/equipment/add`), and History for team
+  admins (`/history`). Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
-  Team admins also get History, which can hold contact details and addresses, the
-  Actions, Add equipment, and links to each item's page. Member names link to member
+  Team admins also get the History tab, which can hold contact details and addresses,
+  the Actions, Add equipment, and links to each item's page. Member names link to member
   pages for everyone (#440). Members never see contact details.
 - **Add to calendar** is `/teams/:subdomain/activities/:id/calendar`, an `.ics` file for
   anyone on the team (`require_team_access`). It replaced `/me/activities/:id/calendar`,
@@ -426,7 +428,7 @@ activity starts.
 - **Add members** (#564,
   [ActivityAddMembersLive](../lib/web/live/activity_add_members_live.ex)): before the
   start, a team admin adds members by name or by group from
-  `/teams/:subdomain/activities/:id/members`, an arrow link under Members. They show as
+  `/teams/:subdomain/activities/:id/members/add`, an arrow link on the Members tab. They show as
   No reply, and adding emails nobody. A group leaves out members away on the activity's
   day, and the page names them; adding one by name includes them. A published activity
   says so in place of the link. D4H's own weekly briefing may still tell them.

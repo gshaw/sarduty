@@ -109,8 +109,8 @@ D4H can put an item's location at a member, and the copy keeps it as
 
 ## Adding equipment to an activity
 
-The activity page has an Equipment section. "Add equipment" opens a page that builds a
-list to send, from:
+The activity page has an Equipment tab, `/activities/:id/equipment`. "Add equipment"
+there opens `/equipment/add`, a page that builds a list to send, from:
 
 1. **Same as last incident** (or exercise, or event): the items on the newest earlier
    activity of the same kind that has any, with their minutes.

@@ -63,6 +63,7 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}",
       "/teams/#{s}/activities",
       "/teams/#{s}/activities/#{past.id}",
+      "/teams/#{s}/activities/#{past.id}/equipment",
       "/teams/#{s}/activities/#{coming.id}",
       "/teams/#{s}/take-attendance",
       "/teams/#{s}/activities/#{on_now.id}/take-attendance",

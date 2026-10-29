@@ -435,7 +435,7 @@ defmodule Web.ActivityEquipmentLive do
         socket =
           socket
           |> put_flash(flash_kind(rows), result_text(rows, "added"))
-          |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}")
+          |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}/equipment")
 
         {:noreply, socket}
 
