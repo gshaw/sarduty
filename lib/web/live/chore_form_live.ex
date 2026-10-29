@@ -22,7 +22,7 @@ defmodule Web.ChoreFormLive do
     {mode, chore} = mode_and_chore(socket.assigns, params["id"])
     chore = chore && %{chore | time: Chore.time_text(chore.minutes)}
     categories = categories(team.id, chore)
-    data = chore || new_chore(today, last_category_id(socket.assigns, categories))
+    data = chore || new_chore(today, nil)
 
     socket
     |> assign(mode: mode, chore: chore, today: today, params: %{})
@@ -31,14 +31,6 @@ defmodule Web.ChoreFormLive do
     |> assign_form(Chore.build_changeset(data, %{}, [], nil))
     |> then(&{:ok, &1})
   end
-
-  # A new chore starts on the category of the member's last one, while it is still open.
-  defp last_category_id(%{live_action: :new, current_member: member}, categories) do
-    id = Chore.last_category_id(member)
-    if Enum.any?(categories, &(&1.id == id)), do: id
-  end
-
-  defp last_category_id(_assigns, _categories), do: nil
 
   defp mode_and_chore(%{live_action: :new, current_member: nil}, _id),
     do: raise(Web.Status.NotFound)
@@ -311,7 +303,7 @@ defmodule Web.ChoreFormLive do
   end
 
   # Starts from what the form opened with, so Today or Yesterday before any typing keeps
-  # the category it started on.
+  # the category Log and add another carried over.
   defp validate(socket, params) do
     %{form: form, categories: categories, today: today, mode: mode} = socket.assigns
     who = if mode == :team_admin, do: :team_admin, else: :member

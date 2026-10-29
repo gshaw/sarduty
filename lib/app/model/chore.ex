@@ -197,16 +197,6 @@ defmodule App.Model.Chore do
     |> Repo.all()
   end
 
-  @doc "The category of the member's most recently logged chore, or nil if they have none."
-  def last_category_id(%Member{} = member) do
-    Chore
-    |> where([c], c.team_id == ^member.team_id and c.member_id == ^member.id)
-    |> order_by([c], desc: c.id)
-    |> limit(1)
-    |> select([c], c.chore_category_id)
-    |> Repo.one()
-  end
-
   defp filter_status(query, nil), do: query
   defp filter_status(query, status), do: where(query, [c], c.status == ^status)
 

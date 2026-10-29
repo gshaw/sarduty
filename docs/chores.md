@@ -32,10 +32,13 @@ did, a date, and a time ([Chore](../lib/app/model/chore.ex),
   `Chore.parse_time/1` and stored as minutes. A bare number is hours, since most chores
   take an hour or more; "30" asks for 30m. The form shows what it read. It used to be a
   Minutes box, and members worked out 4.5 × 60 to log 270 (2026-10-28).
-- **Categories are radios, each with a line a team admin writes** about what it covers.
-  Members picked different categories for the same work, so the line says which is
-  which. The form stays one column: categories beside the other fields left a wide
-  gap on a desktop (tried 2026-10-28).
+- **Category is a combobox, each option with a line a team admin writes** about what it
+  covers. Members picked different categories for the same work, so the line says which
+  is which. Radios filled a phone's screen (#719). On a phone the list opens without the
+  keyboard.
+- **A new chore starts with no category.** The category decides primary or secondary
+  hours, and a default gets left as is. Starting on the member's last category shipped
+  in v406 and came out the same day (2026-10-29).
 - **Log and add another** saves and opens the form again on the same date and category.
   Members often log 2 or 3 chores for one day.
 
