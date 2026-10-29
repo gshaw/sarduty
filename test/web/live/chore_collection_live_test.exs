@@ -75,12 +75,13 @@ defmodule Web.ChoreCollectionLiveTest do
     assert [%{minutes: 150, date: ^yesterday}] = Chore.get_all_for_member(member)
     assert has_element?(lv, ~s{#chore_date[value="#{yesterday}"]})
 
-    assert has_element?(
-             lv,
-             ~s{#chore_chore_category_id-select option[value="#{category.id}"][selected]}
-           )
-
+    selected = ~s{#chore_chore_category_id-select option[value="#{category.id}"][selected]}
+    assert has_element?(lv, selected)
     refute has_element?(lv, "#chore-time-read")
+
+    # Today, before anything is typed, keeps it.
+    lv |> element("#chore-date-today") |> render_click()
+    assert has_element?(lv, selected)
   end
 
   test "a save with no category marks the categories as the error", %{conn: conn, team: team} do
@@ -92,20 +93,20 @@ defmodule Web.ChoreCollectionLiveTest do
     assert has_element?(lv, "#chore-form .field-error", "Select a category")
   end
 
-  test "a new chore starts on the category of the member's last one", ctx do
-    %{conn: conn, team: team, member: member, category: category} = ctx
+  # A default gets left as is, and the category decides primary or secondary hours.
+  test "a new chore starts with no category, even after earlier ones", ctx do
+    %{conn: conn, team: team, member: member} = ctx
     board = chore_category_fixture(team, %{title: "Board work", description: "Meetings"})
-    chore_fixture(member, category, %{date: Date.add(Date.utc_today(), -3)})
-    chore_fixture(member, board, %{date: Date.add(Date.utc_today(), -9)})
-
+    chore_fixture(member, board)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
-    selected = ~s{#chore_chore_category_id-select option[value="#{board.id}"][selected]}
-    assert has_element?(lv, selected)
-    assert has_element?(lv, "#chore-category-hint", "Meetings")
 
-    # Today, before anything is typed, keeps it.
-    lv |> element("#chore-date-today") |> render_click()
-    assert has_element?(lv, selected)
+    refute has_element?(
+             lv,
+             ~s{#chore_chore_category_id-select option[value="#{board.id}"][selected]}
+           )
+
+    refute has_element?(lv, "#chore_chore_category_id-select option[selected]:not([value=''])")
+    refute has_element?(lv, "#chore-category-hint")
   end
 
   test "a time that reads as more than a day asks for minutes", %{conn: conn, team: team} do
