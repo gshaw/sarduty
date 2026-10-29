@@ -26,8 +26,10 @@ new kind of write is a new row action there, not a new call from a page or an op
   a team on SAR Duty Records ([records.md](records.md)), a group or who is in it on
   any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), an activity's,
   member's, or equipment item's custom fields on any D4H team, from its Change fields
-  page ([custom-fields.md](custom-fields.md#changing-them)), or a member's details on any
-  D4H team, from Change member ([members.md](members.md#changing-a-members-details)). Adding or
+  page ([custom-fields.md](custom-fields.md#changing-them)), a member's details on any
+  D4H team, from Change member ([members.md](members.md#changing-a-members-details)), or
+  an item's status and barcode, from Change item
+  ([equipment.md](equipment.md#changing-an-item-on-a-d4h-team)). Adding or
   removing many members from the Members list (#547) is one `edit` set with a row each,
   applied by SetGroupMembers, not ApplyEdit.
   [ApplyEdit](../lib/app/operation/apply_edit.ex) proposes and applies it in one step,

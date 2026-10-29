@@ -566,12 +566,12 @@ defmodule Web.EquipmentLiveTest do
     assert length(Repo.all(EquipmentUsage)) == 1
   end
 
-  test "a D4H team cannot add or change items here", ctx do
+  test "a D4H team cannot add or delete items here", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
     refute has_element?(lv, "#equipment-add")
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment/#{ctx.truck.id}")
-    refute has_element?(lv, "#item-edit")
+    refute has_element?(lv, "#item-delete")
 
     assert has_element?(
              lv,

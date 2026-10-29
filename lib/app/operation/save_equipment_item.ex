@@ -1,11 +1,13 @@
 defmodule App.Operation.SaveEquipmentItem do
   @moduledoc """
   A team admin adds, changes, or deletes an equipment item of a team on SAR Duty Records
-  (#271, docs/records.md). plan/3 turns the form into a change set row, applied through
-  App.Operation.ApplyEdit; the sync then copies the item back.
+  (#271, docs/records.md), or changes an item's status and barcode on a D4H team. plan/4
+  turns the form into a change set row, applied through App.Operation.ApplyEdit; the
+  sync then copies the item back.
   """
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
   alias App.Model.EquipmentItem
   alias App.Model.Team
@@ -22,7 +24,7 @@ defmodule App.Operation.SaveEquipmentItem do
     form = EquipmentItemFormViewModel.from_item(item, team.timezone)
 
     with {:ok, values} <- EquipmentItemFormViewModel.validate(form, params) do
-      item |> plan(values, team.timezone) |> save(team, item, user, now)
+      item |> plan(values, team.timezone, D4H.service(team)) |> save(team, item, user, now)
     end
   end
 
@@ -47,10 +49,12 @@ defmodule App.Operation.SaveEquipmentItem do
   end
 
   @doc """
-  The change set row for the form's values, or `:unchanged`. An update names only the
-  fields that differ, with their old values beside them.
+  The change set row for the form's values, or `:unchanged`, on a team whose records
+  are in `service` (`:d4h` or `:records`). An update names only the fields that differ,
+  with their old values beside them. Only Records adds items, and on D4H only the
+  status and barcode change.
   """
-  def plan(nil, %EquipmentItemFormViewModel{} = values, timezone) do
+  def plan(nil, %EquipmentItemFormViewModel{} = values, timezone, :records) do
     %ChangeSetRow{
       action: :create_equipment_item,
       old_value: %{},
@@ -58,9 +62,14 @@ defmodule App.Operation.SaveEquipmentItem do
     }
   end
 
-  def plan(%EquipmentItem{} = item, %EquipmentItemFormViewModel{} = values, timezone) do
+  def plan(%EquipmentItem{} = item, %EquipmentItemFormViewModel{} = values, timezone, service) do
     old = item |> EquipmentItemFormViewModel.from_item(timezone) |> fields(timezone)
-    new = values |> fields(timezone) |> Map.reject(fn {key, value} -> old[key] == value end)
+
+    new =
+      values
+      |> fields(timezone)
+      |> then(&if service == :d4h, do: Map.take(&1, ["status", "barcode"]), else: &1)
+      |> Map.reject(fn {key, value} -> old[key] == value end)
 
     if new == %{} do
       :unchanged

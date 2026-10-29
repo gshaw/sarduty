@@ -154,12 +154,27 @@ barcodes" and the equipment page shows "Scan a barcode". Both use the door's
 - Barcodes come from SAR Duty's copy, so an item added in D4H in the last 10 minutes is
   not found until the next sync.
 
+## Changing an item on a D4H team
+
+A team admin on a D4H team changes an item's status and barcode from Change item in its
+Actions (`/equipment/:id/edit`, decided 2026-10-29). D4H's `PATCH /equipment/<id>` takes
+only those, `isCritical`, `isMonitor`, `notes`, and custom fields (spec 2026-10-29). So
+name, type, place, serial, and expiry change in D4H, and the form says so.
+
+- **Status** is In service, Unserviceable, or Lost. D4H's PATCH has no `RETIRED`, so a
+  retired item's form has no Status, and retiring stays in D4H.
+- **Barcode** is what a scan matches ([Scanning barcodes](#scanning-barcodes)), so
+  giving an item one here makes it scannable after the next sync.
+- Saving is one `update_equipment_item` row naming only what changed, through
+  [SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex) and ApplyEdit
+  (`ApplyEdit.d4h_takes?/1`). Adding and deleting stay a Records team's only.
+
 ## Teams on SAR Duty Records
 
 Records serves D4H's equipment endpoints (its `Docs/api.md`), so a Records team gets the
 same pages, templates, and "Add equipment". It also has nowhere else to keep its items, so
-SAR Duty shows "Add item" on the equipment page, and "Change item" and "Delete item" in
-an item's Actions, for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_item_form_live.ex),
+SAR Duty shows "Add item" on the equipment page, and "Delete item" in an item's Actions,
+for Records teams only, and every field on Change item ([EquipmentItemFormLive](../lib/web/live/equipment_item_form_live.ex),
 [SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex)). Each change is an
 `:edit` change set row, as for members ([records.md](records.md)).
 
