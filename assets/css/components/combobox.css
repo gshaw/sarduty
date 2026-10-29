@@ -52,6 +52,8 @@
   .combobox-option { cursor: pointer; border-bottom: 1px solid var(--border-subtle); }
   .combobox-option:last-child { border-bottom: 0; }
   .combobox-option[aria-selected="true"] { background: var(--primary); color: var(--on-fill); }
+  .combobox-hint { display: block; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  .combobox-option[aria-selected="true"] .combobox-hint { color: inherit; }
   .combobox-option mark {
     background: none;
     color: inherit;

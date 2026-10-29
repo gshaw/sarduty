@@ -355,6 +355,10 @@ defmodule Web.Components.Core do
     default: false,
     doc: "for a combobox: sends the typed text, with the options as suggestions"
 
+  attr :keyboard, :boolean,
+    default: true,
+    doc: "for a combobox: false keeps a phone's keyboard closed, for a short list to read"
+
   slot :inner_block
   slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
   slot :label_end, doc: "after the label's text, such as a badge"
@@ -463,9 +467,11 @@ defmodule Web.Components.Core do
         prompt={@prompt}
         clearable={@clearable}
         free_text={@free_text}
+        keyboard={@keyboard}
         class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       />
+      {render_slot(@below)}
     </div>
     """
   end
@@ -624,7 +630,10 @@ defmodule Web.Components.Core do
   type="combobox">` adds the label; use this one where the field has an aria-label
   instead. `size={:sm}` is for a row of small controls. The x at its end clears it.
   `free_text` is for an answer people may type new, such as a role: the text box itself is
-  the field, and the options only suggest. See /styles/combobox.
+  the field, and the options only suggest. An option given as `[key: label, value: id,
+  "data-hint": text]` shows its hint under its label in the list. `keyboard={false}` is for
+  a short list people read rather than search: a phone keeps its keyboard closed, so the
+  list has the screen. See /styles/combobox.
 
   ## Examples
 
@@ -653,6 +662,10 @@ defmodule Web.Components.Core do
   attr :free_text, :boolean,
     default: false,
     doc: "the text box is the field and takes any text; the options only suggest"
+
+  attr :keyboard, :boolean,
+    default: true,
+    doc: "false keeps a phone's keyboard closed when the box is tapped, for a short list"
 
   # Not "name": Safari offers contacts to a field whose placeholder says it.
   attr :placeholder, :string, default: "Type to search"
@@ -693,6 +706,7 @@ defmodule Web.Components.Core do
             aria-expanded="false"
             aria-controls={"#{@id}-listbox"}
             autocomplete="off"
+            inputmode={!@keyboard && "none"}
             placeholder={if @free_text, do: " ", else: @placeholder}
             class={@size == :sm && "input-sm"}
             {@rest}
