@@ -148,7 +148,8 @@ defmodule Web.Components.Reply do
           size={@size}
           href={@calendar_href}
         >
-          <.icon name="calendar-plus" size={@size} /> Add to calendar
+          <%!-- Black, as at the start of every action link. --%>
+          <.icon name="calendar-plus" size={@size} class="text-text" /> Add to calendar
         </.button>
       </p>
     </div>

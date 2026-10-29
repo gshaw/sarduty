@@ -121,7 +121,7 @@ defmodule Web.ActivityFormLive do
       <h2 class="heading">Delete the activity</h2>
       <p>Delete it in {@service}. {@service} does not let SAR Duty delete activities.</p>
       <p>
-        <.a external={true} href={D4H.activity_url(@current_team, @activity)}>Open {@service} activity</.a>
+        <.a external={true} href={D4H.activity_url(@current_team, @activity)}>Open in {@service}</.a>
       </p>
     </section>
 

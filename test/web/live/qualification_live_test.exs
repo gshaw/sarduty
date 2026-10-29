@@ -42,7 +42,7 @@ defmodule Web.QualificationLiveTest do
     assert has_element?(lv, "#all_awards tr.is-muted", "Bob Expired")
   end
 
-  test "Open D4H qualification links to the qualification's course page", %{conn: conn} do
+  test "Open in D4H links to the qualification's course page", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     qualification = qualification_fixture(team, %{title: "Drivers Abstract"})
 

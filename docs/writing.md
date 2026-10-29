@@ -84,6 +84,12 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
     `D4H.error_text/2` for an error from the service. A test fails on "D4H" written into
     text. A Records team changes its activities and awards in SAR Duty, so never send it
     to Records for those.
+17. **A link to D4H says "Open in D4H" when it opens the page's own record**: the
+    activity, member, item, or qualification the page is about, or the team on its
+    dashboard. One that opens something else names it: "Open member in D4H" on a
+    certificate, "Open location bookmarks in D4H" on places. Never "Open D4H activity".
+    It goes last in the page's Actions, as an action link with the arrow
+    ([/styles/typography](/styles/typography)). A Records team gets none.
 
 ## Patterns
 

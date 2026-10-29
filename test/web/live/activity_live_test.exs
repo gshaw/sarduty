@@ -24,6 +24,8 @@ defmodule Web.ActivityLiveTest do
     refute has_element?(lv, "#deleted-in-d4h")
     assert has_element?(lv, "#activity-change-tags")
     refute has_element?(lv, "#activity-tags-locked")
+    # Add to calendar sits under Start, with its icon in the arrow's place.
+    assert has_element?(lv, "#activity-calendar.has-mark .link-mark.icon-calendar-plus")
   end
 
   test "a chore activity's kind is Chores (#575)", %{conn: conn} do
@@ -253,7 +255,9 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
 
       assert has_element?(lv, "#deleted-in-d4h", "Deleted")
-      refute has_element?(lv, "#activity-actions")
+      refute has_element?(lv, "#activity-edit")
+      refute has_element?(lv, "#activity-calendar")
+      assert has_element?(lv, "#activity-actions #activity-d4h", "Open in D4H")
     end
 
     test "sends its D4H pages back to the activity", %{conn: conn, team: team, activity: activity} do
@@ -311,7 +315,9 @@ defmodule Web.ActivityLiveTest do
                ~s{#activity-calendar[href="/teams/#{team.subdomain}/activities/#{activity.id}/calendar"]}
              )
 
-      refute has_element?(lv, "#activity-actions")
+      assert has_element?(lv, "#activity-actions #activity-d4h", "Open in D4H")
+      refute has_element?(lv, "#activity-edit")
+      refute has_element?(lv, "#activity-send-attendance")
       refute has_element?(lv, "#activity-history-link")
       refute has_element?(lv, "#activity-equipment-add")
     end

@@ -40,8 +40,6 @@ defmodule Web.ServiceNameTest do
       "a D4H team's key steps in team settings, which send the reader to D4H",
     {"lib/web/controllers/style_guide_html", "Open in D4H"} =>
       "the style guide's example of a link that sends the reader to D4H",
-    {"lib/web/controllers/style_guide_html/pages/detail_list.html.heex", "Open D4H activity"} =>
-      "the same, as a D4H team reads it",
     {"lib/web/controllers/style_guide_html/pages/forms.html.heex", "From D4H. Change it there."} =>
       "a read-only field's hint, which sends the reader to D4H",
     {"lib/web/controllers/style_guide_html/pages/toast.html.heex", "D4H refused the change"} =>

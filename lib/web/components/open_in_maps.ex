@@ -24,8 +24,8 @@ defmodule Web.Components.OpenInMaps do
       assign(assigns, :url, url(assigns.app, assigns.coordinate, assigns.address, assigns.label))
 
     ~H"""
-    <p :if={@url} class={["mb-0", @class]}>
-      <.a id={@id} href={@url} external>Open in {app_name(@app)}</.a>
+    <p :if={@url} class={["action mb-0", @class]}>
+      <.a id={@id} href={@url} external icon="map-pin">Open in {app_name(@app)}</.a>
     </p>
     """
   end

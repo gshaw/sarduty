@@ -5,7 +5,6 @@ defmodule Web.GroupLive do
   import Web.Components.GroupRule
   import Web.Components.Standing, only: [standing_badge: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupMembershipChange
@@ -216,16 +215,12 @@ defmodule Web.GroupLive do
   defp sidebar_content(assigns) do
     ~H"""
     <dl>
-      <dt>Actions</dt>
-      <dd>
+      <%!-- D4H has no page for one group, so there is no Open in D4H here. --%>
+      <dt :if={!@group.organization_owned}>Actions</dt>
+      <dd :if={!@group.organization_owned}>
         <ul id="group-actions" class="action-list">
-          <li :if={!@group.organization_owned}>
+          <li>
             <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
-          </li>
-          <li :if={!D4H.records?(@team)}>
-            <.a external={true} href={D4H.build_url(@team, "/team/members")}>Open {D4H.service_name(
-              @team
-            )} members</.a>
           </li>
         </ul>
       </dd>

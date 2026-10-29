@@ -100,7 +100,7 @@ defmodule Web.Components.MemberPage do
         )}. {TeamAttention.no_access(D4H.service(@member.team))}
       </p>
       <p :if={!D4H.records?(@member.team)}>
-        <.a external={true} href={D4H.member_url(@member)}>Open {@service} member</.a>
+        <.a external={true} href={D4H.member_url(@member)}>Open in {@service}</.a>
       </p>
       <p :if={D4H.records?(@member.team)}>
         <.a navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change member</.a>

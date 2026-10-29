@@ -29,7 +29,8 @@ defmodule Web.RecordsTeamTest do
 
     for path <- paths do
       {:ok, lv, _html} = live(conn, path)
-      refute has_element?(lv, "a", "Open D4H"), path
+      refute has_element?(lv, "a", "Open in D4H"), path
+      refute has_element?(lv, "a", "Open in SAR Duty Records"), path
     end
   end
 
@@ -96,6 +97,6 @@ defmodule Web.RecordsTeamTest do
     member = member_fixture(team)
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
-    assert has_element?(lv, "a", "Open D4H member")
+    assert has_element?(lv, "a", "Open in D4H")
   end
 end

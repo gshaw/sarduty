@@ -47,7 +47,7 @@ defmodule Web.Settings.PlaceCollectionLive do
         id="places-in-service-link"
         external={true}
         href={D4H.build_url(@current_team, "/team/settings/locations")}
-      >Open {@service} location bookmarks</.a>
+      >Open location bookmarks in {@service}</.a>
     </p>
 
     <.table

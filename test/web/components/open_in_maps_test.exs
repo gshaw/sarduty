@@ -49,6 +49,8 @@ defmodule Web.Components.OpenInMapsTest do
     assert document |> LazyHTML.query(~s(a#maps[target="_blank"])) |> LazyHTML.text() ==
              "Open in Apple Maps"
 
+    # A map-pin in the arrow's place (/styles/typography).
+    assert document |> LazyHTML.query("a#maps .link-mark.icon-map-pin") |> Enum.count() == 1
     assert document |> LazyHTML.query("#none") |> Enum.count() == 0
   end
 end
