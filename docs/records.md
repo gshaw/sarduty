@@ -62,7 +62,7 @@ that title.
   only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
   admin cannot stop being one or leave, and saving a retired member's details keeps
   them retired.
-- **Photos**: set or remove on the member's Change details page. `PUT` takes the image
+- **Photos**: set or remove on the member's Change member page. `PUT` takes the image
   itself (JPEG, PNG, or WebP, under 10 MB), and Records shrinks it and strips its
   metadata. The change set row records only the size: the image passes through
   `ApplyChangeSet`'s `photo:` option and is never kept in SAR Duty. Reading is D4H's

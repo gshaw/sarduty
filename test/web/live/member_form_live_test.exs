@@ -173,7 +173,7 @@ defmodule Web.MemberFormLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/members/new") end
     end
 
-    test "Change details has the details D4H takes, without access, photo, or leaving",
+    test "Change member has the details D4H takes, without access, photo, or leaving",
          %{conn: conn, team: team} do
       member = member_fixture(team, %{position: "MIT"})
       member_fixture(team, %{position: "GSTL"})

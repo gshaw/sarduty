@@ -136,7 +136,7 @@ defmodule Web.Components.MemberSidebar do
     <dd>
       <ul id="member-actions" class="action-list">
         <li>
-          <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
+          <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change member</.a>
         </li>
         <li :if={@fields?}>
           <.a

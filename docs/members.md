@@ -46,7 +46,7 @@ matched. ID hides on narrow screens.
 
 ## Changing a member's details
 
-A team admin changes a member's details on every team, from Change details in the
+A team admin changes a member's details on every team, from Change member in the
 member's Actions (`/members/:id/edit`, decided 2026-10-29). The form has name, ID, Role,
 email, mobile phone, address, joined date, and status: Operational, Not operational, or
 Observer, D4H's three. Saving is one `update_member` row naming only what changed,
@@ -162,7 +162,7 @@ admin through them.
    after. Your membership's list of the items they hold
    doesn't justify the access.
 2. **Set their access to No access in D4H.** SAR Duty can't: D4H sets access only in
-   its web app (a Records team can, on Change details). Until it's done, two red notices
+   its web app (a Records team can, on Change member). Until it's done, two red notices
    say so. Needs attention's one danger item, red and first in the list: "2 retiring
    members can still log in to D4H", opening `standing=retiring&access=some`. And a red
    banner on every tab of that member's page, with an Open in D4H link. Access is

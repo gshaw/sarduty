@@ -45,7 +45,7 @@ defmodule App.Operation.ApplyEdit do
        else: {:error, "Change this in #{D4H.service_name(team)}."}
   end
 
-  # What D4H's PATCH takes from a member's Change details and Change fields pages. Access
+  # What D4H's PATCH takes from a member's Change member and Change fields pages. Access
   # (`permission`) is not among them: D4H sets it only in its web app.
   @d4h_member_keys ~w(name ref_id position email phone address status joined_at custom_values)
 
