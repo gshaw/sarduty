@@ -108,9 +108,9 @@ defmodule Web.EquipmentItemLive do
         <dl>
           <dt>Actions</dt>
           <dd>
-            <%!-- A team on SAR Duty Records has no D4H to open, so it changes items here. --%>
+            <%!-- Every team changes an item here, a D4H team only its status and barcode. A team on SAR Duty Records has no D4H to open, so it also deletes items here. --%>
             <ul id="item-actions" class="action-list">
-              <li :if={D4H.records?(@current_team)}>
+              <li>
                 <.a id="item-edit" navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}>Change item</.a>
               </li>
               <li :if={D4H.records?(@current_team)}>

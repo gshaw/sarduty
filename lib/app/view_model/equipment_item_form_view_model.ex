@@ -30,8 +30,19 @@ defmodule App.ViewModel.EquipmentItemFormViewModel do
 
   @fields [:title, :item_type, :status, :place, :new_place, :barcode, :serial, :expires_on]
 
+  # D4H's PATCH sets these. It retires an item only in its web app.
+  @d4h_statuses ~w(operational unserviceable lost)
+
   def types, do: @types
   def statuses, do: @statuses
+
+  @doc "The statuses a team in `service` sets from the form."
+  def statuses(:records), do: @statuses
+  def statuses(:d4h), do: Enum.filter(@statuses, &(elem(&1, 1) in @d4h_statuses))
+
+  @doc "Whether the form changes `item`'s status, which D4H does only from these."
+  def status_changes?(_item, :records), do: true
+  def status_changes?(%EquipmentItem{status: status}, :d4h), do: status in @d4h_statuses
 
   @doc "The form for an item, in the team's time zone, or an empty one."
   def from_item(nil, _timezone), do: %__MODULE__{}

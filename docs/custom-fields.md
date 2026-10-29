@@ -104,7 +104,7 @@ in."
 that changed, as `custom_values` on one change set row (nil clears one), and the adapter
 turns them into `customFieldValues`: `update_activity`, `update_member`, or
 `update_equipment_item`. On a D4H team a member or item row may send its custom fields
-and nothing else ([ApplyEdit](../lib/app/operation/apply_edit.ex)). The copy takes the
+with only the other fields D4H's PATCH takes ([ApplyEdit](../lib/app/operation/apply_edit.ex)). The copy takes the
 values it sent, since the sync after the write may not read them back. History says
 "Fields changed in SAR Duty", never the values.
 

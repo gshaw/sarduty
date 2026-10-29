@@ -3,8 +3,8 @@ defmodule App.Operation.ApplyEdit do
   One change a team admin makes to a record: a change set of one row, source `:edit`,
   applied at once like the door's. A team on SAR Duty Records changes any record this way
   (docs/records.md). A D4H team changes its groups and who is in them (#546), adds and
-  changes activities (#585), changes members' details and custom fields, and changes
-  equipment items' custom fields (#705); every other record it changes in D4H.
+  changes activities (#585), changes members' details and custom fields (#705), and changes
+  equipment items' status, barcode, and custom fields; every other record it changes in D4H.
 
   After a group row the caller writes the local copy, as group rules do, and the next
   sync confirms it. After any other row the sync copies what changed, so the page that
@@ -49,17 +49,24 @@ defmodule App.Operation.ApplyEdit do
   # (`permission`) is not among them: D4H sets it only in its web app.
   @d4h_member_keys ~w(name ref_id position email phone address status joined_at custom_values)
 
+  # What D4H's equipment PATCH takes: an item's name, place, serial, and expiry change
+  # only in its web app.
+  @d4h_item_keys ~w(status barcode custom_values)
+
   @doc """
-  Whether a D4H team may send `row`: a member row with only the details D4H takes, or
-  an item row with only its custom fields (#705).
+  Whether a D4H team may send `row`: a member or item row with only the fields D4H's
+  PATCH takes.
   """
   def d4h_takes?(%ChangeSetRow{action: :update_member, new_value: new_value}),
-    do: new_value != %{} and new_value |> Map.keys() |> Enum.all?(&(&1 in @d4h_member_keys))
+    do: only?(new_value, @d4h_member_keys)
 
   def d4h_takes?(%ChangeSetRow{action: :update_equipment_item, new_value: new_value}),
-    do: Map.keys(new_value) == ["custom_values"]
+    do: only?(new_value, @d4h_item_keys)
 
   def d4h_takes?(%ChangeSetRow{}), do: false
+
+  defp only?(new_value, keys),
+    do: new_value != %{} and new_value |> Map.keys() |> Enum.all?(&(&1 in keys))
 
   defp apply_row(team, user, row, now, opts) do
     change_set =

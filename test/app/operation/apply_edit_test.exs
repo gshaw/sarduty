@@ -39,10 +39,14 @@ defmodule App.Operation.ApplyEditTest do
     refute ApplyEdit.d4h_takes?(%ChangeSetRow{action: :retire_member, new_value: %{}})
   end
 
-  test "an item sends only its custom fields" do
+  test "an item sends only its status, barcode, and custom fields" do
     item = %ChangeSetRow{action: :update_equipment_item, new_value: %{"custom_values" => %{}}}
     assert ApplyEdit.d4h_takes?(item)
-    refute ApplyEdit.d4h_takes?(%{item | new_value: %{"name" => "Rope"}})
+    assert ApplyEdit.d4h_takes?(%{item | new_value: %{"status" => "lost", "barcode" => "R1"}})
+    refute ApplyEdit.d4h_takes?(%{item | new_value: %{"title" => "Rope"}})
+    refute ApplyEdit.d4h_takes?(%{item | new_value: %{"status" => "lost", "serial" => "9"}})
+    refute ApplyEdit.d4h_takes?(%{item | new_value: %{}})
+    refute ApplyEdit.d4h_takes?(%ChangeSetRow{action: :delete_equipment_item, new_value: %{}})
   end
 
   test "a D4H team's member row with access goes nowhere and says where to change it" do

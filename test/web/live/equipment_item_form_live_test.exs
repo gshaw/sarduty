@@ -5,7 +5,9 @@ defmodule Web.EquipmentItemFormLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.ChangeSetRow
   alias App.RecordsStub
+  alias App.Repo
 
   setup %{conn: conn} do
     %{user: user, team: team} = records_team_with_user_fixture(%{d4h_access_key: "sdr_key"})
@@ -129,5 +131,61 @@ defmodule Web.EquipmentItemFormLiveTest do
       live(conn, ~p"/teams/#{team}/activities/#{activity_fixture(team).id}/equipment")
 
     assert has_element?(lv, "#activity-equipment-add")
+  end
+
+  describe "on a D4H team" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "d4h_key"}})
+      %{conn: log_in_user(conn, user), team: team}
+    end
+
+    test "adding 404s, and Change item has only status and barcode",
+         %{conn: conn, team: team} do
+      item = equipment_item_fixture(team, %{d4h_equipment_id: 20})
+      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/equipment/new") end
+
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}")
+      assert has_element?(page, "#item-actions #item-edit", "Change item")
+      refute has_element?(page, "#item-actions #item-delete")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/edit")
+      assert has_element?(lv, "#form_status")
+      assert has_element?(lv, "#form_barcode")
+      refute has_element?(lv, ~s(#form_status option[value="retired"]))
+      refute has_element?(lv, "#form_title")
+      refute has_element?(lv, "#form_place")
+      refute has_element?(lv, "#form_serial")
+      refute has_element?(lv, "#form_expires_on")
+      assert has_element?(lv, "#equipment-item-elsewhere", "change in D4H")
+    end
+
+    test "saving sends D4H only the status and barcode that changed",
+         %{conn: conn, team: team} do
+      stub()
+      item = equipment_item_fixture(team, %{d4h_equipment_id: 21, barcode: "OLD"})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/edit")
+
+      lv
+      |> form("#equipment-item-form", form: %{status: "unserviceable", barcode: "NEW"})
+      |> render_submit()
+
+      assert_received {:records, "PATCH", "/equipment/21", body}
+      assert body == %{"status" => "UNSERVICEABLE", "barcode" => "NEW"}
+
+      [row] = Repo.all(ChangeSetRow)
+      assert {row.action, row.status} == {:update_equipment_item, :applied}
+    end
+
+    test "a retired item's status stays as D4H has it", %{conn: conn, team: team} do
+      stub()
+      item = equipment_item_fixture(team, %{d4h_equipment_id: 22, status: "retired"})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/edit")
+      refute has_element?(lv, "#form_status")
+
+      lv |> form("#equipment-item-form", form: %{barcode: "R9"}) |> render_submit()
+
+      assert_received {:records, "PATCH", "/equipment/22", body}
+      assert body == %{"barcode" => "R9"}
+    end
   end
 end
