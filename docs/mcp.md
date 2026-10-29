@@ -99,11 +99,12 @@ switch are events, kept two years.
 
 ## Connecting
 
-The token page shows the new token with a prompt to paste into any agent, which
-tells it the URL, the header, and how to add the server. It also has the commands. Claude Code:
-`claude mcp add --transport http sarduty <url> --header "Authorization: Bearer <token>"`.
-Claude Desktop runs `npx mcp-remote <url> --header "Authorization:${SARDUTY_AUTH}"`. The
-claude.ai and ChatGPT connectors need OAuth, which SAR Duty doesn't offer yet.
+After creating a token, the page shows it once with a prompt to paste into any agent. The
+prompt gives the URL and header, names Claude Code's `claude mcp add` only as an example,
+and asks the agent to say which file to change when it can't add the server itself, as in
+Claude Desktop. The tokens list shows the URL, header, and transport, with no per-app
+commands. The claude.ai and ChatGPT connectors need OAuth, which SAR Duty doesn't offer
+yet.
 
 ## Not yet
 

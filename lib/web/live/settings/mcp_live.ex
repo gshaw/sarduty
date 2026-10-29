@@ -3,8 +3,6 @@ defmodule Web.Settings.MCPLive do
 
   import Web.Components.TeamSettingsTabs
 
-  import Web.Components.CopyButton
-
   alias App.Model.MCPToken
   alias App.Model.Team
   alias App.Operation.RevokeMCPToken
@@ -119,24 +117,7 @@ defmodule Web.Settings.MCPLive do
           <li>Header: <code>Authorization: Bearer YOUR_TOKEN</code></li>
           <li>Transport: Streamable HTTP</li>
         </ul>
-        <p>The claude.ai and ChatGPT connectors cannot send a header yet.</p>
-        <h3 class="subheading mt-4">Claude Code</h3>
-        <p>Run this in a terminal:</p>
-        <.copy_code_block
-          id="claude-code-command"
-          value={claude_code_command(@endpoint_url)}
-          label="Copy command"
-        />
-        <h3 class="subheading mt-4">Claude Desktop</h3>
-        <p>
-          Add this to <code>claude_desktop_config.json</code>, then restart Claude Desktop. It
-          needs Node.js, and uses <code>mcp-remote</code> to send the token.
-        </p>
-        <.copy_code_block
-          id="claude-desktop-config"
-          value={claude_desktop_config(@endpoint_url)}
-          label="Copy config"
-        />
+        <p class="mt-4">The claude.ai and ChatGPT connectors cannot send a header yet.</p>
       </div>
     </div>
     """
@@ -146,24 +127,4 @@ defmodule Web.Settings.MCPLive do
 
   defp last_used(%MCPToken{last_used_at: used}, timezone),
     do: Service.Format.minutes_ago(used, DateTime.utc_now(), timezone)
-
-  @placeholder "YOUR_TOKEN"
-
-  defp claude_code_command(url) do
-    "claude mcp add --transport http sarduty #{url} \\\n" <>
-      "  --header \"Authorization: Bearer #{@placeholder}\""
-  end
-
-  defp claude_desktop_config(url) do
-    %{
-      "mcpServers" => %{
-        "sarduty" => %{
-          "command" => "npx",
-          "args" => ["mcp-remote", url, "--header", "Authorization:${SARDUTY_AUTH}"],
-          "env" => %{"SARDUTY_AUTH" => "Bearer #{@placeholder}"}
-        }
-      }
-    }
-    |> Jason.encode!(pretty: true)
-  end
 end
