@@ -9,7 +9,9 @@ held more than items. Since #307 a template for one kind of activity also holds 
 for that kind's D4H custom fields, such as an incident's primary cause and requesting
 agency.
 
-Templates have their own menu item, `/teams/:subdomain/templates`. They live in
+Templates have their own menu item, `/teams/:subdomain/templates`. A template's page,
+`/templates/:id`, shows what it adds, with Change template (`/edit`) and Delete template
+in its Actions; Delete opens the confirm dialog, with no page (#714). They live in
 `templates` (with `activity_kind` and `custom_values`), `template_items`,
 `template_tags`, and `template_groups`, and the sync never
 touches them, except that an item, tag, or group D4H deletes leaves its templates.

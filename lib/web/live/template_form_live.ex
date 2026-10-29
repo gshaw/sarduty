@@ -35,7 +35,7 @@ defmodule Web.TemplateFormLive do
         groups: if(template, do: Template.groups(template), else: []),
         all_groups: Group.get_all(team.id)
       )
-      |> assign(page_title: if(template, do: template.title, else: "Add template"))
+      |> assign(page_title: if(template, do: "Change #{template.title}", else: "Add template"))
       |> assign(values: (template && template.custom_values) || %{})
       |> assign_form(Template.build_changeset(template || %Template{}, %{}))
 
@@ -62,7 +62,12 @@ defmodule Web.TemplateFormLive do
     ~H"""
     <.breadcrumbs>
       <:item label="Templates" path={~p"/teams/#{@current_team}/templates"} />
-      <:item label={@page_title} />
+      <:item
+        :if={@template}
+        label={@template.title}
+        path={~p"/teams/#{@current_team}/templates/#{@template.id}"}
+      />
+      <:item label={if @template, do: "Change", else: @page_title} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
@@ -157,25 +162,11 @@ defmodule Web.TemplateFormLive do
             <.button id="template-save" variant={:success}>{if @template,
               do: "Save template",
               else: "Add template"}</.button>
-            <.button id="template-cancel" navigate={~p"/teams/#{@current_team}/templates"}>
+            <.button id="template-cancel" navigate={back_path(@current_team, @template)}>
               Cancel
             </.button>
           </.form_actions>
         </.form>
-
-        <section :if={@template} id="template-delete" class="mt-8">
-          <h2 class="heading">Delete the template</h2>
-          <p>Its items stay, and so do the activities they went on.</p>
-          <.button
-            id="template-delete-button"
-            type="button"
-            variant={:danger}
-            phx-click="delete"
-            data-confirm={"Delete the #{@template.title} template?"}
-          >
-            Delete template
-          </.button>
-        </section>
       </main>
     </div>
     """
@@ -203,25 +194,13 @@ defmodule Web.TemplateFormLive do
         socket =
           socket
           |> put_flash(:info, "Saved the #{template.title} template.")
-          |> push_navigate(to: ~p"/teams/#{team}/templates")
+          |> push_navigate(to: ~p"/teams/#{team}/templates/#{template.id}")
 
         {:noreply, socket}
 
       {:error, changeset} ->
         {:noreply, socket |> assign(lines: lines) |> put_values(params) |> assign_form(changeset)}
     end
-  end
-
-  def handle_event("delete", _params, socket) do
-    %{current_team: team, template: template} = socket.assigns
-    :ok = SaveTemplate.delete(team, template)
-
-    socket =
-      socket
-      |> put_flash(:info, "Deleted the #{template.title} template.")
-      |> push_navigate(to: ~p"/teams/#{team}/templates")
-
-    {:noreply, socket}
   end
 
   def handle_event("search", %{"q" => q}, socket) do
@@ -268,6 +247,9 @@ defmodule Web.TemplateFormLive do
        assign(socket,
          groups: Enum.reject(socket.assigns.groups, &(Integer.to_string(&1.id) == id))
        )}
+
+  defp back_path(team, nil), do: ~p"/teams/#{team}/templates"
+  defp back_path(team, template), do: ~p"/teams/#{team}/templates/#{template.id}"
 
   # Keeps what was typed in the fields when the page renders again.
   defp put_values(socket, params),

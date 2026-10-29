@@ -28,6 +28,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/equipment/:id/fields/edit",
     "/teams/:subdomain/equipment/:id/edit",
     "/teams/:subdomain/templates/:id",
+    "/teams/:subdomain/templates/:id/edit",
     # Chore pages need member logins, which this team lacks. Web.ChoreLiveTest,
     # Web.ChoreCollectionLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
     # records with them on.
@@ -243,6 +244,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/templates/:id", s, o),
     do: ~p"/teams/#{s}/templates/#{o.template.id}"
+
+  defp path_for("/teams/:subdomain/templates/:id/edit", s, o),
+    do: ~p"/teams/#{s}/templates/#{o.template.id}/edit"
 
   defp path_for("/teams/:subdomain/settings/chore-categories/:id", s, o),
     do: ~p"/teams/#{s}/settings/chore-categories/#{o.chore_category.id}"

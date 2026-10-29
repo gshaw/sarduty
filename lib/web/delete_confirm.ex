@@ -57,6 +57,14 @@ defmodule Web.DeleteConfirm do
     end
   end
 
+  @doc "A template is SAR Duty's own, so deleting it changes nothing in D4H."
+  def template(template) do
+    simple(
+      "Delete the #{template.title} template? Its items stay, and so do the activities it went on.",
+      "Delete template"
+    )
+  end
+
   @doc """
   A group takes its members and rules with it, and stops what names it: other groups'
   rules, templates that add its members, and the attendance check. `context` is

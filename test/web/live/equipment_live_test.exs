@@ -505,6 +505,47 @@ defmodule Web.EquipmentLiveTest do
     assert html =~ "Incident"
   end
 
+  test "a template's page shows what it adds, and deletes it from its Actions", ctx do
+    cause = cause_field(ctx.team)
+    values = %{"#{cause.d4h_custom_field_id}" => [2]}
+    template = incident_template(ctx.team, "Lost hiker", [{ctx.radio, 90}], values)
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+
+    assert has_element?(lv, "#template-details", "Incident")
+    assert has_element?(lv, "#template-items-table", "Radio 7")
+    assert has_element?(lv, "#template-items-table", "1h 30m")
+    assert has_element?(lv, "#template-fields-#{cause.d4h_custom_field_id}", "Injured")
+
+    assert has_element?(
+             lv,
+             ~s|#template-edit[href="#{~p"/teams/#{ctx.team}/templates/#{template.id}/edit"}"]|
+           )
+
+    assert has_element?(lv, "#template-delete[data-confirm-button='Delete template']")
+
+    {:ok, _lv, html} =
+      lv
+      |> element("#template-delete")
+      |> render_click()
+      |> follow_redirect(ctx.conn, ~p"/teams/#{ctx.team}/templates")
+
+    assert html =~ "Deleted the Lost hiker template."
+    refute Repo.get(Template, template.id)
+  end
+
+  test "Change template has no Delete, and Cancel goes back to the template", ctx do
+    template = template_fixture(ctx.team, "Truck 1")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/edit")
+
+    assert has_element?(lv, "h1", "Change Truck 1")
+    refute has_element?(lv, "#template-delete")
+
+    assert has_element?(
+             lv,
+             ~s|#template-cancel[href="#{~p"/teams/#{ctx.team}/templates/#{template.id}"}"]|
+           )
+  end
+
   test "a template fills in the incident's empty fields in D4H", ctx do
     cause = cause_field(ctx.team)
     agency = custom_field_fixture(ctx.team, %{title: "Requesting Agency"})
