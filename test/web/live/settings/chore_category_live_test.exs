@@ -59,6 +59,7 @@ defmodule Web.Settings.ChoreCategoryLiveTest do
       |> follow_redirect(conn)
 
     assert has_element?(lv, "#chore-categories", "Equipment maintenance")
+    assert has_element?(lv, "#chore-categories .hint", "Trucks, radios, and the yard")
     [category] = ChoreCategory.get_all(team.id)
     assert %{hours: :primary, description: "Trucks, radios, and the yard"} = category
     assert category |> ChoreCategory.tags() |> Enum.map(& &1.title) == ["Chores"]
