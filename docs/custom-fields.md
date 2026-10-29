@@ -54,6 +54,21 @@ required fields", and links to Activities with Required fields: Missing
 (`Activity.missing_required_fields/1`). An activity whose values aren't copied yet
 isn't counted. Records teams have no fields, so the filter isn't shown for them.
 
+## Changing them
+
+The activity form, Add activity and Change activity, has a section for the kind's
+fields, "Incident fields", each as its type's input: text, a box for text areas, a
+number, a date or time, a select (a combobox past 10 options), or boxes to tick. A
+required one says "Needed to publish.", since D4H only checks them then. An archived
+option shows only while it is chosen. A published activity is locked, as for its other
+details.
+
+[SaveActivity](../lib/app/operation/save_activity.ex) sends only the fields that
+changed, as `custom_values` on the change set row (nil clears one), and the adapter
+turns them into `customFieldValues`. The copy takes the values it sent, since the sync
+after the write may not read them back. Equipment and member fields are shown, not
+changed, in SAR Duty for now.
+
 ## How fresh it is
 
 D4H doesn't change a record's `updatedAt` when only its custom field values change

@@ -4,6 +4,7 @@ defmodule Web.ActivityFormLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.CustomField
   alias App.Operation.DeleteActivity
   alias App.Operation.SaveActivity
   alias App.ViewModel.ActivityFormViewModel
@@ -22,6 +23,10 @@ defmodule Web.ActivityFormLive do
       |> assign(page_title: if(activity, do: "Change #{activity.title}", else: "Add activity"))
       |> assign(activity: activity, form_data: form, records?: D4H.records?(team))
       |> assign(params: %{})
+      |> assign(
+        custom_fields:
+          Map.new(~w(event exercise incident), &{&1, CustomField.get_all(team.id, &1)})
+      )
       |> assign(delete_confirm: activity && delete_confirm(team, activity))
       |> assign(
         description_locked?: ActivityFormViewModel.description_locked?(activity),
@@ -83,6 +88,11 @@ defmodule Web.ActivityFormLive do
           Which hours the activity counts for on tax credit letters.
         </.input>
         <.input field={@form[:tracking_number]} label="Tracking number (optional)" />
+        <.custom_inputs
+          fields={Map.get(@custom_fields, @form[:kind].value, [])}
+          kind={@form[:kind].value}
+          values={@form[:custom].value || %{}}
+        />
         <div :if={@description_locked?} id="activity-description-locked" class="mb-6">
           <.label>Description</.label>
           <.hint>
@@ -132,6 +142,128 @@ defmodule Web.ActivityFormLive do
       </.button>
     </section>
     """
+  end
+
+  attr :fields, :list, required: true
+  attr :kind, :string, required: true
+  attr :values, :map, required: true
+
+  # The kind's D4H custom fields (#681), each as its type's input, named
+  # form[custom][<D4H field id>]. Required ones say so: D4H won't publish without them.
+  defp custom_inputs(assigns) do
+    ~H"""
+    <section :if={@fields != []} id="activity-custom-fields" class="mb-6">
+      <h2 class="heading mt-2">{String.capitalize(@kind || "")} fields</h2>
+      <.custom_input
+        :for={field <- @fields}
+        field={field}
+        value={@values[Integer.to_string(field.d4h_custom_field_id)]}
+      />
+    </section>
+    """
+  end
+
+  attr :field, CustomField, required: true
+  attr :value, :any, default: nil
+
+  defp custom_input(%{field: %{field_type: "multiple_choice"}} = assigns) do
+    assigns =
+      assign(assigns, id: input_id(assigns.field), name: input_name(assigns.field) <> "[]")
+
+    ~H"""
+    <fieldset id={@id} class="mb-6">
+      <legend>{@field.title}</legend>
+      <.hint :if={field_hint(@field)}>{field_hint(@field)}</.hint>
+      <input type="hidden" name={@name} value="" />
+      <label :for={{label, value} <- options(@field, @value)} class="choice">
+        <input
+          type="checkbox"
+          id={"#{@id}-#{value}"}
+          name={@name}
+          value={value}
+          checked={value in List.wrap(@value)}
+        />
+        {label}
+      </label>
+    </fieldset>
+    """
+  end
+
+  defp custom_input(%{field: %{field_type: "single_choice"}} = assigns) do
+    assigns =
+      assign(assigns,
+        id: input_id(assigns.field),
+        name: input_name(assigns.field),
+        options: options(assigns.field, assigns.value),
+        selected: assigns.value |> List.wrap() |> List.first()
+      )
+
+    ~H"""
+    <.input
+      id={@id}
+      name={@name}
+      type={if length(@options) > 10, do: "combobox", else: "select"}
+      label={@field.title}
+      prompt="None"
+      clearable
+      options={@options}
+      value={@selected}
+    >
+      {field_hint(@field)}
+    </.input>
+    """
+  end
+
+  defp custom_input(assigns) do
+    assigns =
+      assign(assigns,
+        id: input_id(assigns.field),
+        name: input_name(assigns.field),
+        type: input_type(assigns.field.field_type),
+        shown: shown_value(assigns.field.field_type, assigns.value)
+      )
+
+    ~H"""
+    <.input
+      id={@id}
+      name={@name}
+      type={@type}
+      label={@field.title}
+      value={@shown}
+      rows={@type == "textarea" && "3"}
+      step={@type == "number" && "any"}
+    >
+      {field_hint(@field)}
+    </.input>
+    """
+  end
+
+  defp input_id(field), do: "custom-field-#{field.d4h_custom_field_id}"
+  defp input_name(field), do: "form[custom][#{field.d4h_custom_field_id}]"
+
+  defp input_type("text_area"), do: "textarea"
+  defp input_type("number"), do: "number"
+  defp input_type("date"), do: "date"
+  defp input_type("time"), do: "time"
+  defp input_type(_text_or_datetime), do: "text"
+
+  defp shown_value("date", value) when is_binary(value), do: String.slice(value, 0, 10)
+  defp shown_value(_type, value), do: value
+
+  # D4H's hint, and for a required field that it's needed to publish.
+  defp field_hint(field) do
+    text = [field.hint, field.required && "Needed to publish."] |> Enum.filter(&is_binary/1)
+    if text == [], do: nil, else: Enum.join(text, " ")
+  end
+
+  # The live options in D4H's order, and an archived one only while it is chosen.
+  defp options(field, value) do
+    chosen = value |> List.wrap() |> Enum.map(&to_string/1)
+
+    field.options
+    |> Enum.sort_by(& &1["ordering"])
+    |> Enum.filter(&(not &1["archived"] or to_string(&1["id"]) in chosen))
+    |> Enum.map(&{&1["label"], to_string(&1["id"])})
   end
 
   # An activity with attendance asks for the box ticked (#651).
