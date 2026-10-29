@@ -36,7 +36,7 @@ defmodule Web.TemplateCollectionLive do
         <.a navigate={~p"/teams/#{@current_team}/templates/#{template.id}"}>{template.title}</.a>
       </:col>
       <:col :let={template} label="Kind">
-        {Web.ActivityTemplateLive.kind_label(template)}
+        {Template.kind_label(template)}
       </:col>
       <:col :let={template} label="Items" class="w-px whitespace-nowrap" align="right">
         {length(template.template_items)}

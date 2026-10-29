@@ -7,7 +7,6 @@ defmodule Web.TemplateLive do
   alias App.Model.EquipmentItem
   alias App.Model.Template
   alias App.Operation.SaveTemplate
-  alias Web.ActivityTemplateLive
 
   # A template's page (#307): what it adds to an activity. Its Actions change each part on
   # a page of its own, and Delete opens the confirm dialog here, with no page (#714).
@@ -45,7 +44,7 @@ defmodule Web.TemplateLive do
       <aside class="content-1/3">
         <dl id="template-details">
           <dt>Kind</dt>
-          <dd>{ActivityTemplateLive.kind_label(@template) || "Any kind"}</dd>
+          <dd>{Template.kind_label(@template) || "Any kind"}</dd>
         </dl>
         <dl>
           <dt>Actions</dt>

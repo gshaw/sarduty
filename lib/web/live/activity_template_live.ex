@@ -231,14 +231,8 @@ defmodule Web.ActivityTemplateLive do
     |> Kernel.++(if groups > 0, do: [count_groups(groups)], else: [])
     |> Kernel.++(if fields > 0, do: [count_fields(fields)], else: [])
     |> Enum.join(", ")
-    |> then(&if(template.activity_kind, do: "#{kind_label(template)}: #{&1}", else: &1))
+    |> then(&if(template.activity_kind, do: "#{Template.kind_label(template)}: #{&1}", else: &1))
   end
-
-  @doc "The kind a template is for, as the form names it, or nil for any kind."
-  def kind_label(%Template{activity_kind: nil}), do: nil
-
-  def kind_label(%Template{activity_kind: kind}),
-    do: Enum.find_value(Template.kind_options(), fn {label, value} -> value == kind && label end)
 
   @doc """
   `tags` with a template's `new` tags added, A to Z, leaving out any the activity has by
@@ -347,9 +341,22 @@ defmodule Web.ActivityTemplateLive do
     %{current_team: team, current_user: user, activity: activity, fills: fills} = assigns
 
     with :ok <- fill_fields(team, activity, fills, user, now),
-         {:ok, rows} <- add_equipment(team, activity, lines, assigns.tags, user, now) do
+         {:ok, rows} <- add_after_fields(assigns, lines, now) do
       {kind, text} = invite(team, activity, assigns.groups, user, now, rows)
       {:ok, kind, Enum.join(fields_text(fills) ++ List.wrap(text), " ")}
+    end
+  end
+
+  # Once the fields went, a refusal leaves the page to say so, as for a refused invite.
+  defp add_after_fields(%{fills: fills} = assigns, lines, now) do
+    %{current_team: team, current_user: user, activity: activity, tags: tags} = assigns
+
+    case add_equipment(team, activity, lines, tags, user, now) do
+      {:error, text} when fills != %{} ->
+        {:ok, :error, "#{count_fields(map_size(fills))} filled in. #{text}"}
+
+      result ->
+        result
     end
   end
 

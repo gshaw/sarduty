@@ -80,14 +80,16 @@ tags still go and nobody is added. If the items or tags are refused, nobody is a
 A template's values fill in only the fields the activity has empty, as the copy has them
 ([SaveCustomFields.fill_empty/4](../lib/app/operation/save_custom_fields.ex)). Values for
 another kind's fields are left out, so every template is listed whatever its kind. When
-two templates fill one field, the first one added wins. Each field to fill is a row with
-a Remove button. On a published activity the fields are left out, with a line saying so:
+two templates fill one field, the first one added wins. A choice D4H has archived or
+deleted since the template was saved is left out. Each field to fill is a row with a
+Remove button. On a published activity the fields are left out, with a line saying so:
 D4H locks them, as for Change fields.
 
 The fields go first, as Change fields sends them: one `update_activity` row with only
 `custom_values`, applied through `SaveCustomFields.call/5`, then the copy takes the
 values. If D4H refuses them, nothing else is sent. The flash starts "2 fields filled
-in."
+in.", and if the items or tags are refused after the fields went, the page leaves with
+that line before the error, as for a refused invite.
 
 ## Still to come
 
