@@ -46,7 +46,7 @@ defmodule Web.ChoreCollectionLiveTest do
     %{conn: conn, team: team, member: member, category: category} = ctx
     chore_category_fixture(team, %{title: "Board work", description: "Meetings and minutes"})
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
-    assert has_element?(lv, "#chore-category-choices", "Meetings and minutes")
+    assert has_element?(lv, "#chore_chore_category_id-choices", "Meetings and minutes")
 
     yesterday =
       team.timezone |> then(&Service.Period.today(DateTime.utc_now(), &1)) |> Date.add(-1)
@@ -68,8 +68,21 @@ defmodule Web.ChoreCollectionLiveTest do
     assert html =~ "Logged Radio programming. Add the next one."
     assert [%{minutes: 150, date: ^yesterday}] = Chore.get_all_for_member(member)
     assert has_element?(lv, ~s{#chore_date[value="#{yesterday}"]})
-    assert has_element?(lv, ~s{#chore-category-choices input[value="#{category.id}"][checked]})
+
+    assert has_element?(
+             lv,
+             ~s{#chore_chore_category_id-choices input[value="#{category.id}"][checked]}
+           )
+
     refute has_element?(lv, "#chore-time-read")
+  end
+
+  test "a save with no category marks the categories as the error", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    refute has_element?(lv, "#chore_chore_category_id-choices.field-error")
+
+    lv |> form("#chore-form", chore: %{description: "Radio check", time: "1h"}) |> render_submit()
+    assert has_element?(lv, "#chore_chore_category_id-choices.field-error", "Select a category")
   end
 
   test "a time that reads as more than a day asks for minutes", %{conn: conn, team: team} do

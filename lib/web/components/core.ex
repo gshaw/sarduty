@@ -300,6 +300,9 @@ defmodule Web.Components.Core do
     * `type="combobox"` is a select you type into, for a list that can run past about 15
       options. See `combobox/1`
 
+    * `type="radios"` is one answer from a few choices, all in view, with `options` as
+      `{label, value}` or `{label, value, hint}`
+
     * `type="checkbox"` is used exclusively to render boolean values
 
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
@@ -320,7 +323,7 @@ defmodule Web.Components.Core do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color combobox date datetime-local email file hidden month number password
-               range radio rich_text search select tel text textarea time url week)
+               radio radios range rich_text search select tel text textarea time url week)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -329,7 +332,11 @@ defmodule Web.Components.Core do
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
-  attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
+
+  attr :options, :list,
+    doc:
+      "a select's options for options_for_select/2; radios' {label, value} or {label, value, hint}"
+
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :clearable, :boolean,
@@ -344,8 +351,10 @@ defmodule Web.Components.Core do
   slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
-    # Only show errors for fields the user has typed in or submitted.
-    errors = if used_input?(field), do: field.errors, else: []
+    # Only show errors for fields the user has typed in, or after a failed save, as the
+    # error summary does. A form sends nothing for radios none of which is checked, so
+    # used_input?/1 alone never marks them.
+    errors = if used_input?(field) or saved?(field.form), do: field.errors, else: []
 
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
@@ -379,6 +388,35 @@ defmodule Web.Components.Core do
         <.error :for={message <- @errors}>{message}</.error>
       </div>
     </div>
+    """
+  end
+
+  # One answer, every choice in view. Options are {label, value}, or {label, value, hint}
+  # for a line under the choice saying what it covers. The first radio has the field's id,
+  # so the error summary's link lands on it. See /styles/forms.
+  def input(%{type: "radios"} = assigns) do
+    assigns = assign(assigns, :choices, Enum.with_index(assigns.options, &radio_choice/2))
+
+    ~H"""
+    <fieldset id={"#{@id}-choices"} class={["mb-6", @errors != [] && "field-error"]}>
+      <legend class="label mb-1">{@label}</legend>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <label :for={{label, value, hint, i} <- @choices} class={["choice", hint && "mb-3"]}>
+        <input
+          type="radio"
+          id={if i == 0, do: @id, else: "#{@id}_#{value}"}
+          name={@name}
+          value={value}
+          checked={to_string(@value) == to_string(value)}
+          {@rest}
+        />
+        <span>
+          {label}
+          <span :if={hint} class="hint block">{hint}</span>
+        </span>
+      </label>
+    </fieldset>
     """
   end
 
@@ -534,6 +572,15 @@ defmodule Web.Components.Core do
     </div>
     """
   end
+
+  defp radio_choice({label, value}, i), do: {label, value, nil, i}
+  defp radio_choice({label, value, hint}, i), do: {label, value, hint, i}
+
+  # A changeset form after a failed save: its action is :insert or :update, not :validate.
+  defp saved?(%Phoenix.HTML.Form{source: %Ecto.Changeset{action: action}}),
+    do: action not in [nil, :validate, :ignore]
+
+  defp saved?(_form), do: false
 
   attr :attribute, :string, required: true
   attr :action, :string, default: nil
