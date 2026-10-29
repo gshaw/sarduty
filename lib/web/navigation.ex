@@ -283,11 +283,11 @@ defmodule Web.Navigation do
   @doc """
   The team switcher's rows: each team where you're a team admin or a member, A to Z, one
   row per team, then each organization you're an organization admin of (#512), then "SAR
-  Duty admin" last for SAR Duty admins, which the switcher sets apart. SAR Duty admins
+  Duty admin" and "Style guide" last for SAR Duty admins, which the switcher sets apart. SAR Duty admins
   reach other organizations from Admin › Organizations. The area you're in is current; a
   team or organization opened as a SAR Duty admin that isn't yours marks nothing. Empty
   when there is nowhere else to go, so the bar's name is plain text.
-  `[%{kind: :team | :org | :admin, key:, label:, path:, current:}]`.
+  `[%{kind: :team | :org | :admin | :styles, key:, label:, path:, current:}]`.
   """
   def switch_rows(is_admin, managed_teams, member_logins, organizations \\ [], area) do
     teams = for team <- teams(managed_teams, member_logins), do: team_row(team, area)
@@ -296,10 +296,10 @@ defmodule Web.Navigation do
       for organization <- Enum.sort_by(organizations, &String.downcase(&1.name)),
           do: org_row(organization, area)
 
-    admin = if is_admin, do: [admin_row(area)], else: []
+    admin = if is_admin, do: [admin_row(area), styles_row()], else: []
 
     rows = teams ++ orgs ++ admin
-    if Enum.all?(rows, & &1.current), do: [], else: rows
+    if Enum.all?(rows, &(&1.current or &1.kind == :styles)), do: [], else: rows
   end
 
   defp team_row(team, area) do
@@ -330,6 +330,11 @@ defmodule Web.Navigation do
       path: ~p"/admin",
       current: match?(%{kind: :admin}, area)
     }
+  end
+
+  # The style guide is no area, so it is never current.
+  defp styles_row do
+    %{kind: :styles, key: "styles", label: "Style guide", path: "/styles", current: false}
   end
 
   # Every team you manage or log in to as a member, once each, A to Z.

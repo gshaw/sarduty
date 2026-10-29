@@ -456,7 +456,7 @@ defmodule Web.Layouts do
 
   # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then Your
   # organizations (#512), then SAR Duty admin below a divider with its shield, so it never
-  # reads as one more team.
+  # reads as one more team, and the style guide under it.
   defp switch_menu(assigns) do
     groups = Enum.group_by(assigns.rows, & &1.kind)
 
@@ -464,7 +464,7 @@ defmodule Web.Layouts do
       assign(assigns,
         teams: groups[:team] || [],
         orgs: groups[:org] || [],
-        admin: groups[:admin] || []
+        admin: (groups[:admin] || []) ++ (groups[:styles] || [])
       )
 
     ~H"""
@@ -488,13 +488,15 @@ defmodule Web.Layouts do
   defp switch_link(assigns) do
     ~H"""
     <.link
-      navigate={@row.path}
+      navigate={@row.kind != :styles && @row.path}
+      href={@row.kind == :styles && @row.path}
       id={@id_prefix <> @row.key}
       aria-current={@row.current && "page"}
-      class={["nav-link", @row.kind == :admin && "switch-admin"]}
+      class={["nav-link", @row.kind in [:admin, :styles] && "switch-admin"]}
     >
       <.icon :if={@row.kind == :admin} name="shield-check" size={:sm} />
       <.icon :if={@row.kind == :org} name="building-complex" size={:sm} />
+      <.icon :if={@row.kind == :styles} name="palette" size={:sm} />
       {@row.label}
     </.link>
     """

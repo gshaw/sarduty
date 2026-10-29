@@ -247,6 +247,7 @@ defmodule Web.StyleGuideHTML do
       {"cake", "Years milestones"},
       {"life-buoy", "Incidents milestones"},
       {"shield-check", "SAR Duty admin, in the team switcher"},
+      {"palette", "Style guide, in the team switcher"},
       {"building-complex", "An organization, in the team switcher"},
       {"scan-line", "Start scanning, on the QR scanner"},
       {"rotate-ccw-square", "Rotate left, a certificate photo"},
