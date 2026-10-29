@@ -79,7 +79,7 @@ defmodule Web.ActivityTemplateLive do
             <.a navigate={~p"/teams/#{@current_team}/templates"}>{if @templates == [],
               do: "Add a template",
               else: "Change templates"}</.a>
-            for items, tags, and groups that go together.
+            for items, tags, groups, and fields that go together.
           </p>
         </section>
       </aside>
