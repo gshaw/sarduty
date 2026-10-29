@@ -35,17 +35,14 @@
 
   <h2>Custom fields</h2>
   <p>
-    A record's custom fields, the ones its team or organization added, in its sidebar after the facts, under a small caps label
-    on the rows' usual rule. A required field left empty shows Missing to team admins on a draft incident, which can't be
-    published until it's filled in.
+    A record's custom fields, the ones its team or organization added, aren't in its sidebar: a BC incident has 27, which
+    would push Actions 3 screens down. They're the record's Fields <a href={page_path(:tabs)}>tab</a>, a table with each
+    field's name beside its value (decided 2026-10-28, #705). A required field left empty shows Missing to team admins on a
+    draft incident, which can't be published until it's filled in. The missing ones come first, under a count, and the tab
+    counts them too.
   </p>
-  <div class="demo max-w-sm">
-    <.custom_fields
-      id="detail-list-fields"
-      title="Incident fields"
-      rows={custom_field_rows()}
-      sidebar
-    />
+  <div class="demo">
+    <.custom_fields_table id="detail-list-fields" rows={custom_field_rows()} required={19} />
   </div>
 
   <h2>When to use</h2>
@@ -57,12 +54,12 @@
   <h2>In the app</h2>
   <p>A plain <code>&lt;dl&gt;</code>. Each <code>dd</code> gets a rule under it.</p>
   <p>
-    Custom fields are <code>&lt;.custom_fields sidebar&gt;</code>
+    Custom fields are <code>&lt;.custom_fields_table&gt;</code>
     with rows from <code>CustomField.rows/4</code>, or <code>&lt;.custom_fields&gt;</code>
-    under a heading on a page with no sidebar, such as Your membership's Contact details.
+    under a heading on a page with no tabs, such as Your membership's Contact details.
   </p>
   <p>
-    Every record's sidebar runs in the same order: its facts, then its custom fields, then Actions. A count the main column
+    Every record's sidebar runs in the same order: its facts, then Actions. A count the main column
     already shows, such as a group's members, stays out of it.
   </p>
   <p>

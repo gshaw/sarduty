@@ -16,6 +16,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/attendance",
     "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/activities/:id/equipment",
+    "/teams/:subdomain/activities/:id/fields",
     "/teams/:subdomain/activities/:id/equipment/add",
     "/teams/:subdomain/activities/:id/templates",
     "/teams/:subdomain/activities/:id/members/add",
@@ -23,6 +24,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/updates",
     "/teams/:subdomain/activities/:id/tags",
     "/teams/:subdomain/equipment/:id",
+    "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/edit",
     "/teams/:subdomain/equipment/:id/delete",
     "/teams/:subdomain/templates/:id",
@@ -49,6 +51,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/qualifications",
     "/teams/:subdomain/members/:id/card",
     "/teams/:subdomain/members/:id/history",
+    "/teams/:subdomain/members/:id/fields",
     "/teams/:subdomain/members/:id/standing",
     "/teams/:subdomain/members/:id/image",
     "/teams/:subdomain/members/:id/certificates/:award_id",
@@ -209,6 +212,9 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/activities/:id/equipment", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/equipment"
 
+  defp path_for("/teams/:subdomain/activities/:id/fields", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/fields"
+
   defp path_for("/teams/:subdomain/activities/:id/equipment/add", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/equipment/add"
 
@@ -229,6 +235,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/equipment/:id", s, o),
     do: ~p"/teams/#{s}/equipment/#{o.item.id}"
+
+  defp path_for("/teams/:subdomain/equipment/:id/fields", s, o),
+    do: ~p"/teams/#{s}/equipment/#{o.item.id}/fields"
 
   defp path_for("/teams/:subdomain/equipment/:id/edit", s, o),
     do: ~p"/teams/#{s}/equipment/#{o.item.id}/edit"
@@ -278,6 +287,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/members/:id/history", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/history"
+
+  defp path_for("/teams/:subdomain/members/:id/fields", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/fields"
 
   defp path_for("/teams/:subdomain/members/:id/standing", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/standing"

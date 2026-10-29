@@ -378,10 +378,10 @@ hidden data makes people suspicious).
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
   reply" once it starts). The sidebar has Kind, the attendance total, Start with Add to
   calendar, Finish, Duration, tax credit hours, and the place with copy and the maps
-  link; then the kind's custom fields; then Actions, with Open in D4H last. The main
-  column has the tags, the map, the description, then tabs: Members (`/activities/:id`),
-  Equipment (`/equipment`, with Add equipment at `/equipment/add`), and History for team
-  admins (`/history`). Take
+  link; then Actions, with Open in D4H last. The main column has the tags, the map, the
+  description, then tabs: Members (`/activities/:id`), Equipment (`/equipment`, with Add
+  equipment at `/equipment/add`), Fields (`/fields`) when it has a custom field to show
+  (#705), and History for team admins (`/history`). Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
   Team admins also get the History tab, which can hold contact details and addresses,

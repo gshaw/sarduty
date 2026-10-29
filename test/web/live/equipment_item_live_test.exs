@@ -15,9 +15,26 @@ defmodule Web.EquipmentItemLiveTest do
 
     item = equipment_item_fixture(team, %{custom_values: %{"603" => "Orange dry bag"}})
 
+    conn = log_in_user(conn, user)
+
+    # Not in the sidebar (#705): Activities and Fields tabs.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}")
+    refute has_element?(lv, "#item-fields")
+    assert has_element?(lv, "#item-activities")
+    assert has_element?(lv, "nav.tabs a[href$='/fields']", "Fields")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/fields")
+    assert has_element?(lv, "#item-fields-603", "Orange dry bag")
+    refute has_element?(lv, "#item-activities")
+  end
+
+  test "an item with no fields has no tabs", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    item = equipment_item_fixture(team)
+
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/equipment/#{item.id}")
 
-    assert has_element?(lv, "aside #item-fields h2.caps", "Equipment fields")
-    assert has_element?(lv, "#item-fields-603", "Orange dry bag")
+    assert has_element?(lv, "#item-activities")
+    refute has_element?(lv, "nav.tabs")
   end
 end

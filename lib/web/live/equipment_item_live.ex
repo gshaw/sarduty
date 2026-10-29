@@ -17,9 +17,12 @@ defmodule Web.EquipmentItemLive do
     items = EquipmentItem.get_all(team.id)
     row = items |> EquipmentList.rows() |> Enum.find(&(&1.item.id == item.id))
 
+    tab = socket.assigns.live_action
+
     socket =
       assign(socket,
-        page_title: item.title,
+        page_title: if(tab == :fields, do: "#{item.title} · Fields", else: item.title),
+        tab: tab,
         item: item,
         row: row,
         contents: Enum.filter(items, &(&1.d4h_container_id == item.d4h_equipment_id)),
@@ -86,7 +89,6 @@ defmodule Web.EquipmentItemLive do
             </dd>
           </div>
         </dl>
-        <.custom_fields id="item-fields" title="Equipment fields" rows={@field_rows} sidebar />
         <dl>
           <dt>Actions</dt>
           <dd>
@@ -118,7 +120,24 @@ defmodule Web.EquipmentItemLive do
           </ul>
         </section>
 
-        <section id="item-activities">
+        <%!-- Tabs only for an item with D4H custom fields (#705): Activities alone isn't a choice. --%>
+        <.tabs :if={@field_rows != [] or @tab == :fields} label="Item">
+          <:tab
+            navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}"}
+            current={@tab == :activities}
+          >
+            Activities
+          </:tab>
+          <:tab
+            navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/fields"}
+            current={@tab == :fields}
+          >
+            Fields
+          </:tab>
+        </.tabs>
+        <.custom_fields_table :if={@tab == :fields} id="item-fields" rows={@field_rows} />
+
+        <section :if={@tab == :activities} id="item-activities">
           <h2 class="heading">Activities · {length(@usages)}</h2>
           <.table :if={@usages != []} id="item-usages" rows={@usages} class="table-striped">
             <:col :let={usage} label="Activity">

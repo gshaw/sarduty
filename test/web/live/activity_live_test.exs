@@ -644,19 +644,31 @@ defmodule Web.ActivityLiveTest do
       {activity, cause, notes, weather}
     end
 
-    test "a team admin sees every field, and the required ones left empty", %{conn: conn} do
+    test "a team admin sees every field on the Fields tab, and the required ones left empty",
+         %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       {activity, _cause, _notes, _weather} = incident_with_fields(team)
+      conn = log_in_user(conn, user)
 
-      {:ok, lv, _html} =
-        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+      # Not in the sidebar (#705): a tab, counting the missing one.
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      refute has_element?(lv, "#activity-fields")
+      assert has_element?(lv, "nav.tabs a[href$='/fields'] .badge", "1")
 
-      # In the sidebar, after the facts and before Actions, under a small caps label.
-      assert has_element?(lv, "#activity-sidebar-end #activity-fields h2.caps", "Incident fields")
-      assert has_element?(lv, "#activity-fields-420", "Lost")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields")
+      assert has_element?(lv, "nav.tabs a[aria-current=page]", "Fields")
+
+      assert has_element?(
+               lv,
+               "#activity-fields-missing-count",
+               "1 of 1 needed to publish is empty."
+             )
+
+      assert has_element?(lv, "#activity-fields-missing #activity-fields-422", "Missing")
+      assert has_element?(lv, "#activity-fields-filled #activity-fields-420", "Lost")
       assert has_element?(lv, "#activity-fields-896", "Team only")
-      assert has_element?(lv, "#activity-fields-422", "Missing")
       refute has_element?(lv, "#activity-fields-577")
+      refute has_element?(lv, "#members-switch")
     end
 
     test "Missing shows only on a draft incident, where it stops D4H publishing it",
@@ -666,10 +678,12 @@ defmodule Web.ActivityLiveTest do
       published = activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
 
       {:ok, lv, _html} =
-        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{published.id}")
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{published.id}/fields")
 
       assert has_element?(lv, "#activity-fields-420", "Lost")
       refute has_element?(lv, "#activity-fields-422")
+      refute has_element?(lv, "#activity-fields-missing-count")
+      refute has_element?(lv, "nav.tabs .badge")
     end
 
     test "a member sees neither restricted fields nor what's missing", %{conn: conn} do
@@ -677,11 +691,23 @@ defmodule Web.ActivityLiveTest do
       {activity, _cause, _notes, _weather} = incident_with_fields(team)
 
       {:ok, lv, _html} =
-        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}/fields")
 
       assert has_element?(lv, "#activity-fields-420", "Lost")
       refute has_element?(lv, "#activity-fields-896")
       refute has_element?(lv, "#activity-fields-422")
+    end
+
+    test "an activity with no field to show has no Fields tab", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      custom_field_fixture(team, %{d4h_custom_field_id: 577, title: "ASE#"})
+      activity = activity_fixture(team, %{activity_kind: "incident", custom_values: %{}})
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "nav.tabs", "Equipment")
+      refute has_element?(lv, "nav.tabs a[href$='/fields']")
     end
   end
 end

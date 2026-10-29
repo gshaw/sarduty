@@ -57,6 +57,10 @@
   table.table tbody tr:hover :is(td, th) { background: var(--row-hover); }
   table.table td .btn-sm { margin: -3px 0 -1px; }
 
+  /* A record's custom fields on its Fields tab (#705): each field's name in its row's head,
+     muted like a detail list's label, with the value beside it. */
+  table.table-fields tbody th { width: 45%; color: var(--text-muted); }
+
   /* A group's title row (groups={…}): small capitals on the header colour, like a header
      row, so the groups share one set of columns. A muted group or row (row_class) greys. */
   table.table tbody tr.table-group-row th,

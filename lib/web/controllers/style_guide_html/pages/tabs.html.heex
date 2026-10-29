@@ -24,6 +24,22 @@
     </.tabs>
   </div>
 
+  <h3>A count</h3>
+  <p>
+    An amber count of what waits on a tab, as the side navigation counts what waits on a page: a draft incident's
+    Fields tab counts the required fields left empty.
+  </p>
+  <div class="demo">
+    <.tabs label="Activity">
+      <:tab navigate="#" current>Members</:tab>
+      <:tab navigate="#">Equipment</:tab>
+      <:tab navigate="#">
+        Fields<.badge kind={:warning}>9</.badge>
+      </:tab>
+      <:tab navigate="#">History</:tab>
+    </.tabs>
+  </div>
+
   <h2>When to use</h2>
   <p>
     A few pages about the same record, such as a member's attendance, qualifications, and groups.
@@ -47,7 +63,8 @@
     </li>
     <li>
       Tabs sit under the title, above both columns. An activity's are the exception: they sit in the main column under its
-      map and description, Members · Equipment · History, so the activity stays on screen on every tab (decided 2026-10-28).
+      map and description, Members · Equipment · Fields · History, so the activity stays on screen on every tab (decided 2026-10-28). An equipment item's do the same, Activities ·
+      Fields under what's inside it, and show only when it has custom fields (#705).
     </li>
     <li>Every page's tabs are the same height. There are no small tabs.</li>
     <li>
@@ -61,6 +78,7 @@
     <code>&lt;.tabs label="Member"&gt;</code>
     with a <code>&lt;:tab navigate=&#123;…&#125; current&gt;</code>
     for each page. <code>current</code>
-    marks the page you are on.
+    marks the page you are on. A count is a <code>&lt;.badge kind=&#123;:warning&#125;&gt;</code>
+    after the label.
   </p>
 </.shell>

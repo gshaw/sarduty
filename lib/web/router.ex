@@ -221,6 +221,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive
       live "/teams/:subdomain/activities/:id/equipment", ActivityLive, :equipment
+      live "/teams/:subdomain/activities/:id/fields", ActivityLive, :fields
       live "/teams/:subdomain/activities/:id/equipment/add", ActivityEquipmentLive
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive
       live "/teams/:subdomain/activities/:id/members/add", ActivityAddMembersLive
@@ -232,7 +233,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/templates/:id", TemplateFormLive, :edit
       live "/teams/:subdomain/equipment", EquipmentCollectionLive
       live "/teams/:subdomain/equipment/new", EquipmentItemFormLive, :new
-      live "/teams/:subdomain/equipment/:id", EquipmentItemLive
+      live "/teams/:subdomain/equipment/:id", EquipmentItemLive, :activities
+      live "/teams/:subdomain/equipment/:id/fields", EquipmentItemLive, :fields
       live "/teams/:subdomain/equipment/:id/edit", EquipmentItemFormLive, :edit
       live "/teams/:subdomain/equipment/:id/delete", EquipmentItemFormLive, :delete
       live "/teams/:subdomain/members", MemberCollectionLive
@@ -244,6 +246,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/:id/qualifications", MemberQualificationsLive
       live "/teams/:subdomain/members/:id/standing", MemberStandingLive
       live "/teams/:subdomain/members/:id/card", MemberCardLive
+      live "/teams/:subdomain/members/:id/fields", MemberFieldsLive
       live "/teams/:subdomain/members/:id/history", MemberHistoryLive
       live "/teams/:subdomain/groups", GroupCollectionLive
       live "/teams/:subdomain/groups/new", TitledRecordFormLive, :new_group
