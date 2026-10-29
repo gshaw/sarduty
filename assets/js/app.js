@@ -81,6 +81,25 @@ window.addEventListener("sarduty:clear", event => {
   input.dispatchEvent(new Event("input", {bubbles: true}))
 })
 
+// "`" anywhere outside a field opens the team switcher, or closes it, the way "/" jumps to
+// the search. Unadvertised: a shortcut to SAR Duty admin and the style guide. Focus goes to
+// the first row, so Tab and Enter pick one; Escape closes it.
+window.addEventListener("keydown", event => {
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (event.target.closest?.("input, textarea, select, [contenteditable]")) return
+  const switcher = [...document.querySelectorAll("#team-switcher, #phone-team-switcher")]
+    .find(details => details.checkVisibility())
+  if (!switcher) return
+  if (event.key === "`") {
+    event.preventDefault()
+    switcher.open = !switcher.open
+    if (switcher.open) switcher.querySelector("a")?.focus()
+  } else if (event.key === "Escape" && switcher.open) {
+    switcher.open = false
+    switcher.querySelector("summary").focus()
+  }
+})
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
