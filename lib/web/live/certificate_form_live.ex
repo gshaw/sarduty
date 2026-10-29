@@ -165,7 +165,7 @@ defmodule Web.CertificateFormLive do
         >
           {if @certificate, do: "Save certificate", else: "Send certificate"}
         </.button>
-        <.button navigate={elem(@parent, 1)}>Cancel</.button>
+        <.button id="certificate-cancel" navigate={elem(@parent, 1)}>Cancel</.button>
         <:trailing :if={@certificate}>
           <.button
             id="certificate-delete"

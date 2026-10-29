@@ -58,7 +58,7 @@ defmodule Web.Settings.PlaceFormLive do
         <.button id="place-save" variant={:success} phx-disable-with="Saving…">
           {if @place, do: "Save place", else: "Add place"}
         </.button>
-        <.button navigate={~p"/teams/#{@current_team}/settings/places"}>Cancel</.button>
+        <.button id="place-cancel" navigate={~p"/teams/#{@current_team}/settings/places"}>Cancel</.button>
         <:trailing :if={@place}>
           <.button
             id="place-delete"

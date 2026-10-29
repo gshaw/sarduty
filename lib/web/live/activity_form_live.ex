@@ -117,6 +117,16 @@ defmodule Web.ActivityFormLive do
         <.button variant={:success} phx-disable-with={if @activity, do: "Saving…", else: "Adding…"}>
           {if @activity, do: "Save activity", else: "Add activity"}
         </.button>
+        <.button
+          id="activity-cancel"
+          navigate={
+            if @activity,
+              do: ~p"/teams/#{@current_team}/activities/#{@activity.id}",
+              else: ~p"/teams/#{@current_team}/activities"
+          }
+        >
+          Cancel
+        </.button>
       </.form_actions>
     </.form>
 

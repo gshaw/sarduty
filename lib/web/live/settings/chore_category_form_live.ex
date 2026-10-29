@@ -107,7 +107,10 @@ defmodule Web.Settings.ChoreCategoryFormLive do
             <.button id="chore-category-save" variant={:success}>
               {if @category, do: "Save category", else: "Add category"}
             </.button>
-            <.button navigate={~p"/teams/#{@current_team}/settings/chore-categories"}>
+            <.button
+              id="chore-category-cancel"
+              navigate={~p"/teams/#{@current_team}/settings/chore-categories"}
+            >
               Cancel
             </.button>
             <:trailing :if={@category}>

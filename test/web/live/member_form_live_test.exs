@@ -25,6 +25,7 @@ defmodule Web.MemberFormLiveTest do
     assert has_element?(list, "#member-add")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/new")
+    assert has_element?(lv, ~s|#member-cancel[href="#{~p"/teams/#{team}/members"}"]|)
 
     {:ok, _lv, html} =
       lv
@@ -74,6 +75,7 @@ defmodule Web.MemberFormLiveTest do
     assert has_element?(page, "#member-actions #member-edit")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+    assert has_element?(lv, ~s|#member-cancel[href="#{~p"/teams/#{team}/members/#{admin.id}"}"]|)
     lv |> form("#member-form", form: %{position: "Training Officer"}) |> render_submit()
 
     path = "/members/#{admin.d4h_member_id}"

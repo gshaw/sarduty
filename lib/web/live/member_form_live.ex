@@ -81,6 +81,16 @@ defmodule Web.MemberFormLive do
         <.button variant={:success} phx-disable-with={if @member, do: "Saving…", else: "Adding…"}>
           {if @member, do: "Save member", else: "Add member"}
         </.button>
+        <.button
+          id="member-cancel"
+          navigate={
+            if @member,
+              do: ~p"/teams/#{@current_team}/members/#{@member.id}",
+              else: ~p"/teams/#{@current_team}/members"
+          }
+        >
+          Cancel
+        </.button>
       </.form_actions>
     </.form>
 

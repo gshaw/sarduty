@@ -59,6 +59,11 @@ defmodule Web.ActivityAddMembersLiveTest do
 
     assert has_element?(
              lv,
+             ~s|#members-cancel[href="#{~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"}"]|
+           )
+
+    assert has_element?(
+             lv,
              "#left-out-on-activity",
              "On the activity already, so left out: Dana Clark."
            )

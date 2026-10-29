@@ -360,6 +360,7 @@ defmodule Web.Org.OrgPagesTest do
       conn = log_in_user(conn, sar_duty_admin())
 
       {:ok, lv, html} = live(conn, ~p"/orgs/wsara/teams/new")
+      assert has_element?(lv, ~s|#add-team-cancel[href="#{~p"/orgs/wsara"}"]|)
       assert html =~ "Ridge SAR"
       refute html =~ "Taken SAR"
       refute html =~ "Coast Range SAR"

@@ -165,7 +165,7 @@ defmodule Web.GroupReviewLive do
         >
           Send {count_changes(MapSet.size(@selected))}
         </.button>
-        <.button navigate={~p"/teams/#{@current_team}/groups/#{@group.id}"}>Cancel</.button>
+        <.button id="review-cancel" navigate={~p"/teams/#{@current_team}/groups/#{@group.id}"}>Cancel</.button>
       </.form_actions>
     </.form>
     """

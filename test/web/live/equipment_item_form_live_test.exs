@@ -27,6 +27,7 @@ defmodule Web.EquipmentItemFormLiveTest do
     assert has_element?(list, "#equipment-add")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/new")
+    assert has_element?(lv, ~s|#equipment-item-cancel[href="#{~p"/teams/#{team}/equipment"}"]|)
 
     lv
     |> form("#equipment-item-form", form: %{place: "new"})
@@ -86,6 +87,12 @@ defmodule Web.EquipmentItemFormLiveTest do
     assert has_element?(page, "#item-actions #item-delete", "Delete item")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{truck.id}/edit")
+
+    assert has_element?(
+             lv,
+             ~s|#equipment-item-cancel[href="#{~p"/teams/#{team}/equipment/#{truck.id}"}"]|
+           )
+
     refute has_element?(lv, ~s(#form_place option[value="Equipment:11"]))
     refute has_element?(lv, ~s(#form_place option[value="Equipment:10"]))
 

@@ -36,6 +36,7 @@ defmodule Web.EndorsementFormLiveTest do
   test "a name already in use is an error", %{conn: conn, team: team} do
     endorsement_fixture(team, %{name: "GSAR"})
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements/new")
+    assert has_element?(lv, ~s|#endorsement-cancel[href="#{~p"/teams/#{team}/endorsements"}"]|)
 
     html = lv |> form("#endorsement-form", endorsement: %{name: "GSAR"}) |> render_submit()
 
@@ -47,6 +48,7 @@ defmodule Web.EndorsementFormLiveTest do
     qualification = qualification_fixture(team)
     theirs = qualification_fixture(team_fixture())
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/endorsements/#{endorsement.id}")
+    refute has_element?(lv, "#endorsement-cancel")
 
     render_submit(lv, "add-qualification", %{"qualification-id" => qualification.id})
 

@@ -110,6 +110,12 @@ defmodule Web.ActivityEquipmentLive do
               >
                 Add {count_items(length(@lines))}
               </.button>
+              <.button
+                id="equipment-cancel"
+                navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
+              >
+                Cancel
+              </.button>
             </.form_actions>
           </.form>
           <p :if={@lines == []} id="equipment-nothing-to-add" class="hint">

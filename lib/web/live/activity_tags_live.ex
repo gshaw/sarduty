@@ -201,6 +201,12 @@ defmodule Web.ActivityTagsLive do
             <.button id="activity-tags-save" variant={:success} phx-disable-with="Saving…">
               Save tags
             </.button>
+            <.button
+              id="activity-tags-cancel"
+              navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
+            >
+              Cancel
+            </.button>
           </.form_actions>
         </.form>
       </main>
