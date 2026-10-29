@@ -15,6 +15,8 @@ defmodule App.Model.ChoreCategory do
     belongs_to :team, Team
     has_many :chore_category_tags, ChoreCategoryTag, on_replace: :delete
     field :title, TrimmedString
+    # What it covers, under its name on Log a chore. Optional.
+    field :description, TrimmedString
     field :hours, Ecto.Enum, values: [:primary, :secondary]
     field :archived_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
@@ -22,10 +24,11 @@ defmodule App.Model.ChoreCategory do
 
   def build_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:title, :hours])
+    |> cast(params, [:title, :description, :hours])
     |> validate_required([:title], message: "Enter a name for the category")
     |> validate_required([:hours], message: "Select which hours the chores count for")
     |> validate_length(:title, max: 100)
+    |> validate_length(:description, max: 120, message: "Keep it under 120 characters")
   end
 
   @doc "A team's chore categories by title, archived ones last, with their tags."

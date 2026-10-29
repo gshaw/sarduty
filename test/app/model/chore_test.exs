@@ -7,7 +7,7 @@ defmodule App.Model.ChoreTest do
   @today ~D[2026-11-05]
   @params %{
     "date" => "2026-10-28",
-    "minutes" => "60",
+    "time" => "1h",
     "chore_category_id" => "7",
     "description" => " Truck 2 tire pressures "
   }
@@ -39,15 +39,66 @@ defmodule App.Model.ChoreTest do
            ]
   end
 
-  test "minutes are 1 to a day, and the category is one it may have" do
-    assert errors(%{"minutes" => "0"}) == [minutes: "Enter minutes from 1 to 1440"]
-    assert errors(%{"minutes" => "1441"}) == [minutes: "Enter minutes from 1 to 1440"]
+  test "the time reads hours and minutes; a bare number is hours" do
+    for {text, minutes} <- [
+          {"45m", 45},
+          {"45 min", 45},
+          {"2h", 120},
+          {"2.5h", 150},
+          {"2.5 hours", 150},
+          {".25h", 15},
+          {"1h 30m", 90},
+          {"1h30", 90},
+          {"1:30", 90},
+          {"3", 180},
+          {" 1.5 ", 90},
+          {"2H", 120}
+        ],
+        do: assert(Chore.parse_time(text) == minutes, text)
+
+    for text <- ["", "abc", "1:75", "2h 30h", "-1", "1.5m"],
+        do: assert(Chore.parse_time(text) == nil, text)
+  end
+
+  test "the Time box shows minutes as parse_time/1 reads them back" do
+    for minutes <- [15, 60, 90, 150, 480, 1440],
+        do: assert(minutes |> Chore.time_text() |> Chore.parse_time() == minutes)
+
+    assert Chore.time_text(90) == "1h 30m"
+  end
+
+  test "the time is more than 0 and up to a day, and the category is one it may have" do
+    changeset = Chore.build_changeset(%Chore{}, @params, [7], @today)
+    assert Ecto.Changeset.get_change(changeset, :minutes) == 60
+
+    assert errors(%{"time" => "0"}) == [time: "Enter a time over 0"]
+    assert errors(%{"time" => "25h"}) == [time: "Enter up to 24h"]
+    assert errors(%{"time" => "30"}) == [time: "Enter 30m for minutes, or up to 24h"]
+    assert errors(%{"time" => "soon"}) == [time: "Enter the time like 45m, 2h, or 2.5h"]
+    assert errors(%{"time" => " "}) == [time: "Enter how long it took"]
     assert errors(%{"chore_category_id" => "8"}) == [chore_category_id: "Select a category"]
   end
 
+  test "a changed chore keeps its minutes until its time is sent, and a cleared time is an error" do
+    chore = %Chore{minutes: 90, time: "1h 30m"}
+
+    assert Chore.build_changeset(chore, %{"date" => "2026-10-28"}, [7], @today).changes == %{
+             date: ~D[2026-10-28]
+           }
+
+    changeset = Chore.build_changeset(%Chore{minutes: 90}, %{"time" => ""}, [7], @today)
+    assert changeset.errors[:time] == {"Enter how long it took", []}
+  end
+
+  test "what they did is one line, its spaces squeezed" do
+    params = Map.put(@params, "description", "Radio\n  programming")
+    changeset = Chore.build_changeset(%Chore{}, params, [7], @today)
+    assert Ecto.Changeset.get_change(changeset, :description) == "Radio programming"
+  end
+
   test "errors come in the form's order" do
-    fields = %{"date" => "", "description" => "", "minutes" => ""} |> errors() |> Keyword.keys()
-    assert fields == [:date, :minutes, :description]
+    fields = %{"date" => "", "description" => "", "time" => ""} |> errors() |> Keyword.keys()
+    assert fields == [:description, :date, :time]
   end
 
   test "declining needs a reason; accepting clears an old one" do

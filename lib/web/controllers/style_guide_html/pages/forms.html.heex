@@ -112,6 +112,38 @@
 
   <p class="spec">The checkbox list's markup, with radios. One answer, every choice in view.</p>
 
+  <h2 id="columns">Two columns</h2>
+  <div class="demo">
+    <div class="form-columns">
+      <fieldset>
+        <legend class="label mb-1">Category</legend>
+        <label class="choice mb-3">
+          <input type="radio" name="e-category" checked />
+          <span>Equipment maintenance <span class="hint block">Trucks, radios, and the yard</span></span>
+        </label>
+        <label class="choice mb-3">
+          <input type="radio" name="e-category" />
+          <span>Board work <span class="hint block">Meetings, minutes, and the AGM</span></span>
+        </label>
+      </fieldset>
+      <div>
+        <.input id="e-did" name="e-did" type="textarea" rows="3" label="What you did" value="" />
+        <div class="max-w-xs">
+          <.input id="e-time" name="e-time" label="Time" value="2.5h">
+            Like 45m, 2h, or 2.5h.
+            <:below>
+              <p class="hint mt-1">Reads as 2h 30m.</p>
+            </:below>
+          </.input>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="spec">
+    <code>.form-columns</code>: a long list of radios beside the form's other fields from 64rem, with its buttons under the second column. One column on a phone, the radios first. A line under a choice says what it covers. Log a chore uses it.
+  </p>
+
   <h2 id="file">File</h2>
   <div class="demo">
     <.label for="e-photo">New photo</.label>

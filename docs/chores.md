@@ -24,9 +24,19 @@ secondary), and other D4H tags, picked as on an activity's Change tags page.
 
 ## Logging and deciding
 
-A member logs a chore at `/teams/:subdomain/chores/new`: a date, minutes, a chore
-category, and what they did ([Chore](../lib/app/model/chore.ex),
+A member logs a chore at `/teams/:subdomain/chores/new`: a chore category, what they
+did, a date, and a time ([Chore](../lib/app/model/chore.ex),
 [SaveChore](../lib/app/operation/save_chore.ex)).
+
+- **The time is typed as people say it**: 45m, 2h, 2.5h, 1h 30m, or 1:30, read by
+  `Chore.parse_time/1` and stored as minutes. A bare number is hours, since most chores
+  take an hour or more; "30" asks for 30m. The form shows what it read. It used to be a
+  Minutes box, and members worked out 4.5 × 60 to log 270 (2026-10-28).
+- **Categories are radios, each with a line a team admin writes** about what it covers.
+  Members picked different categories for the same work, so the line says which is
+  which. On a wide screen they sit beside the other fields (`.form-columns`).
+- **Log and add another** saves and opens the form again on the same date and category.
+  Members often log 2 or 3 chores for one day.
 
 - **Each chore is its own row.** D4H gets one attendance per member per event, but SAR
   Duty keeps every chore with its date and minutes. No start time.

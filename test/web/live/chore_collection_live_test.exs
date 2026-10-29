@@ -27,7 +27,7 @@ defmodule Web.ChoreCollectionLiveTest do
       |> form("#chore-form",
         chore: %{
           date: Date.to_iso8601(today),
-          minutes: "90",
+          time: "1.5h",
           chore_category_id: category.id,
           description: "Truck 2 tire pressures"
         }
@@ -42,6 +42,43 @@ defmodule Web.ChoreCollectionLiveTest do
     assert has_element?(lv, "#stat-waiting", "1h 30m")
   end
 
+  test "Log and add another keeps the date and category for the next chore", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+    chore_category_fixture(team, %{title: "Board work", description: "Meetings and minutes"})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    assert has_element?(lv, "#chore-category-choices", "Meetings and minutes")
+
+    yesterday =
+      team.timezone |> then(&Service.Period.today(DateTime.utc_now(), &1)) |> Date.add(-1)
+
+    lv |> element("#chore-date-yesterday") |> render_click()
+    assert has_element?(lv, ~s{#chore_date[value="#{yesterday}"]})
+    refute has_element?(lv, "#chore-form", "Enter what you did")
+
+    lv |> form("#chore-form", chore: %{time: "2.5h"}) |> render_change()
+    assert has_element?(lv, "#chore-time-read", "Reads as 2h 30m.")
+
+    html =
+      lv
+      |> form("#chore-form",
+        chore: %{time: "2.5h", chore_category_id: category.id, description: "Radio  programming"}
+      )
+      |> render_submit(%{another: "true"})
+
+    assert html =~ "Logged Radio programming. Add the next one."
+    assert [%{minutes: 150, date: ^yesterday}] = Chore.get_all_for_member(member)
+    assert has_element?(lv, ~s{#chore_date[value="#{yesterday}"]})
+    assert has_element?(lv, ~s{#chore-category-choices input[value="#{category.id}"][checked]})
+    refute has_element?(lv, "#chore-time-read")
+  end
+
+  test "a time that reads as more than a day asks for minutes", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    html = lv |> form("#chore-form", chore: %{time: "30"}) |> render_change()
+    assert html =~ "Enter 30m for minutes, or up to 24h"
+    refute has_element?(lv, "#chore-time-read")
+  end
+
   test "a chore older than 60 days is refused", %{conn: conn, team: team, category: category} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     old = team.timezone |> then(&Service.Period.today(DateTime.utc_now(), &1)) |> Date.add(-61)
@@ -49,7 +86,7 @@ defmodule Web.ChoreCollectionLiveTest do
     html =
       lv
       |> form("#chore-form",
-        chore: %{date: old, minutes: "60", chore_category_id: category.id, description: "Old"}
+        chore: %{date: old, time: "1h", chore_category_id: category.id, description: "Old"}
       )
       |> render_submit()
 
@@ -69,7 +106,7 @@ defmodule Web.ChoreCollectionLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{waiting.id}/edit")
 
     lv
-    |> form("#chore-form", chore: %{minutes: "45"})
+    |> form("#chore-form", chore: %{time: "45m"})
     |> render_submit()
 
     assert Repo.get!(Chore, waiting.id).minutes == 45
@@ -94,7 +131,7 @@ defmodule Web.ChoreCollectionLiveTest do
 
     {:ok, _lv, html} =
       edit
-      |> form("#chore-form", chore: %{minutes: "45"})
+      |> form("#chore-form", chore: %{time: "45m"})
       |> render_submit()
       |> follow_redirect(conn)
 
