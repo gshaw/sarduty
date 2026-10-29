@@ -16,14 +16,15 @@ defmodule App.Adapter.D4H.EquipmentItem do
             location_title: nil,
             d4h_container_id: nil,
             d4h_member_id: nil,
-            expires_at: nil
+            expires_at: nil,
+            custom_values: %{}
 
   def build(record, kinds \\ %{}, locations \\ %{}) do
     place = place(record["location"])
 
     %__MODULE__{
       d4h_equipment_id: record["id"],
-      title: blank_to_nil(record["ref"]) || "Item #{record["id"]}",
+      title: title(record),
       item_type: String.downcase(record["type"] || "equipment"),
       kind: kind_title(record["kind"], kinds),
       status: String.downcase(record["status"] || "operational"),
@@ -33,9 +34,12 @@ defmodule App.Adapter.D4H.EquipmentItem do
       location_title: place[:location] && Map.get(locations, place[:location]),
       d4h_container_id: place[:container],
       d4h_member_id: place[:member],
-      expires_at: Parse.optional_datetime(record["dateExpires"])
+      expires_at: Parse.optional_datetime(record["dateExpires"]),
+      custom_values: Parse.custom_values(record["customFieldValues"])
     }
   end
+
+  defp title(record), do: blank_to_nil(record["ref"]) || "Item #{record["id"]}"
 
   defp place(%{"resourceType" => "EquipmentLocation", "id" => id}) when is_integer(id),
     do: %{location: id}

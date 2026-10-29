@@ -13,7 +13,8 @@ defmodule App.Adapter.D4H.Activity do
             started_at: nil,
             finished_at: nil,
             activity_kind: nil,
-            tags: []
+            tags: [],
+            custom_values: %{}
 
   def build(record) do
     build(record, nil)
@@ -34,7 +35,8 @@ defmodule App.Adapter.D4H.Activity do
       started_at: Parse.datetime(record["startsAt"]),
       finished_at: Parse.datetime(record["endsAt"]),
       activity_kind: Parse.activity_kind(record["resourceType"]),
-      tags: Parse.tag_ids(record["tags"], tag_index)
+      tags: Parse.tag_ids(record["tags"], tag_index),
+      custom_values: Parse.custom_values(record["customFieldValues"])
     }
   end
 

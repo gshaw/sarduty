@@ -3,11 +3,14 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
 
   import App.DataFixtures
 
+  alias App.Adapter.D4H
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
   alias App.Model.D4HChange
   alias App.Operation.RecordD4HChanges
+  alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
+  alias App.Operation.RefreshD4HData.UpsertCustomFields
   alias App.Operation.RefreshD4HData.UpsertGroupMemberships
   alias App.Operation.RefreshD4HData.UpsertMembers
 
@@ -196,5 +199,63 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
              :attendance,
              :award
            ]
+  end
+
+  describe "custom field values (#681)" do
+    defp d4h_activity(activity, custom_values) do
+      %D4H.Activity{
+        d4h_activity_id: activity.d4h_activity_id,
+        is_published: activity.is_published,
+        title: activity.title,
+        description: activity.description,
+        address: activity.address,
+        activity_kind: activity.activity_kind,
+        started_at: activity.started_at,
+        finished_at: activity.finished_at,
+        tags: activity.tags,
+        custom_values: custom_values
+      }
+    end
+
+    defp save_city_field(team) do
+      city = %D4H.CustomField{
+        d4h_custom_field_id: 888,
+        target: "incident",
+        title: "City – Reporting",
+        field_type: "single_choice",
+        options: [%{"id" => 1, "label" => "Surrey"}, %{"id" => 2, "label" => "Delta"}]
+      }
+
+      UpsertCustomFields.save(team.id, [city], @now)
+    end
+
+    test "the first copy is the baseline; a change after it is recorded by title", ctx do
+      save_city_field(ctx.team)
+      assert ctx.activity.custom_values == nil
+
+      RecordD4HChanges.recording(ctx.team, @now, fn ->
+        UpsertActivities.upsert(ctx.team.id, d4h_activity(ctx.activity, %{"888" => [1]}))
+      end)
+
+      assert Repo.all(D4HChange) == []
+
+      RecordD4HChanges.recording(ctx.team, @now, fn ->
+        UpsertActivities.upsert(
+          ctx.team.id,
+          d4h_activity(ctx.activity, %{"888" => [2], "454" => "PROS 1"})
+        )
+      end)
+
+      assert [change] = Repo.all(D4HChange)
+      assert change.fields == ["custom_values"]
+
+      assert change.old_value == %{
+               "custom_values" => %{"City – Reporting" => "Surrey", "Field 454" => nil}
+             }
+
+      assert change.new_value == %{
+               "custom_values" => %{"City – Reporting" => "Delta", "Field 454" => ~s("PROS 1")}
+             }
+    end
   end
 end

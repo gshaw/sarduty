@@ -20,10 +20,10 @@ refresh once a night as the safety net (#163).
   first 401 or 403 stops the syncs until a new key is saved in team settings or a nightly
   refresh gets past the key.
 - Opening the team dashboard queues one too, when the last sync is over 2 minutes old.
-- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 15 lists for
+- [SyncD4HChanges](../lib/app/operation/sync_d4h_changes.ex) asks each of the 16 lists for
   one row sorted by `updatedAt`, 4 at a time. That gives each list's total and newest
   change. If none moved since the last look (`teams.d4h_sync_state`), only the open
-  years' read below follows: 15 small requests and 3 pages.
+  years' read below follows: 16 small requests and 3 pages.
 - Every sync reads the open years' activities whole (#358): this year's, and last
   year's too from January to April ([Service.Period](../lib/service/period.ex)). D4H
   doesn't change an activity's `updatedAt` when its tags change, so the heads never see a
@@ -210,6 +210,12 @@ are copied to `location_bookmarks` by
   one transaction, keyed by D4H id. Archived bookmarks and ones D4H no longer has go.
 - D4H's API only reads bookmarks; a D4H team changes them in D4H. SAR Duty Records
   serves them in D4H's shape.
+
+## Custom fields
+
+D4H's custom fields (#681) are the sync's 16th list head: their definitions, copied to
+`custom_fields`. Their values ride on activities and equipment. SAR Duty Records has
+none and is never asked. See [custom-fields.md](custom-fields.md).
 
 ## Where the copy drifts
 

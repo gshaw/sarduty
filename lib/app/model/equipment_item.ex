@@ -25,6 +25,9 @@ defmodule App.Model.EquipmentItem do
     field :location_title, :string
     field :d4h_container_id, :integer
     field :expires_at, :utc_datetime
+    # D4H custom field values by D4H field id (#681): see App.Model.CustomField. Nil
+    # until the first refresh after they were added copies them.
+    field :custom_values, :map
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -41,7 +44,8 @@ defmodule App.Model.EquipmentItem do
     :d4h_location_id,
     :location_title,
     :d4h_container_id,
-    :expires_at
+    :expires_at,
+    :custom_values
   ]
 
   def fields, do: @fields

@@ -142,4 +142,16 @@ defmodule App.ViewData.ChangeHistoryTest do
              :activity
            ) == "Deleted"
   end
+
+  test "custom field values are named by title (#681)" do
+    assert describe_change(
+             %{
+               record_kind: :activity,
+               action: :changed,
+               fields: ["custom_values"],
+               new_value: %{"custom_values" => %{"Primary Cause" => "Dementia", "Area" => nil}}
+             },
+             :activity
+           ) == "Area cleared. Primary Cause changed to Dementia"
+  end
 end

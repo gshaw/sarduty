@@ -215,6 +215,16 @@ defmodule App.ViewData.ChangeHistory do
     end
   end
 
+  # Kept as text by field title (#681): see RecordD4HChanges.
+  defp activity_field("custom_values", c, _tz) do
+    (c.new_value["custom_values"] || %{})
+    |> Enum.sort()
+    |> Enum.map_join(". ", fn
+      {title, nil} -> "#{title} cleared"
+      {title, value} -> "#{title} changed to #{value}"
+    end)
+  end
+
   defp activity_field("deleted_at", c, _tz),
     do: if(c.new_value["deleted_at"], do: "Deleted", else: "Restored")
 

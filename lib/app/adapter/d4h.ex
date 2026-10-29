@@ -413,6 +413,23 @@ defmodule App.Adapter.D4H do
     fetch_all(context, "/tags", &D4H.Tag.build/1)
   end
 
+  @doc """
+  The team's custom fields and its organisation's (#681), archived ones too, for the
+  targets SAR Duty copies. SAR Duty Records has no custom fields, so it isn't asked.
+  """
+  def fetch_custom_fields(context) do
+    if custom_fields?(context) do
+      context
+      |> fetch_all("/custom-fields", &D4H.CustomField.build/1)
+      |> Enum.reject(&is_nil/1)
+    else
+      []
+    end
+  end
+
+  @doc "Whether the context's service has custom fields: D4H does, SAR Duty Records doesn't."
+  def custom_fields?(context), do: not records?(URI.parse(context.options.base_url).host)
+
   # The team names its own places, so its organization's bookmarks are left out (#614).
   @location_bookmarks [exclude_org_data: true]
 

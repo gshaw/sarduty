@@ -16,7 +16,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
             member-group-memberships equipment equipment-usages whiteboard
-            location-bookmarks)
+            location-bookmarks custom-fields)
 
   defp head(total, newest \\ @newest),
     do: %{"results" => [%{"updatedAt" => newest}], "totalSize" => total}
@@ -26,6 +26,13 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     team = team_fixture(Map.merge(%{d4h_access_key: "team-key"}, attrs))
     {:ok, at, 0} = DateTime.from_iso8601(@newest)
     heads = Map.new(@lists, &{&1, %{total_size: 10, newest_updated_at: at}})
+
+    # SAR Duty Records has no custom fields, so its head is always empty (#681).
+    heads =
+      if D4H.records?(team),
+        do: Map.put(heads, "custom-fields", %{total_size: 0, newest_updated_at: nil}),
+        else: heads
+
     SyncD4HChanges.save_heads(team, heads, DateTime.utc_now())
   end
 
@@ -33,12 +40,12 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   defp list_name(conn), do: conn.path_info |> List.last()
 
-  test "when nothing changed, a sync makes the 15 list checks and reads the open years" do
-    check_unchanged_sync(synced_team())
+  test "when nothing changed, a sync makes the 16 list checks and reads the open years" do
+    check_unchanged_sync(synced_team(), 19)
   end
 
-  test "a SAR Duty Records team's sync reads the open years too" do
-    check_unchanged_sync(synced_team(%{d4h_api_host: D4H.records_host()}))
+  test "a SAR Duty Records team's sync reads the open years too, and never asks for custom fields" do
+    check_unchanged_sync(synced_team(%{d4h_api_host: D4H.records_host()}), 18)
   end
 
   # D4H answers every head unchanged and each open year's read empty, telling the test.
@@ -55,12 +62,12 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     end)
   end
 
-  defp check_unchanged_sync(team) do
+  defp check_unchanged_sync(team, request_count) do
     stub_unchanged()
     Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
     assert perform(team) == :ok
 
-    requests = for _ <- 1..18, do: assert_receive({:d4h, _list, _params})
+    requests = for _ <- 1..request_count, do: assert_receive({:d4h, _list, _params})
     open_years = for {:d4h, list, %{"starts_after" => _}} <- requests, do: list
     assert Enum.sort(open_years) == ~w(events exercises incidents)
     refute_received {:d4h, _, _}

@@ -2,6 +2,7 @@ defmodule App.Operation.RecordD4HChanges do
   import Ecto.Query
 
   alias App.Model.ChangeSetRow
+  alias App.Model.CustomField
   alias App.Model.D4HChange
   alias App.Model.Group
   alias App.Model.Qualification
@@ -20,7 +21,7 @@ defmodule App.Operation.RecordD4HChanges do
   # Fields compared per kind. Anything else D4H sends, such as `updatedAt`, is noise.
   @tracked %{
     member: ~w(name position d4h_status d4h_permission joined_at left_at)a,
-    activity: ~w(title started_at finished_at is_published tags deleted_at)a,
+    activity: ~w(title started_at finished_at is_published tags custom_values deleted_at)a,
     attendance: ~w(status started_at finished_at duration_in_minutes)a,
     award: ~w(starts_at ends_at)a,
     group_membership: []
@@ -37,8 +38,9 @@ defmodule App.Operation.RecordD4HChanges do
   # Named in `fields` when they change, but their values are never kept.
   @contact_fields ~w(email phone address primary_emergency_contact secondary_emergency_contact)a
 
-  # Nil until the first sync copies them (#423). That fill is the baseline, not a change.
-  @filled_later ~w(primary_emergency_contact secondary_emergency_contact)a
+  # Nil until the first sync copies them (#423, #681). That fill is the baseline, not a
+  # change.
+  @filled_later ~w(primary_emergency_contact secondary_emergency_contact custom_values)a
 
   @doc """
   Runs `fun` with recording on for `team`. A team's first full refresh records nothing:
@@ -87,11 +89,37 @@ defmodule App.Operation.RecordD4HChanges do
     end
   end
 
+  # Custom field values (#681) are kept as text people read, by field title, and only
+  # for the fields that changed, since their ids and option ids mean nothing later.
+  defp describe_custom_values(%{fields: fields} = change, old, new) do
+    if "custom_values" in fields do
+      old_values = old.custom_values || %{}
+      new_values = new.custom_values || %{}
+      keys = Enum.uniq(Map.keys(old_values) ++ Map.keys(new_values))
+      ids = Enum.filter(keys, &(old_values[&1] != new_values[&1]))
+      index = CustomField.index(new.team_id)
+      tz = new.team_id |> Team.get!() |> Map.fetch!(:timezone)
+
+      %{
+        change
+        | old_value:
+            Map.put(change.old_value, "custom_values", describe(index, old_values, ids, tz)),
+          new_value:
+            Map.put(change.new_value, "custom_values", describe(index, new_values, ids, tz))
+      }
+    else
+      change
+    end
+  end
+
+  defp describe(index, values, ids, tz), do: CustomField.describe_values(index, values, ids, tz)
+
   defp changed?(field, nil, _new) when field in @filled_later, do: false
   defp changed?(_field, old, new), do: old != new
 
+  # A record added or removed whole keeps its fields, not its custom field values.
   defp whole(kind, action, side, record) do
-    values = values(record, Map.fetch!(@tracked, kind))
+    values = values(record, Map.fetch!(@tracked, kind) -- [:custom_values])
     Map.put(%{action: action, fields: [], old_value: nil, new_value: nil}, side, values)
   end
 
@@ -115,7 +143,7 @@ defmodule App.Operation.RecordD4HChanges do
          record = new || old,
          false <- own_write?(run, kind, change, record) do
       run
-      |> build(kind, change, record, opts)
+      |> build(kind, describe_custom_values(change, old, new), record, opts)
       |> D4HChange.insert!()
     end
 

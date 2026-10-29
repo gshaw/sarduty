@@ -18,7 +18,8 @@ defmodule App.Operation.SyncD4HChanges do
   The whiteboard (#515) is the 14th list. A team with its module off answers 403, which
   reads as an empty list here, never as a rejected key. While the team's whiteboard is
   off, the sync skips it and the nightly refresh tries again. Location bookmarks (#614)
-  are the 15th.
+  are the 15th, and custom fields (#681) the 16th: their definitions only, since the
+  values ride on the activities and equipment. SAR Duty Records has none, and isn't asked.
   """
 
   import Ecto.Query
@@ -34,6 +35,7 @@ defmodule App.Operation.SyncD4HChanges do
   alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
   alias App.Operation.RefreshD4HData.UpsertAwardDocuments
+  alias App.Operation.RefreshD4HData.UpsertCustomFields
   alias App.Operation.RefreshD4HData.UpsertEquipmentItems
   alias App.Operation.RefreshD4HData.UpsertEquipmentUsages
   alias App.Operation.RefreshD4HData.UpsertGroupMemberships
@@ -51,7 +53,7 @@ defmodule App.Operation.SyncD4HChanges do
   @lists ~w(members tags exercises events incidents attendance member-qualifications
             member-qualification-awards award-documents member-groups
             member-group-memberships equipment equipment-usages whiteboard
-            location-bookmarks)
+            location-bookmarks custom-fields)
 
   # A D4H team may not have the equipment module (#271).
   @equipment_lists ~w(equipment equipment-usages)
@@ -62,7 +64,7 @@ defmodule App.Operation.SyncD4HChanges do
   # Fetched whole when they change, in this order, since later ones point at earlier ones.
   # Equipment usages come after activities, in apply_plan/5, so a new activity's usages
   # aren't skipped.
-  @small_lists ~w(members member-qualifications member-qualification-awards award-documents
+  @small_lists ~w(custom-fields members member-qualifications member-qualification-awards award-documents
                   member-groups member-group-memberships equipment equipment-usages
                   whiteboard location-bookmarks)
 
@@ -231,6 +233,10 @@ defmodule App.Operation.SyncD4HChanges do
   defp fetch_head(d4h, "location-bookmarks"),
     do: D4H.fetch_list_head(d4h, "/location-bookmarks", D4H.location_bookmark_params())
 
+  defp fetch_head(d4h, "custom-fields") do
+    if D4H.custom_fields?(d4h), do: D4H.fetch_list_head(d4h, "/custom-fields"), else: @empty_head
+  end
+
   defp fetch_head(d4h, list), do: D4H.fetch_list_head(d4h, "/" <> list)
 
   @doc """
@@ -363,6 +369,8 @@ defmodule App.Operation.SyncD4HChanges do
 
   defp upsert_rows(team, rows, changed?),
     do: Enum.reduce(rows, changed?, &(UpsertActivities.upsert(team.id, &1) == :changed or &2))
+
+  defp fetch_list("custom-fields", d4h, team, _progress), do: UpsertCustomFields.call(d4h, team)
 
   defp fetch_list("members", d4h, team, progress), do: UpsertMembers.call(d4h, team, progress)
 
