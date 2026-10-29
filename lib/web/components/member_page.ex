@@ -3,7 +3,7 @@ defmodule Web.Components.MemberPage do
   The frame of every tab of a member's page: the header, the tabs, and the sidebar
   around the tab's own content. Members open three tabs (#440), and the frame takes
   `team_admin?` once and decides what they see: no View as member, no Equipment, Standing,
-  ID card, or History tab, and no contact details or Actions.
+  ID card, Fields, or History tab, and no contact details or Actions.
   """
   use Web, :function_component
 
@@ -22,7 +22,11 @@ defmodule Web.Components.MemberPage do
   attr :milestones, :list, required: true, doc: "from load_sidebar/1"
   attr :equipment, :list, required: true, doc: "from load_sidebar/1"
   attr :maps_app, :string, required: true, doc: "the account's maps_app"
-  attr :field_rows, :list, default: [], doc: "the member fields, from load_sidebar/1"
+
+  attr :field_rows, :list,
+    default: [],
+    doc: "the member fields, from load_sidebar/1; Fields shows when there are any"
+
   attr :team_admin?, :boolean, default: false
 
   attr :current_member, :any,
@@ -61,6 +65,7 @@ defmodule Web.Components.MemberPage do
       member={@member}
       active_tab={@tab}
       equipment={@equipment}
+      fields?={@field_rows != []}
       team_admin?={@team_admin?}
     />
     <div class="content-wrapper">
@@ -70,7 +75,6 @@ defmodule Web.Components.MemberPage do
           maps_app={@maps_app}
           milestones={@milestones}
           team_admin?={@team_admin?}
-          field_rows={@field_rows}
         />
       </aside>
       <main class="content-2/3">

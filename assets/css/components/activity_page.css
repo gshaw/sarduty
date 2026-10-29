@@ -1,9 +1,9 @@
 /* The activity page (activity_live.ex): its sidebar in two parts. A phone shows the
-   facts, then the main column, then the custom fields and Actions. Wider, both parts
-   stack on the right as one sidebar. */
+   facts, then the main column, then Actions. Wider, both parts stack on the right as one
+   sidebar. */
 @layer components {
   .activity-columns { display: grid; grid-template-columns: minmax(0, 1fr); }
-  /* On a phone the fields follow the main column, so they need a section's space. */
+  /* On a phone Actions follow the main column, so they need a section's space. */
   .activity-columns-end { margin-top: var(--sp-8); }
   @media (width >= 48rem) {
     .activity-columns {

@@ -163,7 +163,8 @@ mockups, are on #645.
   Your membership, and that link is current there; a team admin's sits under
   Certificates (#645). Audited 2026-10-28: Whiteboard, Templates, Endorsements, and Tax
   credit letters are sections of their own, so their pages have no trail.
-  A record's tabs sit under its title, above both columns.
+  A record's tabs sit under its title, above both columns. An activity's and an
+  equipment item's sit in the main column, under what the record is.
 - Below 1024px the side navigation hides (#471). The Menu button moves to the left of the
   bar, the logo sits over the area's name in the middle, and your avatar stays on the
   right with the same account menu. The switcher stays on the name, with a chevron, and

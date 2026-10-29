@@ -9,14 +9,28 @@ defmodule Web.Components.MemberTabs do
 
   attr :active_tab, :atom,
     required: true,
-    values: [:attendance, :qualifications, :groups, :equipment, :standing, :card, :history]
+    values: [
+      :attendance,
+      :qualifications,
+      :groups,
+      :equipment,
+      :standing,
+      :card,
+      :fields,
+      :history
+    ]
+
+  attr :fields?, :boolean,
+    default: false,
+    doc: "whether the member has a field the team copies; Fields shows when they do"
 
   attr :team_admin?, :boolean,
     default: false,
-    doc: "adds Equipment, Standing, ID card, and History"
+    doc: "adds Equipment, Standing, ID card, Fields, and History"
 
-  # Standing, ID card, and History are team admins' own records (#440), and the team's
-  # equipment pages are theirs too. A member sees what they hold on Your membership.
+  # Standing, ID card, Fields, and History are team admins' own records (#440, #681), and
+  # the team's equipment pages are theirs too. A member sees what they hold, and their
+  # own fields, on Your membership.
   def member_tabs(assigns) do
     ~H"""
     <.tabs label="Member">
@@ -58,6 +72,13 @@ defmodule Web.Components.MemberTabs do
         current={@active_tab == :card}
       >
         ID card
+      </:tab>
+      <:tab
+        :if={@team_admin? and (@fields? or @active_tab == :fields)}
+        navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields"}
+        current={@active_tab == :fields}
+      >
+        Fields
       </:tab>
       <:tab
         :if={@team_admin?}

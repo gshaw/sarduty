@@ -34,21 +34,25 @@ ones, edit them, and later fill them from templates (#307).
 ## Where they show
 
 [CustomField.rows/4](../lib/app/model/custom_field.ex) picks what a page shows, and
-[CustomFields](../lib/web/components/custom_fields.ex) shows it as a detail list.
+[CustomFields](../lib/web/components/custom_fields.ex) shows it.
 
-Every record's sidebar runs the same way: its facts, then its custom fields under a
-small caps label named for the kind ("INCIDENT FIELDS"), then Actions (decided
-2026-10-28). The label sits on the rows' usual rule, with no heavier rule and no
-heading: Actions starting says where the fields end.
+A record's custom fields are its **Fields tab**, `/fields`, a table with each field's
+name beside its value (decided 2026-10-28, #705). They were in the sidebar, after the
+facts, until a BC incident's 27 ran it 3 screens long and pushed Actions to the bottom.
+So every record's sidebar is its facts, then Actions. The tab shows only when the record
+has a field to show, as a member's Equipment tab shows only when they hold something,
+so a Records team, which has no custom fields, sees no change. It's named Fields, not
+"Incident fields": the page already says what the record is, and the name doesn't change
+with the kind.
 
-- **An activity's page** shows every field with a value, in D4H's order. Team admins
-  also see RESTRICTED fields, and on a draft incident each required field left empty,
-  marked Missing ([below](#missing-required-fields)). Members see the rest, as they
-  see tags. On a phone the facts come before the description and Members, and the
-  fields and Actions after.
-- **An equipment item's page**, for team admins, has Equipment fields.
-- **A member's page**, for team admins, has Member fields, after contact details and
-  before Milestones.
+- **An activity's** Fields tab, after Members and Equipment, shows every field with a
+  value, in D4H's order. Team admins also see RESTRICTED fields, and on a draft incident
+  each required field left empty, marked Missing ([below](#missing-required-fields)):
+  the missing ones come first, under "9 of 19 needed to publish are empty.", and the
+  tab's name carries the count in amber. Members see the rest, as they see tags.
+- **An equipment item's**, for team admins: its page gets Activities and Fields tabs,
+  in the main column under what's inside it.
+- **A member's**, for team admins, before History.
   A member sees their own on Your membership's Contact details, only the ones D4H lets
   a member see (`member_privacy` viewable or editable). Members never see another
   member's.
@@ -57,7 +61,7 @@ heading: Actions starting says where the fields end.
 
 D4H won't publish an incident until its required fields are filled in. So a required
 field left empty is flagged only on a draft incident (`Activity.flag_missing_fields?/1`,
-decided 2026-10-28): the activity page marks it Missing for team admins, and Needs
+decided 2026-10-28): the activity's Fields tab marks it Missing for team admins, and Needs
 attention lists finished drafts with one, "2 draft activities are missing required
 fields", linking to Activities with Required fields: Missing
 (`Activity.missing_required_fields/1`, the same rule as a query). A published incident

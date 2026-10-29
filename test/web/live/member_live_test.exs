@@ -336,9 +336,26 @@ defmodule Web.MemberLiveTest do
     custom_field_fixture(team, %{d4h_custom_field_id: 631, target: "member", title: "Not copied"})
     member = member_fixture(team, %{custom_values: %{"630" => "SF 12"}})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+    conn = log_in_user(conn, user)
 
+    # Not in the sidebar (#705): a Fields tab.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}")
+    refute has_element?(lv, "#member-fields")
+    assert has_element?(lv, "nav.tabs a[href$='/fields']", "Fields")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/fields")
+    assert has_element?(lv, "nav.tabs a[aria-current=page]", "Fields")
     assert has_element?(lv, "#member-fields-630", "SF 12")
     refute has_element?(lv, "#member-fields-631")
+  end
+
+  test "a member with no copied field has no Fields tab", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}")
+
+    assert has_element?(lv, "nav.tabs", "History")
+    refute has_element?(lv, "nav.tabs a[href$='/fields']")
   end
 end

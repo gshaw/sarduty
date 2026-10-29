@@ -15,8 +15,8 @@ enforces the top-level list and the held URLs.
 - **A record's page only shows it; `/edit` changes its fields and `/delete` deletes
   it**, each on its own page with its own Actions link (decided 2026-10-28). A group or
   qualification is only a title, so its link says Rename, but the path is still
-  `/edit`. An activity's tabs are `/activities/:id` (Members), `/equipment`, and
-  `/history`; adding goes under the tab it adds to, `/equipment/add` and
+  `/edit`. An activity's tabs are `/activities/:id` (Members), `/equipment`, `/fields`,
+  and `/history`, a member's and an equipment item's custom fields are `/fields` too; adding goes under the tab it adds to, `/equipment/add` and
   `/members/add`.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names

@@ -39,10 +39,10 @@ defmodule Web.ActivityLive do
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
   # until the start (#444). Under the description, tabs: Members lists who is invited
-  # and how they replied, filtered by `?view=`; Equipment what was used; and History,
-  # for team admins. Team admins also get Take attendance, Actions, and the links to
-  # member and equipment pages. A member never gets an activity D4H has deleted; a team
-  # admin sees it under a banner.
+  # and how they replied, filtered by `?view=`; Equipment what was used; Fields its D4H
+  # custom fields, when it has any (#705); and History, for team admins. Team admins
+  # also get Take attendance, Actions, and the links to member and equipment pages. A
+  # member never gets an activity D4H has deleted; a team admin sees it under a banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
@@ -66,6 +66,7 @@ defmodule Web.ActivityLive do
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),
         field_rows: field_rows(team, activity, team_admin?),
+        required_fields: required_fields(team, activity, team_admin?),
         replier: Reply.replier(socket.assigns, now),
         members_view: view_status(params["view"])
       )
@@ -76,6 +77,7 @@ defmodule Web.ActivityLive do
 
   defp page_title(activity, :members), do: activity.title
   defp page_title(activity, :equipment), do: "#{activity.title} · Equipment"
+  defp page_title(activity, :fields), do: "#{activity.title} · Fields"
   defp page_title(activity, :history), do: "#{activity.title} · History"
 
   # Who is invited and how they replied, again after a reply.
@@ -188,6 +190,22 @@ defmodule Web.ActivityLive do
     )
   end
 
+  # The required fields left empty, for the Fields tab's count, or nil when there are none.
+  defp missing_count(rows) do
+    case Enum.count(rows, & &1.missing?) do
+      0 -> nil
+      count -> count
+    end
+  end
+
+  # How many of the fields the viewer sees D4H needs to publish, for the Fields tab's
+  # count of the missing ones.
+  defp required_fields(team, activity, team_admin?) do
+    team.id
+    |> CustomField.get_all(activity.activity_kind)
+    |> Enum.count(&(&1.required and (team_admin? or not &1.restricted)))
+  end
+
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
@@ -258,6 +276,15 @@ defmodule Web.ActivityLive do
             Equipment
           </:tab>
           <:tab
+            :if={@field_rows != [] or @tab == :fields}
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields"}
+            current={@tab == :fields}
+          >
+            Fields<.badge :if={missing = missing_count(@field_rows)} kind={:warning}>
+              {missing}
+            </.badge>
+          </:tab>
+          <:tab
             :if={@team_admin?}
             navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
             current={@tab == :history}
@@ -285,6 +312,12 @@ defmodule Web.ActivityLive do
           usages={@usages}
           team_admin?={@team_admin?}
         />
+        <.custom_fields_table
+          :if={@tab == :fields}
+          id="activity-fields"
+          rows={@field_rows}
+          required={@required_fields}
+        />
         <.change_history
           :if={@tab == :history}
           id="activity-history"
@@ -295,7 +328,6 @@ defmodule Web.ActivityLive do
       <aside id="activity-sidebar-end" class="activity-columns-end">
         <.sidebar_end
           activity={@activity}
-          field_rows={@field_rows}
           team_admin?={@team_admin?}
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
@@ -399,12 +431,11 @@ defmodule Web.ActivityLive do
   end
 
   attr :activity, :map, required: true
-  attr :field_rows, :list, required: true
   attr :team_admin?, :boolean, default: false
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
 
-  # Every record's sidebar ends the same way: its custom fields, then Actions.
+  # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705).
   def sidebar_end(assigns) do
     # A team admin's actions read or write the activity in D4H, which no longer has a
     # deleted one. A Records team has no D4H to open.
@@ -415,12 +446,6 @@ defmodule Web.ActivityLive do
       )
 
     ~H"""
-    <.custom_fields
-      id="activity-fields"
-      title={"#{String.capitalize(@activity.activity_kind)} fields"}
-      rows={@field_rows}
-      sidebar
-    />
     <dl>
       <dt :if={@admin_actions? or @d4h?}>Actions</dt>
       <dd :if={@admin_actions? or @d4h?}>
