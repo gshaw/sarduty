@@ -392,6 +392,28 @@ defmodule App.Model.Activity do
     )
   end
 
+  @doc """
+  Activities with a required D4H custom field of their kind left empty (#681). One whose
+  values aren't copied yet is left out: nil isn't known to be missing anything.
+  """
+  def missing_required_fields(query) do
+    where(
+      query,
+      [r],
+      not is_nil(r.custom_values) and
+        fragment(
+          """
+          EXISTS (SELECT 1 FROM custom_fields f
+          WHERE f.team_id = ? AND f.target = ? AND f.required AND f.archived_at IS NULL
+          AND json_extract(?, '$."' || f.d4h_custom_field_id || '"') IS NULL)
+          """,
+          r.team_id,
+          r.activity_kind,
+          r.custom_values
+        )
+    )
+  end
+
   @doc "Activities that carry the tag titled `title`."
   def tagged(query, title),
     do:

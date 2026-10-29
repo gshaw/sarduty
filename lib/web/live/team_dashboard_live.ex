@@ -421,6 +421,9 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :drafts}),
     do: ~p"/teams/#{team}/activities?status=draft&when=recent&sort=date-"
 
+  defp attention_path(team, %{key: :missing_fields}),
+    do: ~p"/teams/#{team}/activities?status=draft&fields=missing&when=past&sort=date-"
+
   defp attention_path(team, %{key: :expiring}),
     do: ~p"/teams/#{team}/qualifications?view=expiring"
 

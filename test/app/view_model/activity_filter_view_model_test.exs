@@ -73,4 +73,21 @@ defmodule App.ViewModel.ActivityFilterViewModelTest do
       assert titles(team, %{"activity" => "chores"}) == ["Chores: Equipment maintenance"]
     end
   end
+
+  test "Required fields: Missing keeps the activities with a required field left empty (#681)" do
+    team = team_fixture()
+    custom_field_fixture(team, %{d4h_custom_field_id: 454, required: true})
+
+    activity_fixture(team, %{title: "Missing file", activity_kind: "incident", custom_values: %{}})
+
+    activity_fixture(team, %{
+      title: "Filled",
+      activity_kind: "incident",
+      custom_values: %{"454" => "1"}
+    })
+
+    assert titles(team, %{"fields" => "missing"}) == ["Missing file"]
+    assert team |> titles(%{}) |> Enum.sort() == ["Filled", "Missing file"]
+    assert {:error, _} = ActivityFilterViewModel.validate(%{"fields" => "nope"})
+  end
 end

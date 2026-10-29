@@ -23,6 +23,7 @@ defmodule App.ViewData.TeamAttention do
     [
       refresh_item(rows.refresh, rows.service),
       drafts_item(rows.draft_count, rows.service),
+      missing_fields_item(rows.missing_fields_count, rows.service),
       expiring_item(rows.expiring_count, rows.expiring_days, rows.service),
       missing_details_item(rows.missing_details_count, rows.service),
       not_seen_item(rows.not_seen),
@@ -100,6 +101,26 @@ defmodule App.ViewData.TeamAttention do
           many: "Check their attendance, then publish them in #{name}."
         ),
       action: "Show drafts"
+    }
+  end
+
+  defp missing_fields_item(0, _service), do: nil
+
+  defp missing_fields_item(count, service) do
+    %{
+      key: :missing_fields,
+      level: :warning,
+      title:
+        Format.count(count,
+          one: "%d draft activity is missing required fields",
+          many: "%d draft activities are missing required fields"
+        ),
+      detail:
+        Format.count(count,
+          one: "#{D4H.service_name(service)} won't publish it until they're filled in.",
+          many: "#{D4H.service_name(service)} won't publish them until they're filled in."
+        ),
+      action: "Show activities"
     }
   end
 

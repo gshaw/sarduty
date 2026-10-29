@@ -46,6 +46,14 @@ ones, edit them, and later fill them from templates (#307).
   a member see (`member_privacy` viewable or editable). Members never see another
   member's.
 
+## Missing required fields
+
+D4H won't publish an activity until its required fields are filled in. Needs
+attention lists finished drafts with one left empty, "2 draft activities are missing
+required fields", and links to Activities with Required fields: Missing
+(`Activity.missing_required_fields/1`). An activity whose values aren't copied yet
+isn't counted. Records teams have no fields, so the filter isn't shown for them.
+
 ## How fresh it is
 
 D4H doesn't change a record's `updatedAt` when only its custom field values change

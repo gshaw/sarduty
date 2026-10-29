@@ -155,4 +155,26 @@ defmodule App.ViewData.TeamDashboardViewDataTest do
       assert TeamDashboardViewData.attendance_to_send(team, @now) == []
     end
   end
+
+  test "counts finished drafts missing a required field, not published or coming ones (#681)" do
+    team = team_fixture()
+    custom_field_fixture(team, %{d4h_custom_field_id: 454, required: true})
+    past = DateTime.add(@now, -2, :day)
+    later = DateTime.add(@now, 2, :day)
+
+    for {published, started_at} <- [{false, past}, {true, past}, {false, later}] do
+      activity_fixture(team, %{
+        activity_kind: "incident",
+        is_published: published,
+        started_at: started_at,
+        finished_at: DateTime.add(started_at, 1, :hour),
+        custom_values: %{}
+      })
+    end
+
+    items = TeamDashboardViewData.attention_items(team, @now)
+
+    assert %{title: "1 draft activity is missing required fields"} =
+             Enum.find(items, &(&1.key == :missing_fields))
+  end
 end
