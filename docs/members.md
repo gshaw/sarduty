@@ -57,9 +57,9 @@ Retiring is its own steps ([Retiring](#retiring)). Adding a member is a Records 
 only ([records.md](records.md#editing-records)).
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
-  across 93 members. The box suggests the team's roles, most held first
-  (`Member.roles/1`), from a `<datalist>`, and still takes a new one. Its x empties it, as a combobox's does. The combobox can't:
-  it is a select, which takes only its options. D4H's structured `roleId` is not copied.
+  across 93 members. Role is the combobox with `free_text`: it lists the team's roles,
+  most held first (`Member.roles/1`), the way a filter's combobox lists its options, and
+  still takes a new one. D4H's structured `roleId` is not copied.
 - **Email** decides who can log in: SAR Duty matches a login to a member by email, so
   its hint says so. Changing it moves the login to the new address.
 

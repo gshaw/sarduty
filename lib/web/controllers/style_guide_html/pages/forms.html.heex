@@ -6,9 +6,6 @@
   <ul>
     <li>Text input: a short answer people type, such as a name.</li>
     <li>Select: one answer from a long list, such as a time zone.</li>
-    <li>
-      Text input with suggestions: a short answer people usually pick from what the team already uses, but may type new, such as a role.
-    </li>
     <li>Radios: one answer from a few choices people should see side by side.</li>
     <li>
       Checkboxes: a yes or no setting in a form with a save button, or any number of things from a list.
@@ -182,23 +179,6 @@
   <p class="spec">
     The input's <code>below</code>
     slot: what the box read, or buttons that fill it, such as Today and Yesterday under a date. Log a chore uses both.
-  </p>
-
-  <h2 id="suggestions">Suggestions</h2>
-  <div class="demo">
-    <div class="max-w-xs">
-      <.input
-        id="e-role"
-        name="e-role"
-        label="Role (optional)"
-        value="GSTL"
-        suggestions={["MIT", "GSTL", "Search Manager"]}
-      />
-    </div>
-  </div>
-  <p class="spec">
-    The input's <code>suggestions</code>: a <code>&lt;datalist&gt;</code>
-    the browser lists as people type, most used first. It still takes any text, so a new answer needs no other box. The x empties it, as a combobox's does, once it has text. A combobox takes only its options. Change details uses it for Role.
   </p>
 
   <h2 id="file">File</h2>

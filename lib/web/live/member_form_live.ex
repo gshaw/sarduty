@@ -57,7 +57,13 @@ defmodule Web.MemberFormLive do
       <.input field={@form[:name]} label="Name" />
       <div class="grid grid-cols-2 gap-x-6">
         <.input field={@form[:ref_id]} label="ID (optional)" />
-        <.input field={@form[:position]} label="Role (optional)" suggestions={@roles} />
+        <.input
+          field={@form[:position]}
+          type="combobox"
+          label="Role (optional)"
+          options={@roles}
+          free_text
+        />
       </div>
       <.input field={@form[:email]} type="email" label="Email (optional)">
         Logging in to SAR Duty uses this email. Tax credit letters go to it too.

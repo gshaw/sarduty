@@ -305,9 +305,6 @@ defmodule Web.Components.Core do
 
     * `type="checkbox"` is used exclusively to render boolean values
 
-    * `suggestions` on a text box offers what to type, and still takes any text. A
-      combobox takes only its options. See /styles/forms
-
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
 
   See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
@@ -354,9 +351,9 @@ defmodule Web.Components.Core do
     default: nil,
     doc: "added to the field's wrapper, such as `field-missing` (#705)"
 
-  attr :suggestions, :list,
-    default: [],
-    doc: "for a text box: values the browser offers as people type, from a `<datalist>`"
+  attr :free_text, :boolean,
+    default: false,
+    doc: "for a combobox: sends the typed text, with the options as suggestions"
 
   slot :inner_block
   slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
@@ -465,6 +462,7 @@ defmodule Web.Components.Core do
         options={@options}
         prompt={@prompt}
         clearable={@clearable}
+        free_text={@free_text}
         class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       />
@@ -565,38 +563,6 @@ defmodule Web.Components.Core do
     """
   end
 
-  # A text box with suggestions: the browser lists them as people type, and any text still
-  # goes. The x empties it, as a combobox's does; the Suggestions hook shows it once there
-  # is text. See /styles/forms.
-  def input(%{suggestions: [_ | _]} = assigns) do
-    ~H"""
-    <div class={["mb-6", @errors != [] && "field-error", @field_class]}>
-      <.label :if={@label != nil} for={@id}>{@label}{render_slot(@label_end)}</.label>
-      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
-      <.error :for={msg <- @errors}>{msg}</.error>
-      <div id={"#{@id}-suggest"} class="combobox-input suggestions" phx-hook="Suggestions">
-        <input
-          type={@type}
-          name={@name}
-          id={@id}
-          value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-          class={[@errors != [] && "is-invalid", @class]}
-          list={"#{@id}-suggestions"}
-          autocomplete="off"
-          {@rest}
-        />
-        <button type="button" id={"#{@id}-clear"} class="combobox-clear" aria-label="Clear">
-          <.icon name="x" />
-        </button>
-      </div>
-      <datalist id={"#{@id}-suggestions"}>
-        <option :for={suggestion <- @suggestions} value={suggestion}></option>
-      </datalist>
-      {render_slot(@below)}
-    </div>
-    """
-  end
-
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -656,8 +622,9 @@ defmodule Web.Components.Core do
   are the same as for a select. `options` take `options_for_select/2`'s shape, so
   `{group, [{name, value}]}` lists the options under a heading per group. `<.input
   type="combobox">` adds the label; use this one where the field has an aria-label
-  instead. `size={:sm}` is for a row of small controls. The x at its end clears it. See
-  /styles/combobox.
+  instead. `size={:sm}` is for a row of small controls. The x at its end clears it.
+  `free_text` is for an answer people may type new, such as a role: the text box itself is
+  the field, and the options only suggest. See /styles/combobox.
 
   ## Examples
 
@@ -666,6 +633,9 @@ defmodule Web.Components.Core do
 
       <.combobox id="target" name="target" size={:sm} options={@options}
         aria-label="Group or endorsement" />
+
+      <.input type="combobox" field={@form[:position]} label="Role" free_text
+        options={@roles} />
   """
   attr :id, :string, required: true, doc: "the text box's id, for its label"
   attr :name, :string, required: true
@@ -680,6 +650,10 @@ defmodule Web.Components.Core do
     default: false,
     doc: "lists the prompt first, so picking it empties the value, as a filter's All"
 
+  attr :free_text, :boolean,
+    default: false,
+    doc: "the text box is the field and takes any text; the options only suggest"
+
   # Not "name": Safari offers contacts to a field whose placeholder says it.
   attr :placeholder, :string, default: "Type to search"
   attr :size, :atom, values: [:md, :sm], default: :md
@@ -693,8 +667,17 @@ defmodule Web.Components.Core do
       class={["combobox", @size == :sm && "input-sm", @class]}
       phx-hook="Combobox"
       data-clearable={@clearable}
+      data-free-text={@free_text}
     >
-      <select id={"#{@id}-select"} name={@name} class="hidden" tabindex="-1" aria-hidden="true">
+      <%!-- With free text the select only holds the suggestions and the text box is sent.
+        Its blank placeholder lets the CSS hide the x while it is empty. --%>
+      <select
+        id={"#{@id}-select"}
+        name={!@free_text && @name}
+        class="hidden"
+        tabindex="-1"
+        aria-hidden="true"
+      >
         <option value="">{@prompt}</option>
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
@@ -703,12 +686,14 @@ defmodule Web.Components.Core do
           <input
             type="text"
             id={@id}
+            name={@free_text && @name}
+            value={@free_text && @value}
             role="combobox"
             aria-autocomplete="list"
             aria-expanded="false"
             aria-controls={"#{@id}-listbox"}
             autocomplete="off"
-            placeholder={@placeholder}
+            placeholder={if @free_text, do: " ", else: @placeholder}
             class={@size == :sm && "input-sm"}
             {@rest}
           />

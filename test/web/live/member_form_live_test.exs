@@ -183,10 +183,12 @@ defmodule Web.MemberFormLiveTest do
       assert has_element?(page, "#member-actions #member-edit")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
-      assert has_element?(lv, "#form_position[list=form_position-suggestions]")
-      assert has_element?(lv, "#form_position-suggest[phx-hook=Suggestions] #form_position-clear")
-      assert has_element?(lv, "#form_position-suggestions option:first-child[value=MIT]")
-      assert has_element?(lv, "#form_position-suggestions option[value=GSTL]")
+      # The combobox with free text: the text box is the field, the select only suggests.
+      assert has_element?(lv, "#form_position-combobox[data-free-text] #form_position-clear")
+      assert has_element?(lv, "input#form_position[name='form[position]'][value=MIT]")
+      refute has_element?(lv, "#form_position-select[name]")
+      assert has_element?(lv, "#form_position-select option:nth-child(2)[value=MIT]")
+      assert has_element?(lv, "#form_position-select option[value=GSTL]")
       refute has_element?(lv, "#form_team_admin")
       refute has_element?(lv, "#member-photo")
       refute has_element?(lv, "#member-retire")

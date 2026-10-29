@@ -3,7 +3,10 @@
 // phx-update="ignore". Typing lists the select's options that contain every word typed;
 // picking one sets the select and fires its input event, so phx-change still runs. A
 // clearable one, a filter's, lists the empty option first, as All. The x empties the text
-// box and the select, and lists every option again. The ARIA follows the
+// box and the select, and lists every option again. A free-text one (data-free-text), such
+// as a member's role, has no picked option: the text box is the field, and its options only
+// suggest. Picking one fills the box, and nothing is highlighted until the arrow keys move,
+// so Enter keeps what was typed. The ARIA follows the
 // WAI combobox pattern: focus stays in the text box and aria-activedescendant names the
 // highlighted option.
 export const Combobox = {
@@ -12,12 +15,18 @@ export const Combobox = {
     this.input = this.el.querySelector("input[role=combobox]")
     this.list = this.el.querySelector("[role=listbox]")
     this.clearable = this.el.hasAttribute("data-clearable")
+    this.freeText = this.el.hasAttribute("data-free-text")
     this.active = -1
     this.syncText()
 
     // The text box has no name: keep its typing out of the form's phx-change.
     for (const type of ["input", "change"]) {
       this.input.addEventListener(type, event => {
+        if (this.freeText) {
+          // Its own input events, from a pick or the x, go to the form and leave the list be.
+          if (type === "input" && event.isTrusted) this.open()
+          return
+        }
         event.stopPropagation()
         if (type !== "input") return
         if (this.input.value !== this.selectedLabel()) this.select.value = ""
@@ -85,7 +94,10 @@ export const Combobox = {
 
   // all: list every option, not just those matching the text, as when the box is clicked.
   open(all = false) {
-    this.render(all && this.input.value === this.selectedLabel() ? "" : this.input.value)
+    const showAll = all && (this.freeText || this.input.value === this.selectedLabel())
+    this.render(showAll ? "" : this.input.value)
+    // A free-text box lists only suggestions that match, and nothing when none do.
+    if (this.freeText && this.options().length === 0) return this.close()
     this.list.hidden = false
     this.input.setAttribute("aria-expanded", "true")
   },
@@ -126,7 +138,7 @@ export const Combobox = {
     }
 
     this.list.replaceChildren(...items)
-    this.highlight(count > 0 && words.length > 0 ? 0 : -1)
+    this.highlight(count > 0 && words.length > 0 && !this.freeText ? 0 : -1)
   },
 
   groupItem(label) {
@@ -188,6 +200,13 @@ export const Combobox = {
   },
 
   pick(option) {
+    if (this.freeText) {
+      this.input.value = option.dataset.value
+      this.close()
+      this.input.dispatchEvent(new Event("input", {bubbles: true}))
+      this.input.dispatchEvent(new Event("change", {bubbles: true}))
+      return
+    }
     this.select.value = option.dataset.value
     this.input.value = this.selectedLabel()
     this.close()
@@ -197,6 +216,14 @@ export const Combobox = {
 
   clear() {
     if (this.input.disabled) return
+    if (this.freeText) {
+      const had = this.input.value !== ""
+      this.input.value = ""
+      this.input.focus()
+      this.open(true)
+      if (had) this.input.dispatchEvent(new Event("input", {bubbles: true}))
+      return
+    }
     const had = this.select.value !== ""
     this.select.value = ""
     this.input.value = ""
@@ -216,6 +243,7 @@ export const Combobox = {
   // The text box shows the picked option. Typing clears the select, so text left
   // without a pick shows nothing rather than sending an option the person did not pick.
   syncText() {
+    if (this.freeText) return
     this.input.value = this.selectedLabel()
   },
 }

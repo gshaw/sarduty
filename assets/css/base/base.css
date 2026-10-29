@@ -62,14 +62,6 @@
     background: var(--bg) var(--select-chevron) no-repeat right var(--sp-2) center / 20px;
   }
 
-  /* A text box with suggestions draws the same chevron. Chrome's own arrow stays, unseen
-     on top of it, so a click there still opens the list. */
-  input[list] {
-    padding-right: var(--sp-8);
-    background: var(--bg) var(--select-chevron) no-repeat right var(--sp-2) center / 20px;
-  }
-  input[list]::-webkit-calendar-picker-indicator { opacity: 0; }
-
   /* iOS Safari gives date and time inputs a native min-width that overflows a phone-width
      column, centres the value, and collapses the box when empty. */
   input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"], [type="week"]) {
