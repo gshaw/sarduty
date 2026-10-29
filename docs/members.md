@@ -58,7 +58,7 @@ only ([records.md](records.md#editing-records)).
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
   across 93 members. The box suggests the team's roles, most held first
-  (`Member.roles/1`), from a `<datalist>`, and still takes a new one. The combobox can't:
+  (`Member.roles/1`), from a `<datalist>`, and still takes a new one. Its x empties it, as a combobox's does. The combobox can't:
   it is a select, which takes only its options. D4H's structured `roleId` is not copied.
 - **Email** decides who can log in: SAR Duty matches a login to a member by email, so
   its hint says so. Changing it moves the login to the new address.

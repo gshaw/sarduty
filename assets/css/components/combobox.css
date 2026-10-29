@@ -27,6 +27,10 @@
   .combobox-clear:hover { color: var(--text); }
   .combobox-input:has(input:placeholder-shown, input:disabled) .combobox-clear { display: none; }
   .combobox.input-sm .combobox-clear { width: 24px; height: 24px; right: var(--sp-6); }
+  /* A text box with suggestions (<.input suggestions>) borrows the x. Its box has no
+     placeholder, so the Suggestions hook marks it empty instead. */
+  .combobox-input.suggestions[data-empty] input { padding-right: var(--sp-8); }
+  .combobox-input.suggestions[data-empty] .combobox-clear { display: none; }
   .combobox-chevron {
     position: absolute;
     right: var(--sp-2);

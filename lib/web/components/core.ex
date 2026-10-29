@@ -565,6 +565,38 @@ defmodule Web.Components.Core do
     """
   end
 
+  # A text box with suggestions: the browser lists them as people type, and any text still
+  # goes. The x empties it, as a combobox's does; the Suggestions hook shows it once there
+  # is text. See /styles/forms.
+  def input(%{suggestions: [_ | _]} = assigns) do
+    ~H"""
+    <div class={["mb-6", @errors != [] && "field-error", @field_class]}>
+      <.label :if={@label != nil} for={@id}>{@label}{render_slot(@label_end)}</.label>
+      <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
+      <.error :for={msg <- @errors}>{msg}</.error>
+      <div id={"#{@id}-suggest"} class="combobox-input suggestions" phx-hook="Suggestions">
+        <input
+          type={@type}
+          name={@name}
+          id={@id}
+          value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+          class={[@errors != [] && "is-invalid", @class]}
+          list={"#{@id}-suggestions"}
+          autocomplete="off"
+          {@rest}
+        />
+        <button type="button" id={"#{@id}-clear"} class="combobox-clear" aria-label="Clear">
+          <.icon name="x" />
+        </button>
+      </div>
+      <datalist id={"#{@id}-suggestions"}>
+        <option :for={suggestion <- @suggestions} value={suggestion}></option>
+      </datalist>
+      {render_slot(@below)}
+    </div>
+    """
+  end
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -578,12 +610,8 @@ defmodule Web.Components.Core do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[@errors != [] && "is-invalid", @class]}
-        list={@suggestions != [] && "#{@id}-suggestions"}
         {@rest}
       />
-      <datalist :if={@suggestions != []} id={"#{@id}-suggestions"}>
-        <option :for={suggestion <- @suggestions} value={suggestion}></option>
-      </datalist>
       {render_slot(@below)}
     </div>
     """

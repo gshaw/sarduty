@@ -184,6 +184,7 @@ defmodule Web.MemberFormLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
       assert has_element?(lv, "#form_position[list=form_position-suggestions]")
+      assert has_element?(lv, "#form_position-suggest[phx-hook=Suggestions] #form_position-clear")
       assert has_element?(lv, "#form_position-suggestions option:first-child[value=MIT]")
       assert has_element?(lv, "#form_position-suggestions option[value=GSTL]")
       refute has_element?(lv, "#form_team_admin")
