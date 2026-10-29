@@ -230,7 +230,10 @@ defmodule Web.GroupLive do
       <dd :if={!@group.organization_owned}>
         <ul id="group-actions" class="action-list">
           <li>
-            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
+            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename</.a>
+          </li>
+          <li>
+            <.a id="group-delete" navigate={~p"/teams/#{@team}/groups/#{@group.id}/delete"}>Delete</.a>
           </li>
         </ul>
       </dd>

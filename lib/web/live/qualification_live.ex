@@ -162,7 +162,13 @@ defmodule Web.QualificationLive do
             <.a
               id="qualification-edit"
               navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/edit"}
-            >Rename or delete</.a>
+            >Rename</.a>
+          </li>
+          <li :if={D4H.records?(@team) and !@qualification.organization_owned}>
+            <.a
+              id="qualification-delete"
+              navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/delete"}
+            >Delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
             <.a

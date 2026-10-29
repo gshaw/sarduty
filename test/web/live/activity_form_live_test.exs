@@ -106,7 +106,7 @@ defmodule Web.ActivityFormLiveTest do
     assert map_size(body) == 1
     assert_received {:records, "POST", "/exercises/88/tags", %{"tagIds" => [2]}}
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/delete")
     refute lv |> element("#activity-delete-button") |> render() =~ "data-confirm-check"
     lv |> element("#activity-delete-button") |> render_click()
 
@@ -120,7 +120,7 @@ defmodule Web.ActivityFormLiveTest do
     activity = activity_fixture(team, %{started_at: started})
     attendance_fixture(activity, member_fixture(team))
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/delete")
     button = lv |> element("#activity-delete-button") |> render()
 
     assert button =~ ~s(data-confirm-check="I understand the attendance for 1 member is lost.")
@@ -511,6 +511,8 @@ defmodule Web.ActivityFormLiveTest do
 
       {:ok, page, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
       assert has_element?(page, "#activity-actions #activity-edit", "Change activity")
+
+      refute has_element?(page, "#activity-delete")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
       refute has_element?(lv, "#activity-delete")

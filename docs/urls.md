@@ -12,6 +12,12 @@ enforces the top-level list and the held URLs.
   `/settings/tax-credit-letters`, not `letters`. Both moved on 2026-10-28 with no
   redirects.
 - **Local ids, never D4H ids**: `/members/42`. D4H ids stay in `d4h_*_id` columns.
+- **A record's page only shows it; `/edit` changes its fields and `/delete` deletes
+  it**, each on its own page with its own Actions link (decided 2026-10-28). A group or
+  qualification is only a title, so its link says Rename, but the path is still
+  `/edit`. An activity's tabs are `/activities/:id` (Members), `/equipment`, and
+  `/history`; adding goes under the tab it adds to, `/equipment/add` and
+  `/members/add`.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.

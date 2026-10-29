@@ -10,17 +10,19 @@ defmodule Web.ActivityFormLive do
   alias App.ViewModel.ActivityFormViewModel
   alias Web.Components.PlaceBox
 
-  # Adding and changing activities (docs/records.md, #585). D4H cannot delete an activity,
-  # so only a Records team deletes one here.
+  # Adding and changing activities (docs/records.md, #585), and deleting one on its own
+  # page, /delete (docs/urls.md). D4H cannot delete an activity, so only a Records team
+  # deletes one here.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     activity = if id = params["id"], do: Activity.find!(team, id)
-    if activity && activity.deleted_at, do: raise(Web.Status.NotFound)
+    ensure_open!(team, activity, socket.assigns.live_action)
+
     form = ActivityFormViewModel.from_activity(activity, team)
 
     socket =
       socket
-      |> assign(page_title: if(activity, do: "Change #{activity.title}", else: "Add activity"))
+      |> assign(page_title: page_title(activity, socket.assigns.live_action))
       |> assign(activity: activity, form_data: form, records?: D4H.records?(team))
       |> assign(params: %{})
       |> assign(
@@ -46,11 +48,18 @@ defmodule Web.ActivityFormLive do
         label={@activity.ref_id}
         path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
       />
-      <:item label={if @activity, do: "Change", else: "Add activity"} />
+      <:item label={breadcrumb(@live_action)} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
-    <.form for={@form} id="activity-form" phx-change="validate" phx-submit="save" class="measure">
+    <.form
+      :if={@live_action != :delete}
+      for={@form}
+      id="activity-form"
+      phx-change="validate"
+      phx-submit="save"
+      class="measure"
+    >
       <.error_summary form={@form} />
       <.warning_text :if={@published_locked?} id="activity-published-locked" class="mb-6">
         A published activity cannot be changed. Untick Published and save first.
@@ -117,7 +126,11 @@ defmodule Web.ActivityFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@activity && !@records?} id="activity-delete-elsewhere" class="mt-8 measure">
+    <section
+      :if={@live_action == :edit && !@records?}
+      id="activity-delete-elsewhere"
+      class="mt-8 measure"
+    >
       <h2 class="heading">Delete the activity</h2>
       <p>Delete it in {@service}. {@service} does not let SAR Duty delete activities.</p>
       <p>
@@ -125,8 +138,7 @@ defmodule Web.ActivityFormLive do
       </p>
     </section>
 
-    <section :if={@activity && @records?} id="activity-delete" class="mt-8 measure">
-      <h2 class="heading">Delete the activity</h2>
+    <section :if={@live_action == :delete} id="activity-delete" class="measure">
       <p>
         It leaves every list and letter. Take attendance stops taking scans for it.
       </p>
@@ -143,6 +155,19 @@ defmodule Web.ActivityFormLive do
     </section>
     """
   end
+
+  defp ensure_open!(team, activity, action) do
+    if activity && activity.deleted_at, do: raise(Web.Status.NotFound)
+    if action == :delete and !D4H.records?(team), do: raise(Web.Status.NotFound)
+  end
+
+  defp page_title(nil, :new), do: "Add activity"
+  defp page_title(activity, :edit), do: "Change #{activity.title}"
+  defp page_title(activity, :delete), do: "Delete #{activity.title}"
+
+  defp breadcrumb(:new), do: "Add activity"
+  defp breadcrumb(:edit), do: "Change"
+  defp breadcrumb(:delete), do: "Delete"
 
   attr :fields, :list, required: true
   attr :kind, :string, required: true

@@ -43,7 +43,8 @@ defmodule Web.GroupLiveTest do
   end
 
   test "the sidebar is Actions alone: the main column counts the members", ctx do
-    assert has_element?(ctx.lv, "#group-actions #group-edit")
+    assert has_element?(ctx.lv, "#group-actions #group-edit", "Rename")
+    assert has_element?(ctx.lv, "#group-actions #group-delete", "Delete")
     refute has_element?(ctx.lv, "aside dt", "Members")
   end
 

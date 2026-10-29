@@ -429,7 +429,13 @@ defmodule Web.ActivityLive do
             <.a
               id="activity-edit"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
-            >{if D4H.records?(@activity.team), do: "Change or delete", else: "Change activity"}</.a>
+            >Change activity</.a>
+          </li>
+          <li :if={@admin_actions? and !@d4h?}>
+            <.a
+              id="activity-delete"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/delete"}
+            >Delete activity</.a>
           </li>
           <li :if={@admin_actions? and @send_reminders?}>
             <.a

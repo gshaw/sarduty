@@ -15,15 +15,20 @@ defmodule Web.TitledRecordFormLive do
   alias App.Repo
   alias App.ViewModel.TitleFormViewModel
 
-  # Adding, renaming, and deleting qualifications and groups. Both are only a title.
-  # Qualifications are for a team on SAR Duty Records (docs/records.md); a D4H team
-  # changes them in D4H. Groups are for every team (#546), except the organization's.
+  # Adding, renaming, and deleting qualifications and groups. Both are only a title, so
+  # /edit renames, and /delete is its own page (docs/urls.md). Qualifications are for a
+  # team on SAR Duty Records (docs/records.md); a D4H team changes them in D4H. Groups are
+  # for every team (#546), except the organization's.
   @kinds %{
     new_qualification: :qualification,
     edit_qualification: :qualification,
+    delete_qualification: :qualification,
     new_group: :group,
-    edit_group: :group
+    edit_group: :group,
+    delete_group: :group
   }
+
+  @deletes [:delete_qualification, :delete_group]
 
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
@@ -37,8 +42,9 @@ defmodule Web.TitledRecordFormLive do
     socket =
       socket
       |> assign(kind: kind, record: record, form_data: form)
+      |> assign(delete?: socket.assigns.live_action in @deletes)
       |> assign_delete(kind, team, record)
-      |> assign(page_title: page_title(kind, record))
+      |> assign(page_title: page_title(kind, record, socket.assigns.live_action in @deletes))
       |> assign_form(TitleFormViewModel.changeset(form, %{}, 200))
 
     {:ok, socket}
@@ -47,20 +53,27 @@ defmodule Web.TitledRecordFormLive do
   defp find!(:qualification, team, id), do: Qualification.find!(team, id)
   defp find!(:group, team, id), do: Group.find!(team, id)
 
-  defp page_title(:qualification, nil), do: "Add qualification"
-  defp page_title(:group, nil), do: "Add group"
-  defp page_title(_kind, record), do: "Change #{record.title}"
+  defp page_title(:qualification, nil, _delete?), do: "Add qualification"
+  defp page_title(:group, nil, _delete?), do: "Add group"
+  defp page_title(_kind, record, true = _delete?), do: "Delete #{record.title}"
+  defp page_title(_kind, record, false), do: "Rename #{record.title}"
 
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
       <:item label={list_label(@kind)} path={list_path(@current_team, @kind)} />
       <:item :if={@record} label={@record.title} path={record_path(@current_team, @kind, @record)} />
-      <:item label={if @record, do: "Change", else: @page_title} />
+      <:item label={breadcrumb(@record, @delete?, @page_title)} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
-    <.form for={@form} id="titled-record-form" phx-submit="save" class="measure">
+    <.form
+      :if={!@delete?}
+      for={@form}
+      id="titled-record-form"
+      phx-submit="save"
+      class="measure"
+    >
       <.error_summary form={@form} />
       <.input field={@form[:title]} label="Title" />
       <.form_actions>
@@ -70,8 +83,7 @@ defmodule Web.TitledRecordFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@record} id="record-delete" class="mt-8 measure">
-      <h2 class="heading">Delete the {@kind}</h2>
+    <section :if={@delete?} id="record-delete" class="measure">
       <p>{@delete_text}</p>
       <.button
         id="record-delete-button"
@@ -87,6 +99,10 @@ defmodule Web.TitledRecordFormLive do
     """
   end
 
+  defp breadcrumb(nil, _delete?, page_title), do: page_title
+  defp breadcrumb(_record, true = _delete?, _page_title), do: "Delete"
+  defp breadcrumb(_record, false, _page_title), do: "Rename"
+
   defp list_label(:qualification), do: "Qualifications"
   defp list_label(:group), do: "Groups"
 
@@ -98,7 +114,7 @@ defmodule Web.TitledRecordFormLive do
 
   defp record_path(team, :group, record), do: ~p"/teams/#{team}/groups/#{record.id}"
 
-  defp assign_delete(socket, _kind, _team, nil), do: socket
+  defp assign_delete(%{assigns: %{delete?: false}} = socket, _kind, _team, _record), do: socket
 
   defp assign_delete(socket, kind, team, record) do
     %{items: items, lost: lost} = delete_facts(kind, team, record)

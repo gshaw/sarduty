@@ -65,15 +65,21 @@ defmodule Web.TitledRecordFormLiveTest do
 
     qualification = qualification_fixture(team, %{title: "Swiftwater", d4h_qualification_id: 99})
     {:ok, page, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}")
-    assert has_element?(page, "#qualification-actions #qualification-edit")
+    assert has_element?(page, "#qualification-actions #qualification-edit", "Rename")
+    assert has_element?(page, "#qualification-actions #qualification-delete", "Delete")
 
+    # Rename and Delete are two pages (docs/urls.md).
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
+    assert has_element?(edit, "h1", "Rename Swiftwater")
+    refute has_element?(edit, "#record-delete")
     edit |> form("#titled-record-form", form: %{title: "Swiftwater Rescue 2"}) |> render_submit()
 
     assert_received {:records, "PATCH", "/member-qualifications/99",
                      %{"title" => "Swiftwater Rescue 2"}}
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/delete")
+    assert has_element?(edit, "h1", "Delete Swiftwater")
+    refute has_element?(edit, "#titled-record-form")
     edit |> element("#record-delete-button") |> render_click()
     assert_received {:records, "DELETE", "/member-qualifications/99", nil}
   end
@@ -212,7 +218,7 @@ defmodule Web.TitledRecordFormLiveTest do
     assert_received {:records, "PATCH", "/member-groups/99", %{"title" => "Rope Rescue"}}
     assert Repo.get!(Group, group.id).title == "Rope Rescue"
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}/edit")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}/delete")
     edit |> element("#record-delete-button") |> render_click()
     assert_received {:records, "DELETE", "/member-groups/99", nil}
     refute Repo.get(Group, group.id)
@@ -253,7 +259,7 @@ defmodule Web.TitledRecordFormLiveTest do
     template_fixture(team, "Truck 1", [], [], [ground])
     team |> Ecto.Changeset.change(watch_d4h_group_id: ground.d4h_group_id) |> Repo.update!()
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{ground.id}/edit")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{ground.id}/delete")
 
     items = [
       "Its 1 member leaves it.",
@@ -296,7 +302,7 @@ defmodule Web.TitledRecordFormLiveTest do
     qualification = qualification_fixture(team, %{title: "Swiftwater"})
     qualification_award_fixture(qualification, member)
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/delete")
     button = edit |> element("#record-delete-button") |> render()
 
     assert button =~ ~s(data-confirm-check="I understand 1 member loses it.")
@@ -305,7 +311,7 @@ defmodule Web.TitledRecordFormLiveTest do
 
   test "deleting a group nobody is in asks a simple question", %{conn: conn, team: team} do
     empty = group_fixture(team, %{title: "Swiftwater"})
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{empty.id}/edit")
+    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{empty.id}/delete")
     button = edit |> element("#record-delete-button") |> render()
 
     assert button =~ ~s(data-confirm="Delete Swiftwater? Nobody is in it.")

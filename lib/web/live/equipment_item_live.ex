@@ -48,18 +48,7 @@ defmodule Web.EquipmentItemLive do
       <:item label="Equipment" path={~p"/teams/#{@current_team}/equipment"} />
       <:item label={@item.title} />
     </.breadcrumbs>
-    <.heading_row>
-      <h1 class="title">{@item.title}</h1>
-      <:action>
-        <.button
-          :if={D4H.records?(@current_team)}
-          id="item-edit"
-          navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}
-        >
-          Change or delete
-        </.button>
-      </:action>
-    </.heading_row>
+    <h1 class="title">{@item.title}</h1>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -98,11 +87,21 @@ defmodule Web.EquipmentItemLive do
           </div>
         </dl>
         <.custom_fields id="item-fields" title="Equipment fields" rows={@field_rows} sidebar />
-        <dl :if={!D4H.records?(@current_team)}>
+        <dl>
           <dt>Actions</dt>
           <dd>
+            <%!-- A team on SAR Duty Records has no D4H to open, so it changes items here. --%>
             <ul id="item-actions" class="action-list">
-              <li>
+              <li :if={D4H.records?(@current_team)}>
+                <.a id="item-edit" navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}>Change item</.a>
+              </li>
+              <li :if={D4H.records?(@current_team)}>
+                <.a
+                  id="item-delete"
+                  navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/delete"}
+                >Delete item</.a>
+              </li>
+              <li :if={!D4H.records?(@current_team)}>
                 <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open in {@service}</.a>
               </li>
             </ul>

@@ -215,6 +215,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/new", ActivityFormLive, :new
       live "/teams/:subdomain/activities/:id", ActivityLive, :members
       live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit
+      live "/teams/:subdomain/activities/:id/delete", ActivityFormLive, :delete
       live "/teams/:subdomain/activities/:id/mileage", ActivityMileageLive
       live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive, :history
       live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
@@ -233,6 +234,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/equipment/new", EquipmentItemFormLive, :new
       live "/teams/:subdomain/equipment/:id", EquipmentItemLive
       live "/teams/:subdomain/equipment/:id/edit", EquipmentItemFormLive, :edit
+      live "/teams/:subdomain/equipment/:id/delete", EquipmentItemFormLive, :delete
       live "/teams/:subdomain/members", MemberCollectionLive
       live "/teams/:subdomain/members/new", MemberFormLive, :new
       live "/teams/:subdomain/members/:id", MemberLive
@@ -247,6 +249,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/groups/new", TitledRecordFormLive, :new_group
       live "/teams/:subdomain/groups/:id", GroupLive
       live "/teams/:subdomain/groups/:id/edit", TitledRecordFormLive, :edit_group
+      live "/teams/:subdomain/groups/:id/delete", TitledRecordFormLive, :delete_group
       live "/teams/:subdomain/groups/:id/review", GroupReviewLive
       live "/teams/:subdomain/groups/:id/rules/:rule_id", GroupRuleLive
       live "/teams/:subdomain/qualifications", QualificationCollectionLive
@@ -256,6 +259,11 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/new", TitledRecordFormLive, :new_qualification
       live "/teams/:subdomain/qualifications/:id", QualificationLive
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
+
+      live "/teams/:subdomain/qualifications/:id/delete",
+           TitledRecordFormLive,
+           :delete_qualification
+
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
