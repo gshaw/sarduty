@@ -55,10 +55,13 @@ defmodule Web.Settings.ChoreCategoryCollectionLive do
       row_id={&"chore-category-#{&1.id}"}
       class="table-striped table-stack"
     >
-      <:col :let={category} label="Category" class="stack-title">
+      <:col :let={category} label="Category" class="stack-title w-1/3">
         <.a navigate={~p"/teams/#{@current_team}/settings/chore-categories/#{category.id}"}>{category.title}</.a>
+        <span :if={category.description} class="hint block">{category.description}</span>
       </:col>
-      <:col :let={category} label="Tax credit hours">{hours_label(category.hours)}</:col>
+      <:col :let={category} label="Tax credit hours" class="whitespace-nowrap">
+        {hours_label(category.hours)}
+      </:col>
       <:col :let={category} label="Other tags">
         <span class="badges">
           <.badge :for={tag <- ChoreCategory.tags(category)} kind={:outline}>{tag.title}</.badge>
