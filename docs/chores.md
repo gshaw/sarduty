@@ -41,6 +41,10 @@ category, and what they did ([Chore](../lib/app/model/chore.ex),
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
   reason the member sees, in any status, and links its D4H activity.
+- **Another team admin should accept a team admin's own chores** (#697), but it is not a
+  rule: a team with one team admin has no one else. Their own say Yours and start
+  cleared, and select all passes over them. Accepting one, on Chores or its page, takes
+  a box, Accept my own chores, and SaveChore refuses it without one. Declining needs none.
 - **AI agents proposed chores** through the MCP from #595 until it became read-only
   (#627, 2026-10-26). The chores stay; their proposals were deleted (2026-10-28).
 - **Chores is one page for everyone** (#645), as [Where a feature goes](navigation.md#where-a-feature-goes)

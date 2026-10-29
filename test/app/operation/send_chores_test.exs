@@ -127,7 +127,10 @@ defmodule App.Operation.SendChoresTest do
 
   defp accept(ctx, attrs) do
     chore = chore_fixture(ctx.member, ctx.category, attrs)
-    {:ok, chore} = SaveChore.accept_one(ctx.team, chore, ctx.user, DateTime.utc_now())
+
+    {:ok, chore} =
+      SaveChore.accept_one(ctx.team, chore, ctx.user, DateTime.utc_now(), member: nil)
+
     chore
   end
 

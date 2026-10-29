@@ -1,7 +1,7 @@
 defmodule Web.ChoreCollectionLive do
   use Web, {:live_view_app_layout, access: :team, member_events: ["delete"]}
 
-  import Web.ChoreText, only: [status_badge: 1]
+  import Web.ChoreText, only: [own_box: 1, status_badge: 1]
   import Web.Components.Chart, only: [stat: 1]
   import Web.Components.StatSwitch
 
@@ -20,7 +20,9 @@ defmodule Web.ChoreCollectionLive do
   # team's chores by status. Waiting chores to accept, with the Review changes pattern:
   # every row starts selected, and a cleared row stays. Accepting sends them to D4H, onto
   # each chore category's activity for the month, and Accepted lists them under those
-  # activities. Every chore opens its own page, to change or decline it.
+  # activities. Every chore opens its own page, to change or decline it. A team admin's
+  # own chores say Yours and start cleared: another team admin should accept them, and
+  # accepting their own takes a box that says they meant it (#697).
   @team_views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
 
   def mount(_params, _session, socket) do
@@ -91,8 +93,10 @@ defmodule Web.ChoreCollectionLive do
   defp load_view(socket, :yours, _team_id), do: socket
 
   defp load_view(socket, :waiting, team_id) do
+    member = socket.assigns.current_member
     waiting = Chore.get_all_for_team(team_id, :waiting)
-    assign(socket, chores: waiting, selected: MapSet.new(waiting, & &1.id))
+    others = Enum.reject(waiting, &Chore.own?(&1, member))
+    socket |> assign(chores: waiting, own: false) |> select(MapSet.new(others, & &1.id))
   end
 
   defp load_view(socket, :accepted, team_id) do
@@ -180,12 +184,16 @@ defmodule Web.ChoreCollectionLive do
               selected={@selected}
               today={@today}
               current_team={@current_team}
+              current_member={@current_member}
             />
+            <div :if={@own_selected?} class="mt-4">
+              <.own_box checked={@own} />
+            </div>
             <.form_actions>
               <.button
                 id="accept"
                 variant={:success}
-                disabled={MapSet.size(@selected) == 0}
+                disabled={MapSet.size(@selected) == 0 or (@own_selected? and !@own)}
                 phx-disable-with="Sending…"
               >
                 Accept {count_chores(MapSet.size(@selected))}
@@ -349,8 +357,10 @@ defmodule Web.ChoreCollectionLive do
   attr :today, :any, required: true
   attr :current_team, :map, required: true
   attr :category, :boolean, default: true
+  attr :current_member, :map, default: nil
 
-  # Chores, each linking its page. With `selected`, a box each, for accepting.
+  # Chores, each linking its page. With `selected`, a box each, for accepting. Select all
+  # passes over the team admin's own.
   defp chore_table(assigns) do
     ~H"""
     <.table id={@id} rows={@chores} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
@@ -362,9 +372,19 @@ defmodule Web.ChoreCollectionLive do
           value={chore.id}
           checked={MapSet.member?(@selected, chore.id)}
           aria-label={"Select #{chore.description}"}
+          data-select-all={Chore.own?(chore, @current_member) && "skip"}
         />
       </:col>
-      <:col :let={chore} label="Member" class="stack-title">{chore.member.name}</:col>
+      <:col :let={chore} label="Member" class="stack-title">
+        {chore.member.name}
+        <.badge
+          :if={Chore.own?(chore, @current_member)}
+          id={"chore-yours-#{chore.id}"}
+          kind={:primary}
+        >
+          Yours
+        </.badge>
+      </:col>
       <:col :let={chore} label="Date" class="whitespace-nowrap">
         {Format.day_in_year(chore.date, @today)}
         <span :if={note = logged_note(chore, @current_team.timezone)} class="hint block">
@@ -385,26 +405,30 @@ defmodule Web.ChoreCollectionLive do
     """
   end
 
-  def handle_event("select", params, socket),
-    do: {:noreply, assign(socket, :selected, params |> ids("chore_ids") |> MapSet.new())}
+  def handle_event("select", params, socket) do
+    socket
+    |> assign(:own, params["own"] == "true")
+    |> select(params |> ids("chore_ids") |> MapSet.new())
+    |> then(&{:noreply, &1})
+  end
 
   def handle_event("accept", params, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
+    %{current_team: team, current_user: user, current_member: member} = socket.assigns
+    now = DateTime.utc_now()
 
-    case ids(params, "chore_ids") do
-      [] ->
-        {:noreply, put_flash(socket, :error, "Select at least 1 chore to accept.")}
+    with [_id | _ids] = ids <- ids(params, "chore_ids"),
+         {:ok, count} <-
+           SaveChore.accept(team, ids, user, now, member: member, own: params["own"] == "true") do
+      result = SendChores.call(team, user, now)
+      {kind, text} = ChoreText.send_flash("Accepted #{count_chores(count)}", result)
 
-      ids ->
-        now = DateTime.utc_now()
-        count = SaveChore.accept(team, ids, user, now)
-        result = SendChores.call(team, user, now)
-        {kind, text} = ChoreText.send_flash("Accepted #{count_chores(count)}", result)
-
-        socket
-        |> put_flash(kind, text)
-        |> load()
-        |> then(&{:noreply, &1})
+      socket
+      |> put_flash(kind, text)
+      |> load()
+      |> then(&{:noreply, &1})
+    else
+      [] -> {:noreply, put_flash(socket, :error, "Select at least 1 chore to accept.")}
+      {:error, :own} -> {:noreply, put_flash(socket, :error, ChoreText.own_refused())}
     end
   end
 
@@ -433,6 +457,16 @@ defmodule Web.ChoreCollectionLive do
     |> put_flash(kind, text)
     |> load()
     |> then(&{:noreply, &1})
+  end
+
+  # The rows checked, and whether any is the team admin's own, which shows the box.
+  defp select(socket, selected) do
+    %{chores: chores, current_member: member} = socket.assigns
+
+    own_selected? =
+      Enum.any?(chores, &(Chore.own?(&1, member) and MapSet.member?(selected, &1.id)))
+
+    assign(socket, selected: selected, own_selected?: own_selected?)
   end
 
   defp ids(params, key) do

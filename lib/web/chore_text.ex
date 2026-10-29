@@ -6,7 +6,7 @@ defmodule Web.ChoreText do
 
   use Phoenix.Component
 
-  import Web.Components.Core, only: [badge: 1]
+  import Web.Components.Core, only: [badge: 1, input: 1]
 
   alias Service.Format
 
@@ -20,6 +20,29 @@ defmodule Web.ChoreText do
     <.badge :if={@chore.status == :declined} id={@id} kind={:warning}>Declined</.badge>
     """
   end
+
+  attr :checked, :boolean, required: true
+
+  @doc """
+  The box a team admin selects to accept their own chores (#697), on the Chores page and a
+  chore's own page. Accept stays off until it is selected.
+  """
+  def own_box(assigns) do
+    ~H"""
+    <.input
+      type="checkbox"
+      id="accept-own"
+      name="own"
+      value={@checked}
+      label="Accept my own chores"
+    >
+      I know another team admin should accept the chores I log. I'm making an exception.
+    </.input>
+    """
+  end
+
+  @doc "The flash when a team admin's own chores go to accept without the box checked."
+  def own_refused, do: "Select Accept my own chores to accept yours."
 
   @doc ~s(A month's minutes by status: "7 hours accepted, 1 hour waiting".)
   def summary(totals) do

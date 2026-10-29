@@ -68,31 +68,48 @@ defmodule App.Operation.SaveChore do
 
   @doc """
   A team admin accepts the team's waiting chores among `ids`. Others are left as they
-  are. Returns how many were accepted.
+  are. `{:ok, count}`, or `{:error, :own}` when they include the team admin's own and
+  `own: true` doesn't say they meant it (#697).
+
+  `member:` is the team admin's member on the team, or nil.
   """
-  def accept(%Team{} = team, ids, user, now) do
-    {:ok, count} =
-      Repo.transaction(fn ->
-        chores =
-          Chore
-          |> where([c], c.team_id == ^team.id and c.status == :waiting and c.id in ^ids)
-          |> Repo.all()
+  def accept(%Team{} = team, ids, user, now, opts) do
+    member = Keyword.fetch!(opts, :member)
 
-        Enum.each(chores, fn chore ->
-          {:ok, _chore} = chore |> Chore.decide_changeset(:accepted, user, now) |> Repo.update()
-        end)
+    Repo.transaction(fn ->
+      chores =
+        Chore
+        |> where([c], c.team_id == ^team.id and c.status == :waiting and c.id in ^ids)
+        |> Repo.all()
 
-        :ok = ChoreEvent.place!(team.id)
-        length(chores)
+      if own_unmeant?(chores, member, opts), do: Repo.rollback(:own)
+
+      Enum.each(chores, fn chore ->
+        {:ok, _chore} = chore |> Chore.decide_changeset(:accepted, user, now) |> Repo.update()
       end)
 
-    count
+      :ok = ChoreEvent.place!(team.id)
+      length(chores)
+    end)
   end
 
-  @doc "A team admin accepts one chore, in any status."
-  def accept_one(%Team{} = team, %Chore{team_id: team_id} = chore, user, now)
-      when team_id == team.id,
-      do: admin_change(team, chore, &Chore.decide_changeset(&1, :accepted, user, now))
+  @doc """
+  A team admin accepts one chore, in any status. `{:error, :own}` for their own unless
+  `own: true`, as accept/5.
+  """
+  def accept_one(%Team{} = team, %Chore{team_id: team_id} = chore, user, now, opts)
+      when team_id == team.id do
+    if own_unmeant?([chore], Keyword.fetch!(opts, :member), opts),
+      do: {:error, :own},
+      else: admin_change(team, chore, &Chore.decide_changeset(&1, :accepted, user, now))
+  end
+
+  @doc """
+  Whether `chores` include `member`'s own and `opts` lack `own: true`. Another team admin
+  should accept a team admin's chores, but they may accept their own when they say so.
+  """
+  def own_unmeant?(chores, member, opts),
+    do: Keyword.get(opts, :own) != true and Enum.any?(chores, &Chore.own?(&1, member))
 
   @doc "A team admin declines a chore with a reason the member sees."
   def decline(%Team{} = team, %Chore{team_id: team_id} = chore, reason, user, now)

@@ -23,7 +23,8 @@ defmodule Web.ChoreLiveTest do
     tag_fixture(team, "Primary Hours")
     category = chore_category_fixture(team)
     member = member_fixture(team, %{name: "Sam Rivera"})
-    %{conn: log_in_user(conn, user), team: team, member: member, category: category}
+    me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    %{conn: log_in_user(conn, user), team: team, member: member, me: me, category: category}
   end
 
   # D4H answering every write: event 900, and attendance row 701 for `member`. `fail`
@@ -250,6 +251,69 @@ defmodule Web.ChoreLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{decided.(unnamed).id}")
     assert has_element?(lv, "#chore-status", unnamed.email)
+  end
+
+  # Another team admin should accept a team admin's chores (#697).
+  test "a team admin's own chores say Yours, start cleared, and take a box to accept", ctx do
+    %{conn: conn, team: team, member: member, me: me, category: category} = ctx
+    theirs = chore_fixture(member, category, %{date: ~D[2026-10-06]})
+    mine = chore_fixture(me, category, %{date: ~D[2026-10-06], description: "Grant report"})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+    assert has_element?(lv, "#chore-yours-#{mine.id}", "Yours")
+    refute has_element?(lv, "#chore-yours-#{theirs.id}")
+    assert has_element?(lv, "#waiting-chores-select-#{theirs.id}[checked]")
+    refute has_element?(lv, "#waiting-chores-select-#{mine.id}[checked]")
+    assert has_element?(lv, ~s{#waiting-chores-select-#{mine.id}[data-select-all="skip"]})
+    assert has_element?(lv, "#accept", "Accept 1 chore")
+    refute has_element?(lv, "#accept-own")
+
+    ids = [to_string(theirs.id), to_string(mine.id)]
+    lv |> form("#accept-form", %{chore_ids: ids}) |> render_change()
+    assert has_element?(lv, "#accept-own")
+    assert has_element?(lv, "#accept[disabled]", "Accept 2 chores")
+
+    # A stale page or a second tab doesn't get past the box.
+    html = render_submit(lv, "accept", %{chore_ids: ids})
+    assert html =~ "Select Accept my own chores to accept yours."
+    assert Repo.get!(Chore, mine.id).status == :waiting
+    assert Repo.get!(Chore, theirs.id).status == :waiting
+
+    lv |> form("#accept-form", %{chore_ids: ids, own: "true"}) |> render_change()
+    refute has_element?(lv, "#accept[disabled]")
+
+    stub_d4h(member)
+    lv |> form("#accept-form", %{chore_ids: ids, own: "true"}) |> render_submit()
+    assert Repo.get!(Chore, mine.id).status == :accepted
+    assert Repo.get!(Chore, theirs.id).status == :accepted
+  end
+
+  test "a team admin's own chore's page takes the box to accept it; declining doesn't", ctx do
+    %{conn: conn, team: team, member: member, me: me, category: category} = ctx
+    theirs = chore_fixture(member, category)
+    mine = chore_fixture(me, category, %{date: ~D[2026-10-06]})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{theirs.id}")
+    refute has_element?(lv, "#accept-own")
+    refute has_element?(lv, "#chore-accept[disabled]")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{mine.id}")
+    assert has_element?(lv, "#accept-own")
+    assert has_element?(lv, "#chore-accept[disabled]")
+    assert has_element?(lv, "#chore-decline-button")
+
+    assert render_submit(lv, "accept", %{}) =~ "Select Accept my own chores to accept yours."
+    assert Repo.get!(Chore, mine.id).status == :waiting
+
+    lv |> form("#accept-form", %{own: "true"}) |> render_change()
+    refute has_element?(lv, "#chore-accept[disabled]")
+
+    stub_d4h(me)
+
+    {:ok, _lv, _html} =
+      lv |> form("#accept-form", %{own: "true"}) |> render_submit() |> follow_redirect(conn)
+
+    assert Repo.get!(Chore, mine.id).status == :accepted
   end
 
   test "another team's chore is not found", %{conn: conn, team: team} do
