@@ -119,4 +119,38 @@ defmodule Web.HoneybadgerFilterTest do
 
     assert filtered.url == "https://sarduty.com/verify/[FILTERED]"
   end
+
+  test "a crashed request's logger context keeps its method and path, not its headers or body" do
+    conn =
+      :post
+      |> Plug.Test.conn("/teams/nsr/mcp", ~s({"arguments":{"code":"BODYSECRET"}}))
+      |> Plug.Conn.put_req_header("authorization", "Bearer HEADERSECRET")
+
+    filtered = HoneybadgerFilter.filter_context(%{conn: conn, request_id: "abc"})
+
+    assert filtered == %{
+             conn: %{method: "POST", host: "www.example.com", request_path: "/teams/nsr/mcp"},
+             request_id: "abc"
+           }
+  end
+
+  test "filters secrets in key-value pairs and in structs" do
+    team = %App.Model.Team{name: "NSR", d4h_access_key: "d4h-key"}
+    socket = %Phoenix.LiveView.Socket{view: Web.ActivityTakeAttendanceLive}
+
+    context = %{
+      headers: [{"authorization", "Bearer HEADERSECRET"}, {"accept", "text/html"}],
+      state: {team, socket, Member.build_changeset(%Member{}, %{email: "alex@example.com"})}
+    }
+
+    filtered = HoneybadgerFilter.filter_context(context)
+
+    assert filtered.headers == [{"authorization", "[FILTERED]"}, {"accept", "text/html"}]
+    assert {%{name: "NSR", d4h_access_key: "[FILTERED]"}, socket, changeset} = filtered.state
+    assert socket == %{view: Web.ActivityTakeAttendanceLive}
+    assert changeset.data == Member
+
+    for secret <- ["HEADERSECRET", "d4h-key", "alex@example.com"],
+        do: refute(inspect(filtered) =~ secret)
+  end
 end

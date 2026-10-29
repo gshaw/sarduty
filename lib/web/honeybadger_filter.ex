@@ -5,8 +5,14 @@ defmodule Web.HoneybadgerFilter do
 
   Honeybadger's `filter_keys` match whole names, and only at the top level of the
   params. This drops those keys at every level, plus any key whose name contains
-  "key", "token", "code" or "password", so a new field like `new_d4h_access_key` can't
-  slip past. Paths and URLs have their tokens and codes cut by Web.RequestLog.
+  "key", "token", "code", "password", "secret", "authorization" or "cookie", so a new
+  field like `new_d4h_access_key` can't slip past. Paths and URLs have their tokens and
+  codes cut by Web.RequestLog.
+
+  Honeybadger turns structs into maps when it sends them, so structs are scrubbed too. A
+  crashed process's logger metadata can carry the whole request, with its headers and
+  raw body, so a request keeps only its method and path, and a LiveView socket only its
+  view. A schema loses its `redact: true` fields, and a changeset keeps only its errors.
   """
 
   @behaviour Honeybadger.Filter
@@ -16,7 +22,7 @@ defmodule Web.HoneybadgerFilter do
   alias Honeybadger.NoticeFilter.Default
   alias Web.RequestLog
 
-  @secret_words ~w(key token code password)
+  @secret_words ~w(key token code password secret authorization cookie)
   @filtered "[FILTERED]"
 
   # Honeybadger.NoticeFilter: run the default filter, which calls the callbacks below,
@@ -91,8 +97,36 @@ defmodule Web.HoneybadgerFilter do
     |> Honeybadger.Utils.sanitize(remove_filtered: true)
   end
 
-  @doc "Replaces the value of any secret key, at every level of maps and lists."
-  def scrub(%{__struct__: _} = struct), do: struct
+  @doc "Replaces the value of any secret key, at every level of maps, lists, and structs."
+  def scrub(%Plug.Conn{} = conn) do
+    %{
+      method: conn.method,
+      host: conn.host,
+      request_path: RequestLog.filter_path(conn.host, conn.request_path)
+    }
+  end
+
+  def scrub(%Phoenix.LiveView.Socket{view: view}), do: %{view: view}
+
+  def scrub(%Ecto.Changeset{} = changeset),
+    do: %{data: Map.get(changeset.data, :__struct__), errors: Keyword.keys(changeset.errors)}
+
+  def scrub(%module{} = value) when module in [Date, DateTime, NaiveDateTime, Time], do: value
+
+  def scrub(%module{} = struct) do
+    redacted =
+      if function_exported?(module, :__schema__, 1),
+        do: module.__schema__(:redact_fields),
+        else: []
+
+    struct
+    |> Map.from_struct()
+    |> Map.drop([:__meta__])
+    |> Map.new(fn {key, value} ->
+      if key in redacted, do: {key, @filtered}, else: {key, value}
+    end)
+    |> scrub()
+  end
 
   def scrub(map) when is_map(map) do
     Map.new(map, fn {key, value} ->
@@ -101,6 +135,16 @@ defmodule Web.HoneybadgerFilter do
   end
 
   def scrub(list) when is_list(list), do: Enum.map(list, &scrub/1)
+
+  def scrub({key, _value} = pair) when is_atom(key) or is_binary(key) do
+    if secret_key?(key),
+      do: {key, @filtered},
+      else: pair |> Tuple.to_list() |> scrub() |> List.to_tuple()
+  end
+
+  def scrub(tuple) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> scrub() |> List.to_tuple()
+
   def scrub(value), do: value
 
   defp secret_key?(key) when is_atom(key) or is_binary(key) do
