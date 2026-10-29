@@ -18,6 +18,7 @@ defmodule Web.ActivityLive do
   alias App.Model.EquipmentUsage
   alias App.Model.Member
   alias App.Model.Reminder
+  alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
   alias App.ViewData.ActivityMembers
@@ -95,6 +96,37 @@ defmodule Web.ActivityLive do
       invitation: replier && Attendance.invitation(activity, replier)
     )
     |> assign_reminders(members)
+    |> assign_delete()
+  end
+
+  # Delete is an Actions link that opens the confirm dialog (docs/urls.md), for a Records
+  # team's admins: D4H does not let SAR Duty delete activities.
+  defp assign_delete(socket) do
+    %{activity: activity, current_team: team, team_admin?: team_admin?, now: now} =
+      socket.assigns
+
+    delete? = team_admin? and D4H.records?(team) and !activity.deleted_at
+    assign(socket, delete_confirm: delete? && Web.DeleteConfirm.activity(team, activity, now))
+  end
+
+  def handle_event("delete", _params, %{assigns: %{delete_confirm: false}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("delete", _params, socket) do
+    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+
+    case DeleteActivity.call(team, activity, user, DateTime.utc_now()) do
+      {:ok, _activity} ->
+        socket =
+          socket
+          |> put_flash(:info, "Deleted #{activity.title}.")
+          |> push_navigate(to: ~p"/teams/#{team}/activities")
+
+        {:noreply, socket}
+
+      {:error, text} ->
+        {:noreply, put_flash(socket, :error, text)}
+    end
   end
 
   # Reminders a team admin sends (#444): each member's latest, the last batch, and
@@ -342,6 +374,7 @@ defmodule Web.ActivityLive do
           change_fields?={@change_fields?}
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
+          delete_confirm={@delete_confirm}
         />
       </aside>
     </div>
@@ -446,6 +479,7 @@ defmodule Web.ActivityLive do
   attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
+  attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
 
   # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705).
   def sidebar_end(assigns) do
@@ -474,10 +508,13 @@ defmodule Web.ActivityLive do
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields/edit"}
             >Change fields</.a>
           </li>
-          <li :if={@admin_actions? and !@d4h?}>
+          <li :if={@delete_confirm}>
             <.a
               id="activity-delete"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/delete"}
+              href="#"
+              phx-click="delete"
+              phx-disable-with="Deleting…"
+              {@delete_confirm}
             >Delete activity</.a>
           </li>
           <li :if={@admin_actions? and @send_reminders?}>

@@ -13,6 +13,7 @@ defmodule Web.GroupLive do
   alias App.Model.Team
   alias App.Operation.AddGroupRule
   alias App.Operation.BuildGroupRulePreview
+  alias App.Operation.SaveTitledRecord
   alias App.Operation.SetGroupMember
   alias App.Repo
   alias App.ViewData.GroupMemberFacts
@@ -31,6 +32,7 @@ defmodule Web.GroupLive do
       |> assign(:page_title, group.title)
       |> assign(:group, group)
       |> assign(:organization_name, Team.organization_name(current_team))
+      |> assign(:templates, Web.DeleteConfirm.template_titles(current_team, group))
       |> load_members()
       |> reload()
 
@@ -52,6 +54,23 @@ defmodule Web.GroupLive do
   # A group without rules is a list kept by hand. The ids come from the browser, so each
   # is looked up in the lists this page loaded through the current team. No flash: the
   # table and Recent changes show it.
+  def handle_event("delete", _params, socket) do
+    %{current_team: team, current_user: user, group: group} = socket.assigns
+
+    case SaveTitledRecord.delete(team, :group, group, user, DateTime.utc_now()) do
+      :ok ->
+        socket =
+          socket
+          |> put_flash(:info, "Deleted #{group.title}.")
+          |> push_navigate(to: ~p"/teams/#{team}/groups")
+
+        {:noreply, socket}
+
+      {:error, text} ->
+        {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
   def handle_event("add-member", %{"member_id" => id}, socket) do
     %{current_team: team, current_user: user, group: group} = socket.assigns
 
@@ -139,6 +158,9 @@ defmodule Web.GroupLive do
           group={@group}
           team={@current_team}
           organization_name={@organization_name}
+          delete_confirm={
+            Web.DeleteConfirm.group(@current_team, @group, length(@members), @context, @templates)
+          }
         />
       </aside>
       <main class="content-2/3">
@@ -233,7 +255,13 @@ defmodule Web.GroupLive do
             <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename</.a>
           </li>
           <li>
-            <.a id="group-delete" navigate={~p"/teams/#{@team}/groups/#{@group.id}/delete"}>Delete</.a>
+            <.a
+              id="group-delete"
+              href="#"
+              phx-click="delete"
+              phx-disable-with="Deleting…"
+              {@delete_confirm}
+            >Delete</.a>
           </li>
         </ul>
       </dd>

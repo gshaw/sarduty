@@ -8,6 +8,7 @@ defmodule Web.EquipmentItemLive do
   alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
+  alias App.Operation.SaveEquipmentItem
   alias App.Repo
   alias App.ViewData.EquipmentList
 
@@ -34,6 +35,22 @@ defmodule Web.EquipmentItemLive do
       )
 
     {:ok, socket}
+  end
+
+  # A D4H team deletes its equipment in D4H, so only a Records team's page offers it.
+  def handle_event("delete", _params, socket) do
+    %{current_team: team, current_user: user, item: item} = socket.assigns
+
+    with true <- D4H.records?(team),
+         :ok <- SaveEquipmentItem.delete(team, item, user, DateTime.utc_now()) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Deleted #{item.title}.")
+       |> push_navigate(to: ~p"/teams/#{team}/equipment")}
+    else
+      false -> {:noreply, socket}
+      {:error, text} -> {:noreply, put_flash(socket, :error, text)}
+    end
   end
 
   defp templates_with(item) do
@@ -99,7 +116,10 @@ defmodule Web.EquipmentItemLive do
               <li :if={D4H.records?(@current_team)}>
                 <.a
                   id="item-delete"
-                  navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/delete"}
+                  href="#"
+                  phx-click="delete"
+                  phx-disable-with="Deleting…"
+                  {Web.DeleteConfirm.item(@item)}
                 >Delete item</.a>
               </li>
               <li :if={@fields?}>

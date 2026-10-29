@@ -67,4 +67,11 @@
     <code>&lt;ul class="action-list"&gt;</code>
     of links. Each link fills its row, so the whole row takes a tap. On a touch screen each row is 44px tall.
   </p>
+  <p>
+    Change and Rename open a page of their own. Delete stays on the record's page: it opens the <a href={
+      page_path(:confirm_dialog)
+    }>confirm dialog</a>, which says what goes with it, and goes back
+    to the list once it's done. In the app: <code>phx-click="delete"</code>
+    with the attributes from <code>Web.DeleteConfirm</code>.
+  </p>
 </.shell>

@@ -68,10 +68,9 @@ defmodule Web.TitledRecordFormLiveTest do
     assert has_element?(page, "#qualification-actions #qualification-edit", "Rename")
     assert has_element?(page, "#qualification-actions #qualification-delete", "Delete")
 
-    # Rename and Delete are two pages (docs/urls.md).
+    # Rename is a page; Delete opens the confirm dialog on the record's page (docs/urls.md).
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
     assert has_element?(edit, "h1", "Rename Swiftwater")
-    refute has_element?(edit, "#record-delete")
 
     assert has_element?(
              edit,
@@ -83,10 +82,7 @@ defmodule Web.TitledRecordFormLiveTest do
     assert_received {:records, "PATCH", "/member-qualifications/99",
                      %{"title" => "Swiftwater Rescue 2"}}
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/delete")
-    assert has_element?(edit, "h1", "Delete Swiftwater")
-    refute has_element?(edit, "#titled-record-form")
-    edit |> element("#record-delete-button") |> render_click()
+    page |> element("#qualification-delete") |> render_click()
     assert_received {:records, "DELETE", "/member-qualifications/99", nil}
   end
 
@@ -231,8 +227,8 @@ defmodule Web.TitledRecordFormLiveTest do
     assert_received {:records, "PATCH", "/member-groups/99", %{"title" => "Rope Rescue"}}
     assert Repo.get!(Group, group.id).title == "Rope Rescue"
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}/delete")
-    edit |> element("#record-delete-button") |> render_click()
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}")
+    page |> element("#group-delete") |> render_click()
     assert_received {:records, "DELETE", "/member-groups/99", nil}
     refute Repo.get(Group, group.id)
     refute_received {:records, "GET", _path, _body}
@@ -272,7 +268,7 @@ defmodule Web.TitledRecordFormLiveTest do
     template_fixture(team, "Truck 1", [], [], [ground])
     team |> Ecto.Changeset.change(watch_d4h_group_id: ground.d4h_group_id) |> Repo.update!()
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{ground.id}/delete")
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/groups/#{ground.id}")
 
     items = [
       "Its 1 member leaves it.",
@@ -282,10 +278,8 @@ defmodule Web.TitledRecordFormLiveTest do
       "The attendance check stops until you select another group."
     ]
 
-    assert has_element?(edit, "#record-delete p", Enum.join(items, " "))
-
     # It takes a member with it, so the dialog asks for the box ticked (#651).
-    button = edit |> element("#record-delete-button") |> render()
+    button = page |> element("#group-delete") |> render()
     assert button =~ ~s(data-confirm="Delete the group Ground Search Team?")
 
     assert button
@@ -297,7 +291,7 @@ defmodule Web.TitledRecordFormLiveTest do
     assert button =~ ~s(data-confirm-check="I understand 1 member and its rules are lost.")
     assert button =~ ~s(data-confirm-warning="SAR Duty Records can&#39;t bring it back.")
 
-    edit |> element("#record-delete-button") |> render_click()
+    page |> element("#group-delete") |> render_click()
     refute Repo.get(Group, ground.id)
     assert [%{d4h_group_id: d4h_group_id}] = GroupRule.get_all(team.id)
     assert d4h_group_id == callout.d4h_group_id
@@ -315,21 +309,21 @@ defmodule Web.TitledRecordFormLiveTest do
     qualification = qualification_fixture(team, %{title: "Swiftwater"})
     qualification_award_fixture(qualification, member)
 
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/delete")
-    button = edit |> element("#record-delete-button") |> render()
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}")
+    link = page |> element("#qualification-delete") |> render()
 
-    assert button =~ ~s(data-confirm-check="I understand 1 member loses it.")
-    assert has_element?(edit, "#record-delete p", "1 member loses it.")
+    assert link =~ ~s(data-confirm-check="I understand 1 member loses it.")
+    assert link =~ "1 member loses it."
   end
 
   test "deleting a group nobody is in asks a simple question", %{conn: conn, team: team} do
     empty = group_fixture(team, %{title: "Swiftwater"})
-    {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{empty.id}/delete")
-    button = edit |> element("#record-delete-button") |> render()
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/groups/#{empty.id}")
+    link = page |> element("#group-delete") |> render()
 
-    assert button =~ ~s(data-confirm="Delete Swiftwater? Nobody is in it.")
-    assert button =~ ~s(data-confirm-button="Delete group")
-    refute button =~ "data-confirm-check"
+    assert link =~ ~s(data-confirm="Delete Swiftwater? Nobody is in it.")
+    assert link =~ ~s(data-confirm-button="Delete group")
+    refute link =~ "data-confirm-check"
   end
 
   test "the organization's group is never renamed or deleted", %{team: team} do
