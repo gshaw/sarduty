@@ -1,6 +1,9 @@
 /* A field with an error gets a red bar down its left side. See /styles/forms. */
 @layer components {
   .field-error { border-left: 5px solid var(--danger-text); padding-left: var(--sp-4); }
+  /* A field that may stay empty but is still needed, such as a D4H field an incident
+     needs to publish (#705): the error's bar in amber, since saving still works. */
+  .field-missing { border-left: 5px solid var(--warning); padding-left: var(--sp-4); }
 
   /* A checkbox or radio in a list of choices, beside its label. The box sits on the label's
      first line, and the label's text sets the baseline, so a table row lines up with it. */

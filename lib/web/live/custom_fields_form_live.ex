@@ -11,7 +11,6 @@ defmodule Web.CustomFieldsFormLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Operation.SaveCustomFields
@@ -28,7 +27,7 @@ defmodule Web.CustomFieldsFormLive do
         fields: fields,
         values: record.custom_values || %{},
         locked?: match?(%Activity{}, record) and Activity.locked?(record),
-        missing: missing(team, record, fields)
+        flag_missing?: match?(%Activity{}, record) and Activity.flag_missing_fields?(record)
       )
 
     {:ok, socket}
@@ -46,11 +45,6 @@ defmodule Web.CustomFieldsFormLive do
   defp title(%Activity{title: title}), do: title
   defp title(%Member{name: name}), do: name
   defp title(%EquipmentItem{title: title}), do: title
-
-  defp missing(team, %Activity{} = activity, fields),
-    do: CustomField.missing_count(fields, activity, team.timezone)
-
-  defp missing(_team, _record, _fields), do: nil
 
   def render(assigns) do
     ~H"""
@@ -77,21 +71,37 @@ defmodule Web.CustomFieldsFormLive do
       <.warning_text :if={@locked?} id="custom-fields-locked" class="mb-6">
         A published activity cannot be changed. {D4H.unpublish_text(@current_team)}
       </.warning_text>
-      <p :if={@missing} id="custom-fields-missing-count" class="mb-6">
-        {missing_text(@missing)}
-      </p>
+      <.missing_summary
+        :if={@flag_missing?}
+        count={missing_count(@fields, @values)}
+        service={D4H.service_name(@current_team)}
+      />
       <%!-- A disabled fieldset sends none of its fields. --%>
       <fieldset disabled={@locked?}>
         <.custom_field_inputs
           fields={@fields}
           values={@values}
           publish?={match?(%Activity{}, @record)}
+          flag_missing?={@flag_missing?}
         />
       </fieldset>
       <.form_actions :if={!@locked?}>
         <.button variant={:success} phx-disable-with="Saving…">Save fields</.button>
       </.form_actions>
     </.form>
+    """
+  end
+
+  # Over a draft incident's fields: how many D4H needs are empty, as the form holds them
+  # now, and that saving still works. Each one is tagged Missing below.
+  defp missing_summary(%{count: {0, _required}} = assigns), do: ~H""
+
+  defp missing_summary(assigns) do
+    ~H"""
+    <div id="custom-fields-missing-count" class="field-missing mb-6">
+      <p class="label mb-1">{missing_text(@count)}</p>
+      <p class="hint">You can save without them. {@service} needs them to publish the incident.</p>
+    </div>
     """
   end
 

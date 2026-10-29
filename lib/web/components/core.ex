@@ -347,8 +347,13 @@ defmodule Web.Components.Core do
     include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
+  attr :field_class, :any,
+    default: nil,
+    doc: "added to the field's wrapper, such as `field-missing` (#705)"
+
   slot :inner_block
   slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
+  slot :label_end, doc: "after the label's text, such as a badge"
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     # Only show errors for fields the user has typed in, or after a failed save, as the
@@ -422,8 +427,8 @@ defmodule Web.Components.Core do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div class={["mb-6", @errors != [] && "field-error"]}>
-      <.label :if={@label != nil} for={@id}>{@label}</.label>
+    <div class={["mb-6", @errors != [] && "field-error", @field_class]}>
+      <.label :if={@label != nil} for={@id}>{@label}{render_slot(@label_end)}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
       <select
@@ -442,8 +447,8 @@ defmodule Web.Components.Core do
 
   def input(%{type: "combobox"} = assigns) do
     ~H"""
-    <div class={["mb-6", @errors != [] && "field-error"]}>
-      <.label :if={@label != nil} for={@id}>{@label}</.label>
+    <div class={["mb-6", @errors != [] && "field-error", @field_class]}>
+      <.label :if={@label != nil} for={@id}>{@label}{render_slot(@label_end)}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
       <.combobox
@@ -462,8 +467,8 @@ defmodule Web.Components.Core do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div class={["mb-6", @errors != [] && "field-error"]}>
-      <.label :if={@label != nil} for={@id}>{@label}</.label>
+    <div class={["mb-6", @errors != [] && "field-error", @field_class]}>
+      <.label :if={@label != nil} for={@id}>{@label}{render_slot(@label_end)}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
       <textarea
@@ -556,8 +561,8 @@ defmodule Web.Components.Core do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div class={["mb-6", @errors != [] && "field-error"]}>
-      <.label :if={@label != nil} for={@id}>{@label}</.label>
+    <div class={["mb-6", @errors != [] && "field-error", @field_class]}>
+      <.label :if={@label != nil} for={@id}>{@label}{render_slot(@label_end)}</.label>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
       <input

@@ -92,7 +92,10 @@ them (#307).
 
 Each field is its type's input: text, a box for text areas, a number, a date or time, a
 select (a combobox past 10 options), or boxes to tick. On an activity a required one
-says "Needed to publish.", since D4H only checks them then. An archived option shows
+is tagged Needed to publish. On a draft incident one left empty is tagged Missing, with
+the error's bar in amber (`field-missing`), and a count over the form says saving still
+works; both change as the person types. Never a red error: D4H saves them blank and
+checks them only when it publishes. An archived option shows
 only while it is chosen. A team admin gets the Fields tab, with its link, whenever the
 record's kind has fields, so an empty one can be filled in; it says "No fields filled
 in."

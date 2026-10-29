@@ -69,7 +69,16 @@ defmodule Web.CustomFieldsFormLiveTest do
     assert has_element?(lv, "h1", "Change fields for Missing hiker")
     assert has_element?(lv, ~s(#custom-field-420 option[selected][value="1"]), "Lost")
     refute has_element?(lv, ~s(#custom-field-420 option[value="3"]))
-    assert render(lv) =~ "The file # of the requesting agency. Needed to publish."
+    # A draft incident: the filled one is tagged, the empty one Missing, and saving
+    # still works.
+    assert has_element?(lv, "#custom-fields-missing-count", "1 of 2 needed to publish is empty.")
+    assert has_element?(lv, ".field-missing label[for=custom-field-454]", "Missing")
+    assert has_element?(lv, "label[for=custom-field-420] .badge", "Needed to publish")
+    refute has_element?(lv, ".field-error")
+
+    lv |> form("#custom-fields-form", fields: %{"454" => "PROS 2026-1"}) |> render_change()
+    refute has_element?(lv, ".field-missing")
+    refute has_element?(lv, "#custom-fields-missing-count")
 
     {:ok, _lv, html} =
       lv
@@ -99,6 +108,8 @@ defmodule Web.CustomFieldsFormLiveTest do
     assert has_element?(lv, "#custom-fields-locked")
     assert has_element?(lv, "#custom-fields-form fieldset[disabled]")
     refute has_element?(lv, "#custom-fields-form button")
+    # Published, so nothing is flagged Missing.
+    refute has_element?(lv, ".field-missing")
   end
 
   test "a member's copied fields go to D4H, and the copy takes them",

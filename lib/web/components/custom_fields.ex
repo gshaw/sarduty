@@ -89,12 +89,17 @@ defmodule Web.Components.CustomFields do
 
   attr :publish?, :boolean,
     default: false,
-    doc: "an activity's fields: a required one says it's needed to publish"
+    doc: "an activity's fields: a required one is tagged Needed to publish"
+
+  attr :flag_missing?, :boolean,
+    default: false,
+    doc: "a draft incident's: a required one left empty is tagged Missing"
 
   @doc """
   A record's fields as inputs on its Change fields page (#705), each as its type's input,
-  named `fields[<D4H field id>]`. On an activity a required one says it's needed to
-  publish: D4H checks them only then.
+  named `fields[<D4H field id>]`. On an activity a required one is tagged Needed to
+  publish, and on a draft incident one left empty is tagged Missing, with an amber bar.
+  Never an error: D4H saves them blank and checks them only when it publishes.
   """
   def custom_field_inputs(assigns) do
     ~H"""
@@ -102,10 +107,33 @@ defmodule Web.Components.CustomFields do
       :for={field <- @fields}
       field={field}
       value={form_value(@values[Integer.to_string(field.d4h_custom_field_id)])}
-      publish?={@publish?}
+      mark={mark(field, @values, @publish?, @flag_missing?)}
     />
     """
   end
+
+  defp mark(field, values, publish?, flag_missing?) do
+    cond do
+      not (publish? and field.required) -> nil
+      flag_missing? and empty?(values[Integer.to_string(field.d4h_custom_field_id)]) -> :missing
+      true -> :needed
+    end
+  end
+
+  @doc """
+  How many of `fields` D4H needs to publish are empty in `values`, the record's or what
+  the form holds now, as `{missing, required}` for missing_text/1.
+  """
+  def missing_count(fields, values) do
+    required = Enum.filter(fields, & &1.required)
+
+    {Enum.count(required, &empty?(values[Integer.to_string(&1.d4h_custom_field_id)])),
+     length(required)}
+  end
+
+  # The form sends an empty box as "", and boxes to tick with a blank first.
+  defp empty?(value) when is_list(value), do: Enum.all?(value, &empty?/1)
+  defp empty?(value), do: value in [nil, ""]
 
   # Option ids as the inputs send them back, as strings.
   defp form_value(list) when is_list(list), do: Enum.map(list, &to_string/1)
@@ -124,16 +152,16 @@ defmodule Web.Components.CustomFields do
 
   attr :field, CustomField, required: true
   attr :value, :any, default: nil
-  attr :publish?, :boolean, required: true
+  attr :mark, :atom, values: [nil, :needed, :missing], required: true
 
   defp custom_input(%{field: %{field_type: "multiple_choice"}} = assigns) do
     assigns =
       assign(assigns, id: input_id(assigns.field), name: input_name(assigns.field) <> "[]")
 
     ~H"""
-    <fieldset id={@id} class="mb-6">
-      <legend>{@field.title}</legend>
-      <.hint :if={field_hint(@field, @publish?)}>{field_hint(@field, @publish?)}</.hint>
+    <fieldset id={@id} class={["mb-6", @mark == :missing && "field-missing"]}>
+      <legend>{@field.title}<.mark mark={@mark} /></legend>
+      <.hint :if={@field.hint not in [nil, ""]}>{@field.hint}</.hint>
       <input type="hidden" name={@name} value="" />
       <label :for={{label, value} <- options(@field, @value)} class="choice">
         <input
@@ -164,12 +192,14 @@ defmodule Web.Components.CustomFields do
       name={@name}
       type={if length(@options) > 10, do: "combobox", else: "select"}
       label={@field.title}
+      field_class={@mark == :missing && "field-missing"}
       prompt="None"
       clearable
       options={@options}
       value={@selected}
     >
-      {field_hint(@field, @publish?)}
+      <:label_end><.mark mark={@mark} /></:label_end>
+      {@field.hint}
     </.input>
     """
   end
@@ -189,11 +219,13 @@ defmodule Web.Components.CustomFields do
       name={@name}
       type={@type}
       label={@field.title}
+      field_class={@mark == :missing && "field-missing"}
       value={@shown}
       rows={@type == "textarea" && "3"}
       step={@type == "number" && "any"}
     >
-      {field_hint(@field, @publish?)}
+      <:label_end><.mark mark={@mark} /></:label_end>
+      {@field.hint}
     </.input>
     """
   end
@@ -210,24 +242,17 @@ defmodule Web.Components.CustomFields do
   defp shown_value("date", value) when is_binary(value), do: String.slice(value, 0, 10)
   defp shown_value(_type, value), do: value
 
-  # D4H's hint, and on an activity, for a required field, that it's needed to publish.
-  # Many of D4H's hints have no full stop, so one goes before the second sentence.
-  defp field_hint(field, publish?) do
-    needed = if publish? and field.required, do: "Needed to publish."
+  attr :mark, :atom, required: true
 
-    hint = if field.hint not in [nil, ""], do: field.hint
+  defp mark(%{mark: nil} = assigns), do: ~H""
 
-    case {hint, needed} do
-      {nil, nil} -> nil
-      {hint, nil} -> hint
-      {nil, needed} -> needed
-      {hint, needed} -> "#{full_stop(hint)} #{needed}"
-    end
-  end
-
-  defp full_stop(text) do
-    text = String.trim_trailing(text)
-    if String.ends_with?(text, [".", "!", "?"]), do: text, else: text <> "."
+  defp mark(assigns) do
+    ~H"""
+    <span class="ml-2">
+      <.badge :if={@mark == :missing} kind={:warning}>Missing</.badge>
+      <.badge :if={@mark == :needed}>Needed to publish</.badge>
+    </span>
+    """
   end
 
   # The live options in D4H's order, and an archived one only while it is chosen.
