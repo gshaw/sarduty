@@ -33,6 +33,20 @@
     </dl>
   </div>
 
+  <h2>Custom fields</h2>
+  <p>
+    A record's custom fields, the ones its team or organization added, under a heading in the page's main column. A required
+    field with no value shows Missing to team admins.
+  </p>
+  <div class="demo max-w-sm">
+    <.custom_fields
+      id="detail-list-fields"
+      title="Incident fields"
+      rows={custom_field_rows()}
+      class=""
+    />
+  </div>
+
   <h2>When to use</h2>
   <p>The facts at the top of a record's page, a label and a value each.</p>
 
@@ -41,6 +55,11 @@
 
   <h2>In the app</h2>
   <p>A plain <code>&lt;dl&gt;</code>. Each <code>dd</code> gets a rule under it.</p>
+  <p>
+    Custom fields are <code>&lt;.custom_fields&gt;</code>, or
+    <code>&lt;.custom_field_pairs&gt;</code>
+    inside a sidebar's own list, with rows from <code>CustomField.rows/4</code>.
+  </p>
   <p>
     Things to do with the record go last, under Actions, as a
     <code>&lt;ul class="action-list"&gt;</code>

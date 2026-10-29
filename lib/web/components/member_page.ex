@@ -22,6 +22,7 @@ defmodule Web.Components.MemberPage do
   attr :milestones, :list, required: true, doc: "from load_sidebar/1"
   attr :equipment, :list, required: true, doc: "from load_sidebar/1"
   attr :maps_app, :string, required: true, doc: "the account's maps_app"
+  attr :field_rows, :list, default: [], doc: "the member fields, from load_sidebar/1"
   attr :team_admin?, :boolean, default: false
 
   attr :current_member, :any,
@@ -69,6 +70,7 @@ defmodule Web.Components.MemberPage do
           maps_app={@maps_app}
           milestones={@milestones}
           team_admin?={@team_admin?}
+          field_rows={@field_rows}
         />
       </aside>
       <main class="content-2/3">

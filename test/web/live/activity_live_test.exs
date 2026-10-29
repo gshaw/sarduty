@@ -582,4 +582,58 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#side-nav-activities[aria-current=page]")
     end
   end
+
+  describe "custom fields (#681)" do
+    defp incident_with_fields(team) do
+      cause =
+        custom_field_fixture(team, %{
+          d4h_custom_field_id: 420,
+          title: "Primary Cause",
+          field_type: "single_choice",
+          options: [%{"id" => 1, "label" => "Lost"}]
+        })
+
+      notes =
+        custom_field_fixture(team, %{d4h_custom_field_id: 896, title: "Notes", restricted: true})
+
+      weather =
+        custom_field_fixture(team, %{d4h_custom_field_id: 422, title: "Weather", required: true})
+
+      _empty = custom_field_fixture(team, %{d4h_custom_field_id: 577, title: "ASE#"})
+
+      activity =
+        activity_fixture(team, %{
+          activity_kind: "incident",
+          custom_values: %{"420" => [1], "896" => "Team only"}
+        })
+
+      {activity, cause, notes, weather}
+    end
+
+    test "a team admin sees every field, and the required ones left empty", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      {activity, _cause, _notes, _weather} = incident_with_fields(team)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#activity-fields h2", "Incident fields")
+      assert has_element?(lv, "#activity-fields-420", "Lost")
+      assert has_element?(lv, "#activity-fields-896", "Team only")
+      assert has_element?(lv, "#activity-fields-422", "Missing")
+      refute has_element?(lv, "#activity-fields-577")
+    end
+
+    test "a member sees neither restricted fields nor what's missing", %{conn: conn} do
+      %{team: team, user: user} = member_with_login_fixture()
+      {activity, _cause, _notes, _weather} = incident_with_fields(team)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#activity-fields-420", "Lost")
+      refute has_element?(lv, "#activity-fields-896")
+      refute has_element?(lv, "#activity-fields-422")
+    end
+  end
 end

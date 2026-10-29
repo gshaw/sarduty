@@ -4,12 +4,14 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.A
   import Web.Components.Breadcrumbs
   import Web.Components.CopyButton
+  import Web.Components.CustomFields
   import Web.Components.Email
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
   import Web.Components.Phone
 
   alias App.Adapter.D4H
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.Standing
@@ -21,8 +23,9 @@ defmodule Web.Components.MemberSidebar do
   @doc """
   Assigns the header's `last_attended_at` and `standing`, as the viewer sees it, the
   sidebar's `milestones`, and the `equipment` that decides whether the tabs show
-  Equipment, for the socket's `member`. Call it when the member loads, not on every
-  render: a form's change events re-render.
+  Equipment, and for a team admin the member fields the team copies (#681), for the
+  socket's `member`. Call it when the member loads, not on every render: a form's change
+  events re-render.
   """
   def load_sidebar(socket) do
     %{member: member, team_admin?: team_admin?} = socket.assigns
@@ -32,8 +35,18 @@ defmodule Web.Components.MemberSidebar do
       last_attended_at: Member.last_attended_at(member),
       standing: Standing.visible(standing, team_admin?),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
-      equipment: EquipmentItem.held_by(member.team, member)
+      equipment: EquipmentItem.held_by(member.team, member),
+      field_rows: field_rows(member, team_admin?)
     )
+  end
+
+  @doc "The member fields the sidebar shows: team admins' alone (#681)."
+  def field_rows(_member, false), do: []
+
+  def field_rows(member, true) do
+    member.team_id
+    |> CustomField.copied_member_fields(:team_admin)
+    |> CustomField.rows(member.custom_values, member.team.timezone)
   end
 
   attr :member, :map, required: true
@@ -80,6 +93,7 @@ defmodule Web.Components.MemberSidebar do
     doc: "the member's milestones, newest first, from load_sidebar/1"
 
   attr :team_admin?, :boolean, default: false, doc: "adds contact details and Actions"
+  attr :field_rows, :list, default: [], doc: "the member fields, from load_sidebar/1"
 
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H. Members see the ID and
@@ -90,6 +104,7 @@ defmodule Web.Components.MemberSidebar do
       <dt>ID</dt>
       <dd>{@member.ref_id}</dd>
       <.contact_details :if={@team_admin?} member={@member} maps_app={@maps_app} />
+      <.custom_field_pairs :if={@team_admin?} id="member-fields" rows={@field_rows} />
       <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />

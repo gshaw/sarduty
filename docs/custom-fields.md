@@ -31,6 +31,21 @@ ones, edit them, and later fill them from templates (#307).
   Saving clears every member's values and reads the members at once, so the copy after
   a change is a new baseline and an unpicked field leaves nothing behind.
 
+## Where they show
+
+[CustomField.rows/4](../lib/app/model/custom_field.ex) picks what a page shows, and
+[CustomFields](../lib/web/components/custom_fields.ex) shows it as a detail list.
+
+- **An activity's page** has a section named for its kind, "Incident fields", under
+  the description: every field with a value, in D4H's order. Team admins also see
+  RESTRICTED fields and each required field left empty, marked Missing. Members see
+  the rest, as they see tags.
+- **An equipment item's page**, for team admins, has Equipment fields.
+- **A member's page**, for team admins, lists the copied member fields in the sidebar.
+  A member sees their own on Your membership's Contact details, only the ones D4H lets
+  a member see (`member_privacy` viewable or editable). Members never see another
+  member's.
+
 ## How fresh it is
 
 D4H doesn't change a record's `updatedAt` when only its custom field values change

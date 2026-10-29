@@ -433,6 +433,28 @@ defmodule App.DataFixtures do
     |> Repo.insert!()
   end
 
+  @doc """
+  A D4H custom field copied for the team (#681): an incident text field unless `attrs`
+  say otherwise. `d4h_custom_field_id` defaults to a unique number.
+  """
+  def custom_field_fixture(%Team{} = team, attrs \\ %{}) do
+    params =
+      Map.merge(
+        %{
+          team_id: team.id,
+          d4h_custom_field_id: System.unique_integer([:positive]),
+          target: "incident",
+          title: "Field",
+          field_type: "text",
+          inserted_at: DateTime.utc_now(),
+          updated_at: DateTime.utc_now()
+        },
+        attrs
+      )
+
+    App.Model.CustomField |> struct!(params) |> Repo.insert!()
+  end
+
   def equipment_item_fixture(%Team{} = team, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
 

@@ -40,4 +40,21 @@ defmodule App.Model.CustomFieldTest do
     assert CustomField.describe_values(index, %{"888" => [1], "5" => "x"}, ["888", "5", "6"], @tz) ==
              %{"City" => "Surrey", "Field 5" => ~s("x"), "Field 6" => nil}
   end
+
+  test "rows: values in order, required ones missing on request, restricted ones on request" do
+    city = field(%{d4h_custom_field_id: 1, title: "City", restricted: true})
+    area = field(%{d4h_custom_field_id: 2, title: "Area", required: true})
+    notes = field(%{d4h_custom_field_id: 3, title: "Notes"})
+    values = %{"1" => "Surrey", "3" => "Found"}
+
+    fields = [city, area, notes]
+    titles = &Enum.map(&1, fn row -> {row.field.title, row.text, row.missing?} end)
+
+    assert fields |> CustomField.rows(values, @tz) |> titles.() == [{"Notes", "Found", false}]
+
+    assert fields |> CustomField.rows(values, @tz, restricted: true, missing: true) |> titles.() ==
+             [{"City", "Surrey", false}, {"Area", nil, true}, {"Notes", "Found", false}]
+
+    assert CustomField.rows([notes], nil, @tz) == []
+  end
 end

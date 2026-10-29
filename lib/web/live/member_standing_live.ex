@@ -20,6 +20,7 @@ defmodule Web.MemberStandingLive do
   alias App.Operation.SetGroupMember
   alias App.Repo
   alias App.ViewData.MemberMilestones
+  alias Web.Components.MemberSidebar
   alias Web.Components.NotAPersonSwitch
 
   # A member's standing (#366): Active, away for a dated period, retiring, or not a
@@ -40,6 +41,7 @@ defmodule Web.MemberStandingLive do
      |> assign(:member, member)
      |> assign(:last_attended_at, Member.last_attended_at(member))
      |> assign(:equipment, EquipmentItem.held_by(member.team, member))
+     |> assign(:field_rows, MemberSidebar.field_rows(member, true))
      |> load_standing()
      |> assign_new_form()}
   end
@@ -217,6 +219,7 @@ defmodule Web.MemberStandingLive do
       standing={@standing}
       milestones={@milestones}
       equipment={@equipment}
+      field_rows={@field_rows}
       maps_app={@current_user.maps_app}
       team_admin?={@team_admin?}
     >

@@ -2,8 +2,10 @@ defmodule Web.EquipmentItemLive do
   use Web, :live_view_app_layout
 
   import Ecto.Query
+  import Web.Components.CustomFields
 
   alias App.Adapter.D4H
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Repo
@@ -22,7 +24,11 @@ defmodule Web.EquipmentItemLive do
         row: row,
         contents: Enum.filter(items, &(&1.d4h_container_id == item.d4h_equipment_id)),
         usages: EquipmentUsage.for_item(item),
-        templates: templates_with(item)
+        templates: templates_with(item),
+        field_rows:
+          team.id
+          |> CustomField.get_all("equipment")
+          |> CustomField.rows(item.custom_values, team.timezone, restricted: true)
       )
 
     {:ok, socket}
@@ -127,6 +133,7 @@ defmodule Web.EquipmentItemLive do
           </.table>
           <p :if={@usages == []} class="hint">No activities have this item.</p>
         </section>
+        <.custom_fields id="item-fields" title="Equipment fields" rows={@field_rows} />
       </main>
     </div>
     """

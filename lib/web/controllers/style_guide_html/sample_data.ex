@@ -1,6 +1,7 @@
 defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
+  alias App.Model.CustomField
   alias App.Model.Team
   alias App.ViewData.Milestones
   alias Service.Format
@@ -8,6 +9,32 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   # cspell:ignore Tremblay exsss
   # Made-up rows for the style guide, shaped like the app's pages.
+
+  @doc """
+  An incident's custom fields (#681), as the activity page shows them to a team admin:
+  two with values and a required one left empty.
+  """
+  def custom_field_rows do
+    field = fn id, title, type, options ->
+      %CustomField{
+        d4h_custom_field_id: id,
+        title: title,
+        field_type: type,
+        required: true,
+        options: options
+      }
+    end
+
+    fields = [
+      field.(1, "Primary Cause", "single_choice", [%{"id" => 10, "label" => "Lost"}]),
+      field.(2, "Agency File #", "text", []),
+      field.(3, "Was weather a factor in response?", "single_choice", [])
+    ]
+
+    CustomField.rows(fields, %{"1" => [10], "2" => "2026-123456"}, "America/Vancouver",
+      missing: true
+    )
+  end
 
   @doc """
   An upload like the certificate form's, for the file drop: `:empty`, `:chosen` with a

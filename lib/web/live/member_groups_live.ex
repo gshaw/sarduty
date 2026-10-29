@@ -98,6 +98,7 @@ defmodule Web.MemberGroupsLive do
       standing={@standing}
       milestones={@milestones}
       equipment={@equipment}
+      field_rows={@field_rows}
       maps_app={@current_user.maps_app}
       team_admin?={@team_admin?}
     >
