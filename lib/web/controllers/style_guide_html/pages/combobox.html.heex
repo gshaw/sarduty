@@ -49,12 +49,52 @@
     </form>
   </div>
 
+  <h3 id="hints">Short list, with hints</h3>
+  <div class="demo">
+    <form class="measure" onsubmit="return false">
+      <.input
+        type="combobox"
+        id="combobox-demo-hints"
+        name="category"
+        label="Category"
+        value="maintenance"
+        placeholder="Select a category"
+        keyboard={false}
+        options={[
+          [
+            key: "Administrative Work",
+            value: "admin",
+            "data-hint": "Phone calls, emails, and filing"
+          ],
+          [
+            key: "Maintenance",
+            value: "maintenance",
+            "data-hint": "Vehicles, equipment, and the hall"
+          ],
+          [
+            key: "Training Prep",
+            value: "training",
+            "data-hint": "eLearning and solo rope practice"
+          ]
+        ]}
+      >
+        <:below>
+          <p class="hint mt-1">Vehicles, equipment, and the hall</p>
+        </:below>
+      </.input>
+    </form>
+  </div>
+
   <h2>When to use</h2>
   <p>
     A list that can run past about 15 options, such as a team's qualifications, groups, or endorsements.
   </p>
   <p>
     With <code>free_text</code>, an answer people usually pick from what the team already uses but may type new, such as a member's role. The options are the team's own answers, most used first.
+  </p>
+
+  <p>
+    With hints and <code>keyboard=&#123;false&#125;</code>, a short list whose choices need a line each to explain, where radios would fill a phone's screen, such as a chore's category. Show the picked one's hint under the box.
   </p>
 
   <h2>When not to use</h2>
@@ -77,6 +117,10 @@
     </li>
     <li>The x at the end clears the box and lists every option again.</li>
     <li>Groups of options show under a heading each.</li>
+    <li>An option's hint shows as a muted line under its label.</li>
+    <li>
+      With <code>keyboard=&#123;false&#125;</code>, tapping the box on a phone opens the list, not the keyboard.
+    </li>
   </ul>
 
   <h2>In the app</h2>
@@ -87,6 +131,10 @@
   <p>
     <code>free_text</code>
     makes the text box the field instead, and the hidden select only holds the suggestions. Change member uses it for Role.
+  </p>
+  <p>
+    An option written as <code>[key: "Maintenance", value: id, "data-hint": "…"]</code>
+    carries its hint. Log a chore uses it for Category.
   </p>
   <p>
     <code>&lt;.combobox size=&#123;:sm&#125; aria-label="…" /&gt;</code>

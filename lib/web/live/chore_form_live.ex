@@ -21,14 +21,24 @@ defmodule Web.ChoreFormLive do
     today = Service.Period.today(DateTime.utc_now(), team.timezone)
     {mode, chore} = mode_and_chore(socket.assigns, params["id"])
     chore = chore && %{chore | time: Chore.time_text(chore.minutes)}
+    categories = categories(team.id, chore)
+    data = chore || new_chore(today, last_category_id(socket.assigns, categories))
 
     socket
     |> assign(mode: mode, chore: chore, today: today, params: %{})
     |> assign(page_title: if(chore, do: "Change chore", else: "Log a chore"))
-    |> assign(categories: categories(team.id, chore))
-    |> assign_form(Chore.build_changeset(chore || new_chore(today), %{}, [], nil))
+    |> assign(categories: categories)
+    |> assign_form(Chore.build_changeset(data, %{}, [], nil))
     |> then(&{:ok, &1})
   end
+
+  # A new chore starts on the category of the member's last one, while it is still open.
+  defp last_category_id(%{live_action: :new, current_member: member}, categories) do
+    id = Chore.last_category_id(member)
+    if Enum.any?(categories, &(&1.id == id)), do: id
+  end
+
+  defp last_category_id(_assigns, _categories), do: nil
 
   defp mode_and_chore(%{live_action: :new, current_member: nil}, _id),
     do: raise(Web.Status.NotFound)
@@ -48,12 +58,7 @@ defmodule Web.ChoreFormLive do
     chore
   end
 
-  # After Log and add another, the next chore starts on the last one's date and category.
-  defp new_chore(today, last \\ nil),
-    do: %Chore{
-      date: (last && last.date) || today,
-      chore_category_id: last && last.chore_category_id
-    }
+  defp new_chore(date, category_id), do: %Chore{date: date, chore_category_id: category_id}
 
   @doc "The categories to offer: the open ones, and the chore's own once archived."
   def categories(team_id, chore) do
@@ -78,12 +83,7 @@ defmodule Web.ChoreFormLive do
 
     <.form for={@form} id="chore-form" class="measure" phx-change="validate" phx-submit="save">
       <.error_summary form={@form} />
-      <.input
-        field={@form[:chore_category_id]}
-        type="radios"
-        label="Category"
-        options={Enum.map(@categories, &{&1.title, &1.id, &1.description})}
-      />
+      <.category_field form={@form} categories={@categories} />
       <.input field={@form[:description]} type="textarea" rows="3" label="What they did" />
       <.date_field form={@form} today={@today} />
       <.time_field form={@form} />
@@ -118,12 +118,7 @@ defmodule Web.ChoreFormLive do
       phx-submit="save"
     >
       <.error_summary form={@form} />
-      <.input
-        field={@form[:chore_category_id]}
-        type="radios"
-        label="Category"
-        options={Enum.map(@categories, &{&1.title, &1.id, &1.description})}
-      />
+      <.category_field form={@form} categories={@categories} />
       <.input field={@form[:description]} type="textarea" rows="3" label="What you did">
         A team admin reads this, and so does everyone who opens its activity.
       </.input>
@@ -165,6 +160,33 @@ defmodule Web.ChoreFormLive do
         </:trailing>
       </.form_actions>
     </.form>
+    """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :categories, :list, required: true
+
+  # A combobox, not radios: six categories with descriptions filled a phone's screen. The
+  # list shows each description, and the picked one's shows under the box.
+  defp category_field(assigns) do
+    value = to_string(assigns.form[:chore_category_id].value)
+    assigns = assign(assigns, picked: Enum.find(assigns.categories, &(to_string(&1.id) == value)))
+
+    ~H"""
+    <.input
+      field={@form[:chore_category_id]}
+      type="combobox"
+      label="Category"
+      placeholder="Select a category"
+      keyboard={false}
+      options={Enum.map(@categories, &[key: &1.title, value: &1.id, "data-hint": &1.description])}
+    >
+      <:below>
+        <p :if={@picked && @picked.description} id="chore-category-hint" class="hint mt-1">
+          {@picked.description}
+        </p>
+      </:below>
+    </.input>
     """
   end
 
@@ -279,7 +301,8 @@ defmodule Web.ChoreFormLive do
 
   # Log and add another: the same page, empty but for the last chore's date and category.
   defp start_another(socket, saved) do
-    changeset = socket.assigns.today |> new_chore(saved) |> Chore.build_changeset(%{}, [], nil)
+    changeset =
+      saved.date |> new_chore(saved.chore_category_id) |> Chore.build_changeset(%{}, [], nil)
 
     socket
     |> put_flash(:info, "Logged #{saved.description}. Add the next one.")
@@ -287,12 +310,14 @@ defmodule Web.ChoreFormLive do
     |> assign_form(changeset)
   end
 
+  # Starts from what the form opened with, so Today or Yesterday before any typing keeps
+  # the category it started on.
   defp validate(socket, params) do
-    %{chore: chore, categories: categories, today: today, mode: mode} = socket.assigns
+    %{form: form, categories: categories, today: today, mode: mode} = socket.assigns
     who = if mode == :team_admin, do: :team_admin, else: :member
 
     changeset =
-      (chore || %Chore{})
+      form.source.data
       |> Chore.build_changeset(params, Enum.map(categories, & &1.id), today, who)
       |> Map.put(:action, :validate)
 

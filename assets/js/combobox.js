@@ -8,7 +8,7 @@
 // suggest. Picking one fills the box, and nothing is highlighted until the arrow keys move,
 // so Enter keeps what was typed. The ARIA follows the
 // WAI combobox pattern: focus stays in the text box and aria-activedescendant names the
-// highlighted option.
+// highlighted option. An option's data-hint shows as a line under its label.
 export const Combobox = {
   mounted() {
     this.select = this.el.querySelector("select")
@@ -157,6 +157,12 @@ export const Combobox = {
     li.setAttribute("aria-selected", "false")
     li.dataset.value = option.value
     li.append(...this.marked(option.text, words))
+    if (option.dataset.hint) {
+      const hint = document.createElement("span")
+      hint.className = "combobox-hint"
+      hint.textContent = option.dataset.hint
+      li.append(hint)
+    }
     return li
   },
 
