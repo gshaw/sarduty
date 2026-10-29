@@ -1,7 +1,7 @@
 defmodule Web.ChoreLive do
   use Web, :live_view_app_layout
 
-  import Web.ChoreText, only: [status_badge: 1]
+  import Web.ChoreText, only: [own_box: 1, status_badge: 1]
 
   alias App.Model.Chore
   alias App.Model.ChoreEvent
@@ -14,14 +14,16 @@ defmodule Web.ChoreLive do
 
   # One chore (#341), /teams/:subdomain/chores/:id: a team admin accepts it, changes it,
   # or declines it with a reason the member sees, in any status. Each sends its chore
-  # category's activity for the month to D4H.
+  # category's activity for the month to D4H. A team admin accepts their own chore only
+  # once they select the box that says they meant it (#697).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
     chore = Chore.find!(team, id)
 
     socket
-    |> assign(page_title: chore.description, chore: chore)
+    |> assign(page_title: chore.description, chore: chore, own: false)
+    |> assign(own_chore?: Chore.own?(chore, socket.assigns.current_member))
     |> assign(decided_by: decider_name(team, chore.decided_by_user, DateTime.utc_now()))
     |> assign(activity: chore.chore_event && ChoreEvent.local_activity(chore.chore_event))
     |> assign_decline_form(%{})
@@ -94,21 +96,23 @@ defmodule Web.ChoreLive do
       </div>
     </dl>
 
-    <.form_actions>
-      <.button
-        :if={@chore.status != :accepted}
-        id="chore-accept"
-        type="button"
-        variant={:success}
-        phx-click="accept"
-        phx-disable-with="Sending…"
-      >
-        Accept chore
-      </.button>
-      <.button id="chore-change" navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}/edit"}>
-        Change chore
-      </.button>
-    </.form_actions>
+    <.form for={%{}} id="accept-form" phx-change="own" phx-submit="accept">
+      <.own_box :if={@own_chore? and @chore.status != :accepted} checked={@own} />
+      <.form_actions>
+        <.button
+          :if={@chore.status != :accepted}
+          id="chore-accept"
+          variant={:success}
+          disabled={@own_chore? and !@own}
+          phx-disable-with="Sending…"
+        >
+          Accept chore
+        </.button>
+        <.button id="chore-change" navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}/edit"}>
+          Change chore
+        </.button>
+      </.form_actions>
+    </.form>
 
     <section :if={@chore.status != :declined} id="chore-decline" class="mt-8">
       <h2 class="subheading">Decline</h2>
@@ -130,10 +134,22 @@ defmodule Web.ChoreLive do
     """
   end
 
-  def handle_event("accept", _params, socket) do
-    %{current_team: team, current_user: user, chore: chore} = socket.assigns
-    {:ok, accepted} = SaveChore.accept_one(team, chore, user, DateTime.utc_now())
-    {:noreply, send_and_return(socket, accepted, "Accepted #{chore.description}")}
+  def handle_event("own", params, socket),
+    do: {:noreply, assign(socket, :own, params["own"] == "true")}
+
+  def handle_event("accept", params, socket) do
+    %{current_team: team, current_user: user, current_member: member, chore: chore} =
+      socket.assigns
+
+    opts = [member: member, own: params["own"] == "true"]
+
+    case SaveChore.accept_one(team, chore, user, DateTime.utc_now(), opts) do
+      {:ok, accepted} ->
+        {:noreply, send_and_return(socket, accepted, "Accepted #{chore.description}")}
+
+      {:error, :own} ->
+        {:noreply, put_flash(socket, :error, ChoreText.own_refused())}
+    end
   end
 
   def handle_event("decline", %{"decline" => %{"reason" => reason}}, socket) do

@@ -98,6 +98,13 @@ defmodule App.Model.Chore do
     |> validate_length(:decline_reason, max: 300, message: "Keep it under 300 characters")
   end
 
+  @doc """
+  Whether `member` logged it: a team admin's own chore, which another team admin should
+  accept (#697). Nil, a user who isn't one of the team's members, has none.
+  """
+  def own?(%Chore{member_id: member_id}, %Member{id: member_id}), do: true
+  def own?(%Chore{}, _member), do: false
+
   @doc "Whether the member can change or delete it: only while it waits."
   def member_can_change?(%Chore{status: status}), do: status == :waiting
 
