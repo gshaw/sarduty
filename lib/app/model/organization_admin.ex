@@ -14,8 +14,8 @@ defmodule App.Model.OrganizationAdmin do
   # its people. Only SAR Duty admins add and remove them. Emails are stored lowercase.
   schema "organization_admins" do
     belongs_to :organization, Organization
-    field :email, :string
-    field :reason, TrimmedString
+    field :email, :string, redact: true
+    field :reason, TrimmedString, redact: true
     belongs_to :added_by_user, User
     # Stamped at most hourly when they open an organization page. Never users.last_seen_at,
     # which would make their own team look recently used.

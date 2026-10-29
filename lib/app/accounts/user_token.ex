@@ -14,9 +14,9 @@ defmodule App.Accounts.UserToken do
   @session_validity_in_days 60
 
   schema "users_tokens" do
-    field :token, :binary
+    field :token, :binary, redact: true
     field :context, :string
-    field :sent_to, :string
+    field :sent_to, :string, redact: true
     field :failed_attempts, :integer, default: 0
     belongs_to :user, App.Accounts.User
 

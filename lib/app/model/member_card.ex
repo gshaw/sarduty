@@ -15,7 +15,7 @@ defmodule App.Model.MemberCard do
   schema "member_cards" do
     belongs_to :team, Team
     belongs_to :member, Member
-    field :code, :string
+    field :code, :string, redact: true
     field :revoked_at, :utc_datetime_usec
     has_many :pass_registrations, PassRegistration
     # Apple Wallet pass updates: Wallet sends the token back to prove it holds the pass,

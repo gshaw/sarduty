@@ -21,8 +21,8 @@ defmodule App.Model.Team do
     field :mailing_address, TrimmedString
     field :authorized_by_name, TrimmedString
     field :authorized_by_title, TrimmedString
-    field :authorized_by_phone, TrimmedString
-    field :authorized_by_email, TrimmedString
+    field :authorized_by_phone, TrimmedString, redact: true
+    field :authorized_by_email, TrimmedString, redact: true
     # A PNG, set by App.Operation.SaveTeamSignature, never cast from a form.
     field :signature, :binary, redact: true
     field :lat, :float
