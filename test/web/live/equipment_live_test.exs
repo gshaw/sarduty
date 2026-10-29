@@ -457,6 +457,133 @@ defmodule Web.EquipmentLiveTest do
              "requested"
   end
 
+  defp cause_field(team) do
+    custom_field_fixture(team, %{
+      title: "Primary Cause",
+      field_type: "single_choice",
+      options: [
+        %{"id" => 1, "label" => "Lost", "ordering" => 0, "archived" => false},
+        %{"id" => 2, "label" => "Injured", "ordering" => 1, "archived" => false}
+      ]
+    })
+  end
+
+  defp incident_template(team, title, items, values) do
+    template = template_fixture(team, title, items)
+    changes = [activity_kind: "incident", custom_values: values]
+    template |> Ecto.Changeset.change(changes) |> Repo.update!()
+  end
+
+  test "a template for incidents holds values for their fields", ctx do
+    cause = cause_field(ctx.team)
+    custom_field_fixture(ctx.team, %{target: "event", title: "Event Leader"})
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
+
+    # Any kind has no fields.
+    refute has_element?(lv, "#template-fields")
+
+    lv
+    |> form("#template-form", template: %{title: "Lost hiker", activity_kind: "incident"})
+    |> render_change()
+
+    assert has_element?(lv, "#template-fields", "Fields · 0")
+    assert has_element?(lv, "#custom-field-#{cause.d4h_custom_field_id}")
+    refute has_element?(lv, "#template-fields", "Event Leader")
+
+    lv
+    |> form("#template-form",
+      template: %{title: "Lost hiker", activity_kind: "incident"},
+      fields: %{"#{cause.d4h_custom_field_id}" => "1"}
+    )
+    |> render_submit()
+
+    template = Repo.get_by!(Template, team_id: ctx.team.id)
+    assert template.activity_kind == "incident"
+    assert template.custom_values == %{"#{cause.d4h_custom_field_id}" => [1]}
+
+    {:ok, _lv, html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates")
+    assert html =~ "Incident"
+  end
+
+  test "a template fills in the incident's empty fields in D4H", ctx do
+    cause = cause_field(ctx.team)
+    agency = custom_field_fixture(ctx.team, %{title: "Requesting Agency"})
+    cause_id = "#{cause.d4h_custom_field_id}"
+    agency_id = "#{agency.d4h_custom_field_id}"
+
+    activity =
+      activity_fixture(ctx.team, %{
+        activity_kind: "incident",
+        custom_values: %{agency_id => "Surrey RCMP"}
+      })
+
+    template =
+      incident_template(ctx.team, "Lost hiker", [], %{cause_id => [1], agency_id => "RCMP"})
+
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+      case conn.method do
+        "GET" ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        method ->
+          send(test_pid, {:d4h_write, method, conn.request_path, Jason.decode!(body)})
+
+          Req.Test.json(
+            conn,
+            App.RecordsStub.activity_json(activity.d4h_activity_id, %{
+              "resourceType" => "Incident"
+            })
+          )
+      end
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    assert has_element?(lv, "#template-#{template.id}", "Incident: 0 items, 2 fields")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+
+    # The agency is filled in already, so only the cause goes.
+    assert has_element?(lv, "#template-fields #field-#{cause_id}", "Lost")
+    refute has_element?(lv, "#template-fields #field-#{agency_id}")
+
+    lv |> form("#template-lines") |> render_submit()
+
+    assert_received {:d4h_write, "PATCH", path, body}
+    assert String.ends_with?(path, "/incidents/#{activity.d4h_activity_id}")
+
+    assert body == %{
+             "customFieldValues" => [%{"id" => cause.d4h_custom_field_id, "value" => [1]}]
+           }
+
+    refute_received {:d4h_write, _method, _path, _body}
+
+    flash = assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    assert flash["info"] == "1 field filled in."
+
+    assert Repo.get!(Activity, activity.id).custom_values == %{
+             cause_id => [1],
+             agency_id => "Surrey RCMP"
+           }
+  end
+
+  test "a published activity's fields are left out", ctx do
+    cause = cause_field(ctx.team)
+    activity = activity_fixture(ctx.team, %{activity_kind: "incident", is_published: true})
+
+    values = %{"#{cause.d4h_custom_field_id}" => [1]}
+    template = incident_template(ctx.team, "Lost hiker", [{ctx.radio, 60}], values)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+
+    refute has_element?(lv, "#template-fields")
+    assert has_element?(lv, "#template-fields-locked", "the activity is published")
+    assert has_element?(lv, "#template-lines-table")
+  end
+
   # A template still logs a truck's hours after an activity, but adds nobody.
   test "after the start, a template's items go and its groups are left out", ctx do
     activity = activity_fixture(ctx.team)

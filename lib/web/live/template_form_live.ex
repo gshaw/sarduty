@@ -3,7 +3,10 @@ defmodule Web.TemplateFormLive do
 
   import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1]
   import Web.ActivityTemplateLive, only: [tags_to_add: 1, groups_to_add: 1]
+  import Web.Components.CustomFields, only: [custom_field_inputs: 1]
 
+  alias App.Adapter.D4H
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.Tag
@@ -14,7 +17,8 @@ defmodule Web.TemplateFormLive do
 
   # Adding and changing a template: its name, its items with their usual hours (#271), its
   # tags, and the groups whose members it adds (#162). Tags and groups come from the sync's
-  # copy of the team's D4H records.
+  # copy of the team's D4H records. A template for one kind of activity also holds values
+  # for that kind's D4H custom fields (#307).
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     template = if id = params["id"], do: Template.find!(team, id)
@@ -32,6 +36,7 @@ defmodule Web.TemplateFormLive do
         all_groups: Group.get_all(team.id)
       )
       |> assign(page_title: if(template, do: template.title, else: "Add template"))
+      |> assign(values: (template && template.custom_values) || %{})
       |> assign_form(Template.build_changeset(template || %Template{}, %{}))
 
     {:ok, socket}
@@ -46,8 +51,12 @@ defmodule Web.TemplateFormLive do
     |> then(&ActivityEquipmentLive.add_lines([], &1))
   end
 
-  defp assign_form(socket, changeset),
-    do: assign(socket, :form, to_form(changeset, as: "template"))
+  # The fields follow the kind the form holds now.
+  defp assign_form(socket, changeset) do
+    kind = Ecto.Changeset.get_field(changeset, :activity_kind)
+    fields = if kind, do: CustomField.get_all(socket.assigns.current_team.id, kind), else: []
+    assign(socket, form: to_form(changeset, as: "template"), fields: fields)
+  end
 
   def render(assigns) do
     ~H"""
@@ -100,6 +109,14 @@ defmodule Web.TemplateFormLive do
         <.form for={@form} id="template-form" phx-change="validate" phx-submit="save">
           <.error_summary form={@form} />
           <.input field={@form[:title]} label="Name">Such as "Truck 1" or "Boat training".</.input>
+          <.input
+            field={@form[:activity_kind]}
+            type="select"
+            label="Kind"
+            options={Template.kind_options()}
+          >
+            Pick a kind to fill in its {D4H.service_name(@current_team)} fields.
+          </.input>
 
           <h2 class="heading">Items · {length(@lines)}</h2>
           <p class="hint mb-4">
@@ -127,6 +144,14 @@ defmodule Web.TemplateFormLive do
           <p :if={@groups == []} id="template-no-groups" class="hint mb-4">
             Add groups whose members the template adds.
           </p>
+
+          <section :if={@fields != []} id="template-fields" class="mt-8">
+            <h2 class="heading">Fields · {filled_count(@fields, @values)}</h2>
+            <p class="hint mb-4">
+              Applying the template fills in the fields the activity has empty. Leave one blank to leave it alone.
+            </p>
+            <.custom_field_inputs fields={@fields} values={@values} />
+          </section>
 
           <.form_actions>
             <.button id="template-save" variant={:success}>{if @template,
@@ -163,14 +188,17 @@ defmodule Web.TemplateFormLive do
       |> Map.put(:action, :validate)
 
     lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
-    {:noreply, socket |> assign(lines: lines) |> assign_form(changeset)}
+
+    {:noreply, socket |> assign(lines: lines) |> put_values(params) |> assign_form(changeset)}
   end
 
   def handle_event("save", params, socket) do
     team = socket.assigns.current_team
     lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
 
-    case save_template(socket.assigns, params["template"] || %{}, lines) do
+    template_params = Map.put(params["template"] || %{}, "fields", params["fields"] || %{})
+
+    case save_template(socket.assigns, template_params, lines) do
       {:ok, template} ->
         socket =
           socket
@@ -180,7 +208,7 @@ defmodule Web.TemplateFormLive do
         {:noreply, socket}
 
       {:error, changeset} ->
-        {:noreply, socket |> assign(lines: lines) |> assign_form(changeset)}
+        {:noreply, socket |> assign(lines: lines) |> put_values(params) |> assign_form(changeset)}
     end
   end
 
@@ -240,6 +268,14 @@ defmodule Web.TemplateFormLive do
        assign(socket,
          groups: Enum.reject(socket.assigns.groups, &(Integer.to_string(&1.id) == id))
        )}
+
+  # Keeps what was typed in the fields when the page renders again.
+  defp put_values(socket, params),
+    do: assign(socket, values: Map.merge(socket.assigns.values, params["fields"] || %{}))
+
+  # How many of the kind's fields the form has filled in.
+  defp filled_count(fields, values),
+    do: map_size(SaveTemplate.custom_values(fields, values))
 
   @doc "The team's groups to offer, leaving out the template's."
   def group_results(all_groups, chosen) do

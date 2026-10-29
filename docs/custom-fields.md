@@ -6,7 +6,7 @@ D4H lets a team, or its organization, add its own fields to incidents, exercises
 events, members, and equipment (#681). BCSARA's 27 incident fields, such as Primary
 Cause, Agency File #, and Task Type, are on every BC team, and 19 of them are required.
 SAR Duty copies the fields and their values so it can show them, flag missing required
-ones, edit them, and later fill them from templates (#307).
+ones, edit them, and fill them from templates (#307).
 
 ## What is copied
 
@@ -82,8 +82,8 @@ Fields tab (decided 2026-10-29, #705). Before, Add
 activity and Change activity held every field of the kind, and a BC incident's ran the
 form six screens long, with the title, times, and address lost above them. Change
 activity now has a Fields section with the tab's count and the same link. Add activity
-has none: the fields wait until the activity exists, and templates will fill most of
-them (#307).
+has none: the fields wait until the activity exists, and a template fills most of
+them (#307, [templates.md](templates.md#fields)).
 
 - **An activity's**, for team admins, its kind's fields. A published one is locked, as
   for its other details.

@@ -54,4 +54,38 @@ defmodule App.Operation.SaveTemplateTest do
              "Rope"
            ]
   end
+
+  test "a template keeps the filled values of its kind's fields only" do
+    team = team_fixture()
+    cause = custom_field_fixture(team, %{field_type: "single_choice", title: "Primary Cause"})
+    agency = custom_field_fixture(team, %{title: "Requesting Agency"})
+    file = custom_field_fixture(team, %{title: "Agency File #"})
+    leader = custom_field_fixture(team, %{target: "event", title: "Event Leader"})
+    id = &Integer.to_string(&1.d4h_custom_field_id)
+
+    fields = %{
+      id.(cause) => "2",
+      id.(agency) => " RCMP ",
+      id.(file) => "",
+      id.(leader) => "Sam"
+    }
+
+    params = %{"title" => "Lost hiker", "activity_kind" => "incident", "fields" => fields}
+    {:ok, template} = SaveTemplate.save(team, nil, params, [])
+
+    assert template.activity_kind == "incident"
+    assert template.custom_values == %{id.(cause) => [2], id.(agency) => "RCMP"}
+
+    # Any kind holds no values.
+    {:ok, template} = SaveTemplate.save(team, template, %{"activity_kind" => ""}, [])
+    assert template.activity_kind == nil
+    assert template.custom_values == %{}
+  end
+
+  test "a template's kind is one of D4H's three" do
+    {:error, changeset} =
+      SaveTemplate.save(team_fixture(), nil, %{"title" => "X", "activity_kind" => "callout"}, [])
+
+    assert changeset.errors[:activity_kind]
+  end
 end

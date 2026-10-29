@@ -9,6 +9,7 @@ defmodule App.Operation.SaveTemplate do
 
   import Ecto.Query
 
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.Tag
@@ -17,6 +18,7 @@ defmodule App.Operation.SaveTemplate do
   alias App.Model.TemplateGroup
   alias App.Model.TemplateItem
   alias App.Model.TemplateTag
+  alias App.Operation.SaveCustomFields
   alias App.Repo
 
   @doc "`{:ok, template}`, or `{:error, changeset}` to show on the form."
@@ -27,6 +29,7 @@ defmodule App.Operation.SaveTemplate do
 
     template
     |> Template.build_changeset(params)
+    |> put_custom_values(team, params["fields"] || %{})
     |> Ecto.Changeset.put_assoc(:template_items, template_items(team, lines))
     |> Ecto.Changeset.put_assoc(:template_tags, template_tags(team, tag_ids))
     |> Ecto.Changeset.put_assoc(:template_groups, template_groups(team, group_ids))
@@ -36,6 +39,23 @@ defmodule App.Operation.SaveTemplate do
   def delete(%Team{} = team, %Template{team_id: team_id} = template) when team_id == team.id do
     {:ok, _template} = Repo.delete(template)
     :ok
+  end
+
+  defp put_custom_values(changeset, team, field_params) do
+    values =
+      case Ecto.Changeset.get_field(changeset, :activity_kind) do
+        nil -> %{}
+        kind -> custom_values(CustomField.get_all(team.id, kind), field_params)
+      end
+
+    Ecto.Changeset.put_change(changeset, :custom_values, values)
+  end
+
+  @doc "The filled values among `field_params` for `custom_fields`, as D4H takes them."
+  def custom_values(custom_fields, field_params) do
+    custom_fields
+    |> SaveCustomFields.custom_values(field_params)
+    |> Map.reject(fn {_id, value} -> is_nil(value) end)
   end
 
   defp template_items(team, lines) do
