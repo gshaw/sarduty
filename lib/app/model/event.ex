@@ -41,6 +41,7 @@ defmodule App.Model.Event do
     id_cards_turned_on: 730,
     id_cards_turned_off: 730,
     member_viewed_as: 730,
+    member_fields_changed: 730,
     organization_admin_added: 730,
     organization_admin_removed: 730,
     organization_hours_tags_changed: 730,

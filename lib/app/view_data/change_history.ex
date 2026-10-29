@@ -178,6 +178,14 @@ defmodule App.ViewData.ChangeHistory do
        when field in ~w(primary_emergency_contact secondary_emergency_contact),
        do: "Emergency contact changed"
 
+  # Titles only, never values (#681): see RecordD4HChanges.
+  defp member_field("custom_values", c, _tz) do
+    case c.new_value["custom_values"] do
+      [_ | _] = titles -> "#{Service.Format.and_list(titles)} changed"
+      _none -> "Member fields changed"
+    end
+  end
+
   defp member_field("name", c, _tz), do: "Name changed from #{from_to(c, "name")}"
   defp member_field("position", c, _tz), do: "Position changed from #{from_to(c, "position")}"
 

@@ -72,7 +72,7 @@ to the organization (#681). Nothing an organization sees in SAR Duty may read on
 space, its reports, or an organization's MCP when there is one. A report across an
 organization's teams uses the organization's own fields, such as BCSARA's Agency File #,
 which mean the same thing on every team. As organization features grow, check each new
-one against this. See [custom-fields.md](custom-fields.md#restricted-fields-and-organisations).
+one against this. See [custom-fields.md](custom-fields.md#restricted-fields-and-organizations).
 
 ## Giving an organization its own verify host
 

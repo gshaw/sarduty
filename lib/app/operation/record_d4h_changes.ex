@@ -20,7 +20,7 @@ defmodule App.Operation.RecordD4HChanges do
 
   # Fields compared per kind. Anything else D4H sends, such as `updatedAt`, is noise.
   @tracked %{
-    member: ~w(name position d4h_status d4h_permission joined_at left_at)a,
+    member: ~w(name position d4h_status d4h_permission joined_at left_at custom_values)a,
     activity: ~w(title started_at finished_at is_published tags custom_values deleted_at)a,
     attendance: ~w(status started_at finished_at duration_in_minutes)a,
     award: ~w(starts_at ends_at)a,
@@ -90,26 +90,41 @@ defmodule App.Operation.RecordD4HChanges do
   end
 
   # Custom field values (#681) are kept as text people read, by field title, and only
-  # for the fields that changed, since their ids and option ids mean nothing later.
-  defp describe_custom_values(%{fields: fields} = change, old, new) do
+  # for the fields that changed, since their ids and option ids mean nothing later. A
+  # member's keep the titles alone, never the values, as for contact details.
+  defp describe_custom_values(kind, %{fields: fields} = change, old, new) do
     if "custom_values" in fields do
       old_values = old.custom_values || %{}
       new_values = new.custom_values || %{}
       keys = Enum.uniq(Map.keys(old_values) ++ Map.keys(new_values))
       ids = Enum.filter(keys, &(old_values[&1] != new_values[&1]))
       index = CustomField.index(new.team_id)
-      tz = new.team_id |> Team.get!() |> Map.fetch!(:timezone)
-
-      %{
-        change
-        | old_value:
-            Map.put(change.old_value, "custom_values", describe(index, old_values, ids, tz)),
-          new_value:
-            Map.put(change.new_value, "custom_values", describe(index, new_values, ids, tz))
-      }
+      put_custom_values(kind, change, index, {old_values, new_values}, ids, new.team_id)
     else
       change
     end
+  end
+
+  defp put_custom_values(:member, change, index, _values, ids, _team_id) do
+    titles = ids |> Enum.map(&((index[&1] && index[&1].title) || "Field #{&1}")) |> Enum.sort()
+
+    %{
+      change
+      | old_value: Map.delete(change.old_value, "custom_values"),
+        new_value: Map.put(change.new_value, "custom_values", titles)
+    }
+  end
+
+  defp put_custom_values(_kind, change, index, {old_values, new_values}, ids, team_id) do
+    tz = team_id |> Team.get!() |> Map.fetch!(:timezone)
+
+    %{
+      change
+      | old_value:
+          Map.put(change.old_value, "custom_values", describe(index, old_values, ids, tz)),
+        new_value:
+          Map.put(change.new_value, "custom_values", describe(index, new_values, ids, tz))
+    }
   end
 
   defp describe(index, values, ids, tz), do: CustomField.describe_values(index, values, ids, tz)
@@ -143,7 +158,7 @@ defmodule App.Operation.RecordD4HChanges do
          record = new || old,
          false <- own_write?(run, kind, change, record) do
       run
-      |> build(kind, describe_custom_values(change, old, new), record, opts)
+      |> build(kind, describe_custom_values(kind, change, old, new), record, opts)
       |> D4HChange.insert!()
     end
 

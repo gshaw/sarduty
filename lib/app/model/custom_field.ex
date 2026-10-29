@@ -34,6 +34,9 @@ defmodule App.Model.CustomField do
     field :archived_at, :utc_datetime
     # [%{"id" => d4h_option_id, "label" => …, "ordering" => …, "archived" => bool}]
     field :options, {:array, :map}, default: []
+    # SAR Duty's own, never D4H's: a member field a team admin picked to copy. Never set
+    # on a RESTRICTED one.
+    field :copy_values, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -51,6 +54,25 @@ defmodule App.Model.CustomField do
     |> where([f], f.team_id == ^team_id)
     |> Repo.all()
     |> Map.new(&{Integer.to_string(&1.d4h_custom_field_id), &1})
+  end
+
+  @doc """
+  The member fields a team admin may pick to copy: every live one that isn't
+  RESTRICTED. A RESTRICTED member field holds things like ethnicity or date of birth,
+  and is never copied.
+  """
+  def member_choices(team_id) do
+    team_id |> get_all("member") |> Enum.reject(& &1.restricted)
+  end
+
+  @doc "The D4H ids, as strings, of the member fields the team copies."
+  def copied_member_ids(team_id) do
+    CustomField
+    |> where([f], f.team_id == ^team_id and f.target == "member")
+    |> where([f], f.copy_values and not f.restricted)
+    |> select([f], f.d4h_custom_field_id)
+    |> Repo.all()
+    |> MapSet.new(&Integer.to_string/1)
   end
 
   def organisation?(%CustomField{owner_type: owner_type}), do: owner_type == "Organisation"
