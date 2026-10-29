@@ -3,7 +3,10 @@ defmodule Web.TemplateFormLive do
 
   import Web.ActivityEquipmentLive, only: [lines_table: 1, item_search: 1]
   import Web.ActivityTemplateLive, only: [tags_to_add: 1, groups_to_add: 1]
+  import Web.Components.CustomFields, only: [custom_field_inputs: 1]
 
+  alias App.Adapter.D4H
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.Tag
@@ -12,32 +15,54 @@ defmodule Web.TemplateFormLive do
   alias Web.ActivityEquipmentLive
   alias Web.ActivityTemplateLive
 
-  # Adding and changing a template: its name, its items with their usual hours (#271), its
-  # tags, and the groups whose members it adds (#162). Tags and groups come from the sync's
-  # copy of the team's D4H records.
+  # Adding a template, and its change pages, one per part (#307): Change template for its
+  # name and kind, then Change items with their usual hours (#271), Change tags, Change
+  # groups whose members it adds (#162), and Change fields for its kind's D4H custom
+  # fields. Each saves only what it shows. The live action names the page.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     template = if id = params["id"], do: Template.find!(team, id)
+    action = socket.assigns.live_action
 
     socket =
       socket
-      |> assign(template: template, lines: template_lines(template), q: "", results: [])
-      |> assign(
-        tags: if(template, do: Template.tags(template), else: []),
-        all_tags: Tag.get_all(team.id)
-      )
-      |> assign(tag_q: "", tag_uses: Tag.use_counts(team.id, a_year_ago()))
-      |> assign(
-        groups: if(template, do: Template.groups(template), else: []),
-        all_groups: Group.get_all(team.id)
-      )
-      |> assign(page_title: if(template, do: template.title, else: "Add template"))
+      |> assign(template: template, page_title: page_title(action, template))
+      |> assign(values: (template && template.custom_values) || %{})
+      |> assign_part(action, template)
       |> assign_form(Template.build_changeset(template || %Template{}, %{}))
 
     {:ok, socket}
   end
 
-  defp template_lines(nil), do: []
+  defp page_title(:new, nil), do: "Add template"
+  defp page_title(:edit, template), do: "Change #{template.title}"
+  defp page_title(:items, template), do: "Change items for #{template.title}"
+  defp page_title(:tags, template), do: "Change tags for #{template.title}"
+  defp page_title(:groups, template), do: "Change groups for #{template.title}"
+  defp page_title(:fields, template), do: "Change fields for #{template.title}"
+
+  defp assign_part(socket, :items, template),
+    do: assign(socket, lines: template_lines(template), q: "", results: [])
+
+  defp assign_part(socket, :tags, template) do
+    team_id = socket.assigns.current_team.id
+
+    assign(socket,
+      tags: Template.tags(template),
+      all_tags: Tag.get_all(team_id),
+      tag_q: "",
+      tag_uses: Tag.use_counts(team_id, a_year_ago())
+    )
+  end
+
+  defp assign_part(socket, :groups, template),
+    do:
+      assign(socket,
+        groups: Template.groups(template),
+        all_groups: Group.get_all(socket.assigns.current_team.id)
+      )
+
+  defp assign_part(socket, _action, _template), do: socket
 
   defp template_lines(template) do
     template.template_items
@@ -46,30 +71,39 @@ defmodule Web.TemplateFormLive do
     |> then(&ActivityEquipmentLive.add_lines([], &1))
   end
 
-  defp assign_form(socket, changeset),
-    do: assign(socket, :form, to_form(changeset, as: "template"))
+  # The fields follow the kind the form holds now.
+  defp assign_form(socket, changeset) do
+    kind = Ecto.Changeset.get_field(changeset, :activity_kind)
+    fields = if kind, do: CustomField.get_all(socket.assigns.current_team.id, kind), else: []
+    assign(socket, form: to_form(changeset, as: "template"), fields: fields)
+  end
 
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
       <:item label="Templates" path={~p"/teams/#{@current_team}/templates"} />
-      <:item label={@page_title} />
+      <:item
+        :if={@template}
+        label={@template.title}
+        path={~p"/teams/#{@current_team}/templates/#{@template.id}"}
+      />
+      <:item label={crumb(@live_action)} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
-    <div class="content-wrapper">
+    <div :if={@live_action in [:items, :tags, :groups]} class="content-wrapper">
       <aside class="content-1/3">
-        <section id="template-search" class="mb-8">
+        <section :if={@live_action == :items} id="template-search">
           <h2 class="heading">Find an item</h2>
           <.item_search q={@q} results={@results} />
         </section>
 
-        <section id="template-tag-search">
+        <section :if={@live_action == :tags} id="template-tag-search">
           <h2 class="heading">Find a tag</h2>
           <.tag_search q={@tag_q} results={tag_results(@all_tags, @tags, @tag_q, @tag_uses)} />
         </section>
 
-        <section id="template-group-search" class="mt-8">
+        <section :if={@live_action == :groups} id="template-group-search">
           <h2 class="heading">Groups</h2>
           <.table
             :if={group_results(@all_groups, @groups) != []}
@@ -97,64 +131,124 @@ defmodule Web.TemplateFormLive do
         </section>
       </aside>
       <main class="content-2/3">
-        <.form for={@form} id="template-form" phx-change="validate" phx-submit="save">
-          <.error_summary form={@form} />
-          <.input field={@form[:title]} label="Name">Such as "Truck 1" or "Boat training".</.input>
-
-          <h2 class="heading">Items · {length(@lines)}</h2>
-          <p class="hint mb-4">
-            The hours are what each item adds to an activity. You can change them when you apply the template.
-          </p>
-          <.lines_table :if={@lines != []} id="template-lines" lines={@lines} />
-          <p :if={@lines == []} id="template-no-items" class="hint mb-4">
-            Find items to add.
-          </p>
-
-          <h2 class="heading mt-8">Tags · {length(@tags)}</h2>
-          <p class="hint mb-4">
-            Applying the template adds these tags to the activity and keeps the tags it has.
-          </p>
-          <.tags_to_add :if={@tags != []} id="template-tags" tags={@tags} />
-          <p :if={@tags == []} id="template-no-tags" class="hint mb-4">
-            Find tags to add.
-          </p>
-
-          <h2 class="heading mt-8">Groups · {length(@groups)}</h2>
-          <p class="hint mb-4">
-            Applying the template adds each member of these groups to the activity, as No reply.
-          </p>
-          <.groups_to_add :if={@groups != []} id="template-groups" groups={@groups} />
-          <p :if={@groups == []} id="template-no-groups" class="hint mb-4">
-            Add groups whose members the template adds.
-          </p>
-
-          <.form_actions>
-            <.button id="template-save" variant={:success}>{if @template,
-              do: "Save template",
-              else: "Add template"}</.button>
-            <.button id="template-cancel" navigate={~p"/teams/#{@current_team}/templates"}>
-              Cancel
-            </.button>
-          </.form_actions>
-        </.form>
-
-        <section :if={@template} id="template-delete" class="mt-8">
-          <h2 class="heading">Delete the template</h2>
-          <p>Its items stay, and so do the activities they went on.</p>
-          <.button
-            id="template-delete-button"
-            type="button"
-            variant={:danger}
-            phx-click="delete"
-            data-confirm={"Delete the #{@template.title} template?"}
-          >
-            Delete template
-          </.button>
-        </section>
+        <.part_form {assigns} />
       </main>
+    </div>
+
+    <div :if={@live_action in [:new, :edit, :fields]} class="measure">
+      <.part_form {assigns} />
     </div>
     """
   end
+
+  defp crumb(:new), do: "Add template"
+  defp crumb(:edit), do: "Change"
+  defp crumb(:items), do: "Change items"
+  defp crumb(:tags), do: "Change tags"
+  defp crumb(:groups), do: "Change groups"
+  defp crumb(:fields), do: "Change fields"
+
+  defp part_form(assigns) do
+    ~H"""
+    <.form for={@form} id="template-form" phx-change="validate" phx-submit="save">
+      <.part {assigns} />
+      <.form_actions :if={@live_action != :fields or @fields != []}>
+        <.button id="template-save" variant={:success}>{save_label(@live_action)}</.button>
+        <.button id="template-cancel" navigate={back_path(@current_team, @template)}>
+          Cancel
+        </.button>
+      </.form_actions>
+    </.form>
+    """
+  end
+
+  defp save_label(:new), do: "Add template"
+  defp save_label(:edit), do: "Save template"
+  defp save_label(:items), do: "Save items"
+  defp save_label(:tags), do: "Save tags"
+  defp save_label(:groups), do: "Save groups"
+  defp save_label(:fields), do: "Save fields"
+
+  defp part(%{live_action: action} = assigns) when action in [:new, :edit] do
+    ~H"""
+    <.error_summary form={@form} />
+    <.input field={@form[:title]} label="Name">Such as "Truck 1" or "Boat training".</.input>
+    <.input
+      field={@form[:activity_kind]}
+      type="select"
+      label="Kind"
+      options={Template.kind_options()}
+    >
+      {kind_hint(@current_team, @template)}
+    </.input>
+    """
+  end
+
+  defp part(%{live_action: :items} = assigns) do
+    ~H"""
+    <h2 class="heading">Items · {length(@lines)}</h2>
+    <p class="hint mb-4">
+      The hours are what each item adds to an activity. You can change them when you apply the template.
+    </p>
+    <.lines_table :if={@lines != []} id="template-lines" lines={@lines} />
+    <p :if={@lines == []} id="template-no-items" class="hint mb-4">
+      Find items to add.
+    </p>
+    """
+  end
+
+  defp part(%{live_action: :tags} = assigns) do
+    ~H"""
+    <h2 class="heading">Tags · {length(@tags)}</h2>
+    <p class="hint mb-4">
+      Applying the template adds these tags to the activity and keeps the tags it has.
+    </p>
+    <.tags_to_add :if={@tags != []} id="template-tags" tags={@tags} />
+    <p :if={@tags == []} id="template-no-tags" class="hint mb-4">
+      Find tags to add.
+    </p>
+    """
+  end
+
+  defp part(%{live_action: :groups} = assigns) do
+    ~H"""
+    <h2 class="heading">Groups · {length(@groups)}</h2>
+    <p class="hint mb-4">
+      Applying the template adds each member of these groups to the activity, as No reply.
+    </p>
+    <.groups_to_add :if={@groups != []} id="template-groups" groups={@groups} />
+    <p :if={@groups == []} id="template-no-groups" class="hint mb-4">
+      Add groups whose members the template adds.
+    </p>
+    """
+  end
+
+  defp part(%{live_action: :fields} = assigns) do
+    ~H"""
+    <section :if={@fields != []} id="template-fields">
+      <p class="hint mb-6">
+        Applying the template fills in the fields the activity has empty. Leave one blank to leave it alone.
+      </p>
+      <.custom_field_inputs fields={@fields} values={@values} />
+    </section>
+    <p :if={@fields == []} id="template-no-fields">
+      {no_fields_text(@current_team, @template)}
+    </p>
+    """
+  end
+
+  defp kind_hint(team, %Template{custom_values: values}) when map_size(values) > 0,
+    do:
+      "Pick a kind to fill in its #{D4H.service_name(team)} fields. A new kind drops the #{Service.Format.count(map_size(values), one: "%d field value", many: "%d field values")}."
+
+  defp kind_hint(team, _template),
+    do: "Pick a kind to fill in its #{D4H.service_name(team)} fields."
+
+  defp no_fields_text(_team, %Template{activity_kind: nil}),
+    do: "This template is for any kind. Pick a kind on Change template to fill in its fields."
+
+  defp no_fields_text(team, template),
+    do: "#{D4H.service_name(team)} has no fields for this #{template.activity_kind}."
 
   def handle_event("validate", params, socket) do
     changeset =
@@ -162,38 +256,30 @@ defmodule Web.TemplateFormLive do
       |> Template.build_changeset(params["template"] || %{})
       |> Map.put(:action, :validate)
 
-    lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
-    {:noreply, socket |> assign(lines: lines) |> assign_form(changeset)}
+    {:noreply, socket |> put_typed(params) |> put_values(params) |> assign_form(changeset)}
   end
 
   def handle_event("save", params, socket) do
-    team = socket.assigns.current_team
-    lines = ActivityEquipmentLive.put_typed(socket.assigns.lines, params)
+    %{current_team: team, template: template, live_action: action} = socket.assigns
+    socket = put_typed(socket, params)
 
-    case save_template(socket.assigns, params["template"] || %{}, lines) do
+    case SaveTemplate.save(
+           team,
+           template,
+           params["template"] || %{},
+           parts(action, socket.assigns, params)
+         ) do
       {:ok, template} ->
         socket =
           socket
           |> put_flash(:info, "Saved the #{template.title} template.")
-          |> push_navigate(to: ~p"/teams/#{team}/templates")
+          |> push_navigate(to: ~p"/teams/#{team}/templates/#{template.id}")
 
         {:noreply, socket}
 
       {:error, changeset} ->
-        {:noreply, socket |> assign(lines: lines) |> assign_form(changeset)}
+        {:noreply, socket |> put_values(params) |> assign_form(changeset)}
     end
-  end
-
-  def handle_event("delete", _params, socket) do
-    %{current_team: team, template: template} = socket.assigns
-    :ok = SaveTemplate.delete(team, template)
-
-    socket =
-      socket
-      |> put_flash(:info, "Deleted the #{template.title} template.")
-      |> push_navigate(to: ~p"/teams/#{team}/templates")
-
-    {:noreply, socket}
   end
 
   def handle_event("search", %{"q" => q}, socket) do
@@ -240,6 +326,13 @@ defmodule Web.TemplateFormLive do
        assign(socket,
          groups: Enum.reject(socket.assigns.groups, &(Integer.to_string(&1.id) == id))
        )}
+
+  defp back_path(team, nil), do: ~p"/teams/#{team}/templates"
+  defp back_path(team, template), do: ~p"/teams/#{team}/templates/#{template.id}"
+
+  # Keeps what was typed in the fields when the page renders again.
+  defp put_values(socket, params),
+    do: assign(socket, values: Map.merge(socket.assigns.values, params["fields"] || %{}))
 
   @doc "The team's groups to offer, leaving out the template's."
   def group_results(all_groups, chosen) do
@@ -340,22 +433,18 @@ defmodule Web.TemplateFormLive do
 
   def tag_sort(tag), do: String.downcase(tag.title)
 
-  defp save_template(
-         %{current_team: team, template: template, tags: tags, groups: groups},
-         params,
-         lines
-       ) do
-    lines = Enum.map(lines, &template_line/1)
+  # What the page saves, besides the name and kind.
+  defp parts(:items, assigns, _params), do: [items: Enum.map(assigns.lines, &template_line/1)]
+  defp parts(:tags, assigns, _params), do: [tag_ids: Enum.map(assigns.tags, & &1.id)]
+  defp parts(:groups, assigns, _params), do: [group_ids: Enum.map(assigns.groups, & &1.id)]
+  defp parts(:fields, _assigns, params), do: [fields: params["fields"] || %{}]
+  defp parts(_action, _assigns, _params), do: []
 
-    SaveTemplate.save(
-      team,
-      template,
-      params,
-      lines,
-      Enum.map(tags, & &1.id),
-      Enum.map(groups, & &1.id)
-    )
-  end
+  # The hours typed on Change items.
+  defp put_typed(%{assigns: %{live_action: :items}} = socket, params),
+    do: assign(socket, lines: ActivityEquipmentLive.put_typed(socket.assigns.lines, params))
+
+  defp put_typed(socket, _params), do: socket
 
   defp template_line(line) do
     minutes =

@@ -6,7 +6,8 @@ defmodule App.Operation.SaveCustomFields do
   App.Operation.ApplyEdit, then writes what it sent to the copy, since D4H doesn't change
   a record's updatedAt for its custom fields and the sync may not read them back (#681).
 
-  A published activity is locked, as for its other details.
+  A published activity is locked, as for its other details. Apply a template (#307) sends
+  its values through call/5 too, after fill_empty/4 picks the ones that go.
   """
 
   alias App.Accounts.User
@@ -68,6 +69,26 @@ defmodule App.Operation.SaveCustomFields do
 
     record |> Ecto.Changeset.change(custom_values: values) |> App.Repo.update!()
   end
+
+  @doc """
+  `fills` with a template's `values` added for `custom_fields`, the activity's kind's:
+  only a field empty on `record` and not in `fills` yet, so what the activity has stays
+  and the first template applied wins a field two of them set.
+  """
+  def fill_empty(fills, record, custom_fields, values) do
+    current = record.custom_values || %{}
+    values = values || %{}
+
+    Enum.reduce(custom_fields, fills, fn field, fills ->
+      id = Integer.to_string(field.d4h_custom_field_id)
+
+      if empty?(current[id]) and not Map.has_key?(fills, id) and not empty?(values[id]),
+        do: Map.put(fills, id, values[id]),
+        else: fills
+    end)
+  end
+
+  defp empty?(value), do: value in [nil, "", []]
 
   @doc """
   The change set row for the form's `params` on `record`'s `custom_fields`, or

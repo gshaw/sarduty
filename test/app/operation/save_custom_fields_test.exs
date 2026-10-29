@@ -62,4 +62,27 @@ defmodule App.Operation.SaveCustomFieldsTest do
     assert %{action: :update_equipment_item, d4h_record_id: 90} = row
     assert row.old_value == %{"custom_values" => %{"454" => "A"}}
   end
+
+  test "a template fills only the fields the activity has empty" do
+    activity = activity(%{"420" => [1], "454" => ""})
+    values = %{"420" => [2], "421" => [7], "454" => "PROS", "999" => "Another kind's field"}
+
+    assert SaveCustomFields.fill_empty(%{}, activity, @fields, values) == %{
+             "421" => [7],
+             "454" => "PROS"
+           }
+  end
+
+  test "the first template applied wins a field two of them fill" do
+    activity = activity(%{})
+    fills = SaveCustomFields.fill_empty(%{}, activity, @fields, %{"454" => "First"})
+
+    assert SaveCustomFields.fill_empty(fills, activity, @fields, %{
+             "454" => "Second",
+             "420" => [3]
+           }) ==
+             %{"454" => "First", "420" => [3]}
+
+    assert SaveCustomFields.fill_empty(fills, activity, @fields, nil) == fills
+  end
 end

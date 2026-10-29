@@ -3,16 +3,20 @@ defmodule Web.ActivityTemplateLive do
 
   import Web.ActivityEquipmentLive, only: [lines_table: 1]
 
+  alias App.Model.Activity
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Template
   alias App.Operation.ChangeActivityEquipment
   alias App.Operation.InviteMembers
+  alias App.Operation.SaveCustomFields
   alias Web.ActivityEquipmentLive
 
   # Applying templates to an activity (#162). Each template adds its items, with hours to
-  # check, its tags, and its groups to one list. Sending writes the items and tags to D4H
-  # as equipment usages and the activity's tags, then adds the groups' members (#564).
+  # check, its tags, its custom field values, and its groups to one list. Sending fills in
+  # the activity's empty fields (#307), writes the items and tags to D4H as equipment
+  # usages and the activity's tags, then adds the groups' members (#564).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -26,7 +30,8 @@ defmodule Web.ActivityTemplateLive do
       socket =
         socket
         |> assign(page_title: "Apply a template", activity: activity, used: used)
-        |> assign(lines: [], tags: [], groups: [])
+        |> assign(lines: [], tags: [], groups: [], fills: %{}, fields_locked?: false)
+        |> assign(fields: CustomField.get_all(team.id, activity.activity_kind))
         |> assign(templates: Template.get_all(team.id))
 
       {:ok, socket}
@@ -74,7 +79,7 @@ defmodule Web.ActivityTemplateLive do
             <.a navigate={~p"/teams/#{@current_team}/templates"}>{if @templates == [],
               do: "Add a template",
               else: "Change templates"}</.a>
-            for items, tags, and groups that go together.
+            for items, tags, groups, and fields that go together.
           </p>
         </section>
       </aside>
@@ -83,12 +88,22 @@ defmodule Web.ActivityTemplateLive do
         <section id="template-to-add">
           <h2 class="heading">To add</h2>
           <.form
-            :if={@lines != [] or @tags != [] or @groups != []}
+            :if={anything?(assigns)}
             for={%{}}
             id="template-lines"
             phx-change="hours"
             phx-submit="send"
           >
+            <div :if={@fills != %{}} id="template-fields" class="mb-4">
+              <h3 class="subheading">Fields</h3>
+              <p class="hint mb-2">
+                These fill in fields the activity has empty. When two templates fill one field, the first one added wins.
+              </p>
+              <.fields_to_fill
+                id="template-fields-table"
+                rows={CustomField.rows(@fields, @fills, @current_team.timezone, restricted: true)}
+              />
+            </div>
             <.lines_table :if={@lines != []} id="template-lines-table" lines={@lines} km />
             <div :if={@tags != []} id="template-tags" class="mt-4">
               <h3 class="subheading">Tags</h3>
@@ -114,16 +129,46 @@ defmodule Web.ActivityTemplateLive do
               </.button>
             </.form_actions>
           </.form>
-          <p
-            :if={@lines == [] and @tags == [] and @groups == []}
-            id="template-nothing-to-add"
-            class="hint"
-          >
+          <p :if={!anything?(assigns)} id="template-nothing-to-add" class="hint">
             Add one or more templates. Check the hours and a vehicle's km, then add them to the activity.
+          </p>
+          <p :if={@fields_locked?} id="template-fields-locked" class="hint mt-4">
+            The templates' fields are left out: the activity is published.
           </p>
         </section>
       </main>
     </div>
+    """
+  end
+
+  defp anything?(assigns),
+    do: assigns.lines != [] or assigns.tags != [] or assigns.groups != [] or assigns.fills != %{}
+
+  attr :id, :string, required: true
+  attr :rows, :list, required: true, doc: "from CustomField.rows/4"
+
+  defp fields_to_fill(assigns) do
+    ~H"""
+    <.table
+      id={@id}
+      rows={@rows}
+      row_id={&"field-#{&1.field.d4h_custom_field_id}"}
+      class="table-striped"
+    >
+      <:col :let={row} label="Field">{row.field.title}</:col>
+      <:col :let={row} label="Value">{row.text}</:col>
+      <:col :let={row} label="" class="w-px whitespace-nowrap">
+        <.button
+          id={"field-remove-#{row.field.d4h_custom_field_id}"}
+          type="button"
+          size={:sm}
+          phx-click="remove-field"
+          phx-value-id={row.field.d4h_custom_field_id}
+        >
+          Remove
+        </.button>
+      </:col>
+    </.table>
     """
   end
 
@@ -175,16 +220,25 @@ defmodule Web.ActivityTemplateLive do
     """
   end
 
-  @doc ~s(What a template holds, as "3 items, 2 tags, 1 group".)
+  @doc ~s(What a template holds, as "Incident: 3 items, 2 tags, 1 group, 5 fields".)
   def template_contents(template) do
     tags = length(template.template_tags)
     groups = length(template.template_groups)
+    fields = map_size(template.custom_values || %{})
 
     [count_items(length(template.template_items))]
     |> Kernel.++(if tags > 0, do: [count_tags(tags)], else: [])
     |> Kernel.++(if groups > 0, do: [count_groups(groups)], else: [])
+    |> Kernel.++(if fields > 0, do: [count_fields(fields)], else: [])
     |> Enum.join(", ")
+    |> then(&if(template.activity_kind, do: "#{kind_label(template)}: #{&1}", else: &1))
   end
+
+  @doc "The kind a template is for, as the form names it, or nil for any kind."
+  def kind_label(%Template{activity_kind: nil}), do: nil
+
+  def kind_label(%Template{activity_kind: kind}),
+    do: Enum.find_value(Template.kind_options(), fn {label, value} -> value == kind && label end)
 
   @doc """
   `tags` with a template's `new` tags added, A to Z, leaving out any the activity has by
@@ -236,11 +290,13 @@ defmodule Web.ActivityTemplateLive do
       end
 
     socket =
-      assign(socket,
+      socket
+      |> assign(
         lines: ActivityEquipmentLive.add_lines(lines, new, used),
         tags: add_tags(socket.assigns.tags, Template.tags(template), activity.tags),
         groups: add_groups(socket.assigns.groups, Template.groups(template))
       )
+      |> add_fills(template)
 
     {:noreply, socket}
   end
@@ -261,20 +317,18 @@ defmodule Web.ActivityTemplateLive do
   def handle_event("remove-group", %{"id" => id}, socket),
     do: {:noreply, assign(socket, groups: reject_id(socket.assigns.groups, id))}
 
-  def handle_event("send", params, socket) do
-    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+  def handle_event("remove-field", %{"id" => id}, socket),
+    do: {:noreply, assign(socket, fills: Map.delete(socket.assigns.fills, id))}
 
+  def handle_event("send", params, socket) do
     lines =
       socket.assigns.lines
       |> ActivityEquipmentLive.put_typed(params)
       |> Enum.map(&ActivityEquipmentLive.to_add/1)
 
-    now = DateTime.utc_now()
-
-    # Equipment and tags go first; a refusal there leaves the invites unsent too.
-    case add_equipment(team, activity, lines, socket.assigns.tags, user, now) do
-      {:ok, rows} ->
-        {kind, text} = invite(team, activity, socket.assigns.groups, user, now, rows)
+    case send_all(socket.assigns, lines, DateTime.utc_now()) do
+      {:ok, kind, text} ->
+        %{current_team: team, activity: activity} = socket.assigns
 
         socket =
           socket
@@ -288,6 +342,43 @@ defmodule Web.ActivityTemplateLive do
     end
   end
 
+  # Fields go first, then equipment and tags; a refusal leaves the rest unsent.
+  defp send_all(assigns, lines, now) do
+    %{current_team: team, current_user: user, activity: activity, fills: fills} = assigns
+
+    with :ok <- fill_fields(team, activity, fills, user, now),
+         {:ok, rows} <- add_equipment(team, activity, lines, assigns.tags, user, now) do
+      {kind, text} = invite(team, activity, assigns.groups, user, now, rows)
+      {:ok, kind, Enum.join(fields_text(fills) ++ List.wrap(text), " ")}
+    end
+  end
+
+  # A published activity's fields are locked, so a template's are left out and said so.
+  defp add_fills(socket, template) do
+    %{activity: activity, fields: fields, fills: fills} = socket.assigns
+    added = SaveCustomFields.fill_empty(fills, activity, fields, template.custom_values)
+
+    cond do
+      added == fills -> socket
+      Activity.locked?(activity) -> assign(socket, fields_locked?: true)
+      true -> assign(socket, fills: added)
+    end
+  end
+
+  defp fill_fields(_team, _activity, fills, _user, _now) when fills == %{}, do: :ok
+
+  defp fill_fields(team, activity, fills, user, now) do
+    case SaveCustomFields.call(team, activity, fills, user, now) do
+      {:ok, _activity} -> :ok
+      {:error, text} -> {:error, "The fields were not sent. #{text}"}
+    end
+  end
+
+  defp fields_text(fills) when fills == %{}, do: []
+
+  defp fields_text(fills),
+    do: [count_fields(map_size(fills)) <> " filled in."]
+
   defp reject_id(records, id), do: Enum.reject(records, &(Integer.to_string(&1.id) == id))
 
   defp add_equipment(_team, _activity, [], [], _user, _now), do: {:ok, []}
@@ -295,7 +386,10 @@ defmodule Web.ActivityTemplateLive do
   defp add_equipment(team, activity, lines, tags, user, now),
     do: ChangeActivityEquipment.add(team, activity, lines, tags, user, now)
 
-  # The flash for the equipment `rows` and the invites, as {kind, text}.
+  # The flash for the equipment `rows` and the invites, as {kind, text}. Nothing for a
+  # template that only fills in fields.
+  defp invite(_team, _activity, [], _user, _now, []), do: {:info, nil}
+
   defp invite(_team, _activity, [], _user, _now, rows),
     do: {ActivityEquipmentLive.flash_kind(rows), ActivityEquipmentLive.result_text(rows, "added")}
 
@@ -325,4 +419,5 @@ defmodule Web.ActivityTemplateLive do
   defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
   defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")
   defp count_groups(n), do: Service.Format.count(n, one: "%d group", many: "%d groups")
+  defp count_fields(n), do: Service.Format.count(n, one: "%d field", many: "%d fields")
 end

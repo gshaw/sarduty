@@ -48,7 +48,8 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **Equipment on an activity is a set too** (source `equipment`, #271): adding items
   from the activity's "Add equipment" page, or removing one. A template's items and tags
   go the same way, with its tags as one `set_activity_tags` row (#162). It applies at
-  once. See [equipment.md](equipment.md) and [templates.md](templates.md).
+  once. A template's field values go before it, as Change fields sends them: one
+  `update_activity` row with only `custom_values`, source `edit` (#307). See [equipment.md](equipment.md) and [templates.md](templates.md).
 - **An activity's tags are a set of one row** (source `tags`, #323): its hours choice
   and other tags from its "Change tags" page, as one `set_activity_tags` row with the whole
   list, applied at once. On D4H the page offers the form only for a draft: D4H refuses

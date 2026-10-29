@@ -25,7 +25,7 @@ defmodule Web.Search do
     qualification: Web.QualificationLive,
     group: Web.GroupLive,
     endorsement: Web.EndorsementFormLive,
-    template: Web.TemplateFormLive,
+    template: Web.TemplateLive,
     chore: Web.ChoreLive,
     certificate: Web.CertificateLive
   }
