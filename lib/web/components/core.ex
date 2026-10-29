@@ -341,6 +341,7 @@ defmodule Web.Components.Core do
                 multiple pattern placeholder readonly required rows size step)
 
   slot :inner_block
+  slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     # Only show errors for fields the user has typed in or submitted.
@@ -529,6 +530,7 @@ defmodule Web.Components.Core do
         class={[@errors != [] && "is-invalid", @class]}
         {@rest}
       />
+      {render_slot(@below)}
     </div>
     """
   end

@@ -14,6 +14,12 @@
 
   fieldset { margin-bottom: var(--sp-4); }
 
+  /* A form's long list of choices beside its other fields on a wide screen, so the form
+     isn't one thin column with the page empty beside it. One column on a phone, the
+     choices first. Log a chore's categories. See /styles/forms. */
+  .form-columns { display: grid; column-gap: var(--sp-12); max-width: 960px; }
+  @media (width >= 64rem) { .form-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
   /* A switch: a checkbox drawn as a track and knob, on the trailing edge of its row. See
      /styles/forms. */
   .switch-row { display: flex; align-items: center; gap: var(--sp-3); }

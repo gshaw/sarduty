@@ -180,7 +180,7 @@ defmodule Web.ChoreLiveTest do
 
     {:ok, lv, html} =
       lv
-      |> form("#chore-form", chore: %{date: "2025-01-15", minutes: "120"})
+      |> form("#chore-form", chore: %{date: "2025-01-15", time: "2h"})
       |> render_submit()
       |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=accepted")
 
@@ -338,7 +338,7 @@ defmodule Web.ChoreLiveTest do
       |> form("#chore-form",
         chore: %{
           date: Date.to_iso8601(today),
-          minutes: "30",
+          time: "30m",
           chore_category_id: category.id,
           description: "Grant report"
         }

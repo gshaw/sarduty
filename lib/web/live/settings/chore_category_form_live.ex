@@ -80,6 +80,9 @@ defmodule Web.Settings.ChoreCategoryFormLive do
         <.form for={@form} id="chore-category-form" phx-change="validate" phx-submit="save">
           <.error_summary form={@form} />
           <.input field={@form[:title]} label="Name">Such as "Equipment maintenance".</.input>
+          <.input field={@form[:description]} label="What it covers">
+            Members read it when they log a chore, such as "Email, phone calls, and filing".
+          </.input>
           <.input
             field={@form[:hours]}
             type="select"

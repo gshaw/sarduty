@@ -43,14 +43,18 @@ defmodule Web.Settings.ChoreCategoryLiveTest do
     {:ok, lv, _html} =
       lv
       |> form("#chore-category-form",
-        category: %{title: "Equipment maintenance", hours: "primary"}
+        category: %{
+          title: "Equipment maintenance",
+          description: "Trucks, radios, and the yard",
+          hours: "primary"
+        }
       )
       |> render_submit()
       |> follow_redirect(conn)
 
     assert has_element?(lv, "#chore-categories", "Equipment maintenance")
     [category] = ChoreCategory.get_all(team.id)
-    assert category.hours == :primary
+    assert %{hours: :primary, description: "Trucks, radios, and the yard"} = category
     assert category |> ChoreCategory.tags() |> Enum.map(& &1.title) == ["Chores"]
   end
 

@@ -22,6 +22,8 @@ defmodule App.Model.Chore do
     belongs_to :chore_event, ChoreEvent
     field :date, :date
     field :minutes, :integer
+    # What the form's Time box holds, such as "2.5h". build_changeset/5 reads it into minutes.
+    field :time, :string, virtual: true
     # What the member did, in their words. A team admin reads it, and so does anyone who
     # opens the D4H event.
     field :description, TrimmedString, redact: true
@@ -33,33 +35,103 @@ defmodule App.Model.Chore do
 
   @window_days 60
   @max_minutes 24 * 60
+  @time_blank "Enter how long it took"
 
   @doc "How many days back a member can log a chore."
   def window_days, do: @window_days
 
   @doc """
-  A chore's date, minutes, chore category, and description. `category_ids` are the ones
-  it may have. With `today`, the date must not be in the future, where D4H counts the
-  hours as signed up, not attended; a member's must also be within the last
-  #{@window_days} days. A team admin passes `:team_admin` for any date that has passed.
+  A chore's category, description, date, and time. The form sends its time as text, read
+  by parse_time/1 into minutes. `category_ids` are the ones it may have. With `today`, the
+  date must not be in the future, where D4H counts the hours as signed up, not attended; a
+  member's must also be within the last #{@window_days} days. A team admin passes
+  `:team_admin` for any date that has passed.
   """
   def build_changeset(data, params, category_ids, today, who \\ :member) do
     data
-    |> cast(params, [:date, :minutes, :chore_category_id, :description])
-    |> validate_required([:date], message: "Enter the date you did it")
-    |> validate_required([:minutes], message: "Enter how many minutes it took")
+    |> cast(params, [:chore_category_id, :description, :date])
+    # A cleared Time box is a change too, so it can't keep the old minutes.
+    |> cast(params, [:time], empty_values: [])
     |> validate_required([:chore_category_id], message: "Select a category")
     |> validate_required([:description], message: "Enter what you did")
-    |> validate_number(:minutes,
-      greater_than: 0,
-      less_than_or_equal_to: @max_minutes,
-      message: "Enter minutes from 1 to #{@max_minutes}"
-    )
-    |> validate_inclusion(:chore_category_id, category_ids, message: "Select a category")
+    |> update_change(:description, &String.replace(&1, ~r/\s+/, " "))
     |> validate_length(:description, max: 200, message: "Keep it under 200 characters")
+    |> validate_inclusion(:chore_category_id, category_ids, message: "Select a category")
+    |> validate_required([:date], message: "Enter the date you did it")
     |> validate_date(today, who)
-    |> App.Validate.in_field_order([:date, :minutes, :chore_category_id, :description])
+    |> put_minutes()
+    |> App.Validate.in_field_order([:chore_category_id, :description, :date, :time])
   end
+
+  # The minutes from the Time box. A chore whose time wasn't sent keeps its minutes.
+  defp put_minutes(changeset) do
+    case fetch_change(changeset, :time) do
+      {:ok, text} -> put_minutes(changeset, String.trim(text || ""), parse_time(text))
+      :error when is_nil(changeset.data.minutes) -> add_error(changeset, :time, @time_blank)
+      :error -> changeset
+    end
+  end
+
+  defp put_minutes(changeset, "", nil),
+    do: add_error(changeset, :time, @time_blank)
+
+  defp put_minutes(changeset, _text, nil),
+    do: add_error(changeset, :time, "Enter the time like 45m, 2h, or 2.5h")
+
+  defp put_minutes(changeset, _text, 0), do: add_error(changeset, :time, "Enter a time over 0")
+
+  # "30" reads as 30 hours, so it asks whether they meant minutes.
+  defp put_minutes(changeset, text, minutes) when minutes > @max_minutes do
+    message =
+      if Regex.match?(~r/^\d+$/, text),
+        do: "Enter #{text}m for minutes, or up to 24h",
+        else: "Enter up to 24h"
+
+    add_error(changeset, :time, message)
+  end
+
+  defp put_minutes(changeset, _text, minutes), do: put_change(changeset, :minutes, minutes)
+
+  @doc """
+  Minutes from what someone types for a chore's time: "45m", "2h", "2.5h", "1h 30m", or
+  "1:30". A bare number is hours, since most chores take an hour or more. Nil when it is
+  none of these.
+  """
+  def parse_time(text) when is_binary(text) do
+    squeezed = text |> String.downcase() |> String.replace(~r/\s+/, "")
+
+    Enum.find_value(time_formats(), fn {regex, kind} ->
+      if parts = Regex.run(regex, squeezed, capture: :all_but_first),
+        do: to_minutes(kind, parts)
+    end)
+  end
+
+  def parse_time(_text), do: nil
+
+  # h, hr, hrs, hour, hours; m, min, mins, minute, minutes.
+  defp time_formats do
+    [
+      {~r/^(\d+(?:\.\d+)?|\.\d+)(?:h|hrs?|hours?)?$/, :hours},
+      {~r/^(\d+)(?:m|mins?|minutes?)$/, :minutes},
+      {~r/^(\d+)(?:h|hrs?|hours?)(\d+)(?:m|mins?|minutes?)?$/, :hours_minutes},
+      {~r/^(\d+):([0-5]\d)$/, :hours_minutes}
+    ]
+  end
+
+  defp to_minutes(:hours, [hours]), do: round(decimal(hours) * 60)
+  defp to_minutes(:minutes, [minutes]), do: String.to_integer(minutes)
+
+  defp to_minutes(:hours_minutes, [hours, minutes]),
+    do: String.to_integer(hours) * 60 + String.to_integer(minutes)
+
+  defp decimal("." <> _rest = number), do: decimal("0" <> number)
+  defp decimal(number), do: number |> Float.parse() |> elem(0)
+
+  @doc "A chore's minutes as the Time box shows them, for parse_time/1 to read back: \"1h 30m\"."
+  def time_text(nil), do: nil
+  def time_text(minutes) when minutes < 60, do: "#{minutes}m"
+  def time_text(minutes) when rem(minutes, 60) == 0, do: "#{div(minutes, 60)}h"
+  def time_text(minutes), do: "#{div(minutes, 60)}h #{rem(minutes, 60)}m"
 
   defp validate_date(changeset, nil, _who), do: changeset
 
