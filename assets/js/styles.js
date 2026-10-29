@@ -1,5 +1,6 @@
 // The style guide's own script. Its pages are not LiveViews, so hooks that the examples
 // need are mounted here by hand.
+import {listenForBarMenuKeys} from "./bar_menu_keys"
 import {Combobox} from "./combobox"
 import {listenForConfirms} from "./confirm_dialog"
 import {RichText} from "./rich_text"
@@ -20,6 +21,9 @@ new LiveSocket("/live", Socket, {
 
 // The Confirm dialog page's examples ask as the app does.
 listenForConfirms()
+
+// The bar's ` key and arrow keys, as in the app.
+listenForBarMenuKeys()
 
 for (const [name, Hook] of Object.entries({Combobox, RichText})) {
   document.querySelectorAll(`[phx-hook=${name}]`).forEach(el => {
