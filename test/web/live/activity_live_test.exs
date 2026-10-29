@@ -623,11 +623,25 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} =
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
 
-      assert has_element?(lv, "#activity-fields h2", "Incident fields")
+      # In the sidebar, after the facts and before Actions, under a small caps label.
+      assert has_element?(lv, "#activity-sidebar-end #activity-fields h2.caps", "Incident fields")
       assert has_element?(lv, "#activity-fields-420", "Lost")
       assert has_element?(lv, "#activity-fields-896", "Team only")
       assert has_element?(lv, "#activity-fields-422", "Missing")
       refute has_element?(lv, "#activity-fields-577")
+    end
+
+    test "Missing shows only on a draft incident, where it stops D4H publishing it",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      {activity, _cause, _notes, _weather} = incident_with_fields(team)
+      published = activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{published.id}")
+
+      assert has_element?(lv, "#activity-fields-420", "Lost")
+      refute has_element?(lv, "#activity-fields-422")
     end
 
     test "a member sees neither restricted fields nor what's missing", %{conn: conn} do

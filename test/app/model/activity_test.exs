@@ -150,6 +150,14 @@ defmodule App.Model.ActivityTest do
       _not_copied = activity_fixture(team, %{activity_kind: "incident"})
       _exercise = activity_fixture(team, %{activity_kind: "exercise", custom_values: %{}})
 
+      # D4H let a published one through, so nothing is missing that stops it.
+      _published =
+        activity_fixture(team, %{
+          activity_kind: "incident",
+          is_published: true,
+          custom_values: %{}
+        })
+
       _other_team =
         activity_fixture(team_fixture(), %{activity_kind: "incident", custom_values: %{}})
 

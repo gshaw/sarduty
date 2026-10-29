@@ -137,7 +137,6 @@ defmodule Web.GroupLive do
       <aside class="content-1/3">
         <.sidebar_content
           group={@group}
-          members={@members}
           team={@current_team}
           organization_name={@organization_name}
         />
@@ -212,18 +211,11 @@ defmodule Web.GroupLive do
   # take out every member. Settings offer only groups without rules for it.
   defp retiring_group?(team, group), do: team.retiring_d4h_group_id == group.d4h_group_id
 
+  # Facts first, then Actions, as on every record's page. The main column counts the
+  # members, so the sidebar doesn't.
   defp sidebar_content(assigns) do
     ~H"""
     <dl>
-      <%!-- D4H has no page for one group, so there is no Open in D4H here. --%>
-      <dt :if={!@group.organization_owned}>Actions</dt>
-      <dd :if={!@group.organization_owned}>
-        <ul id="group-actions" class="action-list">
-          <li>
-            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
-          </li>
-        </ul>
-      </dd>
       <%= if @group.organization_owned do %>
         <dt>Belongs to</dt>
         <dd id="group-organization">
@@ -233,8 +225,15 @@ defmodule Web.GroupLive do
           </span>
         </dd>
       <% end %>
-      <dt>Members</dt>
-      <dd>{length(@members)}</dd>
+      <%!-- D4H has no page for one group, so there is no Open in D4H here. --%>
+      <dt :if={!@group.organization_owned}>Actions</dt>
+      <dd :if={!@group.organization_owned}>
+        <ul id="group-actions" class="action-list">
+          <li>
+            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename or delete</.a>
+          </li>
+        </ul>
+      </dd>
     </dl>
     """
   end

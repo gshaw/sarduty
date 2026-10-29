@@ -36,23 +36,38 @@ ones, edit them, and later fill them from templates (#307).
 [CustomField.rows/4](../lib/app/model/custom_field.ex) picks what a page shows, and
 [CustomFields](../lib/web/components/custom_fields.ex) shows it as a detail list.
 
-- **An activity's page** has a section named for its kind, "Incident fields", under
-  the description: every field with a value, in D4H's order. Team admins also see
-  RESTRICTED fields and each required field left empty, marked Missing. Members see
-  the rest, as they see tags.
+Every record's sidebar runs the same way: its facts, then its custom fields under a
+small caps label named for the kind ("INCIDENT FIELDS"), then Actions (decided
+2026-10-28). The label sits on the rows' usual rule, with no heavier rule and no
+heading: Actions starting says where the fields end.
+
+- **An activity's page** shows every field with a value, in D4H's order. Team admins
+  also see RESTRICTED fields, and on a draft incident each required field left empty,
+  marked Missing ([below](#missing-required-fields)). Members see the rest, as they
+  see tags. On a phone the facts come before the description and Members, and the
+  fields and Actions after.
 - **An equipment item's page**, for team admins, has Equipment fields.
-- **A member's page**, for team admins, lists the copied member fields in the sidebar.
+- **A member's page**, for team admins, has Member fields, after contact details and
+  before Milestones.
   A member sees their own on Your membership's Contact details, only the ones D4H lets
   a member see (`member_privacy` viewable or editable). Members never see another
   member's.
 
 ## Missing required fields
 
-D4H won't publish an activity until its required fields are filled in. Needs
-attention lists finished drafts with one left empty, "2 draft activities are missing
-required fields", and links to Activities with Required fields: Missing
-(`Activity.missing_required_fields/1`). An activity whose values aren't copied yet
-isn't counted. Records teams have no fields, so the filter isn't shown for them.
+D4H won't publish an incident until its required fields are filled in. So a required
+field left empty is flagged only on a draft incident (`Activity.flag_missing_fields?/1`,
+decided 2026-10-28): the activity page marks it Missing for team admins, and Needs
+attention lists finished drafts with one, "2 draft activities are missing required
+fields", linking to Activities with Required fields: Missing
+(`Activity.missing_required_fields/1`, the same rule as a query). A published incident
+got past D4H, so whatever is empty there is optional in practice, and flagging it is
+noise. Exercises and events aren't flagged: D4H's check is tested only on incidents.
+An activity whose values aren't copied yet isn't counted. Records teams have no
+fields, so the filter isn't shown for them.
+
+Later, a team may pick which fields it requires, as it picks member fields, for the
+fields D4H doesn't enforce.
 
 ## Changing them
 

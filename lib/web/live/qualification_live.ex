@@ -136,11 +136,27 @@ defmodule Web.QualificationLive do
     """
   end
 
+  # Facts first, then Actions, as on every record's page.
   defp sidebar_content(assigns) do
+    # A Records team can't rename its organization's qualification, and has no D4H to open.
+    %{team: team, qualification: qualification} = assigns
+
+    assigns =
+      assign(assigns, :actions?, !D4H.records?(team) or !qualification.organization_owned)
+
     ~H"""
     <dl>
-      <dt>Actions</dt>
-      <dd>
+      <%= if @qualification.organization_owned do %>
+        <dt>Belongs to</dt>
+        <dd id="qualification-organization">
+          {@organization_name || "Your organization"}
+          <span class="hint block">
+            Only {@organization_name || "your organization"} can rename or delete it.
+          </span>
+        </dd>
+      <% end %>
+      <dt :if={@actions?}>Actions</dt>
+      <dd :if={@actions?}>
         <ul id="qualification-actions" class="action-list">
           <li :if={D4H.records?(@team) and !@qualification.organization_owned}>
             <.a
@@ -157,15 +173,6 @@ defmodule Web.QualificationLive do
           </li>
         </ul>
       </dd>
-      <%= if @qualification.organization_owned do %>
-        <dt>Belongs to</dt>
-        <dd id="qualification-organization">
-          {@organization_name || "Your organization"}
-          <span class="hint block">
-            Only {@organization_name || "your organization"} can rename or delete it.
-          </span>
-        </dd>
-      <% end %>
     </dl>
     """
   end

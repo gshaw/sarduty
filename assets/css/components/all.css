@@ -20,6 +20,7 @@
 @import "./stat_switch";
 @import "./chart";
 @import "./activity_panel";
+@import "./activity_page";
 @import "./reply";
 @import "./dashboard";
 @import "./home";

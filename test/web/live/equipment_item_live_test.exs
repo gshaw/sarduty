@@ -17,7 +17,7 @@ defmodule Web.EquipmentItemLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/equipment/#{item.id}")
 
-    assert has_element?(lv, "#item-fields h2", "Equipment fields")
+    assert has_element?(lv, "aside #item-fields h2.caps", "Equipment fields")
     assert has_element?(lv, "#item-fields-603", "Orange dry bag")
   end
 end

@@ -393,14 +393,25 @@ defmodule App.Model.Activity do
   end
 
   @doc """
-  Activities with a required D4H custom field of their kind left empty (#681). One whose
-  values aren't copied yet is left out: nil isn't known to be missing anything.
+  Whether a required custom field left empty is worth flagging (#681): on a draft
+  incident, since D4H refuses to publish an incident with one empty. A published one got
+  past D4H already, and D4H's check on exercises and events is untested. Matches
+  `missing_required_fields/1`.
+  """
+  def flag_missing_fields?(%__MODULE__{activity_kind: kind, is_published: published?}),
+    do: kind == "incident" and !published?
+
+  @doc """
+  Draft incidents with a required D4H custom field left empty (#681), as
+  `flag_missing_fields?/1`. One whose values aren't copied yet is left out: nil isn't
+  known to be missing anything.
   """
   def missing_required_fields(query) do
     where(
       query,
       [r],
-      not is_nil(r.custom_values) and
+      r.activity_kind == "incident" and r.is_published == false and
+        not is_nil(r.custom_values) and
         fragment(
           """
           EXISTS (SELECT 1 FROM custom_fields f
