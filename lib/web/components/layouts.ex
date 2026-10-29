@@ -39,7 +39,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
       {@inner_content}
     </main>
-    <.site_footer current_user={@current_user} />
+    <.site_footer />
     """
   end
 
@@ -227,13 +227,10 @@ defmodule Web.Layouts do
       Application.get_env(:swoosh, :local) == true
   end
 
-  attr :current_user, :map, default: nil
-
   # The public pages' footer. The verify site is a separate host, so its link is a full URL.
   defp site_footer(assigns) do
     assigns =
       assign(assigns,
-        admin?: assigns.current_user && assigns.current_user.is_admin,
         support_url: "https://buymeacoffee.com/gshaw",
         dev_routes?: Application.get_env(:sarduty, :dev_routes),
         mailbox?: Application.get_env(:swoosh, :local)
@@ -247,9 +244,6 @@ defmodule Web.Layouts do
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
         · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-        <%= if @admin? do %>
-          · <.a id="footer-styles" href="/styles">Style guide</.a>
-        <% end %>
         <%= if @dev_routes? do %>
           · <.a href="/dev/dashboard" external={true}>Dashboard</.a>
           <%= if @mailbox? do %>
@@ -462,7 +456,7 @@ defmodule Web.Layouts do
 
   # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then Your
   # organizations (#512), then SAR Duty admin below a divider with its shield, so it never
-  # reads as one more team.
+  # reads as one more team, and the style guide under it.
   defp switch_menu(assigns) do
     groups = Enum.group_by(assigns.rows, & &1.kind)
 
@@ -470,7 +464,7 @@ defmodule Web.Layouts do
       assign(assigns,
         teams: groups[:team] || [],
         orgs: groups[:org] || [],
-        admin: groups[:admin] || []
+        admin: (groups[:admin] || []) ++ (groups[:styles] || [])
       )
 
     ~H"""
@@ -494,13 +488,15 @@ defmodule Web.Layouts do
   defp switch_link(assigns) do
     ~H"""
     <.link
-      navigate={@row.path}
+      navigate={@row.kind != :styles && @row.path}
+      href={@row.kind == :styles && @row.path}
       id={@id_prefix <> @row.key}
       aria-current={@row.current && "page"}
-      class={["nav-link", @row.kind == :admin && "switch-admin"]}
+      class={["nav-link", @row.kind in [:admin, :styles] && "switch-admin"]}
     >
       <.icon :if={@row.kind == :admin} name="shield-check" size={:sm} />
       <.icon :if={@row.kind == :org} name="building-complex" size={:sm} />
+      <.icon :if={@row.kind == :styles} name="palette" size={:sm} />
       {@row.label}
     </.link>
     """

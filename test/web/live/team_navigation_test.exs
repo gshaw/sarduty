@@ -73,6 +73,7 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, "#switch-team-#{team.subdomain}[aria-current=page]")
     assert has_element?(lv, ~s{#switch-team-#{other.subdomain}[href="/teams/#{other.subdomain}"]})
     refute has_element?(lv, "#switch-admin")
+    refute has_element?(lv, "#switch-styles")
   end
 
   test "Templates is in the menu, with no dot on the phone menu when nothing waits",
@@ -101,6 +102,7 @@ defmodule Web.TeamNavigationTest do
 
     assert has_element?(lv, "#nav-area", "SAR Duty admin")
     assert has_element?(lv, ~s{#switch-admin[href="/admin"][aria-current=page]})
+    assert has_element?(lv, ~s{#switch-styles[href="/styles"]})
     assert has_element?(lv, "#switch-team-#{team.subdomain}")
     assert has_element?(lv, "#side-nav-admin-orgs[aria-current=page]")
     refute has_element?(lv, "#side-nav-admin-teams[aria-current]")

@@ -194,7 +194,7 @@ defmodule Web.NavigationTest do
   describe "switch_rows/4" do
     defp rows(rows), do: for(row <- rows, do: {row.label, row.current})
 
-    test "each team once, A to Z, then SAR Duty admin, the current one marked" do
+    test "each team once, A to Z, then SAR Duty admin and Style guide, the current one marked" do
       area = Navigation.area("/teams/squamish", @team)
 
       rows =
@@ -208,11 +208,14 @@ defmodule Web.NavigationTest do
       assert rows(rows) == [
                {"Pemberton SAR", false},
                {"Squamish SAR", true},
-               {"SAR Duty admin", false}
+               {"SAR Duty admin", false},
+               {"Style guide", false}
              ]
 
-      assert Enum.map(rows, & &1.path) == ["/teams/pemberton", "/teams/squamish", "/admin"]
-      assert Enum.map(rows, & &1.kind) == [:team, :team, :admin]
+      assert Enum.map(rows, & &1.path) ==
+               ["/teams/pemberton", "/teams/squamish", "/admin", "/styles"]
+
+      assert Enum.map(rows, & &1.kind) == [:team, :team, :admin, :styles]
     end
 
     test "one place is nothing to switch to, so the name is plain text" do
@@ -224,7 +227,7 @@ defmodule Web.NavigationTest do
     test "a team opened from Admin that isn't yours marks nothing" do
       area = Navigation.area("/teams/pemberton", @pemberton)
       rows = Navigation.switch_rows(true, [], [], area)
-      assert rows(rows) == [{"SAR Duty admin", false}]
+      assert rows(rows) == [{"SAR Duty admin", false}, {"Style guide", false}]
     end
   end
 
@@ -256,7 +259,8 @@ defmodule Web.NavigationTest do
                {:team, "team-squamish", false},
                {:org, "org-nsara", false},
                {:org, "org-wsara", true},
-               {:admin, "admin", false}
+               {:admin, "admin", false},
+               {:styles, "styles", false}
              ]
     end
 
