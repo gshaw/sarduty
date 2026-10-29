@@ -287,9 +287,26 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#item-usages", "Night search")
   end
 
-  test "a template is added with its items and hours", ctx do
+  test "a template is added with a name and kind, then lands on its page", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
     assert has_element?(lv, ~s|#template-cancel[href="#{~p"/teams/#{ctx.team}/templates"}"]|)
+    refute has_element?(lv, "#item-search-form")
+
+    {:ok, _lv, html} =
+      lv
+      |> form("#template-form", template: %{title: "Truck 2", activity_kind: "exercise"})
+      |> render_submit()
+      |> follow_redirect(ctx.conn)
+
+    assert html =~ "Saved the Truck 2 template."
+    template = Repo.get_by!(Template, team_id: ctx.team.id)
+    assert {template.title, template.activity_kind} == {"Truck 2", "exercise"}
+  end
+
+  test "Change items saves a template's items and hours", ctx do
+    template = template_fixture(ctx.team, "Truck 2")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/items/edit")
+    assert has_element?(lv, "h1", "Change items for Truck 2")
 
     lv |> form("#item-search-form", %{q: "radio"}) |> render_change()
     lv |> element("#item-add-#{ctx.radio.id}") |> render_click()
@@ -299,11 +316,10 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#hours-#{ctx.radio.id}")
     refute has_element?(lv, "#hours-#{ctx.truck.id}")
 
-    lv
-    |> form("#template-form", template: %{title: "Truck 2"}, hours: %{"#{ctx.radio.id}" => "2.5"})
-    |> render_submit()
+    lv |> form("#template-form", hours: %{"#{ctx.radio.id}" => "2.5"}) |> render_submit()
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/templates/#{template.id}")
 
-    template = Template |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(:template_items)
+    template = Template |> Repo.get!(template.id) |> Repo.preload(:template_items)
     assert template.title == "Truck 2"
 
     assert template.template_items |> Enum.map(&{&1.equipment_item_id, &1.minutes}) |> Enum.sort() ==
@@ -314,7 +330,8 @@ defmodule Web.EquipmentLiveTest do
     water = tag_fixture(ctx.team, "Flat Water")
     tag_fixture(ctx.team, "Medical")
     activity_fixture(ctx.team, %{tags: ["Flat Water"]})
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
+    template = template_fixture(ctx.team, "Boat training")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/tags/edit")
 
     # With no search, only tags the team's activities used.
     assert has_element?(lv, "#tag-most-used")
@@ -327,9 +344,9 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#template-tags #tag-#{water.id}", "Flat Water")
     refute has_element?(lv, "#tag-add-#{water.id}")
 
-    lv |> form("#template-form", template: %{title: "Boat training"}) |> render_submit()
+    lv |> form("#template-form") |> render_submit()
 
-    template = Template |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(template_tags: :tag)
+    template = Template |> Repo.get!(template.id) |> Repo.preload(template_tags: :tag)
     assert Enum.map(template.template_tags, & &1.tag.title) == ["Flat Water"]
   end
 
@@ -384,16 +401,16 @@ defmodule Web.EquipmentLiveTest do
 
   test "a template gets groups whose members it adds", ctx do
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
+    template = template_fixture(ctx.team, "Managers' training")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/groups/edit")
 
     lv |> element("#group-add-#{managers.id}") |> render_click()
     assert has_element?(lv, "#template-groups #group-#{managers.id}", "Search Managers")
     refute has_element?(lv, "#group-add-#{managers.id}")
 
-    lv |> form("#template-form", template: %{title: "Managers' training"}) |> render_submit()
+    lv |> form("#template-form") |> render_submit()
 
-    template =
-      Template |> Repo.get_by!(team_id: ctx.team.id) |> Repo.preload(template_groups: :group)
+    template = Template |> Repo.get!(template.id) |> Repo.preload(template_groups: :group)
 
     assert Enum.map(template.template_groups, & &1.group.title) == ["Search Managers"]
   end
@@ -474,35 +491,44 @@ defmodule Web.EquipmentLiveTest do
     template |> Ecto.Changeset.change(changes) |> Repo.update!()
   end
 
-  test "a template for incidents holds values for their fields", ctx do
+  test "Change fields shows the kind's fields and saves the filled ones", ctx do
     cause = cause_field(ctx.team)
     custom_field_fixture(ctx.team, %{target: "event", title: "Event Leader"})
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
+    template = incident_template(ctx.team, "Lost hiker", [], %{})
+    path = ~p"/teams/#{ctx.team}/templates/#{template.id}/fields/edit"
+    {:ok, lv, _html} = live(ctx.conn, path)
 
-    # Any kind has no fields.
-    refute has_element?(lv, "#template-fields")
-
-    lv
-    |> form("#template-form", template: %{title: "Lost hiker", activity_kind: "incident"})
-    |> render_change()
-
-    assert has_element?(lv, "#template-fields", "Fields · 0")
     assert has_element?(lv, "#custom-field-#{cause.d4h_custom_field_id}")
     refute has_element?(lv, "#template-fields", "Event Leader")
 
     lv
-    |> form("#template-form",
-      template: %{title: "Lost hiker", activity_kind: "incident"},
-      fields: %{"#{cause.d4h_custom_field_id}" => "1"}
-    )
+    |> form("#template-form", fields: %{"#{cause.d4h_custom_field_id}" => "1"})
     |> render_submit()
 
-    template = Repo.get_by!(Template, team_id: ctx.team.id)
-    assert template.activity_kind == "incident"
+    template = Repo.get!(Template, template.id)
     assert template.custom_values == %{"#{cause.d4h_custom_field_id}" => [1]}
 
     {:ok, _lv, html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates")
     assert html =~ "Incident"
+  end
+
+  test "a template for any kind has no fields, and a new kind drops the old values", ctx do
+    cause = cause_field(ctx.team)
+    template = template_fixture(ctx.team, "Truck 1")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+    refute has_element?(lv, "#template-edit-fields")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/fields/edit")
+    assert has_element?(lv, "#template-no-fields", "for any kind")
+    refute has_element?(lv, "#template-save")
+
+    values = %{"#{cause.d4h_custom_field_id}" => [1]}
+    template = incident_template(ctx.team, "Lost hiker", [], values)
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/edit")
+    assert has_element?(lv, "#template-form", "A new kind drops the 1 field value.")
+
+    lv |> form("#template-form", template: %{activity_kind: "exercise"}) |> render_submit()
+    assert Repo.get!(Template, template.id).custom_values == %{}
   end
 
   test "a template's page shows what it adds, and deletes it from its Actions", ctx do
@@ -521,6 +547,8 @@ defmodule Web.EquipmentLiveTest do
              ~s|#template-edit[href="#{~p"/teams/#{ctx.team}/templates/#{template.id}/edit"}"]|
            )
 
+    assert has_element?(lv, "#template-edit-items")
+    assert has_element?(lv, "#template-edit-fields")
     assert has_element?(lv, "#template-delete[data-confirm-button='Delete template']")
 
     {:ok, _lv, html} =

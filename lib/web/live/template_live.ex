@@ -9,8 +9,8 @@ defmodule Web.TemplateLive do
   alias App.Operation.SaveTemplate
   alias Web.ActivityTemplateLive
 
-  # A template's page (#307): what it adds to an activity, with Change template and Delete
-  # template in its Actions. Delete opens the confirm dialog here, with no page (#714).
+  # A template's page (#307): what it adds to an activity. Its Actions change each part on
+  # a page of its own, and Delete opens the confirm dialog here, with no page (#714).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     template = Template.find!(team, id)
@@ -24,6 +24,7 @@ defmodule Web.TemplateLive do
       assign(socket,
         page_title: template.title,
         template: template,
+        fields?: fields != [],
         items: Enum.sort_by(template.template_items, &String.downcase(&1.equipment_item.title)),
         field_rows:
           CustomField.rows(fields, template.custom_values, team.timezone, restricted: true)
@@ -55,6 +56,30 @@ defmodule Web.TemplateLive do
                   id="template-edit"
                   navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/edit"}
                 >Change template</.a>
+              </li>
+              <li>
+                <.a
+                  id="template-edit-items"
+                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/items/edit"}
+                >Change items</.a>
+              </li>
+              <li>
+                <.a
+                  id="template-edit-tags"
+                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/tags/edit"}
+                >Change tags</.a>
+              </li>
+              <li>
+                <.a
+                  id="template-edit-groups"
+                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/groups/edit"}
+                >Change groups</.a>
+              </li>
+              <li :if={@fields?}>
+                <.a
+                  id="template-edit-fields"
+                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/fields/edit"}
+                >Change fields</.a>
               </li>
               <li>
                 <.a

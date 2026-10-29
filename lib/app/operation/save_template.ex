@@ -2,9 +2,12 @@ defmodule App.Operation.SaveTemplate do
   @moduledoc """
   Saves or deletes a template (#271). A template is SAR Duty's own, so nothing goes to D4H.
 
-  `lines` are `%{equipment_item_id: id, minutes: n}`, and `tag_ids` and `group_ids` local
-  ids (#162). An item, tag, or group that isn't the team's is dropped, so a template never
-  points at another team's records.
+  Each of a template's change pages saves its own part (#307): `params` hold the name
+  and kind, and `parts` only what that page shows. `items:` are `%{equipment_item_id:
+  id, minutes: n}`, `tag_ids:` and `group_ids:` local ids (#162), and `fields:` the form's
+  custom field values by D4H field id. An item, tag, or group that isn't the team's is
+  dropped, so a template never points at another team's records. Only the template's
+  kind's filled fields are kept, and a new kind drops the old kind's values.
   """
 
   import Ecto.Query
@@ -22,23 +25,30 @@ defmodule App.Operation.SaveTemplate do
   alias App.Repo
 
   @doc "`{:ok, template}`, or `{:error, changeset}` to show on the form."
-  def save(%Team{} = team, template, params, lines, tag_ids \\ [], group_ids \\ []) do
+  def save(%Team{} = team, template, params, parts \\ []) do
     template =
       template ||
         %Template{team_id: team.id, template_items: [], template_tags: [], template_groups: []}
 
     template
     |> Template.build_changeset(params)
-    |> put_custom_values(team, params["fields"] || %{})
-    |> Ecto.Changeset.put_assoc(:template_items, template_items(team, lines))
-    |> Ecto.Changeset.put_assoc(:template_tags, template_tags(team, tag_ids))
-    |> Ecto.Changeset.put_assoc(:template_groups, template_groups(team, group_ids))
+    |> put_custom_values(team, parts[:fields])
+    |> put_part(:template_items, parts[:items], &template_items(team, &1))
+    |> put_part(:template_tags, parts[:tag_ids], &template_tags(team, &1))
+    |> put_part(:template_groups, parts[:group_ids], &template_groups(team, &1))
     |> Repo.insert_or_update()
   end
 
-  def delete(%Team{} = team, %Template{team_id: team_id} = template) when team_id == team.id do
-    {:ok, _template} = Repo.delete(template)
-    :ok
+  defp put_part(changeset, _assoc, nil, _build), do: changeset
+
+  defp put_part(changeset, assoc, part, build),
+    do: Ecto.Changeset.put_assoc(changeset, assoc, build.(part))
+
+  # Another kind has other fields, so its values go.
+  defp put_custom_values(changeset, _team, nil) do
+    if Ecto.Changeset.changed?(changeset, :activity_kind),
+      do: Ecto.Changeset.put_change(changeset, :custom_values, %{}),
+      else: changeset
   end
 
   defp put_custom_values(changeset, team, field_params) do
@@ -56,6 +66,11 @@ defmodule App.Operation.SaveTemplate do
     custom_fields
     |> SaveCustomFields.custom_values(field_params)
     |> Map.reject(fn {_id, value} -> is_nil(value) end)
+  end
+
+  def delete(%Team{} = team, %Template{team_id: team_id} = template) when team_id == team.id do
+    {:ok, _template} = Repo.delete(template)
+    :ok
   end
 
   defp template_items(team, lines) do

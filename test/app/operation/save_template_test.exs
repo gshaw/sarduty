@@ -13,18 +13,15 @@ defmodule App.Operation.SaveTemplateTest do
     other = tag_fixture(team_fixture(), "Other team")
 
     {:ok, template} =
-      SaveTemplate.save(team, nil, %{"title" => "Boat training"}, [], [
-        water.id,
-        boat.id,
-        water.id,
-        other.id
-      ])
+      SaveTemplate.save(team, nil, %{"title" => "Boat training"},
+        tag_ids: [water.id, boat.id, water.id, other.id]
+      )
 
     template = Template.find!(team, template.id)
     assert template.template_items == []
     assert template |> Template.tags() |> Enum.map(& &1.title) == ["Boat", "Flat Water"]
 
-    {:ok, _template} = SaveTemplate.save(team, template, %{}, [], [water.id])
+    {:ok, _template} = SaveTemplate.save(team, template, %{}, tag_ids: [water.id])
 
     assert team |> Template.find!(template.id) |> Template.tags() |> Enum.map(& &1.title) == [
              "Flat Water"
@@ -38,21 +35,31 @@ defmodule App.Operation.SaveTemplateTest do
     other = group_fixture(team_fixture(), %{title: "Other team"})
 
     {:ok, template} =
-      SaveTemplate.save(team, nil, %{"title" => "Managers' training"}, [], [], [
-        managers.id,
-        rope.id,
-        managers.id,
-        other.id
-      ])
+      SaveTemplate.save(team, nil, %{"title" => "Managers' training"},
+        group_ids: [managers.id, rope.id, managers.id, other.id]
+      )
 
     template = Template.find!(team, template.id)
     assert template |> Template.groups() |> Enum.map(& &1.title) == ["Rope", "Search Managers"]
 
-    {:ok, _template} = SaveTemplate.save(team, template, %{}, [], [], [rope.id])
+    {:ok, _template} = SaveTemplate.save(team, template, %{}, group_ids: [rope.id])
 
     assert team |> Template.find!(template.id) |> Template.groups() |> Enum.map(& &1.title) == [
              "Rope"
            ]
+  end
+
+  test "saving one part leaves the others" do
+    team = team_fixture()
+    water = tag_fixture(team, "Flat Water")
+    {:ok, template} = SaveTemplate.save(team, nil, %{"title" => "Boat"}, tag_ids: [water.id])
+    template = Template.find!(team, template.id)
+
+    {:ok, _template} = SaveTemplate.save(team, template, %{"title" => "Boat training"})
+
+    template = Template.find!(team, template.id)
+    assert template.title == "Boat training"
+    assert template |> Template.tags() |> Enum.map(& &1.title) == ["Flat Water"]
   end
 
   test "a template keeps the filled values of its kind's fields only" do
@@ -70,21 +77,21 @@ defmodule App.Operation.SaveTemplateTest do
       id.(leader) => "Sam"
     }
 
-    params = %{"title" => "Lost hiker", "activity_kind" => "incident", "fields" => fields}
-    {:ok, template} = SaveTemplate.save(team, nil, params, [])
+    params = %{"title" => "Lost hiker", "activity_kind" => "incident"}
+    {:ok, template} = SaveTemplate.save(team, nil, params, fields: fields)
 
     assert template.activity_kind == "incident"
     assert template.custom_values == %{id.(cause) => [2], id.(agency) => "RCMP"}
 
     # Any kind holds no values.
-    {:ok, template} = SaveTemplate.save(team, template, %{"activity_kind" => ""}, [])
+    {:ok, template} = SaveTemplate.save(team, template, %{"activity_kind" => ""})
     assert template.activity_kind == nil
     assert template.custom_values == %{}
   end
 
   test "a template's kind is one of D4H's three" do
     {:error, changeset} =
-      SaveTemplate.save(team_fixture(), nil, %{"title" => "X", "activity_kind" => "callout"}, [])
+      SaveTemplate.save(team_fixture(), nil, %{"title" => "X", "activity_kind" => "callout"})
 
     assert changeset.errors[:activity_kind]
   end

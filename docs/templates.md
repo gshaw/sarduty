@@ -10,8 +10,12 @@ for that kind's D4H custom fields, such as an incident's primary cause and reque
 agency.
 
 Templates have their own menu item, `/teams/:subdomain/templates`. A template's page,
-`/templates/:id`, shows what it adds, with Change template (`/edit`) and Delete template
-in its Actions; Delete opens the confirm dialog, with no page (#714). They live in
+`/templates/:id`, shows what it adds. Its Actions change one part each, on a page of its
+own that saves only that part (#307): Change template for the name and kind (`/edit`),
+Change items, Change tags, Change groups, and Change fields (`/items/edit` and so on).
+Change fields shows only when the kind has fields. Add template asks for the name and
+kind, then opens the template's page. Delete template opens the confirm dialog, with no
+page (#714). One form for everything ran a BC incident's template many screens long. They live in
 `templates` (with `activity_kind` and `custom_values`), `template_items`,
 `template_tags`, and `template_groups`, and the sync never
 touches them, except that an item, tag, or group D4H deletes leaves its templates.
@@ -32,7 +36,7 @@ touches them, except that an item, tag, or group D4H deletes leaves its template
   works: it signs nobody up and emails nobody, and each member answers.
 - **A kind and fields** (#307): Incident, Exercise, Event, or Any kind. A template with a
   kind shows that kind's D4H custom fields ([custom-fields.md](custom-fields.md)), the
-  same inputs as Change fields, and keeps the filled ones in `custom_values`, keyed by
+  same inputs as an activity's Change fields, and keeps the filled ones in `custom_values`, keyed by
   D4H field id as on activities. Any kind holds no values, and changing the kind drops
   the old kind's. RESTRICTED fields are offered: templates are for team admins only. A
   field D4H deletes is ignored, since only the kind's live fields are read.
