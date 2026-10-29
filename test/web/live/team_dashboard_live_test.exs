@@ -92,11 +92,11 @@ defmodule Web.TeamDashboardLiveTest do
     refute has_element?(lv, "#refresh-now")
   end
 
-  test "Open D4H sits in the line under the team's name", %{conn: conn} do
+  test "Open in D4H sits in the line under the team's name", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = open(conn, user, team)
-    assert has_element?(lv, "#team-head-facts #open-d4h[target=_blank]", "Open D4H")
+    assert has_element?(lv, "#team-head-facts #open-d4h[target=_blank]", "Open in D4H")
   end
 
   test "an empty team has nothing coming up and nothing to do", %{conn: conn} do
@@ -366,7 +366,7 @@ defmodule Web.TeamDashboardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
 
       assert has_element?(lv, "#d4h-updated")
-      assert has_element?(lv, "#open-d4h", "Open D4H")
+      assert has_element?(lv, "#open-d4h", "Open in D4H")
       refute has_element?(lv, "#refresh-now")
       refute has_element?(lv, "#needs-attention")
       assert has_element?(lv, "#next-up", "Rope practice")

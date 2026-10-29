@@ -232,7 +232,7 @@ defmodule Web.CertificateLive do
 
         <div :if={@certificate.status == :accepted} id="certificate-fix">
           <p class="action">
-            <.a external={true} href={D4H.member_url(%{@certificate.member | team: @current_team})}>Open {@service} member</.a>
+            <.a external={true} href={D4H.member_url(%{@certificate.member | team: @current_team})}>Open member in {@service}</.a>
           </p>
           <p class="hint">Wrong qualification or dates? Fix the award in {@service}.</p>
         </div>

@@ -561,7 +561,7 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(
              lv,
              ~s(#item-actions a[href$="/team/equipment/view/#{ctx.truck.d4h_equipment_id}"]),
-             "Open D4H item"
+             "Open in D4H"
            )
 
     assert_error_sent 404, fn -> get(ctx.conn, ~p"/teams/#{ctx.team}/equipment/new") end

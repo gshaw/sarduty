@@ -153,7 +153,7 @@ defmodule Web.QualificationLive do
               id="qualification-d4h"
               external={true}
               href={D4H.qualification_url(@team, @qualification)}
-            >Open {D4H.service_name(@team)} qualification</.a>
+            >Open in {D4H.service_name(@team)}</.a>
           </li>
         </ul>
       </dd>

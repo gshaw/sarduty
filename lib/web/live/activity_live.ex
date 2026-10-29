@@ -311,6 +311,14 @@ defmodule Web.ActivityLive do
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
 
   def sidebar_content(assigns) do
+    # A team admin's actions read or write the activity in D4H, which no longer has a
+    # deleted one. A Records team has no D4H to open.
+    assigns =
+      assign(assigns,
+        admin_actions?: assigns.team_admin? and !assigns.activity.deleted_at,
+        d4h?: !D4H.records?(assigns.activity.team)
+      )
+
     ~H"""
     <dl>
       <dt>Kind</dt>
@@ -328,6 +336,13 @@ defmodule Web.ActivityLive do
       <dt>Start</dt>
       <dd>
         {Service.Format.datetime_medium(@activity.started_at, @activity.team.timezone)}
+        <p :if={!@activity.deleted_at} class="action mb-0">
+          <.a
+            id="activity-calendar"
+            icon="calendar-plus"
+            href={~p"/teams/#{@activity.team}/activities/#{@activity.id}/calendar"}
+          >Add to calendar</.a>
+        </p>
       </dd>
       <dt>Finish</dt>
       <dd>
@@ -343,22 +358,6 @@ defmodule Web.ActivityLive do
 
       <.place activity={@activity} maps_app={@maps_app} />
 
-      <dt>Links</dt>
-      <dd>
-        <ul id="activity-links" class="action-list">
-          <li :if={!@activity.deleted_at}>
-            <.a
-              id="activity-calendar"
-              href={~p"/teams/#{@activity.team}/activities/#{@activity.id}/calendar"}
-            >Add to calendar</.a>
-          </li>
-          <li :if={!D4H.records?(@activity.team)}>
-            <.a external={true} href={D4H.activity_url(@activity.team, @activity)}>Open {D4H.service_name(
-              @activity.team
-            )} activity</.a>
-          </li>
-        </ul>
-      </dd>
       <%!-- Team admins only: the history can hold contact details and addresses. --%>
       <div :if={@team_admin?}>
         <dt>History</dt>
@@ -374,54 +373,60 @@ defmodule Web.ActivityLive do
         </dd>
       </div>
 
-      <%!-- Each action reads or writes the activity in D4H, which no longer has it. --%>
-      <dt :if={@team_admin? and !@activity.deleted_at}>Actions</dt>
-      <dd :if={@team_admin? and !@activity.deleted_at}>
+      <dt :if={@admin_actions? or @d4h?}>Actions</dt>
+      <dd :if={@admin_actions? or @d4h?}>
         <ul id="activity-actions" class="action-list">
-          <li :if={@send_reminders?}>
-            <.a
-              id="activity-send-reminders"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/reminders"}
-            >Send reminders</.a>
-          </li>
-          <li :if={@send_update?}>
-            <.a
-              id="activity-send-update"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/updates"}
-            >Send an update</.a>
-          </li>
-          <li>
-            <.a
-              id="activity-send-attendance"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
-            >Send attendance</.a>
-          </li>
-          <li>
+          <li :if={@admin_actions?}>
             <.a
               id="activity-edit"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
             >{if D4H.records?(@activity.team), do: "Change or delete", else: "Change activity"}</.a>
           </li>
+          <li :if={@admin_actions? and @send_reminders?}>
+            <.a
+              id="activity-send-reminders"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/reminders"}
+            >Send reminders</.a>
+          </li>
+          <li :if={@admin_actions? and @send_update?}>
+            <.a
+              id="activity-send-update"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/updates"}
+            >Send an update</.a>
+          </li>
+          <li :if={@admin_actions?}>
+            <.a
+              id="activity-send-attendance"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
+            >Send attendance</.a>
+          </li>
           <%!-- D4H refuses tags on a published activity (#358). --%>
-          <li :if={Activity.locked?(@activity)}>
+          <li :if={@admin_actions? and Activity.locked?(@activity)}>
             <div id="activity-tags-locked" class="hint">
               Published, so unpublish it to change its tags.
             </div>
           </li>
-          <li :if={!Activity.locked?(@activity)}>
+          <li :if={@admin_actions? and !Activity.locked?(@activity)}>
             <.a
               id="activity-change-tags"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
             >Change tags</.a>
           </li>
-          <li>
+          <li :if={@admin_actions?}>
             <.a
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
             >Apply a template</.a>
           </li>
-          <li>
+          <li :if={@admin_actions?}>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>Mileage report</.a>
+          </li>
+          <li :if={@d4h?}>
+            <.a
+              id="activity-d4h"
+              external={true}
+              href={D4H.activity_url(@activity.team, @activity)}
+            >Open in {D4H.service_name(@activity.team)}</.a>
           </li>
         </ul>
       </dd>

@@ -146,7 +146,7 @@ admin through them.
    its web app (a Records team can, on Change member). Until it's done, two red notices
    say so. Needs attention's one danger item, red and first in the list: "2 retiring
    members can still log in to D4H", opening `standing=retiring&access=some`. And a red
-   banner on every tab of that member's page, with an Open D4H member link. Access is
+   banner on every tab of that member's page, with an Open in D4H link. Access is
    the synced `d4h_permission`, anything but No access (`Member.d4h_access?/1`); a
    member whose permission D4H didn't send isn't counted.
 3. **Get the items back.** Needs attention's "1 retiring member holds 3 items" opens
@@ -338,7 +338,7 @@ The team's Dashboard, `/teams/:subdomain`
 - **Members see the team admin's page without its controls**: Next up, the team's next
   activity, with a maps link and how many signed up; Coming up, the team's next
   activities, each linked from its title; the team's year; and **For you to do**. The
-  line under the team's name says when SAR Duty last refreshed, with Open D4H.
+  line under the team's name says when SAR Duty last refreshed, with Open in D4H.
 - **Replies** (#444): a member replies to an activity they're invited to from Next up and
   Coming up, until it starts. A team admin replies as their own member row, found by
   email, on a team with member logins off too. See [Replies](#replies).
@@ -377,8 +377,8 @@ hidden data makes people suspicious).
 - **An activity's page** is the team admin's: under the title, the day and time and the
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
   reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,
-  tax credit hours, the place with copy and the maps link, Add to calendar and Open D4H
-  activity, the tags, the map, the description, Members, and the equipment. Take
+  tax credit hours, the place with copy and the maps link, Add to calendar under Start,
+  Open in D4H in Actions, the tags, the map, the description, Members, and the equipment. Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
   Team admins also get History, which can hold contact details and addresses, the

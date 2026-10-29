@@ -24,6 +24,11 @@
      drops, rather than showing underlined after the arrow. A float is never underlined. */
   .action > a { display: inline-block; }
   .action-list a::before, .action > a::before { content: var(--list-style-type-arrow); float: left; white-space: pre; color: var(--text); }
+  /* An action with its own icon, such as Add to calendar, puts it in the arrow's place:
+     black like the arrow, never underlined, floated so a long label wraps under its
+     words (<.a icon="…">). */
+  .action-list a.has-mark::before, .action > a.has-mark::before { content: none; }
+  .link-mark { float: left; color: var(--text); margin-top: calc((var(--lh-md) - 16px) / 2); margin-right: 0.375em; }
 
   .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
   .link:hover { color: var(--link-hover); text-decoration-thickness: 3px; }

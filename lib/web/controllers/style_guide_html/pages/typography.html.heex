@@ -127,22 +127,50 @@
   <ul class="list">
     <li>Never in a sentence, a table, a menu, the side navigation, or beside a heading.</li>
     <li>
-      Never on a link that belongs to a value, such as Open in Google Maps under an address. It sits with the value.
-    </li>
-    <li>
       A link to the whole list gets one, even under a value, such as All 12 milestones under the latest one.
     </li>
+    <li>
+      An action with an icon of its own takes the icon in the arrow's place, black like the arrow and never underlined:
+      Add to calendar under a start date, Open in Maps under an address. Every other action keeps the arrow. The external-link
+      icon still trails, in the link's colour.
+    </li>
   </ul>
+  <div class="demo">
+    <dl class="max-w-sm">
+      <dt>Start</dt>
+      <dd>
+        Sun Oct 25, 2026, 19:00
+        <p class="action mb-0"><.a href="#" icon="calendar-plus">Add to calendar</.a></p>
+      </dd>
+      <dt>Address</dt>
+      <dd>
+        123 Main St
+        <p class="action mb-0">
+          <.a href="#" external={true} icon="map-pin">Open in Google Maps</.a>
+        </p>
+      </dd>
+      <dt>Actions</dt>
+      <dd>
+        <ul class="action-list">
+          <li><.a href="#">Change activity</.a></li>
+          <li><.a href="#" external={true}>Open in D4H</.a></li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
   <p class="spec">
     In the app: <code>&lt;ul class="action-list"&gt;</code>
     for several, <code>&lt;p class="action"&gt;</code>
-    for one.
+    for one, and <code>&lt;.a icon="calendar-plus"&gt;</code>
+    for an icon in the arrow's place.
   </p>
 
   <h2>Links to other sites</h2>
   <p>
     <code>external=&#123;true&#125;</code>
     for a link that leaves SAR Duty, such as Open in D4H or a help page: it opens a new tab and ends in an icon that says so.
+    A link that opens the page's own record in D4H says just Open in D4H. One that opens something else names what it
+    opens, such as the member on a certificate.
     The verify site is SAR Duty's own, so its links open in the same tab with no icon.
   </p>
 </.shell>

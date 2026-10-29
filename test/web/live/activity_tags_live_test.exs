@@ -115,7 +115,7 @@ defmodule Web.ActivityTagsLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/tags")
 
     assert has_element?(lv, "#tags-published", "This activity is published")
-    assert has_element?(lv, "#tags-published a", "Open D4H activity")
+    assert has_element?(lv, "#tags-published a", "Open in D4H")
     refute has_element?(lv, "#activity-tags-form")
     assert Repo.get!(Activity, activity.id).is_published
 

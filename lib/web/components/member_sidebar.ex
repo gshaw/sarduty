@@ -126,7 +126,7 @@ defmodule Web.Components.MemberSidebar do
           <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
         </li>
         <li :if={!D4H.records?(@member.team)}>
-          <.a external={true} href={D4H.member_url(@member)}>Open {D4H.service_name(@member.team)} member</.a>
+          <.a external={true} href={D4H.member_url(@member)}>Open in {D4H.service_name(@member.team)}</.a>
         </li>
       </ul>
     </dd>

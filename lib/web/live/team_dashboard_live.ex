@@ -239,7 +239,7 @@ defmodule Web.TeamDashboardLive do
     </span>
     <span :if={!D4H.records?(@team)} class="whitespace-nowrap">
       <span aria-hidden="true">·</span>
-      <.a id="open-d4h" external={true} href={D4H.build_url(@team, "/dashboard")}>Open {D4H.service_name(
+      <.a id="open-d4h" external={true} href={D4H.build_url(@team, "/dashboard")}>Open in {D4H.service_name(
         @team
       )}</.a>
     </span>
