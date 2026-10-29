@@ -44,7 +44,7 @@ defmodule Web.Settings.TeamAdminsLive do
     <p :if={D4H.records?(@current_team)} class="measure">
       These people can log in to SAR Duty for {@current_team.name}. They are the members who
       are team admins. Members who are retired or have left cannot log in. To add or remove
-      someone, change Team admin on their Change details page.
+      someone, change Team admin on their Change member page.
     </p>
     <.team_managers
       id="team-managers"

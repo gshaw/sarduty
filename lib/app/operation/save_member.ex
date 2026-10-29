@@ -1,11 +1,13 @@
 defmodule App.Operation.SaveMember do
   @moduledoc """
-  A team admin adds a member to a team on SAR Duty Records, or changes their details
-  (docs/records.md). plan/3 turns the form into a change set row; call/5 applies it
-  through App.Operation.ApplyEdit and returns the member as the sync copied it.
+  A team admin adds a member to a team on SAR Duty Records, or changes a member's details
+  on any team (docs/records.md). plan/4 turns the form into a change set row; call/5
+  applies it through App.Operation.ApplyEdit and returns the member as the sync copied
+  it. A D4H team's form has no access: D4H sets it only in its web app.
   """
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
   alias App.Model.Member
   alias App.Model.Team
@@ -23,7 +25,7 @@ defmodule App.Operation.SaveMember do
     form = MemberFormViewModel.from_member(member, team.timezone, nil)
 
     with {:ok, values} <- MemberFormViewModel.validate(form, params) do
-      member |> plan(values, team.timezone) |> save(team, member, user, now)
+      member |> plan(values, team.timezone, D4H.service(team)) |> save(team, member, user, now)
     end
   end
 
@@ -51,18 +53,20 @@ defmodule App.Operation.SaveMember do
   end
 
   @doc """
-  The change set row for the form's values, or `:unchanged`. An update names only the
-  fields that differ, with their old values beside them.
+  The change set row for the form's values, or `:unchanged`, on a team whose records
+  are in `service` (`:d4h` or `:records`). An update names only the fields that differ,
+  with their old values beside them. Only Records adds members and sets access.
   """
-  def plan(nil, %MemberFormViewModel{} = values, timezone),
+  def plan(nil, %MemberFormViewModel{} = values, timezone, :records),
     do: %ChangeSetRow{action: :create_member, old_value: %{}, new_value: fields(values, timezone)}
 
-  def plan(%Member{} = member, %MemberFormViewModel{} = values, timezone) do
+  def plan(%Member{} = member, %MemberFormViewModel{} = values, timezone, service) do
     old = current(member, timezone)
 
     new =
       values
       |> fields(timezone)
+      |> then(&if service == :d4h, do: Map.delete(&1, "permission"), else: &1)
       |> Map.reject(fn {key, value} -> old[key] == value end)
       |> keep_retired(member)
 

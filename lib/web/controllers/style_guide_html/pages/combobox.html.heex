@@ -34,9 +34,27 @@
     </form>
   </div>
 
+  <h3 id="free-text">Free text</h3>
+  <div class="demo">
+    <form class="max-w-xs" onsubmit="return false">
+      <.input
+        type="combobox"
+        id="combobox-demo-free"
+        name="role"
+        label="Role (optional)"
+        value="GSTL"
+        options={["MIT", "GSTL", "Member", "Search Manager"]}
+        free_text
+      />
+    </form>
+  </div>
+
   <h2>When to use</h2>
   <p>
     A list that can run past about 15 options, such as a team's qualifications, groups, or endorsements.
+  </p>
+  <p>
+    With <code>free_text</code>, an answer people usually pick from what the team already uses but may type new, such as a member's role. The options are the team's own answers, most used first.
   </p>
 
   <h2>When not to use</h2>
@@ -54,7 +72,9 @@
     <li>Typing lists the options with every word typed, in any order, and underlines them.</li>
     <li>Clicking the box, or the down arrow, lists every option.</li>
     <li>The arrow keys move through the list. Enter picks one, and Escape closes the list.</li>
-    <li>Text left without a pick is cleared, so the form never sends a guess.</li>
+    <li>
+      Text left without a pick is cleared, so the form never sends a guess. With free text it stays, and is what the form sends; nothing is highlighted until the arrow keys move, so Enter keeps it.
+    </li>
     <li>The x at the end clears the box and lists every option again.</li>
     <li>Groups of options show under a heading each.</li>
   </ul>
@@ -63,6 +83,10 @@
   <p>
     <code>&lt;.input type="combobox" options=&#123;…&#125; label="…" /&gt;</code>
     takes the same options as a select, and the form gets the same params. A hidden select holds the value, so a test fills it in as a select.
+  </p>
+  <p>
+    <code>free_text</code>
+    makes the text box the field instead, and the hidden select only holds the suggestions. Change member uses it for Role.
   </p>
   <p>
     <code>&lt;.combobox size=&#123;:sm&#125; aria-label="…" /&gt;</code>

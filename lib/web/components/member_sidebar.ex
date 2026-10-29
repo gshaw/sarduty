@@ -128,15 +128,15 @@ defmodule Web.Components.MemberSidebar do
   attr :member, :map, required: true
   attr :fields?, :boolean, required: true
 
-  # A team on SAR Duty Records has no D4H to open, so it changes members here. Custom
-  # fields change here on every team that has them (#705).
+  # Details change here on every team, and custom fields on every team that has them
+  # (#705). A team on SAR Duty Records has no D4H to open.
   defp member_actions(assigns) do
     ~H"""
     <dt>Actions</dt>
     <dd>
       <ul id="member-actions" class="action-list">
-        <li :if={D4H.records?(@member.team)}>
-          <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
+        <li>
+          <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change member</.a>
         </li>
         <li :if={@fields?}>
           <.a

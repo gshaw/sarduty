@@ -29,7 +29,7 @@ defmodule App.Operation.SaveMemberTest do
   end
 
   test "a new member is a create with every field, joining at midnight in the team's zone" do
-    row = SaveMember.plan(nil, values(%{name: "New Person"}), @tz)
+    row = SaveMember.plan(nil, values(%{name: "New Person"}), @tz, :records)
 
     assert row.action == :create_member
     assert row.new_value["name"] == "New Person"
@@ -38,11 +38,17 @@ defmodule App.Operation.SaveMemberTest do
   end
 
   test "an unchanged form changes nothing, an Editor reading as a team admin" do
-    assert SaveMember.plan(member(), values(), @tz) == :unchanged
+    assert SaveMember.plan(member(), values(), @tz, :records) == :unchanged
   end
 
   test "an update names only what changed, with the old value" do
-    row = SaveMember.plan(member(), values(%{phone: "902-555-0199", team_admin: false}), @tz)
+    row =
+      SaveMember.plan(
+        member(),
+        values(%{phone: "902-555-0199", team_admin: false}),
+        @tz,
+        :records
+      )
 
     assert row.action == :update_member
     assert row.d4h_record_id == 70
@@ -53,7 +59,21 @@ defmodule App.Operation.SaveMemberTest do
   test "saving a retired member's details leaves them retired" do
     retired = %{member() | d4h_status: "RETIRED"}
     form = MemberFormViewModel.from_member(retired, @tz, nil)
-    assert SaveMember.plan(retired, form, @tz) == :unchanged
-    assert SaveMember.plan(retired, %{form | status: "OBSERVER"}, @tz) == :unchanged
+    assert SaveMember.plan(retired, form, @tz, :records) == :unchanged
+    assert SaveMember.plan(retired, %{form | status: "OBSERVER"}, @tz, :records) == :unchanged
+  end
+
+  test "on a D4H team, an update names only the details D4H takes, never access" do
+    values = values(%{position: "MIT", email: "Pat@New.Example.com", team_admin: false})
+    row = SaveMember.plan(member(), values, @tz, :d4h)
+
+    assert row.action == :update_member
+    assert row.d4h_record_id == 70
+    assert row.new_value == %{"position" => "MIT", "email" => "pat@new.example.com"}
+    assert row.old_value == %{"position" => nil, "email" => "pat@example.com"}
+  end
+
+  test "on a D4H team, a change to access alone changes nothing" do
+    assert SaveMember.plan(member(), values(%{team_admin: false}), @tz, :d4h) == :unchanged
   end
 end

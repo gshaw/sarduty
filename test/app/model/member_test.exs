@@ -242,4 +242,17 @@ defmodule App.Model.MemberTest do
       assert Member.find_by_email(team, "nobody@example.com", now) == nil
     end
   end
+
+  describe "roles/1, the Role box's suggestions" do
+    test "are the team's own roles, each once, most held first, with blanks left out" do
+      team = team_fixture()
+
+      for role <- ["MIT", "MIT", "MIT ", "GSTL", "GSTL", "Search Manager", "", nil, "  "],
+          do: member_fixture(team, %{position: role})
+
+      member_fixture(team_fixture(), %{position: "Other team's role"})
+
+      assert Member.roles(team) == ["MIT", "GSTL", "Search Manager"]
+    end
+  end
 end
