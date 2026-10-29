@@ -180,10 +180,10 @@ defmodule Web.NavigationTest do
       assert current(team_sections("/teams/squamish/members-x", opts)) == []
     end
 
-    test "SAR Duty admin has three sections; account settings and pages outside an area none" do
+    test "SAR Duty admin has two sections; account settings and pages outside an area none" do
       sections = "/admin/orgs" |> Navigation.area(nil) |> Navigation.sections("/admin/orgs")
-      assert sections |> keys() |> List.last() == ["admin-styles"]
-      assert length(sections) == 3
+      assert sections |> keys() |> List.last() == ["admin-admins", "admin-events", "admin-mcp"]
+      assert length(sections) == 2
       assert current(sections) == ["admin-orgs"]
 
       assert "/account" |> Navigation.area(nil) |> Navigation.sections("/account") == []
