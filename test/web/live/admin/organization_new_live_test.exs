@@ -13,6 +13,7 @@ defmodule Web.Admin.OrganizationNewLiveTest do
 
   test "a SAR Duty admin creates one, then adds its organization admins", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/orgs/new")
+    assert has_element?(lv, ~s|#organization-cancel[href="#{~p"/admin/orgs"}"]|)
 
     {:ok, _lv, html} =
       lv

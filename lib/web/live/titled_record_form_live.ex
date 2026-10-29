@@ -80,6 +80,16 @@ defmodule Web.TitledRecordFormLive do
         <.button variant={:success} phx-disable-with={if @record, do: "Saving…", else: "Adding…"}>
           {if @record, do: "Save #{@kind}", else: @page_title}
         </.button>
+        <.button
+          id="titled-record-cancel"
+          navigate={
+            if @record,
+              do: record_path(@current_team, @kind, @record),
+              else: list_path(@current_team, @kind)
+          }
+        >
+          Cancel
+        </.button>
       </.form_actions>
     </.form>
 

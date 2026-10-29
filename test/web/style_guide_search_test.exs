@@ -41,7 +41,7 @@ defmodule Web.StyleGuideSearchTest do
     assert tel.path == "/styles/phone#:~:text=In%20the%20app"
     assert tel.snippet =~ "tel:"
 
-    assert [%{title: "Confirm dialog › How it works"} | _rest] =
+    assert [%{title: "Button › Cancel"} | _rest] =
              "cancel" |> hits(index) |> List.flatten()
   end
 

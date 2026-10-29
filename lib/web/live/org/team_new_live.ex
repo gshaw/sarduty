@@ -68,6 +68,9 @@ defmodule Web.Org.TeamNewLive do
 
         <.form_actions>
           <.button variant={:success} phx-disable-with="Adding…">Add team</.button>
+          <.button id="add-team-cancel" navigate={~p"/orgs/#{@current_organization}"}>
+            Cancel
+          </.button>
         </.form_actions>
       </.form>
     </div>

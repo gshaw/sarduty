@@ -35,6 +35,12 @@ defmodule Web.Settings.ChoreCategoryLiveTest do
     assert has_element?(lv, ".tabs a[aria-current=page]", "Chore categories")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/chore-categories/new")
+
+    assert has_element?(
+             lv,
+             ~s|#chore-category-cancel[href="#{~p"/teams/#{team}/settings/chore-categories"}"]|
+           )
+
     lv |> form("#tag-search-form", tag_q: "cho") |> render_change()
     refute has_element?(lv, "#tag-search-results", "Primary Hours")
     lv |> element("#tag-add-#{chores.id}") |> render_click()

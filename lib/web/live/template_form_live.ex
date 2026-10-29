@@ -132,6 +132,9 @@ defmodule Web.TemplateFormLive do
             <.button id="template-save" variant={:success}>{if @template,
               do: "Save template",
               else: "Add template"}</.button>
+            <.button id="template-cancel" navigate={~p"/teams/#{@current_team}/templates"}>
+              Cancel
+            </.button>
           </.form_actions>
         </.form>
 

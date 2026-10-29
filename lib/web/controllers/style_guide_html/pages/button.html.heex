@@ -148,15 +148,38 @@
   <h2>Button rows</h2>
   <div class="demo">
     <.form_actions>
-      <.button variant={:primary}>Save settings</.button>
+      <.button variant={:primary}>Save place</.button>
       <.button>Cancel</.button>
       <:trailing>
-        <.button variant={:danger}>Delete team</.button>
+        <.button variant={:danger}>Delete place</.button>
       </:trailing>
     </.form_actions>
   </div>
   <p class="spec">
     The main action first. A destructive action sits apart, on the right.
+  </p>
+
+  <h3 id="cancel">Cancel</h3>
+  <p>
+    A form on a page of its own, reached from a link, gets a secondary Cancel right after its
+    main button. Cancel goes back without saving, to the page the link was on:
+  </p>
+  <ul>
+    <li>Changing a record: the record's page, or the tab the link was on.</li>
+    <li>Adding a record: the list it joins.</li>
+    <li>An action on a record, such as Add equipment: the record's page.</li>
+  </ul>
+  <p>No Cancel on a form that saves in place and stays on its page:</p>
+  <ul>
+    <li>Settings tabs.</li>
+    <li>Filter forms.</li>
+    <li>Forms on a record's page or tab, such as Award qualification.</li>
+    <li>A locked or read-only form with no Save.</li>
+  </ul>
+  <p class="spec">
+    <code>&lt;.button id="…-cancel" navigate=&#123;…&#125;&gt;Cancel&lt;/.button&gt;</code>. The
+    source test <code>Web.FormCancelTest</code>
+    fails on a form page with no Cancel; a form that saves in place gives its reason there.
   </p>
 
   <h2>In the app</h2>

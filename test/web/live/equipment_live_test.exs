@@ -259,6 +259,11 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#scan-message", "Added Thermal camera 2.")
     assert lv |> element("#hours-#{camera.id}") |> render() =~ ~s(value="2")
 
+    assert has_element?(
+             lv,
+             ~s|#equipment-cancel[href="#{~p"/teams/#{ctx.team}/activities/#{activity.id}"}"]|
+           )
+
     scan.("SF0119")
     assert has_element?(lv, "#scan-message", "already in the list to add")
 
@@ -284,6 +289,7 @@ defmodule Web.EquipmentLiveTest do
 
   test "a template is added with its items and hours", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/new")
+    assert has_element?(lv, ~s|#template-cancel[href="#{~p"/teams/#{ctx.team}/templates"}"]|)
 
     lv |> form("#item-search-form", %{q: "radio"}) |> render_change()
     lv |> element("#item-add-#{ctx.radio.id}") |> render_click()
@@ -361,6 +367,11 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#template-tags #tag-#{water.id}")
     refute has_element?(lv, "#template-tags #tag-#{hours.id}")
     assert has_element?(lv, "#template-send", "Add to activity")
+
+    assert has_element?(
+             lv,
+             ~s|#template-cancel[href="#{~p"/teams/#{ctx.team}/activities/#{activity.id}"}"]|
+           )
 
     lv |> form("#template-lines") |> render_submit()
 

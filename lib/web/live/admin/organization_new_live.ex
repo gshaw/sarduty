@@ -44,6 +44,7 @@ defmodule Web.Admin.OrganizationNewLive do
       />
       <.form_actions>
         <.button variant={:success}>Create organization</.button>
+        <.button id="organization-cancel" navigate={~p"/admin/orgs"}>Cancel</.button>
       </.form_actions>
     </.form>
     """

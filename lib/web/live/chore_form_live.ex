@@ -91,7 +91,7 @@ defmodule Web.ChoreFormLive do
         <.button id="chore-save" variant={:success} phx-disable-with="Sending…">
           Save chore
         </.button>
-        <.button navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}"}>Cancel</.button>
+        <.button id="chore-cancel" navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}"}>Cancel</.button>
       </.form_actions>
     </.form>
     """
@@ -150,7 +150,7 @@ defmodule Web.ChoreFormLive do
         >
           Log and add another
         </.button>
-        <.button navigate={ChoreCollectionLive.view_path(@current_team, :yours)}>Cancel</.button>
+        <.button id="chore-log-cancel" navigate={ChoreCollectionLive.view_path(@current_team, :yours)}>Cancel</.button>
         <:trailing :if={@chore}>
           <.button
             id="chore-delete"

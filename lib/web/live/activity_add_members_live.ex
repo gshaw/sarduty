@@ -166,6 +166,12 @@ defmodule Web.ActivityAddMembersLive do
               <.button id="members-send" variant={:success} phx-disable-with="Adding…">
                 {Format.count(length(@to_add), one: "Add 1 member", many: "Add %d members")}
               </.button>
+              <.button
+                id="members-cancel"
+                navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
+              >
+                Cancel
+              </.button>
             </.form_actions>
           </form>
         </section>

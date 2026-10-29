@@ -51,6 +51,11 @@ defmodule Web.ActivityTagsLiveTest do
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/tags")
 
+    assert has_element?(
+             lv,
+             ~s|#activity-tags-cancel[href="#{~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"}"]|
+           )
+
     assert has_element?(lv, "#activity-hours option[selected][value=primary]")
     assert has_element?(lv, "#activity-tags #tag-#{water.id}")
     refute has_element?(lv, "#activity-tags #tag-#{primary.id}")

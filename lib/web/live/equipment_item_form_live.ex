@@ -82,6 +82,16 @@ defmodule Web.EquipmentItemFormLive do
         <.button variant={:success} phx-disable-with={if @item, do: "Saving…", else: "Adding…"}>
           {if @item, do: "Save item", else: "Add item"}
         </.button>
+        <.button
+          id="equipment-item-cancel"
+          navigate={
+            if @item,
+              do: ~p"/teams/#{@current_team}/equipment/#{@item.id}",
+              else: ~p"/teams/#{@current_team}/equipment"
+          }
+        >
+          Cancel
+        </.button>
       </.form_actions>
     </.form>
 

@@ -72,6 +72,12 @@ defmodule Web.TitledRecordFormLiveTest do
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
     assert has_element?(edit, "h1", "Rename Swiftwater")
     refute has_element?(edit, "#record-delete")
+
+    assert has_element?(
+             edit,
+             ~s|#titled-record-cancel[href="#{~p"/teams/#{team}/qualifications/#{qualification.id}"}"]|
+           )
+
     edit |> form("#titled-record-form", form: %{title: "Swiftwater Rescue 2"}) |> render_submit()
 
     assert_received {:records, "PATCH", "/member-qualifications/99",
@@ -194,6 +200,7 @@ defmodule Web.TitledRecordFormLiveTest do
        %{conn: conn, team: team, member: member} do
     stub()
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/groups/new")
+    assert has_element?(lv, ~s|#titled-record-cancel[href="#{~p"/teams/#{team}/groups"}"]|)
     lv |> form("#titled-record-form", form: %{title: "Rope Team"}) |> render_submit()
     assert_received {:records, "POST", "/member-groups", %{"title" => "Rope Team"}}
 
@@ -214,6 +221,12 @@ defmodule Web.TitledRecordFormLiveTest do
     refute Repo.get(GroupMember, group_member.id)
 
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/groups/#{group.id}/edit")
+
+    assert has_element?(
+             edit,
+             ~s|#titled-record-cancel[href="#{~p"/teams/#{team}/groups/#{group.id}"}"]|
+           )
+
     edit |> form("#titled-record-form", form: %{title: "Rope Rescue"}) |> render_submit()
     assert_received {:records, "PATCH", "/member-groups/99", %{"title" => "Rope Rescue"}}
     assert Repo.get!(Group, group.id).title == "Rope Rescue"

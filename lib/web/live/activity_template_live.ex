@@ -106,6 +106,12 @@ defmodule Web.ActivityTemplateLive do
               <.button id="template-send" variant={:success} phx-disable-with="Adding…">
                 Add to activity
               </.button>
+              <.button
+                id="template-cancel"
+                navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
+              >
+                Cancel
+              </.button>
             </.form_actions>
           </.form>
           <p

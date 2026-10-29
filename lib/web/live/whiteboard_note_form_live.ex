@@ -99,7 +99,7 @@ defmodule Web.WhiteboardNoteFormLive do
         >
           {if @note, do: "Save note", else: "Post note"}
         </.button>
-        <.button navigate={~p"/teams/#{@current_team}"}>Cancel</.button>
+        <.button id="whiteboard-note-cancel" navigate={~p"/teams/#{@current_team}"}>Cancel</.button>
       </.form_actions>
     </.form>
 

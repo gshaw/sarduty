@@ -32,6 +32,7 @@ defmodule Web.ActivityFormLiveTest do
     assert has_element?(list, "#activity-add")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+    assert has_element?(lv, ~s|#activity-cancel[href="#{~p"/teams/#{team}/activities"}"]|)
 
     {:ok, _lv, html} =
       lv
@@ -95,6 +96,11 @@ defmodule Web.ActivityFormLiveTest do
     assert has_element?(page, "#activity-actions #activity-edit")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+
+    assert has_element?(
+             lv,
+             ~s|#activity-cancel[href="#{~p"/teams/#{team}/activities/#{activity.id}"}"]|
+           )
 
     lv
     |> form("#activity-form", form: %{title: "Rope practice", hours: "secondary"})

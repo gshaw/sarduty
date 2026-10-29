@@ -227,6 +227,14 @@ defmodule Web.EndorsementFormLive do
         </.input>
         <.form_actions>
           <.button variant={:success}>{if @endorsement, do: "Save name", else: "Add endorsement"}</.button>
+          <%!-- The endorsement's own page saves its name in place. --%>
+          <.button
+            :if={!@endorsement}
+            id="endorsement-cancel"
+            navigate={~p"/teams/#{@current_team}/endorsements"}
+          >
+            Cancel
+          </.button>
         </.form_actions>
       </.form>
 
