@@ -24,7 +24,7 @@ defmodule App.Model.ChoreEvent do
     field :d4h_activity_id, :integer
     field :needs_send, :boolean, default: false
     field :sent_at, :utc_datetime_usec
-    field :send_note, :string
+    field :send_note, :string, redact: true
     timestamps(type: :utc_datetime_usec)
   end
 

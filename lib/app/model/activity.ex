@@ -138,8 +138,8 @@ defmodule App.Model.Activity do
     field :tracking_number, :string
     field :is_published, :boolean
     field :title, TrimmedString
-    field :description, TrimmedString
-    field :address, TrimmedString
+    field :description, TrimmedString, redact: true
+    field :address, TrimmedString, redact: true
     field :coordinate, :string
     field :activity_kind, :string
     field :hours_kind, :string
@@ -148,7 +148,7 @@ defmodule App.Model.Activity do
     field :tags, {:array, :string}
     # D4H custom field values by D4H field id (#681): see App.Model.CustomField. Nil
     # until the first refresh after they were added copies them.
-    field :custom_values, :map
+    field :custom_values, :map, redact: true
     # Set by the refresh when D4H stops listing the activity. Deleted activities are kept
     # for their attendance scans, and left out of every list.
     field :deleted_at, :utc_datetime

@@ -224,7 +224,8 @@ fi
 - **Cloak is for credentials**: D4H access keys and pass tokens use
   `App.Field.EncryptedString`. Personal data such as member contact details and letter
   text is plain. R2 encrypts the replica at rest and local backups use age (#111). Give
-  personal fields `redact: true`.
+  personal fields `redact: true`, so error reports leave them out;
+  `App.Model.RedactFieldsTest` fails on a field whose name says it might hold one.
 - **Times are stored in UTC** and shown in the team's zone with `Service.Format`
   (`Service.Format.date_long(datetime, team.timezone)`).
 - **Every value people read has a formatter in `Service.Format`**: dates, durations,

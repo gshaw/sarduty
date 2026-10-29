@@ -11,7 +11,7 @@ defmodule App.Model.WhiteboardNote do
   schema "whiteboard_notes" do
     belongs_to :team, Team
     field :d4h_whiteboard_note_id, :integer
-    field :text, :string
+    field :text, :string, redact: true
     field :url, :string
     field :important, :boolean, default: false
     field :owner_kind, Ecto.Enum, values: [:team, :organization], default: :team

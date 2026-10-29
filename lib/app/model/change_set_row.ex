@@ -60,9 +60,9 @@ defmodule App.Model.ChangeSetRow do
       ]
 
     field :d4h_record_id, :integer
-    field :old_value, :map
-    field :new_value, :map
-    field :reason, :string
+    field :old_value, :map, redact: true
+    field :new_value, :map, redact: true
+    field :reason, :string, redact: true
     field :status, Ecto.Enum, values: [:proposed, :applied, :failed, :skipped]
     field :error, :string
     field :applied_at, :utc_datetime_usec

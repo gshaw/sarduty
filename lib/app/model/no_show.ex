@@ -18,7 +18,7 @@ defmodule App.Model.NoShow do
     belongs_to :followed_up_by_user, User
     field :followed_up_at, :utc_datetime_usec
     # What they heard, set with the tick (#650).
-    field :note, :string
+    field :note, :string, redact: true
     timestamps(type: :utc_datetime_usec)
   end
 

@@ -28,8 +28,8 @@ defmodule App.Model.D4HChange do
     field :d4h_record_id, :integer
     field :label, :string
     field :fields, {:array, :string}, default: []
-    field :old_value, :map
-    field :new_value, :map
+    field :old_value, :map, redact: true
+    field :new_value, :map, redact: true
     field :seen_after, :utc_datetime_usec
     field :seen_at, :utc_datetime_usec
   end

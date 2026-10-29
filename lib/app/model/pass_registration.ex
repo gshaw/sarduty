@@ -10,7 +10,7 @@ defmodule App.Model.PassRegistration do
   schema "pass_registrations" do
     belongs_to :member_card, MemberCard
     field :device_library_identifier, :string
-    field :push_token, :string
+    field :push_token, :string, redact: true
     timestamps(type: :utc_datetime_usec)
   end
 

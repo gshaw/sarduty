@@ -14,8 +14,8 @@ defmodule App.Model.TeamLoginGrant do
   # /admin/teams/:id (#513). Emails are stored lowercase.
   schema "team_login_grants" do
     belongs_to :team, Team
-    field :email, :string
-    field :reason, TrimmedString
+    field :email, :string, redact: true
+    field :reason, TrimmedString, redact: true
     belongs_to :added_by_user, User
     timestamps(type: :utc_datetime_usec)
   end
