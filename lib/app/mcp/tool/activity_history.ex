@@ -1,7 +1,8 @@
 defmodule App.MCP.Tool.ActivityHistory do
   @moduledoc """
   An activity's history (#216): its own changes and its attendance's, from
-  App.ViewData.ChangeHistory. No account emails.
+  App.ViewData.ChangeHistory. No account emails, and custom fields by title alone, never
+  their values (#681).
   """
   @behaviour App.MCP.Tool
 
@@ -43,7 +44,9 @@ defmodule App.MCP.Tool.ActivityHistory do
     case Repo.get_by(Activity, id: args["activity_id"], team_id: team.id) do
       %Activity{} = activity ->
         entries =
-          team |> ChangeHistory.for_activity(activity) |> HistoryOutput.build(team.timezone)
+          team
+          |> ChangeHistory.for_activity(activity, field_values: false)
+          |> HistoryOutput.build(team.timezone)
 
         {:ok, entries, length(entries)}
 

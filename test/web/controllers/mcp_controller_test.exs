@@ -183,7 +183,8 @@ defmodule Web.MCPControllerTest do
         "49.31234",
         "Meet at the gate",
         "private letter text",
-        team.mailing_address
+        team.mailing_address,
+        "Notes kept inside the team"
       ]
 
       D4HChange.insert!(%D4HChange{
@@ -194,6 +195,18 @@ defmodule Web.MCPControllerTest do
         fields: ["email", "phone"],
         old_value: %{},
         new_value: %{},
+        seen_at: ~U[2026-03-02 17:00:00.000000Z]
+      })
+
+      # A custom field's value, kept by title in history (#681).
+      D4HChange.insert!(%D4HChange{
+        team_id: team.id,
+        activity_id: activity.id,
+        record_kind: :activity,
+        action: :changed,
+        fields: ["custom_values"],
+        old_value: %{"custom_values" => %{"Team notes" => nil}},
+        new_value: %{"custom_values" => %{"Team notes" => "Notes kept inside the team"}},
         seen_at: ~U[2026-03-02 17:00:00.000000Z]
       })
 
