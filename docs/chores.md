@@ -29,9 +29,10 @@ did, a date, and a time ([Chore](../lib/app/model/chore.ex),
 [SaveChore](../lib/app/operation/save_chore.ex)).
 
 - **The time is typed as people say it**: 45m, 2h, 2.5h, 1h 30m, or 1:30, read by
-  `Chore.parse_time/1` and stored as minutes. A bare number is hours, since most chores
-  take an hour or more; "30" asks for 30m. The form shows what it read. It used to be a
-  Minutes box, and members worked out 4.5 × 60 to log 270 (2026-10-28).
+  `Chore.parse_time/1` and stored as minutes. A bare number is hours up to 24, since most
+  chores take an hour or more, and minutes over 24 (2026-10-29). The form shows what it
+  read. It used to be a Minutes box, and members worked out 4.5 × 60 to log 270
+  (2026-10-28).
 - **Category is a combobox, each option with a line a team admin writes** about what it
   covers. Members picked different categories for the same work, so the line says which
   is which. Radios filled a phone's screen (#719). On a phone the list opens without the

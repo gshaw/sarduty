@@ -80,22 +80,15 @@ defmodule App.Model.Chore do
 
   defp put_minutes(changeset, _text, 0), do: add_error(changeset, :time, "Enter a time over 0")
 
-  # "30" reads as 30 hours, so it asks whether they meant minutes.
-  defp put_minutes(changeset, text, minutes) when minutes > @max_minutes do
-    message =
-      if Regex.match?(~r/^\d+$/, text),
-        do: "Enter #{text}m for minutes, or up to 24h",
-        else: "Enter up to 24h"
-
-    add_error(changeset, :time, message)
-  end
+  defp put_minutes(changeset, _text, minutes) when minutes > @max_minutes,
+    do: add_error(changeset, :time, "Enter up to 24h")
 
   defp put_minutes(changeset, _text, minutes), do: put_change(changeset, :minutes, minutes)
 
   @doc """
   Minutes from what someone types for a chore's time: "45m", "2h", "2.5h", "1h 30m", or
-  "1:30". A bare number is hours, since most chores take an hour or more. Nil when it is
-  none of these.
+  "1:30". A bare whole number is hours up to 24, since most chores take an hour or more,
+  and minutes over 24, which can't be hours. Nil when it is none of these.
   """
   def parse_time(text) when is_binary(text) do
     squeezed = text |> String.downcase() |> String.replace(~r/\s+/, "")
@@ -111,11 +104,17 @@ defmodule App.Model.Chore do
   # h, hr, hrs, hour, hours; m, min, mins, minute, minutes.
   defp time_formats do
     [
+      {~r/^(\d+)$/, :bare},
       {~r/^(\d+(?:\.\d+)?|\.\d+)(?:h|hrs?|hours?)?$/, :hours},
       {~r/^(\d+)(?:m|mins?|minutes?)$/, :minutes},
       {~r/^(\d+)(?:h|hrs?|hours?)(\d+)(?:m|mins?|minutes?)?$/, :hours_minutes},
       {~r/^(\d+):([0-5]\d)$/, :hours_minutes}
     ]
+  end
+
+  defp to_minutes(:bare, [number]) do
+    number = String.to_integer(number)
+    if number > div(@max_minutes, 60), do: number, else: number * 60
   end
 
   defp to_minutes(:hours, [hours]), do: round(decimal(hours) * 60)
