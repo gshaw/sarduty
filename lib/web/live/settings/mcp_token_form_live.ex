@@ -65,12 +65,6 @@ defmodule Web.Settings.MCPTokenFormLive do
         value={setup_prompt(@endpoint_url, @new_token)}
         label="Copy setup prompt"
       />
-      <p>Or, in Claude Code, run this in a terminal:</p>
-      <.copy_code_block
-        id="claude-code-command"
-        value={claude_code_command(@endpoint_url, @new_token)}
-        label="Copy command"
-      />
       <.form_actions>
         <.button id="token-done" navigate={~p"/teams/#{@current_team}/settings/mcp"}>
           Back to tokens
@@ -100,26 +94,26 @@ defmodule Web.Settings.MCPTokenFormLive do
     """
   end
 
+  # Written for any agent, so it names Claude Code only as an example.
   defp setup_prompt(url, token) do
     """
-    Connect to SAR Duty's MCP server for me. It is a remote MCP server over Streamable \
-    HTTP, so it needs no install.
+    Add SAR Duty's MCP server to your MCP settings. It is a remote server over \
+    Streamable HTTP, so there is nothing to install.
 
     - Name: sarduty
     - URL: #{url}
     - Header: Authorization: Bearer #{token}
 
-    In Claude Code, run `claude mcp add --transport http sarduty <URL> --header \
-    "Authorization: Bearer <token>"`. In another app, add it to that app's MCP settings. \
-    Then list its tools to check it works.
+    Use your own app's way of adding a remote MCP server with a custom header. For \
+    example, Claude Code: `claude mcp add --transport http sarduty <URL> --header \
+    "Authorization: Bearer <token>"`. If you can't add it yourself, tell me which file \
+    or setting to change and what to put there. If your app cannot send a custom \
+    header, say so; don't use a workaround.
+
+    Then list the server's tools to check it works. You may need to restart first.
 
     The token is a password. Do not print it again or save it anywhere but the MCP \
     settings.\
     """
-  end
-
-  defp claude_code_command(url, token) do
-    "claude mcp add --transport http sarduty #{url} \\\n" <>
-      "  --header \"Authorization: Bearer #{token}\""
   end
 end

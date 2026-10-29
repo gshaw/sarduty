@@ -33,7 +33,7 @@ defmodule Web.Settings.MCPTokenFormLiveTest do
 
     assert MCPToken.hash(token) == record.token_hash
     refute has_element?(lv, "#new-token-form")
-    assert has_element?(lv, "#claude-code-command", token)
+    refute has_element?(lv, "#claude-code-command")
     assert has_element?(lv, "#setup-prompt", token)
     assert has_element?(lv, ~s|#new-token-value-copy[value="#{token}"]|)
     assert has_element?(lv, "#setup-prompt-copy[aria-label='Copy setup prompt']")

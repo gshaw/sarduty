@@ -113,10 +113,13 @@ defmodule Web.Settings.MCPLive do
         </.table>
 
         <h2 class="heading mt-8">Connect an agent</h2>
-        <p>
-          Agents connect with the token in a header. The claude.ai and ChatGPT connectors cannot
-          send one yet.
-        </p>
+        <p>Any MCP app that can send a header can connect. It needs:</p>
+        <ul id="connect-details" class="list-disc pl-6">
+          <li>URL: <code>{@endpoint_url}</code></li>
+          <li>Header: <code>Authorization: Bearer YOUR_TOKEN</code></li>
+          <li>Transport: Streamable HTTP</li>
+        </ul>
+        <p>The claude.ai and ChatGPT connectors cannot send a header yet.</p>
         <h3 class="subheading mt-4">Claude Code</h3>
         <p>Run this in a terminal:</p>
         <.copy_code_block

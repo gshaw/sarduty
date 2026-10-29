@@ -55,6 +55,7 @@ defmodule Web.Settings.MCPLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     assert has_element?(lv, "#token-#{record.id}", "Laptop")
+    assert has_element?(lv, "#connect-details", "/teams/#{team.subdomain}/mcp")
     assert has_element?(lv, "#claude-code-command", "YOUR_TOKEN")
 
     lv |> element("#revoke-token-#{record.id}") |> render_click()
