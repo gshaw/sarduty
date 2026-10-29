@@ -363,6 +363,11 @@ defmodule Web.GroupLiveTest do
       assert [removed, _added] = GroupMembershipChange.recent_for_group(ctx.group)
       assert %{action: :remove, reason: nil, error: nil} = removed
       assert has_element?(lv, "#recent-changes", "Added Avery Chen · by #{ctx.user_email}")
+
+      assert has_element?(
+               lv,
+               ~s(#recent-changes a[href="/teams/#{ctx.team.subdomain}/members/#{avery.id}"])
+             )
     end
 
     test "a group with rules has no add row or Remove, and refuses one sent anyway", ctx do
@@ -441,15 +446,21 @@ defmodule Web.GroupLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     leavers = group_fixture(team, %{title: "Leavers"})
 
-    team
-    |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
-    |> App.Repo.update!()
+    team =
+      team
+      |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+      |> App.Repo.update!()
+
+    leaving = member_fixture(team, %{name: "Sam Hale"})
+    group_member_fixture(leavers, leaving)
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/groups/#{leavers.id}")
 
-    assert has_element?(lv, "#retiring-group", "It cannot have group rules.")
+    assert has_element?(lv, "#retiring-group", "Everyone in this group is shown as")
+    assert has_element?(lv, "#retiring-group-badge", "Retiring")
     refute has_element?(lv, "#edit-rules")
+    refute has_element?(lv, "#group-member-standing-#{leaving.id}")
 
     assert {:error, "Members of this group are retiring. It cannot have group rules."} =
              AddGroupRule.call(leavers, :standing, {:standing, :active})
