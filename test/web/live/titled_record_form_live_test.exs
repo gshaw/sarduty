@@ -72,6 +72,7 @@ defmodule Web.TitledRecordFormLiveTest do
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")
     assert has_element?(edit, "h1", "Rename Swiftwater")
     refute has_element?(edit, "#record-delete")
+
     assert has_element?(
              edit,
              ~s|#titled-record-cancel[href="#{~p"/teams/#{team}/qualifications/#{qualification.id}"}"]|

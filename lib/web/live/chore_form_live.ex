@@ -150,7 +150,7 @@ defmodule Web.ChoreFormLive do
         >
           Log and add another
         </.button>
-        <.button navigate={ChoreCollectionLive.view_path(@current_team, :yours)}>Cancel</.button>
+        <.button id="chore-log-cancel" navigate={ChoreCollectionLive.view_path(@current_team, :yours)}>Cancel</.button>
         <:trailing :if={@chore}>
           <.button
             id="chore-delete"
