@@ -28,6 +28,30 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-calendar.has-mark .link-mark.icon-calendar-plus")
   end
 
+  test "tabs under the description: Members, Equipment, and History", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity = activity_fixture(team)
+    conn = log_in_user(conn, user)
+    tabs = ~s{nav[aria-label="Activity"] a}
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+    assert has_element?(lv, ~s{#{tabs}[aria-current="page"]}, "Members")
+    assert has_element?(lv, "#activity-members")
+    refute has_element?(lv, "#activity-equipment")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/equipment")
+    assert has_element?(lv, ~s{#{tabs}[aria-current="page"]}, "Equipment")
+    assert has_element?(lv, "#activity-equipment")
+    refute has_element?(lv, "#activity-members")
+
+    # The activity stays on screen on every tab.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/history")
+    assert has_element?(lv, ~s{#{tabs}[aria-current="page"]}, "History")
+    assert has_element?(lv, "#activity-history-empty")
+    assert has_element?(lv, "#activity-panel")
+    assert has_element?(lv, "#activity-facts")
+  end
+
   test "a chore activity's kind is Chores (#575)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity = chore_activity_fixture(team, [60])
@@ -206,7 +230,7 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(
                lv,
-               ~s{#activity-members .action #members-add[href="/teams/#{team.subdomain}/activities/#{activity.id}/members"]},
+               ~s{#activity-members .action #members-add[href="/teams/#{team.subdomain}/activities/#{activity.id}/members/add"]},
                "Add members"
              )
 
@@ -308,7 +332,9 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#activity-map circle")
       assert has_element?(lv, ".badge", "Rope")
       assert has_element?(lv, "dt", "Tax credit hours")
-      assert has_element?(lv, "#activity-equipment")
+      # Members and Equipment tabs; History is for team admins.
+      assert has_element?(lv, ~s{nav[aria-label="Activity"] a}, "Equipment")
+      refute has_element?(lv, ~s{nav[aria-label="Activity"] a}, "History")
 
       assert has_element?(
                lv,
@@ -318,7 +344,9 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#activity-actions #activity-d4h", "Open in D4H")
       refute has_element?(lv, "#activity-edit")
       refute has_element?(lv, "#activity-send-attendance")
-      refute has_element?(lv, "#activity-history-link")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/equipment")
+      assert has_element?(lv, "#activity-equipment")
       refute has_element?(lv, "#activity-equipment-add")
     end
 

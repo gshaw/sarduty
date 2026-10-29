@@ -129,6 +129,8 @@ defmodule Web.ActivityTagsLiveTest do
 
     refute has_element?(lv, "#activity-change-tags")
     assert has_element?(lv, "#activity-apply-template")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
     assert has_element?(lv, "#activity-equipment-add")
   end
 end

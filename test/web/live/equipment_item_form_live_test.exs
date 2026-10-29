@@ -114,7 +114,9 @@ defmodule Web.EquipmentItemFormLiveTest do
   end
 
   test "a Records team's activity has an equipment section", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity_fixture(team).id}")
+    {:ok, lv, _html} =
+      live(conn, ~p"/teams/#{team}/activities/#{activity_fixture(team).id}/equipment")
+
     assert has_element?(lv, "#activity-equipment-add")
   end
 end

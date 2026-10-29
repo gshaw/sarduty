@@ -1,43 +1,13 @@
 defmodule Web.ActivityHistoryLive do
+  @moduledoc """
+  An activity's History tab: the activity's own page, team admins only, since the history
+  can hold contact details and addresses. Web.ActivityLive draws it; this module exists
+  so the route keeps the team admin access members' tabs don't have.
+  """
   use Web, :live_view_app_layout
 
-  import Web.Components.ChangeHistory
-
-  alias App.Model.Activity
-  alias App.Repo
-  alias App.ViewData.ChangeHistory
-
-  def mount(_params, _session, socket) do
-    {:ok, socket}
-  end
-
-  def handle_params(params, _uri, socket) do
-    team = socket.assigns.current_team
-    activity = team |> Activity.find!(params["id"]) |> Repo.preload(:team)
-
-    socket =
-      assign(socket,
-        page_title: "#{activity.title} · History",
-        activity: activity,
-        entries: ChangeHistory.for_activity(team, activity)
-      )
-
-    {:noreply, socket}
-  end
-
-  def render(assigns) do
-    ~H"""
-    <.breadcrumbs>
-      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
-      <:item
-        label={"#{@activity.ref_id}"}
-        path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
-      />
-      <:item label="History" />
-    </.breadcrumbs>
-
-    <h1 class="title">{@activity.title}</h1>
-    <.change_history id="activity-history" entries={@entries} timezone={@current_team.timezone} />
-    """
-  end
+  defdelegate mount(params, session, socket), to: Web.ActivityLive
+  defdelegate handle_params(params, uri, socket), to: Web.ActivityLive
+  defdelegate handle_info(message, socket), to: Web.ActivityLive
+  defdelegate render(assigns), to: Web.ActivityLive
 end
