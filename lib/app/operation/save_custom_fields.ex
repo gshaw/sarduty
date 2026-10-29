@@ -73,7 +73,8 @@ defmodule App.Operation.SaveCustomFields do
   @doc """
   `fills` with a template's `values` added for `custom_fields`, the activity's kind's:
   only a field empty on `record` and not in `fills` yet, so what the activity has stays
-  and the first template applied wins a field two of them set.
+  and the first template applied wins a field two of them set. A choice keeps only the
+  options D4H still offers, as Change fields offers them.
   """
   def fill_empty(fills, record, custom_fields, values) do
     current = record.custom_values || %{}
@@ -81,12 +82,21 @@ defmodule App.Operation.SaveCustomFields do
 
     Enum.reduce(custom_fields, fills, fn field, fills ->
       id = Integer.to_string(field.d4h_custom_field_id)
+      value = live_value(field, values[id])
 
-      if empty?(current[id]) and not Map.has_key?(fills, id) and not empty?(values[id]),
-        do: Map.put(fills, id, values[id]),
+      if empty?(current[id]) and not Map.has_key?(fills, id) and not empty?(value),
+        do: Map.put(fills, id, value),
         else: fills
     end)
   end
+
+  # An option archived or deleted since the template was saved is left out.
+  defp live_value(field, ids) when is_list(ids) do
+    live = for option <- field.options, not option["archived"], do: option["id"]
+    Enum.filter(ids, &(&1 in live))
+  end
+
+  defp live_value(_field, value), do: value
 
   defp empty?(value), do: value in [nil, "", []]
 

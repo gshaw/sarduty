@@ -638,6 +638,50 @@ defmodule Web.EquipmentLiveTest do
            }
   end
 
+  test "when the tags fail after the fields went, the page leaves and says the fields went",
+       ctx do
+    cause = cause_field(ctx.team)
+    water = tag_fixture(ctx.team, "Flat Water")
+    activity = activity_fixture(ctx.team, %{activity_kind: "incident"})
+    values = %{"#{cause.d4h_custom_field_id}" => [1]}
+
+    template =
+      ctx.team
+      |> template_fixture("Lost hiker", [], [water])
+      |> Ecto.Changeset.change(activity_kind: "incident", custom_values: values)
+      |> Repo.update!()
+
+    patched = :atomics.new(1, [])
+
+    # D4H takes the fields, then refuses the read before the tags.
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      case {conn.method, :atomics.get(patched, 1)} do
+        {"GET", 0} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        {"GET", _patched} ->
+          conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"message" => "Refused"})
+
+        {"PATCH", _patched} ->
+          :atomics.put(patched, 1, 1)
+
+          Req.Test.json(
+            conn,
+            App.RecordsStub.activity_json(activity.d4h_activity_id, %{
+              "resourceType" => "Incident"
+            })
+          )
+      end
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    lv |> form("#template-lines") |> render_submit()
+
+    flash = assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    assert flash["error"] =~ ~r/^1 field filled in\. The change was not sent\./
+  end
+
   test "a published activity's fields are left out", ctx do
     cause = cause_field(ctx.team)
     activity = activity_fixture(ctx.team, %{activity_kind: "incident", is_published: true})

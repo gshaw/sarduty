@@ -7,9 +7,11 @@ defmodule App.Operation.SaveCustomFieldsTest do
   alias App.Model.Member
   alias App.Operation.SaveCustomFields
 
+  @options for id <- 1..8, do: %{"id" => id, "label" => "Option #{id}", "archived" => id == 8}
+
   @fields [
-    %CustomField{d4h_custom_field_id: 420, field_type: "single_choice"},
-    %CustomField{d4h_custom_field_id: 421, field_type: "multiple_choice"},
+    %CustomField{d4h_custom_field_id: 420, field_type: "single_choice", options: @options},
+    %CustomField{d4h_custom_field_id: 421, field_type: "multiple_choice", options: @options},
     %CustomField{d4h_custom_field_id: 454, field_type: "text"}
   ]
 
@@ -84,5 +86,12 @@ defmodule App.Operation.SaveCustomFieldsTest do
              %{"454" => "First", "420" => [3]}
 
     assert SaveCustomFields.fill_empty(fills, activity, @fields, nil) == fills
+  end
+
+  test "a template's archived or deleted options are left out" do
+    activity = activity(%{})
+    values = %{"420" => [8], "421" => [7, 8, 99]}
+
+    assert SaveCustomFields.fill_empty(%{}, activity, @fields, values) == %{"421" => [7]}
   end
 end

@@ -41,6 +41,12 @@ defmodule App.Model.Template do
   def kind_options,
     do: [{"Any kind", ""}, {"Incident", "incident"}, {"Exercise", "exercise"}, {"Event", "event"}]
 
+  @doc "The kind a template is for, as the form names it, or nil for any kind."
+  def kind_label(%Template{activity_kind: nil}), do: nil
+
+  def kind_label(%Template{activity_kind: kind}),
+    do: Enum.find_value(kind_options(), fn {label, value} -> value == kind && label end)
+
   @doc "A team's templates by title, with their items, tags, and groups."
   def get_all(team_id) do
     Template
