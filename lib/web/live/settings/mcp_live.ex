@@ -60,8 +60,9 @@ defmodule Web.Settings.MCPLive do
         email, phone numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
       </p>
       <p id="no-training" class="font-semibold">
-        Use a token only with an AI service set not to train on your data. The token gives
-        it your team members' names, hours, and history.
+        Use a token only with an AI service set not to train on your data. Personal
+        accounts, free or paid, often train on your chats unless you turn it off. The token
+        gives it your team members' names, hours, and history.
       </p>
       <p>
         Each token is yours. It stops working when you revoke it, or when you lose Owner or
