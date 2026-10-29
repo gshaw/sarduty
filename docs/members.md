@@ -376,9 +376,10 @@ hidden data makes people suspicious).
   default. Team admins also get Add activity and the Templates tab.
 - **An activity's page** is the team admin's: under the title, the day and time and the
   counts, "6 signed up · 2 can't make it · 5 no reply" ("6 attended · 2 absent · 5 no
-  reply" once it starts), then Kind, the attendance total, Start, Finish, Duration,
-  tax credit hours, the place with copy and the maps link, Add to calendar under Start,
-  Open in D4H in Actions, the tags, the map, the description, Members, and the equipment. Take
+  reply" once it starts). The sidebar has Kind, the attendance total, Start with Add to
+  calendar, Finish, Duration, tax credit hours, and the place with copy and the maps
+  link; then the kind's custom fields; then Actions, with Open in D4H last. The main
+  column has the tags, the map, the description, Members, and the equipment. Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
   Team admins also get History, which can hold contact details and addresses, the

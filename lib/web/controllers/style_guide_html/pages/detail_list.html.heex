@@ -35,15 +35,16 @@
 
   <h2>Custom fields</h2>
   <p>
-    A record's custom fields, the ones its team or organization added, under a heading in the page's main column. A required
-    field with no value shows Missing to team admins.
+    A record's custom fields, the ones its team or organization added, in its sidebar after the facts, under a small caps label
+    on the rows' usual rule. A required field left empty shows Missing to team admins on a draft incident, which can't be
+    published until it's filled in.
   </p>
   <div class="demo max-w-sm">
     <.custom_fields
       id="detail-list-fields"
       title="Incident fields"
       rows={custom_field_rows()}
-      class=""
+      sidebar
     />
   </div>
 
@@ -56,9 +57,13 @@
   <h2>In the app</h2>
   <p>A plain <code>&lt;dl&gt;</code>. Each <code>dd</code> gets a rule under it.</p>
   <p>
-    Custom fields are <code>&lt;.custom_fields&gt;</code>, or
-    <code>&lt;.custom_field_pairs&gt;</code>
-    inside a sidebar's own list, with rows from <code>CustomField.rows/4</code>.
+    Custom fields are <code>&lt;.custom_fields sidebar&gt;</code>
+    with rows from <code>CustomField.rows/4</code>, or <code>&lt;.custom_fields&gt;</code>
+    under a heading on a page with no sidebar, such as Your membership's Contact details.
+  </p>
+  <p>
+    Every record's sidebar runs in the same order: its facts, then its custom fields, then Actions. A count the main column
+    already shows, such as a group's members, stays out of it.
   </p>
   <p>
     Things to do with the record go last, under Actions, as a

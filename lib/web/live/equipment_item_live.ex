@@ -96,16 +96,17 @@ defmodule Web.EquipmentItemLive do
               </ul>
             </dd>
           </div>
-          <div :if={!D4H.records?(@current_team)}>
-            <dt>Actions</dt>
-            <dd>
-              <ul id="item-actions" class="action-list">
-                <li>
-                  <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open in {@service}</.a>
-                </li>
-              </ul>
-            </dd>
-          </div>
+        </dl>
+        <.custom_fields id="item-fields" title="Equipment fields" rows={@field_rows} sidebar />
+        <dl :if={!D4H.records?(@current_team)}>
+          <dt>Actions</dt>
+          <dd>
+            <ul id="item-actions" class="action-list">
+              <li>
+                <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open in {@service}</.a>
+              </li>
+            </ul>
+          </dd>
         </dl>
       </aside>
       <main class="content-2/3">
@@ -133,7 +134,6 @@ defmodule Web.EquipmentItemLive do
           </.table>
           <p :if={@usages == []} class="hint">No activities have this item.</p>
         </section>
-        <.custom_fields id="item-fields" title="Equipment fields" rows={@field_rows} />
       </main>
     </div>
     """

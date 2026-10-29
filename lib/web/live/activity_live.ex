@@ -165,14 +165,15 @@ defmodule Web.ActivityLive do
     end
   end
 
-  # The activity's D4H custom fields (#681). RESTRICTED ones, and required ones left
-  # empty, show to team admins only.
+  # The activity's D4H custom fields (#681). RESTRICTED ones show to team admins only,
+  # and so do required ones left empty, on a draft incident, where they stop D4H
+  # publishing it (Activity.flag_missing_fields?/1).
   defp field_rows(team, activity, team_admin?) do
     team.id
     |> CustomField.get_all(activity.activity_kind)
     |> CustomField.rows(activity.custom_values, team.timezone,
       restricted: team_admin?,
-      missing: team_admin?
+      missing: team_admin? and Activity.flag_missing_fields?(activity)
     )
   end
 
@@ -218,26 +219,19 @@ defmodule Web.ActivityLive do
         />
       </:reply>
     </.activity_panel>
-    <div class="content-wrapper">
-      <aside class="content-1/3">
-        <.sidebar_content
+    <%!-- A phone shows the facts, then the story and people, then fields and Actions. --%>
+    <div class="activity-columns">
+      <aside id="activity-facts" class="activity-columns-facts">
+        <.facts
           activity={@activity}
           maps_app={@current_user.maps_app}
           hours_tags={@hours_tags}
           attendances={@attendances}
           attendance_count={@attendance_count}
-          team_admin?={@team_admin?}
-          send_reminders?={@send_reminders?}
-          send_update?={@send_update?}
         />
       </aside>
-      <main class="content-2/3">
+      <main class="activity-columns-main">
         <.main_content activity={@activity} hours_tags={@hours_tags} map={@map} />
-        <.custom_fields
-          id="activity-fields"
-          title={"#{String.capitalize(@activity.activity_kind)} fields"}
-          rows={@field_rows}
-        />
         <.members_section
           activity={@activity}
           members={@members}
@@ -253,6 +247,15 @@ defmodule Web.ActivityLive do
         />
         <.equipment_section activity={@activity} usages={@usages} team_admin?={@team_admin?} />
       </main>
+      <aside id="activity-sidebar-end" class="activity-columns-end">
+        <.sidebar_end
+          activity={@activity}
+          field_rows={@field_rows}
+          team_admin?={@team_admin?}
+          send_reminders?={@send_reminders?}
+          send_update?={@send_update?}
+        />
+      </aside>
     </div>
     """
   end
@@ -306,19 +309,8 @@ defmodule Web.ActivityLive do
   attr :hours_tags, :map, required: true
   attr :attendances, :list, required: true
   attr :attendance_count, :integer, required: true
-  attr :team_admin?, :boolean, default: false
-  attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
-  attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
 
-  def sidebar_content(assigns) do
-    # A team admin's actions read or write the activity in D4H, which no longer has a
-    # deleted one. A Records team has no D4H to open.
-    assigns =
-      assign(assigns,
-        admin_actions?: assigns.team_admin? and !assigns.activity.deleted_at,
-        d4h?: !D4H.records?(assigns.activity.team)
-      )
-
+  def facts(assigns) do
     ~H"""
     <dl>
       <dt>Kind</dt>
@@ -357,7 +349,34 @@ defmodule Web.ActivityLive do
       </div>
 
       <.place activity={@activity} maps_app={@maps_app} />
+    </dl>
+    """
+  end
 
+  attr :activity, :map, required: true
+  attr :field_rows, :list, required: true
+  attr :team_admin?, :boolean, default: false
+  attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
+  attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
+
+  # Every record's sidebar ends the same way: its custom fields, then Actions.
+  def sidebar_end(assigns) do
+    # A team admin's actions read or write the activity in D4H, which no longer has a
+    # deleted one. A Records team has no D4H to open.
+    assigns =
+      assign(assigns,
+        admin_actions?: assigns.team_admin? and !assigns.activity.deleted_at,
+        d4h?: !D4H.records?(assigns.activity.team)
+      )
+
+    ~H"""
+    <.custom_fields
+      id="activity-fields"
+      title={"#{String.capitalize(@activity.activity_kind)} fields"}
+      rows={@field_rows}
+      sidebar
+    />
+    <dl>
       <%!-- Team admins only: the history can hold contact details and addresses. --%>
       <div :if={@team_admin?}>
         <dt>History</dt>

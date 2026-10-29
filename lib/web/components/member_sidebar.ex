@@ -104,7 +104,15 @@ defmodule Web.Components.MemberSidebar do
       <dt>ID</dt>
       <dd>{@member.ref_id}</dd>
       <.contact_details :if={@team_admin?} member={@member} maps_app={@maps_app} />
-      <.custom_field_pairs :if={@team_admin?} id="member-fields" rows={@field_rows} />
+    </dl>
+    <.custom_fields
+      :if={@team_admin?}
+      id="member-fields"
+      title="Member fields"
+      rows={@field_rows}
+      sidebar
+    />
+    <dl>
       <%!-- The latest, and the rest on the team's Milestones page (#389). --%>
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />

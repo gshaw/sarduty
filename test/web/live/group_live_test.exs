@@ -42,6 +42,11 @@ defmodule Web.GroupLiveTest do
     }
   end
 
+  test "the sidebar is Actions alone: the main column counts the members", ctx do
+    assert has_element?(ctx.lv, "#group-actions #group-edit")
+    refute has_element?(ctx.lv, "aside dt", "Members")
+  end
+
   test "adds and removes rules, never with another team's endorsement", ctx do
     lv = ctx.lv
     lv |> element("#edit-rules") |> render_click()
