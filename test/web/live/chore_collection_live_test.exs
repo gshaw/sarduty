@@ -109,11 +109,10 @@ defmodule Web.ChoreCollectionLiveTest do
     refute has_element?(lv, "#chore-category-hint")
   end
 
-  test "a time that reads as more than a day asks for minutes", %{conn: conn, team: team} do
+  test "a bare number over 24 reads as minutes", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
-    html = lv |> form("#chore-form", chore: %{time: "30"}) |> render_change()
-    assert html =~ "Enter 30m for minutes, or up to 24h"
-    refute has_element?(lv, "#chore-time-read")
+    lv |> form("#chore-form", chore: %{time: "30"}) |> render_change()
+    assert has_element?(lv, "#chore-time-read", "30 min")
   end
 
   test "a chore older than 60 days is refused", %{conn: conn, team: team, category: category} do

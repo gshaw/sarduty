@@ -39,7 +39,7 @@ defmodule App.Model.ChoreTest do
            ]
   end
 
-  test "the time reads hours and minutes; a bare number is hours" do
+  test "the time reads hours and minutes; a bare number is hours up to 24, then minutes" do
     for {text, minutes} <- [
           {"45m", 45},
           {"45 min", 45},
@@ -51,6 +51,9 @@ defmodule App.Model.ChoreTest do
           {"1h30", 90},
           {"1:30", 90},
           {"3", 180},
+          {"24", 1440},
+          {"25", 25},
+          {"45", 45},
           {" 1.5 ", 90},
           {"2H", 120}
         ],
@@ -73,7 +76,7 @@ defmodule App.Model.ChoreTest do
 
     assert errors(%{"time" => "0"}) == [time: "Enter a time over 0"]
     assert errors(%{"time" => "25h"}) == [time: "Enter up to 24h"]
-    assert errors(%{"time" => "30"}) == [time: "Enter 30m for minutes, or up to 24h"]
+    assert errors(%{"time" => "30.5"}) == [time: "Enter up to 24h"]
     assert errors(%{"time" => "soon"}) == [time: "Enter the time like 45m, 2h, or 2.5h"]
     assert errors(%{"time" => " "}) == [time: "Enter how long it took"]
     assert errors(%{"chore_category_id" => "8"}) == [chore_category_id: "Select a category"]
