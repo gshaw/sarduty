@@ -246,9 +246,9 @@ defmodule Web.Layouts do
         · <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
+        · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
         <%= if @admin? do %>
           · <.a id="footer-styles" href="/styles">Style guide</.a>
-          · <.a href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
         <% end %>
         <%= if @dev_routes? do %>
           · <.a href="/dev/dashboard" external={true}>Dashboard</.a>

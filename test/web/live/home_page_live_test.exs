@@ -59,10 +59,11 @@ defmodule Web.HomePageLiveTest do
     assert has_element?(lv, ~s(#footer-verify[href="#{Web.VerifyHost.url()}"]))
   end
 
-  test "the footer links everyone to Buy Me a Coffee", %{conn: conn} do
+  test "the footer links everyone to Buy Me a Coffee and GitHub", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 
     assert has_element?(lv, ~s(#footer-support[href="https://buymeacoffee.com/gshaw"]))
+    assert has_element?(lv, ~s(#footer-github[href="https://github.com/gshaw/sarduty"]))
   end
 
   test "the footer hides the style guide from visitors", %{conn: conn} do
