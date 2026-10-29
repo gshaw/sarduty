@@ -72,6 +72,14 @@ defmodule Web.ChoreCollectionLiveTest do
     refute has_element?(lv, "#chore-time-read")
   end
 
+  test "a save with no category marks the categories as the error", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    refute has_element?(lv, "#chore-category-choices.field-error")
+
+    lv |> form("#chore-form", chore: %{description: "Radio check", time: "1h"}) |> render_submit()
+    assert has_element?(lv, "#chore-category-choices.field-error", "Select a category")
+  end
+
   test "a time that reads as more than a day asks for minutes", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     html = lv |> form("#chore-form", chore: %{time: "30"}) |> render_change()

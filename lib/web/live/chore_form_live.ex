@@ -162,9 +162,13 @@ defmodule Web.ChoreFormLive do
   attr :categories, :list, required: true
 
   # One radio per category, with the line a team admin wrote about what it covers. The
-  # first radio has the field's id, so the error summary's link lands on it.
+  # first radio has the field's id, so the error summary's link lands on it. A form sends
+  # nothing for radios none of which is checked, so used_input?/1 says no after a save
+  # too; a failed save shows the error all the same.
   defp category_field(assigns) do
-    errors = if used_input?(assigns.field), do: assigns.field.errors, else: []
+    %{field: field} = assigns
+    show? = used_input?(field) or field.form.source.action not in [nil, :validate]
+    errors = if show?, do: field.errors, else: []
     assigns = assign(assigns, errors: Enum.map(errors, &translate_error/1))
 
     ~H"""
