@@ -9,5 +9,6 @@ defmodule Web.ActivityHistoryLive do
   defdelegate mount(params, session, socket), to: Web.ActivityLive
   defdelegate handle_params(params, uri, socket), to: Web.ActivityLive
   defdelegate handle_info(message, socket), to: Web.ActivityLive
+  defdelegate handle_event(event, params, socket), to: Web.ActivityLive
   defdelegate render(assigns), to: Web.ActivityLive
 end

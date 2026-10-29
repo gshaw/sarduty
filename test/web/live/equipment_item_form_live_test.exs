@@ -115,8 +115,12 @@ defmodule Web.EquipmentItemFormLiveTest do
     stub()
     item = equipment_item_fixture(team, %{d4h_equipment_id: 12})
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/delete")
-    lv |> element("#item-delete-button") |> render_click()
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}")
+    link = page |> element("#item-delete") |> render()
+    assert link =~ ~s(data-confirm-button="Delete item")
+    # The dialog's button is red though the link isn't a red button.
+    assert link =~ "data-confirm-danger"
+    page |> element("#item-delete") |> render_click()
     assert_received {:records, "DELETE", "/equipment/12", nil}
   end
 

@@ -3,32 +3,27 @@ defmodule Web.ActivityFormLive do
 
   import Web.Components.CustomFields, only: [missing_text: 1]
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.Attendance
   alias App.Model.CustomField
-  alias App.Operation.DeleteActivity
   alias App.Operation.SaveActivity
   alias App.ViewModel.ActivityFormViewModel
   alias Web.Components.PlaceBox
 
-  # Adding and changing activities (docs/records.md, #585), and deleting one on its own
-  # page, /delete (docs/urls.md). D4H cannot delete an activity, so only a Records team
-  # deletes one here.
+  # Adding and changing activities (docs/records.md, #585). Delete is on the activity's
+  # page, in Actions (docs/urls.md).
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     activity = if id = params["id"], do: Activity.find!(team, id)
-    ensure_open!(team, activity, socket.assigns.live_action)
+    if activity && activity.deleted_at, do: raise(Web.Status.NotFound)
 
     form = ActivityFormViewModel.from_activity(activity, team)
 
     socket =
       socket
       |> assign(page_title: page_title(activity, socket.assigns.live_action))
-      |> assign(activity: activity, form_data: form, records?: D4H.records?(team))
+      |> assign(activity: activity, form_data: form)
       |> assign(params: %{})
       |> assign(fields: activity && fields(team, activity))
-      |> assign(delete_confirm: activity && delete_confirm(team, activity))
       |> assign(
         description_locked?: ActivityFormViewModel.description_locked?(activity),
         published_locked?: activity != nil and Activity.locked?(activity)
@@ -52,7 +47,6 @@ defmodule Web.ActivityFormLive do
     <h1 class="title">{@page_title}</h1>
 
     <.form
-      :if={@live_action != :delete}
       for={@form}
       id="activity-form"
       phx-change="validate"
@@ -142,34 +136,6 @@ defmodule Web.ActivityFormLive do
         >Change fields</.a>
       </p>
     </section>
-
-    <section
-      :if={@live_action == :edit && !@records?}
-      id="activity-delete-elsewhere"
-      class="mt-8 measure"
-    >
-      <h2 class="heading">Delete the activity</h2>
-      <p>Delete it in {@service}. {@service} does not let SAR Duty delete activities.</p>
-      <p>
-        <.a external={true} href={D4H.activity_url(@current_team, @activity)}>Open in {@service}</.a>
-      </p>
-    </section>
-
-    <section :if={@live_action == :delete} id="activity-delete" class="measure">
-      <p>
-        It leaves every list and letter. Take attendance stops taking scans for it.
-      </p>
-      <.button
-        id="activity-delete-button"
-        phx-disable-with="Deleting…"
-        type="button"
-        variant={:danger}
-        phx-click="delete"
-        {@delete_confirm}
-      >
-        Delete activity
-      </.button>
-    </section>
     """
   end
 
@@ -183,44 +149,11 @@ defmodule Web.ActivityFormLive do
     end
   end
 
-  defp ensure_open!(team, activity, action) do
-    if activity && activity.deleted_at, do: raise(Web.Status.NotFound)
-    if action == :delete and !D4H.records?(team), do: raise(Web.Status.NotFound)
-  end
-
   defp page_title(nil, :new), do: "Add activity"
   defp page_title(activity, :edit), do: "Change #{activity.title}"
-  defp page_title(activity, :delete), do: "Delete #{activity.title}"
 
   defp breadcrumb(:new), do: "Add activity"
   defp breadcrumb(:edit), do: "Change"
-  defp breadcrumb(:delete), do: "Delete"
-
-  # An activity with attendance asks for the box ticked (#651).
-  defp delete_confirm(team, activity) do
-    case Attendance.attended_count(activity, DateTime.utc_now()) do
-      0 ->
-        %{
-          "data-confirm" => "Delete #{activity.title}?",
-          "data-confirm-button" => "Delete activity"
-        }
-
-      count ->
-        members = Service.Format.count(count, one: "%d member", many: "%d members")
-
-        %{
-          "data-confirm" => "Delete the activity #{activity.title}?",
-          "data-confirm-list" =>
-            Jason.encode!([
-              "Its attendance for #{members} stops counting.",
-              "It leaves every list and letter."
-            ]),
-          "data-confirm-warning" => "#{D4H.service_name(team)} can't bring it back.",
-          "data-confirm-check" => "I understand the attendance for #{members} is lost.",
-          "data-confirm-button" => "Delete activity"
-        }
-    end
-  end
 
   @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
 
@@ -241,23 +174,6 @@ defmodule Web.ActivityFormLive do
       {:ok, saved} -> {:noreply, saved(socket, saved, "Saved #{params["title"]}.")}
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_form(socket, changeset)}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  def handle_event("delete", _params, socket) do
-    %{current_team: team, current_user: user, activity: activity} = socket.assigns
-
-    case DeleteActivity.call(team, activity, user, DateTime.utc_now()) do
-      {:ok, _activity} ->
-        socket =
-          socket
-          |> put_flash(:info, "Deleted #{activity.title}.")
-          |> push_navigate(to: ~p"/teams/#{team}/activities")
-
-        {:noreply, socket}
-
-      {:error, text} ->
-        {:noreply, put_flash(socket, :error, text)}
     end
   end
 

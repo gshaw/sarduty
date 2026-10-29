@@ -8,8 +8,9 @@ defmodule Web.EquipmentItemFormLive do
   alias App.Repo
   alias App.ViewModel.EquipmentItemFormViewModel
 
-  # Adding, changing, and deleting equipment items of a team on SAR Duty Records (#271,
-  # docs/records.md). A D4H team changes its equipment in D4H.
+  # Adding and changing equipment items of a team on SAR Duty Records (#271,
+  # docs/records.md). A D4H team changes its equipment in D4H. Delete is on the item's
+  # page, in Actions (docs/urls.md).
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     unless D4H.records?(team), do: raise(Web.Status.NotFound)
@@ -44,7 +45,6 @@ defmodule Web.EquipmentItemFormLive do
     <h1 class="title">{@page_title}</h1>
 
     <.form
-      :if={@live_action != :delete}
       for={@form}
       id="equipment-item-form"
       phx-change="validate"
@@ -94,31 +94,14 @@ defmodule Web.EquipmentItemFormLive do
         </.button>
       </.form_actions>
     </.form>
-
-    <section :if={@live_action == :delete} id="item-delete" class="measure">
-      <p>Its activities lose it too. To keep its history, set its status to Retired instead.</p>
-      <.button
-        id="item-delete-button"
-        phx-disable-with="Deleting…"
-        type="button"
-        variant={:danger}
-        phx-click="delete"
-        data-confirm={"Delete #{@item.title}? Its activities lose it too."}
-      >
-        Delete item
-      </.button>
-    </section>
     """
   end
 
-  # Deleting is its own page, /delete (docs/urls.md).
   defp page_title(nil, :new), do: "Add item"
   defp page_title(item, :edit), do: "Change #{item.title}"
-  defp page_title(item, :delete), do: "Delete #{item.title}"
 
   defp breadcrumb(:new), do: "Add item"
   defp breadcrumb(:edit), do: "Change"
-  defp breadcrumb(:delete), do: "Delete"
 
   def handle_event("validate", %{"form" => params}, socket) do
     changeset =
@@ -144,21 +127,6 @@ defmodule Web.EquipmentItemFormLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
-
-      {:error, text} ->
-        {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  def handle_event("delete", _params, socket) do
-    %{current_team: team, current_user: user, item: item} = socket.assigns
-
-    case SaveEquipmentItem.delete(team, item, user, DateTime.utc_now()) do
-      :ok ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Deleted #{item.title}.")
-         |> push_navigate(to: ~p"/teams/#{team}/equipment")}
 
       {:error, text} ->
         {:noreply, put_flash(socket, :error, text)}

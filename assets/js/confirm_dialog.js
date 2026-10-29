@@ -94,7 +94,7 @@ function ask(dialog, button, message) {
 
   // Red for a delete, blue otherwise; with a better way out, that's the blue one.
   const confirm = action(dialog)
-  const danger = button.classList.contains("btn-danger")
+  const danger = button.classList.contains("btn-danger") || button.hasAttribute("data-confirm-danger")
   confirm.className = ["btn", danger ? "btn-danger" : alt ? null : "btn-primary"].filter(Boolean).join(" ")
   confirm.textContent = data("button") || button.textContent.replace(/\s+/g, " ").trim()
   lock(dialog)

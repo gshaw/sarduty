@@ -159,7 +159,8 @@ defmodule Web.Components.Messages do
 
   - `data-confirm`: the question, then any sentences after it as the body.
   - `data-confirm-button`: the action, such as "Delete group". The button's own text
-    otherwise. Red when the button is, blue otherwise.
+    otherwise. Red when the button is, or has `data-confirm-danger` (an Actions link's
+    Delete), blue otherwise.
   - `data-confirm-list`: what's lost, as a JSON array of sentences.
   - `data-confirm-warning`: a bold last line, such as "D4H can't bring it back."
   - `data-confirm-check`: a check box the action waits on. Only for a change that takes

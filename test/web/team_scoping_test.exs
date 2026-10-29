@@ -10,7 +10,6 @@ defmodule Web.TeamScopingTest do
   @templates [
     "/teams/:subdomain/activities/:id",
     "/teams/:subdomain/activities/:id/edit",
-    "/teams/:subdomain/activities/:id/delete",
     "/teams/:subdomain/activities/:id/history",
     "/teams/:subdomain/activities/:id/mileage",
     "/teams/:subdomain/activities/:id/attendance",
@@ -28,7 +27,6 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/fields/edit",
     "/teams/:subdomain/equipment/:id/edit",
-    "/teams/:subdomain/equipment/:id/delete",
     "/teams/:subdomain/templates/:id",
     # Chore pages need member logins, which this team lacks. Web.ChoreLiveTest,
     # Web.ChoreCollectionLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
@@ -62,12 +60,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/view-as",
     "/teams/:subdomain/groups/:id",
     "/teams/:subdomain/groups/:id/edit",
-    "/teams/:subdomain/groups/:id/delete",
     "/teams/:subdomain/groups/:id/review",
     "/teams/:subdomain/groups/:id/rules/:rule_id",
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/qualifications/:id/edit",
-    "/teams/:subdomain/qualifications/:id/delete",
     "/teams/:subdomain/tax-credit-letters/:id",
     "/teams/:subdomain/tax-credit-letters/:id/pdf",
     # A member's own letter (#156). Web.MeLiveTest covers another member on the same team.
@@ -182,23 +178,14 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/groups/:id/edit", s, o),
     do: ~p"/teams/#{s}/groups/#{o.group.id}/edit"
 
-  defp path_for("/teams/:subdomain/groups/:id/delete", s, o),
-    do: ~p"/teams/#{s}/groups/#{o.group.id}/delete"
-
   defp path_for("/teams/:subdomain/qualifications/:id/edit", s, o),
     do: ~p"/teams/#{s}/qualifications/#{o.qualification.id}/edit"
-
-  defp path_for("/teams/:subdomain/qualifications/:id/delete", s, o),
-    do: ~p"/teams/#{s}/qualifications/#{o.qualification.id}/delete"
 
   defp path_for("/teams/:subdomain/activities/:id", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}"
 
   defp path_for("/teams/:subdomain/activities/:id/edit", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/edit"
-
-  defp path_for("/teams/:subdomain/activities/:id/delete", s, o),
-    do: ~p"/teams/#{s}/activities/#{o.activity.id}/delete"
 
   defp path_for("/teams/:subdomain/activities/:id/history", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/history"
@@ -250,9 +237,6 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/equipment/:id/edit", s, o),
     do: ~p"/teams/#{s}/equipment/#{o.item.id}/edit"
-
-  defp path_for("/teams/:subdomain/equipment/:id/delete", s, o),
-    do: ~p"/teams/#{s}/equipment/#{o.item.id}/delete"
 
   defp path_for("/teams/:subdomain/endorsements/:id", s, o),
     do: ~p"/teams/#{s}/endorsements/#{o.endorsement.id}"

@@ -11,6 +11,7 @@ defmodule Web.QualificationLive do
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
+  alias App.Operation.SaveTitledRecord
   alias App.Repo
   alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.QualificationFilterViewModel
@@ -33,6 +34,13 @@ defmodule Web.QualificationLive do
     end
   end
 
+  # Only a Records team deletes its own qualifications; D4H's are deleted in D4H.
+  defp delete_confirm(team, qualification) do
+    if D4H.records?(team) and !qualification.organization_owned,
+      do: Web.DeleteConfirm.qualification(team, qualification),
+      else: %{}
+  end
+
   defp assign_awards(socket, id, filter_options, changeset) do
     current_team = socket.assigns.current_team
     qualification = find_qualification(id, current_team.id)
@@ -50,6 +58,7 @@ defmodule Web.QualificationLive do
     assign(socket,
       page_title: qualification.title,
       qualification: qualification,
+      delete_confirm: delete_confirm(current_team, qualification),
       active_awards: active_awards,
       expired_awards: expired_awards,
       expired_ids: MapSet.new(expired_awards, & &1.id),
@@ -74,6 +83,28 @@ defmodule Web.QualificationLive do
   defp shown?(award, q, group_member_ids) do
     StringHelpers.matches?(award.member.name, q) and
       (is_nil(group_member_ids) or MapSet.member?(group_member_ids, award.member.id))
+  end
+
+  # The page offers Delete only to a Records team, and D4H's qualifications stay D4H's.
+  def handle_event("delete", _params, %{assigns: %{delete_confirm: confirm}} = socket)
+      when confirm == %{},
+      do: {:noreply, socket}
+
+  def handle_event("delete", _params, socket) do
+    %{current_team: team, current_user: user, qualification: qualification} = socket.assigns
+
+    case SaveTitledRecord.delete(team, :qualification, qualification, user, DateTime.utc_now()) do
+      :ok ->
+        socket =
+          socket
+          |> put_flash(:info, "Deleted #{qualification.title}.")
+          |> push_navigate(to: ~p"/teams/#{team}/qualifications")
+
+        {:noreply, socket}
+
+      {:error, text} ->
+        {:noreply, put_flash(socket, :error, text)}
+    end
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do
@@ -116,6 +147,7 @@ defmodule Web.QualificationLive do
           qualification={@qualification}
           team={@current_team}
           organization_name={@organization_name}
+          delete_confirm={@delete_confirm}
         />
       </aside>
       <main class="content-2/3">
@@ -167,7 +199,10 @@ defmodule Web.QualificationLive do
           <li :if={D4H.records?(@team) and !@qualification.organization_owned}>
             <.a
               id="qualification-delete"
-              navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/delete"}
+              href="#"
+              phx-click="delete"
+              phx-disable-with="Deleting…"
+              {@delete_confirm}
             >Delete</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
