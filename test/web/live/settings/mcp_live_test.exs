@@ -5,7 +5,6 @@ defmodule Web.Settings.MCPLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
-  alias App.Model.MCPToken
   alias App.Operation.CreateMCPToken
   alias App.Operation.SetTeamMCP
   alias App.Repo
@@ -30,8 +29,8 @@ defmodule Web.Settings.MCPLiveTest do
     refute has_element?(lv, ".tabs a", "MCP tokens")
   end
 
-  test "a manager creates a token, sees it once, and revokes it", ctx do
-    %{conn: conn, admin: admin} = ctx
+  test "a manager opens Create token and revokes a token", ctx do
+    %{conn: conn, user: user, admin: admin} = ctx
     team = turn_on(ctx.team, admin)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
@@ -43,57 +42,25 @@ defmodule Web.Settings.MCPLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     assert has_element?(lv, "#no-tokens")
+    assert has_element?(lv, "#no-training")
+    refute has_element?(lv, "#new-token-form")
 
-    lv
-    |> form("#new-token-form", token: %{name: "Laptop", no_training: "true"})
-    |> render_submit()
+    assert {:error, {:live_redirect, %{to: to}}} =
+             lv |> element("#token-create") |> render_click()
 
-    [record] = MCPToken.get_live_for_team(team)
+    assert to == "/teams/#{team.subdomain}/settings/mcp/new"
 
-    token =
-      lv
-      |> element("#new-token-value")
-      |> render()
-      |> then(&Regex.run(~r/sarduty_mcp_[\w-]+/, &1))
-      |> hd()
+    {:ok, _token, record} =
+      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
 
-    assert MCPToken.hash(token) == record.token_hash
-    assert has_element?(lv, "#claude-code-command", token)
-    assert has_element?(lv, "#setup-prompt", token)
-    assert has_element?(lv, ~s|#new-token-value-copy[value="#{token}"]|)
-    assert has_element?(lv, "#setup-prompt-copy[aria-label='Copy setup prompt']")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     assert has_element?(lv, "#token-#{record.id}", "Laptop")
-
-    {:ok, lv, html} = live(conn, ~p"/teams/#{team}/settings/mcp")
-    refute html =~ token
-    refute has_element?(lv, "#new-token")
+    assert has_element?(lv, "#connect-details", "/teams/#{team.subdomain}/mcp")
+    refute has_element?(lv, "#claude-code-command")
 
     lv |> element("#revoke-token-#{record.id}") |> render_click()
     assert Repo.reload!(record).revoked_at
     refute has_element?(lv, "#token-#{record.id}")
-  end
-
-  test "a token needs a name", %{conn: conn, admin: admin} = ctx do
-    team = turn_on(ctx.team, admin)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
-
-    html = lv |> form("#new-token-form", token: %{name: " "}) |> render_submit()
-    assert html =~ "Enter a name for the token"
-    assert MCPToken.get_live_for_team(team) == []
-  end
-
-  test "a token needs the promise not to train", %{conn: conn, admin: admin} = ctx do
-    team = turn_on(ctx.team, admin)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
-    assert has_element?(lv, "#no-training")
-
-    html =
-      lv
-      |> form("#new-token-form", token: %{name: "Laptop", no_training: "false"})
-      |> render_submit()
-
-    assert html =~ "then check this box"
-    assert MCPToken.get_live_for_team(team) == []
   end
 
   test "an admin who doesn't manage the team cannot create one", %{admin: admin} = ctx do
@@ -101,7 +68,7 @@ defmodule Web.Settings.MCPLiveTest do
     {:ok, lv, _html} = live(log_in_user(build_conn(), admin), ~p"/teams/#{team}/settings/mcp")
 
     assert has_element?(lv, "#cannot-create")
-    refute has_element?(lv, "#new-token-form")
+    refute has_element?(lv, "#token-create")
   end
 
   test "never revokes another team's token", %{conn: conn, admin: admin} = ctx do

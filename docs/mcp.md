@@ -16,10 +16,12 @@ in the agent's prompt, not in SAR Duty.
   it isn't offered: a team sees MCP only once it is on, as a row on team settings'
   Features tab and the MCP tokens tab. Turning it off revokes every token on the team, so
   turning it back on wakes none of them.
-- **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp`, which
-  is not found while the switch is off. Creating one takes a checked box promising to use it
-  only with an AI service set not to train on the manager's data; the
-  `mcp_token_created` event records it. The token shows once; the database keeps its
+- **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp/new`, and
+  the list at `/teams/:subdomain/settings/mcp` revokes them. Both are not found while the
+  switch is off. Creating one takes a checked box promising to use it only with an AI
+  service set not to train on the manager's data; the `mcp_token_created` event records
+  it. The token shows once, on the same page, in place of the form, so there is no second
+  Create token to press. The database keeps its
   SHA-256 hash ([MCPToken](../lib/app/model/mcp_token.ex)). It belongs to a user and a
   team. An admin who doesn't manage the team can't create one, but anyone who can open
   the page can revoke any of the team's tokens.
@@ -97,11 +99,12 @@ switch are events, kept two years.
 
 ## Connecting
 
-The token page shows the new token with a prompt to paste into any agent, which
-tells it the URL, the header, and how to add the server. It also has the commands. Claude Code:
-`claude mcp add --transport http sarduty <url> --header "Authorization: Bearer <token>"`.
-Claude Desktop runs `npx mcp-remote <url> --header "Authorization:${SARDUTY_AUTH}"`. The
-claude.ai and ChatGPT connectors need OAuth, which SAR Duty doesn't offer yet.
+After creating a token, the page shows it once with a prompt to paste into any agent. The
+prompt gives the URL and header, names Claude Code's `claude mcp add` only as an example,
+and asks the agent to say which file to change when it can't add the server itself, as in
+Claude Desktop. The tokens list shows the URL, header, and transport, with no per-app
+commands. The claude.ai and ChatGPT connectors need OAuth, which SAR Duty doesn't offer
+yet.
 
 ## Not yet
 
