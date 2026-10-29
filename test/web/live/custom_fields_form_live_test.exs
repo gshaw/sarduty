@@ -67,6 +67,7 @@ defmodule Web.CustomFieldsFormLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields/edit")
 
     assert has_element?(lv, "h1", "Change fields for Missing hiker")
+    assert has_element?(lv, "#custom-fields-cancel[href$='/activities/#{activity.id}/fields']")
     assert has_element?(lv, ~s(#custom-field-420 option[selected][value="1"]), "Lost")
     refute has_element?(lv, ~s(#custom-field-420 option[value="3"]))
     # A draft incident: the filled one is tagged, the empty one Missing, and saving

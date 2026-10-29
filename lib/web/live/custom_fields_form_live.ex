@@ -87,6 +87,7 @@ defmodule Web.CustomFieldsFormLive do
       </fieldset>
       <.form_actions :if={!@locked?}>
         <.button variant={:success} phx-disable-with="Saving…">Save fields</.button>
+        <.button id="custom-fields-cancel" navigate={fields_path(@current_team, @record)}>Cancel</.button>
       </.form_actions>
     </.form>
     """
