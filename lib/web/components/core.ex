@@ -305,6 +305,9 @@ defmodule Web.Components.Core do
 
     * `type="checkbox"` is used exclusively to render boolean values
 
+    * `suggestions` on a text box offers what to type, and still takes any text. A
+      combobox takes only its options. See /styles/forms
+
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
 
   See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
@@ -350,6 +353,10 @@ defmodule Web.Components.Core do
   attr :field_class, :any,
     default: nil,
     doc: "added to the field's wrapper, such as `field-missing` (#705)"
+
+  attr :suggestions, :list,
+    default: [],
+    doc: "for a text box: values the browser offers as people type, from a `<datalist>`"
 
   slot :inner_block
   slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
@@ -571,8 +578,12 @@ defmodule Web.Components.Core do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[@errors != [] && "is-invalid", @class]}
+        list={@suggestions != [] && "#{@id}-suggestions"}
         {@rest}
       />
+      <datalist :if={@suggestions != []} id={"#{@id}-suggestions"}>
+        <option :for={suggestion <- @suggestions} value={suggestion}></option>
+      </datalist>
       {render_slot(@below)}
     </div>
     """

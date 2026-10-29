@@ -161,12 +161,52 @@ defmodule Web.MemberFormLiveTest do
     end
   end
 
-  test "a D4H team has no such page and no add button", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    conn = log_in_user(conn, user)
+  describe "on a D4H team" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "d4h_key"}})
+      %{conn: log_in_user(conn, user), team: team}
+    end
 
-    {:ok, list, _html} = live(conn, ~p"/teams/#{team}/members")
-    refute has_element?(list, "#member-add")
-    assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/members/new") end
+    test "there is no Add member, and adding 404s", %{conn: conn, team: team} do
+      {:ok, list, _html} = live(conn, ~p"/teams/#{team}/members")
+      refute has_element?(list, "#member-add")
+      assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/members/new") end
+    end
+
+    test "Change details has the details D4H takes, without access, photo, or leaving",
+         %{conn: conn, team: team} do
+      member = member_fixture(team, %{position: "MIT"})
+      member_fixture(team, %{position: "GSTL"})
+      member_fixture(team, %{position: "MIT"})
+
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}")
+      assert has_element?(page, "#member-actions #member-edit")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
+      assert has_element?(lv, "#form_position[list=form_position-suggestions]")
+      assert has_element?(lv, "#form_position-suggestions option:first-child[value=MIT]")
+      assert has_element?(lv, "#form_position-suggestions option[value=GSTL]")
+      refute has_element?(lv, "#form_team_admin")
+      refute has_element?(lv, "#member-photo")
+      refute has_element?(lv, "#member-retire")
+    end
+
+    test "saving sends D4H only what changed", %{conn: conn, team: team} do
+      RecordsStub.stub(fn _method, _path, _body -> {200, RecordsStub.member_json(77)} end)
+
+      member = member_fixture(team, %{d4h_status: "OPERATIONAL"})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
+
+      lv
+      |> form("#member-form", form: %{position: "Search Manager", ref_id: "SF 12"})
+      |> render_submit()
+
+      path = "/members/#{member.d4h_member_id}"
+      assert_received {:records, "PATCH", ^path, body}
+      assert body == %{"position" => "Search Manager", "ref" => "SF 12"}
+
+      [row] = Repo.all(ChangeSetRow)
+      assert {row.action, row.status, row.member_id} == {:update_member, :applied, member.id}
+    end
   end
 end

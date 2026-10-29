@@ -44,6 +44,25 @@ with a filter: Retired when the Standing filter can show retired members, since 
 other row has a date, and Missing with Details: Missing, since it says why each row
 matched. ID hides on narrow screens.
 
+## Changing a member's details
+
+A team admin changes a member's details on every team, from Change details in the
+member's Actions (`/members/:id/edit`, decided 2026-10-29). The form has name, ID, Role,
+email, mobile phone, address, joined date, and status: Operational, Not operational, or
+Observer, D4H's three. Saving is one `update_member` row naming only what changed,
+through [SaveMember](../lib/app/operation/save_member.ex) and ApplyEdit, which sends a D4H
+team only those fields (`ApplyEdit.d4h_takes?/1`). A D4H team's form has no Team admin
+box, photo, or Mark as retired: D4H sets access, photos, and leaving in its web app, and
+Retiring is its own steps ([Retiring](#retiring)). Adding a member is a Records team's
+only ([records.md](records.md#editing-records)).
+
+- **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
+  across 93 members. The box suggests the team's roles, most held first
+  (`Member.roles/1`), from a `<datalist>`, and still takes a new one. The combobox can't:
+  it is a select, which takes only its options. D4H's structured `roleId` is not copied.
+- **Email** decides who can log in: SAR Duty matches a login to a member by email, so
+  its hint says so. Changing it moves the login to the new address.
+
 ## Standing
 
 A member's **standing** says whether the team expects them to show up now (#366):
@@ -143,7 +162,7 @@ admin through them.
    after. Your membership's list of the items they hold
    doesn't justify the access.
 2. **Set their access to No access in D4H.** SAR Duty can't: D4H sets access only in
-   its web app (a Records team can, on Change member). Until it's done, two red notices
+   its web app (a Records team can, on Change details). Until it's done, two red notices
    say so. Needs attention's one danger item, red and first in the list: "2 retiring
    members can still log in to D4H", opening `standing=retiring&access=some`. And a red
    banner on every tab of that member's page, with an Open in D4H link. Access is

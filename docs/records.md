@@ -42,14 +42,17 @@ like a D4H key. Existing D4H teams need no change.
 
 D4H teams change most of their records in D4H. A Records team has nowhere else to do
 it, so SAR Duty shows editing screens for Records teams; a D4H team gets a 404 and no
-buttons. Two exceptions: every team adds, renames, and deletes groups and changes who is
-in them ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), and a D4H team adds
-and changes activities (#585). Each change is a change set of one row, source `:edit`,
+buttons. The exceptions: every team adds, renames, and deletes groups and changes who is
+in them ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), a D4H team adds and
+changes activities (#585), and a D4H team changes a member's details and the custom fields
+of members and items (#705), but not access, photos, or leaving
+([members.md](members.md#changing-a-members-details)). Each change is a change set of one row, source `:edit`,
 applied at once by [App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex) through
 `ApplyChangeSet`, then the sync copies it back, except a group's, whose copy is written
 from the answer. The row names only the fields that changed, with their old values, so it
-shows in the record's history. ApplyEdit refuses a D4H team every row but a group's and
-an activity's create and update.
+shows in the record's history. ApplyEdit refuses a D4H team every row but a group's, an
+activity's create and update, a member's details and custom fields, and an item's custom
+fields (`ApplyEdit.d4h_takes?/1`).
 
 Records refuses a bad write with a 400 whose `title` says what is wrong; the page shows
 that title.

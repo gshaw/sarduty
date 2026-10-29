@@ -84,6 +84,19 @@ defmodule App.Model.Member do
     |> Repo.all()
   end
 
+  @doc """
+  The roles the team's members hold, most held first, for the Role box's suggestions. A
+  role is D4H's free-text position, so these steer admins to the team's own words.
+  """
+  def roles(%Team{} = team) do
+    Member
+    |> where([m], m.team_id == ^team.id and fragment("trim(?) != ''", m.position))
+    |> group_by([m], fragment("trim(?)", m.position))
+    |> order_by([m], desc: count(m.id), asc: fragment("trim(?)", m.position))
+    |> select([m], fragment("trim(?)", m.position))
+    |> Repo.all()
+  end
+
   @doc "The first word of the member's name, for a line that speaks of them."
   def first_name(%{name: name}), do: name |> String.split(" ", parts: 2) |> hd()
 

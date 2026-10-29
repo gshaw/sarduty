@@ -24,9 +24,10 @@ new kind of write is a new row action there, not a new call from a page or an op
   saved. Their chore proposals were deleted (2026-10-28). See [mcp.md](mcp.md).
 - **An edit is a set of one row** (source `edit`): a team admin changing one record of
   a team on SAR Duty Records ([records.md](records.md)), a group or who is in it on
-  any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), or an activity's,
+  any team ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), an activity's,
   member's, or equipment item's custom fields on any D4H team, from its Change fields
-  page ([custom-fields.md](custom-fields.md#changing-them)). Adding or
+  page ([custom-fields.md](custom-fields.md#changing-them)), or a member's details on any
+  D4H team, from Change details ([members.md](members.md#changing-a-members-details)). Adding or
   removing many members from the Members list (#547) is one `edit` set with a row each,
   applied by SetGroupMembers, not ApplyEdit.
   [ApplyEdit](../lib/app/operation/apply_edit.ex) proposes and applies it in one step,

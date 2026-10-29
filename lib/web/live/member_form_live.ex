@@ -10,11 +10,12 @@ defmodule Web.MemberFormLive do
   alias App.Operation.SetMemberRetired
   alias App.ViewModel.MemberFormViewModel
 
-  # Adding and changing members of a team on SAR Duty Records (docs/records.md). A D4H team
-  # changes its members in D4H, so it has no such page.
+  # Adding and changing members of a team on SAR Duty Records (docs/records.md), and
+  # changing a member's details on a D4H team. D4H adds members, and sets access, photos,
+  # and leaving, in its web app, so a D4H team's page has only the details.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    unless D4H.records?(team), do: raise(Web.Status.NotFound)
+    unless D4H.records?(team) or params["id"], do: raise(Web.Status.NotFound)
 
     member = if id = params["id"], do: team |> Member.find!(id) |> Map.put(:team, team)
     today = DateTime.utc_now() |> Service.Convert.utc_to_local(team.timezone) |> elem(0)
@@ -24,6 +25,7 @@ defmodule Web.MemberFormLive do
       socket
       |> assign(page_title: if(member, do: "Change #{member.name}", else: "Add member"))
       |> assign(member: member, form_data: form, photo_version: 0)
+      |> assign(records?: D4H.records?(team), roles: Member.roles(team))
       |> assign_form(MemberFormViewModel.changeset(form))
       # cspell:ignore webp -- the WebP file extension
       # Records takes up to 10 MB and shrinks it. HEIC is refused there, but an iPhone's
@@ -55,10 +57,10 @@ defmodule Web.MemberFormLive do
       <.input field={@form[:name]} label="Name" />
       <div class="grid grid-cols-2 gap-x-6">
         <.input field={@form[:ref_id]} label="ID (optional)" />
-        <.input field={@form[:position]} label="Role (optional)" />
+        <.input field={@form[:position]} label="Role (optional)" suggestions={@roles} />
       </div>
       <.input field={@form[:email]} type="email" label="Email (optional)">
-        Team admins log in with it, and tax credit letters go to it.
+        Logging in to SAR Duty uses this email. Tax credit letters go to it too.
       </.input>
       <.input field={@form[:phone]} type="tel" label="Mobile phone (optional)" />
       <.input field={@form[:address]} type="textarea" rows="3" label="Address (optional)">
@@ -74,7 +76,7 @@ defmodule Web.MemberFormLive do
           options={MemberFormViewModel.statuses()}
         />
       </div>
-      <.input field={@form[:team_admin]} type="checkbox" label="Team admin">
+      <.input :if={@records?} field={@form[:team_admin]} type="checkbox" label="Team admin">
         Team admins log in to SAR Duty and change the team's records.
       </.input>
       <.form_actions>
@@ -84,7 +86,7 @@ defmodule Web.MemberFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@member} id="member-photo" class="mt-8 measure">
+    <section :if={@records? and @member} id="member-photo" class="mt-8 measure">
       <h2 class="heading">Photo</h2>
       <%!-- The version changes after a save, so the browser loads the new photo. --%>
       <p>
@@ -122,7 +124,7 @@ defmodule Web.MemberFormLive do
       </form>
     </section>
 
-    <section :if={@member} id="member-retire" class="mt-8 measure">
+    <section :if={@records? and @member} id="member-retire" class="mt-8 measure">
       <h2 class="heading">Retirement</h2>
       <%= if @member.d4h_status == "RETIRED" do %>
         <p>
