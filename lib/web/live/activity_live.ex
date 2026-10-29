@@ -40,9 +40,10 @@ defmodule Web.ActivityLive do
   # Under the title, everyone gets the counts, and a member it invites gets their reply
   # until the start (#444). Under the description, tabs: Members lists who is invited
   # and how they replied, filtered by `?view=`; Equipment what was used; Fields its D4H
-  # custom fields, when it has any (#705); and History, for team admins. Team admins
-  # also get Take attendance, Actions, and the links to member and equipment pages. A
-  # member never gets an activity D4H has deleted; a team admin sees it under a banner.
+  # custom fields, when it has any or a team admin can fill one in, with Change fields
+  # (#705); and History, for team admins. Team admins also get Take attendance, Actions,
+  # and the links to member and equipment pages. A member never gets an activity D4H has
+  # deleted; a team admin sees it under a banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
@@ -65,11 +66,10 @@ defmodule Web.ActivityLive do
         hours_tags: Activity.hours_tags(team),
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),
-        field_rows: field_rows(team, activity, team_admin?),
-        required_fields: required_fields(team, activity, team_admin?),
         replier: Reply.replier(socket.assigns, now),
         members_view: view_status(params["view"])
       )
+      |> assign_fields()
       |> assign_people()
 
     {:noreply, socket}
@@ -181,9 +181,21 @@ defmodule Web.ActivityLive do
   # The activity's D4H custom fields (#681). RESTRICTED ones show to team admins only,
   # and so do required ones left empty, on a draft incident, where they stop D4H
   # publishing it (Activity.flag_missing_fields?/1).
-  defp field_rows(team, activity, team_admin?) do
-    team.id
-    |> CustomField.get_all(activity.activity_kind)
+  # The Fields tab: the rows the viewer sees, how many of them D4H needs to publish, for
+  # the count over the missing ones, and whether a team admin can change them (#705).
+  defp assign_fields(socket) do
+    %{current_team: team, team_admin?: team_admin?, activity: activity} = socket.assigns
+    fields = CustomField.get_all(team.id, activity.activity_kind)
+
+    assign(socket,
+      field_rows: field_rows(team, activity, fields, team_admin?),
+      required_fields: Enum.count(fields, &(&1.required and (team_admin? or not &1.restricted))),
+      change_fields?: team_admin? and fields != [] and is_nil(activity.deleted_at)
+    )
+  end
+
+  defp field_rows(team, activity, fields, team_admin?) do
+    fields
     |> CustomField.rows(activity.custom_values, team.timezone,
       restricted: team_admin?,
       missing: team_admin? and Activity.flag_missing_fields?(activity)
@@ -196,14 +208,6 @@ defmodule Web.ActivityLive do
       0 -> nil
       count -> count
     end
-  end
-
-  # How many of the fields the viewer sees D4H needs to publish, for the Fields tab's
-  # count of the missing ones.
-  defp required_fields(team, activity, team_admin?) do
-    team.id
-    |> CustomField.get_all(activity.activity_kind)
-    |> Enum.count(&(&1.required and (team_admin? or not &1.restricted)))
   end
 
   def render(assigns) do
@@ -276,7 +280,7 @@ defmodule Web.ActivityLive do
             Equipment
           </:tab>
           <:tab
-            :if={@field_rows != [] or @tab == :fields}
+            :if={@field_rows != [] or @tab == :fields or @change_fields?}
             navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields"}
             current={@tab == :fields}
           >
@@ -318,6 +322,12 @@ defmodule Web.ActivityLive do
           rows={@field_rows}
           required={@required_fields}
         />
+        <p :if={@tab == :fields and @change_fields?} class="action">
+          <.a
+            id="activity-fields-change"
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields/edit"}
+          >Change fields</.a>
+        </p>
         <.change_history
           :if={@tab == :history}
           id="activity-history"
@@ -329,6 +339,7 @@ defmodule Web.ActivityLive do
         <.sidebar_end
           activity={@activity}
           team_admin?={@team_admin?}
+          change_fields?={@change_fields?}
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
         />
@@ -432,6 +443,7 @@ defmodule Web.ActivityLive do
 
   attr :activity, :map, required: true
   attr :team_admin?, :boolean, default: false
+  attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
 
@@ -455,6 +467,12 @@ defmodule Web.ActivityLive do
               id="activity-edit"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/edit"}
             >Change activity</.a>
+          </li>
+          <li :if={@change_fields?}>
+            <.a
+              id="activity-actions-change-fields"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields/edit"}
+            >Change fields</.a>
           </li>
           <li :if={@admin_actions? and !@d4h?}>
             <.a

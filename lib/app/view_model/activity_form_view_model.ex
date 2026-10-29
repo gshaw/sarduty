@@ -25,9 +25,6 @@ defmodule App.ViewModel.ActivityFormViewModel do
     field :ends_at, :naive_datetime
     field :hours, :string, default: "primary"
     field :published, :boolean, default: false
-    # D4H custom field values as the form holds them, by D4H field id (#681): text, or
-    # option ids as strings. SaveActivity turns them into what D4H takes.
-    field :custom, :map, default: %{}
   end
 
   @fields [:kind, :title, :starts_at, :ends_at, :place, :hours, :tracking_number, :description]
@@ -49,8 +46,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
       starts_at: local(activity.started_at, timezone),
       ends_at: local(activity.finished_at, timezone),
       hours: hours_of(activity.tags, Activity.hours_tags(team)),
-      published: activity.is_published == true,
-      custom: form_custom(activity.custom_values)
+      published: activity.is_published == true
     }
   end
 
@@ -67,15 +63,6 @@ defmodule App.ViewModel.ActivityFormViewModel do
     if description_locked?(activity),
       do: description,
       else: Service.DescriptionHTML.clean(description)
-  end
-
-  defp form_custom(nil), do: %{}
-
-  defp form_custom(values) do
-    Map.new(values, fn
-      {id, list} when is_list(list) -> {id, Enum.map(list, &to_string/1)}
-      {id, value} -> {id, value}
-    end)
   end
 
   # As put_coordinate/1 writes it, so an untouched pin is unchanged.
@@ -111,8 +98,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
       :starts_at,
       :ends_at,
       :hours,
-      :published,
-      :custom
+      :published
     ])
     |> validate_required([:title], message: "Enter a title.")
     |> validate_required([:starts_at], message: "Enter when it starts.")

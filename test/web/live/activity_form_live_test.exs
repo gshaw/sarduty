@@ -438,63 +438,44 @@ defmodule Web.ActivityFormLiveTest do
       assert [%ChangeSetRow{action: :create_activity, status: :applied}] = edit_rows(team)
     end
 
-    test "an incident's custom fields are inputs, and a change sends only them (#681)",
+    test "Change activity links to Change fields, with the Fields tab's count (#705)",
          %{conn: conn, team: team} do
-      stub()
-
       custom_field_fixture(team, %{
         d4h_custom_field_id: 420,
         title: "Primary Cause",
-        field_type: "single_choice",
-        required: true,
-        options: [
-          %{"id" => 1, "label" => "Lost", "ordering" => 0, "archived" => false},
-          %{"id" => 2, "label" => "Injured", "ordering" => 1, "archived" => false},
-          %{"id" => 3, "label" => "Old", "ordering" => 2, "archived" => true}
-        ]
+        required: true
       })
 
-      custom_field_fixture(team, %{d4h_custom_field_id: 454, title: "Agency File #"})
+      custom_field_fixture(team, %{
+        d4h_custom_field_id: 454,
+        title: "Agency File #",
+        required: true
+      })
 
       activity =
         activity_fixture(team, %{
-          title: "Missing hiker",
           activity_kind: "incident",
-          d4h_activity_id: 88,
-          custom_values: %{"420" => [1]}
+          is_published: false,
+          custom_values: %{"454" => "PROS 1"}
         })
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
 
-      assert has_element?(lv, "#activity-custom-fields h2", "Incident fields")
-      assert has_element?(lv, ~s(#custom-field-420 option[selected][value="1"]), "Lost")
-      refute has_element?(lv, ~s(#custom-field-420 option[value="3"]))
-      assert render(lv) =~ "Needed to publish."
+      refute has_element?(lv, "#custom-field-420")
 
-      lv
-      |> form("#activity-form", form: %{custom: %{"420" => "2", "454" => "PROS 2026-1"}})
-      |> render_submit()
+      assert has_element?(
+               lv,
+               "#activity-fields-missing-count",
+               "1 of 2 needed to publish is empty."
+             )
 
-      assert [{"PATCH", "/incidents/88", body} | _rest] = writes()
+      assert has_element?(
+               lv,
+               ~s(#activity-fields-change[href="/teams/#{team.subdomain}/activities/#{activity.id}/fields/edit"])
+             )
 
-      assert body == %{
-               "customFieldValues" => [
-                 %{"id" => 420, "value" => [2]},
-                 %{"id" => 454, "value" => "PROS 2026-1"}
-               ]
-             }
-
-      assert Repo.reload(activity).custom_values == %{"420" => [2], "454" => "PROS 2026-1"}
-    end
-
-    test "a new activity shows the fields of the kind picked (#681)", %{conn: conn, team: team} do
-      stub()
-      custom_field_fixture(team, %{d4h_custom_field_id: 454, title: "Agency File #"})
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
-
-      refute has_element?(lv, "#activity-custom-fields")
-      lv |> form("#activity-form", form: %{kind: "incident"}) |> render_change()
-      assert has_element?(lv, "#custom-field-454")
+      {:ok, new, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+      refute has_element?(new, "#activity-fields")
     end
 
     test "a published activity only unpublishes, and there is no delete",

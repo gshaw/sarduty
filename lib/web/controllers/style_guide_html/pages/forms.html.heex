@@ -77,6 +77,37 @@
     }>Fix form errors</a>.
   </p>
 
+  <h2 id="needed">Needed but may stay empty</h2>
+  <div class="demo">
+    <div class="max-w-xs">
+      <.input
+        id="e-agency"
+        name="e-agency"
+        type="select"
+        label="Agency"
+        prompt="None"
+        options={["Police", "BC Ambulance"]}
+        value={nil}
+        field_class="field-missing"
+      >
+        <:label_end>
+          <span class="ml-2"><.badge kind={:warning}>Missing</.badge></span>
+        </:label_end>
+        Choose the requesting agency.
+      </.input>
+      <.input id="e-file" name="e-file" label="Agency File #" value="PROS 2026-114">
+        <:label_end>
+          <span class="ml-2"><.badge>Needed to publish</.badge></span>
+        </:label_end>
+      </.input>
+    </div>
+  </div>
+  <p class="spec">
+    A field an incident needs only to publish, on Change fields: a Needed to publish tag, and while it's empty on a draft incident, Missing and <code>field-missing</code>, the error's bar in amber. Never red: saving still works. The
+    <code>label_end</code>
+    slot puts the tag after the label.
+  </p>
+
   <h2>Checkboxes</h2>
   <div class="demo">
     <.input

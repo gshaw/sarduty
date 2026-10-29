@@ -18,6 +18,7 @@ defmodule Web.EquipmentItemLive do
     row = items |> EquipmentList.rows() |> Enum.find(&(&1.item.id == item.id))
 
     tab = socket.assigns.live_action
+    fields = CustomField.get_all(team.id, "equipment")
 
     socket =
       assign(socket,
@@ -28,10 +29,8 @@ defmodule Web.EquipmentItemLive do
         contents: Enum.filter(items, &(&1.d4h_container_id == item.d4h_equipment_id)),
         usages: EquipmentUsage.for_item(item),
         templates: templates_with(item),
-        field_rows:
-          team.id
-          |> CustomField.get_all("equipment")
-          |> CustomField.rows(item.custom_values, team.timezone, restricted: true)
+        fields?: fields != [],
+        field_rows: CustomField.rows(fields, item.custom_values, team.timezone, restricted: true)
       )
 
     {:ok, socket}
@@ -103,6 +102,12 @@ defmodule Web.EquipmentItemLive do
                   navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/delete"}
                 >Delete item</.a>
               </li>
+              <li :if={@fields?}>
+                <.a
+                  id="item-actions-change-fields"
+                  navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/fields/edit"}
+                >Change fields</.a>
+              </li>
               <li :if={!D4H.records?(@current_team)}>
                 <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open in {@service}</.a>
               </li>
@@ -120,8 +125,8 @@ defmodule Web.EquipmentItemLive do
           </ul>
         </section>
 
-        <%!-- Tabs only for an item with D4H custom fields (#705): Activities alone isn't a choice. --%>
-        <.tabs :if={@field_rows != [] or @tab == :fields} label="Item">
+        <%!-- Tabs only when the team has D4H equipment fields (#705): Activities alone isn't a choice. --%>
+        <.tabs :if={@fields? or @tab == :fields} label="Item">
           <:tab
             navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}"}
             current={@tab == :activities}
@@ -136,6 +141,12 @@ defmodule Web.EquipmentItemLive do
           </:tab>
         </.tabs>
         <.custom_fields_table :if={@tab == :fields} id="item-fields" rows={@field_rows} />
+        <p :if={@tab == :fields and @fields?} class="action">
+          <.a
+            id="item-fields-change"
+            navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/fields/edit"}
+          >Change fields</.a>
+        </p>
 
         <section :if={@tab == :activities} id="item-activities">
           <h2 class="heading">Activities · {length(@usages)}</h2>

@@ -1,7 +1,8 @@
 defmodule Web.MemberFieldsLive do
   @moduledoc """
   A member's Fields tab (#705): the D4H member fields the team copies (#681), team admins
-  only, as the member's contact details are. A member sees their own on Your membership.
+  only, as the member's contact details are, with Change fields. A member sees their own
+  on Your membership.
   """
   use Web, :live_view_app_layout
 
@@ -39,11 +40,17 @@ defmodule Web.MemberFieldsLive do
       standing={@standing}
       milestones={@milestones}
       equipment={@equipment}
-      field_rows={@field_rows}
+      fields?={@fields?}
       maps_app={@current_user.maps_app}
       team_admin?={@team_admin?}
     >
       <.custom_fields_table id="member-fields" rows={@field_rows} />
+      <p class="action">
+        <.a
+          id="member-fields-change"
+          navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields/edit"}
+        >Change fields</.a>
+      </p>
     </.member_page>
     """
   end

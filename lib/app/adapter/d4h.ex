@@ -1184,6 +1184,7 @@ defmodule App.Adapter.D4H do
         pair ->
           pair
       end)
+      |> put_custom_values(attrs)
 
     case place_json(context, attrs["place"]) do
       {:ok, nil} -> {:ok, json}
@@ -1241,8 +1242,8 @@ defmodule App.Adapter.D4H do
 
   defp put_tracking_number(json), do: json
 
-  # Custom field values (#681), a map of D4H field id to a string, a list of option ids,
-  # or nil to clear it. D4H keeps the fields a write leaves out, and takes nil, not [],
+  # Custom field values (#681) of an activity, member, or item, a map of D4H field id to
+  # a string, a list of option ids, or nil to clear it. D4H keeps the fields a write leaves out, and takes nil, not [],
   # to clear a choice (tested 2026-10-28).
   defp put_custom_values(json, %{"custom_values" => values}) when map_size(values) > 0 do
     list =
@@ -1301,6 +1302,7 @@ defmodule App.Adapter.D4H do
     end)
     |> put_contact(attrs, "primary_emergency_contact", "primaryEmergencyContact")
     |> put_contact(attrs, "secondary_emergency_contact", "secondaryEmergencyContact")
+    |> put_custom_values(attrs)
   end
 
   # D4H merges the contact it gets with the one it has, so a cleared field goes as "".

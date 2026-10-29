@@ -22,7 +22,7 @@ defmodule Web.Components.MemberTabs do
 
   attr :fields?, :boolean,
     default: false,
-    doc: "whether the member has a field the team copies; Fields shows when they do"
+    doc: "whether the team copies member fields; Fields shows when it does"
 
   attr :team_admin?, :boolean,
     default: false,

@@ -22,8 +22,9 @@ defmodule Web.Components.MemberSidebar do
   @doc """
   Assigns the header's `last_attended_at` and `standing`, as the viewer sees it, the
   sidebar's `milestones`, the `equipment` that decides whether the tabs show Equipment,
-  and for a team admin the member fields the team copies (#681), which decide whether
-  they show Fields (#705), for the socket's `member`. Call it when the member loads, not on every render: a form's change
+  and for a team admin the member fields the team copies (#681), and `fields?`, whether
+  the team copies any, which decides whether they show Fields (#705), for the socket's
+  `member`. Call it when the member loads, not on every render: a form's change
   events re-render.
   """
   def load_sidebar(socket) do
@@ -35,9 +36,19 @@ defmodule Web.Components.MemberSidebar do
       standing: Standing.visible(standing, team_admin?),
       milestones: MemberMilestones.for_member(member, DateTime.utc_now()),
       equipment: EquipmentItem.held_by(member.team, member),
-      field_rows: field_rows(member, team_admin?)
+      field_rows: field_rows(member, team_admin?),
+      fields?: fields?(member, team_admin?)
     )
   end
+
+  @doc """
+  Whether the Fields tab shows: to a team admin when the team copies member fields, so
+  they can fill one in with Change fields (#705).
+  """
+  def fields?(_member, false), do: false
+
+  def fields?(member, true),
+    do: CustomField.copied_member_fields(member.team_id, :team_admin) != []
 
   @doc "The member fields the Fields tab shows: team admins' alone (#681)."
   def field_rows(_member, false), do: []
@@ -92,6 +103,7 @@ defmodule Web.Components.MemberSidebar do
     doc: "the member's milestones, newest first, from load_sidebar/1"
 
   attr :team_admin?, :boolean, default: false, doc: "adds contact details and Actions"
+  attr :fields?, :boolean, default: false, doc: "from load_sidebar/1: adds Change fields"
 
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H. Members see the ID and
@@ -108,14 +120,16 @@ defmodule Web.Components.MemberSidebar do
       <dt>Milestones</dt>
       <.milestones_summary member={@member} milestones={@milestones} />
 
-      <.member_actions :if={@team_admin?} member={@member} />
+      <.member_actions :if={@team_admin?} member={@member} fields?={@fields?} />
     </dl>
     """
   end
 
   attr :member, :map, required: true
+  attr :fields?, :boolean, required: true
 
-  # A team on SAR Duty Records has no D4H to open, so it changes members here.
+  # A team on SAR Duty Records has no D4H to open, so it changes members here. Custom
+  # fields change here on every team that has them (#705).
   defp member_actions(assigns) do
     ~H"""
     <dt>Actions</dt>
@@ -123,6 +137,12 @@ defmodule Web.Components.MemberSidebar do
       <ul id="member-actions" class="action-list">
         <li :if={D4H.records?(@member.team)}>
           <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change details</.a>
+        </li>
+        <li :if={@fields?}>
+          <.a
+            id="member-actions-change-fields"
+            navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields/edit"}
+          >Change fields</.a>
         </li>
         <li :if={!D4H.records?(@member.team)}>
           <.a external={true} href={D4H.member_url(@member)}>Open in {D4H.service_name(@member.team)}</.a>

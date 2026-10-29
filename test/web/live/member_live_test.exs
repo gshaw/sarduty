@@ -342,11 +342,13 @@ defmodule Web.MemberLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}")
     refute has_element?(lv, "#member-fields")
     assert has_element?(lv, "nav.tabs a[href$='/fields']", "Fields")
+    assert has_element?(lv, "#member-actions-change-fields[href$='/fields/edit']")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/fields")
     assert has_element?(lv, "nav.tabs a[aria-current=page]", "Fields")
     assert has_element?(lv, "#member-fields-630", "SF 12")
     refute has_element?(lv, "#member-fields-631")
+    assert has_element?(lv, "#member-fields-change[href$='/members/#{member.id}/fields/edit']")
   end
 
   test "a member with no copied field has no Fields tab", %{conn: conn} do
@@ -357,5 +359,6 @@ defmodule Web.MemberLiveTest do
 
     assert has_element?(lv, "nav.tabs", "History")
     refute has_element?(lv, "nav.tabs a[href$='/fields']")
+    refute has_element?(lv, "#member-actions-change-fields")
   end
 end

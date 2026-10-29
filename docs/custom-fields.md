@@ -40,8 +40,9 @@ A record's custom fields are its **Fields tab**, `/fields`, a table with each fi
 name beside its value (decided 2026-10-28, #705). They were in the sidebar, after the
 facts, until a BC incident's 27 ran it 3 screens long and pushed Actions to the bottom.
 So every record's sidebar is its facts, then Actions. The tab shows only when the record
-has a field to show, as a member's Equipment tab shows only when they hold something,
-so a Records team, which has no custom fields, sees no change. It's named Fields, not
+has a field to show, as a member's Equipment tab shows only when they hold something, or
+for a team admin when its kind has fields to fill in ([below](#changing-them)). A
+Records team, which has no custom fields, sees no change. It's named Fields, not
 "Incident fields": the page already says what the record is, and the name doesn't change
 with the kind.
 
@@ -75,18 +76,37 @@ fields D4H doesn't enforce.
 
 ## Changing them
 
-The activity form, Add activity and Change activity, has a section for the kind's
-fields, "Incident fields", each as its type's input: text, a box for text areas, a
-number, a date or time, a select (a combobox past 10 options), or boxes to tick. A
-required one says "Needed to publish.", since D4H only checks them then. An archived
-option shows only while it is chosen. A published activity is locked, as for its other
-details.
+A record's fields have their own page, **Change fields**, `/fields/edit`, reached from
+Change fields in its Actions, after the record's own Change link, and at the foot of its
+Fields tab (decided 2026-10-29, #705). Before, Add
+activity and Change activity held every field of the kind, and a BC incident's ran the
+form six screens long, with the title, times, and address lost above them. Change
+activity now has a Fields section with the tab's count and the same link. Add activity
+has none: the fields wait until the activity exists, and templates will fill most of
+them (#307).
 
-[SaveActivity](../lib/app/operation/save_activity.ex) sends only the fields that
-changed, as `custom_values` on the change set row (nil clears one), and the adapter
-turns them into `customFieldValues`. The copy takes the values it sent, since the sync
-after the write may not read them back. Equipment and member fields are shown, not
-changed, in SAR Duty for now.
+- **An activity's**, for team admins, its kind's fields. A published one is locked, as
+  for its other details.
+- **A member's**, the fields the team copies.
+- **An equipment item's**, every equipment field.
+
+Each field is its type's input: text, a box for text areas, a number, a date or time, a
+select (a combobox past 10 options), or boxes to tick. On an activity a required one
+is tagged Needed to publish. On a draft incident one left empty is tagged Missing, with
+the error's bar in amber (`field-missing`), and a count over the form says saving still
+works; both change as the person types. Never a red error: D4H saves them blank and
+checks them only when it publishes. An archived option shows
+only while it is chosen. A team admin gets the Fields tab, with its link, whenever the
+record's kind has fields, so an empty one can be filled in; it says "No fields filled
+in."
+
+[SaveCustomFields](../lib/app/operation/save_custom_fields.ex) sends only the fields
+that changed, as `custom_values` on one change set row (nil clears one), and the adapter
+turns them into `customFieldValues`: `update_activity`, `update_member`, or
+`update_equipment_item`. On a D4H team a member or item row may send its custom fields
+and nothing else ([ApplyEdit](../lib/app/operation/apply_edit.ex)). The copy takes the
+values it sent, since the sync after the write may not read them back. History says
+"Fields changed in SAR Duty", never the values.
 
 ## How fresh it is
 
