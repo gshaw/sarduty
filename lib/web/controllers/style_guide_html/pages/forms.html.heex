@@ -101,30 +101,40 @@
     24px boxes. Several that answer one question sit in a fieldset whose legend is the question, each in a <code>&lt;label class="choice"&gt;</code>.
   </p>
 
-  <h2>Radios</h2>
+  <h2 id="radios">Radios</h2>
   <div class="demo">
-    <fieldset>
-      <legend>Hours to count</legend>
-      <label class="choice"><input type="radio" name="e-hours" checked /> Primary and secondary</label>
-      <label class="choice"><input type="radio" name="e-hours" /> Primary only</label>
-    </fieldset>
+    <.input
+      id="e-hours"
+      name="e-hours"
+      type="radios"
+      label="Hours to count"
+      value="both"
+      options={[{"Primary and secondary", "both"}, {"Primary only", "primary"}]}
+    />
+    <.input
+      id="e-category"
+      name="e-category"
+      type="radios"
+      label="Category"
+      value=""
+      errors={["Select a category"]}
+      options={[
+        {"Equipment maintenance", "1", "Trucks, radios, and the yard"},
+        {"Board work", "2", "Meetings, minutes, and the AGM"}
+      ]}
+    />
   </div>
 
-  <p class="spec">The checkbox list's markup, with radios. One answer, every choice in view.</p>
+  <p class="spec">
+    <code>&lt;.input type="radios"&gt;</code>
+    with <code>options</code>
+    as <code>&lbrace;label, value&rbrace;</code>, or
+    <code>&lbrace;label, value, hint&rbrace;</code>
+    for a line saying what a choice covers. One answer, every choice in view. Its error shows after a failed save even when nothing is picked, since a form sends nothing for radios none of which is checked. Log a chore's categories use it.
+  </p>
 
-  <h2 id="choice-lines">Radios with a line each</h2>
+  <h2 id="below">Under the box</h2>
   <div class="demo">
-    <fieldset>
-      <legend class="label mb-1">Category</legend>
-      <label class="choice mb-3">
-        <input type="radio" name="e-category" checked />
-        <span>Equipment maintenance <span class="hint block">Trucks, radios, and the yard</span></span>
-      </label>
-      <label class="choice mb-3">
-        <input type="radio" name="e-category" />
-        <span>Board work <span class="hint block">Meetings, minutes, and the AGM</span></span>
-      </label>
-    </fieldset>
     <div class="max-w-xs">
       <.input id="e-time" name="e-time" label="Time" value="2.5h">
         Like 45m, 2h, or 2.5h.
@@ -136,9 +146,8 @@
   </div>
 
   <p class="spec">
-    A line under a choice says what it covers, as a hint. A box can say what it read under it, with the input's
-    <code>below</code>
-    slot. Log a chore uses both.
+    The input's <code>below</code>
+    slot: what the box read, or buttons that fill it, such as Today and Yesterday under a date. Log a chore uses both.
   </p>
 
   <h2 id="file">File</h2>

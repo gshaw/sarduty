@@ -78,7 +78,12 @@ defmodule Web.ChoreFormLive do
 
     <.form for={@form} id="chore-form" class="measure" phx-change="validate" phx-submit="save">
       <.error_summary form={@form} />
-      <.category_field field={@form[:chore_category_id]} categories={@categories} />
+      <.input
+        field={@form[:chore_category_id]}
+        type="radios"
+        label="Category"
+        options={Enum.map(@categories, &{&1.title, &1.id, &1.description})}
+      />
       <.input field={@form[:description]} type="textarea" rows="3" label="What they did" />
       <.date_field form={@form} today={@today} />
       <.time_field form={@form} />
@@ -113,7 +118,12 @@ defmodule Web.ChoreFormLive do
       phx-submit="save"
     >
       <.error_summary form={@form} />
-      <.category_field field={@form[:chore_category_id]} categories={@categories} />
+      <.input
+        field={@form[:chore_category_id]}
+        type="radios"
+        label="Category"
+        options={Enum.map(@categories, &{&1.title, &1.id, &1.description})}
+      />
       <.input field={@form[:description]} type="textarea" rows="3" label="What you did">
         A team admin reads this, and so does everyone who opens its activity.
       </.input>
@@ -155,40 +165,6 @@ defmodule Web.ChoreFormLive do
         </:trailing>
       </.form_actions>
     </.form>
-    """
-  end
-
-  attr :field, Phoenix.HTML.FormField, required: true
-  attr :categories, :list, required: true
-
-  # One radio per category, with the line a team admin wrote about what it covers. The
-  # first radio has the field's id, so the error summary's link lands on it. A form sends
-  # nothing for radios none of which is checked, so used_input?/1 says no after a save
-  # too; a failed save shows the error all the same.
-  defp category_field(assigns) do
-    %{field: field} = assigns
-    show? = used_input?(field) or field.form.source.action not in [nil, :validate]
-    errors = if show?, do: field.errors, else: []
-    assigns = assign(assigns, errors: Enum.map(errors, &translate_error/1))
-
-    ~H"""
-    <fieldset id="chore-category-choices" class={["mb-6", @errors != [] && "field-error"]}>
-      <legend class="label mb-1">Category</legend>
-      <.error :for={message <- @errors}>{message}</.error>
-      <label :for={{category, i} <- Enum.with_index(@categories)} class="choice mb-3">
-        <input
-          type="radio"
-          id={if i == 0, do: @field.id, else: "#{@field.id}_#{category.id}"}
-          name={@field.name}
-          value={category.id}
-          checked={to_string(@field.value) == to_string(category.id)}
-        />
-        <span>
-          {category.title}
-          <span :if={category.description} class="hint block">{category.description}</span>
-        </span>
-      </label>
-    </fieldset>
     """
   end
 
