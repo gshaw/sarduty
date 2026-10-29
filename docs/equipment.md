@@ -158,8 +158,8 @@ barcodes" and the equipment page shows "Scan a barcode". Both use the door's
 
 Records serves D4H's equipment endpoints (its `Docs/api.md`), so a Records team gets the
 same pages, templates, and "Add equipment". It also has nowhere else to keep its items, so
-SAR Duty shows "Add item" on the equipment page and "Change or delete" on an item's
-page for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_item_form_live.ex),
+SAR Duty shows "Add item" on the equipment page, and "Change item" and "Delete item" in
+an item's Actions, for Records teams only ([EquipmentItemFormLive](../lib/web/live/equipment_item_form_live.ex),
 [SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex)). Each change is an
 `:edit` change set row, as for members ([records.md](records.md)).
 

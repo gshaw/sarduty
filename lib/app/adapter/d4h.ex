@@ -74,7 +74,7 @@ defmodule App.Adapter.D4H do
   def unpublish_text(team_or_host) do
     case service(team_or_host) do
       :d4h -> "Unpublish it with Change activity first."
-      :records -> "Unpublish it with Change or delete on the activity's page first."
+      :records -> "Unpublish it with Change activity on the activity's page first."
     end
   end
 

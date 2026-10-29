@@ -82,8 +82,8 @@ defmodule Web.EquipmentItemFormLiveTest do
       equipment_item_fixture(team, %{title: "Drawer", d4h_equipment_id: 11, d4h_container_id: 10})
 
     {:ok, page, _html} = live(conn, ~p"/teams/#{team}/equipment/#{drawer.id}")
-    assert has_element?(page, "#item-edit")
-    refute has_element?(page, "#item-actions")
+    assert has_element?(page, "#item-actions #item-edit", "Change item")
+    assert has_element?(page, "#item-actions #item-delete", "Delete item")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{truck.id}/edit")
     refute has_element?(lv, ~s(#form_place option[value="Equipment:11"]))
@@ -108,7 +108,7 @@ defmodule Web.EquipmentItemFormLiveTest do
     stub()
     item = equipment_item_fixture(team, %{d4h_equipment_id: 12})
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/equipment/#{item.id}/delete")
     lv |> element("#item-delete-button") |> render_click()
     assert_received {:records, "DELETE", "/equipment/12", nil}
   end

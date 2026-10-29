@@ -23,7 +23,7 @@ defmodule Web.EquipmentItemFormLive do
 
     socket =
       socket
-      |> assign(page_title: if(item, do: "Change #{item.title}", else: "Add item"))
+      |> assign(page_title: page_title(item, socket.assigns.live_action))
       |> assign(item: item, form_data: form, places: places)
       |> assign_form(EquipmentItemFormViewModel.changeset(form))
 
@@ -39,11 +39,12 @@ defmodule Web.EquipmentItemFormLive do
         label={@item.title}
         path={~p"/teams/#{@current_team}/equipment/#{@item.id}"}
       />
-      <:item label={if @item, do: "Change", else: "Add item"} />
+      <:item label={breadcrumb(@live_action)} />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
 
     <.form
+      :if={@live_action != :delete}
       for={@form}
       id="equipment-item-form"
       phx-change="validate"
@@ -84,8 +85,7 @@ defmodule Web.EquipmentItemFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@item} id="item-delete" class="mt-8 measure">
-      <h2 class="heading">Delete the item</h2>
+    <section :if={@live_action == :delete} id="item-delete" class="measure">
       <p>Its activities lose it too. To keep its history, set its status to Retired instead.</p>
       <.button
         id="item-delete-button"
@@ -100,6 +100,15 @@ defmodule Web.EquipmentItemFormLive do
     </section>
     """
   end
+
+  # Deleting is its own page, /delete (docs/urls.md).
+  defp page_title(nil, :new), do: "Add item"
+  defp page_title(item, :edit), do: "Change #{item.title}"
+  defp page_title(item, :delete), do: "Delete #{item.title}"
+
+  defp breadcrumb(:new), do: "Add item"
+  defp breadcrumb(:edit), do: "Change"
+  defp breadcrumb(:delete), do: "Delete"
 
   def handle_event("validate", %{"form" => params}, socket) do
     changeset =
