@@ -39,7 +39,7 @@ defmodule Web.Layouts do
       <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
       {@inner_content}
     </main>
-    <.site_footer current_user={@current_user} />
+    <.site_footer />
     """
   end
 
@@ -227,13 +227,10 @@ defmodule Web.Layouts do
       Application.get_env(:swoosh, :local) == true
   end
 
-  attr :current_user, :map, default: nil
-
   # The public pages' footer. The verify site is a separate host, so its link is a full URL.
   defp site_footer(assigns) do
     assigns =
       assign(assigns,
-        admin?: assigns.current_user && assigns.current_user.is_admin,
         support_url: "https://buymeacoffee.com/gshaw",
         dev_routes?: Application.get_env(:sarduty, :dev_routes),
         mailbox?: Application.get_env(:swoosh, :local)
@@ -247,9 +244,6 @@ defmodule Web.Layouts do
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
         · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-        <%= if @admin? do %>
-          · <.a id="footer-styles" href="/styles">Style guide</.a>
-        <% end %>
         <%= if @dev_routes? do %>
           · <.a href="/dev/dashboard" external={true}>Dashboard</.a>
           <%= if @mailbox? do %>
