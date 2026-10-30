@@ -242,7 +242,7 @@ none and is never asked. See [custom-fields.md](custom-fields.md).
   page for a bot or a shared D4H account, and the members stage never writes it.
   `Member.people_query/1` leaves those members out of the dashboard's member counts and
   missing-details check, and the members list's missing-details filter.
-  `Member.get_managers/2` and Take attendance's member list leave them out as well.
+  Take attendance's member list leaves them out as well. Logins and Team admins don't.
   The member page suggests it for a member with no email, no mobile phone, and no
   attendance.
 - **An activity D4H stops listing is marked deleted** (#160). D4H leaves deleted
@@ -324,8 +324,9 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
   so tries on one account group together. A team key change and login grants added or
   removed are kept two years. `/admin/events` lists the IPs with the most wrong codes,
   limits, blocks, and failed sign-ups over the last 7 days.
-- **The team key's account** is left out when it's a "SAR Duty" account, since it isn't a
-  person. A team key from a person's own account leaves them in.
+- **A bot logs in like any member** (2026-10-30). Not a person changes counts and
+  pickers, never access: a team admin marks the team key's account Not a person, and it
+  stays on Team admins with its badge, since D4H made it an Owner or Editor.
 - **Login grants** let an email into one team that D4H doesn't list as a manager there: a
   shared role address, or a team whose key fails. A grant can do everything a team admin
   does. A SAR Duty admin adds and removes them on the team's admin page,

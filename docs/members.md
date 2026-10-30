@@ -96,7 +96,8 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   categories guessed at teams' cases and nothing read it. The hint asks for no medical
   details.
 - **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
-  an away period. **Active** is the absence of the others and is never stored.
+  an away period. **Active** is the absence of the others and is never stored. What it
+  does is under [Not a person](#not-a-person).
 - The member's **Standing** tab lists away periods, past ones too, with a form to add one
   and buttons to end one today or delete it. Any team admin can. With a Retiring group it
   has **Mark as retiring** or **Remove from Leavers** (the group's own name), one
@@ -122,6 +123,22 @@ members marked not a person or retiring with no rule (`Member.counted_query/1`):
 members and a template's groups (`InviteMembers`), the home page's counts and charts,
 the missing details filter, and the member list on Take attendance. Retiring members
 skip more than that; see [Retiring](#retiring).
+
+### Not a person
+
+One rule, decided 2026-10-30, and the switch's hint says it: **a bot or shared account
+logs in, gets email, and has the access D4H gives it, like any member. SAR Duty never
+counts it as one of the team's people or offers it when you pick people.**
+
+- **Counted or picked** (`Member.people_query/1`, through `counted_query/1`): member
+  counts, Missing details, Add members, a template's groups, and Take attendance's list.
+- **Like any member**: logging in, as a team admin when D4H makes it an Owner or Editor;
+  Team admins and team admin email, with its badge; reminders; its own page and history.
+
+So a sign-in kiosk with its own email, such as a team's `kiosk@` account, logs in and
+opens Take attendance. Until 2026-10-30 Not a person also blocked logins, and the team
+key's account was left out of Team admins by a name match on "SAR Duty". Both are gone:
+a team marks its key's account Not a person like any other bot.
 
 ### Retiring
 
@@ -150,9 +167,9 @@ rules leave them in a group unless a rule on its page says "Standing is …" (ab
 members.** Use `Member.counted_query/1`, or `Member.managers_query/2` for team admins.
 Don't read `group_members` for it yourself. Contacting skips retiring members only:
 reminders still go to a member marked not a person, on purpose (#740), and every member
-table shows them with the Not a person badge. A manager marked not a person doesn't log
-in as a team admin either: one bar for logins, Team admins, and team admin email
-(2026-10-28, #683).
+table shows them with the Not a person badge. One bar for logins, Team admins, and team
+admin email (2026-10-28, #683): a team admin marked not a person logs in and is listed,
+with the badge (2026-10-30; see [Not a person](#not-a-person)).
 
 **The steps, in order.** Needs attention and the member's Standing tab lead a team
 admin through them.
@@ -602,9 +619,10 @@ goes in its list.
   another person's member pages only through View as member, which is read-only.
 - **Who logs in as a member is one query**:
   [Member.get_logins/2](../lib/app/model/member.ex). The team has member logins on, and
-  the member is current, isn't retired, and isn't marked not a person. Two such members on
-  one team with the same email match neither, since SAR Duty can't tell whose card to
-  show. `Accounts.may_log_in?/2` uses it, so emailed and texted codes both work.
+  the member is current, isn't retired, and isn't retiring; Not a person logs in too.
+  Two such members on one team with the same email match neither, since SAR Duty can't
+  tell whose card to show. `Accounts.may_log_in?/2` uses it, so emailed and texted codes
+  both work.
 - **Every request checks again.** Turning member logins off, or the refresh seeing a
   member leave, ends access on the next page. Getting a card checks the login again, in
   case the page was open when access ended.
