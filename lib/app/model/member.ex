@@ -174,8 +174,8 @@ defmodule App.Model.Member do
   @doc """
   Narrows `query` to the members SAR Duty counts (#514): people_query/1, and not in their
   team's Retiring group. A retiring member is no longer a member, so the Dashboard's
-  counts, Missing details, Add members, Take attendance, organization totals, and every
-  login read this.
+  counts, Missing details, Add members, Take attendance, and organization totals read
+  this. Logins don't: not a person changes counts and pickers, never access.
   """
   def counted_query(query), do: query |> people_query() |> not_retiring_query()
 
@@ -306,7 +306,8 @@ defmodule App.Model.Member do
 
   @doc """
   The members this email logs in as (#156): one per team with member logins on, where a
-  current member with this email isn't marked not a person or retiring. A team where two such
+  current member with this email isn't retiring. A member marked not a person, such as a
+  sign-in kiosk, logs in like any member. A team where two such
   members share the email is left out, since SAR Duty can't tell whose card to show.
   With the team, by team name.
   """
@@ -333,7 +334,7 @@ defmodule App.Model.Member do
     |> join(:inner, [m], t in assoc(m, :team))
     |> where([m, t], t.member_logins and fragment("lower(?)", m.email) == ^email)
     |> current_query(now)
-    |> counted_query()
+    |> not_retiring_query()
     |> preload([m, t], team: t)
   end
 
@@ -402,22 +403,14 @@ defmodule App.Model.Member do
   @doc """
   Narrows `query` to the members who log in as their team's team admins: the one bar for
   logins (Team.get_managed_by/2), Team admins, and an organization's team admin emails.
-  A D4H Owner or Editor, current on `now`, and counted_query/1, so not marked not a
-  person or retiring. A team key from a "SAR Duty" account is left out; a team key from a
-  person's account leaves them in, since they manage the team too.
+  A D4H Owner or Editor, current on `now`, and not retiring. A member marked not a person
+  is in: D4H gave it the access, and the Team admins page shows it with its badge.
   """
   def managers_query(query, now) do
     query
     |> where([m], m.d4h_permission in @manager_permissions)
     |> current_query(now)
-    |> counted_query()
-    |> join(:inner, [m], t in Team, as: :manager_team, on: t.id == m.team_id)
-    |> where(
-      [m, manager_team: t],
-      is_nil(t.d4h_access_key_member_id) or t.d4h_access_key_member_id != m.d4h_member_id or
-        is_nil(t.d4h_access_key_owner) or
-        not like(fragment("lower(replace(?, ' ', ''))", t.d4h_access_key_owner), "%sarduty%")
-    )
+    |> not_retiring_query()
   end
 
   @doc "The team's managers (managers_query/2), by name."

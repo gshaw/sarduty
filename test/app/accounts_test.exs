@@ -35,18 +35,16 @@ defmodule App.AccountsTest do
       refute Accounts.may_log_in?("nobody@example.com", @now)
     end
 
-    test "a SAR Duty team key account doesn't make its email a manager" do
+    test "a bot D4H made an Owner may, even the team key's account" do
       team = team_fixture(%{d4h_access_key_member_id: 900, d4h_access_key_owner: "SAR Duty"})
-      manager_fixture(team, %{email: "sarduty@example.com", d4h_member_id: 900})
 
-      refute Accounts.may_log_in?("sarduty@example.com", @now)
-    end
+      manager_fixture(team, %{
+        email: "sarduty@example.com",
+        d4h_member_id: 900,
+        not_a_person: true
+      })
 
-    test "a manager whose own key is the team key still may" do
-      team = team_fixture(%{d4h_access_key_member_id: 901, d4h_access_key_owner: "Kim Lee"})
-      manager_fixture(team, %{email: "kim@example.com", d4h_member_id: 901})
-
-      assert Accounts.may_log_in?("kim@example.com", @now)
+      assert Accounts.may_log_in?("sarduty@example.com", @now)
     end
 
     test "an email an admin let into a team may, and reaches only that team" do
@@ -112,15 +110,22 @@ defmodule App.AccountsTest do
       refute Accounts.may_log_in?("member@example.com", @now)
     end
 
-    test "retired members, members who left, and not a person may not" do
+    test "retired members and members who left may not" do
       team = member_logins_team_fixture()
       member_fixture(team, %{email: "retired@example.com", d4h_status: "RETIRED"})
       member_fixture(team, %{email: "left@example.com", left_at: ~U[2026-01-01 00:00:00Z]})
-      member_fixture(team, %{email: "bot@example.com", not_a_person: true})
 
       refute Accounts.may_log_in?("retired@example.com", @now)
       refute Accounts.may_log_in?("left@example.com", @now)
-      refute Accounts.may_log_in?("bot@example.com", @now)
+    end
+
+    test "a member marked not a person may, like a sign-in kiosk" do
+      team = member_logins_team_fixture()
+      kiosk = member_fixture(team, %{email: "kiosk@example.com", not_a_person: true})
+
+      assert Accounts.may_log_in?("kiosk@example.com", @now)
+      assert [%{id: id}] = Member.get_logins("kiosk@example.com", @now)
+      assert id == kiosk.id
     end
 
     test "a member in their team's Retiring group may not (#514)" do
@@ -194,12 +199,13 @@ defmodule App.AccountsTest do
       assert [%{email: "staying@example.com"}] = Member.get_managers(team, @now)
     end
 
-    test "an Owner marked not a person manages the team no longer (#683)" do
+    test "an Owner marked not a person still manages the team" do
       team = team_fixture()
-      manager_fixture(team, %{email: "truck@example.com", not_a_person: true})
+      %{id: truck_id} = manager_fixture(team, %{email: "truck@example.com", not_a_person: true})
 
-      assert Team.get_managed_by("truck@example.com", @now) == []
-      assert Member.get_managers(team, @now) == []
+      assert [%{id: id}] = Team.get_managed_by("truck@example.com", @now)
+      assert id == team.id
+      assert [%{id: ^truck_id}] = Member.get_managers(team, @now)
     end
 
     test "another team's Retiring group with the same D4H id cuts nothing" do

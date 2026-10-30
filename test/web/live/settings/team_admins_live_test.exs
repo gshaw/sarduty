@@ -19,34 +19,16 @@ defmodule Web.Settings.TeamAdminsLiveTest do
     assert has_element?(lv, "#grant-#{grant.id}", "office@example.com")
   end
 
-  test "leaves out the SAR Duty account that holds the team key", %{conn: conn} do
+  test "lists a bot D4H made a team admin, with its badge", %{conn: conn} do
     key = %{d4h_access_key_member_id: 900, d4h_access_key_owner: "SAR Duty"}
     %{user: user, team: team} = user_with_team_fixture(%{team: key})
-
-    _sar_duty = manager_fixture(team, %{name: "SAR Duty", d4h_member_id: 900})
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
-
-    refute has_element?(lv, "#team-managers", "SAR Duty")
-  end
-
-  test "leaves out a member marked not a person", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    _bot = manager_fixture(team, %{name: "Roster Bot", not_a_person: true})
+    sar_duty = manager_fixture(team, %{name: "SAR Duty", d4h_member_id: 900, not_a_person: true})
+    person = manager_fixture(team, %{name: "Kim Lee"})
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
 
-    refute has_element?(lv, "#team-managers", "Roster Bot")
-  end
-
-  test "keeps a person whose own key is the team key", %{conn: conn} do
-    key = %{d4h_access_key_member_id: 901, d4h_access_key_owner: "Kim Lee"}
-    %{user: user, team: team} = user_with_team_fixture(%{team: key})
-
-    kim = manager_fixture(team, %{name: "Kim Lee", d4h_member_id: 901})
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
-
-    assert has_element?(lv, "#manager-#{kim.id}", "Kim Lee")
+    assert has_element?(lv, "#manager-#{sar_duty.id}", "Not a person")
+    assert has_element?(lv, "#manager-#{person.id}", "Kim Lee")
+    refute has_element?(lv, "#manager-#{person.id}", "Not a person")
   end
 end

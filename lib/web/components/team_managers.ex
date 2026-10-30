@@ -1,7 +1,7 @@
 defmodule Web.Components.TeamManagers do
   @moduledoc """
-  Who can log in to a team: its D4H managers, flagged where odd, and the emails an admin
-  let in. Shared by a team's managers page and /admin.
+  Who can log in to a team: its D4H managers, flagged where odd or not a person, and the
+  emails an admin let in. Shared by a team's managers page and /admin.
   """
   use Web, :function_component
 
@@ -46,20 +46,12 @@ defmodule Web.Components.TeamManagers do
   defp rows(%{managers: managers, grants: grants, login_emails: login_emails}) do
     manager_rows =
       for member <- managers do
-        badges =
-          [
-            has_login?(member, login_emails) && {:primary, "Has logged in"},
-            odd_domain?(member, managers) && {:warning, "Other email domain"},
-            member.d4h_status != "OPERATIONAL" && {:default, "Not operational"}
-          ]
-          |> Enum.filter(& &1)
-
         %{
           id: "manager-#{member.id}",
           name: member.name,
           access: Member.permission_label(member.d4h_permission),
           email: member.email,
-          badges: badges,
+          badges: badges(member, managers, login_emails),
           reason: nil
         }
       end
@@ -77,6 +69,18 @@ defmodule Web.Components.TeamManagers do
       end
 
     manager_rows ++ grant_rows
+  end
+
+  defp badges(member, managers, login_emails) do
+    Enum.filter(
+      [
+        member.not_a_person && {:default, "Not a person"},
+        has_login?(member, login_emails) && {:primary, "Has logged in"},
+        odd_domain?(member, managers) && {:warning, "Other email domain"},
+        member.d4h_status != "OPERATIONAL" && {:default, "Not operational"}
+      ],
+      & &1
+    )
   end
 
   defp has_login?(member, login_emails),

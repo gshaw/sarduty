@@ -33,9 +33,9 @@ defmodule Web.Components.NotAPersonSwitch do
         phx-click="toggle"
         phx-target={@myself}
       >
-        For a bot or a shared account. SAR Duty leaves it out of member counts, the missing
-        details check, team admins, and Take attendance. Group rules and the attendance
-        check leave it out only when set to Active.
+        For a bot or a shared account. It logs in and gets email like any member, as a team
+        admin if it has that access. SAR Duty never counts it or offers it when you pick
+        people.
       </.switch>
       <p
         :if={Member.looks_like_not_a_person?(@member, @attended?)}
