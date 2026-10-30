@@ -134,7 +134,7 @@ defmodule Web.TemplateLive do
             class="table-striped"
           >
             <:col :let={group} label="Group">
-              <.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a>
+              <.group_cell group={group} team={@current_team} />
             </:col>
           </.table>
           <p :if={@template.template_groups == []} class="hint">No groups.</p>
