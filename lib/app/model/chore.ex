@@ -230,11 +230,29 @@ defmodule App.Model.Chore do
     Map.merge(%{waiting: 0, accepted: 0, declined: 0}, counts)
   end
 
-  @doc "How many of the team's chores wait for a team admin."
-  def count_waiting(team_id) do
+  @doc """
+  How many of the team's waiting chores ask for `member`, a team admin: all but their
+  own, which another team admin should accept (#697). With no other team admin, their
+  own count too, since nobody else will accept them. A nil member, a SAR Duty admin who
+  isn't on the team, has none of their own.
+  """
+  def count_to_accept(%Team{} = team, member, now) do
     Chore
-    |> where([c], c.team_id == ^team_id and c.status == :waiting)
+    |> where([c], c.team_id == ^team.id and c.status == :waiting)
+    |> without_own(member, other_managers?(team, member, now))
     |> Repo.aggregate(:count)
+  end
+
+  defp without_own(query, %Member{id: id}, true), do: where(query, [c], c.member_id != ^id)
+  defp without_own(query, _member, _other_managers?), do: query
+
+  defp other_managers?(_team, nil, _now), do: false
+
+  defp other_managers?(team, member, now) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.id != ^member.id)
+    |> Member.managers_query(now)
+    |> Repo.exists?()
   end
 
   @doc "How many chores each of the team's categories has in `year`, as category id to count."

@@ -70,8 +70,7 @@ defmodule Web.ChoreCollectionLive do
     socket
     |> assign(
       counts: counts,
-      to_send: ChoreEvent.count_to_send(team_id),
-      chore_count: counts.waiting
+      to_send: ChoreEvent.count_to_send(team_id)
     )
     |> load_yours()
     |> load_view(socket.assigns.view, team_id)

@@ -269,7 +269,6 @@ defmodule Web.Layouts do
       member_logins: assigns[:member_logins] || [],
       user_organizations: assigns[:user_organizations] || [],
       current_path: assigns[:current_path],
-      chore_count: assigns[:chore_count] || 0,
       certificate_count: assigns[:certificate_count] || 0
     }
   end
@@ -284,7 +283,6 @@ defmodule Web.Layouts do
       Navigation.sections(area, assigns.current_path,
         team_admin?: assigns.team_admin?,
         member?: assigns.current_member != nil,
-        chores: assigns.chore_count,
         certificates: assigns.certificate_count
       )
 
@@ -301,7 +299,6 @@ defmodule Web.Layouts do
   attr :member_logins, :list, default: []
   attr :user_organizations, :list, default: []
   attr :current_path, :string, default: nil
-  attr :chore_count, :integer, default: 0
   attr :certificate_count, :integer, default: 0
   attr :size, :atom, default: :wide
 

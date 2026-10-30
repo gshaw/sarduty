@@ -141,9 +141,11 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
 ## Where else chores show
 
 - **Team home**: for team admins, "N chores to accept" under Needs attention, and a
-  warning when a chore activity is out of date in D4H; the waiting count shows beside
-  Chores in the side navigation. For a member, a declined chore under For you to do until
-  they delete it.
+  warning when a chore activity is out of date in D4H. The count leaves out the reader's
+  own chores, which another team admin should accept, unless no other team admin can
+  (`Chore.count_to_accept/3`). Chores in the side navigation has no count (#698): a
+  team admin whose own chores wait would see one they shouldn't act on. For a member, a
+  declined chore under For you to do until they delete it.
 - **Activities**: chore activities are their own kind, Chores, though D4H holds them as
   events (#575). A Chores tile beside Events lists them, with each one's members' total as
   its duration, since the activity lasts no time. All includes them; Events leaves them

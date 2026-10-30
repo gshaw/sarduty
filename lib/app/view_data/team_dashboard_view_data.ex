@@ -37,6 +37,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   @doc """
   The top half as of `now`. `attention?: false` leaves out Needs attention, which only
   team admins see, so a member's Dashboard doesn't count what nobody will read.
+  `member:` is the team admin reading it, whose own chores wait for someone else.
   """
   def build(%Team{} = team, now \\ DateTime.utc_now(), opts \\ []) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
@@ -47,25 +48,27 @@ defmodule App.ViewData.TeamDashboardViewData do
       refresh_result: refresh_result,
       next_up: next_up,
       coming_up: coming_up,
-      attention: attention(team, refresh_result, now, Keyword.get(opts, :attention?, true))
+      attention:
+        attention(team, refresh_result, now, Keyword.get(opts, :attention?, true), opts[:member])
     }
   end
 
   @doc """
   Every Needs attention item a team admin would see, without the page's limit: for an
-  agent's needs_attention tool (#595).
+  agent's needs_attention tool (#595). Its chores are every one waiting, a team admin's
+  own too.
   """
   def attention_items(%Team{} = team, now \\ DateTime.utc_now()) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
-    team |> attention_rows(refresh_result, now) |> TeamAttention.items(now, :all)
+    team |> attention_rows(refresh_result, now, nil) |> TeamAttention.items(now, :all)
   end
 
-  defp attention(team, refresh_result, now, true),
-    do: team |> attention_rows(refresh_result, now) |> TeamAttention.items(now)
+  defp attention(team, refresh_result, now, true, member),
+    do: team |> attention_rows(refresh_result, now, member) |> TeamAttention.items(now)
 
-  defp attention(_team, _refresh_result, _now, false), do: []
+  defp attention(_team, _refresh_result, _now, false, _member), do: []
 
-  defp attention_rows(team, refresh_result, now) do
+  defp attention_rows(team, refresh_result, now, member) do
     %{
       timezone: team.timezone,
       service: D4H.service(team),
@@ -79,7 +82,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       not_seen: not_seen_row(team, now),
       retiring: retiring_row(team, now),
       group_change_count: count_group_changes(team, now),
-      chore_count: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0),
+      chore_count: if(Team.chores?(team), do: Chore.count_to_accept(team, member, now), else: 0),
       certificate_count:
         if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0),
       chores_to_send: chores_to_send(team),
