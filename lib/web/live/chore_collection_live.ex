@@ -194,7 +194,6 @@ defmodule Web.ChoreCollectionLive do
               chores={@chores}
               standings={@standings}
               selected={@selected}
-              today={@today}
               current_team={@current_team}
               current_member={@current_member}
             />
@@ -254,7 +253,6 @@ defmodule Web.ChoreCollectionLive do
             id={"chore-event-#{row.event.id}-chores"}
             chores={row.chores}
             standings={@standings}
-            today={@today}
             current_team={@current_team}
             category={false}
           />
@@ -268,7 +266,6 @@ defmodule Web.ChoreCollectionLive do
           id="declined-chores"
           chores={@chores}
           standings={@standings}
-          today={@today}
           current_team={@current_team}
         />
       <% :yours -> %>
@@ -369,7 +366,6 @@ defmodule Web.ChoreCollectionLive do
   attr :chores, :list, required: true
   attr :standings, :map, required: true
   attr :selected, :any, default: nil, doc: "the ids checked, or nil for no boxes"
-  attr :today, :any, required: true
   attr :current_team, :map, required: true
   attr :category, :boolean, default: true
   attr :current_member, :map, default: nil
