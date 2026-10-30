@@ -103,6 +103,7 @@ defmodule Web.TeamSignupLiveTest do
 
     team = Team.get_by(d4h_team_id: @d4h_team_id)
     assert team.subdomain == "ridge"
+    assert {team.legal_name, team.abbreviated_name} == {"Ridge SAR", "Ridge SAR"}
     assert team.d4h_access_key == "team-token"
     assert team.d4h_access_key_owner == "SAR Duty"
 

@@ -14,7 +14,12 @@ defmodule App.Model.Team do
   # Paths name a team by its subdomain: ~p"/teams/#{team}/members".
   @derive {Phoenix.Param, key: :subdomain}
   schema "teams" do
+    # Three names, one for each amount of room (#738): `name` on most pages,
+    # `legal_name` on tax credit letters and the back of ID cards, `abbreviated_name` in
+    # texts. Advice limits are in name_advice/1; saving only fails over the maximums.
     field :name, TrimmedString
+    field :legal_name, TrimmedString
+    field :abbreviated_name, TrimmedString
     field :subdomain, :string
     field :d4h_team_id, :integer
     field :d4h_api_host, :string
@@ -155,10 +160,44 @@ defmodule App.Model.Team do
   # UpdateTeamSettings sets the key after checking it with D4H.
   def build_settings_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:name, :new_d4h_access_key])
-    |> validate_required([:name])
-    |> Validate.name(:name)
+    |> cast(params, [:name, :legal_name, :abbreviated_name, :new_d4h_access_key])
+    |> validate_names()
     |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
+  end
+
+  @legal_name_max 100
+  @abbreviated_name_max 20
+
+  defp validate_names(changeset) do
+    changeset
+    |> validate_required([:name, :legal_name, :abbreviated_name])
+    |> Validate.name(:name)
+    |> validate_length(:legal_name, max: @legal_name_max)
+    |> validate_length(:abbreviated_name, max: @abbreviated_name_max)
+  end
+
+  @doc """
+  The longest each name may be when saved. Sign-up cuts D4H's title to these (#738).
+  """
+  def name_max(:name), do: Validate.Name.max_length()
+  def name_max(:legal_name), do: @legal_name_max
+  def name_max(:abbreviated_name), do: @abbreviated_name_max
+
+  @doc """
+  The length a name should keep to, or nil for none. Longer is allowed, and shows on
+  Needs attention (#738): Wallet cuts a name over about 23 characters on an ID card's
+  top line, and a text has 100 characters in all.
+  """
+  def name_advice(:name), do: 20
+  def name_advice(:legal_name), do: nil
+  def name_advice(:abbreviated_name), do: 10
+
+  @doc "Whether the `field` name in `names`, a team or a map, is longer than name_advice/1 says."
+  def name_too_long?(%{} = names, field) do
+    case name_advice(field) do
+      nil -> false
+      advice -> String.length(Map.fetch!(names, field) || "") > advice
+    end
   end
 
   @doc "Settings' Tax credit letters tab: the mailing address and who signs."
@@ -210,6 +249,8 @@ defmodule App.Model.Team do
     data
     |> cast(params, [
       :name,
+      :legal_name,
+      :abbreviated_name,
       :subdomain,
       :d4h_team_id,
       :d4h_api_host,
@@ -228,7 +269,6 @@ defmodule App.Model.Team do
       :timezone
     ])
     |> validate_required([
-      :name,
       :subdomain,
       :d4h_team_id,
       :d4h_api_host,
@@ -236,7 +276,7 @@ defmodule App.Model.Team do
       :lng,
       :timezone
     ])
-    |> Validate.name(:name)
+    |> validate_names()
     |> Validate.address(:mailing_address)
     |> validate_length(:authorized_by_name, max: 250)
     |> validate_exclusion(:subdomain, @reserved_subdomains,

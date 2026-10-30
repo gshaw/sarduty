@@ -10,6 +10,8 @@ defmodule App.Operation.UpdateTeamSettingsTest do
   @now ~U[2026-09-10 12:00:00.000000Z]
   @team %Team{
     name: "Ridge Valley SAR",
+    legal_name: "Ridge Valley Search and Rescue Society",
+    abbreviated_name: "RIDGE",
     d4h_team_id: 7,
     d4h_access_key: "old-key",
     d4h_sync_state: %{"heads" => %{}, "key_rejected" => true}

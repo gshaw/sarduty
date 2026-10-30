@@ -13,6 +13,7 @@ defmodule App.Operation.BuildGooglePassTest do
   defp card(attrs \\ %{}) do
     team = %Team{
       name: "Example SAR",
+      legal_name: "Example Search and Rescue Society",
       subdomain: "example",
       timezone: "America/Vancouver",
       d4h_refreshed_at: ~U[2026-09-30 13:05:00Z],
@@ -150,7 +151,7 @@ defmodule App.Operation.BuildGooglePassTest do
     object = object(put_in(card.member.team.organization, organization))
 
     assert text(object, "issuer").body =~
-             "Example SAR, a member team of BC Search and Rescue Association."
+             "Example Search and Rescue Society, a member team of BC Search and Rescue Association."
 
     refute Jason.encode!(object) =~ "SAR Duty"
   end

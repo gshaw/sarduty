@@ -6,6 +6,7 @@ defmodule App.ViewData.TeamAttention do
   """
 
   alias App.Adapter.D4H
+  alias App.Model.Team
   alias Service.Format
 
   @max_items 7
@@ -20,6 +21,18 @@ defmodule App.ViewData.TeamAttention do
   def items(rows, now, limit \\ @max_items) do
     this_year = Service.YearRange.year_in(now, rows.timezone)
 
+    rows
+    |> count_items()
+    |> Enum.concat(retiring_items(rows))
+    |> Enum.concat(untagged_items(rows, this_year))
+    |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
+    |> Enum.concat(name_items(rows.names))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.sort_by(&level_order/1)
+    |> take(limit)
+  end
+
+  defp count_items(rows) do
     [
       refresh_item(rows.refresh, rows.service),
       drafts_item(rows.draft_count, rows.service),
@@ -34,12 +47,6 @@ defmodule App.ViewData.TeamAttention do
       attendance_to_send_item(rows.attendance_to_send),
       no_shows_item(rows.no_shows)
     ]
-    |> Enum.concat(retiring_items(rows))
-    |> Enum.concat(untagged_items(rows, this_year))
-    |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
-    |> Enum.reject(&is_nil/1)
-    |> Enum.sort_by(&level_order/1)
-    |> take(limit)
   end
 
   # Stable, so items keep their order within a level.
@@ -444,6 +451,38 @@ defmodule App.ViewData.TeamAttention do
       one: "Tax credit letters count no hours for it. Set its hours tag in #{name}.",
       many: "Tax credit letters count no hours for them. Set each one's hours tag in #{name}."
     )
+  end
+
+  # The team's names start as one, so these nudge until the short ones are short (#738).
+  # By length only: SAR Duty can't tell a right legal name from a wrong one.
+  defp name_items(names), do: [long_name_item(names), long_abbreviated_name_item(names)]
+
+  defp long_name_item(names) do
+    if Team.name_too_long?(names, :name) do
+      %{
+        key: :long_name,
+        level: :info,
+        title: "Your team's name is too long for ID cards",
+        detail:
+          "\"#{names.name}\" is cut off on ID cards and the phone top bar. " <>
+            "A name of #{Format.characters(Team.name_advice(:name))} or fewer fits.",
+        action: "Open team settings"
+      }
+    end
+  end
+
+  defp long_abbreviated_name_item(names) do
+    if Team.name_too_long?(names, :abbreviated_name) do
+      %{
+        key: :long_abbreviated_name,
+        level: :info,
+        title: "Your team's abbreviated name is too long for texts",
+        detail:
+          "Texts to members start with it. " <>
+            "#{Format.characters(Team.name_advice(:abbreviated_name))} or fewer leaves room for the message.",
+        action: "Open team settings"
+      }
+    end
   end
 
   defp letters_item(nil, _now, _timezone), do: nil

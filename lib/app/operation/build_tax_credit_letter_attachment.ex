@@ -8,12 +8,12 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
 
   def call(tax_credit_letter) do
     team = Repo.preload(tax_credit_letter.member.team, :organization)
-    title = "#{tax_credit_letter.year} SRVTC #{team.name}"
+    title = "#{tax_credit_letter.year} SRVTC #{team.legal_name}"
 
     content =
       %{
         title: title,
-        author: team.name,
+        author: team.legal_name,
         creator: "SARDuty.com",
         logos: logos(team),
         content: tax_credit_letter.letter_content,

@@ -6,7 +6,11 @@ defmodule App.Mailer.TaxCreditLetterMailerTest do
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
 
-  @team %Team{name: "South Fraser Search and Rescue", authorized_by_name: "Andrew Smith"}
+  @team %Team{
+    name: "South Fraser SAR",
+    legal_name: "South Fraser Search and Rescue",
+    authorized_by_name: "Andrew Smith"
+  }
 
   defp letter(team), do: %TaxCreditLetter{year: 2025, member: %Member{team: team}}
 

@@ -70,6 +70,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       timezone: team.timezone,
       service: D4H.service(team),
       refresh: refresh_row(team, refresh_result),
+      names: Map.take(team, [:name, :abbreviated_name]),
       draft_count: count_recent_drafts(team, now),
       missing_fields_count: count_missing_fields(team, now),
       expiring_days: BuildGroupRulePreview.expiring_days(),

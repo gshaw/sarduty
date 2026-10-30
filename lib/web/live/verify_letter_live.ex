@@ -191,7 +191,7 @@ defmodule Web.VerifyLetterLive do
             alt=""
             class="logo-md"
           />
-          <p id="result-team" class="subheading mb-0">{@result.team.name}</p>
+          <p id="result-team" class="subheading mb-0">{@result.team.legal_name}</p>
         </div>
 
         <div class="flex justify-between gap-4 mt-4">

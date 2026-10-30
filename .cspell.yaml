@@ -28,6 +28,7 @@ words:
   - VEVENT # iCalendar's event block, in Service.Calendar and its test
   - DTEND # iCalendar's end time, in Service.Calendar and its test
   - ntoa # Erlang's :inet.ntoa/1, an IP tuple to a string
+  - YSSR # York Sunbury SAR's abbreviated name, the example in team name tests (#738)
   - REFERER # the HTTP Referer header, as Plug and Honeybadger spell it
   - fnox # the secrets tool that holds the Fly tokens, in backups/backup.sh and docs/deployment.md
   - onsubmit # an HTML attribute

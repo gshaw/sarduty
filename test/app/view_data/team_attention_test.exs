@@ -14,6 +14,7 @@ defmodule App.ViewData.TeamAttentionTest do
         timezone: "America/Vancouver",
         service: :d4h,
         refresh: %{state: :ok, message: nil},
+        names: %{name: "Ridge SAR", abbreviated_name: "RIDGE"},
         draft_count: 0,
         missing_fields_count: 0,
         expiring_days: 60,
@@ -42,6 +43,31 @@ defmodule App.ViewData.TeamAttentionTest do
   test "nothing to do means no items" do
     assert items(%{}, @october) == []
     assert items(%{untagged: [%{count: 0, year: 2026}]}, @october) == []
+  end
+
+  describe "names (#738)" do
+    test "a name too long for ID cards asks for a shorter one" do
+      names = %{name: "York Sunbury Search and Rescue", abbreviated_name: "YSSR"}
+      assert [item] = items(%{names: names}, @october)
+      assert %{key: :long_name, level: :info} = item
+      assert item.title == "Your team's name is too long for ID cards"
+      assert item.detail =~ ~s("York Sunbury Search and Rescue" is cut off)
+      assert item.detail =~ "20 characters or fewer"
+    end
+
+    test "an abbreviated name too long for texts asks for a shorter one" do
+      names = %{name: "York Sunbury SAR", abbreviated_name: "York Sunbury SAR"}
+
+      assert [%{key: :long_abbreviated_name, level: :info} = item] =
+               items(%{names: names}, @october)
+
+      assert item.detail =~ "10 characters or fewer"
+    end
+
+    test "names at the advised lengths need nothing" do
+      names = %{name: String.duplicate("a", 20), abbreviated_name: String.duplicate("a", 10)}
+      assert items(%{names: names}, @october) == []
+    end
   end
 
   test "waiting chores ask a team admin to accept them" do

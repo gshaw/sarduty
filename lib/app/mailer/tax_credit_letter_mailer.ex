@@ -45,7 +45,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     team = letter.member.team
 
     [
-      "Attached is your #{letter.year} tax credit letter from #{team.name}.",
+      "Attached is your #{letter.year} tax credit letter from #{team.legal_name}.",
       "Claim the search and rescue volunteers amount on line 31240 of your tax return. Keep this letter in case the CRA asks for it.",
       questions_line(team)
     ]
@@ -56,7 +56,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
 
   # The signer's email, or their phone when they have no email. Nothing without either.
   defp questions_line(team) do
-    name = team.authorized_by_name || team.name
+    name = team.authorized_by_name || team.legal_name
 
     case Enum.reject([team.authorized_by_email, team.authorized_by_phone], &(&1 in [nil, ""])) do
       [contact | _rest] -> "Questions about your hours? Contact #{name} at #{contact}."

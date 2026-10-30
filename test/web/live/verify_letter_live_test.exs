@@ -11,7 +11,7 @@ defmodule Web.VerifyLetterLiveTest do
   # Like the ID card check: matched by host, with a client IP of its own per test.
   setup %{conn: conn} do
     team =
-      %{name: "North Shore Rescue"}
+      %{name: "NSR", legal_name: "North Shore Rescue"}
       |> team_fixture()
       |> Ecto.Changeset.change(authorized_by_name: "Pat Lee", authorized_by_phone: "604-555-0100")
       |> App.Repo.update!()

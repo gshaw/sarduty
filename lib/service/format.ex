@@ -95,6 +95,9 @@ defmodule Service.Format do
 
   def months(n) when is_integer(n), do: count(n, one: "1 month", many: "%d months")
 
+  @doc ~s(A length of text: "1 character", "20 characters".)
+  def characters(n) when is_integer(n), do: count(n, one: "1 character", many: "%d characters")
+
   @doc ~s(A file's size: "820 bytes", "64 KB", "2.4 MB".)
   def file_size(bytes) when is_integer(bytes) and bytes < 1000,
     do: count(bytes, one: "1 byte", many: "%d bytes")

@@ -7,7 +7,8 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
   alias App.Operation.CreateTaxCreditLetter
 
   @team %Team{
-    name: "North Shore Rescue",
+    name: "NSR",
+    legal_name: "North Shore Rescue",
     mailing_address: "123 Main St",
     timezone: "America/Vancouver",
     authorized_by_name: "Pat Lee"
@@ -162,7 +163,7 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
       assert signer =~ ~r/^Pat Lee\n/
     end
 
-    test "without a signer, the team's name signs" do
+    test "without a signer, the team's legal name signs" do
       team = %{@team | authorized_by_name: nil}
       assert CreateTaxCreditLetter.signer_block(team) == "North Shore Rescue"
     end

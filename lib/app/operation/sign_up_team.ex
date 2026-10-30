@@ -13,7 +13,6 @@ defmodule App.Operation.SignUpTeam do
   alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
-  alias App.Validate
   alias App.ViewModel.TeamSignupViewModel
   alias App.Worker.NotifyTeamSignedUpWorker
   alias App.Worker.RefreshTeamDataWorker
@@ -133,7 +132,9 @@ defmodule App.Operation.SignUpTeam do
     Repo.transaction(fn ->
       team =
         Team.insert!(%{
-          name: String.slice(d4h_team.name, 0, Validate.Name.max_length()),
+          name: cut_name(d4h_team.name, :name),
+          legal_name: cut_name(d4h_team.name, :legal_name),
+          abbreviated_name: cut_name(d4h_team.name, :abbreviated_name),
           subdomain: d4h_team.subdomain,
           d4h_team_id: whoami.d4h_team_id,
           d4h_api_host: view_model.api_host,
@@ -177,4 +178,7 @@ defmodule App.Operation.SignUpTeam do
     |> add_error(field, message)
     |> Map.put(:action, :insert)
   end
+
+  # All three names start as D4H's title, cut to fit (#738).
+  defp cut_name(title, field), do: String.slice(title, 0, Team.name_max(field))
 end

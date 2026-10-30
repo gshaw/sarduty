@@ -36,6 +36,8 @@ defmodule Service.FormatTest do
     assert Format.months(18) == "18 months"
     assert Format.months(12) == "1 year"
     assert Format.months(36) == "3 years"
+    assert Format.characters(1) == "1 character"
+    assert Format.characters(20) == "20 characters"
     assert Format.file_size(820) == "820 bytes"
     assert Format.file_size(64_200) == "64 KB"
     assert Format.file_size(2_400_000) == "2.4 MB"

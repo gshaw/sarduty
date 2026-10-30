@@ -95,10 +95,11 @@ defmodule App.Model.MemberCard do
   instead of SAR Duty. Expects the team with `:organization` preloaded.
   """
   def issued_by(%Team{organization: %Organization{name: organization}} = team),
-    do: "#{team.name}, a member team of #{organization}. Status comes from the team's records."
+    do:
+      "#{team.legal_name}, a member team of #{organization}. Status comes from the team's records."
 
   def issued_by(%Team{organization: nil} = team),
-    do: "#{team.name} through SAR Duty. Status comes from the team's records."
+    do: "#{team.legal_name} through SAR Duty. Status comes from the team's records."
 
   @doc """
   The code in what a scanner read: a bare code, or a link to a card's page,
