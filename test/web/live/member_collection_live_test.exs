@@ -281,29 +281,6 @@ defmodule Web.MemberCollectionLiveTest do
            )
   end
 
-  test "the Standing column shows only once a current member is not active, under any filter",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    member_fixture(team)
-    member_fixture(team, %{left_at: ~U[2025-06-01 00:00:00Z]})
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-
-    assert has_element?(lv, "#member-view-current[aria-current=page]")
-    refute has_element?(lv, "table th", "Standing")
-
-    # A filter changes the rows, not the columns.
-    {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=retired")
-
-    refute has_element?(lv, "table th", "Standing")
-
-    member_fixture(team, %{not_a_person: true})
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-
-    assert has_element?(lv, "table th", "Standing")
-  end
-
   test "Standing: Not retired leaves out retired members; Retired and All show them",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -346,17 +323,8 @@ defmodule Web.MemberCollectionLiveTest do
 
     assert has_element?(lv, "#standing-#{left.id}", "Retired")
     assert has_element?(lv, "#standing-#{gone_bot.id}", "Retired")
-    assert has_element?(lv, "#standing-#{current.id}", "Active")
+    refute has_element?(lv, "#standing-#{current.id}")
     assert has_element?(lv, "#standing-#{leaving.id}", "Not a person")
-
-    {:ok, _lv, html} =
-      live(
-        conn |> log_in_user(user),
-        ~p"/teams/#{team}/members?when=all&standing=all&sort=standing"
-      )
-
-    assert names_in_order(html, [current.name, left.name])
-    assert names_in_order(html, [current.name, retired.name])
   end
 
   test "the Standing switch counts each standing and has no All (#469)", %{conn: conn} do
@@ -410,10 +378,11 @@ defmodule Web.MemberCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#standing-#{active.id}", "Active")
-    assert has_element?(lv, "#standing-#{back.id}", "Active")
+    # The Member column's badge: none for active.
+    refute has_element?(lv, "#standing-#{active.id}")
+    refute has_element?(lv, "#standing-#{back.id}")
     assert has_element?(lv, "#standing-#{bot.id}", "Not a person")
-    until = today |> Date.add(30) |> Service.Format.day_in_year(today)
+    until = today |> Date.add(30) |> Service.Format.date_short()
     assert has_element?(lv, "#standing-#{away.id}", "Away until #{until}")
 
     for {standing, shown} <- [
@@ -425,31 +394,9 @@ defmodule Web.MemberCollectionLiveTest do
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=#{standing}")
 
       for member <- [active, away, back, bot] do
-        assert has_element?(lv, "#standing-#{member.id}") == member in shown
+        assert has_element?(lv, "#last-attended-#{member.id}") == member in shown
       end
     end
-
-    {:ok, _lv, html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=standing")
-
-    assert names_in_order(html, [away.name, bot.name])
-  end
-
-  test "the Standing sort puts not a person with the others, even with an away period",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    today = Service.Period.today(DateTime.utc_now(), team.timezone)
-    away = member_fixture(team, %{name: "Bea Away"})
-    away_period_fixture(away, Date.add(today, -3), Date.add(today, 30))
-    # Marked after an away period was added: not a person still wins.
-    bot = member_fixture(team, %{name: "Ann Bot", not_a_person: true})
-    away_period_fixture(bot, Date.add(today, -3), Date.add(today, 5))
-    member_fixture(team, %{name: "Cy Active"})
-
-    {:ok, _lv, html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?sort=standing")
-
-    assert names_in_order(html, [away.name, bot.name, "Cy Active"])
   end
 
   test "the Standing filter takes several standings from the attendance check (#366)",
@@ -465,9 +412,9 @@ defmodule Web.MemberCollectionLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=active,away")
 
     assert has_element?(lv, "select[name='form[standing]'] option[selected]", "Active or away")
-    assert has_element?(lv, "#standing-#{active.id}")
-    assert has_element?(lv, "#standing-#{away.id}")
-    refute has_element?(lv, "#standing-#{bot.id}")
+    assert has_element?(lv, "#last-attended-#{active.id}")
+    assert has_element?(lv, "#last-attended-#{away.id}")
+    refute has_element?(lv, "#last-attended-#{bot.id}")
 
     assert_raise Web.Status.NotFound, fn ->
       live(log_in_user(conn, user), ~p"/teams/#{team}/members?standing=active,gone")
@@ -526,26 +473,18 @@ defmodule Web.MemberCollectionLiveTest do
 
       # Away reads Active to a member: it's often leave.
       assert has_element?(lv, "#standing-#{bot.id}", "Not a person")
-      assert has_element?(lv, "#standing-#{away.id}", "Active")
+      refute has_element?(lv, "#standing-#{away.id}")
       refute has_element?(lv, ~s{th a[href*="sort=standing"]})
     end
 
-    test "no Standing column when nobody is Not a person", %{conn: conn, team: team, bot: bot} do
-      bot |> Ecto.Changeset.change(not_a_person: false) |> App.Repo.update!()
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
-
-      refute has_element?(lv, "th", "Standing")
-    end
-
-    test "ignores the URL's standings, Attended, Details, and Standing sort",
+    test "ignores the URL's standings, Attended, and Details",
          %{conn: conn, team: team} do
       for params <- [
             "standing=away",
             "standing=active",
             "standing=active,away",
             "attended=30",
-            "details=missing",
-            "sort=standing"
+            "details=missing"
           ] do
         {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members?when=all&#{params}")
 
@@ -813,7 +752,7 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
     assert has_element?(lv, "#member-view-retiring", "1")
     assert has_element?(lv, "#standing-#{retiring.id}", "Retiring")
-    assert has_element?(lv, "#standing-#{active.id}", "Active")
+    refute has_element?(lv, "#standing-#{active.id}")
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=retiring")

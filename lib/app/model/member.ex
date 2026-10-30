@@ -166,22 +166,6 @@ defmodule App.Model.Member do
   end
 
   @doc """
-  Whether any current member of the team is not active on `today` (#367), as
-  `team_admin?` sees them (#440): a member never sees Away. The members list shows its
-  Standing column only then.
-  """
-  def any_not_active?(%Team{} = team, %Date{} = today, now, team_admin?) do
-    hidden = if team_admin?, do: ["active", "retired"], else: ["active", "away", "retired"]
-    standing = Standing.dynamic(now)
-
-    Member
-    |> where([m], m.team_id == ^team.id)
-    |> Standing.join(team, today)
-    |> where(^dynamic(^standing not in ^hidden))
-    |> Repo.exists?()
-  end
-
-  @doc """
   Narrows `query` to people, leaving out members a team admin marked not a person. Most
   queries want counted_query/1, which leaves out retiring members too.
   """
