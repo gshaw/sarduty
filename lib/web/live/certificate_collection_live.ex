@@ -1,9 +1,11 @@
 defmodule Web.CertificateCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Model.Certificate
+  alias App.Model.Standing
   alias App.Model.Team
   alias Service.Format
   alias Web.CertificateText
@@ -23,12 +25,15 @@ defmodule Web.CertificateCollectionLive do
     wanted = params["view"] || "waiting"
     view = @views |> Keyword.keys() |> Enum.find(&(Atom.to_string(&1) == wanted))
     if !view, do: raise(Web.Status.NotFound)
-    team_id = socket.assigns.current_team.id
-    counts = Certificate.count_by_status(team_id)
+    team = socket.assigns.current_team
+    counts = Certificate.count_by_status(team.id)
+    certificates = Certificate.get_all_for_team(team.id, view)
+    members = Enum.map(certificates, & &1.member)
 
     socket
     |> assign(view: view, counts: counts, certificate_count: counts.waiting)
-    |> assign(certificates: Certificate.get_all_for_team(team_id, view))
+    |> assign(certificates: certificates)
+    |> assign(standings: Standing.by_member(team, members, DateTime.utc_now()))
     |> then(&{:noreply, &1})
   end
 
@@ -88,7 +93,13 @@ defmodule Web.CertificateCollectionLive do
       row_id={&"certificate-#{&1.id}"}
       class="table-stack"
     >
-      <:col :let={certificate} label="Member" class="stack-title">{certificate.member.name}</:col>
+      <:col :let={certificate} label="Member" class="stack-title">
+        <.member_cell
+          member={certificate.member}
+          team={@current_team}
+          standing={@standings[certificate.member.id]}
+        />
+      </:col>
       <:col :let={certificate} label="Qualification" class="stack-full">
         <.a navigate={~p"/teams/#{@current_team}/certificates/#{certificate.id}"}>{CertificateText.title(
           certificate

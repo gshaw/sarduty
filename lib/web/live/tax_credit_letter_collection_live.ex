@@ -2,8 +2,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FilterBar
+  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
+  alias App.Model.Standing
   alias App.Operation.CreateTaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.EmailTaxCreditLetter
@@ -105,10 +107,15 @@ defmodule Web.TaxCreditLetterCollectionLive do
         <th colspan="3" class="text-center">Tax credit hours</th>
         <th></th>
       </:header_row>
-      <:col :let={record} label="Name" sorts={[{"↑", "name"}]}>
-        <.a navigate={
-          ~p"/teams/#{@current_team}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
-        }>{record.member.name}</.a>
+      <:col :let={record} label="Member" sorts={[{"↑", "name"}]}>
+        <.member_cell
+          member={record.member}
+          team={@current_team}
+          standing={@standings[record.member.id]}
+          path={
+            ~p"/teams/#{@current_team}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
+          }
+        />
       </:col>
       <:col :let={record} label="Email">
         <.email id={"letter-member-#{record.member.id}-email"} email={record.member.email} />
@@ -299,13 +306,15 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   defp assign_records(socket) do
-    filter_options = socket.assigns.filter_options
-    all = TaxCreditLetterFilterViewModel.find_all(socket.assigns.current_team, filter_options)
+    %{filter_options: filter_options, current_team: team} = socket.assigns
+    all = TaxCreditLetterFilterViewModel.find_all(team, filter_options)
     records = TaxCreditLetterFilterViewModel.shown(all, filter_options)
+    members = Enum.map(records, & &1.member)
 
     socket
     |> assign(:letter_counts, TaxCreditLetterFilterViewModel.letter_counts(all))
     |> assign(:records, records)
+    |> assign(:standings, Standing.by_member(team, members, DateTime.utc_now()))
     |> assign(
       :to_send,
       Enum.filter(records, &(is_nil(&1.tax_credit_letter_id) and &1.total_minutes > 0))

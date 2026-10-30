@@ -8,6 +8,7 @@ defmodule Web.ActivityTakeAttendanceLive do
        view_events: ~w(set_kind change clear_override toggle_yet_to_arrive scan_failed),
        member_events: ~w(scanned pick undo)}
 
+  import Web.Components.MemberColumn
   import Web.Components.Scanner
   import Web.Components.YetToArrive
 
@@ -276,7 +277,10 @@ defmodule Web.ActivityTakeAttendanceLive do
     all_scans = AttendanceScan.get_all(activity)
     yet_to_arrive = activity |> Attendance.signed_up_members() |> BuildYetToArrive.call(all_scans)
     scans = all_scans |> Enum.reverse() |> Enum.take(@recent_count)
-    assign(socket, scans: scans, yet_to_arrive: yet_to_arrive)
+    %{team: team, team_admin?: team_admin?} = socket.assigns
+    members = Enum.map(scans, & &1.member)
+    standings = Standing.visible_by_member(team, members, DateTime.utc_now(), team_admin?)
+    assign(socket, scans: scans, yet_to_arrive: yet_to_arrive, standings: standings)
   end
 
   @doc "Current members whose name contains every word typed, up to #{@max_name_matches}."
@@ -455,7 +459,15 @@ defmodule Web.ActivityTakeAttendanceLive do
       <h2 class="heading mt-4">Recorded</h2>
       <p :if={@scans == []} id="no-scans">Nobody yet. Scans show here as you take them.</p>
       <.table :if={@scans != []} id="scans" rows={@scans} class="table-striped">
-        <:col :let={scan} label="Name">{scan.member.name}</:col>
+        <%!-- No link: the door's tool stays open for the next scan. --%>
+        <:col :let={scan} label="Member">
+          <.member_cell
+            member={scan.member}
+            team={@team}
+            standing={@standings[scan.member.id]}
+            link={false}
+          />
+        </:col>
         <:col :let={scan} label="Scan" class="whitespace-nowrap">
           {if scan.kind == "arrived", do: "Arrived", else: "Left"} {Service.Format.time_short(
             AttendanceScan.time(scan),

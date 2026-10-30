@@ -111,6 +111,7 @@ defmodule App.Model.MemberQualificationAward do
   defp select_soonest_first(query) do
     query
     |> select([aw, m, q], %{
+      member: m,
       member_id: m.id,
       member_name: m.name,
       qualification_id: q.id,

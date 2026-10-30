@@ -435,6 +435,19 @@ defmodule Web.StyleGuideHTML.SampleData do
   end
 
   # Members by standing, for the table's row groups.
+  # The Member column's standings, one row each, for /styles/table.
+  def member_column_rows do
+    away = %App.Model.MemberAwayPeriod{ends_on: ~D[2026-03-01], reason: "Parental leave"}
+
+    [
+      %{id: 1, name: "Avery Chen", role: "Team leader", standing: :active},
+      %{id: 2, name: "Casey Dhillon", role: "Member", standing: {:away, away}},
+      %{id: 3, name: "Jordan Price", role: "Member", standing: :retiring},
+      %{id: 4, name: "Kiosk sign-in", role: nil, standing: :not_a_person},
+      %{id: 5, name: "Sam Okafor", role: "Member", standing: :retired}
+    ]
+  end
+
   def member_groups do
     [
       %{

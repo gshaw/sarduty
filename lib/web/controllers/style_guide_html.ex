@@ -14,6 +14,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.FilterBar
   import Web.Components.GroupRule
   import Web.Components.HeadingRow
+  import Web.Components.MemberColumn
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.OpenInMaps

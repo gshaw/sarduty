@@ -3,10 +3,12 @@ defmodule Web.ChoreCollectionLive do
 
   import Web.ChoreText, only: [own_box: 1, status_badge: 1]
   import Web.Components.Chart, only: [stat: 1]
+  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
@@ -74,6 +76,16 @@ defmodule Web.ChoreCollectionLive do
     )
     |> load_yours()
     |> load_view(socket.assigns.view, team_id)
+    |> assign_standings()
+  end
+
+  # The standing of everyone in the view's tables, which only team admins see.
+  defp assign_standings(socket) do
+    %{current_team: team} = socket.assigns
+    events = Map.get(socket.assigns, :events, [])
+    chores = Map.get(socket.assigns, :chores, []) ++ Enum.flat_map(events, & &1.chores)
+    members = chores |> Enum.map(& &1.member) |> Enum.uniq_by(& &1.id)
+    assign(socket, :standings, Standing.by_member(team, members, DateTime.utc_now()))
   end
 
   # The member's own chores, for the Yours tile's count and its view.
@@ -181,6 +193,7 @@ defmodule Web.ChoreCollectionLive do
             <.chore_table
               id="waiting-chores"
               chores={@chores}
+              standings={@standings}
               selected={@selected}
               today={@today}
               current_team={@current_team}
@@ -241,6 +254,7 @@ defmodule Web.ChoreCollectionLive do
             :if={row.chores != []}
             id={"chore-event-#{row.event.id}-chores"}
             chores={row.chores}
+            standings={@standings}
             today={@today}
             current_team={@current_team}
             category={false}
@@ -254,6 +268,7 @@ defmodule Web.ChoreCollectionLive do
           :if={@chores != []}
           id="declined-chores"
           chores={@chores}
+          standings={@standings}
           today={@today}
           current_team={@current_team}
         />
@@ -353,6 +368,7 @@ defmodule Web.ChoreCollectionLive do
 
   attr :id, :string, required: true
   attr :chores, :list, required: true
+  attr :standings, :map, required: true
   attr :selected, :any, default: nil, doc: "the ids checked, or nil for no boxes"
   attr :today, :any, required: true
   attr :current_team, :map, required: true
@@ -376,7 +392,11 @@ defmodule Web.ChoreCollectionLive do
         />
       </:col>
       <:col :let={chore} label="Member" class="stack-title">
-        {chore.member.name}
+        <.member_cell
+          member={chore.member}
+          team={@current_team}
+          standing={@standings[chore.member.id]}
+        />
         <.badge
           :if={Chore.own?(chore, @current_member)}
           id={"chore-yours-#{chore.id}"}

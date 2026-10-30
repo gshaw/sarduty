@@ -4,6 +4,7 @@ defmodule Web.MemberCollectionLive do
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.FilterBar
+  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
@@ -250,8 +251,13 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
-      <:col :let={record} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
-        <.a navigate={member_path(@current_team, record.member, @filter_options)}>{record.member.name}</.a>
+      <:col :let={record} label="Member" sorts={[{"↑", "name"}]}>
+        <.member_cell
+          member={record.member}
+          team={@current_team}
+          standing={standing(record, @team_admin?, @today, @now)}
+          path={member_path(@current_team, record.member, @filter_options)}
+        />
       </:col>
       <:col :let={record} label="Role" sorts={[{"↑", "role"}]}>
         {record.member.position}
@@ -347,15 +353,19 @@ defmodule Web.MemberCollectionLive do
     do: Member.any_not_active?(team, today, now, team_admin?)
 
   # The row has the away period's last day only, which is all the column shows.
-  defp standing_text(record, team_admin?, today, now) do
+  defp standing(record, team_admin?, today, now) do
     away =
       if record.away_until,
         do: [%MemberAwayPeriod{starts_on: today, ends_on: record.away_until}],
         else: []
 
-    case record.member
-         |> Standing.of(away, record.retiring?, today, now)
-         |> Standing.visible(team_admin?) do
+    record.member
+    |> Standing.of(away, record.retiring?, today, now)
+    |> Standing.visible(team_admin?)
+  end
+
+  defp standing_text(record, team_admin?, today, now) do
+    case standing(record, team_admin?, today, now) do
       {:away, period} -> "Away until #{Service.Format.day_in_year(period.ends_on, today)}"
       standing -> Standing.text(standing)
     end

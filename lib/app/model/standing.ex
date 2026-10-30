@@ -69,6 +69,11 @@ defmodule App.Model.Standing do
     end)
   end
 
+  @doc "by_member/3 as `team_admin?` sees each standing (visible/2): what a Member column shows."
+  def visible_by_member(%Team{} = team, members, now, team_admin?) do
+    team |> by_member(members, now) |> Map.new(fn {id, s} -> {id, visible(s, team_admin?)} end)
+  end
+
   @doc """
   The ids of the team's members in its Retiring group, as a query: none when the team
   has no Retiring group, or it was deleted. Retired members in it are left to of/5.

@@ -148,7 +148,9 @@ rules leave them in a group unless a rule on its page says "Standing is …" (ab
 
 **A new query that counts, contacts, invites, or lets members in skips retiring
 members.** Use `Member.counted_query/1`, or `Member.managers_query/2` for team admins.
-Don't read `group_members` for it yourself. A manager marked not a person doesn't log
+Don't read `group_members` for it yourself. Contacting skips retiring members only:
+reminders still go to a member marked not a person, on purpose (#740), and every member
+table shows them with the Not a person badge. A manager marked not a person doesn't log
 in as a team admin either: one bar for logins, Team admins, and team admin email
 (2026-10-28, #683).
 

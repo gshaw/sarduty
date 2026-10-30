@@ -1,6 +1,7 @@
 defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.MemberColumn
   import Web.Components.Phone, only: [phone: 1]
   import Web.Components.YetToArrive
 
@@ -9,6 +10,7 @@ defmodule Web.ActivityAttendanceLive do
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
   alias App.Model.NoShow
+  alias App.Model.Standing
   alias App.Operation.BuildAttendanceTimes
   alias App.Operation.BuildYetToArrive
   alias App.Operation.FollowUpNoShow
@@ -43,7 +45,8 @@ defmodule Web.ActivityAttendanceLive do
     {:noreply, socket}
   end
 
-  def handle_info(:attendance_scans_changed, socket), do: {:noreply, load_times(socket)}
+  def handle_info(:attendance_scans_changed, socket),
+    do: {:noreply, socket |> load_times() |> assign_standings()}
 
   # Reads D4H live, so the plan matches D4H now.
   def handle_event("review", _params, socket) do
@@ -55,8 +58,12 @@ defmodule Web.ActivityAttendanceLive do
         selected =
           for change <- review.changes, change.selected, into: MapSet.new(), do: change.key
 
-        {:noreply,
-         assign(socket, review: review, reviewed_at: now, selected: selected, failures: [])}
+        socket =
+          socket
+          |> assign(review: review, reviewed_at: now, selected: selected, failures: [])
+          |> assign_standings()
+
+        {:noreply, socket}
 
       {:error, error} ->
         {:noreply, put_flash(socket, :error, error_text(error, team))}
@@ -156,8 +163,19 @@ defmodule Web.ActivityAttendanceLive do
     "Followed up#{by}, #{Service.Format.month_day_time(no_show.followed_up_at, timezone)}"
   end
 
-  defp load_no_shows(socket),
-    do: assign(socket, no_shows: NoShow.get_all(socket.assigns.activity))
+  defp load_no_shows(socket) do
+    socket
+    |> assign(no_shows: NoShow.get_all(socket.assigns.activity))
+    |> assign_standings()
+  end
+
+  # The standing of everyone in the page's three member tables.
+  defp assign_standings(socket) do
+    %{times: times, no_shows: no_shows, review: review, current_team: team} = socket.assigns
+    changes = if review, do: review.changes, else: []
+    members = Enum.map(times ++ no_shows ++ changes, & &1.member)
+    assign(socket, :standings, Standing.by_member(team, members, DateTime.utc_now()))
+  end
 
   defp load_times(socket) do
     activity = socket.assigns.activity
@@ -189,7 +207,7 @@ defmodule Web.ActivityAttendanceLive do
     </.button>
 
     <h2 class="heading mt-8">Arrivals and departures</h2>
-    <.times_section times={@times} activity={@activity} />
+    <.times_section times={@times} standings={@standings} activity={@activity} />
 
     <div :if={@yet_to_arrive.signed_up > 0} id="yet-to-arrive-section">
       <h2 class="heading mt-4">Yet to arrive · {count_text(@yet_to_arrive)}</h2>
@@ -202,16 +220,23 @@ defmodule Web.ActivityAttendanceLive do
 
     <h2 class="heading mt-4">Send attendance</h2>
     <.failures_section failures={@failures} />
-    <.send_section review={@review} selected={@selected} times={@times} activity={@activity} />
+    <.send_section
+      review={@review}
+      selected={@selected}
+      times={@times}
+      standings={@standings}
+      activity={@activity}
+    />
 
     <div :if={@no_shows != []} id="no-shows">
       <h2 class="heading mt-4">No-shows</h2>
-      <.no_shows_section no_shows={@no_shows} activity={@activity} />
+      <.no_shows_section no_shows={@no_shows} standings={@standings} activity={@activity} />
     </div>
     """
   end
 
   attr :no_shows, :list, required: true
+  attr :standings, :map, required: true
   attr :activity, :any, required: true
 
   defp no_shows_section(assigns) do
@@ -227,7 +252,13 @@ defmodule Web.ActivityAttendanceLive do
       row_id={&"no-show-#{&1.id}"}
       class="table-striped table-stack md:w-fit"
     >
-      <:col :let={no_show} label="Name" class="stack-title">{no_show.member.name}</:col>
+      <:col :let={no_show} label="Member" class="stack-title">
+        <.member_cell
+          member={no_show.member}
+          team={@activity.team}
+          standing={@standings[no_show.member.id]}
+        />
+      </:col>
       <:col :let={no_show} label="Phone" class="whitespace-nowrap stack-optional">
         <.phone
           id={"no-show-#{no_show.id}"}
@@ -307,6 +338,7 @@ defmodule Web.ActivityAttendanceLive do
   attr :review, :any, required: true
   attr :selected, :any, required: true
   attr :times, :list, required: true
+  attr :standings, :map, required: true
   attr :activity, :any, required: true
 
   defp send_section(%{review: nil} = assigns) do
@@ -371,7 +403,12 @@ defmodule Web.ActivityAttendanceLive do
           />
         </:col>
         <:col :let={change} label="Member" class="stack-title">
-          <label for={"select-#{change.key}"}>{change.member.name}</label>
+          <.member_cell
+            member={change.member}
+            team={@activity.team}
+            standing={@standings[change.member.id]}
+            label_for={"select-#{change.key}"}
+          />
         </:col>
         <:col :let={change} label="Change">
           <span class={action_class(change.action)}>{action_text(change.action)}</span>
@@ -419,6 +456,7 @@ defmodule Web.ActivityAttendanceLive do
   defp status_text(status), do: status
 
   attr :times, :list, required: true
+  attr :standings, :map, required: true
   attr :activity, :any, required: true
 
   defp times_section(%{times: []} = assigns) do
@@ -440,7 +478,9 @@ defmodule Web.ActivityAttendanceLive do
       )} of the end.
     </p>
     <.table id="times" rows={@times} class="table-striped table-stack md:w-fit">
-      <:col :let={row} label="Name" class="stack-title">{row.member.name}</:col>
+      <:col :let={row} label="Member" class="stack-title">
+        <.member_cell member={row.member} team={@activity.team} standing={@standings[row.member.id]} />
+      </:col>
       <:col :let={row} label="Arrived" align="right">
         {Service.Format.time_short(row.arrived_at, @activity.team.timezone)}
       </:col>

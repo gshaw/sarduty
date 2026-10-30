@@ -2,6 +2,7 @@ defmodule Web.ActivitySendRemindersLive do
   use Web, :live_view_app_layout
 
   import Web.Components.EmailPreview
+  import Web.Components.MemberColumn
 
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
@@ -23,9 +24,10 @@ defmodule Web.ActivitySendRemindersLive do
     now = DateTime.utc_now()
 
     if Activity.open?(activity, now) do
+      members = ActivityMembers.load(activity)
+
       plan =
-        activity
-        |> ActivityMembers.load()
+        members
         |> SendReminders.plan(Reminder.for_activity(activity), Standing.retiring_ids(team))
 
       sender = SendReminders.sender(team, user, now)
@@ -35,6 +37,7 @@ defmodule Web.ActivitySendRemindersLive do
          page_title: "Send reminders",
          activity: activity,
          plan: plan,
+         standings: Standing.by_member(team, Enum.map(members, & &1.member), now),
          selected: MapSet.new(plan.send, & &1.member.id),
          sender: sender,
          message: "",
@@ -141,8 +144,13 @@ defmodule Web.ActivitySendRemindersLive do
               checked={MapSet.member?(@selected, email.member.id)}
             />
           </:col>
-          <:col :let={email} label="Name" class="whitespace-nowrap">
-            <label for={"email-select-#{email.member.id}"}>{email.member.name}</label>
+          <:col :let={email} label="Member">
+            <.member_cell
+              member={email.member}
+              team={@current_team}
+              standing={@standings[email.member.id]}
+              label_for={"email-select-#{email.member.id}"}
+            />
           </:col>
           <:col :let={email} label="Emailed before">
             {emailed_text(email.emailed, @current_team.timezone)}

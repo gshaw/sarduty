@@ -214,8 +214,11 @@ fi
   into many queries, give it one home and a test before changing it.
 - **A retiring member is no longer a member.** Someone in the team's Retiring group
   can't log in, isn't a team admin, and is left out of counts, invites, reminders, and
-  email. A new query that counts, contacts, or lets members in uses
-  `Member.counted_query/1`, and one for team admins `Member.managers_query/2`. See [Retiring](docs/members.md#retiring).
+  email. A new query that counts, contacts, or lets members in skips retiring members:
+  `Member.counted_query/1` for counts and logins, and `Member.managers_query/2` for team
+  admins. `counted_query` also leaves out not-a-person members, but contacting doesn't:
+  reminders still go to them, on purpose, and tables show them with their badge (#740).
+  See [Retiring](docs/members.md#retiring).
 - **D4H ids live in `d4h_*_id` columns.** Foreign keys are local ids. Route params are
   local ids; D4H calls take the `d4h_*_id`.
 - **Scope every team query, including joins and deletes.** Filter the member's or

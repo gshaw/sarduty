@@ -85,11 +85,44 @@
     A column that hides needs a reason in <code>Web.TableColumnsTest</code>.
   </p>
 
+  <h2>Standard columns</h2>
+  <p>
+    A column that recurs looks the same on every table. A record column is a record's name,
+    linked to its page, with the badge that says its state. A value column is one formatter,
+    one alignment, and one header.
+  </p>
+  <.table id="sample-member-column" rows={SampleData.member_column_rows()} class="table-striped">
+    <:col :let={row} label="Member">
+      <.member_cell member={row} team={sample_team()} standing={row.standing} path="#" />
+    </:col>
+    <:col :let={row} label="Role">{row.role}</:col>
+  </.table>
+  <ul>
+    <li>
+      <strong>Member</strong>: every table that lists the members of something, such as an
+      activity, a group, a qualification, chores, or tax letters. The name links to the member's
+      page and the standing badge follows it; an active member has none. A not-a-person member
+      stays in the list with its badge, so a team admin sees it and removes it.
+    </li>
+    <li>
+      The column says Member, even on Members. A list a page builds before it saves, or a
+      scanner, shows the name without a link. A row with a checkbox makes the name its label.
+    </li>
+    <li>
+      Activity, Expires, and the rest join this list when a second page needs one.
+    </li>
+  </ul>
+  <p>
+    <code>&lt;:col label="Member"&gt;&lt;.member_cell member=&#123;…&#125; team=&#123;@current_team&#125; standing=&#123;@standings[id]&#125; /&gt;&lt;/:col&gt;</code>, with the standings from <code>Standing.visible_by_member/4</code>.
+    <code>Web.MemberColumnTest</code>
+    fails on a table that links to a member by hand.
+  </p>
+
   <h2>Wrapping cells</h2>
   <p>Long text wraps; the other cells stay on its first line.</p>
   <.table id="sample-wrapping" rows={rule_preview()} class="table-striped">
-    <:col :let={{name, _why, _detail, _days}} label="Member" class="whitespace-nowrap">
-      <.a href="#">{name}</.a>
+    <:col :let={{name, _why, _detail, _days}} label="Member">
+      <.member_cell member={%{id: 0, name: name}} team={sample_team()} path="#" />
     </:col>
     <:col :let={{_name, why, detail, days}} label="Why">
       {why}
@@ -129,7 +162,9 @@
     groups={SampleData.member_groups()}
     row_id={&"sample-groups-#{&1.id}"}
   >
-    <:col :let={member} label="Member">{member.name}</:col>
+    <:col :let={member} label="Member">
+      <.member_cell member={member} team={sample_team()} path="#" />
+    </:col>
     <:col :let={member} label="Last attended" class="w-px whitespace-nowrap">
       {member.last_attended}
     </:col>
@@ -155,9 +190,15 @@
     <form>
       <.table id="sample-select-all" rows={rule_preview()} class="table-striped">
         <:col :let={{name, _why, _detail, _days}} label="" class="w-px" select_all>
-          <input type="checkbox" name={name} aria-label={name} checked />
+          <input type="checkbox" id={"sample-select-#{name}"} name={name} checked />
         </:col>
-        <:col :let={{name, _why, _detail, _days}} label="Member">{name}</:col>
+        <:col :let={{name, _why, _detail, _days}} label="Member">
+          <.member_cell
+            member={%{id: 0, name: name}}
+            team={sample_team()}
+            label_for={"sample-select-#{name}"}
+          />
+        </:col>
         <:col :let={{_name, why, _detail, _days}} label="Why">{why}</:col>
       </.table>
     </form>
