@@ -62,6 +62,8 @@ defmodule Web.EquipmentCollectionLive do
       assign(socket,
         show: show,
         default_show: default_show,
+        # The Unserviceable and Lost tiles name every row's status already.
+        item_status?: show not in ["unserviceable", "lost"],
         show_counts: show_counts(narrowed, now),
         q: q,
         browsing: EquipmentList.browsing?(show, q, place, category),
@@ -241,7 +243,7 @@ defmodule Web.EquipmentCollectionLive do
       class="table-striped"
     >
       <:col :let={row} label="Item">
-        <.item_cell item={row.item} team={@current_team} />
+        <.item_cell item={row.item} team={@current_team} status={@item_status?} />
       </:col>
       <:col :let={row} label="Where">{row.inside}</:col>
       <:col :let={row} label="Category">{row.item.kind}</:col>
@@ -263,6 +265,7 @@ defmodule Web.EquipmentCollectionLive do
         id={"equipment-#{slug(place)}"}
         rows={rows}
         team={@current_team}
+        status={@item_status?}
       />
       <.table
         :if={!@held_place?}
@@ -272,7 +275,7 @@ defmodule Web.EquipmentCollectionLive do
         class="table-striped"
       >
         <:col :let={row} label="Item">
-          <.item_cell item={row.item} team={@current_team} />
+          <.item_cell item={row.item} team={@current_team} status={@item_status?} />
         </:col>
         <:col :let={row} label="Where">
           {where(row)}

@@ -43,7 +43,7 @@ defmodule Web.Components.Columns do
       <span :if={!@label_for and !@link}>{@member.name}</span>
       <.a :if={!@label_for and @link} navigate={@path || ~p"/teams/#{@team}/members/#{@member.id}"}>{@member.name}</.a>
     </span>
-    <.standing_badge id={@id} standing={@standing || :active} />
+    <.standing_badge id={@id} standing={@standing || :active} follows />
     """
   end
 
@@ -59,7 +59,9 @@ defmodule Web.Components.Columns do
     <.a navigate={@path || ~p"/teams/#{@team}/activities/#{@activity.id}"}><.activity_title activity={
       @activity
     } /></.a>
-    <.badge :if={Activity.finished_draft?(@activity, @now || DateTime.utc_now())}>Draft</.badge>
+    <.badge :if={Activity.finished_draft?(@activity, @now || DateTime.utc_now())} follows>
+      Draft
+    </.badge>
     <.activity_kind_mark :if={@kind} activity={@activity} class="ml-2 whitespace-nowrap" />
     """
   end
@@ -68,12 +70,16 @@ defmodule Web.Components.Columns do
   attr :team, :any, default: nil, doc: "for the link"
   attr :link, :boolean, default: true, doc: "false for a member: item pages are for team admins"
 
+  attr :status, :boolean,
+    default: true,
+    doc: "false where the stat switch's tile already names the status, such as Lost"
+
   @doc "Item: the title, linked to the item, and its status unless it's operational."
   def item_cell(assigns) do
     ~H"""
     <.a :if={@link} navigate={~p"/teams/#{@team}/equipment/#{@item.id}"}>{@item.title}</.a>
     <span :if={!@link}>{@item.title}</span>
-    <.item_status item={@item} />
+    <.item_status :if={@status} item={@item} />
     """
   end
 
@@ -85,13 +91,13 @@ defmodule Web.Components.Columns do
   defp item_status(%{item: %{status: status}} = assigns)
        when status in ["unserviceable", "lost"] do
     ~H"""
-    <.badge kind={:danger}>{String.capitalize(@item.status)}</.badge>
+    <.badge kind={:danger} follows>{String.capitalize(@item.status)}</.badge>
     """
   end
 
   defp item_status(assigns) do
     ~H"""
-    <.badge>{String.capitalize(@item.status)}</.badge>
+    <.badge follows>{String.capitalize(@item.status)}</.badge>
     """
   end
 
@@ -190,7 +196,7 @@ defmodule Web.Components.Columns do
     ~H"""
     <span :if={@expiry == :expired}>Expired</span>
     {date(@value, @timezone)}
-    <.badge :if={is_integer(@expiry)} kind={:warning}>{Format.days(@expiry)}</.badge>
+    <.badge :if={is_integer(@expiry)} kind={:warning} follows>{Format.days(@expiry)}</.badge>
     """
   end
 

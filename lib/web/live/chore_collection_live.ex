@@ -396,6 +396,7 @@ defmodule Web.ChoreCollectionLive do
           :if={Chore.own?(chore, @current_member)}
           id={"chore-yours-#{chore.id}"}
           kind={:primary}
+          follows
         >
           Yours
         </.badge>

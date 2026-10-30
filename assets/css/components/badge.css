@@ -15,6 +15,10 @@
     background: color-mix(in srgb, var(--c) 16%, var(--bg));
   }
 
+  /* After a name on the same line: with the space before it, about 8px (--sp-2), so the
+     badge doesn't touch the link. */
+  .badge-follows { margin-left: var(--sp-1); }
+
   .badge-primary { --c: var(--link); }
   .badge-success { --c: var(--success-text); }
   .badge-warning { background: var(--warning); color: var(--on-warning); }

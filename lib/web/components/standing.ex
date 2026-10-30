@@ -7,6 +7,7 @@ defmodule Web.Components.Standing do
 
   attr :id, :string, default: nil
   attr :standing, :any, required: true, doc: "from App.Model.Standing.today/3"
+  attr :follows, :boolean, default: false, doc: "after the name on the same line"
 
   @doc """
   The standing as a badge beside a member's name, or nothing when they are active. Away
@@ -19,7 +20,7 @@ defmodule Web.Components.Standing do
     assigns = assign(assigns, kind: badge_kind(assigns.standing))
 
     ~H"""
-    <.badge id={@id} kind={@kind}>{badge_text(@standing)}</.badge>
+    <.badge id={@id} kind={@kind} follows={@follows}>{badge_text(@standing)}</.badge>
     """
   end
 

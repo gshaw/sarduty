@@ -254,7 +254,9 @@ defmodule Web.MemberCollectionLive do
           id={"standing-#{record.member.id}"}
           member={record.member}
           team={@current_team}
-          standing={standing(record, @team_admin?, @today, @now)}
+          standing={
+            record |> standing(@team_admin?, @today, @now) |> unless_tile(@filter_options.standing)
+          }
           path={member_path(@current_team, record.member, @filter_options)}
         />
       </:col>
@@ -337,6 +339,11 @@ defmodule Web.MemberCollectionLive do
   end
 
   # The row has the away period's last day only, which is all the badge shows.
+  # A tile that names one standing, such as Retired, says it for every row: no badge.
+  defp unless_tile(standing, tile) do
+    if standing |> Standing.kind() |> Atom.to_string() == tile, do: :active, else: standing
+  end
+
   defp standing(record, team_admin?, today, now) do
     away =
       if record.away_until,

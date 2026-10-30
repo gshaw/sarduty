@@ -48,6 +48,38 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#item-#{ctx.phone.id}")
   end
 
+  test "Unserviceable and Lost are tiles of their own; In service and Expiring leave them out",
+       ctx do
+    soon = DateTime.add(DateTime.utc_now(), 10, :day)
+    broken = equipment_item_fixture(ctx.team, %{title: "Broken vest", status: "unserviceable"})
+
+    gone =
+      equipment_item_fixture(ctx.team, %{title: "Gone rope", status: "lost", expires_at: soon})
+
+    due = equipment_item_fixture(ctx.team, %{title: "Due harness", expires_at: soon})
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=all")
+
+    # The setup's three, and the due harness.
+    assert has_element?(lv, "#equipment-view-in-service", "4")
+    assert has_element?(lv, "#equipment-view-unserviceable", "1")
+    assert has_element?(lv, "#equipment-view-lost", "1")
+    assert has_element?(lv, "#equipment-view-expiring", "1")
+    refute has_element?(lv, "#equipment-view-problems")
+
+    # Mixed statuses: each row's badge says which.
+    assert has_element?(lv, "#item-#{broken.id} .badge", "Unserviceable")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=lost")
+    assert has_element?(lv, "#item-#{gone.id}", "Gone rope")
+    refute has_element?(lv, "#item-#{gone.id} .badge", "Lost")
+    refute has_element?(lv, "#item-#{broken.id}")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=expiring")
+    assert has_element?(lv, "#item-#{due.id}")
+    refute has_element?(lv, "#item-#{gone.id}")
+  end
+
   test "the stat switch counts each part of the place and keeps the search", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?place=Yard&q=radio")
 

@@ -194,12 +194,19 @@ defmodule Web.Components.Core do
       :outline
     ]
 
+  attr :follows, :boolean,
+    default: false,
+    doc: "after a name or value on the same line, such as in a table cell: 8px before it"
+
   attr :rest, :global
   slot :inner_block, required: true
 
   def badge(assigns) do
     ~H"""
-    <span class={["badge", @kind != :default && "badge-#{@kind}"]} {@rest}>
+    <span
+      class={["badge", @kind != :default && "badge-#{@kind}", @follows && "badge-follows"]}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </span>
     """

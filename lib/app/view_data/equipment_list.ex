@@ -14,6 +14,7 @@ defmodule App.ViewData.EquipmentList do
   """
 
   alias App.Model.EquipmentItem
+  alias App.Operation.BuildGroupRulePreview
 
   @with_members "With members"
   @no_location "No location"
@@ -27,8 +28,9 @@ defmodule App.ViewData.EquipmentList do
     do: [
       {"All", "all"},
       {"In service", "in-service"},
-      {"Expiring in 60 days", "expiring"},
-      {"Unserviceable or lost", "problems"},
+      {"Expiring in #{Service.Format.days(BuildGroupRulePreview.expiring_days())}", "expiring"},
+      {"Unserviceable", "unserviceable"},
+      {"Lost", "lost"},
       {"Retired", "retired"}
     ]
 
@@ -75,20 +77,24 @@ defmodule App.ViewData.EquipmentList do
     Enum.filter(rows, &(shown?(&1, show, now) and matches?(&1.item, q)))
   end
 
-  defp shown?(%{item: item}, "in-service", _now), do: item.status != "retired"
-  defp shown?(%{item: item}, "retired", _now), do: item.status == "retired"
-  defp shown?(%{item: item}, "problems", _now), do: item.status in ["unserviceable", "lost"]
+  # In service is what D4H calls operational, as on the item's form.
+  defp shown?(%{item: item}, "in-service", _now), do: item.status == "operational"
+
+  defp shown?(%{item: item}, status, _now) when status in ["unserviceable", "lost", "retired"],
+    do: item.status == status
 
   defp shown?(%{item: item}, "expiring", now), do: expiring?(item, now)
   defp shown?(_row, _all, _now), do: true
 
-  @doc "Whether the item has expired or expires within 60 days of `now`."
-  def expiring?(%EquipmentItem{expires_at: nil}, _now), do: false
-
-  def expiring?(%EquipmentItem{status: "retired"}, _now), do: false
+  @doc """
+  Whether the item has expired or expires soon (BuildGroupRulePreview.expiry/2), leaving
+  out retired and lost items: nobody renews what's gone.
+  """
+  def expiring?(%EquipmentItem{status: status}, _now) when status in ["retired", "lost"],
+    do: false
 
   def expiring?(%EquipmentItem{expires_at: expires_at}, now),
-    do: Service.Convert.days_until(expires_at, now) <= 60
+    do: BuildGroupRulePreview.expiry(expires_at, now) != nil
 
   defp matches?(_item, q) when q in [nil, ""], do: true
 

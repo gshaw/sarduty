@@ -323,8 +323,16 @@ defmodule Web.MemberCollectionLiveTest do
 
     assert has_element?(lv, "#standing-#{left.id}", "Retired")
     assert has_element?(lv, "#standing-#{gone_bot.id}", "Retired")
+
     refute has_element?(lv, "#standing-#{current.id}")
     assert has_element?(lv, "#standing-#{leaving.id}", "Not a person")
+
+    # The Retired tile says it for every row, so no badge repeats it.
+    {:ok, lv, _html} =
+      live(conn |> log_in_user(user), ~p"/teams/#{team}/members?when=all&standing=retired")
+
+    assert has_element?(lv, "#last-attended-#{left.id}")
+    refute has_element?(lv, "#standing-#{left.id}")
   end
 
   test "the Standing switch counts each standing and has no All (#469)", %{conn: conn} do

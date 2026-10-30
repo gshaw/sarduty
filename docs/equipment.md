@@ -57,6 +57,12 @@ It opens on two short tables: the places items are in and the categories (D4H's
 place, with the chain of items holding each one. A search, or a filter other than "In
 service", lists items from every place.
 
+The stat switch (2026-10-29): All, In service (D4H's operational, as the item form names
+it), Expiring, Unserviceable, Lost, and Retired. Expiring leaves out lost and retired
+items, since nobody renews what's gone, and reads `BuildGroupRulePreview.expiry/2`, the
+app's one expiry rule. The Unserviceable and Lost tiles leave the status badge off their
+rows.
+
 ## Items members hold
 
 D4H can put an item's location at a member, and the copy keeps it as

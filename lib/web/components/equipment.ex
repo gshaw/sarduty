@@ -13,6 +13,7 @@ defmodule Web.Components.Equipment do
   attr :rows, :list, required: true, doc: "`%{item, inside}`, kits then their contents"
   attr :team, :map, required: true
   attr :links, :boolean, default: true, doc: "false for a member: item pages are for team admins"
+  attr :status, :boolean, default: true, doc: "false where a tile already names the status"
 
   @doc """
   The items a member holds. Where says what an item is inside, and goes when nothing is
@@ -24,7 +25,7 @@ defmodule Web.Components.Equipment do
     ~H"""
     <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.item.id}"} class="table-striped">
       <:col :let={row} label="Item">
-        <.item_cell item={row.item} team={@team} link={@links} />
+        <.item_cell item={row.item} team={@team} link={@links} status={@status} />
       </:col>
       <:col :let={row} :if={@where?} label="Where">{row.inside}</:col>
       <:col :let={row} label="Category">{row.item.kind}</:col>
