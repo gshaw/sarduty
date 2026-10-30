@@ -405,6 +405,10 @@ defmodule Web.MemberCollectionLiveTest do
         assert has_element?(lv, "#last-attended-#{member.id}") == member in shown
       end
     end
+
+    # The Away tile keeps the badge: each row's last day differs.
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=away")
+    assert has_element?(lv, "#standing-#{away.id}", "Away until #{until}")
   end
 
   test "the Standing filter takes several standings from the attendance check (#366)",

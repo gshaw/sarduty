@@ -50,8 +50,8 @@ defmodule Web.EquipmentCollectionLive do
     |> assign(
       show: show,
       default_show: default_show,
-      # The Unserviceable and Lost tiles name every row's status already.
-      item_status?: show not in ["unserviceable", "lost"],
+      # Each tile but All names its rows' status already.
+      item_status?: show == "all",
       q: fields.q,
       browsing: EquipmentList.browsing?(show, fields),
       held_place?: EquipmentList.held_place?(fields.place),

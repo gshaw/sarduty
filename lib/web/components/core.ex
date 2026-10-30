@@ -199,10 +199,7 @@ defmodule Web.Components.Core do
 
   def badge(assigns) do
     ~H"""
-    <span
-      class={["badge", @kind != :default && "badge-#{@kind}"]}
-      {@rest}
-    >
+    <span class={["badge", @kind != :default && "badge-#{@kind}"]} {@rest}>
       {render_slot(@inner_block)}
     </span>
     """

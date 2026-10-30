@@ -57,6 +57,7 @@ defmodule Web.EquipmentLiveTest do
       equipment_item_fixture(ctx.team, %{title: "Gone rope", status: "lost", expires_at: soon})
 
     due = equipment_item_fixture(ctx.team, %{title: "Due harness", expires_at: soon})
+    old = equipment_item_fixture(ctx.team, %{title: "Old helmet", status: "retired"})
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=all")
 
@@ -74,6 +75,10 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#item-#{gone.id}", "Gone rope")
     refute has_element?(lv, "#item-#{gone.id} .badge", "Lost")
     refute has_element?(lv, "#item-#{broken.id}")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=retired")
+    assert has_element?(lv, "#item-#{old.id}", "Old helmet")
+    refute has_element?(lv, "#item-#{old.id} .badge", "Retired")
 
     # In service, the usual tile, with the Expires filter: what to renew.
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?expires=soon")

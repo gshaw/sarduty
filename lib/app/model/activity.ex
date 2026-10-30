@@ -230,10 +230,8 @@ defmodule App.Model.Activity do
   Whether the activity has finished by `now` and D4H still holds it as a draft: someone
   has to publish it. A coming activity is a draft until then, which needs no mark. Pure.
   """
-  def finished_draft?(%{is_published: published?} = activity, %DateTime{} = now) do
-    finished_at = activity.finished_at || activity.started_at
-    published? == false and finished_at != nil and not DateTime.after?(finished_at, now)
-  end
+  def finished_draft?(%{is_published: published?, finished_at: finished_at}, %DateTime{} = now),
+    do: published? == false and not DateTime.after?(finished_at, now)
 
   @doc "Whether the activity has started by `now`. Pure."
   def started?(%{started_at: started_at}, %DateTime{} = now),
