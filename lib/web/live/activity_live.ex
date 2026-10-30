@@ -738,7 +738,7 @@ defmodule Web.ActivityLive do
           align="right"
           class="w-px whitespace-nowrap"
         >
-          <.hours_cell minutes={row.status == "attending" && row.duration_in_minutes} />
+          <.hours_cell minutes={if row.status == "attending", do: row.duration_in_minutes} />
         </:col>
       </.table>
     </section>

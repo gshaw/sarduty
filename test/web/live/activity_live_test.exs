@@ -572,6 +572,10 @@ defmodule Web.ActivityLiveTest do
                Service.Format.month_day_time(next_day, team.timezone)
              )
 
+      # An absent member's Hours cell is blank, never "false".
+      assert has_element?(lv, "#activity-members th", "Hours")
+      refute has_element?(lv, "#member-row-#{away.id} td", "false")
+
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=absent")
       refute has_element?(lv, "#activity-members th", "Start")
       assert has_element?(lv, "#member-row-#{away.id}")
