@@ -1,15 +1,18 @@
 defmodule Web.TemplateLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.CustomFields, only: [custom_fields: 1]
+  import Web.Components.CustomFields, only: [custom_fields_table: 1]
 
+  alias App.Model.Activity
   alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Template
   alias App.Operation.SaveTemplate
 
-  # A template's page (#307): what it adds to an activity. Its Actions change each part on
-  # a page of its own, and Delete opens the confirm dialog here, with no page (#714).
+  # A template's page (#307): what it adds to an activity, all on one page, laid out like
+  # the activity: tags under the title, the hours tag as Tax credit hours, and Change tags
+  # in Actions. Items, groups, and fields each have their Change link at their foot.
+  # Delete opens the confirm dialog here, with no page (#714).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     template = Template.find!(team, id)
@@ -23,6 +26,9 @@ defmodule Web.TemplateLive do
       assign(socket,
         page_title: template.title,
         template: template,
+        # The tags as an activity holds them, so the hours tag reads as Tax credit hours.
+        tagged: %{tags: template |> Template.tags() |> Enum.map(& &1.title)},
+        hours_tags: Activity.hours_tags(team),
         fields?: fields != [],
         items: Enum.sort_by(template.template_items, &String.downcase(&1.equipment_item.title)),
         field_rows:
@@ -45,6 +51,10 @@ defmodule Web.TemplateLive do
         <dl id="template-details">
           <dt>Kind</dt>
           <dd>{Template.kind_label(@template) || "Any kind"}</dd>
+          <div :if={hours_type = activity_hours_type(@tagged, @hours_tags)}>
+            <dt>Tax credit hours</dt>
+            <dd>{hours_type}</dd>
+          </div>
         </dl>
         <dl>
           <dt>Actions</dt>
@@ -58,27 +68,9 @@ defmodule Web.TemplateLive do
               </li>
               <li>
                 <.a
-                  id="template-edit-items"
-                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/items/edit"}
-                >Change items</.a>
-              </li>
-              <li>
-                <.a
                   id="template-edit-tags"
                   navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/tags/edit"}
                 >Change tags</.a>
-              </li>
-              <li>
-                <.a
-                  id="template-edit-groups"
-                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/groups/edit"}
-                >Change groups</.a>
-              </li>
-              <li :if={@fields?}>
-                <.a
-                  id="template-edit-fields"
-                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/fields/edit"}
-                >Change fields</.a>
               </li>
               <li>
                 <.a
@@ -94,6 +86,13 @@ defmodule Web.TemplateLive do
         </dl>
       </aside>
       <main class="content-2/3">
+        <.activity_tags
+          id="template-tags"
+          activity={@tagged}
+          hours_tags={@hours_tags}
+          class="mb-4"
+        />
+
         <section id="template-items">
           <h2 class="heading">Items · {length(@items)}</h2>
           <.table
@@ -117,33 +116,59 @@ defmodule Web.TemplateLive do
             </:col>
           </.table>
           <p :if={@items == []} class="hint">No items.</p>
-        </section>
-
-        <section id="template-tags" class="mt-8">
-          <h2 class="heading">Tags · {length(@template.template_tags)}</h2>
-          <ul :if={@template.template_tags != []} class="flex flex-wrap gap-2">
-            <li :for={tag <- Template.tags(@template)}>
-              <.badge kind={:outline}>{tag.title}</.badge>
-            </li>
-          </ul>
-          <p :if={@template.template_tags == []} class="hint">No tags.</p>
+          <p class="action">
+            <.a
+              id="template-edit-items"
+              navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/items/edit"}
+            >{if @items == [], do: "Add items", else: "Change items"}</.a>
+          </p>
         </section>
 
         <section id="template-groups" class="mt-8">
           <h2 class="heading">Groups · {length(@template.template_groups)}</h2>
-          <ul :if={@template.template_groups != []}>
-            <li :for={group <- Template.groups(@template)}>
-              <.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a>
-            </li>
-          </ul>
+          <.table
+            :if={@template.template_groups != []}
+            id="template-groups-table"
+            rows={Template.groups(@template)}
+            row_id={&"group-#{&1.id}"}
+            class="table-striped"
+          >
+            <:col :let={group} label="Group">
+              <.group_cell group={group} team={@current_team} />
+            </:col>
+          </.table>
           <p :if={@template.template_groups == []} class="hint">No groups.</p>
+          <p class="action">
+            <.a
+              id="template-edit-groups"
+              navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/groups/edit"}
+            >{if @template.template_groups == [], do: "Add groups", else: "Change groups"}</.a>
+          </p>
         </section>
 
-        <.custom_fields
-          id="template-fields"
-          title={"Fields · #{length(@field_rows)}"}
-          rows={@field_rows}
-        />
+        <section class="mt-8">
+          <h2 class="heading">Fields · {length(@field_rows)}</h2>
+          <%= cond do %>
+            <% @fields? -> %>
+              <.custom_fields_table id="template-fields" rows={@field_rows} />
+              <p class="action">
+                <.a
+                  id="template-edit-fields"
+                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/fields/edit"}
+                >{if @field_rows == [], do: "Add fields", else: "Change fields"}</.a>
+              </p>
+            <% @template.activity_kind -> %>
+              <p id="template-no-fields" class="hint">
+                {Template.kind_label(@template)} activities have no custom fields.
+              </p>
+            <% true -> %>
+              <p id="template-no-fields" class="hint">
+                Fields go on a template for one kind of activity.
+                <.a navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/edit"}>Change template</.a>
+                to pick one.
+              </p>
+          <% end %>
+        </section>
       </main>
     </div>
     """
