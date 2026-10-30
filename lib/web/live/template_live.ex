@@ -9,10 +9,10 @@ defmodule Web.TemplateLive do
   alias App.Model.Template
   alias App.Operation.SaveTemplate
 
-  # A template's page (#307): what it adds to an activity, all on one page. Each part has
-  # its own Change link at its foot; Actions keep the template itself, and Delete opens
-  # the confirm dialog here, with no page (#714). Its hours tag shows as Tax credit hours,
-  # as on the activity.
+  # A template's page (#307): what it adds to an activity, all on one page, laid out like
+  # the activity: tags under the title, the hours tag as Tax credit hours, and Change tags
+  # in Actions. Items, groups, and fields each have their Change link at their foot.
+  # Delete opens the confirm dialog here, with no page (#714).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     template = Template.find!(team, id)
@@ -68,6 +68,12 @@ defmodule Web.TemplateLive do
               </li>
               <li>
                 <.a
+                  id="template-edit-tags"
+                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/tags/edit"}
+                >Change tags</.a>
+              </li>
+              <li>
+                <.a
                   id="template-delete"
                   href="#"
                   phx-click="delete"
@@ -80,15 +86,12 @@ defmodule Web.TemplateLive do
         </dl>
       </aside>
       <main class="content-2/3">
-        <section id="template-tags" class="mb-8">
-          <.activity_tags activity={@tagged} hours_tags={@hours_tags} />
-          <p class="action">
-            <.a
-              id="template-edit-tags"
-              navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/tags/edit"}
-            >{if @template.template_tags == [], do: "Add tags", else: "Change tags"}</.a>
-          </p>
-        </section>
+        <.activity_tags
+          id="template-tags"
+          activity={@tagged}
+          hours_tags={@hours_tags}
+          class="mb-4"
+        />
 
         <section id="template-items">
           <h2 class="heading">Items · {length(@items)}</h2>

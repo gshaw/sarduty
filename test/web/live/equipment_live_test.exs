@@ -583,7 +583,7 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#template-details", "Primary")
     assert has_element?(lv, "#template-tags", "Flat Water")
     refute has_element?(lv, "#template-tags", "Primary Hours")
-    assert has_element?(lv, "#template-tags #template-edit-tags", "Change tags")
+    assert has_element?(lv, "#template-actions #template-edit-tags", "Change tags")
   end
 
   test "a template's page shows what it adds, and deletes it from its Actions", ctx do
