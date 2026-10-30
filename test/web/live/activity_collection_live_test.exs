@@ -73,6 +73,32 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection td", "Oct 1, 2026")
   end
 
+  test "Draft follows the title once an unpublished activity has finished, not before",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    now = DateTime.utc_now()
+
+    done =
+      activity_fixture(team, %{
+        is_published: false,
+        started_at: DateTime.add(now, -3, :hour),
+        finished_at: DateTime.add(now, -1, :hour)
+      })
+
+    coming =
+      activity_fixture(team, %{
+        is_published: false,
+        started_at: DateTime.add(now, 2, :day),
+        finished_at: DateTime.add(now, 3, :day)
+      })
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=all")
+
+    assert has_element?(lv, "#activity-#{done.id} td .badge", "Draft")
+    refute has_element?(lv, "#activity-#{coming.id} td .badge", "Draft")
+    refute has_element?(lv, "#activity_collection .marker-more", "Draft")
+  end
+
   test "a team without chores has no Chores tile", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

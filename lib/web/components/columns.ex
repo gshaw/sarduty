@@ -38,12 +38,14 @@ defmodule Web.Components.Columns do
   @doc "Member: the name, linked to the member's page, and the standing badge."
   def member_cell(assigns) do
     ~H"""
-    <span class="whitespace-nowrap">
-      <label :if={@label_for} for={@label_for}>{@member.name}</label>
-      <span :if={!@label_for and !@link}>{@member.name}</span>
-      <.a :if={!@label_for and @link} navigate={@path || ~p"/teams/#{@team}/members/#{@member.id}"}>{@member.name}</.a>
+    <span class="with-badge">
+      <span class="whitespace-nowrap">
+        <label :if={@label_for} for={@label_for}>{@member.name}</label>
+        <span :if={!@label_for and !@link}>{@member.name}</span>
+        <.a :if={!@label_for and @link} navigate={@path || ~p"/teams/#{@team}/members/#{@member.id}"}>{@member.name}</.a>
+      </span>
+      <.standing_badge id={@id} standing={@standing || :active} />
     </span>
-    <.standing_badge id={@id} standing={@standing || :active} />
     """
   end
 
@@ -51,14 +53,18 @@ defmodule Web.Components.Columns do
   attr :team, :any, required: true
   attr :path, :string, default: nil, doc: "the link, such as a tab; the activity page by default"
   attr :kind, :boolean, default: true, doc: "false when the table has a Kind column"
+  attr :now, :any, default: nil, doc: "the time now, when the page has one"
 
-  @doc ~s(Activity: "ref: title", linked to the activity, and its kind.)
+  @doc ~s(Activity: "ref: title", linked to the activity, Draft once it has finished unpublished, and its kind.)
   def activity_cell(assigns) do
     ~H"""
-    <.a navigate={@path || ~p"/teams/#{@team}/activities/#{@activity.id}"}><.activity_title activity={
-      @activity
-    } /></.a>
-    <.activity_kind_mark :if={@kind} activity={@activity} class="ml-2 whitespace-nowrap" />
+    <span class="with-badge">
+      <.a navigate={@path || ~p"/teams/#{@team}/activities/#{@activity.id}"}><.activity_title activity={
+        @activity
+      } /></.a>
+      <.badge :if={Activity.finished_draft?(@activity, @now || DateTime.utc_now())}>Draft</.badge>
+      <.activity_kind_mark :if={@kind} activity={@activity} />
+    </span>
     """
   end
 
@@ -66,12 +72,18 @@ defmodule Web.Components.Columns do
   attr :team, :any, default: nil, doc: "for the link"
   attr :link, :boolean, default: true, doc: "false for a member: item pages are for team admins"
 
+  attr :status, :boolean,
+    default: true,
+    doc: "false where the stat switch's tile already names the status, such as Lost"
+
   @doc "Item: the title, linked to the item, and its status unless it's operational."
   def item_cell(assigns) do
     ~H"""
-    <.a :if={@link} navigate={~p"/teams/#{@team}/equipment/#{@item.id}"}>{@item.title}</.a>
-    <span :if={!@link}>{@item.title}</span>
-    <.item_status item={@item} />
+    <span class="with-badge">
+      <.a :if={@link} navigate={~p"/teams/#{@team}/equipment/#{@item.id}"}>{@item.title}</.a>
+      <span :if={!@link}>{@item.title}</span>
+      <.item_status :if={@status} item={@item} />
+    </span>
     """
   end
 
@@ -186,9 +198,10 @@ defmodule Web.Components.Columns do
     assigns = assign(assigns, :expiry, BuildGroupRulePreview.expiry(assigns.value, now))
 
     ~H"""
-    <span :if={@expiry == :expired}>Expired</span>
-    {date(@value, @timezone)}
-    <.badge :if={is_integer(@expiry)} kind={:warning}>{Format.days(@expiry)}</.badge>
+    <span class="with-badge">
+      <span>{if @expiry == :expired, do: "Expired "}{date(@value, @timezone)}</span>
+      <.badge :if={is_integer(@expiry)} kind={:warning}>{Format.days(@expiry)}</.badge>
+    </span>
     """
   end
 

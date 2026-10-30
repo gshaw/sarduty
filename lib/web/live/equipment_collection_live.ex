@@ -43,51 +43,75 @@ defmodule Web.EquipmentCollectionLive do
   end
 
   def handle_params(params, _uri, socket) do
-    q = String.trim(params["q"] || "")
-    place = params["place"] || ""
-    category = params["category"] || ""
-    now = DateTime.utc_now()
+    fields = read_fields(params)
+    {show, default_show} = read_show(params, fields.place)
 
-    # A held place opens on All: retired items are still with the member (#490).
+    socket
+    |> assign(
+      show: show,
+      default_show: default_show,
+      # Each tile but All names its rows' status already.
+      item_status?: show == "all",
+      q: fields.q,
+      browsing: EquipmentList.browsing?(show, fields),
+      held_place?: EquipmentList.held_place?(fields.place),
+      by_holder?: EquipmentList.by_holder?(fields.place),
+      form: filter_form(fields, show, default_show)
+    )
+    |> assign_rows(fields, show)
+    |> then(&{:noreply, &1})
+  end
+
+  defp assign_rows(socket, %{place: place} = fields, show) do
+    now = DateTime.utc_now()
+    held = held_in(socket.assigns.current_team, place, now)
+
+    narrowed =
+      socket.assigns.rows
+      |> EquipmentList.narrow(place, fields.category, held)
+      |> EquipmentList.expiring(fields.expires, now)
+
+    rows = EquipmentList.filter(narrowed, show, fields.q, now)
+
+    assign(socket,
+      show_counts: show_counts(narrowed, now),
+      count: length(rows),
+      groups: groups(rows, place, held)
+    )
+  end
+
+  defp read_fields(params) do
+    %{
+      q: String.trim(params["q"] || ""),
+      place: params["place"] || "",
+      category: params["category"] || "",
+      expires: if(params["expires"] == "soon", do: "soon", else: "")
+    }
+  end
+
+  # A held place opens on All: retired items are still with the member (#490).
+  defp read_show(params, place) do
     default_show = if EquipmentList.held_place?(place), do: "all", else: "in-service"
 
     show =
       if params["show"] in EquipmentList.show_values(), do: params["show"], else: default_show
 
-    held = held_in(socket.assigns.current_team, place, now)
-    narrowed = EquipmentList.narrow(socket.assigns.rows, place, category, held)
-    rows = EquipmentList.filter(narrowed, show, q, now)
+    {show, default_show}
+  end
 
-    socket =
-      assign(socket,
-        show: show,
-        default_show: default_show,
-        show_counts: show_counts(narrowed, now),
-        q: q,
-        browsing: EquipmentList.browsing?(show, q, place, category),
-        count: length(rows),
-        held_place?: EquipmentList.held_place?(place),
-        by_holder?: EquipmentList.by_holder?(place),
-        groups: groups(rows, place, held),
-        form:
-          to_form(
-            # The default stays out of the URL, so a new place opens on its own default.
-            %{
-              "q" => q,
-              "place" => place,
-              "category" => category,
-              "show" => if(show == default_show, do: "", else: show)
-            },
-            as: "form"
-          )
-      )
-
-    {:noreply, socket}
+  # The default show stays out of the URL, so a new place opens on its own default.
+  defp filter_form(fields, show, default_show) do
+    fields
+    |> Map.put(:show, if(show == default_show, do: "", else: show))
+    |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
+    |> to_form(as: "form")
   end
 
   def handle_event("change", %{"form" => form}, socket) do
     params =
-      form |> Map.take(["q", "place", "category", "show"]) |> Map.reject(&(elem(&1, 1) == ""))
+      form
+      |> Map.take(["q", "place", "category", "expires", "show"])
+      |> Map.reject(&(elem(&1, 1) == ""))
 
     {:noreply,
      push_patch(socket, to: filter_path(socket.assigns.current_team, params), replace: true)}
@@ -203,6 +227,12 @@ defmodule Web.EquipmentCollectionLive do
         default=""
       />
       <:filter field={@form[:category]} label="Category" options={@category_options} default="" />
+      <:filter
+        field={@form[:expires]}
+        label="Expires"
+        options={EquipmentList.expires_options()}
+        default=""
+      />
     </.filter_bar>
 
     <div :if={@rows != []} class="hidden pointer-coarse:block measure mb-6">
@@ -241,7 +271,7 @@ defmodule Web.EquipmentCollectionLive do
       class="table-striped"
     >
       <:col :let={row} label="Item">
-        <.item_cell item={row.item} team={@current_team} />
+        <.item_cell item={row.item} team={@current_team} status={@item_status?} />
       </:col>
       <:col :let={row} label="Where">{row.inside}</:col>
       <:col :let={row} label="Category">{row.item.kind}</:col>
@@ -263,6 +293,7 @@ defmodule Web.EquipmentCollectionLive do
         id={"equipment-#{slug(place)}"}
         rows={rows}
         team={@current_team}
+        status={@item_status?}
       />
       <.table
         :if={!@held_place?}
@@ -272,7 +303,7 @@ defmodule Web.EquipmentCollectionLive do
         class="table-striped"
       >
         <:col :let={row} label="Item">
-          <.item_cell item={row.item} team={@current_team} />
+          <.item_cell item={row.item} team={@current_team} status={@item_status?} />
         </:col>
         <:col :let={row} label="Where">
           {where(row)}

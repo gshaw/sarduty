@@ -103,6 +103,7 @@ defmodule Web.Components.ActivityFilterTable do
     <.table
       id={@id}
       rows={@rows}
+      row_id={&"activity-#{&1.id}"}
       class="table-striped"
       sort={@sort}
       path_fn={@path_fn}

@@ -15,6 +15,10 @@
     background: color-mix(in srgb, var(--c) 16%, var(--bg));
   }
 
+  /* A name or value and the badges after it: 8px (--sp-2) between them on a line, and
+     none at the start of a line when the badge wraps under the name. */
+  .with-badge { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-2); }
+
   .badge-primary { --c: var(--link); }
   .badge-success { --c: var(--success-text); }
   .badge-warning { background: var(--warning); color: var(--on-warning); }

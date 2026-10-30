@@ -387,18 +387,20 @@ defmodule Web.ChoreCollectionLive do
         />
       </:col>
       <:col :let={chore} label="Member" class="stack-title">
-        <.member_cell
-          member={chore.member}
-          team={@current_team}
-          standing={@standings[chore.member.id]}
-        />
-        <.badge
-          :if={Chore.own?(chore, @current_member)}
-          id={"chore-yours-#{chore.id}"}
-          kind={:primary}
-        >
-          Yours
-        </.badge>
+        <span class="with-badge">
+          <.member_cell
+            member={chore.member}
+            team={@current_team}
+            standing={@standings[chore.member.id]}
+          />
+          <.badge
+            :if={Chore.own?(chore, @current_member)}
+            id={"chore-yours-#{chore.id}"}
+            kind={:primary}
+          >
+            Yours
+          </.badge>
+        </span>
       </:col>
       <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
         <.date_cell value={chore.date} timezone={@current_team.timezone} />

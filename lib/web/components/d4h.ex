@@ -91,15 +91,12 @@ defmodule Web.Components.D4H do
 
   attr :activity, :map, required: true
 
-  # The kind in a table column: the marker, then Draft and the tracking number, lined up
-  # under the word rather than the square. The tracking number stays on one line, since
-  # the browser breaks it at its hyphen ("26-" over "07907").
+  # The kind in a table column: the marker, then the tracking number, lined up under the
+  # word rather than the square. The tracking number stays on one line, since the browser
+  # breaks it at its hyphen ("26-" over "07907"). Draft is the Activity cell's.
   def activity_kind(assigns) do
     ~H"""
     <.activity_kind_mark activity={@activity} />
-    <div :if={!@activity.is_published} class="marker-more">
-      <.badge>Draft</.badge>
-    </div>
     <div :if={@activity.tracking_number} class="marker-more mono text-text-muted whitespace-nowrap">
       {@activity.tracking_number}
     </div>

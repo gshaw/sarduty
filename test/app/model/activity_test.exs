@@ -12,6 +12,16 @@ defmodule App.Model.ActivityTest do
   # 19:00–21:00 UTC.
   @evening %Activity{started_at: ~U[2026-10-10 19:00:00Z], finished_at: ~U[2026-10-10 21:00:00Z]}
 
+  describe "finished_draft?/2" do
+    test "an unpublished activity is a finished draft only once it has finished" do
+      draft = %{@evening | is_published: false}
+
+      refute Activity.finished_draft?(draft, ~U[2026-10-10 20:00:00Z])
+      assert Activity.finished_draft?(draft, ~U[2026-10-10 21:00:00Z])
+      refute Activity.finished_draft?(%{draft | is_published: true}, ~U[2026-10-11 00:00:00Z])
+    end
+  end
+
   describe "open?/2" do
     test "an activity is open until it starts" do
       assert Activity.open?(@evening, ~U[2026-10-10 18:59:59Z])

@@ -14,6 +14,7 @@ defmodule App.ViewData.EquipmentList do
   """
 
   alias App.Model.EquipmentItem
+  alias App.Operation.BuildGroupRulePreview
 
   @with_members "With members"
   @no_location "No location"
@@ -27,8 +28,8 @@ defmodule App.ViewData.EquipmentList do
     do: [
       {"All", "all"},
       {"In service", "in-service"},
-      {"Expiring in 60 days", "expiring"},
-      {"Unserviceable or lost", "problems"},
+      {"Unserviceable", "unserviceable"},
+      {"Lost", "lost"},
       {"Retired", "retired"}
     ]
 
@@ -75,20 +76,29 @@ defmodule App.ViewData.EquipmentList do
     Enum.filter(rows, &(shown?(&1, show, now) and matches?(&1.item, q)))
   end
 
-  defp shown?(%{item: item}, "in-service", _now), do: item.status != "retired"
-  defp shown?(%{item: item}, "retired", _now), do: item.status == "retired"
-  defp shown?(%{item: item}, "problems", _now), do: item.status in ["unserviceable", "lost"]
+  # In service is what D4H calls operational, as on the item's form.
+  defp shown?(%{item: item}, "in-service", _now), do: item.status == "operational"
 
-  defp shown?(%{item: item}, "expiring", now), do: expiring?(item, now)
+  defp shown?(%{item: item}, status, _now) when status in ["unserviceable", "lost", "retired"],
+    do: item.status == status
+
   defp shown?(_row, _all, _now), do: true
 
-  @doc "Whether the item has expired or expires within 60 days of `now`."
-  def expiring?(%EquipmentItem{expires_at: nil}, _now), do: false
+  @doc "The Expires filter's options: the window is the app's one (BuildGroupRulePreview)."
+  def expires_options,
+    do: [
+      {"All", ""},
+      {"Expired or within #{Service.Format.days(BuildGroupRulePreview.expiring_days())}", "soon"}
+    ]
 
-  def expiring?(%EquipmentItem{status: "retired"}, _now), do: false
+  @doc """
+  The rows the Expires filter keeps: with "soon", those expired or expiring
+  (BuildGroupRulePreview.expiry/2). A filter, not a tile: it cuts across every status.
+  """
+  def expiring(rows, "soon", now),
+    do: Enum.filter(rows, &(BuildGroupRulePreview.expiry(&1.item.expires_at, now) != nil))
 
-  def expiring?(%EquipmentItem{expires_at: expires_at}, now),
-    do: Service.Convert.days_until(expires_at, now) <= 60
+  def expiring(rows, _all, _now), do: rows
 
   defp matches?(_item, q) when q in [nil, ""], do: true
 
@@ -165,11 +175,12 @@ defmodule App.ViewData.EquipmentList do
   end
 
   @doc """
-  Whether the page lists items, or only the places and categories to pick from. South
+  Whether the page lists items, or only the places and categories to pick from: In
+  service with no search or filter (`fields`, each "" when off). South
   Fraser's 1,136 items in one list were too many to read (Andrew, 2026-10-11).
   """
-  def browsing?(show, q, place, category),
-    do: show == "in-service" and q == "" and place == "" and category == ""
+  def browsing?(show, fields),
+    do: show == "in-service" and fields |> Map.values() |> Enum.all?(&(&1 == ""))
 
   @doc "The places in `rows`, in group order, as `{place, count}`."
   def places(rows) do

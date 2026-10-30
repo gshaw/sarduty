@@ -254,7 +254,9 @@ defmodule Web.MemberCollectionLive do
           id={"standing-#{record.member.id}"}
           member={record.member}
           team={@current_team}
-          standing={standing(record, @team_admin?, @today, @now)}
+          standing={
+            record |> standing(@team_admin?, @today, @now) |> unless_tile(@filter_options.standing)
+          }
           path={member_path(@current_team, record.member, @filter_options)}
         />
       </:col>
@@ -335,6 +337,13 @@ defmodule Web.MemberCollectionLive do
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
   end
+
+  # A tile that names one standing, such as Retired, says it for every row: no badge.
+  # Away keeps its badge, since each row's last day differs.
+  defp unless_tile({:away, _period} = away, _tile), do: away
+
+  defp unless_tile(standing, tile),
+    do: if(Atom.to_string(standing) == tile, do: :active, else: standing)
 
   # The row has the away period's last day only, which is all the badge shows.
   defp standing(record, team_admin?, today, now) do
