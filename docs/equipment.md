@@ -58,10 +58,10 @@ place, with the chain of items holding each one. A search, or a filter other tha
 service", lists items from every place.
 
 The stat switch (2026-10-29): All, In service (D4H's operational, as the item form names
-it), Expiring, Unserviceable, Lost, and Retired. Expiring leaves out lost and retired
-items, since nobody renews what's gone, and reads `BuildGroupRulePreview.expiry/2`, the
-app's one expiry rule. The Unserviceable and Lost tiles leave the status badge off their
-rows.
+it), Unserviceable, Lost, and Retired. The Unserviceable and Lost tiles leave the status
+badge off their rows. Expires is a filter, not a tile: it cuts across every status, so
+with In service it lists what to renew. It reads `BuildGroupRulePreview.expiry/2`, the
+app's one expiry rule.
 
 ## Items members hold
 

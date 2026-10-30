@@ -68,7 +68,8 @@ defmodule App.ViewData.EquipmentListTest do
 
     refute 6 in ids.("in-service", "")
     assert ids.("retired", "") == [6]
-    assert ids.("expiring", "") == [8]
+    assert rows |> EquipmentList.expiring("soon", @now) |> Enum.map(& &1.item.id) == [8]
+    assert EquipmentList.expiring(rows, "", @now) == rows
     assert ids.("in-service", "drawer") == [3]
   end
 
@@ -83,9 +84,11 @@ defmodule App.ViewData.EquipmentListTest do
              {"No category", 5}
            ]
 
-    assert EquipmentList.browsing?("in-service", "", "", "")
-    refute EquipmentList.browsing?("in-service", "", "Yard", "")
-    refute EquipmentList.browsing?("retired", "", "", "")
+    none = %{q: "", place: "", category: "", expires: ""}
+    assert EquipmentList.browsing?("in-service", none)
+    refute EquipmentList.browsing?("in-service", %{none | place: "Yard"})
+    refute EquipmentList.browsing?("in-service", %{none | expires: "soon"})
+    refute EquipmentList.browsing?("retired", none)
   end
 
   test "a place or a category narrows the rows" do

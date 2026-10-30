@@ -48,7 +48,7 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#item-#{ctx.phone.id}")
   end
 
-  test "Unserviceable and Lost are tiles of their own; In service and Expiring leave them out",
+  test "Unserviceable and Lost are tiles of their own, and Expires filters across them",
        ctx do
     soon = DateTime.add(DateTime.utc_now(), 10, :day)
     broken = equipment_item_fixture(ctx.team, %{title: "Broken vest", status: "unserviceable"})
@@ -64,7 +64,7 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#equipment-view-in-service", "4")
     assert has_element?(lv, "#equipment-view-unserviceable", "1")
     assert has_element?(lv, "#equipment-view-lost", "1")
-    assert has_element?(lv, "#equipment-view-expiring", "1")
+    refute has_element?(lv, "#equipment-view-expiring")
     refute has_element?(lv, "#equipment-view-problems")
 
     # Mixed statuses: each row's badge says which.
@@ -75,7 +75,10 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#item-#{gone.id} .badge", "Lost")
     refute has_element?(lv, "#item-#{broken.id}")
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?show=expiring")
+    # In service, the usual tile, with the Expires filter: what to renew.
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment?expires=soon")
+    assert has_element?(lv, "#equipment-view-in-service", "1")
+    assert has_element?(lv, "#equipment-view-lost", "1")
     assert has_element?(lv, "#item-#{due.id}")
     refute has_element?(lv, "#item-#{gone.id}")
   end
