@@ -46,6 +46,21 @@ defmodule App.Model.GroupMember do
   def member_ids(team_id, group_id),
     do: team_id |> member_ids_query(group_id) |> Repo.all() |> MapSet.new()
 
+  @doc """
+  How many members each of the team's groups holds, as %{group_id => count}. A group with
+  nobody in it is left out, so read it with `Map.get(counts, id, 0)`.
+  """
+  def counts(team_id) do
+    query =
+      from gm in GroupMember,
+        join: g in assoc(gm, :group),
+        where: g.team_id == ^team_id,
+        group_by: gm.group_id,
+        select: {gm.group_id, count(gm.id)}
+
+    query |> Repo.all() |> Map.new()
+  end
+
   def get_by(params), do: Repo.get_by(GroupMember, params)
 
   def insert!(params) do
