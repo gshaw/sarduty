@@ -572,12 +572,14 @@ defmodule Web.EquipmentLiveTest do
     assert Repo.get!(Template, template.id).custom_values == %{}
   end
 
-  test "a template's hours tag is its Tax credit hours, not a tag", ctx do
+  test "a template's hours tag is its Tax credit hours, and its groups a table", ctx do
     hours = tag_fixture(ctx.team, "Primary Hours")
     water = tag_fixture(ctx.team, "Flat Water")
-    template = template_fixture(ctx.team, "Boat training", [], [water, hours])
+    boat = group_fixture(ctx.team, %{title: "Boat crew"})
+    template = template_fixture(ctx.team, "Boat training", [], [water, hours], [boat])
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
 
+    assert has_element?(lv, "#template-groups-table #group-#{boat.id}", "Boat crew")
     assert has_element?(lv, "#template-details", "Primary")
     assert has_element?(lv, "#template-tags", "Flat Water")
     refute has_element?(lv, "#template-tags", "Primary Hours")

@@ -123,11 +123,17 @@ defmodule Web.TemplateLive do
 
         <section id="template-groups" class="mt-8">
           <h2 class="heading">Groups · {length(@template.template_groups)}</h2>
-          <ul :if={@template.template_groups != []}>
-            <li :for={group <- Template.groups(@template)}>
+          <.table
+            :if={@template.template_groups != []}
+            id="template-groups-table"
+            rows={Template.groups(@template)}
+            row_id={&"group-#{&1.id}"}
+            class="table-striped"
+          >
+            <:col :let={group} label="Group">
               <.a navigate={~p"/teams/#{@current_team}/groups/#{group.id}"}>{group.title}</.a>
-            </li>
-          </ul>
+            </:col>
+          </.table>
           <p :if={@template.template_groups == []} class="hint">No groups.</p>
           <p class="action">
             <.a
