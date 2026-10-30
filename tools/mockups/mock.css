@@ -1,0 +1,113 @@
+/* Mockup kit: marks, frames, and mock-only pieces. Loaded after the app's own app.css.
+   Marks are in one colour the app never uses (fuchsia), so nobody mistakes a mark for
+   the design. Every mark has a pin: its number in the caption list under the image.
+   See docs/mockups.md. */
+
+:root {
+  --mk: #c026d3;
+  --mk-soft: color-mix(in srgb, #c026d3 6%, transparent);
+  --mk-font: ui-sans-serif, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---- Marks ---------------------------------------------------------------- */
+
+/* New: dashed, with a faint fill. Changed: dotted, no fill. Removed: struck through. */
+.mk { position: relative; outline: 2px dashed var(--mk); outline-offset: 5px; border-radius: 3px;
+  background-color: var(--mk-soft); }
+.mk-changed { outline-style: dotted; outline-width: 3px; background-color: transparent; }
+.mk-removed { outline-style: solid; outline-width: 1px; background-color: transparent; opacity: .45;
+  text-decoration: line-through; text-decoration-color: var(--mk); text-decoration-thickness: 2px; }
+.mk-removed * { text-decoration: inherit; }
+
+/* The pin: a numbered dot on the outline's top-left corner, small enough to cover only
+   the corner. The caption list under the image says what each number is, and whether
+   it's new, changed, or removed. */
+.mk[data-pin]::before { content: attr(data-pin); position: absolute; z-index: 50; top: -16px; left: -16px;
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--mk); color: #fff;
+  font: 700 12px/1 var(--mk-font); text-decoration: none; box-shadow: 0 0 0 2px #fff; pointer-events: none; opacity: 1; }
+.mk.pin-right[data-pin]::before { left: auto; right: -16px; }
+/* At a narrow page's edge the corner is off the screen: pull the pin inside. */
+.mk.pin-inset[data-pin]::before { left: 4px; top: -13px; }
+/* Block marks hug their content; add .fill to span the column. */
+div.mk:not(.fill), p.mk:not(.fill), section.mk:not(.fill) { width: fit-content; max-width: 100%; }
+/* Inline marks (a word in a sentence, a table cell) stay on their line. */
+span.mk, a.mk, strong.mk { outline-offset: 3px; }
+th.mk, td.mk { outline-offset: -2px; }
+th.mk[data-pin]::before, td.mk[data-pin]::before { top: -10px; left: -10px; }
+
+/* A note in the margin, for something a picture can't show (a rule, a timing). */
+.mk-note { font: 500 13px/18px var(--mk-font); color: var(--mk); margin: var(--sp-2) 0 0; }
+.mk-note::before { content: "↳ "; }
+
+/* ---- Frames: drawn around a finished shot by shots.mjs --------------------- */
+
+body.frame { margin: 0; padding: 32px; background: #e9ebef; font-family: var(--mk-font); }
+body.frame.bare { padding: 0; background: transparent; }
+
+.browser { border-radius: 10px; overflow: hidden; background: #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 18px 40px -12px rgba(0,0,0,.25); }
+.browser-bar { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px;
+  background: #f3f4f6; border-bottom: 1px solid #dfe1e5; }
+.browser-dots { display: flex; gap: 7px; }
+.browser-dots i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.browser-dots i:nth-child(2) { background: #febc2e; }
+.browser-dots i:nth-child(3) { background: #28c840; }
+.browser-url { flex: 1; max-width: 640px; margin: 0 auto; height: 26px; border-radius: 7px; background: #fff;
+  box-shadow: inset 0 0 0 1px #dfe1e5; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #3c4043; }
+.browser-url b { font-weight: 400; color: #80868b; }
+.browser img, .phone img { display: block; width: 100%; }
+/* A shot cropped from partway down starts with a fade under the address bar. */
+.browser-shot { position: relative; }
+.browser.cut-top .browser-shot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 56px; z-index: 1;
+  background: linear-gradient(#fff, transparent); }
+/* A cropped shot ends in a fade, so it reads as "the page goes on". */
+.browser.cut, .phone.cut .phone-screen { position: relative; }
+.browser.cut::after, .phone.cut .phone-screen::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+  height: 56px; background: linear-gradient(transparent, #fff); }
+
+.phone { width: 390px; padding: 12px; border-radius: 56px; background: #1d1d1f;
+  box-shadow: 0 0 0 1px #000, 0 18px 40px -12px rgba(0,0,0,.35); }
+.phone-screen { border-radius: 44px; overflow: hidden; background: #fff; }
+.phone-status { display: flex; justify-content: space-between; align-items: center; height: 50px;
+  padding: 6px 30px 0 34px; font: 600 16px/1 -apple-system, var(--mk-font); color: #000; background: inherit; }
+.phone-status .island { width: 120px; height: 34px; border-radius: 20px; background: #000; }
+.phone-status .icons { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.phone-status .batt { width: 25px; height: 12px; border-radius: 4px; box-shadow: 0 0 0 1.5px #999; position: relative; }
+.phone-status .batt::after { content: ""; position: absolute; inset: 2px 5px 2px 2px; border-radius: 2px; background: #000; }
+
+/* Several frames side by side, each with a caption above it. */
+.frames { display: flex; gap: 40px; align-items: flex-start; justify-content: center; }
+.frames figure { margin: 0; }
+.frames figcaption { font: 600 15px/20px var(--mk-font); color: #3c4043; text-align: center; margin-bottom: 14px; }
+
+/* ---- Messages: a text thread as the member's phone shows it ----------------- */
+
+.sms { background: #fff; font: 17px/22px -apple-system, var(--mk-font); color: #000; }
+.sms-head { text-align: center; padding: 4px 0 10px; border-bottom: 1px solid #e5e5ea; background: #f9f9f9; }
+.sms-head .avatar { width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 4px; background: linear-gradient(#a5abb8, #858994);
+  color: #fff; display: grid; place-items: center; font: 600 22px/1 -apple-system, var(--mk-font); }
+.sms-head .who { font-size: 12px; line-height: 16px; color: #000; }
+.sms-head .who small { display: block; color: #8e8e93; font-size: 11px; }
+.sms-body { padding: 10px 14px 18px; display: flex; flex-direction: column; gap: 3px; min-height: 600px; }
+.sms .mk[data-pin] { margin-top: 10px; }
+.sms-time { align-self: center; font-size: 11px; line-height: 14px; color: #8e8e93; margin: 12px 0 6px; }
+.sms-time b { font-weight: 600; }
+.sms-in, .sms-out { max-width: 76%; padding: 7px 12px 8px; border-radius: 18px; overflow-wrap: anywhere; }
+.sms-in { align-self: flex-start; background: #e9e9eb; }
+.sms-out { align-self: flex-end; background: #0a84ff; color: #fff; }
+.sms-in + .sms-out, .sms-out + .sms-in { margin-top: 8px; }
+.sms-in a, .sms-out a { color: inherit; text-decoration: underline; }
+.sms-status { align-self: flex-end; font-size: 11px; line-height: 14px; color: #8e8e93; margin-top: 2px; }
+.sms .mk { outline-offset: 4px; border-radius: 20px; }
+.sms-input { display: flex; align-items: center; gap: 8px; padding: 8px 12px 26px; }
+.sms-input span { flex: 1; height: 34px; border-radius: 17px; box-shadow: inset 0 0 0 1px #c7c7cc; padding: 0 14px;
+  display: flex; align-items: center; color: #8e8e93; font-size: 16px; }
+
+/* ---- Email: one message in a mail app ---------------------------------------- */
+
+.mail { background: #fff; font-family: var(--mk-font); }
+.mail-head { padding: 18px 24px 14px; border-bottom: 1px solid #e5e7eb; display: grid; gap: 4px; font-size: 14px; color: #3c4043; }
+.mail-head .subject { font-size: 20px; font-weight: 600; color: #111; margin-bottom: 6px; }
+.mail-head b { font-weight: 600; color: #111; }
+.mail-body { padding: 8px 0 24px; }
